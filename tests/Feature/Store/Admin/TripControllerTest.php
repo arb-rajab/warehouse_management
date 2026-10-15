@@ -9,6 +9,7 @@ use App\Models\Truck;
 use App\Services\DriverService;
 use App\Services\UserService;
 use Illuminate\Support\Facades\Http;
+use Inertia\Testing\AssertableInertia as Assert;
 
 beforeEach(function () {
     $this->routingResponse = Http::response([], 503);
@@ -122,11 +123,16 @@ test('an open trip prevents a second assignment even when the truck availability
     expect(Trip::count())->toBe(1)->and(Checkpoint::count())->toBe(0)->and($existing->fresh()->truck_id)->toBe($existing->truck_id);
 });
 
-test('editing and updating a missing trip return 404', function () {
+test('editing and updating a missing trip return 404 and the old update URI is gone', function () {
+    $trip = createTripTestRecord();
     actingAsStoreUser(createStoreStaff('edit_trip'));
 
     $this->get(route('trips.edit', 999999))->assertNotFound();
-    $this->post(route('trips.update'), ['id' => 999999])->assertNotFound();
+    $this->put(route('trips.update', 999999), tripTestPayload($trip->truck))->assertNotFound();
+    $this->post('/temp/admin/trips/update', ['id' => $trip->id, ...tripTestPayload($trip->truck)])->assertMethodNotAllowed();
+    $this->get('/temp/admin/trips/edit/'.$trip->id)->assertNotFound();
+
+    expect($trip->fresh()->notes)->toBeNull()->and(Checkpoint::count())->toBe(0);
 });
 
 test('trip updates preserve checkpoint identity coordinates status arrival and attachments', function () {
@@ -137,7 +143,7 @@ test('trip updates preserve checkpoint identity coordinates status arrival and a
     $before = $checkpoint->only(['trip_id', 'relationable_id', 'relationable_type', 'type', 'longitudes', 'latitudes', 'status', 'arrived_at', 'cmr_file', 'photos', 'address']);
     actingAsStoreUser(createStoreStaff('edit_trip'));
 
-    $this->post(route('trips.update'), ['id' => $trip->id, ...tripTestPayload($newTruck, $checkpoint)])->assertRedirect(route('trips.show', $trip->id));
+    $this->put(route('trips.update', $trip), tripTestPayload($newTruck, $checkpoint))->assertRedirect(route('trips.show', $trip->id));
 
     expect($checkpoint->fresh()->only(array_keys($before)))->toEqual($before)
         ->and($checkpoint->fresh()->notes)->toBe('Checkpoint note')
@@ -152,7 +158,7 @@ test('trip updates refuse callers without changing trip checkpoint or truck', fu
     $checkpoint = createTripTestCheckpoint($trip);
     actingAsRefusedStoreCaller($caller);
 
-    assertStoreCallerRefused($this->post(route('trips.update'), ['id' => $trip->id, ...tripTestPayload($trip->truck, $checkpoint)]), $caller);
+    assertStoreCallerRefused($this->put(route('trips.update', $trip), tripTestPayload($trip->truck, $checkpoint)), $caller);
 
     expect($trip->fresh()->notes)->toBeNull()->and($checkpoint->fresh()->notes)->toBeNull()->and($trip->truck->fresh()->is_available)->toBeFalse();
 })->with('refused store admin callers');
@@ -163,7 +169,7 @@ test('foreign checkpoint ids cannot be copied into or removed from another trip'
     $foreign = createTripTestCheckpoint(createTripTestRecord());
     actingAsStoreUser(createStoreStaff('edit_trip'));
 
-    $this->post(route('trips.update'), ['id' => $trip->id, ...tripTestPayload($trip->truck, $foreign)])->assertSessionHasErrors('checkpoints_array.0.id');
+    $this->put(route('trips.update', $trip), tripTestPayload($trip->truck, $foreign))->assertSessionHasErrors('checkpoints_array.0.id');
 
     expect($own->fresh())->not->toBeNull()->and($foreign->fresh()->trip_id)->toBe($foreign->trip_id)->and($trip->fresh()->notes)->toBeNull();
 });
@@ -175,7 +181,7 @@ test('bound checkpoints cannot be reassigned to a different customer', function 
     $payload['checkpoints_array'][0]['checkpoint_related_id'] = createStoreUser()->id;
     actingAsStoreUser(createStoreStaff('edit_trip'));
 
-    $this->post(route('trips.update'), ['id' => $trip->id, ...$payload])->assertSessionHasErrors('checkpoints_array.0.checkpoint_related_id');
+    $this->put(route('trips.update', $trip), $payload)->assertSessionHasErrors('checkpoints_array.0.checkpoint_related_id');
 
     expect($checkpoint->fresh()->relationable_id)->toBe(9)->and($trip->fresh()->notes)->toBeNull();
 });
@@ -186,7 +192,7 @@ test('trip updates cannot take a truck from another open trip', function () {
     $other = createTripTestRecord();
     actingAsStoreUser(createStoreStaff('edit_trip'));
 
-    $this->post(route('trips.update'), ['id' => $trip->id, ...tripTestPayload($other->truck, $checkpoint)])->assertSessionHasErrors('truck_id');
+    $this->put(route('trips.update', $trip), tripTestPayload($other->truck, $checkpoint))->assertSessionHasErrors('truck_id');
 
     expect($trip->fresh()->truck_id)->toBe($trip->truck_id)->and($other->fresh()->truck_id)->toBe($other->truck_id)->and($checkpoint->fresh()->notes)->toBeNull();
 });
@@ -197,7 +203,7 @@ test('every existing trip transition keeps dates active state orders and truck a
     createTripTestCheckpoint($trip, ['type' => 'delivery', 'relationable_type' => Order::class, 'relationable_id' => $order->id]);
     actingAsStoreUser(createStoreStaff('edit_trip'));
 
-    $this->post(route('trips.update-status'), ['id' => $trip->id, 'status' => $to])->assertOk()->assertSee('1');
+    $this->put(route('trips.update-status', [$trip, 'list' => 'all']), ['status' => $to])->assertRedirect(route('trips.index'));
 
     expect($trip->fresh()->status)->toBe($to)
         ->and($trip->fresh()->active)->toBe($to !== 'closed')
@@ -222,12 +228,12 @@ test('repeated transitions retain the first start close and arrival timestamps',
     $checkpoint = createTripTestCheckpoint($trip, ['status' => 'delivered', 'arrived_at' => '2026-10-09 10:00:00']);
     actingAsStoreUser(createStoreStaff('edit_trip'));
 
-    $this->post(route('trips.update-status'), ['id' => $trip->id, 'status' => 'started'])->assertOk();
+    $this->put(route('trips.update-status', [$trip, 'list' => 'all']), ['status' => 'started'])->assertRedirect();
     $this->post(route('checkpoints.update-status'), ['id' => $checkpoint->id, 'status' => 'delivered'])->assertOk();
-    $this->post(route('trips.update-status'), ['id' => $trip->id, 'status' => 'closed'])->assertOk();
+    $this->put(route('trips.update-status', [$trip, 'list' => 'all']), ['status' => 'closed'])->assertRedirect();
     $closedAt = $trip->fresh()->closed_at;
     $this->travel(1)->hours();
-    $this->post(route('trips.update-status'), ['id' => $trip->id, 'status' => 'closed'])->assertOk();
+    $this->put(route('trips.update-status', [$trip, 'list' => 'all']), ['status' => 'closed'])->assertRedirect();
 
     expect($trip->fresh()->started_at->toDateTimeString())->toBe('2026-10-09 09:00:00')
         ->and($checkpoint->fresh()->arrived_at->toDateTimeString())->toBe('2026-10-09 10:00:00')
@@ -239,7 +245,7 @@ test('reopening a closed trip refuses to take a truck now owned by another open 
     $other = createTripTestRecord(['truck_id' => $trip->truck_id]);
     actingAsStoreUser(createStoreStaff('edit_trip'));
 
-    $this->post(route('trips.update-status'), ['id' => $trip->id, 'status' => 'started'])->assertSessionHasErrors('truck_id');
+    $this->put(route('trips.update-status', [$trip, 'list' => 'all']), ['status' => 'started'])->assertSessionHasErrors('truck_id');
 
     expect($trip->fresh()->status)->toBe('closed')->and($trip->fresh()->active)->toBeFalse()->and($other->fresh()->status)->toBe('pending');
 });
@@ -250,19 +256,33 @@ test('trip status transitions refuse callers and leave timestamps status orders 
     createTripTestCheckpoint($trip, ['type' => 'delivery', 'relationable_type' => Order::class, 'relationable_id' => $order->id]);
     actingAsRefusedStoreCaller($caller);
 
-    assertStoreCallerRefused($this->post(route('trips.update-status'), ['id' => $trip->id, 'status' => 'closed']), $caller);
+    assertStoreCallerRefused($this->put(route('trips.update-status', [$trip, 'list' => 'all']), ['status' => 'closed']), $caller);
 
     expect($trip->fresh()->status)->toBe('pending')->and($trip->fresh()->closed_at)->toBeNull()->and($trip->fresh()->active)->toBeTrue()->and($trip->truck->fresh()->is_available)->toBeFalse()->and($order->fresh()->delivery_status)->toBe('on_delivery');
 })->with('refused store admin callers');
 
-test('trip status validation rejects invalid enums and unknown trips', function () {
+test('trip status validation rejects invalid enums, a missing or unknown list and unknown trips', function () {
     $trip = createTripTestRecord();
     actingAsStoreUser(createStoreStaff('edit_trip'));
 
-    $this->post(route('trips.update-status'), ['id' => $trip->id, 'status' => 'destroyed'])->assertSessionHasErrors('status');
-    $this->post(route('trips.update-status'), ['id' => 999999, 'status' => 'closed'])->assertNotFound();
+    $this->put(route('trips.update-status', [$trip, 'list' => 'all']), ['status' => 'destroyed'])->assertSessionHasErrors('status');
+    $this->put(route('trips.update-status', [$trip, 'list' => 'all']), [])->assertSessionHasErrors('status');
+    $this->put(route('trips.update-status', $trip), ['status' => 'closed'])->assertSessionHasErrors('list');
+    $this->put(route('trips.update-status', [$trip, 'list' => 'seller']), ['status' => 'closed'])->assertSessionHasErrors('list');
+    $this->put(route('trips.update-status', ['trip' => 999999, 'list' => 'all']), ['status' => 'closed'])->assertNotFound();
+    $this->post('/temp/admin/trips/update-trip-status', ['id' => $trip->id, 'status' => 'closed'])->assertMethodNotAllowed();
 
     expect($trip->fresh()->status)->toBe('pending')->and($trip->fresh()->closed_at)->toBeNull()->and($trip->truck->fresh()->is_available)->toBeFalse();
+});
+
+test('a status change returns to the list it was made from with that list\'s filters', function () {
+    $trip = createTripTestRecord();
+    actingAsStoreUser(createStoreStaff('edit_trip'));
+
+    $this->put(route('trips.update-status', [$trip, 'list' => 'today', 'page' => 2, 'search' => 'Trip', 'status' => ['pending']]), ['status' => 'started'])
+        ->assertRedirect(route('trips.today-trips', ['page' => 2, 'search' => 'Trip', 'status' => ['pending']]));
+
+    expect($trip->fresh()->status)->toBe('started');
 });
 
 test('checkpoint statuses set arrival only when delivered', function (string $status) {
@@ -380,20 +400,162 @@ test('map data handles empty invalid and zero coordinates and retains markers on
     Http::assertSent(fn ($request) => str_starts_with($request->url(), 'https://router.project-osrm.org/route/'));
 });
 
-test('the existing trip edit screen can be rendered', function () {
-    $trip = createTripTestRecord();
-    createTripTestCheckpoint($trip);
-    actingAsStoreUser(createStoreStaff('edit_trip'));
+describe('trip forms', function () {
+    test('the create form renders the orders out for delivery and the non-representative store users', function () {
+        $customer = createStoreUser();
+        $customer->forceFill(['name' => 'Alma Customer'])->save();
+        $rep = createStoreUser();
+        $rep->forceFill(['name' => 'Rita Rep', 'is_rep' => true])->save();
+        $order = createStoreOrder($customer, ['delivery_status' => 'on_delivery', 'code' => '20261014-0002']);
+        $repOrder = createStoreOrder($customer, ['delivery_status' => 'on_delivery', 'code' => '20261014-0001', 'by_rep' => 1, 'for_customer' => $rep->id]);
+        createStoreOrder($customer, ['delivery_status' => 'delivered', 'code' => '20261014-0003']);
+        $staff = createStoreStaff('add_trip');
+        actingAsStoreUser($staff);
 
-    $this->get(route('trips.edit', $trip->id))->assertOk()->assertViewIs('shop.backend.trips.edit')->assertViewHas('trip', fn ($record) => $record->id === $trip->id);
+        $this->get(route('trips.create'))->assertOk()->assertInertia(fn (Assert $page) => $page
+            ->component('Store/Admin/Trips/Trips/Create')
+            ->where('orders', [
+                ['id' => $order->id, 'code' => '20261014-0002', 'customer' => 'Alma Customer'],
+                ['id' => $repOrder->id, 'code' => '20261014-0001', 'customer' => 'Rita Rep'],
+            ])
+            ->where('customers', StoreUser::query()->where('is_rep', false)->orderBy('name')->orderBy('id')->get(['id', 'name'])->map(fn (StoreUser $user) => ['id' => $user->id, 'name' => (string) $user->name])->all())
+            ->where('customers', fn ($customers) => collect($customers)->pluck('id')->contains($customer->id) && ! collect($customers)->pluck('id')->contains($rep->id))
+            ->missing('trip'));
+    });
+
+    test('the edit form renders the trip and its stored checkpoints in their order', function () {
+        $driver = createStoreUser('driver');
+        $trip = createTripTestRecord(['driver_id' => $driver->id, 'notes' => 'Trip note', 'status' => 'started']);
+        $customer = createStoreUser();
+        $customer->forceFill(['name' => 'Alma Customer'])->save();
+        $order = createStoreOrder($customer, ['delivery_status' => 'delivered', 'code' => '20261014-0009']);
+        $delivery = createTripTestCheckpoint($trip, ['type' => 'delivery', 'relationable_type' => Order::class, 'relationable_id' => $order->id, 'sort_order_in_trip' => 2, 'notes' => 'Back door']);
+        $departure = createTripTestCheckpoint($trip, ['notes' => 'Default starting checkpoint']);
+        createTripTestCheckpoint(createTripTestRecord(), ['notes' => 'Noise']);
+        actingAsStoreUser(createStoreStaff('edit_trip'));
+
+        $this->get(route('trips.edit', $trip))->assertOk()->assertInertia(fn (Assert $page) => $page
+            ->component('Store/Admin/Trips/Trips/Edit')
+            ->has('trip', fn (Assert $form) => $form
+                ->where('id', $trip->id)->where('code', $trip->code)->where('status', 'started')
+                ->where('driver_id', $driver->id)->where('truck_id', $trip->truck_id)
+                ->where('due_date', '2026-10-10')->where('notes', 'Trip note')
+                ->has('checkpoints', 2)
+                ->has('checkpoints.0', fn (Assert $row) => $row
+                    ->where('id', $departure->id)->where('type', 'other')->where('related_id', 9)
+                    ->where('notes', 'Default starting checkpoint')->where('order_code', null)
+                    ->where('customer', $this->departure->name))
+                ->has('checkpoints.1', fn (Assert $row) => $row
+                    ->where('id', $delivery->id)->where('type', 'delivery')->where('related_id', $order->id)
+                    ->where('notes', 'Back door')->where('order_code', '20261014-0009')
+                    ->where('customer', 'Alma Customer')))
+            ->has('orders')
+            ->has('customers'));
+    });
+
+    test('a new trip and an update return to the trip\'s Blade checkpoints page', function () {
+        actingAsStoreUser(createStoreStaff('add_trip', 'edit_trip'));
+        $truck = Truck::create(['name' => 'Available truck']);
+
+        $this->post(route('trips.store'), tripTestPayload($truck))->assertRedirect(route('trips.show', Trip::query()->value('id')));
+        $trip = Trip::firstOrFail();
+        $this->put(route('trips.update', $trip), tripTestPayload($truck))->assertRedirect(route('trips.show', $trip->id));
+    });
+
+    test('the trip forms refuse every unauthorized caller', function (string $caller) {
+        $trip = createTripTestRecord();
+        actingAsRefusedStoreCaller($caller);
+
+        assertStoreCallerRefused($this->get(route('trips.create')), $caller);
+        assertStoreCallerRefused($this->get(route('trips.edit', $trip)), $caller);
+    })->with('refused store admin callers');
+
+    test('each trip form action needs its own permission', function (string $method, string $route, string $permission) {
+        $trip = createTripTestRecord();
+        $checkpoint = createTripTestCheckpoint($trip);
+        $url = in_array($route, ['trips.edit', 'trips.update'], true) ? route($route, $trip) : route($route);
+        $payload = $route === 'trips.update' ? tripTestPayload($trip->truck, $checkpoint) : tripTestPayload(Truck::create(['name' => 'Spare truck']));
+        actingAsStoreUser(createStoreStaff(...array_values(array_diff(['view_all_trips', 'add_trip', 'edit_trip', 'delete_trip'], [$permission]))));
+
+        $this->call($method, $url, $payload)->assertForbidden();
+        expect(Trip::count())->toBe(1)->and($trip->fresh()->notes)->toBeNull()->and($checkpoint->fresh()->notes)->toBeNull();
+
+        actingAsStoreUser(createStoreStaff($permission));
+        expect($this->call($method, $url, $payload)->getStatusCode())->toBeIn([200, 302]);
+    })->with([
+        'create' => ['GET', 'trips.create', 'add_trip'],
+        'store' => ['POST', 'trips.store', 'add_trip'],
+        'edit' => ['GET', 'trips.edit', 'edit_trip'],
+        'update' => ['PUT', 'trips.update', 'edit_trip'],
+    ]);
+
+    test('the trip forms validate notes, dates and references as field errors without writing', function (array $replacement, string $error) {
+        $trip = createTripTestRecord();
+        $checkpoint = createTripTestCheckpoint($trip);
+        $truck = Truck::create(['name' => 'Available truck']);
+        actingAsStoreUser(createStoreStaff('add_trip', 'edit_trip'));
+
+        $this->post(route('trips.store'), [...tripTestPayload($truck), ...$replacement])->assertSessionHasErrors($error);
+        $this->put(route('trips.update', $trip), [...tripTestPayload($trip->truck, $checkpoint), ...$replacement])->assertSessionHasErrors($error);
+
+        expect(Trip::count())->toBe(1)->and(Checkpoint::count())->toBe(1)
+            ->and($trip->fresh()->notes)->toBeNull()->and($checkpoint->fresh()->notes)->toBeNull()
+            ->and($truck->fresh()->is_available)->toBeTrue();
+    })->with([
+        'notes over 255' => [['notes' => str_repeat('x', 256)], 'notes'],
+        'notes not text' => [['notes' => ['bad']], 'notes'],
+        'no due date' => [['due_date' => ''], 'due_date'],
+        'not a date' => [['due_date' => 'tomorrow-ish'], 'due_date'],
+        'no truck' => [['truck_id' => ''], 'truck_id'],
+        'unknown truck' => [['truck_id' => 999999], 'truck_id'],
+        'unknown driver' => [['driver_id' => 999999], 'driver_id'],
+        'unknown order' => [['checkpoints_array' => [['id' => 0, 'checkpoint_type' => 'delivery', 'checkpoint_related_id' => 999999]]], 'checkpoints_array.0.checkpoint_related_id'],
+        'unknown customer' => [['checkpoints_array' => [['id' => 0, 'checkpoint_type' => 'other', 'checkpoint_related_id' => 999999]]], 'checkpoints_array.0.checkpoint_related_id'],
+        'checkpoint notes over 1000' => [['checkpoints_array' => [['id' => 0, 'checkpoint_type' => 'other', 'checkpoint_related_id' => 9, 'checkpoint_notes' => str_repeat('x', 1001)]]], 'checkpoints_array.0.checkpoint_notes'],
+    ]);
+
+    test('the create form refuses a stored checkpoint id', function () {
+        $checkpoint = createTripTestCheckpoint(createTripTestRecord());
+        $truck = Truck::create(['name' => 'Available truck']);
+        actingAsStoreUser(createStoreStaff('add_trip'));
+
+        $this->post(route('trips.store'), tripTestPayload($truck, $checkpoint))->assertSessionHasErrors('checkpoints_array.0.id');
+
+        expect(Trip::count())->toBe(1)->and($truck->fresh()->is_available)->toBeTrue();
+    });
+
+    test('moving a trip to another truck frees the old one only when no other open trip holds it', function () {
+        $trip = createTripTestRecord();
+        $checkpoint = createTripTestCheckpoint($trip);
+        $other = createTripTestRecord(['truck_id' => $trip->truck_id]);
+        $newTruck = Truck::create(['name' => 'Replacement truck']);
+        actingAsStoreUser(createStoreStaff('edit_trip'));
+
+        $this->put(route('trips.update', $trip), tripTestPayload($newTruck, $checkpoint))->assertRedirect(route('trips.show', $trip->id));
+
+        expect($trip->fresh()->truck_id)->toBe($newTruck->id)->and($newTruck->fresh()->is_available)->toBeFalse()
+            ->and($other->truck->fresh()->is_available)->toBeFalse()->and($other->fresh()->truck_id)->toBe($other->truck_id);
+    });
+
+    test('an update reorders, keeps, adds and drops checkpoints as posted', function () {
+        $trip = createTripTestRecord();
+        $first = createTripTestCheckpoint($trip, ['notes' => 'First']);
+        $dropped = createTripTestCheckpoint($trip, ['sort_order_in_trip' => 2, 'notes' => 'Dropped']);
+        $customer = createStoreUser();
+        actingAsStoreUser(createStoreStaff('edit_trip'));
+
+        $this->put(route('trips.update', $trip), [...tripTestPayload($trip->truck), 'checkpoints_array' => [
+            ['id' => 0, 'checkpoint_type' => 'other', 'checkpoint_related_id' => $customer->id, 'checkpoint_notes' => 'New stop'],
+            ['id' => $first->id, 'checkpoint_type' => 'other', 'checkpoint_related_id' => 9, 'checkpoint_notes' => 'Moved'],
+        ]])->assertRedirect(route('trips.show', $trip->id));
+
+        $rows = $trip->checkpoints()->get(['id', 'relationable_id', 'sort_order_in_trip', 'notes']);
+        expect($rows->pluck('relationable_id')->all())->toBe([$customer->id, 9])
+            ->and($rows->pluck('sort_order_in_trip')->all())->toBe([1, 2])
+            ->and($rows[1]->id)->toBe($first->id)->and($rows[1]->notes)->toBe('Moved')
+            ->and(Checkpoint::find($dropped->id))->toBeNull();
+    });
 });
-
-test('trip editing refuses every unauthorized caller', function (string $caller) {
-    $trip = createTripTestRecord();
-    actingAsRefusedStoreCaller($caller);
-
-    assertStoreCallerRefused($this->get(route('trips.edit', $trip->id)), $caller);
-})->with('refused store admin callers');
 
 test('map creation fails departure validation before writing any rows', function () {
     $this->departure->delete();
@@ -412,7 +574,7 @@ test('closed trip edits do not reserve the truck again', function () {
     $checkpoint = createTripTestCheckpoint($trip);
     actingAsStoreUser(createStoreStaff('edit_trip'));
 
-    $this->post(route('trips.update'), ['id' => $trip->id, ...tripTestPayload($trip->truck, $checkpoint)])->assertRedirect();
+    $this->put(route('trips.update', $trip), tripTestPayload($trip->truck, $checkpoint))->assertRedirect();
 
     expect($trip->fresh()->status)->toBe('closed')->and($trip->fresh()->active)->toBeFalse()->and($trip->truck->fresh()->is_available)->toBeTrue();
 });
@@ -450,29 +612,6 @@ test('shortest path sorting maps waypoint indexes to checkpoint identities with 
         ->and($trip->fresh()->duration)->toBe('120.00')->and($trip->fresh()->distance)->toBe('1000.00');
 });
 
-test('trip index write controls follow edit trip and delete trip permissions', function (array $permissions, bool $canEdit, bool $canDelete) {
-    $trip = createTripTestRecord(['notes' => 'Visible note']);
-    createTripTestRecord();
-    actingAsStoreUser(createStoreStaff('view_all_trips', ...$permissions));
-
-    $response = $this->get(route('trips.index'))->assertOk()->assertViewIs('shop.backend.trips.index')->assertSee('Visible note');
-    if ($canEdit) {
-        $response->assertSee('class="form-control trip-notes"', false)->assertSee('onclick="openUpdateModal(this)"', false)->assertSee(route('trips.edit', $trip->id), false);
-    } else {
-        $response->assertDontSee('class="form-control trip-notes"', false)->assertDontSee('onclick="openUpdateModal(this)"', false)->assertDontSee(route('trips.edit', $trip->id), false);
-    }
-    if ($canDelete) {
-        $response->assertSee(route('trips.destroy', $trip->id), false)->assertSee('onclick="bulk_delete()"', false);
-    } else {
-        $response->assertDontSee(route('trips.destroy', $trip->id), false)->assertDontSee('onclick="bulk_delete()"', false);
-    }
-})->with([
-    'reader' => [[], false, false],
-    'editor' => [['edit_trip'], true, false],
-    'trip deleter' => [['delete_trip'], false, true],
-    'customer deleter' => [['delete_customer'], false, false],
-]);
-
 test('trip checkpoint screens display empty trips safely', function () {
     $trip = createTripTestRecord();
     actingAsStoreUser(createStoreStaff('view_all_trips'));
@@ -498,6 +637,14 @@ test('checkpoint write controls require edit trip while readers retain notes and
     $response->assertSee('tripMapPopup([[null, marker.label]])', false);
 })->with([false, true]);
 
+test('the retained map picker renders an available truck with its pallet capacity', function () {
+    Truck::create(['name' => 'Free truck', 'is_available' => true, 'max_pallets_number' => 18]);
+    Truck::create(['name' => 'Busy truck', 'is_available' => false, 'max_pallets_number' => 7]);
+    actingAsStoreUser(createStoreStaff('add_trip'));
+
+    $this->get(route('trips.create-from-map'))->assertOk()->assertSee('Free truck')->assertSee('Max Pallets Number:18')->assertDontSee('Max Pallets Number:7');
+});
+
 test('the retained map picker renders a busy truck with no open trip without a broken link', function () {
     Truck::create(['name' => 'Busy without trip', 'is_available' => false]);
     actingAsStoreUser(createStoreStaff('add_trip'));
@@ -520,9 +667,255 @@ test('editing a closed trip preserves a truck now assigned to another open trip'
     $current = createTripTestRecord(['truck_id' => $trip->truck_id]);
     actingAsStoreUser(createStoreStaff('edit_trip'));
 
-    $this->post(route('trips.update'), ['id' => $trip->id, ...tripTestPayload($trip->truck, $checkpoint)])->assertRedirect();
+    $this->put(route('trips.update', $trip), tripTestPayload($trip->truck, $checkpoint))->assertRedirect();
 
     expect($trip->fresh()->status)->toBe('closed')->and($trip->fresh()->active)->toBeFalse()
         ->and($trip->fresh()->notes)->toBe('Trip note')->and($trip->truck->fresh()->is_available)->toBeFalse()
         ->and($current->fresh()->status)->toBe('pending')->and($current->fresh()->truck_id)->toBe($trip->truck_id);
+});
+
+describe('trip lists', function () {
+    test('the all-trips list renders every row field', function () {
+        $driver = createStoreUser('driver');
+        $driver->forceFill(['name' => 'Sam Driver'])->save();
+        $trip = createTripTestRecord(['driver_id' => $driver->id, 'status' => 'started', 'started_at' => '2026-10-10 09:05:00', 'closed_at' => '2026-10-11 17:45:00', 'distance' => 12345.67, 'duration' => 3720, 'notes' => 'Visible note']);
+        $bare = createTripTestRecord(['truck_id' => null, 'due_date' => null]);
+        actingAsStoreUser(createStoreStaff('view_all_trips'));
+
+        $this->get(route('trips.index'))->assertOk()->assertInertia(fn (Assert $page) => $page
+            ->component('Store/Admin/Trips/Trips/Index')
+            ->where('listType', 'all')
+            ->where('filters', ['per_page' => 20, 'search' => '', 'status' => []])
+            ->where('statuses', ['pending', 'started', 'closed'])
+            ->has('trips.data', 2)
+            ->has('trips.data.0', fn (Assert $row) => $row
+                ->where('id', $bare->id)->where('code', $bare->code)->where('status', 'pending')
+                ->where('due_date', null)->where('started_at', null)->where('closed_at', null)
+                ->where('distance', null)->where('duration', null)->where('notes', null)
+                ->where('driver', null)->where('truck', null))
+            ->has('trips.data.1', fn (Assert $row) => $row
+                ->where('id', $trip->id)->where('code', $trip->code)->where('status', 'started')
+                ->where('due_date', '2026-10-10')->where('started_at', '2026-10-10T09:05:00+00:00')->where('closed_at', '2026-10-11T17:45:00+00:00')
+                ->where('distance', 12345.67)->where('duration', 3720)->where('notes', 'Visible note')
+                ->where('driver', ['id' => $driver->id, 'name' => 'Sam Driver'])
+                ->where('truck', ['id' => $trip->truck_id, 'name' => 'Delivery truck'])));
+    });
+
+    test('today\'s list shows only trips due today and both lists filter by status and search', function () {
+        $this->travelTo('2026-10-14 08:00:00');
+        $today = createTripTestRecord(['due_date' => '2026-10-14']);
+        $todayStarted = createTripTestRecord(['due_date' => '2026-10-14', 'status' => 'started']);
+        $tomorrow = createTripTestRecord(['due_date' => '2026-10-15']);
+        $closed = createTripTestRecord(['status' => 'closed', 'active' => false]);
+        $driver = createStoreUser('driver');
+        $driver->forceFill(['name' => 'Sam Driver'])->save();
+        $driven = createTripTestRecord(['driver_id' => $driver->id]);
+        actingAsStoreUser(createStoreStaff('view_all_trips'));
+        $ids = fn (array $query, string $route = 'trips.index') => array_column($this->get(route($route, $query))->assertOk()->inertiaProps('trips.data'), 'id');
+
+        $this->get(route('trips.today-trips'))->assertOk()->assertInertia(fn (Assert $page) => $page->component('Store/Admin/Trips/Trips/Index')->where('listType', 'today'));
+        expect($ids([], 'trips.today-trips'))->toBe([$todayStarted->id, $today->id])
+            ->and($ids(['status' => ['started']], 'trips.today-trips'))->toBe([$todayStarted->id])
+            ->and($ids(['status' => ['pending', 'closed']]))->toBe([$driven->id, $closed->id, $tomorrow->id, $today->id])
+            ->and($ids(['search' => $tomorrow->code]))->toBe([$tomorrow->id])
+            ->and($ids(['search' => 'Sam Dri']))->toBe([$driven->id]);
+        $this->get(route('trips.index', ['search' => 'Sam Dri', 'status' => ['pending']]))->assertInertia(fn (Assert $page) => $page->where('filters', ['per_page' => 20, 'search' => 'Sam Dri', 'status' => ['pending']]));
+    });
+
+    test('trips paginate twenty at a time with an allowed page size and refuse other filters', function () {
+        for ($i = 0; $i < 21; $i++) {
+            createTripTestRecord();
+        }
+        actingAsStoreUser(createStoreStaff('view_all_trips'));
+
+        $this->get(route('trips.index'))->assertInertia(fn (Assert $page) => $page->has('trips.data', 20)->where('trips.meta.total', 21)->where('trips.meta.last_page', 2));
+        $this->get(route('trips.index', ['page' => 2]))->assertInertia(fn (Assert $page) => $page->has('trips.data', 1));
+        $this->get(route('trips.index', ['per_page' => 10, 'search' => 'Delivery truck']))->assertInertia(fn (Assert $page) => $page->has('trips.data', 10)->where('filters.per_page', 10));
+        $this->get(route('trips.index', ['per_page' => 999]))->assertSessionHasErrors('per_page');
+        $this->get(route('trips.index', ['search' => ['bad']]))->assertSessionHasErrors('search');
+        $this->get(route('trips.index', ['status' => ['destroyed']]))->assertSessionHasErrors('status.0');
+        $this->get(route('trips.today-trips', ['status' => 'pending']))->assertSessionHasErrors('status');
+    });
+
+    test('the trip lists refuse callers without permission', function (string $caller) {
+        actingAsRefusedStoreCaller($caller);
+
+        assertStoreCallerRefused($this->get(route('trips.index')), $caller);
+        assertStoreCallerRefused($this->get(route('trips.today-trips')), $caller);
+    })->with('refused store admin callers');
+
+    test('each trip list action needs its own permission', function (string $method, string $route, string $permission) {
+        $trip = createTripTestRecord();
+        $url = match ($route) {
+            'trips.index', 'trips.today-trips' => route($route),
+            'trips.bulk-trip-delete' => route($route, ['list' => 'all']),
+            default => route($route, [$trip, 'list' => 'all']),
+        };
+        $payload = ['status' => 'started', 'notes' => 'Changed', 'id' => [$trip->id]];
+        actingAsStoreUser(createStoreStaff(...array_values(array_diff(['view_all_trips', 'edit_trip', 'delete_trip', 'delete_customer'], [$permission]))));
+
+        $this->call($method, $url, $payload)->assertForbidden();
+        expect($trip->fresh()->only(['status', 'notes']))->toBe(['status' => 'pending', 'notes' => null]);
+
+        actingAsStoreUser(createStoreStaff($permission));
+        expect($this->call($method, $url, $payload)->getStatusCode())->toBeIn([200, 302]);
+    })->with([
+        'all trips' => ['GET', 'trips.index', 'view_all_trips'],
+        'today\'s trips' => ['GET', 'trips.today-trips', 'view_all_trips'],
+        'status' => ['PUT', 'trips.update-status', 'edit_trip'],
+        'notes' => ['PUT', 'trips.update-notes', 'edit_trip'],
+        'delete' => ['DELETE', 'trips.destroy', 'delete_trip'],
+        'bulk delete' => ['POST', 'trips.bulk-trip-delete', 'delete_trip'],
+    ]);
+});
+
+describe('trip notes', function () {
+    test('notes save from a list and return to it with its filters', function () {
+        $trip = createTripTestRecord(['notes' => 'Old note']);
+        $noise = createTripTestRecord(['notes' => 'Noise note']);
+        actingAsStoreUser(createStoreStaff('edit_trip'));
+
+        $this->put(route('trips.update-notes', [$trip, 'list' => 'today', 'page' => 2]), ['notes' => 'New note'])->assertRedirect(route('trips.today-trips', ['page' => 2]));
+        expect($trip->fresh()->notes)->toBe('New note')->and($noise->fresh()->notes)->toBe('Noise note');
+
+        $this->put(route('trips.update-notes', [$trip, 'list' => 'all']), ['notes' => ''])->assertRedirect(route('trips.index'));
+        expect($trip->fresh()->notes)->toBeNull()->and($trip->fresh()->status)->toBe('pending');
+    });
+
+    test('notes follow the edit form\'s rule and need a list and an existing trip', function () {
+        $trip = createTripTestRecord(['notes' => 'Old note']);
+        actingAsStoreUser(createStoreStaff('edit_trip'));
+
+        $this->put(route('trips.update-notes', [$trip, 'list' => 'all']), ['notes' => str_repeat('x', 256)])->assertSessionHasErrors('notes');
+        $this->put(route('trips.update-notes', [$trip, 'list' => 'all']), ['notes' => ['bad']])->assertSessionHasErrors('notes');
+        $this->put(route('trips.update-notes', $trip), ['notes' => 'New'])->assertSessionHasErrors('list');
+        $this->put(route('trips.update-notes', ['trip' => 999999, 'list' => 'all']), ['notes' => 'New'])->assertNotFound();
+        $this->put(route('trips.update-notes', [$trip, 'list' => 'all']), ['notes' => str_repeat('x', 255)])->assertRedirect(route('trips.index'));
+
+        expect($trip->fresh()->notes)->toBe(str_repeat('x', 255));
+    });
+
+    test('notes refuse callers and change nothing', function (string $caller) {
+        $trip = createTripTestRecord(['notes' => 'Old note']);
+        actingAsRefusedStoreCaller($caller);
+
+        assertStoreCallerRefused($this->put(route('trips.update-notes', [$trip, 'list' => 'all']), ['notes' => 'Changed']), $caller);
+
+        expect($trip->fresh()->notes)->toBe('Old note');
+    })->with('refused store admin callers');
+});
+
+describe('trip deletion', function () {
+    test('deleting a trip removes it and its checkpoints, keeps its orders\' status and frees its truck', function () {
+        $trip = createTripTestRecord();
+        $order = createStoreOrder(createStoreUser(), ['delivery_status' => 'on_delivery']);
+        createTripTestCheckpoint($trip, ['type' => 'delivery', 'relationable_type' => Order::class, 'relationable_id' => $order->id]);
+        $noise = createTripTestRecord();
+        $noiseCheckpoint = createTripTestCheckpoint($noise);
+        actingAsStoreUser(createStoreStaff('delete_trip'));
+
+        $this->delete(route('trips.destroy', [$trip, 'list' => 'all', 'page' => 2, 'search' => 'Trip']))->assertRedirect(route('trips.index', ['page' => 2, 'search' => 'Trip']));
+
+        expect(Trip::find($trip->id))->toBeNull()->and(Checkpoint::where('trip_id', $trip->id)->count())->toBe(0)
+            ->and($order->fresh()->delivery_status)->toBe('on_delivery')
+            ->and($trip->truck->fresh()->is_available)->toBeTrue()
+            ->and($noise->fresh())->not->toBeNull()->and($noiseCheckpoint->fresh())->not->toBeNull()
+            ->and($noise->truck->fresh()->is_available)->toBeFalse();
+    });
+
+    test('deleting a trip keeps its truck reserved while another open trip holds it', function () {
+        $trip = createTripTestRecord();
+        $other = createTripTestRecord(['truck_id' => $trip->truck_id]);
+        actingAsStoreUser(createStoreStaff('delete_trip'));
+
+        $this->delete(route('trips.destroy', [$trip, 'list' => 'today']))->assertRedirect(route('trips.today-trips'));
+
+        expect(Trip::find($trip->id))->toBeNull()->and($other->fresh())->not->toBeNull()->and($trip->truck->fresh()->is_available)->toBeFalse();
+    });
+
+    test('the map picker deletes a truck\'s open trip through a spoofed DELETE and returns to the picker', function () {
+        $trip = createTripTestRecord();
+        actingAsStoreUser(createStoreStaff('add_trip', 'delete_trip'));
+        $link = route('trips.destroy', ['trip' => $trip->id, 'list' => 'map']);
+
+        $this->get(route('trips.create-from-map'))->assertOk()->assertSee('data-method="delete" data-href="'.e($link).'"', false);
+        $this->post($link, ['_method' => 'DELETE'])->assertRedirect(route('trips.create-from-map'));
+
+        expect(Trip::find($trip->id))->toBeNull()->and($trip->truck->fresh()->is_available)->toBeTrue();
+    });
+
+    test('deleting needs a list and an existing trip and is never a GET or a POST', function () {
+        $trip = createTripTestRecord();
+        actingAsStoreUser(createStoreStaff('delete_trip'));
+
+        $this->delete(route('trips.destroy', $trip))->assertSessionHasErrors('list');
+        $this->delete(route('trips.destroy', [$trip, 'list' => 'seller']))->assertSessionHasErrors('list');
+        $this->delete(route('trips.destroy', ['trip' => 999999, 'list' => 'all']))->assertNotFound();
+        $this->get(route('trips.destroy', [$trip, 'list' => 'all']))->assertMethodNotAllowed();
+        $this->post(route('trips.destroy', [$trip, 'list' => 'all']))->assertMethodNotAllowed();
+        $this->post('/temp/admin/trips/delete/'.$trip->id)->assertNotFound();
+
+        expect($trip->fresh())->not->toBeNull()->and($trip->truck->fresh()->is_available)->toBeFalse();
+    });
+
+    test('deleting a trip refuses callers and changes nothing', function (string $caller) {
+        $trip = createTripTestRecord();
+        createTripTestCheckpoint($trip);
+        actingAsRefusedStoreCaller($caller);
+
+        assertStoreCallerRefused($this->delete(route('trips.destroy', [$trip, 'list' => 'all'])), $caller);
+
+        expect($trip->fresh())->not->toBeNull()->and(Checkpoint::where('trip_id', $trip->id)->count())->toBe(1)->and($trip->truck->fresh()->is_available)->toBeFalse();
+    })->with('refused store admin callers');
+
+    test('bulk deleting removes only the selected trips and their checkpoints and frees their trucks', function () {
+        $first = createTripTestRecord();
+        $second = createTripTestRecord();
+        $kept = createTripTestRecord();
+        createTripTestCheckpoint($first);
+        createTripTestCheckpoint($kept);
+        actingAsStoreUser(createStoreStaff('delete_trip'));
+
+        $this->post(route('trips.bulk-trip-delete', ['list' => 'today', 'search' => 'Trip']), ['id' => [$first->id, $second->id]])->assertRedirect(route('trips.today-trips', ['search' => 'Trip']));
+
+        expect(Trip::pluck('id')->all())->toBe([$kept->id])->and(Checkpoint::pluck('trip_id')->all())->toBe([$kept->id])
+            ->and($first->truck->fresh()->is_available)->toBeTrue()->and($second->truck->fresh()->is_available)->toBeTrue()
+            ->and($kept->truck->fresh()->is_available)->toBeFalse();
+    });
+
+    test('bulk deleting validates the selection and its list', function (array $query, array $payload, string $error) {
+        $trip = createTripTestRecord();
+        actingAsStoreUser(createStoreStaff('delete_trip'));
+
+        $this->post(route('trips.bulk-trip-delete', $query), $payload)->assertSessionHasErrors($error);
+
+        expect(Trip::count())->toBe(1)->and($trip->truck->fresh()->is_available)->toBeFalse();
+    })->with([
+        'no selection' => [['list' => 'all'], [], 'id'],
+        'empty selection' => [['list' => 'all'], ['id' => []], 'id'],
+        'unknown trip' => [['list' => 'all'], ['id' => [999999]], 'id.0'],
+        'not a number' => [['list' => 'all'], ['id' => ['x']], 'id.0'],
+        'no list' => [[], ['id' => [999999]], 'list'],
+    ]);
+
+    test('a selection with one unknown or repeated trip deletes none of them', function () {
+        $trip = createTripTestRecord();
+        createTripTestCheckpoint($trip);
+        actingAsStoreUser(createStoreStaff('delete_trip'));
+
+        $this->post(route('trips.bulk-trip-delete', ['list' => 'all']), ['id' => [$trip->id, 999999]])->assertSessionHasErrors('id.1');
+        $this->post(route('trips.bulk-trip-delete', ['list' => 'all']), ['id' => [$trip->id, $trip->id]])->assertSessionHasErrors('id.0');
+
+        expect($trip->fresh())->not->toBeNull()->and(Checkpoint::count())->toBe(1)->and($trip->truck->fresh()->is_available)->toBeFalse();
+    });
+
+    test('bulk deleting refuses callers and deletes nothing', function (string $caller) {
+        $trip = createTripTestRecord();
+        createTripTestCheckpoint($trip);
+        actingAsRefusedStoreCaller($caller);
+
+        assertStoreCallerRefused($this->post(route('trips.bulk-trip-delete', ['list' => 'all']), ['id' => [$trip->id]]), $caller);
+
+        expect(Trip::count())->toBe(1)->and(Checkpoint::count())->toBe(1)->and($trip->truck->fresh()->is_available)->toBeFalse();
+    })->with('refused store admin callers');
 });

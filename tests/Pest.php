@@ -2,6 +2,8 @@
 
 use App\Enums\CellLogAction;
 use App\Http\Middleware\HandleInertiaRequests;
+use App\Http\Requests\Store\Admin\UpdateWebsiteAppearanceRequest;
+use App\Http\Requests\Store\Admin\UpdateWebsiteFooterRequest;
 use App\Models\Carrier;
 use App\Models\Cart;
 use App\Models\Cell;
@@ -304,6 +306,55 @@ function assertStoreCallerRefused(TestResponse $response, string $caller): void
         'customer' => $response->assertNotFound(),
         'staff without the permission' => $response->assertForbidden(),
     };
+}
+
+/**
+ * The URI of the retired generic settings writer, `business_settings.update`.
+ * The footer and appearance forms were its last consumers; since they moved
+ * to their typed writers no route answers it, so a post to it is a 404 for
+ * every caller, before any write (.ai/rules/store-backoffice-migration.md §20).
+ */
+function retiredSettingsWriterUri(): string
+{
+    return '/temp/admin/business-settings/update';
+}
+
+/**
+ * A complete footer form payload: every key UpdateWebsiteFooterRequest
+ * accepts now, blank (switches off, no links) unless overridden.
+ *
+ * @param  array<string, mixed>  $overrides
+ * @return array<string, mixed>
+ */
+function websiteFooterPayload(array $overrides = []): array
+{
+    $settings = [];
+    foreach (UpdateWebsiteFooterRequest::enabledKeys() as $key) {
+        $settings[$key] = match (true) {
+            in_array($key, UpdateWebsiteFooterRequest::SWITCHES, true) => false,
+            in_array($key, UpdateWebsiteFooterRequest::ARRAYS, true) => [],
+            default => '',
+        };
+    }
+
+    return [...$settings, ...$overrides];
+}
+
+/**
+ * A complete appearance form payload: every key UpdateWebsiteAppearanceRequest
+ * accepts now, blank (switches off) unless overridden.
+ *
+ * @param  array<string, mixed>  $overrides
+ * @return array<string, mixed>
+ */
+function websiteAppearancePayload(array $overrides = []): array
+{
+    $settings = [];
+    foreach (UpdateWebsiteAppearanceRequest::enabledKeys() as $key) {
+        $settings[$key] = in_array($key, UpdateWebsiteAppearanceRequest::SWITCHES, true) ? false : '';
+    }
+
+    return [...$settings, ...$overrides];
 }
 
 /**

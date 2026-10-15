@@ -1382,7 +1382,9 @@ test('an authenticated admin can export a Code 128 barcode label for a product, 
         ->and($svg)->not->toContain('<image');
     expect($svg)->toContain('Widgets');
     expect($svg)->not->toContain('ودجات');
-    expect($svg)->toContain("ID: {$product->id}");
+    expect($svg)->toContain(">{$product->id}</text>")
+        ->and($svg)->not->toContain('ID:')
+        ->and($svg)->not->toContain('المعرف');
     // One <text> for the id, one for the (short, unwrapped) name.
     expect(substr_count($svg, '<text'))->toBe(2);
 });
@@ -1417,7 +1419,7 @@ test('a product barcode label draws the id and name in enlarged type', function 
 
     $svg = $this->get("/admin/products/{$product->id}/export-qr")->getContent();
 
-    expect($svg)->toMatch('/<text[^>]*font-size="34"[^>]*>ID: '.$product->id.'<\/text>/')
+    expect($svg)->toMatch('/<text[^>]*font-size="34"[^>]*>'.$product->id.'<\/text>/')
         ->and($svg)->toMatch('/<text[^>]*font-size="28"[^>]*>Widgets<\/text>/');
 });
 
@@ -1445,10 +1447,77 @@ test('a product with a long name has its barcode label text wrapped, up to the c
     expect($svg)->toContain('…');
     // The id is drawn and budget-clamped before the name, so truncating a
     // long name never costs the id its own line.
-    expect($svg)->toContain("ID: {$product->id}");
+    expect($svg)->toContain(">{$product->id}</text>");
 
     preg_match('/<svg[^>]*height="(\d+)"/', $svg, $matches);
     expect((int) $matches[1])->toBeLessThanOrEqual(380);
+});
+
+test('a product barcode label has no id label word in either locale', function (string $locale) {
+    actingAsAdmin();
+
+    $product = Product::factory()->create(['id' => 7, 'name' => 'Widgets', 'ar_name' => 'ودجات']);
+
+    $svg = $this->withSession(['locale' => $locale])->get("/admin/products/{$product->id}/export-qr")->getContent();
+
+    expect($svg)->toContain('>7</text>')
+        ->and($svg)->not->toContain('ID:')
+        ->and($svg)->not->toContain('المعرف');
+})->with(['en', 'ar']);
+
+test('a very long product name fills the configured height, ends in an ellipsis and never overlaps the id', function (string $name) {
+    actingAsAdmin();
+    $product = Product::factory()->create(['name' => $name, 'ar_name' => '']);
+
+    $nameLineYs = function (int $height) use ($product): array {
+        Setting::query()->delete();
+        Setting::factory()->create(['qr_code_width' => 280, 'qr_code_height' => $height]);
+
+        $svg = $this->get("/admin/products/{$product->id}/export-qr")->getContent();
+
+        preg_match_all('/<text[^>]*y="(\d+)"[^>]*font-size="(\d+)"[^>]*>([^<]*)</', $svg, $matches, PREG_SET_ORDER);
+        preg_match('/<svg[^>]*height="(\d+)"/', $svg, $svgHeight);
+
+        return [
+            'idY' => (int) $matches[0][1],
+            'ys' => array_map(fn (array $m): int => (int) $m[1], array_slice($matches, 1)),
+            'last' => end($matches)[3],
+            'height' => (int) $svgHeight[1],
+        ];
+    };
+
+    $tall = $nameLineYs(900);
+    $short = $nameLineYs(500);
+
+    expect($tall['ys'])->not->toBeEmpty()
+        // More than two lines: the name spans the available space.
+        ->and(count($tall['ys']))->toBeGreaterThan(2)
+        ->and(count($tall['ys']))->toBeGreaterThan(count($short['ys']))
+        ->and($tall['last'])->toEndWith('…')
+        ->and($short['last'])->toEndWith('…')
+        ->and($tall['height'])->toBeLessThanOrEqual(900)
+        ->and($short['height'])->toBeLessThanOrEqual(500)
+        // The first name baseline sits clear of the id's baseline by more
+        // than the name's ascent, so the two blocks cannot collide.
+        ->and($tall['ys'][0] - $tall['idY'])->toBeGreaterThan(28);
+})->with([
+    'with spaces' => [str_repeat('Widget Component ', 60)],
+    'no spaces' => [str_repeat('W', 1500)],
+    'arabic' => [str_repeat('مكون ودجات ', 60)],
+]);
+
+test('an Arabic product name wraps by characters, not bytes', function () {
+    actingAsAdmin();
+    Setting::factory()->create(['qr_code_width' => 360, 'qr_code_height' => 1000]);
+
+    $product = Product::factory()->create(['id' => 104001, 'name' => 'x', 'ar_name' => 'العائلة جريش الكبة 5كغ ايراني']);
+
+    $svg = $this->withSession(['locale' => 'ar'])->get("/admin/products/{$product->id}/export-qr")->getContent();
+
+    preg_match_all('/font-size="28"[^>]*>([^<]*)</u', $svg, $matches);
+
+    // 20 characters fit a line: "العائلة جريش الكبة" (18) is one line, not three.
+    expect($matches[1])->toBe(['العائلة جريش الكبة', '5كغ ايراني']);
 });
 
 test('a multi-digit product id encodes to a longer barcode', function () {
@@ -1508,6 +1577,22 @@ function productImageFixtureBytes(int $width, int $height, string $format): stri
 
     return (string) ob_get_clean();
 }
+
+test('the product image route answers a repeat request that already holds the image with a 304 without fetching it again', function () {
+    actingAsAdmin();
+    Http::fake([
+        'cdn.example.com/*' => Http::response(productImageFixtureBytes(600, 300, 'jpeg'), 200, ['Content-Type' => 'image/jpeg']),
+    ]);
+    $product = Product::factory()->imageUrl('https://cdn.example.com/widgets.jpg')->create();
+
+    $etag = $this->get("/admin/products/{$product->id}/image")->assertOk()->headers->get('ETag');
+
+    expect($etag)->not->toBeNull();
+
+    $this->get("/admin/products/{$product->id}/image", ['If-None-Match' => $etag])->assertNotModified();
+
+    Http::assertSentCount(1);
+});
 
 test('the product image route re-serves the store image as a downscaled png from this apps origin', function () {
     actingAsAdmin();
@@ -1837,6 +1922,24 @@ test('a barcode label can be previewed inline as the same SVG that is downloaded
         ->toBe($this->get("/admin/products/{$product->id}/barcodes/{$barcode->id}/download")->getContent());
 });
 
+test('a barcode preview answers a repeat request that already holds the current label with a 304', function () {
+    actingAsAdmin();
+
+    $product = Product::factory()->create();
+    $barcode = ProductBarcode::factory()->create(['product_id' => $product->id, 'barcode' => '1234567890123']);
+    $url = "/admin/products/{$product->id}/barcodes/{$barcode->id}/preview";
+
+    $etag = $this->get($url)->assertOk()->headers->get('ETag');
+
+    expect($etag)->not->toBeNull();
+
+    $this->get($url, ['If-None-Match' => $etag])->assertNotModified();
+
+    $product->update(['name' => 'Renamed product']);
+
+    $this->get($url, ['If-None-Match' => $etag])->assertOk();
+});
+
 test('previewing a barcode that belongs to another product returns a 404', function () {
     actingAsAdmin();
 
@@ -1893,4 +1996,15 @@ test('a barcode must be printable ASCII to be added', function () {
 
     $response->assertSessionHasErrors('barcode');
     $this->assertDatabaseCount('wms_product_barcodes', 0);
+});
+
+test('the product search answers a repeat request that already holds the current results with a 304', function () {
+    actingAsAdmin();
+    Product::factory()->create(['name' => 'Widget']);
+
+    $etag = $this->getJson('/admin/products/search?q=Widget')->assertOk()->headers->get('ETag');
+
+    expect($etag)->not->toBeNull();
+
+    $this->getJson('/admin/products/search?q=Widget', ['If-None-Match' => $etag])->assertNotModified();
 });

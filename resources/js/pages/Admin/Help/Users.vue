@@ -1,8 +1,10 @@
 <script setup lang="ts">
+import { Trash2 } from '@lucide/vue';
 import { index as usersIndex } from '@/actions/App/Http/Controllers/Admin/UserController';
 import AddResourceLink from '@/components/AddResourceLink.vue';
 import HelpTopicPage from '@/components/HelpTopicPage.vue';
 import HelpUiPreview from '@/components/HelpUiPreview.vue';
+import TableActionLink from '@/components/TableActionLink.vue';
 import UserFormFields from '@/components/UserFormFields.vue';
 import UserRoleBadge from '@/components/UserRoleBadge.vue';
 import { filterSectionHeadingClass as sectionHeadingClass } from '@/lib/filters';
@@ -53,6 +55,23 @@ import { t } from '@/lib/i18n';
                 </HelpUiPreview>
                 <HelpUiPreview>
                     <UserRoleBadge :is-admin="false" />
+                </HelpUiPreview>
+            </div>
+        </section>
+
+        <section>
+            <h2 :class="sectionHeadingClass">
+                {{ t('help.users.removing.heading') }}
+            </h2>
+            <p class="text-sm text-gray-700 dark:text-neutral-300">
+                {{ t('help.users.removing.body') }}
+            </p>
+            <div class="mt-2 flex flex-wrap items-center gap-3">
+                <HelpUiPreview>
+                    <TableActionLink href="#" tabindex="-1" variant="danger">
+                        <Trash2 class="h-3.5 w-3.5" />
+                        {{ t('users.index.delete') }}
+                    </TableActionLink>
                 </HelpUiPreview>
             </div>
         </section>

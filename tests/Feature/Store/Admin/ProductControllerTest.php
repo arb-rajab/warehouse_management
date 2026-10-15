@@ -588,7 +588,7 @@ test('the seller list still renders the shared Blade view and keeps its jQuery e
     actingAsStoreUser(createStoreStaff('show_seller_products', 'product_edit', 'product_delete', 'product_duplicate'));
     $this->get(route('products.seller', ['active' => 1]))->assertOk()->assertViewIs('shop.backend.product.products.index')
         ->assertSee('Seller olive oil')->assertDontSee('Olive oil</span>', false)
-        ->assertSee(route('products.seller.edit', ['id' => $sellerProduct->id, 'lang' => 'en']), false)
+        ->assertSee(route('products.seller.edit', ['product' => $sellerProduct->id, 'lang' => 'en']), false)
         ->assertSee(route('products.destroy', $sellerProduct->id), false)
         ->assertSee(route('bulk-product-delete'), false)
         ->assertSee(route('products.update_sale'), false)
@@ -608,18 +608,29 @@ test('the seller list still renders the shared Blade view and keeps its jQuery e
     expect($sellerProduct->fresh()->getAttribute('for_sale'))->toBe(1);
 });
 
-test('the retained Blade create and edit forms keep their routes and gates and open in full', function () {
+test('the create and edit forms are Inertia on the store controller with their route names and gates', function () {
     actingAsStoreUser(createStoreStaff('add_new_product', 'product_edit'));
-    // The legacy edit form decodes these JSON columns, which the store always fills.
-    DB::table('products')->where('id', $this->product->id)->update(['colors' => '[]', 'attributes' => '[]', 'tags' => '']);
     expect(route('products.create', [], false))->toBe('/temp/admin/products/create')
-        ->and(route('products.admin.edit', ['id' => 5, 'lang' => 'en'], false))->toBe('/temp/admin/products/admin/5/edit?lang=en')
-        ->and(Route::getRoutes()->getByName('products.create')->getActionName())->toBe(LegacyProductController::class.'@create')
-        ->and(Route::getRoutes()->getByName('products.admin.edit')->getActionName())->toBe(LegacyProductController::class.'@admin_product_edit');
-    $this->get(route('products.create'))->assertOk()->assertViewIs('shop.backend.product.products.create');
-    $this->get(route('products.admin.edit', ['id' => $this->product->id, 'lang' => 'en']))->assertOk()->assertViewIs('shop.backend.product.products.edit');
-    $this->get(route('products.admin.edit', ['id' => $this->product->id, 'lang' => 'en']), inertiaHeaders())
-        ->assertConflict()->assertHeader('X-Inertia-Location', route('products.admin.edit', ['id' => $this->product->id, 'lang' => 'en']));
+        ->and(route('products.admin.edit', ['product' => 5, 'lang' => 'en'], false))->toBe('/temp/admin/products/admin/5/edit?lang=en')
+        ->and(route('products.seller.edit', ['product' => 5], false))->toBe('/temp/admin/products/seller/5/edit')
+        ->and(route('products.update', 5, false))->toBe('/temp/admin/products/update/5')
+        ->and(route('products.edit_variant_combinations', 5, false))->toBe('/temp/admin/products/5/variant-combinations')
+        ->and(Route::getRoutes()->getByName('products.update')->methods())->toBe(['POST'])
+        ->and(Route::getRoutes()->getByName('products.edit_variant_combinations')->methods())->toBe(['POST'])
+        ->and(Route::has('products.sku_combination_edit'))->toBeFalse();
+    foreach (['products.create' => 'create', 'products.admin.edit' => 'edit', 'products.seller.edit' => 'sellerEdit', 'products.update' => 'update', 'products.edit_variant_combinations' => 'editVariantCombinations'] as $name => $action) {
+        expect(Route::getRoutes()->getByName($name)->getActionName())->toBe(ProductController::class.'@'.$action);
+    }
+    expect(collect(ProductController::middleware())->map(fn ($entry) => [$entry->middleware, $entry->only]))
+        ->toContain(['permission:product_edit', ['edit', 'sellerEdit', 'update', 'editVariantCombinations']]);
+    foreach (['admin_product_edit', 'seller_product_edit', 'update', 'sku_combination_edit'] as $method) {
+        expect(method_exists(LegacyProductController::class, $method))->toBeFalse();
+    }
+    $this->get(route('products.create'))->assertOk()->assertInertia(fn (Assert $page) => $page->component('Store/Admin/Product/Products/Create'));
+    $this->get(route('products.create'), inertiaHeaders())->assertOk()->assertHeader('X-Inertia', 'true');
+    $this->get(route('products.admin.edit', ['product' => $this->product->id, 'lang' => 'en']))->assertOk()
+        ->assertInertia(fn (Assert $page) => $page->component('Store/Admin/Product/Products/Edit')->where('listType', 'admin'));
+    $this->get(route('products.admin.edit', ['product' => $this->product->id, 'lang' => 'en']), inertiaHeaders())->assertOk()->assertHeader('X-Inertia', 'true');
     actingAsStoreUser(createStoreStaff('show_in_house_products'));
     $this->get(route('products.create'))->assertForbidden();
     $this->get(route('products.admin.edit', $this->product->id))->assertForbidden();
@@ -637,7 +648,8 @@ test('the list migration keeps storefront, seller and app product contracts', fu
     expect(view()->exists('shop.backend.product.products.index'))->toBeTrue()
         ->and(view()->exists('shop.backend.product.products.sku_combinations'))->toBeTrue()
         ->and(view()->exists('shop.backend.product.products.sku_combinations_edit'))->toBeTrue()
-        ->and(view()->exists('shop.backend.product.products.choice_options_script'))->toBeTrue()
+        // Only the deleted Blade edit form included the choice script.
+        ->and(view()->exists('shop.backend.product.products.choice_options_script'))->toBeFalse()
         ->and(Route::getRoutes()->getByName('seller.products')->getActionName())->toBe(SellerProductController::class.'@index')
         ->and(Route::getRoutes()->getByName('seller.products.published')->getActionName())->toBe(SellerProductController::class.'@updatePublished')
         ->and(Route::getRoutes()->match(Request::create('/temp/api/v2/products/'.$this->product->id))->getActionName())

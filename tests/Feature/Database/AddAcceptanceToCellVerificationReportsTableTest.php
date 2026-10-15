@@ -8,7 +8,7 @@ test('deleting the user who accepted a report nulls the reports accepted_by but 
     $report = CellVerificationReport::factory()->accepted()->create(['accepted_by' => $acceptedBy->id]);
     $otherReport = CellVerificationReport::factory()->accepted()->create(); // noise: accepted by someone else
 
-    $acceptedBy->delete();
+    $acceptedBy->forceDelete();
 
     expect($report->fresh()->accepted_by)->toBeNull();
     expect($report->fresh()->accepted_at)->not->toBeNull();

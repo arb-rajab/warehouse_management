@@ -47,6 +47,10 @@ import type {
     StoreCategory,
     StoreCategoryForm,
     StoreDigitalProduct,
+    StoreDigitalProductForm,
+    StoreDigitalProductTax,
+    StoreProductForm,
+    StoreProductVariantState,
     StoreProductListFilters,
     StoreProductListRow,
     StorePickupPoint,
@@ -61,6 +65,8 @@ import type {
     StoreTicketReply,
     StoreDriver,
     StoreOrder,
+    StoreTrip,
+    StoreTripForm,
 } from '@/types/store';
 
 import type {
@@ -823,30 +829,27 @@ export function storeWebsiteFooterSettings(
     overrides: Partial<StoreWebsiteFooterSettings> = {},
 ): StoreWebsiteFooterSettings {
     return {
-        ...{
-            footer_logo: '',
-            about_us_description: '<p>About us</p>',
-            play_store_link: '',
-            app_store_link: '',
-            contact_address: '',
-            contact_phone: '',
-            contact_email: '',
-            widget_one: '',
-            widget_one_labels: ['Help'],
-            widget_one_links: ['/help'],
-            frontend_copyright_text: '',
-            show_social_links: false,
-            facebook_link: '',
-            twitter_link: '',
-            instagram_link: '',
-            youtube_link: '',
-            linkedin_link: '',
-            seller_app_link: 'https://example.com/seller',
-            payment_method_images: '',
-            registration_tutorial_button: false,
-            registration_tutorial_text: '',
-            registration_tutorial_link: '',
-        },
+        footer_logo: '12',
+        about_us_description: '<p>About <strong>us</strong></p>',
+        play_store_link: 'https://play.example.com/store',
+        app_store_link: '',
+        contact_address: 'Main street 1',
+        contact_phone: '+31 20 123 4567',
+        contact_email: 'shop@example.com',
+        widget_one: 'Links',
+        widget_one_labels: ['Help'],
+        widget_one_links: ['/help'],
+        frontend_copyright_text: '<p>© Store</p>',
+        show_social_links: true,
+        facebook_link: 'https://facebook.example.com/store',
+        twitter_link: '',
+        instagram_link: '',
+        youtube_link: '',
+        linkedin_link: '',
+        payment_method_images: '',
+        registration_tutorial_button: false,
+        registration_tutorial_text: '',
+        registration_tutorial_link: '',
         ...overrides,
     };
 }
@@ -855,27 +858,24 @@ export function storeWebsiteAppearanceSettings(
     overrides: Partial<StoreWebsiteAppearanceSettings> = {},
 ): StoreWebsiteAppearanceSettings {
     return {
-        ...{
-            website_name: 'Store',
-            site_motto: '',
-            site_icon: '',
-            base_color: '#112233',
-            base_hov_color: '#123',
-            login_page_image: '',
-            register_page_image: '',
-            seller_login_page_bg: '',
-            flash_deal_banner: '',
-            flash_deal_banner_small: '',
-            meta_title: '',
-            meta_description: '',
-            meta_keywords: '',
-            meta_image: '',
-            cookies_agreement_text: '',
-            show_cookies_agreement: false,
-            show_website_popup: false,
-            website_popup_content: '',
-            show_subscribe_form: false,
-        },
+        website_name: 'Store',
+        site_motto: 'Fresh food',
+        site_icon: '',
+        base_color: '#112233',
+        base_hov_color: '#123',
+        login_page_image: '',
+        register_page_image: '',
+        flash_deal_banner: '',
+        flash_deal_banner_small: '',
+        meta_title: 'Store',
+        meta_description: 'Fresh food online',
+        meta_keywords: 'food, rice',
+        meta_image: '',
+        cookies_agreement_text: '<p>We use <strong>cookies</strong></p>',
+        show_cookies_agreement: true,
+        show_website_popup: false,
+        website_popup_content: '<p>Welcome</p>',
+        show_subscribe_form: false,
         ...overrides,
     };
 }
@@ -884,13 +884,14 @@ export function storeWebsitePageForm(
     overrides: Partial<StoreWebsitePageForm> = {},
 ): StoreWebsitePageForm {
     return {
-        title: 'About',
+        id: 44,
+        type: 'custom_page',
         slug: 'about',
-        content: '<p>About us</p>',
         meta_title: 'Meta',
         meta_description: 'Description',
         keywords: 'store',
         meta_image: '',
+        public_url: 'http://localhost/temp/about',
         ...overrides,
     };
 }
@@ -1002,6 +1003,57 @@ export function storeDriver(overrides: Partial<StoreDriver> = {}): StoreDriver {
         email: 'sam@example.com',
         phone: '0612345678',
         country: 'Netherlands',
+        ...overrides,
+    };
+}
+
+export function storeTrip(overrides: Partial<StoreTrip> = {}): StoreTrip {
+    return {
+        id: 41,
+        code: '20261014-080000',
+        status: 'started',
+        due_date: '2026-10-14',
+        started_at: '2026-10-14T08:30:00+00:00',
+        closed_at: null,
+        distance: 12345.67,
+        duration: 3720,
+        notes: 'Ring at the back',
+        driver: { id: 31, name: 'Sam Driver' },
+        truck: { id: 11, name: 'Cargo truck' },
+        ...overrides,
+    };
+}
+
+/** A trip on the edit form: the departure checkpoint, then a delivery. */
+export function storeTripForm(
+    overrides: Partial<StoreTripForm> = {},
+): StoreTripForm {
+    return {
+        id: 41,
+        code: '20261014-080000',
+        status: 'pending',
+        driver_id: 31,
+        truck_id: 11,
+        due_date: '2026-10-14',
+        notes: 'Ring at the back',
+        checkpoints: [
+            {
+                id: 501,
+                type: 'other',
+                related_id: 9,
+                notes: 'Default starting checkpoint',
+                order_code: null,
+                customer: 'Warehouse',
+            },
+            {
+                id: 502,
+                type: 'delivery',
+                related_id: 77,
+                notes: 'Back door',
+                order_code: '20261013-0042',
+                customer: 'Alma Customer',
+            },
+        ],
         ...overrides,
     };
 }
@@ -1148,6 +1200,120 @@ export function storeDigitalProduct(
         featured: false,
         public_url: '/temp/product/recipe-e-book',
         download_token: 'encrypted-31',
+        ...overrides,
+    };
+}
+export function storeDigitalProductForm(
+    overrides: Partial<StoreDigitalProductForm> = {},
+): StoreDigitalProductForm {
+    return {
+        id: 31,
+        category_id: 12,
+        photos: '5,6',
+        thumbnail_img: '7',
+        tags: 'cooking,recipes',
+        unit_price: '1250.50',
+        purchase_price: '900.00',
+        discount: '10.00',
+        discount_type: 'percent',
+        date_range: '01-11-2026 08:00:00 to 30-11-2026 20:00:00',
+        meta_title: 'Recipe e-book',
+        meta_description: 'Family recipes',
+        meta_img: '8',
+        slug: 'recipe-e-book-12345',
+        file: '9',
+        ...overrides,
+    };
+}
+/** A physical product's edit-form fields, as ProductFormResource sends them. */
+export function storeProductForm(
+    overrides: Partial<StoreProductForm> = {},
+): StoreProductForm {
+    return {
+        id: 41,
+        added_by: 'admin',
+        category_id: 12,
+        brand_id: 5,
+        weight: '1.25',
+        max_qty: '24',
+        min_qty: '2',
+        tags: 'oil,olive',
+        photos: '5,6',
+        old_photo: '4',
+        thumbnail_img: '7',
+        video_provider: 'vimeo',
+        video_link: 'https://vimeo.com/123',
+        pdf: '9',
+        unit_price: '12.50',
+        discount: '1.50',
+        discount_type: 'amount',
+        date_range: '01-11-2026 08:00:00 to 30-11-2026 20:30:00',
+        current_stock: '40',
+        sku: 'EVOO-1',
+        external_link: 'https://example.com/oil',
+        external_link_btn: 'Buy elsewhere',
+        meta_title: 'Olive oil',
+        meta_description: 'Fresh oil',
+        meta_img: '8',
+        slug: 'olive-oil',
+        shipping_type: 'flat_rate',
+        flat_shipping_cost: '4.95',
+        is_quantity_multiplied: true,
+        est_shipping_days: '3',
+        low_stock_quantity: '5',
+        stock_visibility_state: 'text',
+        cash_on_delivery: false,
+        featured: true,
+        todays_deal: false,
+        flash_deal_id: 9,
+        product_types: ['Cold pressed', 'Organic'],
+        product_barcodes: ['8712345678906'],
+        ...overrides,
+    };
+}
+/** A product's stored size choice with its two stored stock rows. */
+export function storeProductVariantState(
+    overrides: Partial<StoreProductVariantState> = {},
+): StoreProductVariantState {
+    return {
+        colors_active: false,
+        colors: [],
+        choice_options: [{ attribute_id: 1, values: ['S', 'Extra Large'] }],
+        attribute_values: {
+            1: [
+                { id: 10, value: 'S' },
+                { id: 11, value: 'Extra Large' },
+            ],
+        },
+        rows: [
+            {
+                variant: 'S',
+                price: '13.00',
+                sku: 'OIL-S',
+                qty: '4',
+                image: '12',
+                files: [storeUpload({ id: 12, name: 'Small bottle' })],
+            },
+            {
+                variant: 'ExtraLarge',
+                price: '15.00',
+                sku: '',
+                qty: '0',
+                image: null,
+                files: [],
+            },
+        ],
+        ...overrides,
+    };
+}
+export function storeDigitalProductTax(
+    overrides: Partial<StoreDigitalProductTax> = {},
+): StoreDigitalProductTax {
+    return {
+        id: 2,
+        name: 'VAT',
+        tax: '21.00',
+        tax_type: 'percent',
         ...overrides,
     };
 }

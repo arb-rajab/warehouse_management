@@ -144,7 +144,7 @@ trait BuildsProductQrLabels
         return $this->productLabelImage(
             $product,
             (string) $product->id,
-            __('messages.qr_label_product_id', ['id' => $product->id]),
+            (string) $product->id,
             $width,
             $height,
         );
@@ -191,7 +191,10 @@ trait BuildsProductQrLabels
         $idY = $barcodeBottom + 12 + (int) round($idFontSize * 0.8);
         $idLines = $this->clampLinesToHeight($this->wrapLabelText($caption, $textMaxWidth, $idFontSize), $idY, $idLineHeight, $maxTextY);
         $idMarkup = $this->textLinesMarkup($idLines, $centerX, $idY, $idLineHeight, $idFontSize, '#111111', 'ltr', bold: true);
-        $contentBottom = $idLines !== [] ? $idY : $barcodeBottom;
+        // The id block's bottom is its *last* line's baseline: a long value
+        // (a stored barcode) wraps onto several lines, and anchoring the name
+        // to the first line only would draw the name over the rest.
+        $contentBottom = $idLines !== [] ? $idY + (count($idLines) - 1) * $idLineHeight : $barcodeBottom;
 
         $nameFontSize = self::PRODUCT_LABEL_NAME_FONT_SIZE;
         $nameLineHeight = (int) round($nameFontSize * 1.2);

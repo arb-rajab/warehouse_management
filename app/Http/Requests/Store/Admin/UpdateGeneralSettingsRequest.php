@@ -32,8 +32,7 @@ class UpdateGeneralSettingsRequest extends FormRequest
             'settings.timezone' => ['required', 'string', Rule::in(array_keys(timezones()))],
         ];
         foreach (self::IMAGES as $key) {
-            $current = get_setting($key);
-            $rules['settings.'.$key] = ['present', 'nullable', 'integer', $this->retainableImageUploadRule('settings.'.$key, is_string($current) && $current !== '' ? $current : null)];
+            $rules['settings.'.$key] = ['present', 'nullable', 'integer', $this->retainableImageUploadRule('settings.'.$key, $this->storedSettingValue($key))];
         }
 
         return $rules;

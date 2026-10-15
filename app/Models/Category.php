@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use App;
+use Closure;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -101,5 +103,38 @@ class Category extends Model
     public function views(): MorphMany
     {
         return $this->morphMany(UserPageView::class, 'viewable');
+    }
+
+    /**
+     * A category select's options in the legacy Blade order: the roots
+     * `$roots` picks and orders from the `parent_id = 0` rows (given by id),
+     * each followed depth first by its children, by id, whatever their own
+     * flags. A child is
+     * prefixed with `--` per level and a space, as
+     * `shop.categories.child_category` printed it; names are in the current
+     * locale. `$excludedId` and everything below it are left out, and a
+     * parent cycle stops the walk.
+     *
+     * @param  Closure(Collection<int, Category>): Collection<int, Category>  $roots
+     * @return list<array{id: int, name: string}>
+     */
+    public static function treeOptions(Closure $roots, ?int $excludedId = null): array
+    {
+        $rows = self::query()->select(['id', 'name', 'parent_id', 'level', 'digital'])
+            ->with('category_translations:id,category_id,lang,name')->orderBy('id')->get();
+        $groups = $rows->groupBy('parent_id');
+        $options = [];
+        $walk = function ($children, int $depth, array $visited) use (&$walk, &$options, $groups, $excludedId): void {
+            foreach ($children as $child) {
+                if ($child->id === $excludedId || in_array($child->id, $visited, true)) {
+                    continue;
+                }
+                $options[] = ['id' => $child->id, 'name' => ($depth > 0 ? str_repeat('--', max(0, $child->level)).' ' : '').$child->getTranslation('name')];
+                $walk($groups->get($child->id, collect()), $depth + 1, [...$visited, $child->id]);
+            }
+        };
+        $walk($roots($groups->get(0, new Collection)), 0, []);
+
+        return $options;
     }
 }

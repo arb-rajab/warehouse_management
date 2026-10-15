@@ -24,7 +24,7 @@ test('deleting the user who acknowledged a flag nulls its acknowledged_by, leavi
         'acknowledged_by' => $user->id,
     ]);
 
-    $user->delete();
+    $user->forceDelete();
 
     $fresh = $flag->fresh();
     expect($fresh)->not->toBeNull();

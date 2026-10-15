@@ -131,8 +131,13 @@ jobs:
     needs: verify-tested
     if: needs.verify-tested.outputs.tested != 'true'
     uses: ./.github/workflows/tests.yml
+    # A called workflow's jobs cannot hold more than the caller grants, and the
+    # suite's `plan` job declares these (it reads runs and PR files on pull
+    # request events; under this call it runs everything without them).
     permissions:
       contents: read
+      actions: read
+      pull-requests: read
 
   # One job serves all three branches. `environment` resolves to the pushed
   # branch name, and every Hostinger detail below is read from that

@@ -7,6 +7,9 @@ paths:
   - 'resources/js/components/StoreAdminNavLink.vue,resources/js/components/StoreStaffFormFields.vue,resources/js/components/StoreRoleFormFields.vue'
   - 'resources/js/components/StoreRichTextField.vue,resources/js/components/StoreBlogFormFields.vue'
   - 'resources/js/components/StoreNewsletterFormFields.vue,resources/js/components/StoreNewsletterRecipients.vue,resources/js/components/StoreTicketReplyForm.vue,resources/js/lib/storeSupportTicket.ts,app/Services/Store/**'
+  - 'resources/js/components/StoreWebsite*'
+  - 'resources/js/components/StoreProduct*,resources/js/lib/storeProductForm.ts'
+  - 'resources/js/components/StoreTripStatusDialog.vue,resources/js/components/StoreTripFormFields.vue'
   - 'app/Http/Controllers/Store/**,app/Http/Requests/Store/**,app/Http/Resources/Store/**'
   - 'app/Http/Middleware/HandleInertiaRequests.php,app/Http/Middleware/HandleStoreBladePages.php,app/Http/Middleware/SendSecureHeaders.php'
   - 'routes/shop-admin.php'
@@ -15,7 +18,13 @@ paths:
 
 # Moving the store back office from Blade to Inertia
 
-Latest follow-up: [the newsletter and the support ticket detail on the shared editor](#19-newsletter-and-support-ticket-detail-on-the-shared-editor-2026-10-13).
+Latest follow-up: [the trip create and edit forms](#25-trip-create-and-edit-forms-2026-10-15).
+Trip-list follow-up: [the trip lists and their status, notes and delete actions](#24-trip-lists-and-status-actions-2026-10-14).
+Edit-form follow-up: [the physical product edit form and two orphaned Blade files](#23-physical-product-edit-form-2026-10-14).
+Create-form follow-up: [the physical product create form](#22-physical-product-create-form-2026-10-13).
+Digital-form follow-up: [the digital product create and edit forms](#21-digital-product-create-and-edit-forms-2026-10-13).
+Website follow-up: [the website footer, appearance and custom pages, and the generic settings writer's retirement](#20-website-footer-appearance-and-custom-pages-2026-10-13).
+Ticket/newsletter follow-up: [the newsletter and the support ticket detail on the shared editor](#19-newsletter-and-support-ticket-detail-on-the-shared-editor-2026-10-13).
 Editor follow-up: [the shared Tiptap editor and blog post forms](#18-shared-rich-text-editor-and-blog-post-forms-2026-10-13).
 Setup-settings follow-up: [general settings verification and the Google Map hold](#17-setup-configuration-settings-follow-up-2026-10-12).
 Product-list follow-up: [in-house and all-products list verification](#16-in-house-and-all-products-lists-follow-up-2026-10-12).
@@ -26,7 +35,7 @@ Customer-package follow-up: [customer package migration verification](#12-custom
 Carrier follow-up: [carrier migration verification](#11-carrier-administration-follow-up-2026-10-12).
 PR #377 verification: [final all-store browser results](../store-backoffice-reconciliation-20261011.md#final-all-store-browser-verification-2026-10-12)
 close the pending browser gate. Earlier dated verification sections remain
-historical evidence; §10 records reconciliation results and §§11–19 record
+historical evidence; §10 records reconciliation results and §§11–25 record
 subsequent module verification and limits.
 
 ## 1. Decision and scope
@@ -109,7 +118,9 @@ keeps WMS's `locale === 'ar'`.
 **Entries:** each entry is `inertia: true` (an Inertia `<Link>`) or not (a
 plain `<a>`, i.e. a full page load). Select link behavior from the actual destination (§6); retained Blade forms
 use full page loads. Blog create/edit (§18), the newsletter and the ticket
-detail (§19) are Inertia pages.
+detail (§19), the website footer, appearance and pages (§20), the digital
+product create/edit forms (§21) and the physical product create (§22) and
+edit (§23) forms are Inertia pages.
 
 **How it differs from the Blade sidebar, on purpose:**
 
@@ -480,11 +491,13 @@ modules too:
     (`RoleController::REMOVED_ADDON_SECTIONS`).
 
 
-## 4. Integrated status (2026-10-13)
+## 4. Integrated status (2026-10-15)
 
 This reflects integrated code and the carrier, customer-package, category,
 brand, digital-product, in-house/all-products list, general-settings,
-blog-editor and newsletter/ticket-detail follow-ups in §§11–19. The original
+blog-editor, newsletter/ticket-detail, website-settings, digital-product
+form, physical product create and edit form, trip list and trip form
+follow-ups in §§11–25. The original
 reconciliation was based on `8e3f82b60b2b4dc951b97ccfed985a75e9e6be69` and
 merged through PR #377. Carrier administration was then implemented separately
 from latest `origin/develop` at `018dd1802c0b2fc99ffbf0e097594fe0f0f3dfef`.
@@ -495,14 +508,14 @@ Verification below distinguishes the original reconciliation from this follow-up
 | Staff and roles | Complete pilot | Existing six Inertia pages retained; action gates unchanged |
 | Reference/shipping/tax/currency | Complete selected subset | Canonical `35ae3133` controllers/forms/routes; duplicate `e5523338` implementation superseded |
 | Carrier administration | Complete | List/create/edit and CRUD/status use Inertia; existing `manage_carriers` gate, tariff contract and public/API consumers preserved (§11) |
-| Language/settings | Complete selected subset | Language CRUD and translation-selector validation separated; dedicated settings endpoints with reserved-key protection; general settings use Inertia with a typed writer and a config-managed timezone (§17); the Google Map settings GET stays Blade because its enabled form loads the Google Maps script (map decision, §17) |
+| Language/settings | Complete selected subset | Language CRUD and translation-selector validation separated; dedicated settings endpoints with reserved-key protection; general settings use Inertia with a typed writer and a config-managed timezone (§17); the generic `business_settings.update` writer is retired (§20); the Google Map settings GET stays Blade because its enabled form loads the Google Maps script (map decision, §17) |
 | Reports/notifications | Complete selected subset | Inertia report/admin notification routes; public/customer/seller notification consumers remain |
 | Uploads/profile | Complete selected subset | Canonical `944e2e1e` backend/picker; per-action authorization and authenticated-user profile |
 | Customers/representatives | Partial | Customers, addresses, representatives/packages/payments, customer package administration (§12) and visit list implemented; classified-product activation remains decision-blocked |
-| Catalogue | Partial | Attributes/values, colors, brand discount, reviews, bulk import/export and offers catalogue implemented; category (§13) and brand (§14) administration complete; digital product list, deletion, download and switches converted (§15); in-house and all-products lists with their switches, duplicate, delete and bulk delete converted (§16); product and digital-product create/edit stay Blade (the editor is no longer a blocker since §18, but their variant, SKU and translation forms are unconverted); the seller product list stays Blade with seller administration |
-| Website/support | Partial | Header/home, conversations, product queries, the ticket list and the ticket detail with its typed reply use Inertia; the reply uses the shared editor and canonical image picker (§19); footer/appearance/custom pages retain the Blade editor (their editor hold is lifted, §18; script policy and WAF holds remain) |
+| Catalogue | Partial | Attributes/values, colors, brand discount, reviews, bulk import/export and offers catalogue implemented; category (§13) and brand (§14) administration complete; digital product list, deletion, download and switches converted (§15); digital product create/edit converted on the shared editor and canonical uploader (§21); in-house and all-products lists with their switches, duplicate, delete and bulk delete converted (§16); physical product create converted with its typed variant/SKU endpoint (§22); physical product edit converted with translation tabs and stored variant rows (§23); the seller product list stays Blade with seller administration |
+| Website/support | Complete selected subset | Header/home, footer, appearance, custom pages (§20), conversations, product queries, the ticket list and the ticket detail with its typed reply use Inertia; footer, appearance and page rich text use the shared editor, cleaned on write (§20); the header/footer scripts stay on their compatibility endpoint as plain code fields; script policy, `manage_website_scripts` and rich-text WAF exceptions stay held |
 | Marketing/blog | Complete selected subset | Coupons, flash/offer deals, campaign products, popups, subscribers and blog categories/list/actions integrated; blog post create/edit (§18) and the newsletter form (§19) use Inertia with the shared Tiptap editor; the typed newsletter send and bounded recipient search are unchanged |
-| Logistics | Partial | Drivers/trucks converted; visits use customer Inertia list plus hardened Blade maps; trips/maps retain Blade, with compatible hardening |
+| Logistics | Partial | Drivers/trucks converted; the all-trips and today's-trips lists with their status dialog, notes, delete and bulk delete converted (§24); the trip create and edit forms converted without their map (§25); visits use customer Inertia list plus hardened Blade maps; the checkpoints page, map picker, trip orders and CMR download retain Blade (Leaflet/Google Maps approval unverified), with compatible hardening |
 | Orders/dashboard | Partial | Orders and entry forms converted; stored tax metadata and line-price-only grand total preserved; shell utilities integrated; dashboard/chart conversion held |
 | Seller administration | Decision-blocked | Existing seller Blade screens remain, including the seller product list (`products.seller`, §16); feature-use/removal decision is still required |
 | Public/seller/auth/PDF consumers | Retained | Blade coexistence, PDF layouts, Inertia root and CSP middleware remain |
@@ -525,18 +538,18 @@ dedicated allowlisted compatibility endpoint, not a general settings writer.
 
 - `StoreBooleanField` has one `name`/`value`/`disabled` API. Adapt callers.
 - Dedicated settings requests reject foreign/reserved keys before writing,
-  including plain/localized forms. Generic settings cannot write migrated
-  reference, header/home, general-settings, script, map or
-  environment-controlled keys. The general-settings keys
-  (`UpdateGeneralSettingsRequest::KEYS`, including `timezone`) are reserved
-  there since §17; the footer and appearance Blade forms keep the generic
-  writer and its four-permission gate unchanged.
+  including plain/localized forms. The generic settings writer
+  (`business_settings.update`) and its four-permission gate are retired
+  since §20: its last consumers, the footer and appearance Blade forms, moved
+  to typed writers that accept only their own keys, so no settings writer
+  takes arbitrary keys any more.
 - The timezone is config-managed: `config('app.timezone')` is `'UTC'` in
   `config/app.php`, and no settings screen stores it. The general settings
   writer validates it against PHP's identifiers (plus the configured value)
   and refuses any other value with a field error; nothing writes `.env`.
 - Website scripts retain the existing rendering, appearance permission and WAF
-  behavior through the narrowly scoped compatibility endpoint. New script policy,
+  behavior through the narrowly scoped compatibility endpoint, now posted by a
+  plain-code form on the Inertia appearance page (§20). New script policy,
   `manage_website_scripts` activation and broad rich-text WAF exceptions are held.
 - Profile and notifications use selected controllers in the Inertia shell;
   public/seller/customer handlers remain without restoring deleted admin Blade.
@@ -552,15 +565,22 @@ dedicated allowlisted compatibility endpoint, not a general settings writer.
   Tiptap as the shared back-office editor. `StoreRichTextField` is the one
   rich-text field for converted screens; blog post create/edit (§18), the
   newsletter and the ticket reply (§19) use it. The approval lifts the editor
-  hold on the website footer, appearance and custom pages and the editor part
-  of product and digital-product create/edit; each still needs its own
-  migration, and the script policy, `manage_website_scripts` and rich-text WAF
-  exceptions stay held. The Blade editor (summernote in
-  `public/assets/js/vendors.js`, started by `aiz-core.js` `textEditor()`) and
-  its assets stay while those Blade consumers remain: 18 fields in 16 views
-  since §19.
+  hold on the website footer, appearance and custom pages (migrated, §20),
+  the digital product create/edit forms (migrated, §21) and the physical
+  product create and edit forms (migrated, §§22–23); the script
+  policy, `manage_website_scripts` and rich-text WAF exceptions stay held. The
+  Blade editor (summernote in `public/assets/js/vendors.js`, started by
+  `aiz-core.js` `textEditor()`) and its assets stay while those Blade
+  consumers remain: 8 fields in 8 views since §23.
 - Chart.js and new Leaflet dependencies still lack independently verified
   approval. Preserve existing Blade chart/map assets.
+- **`products` writers: owner decision pending, behaviour unchanged.** Brand
+  and digital/product deletion (§§14–16), product duplication (§16),
+  digital product create/update (§21) and physical product create and
+  update (§§22–23) still write WMS-owned `products` rows
+  beside `products:sync`, the table's single writer (shared-database.md).
+  Each now runs in one transaction and is pinned by tests; changing
+  who may write `products` needs the owner's decision.
 - Product list switches share one write path. The digital-product and
   in-house/all-products lists publish and feature through
   `Concerns\UpdatesStoreProductFlags`, scoped to the products each list shows.
@@ -580,10 +600,15 @@ dedicated allowlisted compatibility endpoint, not a general settings writer.
 
 ### 5.1 Actual retained backend Blade files
 
-The current backend inventory contains **56 Blade files**, down from 73 after
+The current backend inventory contains **39 Blade files**, down from 73 after
 removing three screens each for carriers, customer packages and categories, the
 two brand screens, the digital product list (§15), general settings (§17), the
-two blog post forms (§18), and the newsletter and ticket detail (§19).
+two blog post forms (§18), the newsletter and ticket detail (§19), the
+footer, appearance and three custom-page screens (§20), the two digital
+product forms (§21), the physical product create form (§22), and the
+physical product edit form, its choice script and the unconsumed blank shell
+(§23), the trip list with its status modal (§24), and the two trip forms
+with their two checkpoint row partials (§25).
 The in-house and all-products lists (§16) removed none:
 `product/products/index.blade.php` is shared with the retained seller product
 list. The Google Map settings screen stays (§17).
@@ -595,14 +620,13 @@ as conversion. Protected shells/downloads/invoices are not conversion targets.
 - **downloads:** `downloads/brand.blade.php`, `downloads/category.blade.php`, `downloads/user.blade.php`.
 - **inc:** `inc/admin_nav.blade.php`, `inc/admin_sidenav.blade.php`.
 - **invoices:** `invoices/invoice.blade.php`.
-- **layouts:** `layouts/app.blade.php`, `layouts/blank.blade.php`, `layouts/layout.blade.php`.
-- **product:** `product/digital_products/create.blade.php`, `product/digital_products/edit.blade.php`, `product/products/choice_options_script.blade.php`, `product/products/create.blade.php`, `product/products/edit.blade.php`, `product/products/index.blade.php`, `product/products/sku_combinations.blade.php`, `product/products/sku_combinations_edit.blade.php`, `product/reviews/index.blade.php`.
+- **layouts:** `layouts/app.blade.php`, `layouts/layout.blade.php`.
+- **product:** `product/products/index.blade.php`, `product/products/sku_combinations.blade.php`, `product/products/sku_combinations_edit.blade.php`, `product/reviews/index.blade.php`.
 - **representatives:** `representatives/visits/map.blade.php`, `representatives/visits/rep-show.blade.php`, `representatives/visits/show.blade.php`.
 - **sellers:** `sellers/create.blade.php`, `sellers/edit.blade.php`, `sellers/index.blade.php`, `sellers/payment.blade.php`, `sellers/payment_histories/index.blade.php`, `sellers/payment_modal.blade.php`, `sellers/profile_modal.blade.php`, `sellers/seller_commission/index.blade.php`, `sellers/seller_verification_form/index.blade.php`, `sellers/seller_withdraw_requests/index.blade.php`, `sellers/seller_withdraw_requests/payment_modal.blade.php`, `sellers/seller_withdraw_requests/withdraw_message_modal.blade.php`, `sellers/verification.blade.php`.
 - **setup_configurations:** `setup_configurations/google_configuration/google_map.blade.php`.
 - **system:** `system/server_status.blade.php`.
-- **trips:** `trips/checkpoints/index.blade.php`, `trips/components/checkpoint-template.blade.php`, `trips/components/checkpoint.blade.php`, `trips/components/update-checkpoint-status-modal.blade.php`, `trips/components/update-trip-status-modal.blade.php`, `trips/create-from-map.blade.php`, `trips/create.blade.php`, `trips/edit.blade.php`, `trips/inc/map-popups.blade.php`, `trips/inc/map-scripts.blade.php`, `trips/inc/scripts.blade.php`, `trips/index.blade.php`, `trips/orders.blade.php`.
-- **website_settings:** `website_settings/appearance.blade.php`, `website_settings/footer.blade.php`, `website_settings/pages/create.blade.php`, `website_settings/pages/edit.blade.php`, `website_settings/pages/index.blade.php`.
+- **trips:** `trips/checkpoints/index.blade.php`, `trips/components/update-checkpoint-status-modal.blade.php`, `trips/create-from-map.blade.php`, `trips/inc/map-popups.blade.php`, `trips/inc/map-scripts.blade.php` (no Blade includer since §25; kept with the map decision), `trips/inc/scripts.blade.php`, `trips/orders.blade.php`.
 
 ## 6. Registered migrated controllers and consumers
 
@@ -634,14 +658,14 @@ line numbers or count sibling snapshots.
 | `CustomerPackageController` (Store/Admin) | `customer_packages.index`, `customer_packages.create`, `customer_packages.store`, `customer_packages.edit`, `customer_packages.update`, `customer_packages.destroy` | `Store/Admin/Customers/Packages/Index.vue`, `Create.vue`, `Edit.vue`; root purchase/payment controller and mobile API retained |
 | `CustomerNotificationController` | `admin.notifications.all`, `admin.notifications.create`, `admin.notifications.send`, `admin.notifications.delete` | `Store/Admin/Notifications/Customers/Index.vue`, `Store/Admin/Notifications/Customers/Create.vue` |
 | `DashboardController` | `cache.clear` | Scoped cache clear only; dashboard route → root `AdminController` / retained Blade |
-| `DigitalProductController` (Store/Admin) | `digitalproducts.index`, `digitalproducts.destroy`, `digitalproducts.download`, `digitalproducts.published`, `digitalproducts.featured`, `digitalproducts.todays_deal` | `Store/Admin/Product/DigitalProducts/Index.vue`; download → file response; `digitalproducts.create`/`store`/`edit`/`update` → root `DigitalProductController` retained Blade forms (editor-blocked); seller, mobile and storefront download consumers separate |
+| `DigitalProductController` (Store/Admin) | `digitalproducts.index`, `digitalproducts.create`, `digitalproducts.store`, `digitalproducts.edit`, `digitalproducts.update`, `digitalproducts.destroy`, `digitalproducts.download`, `digitalproducts.published`, `digitalproducts.featured`, `digitalproducts.todays_deal` | `Store/Admin/Product/DigitalProducts/Index.vue`, `Create.vue`, `Edit.vue` (§21); store → list, update → edit form in the same language; download → file response; root `DigitalProductController` removed; seller, mobile and storefront digital product and download consumers separate |
 | `DriverController` | `drivers.create`, `drivers.index`, `drivers.store`, `drivers.update`, `drivers.destroy`, `drivers.edit` | `Store/Admin/Trips/Drivers/Index.vue`, `Store/Admin/Trips/Drivers/Create.vue`, `Store/Admin/Trips/Drivers/Edit.vue` |
 | `DynamicPopupController` | `bulk-dynamic-popup-delete`, `dynamic-popups.index`, `dynamic-popups.store`, `dynamic-popups.update-status`, `dynamic-popups.create`, `dynamic-popups.update`, `dynamic-popups.destroy`, `dynamic-popups.edit` | `Store/Admin/Marketing/DynamicPopups/Index.vue`, `Store/Admin/Marketing/DynamicPopups/Create.vue`, `Store/Admin/Marketing/DynamicPopups/Edit.vue` |
 | `FlashDealController` | `flash_deals.index`, `flash_deals.store`, `flash_deals.create`, `flash_deals.update`, `flash_deals.destroy`, `flash_deals.edit`, `flash_deals.update_featured`, `flash_deals.update_status` | `Store/Admin/Marketing/FlashDeals/Index.vue`, `Store/Admin/Marketing/FlashDeals/Create.vue`, `Store/Admin/Marketing/FlashDeals/Edit.vue` |
 | `GeneralSettingsController` | `general_setting.index`, `general_setting.update` | `Store/Admin/Setup/GeneralSettings/Index.vue` |
 | `GoogleMapController` | `google-map.update` | Redirect to the retained Blade `google-map.index` GET (root `BusinessSettingsController::google_map`; map decision, §17) |
 | `LanguageController` | `languages.index`, `languages.store`, `app-translations.export`, `app-translations.import`, `app-translations.store`, `app-translations.show`, `languages.create`, `languages.key_value_store`, `languages.update-status`, `languages.update_rtl_status`, `languages.destroy`, `languages.show`, `languages.edit`, `languages.update` | `Store/Admin/Languages/Index.vue`, `Store/Admin/Languages/Create.vue`, `Store/Admin/Languages/Edit.vue`, `Store/Admin/Languages/Translations.vue` |
-| `LegacyWebsiteScriptsController` | `website.scripts.compatibility.update` | JSON / redirects / PDF as applicable |
+| `LegacyWebsiteScriptsController` | `website.scripts.compatibility.update` | Redirect to `website.appearance`; posted by the plain-code scripts form of `Store/Admin/Website/Appearance.vue` (§20) |
 | `NewsletterController` | `newsletters.index`, `newsletters.recipients`, `newsletters.send` | `Store/Admin/Marketing/Newsletters/Index.vue` (§19); typed send redirecting to the retained Blade dashboard; bounded JSON recipient search |
 | `NotificationController` | `admin.all-notification` | `Store/Admin/Notifications/Index.vue` |
 | `OfferController` | `offer_deals.brands.create`, `offer_deals.create`, `offer_deals.index`, `offer_deals.store`, `offer_deals.update`, `offer_deals.destroy`, `offer_deals.edit`, `offer_deals.update_multiple_usage`, `offer_deals.update_repeatable`, `offer_deals.update_status` | `Store/Admin/Marketing/Offers/Index.vue`, `Store/Admin/Marketing/Offers/Create.vue`, `Store/Admin/Marketing/Offers/Edit.vue` |
@@ -650,7 +674,7 @@ line numbers or count sibling snapshots.
 | `OrderController` | `all_orders.index`, `bulk-order-delete`, `inhouse_orders.index`, `inhouse_orders.show`, `orders.details`, `order.item.edit_price`, `orders.update_delivery_status`, `orders.update_manager_notes`, `orders.update_payment_status`, `orders.update_tracking_code`, `orders.show`, `orders.destroy`, `all_orders.show`, `pick_up_point.index`, `pick_up_point.order_show`, `seller_orders.index`, `seller_orders.show` | `Store/Admin/Sales/Orders/Index.vue`, `Store/Admin/Sales/Orders/Show.vue` |
 | `OrderEntryController` | `new.feat-order.trip.create`, `new.feat-order.trip.edit`, `new.feat-order.trip.store`, `new.feat-order.trip.update`, `feat-order.create`, `feat-order.store`, `orders.search-options` | `Store/Admin/Sales/Orders/Create.vue`, `Store/Admin/Sales/Orders/Edit.vue` |
 | `PickupPointController` | `pick_up_points.index`, `pick_up_points.store`, `pick_up_points.create`, `pick_up_points.update`, `pick_up_points.destroy`, `pick_up_points.edit` | `Store/Admin/Setup/PickupPoints/Index.vue`, `Store/Admin/Setup/PickupPoints/Edit.vue`, `Store/Admin/Setup/PickupPoints/Create.vue` |
-| `ProductController` (Store/Admin) | `products.admin`, `products.all`, `products.list.published`, `products.list.featured`, `products.list.for_sale`, `products.list.duplicate`, `products.list.destroy`, `products.list.bulk_destroy` | `Store/Admin/Product/Products/Index.vue` (both lists, `listType`); `products.seller`, `products.create`/`store`, `products.admin.edit`/`seller.edit`/`update`, the jQuery switches, approval, duplicate, destroy, bulk delete, `products.fetch` (JSON) and the form helpers stay on root `ProductController` for the Blade seller list and editor forms |
+| `ProductController` (Store/Admin) | `products.admin`, `products.all`, `products.list.published`, `products.list.featured`, `products.list.for_sale`, `products.list.duplicate`, `products.list.destroy`, `products.list.bulk_destroy`, `products.create`, `products.store`, `products.variant_combinations`, `products.admin.edit`, `products.seller.edit`, `products.update`, `products.edit_variant_combinations` | `Store/Admin/Product/Products/Index.vue` (both lists, `listType`), `Create.vue` (§22; store → in-house list, `products.variant_combinations` → JSON variant rows), `Edit.vue` (§23; both edit routes, `listType` `admin`/`seller`; update → the edit form in the same language; `products.edit_variant_combinations` → JSON rows keeping stored stock values); `products.admin.edit`/`seller.edit` send a digital product to `digitalproducts.edit` (§21); `products.seller`, the jQuery switches, approval, duplicate, destroy, bulk delete, `products.fetch` (JSON) and the Blade SKU helper `products.sku_combination` stay on root `ProductController` for the Blade seller list |
 | `ProductBulkUploadController` | `bulk_product_upload`, `pdf.download_brand`, `pdf.download_category`, `pdf.download_seller`, `product_bulk_export.index`, `product_bulk_upload.index` | `Store/Admin/Product/BulkUpload/Index.vue` |
 | `ProductQueryController` | `product_query.index`, `product_query.show`, `product_query.reply` | `Store/Admin/Support/ProductQueries/Index.vue`, `Store/Admin/Support/ProductQueries/Show.vue` |
 | `ProductSearchController` | `order_configuration.product-search`, `products.add-more-choice-option` | JSON / redirects / PDF as applicable |
@@ -667,19 +691,24 @@ line numbers or count sibling snapshots.
 | `SubscriberController` | `admin.subscribers.index`, `subscriber.destroy` | `Store/Admin/Marketing/Subscribers/Index.vue` |
 | `SupportTicketController` | `support_ticket.admin_index`, `support_ticket.admin_store`, `support_ticket.admin_show` | `Store/Admin/Support/Tickets/Index.vue`, `Show.vue` (§19); reply → redirect to the detail; customer/seller ticket pages stay on root/seller `SupportTicketController` (Blade) |
 | `TaxController` | `tax.index`, `tax.store`, `tax.update`, `tax.destroy`, `tax.edit`, `taxes.tax-status` | `Store/Admin/Setup/Taxes/Index.vue`, `Store/Admin/Setup/Taxes/Edit.vue` |
+| `TripController` (Store/Admin) | `trips.index`, `trips.today-trips`, `trips.create`, `trips.store`, `trips.edit`, `trips.update`, `trips.update-status`, `trips.update-notes`, `trips.destroy`, `trips.bulk-trip-delete` | `Store/Admin/Trips/Trips/Index.vue` (both lists, `listType` `all`/`today`) with `StoreTripStatusDialog` (§24); `Create.vue` and `Edit.vue` with `StoreTripFormFields` (§25; store and update → the Blade checkpoints page `trips.show`); list writes redirect to the screen named by `list` (`all`, `today`, or `map` → the Blade map picker, whose truck cards send `trips.destroy` as a spoofed DELETE); the checkpoints page, map picker and its writer, trip orders and CMR download stay on root `Trip\TripController` (Blade); the forms' vehicle lookup `trips.available-vehicles` (JSON) stays on `Api\V2\Trip\DriverController` |
 | `TruckController` | `trucks.create`, `trucks.index`, `trucks.photos`, `trucks.store`, `trucks.update`, `trucks.edit`, `trucks.qr` | `Store/Admin/Trips/Trucks/Index.vue`, `Store/Admin/Trips/Trucks/Create.vue`, `Store/Admin/Trips/Trucks/Edit.vue` |
 | `UploadController` | `all-file`, `bulk-uploaded-files-delete`, `uploaded-files.index`, `uploaded-files.store`, `uploaded-files.create`, `uploaded-files.files`, `uploaded-files.info`, `uploaded-files.destroy` | `Store/Admin/Uploads/Index.vue`, `Store/Admin/Uploads/Create.vue` |
 | `VisitController` | `bulk-visit-delete`, `admin.rep.visits.destroy`, `admin.rep.visits.index` | `Store/Admin/Representatives/Visits/Index.vue` |
+| `WebsiteAppearanceController` | `website.appearance`, `website.appearance.update` | `Store/Admin/Website/Appearance.vue` (§20) |
+| `WebsiteFooterController` | `website.footer`, `website.footer.update` | `Store/Admin/Website/Footer.vue` (§20) |
 | `WebsiteHeaderController` | `website.header`, `website.header.update` | `Store/Admin/Website/Header.vue` |
 | `WebsiteHomeController` | `website.home.edit`, `website.home.update` | `Store/Admin/Website/Home.vue` |
+| `WebsitePageController` | `website.pages`, `custom-pages.create`, `custom-pages.store`, `custom-pages.edit`, `custom-pages.update`, `custom-pages.destroy` | `Store/Admin/Website/Pages/Index.vue`, `Create.vue`, `Edit.vue` (§20); the public `custom-pages.show_custom_page` and `mobile.custom-pages` stay on root `PageController` (Blade) |
 | `ZoneController` | `zones.index`, `zones.store`, `zones.create`, `zones.update`, `zones.destroy`, `zones.edit` | `Store/Admin/Setup/Zones/Index.vue`, `Store/Admin/Setup/Zones/Edit.vue`, `Store/Admin/Setup/Zones/Create.vue` |
 
-Visit details/day maps are served by retained root `VisitController`; trips and
-Google map settings also retain their Blade GET consumers. Root
-`BusinessSettingsController` keeps the Google Map GET, the generic settings
-writer, the seller commission/verification screens and `env_key_update`, so it
-stays in both analysis exclusion lists. Website footer,
-appearance and custom pages, seller/classified screens use retained root handlers. The newsletter and
+Visit details/day maps are served by retained root `VisitController`; the trip
+checkpoints page, map picker and trip orders (§§24–25) and the Google map
+settings also retain their Blade GET consumers. Root
+`BusinessSettingsController` keeps the Google Map GET, the seller
+commission/verification screens and `env_key_update` (the generic settings
+writer and its refusing `.env` stub are gone, §20), so it stays in both
+analysis exclusion lists. Seller/classified screens use retained root handlers. The newsletter and
 the ticket detail use their typed admin controllers and Inertia pages (§19). Explicit approval and implementation gaps are tracked
 by source/path in the reconciliation ledger. The unavailable audit commit
 `aed3feab5b6edd95fb941ee92a455e058403def5` is excluded and was not recovered or included.
@@ -1761,5 +1790,860 @@ of `shop.backend.layouts.app`, **3** of `shop.backend.layouts.layout` and **0**
 of the blank shell. Registrations are unchanged at **1,050** under `/temp` and
 **438** under `/temp/admin`. Verification is recorded in the newsletter and
 ticket section of
+[the reconciliation ledger](../store-backoffice-reconciliation-20261011.md).
+No deployment or production-data mutation is authorized.
+
+
+## 20. Website footer, appearance and custom pages (2026-10-13)
+
+The website footer, appearance and custom pages now use
+`Store/Admin/Website/Footer`, `Appearance` and `Pages/Index|Create|Edit`, with
+the shared editor (§18) for their rich text. Work is on
+`claude/website-settings-inertia-migration-j3i59z`, branched from `develop` at
+`ef175fc` (the PR #397 merge, after the PR #393 merge `06a3806`), and merged
+with `develop` at `e17cdbd` (PR #399) before the push. The owner
+authorized this session's PR, its merge into `develop` and `[skip ci]` on both.
+Every commit, the PR and its merge commit carry `[skip ci]`, so no PR CI, no PR
+or merge SAST and no `develop` deploy ran for them; the local checks in the
+ledger are the only verification. Source: `e3995898`, adapted to current
+`develop`, not cherry-picked; its scripts pieces are not taken.
+
+**Footer (`website.footer`, gate `footer_setup`).**
+
+- **Routes.** GET `/website/footer` and the new PUT `website.footer.update` on
+  `Store\Admin\WebsiteFooterController`. Without a `lang` the screen opens in
+  the back office's current language, as the Blade sidebar linked it.
+- **Typed writer.** `UpdateWebsiteFooterRequest` takes `settings[…]` with the
+  Blade form's keys only (`KEYS`) and a `lang`. Foreign, reserved,
+  environment, script and general-settings keys, nested or top-level, and the
+  legacy `types[]` shape are 422s before any write. `seller_app_link` is
+  offered and accepted only while `vendor_system_activation` is on and
+  `delivery_boy_app_link` only while the delivery boy addon is, as the Blade
+  form showed them (`enabledKeys()`).
+- **Stored formats, unchanged.** `about_us_description`, `contact_address`,
+  `widget_one`, `widget_one_labels` and `frontend_copyright_text` are per
+  language; everything else is shared. Upload ids are strings
+  (`payment_method_images` comma-separated), the link labels and links JSON
+  arrays (`json_encode`'s default escaping, as before), the switches `on` or
+  null. The rows list one link per label of the language, as the Blade form
+  did. The tutorial switch is ticked for any stored value and the social one
+  only for `on`, as the Blade form read them.
+- **Validation.** Links are http(s), root-relative or fragments (≤2048), the
+  email an email, short texts ≤255, link rows paired and ≤50. Images use
+  `retainableImageUploadRule()`; the payment logos keep any already-stored id
+  and need the library rule for new ones.
+
+**Appearance (`website.appearance`, gate `website_appearance`).**
+
+- **Typed writer.** `website.appearance.update` (PUT) on
+  `Store\Admin\WebsiteAppearanceController` with `UpdateWebsiteAppearanceRequest`:
+  name, motto, eight images, both colours (`#rgb`/`#rrggbb`, they print into
+  CSS), meta texts, the cookie and popup texts and three switches. The seller
+  and delivery boy login backgrounds follow the same feature conditions as the
+  Blade form. Script keys are refused here.
+- **Scripts: unchanged and held.** The page shows `header_script` and
+  `footer_script` as stored, in plain `dir="ltr"` code text areas (never the
+  editor), and posts them in their own form to
+  `website.scripts.compatibility.update` (`LegacyWebsiteScriptsController`),
+  which still allows only those two keys and still returns to the appearance
+  screen. The storefront still echoes them raw; the WAF still refuses a
+  `<script>` payload with a 403. `WebsiteScriptsController`,
+  `UpdateWebsiteScriptsRequest`, `manage_website_scripts` and any
+  `config/waf.php` change stay unactivated.
+
+**Custom pages (`website.pages`, `custom-pages.*`).**
+
+- **Routes.** `Store\Admin\WebsitePageController` with the existing gates:
+  `website.pages` (`view_all_website_pages`), `custom-pages.create`/`.store`
+  (`add_website_page`), `custom-pages.edit` at the same
+  `/custom-pages/edit/{slug}` URI and `custom-pages.update` (PUT/PATCH)
+  (`edit_website_page`), `custom-pages.destroy`, now `DELETE
+  /custom-pages/destroy/{page}` (`delete_website_page`). The `Route::resource`
+  duplicates and the empty `custom-pages.index`/`.show` are gone. Root
+  `PageController` keeps only the public `show_custom_page` and
+  `mobile_custom_page`, unchanged; `website.home.edit` stays ahead of the edit
+  route.
+- **Behaviour kept.** A new page is a custom page in the default language. The
+  slug is normalised as the Blade writer did (spaces to hyphens, anything but
+  letters, digits and hyphens dropped), as typed and again on the server, and
+  must be unique among all pages; only custom pages change it. A default-
+  language save rewrites the base title and content; any save writes the meta
+  fields and the language's translation. The list pages 20 at a time with the
+  selector (it listed all), in `id` order, with the title in the back office's
+  language. The home row opens the home settings.
+- **Deliberate changes.** Deleting a policy or home page, and updating the home
+  page through this form, are 403s (only custom pages offered delete); a
+  duplicate slug is a field error instead of a flash.
+
+**Sanitisation.** The four settings texts and the page content are cleaned
+with `HtmlSanitizer` before validation and the edit props are cleaned. The
+storefront already prints the footer texts and the popup through
+`clean_html()`; the cookie text, custom and policy pages still print raw, as
+before, so cleaning on write is what now keeps scripts out of them. The
+cleaner is idempotent, so legitimate stored markup renders unchanged; legacy
+summernote markup (`b`, `u`, `i`, lists, aligned paragraphs, tables) round-
+trips as stored. Links gain `rel="noopener noreferrer nofollow"`. Not kept:
+`<iframe>` video embeds, `<font>` colours and forms, which the editor cannot
+represent and the cleaner removes; the WAF already refused a save carrying an
+iframe.
+
+**Generic writer retired.** After both forms moved, nothing posts to
+`business_settings.update`: `rg` over `resources/views`, `resources/js`
+(outside the generated Wayfinder files), `public/assets/js`, `app` and
+`routes` finds no consumer, and `SettingsReconciliationTest` pins that. The
+route, root `BusinessSettingsController::update`, its
+`general_settings|footer_setup|website_appearance|edit_website_page` gate (the
+#391 gap where any one of four permissions wrote footer and appearance keys)
+and `overWriteEnvFile()`, whose last callers were the writer's `site_name` and
+`timezone` branches, are removed. The URI now answers 404 for every caller.
+
+**Tests retargeted, none weakened.**
+
+- Generic-writer refusals (`SettingsReconciliationTest`,
+  `ReferenceSettingsIsolationTest`, `SettingsControllerTest`,
+  `WebsiteHeaderControllerTest`, `WebsiteHomeControllerTest`,
+  `GoogleMapControllerTest`, `LegacyAdminPermissionsTest`) now assert the 404
+  of the retired URI (`retiredSettingsWriterUri()`) with the same DB
+  assertions, and the footer and appearance writers refuse every other page's
+  key, plain or localized. The four-permission save test became "each former
+  permission saves only its own page". `LegacyEnvFileProtectionTest` pins that
+  no `.env` writer is left.
+- Blade-page examples moved to the seller list (`/temp/admin/sellers`, seller
+  decision): `HandleStoreBladePagesTest`, `ReconstructedMigrationAuditTest`,
+  the general-settings shell test, `store-staff-coexistence.spec.ts` (Sellers →
+  All sellers) and `store-setup-settings.spec.ts`.
+- No seller or trips admin screen uses the legacy uploader, and the admin's
+  seller product form (`products.seller.edit`) answers 500 on an inherited
+  defect (`edit.blade.php:244`, `$variations` undefined). So
+  `store-legacy-uploader.spec.ts` uses the retained product create form,
+  scoped to `thumbnail_img`; it keeps real browser coverage, and whoever
+  converts the product form must retarget it.
+- `LegacyUploadSecurityTest`'s "page editor prints its values escaped" read
+  the Blade view; it now checks that the Inertia editor files print no raw
+  HTML and that hostile stored values reach the page escaped and cleaned.
+- `LegacyControllerMiddlewareConversionTest` pins four root entries;
+  `ControllerRedirectsTest` no longer needs its `PageController` exclusion.
+
+**Retained.** The Blade editor and its assets (12 fields in 12 views: the admin
+product and digital-product create/edit forms and the seller and customer
+areas), the legacy uploader, shells, PDFs, `HandleStoreBladePages`,
+`store.blade_csp`, the strict Inertia CSP, the WAF, and the held script policy,
+`manage_website_scripts`, rich-text WAF exceptions, chart/map activation,
+seller/classified scope and server status.
+
+**Known limits.** Inertia embeds page props as `json_encode()` JSON, which
+escapes `</script>` but not `<!--`; a stored script holding an unterminated
+`<!--` before a `<script` could keep the appearance page from booting (it
+cannot execute). Links in the footer had no format rule before: a stored link
+such as `www.example.com` must be corrected on the next save.
+
+Current inventory: **51** backend Blade files, **27** direct literal consumers
+of `shop.backend.layouts.app`, **3** of `shop.backend.layouts.layout` and **0**
+of the blank shell. Registrations are **1,047** under `/temp` and **435** under
+`/temp/admin`: ten replace thirteen. Verification is recorded in the website
+settings section of
+[the reconciliation ledger](../store-backoffice-reconciliation-20261011.md).
+No deployment or production-data mutation is authorized.
+
+
+## 21. Digital product create and edit forms (2026-10-13)
+
+Digital product create and edit now use `Store/Admin/Product/DigitalProducts/Create`
+and `Edit` with the shared editor (§18) and the canonical upload picker (§2.4).
+Work is on `claude/digital-product-forms-inertia-v66574`, branched from
+`develop` at `bb942f0` (the PR #400 merge). The owner authorized this
+session's PR (#401), its merge into `develop` and `[skip ci]` on both. Every
+commit, the PR and its merge commit carry `[skip ci]`, so no PR CI, no PR or
+merge SAST and no `develop` deploy ran for them; the local checks in the
+ledger are the only verification.
+
+**Routes and gates: names, URIs and methods kept.** `digitalproducts.create`
+(GET `/digitalproducts/create`) and `.store` (POST `/digitalproducts`) under
+`add_digital_product`; `.edit` (GET `/digitalproducts/edit/{product}`) and
+`.update` (PUT/PATCH `/digitalproducts/{product}`) under
+`edit_digital_product`, now on `Store\Admin\DigitalProductController` with a
+bound product. Edit and update accept only a digital product (404 otherwise).
+Root `DigitalProductController` is deleted and leaves both analysis exclusion
+lists; the list's Add and Edit links are Inertia visits, download stays a full
+load.
+
+**Writes (behaviour kept, now atomic).** `StoreDigitalProductRequest` and
+`UpdateDigitalProductRequest` (`Concerns\ValidatesStoreDigitalProduct`)
+validate; the controller writes in one transaction, the product row locked on
+update:
+
+- **Create.** `added_by = admin`, the store caller as `user_id`, `digital = 1`,
+  every form field, the slug `<name letters/digits/hyphens>-<rand(10000, 99999)>`,
+  then the posted taxes through `ProductTaxService`, one stock row (`variant`
+  and `sku` empty, the unit price, quantity 0) and the default-language
+  translation. Returns to the list.
+- **Update.** The base name and description change only in the default
+  language; the posted language's translation is written; the shared fields
+  are written for every language; every stock row is replaced by the same new
+  row (so the quantity returns to 0, as before); posted taxes replace all the
+  product's tax rows, and with no tax posted (no active tax) they stay. The
+  slug is lowercased. Returns to the edit form in the same language (the Blade
+  `back()`).
+- **Second writer of `products`: owner decision pending.** Creating and
+  updating write WMS-owned `products` rows beside `products:sync`
+  (shared-database.md), the same conflict as deletion (§§14–16). Behaviour and
+  policy are unchanged; tests pin it, including rollback of product, stock,
+  translation and taxes together.
+- No cache was cleared before and none is now.
+
+**Fields.** Name (≤200, the `products.name` and translation width), category,
+photos (CSV, ≤2000 chars, ≤50 ids), thumbnail, tags, description, unit and
+purchase price, discount and type, discount range, the active taxes (amount
+and type each), meta title, description and image, the file and, on edit, the
+slug. Amounts are `decimal(20,2)`: `0`–`999999999999999999.99`, two
+decimals. MEDIUMTEXT/LONGTEXT fields (meta texts, slug, description) have no
+length rule.
+
+- **Category.** The options are built server-side, as categories (§13) do:
+  `Category::treeOptions()` (now shared with the category form) walks the
+  digital root categories and every category below them, by id, prefixed
+  `--` per level, as the retained `shop.categories.child_category` partial
+  printed them; the request accepts only those ids. The partial stays for its
+  seller and product consumers.
+- **Tags.** The Blade tag widget posted JSON in `tags[0]`; the form now posts
+  one comma-separated text, stored trimmed, without empties or repeats and
+  comma-joined, the format the storefront already reads.
+- **Uploads.** Photos, thumbnail and meta image are images, the file an upload
+  of any type, as the legacy pickers offered them. New references need the
+  caller's own upload or, with `view_uploads`, the library; an unchanged
+  stored reference round-trips whoever owns it without granting a preview
+  (`retainableImageUploadRule()`, the new `retainableUploadReferenceRule()`
+  for the file and `retainableImageUploadIdsRule()` for the photos, the last
+  extracted from the footer's payment logos). `file_name` keeps the upload id
+  the encrypted download (§15), the storefront, seller and mobile downloads
+  read.
+- **Taxes.** Each active tax (`tax_status = 1`, by id) is listed with the
+  product's stored amount and type (0 and `amount` without one); `tax_id[]`,
+  `tax[]` and `tax_type[]` must match in length, distinct active taxes only.
+
+**Deliberate changes.**
+
+- **Discount range now stored.** Both Blade forms posted `date_range`, and the
+  edit form showed a stored range, but neither root `store` nor `update` read
+  it (seller forms neither), so a range set here was silently dropped. It is
+  now validated (`d-m-Y H:i:s to d-m-Y H:i:s`, real dates, end not before
+  start; `Concerns\ValidatesDiscountDateRange`, shared with the brand
+  discount) and stored as `ProductService` stores it: `strtotime()` of each
+  half in the app timezone (UTC). An empty range clears both dates, so the
+  discount applies without a period, as the storefront treats null dates.
+- **Blank slug on update** is regenerated from the base name as on create,
+  instead of being stored empty.
+- **Validation.** Fields gained the schema bounds above; unknown categories,
+  inactive taxes and foreign uploads are 422s.
+- **Shared product edit redirect fixed.** `ProductController::admin_product_edit`
+  and `seller_product_edit` sent a digital product to `admin/digitalproducts/{id}/edit`
+  and `digitalproducts/{id}/edit`, URLs without `/temp` that match no route,
+  so the all-products list's Edit for a digital product reached a 404. They
+  now redirect to `digitalproducts.edit` with the request's `lang`.
+
+**Description.** Cleaned with `HtmlSanitizer` before validation (stored base
+and translation alike) and on the edit prop. The storefront digital product
+page already prints `clean_html()` (`digital_product_details.blade.php:555`),
+so legitimate content renders unchanged; the mobile product APIs return the
+stored text, which is now cleaned. Legacy summernote markup round-trips.
+The strict CSP, `blade_csp`, WAF patterns and exclusions are unchanged; the
+WAF still refuses a `<script>` or `onerror=` save with a 403 before any write.
+
+**Retained.** `shop.categories.child_category`, the seller and customer digital
+product forms and their Blade editor, product create/edit, the legacy uploader
+and its browser test on the physical product create form, shells, PDFs,
+`HandleStoreBladePages`, `store.blade_csp`, and the held script policy,
+`manage_website_scripts`, rich-text WAF exceptions, chart/map activation,
+seller/classified scope and server status.
+
+**Known limits.** In the browser harness (strict mode) a storefront product
+page lazy-loads translations of its owner's other products and 500s when that
+list holds a product without a slug; the browser spec gives its fixtures their
+own owner. Production does not run strict mode.
+
+**Tests adapted in place, none weakened.** `DigitalProductControllerTest`'s
+retained-Blade-forms test asserts the Inertia renders and the update redirect
+to the form; its migration test asserts both views are gone. The list's
+Vitest and browser specs expect Inertia create/edit visits.
+
+Current inventory: **49** backend Blade files, **25** direct literal consumers
+of `shop.backend.layouts.app`, **3** of `shop.backend.layouts.layout` and **0**
+of the blank shell. Registrations are unchanged at **1,047** under `/temp` and
+**435** under `/temp/admin`: five replace five. Blade editor: **10** fields in
+**10** views. Verification is recorded in the digital product forms section of
+[the reconciliation ledger](../store-backoffice-reconciliation-20261011.md).
+No deployment or production-data mutation is authorized.
+
+
+## 22. Physical product create form (2026-10-13)
+
+The physical product create form now uses `Store/Admin/Product/Products/Create`
+with the shared editor (§18), the canonical upload picker (§2.4) and a typed
+variant endpoint. Work is on `ccr-68328473-iie1w4`, branched from `develop` at
+`6a10019` (the PR #401 merge). The owner authorized this session's PR (#402), its
+merge into `develop` and `[skip ci]` on both. Every commit, the PR and its
+merge commit carry `[skip ci]`, so no PR CI, no PR or merge SAST and no
+`develop` deploy ran for them; the local checks in the ledger are the only
+verification. The edit form stays Blade for the next session.
+
+**Routes and gate.** `products.create` (GET `/products/create`) and
+`products.store` (POST `/products/store`) keep their names and URIs under
+`add_new_product`, now on `Store\Admin\ProductController`; the new
+`products.variant_combinations` (POST `/products/variant-combinations`, same
+gate) returns the variant rows as JSON. Root `ProductController` loses
+`create`, `store` and their middleware entry (four remain) and keeps the
+edit/update, seller list, jQuery switches and the Blade SKU endpoints
+(`products.sku_combination`, `.sku_combination_edit`), which the edit form
+and `Seller\ProductController` still render. The list's Add link and the
+sidebar entry are Inertia visits; Blade links by route name still resolve.
+
+**The legacy write path did not work.** `Product`'s `#[Fillable]` holds only
+the four `products:sync` columns since the model merge, and
+`ProductService::store()` and `ProductStockService::store()` mass-assign the
+form: outside strict mode every other column was silently dropped (no
+category, price, unit, slug or owner), and in local/testing (strict mode) the
+write throws `MassAssignmentException`. `Services\Store\InHouseProductWriter`
+computes what `ProductService::store()` computes (the store's own non-vendor
+admin account as owner, approval, comma-joined tags, the discount period, the
+meta defaults, the shipping cost, a numbered unique slug, the colour, choice
+and attribute JSON, publication from the button pressed) and sets the
+columns explicitly; stock rows are written as `ProductStockService` meant to.
+Taxes and the flash deal still go through `ProductTaxService` and
+`ProductFlashDealService`. The services are unchanged for the seller panel
+and the seller API, which keep the defect (reported, out of scope); the import
+commands write products directly and share none of them.
+
+**Atomic store.** Product, stock rows, taxes, flash deal entry, default-
+language translation, product types and store barcodes commit or fail
+together in one transaction; `view:clear` and `cache:clear` run after commit
+(never on failure). The request then returns to the in-house list.
+`digital = 0`, `added_by = admin` and the owner are set by the server; a
+posted `digital`, `added_by`, `user_id`, auction, wholesale or counter field
+is ignored.
+
+**Second writer of `products`: owner decision pending.** Creating a product
+writes WMS-owned `products` beside `products:sync` (shared-database.md), the
+same decision as §§14–16 and §21; behaviour and policy are kept, tests pin it.
+
+**Fields (`StoreProductRequest`).** Every field the Blade form posted, with the
+schema widths: name ≤200, unit ≤20 (both also `product_translations`), weight
+`decimal(8,2)`, quantities `int`, tags ≤500 (comma-separated, as §21), photos
+≤2000 and ≤50 ids, amounts `decimal(20,2)`, SKU ≤255, video link ≤100 and
+external link ≤500 as http(s) URLs, button text ≤255. The category is one of
+the physical tree (`Category::treeOptions()`); taxes use the shared
+`ValidatesStoreProductTaxes` (extracted from §21's digital rules); the
+discount keeps the legacy rule (flat below the unit price, percentage below
+100) and the range uses `ValidatesDiscountDateRange`. Uploads: photos,
+thumbnail, meta image and variant photos are images, the PDF a `document`
+upload, each the caller's own or, with `view_uploads`, the library's.
+Shipping (product-wise only with `shipping_type = product_wise_shipping`),
+estimated days, flash deal (`Flash_deals`, active deals only, a type required
+with a deal), taxes (`VAT_TAX_section`) and the cash-on-delivery switch
+(`cash_payment`) are excluded while their settings hide them, as the form
+never posted them.
+
+**Variants.** Colours (by code, while "use colours" is on) and attributes with
+their values (each value one of its attribute's, distinct per attribute)
+generate the rows. `Services\Store\ProductVariantCombinations` mirrors the
+Blade table (`sku_combinations.blade.php`): the cartesian product with colours
+first, then each attribute in list order, values in list order; a colour is
+named by its stored name, every other part with spaces removed, joined with
+`-`; each row defaults to the unit price as typed, an empty SKU and a quantity
+of 10. Pest compares the JSON with the retained Blade endpoint for four choice
+sets. The store recomputes the names and refuses rows that do not match; at
+most 500 rows (the legacy form had no bound and timed out), no name wider than
+`product_stocks.variant`, no two equal names.
+
+**Deliberate changes.**
+
+- **The colour row is shown.** Both admin Blade forms hid it (`d-none`), so
+  colours could not be chosen; the owner's scope lists colours among the
+  form's fields. The write is the legacy one.
+- **Cash on delivery.** A hidden input after the switch always posted `1`, so
+  unticking it did nothing. The switch is now honoured where it shows; where
+  `cash_payment` hides it, `1` is stored as before.
+- **Removed addons.** The POS barcode, refund and club-point fields depended on
+  addons removed in phase 1 (§2.2); `refundable` and `earn_point` have no
+  column. They are not offered.
+- **Barcodes.** Store barcodes (`product_barcodes`) must be distinct and not
+  already stored, the convention the Otajer import keeps; WMS barcodes
+  (`wms_product_barcodes`, unique, #389) are untouched by this form.
+- **A colour name with a space** (e.g. "Light Blue") kept its space in the
+  variant name but PHP rewrote the posted field name, so the legacy stock row
+  lost its price, SKU and quantity; the structured rows store them.
+- An attribute chosen without a value is a field error instead of a 500.
+
+**Description.** Cleaned with `HtmlSanitizer` before validation (product and
+translation alike); the meta description default strips the cleaned text.
+The storefront prints `clean_html()` (`product_details/description.blade.php:22`),
+so legitimate content renders unchanged; the mobile API returns the stored,
+now cleaned, text. The strict CSP, `blade_csp`, WAF patterns and exclusions are
+unchanged: the WAF still refuses a `<script>`, `onerror=` or `javascript:`
+payload with a 403 before any write.
+
+**Components (reusable by the edit session).** `StoreProductFormFields`,
+`StoreProductVariantFields`, `StoreProductListField` (types and barcodes),
+`StoreProductTaxFields` and `StoreProductDiscountFields` (both extracted from
+§21's digital form, now their second consumer), `lib/storeProductForm.ts`,
+`store.products.form.*` and the shared `store.productForm.*` keys in English
+and Arabic. The publish button is the form's submit; "Save & unpublish" posts
+`button=unpublish`, first in the form as on the Blade page.
+
+**Consumers traced.** Only root `create` rendered `create.blade.php`, now
+deleted. `choice_options_script.blade.php` (edit form),
+`sku_combinations*.blade.php` (edit form, `Seller\ProductController:209/239`),
+`shop.categories.child_category`, PDFs, shells, the legacy uploader,
+`HandleStoreBladePages` and `store.blade_csp` stay. `admin_sidenav` and the
+seller list's Blade links use the route name.
+
+**Tests adapted in place, none weakened.** `ProductControllerTest`'s retained
+forms test asserts the Inertia create render and the Blade edit form;
+`LegacyControllerMiddlewareConversionTest` counts four root entries; the digital
+form's Vitest reads the shared `store.productForm.*` labels;
+`storeAdminMenu.test.ts` lists the create entry as Inertia; the list's Vitest
+expects an Inertia Add link. `store-offers-catalogue.spec.ts` drives the
+choice script on the retained Blade edit form. `store-legacy-uploader.spec.ts`
+moved to the seller panel's product form (`/temp/seller/product/create`), which
+keeps the legacy uploader long-term: a seeded seller uploads, selects, removes
+and deletes through the seller endpoint, and the Blade-to-Inertia hop now
+starts from the retained seller list.
+
+**Known limits.** In the strict-mode browser harness the storefront product
+page still lazy-loads the owner's other products (§21); the spec gives its
+fixtures their own owner before visiting it. The seller product form lazy-loads
+tax rows under strict mode (inherited); Pest relaxes lazy loading for that one
+render.
+
+Current inventory: **48** backend Blade files, **24** direct literal consumers
+of `shop.backend.layouts.app`, **3** of `shop.backend.layouts.layout` and **0**
+of the blank shell. Registrations are **1,048** under `/temp` and **436** under
+`/temp/admin`: three replace two. Blade editor: **9** fields in **9** views.
+Verification is recorded in the product create form section of
+[the reconciliation ledger](../store-backoffice-reconciliation-20261011.md).
+No deployment or production-data mutation is authorized.
+
+
+## 23. Physical product edit form (2026-10-14)
+
+The physical product edit form now uses `Store/Admin/Product/Products/Edit`
+with the create form's components (§22), the shared editor (§18), the
+canonical upload picker (§2.4) and the language tabs. Work is on
+`claude/magical-lamport-g4w0c0`, from `develop` at `cb02808` (the PR #402
+merge). The owner authorized this session's commit, PR (#403), its merge into
+`develop` and `[skip ci]` on all of them, knowing the checks had not run. So no
+PR CI, no PR or merge SAST and no `develop` deploy ran, and the local checks in
+the ledger are the only verification: every backend, Vitest, type and browser
+check is still outstanding (no PHP 8.5, `vendor/` or `node_modules` in the
+session).
+
+**Routes and gate: names kept.** All four are on `Store\Admin\ProductController`
+under `product_edit`, the root controller's gate:
+
+- `products.admin.edit` (GET `/products/admin/{product}/edit`) and
+  `products.seller.edit` (GET `/products/seller/{product}/edit`): the same
+  page, `listType` `admin` or `seller`; each language tab stays on the route it
+  was opened from. The URI parameter is now the bound `{product}` (it was
+  `{id}`), so the Blade seller list's links pass `product`. A missing id is a
+  404; a digital product still goes to `digitalproducts.edit` with its `lang`.
+- `products.update` (POST `/products/update/{product}`, method and URI kept):
+  `UpdateProductRequest`; a digital product is a 404 before validation.
+- `products.edit_variant_combinations` (new, POST
+  `/products/{product}/variant-combinations`): the variant rows for the edit
+  form (below); a digital product is a 404.
+
+Root `ProductController` loses `admin_product_edit`, `seller_product_edit`,
+`update`, `sku_combination_edit` (route `products.sku_combination_edit`, whose
+only consumer was the deleted form) and their gate entries, keeps its four
+middleware entries (`product_edit` now covers only the jQuery switches) and
+stays in both analysis exclusion lists. `LegacyAdminPermissionsTest` drops
+the `sku_combination_edit` ratchet entry. The list's Edit link is now an
+Inertia visit; the sidebar has no edit entry, so `storeAdminMenu.ts` and its
+test are unchanged.
+
+**Writes (behaviour kept, now atomic).** `UpdateProductRequest` and
+`StoreProductRequest` share `Concerns\ValidatesStoreProduct` (extracted from
+§22's request: the same fields, widths, settings exclusions, variant checks
+and description cleaning). `InHouseProductWriter::update()` sets every column
+explicitly, in one transaction with the product row locked; `view:clear` and
+`cache:clear` run after commit. The legacy `ProductService::update()` mass-
+assigned the form, which Product's `#[Fillable]` reduced to the four
+`products:sync` columns, so the Blade form saved almost nothing (§22's
+defect); `ProductService` and `ProductStockService` stay unchanged for the
+seller panel and API.
+
+- **Languages.** The base name, unit and description change only in the
+  default language; the edited language's translation is written (created when
+  missing). Everything else is shared and written whatever the language, as
+  the legacy update did. Meta defaults take the posted (translated) name and
+  description, as before. Without a `lang` the form opens in the default
+  language; an unknown `lang` is refused.
+- **Kept as they are:** owner, `added_by`, approval, publication, `digital`.
+- **Stock rows.** A stored row is kept, updated in place (same id), for each
+  posted row whose variant it already names (the first such row when names
+  repeat); new variants add rows and rows no posted variant names are deleted.
+  Without variants one empty-variant row holds the unit price, quantity and
+  SKU. The legacy update deleted and recreated every row.
+- **Taxes** are replaced when posted; with the tax section off they stay.
+  **Types and store barcodes** are replaced; the product's own barcodes may be
+  posted again, another product's may not. **Flash deal:** a chosen active
+  deal applies through `ProductFlashDealService` (discount and period); none
+  chosen leaves an existing entry, as the service always did.
+- **Second writer of `products`: owner decision pending.** Updating writes
+  WMS-owned `products` beside `products:sync` (shared-database.md), as §§14–16,
+  §21 and §22; policy unchanged, tests pin it.
+
+**Variant editor.** The page sends the stored choice set: colours in the list's
+order (on while any is chosen), attributes in their stored order (it names the
+stored variants), each attribute's values in its value list's order with a
+repeated value offered once, the values lists and the rows. Stored colours,
+attributes and values that no longer exist are left out, so they drop on
+save, as the Blade selects dropped them. The initial rows are the stored rows
+(price, SKU, quantity, photo with a policy-gated preview); the page does not
+regenerate them until a choice or the unit price changes.
+
+**Decision: changing the choices.** The rows regenerate through
+`products.edit_variant_combinations`: a variant that already has a stored row
+keeps its stored price, SKU, quantity and photo; a new variant starts at the
+unit price as typed, an empty SKU and quantity 10 (the create defaults). On
+save the rows of dropped variants are deleted. Deliberate changes from the
+Blade SKU table: it re-priced every row to the typed unit price once the unit
+price differed from the stored one, and pre-filled a new row's SKU with its
+variant name.
+
+**Uploads.** Stored references round-trip whoever owns them without a preview
+(`retainableImageUploadRule()`/`retainableUploadReferenceRule()`/
+`retainableImageUploadIdsRule()`); a variant photo is retained only on the
+variant whose stored row holds it. New references follow the library rules.
+
+**Deliberate changes.**
+
+- **Slug.** A typed slug is normalised (`Str::slug`) and must be free among
+  other products (field error). A blank slug is regenerated from the base
+  name, numbered as on create. The legacy update renumbered a slug on every
+  save once another product's slug began with it.
+- **`variant_product`** now returns to 0 when the variants are removed.
+- **Hidden switches keep their values.** The legacy update set
+  `cash_on_delivery` and `is_quantity_multiplied` to 0 when their settings hid
+  them and reset `shipping_cost` to 0 outside product-wise shipping; they now
+  keep their stored values.
+- **Sections follow the create form.** The Blade edit form hid the colours,
+  shipping, today's deal, flash deal and shipping days blocks (`d-none`) but
+  still posted them; they show under the same settings as on create (§22).
+- **Otajer images** (`old_photo`, multiple images) and the slug show only on
+  the edit form, as on the Blade form. The removed addons' fields stay out.
+- **Validation.** The create form's schema bounds apply; legacy free-text
+  video or external links that are not http(s) URLs must be corrected on the
+  next save.
+
+**Description.** Cleaned with `HtmlSanitizer` before validation (base and
+translation) and on the edit prop, as §22. The strict CSP, `blade_csp`, WAF
+patterns and exclusions are unchanged; the WAF still refuses a `<script>` or
+`onerror=` save with a 403 before any write.
+
+**Consumers traced and files deleted (`git rm`).**
+
+- `product/products/edit.blade.php`: rendered only by the removed root
+  `admin_product_edit`/`seller_product_edit`.
+- `product/products/choice_options_script.blade.php`: included only by that
+  form (`rg` over `resources/views`, `app`, `routes`, `public/assets/js`). The
+  seller and customer forms have their own scripts.
+- `layouts/blank.blade.php`: no `@extends`/`@include`/`view()` caller in
+  `resources/views`, `app`, `routes` or `config`; its markup is the removed
+  installer's card. `StoreBackOfficeShellTest` pinned only its existence and
+  now asserts it is gone with no reference.
+- Kept: `sku_combinations_edit.blade.php` (rendered by
+  `Seller\ProductController::sku_combination_edit`, `seller.products.sku_combination_edit`),
+  `sku_combinations.blade.php` (seller and root `products.sku_combination`),
+  `product/products/index.blade.php` (seller list) and
+  `product/reviews/index.blade.php`: root `ReviewController::index` still
+  renders it for `reviews.index` (`/temp/reviews`), linked from `admin_sidenav`
+  and pinned by `ReviewControllerTest`, so it was not an orphan.
+
+**Tests adapted in place, none weakened.** `ProductControllerTest`'s retained
+forms test asserts both Inertia forms, the four routes and their gate;
+`ProductCreateFormTest` asserts the edit view and choice script are gone and
+the admin SKU edit route is removed (the seller one still renders);
+`DigitalProductFormTest` passes `product` to the edit routes;
+`LegacyControllerMiddlewareConversionTest` pins the remaining `product_edit`
+entry; `store-offers-catalogue.spec.ts` drives hostile attribute titles and
+values on the Inertia edit form. New: `ProductEditFormTest.php` (beside
+`ProductCreateFormTest.php`, as §22 did; no `Legacy*Test` held edit or update
+cases to move), `Edit.test.ts`, edit cases in the form, variant and list field
+tests, and `store-product-edit.spec.ts`.
+
+**Known limits.** On MySQL the stored decimals come back as `12.50`, so the
+edit form shows them as stored (Pest asserts the sqlite values). A product
+whose stored choice order does not match its stock names (older imports)
+shows default rows for the unmatched variants; saving deletes the unmatched
+rows, as the Blade form did.
+
+Current inventory: **45** backend Blade files, **23** direct literal consumers
+of `shop.backend.layouts.app`, **3** of `shop.backend.layouts.layout`, no
+blank shell. Registrations are unchanged at **1,048** under `/temp` and
+**436** under `/temp/admin`: four replace four (counted from the route files;
+`route:list` could not run). Blade editor: **8** fields in **8** views.
+Verification is recorded in the product edit form section of
+[the reconciliation ledger](../store-backoffice-reconciliation-20261011.md).
+No deployment or production-data mutation is authorized.
+
+## 24. Trip lists and status actions (2026-10-14)
+
+The all-trips and today's-trips lists now share `Store/Admin/Trips/Trips/Index`
+(`listType` `all` or `today`); the Blade status modal is `StoreTripStatusDialog`.
+Work is on `ccr-861a6e50-1xombz`, from `develop` at `4cbb84d` (the PR #403
+merge). The owner authorized this session's commit, PR (#404), its merge into
+`develop` and `[skip ci]` on all of them, because the checks run locally. So no
+PR CI, no PR or merge SAST and no `develop` deploy ran. The ledger records what
+ran here (Vitest, vue-tsc, ESLint and Prettier, against stand-in Wayfinder
+modules) and what did not (Pest, Pint, PHPStan, Wayfinder generation, the build
+and Playwright: no PHP 8.5 or `vendor/` in the session).
+
+**Routes and gates: names and permissions kept.** Six routes moved from root
+`Trip\TripController` to `Store\Admin\TripController` (`HasMiddleware`):
+
+- `trips.index` (GET `/trips/index`) and `trips.today-trips` (GET
+  `/trips/today-trips`): `view_all_trips`; `FilterTripsRequest` (`per_page`,
+  `search`, `status[]`).
+- `trips.update-status` (PUT `/trips/{trip}/status`; was POST
+  `/trips/update-trip-status` with `id`) and `trips.update-notes` (PUT
+  `/trips/{trip}/notes`; was POST `/trips/update-trip-notes` with `trip_id`):
+  `edit_trip`.
+- `trips.destroy` (DELETE `/trips/{trip}`; was POST `/trips/delete/{id}`) and
+  `trips.bulk-trip-delete` (POST `/trips/bulk-trips-delete`, URI kept):
+  `delete_trip`.
+
+Every write takes `list` (`StoreTripList`: `all`, `today` or `map`) and returns
+to that screen with the rest of its query, as the product lists' `list` does
+(§16). A missing bound trip is a 404. The root controller keeps the trip forms,
+the checkpoints page and its actions, the map picker, the trip orders and the
+CMR download, and stays in both analysis exclusion lists. Its
+`lockTruckForTrip()` moved unchanged to `Concerns\ReservesTripTrucks`, which
+both controllers use. No gate changed, so `LegacyAdminPermissionsTest` is
+unchanged; `LegacyAdminOwnershipTest`'s four trip-list rows moved to
+`TripControllerTest`'s per-permission dataset.
+
+**Behaviour kept.**
+
+- **Status transitions:** the legacy body, unchanged, in one transaction.
+  Closing keeps the first close time, marks the trip's order checkpoints
+  delivered and frees the truck only when no other open trip holds it; starting
+  or reopening reserves the truck again (a `truck_id` error, shown in the
+  dialog, when another open trip holds it) and keeps the first start time. The
+  response is a redirect instead of the jQuery `1`.
+- **Departure ID 9:** untouched; only the retained create and map writers add
+  the departure checkpoint.
+- **Search:** the `Trip::search()` scope, unchanged (exact code; status,
+  driver, truck and checkpoint customer by `LIKE`).
+- **Deleting** removes the checkpoints with one query, so no checkpoint
+  `deleting` hook runs and the orders keep their delivery status, as before.
+
+**Deliberate changes.**
+
+- **Truck availability on delete.** The legacy single delete freed the truck
+  even while another open trip held it, and the bulk delete never freed it (a
+  truck whose only open trip was bulk-deleted could not be assigned again).
+  Both now free it only when no other open trip holds it, with the trip locked.
+- **Bulk selection** is validated (1–100 distinct existing trips; otherwise a
+  field error and nothing deleted). The legacy handler skipped unknown ids.
+- **Notes** take the edit form's rule (`ValidatesStoreTrip`: nullable string,
+  at most 255); the inline Blade field accepted any length. They still save on
+  change; "Notes saved." shows under the row instead of a toast.
+- **Lists** page 20 at a time with the per-page selector (was 15), newest
+  first then by id. The status filter is `status[]` (any of pending, started,
+  closed) instead of the `pending`/`started`/`closed`/`allTrips` flags. Today's
+  list uses `whereDate('due_date', today())`, equal to the old comparison on
+  MySQL.
+- **Display.** Start and close times use `formatDateTime` (the browser's locale
+  and time zone; Blade printed server-time `Y-m-d H:i`); the distance is in
+  kilometres to two places in the locale's number format; the duration uses
+  the shared `formatDuration` with translated units (Blade printed Carbon's
+  English short span, `1s` where the page now shows `0s`).
+- **Links.** Driver and truck names link to their Inertia edit pages for a
+  viewer with `edit_driver`/`edit_truck` (pages.md). The trip code (checkpoints
+  page), Edit and Create trip load their Blade pages in full; Create order
+  (`add_order`) is an Inertia visit to the order entry.
+
+**Map picker.** Its truck cards' delete link is now `data-method="delete"` with
+`route('trips.destroy', ['trip' => …, 'list' => 'map'])`. `aiz-core.js`
+`postLink` also handles `a[data-method="delete"]`, adding `_method=DELETE` to
+the CSRF form; `.confirm-delete` passes the mark on to the modal's link as
+before. After the delete the picker reloads (it was Blade `back()`).
+`LegacyStoreStateChangingRoutesTest` accepts `data-method="post"` or `"delete"`
+and pins the `_method` field.
+
+**Consumers traced and files deleted (`git rm`).**
+
+- `trips/index.blade.php`: rendered only by the removed root `getTrips()`.
+- `trips/components/update-trip-status-modal.blade.php`: included only by
+  `trips/index.blade.php`.
+- `trips.update-status`, `trips.update-notes` and `trips.bulk-trip-delete` had
+  no consumer outside those two views; `trips.destroy` also serves the map
+  picker (above). Traced with `rg` over `resources/views`, `app`, `routes`,
+  `public/assets/js`, `resources/js` and `tests`.
+- Kept: `trips/inc/scripts.blade.php` (create, edit and map picker),
+  `inc/map-popups`, `inc/map-scripts`, the checkpoint components and
+  `update-checkpoint-status-modal` (checkpoints page) and
+  `shop.modals.delete_modal`. `admin_sidenav.blade.php` links the lists by name
+  and needs no change.
+
+**Menu.** All trips and Today's trips are Inertia entries from the new
+controller (`storeAdminMenu.ts` and its test); Create trip, Create trip from
+the map and Orders stay Blade.
+
+**Tests.** `TripControllerTest.php` keeps the root controller's cases; its
+status cases now use the bound PUT route and assert the redirect, and new cases
+cover the list payload, filters with noise rows, pagination and `per_page`,
+refused callers, the per-permission matrix, notes, delete (orders, trucks, the
+map picker's spoofed DELETE, 404/405) and bulk delete with a DB-unchanged
+assertion on every refusal. The Blade list's permission-rendering case became
+Vitest gating cases. New: `Trips/Trips/Index.test.ts`,
+`StoreTripStatusDialog.test.ts` and `store-trips.spec.ts` (native confirms, the
+dialog, notes on change, the map picker's modal delete);
+`store-drivers.spec.ts` now expects the Inertia list and continues to the
+Blade create form.
+
+Current inventory: **43** backend Blade files, **22** direct literal consumers
+of `shop.backend.layouts.app`, **3** of `shop.backend.layouts.layout`.
+Registrations are unchanged at **1,048** under `/temp` and **436** under
+`/temp/admin`: six replace six (counted from the route files; `route:list`
+could not run). Blade editor: **8** fields in **8** views. Verification is
+recorded in the trip list section of
+[the reconciliation ledger](../store-backoffice-reconciliation-20261011.md).
+No deployment or production-data mutation is authorized.
+
+## 25. Trip create and edit forms (2026-10-15)
+
+The trip create and edit forms now use `Store/Admin/Trips/Trips/Create` and
+`Edit` (`ResourceFormPage`, `wide`, `StoreAdminLayout`) with
+`StoreTripFormFields`. Work is on `ccr-0ba426e7-qihjvq`, from `develop` at
+`1f68656` (the PR #404 merge). The owner authorized this session's commit,
+PR (#406), its merge into `develop` and `[skip ci]` on all of them, because the
+checks run locally. So no PR CI, no PR or merge SAST and no `develop` deploy
+ran. The ledger records what ran here (Vitest, vue-tsc, ESLint and Prettier,
+against stand-in Wayfinder modules) and what did not (Pest, Pint, PHPStan,
+Wayfinder generation, `route:list`, the build and Playwright: PHP 8.3.6 and no
+`vendor/` in the session, as for #404, whose PHP checks are therefore still
+outstanding too).
+
+**Routes and gates: names and permissions kept.** Four routes moved from root
+`Trip\TripController` to `Store\Admin\TripController`:
+
+- `trips.create` (GET `/trips/create`) and `trips.store` (POST
+  `/trips/store`, URI kept): `add_trip`.
+- `trips.edit` (GET `/trips/{trip}/edit`; was `/trips/edit/{id}`) and
+  `trips.update` (PUT `/trips/{trip}`; was POST `/trips/update` with `id`):
+  `edit_trip`. A missing bound trip is a 404; a POST to the old update URI
+  is now a 405 (the PUT owns the pattern) and the old edit URI a 404.
+
+No retained Blade screen posted to the old routes, so none stays. The lookups
+`trips.available-vehicles` and `trips.user-coordinates` are unchanged JSON
+routes on `Api\V2\Trip\DriverController` (the driver API is a separate
+consumer); the form calls the first through its Wayfinder action with the same
+`date` and `excluded_trip_id` parameters as the Blade script. The root
+controller keeps the checkpoints page and its actions, the map picker and its
+writer, the trip orders and the CMR download, and stays in both analysis
+exclusion lists.
+
+**Writers: behaviour kept.** `store` and `update` are the legacy bodies,
+moved:
+
+- **Departure ID 9:** a new trip still starts with the departure checkpoint
+  (store user 9), refused with a `departure` field error when that user is
+  missing.
+- **Trucks:** `Concerns\ReservesTripTrucks` is reused unchanged (only its
+  docblock names the new callers): an open trip elsewhere or an unavailable
+  truck is a `truck_id` error, a closed trip does not reserve its truck again,
+  and a truck is freed only when no other open trip holds it, the trip's old
+  truck included (§24's rule).
+- **Checkpoints:** a stored checkpoint keeps its identity, order or customer,
+  coordinates, status, arrival and attachments, and takes only its new
+  position and notes; rows left out are deleted with one query (no `deleting`
+  hook) and new rows are added. The shortest-path sort, the driver
+  notification and the redirect to the trip's Blade checkpoints page
+  (`trips.show`, reached from Inertia through `HandleStoreBladePages`'s 409)
+  are unchanged.
+- **Shared steps:** `createTrip()` (now given the validated array),
+  `formatCheckpointsArray()`, `applyDefaultFirstCheckpoint()`,
+  `hasValidCoordinates()` and `sortBasedOnShortestPath()` moved unchanged to
+  `Concerns\WritesTripCheckpoints`, used by both controllers (the map picker's
+  writer still needs them).
+
+**Validation.** `StoreTripRequest` and `UpdateTripRequest` share
+`Concerns\ValidatesStoreTrip` (driver, truck and due date, notes at most 255,
+checkpoint notes at most 1000). Each row's reference is now a
+`Rule::exists` on the table its type names (`orders` for a delivery, `users`
+otherwise), so an unknown driver, truck, order or customer is a 422 field
+error. The update request takes the bound trip instead of `id`; a stored row
+must belong to it, appear once and keep its type and reference, and the create
+form refuses any stored id.
+
+**Deliberate changes.**
+
+- **Stored checkpoints show as text.** Their order or customer cannot change
+  (the server refused it already), so the edit form shows the order code and
+  customer, or the customer, and posts the reference hidden. The Blade select
+  offered only orders out for delivery, so a trip holding an order since
+  delivered could not be saved; it now can.
+- **Order of stops** changes with Move up and Move down buttons instead of
+  SortableJS drag handles (loaded from jsDelivr `@latest`); no dependency was
+  added. The shortest-path sort still reorders on save when routing answers.
+- **No map on the forms.** The Blade forms embedded the Leaflet checkpoint map
+  (`inc/map-scripts`); the map dependency's approval is unverified (§5), so
+  the Inertia forms have none. `inc/map-scripts.blade.php` stays, now with no
+  Blade includer, as the owner kept the map partials out of scope;
+  `storeTripBladeMap.test.ts` still loads it.
+- **Native constraints mirror the rules.** Due date (`type="date"`, required),
+  truck (required), notes (`maxlength` 255), each new row's reference
+  (required) and checkpoint notes (`maxlength` 1000). A customer checkpoint's
+  notes were `required` only in the Blade markup; the server never required
+  them, so the field is optional. An empty checkpoint list is refused by the
+  browser (a required marker with "Add at least one checkpoint.") as well as
+  by the server.
+- **Vehicles.** A driver or truck no longer free on a newly chosen date is
+  cleared; the Blade script re-selected only the stored value. The date,
+  driver and truck hints are kept. Errors show under their fields instead of
+  a list above the form.
+- **Choices.** Orders out for delivery, newest code first (kept), labelled
+  `#code customer`; store users who are not representatives, now by name
+  ascending (the Blade lists ran by name descending), sent once as page props
+  with only their id, code or name.
+- **Links.** The list's Create trip and Edit, and the sidebar's Create trip,
+  are Inertia visits (`storeAdminMenu.ts` and its test); Create trip from the
+  map and Orders stay Blade. `admin_sidenav.blade.php` links by name and needs
+  no change.
+
+**Consumers traced and files deleted (`git rm`).** Traced with `rg` over
+`resources/views`, `app`, `routes`, `public/assets/js`, `resources/js`,
+`config` and `tests`.
+
+- `trips/create.blade.php` and `trips/edit.blade.php`: rendered only by the
+  removed root `create`/`edit`.
+- `trips/components/checkpoint-template.blade.php` and
+  `trips/components/checkpoint.blade.php`: included only by those two forms.
+- Kept: `trips/inc/scripts.blade.php` (still included by
+  `create-from-map.blade.php`), `inc/map-popups` (checkpoints page, map picker,
+  `inc/map-scripts`), `inc/map-scripts` (above),
+  `update-checkpoint-status-modal` (checkpoints page).
+
+**Tests.** `TripControllerTest.php`: the update cases now use the bound PUT;
+a `trip forms` block adds the create and edit payloads (with noise rows), the
+redirects, refused callers, the per-permission matrix, a validation dataset
+run against both writers with a DB-unchanged assertion, the stored-id
+refusal on create, truck release with another open trip, and reorder, keep,
+add and drop on update. `LegacyAdminOwnershipTest`'s last three rows (trip
+create, store and update) moved into that matrix, so the emptied file was
+removed; `LegacyShopRouteAccessTest`'s docblock no longer names it. No gate
+changed, so `LegacyAdminPermissionsTest` is unchanged. New: `Create.test.ts`,
+`Edit.test.ts`, `StoreTripFormFields.test.ts` (full mounts) and a
+`store-trips.spec.ts` case (the vehicle lookup on a date, the browser's
+empty-list refusal, save to the Blade checkpoints page, edit with a reorder);
+`Index.test.ts` and `store-drivers.spec.ts` now expect the Inertia form.
+
+Current inventory: **39** backend Blade files, **20** direct literal consumers
+of `shop.backend.layouts.app`, **3** of `shop.backend.layouts.layout`.
+Registrations are unchanged at **1,048** under `/temp` and **436** under
+`/temp/admin`: four replace four (counted from the route files; `route:list`
+could not run). Blade editor: **8** fields in **8** views. Verification is
+recorded in the trip form section of
 [the reconciliation ledger](../store-backoffice-reconciliation-20261011.md).
 No deployment or production-data mutation is authorized.

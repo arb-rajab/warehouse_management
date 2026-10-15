@@ -233,11 +233,41 @@ class ProductController extends Controller
      * The same label as {@see downloadBarcode()}, served inline so the
      * products page can show it in an `<img>` without downloading it.
      */
-    public function previewBarcode(Product $product, ProductBarcode $barcode): HttpResponse
+    public function previewBarcode(Request $request, Product $product, ProductBarcode $barcode): HttpResponse
     {
+        $setting = Setting::current();
+
+        // Every input of the label, hashed before the SVG is rendered, so a
+        // repeat request is answered with a 304 without rendering it.
+        $etag = md5(implode('|', [
+            $this->productLabelName($product),
+            $barcode->barcode,
+            $setting->qr_code_width,
+            $setting->qr_code_height,
+        ]));
+
+        $notModified = $this->notModifiedResponse($request, $etag, 'private, no-cache');
+
+        if ($notModified !== null) {
+            return $notModified;
+        }
+
         return response($this->barcodeLabelSvg($product, $barcode))
             ->header('Content-Type', 'image/svg+xml')
-            ->header('Content-Disposition', 'inline');
+            ->header('Content-Disposition', 'inline')
+            ->header('Cache-Control', 'private, no-cache')
+            ->setEtag($etag);
+    }
+
+    /**
+     * An empty 304 when the request's `If-None-Match` already holds $etag,
+     * otherwise null. Lets an action skip expensive work before it starts.
+     */
+    private function notModifiedResponse(Request $request, string $etag, string $cacheControl): ?HttpResponse
+    {
+        $response = response('')->setEtag($etag)->header('Cache-Control', $cacheControl);
+
+        return $response->isNotModified($request) ? $response : null;
     }
 
     private function barcodeLabelSvg(Product $product, ProductBarcode $barcode): string
@@ -315,7 +345,7 @@ class ProductController extends Controller
      * downscaled PNG rather than passed through, so only a real raster image
      * (never SVG/HTML) is ever served from this origin.
      */
-    public function image(Product $product): HttpResponse
+    public function image(Request $request, Product $product): HttpResponse
     {
         $product->loadMissing('thumbnailUpload:id,file_name,external_link');
         $url = $product->image_url;
@@ -325,6 +355,15 @@ class ProductController extends Controller
         }
 
         abort_unless($this->isAllowedImageUrl($url), HttpResponse::HTTP_BAD_GATEWAY);
+
+        // The served PNG is a pure function of the image URL, so a browser
+        // that already holds it revalidates without the upstream fetch.
+        $etag = md5($url);
+        $notModified = $this->notModifiedResponse($request, $etag, 'private, max-age=86400');
+
+        if ($notModified !== null) {
+            return $notModified;
+        }
 
         try {
             $upstream = Http::timeout(10)
@@ -346,7 +385,8 @@ class ProductController extends Controller
 
         return response($png)
             ->header('Content-Type', 'image/png')
-            ->header('Cache-Control', 'private, max-age=86400');
+            ->header('Cache-Control', 'private, max-age=86400')
+            ->setEtag($etag);
     }
 
     /**

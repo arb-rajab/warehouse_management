@@ -47,7 +47,6 @@ const ADMIN_WRITES_STILL_UNGATED = [
     'ProductController@get_products_by_subcategory',
     'ProductController@search',
     'ProductController@sku_combination',
-    'ProductController@sku_combination_edit',
 
     // The controller has no such method, so the request errors out.
 
@@ -170,7 +169,7 @@ test('the permission that gates a page also lets its write endpoint through, and
 test('a staff user cannot change a business setting or take the site down', function () {
     actingAsStoreUser(createStoreUser('staff'));
 
-    $this->post(route('business_settings.update'), ['types' => ['planted_setting'], 'planted_setting' => 'x'])->assertForbidden();
+    $this->post(retiredSettingsWriterUri(), ['types' => ['planted_setting'], 'planted_setting' => 'x'])->assertNotFound();
     $this->post(route('business_settings.update.activation'), ['type' => 'maintenance_mode', 'value' => 1])->assertForbidden();
 
     $this->assertDatabaseMissing('business_settings', ['type' => 'planted_setting']);

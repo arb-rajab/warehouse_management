@@ -5,12 +5,11 @@ namespace App\Http\Controllers\Trip;
 use App\Enums\CheckpointStatus;
 use App\Enums\TripStatus;
 use App\Events\SetTruckAvailability;
+use App\Http\Controllers\Concerns\ReservesTripTrucks;
+use App\Http\Controllers\Concerns\WritesTripCheckpoints;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Store\Admin\StoreMapTripRequest;
-use App\Http\Requests\Store\Admin\StoreTripRequest;
 use App\Http\Requests\Store\Admin\UpdateCheckpointStatusRequest;
-use App\Http\Requests\Store\Admin\UpdateTripRequest;
-use App\Http\Requests\Store\Admin\UpdateTripStatusRequest;
 use App\Models\Checkpoint;
 use App\Models\Order;
 use App\Models\StoreUser;
@@ -18,7 +17,6 @@ use App\Models\Trip;
 use App\Models\Truck;
 use App\Services\DriverService;
 use App\Services\UserService;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -28,6 +26,9 @@ use Illuminate\Validation\ValidationException;
 
 class TripController extends Controller
 {
+    use ReservesTripTrucks;
+    use WritesTripCheckpoints;
+
     protected $userService;
 
     protected $driverService;
@@ -36,16 +37,6 @@ class TripController extends Controller
     {
         $this->userService = $userService;
         $this->driverService = $driverService;
-    }
-
-    public function getTodayTrips(Request $request)
-    {
-        return $this->getTrips($request, 'today');
-    }
-
-    public function getAllTrips(Request $request)
-    {
-        return $this->getTrips($request, 'all');
     }
 
     public function show($id)
@@ -68,16 +59,9 @@ class TripController extends Controller
 
     }
 
-    public function create()
-    {
-        $trip = null; // to fix frontend issue
-
-        return view('shop.backend.trips.create', compact('trip'));
-    }
-
     public function create_from_map()
     {
-        $available_trucks = Truck::available(true)->select(['id', 'name', 'photos', 'is_available'])->get();
+        $available_trucks = Truck::available(true)->select(['id', 'name', 'photos', 'is_available', 'max_pallets_number'])->get();
         $unavailable_trucks = Truck::available(false)->select(['id', 'name', 'photos', 'is_available'])->get();
         $trip = null; // to fix frontend issue
 
@@ -94,13 +78,13 @@ class TripController extends Controller
             Gate::authorize('edit_trip');
         }
 
-        $trip = DB::transaction(function () use ($data, $request) {
+        $trip = DB::transaction(function () use ($data) {
             $trip = empty($data['trip_id']) ? null : Trip::query()->lockForUpdate()->findOrFail($data['trip_id']);
             $truck = $this->lockTruckForTrip((int) $data['truck_id'], $trip);
             if ($trip !== null && ($trip->truck_id !== $truck->id || $trip->status === TripStatus::Closed->value)) {
                 throw ValidationException::withMessages(['trip_id' => __('validation.exists', ['attribute' => 'trip'])]);
             }
-            $trip ??= $this->createTrip($request);
+            $trip ??= $this->createTrip($data);
             foreach ($data['markers'] as $marker) {
                 $order = Order::query()->lockForUpdate()->findOrFail($marker['order_id']);
                 if ($order->delivery_status !== 'on_delivery' || Checkpoint::query()->where('relationable_type', Order::class)->where('relationable_id', $order->id)->whereIn('trip_id', Trip::query()->select('id')->where('status', '<>', 'closed'))->exists()) {
@@ -121,219 +105,6 @@ class TripController extends Controller
         $this->driverService->notifyDriver($trip);
 
         return response()->json(['success' => true]);
-    }
-
-    public function store(StoreTripRequest $request)
-    {
-        $data = $request->validated();
-        $trip = DB::transaction(function () use ($data, $request) {
-            $truck = $this->lockTruckForTrip((int) $data['truck_id']);
-            $checkpoints = [];
-            $this->applyDefaultFirstCheckpoint($checkpoints);
-            $checkpoints = [...$checkpoints, ...$this->prepareCheckpointRows($data['checkpoints_array'], offset: 1)];
-            $trip = $this->createTrip($request);
-            $trip->checkpoints()->createMany($checkpoints);
-            event(new SetTruckAvailability($trip, $truck, false));
-
-            return $trip;
-        });
-        $this->sortBasedOnShortestPath($trip);
-        $this->driverService->notifyDriver($trip);
-
-        return redirect()->route('trips.show', $trip->id);
-    }
-
-    public function edit($id)
-    {
-        $trip = Trip::findOrFail($id);
-
-        return view('shop.backend.trips.edit', compact('trip'));
-    }
-
-    public function update(UpdateTripRequest $request)
-    {
-        $data = $request->validated();
-        $driverChanged = false;
-        $trip = DB::transaction(function () use ($data, &$driverChanged) {
-            $trip = Trip::query()->lockForUpdate()->findOrFail($data['id']);
-            $oldTruckId = $trip->truck_id;
-            $truck = $this->lockTruckForTrip((int) $data['truck_id'], $trip, reserve: $trip->status !== TripStatus::Closed->value);
-            $driverChanged = $trip->driver_id !== ($data['driver_id'] ?? null);
-            $checkpoints = $this->prepareCheckpointRows($data['checkpoints_array'], $trip);
-            $trip->fill([
-                'driver_id' => $data['driver_id'] ?? null,
-                'truck_id' => $truck->id,
-                'due_date' => $data['due_date'],
-                'notes' => $data['notes'] ?? null,
-            ])->save();
-            $retained = array_filter(array_column($checkpoints, 'id'));
-            $trip->checkpoints()->whereNotIn('id', $retained)->delete();
-            foreach ($checkpoints as $checkpoint) {
-                $id = $checkpoint['id'] ?? null;
-                unset($checkpoint['id']);
-                if ($id !== null) {
-                    $trip->checkpoints()->whereKey($id)->update($checkpoint);
-                } else {
-                    $trip->checkpoints()->create($checkpoint);
-                }
-            }
-            $available = $trip->status === TripStatus::Closed->value && ! $truck->trips()->where('status', '<>', TripStatus::Closed->value)->exists();
-            event(new SetTruckAvailability($trip, $truck, $available));
-            if ($oldTruckId !== null && $oldTruckId !== $truck->id) {
-                $oldTruck = Truck::query()->lockForUpdate()->find($oldTruckId);
-                if ($oldTruck !== null) {
-                    $available = ! $oldTruck->trips()->where('status', '<>', TripStatus::Closed->value)->exists();
-                    event(new SetTruckAvailability($trip, $oldTruck, $available));
-                }
-            }
-
-            return $trip;
-        });
-        $this->sortBasedOnShortestPath($trip);
-        if ($driverChanged) {
-            $this->driverService->notifyDriver($trip);
-        }
-
-        return redirect()->route('trips.show', $trip->id);
-    }
-
-    protected function lockTruckForTrip(int $truckId, ?Trip $trip = null, bool $reserve = true): Truck
-    {
-        $truck = Truck::query()->lockForUpdate()->findOrFail($truckId);
-        if (! $reserve) {
-            return $truck;
-        }
-        $otherTrip = $truck->trips()->where('status', '<>', TripStatus::Closed->value);
-        if ($trip !== null) {
-            $otherTrip->whereKeyNot($trip->id);
-        }
-        if ($otherTrip->exists() || (! $truck->is_available && ($trip === null || $trip->truck_id !== $truck->id))) {
-            throw ValidationException::withMessages(['truck_id' => __('validation.exists', ['attribute' => 'available truck'])]);
-        }
-
-        return $truck;
-    }
-
-    /** @param array<int, array<string, mixed>> $rows
-     * @return array<int, array<string, mixed>>
-     */
-    protected function prepareCheckpointRows(array $rows, ?Trip $trip = null, int $offset = 0): array
-    {
-        $checkpoints = [];
-        foreach (array_values($rows) as $index => $row) {
-            $id = (int) ($row['id'] ?? 0);
-            if ($id > 0) {
-                $checkpoint = $trip?->checkpoints()->lockForUpdate()->find($id);
-                $type = $row['checkpoint_type'] === 'delivery' ? Order::class : StoreUser::class;
-                if ($checkpoint === null || $checkpoint->relationable_type !== $type || $checkpoint->relationable_id !== (int) $row['checkpoint_related_id'] || $checkpoint->type !== $row['checkpoint_type']) {
-                    throw ValidationException::withMessages(['checkpoints_array' => __('validation.exists', ['attribute' => 'checkpoint'])]);
-                }
-                $checkpoints[] = ['id' => $id, 'sort_order_in_trip' => $index + $offset + 1, 'notes' => $row['checkpoint_notes'] ?? ''];
-
-                continue;
-            }
-            if ($row['checkpoint_type'] === 'delivery') {
-                $order = Order::query()->findOrFail($row['checkpoint_related_id']);
-                $address = json_decode($order->shipping_address);
-                $coordinates = $this->userService->getUserLongLat($order->customer, $order);
-                $type = Order::class;
-            } else {
-                $customer = StoreUser::query()->findOrFail($row['checkpoint_related_id']);
-                $address = formateAddressArray($customer->addresses->where('set_default', true)->first());
-                $coordinates = $this->userService->getUserLongLat($customer);
-                $type = StoreUser::class;
-            }
-            $checkpoints[] = $this->formatCheckpointsArray($row, $address, $index + $offset, $type, $coordinates);
-        }
-
-        return $checkpoints;
-    }
-
-    public function delete($id)
-    {
-        $trip = Trip::find($id);
-        if ($trip) {
-            // Delete related checkpoints
-            $trip->checkpoints()->delete();
-
-            event(new SetTruckAvailability($trip, $trip->truck, true));
-
-            $trip->delete();
-            flash('Trip Deleted Successfully')->success();
-        } else {
-            flash('Error: trip Not Found')->error();
-        }
-
-        return redirect()->back();
-    }
-
-    public function bulk_trip_delete(Request $request)
-    {
-        $deletedCount = 0;
-
-        try {
-            foreach ($request->id as $trip_id) {
-                $trip = Trip::find($trip_id);
-                if ($trip) {
-
-                    $trip->checkpoints()->delete();
-
-                    $trip->delete();
-                    $deletedCount++;
-                }
-            }
-        } catch (\Exception $e) {
-            flash('An error occurred during bulk delete')->error();
-
-            return 0;
-        }
-
-        return 1;
-    }
-
-    public function update_trip_notes(Request $request)
-    {
-        $trip = Trip::find($request->trip_id);
-
-        if (! $trip) {
-            return response()->json(['success' => false]);
-        }
-
-        $trip->notes = $request->notes;
-
-        if ($trip->save()) {
-            return response()->json(['success' => true]);
-        }
-
-        return response()->json(['success' => false]);
-    }
-
-    public function update_trip_status(UpdateTripStatusRequest $request)
-    {
-        $data = $request->validated();
-        DB::transaction(function () use ($data): void {
-            $trip = Trip::query()->lockForUpdate()->findOrFail($data['id']);
-            $status = TripStatus::from($data['status']);
-            $truck = $status === TripStatus::Closed
-                ? Truck::query()->lockForUpdate()->findOrFail($trip->truck_id)
-                : $this->lockTruckForTrip((int) $trip->truck_id, $trip);
-            $trip->status = $status->value;
-            $trip->active = $status !== TripStatus::Closed;
-            $trip->closed_at = $status === TripStatus::Closed ? ($trip->closed_at ?? now()) : null;
-            if ($status === TripStatus::Started) {
-                $trip->started_at ??= now();
-            }
-            $trip->save();
-            if ($status === TripStatus::Closed) {
-                foreach ($trip->checkpoints()->select('relationable_id')->where('relationable_type', Order::class)->get() as $checkpoint) {
-                    Order::query()->whereKey($checkpoint->relationable_id)->update(['delivery_status' => 'delivered']);
-                }
-            }
-            $available = $status === TripStatus::Closed && ! $truck->trips()->where('status', '<>', TripStatus::Closed->value)->exists();
-            event(new SetTruckAvailability($trip, $truck, $available));
-        });
-
-        return 1;
     }
 
     public function update_checkpoint_notes(Request $request)
@@ -379,29 +150,6 @@ class TripController extends Controller
         }
 
         return redirect()->back()->with('error', 'File not found on the server');
-    }
-
-    protected function getTrips(Request $request, $type = 'all')
-    {
-        $trips = Trip::query()->select(['id', 'code', 'driver_id', 'truck_id', 'due_date', 'status', 'started_at', 'closed_at', 'distance', 'duration', 'notes'])->with(['driver:id,name', 'truck:id,name']);
-
-        if ($type === 'today') {
-            $trips->where('due_date', today());
-        }
-
-        // Handle search functionality
-        $sort_search = $request->input('search');
-        if ($sort_search) {
-            $trips->search($sort_search);
-        }
-
-        $this->applyStatusFilters($request, $trips);
-
-        $trips = $trips->orderBy('created_at', 'desc')->paginate(15);
-
-        $page_title = $type === 'today' ? translate('Today Trips') : translate('All Trips');
-
-        return view('shop.backend.trips.index', compact('trips', 'sort_search', 'page_title'));
     }
 
     protected function getOrdersCoordinates($orders)
@@ -463,34 +211,6 @@ class TripController extends Controller
         return $checkpoints_array;
     }
 
-    protected function createTrip($request)
-    {
-        $trip = Trip::create([
-            'driver_id' => $request->driver_id ?? null,
-            'truck_id' => $request->truck_id,
-            'due_date' => $request->due_date ?? now(),
-            'notes' => $request->notes,
-            'code' => now()->format('Ymd-His'),
-            'active' => true,
-        ]);
-
-        return $trip;
-    }
-
-    protected function formatCheckpointsArray($checkpoint, $address, $key, $relationable_type, $long_lat_array = [])
-    {
-        return [
-            'type' => $checkpoint['checkpoint_type'],
-            'sort_order_in_trip' => $key + 1,
-            'longitudes' => $long_lat_array['longitude'] ?? null,
-            'latitudes' => $long_lat_array['latitude'] ?? null,
-            'address' => $address,
-            'relationable_id' => $checkpoint['checkpoint_related_id'],
-            'relationable_type' => $relationable_type,
-            'notes' => $checkpoint['checkpoint_notes'] ?? '',
-        ];
-    }
-
     protected function getCheckpointsMapData($checkpoints)
     {
         $points = $this->checkpointMapPoints($checkpoints);
@@ -520,92 +240,6 @@ class TripController extends Controller
                 'latitude' => $checkpoint->latitudes,
                 'label' => $checkpoint->sort_order_in_trip.' | '.($checkpoint->getCustomerForCheckpoint()?->name ?? '-'),
             ])->values()->all();
-    }
-
-    protected function hasValidCoordinates($latitude, $longitude): bool
-    {
-        return is_numeric($latitude) && is_numeric($longitude)
-            && (float) $latitude >= -90 && (float) $latitude <= 90
-            && (float) $longitude >= -180 && (float) $longitude <= 180;
-    }
-
-    protected function sortBasedOnShortestPath($trip)
-    {
-        $checkpoints = $trip->checkpoints()->select(['id', 'trip_id', 'longitudes', 'latitudes', 'sort_order_in_trip', 'eta'])->orderBy('sort_order_in_trip')->get();
-        $validCheckpoints = $checkpoints->filter(fn ($checkpoint) => $this->hasValidCoordinates($checkpoint->latitudes, $checkpoint->longitudes))->values();
-        if ($validCheckpoints->count() < 2) {
-            return;
-        }
-        $coordinateString = $validCheckpoints->map(fn ($checkpoint) => "{$checkpoint->longitudes},{$checkpoint->latitudes}")->implode(';');
-        try {
-            $data = Http::connectTimeout(2)->timeout(5)->get("https://router.project-osrm.org/trip/v1/driving/{$coordinateString}", [
-                'overview' => 'full',
-                'geometries' => 'geojson',
-            ])->throw()->json();
-            if (count($data['waypoints'] ?? []) !== $validCheckpoints->count() || ! isset($data['trips'][0]['duration'], $data['trips'][0]['distance'])) {
-                return;
-            }
-            $positions = $validCheckpoints->pluck('sort_order_in_trip')->sort()->values();
-            DB::transaction(function () use ($trip, $data, $positions, $validCheckpoints): void {
-                foreach ($validCheckpoints as $index => $checkpoint) {
-                    $order = $data['waypoints'][$index]['waypoint_index'];
-                    if (! isset($positions[$order])) {
-                        throw new \UnexpectedValueException('Invalid route waypoint index.');
-                    }
-                    $checkpoint->update([
-                        'sort_order_in_trip' => $positions[$order],
-                        'eta' => $data['trips'][0]['legs'][$order]['duration'] ?? null,
-                    ]);
-                }
-                $trip->update(['duration' => $data['trips'][0]['duration'], 'distance' => $data['trips'][0]['distance']]);
-            });
-        } catch (\Exception $exception) {
-            // A routing outage must not prevent creating or editing a trip.
-        }
-    }
-
-    /**
-     * Apply status filters to the query based on the request.
-     *
-     * @param  Builder  $query
-     */
-    protected function applyStatusFilters(Request $request, $query)
-    {
-        $pending = $request->has('pending');
-        $started = $request->has('started');
-        $closed = $request->has('closed');
-        $allTrips = $request->has('allTrips');
-
-        if (! $allTrips && ($pending || $started || $closed)) {
-            $query->where(function ($subQuery) use ($pending, $started, $closed) {
-                if ($pending) {
-                    $subQuery->orWhere('status', TripStatus::Pending->value);
-                }
-                if ($started) {
-                    $subQuery->orWhere('status', TripStatus::Started->value);
-                }
-                if ($closed) {
-                    $subQuery->orWhere('status', TripStatus::Closed->value);
-                }
-            });
-        }
-    }
-
-    protected function applyDefaultFirstCheckpoint(&$checkpoints_array)
-    {
-        $default_starting_checkpoint = [
-            'id' => '0',
-            'checkpoint_type' => 'other',
-            'checkpoint_related_id' => 9,
-            'checkpoint_notes' => __('Default starting checkpoint'),
-        ];
-
-        $default_starting_checkpoint_user = StoreUser::find(9);
-        if ($default_starting_checkpoint_user === null) {
-            throw ValidationException::withMessages(['departure' => __('messages.store_trip_departure_unavailable')]);
-        }
-        $long_lat_array = $this->userService->getUserLongLat($default_starting_checkpoint_user);
-        $checkpoints_array[] = $this->formatCheckpointsArray($default_starting_checkpoint, [], 0, StoreUser::class, $long_lat_array);
     }
 
     public function all_orders(Request $request)

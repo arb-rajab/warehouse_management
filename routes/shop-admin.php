@@ -1,77 +1,80 @@
 <?php
-use App\Http\Controllers\Store\Admin\DashboardController;
-use App\Http\Controllers\Store\Admin\OrderEntryController;
-use App\Http\Controllers\Store\Admin\CampaignProductController;
-use App\Http\Controllers\PageController;
-use App\Http\Controllers\Store\Admin\ProductQueryController;
-use App\Http\Controllers\Store\Admin\ConversationController;
 
 use App\Http\Controllers\AdminController;
-use App\Http\Controllers\Store\Admin\CustomerNotificationController;
-use App\Http\Controllers\AizUploadController;
+use App\Http\Controllers\BusinessSettingsController;
+use App\Http\Controllers\CommissionController;
+use App\Http\Controllers\CustomerProductController;
+use App\Http\Controllers\PaymentController;
+use App\Http\Controllers\ProductController;
+use App\Http\Controllers\SellerController;
+use App\Http\Controllers\SellerWithdrawRequestController;
+use App\Http\Controllers\Store\Admin\AddressController;
 use App\Http\Controllers\Store\Admin\AttributeController;
-use App\Http\Controllers\Store\Admin\BrandDiscountController;
 use App\Http\Controllers\Store\Admin\AttributeValueController;
-use App\Http\Controllers\Store\Admin\ColorController;
 use App\Http\Controllers\Store\Admin\BlogCategoryController;
 use App\Http\Controllers\Store\Admin\BlogController as AdminBlogController;
 use App\Http\Controllers\Store\Admin\BrandController;
-use App\Http\Controllers\BusinessSettingsController;
+use App\Http\Controllers\Store\Admin\BrandDiscountController;
+use App\Http\Controllers\Store\Admin\CampaignProductController;
 use App\Http\Controllers\Store\Admin\CarrierController;
 use App\Http\Controllers\Store\Admin\CategoryController;
 use App\Http\Controllers\Store\Admin\CityController;
-use App\Http\Controllers\CommissionController;
+use App\Http\Controllers\Store\Admin\ColorController;
+use App\Http\Controllers\Store\Admin\ConversationController;
 use App\Http\Controllers\Store\Admin\CountryController;
 use App\Http\Controllers\Store\Admin\CouponController;
 use App\Http\Controllers\Store\Admin\CurrencyController;
-use App\Http\Controllers\Store\Admin\ShippingConfigurationController;
-use App\Http\Controllers\Store\Admin\OrderConfigurationController;
 use App\Http\Controllers\Store\Admin\CustomerController;
+use App\Http\Controllers\Store\Admin\CustomerNotificationController;
 use App\Http\Controllers\Store\Admin\CustomerPackageController;
-use App\Http\Controllers\CustomerProductController;
-use App\Http\Controllers\DigitalProductController as LegacyDigitalProductController;
+use App\Http\Controllers\Store\Admin\DashboardController;
 use App\Http\Controllers\Store\Admin\DigitalProductController;
+use App\Http\Controllers\Store\Admin\DriverController;
 use App\Http\Controllers\Store\Admin\DynamicPopupController;
 use App\Http\Controllers\Store\Admin\FlashDealController;
 use App\Http\Controllers\Store\Admin\GeneralSettingsController;
+use App\Http\Controllers\Store\Admin\GoogleMapController;
 use App\Http\Controllers\Store\Admin\LanguageController;
-use App\Http\Controllers\Store\Admin\SettingsController;
+use App\Http\Controllers\Store\Admin\LegacyWebsiteScriptsController;
 use App\Http\Controllers\Store\Admin\NewsletterController;
 use App\Http\Controllers\Store\Admin\NotificationController;
 use App\Http\Controllers\Store\Admin\OfferController;
 use App\Http\Controllers\Store\Admin\OffersCatalogController;
-use App\Http\Controllers\Store\Admin\ProductSearchController;
+use App\Http\Controllers\Store\Admin\OrderConfigurationController;
 use App\Http\Controllers\Store\Admin\OrderController;
-use App\Http\Controllers\PaymentController;
+use App\Http\Controllers\Store\Admin\OrderEntryController;
 use App\Http\Controllers\Store\Admin\PickupPointController;
-use App\Http\Controllers\ProductController;
-use App\Http\Controllers\Store\Admin\ProductController as StoreProductController;
-use App\Http\Controllers\Store\Admin\ReportController;
-use App\Http\Controllers\Store\Admin\ProfileController;
-use App\Http\Controllers\Store\Admin\UploadController;
 use App\Http\Controllers\Store\Admin\ProductBulkUploadController;
-use App\Http\Controllers\Store\Admin\ReviewController;
-use App\Http\Controllers\SellerController;
-use App\Http\Controllers\SellerWithdrawRequestController;
-use App\Http\Controllers\Store\Admin\StateController;
+use App\Http\Controllers\Store\Admin\ProductController as StoreProductController;
+use App\Http\Controllers\Store\Admin\ProductQueryController;
+use App\Http\Controllers\Store\Admin\ProductSearchController;
+use App\Http\Controllers\Store\Admin\ProfileController;
+use App\Http\Controllers\Store\Admin\ReportController;
 use App\Http\Controllers\Store\Admin\RepresentativePackageController;
 use App\Http\Controllers\Store\Admin\RepresentativePaymentController;
-use App\Http\Controllers\Store\Admin\AddressController;
+use App\Http\Controllers\Store\Admin\ReviewController;
 use App\Http\Controllers\Store\Admin\RoleController;
+use App\Http\Controllers\Store\Admin\SettingsController;
+use App\Http\Controllers\Store\Admin\ShippingConfigurationController;
 use App\Http\Controllers\Store\Admin\StaffController;
+use App\Http\Controllers\Store\Admin\StateController;
+use App\Http\Controllers\Store\Admin\SubscriberController;
+use App\Http\Controllers\Store\Admin\SupportTicketController as AdminSupportTicketController;
+use App\Http\Controllers\Store\Admin\TaxController;
+use App\Http\Controllers\Store\Admin\TripController as StoreTripController;
+use App\Http\Controllers\Store\Admin\TruckController;
+use App\Http\Controllers\Store\Admin\UploadController;
+use App\Http\Controllers\Store\Admin\WebsiteAppearanceController;
+use App\Http\Controllers\Store\Admin\WebsiteFooterController;
 use App\Http\Controllers\Store\Admin\WebsiteHeaderController;
 use App\Http\Controllers\Store\Admin\WebsiteHomeController;
-use App\Http\Controllers\Store\Admin\SupportTicketController as AdminSupportTicketController;
-use App\Http\Controllers\Store\Admin\SubscriberController;
-use App\Http\Controllers\SupportTicketController;
-use App\Http\Controllers\Store\Admin\TaxController;
-use App\Http\Controllers\Store\Admin\DriverController;
-use App\Http\Controllers\Trip\TripController;
-use App\Http\Controllers\Store\Admin\TruckController;
-use App\Http\Controllers\VisitController;
-use App\Http\Controllers\WebsiteController;
+use App\Http\Controllers\Store\Admin\WebsitePageController;
 use App\Http\Controllers\Store\Admin\ZoneController;
+use App\Http\Controllers\Trip\TripController;
+use App\Http\Controllers\VisitController;
+use App\Models\Ticket;
 use Aws\Middleware;
+use Illuminate\Contracts\Encryption\DecryptException;
 
 /*
   |--------------------------------------------------------------------------
@@ -107,10 +110,9 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
     Route::get('/brands-wise-product-discount', [BrandDiscountController::class, 'index'])->name('brands_wise_product_discount');
     Route::post('/set-product-discount', [BrandDiscountController::class, 'update'])->name('set_product_discount');
 
-    // Products: the in-house and all-products lists and their row actions
-    // are Inertia. The seller list, the create/edit forms (rich-text editor)
-    // and the jQuery endpoints the seller list posts to stay on the root
-    // ProductController's Blade.
+    // Products: the in-house and all-products lists, their row actions and
+    // the create and edit forms are Inertia. The seller list and the jQuery
+    // endpoints it posts to stay on the root ProductController's Blade.
     Route::get('/products/admin', [StoreProductController::class, 'inHouse'])->name('products.admin');
     Route::get('/products/all', [StoreProductController::class, 'all'])->name('products.all');
     Route::post('/products/{product}/published', [StoreProductController::class, 'updatePublished'])->name('products.list.published');
@@ -119,13 +121,15 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
     Route::post('/products/{product}/duplicate', [StoreProductController::class, 'duplicate'])->name('products.list.duplicate');
     Route::delete('/products/{product}', [StoreProductController::class, 'destroy'])->name('products.list.destroy');
     Route::post('/products/bulk-delete', [StoreProductController::class, 'bulkDestroy'])->name('products.list.bulk_destroy');
+    Route::get('/products/create', [StoreProductController::class, 'create'])->name('products.create');
+    Route::post('/products/store', [StoreProductController::class, 'store'])->name('products.store');
+    Route::post('/products/variant-combinations', [StoreProductController::class, 'variantCombinations'])->name('products.variant_combinations');
+    Route::get('/products/admin/{product}/edit', [StoreProductController::class, 'edit'])->name('products.admin.edit');
+    Route::get('/products/seller/{product}/edit', [StoreProductController::class, 'sellerEdit'])->name('products.seller.edit');
+    Route::post('/products/update/{product}', [StoreProductController::class, 'update'])->name('products.update');
+    Route::post('/products/{product}/variant-combinations', [StoreProductController::class, 'editVariantCombinations'])->name('products.edit_variant_combinations');
     Route::controller(ProductController::class)->group(function () {
         Route::get('/products/seller', 'seller_products')->name('products.seller');
-        Route::get('/products/create', 'create')->name('products.create');
-        Route::post('/products/store/', 'store')->name('products.store');
-        Route::get('/products/admin/{id}/edit', 'admin_product_edit')->name('products.admin.edit');
-        Route::get('/products/seller/{id}/edit', 'seller_product_edit')->name('products.seller.edit');
-        Route::post('/products/update/{product}', 'update')->name('products.update');
         Route::post('/products/todays_deal', 'updateTodaysDeal')->name('products.todays_deal');
         Route::post('/products/sale_status', 'updateSaleStatus')->name('products.update_sale');
         Route::post('/products/featured', 'updateFeatured')->name('products.featured');
@@ -140,7 +144,6 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
         Route::get('products/get-details/{id}', 'getDetails')->name('products.get-details');
 
         Route::post('/products/sku_combination', 'sku_combination')->name('products.sku_combination');
-        Route::post('/products/sku_combination_edit', 'sku_combination_edit')->name('products.sku_combination_edit');
     });
 
     Route::get('/offers/index', [OffersCatalogController::class, 'index'])->name('offers.index');
@@ -149,13 +152,13 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
     Route::delete('/offers/destroy/{catalog}', [OffersCatalogController::class, 'destroy'])->name('offers.destroy');
     Route::post('/products/add-more-choice-option', [ProductSearchController::class, 'attributeValues'])->name('products.add-more-choice-option');
 
-    // Digital products: the list and its row actions are Inertia; the create
-    // and edit forms stay Blade for their rich-text editor.
+    // Digital products: the list, its row actions and the create and edit
+    // forms are Inertia.
     Route::get('/digitalproducts', [DigitalProductController::class, 'index'])->name('digitalproducts.index');
-    Route::get('/digitalproducts/create', [LegacyDigitalProductController::class, 'create'])->name('digitalproducts.create');
-    Route::post('/digitalproducts', [LegacyDigitalProductController::class, 'store'])->name('digitalproducts.store');
-    Route::get('/digitalproducts/edit/{id}', [LegacyDigitalProductController::class, 'edit'])->name('digitalproducts.edit');
-    Route::match(['PUT', 'PATCH'], '/digitalproducts/{id}', [LegacyDigitalProductController::class, 'update'])->name('digitalproducts.update');
+    Route::get('/digitalproducts/create', [DigitalProductController::class, 'create'])->name('digitalproducts.create');
+    Route::post('/digitalproducts', [DigitalProductController::class, 'store'])->name('digitalproducts.store');
+    Route::get('/digitalproducts/edit/{product}', [DigitalProductController::class, 'edit'])->name('digitalproducts.edit');
+    Route::match(['PUT', 'PATCH'], '/digitalproducts/{product}', [DigitalProductController::class, 'update'])->name('digitalproducts.update');
     Route::delete('/digitalproducts/destroy/{product}', [DigitalProductController::class, 'destroy'])->name('digitalproducts.destroy');
     Route::get('/digitalproducts/download/{id}', [DigitalProductController::class, 'download'])->name('digitalproducts.download');
     Route::post('/digitalproducts/{product}/published', [DigitalProductController::class, 'updatePublished'])->name('digitalproducts.published');
@@ -263,24 +266,29 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
         Route::post('/representatives/packages/set_package', 'assign')->name('rep.set-package');
     });
     Route::group(['prefix' => 'trips'], function () {
-        Route::controller(TripController::class)->group(function() {
-            Route::get('/index', 'getAllTrips')->name('trips.index')->middleware('permission:view_all_trips');
+        // The trip lists and their row actions (store-backoffice-migration.md §24)
+        // and the trip create and edit forms (§25).
+        Route::controller(StoreTripController::class)->group(function () {
+            Route::get('/index', 'index')->name('trips.index');
+            Route::get('/today-trips', 'today')->name('trips.today-trips');
+            Route::get('/create', 'create')->name('trips.create');
+            Route::post('/store', 'store')->name('trips.store');
+            Route::get('/{trip}/edit', 'edit')->name('trips.edit');
+            Route::put('/{trip}', 'update')->name('trips.update');
+            Route::put('/{trip}/status', 'updateStatus')->name('trips.update-status');
+            Route::put('/{trip}/notes', 'updateNotes')->name('trips.update-notes');
+            Route::delete('/{trip}', 'destroy')->name('trips.destroy');
+            Route::post('/bulk-trips-delete', 'bulkDestroy')->name('trips.bulk-trip-delete');
+        });
+
+        Route::controller(TripController::class)->group(function () {
             Route::get('/orders', 'all_orders')->name('trips.orders')->middleware('permission:view_all_trips');
             Route::post('/orders/bulk-change-delivery-status', 'bulk_change_delivery_status')->name('trips.orders.bulk-change-delivery-status')->middleware('permission:edit_trip');
             Route::post('/orders/update-invoice-number', 'updateInvoiceNumber')->name('trips.orders.update_invoice_number')->middleware('permission:edit_trip');
             Route::post('/orders/update-order-status', 'updateOrderStatusToDelivered')->name('trips.orders.update_order_status_to_delivered')->middleware('permission:edit_trip');
-            Route::get('/today-trips', 'getTodayTrips')->name('trips.today-trips')->middleware('permission:view_all_trips');
-            Route::get('/create', 'create')->name('trips.create')->middleware('permission:add_trip');
             Route::get('/create-from-map', 'create_from_map')->name('trips.create-from-map')->middleware('permission:add_trip');
-            Route::post('/store', 'store')->name('trips.store')->middleware('permission:add_trip');
             Route::post('/store-from-map', 'store_from_map')->name('trips.store-from-map')->middleware('permission:add_trip');
             Route::get('/show/{id}', 'show')->name('trips.show')->middleware('permission:view_all_trips');
-            Route::get('/edit/{id}', 'edit')->name('trips.edit')->middleware('permission:edit_trip');
-            Route::post('/update', 'update')->name('trips.update')->middleware('permission:edit_trip');
-            Route::post('/delete/{id}', 'delete')->name('trips.destroy')->middleware('permission:delete_trip');
-            Route::post('/bulk-trips-delete', 'bulk_trip_delete')->name('trips.bulk-trip-delete')->middleware('permission:delete_trip');
-            Route::post('/update-trip-status', 'update_trip_status')->name('trips.update-status')->middleware('permission:edit_trip');
-            Route::post('/update-trip-notes', 'update_trip_notes')->name('trips.update-notes')->middleware('permission:edit_trip');
             Route::post('/update-checkpoint-notes', 'update_checkpoint_notes')->name('checkpoints.update-notes')->middleware('permission:edit_trip');
             Route::post('/update-checkpoint-status', 'update_checkpoint_status')->name('checkpoints.update-status')->middleware('permission:edit_trip');
             Route::get('/print-cmr/{id}', 'print_cmr')->name('checkpoints.print-cmr')->middleware('permission:view_all_trips');
@@ -332,20 +340,19 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
 
     // Business Settings
     Route::controller(BusinessSettingsController::class)->group(function () {
-        Route::post('/business-settings/update', 'update')->name('business_settings.update');
         Route::post('/business-settings/update/seller-commission-activation', 'updateSellerCommissionActivation')->name('business_settings.seller_commission.activation')->middleware('RaizerSuperAdmin');
 
         Route::get('/google-map', 'google_map')->name('google-map.index');
 
         Route::post('/env_key_update', 'env_key_update')->name('env_key_update.update');
-        Route::post('/google-map', [\App\Http\Controllers\Store\Admin\GoogleMapController::class, 'update'])->name('google-map.update');
+        Route::post('/google-map', [GoogleMapController::class, 'update'])->name('google-map.update');
 
         Route::get('/verification/form', 'seller_verification_form')->name('seller_verification_form.index');
         Route::post('/verification/form', 'seller_verification_form_update')->name('seller_verification_form.update');
         Route::get('/vendor_commission', 'vendor_commission')->name('business_settings.vendor_commission');
         Route::post('/vendor_commission_update', 'vendor_commission_update')->name('business_settings.vendor_commission.update');
 
-        //Shipping Configuration
+        // Shipping Configuration
 
         // Order Configuration
     });
@@ -416,28 +423,25 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
     Route::delete('/languages/{language}', [LanguageController::class, 'destroy'])->name('languages.destroy');
     Route::get('/languages/{language}', [LanguageController::class, 'show'])->name('languages.show');
 
-    Route::post('/website/scripts/compatibility', [\App\Http\Controllers\Store\Admin\LegacyWebsiteScriptsController::class, 'update'])->name('website.scripts.compatibility.update');
+    Route::post('/website/scripts/compatibility', [LegacyWebsiteScriptsController::class, 'update'])->name('website.scripts.compatibility.update');
 
-    // Website coexistence: rich-text forms remain Blade.
+    // Website setup: Inertia pages, each settings page writing only its own
+    // keys (.ai/rules/store-backoffice-migration.md §20). The home settings
+    // route stays ahead of the custom-page edit route, whose slug it shares.
     Route::get('/website/header', [WebsiteHeaderController::class, 'edit'])->name('website.header');
     Route::put('/website/header', [WebsiteHeaderController::class, 'update'])->name('website.header.update');
+    Route::get('/website/footer', [WebsiteFooterController::class, 'edit'])->name('website.footer');
+    Route::put('/website/footer', [WebsiteFooterController::class, 'update'])->name('website.footer.update');
+    Route::get('/website/appearance', [WebsiteAppearanceController::class, 'edit'])->name('website.appearance');
+    Route::put('/website/appearance', [WebsiteAppearanceController::class, 'update'])->name('website.appearance.update');
     Route::get('/website/custom-pages/edit/home', [WebsiteHomeController::class, 'edit'])->name('website.home.edit');
     Route::put('/website/home', [WebsiteHomeController::class, 'update'])->name('website.home.update');
-    Route::group(['prefix' => 'website'], function () {
-        Route::controller(WebsiteController::class)->group(function () {
-            Route::get('/footer', 'footer')->name('website.footer');
-
-            Route::get('/appearance', 'appearance')->name('website.appearance');
-            Route::get('/pages', 'pages')->name('website.pages');
-        });
-
-        // Custom Page
-        Route::resource('custom-pages', PageController::class);
-        Route::controller(PageController::class)->group(function () {
-            Route::get('/custom-pages/edit/{id}', 'edit')->name('custom-pages.edit');
-            Route::post('/custom-pages/destroy/{id}', 'destroy')->name('custom-pages.destroy');
-        });
-    });
+    Route::get('/website/pages', [WebsitePageController::class, 'index'])->name('website.pages');
+    Route::get('/website/custom-pages/create', [WebsitePageController::class, 'create'])->name('custom-pages.create');
+    Route::post('/website/custom-pages', [WebsitePageController::class, 'store'])->name('custom-pages.store');
+    Route::get('/website/custom-pages/edit/{page:slug}', [WebsitePageController::class, 'edit'])->name('custom-pages.edit');
+    Route::match(['PUT', 'PATCH'], '/website/custom-pages/{page}', [WebsitePageController::class, 'update'])->name('custom-pages.update');
+    Route::delete('/website/custom-pages/destroy/{page}', [WebsitePageController::class, 'destroy'])->name('custom-pages.destroy');
 
     // Staff roles and staff: Inertia pages (resources/js/pages/Store/Admin/Staff),
     // so explicit routes on bound models rather than the resource-plus-override
@@ -517,10 +521,9 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
     Route::post('/orders/update_manager_notes', [OrderController::class, 'update_manager_notes'])->name('orders.update_manager_notes');
     Route::post('/orders/item/edit_price', [OrderController::class, 'edit_item_price'])->name('order.item.edit_price');
 
-
     Route::post('/pay_to_seller', [CommissionController::class, 'pay_to_seller'])->name('commissions.pay_to_seller')->middleware('permission:pay_to_seller');
 
-    //Reports
+    // Reports
     Route::get('/in_house_sale_report', [ReportController::class, 'in_house_sale_report'])->name('in_house_sale_report.index');
     Route::get('/seller_sale_report', [ReportController::class, 'seller_sale_report'])->name('seller_sale_report.index');
     Route::get('/stock_report', [ReportController::class, 'stock_report'])->name('stock_report.index');
@@ -529,7 +532,7 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
     Route::get('/commission-log', [ReportController::class, 'commission_history'])->name('commission-log.index');
     Route::get('/wallet-history', [ReportController::class, 'wallet_transaction_history'])->name('wallet-history.index');
 
-    //Blog Section
+    // Blog Section
     Route::get('/blog-category', [BlogCategoryController::class, 'index'])->name('blog-category.index');
     Route::get('/blog-category/create', [BlogCategoryController::class, 'create'])->name('blog-category.create');
     Route::post('/blog-category', [BlogCategoryController::class, 'store'])->name('blog-category.store');
@@ -557,23 +560,27 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
     Route::put('/coupon/{coupon}', [CouponController::class, 'update'])->name('coupon.update');
     Route::delete('/coupon/{coupon}', [CouponController::class, 'destroy'])->name('coupon.destroy');
 
-    //Reviews
+    // Reviews
     Route::get('/reviews', [ReviewController::class, 'index'])->name('admin.reviews.index');
     Route::post('/reviews/{review}/published', [ReviewController::class, 'updatePublished'])->name('reviews.published');
 
-    //Support_Ticket
+    // Support_Ticket
     Route::get('support_ticket/', [AdminSupportTicketController::class, 'index'])->name('support_ticket.admin_index');
     // Preserve encrypted identifiers in existing email links while binding the record.
     Route::bind('supportTicket', function (string $value) {
-        try { $id = ctype_digit($value) ? $value : decrypt($value); }
-        catch (\Illuminate\Contracts\Encryption\DecryptException) { abort(404); }
+        try {
+            $id = ctype_digit($value) ? $value : decrypt($value);
+        } catch (DecryptException) {
+            abort(404);
+        }
         abort_unless((is_int($id) && $id > 0) || (is_string($id) && ctype_digit($id)), 404);
-        return \App\Models\Ticket::query()->whereHas('user')->findOrFail((int) $id);
+
+        return Ticket::query()->whereHas('user')->findOrFail((int) $id);
     });
     Route::get('support_ticket/{supportTicket}/show', [AdminSupportTicketController::class, 'show'])->name('support_ticket.admin_show');
     Route::post('support_ticket/reply', [AdminSupportTicketController::class, 'reply'])->name('support_ticket.admin_store');
 
-    //Pickup_Points
+    // Pickup_Points
     Route::get('/pick_up_points', [PickupPointController::class, 'index'])->name('pick_up_points.index');
     Route::get('/pick_up_points/create', [PickupPointController::class, 'create'])->name('pick_up_points.create');
     Route::post('/pick_up_points', [PickupPointController::class, 'store'])->name('pick_up_points.store');
@@ -616,7 +623,7 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
     Route::match(['PUT', 'PATCH'], '/customer_packages/{customerPackage}', [CustomerPackageController::class, 'update'])->name('customer_packages.update');
     Route::delete('/customer_packages/destroy/{customerPackage}', [CustomerPackageController::class, 'destroy'])->name('customer_packages.destroy');
 
-    //Classified Products
+    // Classified Products
     Route::controller(CustomerProductController::class)->group(function () {
         Route::get('/classified_products', 'customer_product_index')->name('classified_products');
         Route::post('/classified_products/published', 'updatePublished')->name('classified_products.published');

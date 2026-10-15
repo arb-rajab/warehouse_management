@@ -46,8 +46,13 @@ test('a controller with dependency-injected constructor arguments keeps them alo
     $middleware = ProductController::middleware();
 
     // Seven until the in-house and all-products lists moved to
-    // Store\Admin\ProductController with their two list gates.
-    expect($middleware)->toHaveCount(5);
+    // Store\Admin\ProductController with their two list gates, five until
+    // the create form moved there with its add_new_product gate. The edit
+    // form's move took only its actions out of the product_edit entry, which
+    // still gates the seller list's jQuery switches.
+    expect($middleware)->toHaveCount(4)
+        ->and(collect($middleware)->firstWhere('middleware', 'permission:product_edit')->only)
+        ->toBe(['updateSaleStatus', 'updateTodaysDeal', 'updateFeatured', 'updatePublished', 'updateProductApproval']);
 
     // The constructor itself still wires up its services -- resolving the
     // controller out of the container is what would fail if that logic had
@@ -60,12 +65,13 @@ test('the root settings controller keeps the gates of its remaining Blade and co
     $middleware = collect(BusinessSettingsController::middleware())
         ->mapWithKeys(fn (Middleware $entry): array => [$entry->middleware => $entry->only]);
 
-    // general_setting moved to Store\Admin\GeneralSettingsController with its gate.
+    // general_setting moved to Store\Admin\GeneralSettingsController with its
+    // gate; the generic `update` writer and its four-permission gate retired
+    // with the footer and appearance forms (store-backoffice-migration.md §20).
     expect($middleware->all())->toBe([
         'permission:seller_commission_configuration' => ['vendor_commission', 'vendor_commission_update'],
         'permission:seller_verification_form_configuration' => ['seller_verification_form', 'seller_verification_form_update'],
         'permission:features_activation' => ['updateSellerCommissionActivation'],
         'permission:google_map_setting' => ['google_map'],
-        'permission:general_settings|footer_setup|website_appearance|edit_website_page' => ['update'],
-    ]);
+    ])->and(method_exists(BusinessSettingsController::class, 'update'))->toBeFalse();
 });

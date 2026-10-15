@@ -55,13 +55,21 @@ import { index as staffIndex } from '@/actions/App/Http/Controllers/Store/Admin/
 import { index as subscribersIndex } from '@/actions/App/Http/Controllers/Store/Admin/SubscriberController';
 import { index as supportTicketsIndex } from '@/actions/App/Http/Controllers/Store/Admin/SupportTicketController';
 import {
+    create as tripsCreate,
+    index as tripsIndex,
+    today as todayTrips,
+} from '@/actions/App/Http/Controllers/Store/Admin/TripController';
+import {
     index as trucksIndex,
     create as trucksCreate,
 } from '@/actions/App/Http/Controllers/Store/Admin/TruckController';
 import { index as uploadsIndex } from '@/actions/App/Http/Controllers/Store/Admin/UploadController';
 import { index as visitsIndex } from '@/actions/App/Http/Controllers/Store/Admin/VisitController';
+import { edit as appearance } from '@/actions/App/Http/Controllers/Store/Admin/WebsiteAppearanceController';
+import { edit as footer } from '@/actions/App/Http/Controllers/Store/Admin/WebsiteFooterController';
 import { edit as header } from '@/actions/App/Http/Controllers/Store/Admin/WebsiteHeaderController';
 import { edit as homeEdit } from '@/actions/App/Http/Controllers/Store/Admin/WebsiteHomeController';
+import { index as websitePages } from '@/actions/App/Http/Controllers/Store/Admin/WebsitePageController';
 import { i18n } from '@/lib/i18n';
 import { storeAccess } from '@/lib/storeAccess';
 import {
@@ -133,6 +141,7 @@ describe('storeAdminMenu', () => {
                 '/temp/admin/digitalproducts',
                 '/temp/admin/products/all',
                 '/temp/admin/products/admin',
+                '/temp/admin/products/create',
                 '/temp/admin/brands',
                 '/temp/admin/customer_packages',
                 customerNotificationsIndex.url(),
@@ -158,6 +167,9 @@ describe('storeAdminMenu', () => {
                 reviewsIndex.url(),
                 offersIndex.url(),
                 header.url(),
+                footer.url(),
+                websitePages.url(),
+                appearance.url(),
                 homeEdit.url(),
                 conversationsIndex.url(),
                 productQueriesIndex.url(),
@@ -174,6 +186,9 @@ describe('storeAdminMenu', () => {
                 driversCreate.url(),
                 trucksIndex.url(),
                 trucksCreate.url(),
+                tripsIndex.url(),
+                todayTrips.url(),
+                tripsCreate.url(),
                 all_orders['/temp/admin/all_orders'].url(),
                 all_orders['/temp/admin/seller_orders'].url(),
                 all_orders['/temp/admin/orders_by_pickup_point'].url(),

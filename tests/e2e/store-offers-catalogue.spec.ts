@@ -1,5 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { loginAsStoreAdmin } from './support/auth';
+import { php } from './support/editor';
+import { seedStoreFixtures } from './support/storeFixtures';
 
 const pdf =
     '%PDF-1.4\n1 0 obj<</Type/Catalog>>endobj\ntrailer<</Root 1 0 R>>\n%%EOF\n';
@@ -70,30 +72,34 @@ test('order configuration renders hostile search results as text', async ({
 test('product attribute choice JSON creates literal values and titles without injected elements', async ({
     page,
 }) => {
+    // The choice script's last consumer, the Blade edit form, is now the
+    // Inertia edit form (.ai/rules/store-backoffice-migration.md §23): the
+    // attribute title comes from the server and the values from the JSON
+    // endpoint, both rendered as text.
+    const value = '"><img src=x onerror="window.catalogueXss=true">';
+    seedStoreFixtures(String.raw`
+        Illuminate\Support\Facades\DB::table('product_translations')->where('product_id', 990001)->delete();
+        Illuminate\Support\Facades\DB::table('product_stocks')->where('product_id', 990001)->delete();
+        App\Models\Product::whereKey(990001)->delete();
+        App\Models\Product::forceCreate([
+            'id'=>990001,'name'=>'Browser choice oil','ar_name'=>'','slug'=>'browser-choice-oil','added_by'=>'admin','digital'=>0,
+            'unit'=>'bottle','unit_price'=>3,'colors'=>'[]','attributes'=>'[]','choice_options'=>'[]','tags'=>'',
+        ]);
+        Illuminate\Support\Facades\DB::table('attributes')->where('name', 'like', '%catalogueXss%')->delete();
+        Illuminate\Support\Facades\DB::table('attributes')->insert(['name' => ${php(value)}]);
+    `);
     await loginAsStoreAdmin(page);
-    const value = '\"><img src=x onerror="window.catalogueXss=true">';
     await page.route('**/temp/admin/products/add-more-choice-option', (route) =>
         route.fulfill({ json: [{ id: 1, value }] }),
     );
-    await page.goto('/temp/admin/products/create');
-    await page.evaluate((name) => {
-        const browser = window as unknown as {
-            add_more_customer_choice_option: (
-                id: number,
-                label: string,
-            ) => void;
-        };
-        browser.add_more_customer_choice_option(1, name);
-    }, value);
-    await expect(
-        page.locator('#customer_choice_options input[name="choice[]"]'),
-    ).toHaveValue(value);
-    await expect(
-        page.locator('#customer_choice_options select option'),
-    ).toHaveText(value);
-    await expect(
-        page.locator('#customer_choice_options select option'),
-    ).toHaveAttribute('value', value);
-    await expect(page.locator('#customer_choice_options img')).toHaveCount(0);
+    await page.goto('/temp/admin/products/admin/990001/edit?lang=en');
+    await page.getByLabel(value, { exact: true }).check();
+
+    const choice = page.locator('fieldset[data-attribute]');
+    await expect(choice.locator('legend')).toHaveText(`Values of ${value}`);
+    const option = choice.getByLabel(value, { exact: true });
+    await expect(option).toHaveAttribute('value', value);
+    await expect(option).toHaveAttribute('name', 'choice_options[0][values][]');
+    await expect(choice.locator('img')).toHaveCount(0);
     expect(await page.evaluate(() => 'catalogueXss' in window)).toBe(false);
 });

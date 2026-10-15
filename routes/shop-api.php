@@ -170,7 +170,7 @@ Route::group(['prefix' => 'v2', 'middleware' => ['app_language']], function () {
     //end user bann
 
     Route::get('get-search-suggestions', 'App\Http\Controllers\Api\V2\SearchSuggestionController@getList');
-    Route::get('languages', 'App\Http\Controllers\Api\V2\LanguageController@getList');
+    Route::get('languages', 'App\Http\Controllers\Api\V2\LanguageController@getList')->middleware('cache.headers:private;etag');
 
     Route::get('classified/all', 'App\Http\Controllers\Api\V2\CustomerProductController@all');
     Route::get('classified/related-products/{id}', 'App\Http\Controllers\Api\V2\CustomerProductController@relatedProducts');
@@ -179,12 +179,12 @@ Route::group(['prefix' => 'v2', 'middleware' => ['app_language']], function () {
 
 
 
-    Route::apiResource('banners', 'App\Http\Controllers\Api\V2\BannerController')->only('index');
+    Route::apiResource('banners', 'App\Http\Controllers\Api\V2\BannerController')->only('index')->middleware('cache.headers:private;etag');
 
     Route::get('brands/top', 'App\Http\Controllers\Api\V2\BrandController@top');
     Route::apiResource('brands', 'App\Http\Controllers\Api\V2\BrandController')->only('index');
 
-    Route::apiResource('business-settings', 'App\Http\Controllers\Api\V2\BusinessSettingController')->only('index');
+    Route::apiResource('business-settings', 'App\Http\Controllers\Api\V2\BusinessSettingController')->only('index')->middleware('cache.headers:private;etag');
 
     Route::get('categories/featured', 'App\Http\Controllers\Api\V2\CategoryController@featured');
     Route::get('categories/home', 'App\Http\Controllers\Api\V2\CategoryController@home');
@@ -192,9 +192,9 @@ Route::group(['prefix' => 'v2', 'middleware' => ['app_language']], function () {
     Route::apiResource('categories', 'App\Http\Controllers\Api\V2\CategoryController')->only('index');
     Route::get('sub-categories/{id}', 'App\Http\Controllers\Api\V2\SubCategoryController@index')->name('subCategories.index');
 
-    Route::apiResource('colors', 'App\Http\Controllers\Api\V2\ColorController')->only('index');
+    Route::apiResource('colors', 'App\Http\Controllers\Api\V2\ColorController')->only('index')->middleware('cache.headers:private;etag');
 
-    Route::apiResource('currencies', 'App\Http\Controllers\Api\V2\CurrencyController')->only('index');
+    Route::apiResource('currencies', 'App\Http\Controllers\Api\V2\CurrencyController')->only('index')->middleware('cache.headers:private;etag');
 
     Route::apiResource('customers', 'App\Http\Controllers\Api\V2\CustomerController')->only('show')->middleware('auth:store_api');
 

@@ -44,3 +44,8 @@ Calling a model-specific `#[Scope]` method from inside a `whereHas('relation', f
 
 ## Table name, key and incrementing are class attributes
 Use `#[Table('wms_x')]` (with `key:` / `incrementing:` when needed, e.g. `ProductSetting`'s `#[Table('wms_product_settings', key: 'product_id', incrementing: false)]`) next to `#[Fillable]`/`#[Hidden]`/`#[ObservedBy]`. Don't use the `$table`/`$primaryKey`/`$incrementing` properties: every WMS model already declares its other metadata as attributes, and mixing the two styles was one of the "different author" seams. The legacy store models keep their properties until they are converted (§7 of legacy-albaraka-holland.md).
+
+## User is soft-deleted; relations to it use withTrashed()
+`wms_users` has `deleted_at` and `User` uses `SoftDeletes`, because `cell_status_logs`, `cell_verification_rounds` and `cell_verification_reports` restrict hard deletion of their `user_id`. `Admin\UserController::destroy` soft-deletes any admin or mobile user (activity or not) and revokes their Sanctum tokens; the default scope is what rejects them afterwards at the web guard, the Sanctum guard and both login lookups, so don't add a second "is active" check.
+
+Every `belongsTo(User::class)` that points at history (`CellStatusLog::user`, `CellVerificationRound::user`, `CellVerificationReport::user`/`acceptedBy`, `CellStatusLogFlag::acknowledgedBy`) must keep `->withTrashed()`, or a removed user's name turns into `null` on their old rows. `User::filterOptions()` includes removed users for the same reason (their logs must stay filterable). A removed user's email stays reserved by the unique index (no restore feature exists yet); tests that need a real FK-restrict check use `forceDelete()`.

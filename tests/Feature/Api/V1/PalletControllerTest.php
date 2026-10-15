@@ -1553,3 +1553,91 @@ test('transferring a full pallet into a first-level destination keeps it full wh
     $response->assertOk()->assertJsonPath('state', 'full');
     expect($destinationCell->refresh()->state)->toBe(CellState::Full);
 });
+
+test('showing a pallet hands out an ETag that changes once the pallet does', function () {
+    actingAsMobileUser();
+
+    $product = Product::factory()->boxesCount(10)->create();
+    $pallet = Pallet::factory()->create(['product_id' => $product->id, 'remaining_boxes' => 6]);
+
+    $etag = $this->getJson("/api/v1/pallets/{$pallet->id}")->assertOk()->headers->get('ETag');
+
+    expect($etag)->not->toBeNull()
+        ->and($this->getJson("/api/v1/pallets/{$pallet->id}")->headers->get('ETag'))->toBe($etag);
+
+    $pallet->cell->update(['state' => CellState::Opened]);
+
+    expect($this->getJson("/api/v1/pallets/{$pallet->id}")->headers->get('ETag'))->not->toBe($etag);
+});
+
+test('a pallet action carrying the current ETag in If-Match goes through', function () {
+    actingAsMobileUser();
+
+    $product = Product::factory()->boxesCount(10)->create();
+    $pallet = Pallet::factory()->create(['product_id' => $product->id, 'remaining_boxes' => 6]);
+    $pallet->cell->update(['state' => CellState::Opened]);
+
+    $etag = $this->getJson("/api/v1/pallets/{$pallet->id}")->headers->get('ETag');
+
+    $response = $this->postJson("/api/v1/pallets/{$pallet->id}/remove-boxes", ['boxes_count' => 4], ['If-Match' => $etag]);
+
+    $response->assertOk()->assertJsonPath('remaining_boxes', 2);
+    expect($response->headers->get('ETag'))->not->toBeNull()->not->toBe($etag);
+});
+
+test('a pallet action with a stale If-Match is refused with 412 and nothing changes', function (string $action, array $payload) {
+    actingAsMobileUser();
+
+    $product = Product::factory()->boxesCount(10)->create();
+    $pallet = Pallet::factory()->create(['product_id' => $product->id, 'remaining_boxes' => 6]);
+    $pallet->cell->update(['state' => CellState::Opened]);
+
+    $etag = $this->getJson("/api/v1/pallets/{$pallet->id}")->headers->get('ETag');
+    // Another worker takes boxes off in the meantime.
+    $pallet->update(['remaining_boxes' => 5]);
+
+    $this->postJson("/api/v1/pallets/{$pallet->id}/{$action}", $payload, ['If-Match' => $etag])
+        ->assertStatus(412)
+        ->assertJsonPath('error_code', 'precondition_failed');
+
+    expect($pallet->refresh()->remaining_boxes)->toBe(5);
+    $this->assertDatabaseCount('cell_status_logs', 0);
+})->with([
+    'remove-boxes' => ['remove-boxes', ['boxes_count' => 1]],
+    'empty' => ['empty', []],
+]);
+
+test('a pallet action without If-Match behaves as before', function () {
+    actingAsMobileUser();
+
+    $product = Product::factory()->boxesCount(10)->create();
+    $pallet = Pallet::factory()->create(['product_id' => $product->id, 'remaining_boxes' => 6]);
+    $pallet->cell->update(['state' => CellState::Opened]);
+
+    $this->postJson("/api/v1/pallets/{$pallet->id}/remove-boxes", ['boxes_count' => 1])->assertOk();
+    $this->postJson("/api/v1/pallets/{$pallet->id}/remove-boxes", ['boxes_count' => 1], ['If-Match' => '*'])->assertOk();
+});
+
+test('transferring and opening a pallet with a stale If-Match is refused with 412 and nothing changes', function () {
+    actingAsMobileUser();
+
+    $sourceRow = Row::factory()->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 1]);
+    $sourceCell = $sourceRow->cells()->first();
+    $pallet = Pallet::factory()->create(['cell_id' => $sourceCell->id]);
+    Row::factory()->create(['letter' => 'B', 'cells_count' => 1, 'flats_count' => 1]);
+
+    $etag = $this->getJson("/api/v1/pallets/{$pallet->id}")->headers->get('ETag');
+    $pallet->update(['remaining_boxes' => $pallet->remaining_boxes + 1]);
+
+    $this->postJson("/api/v1/pallets/{$pallet->id}/transfer", [
+        'to_row_letter' => 'B',
+        'to_cell_number' => 1,
+        'to_flat_number' => 1,
+    ], ['If-Match' => $etag])->assertStatus(412)->assertJsonPath('error_code', 'precondition_failed');
+
+    $this->postJson("/api/v1/pallets/{$pallet->id}/open", [], ['If-Match' => $etag])
+        ->assertStatus(412);
+
+    expect($pallet->refresh()->cell_id)->toBe($sourceCell->id);
+    $this->assertDatabaseCount('cell_status_logs', 0);
+});
