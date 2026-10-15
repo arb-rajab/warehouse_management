@@ -20,6 +20,7 @@ class HelpController extends Controller
             HelpTopic::Dashboard => 'Dashboard',
             HelpTopic::Rows => 'Rows',
             HelpTopic::Cells => 'Cells',
+            HelpTopic::WarehouseMap => 'WarehouseMap',
             HelpTopic::Users => 'Users',
             HelpTopic::Products => 'Products',
             HelpTopic::CellLogs => 'CellLogs',

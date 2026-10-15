@@ -3,6 +3,7 @@ import type { UrlMethodPair } from '@inertiajs/core';
 import { Link, usePage } from '@inertiajs/vue3';
 import {
     ArrowLeftRight,
+    Boxes,
     CircleUser,
     ClipboardCheck,
     LayoutDashboard,
@@ -24,12 +25,21 @@ import { index as productsIndex } from '@/actions/App/Http/Controllers/Admin/Pro
 import { index as rowsIndex } from '@/actions/App/Http/Controllers/Admin/RowController';
 import { edit as settingsEdit } from '@/actions/App/Http/Controllers/Admin/SettingController';
 import { index as usersIndex } from '@/actions/App/Http/Controllers/Admin/UserController';
+import { index as warehouseMapIndex } from '@/actions/App/Http/Controllers/Admin/WarehouseMapController';
 import AccountMenu from '@/components/AccountMenu.vue';
 import LanguageSwitcher from '@/components/LanguageSwitcher.vue';
 import LogoutLink from '@/components/LogoutLink.vue';
 import SkipToContentLink from '@/components/SkipToContentLink.vue';
 import { t } from '@/lib/i18n';
 import { isActiveNavUrl } from '@/lib/navigation';
+
+/**
+ * `fullBleed` hands the whole area under the app bar to the page (the 2D / 3D
+ * warehouse map): no width limit, no padding, and the page fills the height.
+ */
+defineProps<{
+    fullBleed?: boolean;
+}>();
 
 const page = usePage();
 
@@ -43,6 +53,11 @@ const navItems = computed(() => [
     },
     { labelKey: 'nav.rows', href: rowsIndex(), icon: Rows3 },
     { labelKey: 'nav.map', href: cellsIndex(), icon: Map },
+    {
+        labelKey: 'nav.warehouseMap',
+        href: warehouseMapIndex(),
+        icon: Boxes,
+    },
     {
         labelKey: 'nav.cellLog',
         href: cellLogsIndex(),
@@ -90,11 +105,13 @@ function navLinkStateClass(href: UrlMethodPair): string[] {
 
 <template>
     <div
-        class="min-h-screen bg-gray-50 text-gray-900 dark:bg-neutral-950 dark:text-neutral-100"
+        class="bg-gray-50 text-gray-900 dark:bg-neutral-950 dark:text-neutral-100"
+        :class="fullBleed ? 'flex h-dvh flex-col' : 'min-h-screen'"
     >
         <SkipToContentLink />
         <nav
             class="border-b border-gray-200 bg-white dark:border-neutral-800 dark:bg-neutral-900"
+            :class="{ 'shrink-0': fullBleed }"
         >
             <div
                 class="mx-auto flex max-w-6xl items-center justify-between px-4 sm:px-6"
@@ -193,7 +210,14 @@ function navLinkStateClass(href: UrlMethodPair): string[] {
                 </div>
             </div>
         </nav>
-        <main id="main" class="mx-auto max-w-6xl px-4 py-8 sm:px-6">
+        <main
+            id="main"
+            :class="
+                fullBleed
+                    ? 'relative min-h-0 flex-1'
+                    : 'mx-auto max-w-6xl px-4 py-8 sm:px-6'
+            "
+        >
             <slot />
         </main>
     </div>

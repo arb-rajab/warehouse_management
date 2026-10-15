@@ -124,8 +124,10 @@ test('the orderedByCoordinates scope orders cells by cell number then flat numbe
         ->toBe([[1, 1], [1, 2], [2, 1]]);
 });
 
-test('the cell factory creates a row of its own only when the caller supplies none', function () {
-    $row = Row::withoutEvents(fn () => Row::factory()->create(['letter' => 'Z']));
+test('the cell factory creates a row of its own only when the caller supplies none', function (int $seed) {
+    fake()->unique(true);
+    fake()->seed($seed);
+    $row = Row::withoutEvents(fn () => Row::factory()->create());
 
     $viaFor = Cell::factory()->for($row)->create();
     $viaOverride = Cell::factory()->create(['row_id' => $row->id]);
@@ -138,4 +140,4 @@ test('the cell factory creates a row of its own only when the caller supplies no
 
     expect($withOwnRow->row_id)->not->toBe($row->id)
         ->and(Row::query()->count())->toBe(2);
-});
+})->with([27, 40, 45, 69]);

@@ -1,7 +1,11 @@
 import { defineConfig, devices } from '@playwright/test';
 import { fileURLToPath } from 'node:url';
 
-const baseURL = 'http://127.0.0.1:8010';
+const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? 'https://127.0.0.1:8010';
+const usesHTTPS = baseURL.startsWith('https://');
+const serverCommand = usesHTTPS
+    ? 'node tests/e2e/support/serve-https.mjs'
+    : 'php artisan serve --no-reload --host=127.0.0.1 --port=8010';
 const dbPath = fileURLToPath(new URL('./database/e2e.sqlite', import.meta.url));
 /**
  * Telescope/Pulse/Health each live on their own sqlite connection (see
@@ -34,6 +38,13 @@ export default defineConfig({
     reporter: 'list',
     use: {
         baseURL,
+        ignoreHTTPSErrors: baseURL.startsWith('https://'),
+        launchOptions: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH
+            ? {
+                  executablePath:
+                      process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH,
+              }
+            : {},
         // No `retries` is configured, so 'on-first-retry' never actually
         // captured anything -- there's no first retry to trigger on.
         // 'retain-on-failure' captures a trace/screenshot/video for any
@@ -50,13 +61,26 @@ export default defineConfig({
         },
     ],
     webServer: {
+        // Reset only dedicated e2e files, including ancillary connections that
+        // migrate:fresh does not drop. --no-reload keeps these DB overrides in
+        // the PHP server child; serve otherwise discards them when .env exists.
         command:
-            'touch database/e2e-telescope.sqlite database/e2e-pulse.sqlite database/e2e-health.sqlite && php artisan migrate:fresh --seed --force && php artisan serve --host=127.0.0.1 --port=8010',
+            "rm -f database/e2e.sqlite database/e2e-telescope.sqlite database/e2e-pulse.sqlite database/e2e-health.sqlite && touch database/e2e.sqlite database/e2e-telescope.sqlite database/e2e-pulse.sqlite database/e2e-health.sqlite && php artisan migrate:fresh --seed --force && php artisan db:seed --class='Tests\\Fixtures\\StoreCampaignBrowserSeeder' --force && php tests/e2e/support/seed-store-orders.php && " +
+            serverCommand,
         url: baseURL,
+        ignoreHTTPSErrors: baseURL.startsWith('https://'),
         reuseExistingServer: false,
+        gracefulShutdown: { signal: 'SIGTERM', timeout: 5_000 },
         timeout: 120_000,
         env: {
             APP_ENV: 'testing',
+            APP_URL: baseURL,
+            CSP_REPORT_ONLY: 'false',
+            TRUSTED_PROXIES: usesHTTPS
+                ? '127.0.0.1'
+                : (process.env.TRUSTED_PROXIES ?? ''),
+            TELESCOPE_ENABLED: 'false',
+            PULSE_ENABLED: 'false',
             DB_CONNECTION: 'sqlite',
             DB_DATABASE: dbPath,
             TELESCOPE_DB_DATABASE: telescopeDbPath,
@@ -79,6 +103,11 @@ export default defineConfig({
             SESSION_DRIVER: 'cookie',
             CACHE_STORE: 'array',
             QUEUE_CONNECTION: 'sync',
+            // The array driver keeps every message in memory, so no spec can
+            // deliver real mail. The username only satisfies the newsletter's
+            // "SMTP configured" guard; nothing connects with it.
+            MAIL_MAILER: 'array',
+            MAIL_USERNAME: 'e2e-array-mailer',
         },
     },
 });

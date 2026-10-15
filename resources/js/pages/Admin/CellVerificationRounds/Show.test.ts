@@ -1,18 +1,23 @@
+import { Form } from '@inertiajs/vue3';
 import { Check, X } from '@lucide/vue';
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { accept as acceptReport } from '@/actions/App/Http/Controllers/Admin/CellVerificationReportController';
 import {
+    complete,
     index as cellVerificationRoundsIndex,
     exportReports,
     show as cellVerificationRoundShow,
 } from '@/actions/App/Http/Controllers/Admin/CellVerificationRoundController';
+import { show as showHelp } from '@/actions/App/Http/Controllers/Admin/HelpController';
 import { show as rowShow } from '@/actions/App/Http/Controllers/Admin/RowController';
 import { show as userShow } from '@/actions/App/Http/Controllers/Admin/UserController';
 import ActionErrorBanner from '@/components/ActionErrorBanner.vue';
 import CellVerificationAcceptButton from '@/components/CellVerificationAcceptButton.vue';
 import CellVerificationAcceptedNote from '@/components/CellVerificationAcceptedNote.vue';
 import CellVerificationRoundStatusBadge from '@/components/CellVerificationRoundStatusBadge.vue';
+import HelpLink from '@/components/HelpLink.vue';
+import SubmitButton from '@/components/SubmitButton.vue';
 import { cellStateLabel } from '@/lib/cellStateColor';
 import { formatDateTime } from '@/lib/date';
 import { t } from '@/lib/i18n';
@@ -32,17 +37,21 @@ import type {
 } from '@/types/admin';
 import Show from './Show.vue';
 
-const { usePageMock, routerGetMock, routerPostMock } = vi.hoisted(() => ({
-    usePageMock: vi.fn(),
-    routerGetMock: vi.fn(),
-    routerPostMock: vi.fn(),
-}));
+const { usePageMock, routerGetMock, routerPostMock, formSlotPropsMock } =
+    vi.hoisted(() => ({
+        usePageMock: vi.fn(),
+        routerGetMock: vi.fn(),
+        routerPostMock: vi.fn(),
+        formSlotPropsMock: vi.fn(() => ({ errors: {}, processing: false })),
+    }));
 
 vi.mock('@inertiajs/vue3', async () => {
-    const { createLinkStub, headStub } = await import('@/testing/inertiaStubs');
+    const { createFormStub, createLinkStub, headStub } =
+        await import('@/testing/inertiaStubs');
 
     return {
         Head: headStub,
+        Form: createFormStub(formSlotPropsMock),
         Link: createLinkStub(),
         usePage: usePageMock,
         router: { get: routerGetMock, post: routerPostMock },
@@ -92,7 +101,72 @@ async function openFilters(
 describe('CellVerificationRounds Show', () => {
     beforeEach(() => {
         resetMocks({ usePageMock, routerGetMock, routerPostMock });
+        formSlotPropsMock.mockReturnValue({ errors: {}, processing: false });
         vi.unstubAllGlobals();
+    });
+
+    it('offers completion for an unfinished round using the typed POST action and preserving scroll and the query', () => {
+        const round = cellVerificationRound({ completed_at: null });
+        const wrapper = mountPage(round, []);
+
+        const form = wrapper.getComponent(Form);
+        expect(form.props('action')).toEqual(
+            complete(round, { mergeQuery: {} }),
+        );
+        expect(form.props('action')).toMatchObject({ method: 'post' });
+        expect(form.props('options')).toEqual({ preserveScroll: true });
+        const button = form.getComponent(SubmitButton);
+        expect(button.props('label')).toBe(
+            t('cellVerificationRound.show.finish'),
+        );
+        expect(button.props('processingLabel')).toBe(
+            t('cellVerificationRound.show.finishing'),
+        );
+        expect(button.props('processing')).toBe(false);
+        expect(button.text()).toBe(t('cellVerificationRound.show.finish'));
+        expect(button.attributes('disabled')).toBeUndefined();
+    });
+
+    it('disables completion and shows its processing label while the form is submitting', () => {
+        formSlotPropsMock.mockReturnValue({ errors: {}, processing: true });
+        const wrapper = mountPage(
+            cellVerificationRound({ completed_at: null }),
+            [],
+        );
+
+        const button = wrapper.getComponent(SubmitButton);
+        expect(button.props('processing')).toBe(true);
+        expect(button.attributes('disabled')).toBeDefined();
+        expect(button.text()).toBe(t('cellVerificationRound.show.finishing'));
+    });
+
+    it('removes the completion action when refreshed round props show it is completed', async () => {
+        const wrapper = mountPage(
+            cellVerificationRound({ completed_at: null }),
+            [],
+        );
+        expect(wrapper.findComponent(Form).exists()).toBe(true);
+
+        await wrapper.setProps({
+            round: cellVerificationRound({
+                completed_at: '2026-10-12T10:00:00Z',
+            }),
+        });
+
+        expect(wrapper.findComponent(Form).exists()).toBe(false);
+        expect(wrapper.findComponent(SubmitButton).exists()).toBe(false);
+        expect(
+            wrapper
+                .getComponent(CellVerificationRoundStatusBadge)
+                .props('completedAt'),
+        ).toBe('2026-10-12T10:00:00Z');
+    });
+
+    it('links to the verification workflow help', () => {
+        const wrapper = mountPage(cellVerificationRound(), []);
+        expect(wrapper.getComponent(HelpLink).props('href')).toEqual(
+            showHelp('cell-verification-rounds'),
+        );
     });
 
     it('renders the round id in the page heading', () => {

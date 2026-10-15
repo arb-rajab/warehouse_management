@@ -110,6 +110,30 @@ describe('ResourceFormPage', () => {
         expect(wrapper.get('form').text()).toContain('form fields go here');
     });
 
+    it('renders independent after-form content outside the resource form', () => {
+        usePageMock.mockReturnValue({
+            url: rowsIndex.url(),
+            props: { locale: 'en', auth: { user: { name: 'Jane', id: 7 } } },
+        });
+        const wrapper = mount(ResourceFormPage, {
+            props: {
+                title: 'Edit',
+                action: rowsIndex(),
+                submitLabel: 'Save',
+                submittingLabel: 'Saving',
+            },
+            slots: {
+                default: '<p>Fields</p>',
+                'after-form':
+                    '<form class="independent"><input name="notes" /></form>',
+            },
+        });
+        expect(wrapper.findAll('form form')).toHaveLength(0);
+        expect(wrapper.get('form.independent input').attributes('name')).toBe(
+            'notes',
+        );
+    });
+
     it('shows the submitting label and disables the button while processing', () => {
         formSlotPropsMock.mockReturnValue({ errors: {}, processing: true });
 

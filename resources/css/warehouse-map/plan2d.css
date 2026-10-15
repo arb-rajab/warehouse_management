@@ -1,0 +1,507 @@
+/* The 2D plan: a top-down floor plan of the 3D warehouse. Entrance at the bottom, aisles running up, A on the left. */
+.wms-plan {
+    overflow: hidden;
+    cursor: grab;
+    touch-action: none;
+    background:
+        radial-gradient(
+                circle at 1px 1px,
+                color-mix(in srgb, var(--wms-muted) 22%, transparent) 1px,
+                transparent 0
+            )
+            0 0 / 28px 28px,
+        var(--wms-page);
+}
+
+.wms-plan.is-panning {
+    cursor: grabbing;
+}
+
+.wms-plan__world {
+    position: absolute;
+    left: 0;
+    top: 0;
+    transform-origin: 0 0;
+    direction: ltr;
+    will-change: transform;
+    padding: 30px 70px 26px;
+    border-radius: 36px;
+    border: 3px solid var(--wms-plan-edge);
+    /* Blur radius is what costs raster time on this one huge, scaled element: keep the outer shadow small and
+       draw the inner vignette as a gradient, not an `inset` blur (that alone was ~60% of every zoom's raster). */
+    box-shadow: 0 24px 48px var(--wms-shadow);
+    background:
+        radial-gradient(ellipse at 50% 50%, transparent 58%, rgb(0 0 0 / 0.18)),
+        linear-gradient(var(--wms-plan-grid) 1px, transparent 1px) 0 0 / 48px
+            48px,
+        linear-gradient(90deg, var(--wms-plan-grid) 1px, transparent 1px) 0 0 /
+            48px 48px,
+        radial-gradient(
+            ellipse at 50% 38%,
+            var(--wms-plan-glow),
+            var(--wms-plan-floor) 72%
+        );
+}
+
+.wms-plan__world:is(.is-coarse, .is-zooming) {
+    box-shadow: none;
+}
+
+.wms-plan__world.is-animating {
+    transition: transform 0.45s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.wms-plan__pairs {
+    display: flex;
+    gap: 44px;
+    align-items: flex-start;
+}
+
+.wms-pair {
+    display: grid;
+    grid-template-columns: auto 78px auto;
+    grid-template-rows: 56px auto 96px;
+}
+
+.wms-aisle-head {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    transition: opacity 0.2s;
+}
+
+.wms-aisle-head--a {
+    grid-column: 1;
+    grid-row: 1;
+}
+
+.wms-aisle-head--b {
+    grid-column: 3;
+    grid-row: 1;
+}
+
+.wms-rack-strip {
+    display: flex;
+    flex-direction: column-reverse;
+    gap: 6px;
+    padding: 8px 7px;
+    background: var(--wms-rack-foot);
+    transition: opacity 0.2s;
+    border-inline: 5px solid var(--wms-beam);
+    border-block: 5px solid var(--wms-steel-plan);
+    border-radius: 7px;
+    box-shadow: 0 8px 18px rgb(0 0 0 / 0.35);
+}
+
+.wms-rack-strip--a {
+    grid-column: 1;
+    grid-row: 2;
+}
+
+.wms-rack-strip--b {
+    grid-column: 3;
+    grid-row: 2;
+}
+
+.wms-aisle-head.is-faded,
+.wms-rack-strip.is-faded {
+    opacity: 0.25;
+}
+
+.wms-rack-strip.is-hit {
+    box-shadow:
+        0 0 0 4px var(--wms-primary),
+        0 8px 24px rgb(37 99 235 / 0.5);
+}
+
+.wms-pair__lane {
+    grid-column: 2;
+    grid-row: 2 / span 2;
+    position: relative;
+    background: var(--wms-lane);
+}
+
+.wms-pair--alt .wms-pair__lane {
+    background: var(--wms-lane-alt);
+}
+
+.wms-pair__lane::before {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 0;
+    bottom: 0;
+    border-left: 4px dashed var(--wms-plan-line);
+    transform: translateX(-50%);
+    opacity: 0.8;
+}
+
+.wms-pair__sign {
+    grid-column: 2;
+    grid-row: 3;
+    align-self: end;
+    justify-self: center;
+    margin-bottom: 22px;
+    z-index: 2;
+    white-space: nowrap;
+    background: #1e3a8a;
+    color: #fff;
+    font-weight: 800;
+    font-size: 19px;
+    padding: 8px 18px;
+    border-radius: 12px;
+    border: 2px solid rgb(147 197 253 / 0.55);
+    box-shadow: 0 6px 16px rgb(0 0 0 / 0.45);
+}
+
+.wms-plate {
+    background: var(--wms-primary);
+    color: #fff;
+    font-weight: 900;
+    font-size: 26px;
+    min-width: 46px;
+    height: 38px;
+    padding: 0 8px;
+    display: grid;
+    place-items: center;
+    border-radius: 10px;
+    box-shadow: 0 3px 8px rgb(0 0 0 / 0.4);
+}
+
+.wms-count {
+    background: var(--wms-card);
+    color: var(--wms-primary);
+    border: 2px solid var(--wms-primary);
+    font-weight: 900;
+    font-size: 17px;
+    min-width: 34px;
+    height: 34px;
+    padding: 0 6px;
+    border-radius: 17px;
+    display: grid;
+    place-items: center;
+}
+
+.wms-plan__entrance {
+    margin-top: 4px;
+    padding-top: 12px;
+    border-top: 4px dashed rgb(234 179 8 / 0.6);
+    text-align: center;
+    font-weight: 900;
+    letter-spacing: 7px;
+    font-size: 17px;
+    color: var(--wms-plan-line);
+    text-transform: uppercase;
+}
+
+.wms-plan__level {
+    position: absolute;
+    top: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--wms-primary);
+    color: #fff;
+    font-weight: 800;
+    font-size: 17px;
+    padding: 7px 18px;
+    border-radius: 20px;
+    box-shadow: 0 4px 12px rgb(0 0 0 / 0.4);
+}
+
+/* tiles */
+.wms-tile {
+    position: relative;
+    width: 66px;
+    height: 78px;
+    flex: none;
+    border-radius: 10px;
+    border: 0;
+    background: var(--wms-tile-empty);
+    cursor: pointer;
+    overflow: hidden;
+    transition:
+        opacity 0.15s,
+        transform 0.15s;
+    box-shadow:
+        inset 0 0 0 3px rgb(141 110 99 / 0.6),
+        0 2px 5px rgb(0 0 0 / 0.35);
+}
+
+.wms-tile::before {
+    /* lit from the same corner as the 3D key light */
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: linear-gradient(
+        135deg,
+        rgb(255 255 255 / 0.3),
+        rgb(255 255 255 / 0) 46%,
+        rgb(0 0 0 / 0.2)
+    );
+}
+
+.wms-tile--full {
+    background-color: var(--wms-success);
+}
+
+.wms-tile--opened {
+    background-color: var(--wms-warning);
+}
+
+.wms-tile.has-image {
+    background-image:
+        linear-gradient(rgb(0 0 0 / 0.28), rgb(0 0 0 / 0.28)),
+        var(--wms-tile-image);
+    background-size: cover;
+    background-position: center;
+}
+
+.wms-tile__num {
+    position: absolute;
+    inset-inline-start: 4px;
+    top: 4px;
+    min-width: 23px;
+    height: 21px;
+    padding: 0 6px;
+    border-radius: 11px;
+    background: rgb(15 23 42 / 0.62);
+    color: #fff;
+    font: 800 12px/21px var(--wms-font);
+    text-align: center;
+}
+
+.wms-tile--empty .wms-tile__num {
+    background: rgb(15 23 42 / 0.35);
+}
+
+.wms-tile__levels {
+    /* one bar per shelf level, so a column's fill reads at a glance */
+    position: absolute;
+    inset-inline: 8px;
+    bottom: 8px;
+    display: flex;
+    gap: 3px;
+}
+
+.wms-tile__level {
+    flex: 1;
+    height: 6px;
+    border-radius: 3px;
+    background: rgb(255 255 255 / 0.28);
+}
+
+.wms-tile__level--f {
+    background: #fff;
+}
+
+.wms-tile__level--o {
+    background: #7c2d12;
+}
+
+.wms-tile__level--x {
+    background: var(--wms-danger);
+}
+
+.wms-tile.is-dim {
+    opacity: 0.16;
+}
+
+.wms-tile.is-match {
+    box-shadow:
+        0 0 0 4px var(--wms-primary),
+        0 6px 16px rgb(37 99 235 / 0.55);
+    transform: scale(var(--wms-hl, 1.15));
+    z-index: 2;
+}
+
+.wms-tile.is-inactive {
+    box-shadow:
+        inset 0 0 0 3px var(--wms-danger),
+        0 2px 5px rgb(0 0 0 / 0.35);
+}
+
+.wms-tile.is-inactive::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+        135deg,
+        transparent calc(50% - 2px),
+        var(--wms-danger) calc(50% - 2px),
+        var(--wms-danger) calc(50% + 2px),
+        transparent calc(50% + 2px)
+    );
+    opacity: 0.85;
+}
+
+.wms-tile.is-target {
+    z-index: 3;
+    animation: wms-glow 0.9s ease-in-out 6;
+    box-shadow:
+        0 0 0 4px var(--wms-target),
+        0 0 22px 6px rgb(250 204 21 / 0.8);
+}
+
+.wms-tile__code {
+    position: absolute;
+    inset-inline: 3px;
+    bottom: 20px;
+    background: var(--wms-target);
+    color: #0f172a;
+    font: 800 11px/16px var(--wms-font);
+    text-align: center;
+    border-radius: 8px;
+    direction: ltr;
+}
+
+.wms-tile:hover {
+    transform: translateY(-2px);
+    box-shadow:
+        inset 0 0 0 3px rgb(141 110 99 / 0.6),
+        0 8px 14px rgb(0 0 0 / 0.45);
+}
+
+.wms-tile.is-match:hover {
+    transform: scale(var(--wms-hl, 1.15));
+}
+
+@keyframes wms-glow {
+    0%,
+    100% {
+        box-shadow:
+            0 0 0 4px var(--wms-target),
+            0 0 6px 1px rgb(250 204 21 / 0.4);
+    }
+
+    50% {
+        box-shadow:
+            0 0 0 4px var(--wms-target),
+            0 0 30px 10px rgb(250 204 21 / 0.95);
+    }
+}
+
+/* the same plan lying down: entrance on the left, bays running left to right, aisle A at the top */
+.wms-plan__world.is-horizontal {
+    display: flex;
+    flex-direction: row;
+    align-items: stretch;
+    padding: 30px 44px 30px 30px;
+}
+
+.is-horizontal .wms-plan__pairs {
+    flex-direction: column;
+    gap: 40px;
+    align-items: stretch;
+}
+
+.is-horizontal .wms-pair {
+    grid-template-columns: 150px 56px auto;
+    grid-template-rows: auto 78px auto;
+}
+
+.is-horizontal .wms-aisle-head {
+    flex-direction: column;
+}
+
+.is-horizontal .wms-aisle-head--a {
+    grid-column: 2;
+    grid-row: 1;
+}
+
+.is-horizontal .wms-aisle-head--b {
+    grid-column: 2;
+    grid-row: 3;
+}
+
+.is-horizontal .wms-rack-strip {
+    flex-direction: row;
+    border-inline-color: var(--wms-steel-plan);
+    border-block-color: var(--wms-beam);
+    padding: 7px 8px;
+}
+
+.is-horizontal .wms-rack-strip--a {
+    grid-column: 3;
+    grid-row: 1;
+}
+
+.is-horizontal .wms-rack-strip--b {
+    grid-column: 3;
+    grid-row: 3;
+}
+
+.is-horizontal .wms-pair__lane {
+    grid-column: 1 / span 3;
+    grid-row: 2;
+}
+
+.is-horizontal .wms-pair__lane::before {
+    left: 0;
+    right: 0;
+    top: 50%;
+    bottom: auto;
+    border-left: 0;
+    border-top: 4px dashed var(--wms-plan-line);
+    transform: translateY(-50%);
+}
+
+.is-horizontal .wms-pair__sign {
+    grid-column: 1;
+    grid-row: 2;
+    margin: 0;
+    align-self: center;
+    font-size: 17px;
+    padding: 7px 14px;
+}
+
+.is-horizontal .wms-tile {
+    width: 78px;
+    height: 66px;
+}
+
+.is-horizontal .wms-plan__entrance {
+    order: -1;
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+    border-top: 0;
+    border-left: 4px dashed rgb(234 179 8 / 0.6);
+    margin: 0 18px 0 0;
+    padding: 0 0 0 12px;
+}
+
+/* A zoomed-out plan (small tiles) and a plan being zoomed (every step re-rasters it) drop shadows, gradients, digits
+   and photos: unreadable or invisible there, and they are most of the paint time. */
+.wms-plan__world:is(.is-coarse, .is-zooming) .wms-tile {
+    box-shadow: none;
+    transition: none;
+}
+
+.wms-plan__world:is(.is-coarse, .is-zooming) .wms-tile.has-image {
+    background-image: none;
+}
+
+.wms-plan__world:is(.is-coarse, .is-zooming) .wms-tile::before,
+.wms-plan__world:is(.is-coarse, .is-zooming) .wms-tile__levels,
+.wms-plan__world:is(.is-coarse, .is-zooming) .wms-tile__num {
+    display: none;
+}
+
+.wms-plan__world:is(.is-coarse, .is-zooming) .wms-tile.is-match {
+    box-shadow: 0 0 0 3px var(--wms-primary);
+}
+
+.wms-plan__world:is(.is-coarse, .is-zooming) .wms-tile.is-inactive {
+    box-shadow: inset 0 0 0 2px var(--wms-danger);
+}
+
+.wms-plan__world:is(.is-coarse, .is-zooming) .wms-tile.is-target {
+    box-shadow:
+        0 0 0 3px var(--wms-target),
+        0 0 12px 3px rgb(250 204 21 / 0.8);
+}
+
+.wms-plan__world:is(.is-coarse, .is-zooming) .wms-tile:hover {
+    transform: none;
+}

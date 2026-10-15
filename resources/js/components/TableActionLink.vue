@@ -7,9 +7,11 @@ withDefaults(
     defineProps<{
         href: string | UrlMethodPair;
         variant?: 'primary' | 'danger';
+        inertia?: boolean;
     }>(),
     {
         variant: 'primary',
+        inertia: true,
     },
 );
 
@@ -20,7 +22,11 @@ const variantClasses: Record<'primary' | 'danger', string> = {
 </script>
 
 <template>
-    <Link :href="href" :class="[pillLinkClass, variantClasses[variant]]">
+    <component
+        :is="inertia ? Link : 'a'"
+        :href="inertia || typeof href === 'string' ? href : href.url"
+        :class="[pillLinkClass, variantClasses[variant]]"
+    >
         <slot />
-    </Link>
+    </component>
 </template>

@@ -43,11 +43,11 @@ function scrollElement({
     return el;
 }
 
-function mountSearch() {
+function mountSearch(options: { includeInactive?: boolean } = {}) {
     return mount(
         defineComponent({
             setup() {
-                return { ...useProductSearch() };
+                return { ...useProductSearch(options) };
             },
             template: '<div></div>',
         }),
@@ -80,6 +80,18 @@ describe('useProductSearch', () => {
 
         expect(getMock).toHaveBeenCalledTimes(1);
         expect(getMock.mock.calls[0][0]).toContain('page=1');
+    });
+
+    it('omits include_inactive by default', () => {
+        mountSearch().vm.fetchFirstPageIfEmpty();
+
+        expect(getMock.mock.calls[0][0]).not.toContain('include_inactive');
+    });
+
+    it('asks the server to include inactive products when told to', () => {
+        mountSearch({ includeInactive: true }).vm.fetchFirstPageIfEmpty();
+
+        expect(getMock.mock.calls[0][0]).toContain('include_inactive=1');
     });
 
     it('fetchFirstPageIfEmpty does nothing once results are already loaded', async () => {

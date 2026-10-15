@@ -1,0 +1,293 @@
+@media (max-width: 860px) {
+    .wms-brand__sub {
+        display: none;
+    }
+
+    .wms-search {
+        flex: 1 1 120px;
+    }
+
+    .wms-chip--optional,
+    .wms-icon-btn--optional {
+        display: none;
+    }
+}
+
+@media (max-width: 720px) {
+    /* on a phone the top bar never wraps over the content: the search folds behind a button */
+    .wms-topbar {
+        inset-inline: 8px;
+        gap: 8px;
+        flex-wrap: nowrap;
+    }
+
+    .wms-topbar.is-searching {
+        flex-wrap: wrap;
+    }
+
+    .wms-brand__title {
+        display: none;
+    }
+
+    .wms-brand {
+        padding-inline-end: 8px;
+    }
+
+    .wms-search-toggle {
+        display: inline-grid;
+    }
+
+    .wms-search,
+    .wms-chips {
+        display: none;
+    }
+
+    .wms-filters {
+        flex: 0 0 auto;
+    }
+
+    .wms-topbar.is-searching .wms-filters {
+        flex: 1 1 100%;
+        max-width: none;
+        order: 5;
+        flex-wrap: wrap;
+        height: auto;
+        padding: 6px;
+    }
+
+    .wms-topbar.is-searching .wms-search {
+        display: flex;
+        flex: 1 1 calc(100% - 52px);
+        max-width: none;
+    }
+
+    .wms-topbar.is-searching .wms-chips {
+        display: flex;
+        flex: 1 1 100%;
+        overflow-x: auto;
+        scrollbar-width: none;
+    }
+
+    .wms-topbar .wms-icon-btn {
+        width: 36px;
+        height: 36px;
+    }
+
+    .wms-actions {
+        gap: 3px;
+    }
+
+    .wms-subbar {
+        top: calc(66px + var(--wms-safe-top));
+        inset-inline: 8px;
+    }
+
+    .wms-topbar.is-searching ~ .wms-subbar {
+        top: calc(176px + var(--wms-safe-top));
+    }
+
+    .wms-topbar.is-searching ~ .wms-walkbar {
+        top: calc(236px + var(--wms-safe-top));
+    }
+
+    .wms-walkbar {
+        top: calc(116px + var(--wms-safe-top));
+        max-width: 96%;
+    }
+
+    .wms-walkbar .wms-chip {
+        padding: 0 10px;
+    }
+
+    .wms-minimap {
+        inset-inline-end: 8px;
+        bottom: auto;
+        top: calc(120px + var(--wms-safe-top));
+    }
+
+    .wms-minimap__canvas {
+        width: 128px;
+        height: 115px;
+    }
+
+    .wms-topbar.is-searching ~ .wms-minimap {
+        display: none;
+    }
+
+    .wms[data-input='touch'][data-view='3d'][data-mode='walk'] .wms-minimap {
+        top: calc(172px + var(--wms-safe-top));
+        bottom: auto;
+    }
+
+    .wms-keys {
+        display: none !important;
+    }
+
+    .wms-zoom {
+        inset-inline-end: 10px;
+    }
+
+    /* the floors become a short pill along the bottom: a vertical strip covered the aisle cards */
+    .wms-floors {
+        inset-inline-start: 8px;
+        top: auto;
+        bottom: calc(16px + var(--wms-safe-bottom));
+        width: auto;
+        flex-direction: row;
+        padding: 5px;
+        border-radius: 22px;
+    }
+
+    .wms-chip--floor {
+        width: 42px;
+        height: 36px;
+    }
+
+    .wms-floors__title {
+        display: none;
+    }
+
+    .wms[data-input='touch'][data-view='3d'][data-mode='walk'] .wms-floors {
+        display: none;
+    }
+
+    /* the result pill takes no room until a filter starts */
+    .wms-result-pill,
+    .wms[data-view='2d'] .wms-result-pill {
+        position: static;
+        flex: none;
+        max-width: 0;
+        padding: 0;
+        border-width: 0;
+        overflow: hidden;
+        transform: none;
+        transition:
+            max-width 0.3s,
+            opacity 0.25s,
+            padding 0.3s;
+    }
+
+    .wms-result-pill.is-shown {
+        max-width: 200px;
+        padding: 0 14px;
+        border-width: 1px;
+    }
+
+    .wms-camera-bar {
+        min-width: 0;
+        flex: 0 1 auto;
+    }
+
+    .wms-drawer {
+        inset-block: auto 0;
+        inset-inline: 0;
+        width: 100%;
+        height: 78%;
+        transform: translateY(105%) !important;
+        border-radius: 24px 24px 0 0;
+    }
+
+    .wms-drawer.is-open {
+        transform: none !important;
+    }
+}
+
+@media (min-width: 721px) {
+    .wms-camera-bar {
+        max-width: calc(100% - 270px);
+    }
+}
+
+@media (max-width: 1250px) {
+    .wms-welcome__grid {
+        grid-template-columns: auto auto;
+    }
+
+    .wms-welcome__col--mid {
+        display: none;
+    }
+}
+
+@media (max-width: 1100px) {
+    .wms-stack {
+        max-width: calc(100% - 32px);
+    }
+}
+
+@media (max-height: 520px) {
+    .wms-keys {
+        display: none !important;
+    }
+
+    .wms-floors {
+        margin-top: 42px;
+    }
+}
+
+/* a phone on its side: very little height, so the camera bar steps aside while walking and the details card shrinks */
+@media (max-height: 480px) {
+    .wms[data-mode='walk'] .wms-subbar {
+        display: none;
+    }
+
+    .wms-walkbar {
+        top: calc(66px + var(--wms-safe-top));
+    }
+
+    .wms-minimap {
+        inset-inline-end: 8px;
+        top: calc(112px + var(--wms-safe-top));
+        bottom: auto;
+        padding: 4px;
+    }
+
+    .wms-minimap__canvas {
+        width: 128px;
+        height: 115px;
+    }
+
+    .wms-card__hint,
+    .wms-card__meter {
+        display: none;
+    }
+
+    .wms-card {
+        padding: 8px 12px;
+        min-width: 0;
+    }
+
+    .wms[data-input='touch'] .wms-stack,
+    .wms[data-input='touch'][data-nav='guided'][data-mode='walk'] .wms-stack {
+        bottom: calc(18px + var(--wms-safe-bottom));
+        max-width: calc(100% - 300px);
+    }
+
+    .wms-lift {
+        bottom: calc(14px + var(--wms-safe-bottom));
+    }
+
+    .wms-welcome {
+        display: none !important;
+    }
+}
+
+/* The pad, the lift buttons and the floors pill own the physical edges on a phone, whatever the language. */
+.wms[data-input='touch'] .wms-lift {
+    right: 14px;
+    left: auto;
+}
+
+.wms[data-input='touch'] .wms-pad {
+    right: 10px;
+    left: auto;
+}
+
+.wms[data-input='touch'] .wms-floors {
+    left: 8px;
+    right: auto;
+}
+
+.wms[data-input='touch'] .wms-zoom {
+    right: 14px;
+    left: auto;
+}

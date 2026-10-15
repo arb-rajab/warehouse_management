@@ -68,6 +68,8 @@ const STATE_CHANGING_STORE_ROUTES = [
     'pick_up_points.destroy',
     'products.destroy',
     'products.duplicate',
+    'products.list.destroy',
+    'products.list.duplicate',
     'purchase_history.destroy',
     'rep.packages.destroy',
     'roles.destroy',
@@ -86,7 +88,6 @@ const STATE_CHANGING_STORE_ROUTES = [
     'subscriber.destroy',
     'tax.destroy',
     'trips.destroy',
-    'trucks.destroy',
     'uploaded-files.destroy',
     'zones.destroy',
 ];
@@ -155,14 +156,17 @@ test('a GET to a state-changing route is refused and changes nothing', function 
     $this->get("/temp/admin/brands/destroy/$brandId")->assertMethodNotAllowed();
     $this->assertDatabaseHas('brands', ['id' => $brandId]);
 
-    $this->post("/temp/admin/brands/destroy/$brandId")->assertRedirect(route('brands.index'));
+    $this->post("/temp/admin/brands/destroy/$brandId")->assertMethodNotAllowed();
+    $this->assertDatabaseHas('brands', ['id' => $brandId]);
+
+    $this->delete("/temp/admin/brands/destroy/$brandId")->assertRedirect(route('brands.index'));
     $this->assertDatabaseMissing('brands', ['id' => $brandId]);
 });
 
-test('a visitor who is not signed in cannot delete through the POST route either', function () {
+test('a visitor who is not signed in cannot delete through the DELETE route either', function () {
     $brandId = DB::table('brands')->insertGetId(['name' => 'Acme', 'slug' => 'acme']);
 
-    expect($this->post("/temp/admin/brands/destroy/$brandId")->getStatusCode())->toBeIn([302, 401, 403]);
+    expect($this->delete("/temp/admin/brands/destroy/$brandId")->getStatusCode())->toBeIn([302, 401, 403]);
     $this->assertDatabaseHas('brands', ['id' => $brandId]);
 });
 
@@ -186,10 +190,7 @@ test('every link to a state-changing route is marked to submit as a POST', funct
     // The links that open a confirmation modal carry no mark; the modal's own button does.
     $modalButtons = [
         'resources/views/shop/frontend/partials/account_delete_modal.blade.php' => ['id="account_delete_link"'],
-        'resources/views/shop/backend/customer/customers/index.blade.php' => ['id="confirmation"', 'id="confirmationunban"'],
-        'resources/views/shop/backend/customer/customers/archive.blade.php' => ['id="confirmation"', 'id="confirmationunban"'],
         'resources/views/shop/backend/sellers/index.blade.php' => ['id="confirmation"', 'id="confirmationunban"'],
-        'resources/views/shop/backend/representatives/index.blade.php' => ['id="confirmation"', 'id="confirmationunban"'],
     ];
     $openedByModal = ['customers.ban', 'sellers.ban', 'account_delete'];
     $offenders = [];

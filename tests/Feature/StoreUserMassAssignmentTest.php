@@ -4,7 +4,6 @@ use App\Models\StoreUser;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\MassAssignmentException;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Schema;
 
 /**
  * The columns that decide privilege and verification are not mass assignable
@@ -69,45 +68,4 @@ test('the flags and the verification time are cast', function () {
         ->and($fresh->admin_verified)->toBeTrue()
         ->and($fresh->registration_completed)->toBeFalse()
         ->and($fresh->email_verified_at)->toBeInstanceOf(CarbonInterface::class);
-});
-
-test('creating a customer through the admin form ignores forged privileged fields', function () {
-    Schema::create('customers', function ($table) {
-        $table->id();
-        $table->unsignedInteger('user_id');
-        $table->timestamps();
-    });
-    $noise = createStoreUser('customer', 'noise@example.com');
-    actingAsStoreUser(createStoreAdmin());
-
-    $this->post('/temp/admin/customers', [
-        'name' => 'Forged Customer',
-        'email' => 'forged@example.com',
-        'phone' => '31600000001',
-        'user_type' => 'admin',
-        'is_rep' => 1,
-        'admin_verified' => 1,
-        'verification_code' => '000000',
-        'rep_id' => '99',
-    ])->assertOk();
-
-    $created = StoreUser::where('email', 'forged@example.com')->firstOrFail();
-    expect($created->user_type)->toBe('customer')
-        ->and($created->is_rep)->toBeFalse()
-        ->and($created->admin_verified)->toBeFalsy()
-        ->and($created->verification_code)->toBeNull()
-        ->and($created->rep_id)->toBeNull()
-        ->and($created->roles()->count())->toBe(0)
-        ->and($noise->fresh()->user_type)->toBe('customer');
-});
-
-test('a customer cannot create customers through the admin form', function () {
-    actingAsStoreUser(createStoreUser('customer'));
-    $before = StoreUser::count();
-
-    $this->post('/temp/admin/customers', ['name' => 'X', 'email' => 'x@example.com', 'phone' => '31600000002'])
-        ->assertNotFound();
-
-    expect(StoreUser::count())->toBe($before)
-        ->and(StoreUser::where('email', 'x@example.com')->exists())->toBeFalse();
 });

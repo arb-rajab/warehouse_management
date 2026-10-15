@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { loginAsStoreAdmin } from './support/auth';
+import { seedStoreFixtures } from './support/storeFixtures';
 
 /**
  * The store back office's first Inertia module, staff, beside the Blade
@@ -37,15 +38,30 @@ test('dismissing the delete confirmation keeps the staff member, accepting it de
 test('the sidebar loads a Blade page in full, and an Inertia redirect to one does too', async ({
     page,
 }) => {
+    seedStoreFixtures(String.raw`
+        foreach (['website_setup', 'website_setup_footer'] as $key) {
+            Illuminate\Support\Facades\DB::table('business_settings')->updateOrInsert(['type' => $key], ['value' => '1']);
+        }
+    `);
     await loginAsStoreAdmin(page);
     await page.goto('/temp/admin/staffs');
     await expect(page.getByRole('heading', { name: 'Staff' })).toBeVisible();
 
-    await page
-        .getByRole('navigation', { name: 'Store admin menu' })
-        .getByRole('link', { name: 'Dashboard' })
+    const navigation = page.getByRole('navigation', {
+        name: 'Store admin menu',
+    });
+    // The footer form stays Blade until the rich-text editor is approved.
+    await navigation
+        .getByRole('button', { name: 'Website setup', exact: true })
         .click();
-    await expect(page).toHaveURL(/\/temp\/admin$/);
+    const response = page.waitForResponse(
+        (response) =>
+            new URL(response.url()).pathname === '/temp/admin/website/footer' &&
+            response.request().isNavigationRequest(),
+    );
+    await navigation.getByRole('link', { name: 'Footer', exact: true }).click();
+    expect((await response).status()).toBe(200);
+    await expect(page).toHaveURL(/\/temp\/admin\/website\/footer$/);
     await expect(page.locator('#app')).toHaveCount(0);
 
     await page.goto('/temp/admin/staffs');

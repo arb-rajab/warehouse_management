@@ -73,6 +73,8 @@ describe('index', function () {
 
 describe('create', function () {
     test('the add-role form can be rendered with the permissions grouped by section', function () {
+        // This payload fixture owns its permission groups.
+        Permission::query()->whereIn('section', ['customer', 'representatives', 'trips', 'trucks', 'drivers', 'setup_configurations', 'sales', 'blog', 'support'])->delete();
         $approve = Permission::create(['name' => 'approve_bulk_price_changes', 'section' => 'price_changes']);
         $unsorted = Permission::create(['name' => 'export_everything']);
         Permission::create(['name' => 'add_auction_product', 'section' => 'auction']);
@@ -83,6 +85,29 @@ describe('create', function () {
         $this->get('/temp/admin/roles/create')->assertOk()->assertInertia(
             fn (Assert $page) => $page->component('Store/Admin/Staff/Roles/Create')
                 ->where('permissionGroups', [
+                    [
+                        'section' => 'uploads',
+                        'label' => 'Uploads',
+                        'permissions' => collect(['view_uploads', 'upload_files', 'delete_uploads', 'delete_all_uploads'])
+                            ->map(fn (string $name) => [
+                                'id' => Permission::findByName($name, 'store')->id,
+                                'label' => match ($name) {
+                                    'view_uploads' => 'View Uploads',
+                                    'upload_files' => 'Upload Files',
+                                    'delete_uploads' => 'Delete Uploads',
+                                    'delete_all_uploads' => 'Delete All Uploads',
+                                },
+                            ])->all(),
+                    ],
+                    [
+                        'section' => 'offers_catalog',
+                        'label' => 'Offers Catalog',
+                        'permissions' => [
+                            ['id' => Permission::findByName('view_offers_catalog', 'store')->id, 'label' => 'View Offers Catalog'],
+                            ['id' => Permission::findByName('add_offers_catalog', 'store')->id, 'label' => 'Add Offers Catalog'],
+                            ['id' => Permission::findByName('delete_offers_catalog', 'store')->id, 'label' => 'Delete Offers Catalog'],
+                        ],
+                    ],
                     [
                         'section' => 'price_changes',
                         'label' => 'Price Changes',
@@ -158,6 +183,8 @@ describe('store', function () {
 
 describe('edit', function () {
     test('the edit-role form can be rendered in the default language', function () {
+        // This payload fixture owns its permission groups.
+        Permission::query()->whereIn('section', ['customer', 'representatives', 'trips', 'trucks', 'drivers', 'setup_configurations', 'sales', 'blog', 'support'])->delete();
         $permission = Permission::create(['name' => 'view_all_orders', 'section' => 'order']);
         $role = Role::findOrCreate('Clerk', 'store');
         $role->givePermissionTo($permission);
@@ -172,7 +199,7 @@ describe('edit', function () {
                 ->where('name', 'Clerk')
                 ->where('languages', [['code' => 'en', 'name' => 'English'], ['code' => 'ar', 'name' => 'Arabic']])
                 ->where('permissionIds', [$permission->id])
-                ->has('permissionGroups', 2)
+                ->where('permissionGroups', fn ($groups) => collect($groups)->pluck('permissions')->flatten(1)->contains('id', $permission->id))
         );
     });
 

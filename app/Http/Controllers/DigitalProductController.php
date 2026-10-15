@@ -7,7 +7,6 @@ use App\Models\Product;
 use App\Models\ProductStock;
 use App\Models\ProductTax;
 use App\Models\ProductTranslation;
-use App\Models\Upload;
 use App\Services\ProductTaxService;
 use Auth;
 use Illuminate\Http\Request;
@@ -15,6 +14,11 @@ use Illuminate\Http\Response;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
 
+/**
+ * The back office's digital product create and edit forms, which stay Blade
+ * for their rich-text editor. The list, deletion, download and switches are
+ * Store\Admin\DigitalProductController's.
+ */
 class DigitalProductController extends Controller implements HasMiddleware
 {
     /**
@@ -28,28 +32,9 @@ class DigitalProductController extends Controller implements HasMiddleware
     public static function middleware(): array
     {
         return [
-            new Middleware('permission:show_digital_products', only: ['index', 'show']),
             new Middleware('permission:add_digital_product', only: ['create', 'store']),
             new Middleware('permission:edit_digital_product', only: ['edit', 'update']),
-            new Middleware('permission:delete_digital_product', only: ['destroy']),
-            new Middleware('permission:download_digital_product', only: ['download']),
         ];
-    }
-    /**
-     * Display a listing of the resource.
-     *
-     * @return Response
-     */
-    public function index(Request $request)
-    {
-        $sort_search    = null;
-        $products       = Product::orderBy('created_at', 'desc');
-        if ($request->has('search')) {
-            $sort_search    = $request->search;
-            $products       = $products->where('name', 'like', '%' . $sort_search . '%');
-        }
-        $products = $products->where('digital', 1)->paginate(10);
-        return view('shop.backend.product.digital_products.index', compact('products', 'sort_search'));
     }
 
     /**
@@ -134,17 +119,6 @@ class DigitalProductController extends Controller implements HasMiddleware
             flash(translate('Something went wrong'))->error();
             return back();
         }
-    }
-
-    /**
-     * Display the specified resource.
-     *
-     * @param  int  $id
-     * @return Response
-     */
-    public function show($id)
-    {
-        //
     }
 
     /**
@@ -238,40 +212,6 @@ class DigitalProductController extends Controller implements HasMiddleware
         } else {
             flash(translate('Something went wrong'))->error();
             return back();
-        }
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     *
-     * @param  int  $id
-     * @return Response
-     */
-    public function destroy($id)
-    {
-        $product = Product::findOrFail($id);
-
-        $product->product_translations()->delete();
-        $product->stocks()->delete();
-
-        Product::destroy($id);
-
-        flash(translate('Product has been deleted successfully'))->success();
-        return redirect()->route('digitalproducts.index');
-    }
-
-
-    public function download(Request $request)
-    {
-        $product = Product::findOrFail(decrypt($request->id));
-
-        $upload = Upload::findOrFail($product->file_name);
-        if (config('filesystems.default') == "s3") {
-            return \Storage::disk('s3')->download($upload->file_name, $upload->file_original_name . "." . $upload->extension);
-        } else {
-            if (file_exists(base_path('public/' . $upload->file_name))) {
-                return response()->download(base_path('public/' . $upload->file_name));
-            }
         }
     }
 }

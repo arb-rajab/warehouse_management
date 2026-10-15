@@ -1,0 +1,77 @@
+/* Colours come from the app's palette: change a token here, not in a component. The 3D scene reads the brand ones from here too. */
+.wms {
+    /* brand + status */
+    --wms-primary: #2563eb;
+    --wms-primary-dark: #1e3a8a;
+    --wms-success: #10b981;
+    --wms-success-bright: #34d399;
+    --wms-warning: #f59e0b;
+    --wms-warning-bright: #fbbf24;
+    --wms-warning-text: #b45309;
+    --wms-danger: #e11d48;
+    --wms-danger-bright: #fb7185;
+    --wms-target: #facc15;
+    --wms-canvas: #0b1120;
+    --wms-steel: #475569;
+    --wms-beam: #c2410c;
+
+    /* the floating HUD is always dark, like the app's map controls */
+    --wms-surface-dark: #0f172a;
+    --wms-raised: #1e293b;
+    --wms-hud: rgb(15 23 42 / 0.94);
+    --wms-white12: rgb(255 255 255 / 0.12);
+    --wms-white60: rgb(255 255 255 / 0.6);
+    --wms-white70: rgb(255 255 255 / 0.7);
+
+    /* themeable surfaces (the 2D page, dialogs): light by default */
+    --wms-page: #f8fafc;
+    --wms-card: #ffffff;
+    --wms-subtle: #f1f5f9;
+    --wms-text: #0f172a;
+    --wms-muted: #64748b;
+    --wms-border: #cbd5e1;
+    --wms-border-light: #e2e8f0;
+    --wms-tile-empty: #cbd5e1;
+    --wms-shadow: rgb(0 0 0 / 0.12);
+
+    /* the 2D plan: the same floor, lanes and racks as the 3D scene, seen from above */
+    --wms-plan-floor: #e6ecf4;
+    --wms-plan-grid: #d3ddea;
+    --wms-plan-glow: #f6f9fd;
+    --wms-lane: #d3dfee;
+    --wms-lane-alt: #c8d6e8;
+    --wms-rack-foot: #9fb0c6;
+    --wms-plan-line: #eab308;
+    --wms-plan-edge: #bccadc;
+    --wms-steel-plan: #64748b;
+
+    --wms-font:
+        'Inter', 'Tajawal', system-ui, -apple-system, 'Segoe UI', Roboto,
+        sans-serif;
+    --wms-safe-top: env(safe-area-inset-top, 0px);
+    --wms-safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.wms[lang='ar'] {
+    --wms-font: 'Tajawal', 'Inter', system-ui, 'Segoe UI', sans-serif;
+}
+
+.wms[data-theme='dark'] {
+    --wms-page: #0b1120;
+    --wms-card: #1e293b;
+    --wms-subtle: #0f172a;
+    --wms-text: #ffffff;
+    --wms-muted: rgb(255 255 255 / 0.7);
+    --wms-border: #334155;
+    --wms-border-light: #2b3a52;
+    --wms-tile-empty: #334155;
+    --wms-shadow: rgb(0 0 0 / 0.5);
+    --wms-plan-floor: #131d31;
+    --wms-plan-grid: #1e2d4a;
+    --wms-plan-glow: #1c2f66;
+    --wms-lane: #1c2b47;
+    --wms-lane-alt: #16233b;
+    --wms-rack-foot: #0d1524;
+    --wms-plan-edge: #2b3a52;
+    --wms-steel-plan: #475569;
+}

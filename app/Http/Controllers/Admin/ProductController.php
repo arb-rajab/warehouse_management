@@ -26,7 +26,10 @@ use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Support\Facades\Http;
 use Inertia\Inertia;
 use Inertia\Response;
+use InvalidArgumentException;
 use Psr\Http\Message\StreamInterface;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use ZipArchive;
 
 class ProductController extends Controller
 {
@@ -180,6 +183,12 @@ class ProductController extends Controller
     }
 
     /**
+     * The admin product filter's searchable catalog: an inactive product is
+     * only offered while the warehouse still holds it (see
+     * Product::activeOrInWarehouse()). Unlike index(), the products page
+     * itself, which lists every product — and so its own product filter
+     * sends `include_inactive=1`, searching every product, deactivated or not.
+     *
      * @return array<string, mixed>
      */
     public function search(SearchProductsRequest $request): array
@@ -188,6 +197,7 @@ class ProductController extends Controller
             Product::query()
                 ->select(['id', 'name', 'ar_name', 'published'])
                 ->searchByName($request->string('q')->value())
+                ->unless($request->boolean('include_inactive'), fn (Builder $query) => $query->activeOrInWarehouse())
                 ->orderBy('name')
                 ->paginate(20)
                 ->withQueryString()
@@ -205,6 +215,94 @@ class ProductController extends Controller
         return response($this->productQrLabelImage($product, $setting->qr_code_width, $setting->qr_code_height))
             ->header('Content-Type', 'image/svg+xml')
             ->header('Content-Disposition', "attachment; filename=\"product-{$product->id}-barcode.svg\"");
+    }
+
+    /**
+     * One of the product's stored barcodes as a printable Code 128 SVG label,
+     * carrying exactly that barcode's value. The route uses `scopeBindings()`,
+     * so `$barcode` only resolves when it belongs to `$product`.
+     */
+    public function downloadBarcode(Product $product, ProductBarcode $barcode): HttpResponse
+    {
+        return response($this->barcodeLabelSvg($product, $barcode))
+            ->header('Content-Type', 'image/svg+xml')
+            ->header('Content-Disposition', "attachment; filename=\"{$this->barcodeFileName($product, $barcode)}\"");
+    }
+
+    /**
+     * The same label as {@see downloadBarcode()}, served inline so the
+     * products page can show it in an `<img>` without downloading it.
+     */
+    public function previewBarcode(Product $product, ProductBarcode $barcode): HttpResponse
+    {
+        return response($this->barcodeLabelSvg($product, $barcode))
+            ->header('Content-Type', 'image/svg+xml')
+            ->header('Content-Disposition', 'inline');
+    }
+
+    private function barcodeLabelSvg(Product $product, ProductBarcode $barcode): string
+    {
+        $setting = Setting::current();
+
+        try {
+            return $this->productBarcodeLabelImage($product, $barcode->barcode, $setting->qr_code_width, $setting->qr_code_height);
+        } catch (InvalidArgumentException) {
+            abort(HttpResponse::HTTP_UNPROCESSABLE_ENTITY, __('messages.barcode_not_printable', ['barcode' => $barcode->barcode]));
+        }
+    }
+
+    /**
+     * A ZIP holding one SVG label per barcode attached to the product — all of
+     * them and none belonging to any other product. Built whole or not at all:
+     * a barcode that cannot be rendered fails the download rather than being
+     * left out of a ZIP that looks complete.
+     */
+    public function downloadAllBarcodes(Product $product): BinaryFileResponse
+    {
+        $barcodes = $product->barcodes()->orderBy('id')->get(['id', 'product_id', 'barcode']);
+
+        abort_if($barcodes->isEmpty(), HttpResponse::HTTP_NOT_FOUND, __('messages.product_has_no_barcodes'));
+
+        $setting = Setting::current();
+        $path = tempnam(sys_get_temp_dir(), 'barcodes');
+        $zip = new ZipArchive;
+
+        if ($path === false || $zip->open($path, ZipArchive::OVERWRITE) !== true) {
+            abort(HttpResponse::HTTP_INTERNAL_SERVER_ERROR);
+        }
+
+        try {
+            foreach ($barcodes as $barcode) {
+                $zip->addFromString(
+                    $this->barcodeFileName($product, $barcode),
+                    $this->productBarcodeLabelImage($product, $barcode->barcode, $setting->qr_code_width, $setting->qr_code_height),
+                );
+            }
+        } catch (InvalidArgumentException) {
+            $zip->close();
+            @unlink($path);
+            abort(HttpResponse::HTTP_UNPROCESSABLE_ENTITY, __('messages.barcode_not_printable', ['barcode' => $barcode->barcode]));
+        }
+
+        if (! $zip->close()) {
+            @unlink($path);
+            abort(HttpResponse::HTTP_INTERNAL_SERVER_ERROR);
+        }
+
+        return response()
+            ->download($path, "product-{$product->id}-barcodes.zip", ['Content-Type' => 'application/zip'])
+            ->deleteFileAfterSend();
+    }
+
+    /**
+     * Unique per barcode (its id leads) and safe on any filesystem, whatever
+     * characters the barcode value holds.
+     */
+    private function barcodeFileName(Product $product, ProductBarcode $barcode): string
+    {
+        $safeValue = trim((string) preg_replace('/[^A-Za-z0-9._-]+/', '_', $barcode->barcode), '_');
+
+        return "product-{$product->id}-barcode-{$barcode->id}".($safeValue !== '' ? "-{$safeValue}" : '').'.svg';
     }
 
     /**

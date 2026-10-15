@@ -7,6 +7,7 @@ use App\Models\CellStatusLog;
 use App\Models\CellVerificationReport;
 use App\Models\CellVerificationRound;
 use App\Models\Pallet;
+use App\Models\Product;
 use App\Models\Row;
 
 test('a row has many cells, generated on creation for exactly its own dimensions', function () {
@@ -138,4 +139,37 @@ test('highestFlatsCount is the tallest row\'s level count, and 1 when there are 
     Row::factory()->create(['letter' => 'C', 'cells_count' => 1, 'flats_count' => 3]);
 
     expect(Row::highestFlatsCount())->toBe(5);
+});
+
+test('the withFullGrid scope loads every row in letter order with its ordered cells, pallets and the product box count', function () {
+    $b = Row::factory()->create(['letter' => 'B', 'cells_count' => 2, 'flats_count' => 2]);
+    $a = Row::factory()->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 1]);
+    $product = Product::factory()->boxesCount(36)->create();
+    Pallet::factory()->create(['cell_id' => $b->cells()->where('cell_number', 2)->where('flat_number', 1)->first()->id, 'product_id' => $product->id]);
+
+    $rows = Row::query()->withFullGrid()->get();
+
+    expect($rows->pluck('letter')->all())->toBe(['A', 'B']);
+    expect($rows->last()->cells->map(fn (Cell $c) => "{$c->cell_number}-{$c->flat_number}")->all())->toBe(['1-1', '1-2', '2-1', '2-2']);
+    expect($rows->first()->cells)->toHaveCount(1);
+
+    $occupied = $rows->last()->cells->first(fn (Cell $c) => $c->pallet !== null);
+
+    expect($occupied->pallet->product->relationLoaded('setting'))->toBeTrue();
+    expect($occupied->pallet->product->boxes_count)->toBe(36);
+    expect($rows->last()->has_pallets)->toBeTrue();
+    expect($rows->first()->has_pallets)->toBeFalse();
+});
+
+test('the withFullGrid scope can keep only cells holding a pallet of a published or unpublished product', function () {
+    $row = Row::factory()->create(['letter' => 'A', 'cells_count' => 3, 'flats_count' => 1]);
+    $live = Product::factory()->create();
+    $retired = Product::factory()->inactive()->create();
+    [$first, $second] = [$row->cells()->where('cell_number', 1)->first(), $row->cells()->where('cell_number', 2)->first()];
+    Pallet::factory()->create(['cell_id' => $first->id, 'product_id' => $live->id]);
+    Pallet::factory()->create(['cell_id' => $second->id, 'product_id' => $retired->id]);
+
+    expect(Row::query()->withFullGrid(true)->first()->cells->pluck('id')->all())->toBe([$first->id]);
+    expect(Row::query()->withFullGrid(false)->first()->cells->pluck('id')->all())->toBe([$second->id]);
+    expect(Row::query()->withFullGrid()->first()->cells)->toHaveCount(3);
 });

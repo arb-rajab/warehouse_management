@@ -2,7 +2,6 @@
 
 namespace App\Http\Requests\Concerns;
 
-use App\Models\Language;
 use App\Models\Permission;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Validation\Rule;
@@ -14,6 +13,8 @@ use Illuminate\Validation\Rule;
  */
 trait ValidatesStoreRole
 {
+    use ValidatesStoreLanguage;
+
     /**
      * @return array<string, ValidationRule|array<mixed>|string>
      */
@@ -22,16 +23,6 @@ trait ValidatesStoreRole
         return [
             'permissions' => ['nullable', 'array'],
             'permissions.*' => ['integer', Rule::exists(Permission::class, 'id')->where('guard_name', 'store')],
-        ];
-    }
-
-    /**
-     * @return array<string, ValidationRule|array<mixed>|string>
-     */
-    protected function languageRules(string $presence): array
-    {
-        return [
-            'lang' => [$presence, 'string', Rule::in([config('app.default_language'), ...Language::query()->pluck('code')])],
         ];
     }
 }

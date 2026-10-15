@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+
 use Illuminate\Database\Eloquent\Model;
 
 class Address extends Model
@@ -13,17 +15,20 @@ class Address extends Model
         return $this->belongsTo(StoreUser::class);
     }
 
-    public function country()
+    /** @return BelongsTo<Country, $this> */
+    public function country(): BelongsTo
     {
         return $this->belongsTo(Country::class);
     }
 
-    public function state()
+    /** @return BelongsTo<State, $this> */
+    public function state(): BelongsTo
     {
         return $this->belongsTo(State::class);
     }
 
-    public function city()
+    /** @return BelongsTo<City, $this> */
+    public function city(): BelongsTo
     {
         return $this->belongsTo(City::class);
     }

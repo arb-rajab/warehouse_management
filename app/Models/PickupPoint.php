@@ -4,6 +4,8 @@ namespace App\Models;
 
 use App;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class PickupPoint extends Model
 {
@@ -15,11 +17,13 @@ class PickupPoint extends Model
         return $pickup_point_translation != null ? $pickup_point_translation->$field : $this->$field;
     }
 
-    public function pickup_point_translations(){
+    /** @return HasMany<PickupPointTranslation, $this> */
+    public function pickup_point_translations(): HasMany{
       return $this->hasMany(PickupPointTranslation::class);
     }
 
-    public function staff(){
+    /** @return BelongsTo<Staff, $this> */
+    public function staff(): BelongsTo{
     	return $this->belongsTo(Staff::class);
     }
 }

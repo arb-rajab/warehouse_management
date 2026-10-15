@@ -4,10 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Models\Product;
 use App\Models\ProductQuery;
-use App\Models\StoreUser;
 use Auth;
 use Illuminate\Foundation\Validation\ValidatesRequests;
 use Illuminate\Http\Request;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
 
@@ -15,37 +16,29 @@ class ProductQueryController extends Controller implements HasMiddleware
 {
     use ValidatesRequests;
 
-    /**
-     * Get the middleware that should be assigned to the controller.
-     *
-     * See Auth\LoginController::middleware()'s docblock for why this
-     * replaces the constructor-based $this->middleware() call.
-     *
-     * @return array<int, \Illuminate\Routing\Controllers\Middleware>
-     */
+    /** @return array<int, Middleware> */
     public static function middleware(): array
     {
-        return [
-            new Middleware('permission:view_all_product_queries', only: ['admin_index', 'reply', 'index', 'show']),
-        ];
-    }
-    /**
-     * Retrieve queries that belongs to current seller
-     */
-    public function index()
-    {
-        $admin_id = StoreUser::where('user_type','admin')->first()->id;
-        $queries = ProductQuery::where('seller_id', $admin_id)->latest()->paginate(20);
-        return view('shop.backend.support.product_query.index', compact('queries'));
+        return [new Middleware('permission:view_all_product_queries', only: ['index', 'show'])];
     }
 
-    /**
-     * Retrieve specific query using query id.
-     */
-    public function show($id)
+    // Retained /temp resource aliases point to the selected admin implementation.
+    public function index(): RedirectResponse
     {
-        $query = ProductQuery::find(decrypt($id));
-        return view('shop.backend.support.product_query.show', compact('query'));
+        return redirect()->route('product_query.index');
+    }
+
+    public function show(string $product_query): RedirectResponse
+    {
+        try {
+            $id = decrypt($product_query);
+        } catch (DecryptException) {
+            abort(404);
+        }
+        abort_unless(is_int($id) || (is_string($id) && ctype_digit($id)), 404);
+        $query = ProductQuery::query()->findOrFail($id);
+
+        return redirect()->route('product_query.show', $query->id);
     }
 
     /**
@@ -70,19 +63,4 @@ class ProductQueryController extends Controller implements HasMiddleware
         return redirect()->back();
     }
 
-    /**
-     * Store reply against the question from Admin panel
-     */
-
-    public function reply(Request $request, $id)
-    {
-        $this->validate($request, [
-            'reply' => 'required',
-        ]);
-        $query = ProductQuery::find($id);
-        $query->reply = $request->reply;
-        $query->save();
-        flash(translate('Replied successfully!'))->success();
-        return redirect()->route('product_query.index');
-    }
 }

@@ -2,6 +2,7 @@
 
 use App\Enums\CellLogAction;
 use App\Http\Middleware\HandleInertiaRequests;
+use App\Models\Carrier;
 use App\Models\Cart;
 use App\Models\Cell;
 use App\Models\CellStatusLog;
@@ -18,6 +19,7 @@ use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -682,4 +684,46 @@ function tinyPng(): string
 function storedUploadFiles(string $publicPath): array
 {
     return array_map('basename', glob("$publicPath/uploads/all/*") ?: []);
+}
+
+/** @return array<string, int> */
+function createStoreReferenceData(): array
+{
+    $country = DB::table('countries')->insertGetId(['name' => 'Netherlands', 'code' => 'NL', 'status' => 1, 'zone_id' => 0]);
+    $state = DB::table('states')->insertGetId(['name' => 'North Holland', 'country_id' => $country, 'status' => 1]);
+    $city = DB::table('cities')->insertGetId(['name' => 'Amsterdam', 'state_id' => $state, 'cost' => 2.50, 'status' => 1]);
+    $zone = DB::table('zones')->insertGetId(['name' => 'Europe', 'status' => 1]);
+    $staffUser = createStoreStaff('pickup_point_setup');
+    $staff = createStaffRow($staffUser)->id;
+    $pickup = DB::table('pickup_points')->insertGetId(['name' => 'Warehouse', 'address' => 'Main Street', 'phone' => '0612345678', 'staff_id' => $staff, 'pick_up_status' => 1]);
+    $tax = DB::table('taxes')->insertGetId(['name' => 'VAT', 'tax_status' => 1]);
+    $currency = DB::table('currencies')->insertGetId(['name' => 'Euro', 'code' => 'EUR', 'symbol' => '€', 'exchange_rate' => 1.23, 'status' => 1]);
+
+    return compact('country', 'state', 'city', 'zone', 'staff', 'pickup', 'tax', 'currency');
+}
+
+/** Build a real multipart payload shared by upload endpoint tests. */
+function uploadedFile(string $name, string $contents): UploadedFile
+{
+    return UploadedFile::fake()->createWithContent($name, $contents);
+}
+
+/** @return array{carrier: Carrier, zone: int, otherZone: int, payload: array<string, mixed>} */
+function createStoreCarrierTariff(): array
+{
+    $zone = DB::table('zones')->insertGetId(['name' => 'Europe', 'status' => 1]);
+    $otherZone = DB::table('zones')->insertGetId(['name' => 'North', 'status' => 1]);
+    $id = DB::table('carriers')->insertGetId(['name' => 'Parcel', 'transit_time' => '2–3 days', 'logo' => null, 'free_shipping' => 0, 'status' => 1]);
+    foreach ([[0, 10, 5, 7], [10, 20, 8, 9]] as [$lower, $upper, $price, $otherPrice]) {
+        $range = DB::table('carrier_ranges')->insertGetId(['carrier_id' => $id, 'billing_type' => 'weight_based', 'delimiter1' => $lower, 'delimiter2' => $upper]);
+        foreach ([$zone => $price, $otherZone => $otherPrice] as $zoneId => $amount) {
+            DB::table('carrier_range_prices')->insert(['carrier_id' => $id, 'carrier_range_id' => $range, 'zone_id' => $zoneId, 'price' => $amount]);
+        }
+    }
+
+    return ['carrier' => Carrier::findOrFail($id), 'zone' => $zone, 'otherZone' => $otherZone, 'payload' => [
+        'carrier_name' => 'Parcel', 'transit_time' => '2–3 days', 'logo' => null, 'shipping_type' => 0,
+        'billing_type' => 'weight_based', 'delimiter1' => ['0', '10'], 'delimiter2' => ['10', '20'],
+        'zones' => [$zone, $otherZone], 'carrier_price' => [$zone => ['5', '8'], $otherZone => ['7', '9']],
+    ]];
 }

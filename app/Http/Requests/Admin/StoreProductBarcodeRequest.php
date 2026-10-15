@@ -31,7 +31,7 @@ class StoreProductBarcodeRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'barcode' => ['required', 'string', 'max:64', 'unique:wms_product_barcodes,barcode'],
+            'barcode' => ['required', 'string', 'max:64', 'regex:/^[\x20-\x7E]+$/', 'unique:wms_product_barcodes,barcode'],
         ];
     }
 }

@@ -31,7 +31,7 @@ class OrderPlacementService
      * @throws DomainException with the message to show the customer when the stock row is
      *                         missing or holds less than `$quantity`
      */
-    public function reserveStock(Product $product, ?string $variation, int|float $quantity): void
+    public function reserveStock(Product $product, ?string $variation, int|float $quantity, bool $exactVariant = false): void
     {
         if ($product->getAttribute('digital') == 1) {
             return;
@@ -39,7 +39,7 @@ class OrderPlacementService
 
         $stock = ProductStock::query()
             ->where('product_id', $product->id)
-            ->where('variant', 'like', '%'.$variation.'%')
+            ->where('variant', $exactVariant ? '=' : 'like', $exactVariant ? ($variation ?? '') : '%'.$variation.'%')
             ->lockForUpdate()
             ->first();
 

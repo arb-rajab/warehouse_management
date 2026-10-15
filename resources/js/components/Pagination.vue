@@ -20,10 +20,12 @@ const props = defineProps<{
      * changing the page size.
      */
     perPage?: number;
+    async?: boolean;
 }>();
 
 const emit = defineEmits<{
     'update:perPage': [value: number];
+    navigate: [url: string];
 }>();
 
 function onPerPageChange(event: Event): void {
@@ -63,9 +65,13 @@ function linkClass(link: PaginationLink): string {
         <nav v-if="links.length > 3" class="flex flex-wrap gap-1">
             <template v-for="(link, index) in links" :key="index">
                 <component
-                    :is="link.url === null ? 'span' : Link"
-                    :href="link.url === null ? undefined : link.url"
-                    class="inline-flex items-center gap-1 rounded-md px-3 py-1 text-sm"
+                    :is="link.url === null ? 'span' : async ? 'button' : Link"
+                    :href="link.url === null || async ? undefined : link.url"
+                    :type="async && link.url !== null ? 'button' : undefined"
+                    @click="
+                        async && link.url !== null && emit('navigate', link.url)
+                    "
+                    class="inline-flex cursor-pointer items-center gap-1 rounded-md px-3 py-1 text-sm"
                     :class="linkClass(link)"
                 >
                     <ChevronLeft

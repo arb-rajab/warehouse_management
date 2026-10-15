@@ -7,6 +7,7 @@ enum HelpTopic: string
     case Dashboard = 'dashboard';
     case Rows = 'rows';
     case Cells = 'cells';
+    case WarehouseMap = 'warehouse-map';
     case Users = 'users';
     case Products = 'products';
     case CellLogs = 'cell-logs';
