@@ -1,78 +1,80 @@
 <?php
-use App\Http\Controllers\Store\Admin\DashboardController;
-use App\Http\Controllers\Store\Admin\OrderEntryController;
-use App\Http\Controllers\Store\Admin\CampaignProductController;
-use App\Http\Controllers\Store\Admin\ProductQueryController;
-use App\Http\Controllers\Store\Admin\ConversationController;
 
 use App\Http\Controllers\AdminController;
-use App\Http\Controllers\Store\Admin\CustomerNotificationController;
-use App\Http\Controllers\AizUploadController;
+use App\Http\Controllers\BusinessSettingsController;
+use App\Http\Controllers\CommissionController;
+use App\Http\Controllers\CustomerProductController;
+use App\Http\Controllers\PaymentController;
+use App\Http\Controllers\ProductController;
+use App\Http\Controllers\SellerController;
+use App\Http\Controllers\SellerWithdrawRequestController;
+use App\Http\Controllers\Store\Admin\AddressController;
 use App\Http\Controllers\Store\Admin\AttributeController;
-use App\Http\Controllers\Store\Admin\BrandDiscountController;
 use App\Http\Controllers\Store\Admin\AttributeValueController;
-use App\Http\Controllers\Store\Admin\ColorController;
 use App\Http\Controllers\Store\Admin\BlogCategoryController;
 use App\Http\Controllers\Store\Admin\BlogController as AdminBlogController;
 use App\Http\Controllers\Store\Admin\BrandController;
-use App\Http\Controllers\BusinessSettingsController;
+use App\Http\Controllers\Store\Admin\BrandDiscountController;
+use App\Http\Controllers\Store\Admin\CampaignProductController;
 use App\Http\Controllers\Store\Admin\CarrierController;
 use App\Http\Controllers\Store\Admin\CategoryController;
 use App\Http\Controllers\Store\Admin\CityController;
-use App\Http\Controllers\CommissionController;
+use App\Http\Controllers\Store\Admin\ColorController;
+use App\Http\Controllers\Store\Admin\ConversationController;
 use App\Http\Controllers\Store\Admin\CountryController;
 use App\Http\Controllers\Store\Admin\CouponController;
 use App\Http\Controllers\Store\Admin\CurrencyController;
-use App\Http\Controllers\Store\Admin\ShippingConfigurationController;
-use App\Http\Controllers\Store\Admin\OrderConfigurationController;
 use App\Http\Controllers\Store\Admin\CustomerController;
+use App\Http\Controllers\Store\Admin\CustomerNotificationController;
 use App\Http\Controllers\Store\Admin\CustomerPackageController;
-use App\Http\Controllers\CustomerProductController;
+use App\Http\Controllers\Store\Admin\DashboardController;
 use App\Http\Controllers\Store\Admin\DigitalProductController;
+use App\Http\Controllers\Store\Admin\DriverController;
 use App\Http\Controllers\Store\Admin\DynamicPopupController;
 use App\Http\Controllers\Store\Admin\FlashDealController;
 use App\Http\Controllers\Store\Admin\GeneralSettingsController;
+use App\Http\Controllers\Store\Admin\GoogleMapController;
 use App\Http\Controllers\Store\Admin\LanguageController;
-use App\Http\Controllers\Store\Admin\SettingsController;
+use App\Http\Controllers\Store\Admin\LegacyWebsiteScriptsController;
 use App\Http\Controllers\Store\Admin\NewsletterController;
 use App\Http\Controllers\Store\Admin\NotificationController;
 use App\Http\Controllers\Store\Admin\OfferController;
 use App\Http\Controllers\Store\Admin\OffersCatalogController;
-use App\Http\Controllers\Store\Admin\ProductSearchController;
+use App\Http\Controllers\Store\Admin\OrderConfigurationController;
 use App\Http\Controllers\Store\Admin\OrderController;
-use App\Http\Controllers\PaymentController;
+use App\Http\Controllers\Store\Admin\OrderEntryController;
 use App\Http\Controllers\Store\Admin\PickupPointController;
-use App\Http\Controllers\ProductController;
-use App\Http\Controllers\Store\Admin\ProductController as StoreProductController;
-use App\Http\Controllers\Store\Admin\ReportController;
-use App\Http\Controllers\Store\Admin\ProfileController;
-use App\Http\Controllers\Store\Admin\UploadController;
 use App\Http\Controllers\Store\Admin\ProductBulkUploadController;
-use App\Http\Controllers\Store\Admin\ReviewController;
-use App\Http\Controllers\SellerController;
-use App\Http\Controllers\SellerWithdrawRequestController;
-use App\Http\Controllers\Store\Admin\StateController;
+use App\Http\Controllers\Store\Admin\ProductController as StoreProductController;
+use App\Http\Controllers\Store\Admin\ProductQueryController;
+use App\Http\Controllers\Store\Admin\ProductSearchController;
+use App\Http\Controllers\Store\Admin\ProfileController;
+use App\Http\Controllers\Store\Admin\ReportController;
 use App\Http\Controllers\Store\Admin\RepresentativePackageController;
 use App\Http\Controllers\Store\Admin\RepresentativePaymentController;
-use App\Http\Controllers\Store\Admin\AddressController;
+use App\Http\Controllers\Store\Admin\ReviewController;
 use App\Http\Controllers\Store\Admin\RoleController;
+use App\Http\Controllers\Store\Admin\SettingsController;
+use App\Http\Controllers\Store\Admin\ShippingConfigurationController;
 use App\Http\Controllers\Store\Admin\StaffController;
+use App\Http\Controllers\Store\Admin\StateController;
+use App\Http\Controllers\Store\Admin\SubscriberController;
+use App\Http\Controllers\Store\Admin\SupportTicketController as AdminSupportTicketController;
+use App\Http\Controllers\Store\Admin\TaxController;
+use App\Http\Controllers\Store\Admin\TripController as StoreTripController;
+use App\Http\Controllers\Store\Admin\TruckController;
+use App\Http\Controllers\Store\Admin\UploadController;
 use App\Http\Controllers\Store\Admin\WebsiteAppearanceController;
 use App\Http\Controllers\Store\Admin\WebsiteFooterController;
 use App\Http\Controllers\Store\Admin\WebsiteHeaderController;
 use App\Http\Controllers\Store\Admin\WebsiteHomeController;
 use App\Http\Controllers\Store\Admin\WebsitePageController;
-use App\Http\Controllers\Store\Admin\SupportTicketController as AdminSupportTicketController;
-use App\Http\Controllers\Store\Admin\SubscriberController;
-use App\Http\Controllers\SupportTicketController;
-use App\Http\Controllers\Store\Admin\TaxController;
-use App\Http\Controllers\Store\Admin\DriverController;
-use App\Http\Controllers\Trip\TripController;
-use App\Http\Controllers\Store\Admin\TripController as StoreTripController;
-use App\Http\Controllers\Store\Admin\TruckController;
-use App\Http\Controllers\VisitController;
 use App\Http\Controllers\Store\Admin\ZoneController;
+use App\Http\Controllers\Trip\TripController;
+use App\Http\Controllers\VisitController;
+use App\Models\Ticket;
 use Aws\Middleware;
+use Illuminate\Contracts\Encryption\DecryptException;
 
 /*
   |--------------------------------------------------------------------------
@@ -279,7 +281,7 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
             Route::post('/bulk-trips-delete', 'bulkDestroy')->name('trips.bulk-trip-delete');
         });
 
-        Route::controller(TripController::class)->group(function() {
+        Route::controller(TripController::class)->group(function () {
             Route::get('/orders', 'all_orders')->name('trips.orders')->middleware('permission:view_all_trips');
             Route::post('/orders/bulk-change-delivery-status', 'bulk_change_delivery_status')->name('trips.orders.bulk-change-delivery-status')->middleware('permission:edit_trip');
             Route::post('/orders/update-invoice-number', 'updateInvoiceNumber')->name('trips.orders.update_invoice_number')->middleware('permission:edit_trip');
@@ -343,14 +345,14 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
         Route::get('/google-map', 'google_map')->name('google-map.index');
 
         Route::post('/env_key_update', 'env_key_update')->name('env_key_update.update');
-        Route::post('/google-map', [\App\Http\Controllers\Store\Admin\GoogleMapController::class, 'update'])->name('google-map.update');
+        Route::post('/google-map', [GoogleMapController::class, 'update'])->name('google-map.update');
 
         Route::get('/verification/form', 'seller_verification_form')->name('seller_verification_form.index');
         Route::post('/verification/form', 'seller_verification_form_update')->name('seller_verification_form.update');
         Route::get('/vendor_commission', 'vendor_commission')->name('business_settings.vendor_commission');
         Route::post('/vendor_commission_update', 'vendor_commission_update')->name('business_settings.vendor_commission.update');
 
-        //Shipping Configuration
+        // Shipping Configuration
 
         // Order Configuration
     });
@@ -421,7 +423,7 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
     Route::delete('/languages/{language}', [LanguageController::class, 'destroy'])->name('languages.destroy');
     Route::get('/languages/{language}', [LanguageController::class, 'show'])->name('languages.show');
 
-    Route::post('/website/scripts/compatibility', [\App\Http\Controllers\Store\Admin\LegacyWebsiteScriptsController::class, 'update'])->name('website.scripts.compatibility.update');
+    Route::post('/website/scripts/compatibility', [LegacyWebsiteScriptsController::class, 'update'])->name('website.scripts.compatibility.update');
 
     // Website setup: Inertia pages, each settings page writing only its own
     // keys (.ai/rules/store-backoffice-migration.md §20). The home settings
@@ -519,10 +521,9 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
     Route::post('/orders/update_manager_notes', [OrderController::class, 'update_manager_notes'])->name('orders.update_manager_notes');
     Route::post('/orders/item/edit_price', [OrderController::class, 'edit_item_price'])->name('order.item.edit_price');
 
-
     Route::post('/pay_to_seller', [CommissionController::class, 'pay_to_seller'])->name('commissions.pay_to_seller')->middleware('permission:pay_to_seller');
 
-    //Reports
+    // Reports
     Route::get('/in_house_sale_report', [ReportController::class, 'in_house_sale_report'])->name('in_house_sale_report.index');
     Route::get('/seller_sale_report', [ReportController::class, 'seller_sale_report'])->name('seller_sale_report.index');
     Route::get('/stock_report', [ReportController::class, 'stock_report'])->name('stock_report.index');
@@ -531,7 +532,7 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
     Route::get('/commission-log', [ReportController::class, 'commission_history'])->name('commission-log.index');
     Route::get('/wallet-history', [ReportController::class, 'wallet_transaction_history'])->name('wallet-history.index');
 
-    //Blog Section
+    // Blog Section
     Route::get('/blog-category', [BlogCategoryController::class, 'index'])->name('blog-category.index');
     Route::get('/blog-category/create', [BlogCategoryController::class, 'create'])->name('blog-category.create');
     Route::post('/blog-category', [BlogCategoryController::class, 'store'])->name('blog-category.store');
@@ -559,23 +560,27 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
     Route::put('/coupon/{coupon}', [CouponController::class, 'update'])->name('coupon.update');
     Route::delete('/coupon/{coupon}', [CouponController::class, 'destroy'])->name('coupon.destroy');
 
-    //Reviews
+    // Reviews
     Route::get('/reviews', [ReviewController::class, 'index'])->name('admin.reviews.index');
     Route::post('/reviews/{review}/published', [ReviewController::class, 'updatePublished'])->name('reviews.published');
 
-    //Support_Ticket
+    // Support_Ticket
     Route::get('support_ticket/', [AdminSupportTicketController::class, 'index'])->name('support_ticket.admin_index');
     // Preserve encrypted identifiers in existing email links while binding the record.
     Route::bind('supportTicket', function (string $value) {
-        try { $id = ctype_digit($value) ? $value : decrypt($value); }
-        catch (\Illuminate\Contracts\Encryption\DecryptException) { abort(404); }
+        try {
+            $id = ctype_digit($value) ? $value : decrypt($value);
+        } catch (DecryptException) {
+            abort(404);
+        }
         abort_unless((is_int($id) && $id > 0) || (is_string($id) && ctype_digit($id)), 404);
-        return \App\Models\Ticket::query()->whereHas('user')->findOrFail((int) $id);
+
+        return Ticket::query()->whereHas('user')->findOrFail((int) $id);
     });
     Route::get('support_ticket/{supportTicket}/show', [AdminSupportTicketController::class, 'show'])->name('support_ticket.admin_show');
     Route::post('support_ticket/reply', [AdminSupportTicketController::class, 'reply'])->name('support_ticket.admin_store');
 
-    //Pickup_Points
+    // Pickup_Points
     Route::get('/pick_up_points', [PickupPointController::class, 'index'])->name('pick_up_points.index');
     Route::get('/pick_up_points/create', [PickupPointController::class, 'create'])->name('pick_up_points.create');
     Route::post('/pick_up_points', [PickupPointController::class, 'store'])->name('pick_up_points.store');
@@ -618,7 +623,7 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
     Route::match(['PUT', 'PATCH'], '/customer_packages/{customerPackage}', [CustomerPackageController::class, 'update'])->name('customer_packages.update');
     Route::delete('/customer_packages/destroy/{customerPackage}', [CustomerPackageController::class, 'destroy'])->name('customer_packages.destroy');
 
-    //Classified Products
+    // Classified Products
     Route::controller(CustomerProductController::class)->group(function () {
         Route::get('/classified_products', 'customer_product_index')->name('classified_products');
         Route::post('/classified_products/published', 'updatePublished')->name('classified_products.published');

@@ -128,6 +128,25 @@ trait BuildsQrLabels
     }
 
     /**
+     * Caps $lines at $maxLines, ending the last kept line with an ellipsis
+     * when anything was cut.
+     *
+     * @param  list<string>  $lines
+     * @return list<string>
+     */
+    private function limitLabelLines(array $lines, int $maxLines): array
+    {
+        if (count($lines) <= $maxLines) {
+            return $lines;
+        }
+
+        $kept = array_slice($lines, 0, $maxLines);
+        $kept[$maxLines - 1] = rtrim($kept[$maxLines - 1]).'…';
+
+        return array_values($kept);
+    }
+
+    /**
      * @param  list<string>  $lines
      */
     private function textLinesMarkup(array $lines, int $centerX, int $startY, int $lineHeight, int $fontSize, string $color, string $direction, bool $bold = false): string
