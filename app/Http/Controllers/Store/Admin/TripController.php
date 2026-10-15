@@ -37,9 +37,9 @@ use Inertia\Response;
 
 /**
  * The all-trips and today's-trips lists with their status, notes and delete
- * actions, and the trip create and edit forms. The checkpoints page, map
- * picker, trip orders and CMR download stay Blade on the root
- * `Trip\TripController`.
+ * actions, and the trip create and edit forms. The trip orders list is
+ * `TripOrderController`; the checkpoints page, map picker and CMR download
+ * stay Blade on the root `Trip\TripController`.
  */
 class TripController extends Controller implements HasMiddleware
 {
@@ -123,7 +123,9 @@ class TripController extends Controller implements HasMiddleware
      * (only their notes and position change), rows left out are deleted with
      * one query and new rows are added. A closed trip does not reserve its
      * truck again; a truck is freed only when no other open trip holds it,
-     * the trip's old truck included. The driver is notified when changed.
+     * the trip's old truck included. The driver is notified only when the
+     * driver changes: the posted id is a string, so both sides are compared
+     * as integers.
      */
     public function update(UpdateTripRequest $request, Trip $trip): RedirectResponse
     {
@@ -133,10 +135,11 @@ class TripController extends Controller implements HasMiddleware
             $trip = Trip::query()->lockForUpdate()->findOrFail($trip->id);
             $oldTruckId = $trip->truck_id;
             $truck = $this->lockTruckForTrip((int) $data['truck_id'], $trip, reserve: $trip->status !== TripStatus::Closed->value);
-            $driverChanged = $trip->driver_id !== ($data['driver_id'] ?? null);
+            $driverId = isset($data['driver_id']) ? (int) $data['driver_id'] : null;
+            $driverChanged = ($trip->driver_id === null ? null : (int) $trip->driver_id) !== $driverId;
             $checkpoints = $this->prepareCheckpointRows($data['checkpoints_array'], $trip);
             $trip->fill([
-                'driver_id' => $data['driver_id'] ?? null,
+                'driver_id' => $driverId,
                 'truck_id' => $truck->id,
                 'due_date' => $data['due_date'],
                 'notes' => $data['notes'] ?? null,

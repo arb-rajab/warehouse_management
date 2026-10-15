@@ -16,7 +16,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * Larastan's migration reader can't follow.
  *
  * @property bool $by_rep
- * @property int|null $invoice_number
+ * @property string|null $invoice_number
  * @property string|null $delivery_date
  * @property int|null $for_customer the customer a representative placed the order for
  * @property-read StoreUser|null $customer

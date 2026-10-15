@@ -568,6 +568,56 @@ export interface StoreTripFilters {
     status: StoreTripStatus[];
 }
 
+/**
+ * A row of the trip orders list: the customer (for a representative's order,
+ * the customer it was placed for), the amount as the store formats prices,
+ * the delivery date as `YYYY-MM-DD`, and the latest checkpoint with its photo
+ * upload ids and trip.
+ */
+export interface StoreTripOrder {
+    id: number;
+    code: string;
+    is_new: boolean;
+    details_count: number;
+    otajer_order_id: string | null;
+    order_from: string | null;
+    wms_status: string | null;
+    customer: {
+        id: number;
+        name: string | null;
+        accounting_id: string | null;
+        company_name: string | null;
+    } | null;
+    by_rep: boolean;
+    representative: { id: number; name: string | null } | null;
+    address: string | null;
+    country: string | null;
+    phone: string | null;
+    invoice_number: string | null;
+    customer_notes: string | null;
+    manager_notes: string | null;
+    amount: string;
+    delivery_status: string;
+    delivery_date: string | null;
+    editable: boolean;
+    checkpoint: { id: number; photos: number[] } | null;
+    trip: {
+        id: number;
+        code: string;
+        driver: { id: number; name: string } | null;
+        truck: { id: number; name: string } | null;
+    } | null;
+}
+
+/** The trip orders list's filters; an empty string is an unset filter. */
+export interface StoreTripOrderFilters {
+    per_page: number;
+    search: string;
+    delivery_status: string;
+    from: string;
+    to: string;
+}
+
 export interface StoreNotification {
     id: string;
     kind: 'order' | 'cart' | 'other';

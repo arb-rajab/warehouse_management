@@ -537,6 +537,41 @@ describe('trip forms', function () {
             ->and($other->truck->fresh()->is_available)->toBeFalse()->and($other->fresh()->truck_id)->toBe($other->truck_id);
     });
 
+    test('an update notifies the driver only when the posted driver differs', function (string $change) {
+        $driver = createStoreUser('driver');
+        $other = createStoreUser('driver');
+        $trip = createTripTestRecord(['driver_id' => $driver->id]);
+        $checkpoint = createTripTestCheckpoint($trip);
+        actingAsStoreUser(createStoreStaff('edit_trip'));
+        $posted = match ($change) {
+            'unchanged' => (string) $driver->id,
+            'changed' => (string) $other->id,
+            'removed' => '',
+        };
+        $this->mock(DriverService::class)->shouldReceive('notifyDriver')->times($change === 'unchanged' ? 0 : 1);
+
+        $this->put(route('trips.update', $trip), [...tripTestPayload($trip->truck, $checkpoint), 'driver_id' => $posted])
+            ->assertRedirect(route('trips.show', $trip->id));
+
+        expect($trip->fresh()->driver_id)->toBe(match ($change) {
+            'unchanged' => $driver->id,
+            'changed' => $other->id,
+            'removed' => null,
+        });
+    })->with(['unchanged', 'changed', 'removed']);
+
+    test('an update without a driver does not notify when the trip had none', function () {
+        $trip = createTripTestRecord();
+        $checkpoint = createTripTestCheckpoint($trip);
+        actingAsStoreUser(createStoreStaff('edit_trip'));
+        $this->mock(DriverService::class)->shouldReceive('notifyDriver')->never();
+
+        $this->put(route('trips.update', $trip), [...tripTestPayload($trip->truck, $checkpoint), 'driver_id' => ''])
+            ->assertRedirect(route('trips.show', $trip->id));
+
+        expect($trip->fresh()->driver_id)->toBeNull();
+    });
+
     test('an update reorders, keeps, adds and drops checkpoints as posted', function () {
         $trip = createTripTestRecord();
         $first = createTripTestCheckpoint($trip, ['notes' => 'First']);

@@ -62,6 +62,7 @@ use App\Http\Controllers\Store\Admin\SubscriberController;
 use App\Http\Controllers\Store\Admin\SupportTicketController as AdminSupportTicketController;
 use App\Http\Controllers\Store\Admin\TaxController;
 use App\Http\Controllers\Store\Admin\TripController as StoreTripController;
+use App\Http\Controllers\Store\Admin\TripOrderController;
 use App\Http\Controllers\Store\Admin\TruckController;
 use App\Http\Controllers\Store\Admin\UploadController;
 use App\Http\Controllers\Store\Admin\WebsiteAppearanceController;
@@ -281,11 +282,15 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
             Route::post('/bulk-trips-delete', 'bulkDestroy')->name('trips.bulk-trip-delete');
         });
 
+        // The trip orders list and its order actions (§26).
+        Route::controller(TripOrderController::class)->group(function () {
+            Route::get('/orders', 'index')->name('trips.orders');
+            Route::post('/orders/bulk-change-delivery-status', 'bulkUpdateDeliveryStatus')->name('trips.orders.bulk-change-delivery-status');
+            Route::put('/orders/{order}/invoice-number', 'updateInvoiceNumber')->name('trips.orders.update_invoice_number');
+            Route::put('/orders/{order}/delivered', 'markDelivered')->name('trips.orders.update_order_status_to_delivered');
+        });
+
         Route::controller(TripController::class)->group(function () {
-            Route::get('/orders', 'all_orders')->name('trips.orders')->middleware('permission:view_all_trips');
-            Route::post('/orders/bulk-change-delivery-status', 'bulk_change_delivery_status')->name('trips.orders.bulk-change-delivery-status')->middleware('permission:edit_trip');
-            Route::post('/orders/update-invoice-number', 'updateInvoiceNumber')->name('trips.orders.update_invoice_number')->middleware('permission:edit_trip');
-            Route::post('/orders/update-order-status', 'updateOrderStatusToDelivered')->name('trips.orders.update_order_status_to_delivered')->middleware('permission:edit_trip');
             Route::get('/create-from-map', 'create_from_map')->name('trips.create-from-map')->middleware('permission:add_trip');
             Route::post('/store-from-map', 'store_from_map')->name('trips.store-from-map')->middleware('permission:add_trip');
             Route::get('/show/{id}', 'show')->name('trips.show')->middleware('permission:view_all_trips');

@@ -343,19 +343,21 @@
         if (event.target && event.target.classList.contains('mark-delivered')) {
             var orderId = event.target.getAttribute('data-order-id');
 
-            fetch('{{ route("trips.orders.update_order_status_to_delivered") }}', {
+            // A spoofed PUT to the order's bound route; the redirect back to
+            // this picker is followed as a GET (store-backoffice-migration.md §26).
+            fetch('{{ route("trips.orders.update_order_status_to_delivered", ["order" => "__order__"]) }}'.replace('__order__', encodeURIComponent(orderId)), {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content') // Laravel CSRF Token
                     },
                     body: JSON.stringify({
-                        order_id: orderId
+                        _method: 'PUT',
+                        return_to: 'map'
                     })
                 })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
+                .then(response => {
+                    if (response.ok) {
                         location.reload();
                     } else {
                         alert("Failed to mark order as delivered.");

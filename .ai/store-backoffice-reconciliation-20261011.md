@@ -3100,7 +3100,8 @@ cannot match and action argument types are not checked.
   and both browser specs written or changed here, and #404's, are unexecuted.
 - **Known limits.** The update writer's driver comparison is the legacy one:
   the posted `driver_id` is a string, so the driver is notified on every
-  save that keeps a driver (unchanged behaviour). The customer choice list is
+  save that keeps a driver (unchanged behaviour). Fixed on 2026-10-15 in
+  the trip orders session (below): both sides are compared as integers. The customer choice list is
   every non-representative store user, as the Blade forms loaded it, sent
   once with only id and name.
 - **Inventory** (from the files, not `route:list`). **39** backend Blade files;
@@ -3111,3 +3112,151 @@ cannot match and action argument types are not checked.
 Required before relying on it: the full `pre_push_check.py` gate with PHP 8.5,
 the dev tools, generated Wayfinder files and `node_modules`, plus the two
 browser specs above, for this PR and #404.
+
+## Trip orders migration (2026-10-15)
+
+Work on `ccr-23c5d0cb-ziq8z5` from `develop` at `78c9c3a` (the PR #413 merge);
+the branch had no commits beyond that base. The owner authorized commits, a
+push, a PR (#419) and its merge into `develop`, each with `[skip ci]`, because
+the checks run locally. **No PR CI, no PR or merge SAST and no `develop`
+deploy ran for this PR or its merge.** No other branch, deployment or
+production data was touched. The guide's §26 records the result.
+
+### #404 and #406 checks carried over
+
+This session had PHP 8.5.11, `vendor/` with the dev tools and
+`node_modules`. `wait_for_setup.py` (first run, with a 600 s `timeout`
+around it, was cut off while setup was still running; the second, in the
+background, exited 0): "frontend (vitest, vue-tsc, prettier, eslint): ready.
+App (artisan, migrations): ready. Vite build (needed by Pest feature tests):
+built (without the remote font: fonts.bunny.net is unreachable). Pint, Pest,
+PHPStan and Larastan are installed". Laravel Boost failed to connect. On
+`develop` at `78c9c3a`, before any change:
+
+- `php artisan wayfinder:generate --skip-routes --with-form`: generated.
+- Pest, `TripControllerTest`, `LegacyAdminPermissionsTest`,
+  `LegacyStoreStateChangingRoutesTest`, `LegacyShopRouteAccessTest`,
+  `StoreBackOfficeShellTest` and `ControllerRedirectsTest`: 141 passed.
+- Pest, every `tests/Feature/Legacy*.php` (43 files): 507 passed.
+- `vendor/bin/pint --test`: passed. PHPStan (`vendor/bin/phpstan analyse
+  --memory-limit=2G`; `composer types:check` refuses to run as root):
+  0 errors.
+- `php artisan route:list --path=temp --json`: **1,048** routes, **436**
+  under `temp/admin`, matching the counts #404 and #406 took from the route
+  files.
+- `npm run build`: failed only on `getaddrinfo ENOTFOUND fonts.bunny.net`;
+  `python3 .claude/scripts/build_without_fonts.py` (the repository's
+  font-less build): built.
+- Playwright, `store-trips.spec.ts` (3) and `store-drivers.spec.ts` (1):
+  4 passed, with `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/opt/pw-browsers/chromium`
+  (the locked Playwright looks for a headless shell build the container does
+  not have).
+
+Nothing failed, so there is no separate fix commit for them. The #404 and
+#406 PHP and browser checks are now run, against `develop` as merged.
+
+### Driver notification fix (own commit)
+
+`Store\Admin\TripController::update` compared the stored integer `driver_id`
+with the posted string, so it notified the driver on every save that kept
+one. It now compares both as integers (and stores the integer). New
+`TripControllerTest` cases post the id as a string: unchanged (no
+notification), changed and removed (one each), and no driver before or after
+(none). The unchanged case failed before the fix ("should be called exactly
+0 times but called 1 times") and passes after it.
+
+### Prerequisites and audit evidence (develop line numbers)
+
+- **Root handlers** (`app/Http/Controllers/Trip/TripController.php`).
+  `all_orders` (`:245-293`): `delivery_status` cached in the session (`:256`)
+  and read back when absent; `whereNotIn('delivery_status', ['pending',
+  'cancelled'])`; the search's `orWhere`s ungrouped, with
+  `orWhereHas('customer')` (`:270`), which fails ("Call to undefined method
+  App\Models\Order::customer()": `customer` is an accessor), so any search
+  answered 500 (reproduced here with a throwaway Pest probe, deleted); the
+  `d-m-Y to d-m-Y` range parsed with `strtotime`; `paginate(15)` (`:290`).
+  `bulk_change_delivery_status` (`:295-310`): `findOrFail` per id, only
+  `confirmed`/`ready_for_delivery` applied, returned `1`. `updateInvoiceNumber`
+  (`:312-324`): any value, `delivery_status = 'on_delivery'`, JSON `success`.
+  `updateOrderStatusToDelivered` (`:326-337`): `delivered`, JSON `success`.
+- **Routes** (`routes/shop-admin.php:285-288`): `trips.orders`
+  (`view_all_trips`); the three writes (`edit_trip`), all POST with
+  `order_id` or `id[]`.
+- **View** (`trips/orders.blade.php`): Create Order under `add_order`
+  (`:13`); the four status radios (the first with a broken `mnhbgnchange`
+  attribute, `:25`); the bulk menu (delete, mark confirmed, mark ready) under
+  `delete_order` (`:61`), the row checkboxes likewise (`:103`, `:151`); the
+  customer link (`:208`); the invoice textarea saved on change (`:278`,
+  `:494`); Print CMR (`:329`); the "Change status" button that marks the
+  order delivered for every viewer (`:336`); Edit under `edit_order` with the
+  editable condition (`:341-343`); bulk delete to `bulk-order-delete`
+  (`:406`); a manager-notes modal posting `orders.update_manager_notes`
+  (`:470`) whose opener `openUpdateModal` (`:486`) had no caller.
+- **Consumers.** `trips/orders.blade.php`: only `all_orders`.
+  `trips.orders.update_order_status_to_delivered`: also
+  `create-from-map.blade.php:346` (fetch from the order popup's
+  `.mark-delivered` button, built in `inc/map-popups.blade.php`). The other
+  two writes: only the view. `admin_sidenav.blade.php:734`: `trips.orders` by
+  name. No test referenced the screen or its routes.
+- **Driver comparison** (`Store\Admin\TripController.php:136` on `develop`).
+
+### Completed scope
+
+- **Backend.** `Store\Admin\TripOrderController` (`index`,
+  `bulkUpdateDeliveryStatus`, `updateInvoiceNumber`, `markDelivered`);
+  `FilterTripOrdersRequest`, `BulkUpdateTripOrdersRequest`,
+  `UpdateTripOrderInvoiceRequest`, `MarkTripOrderDeliveredRequest`;
+  `Resources\Store\TripOrderResource` (photos through the existing
+  `TruckPhotoResource`). `BulkDeleteOrdersRequest` and
+  `OrderController::bulk_order_delete` take `return_to=trip_orders`.
+  `Order`'s `invoice_number` docblock is `string|null` (the column is a
+  string). Root loses the four handlers.
+- **Frontend.** `Store/Admin/Trips/Orders/Index.vue`, two types and a
+  fixture, `confirmDeliveryStatus` in `lib/confirm.ts`, 53
+  `store.trips.orders.*` keys in each of English and Arabic, the menu's
+  Orders entry as an Inertia visit.
+- **Retained Blade.** `create-from-map.blade.php`'s Mark as delivered posts a
+  spoofed PUT with `return_to=map` to the bound route.
+- **Routes.** Four registrations replace four; names kept.
+- **Removed (`git rm`).** `trips/orders.blade.php`.
+- **Unchanged.** Permission names and grants, order tax and totals (held,
+  §5), the order detail and entry pages, the checkpoints page, the map
+  picker's other controls and its writer, CMR, CSP and `blade_csp`, shells
+  and `HandleStoreBladePages`. No dependency or lockfile change.
+
+### Verification and limits
+
+Same session and tools as above (PHP 8.5.11, dev tools, generated Wayfinder
+files, the font-less build). No stand-in Wayfinder modules were needed.
+
+- **Ran.**
+  - Pest, `TripOrderControllerTest.php`: 34 passed; `TripControllerTest.php`
+    with the new driver cases: 124 passed; `OrderControllerTest.php`,
+    `StoreBackOfficeShellTest.php`, `LegacyAdminPermissionsTest.php` and
+    `LegacyStoreStateChangingRoutesTest.php`: passed.
+  - Vitest, `Trips/Orders/Index.test.ts`, `confirm.test.ts`,
+    `storeAdminMenu.test.ts` and `storeTripBladeMap.test.ts`: passed.
+  - Playwright, `store-trip-orders.spec.ts` (2, new), `store-trips.spec.ts`
+    (3) and `store-drivers.spec.ts` (1): 6 passed, with the Chromium path
+    above. The map picker case serves a stand-in for the unpkg Leaflet
+    (unreachable here: `net::ERR_TUNNEL_CONNECTION_FAILED`; without it the
+    picker's script stops on `L is not defined` before its click handler).
+  - `npm run build`: fails only on `fonts.bunny.net`, as above; the
+    font-less build succeeded and is what Pest and Playwright used.
+  - `route:list`: 1,048 and 436 (four replace four).
+  - `python3 .claude/scripts/pre_push_check.py --full`: exit 0. ESLint,
+    Prettier, vue-tsc, Vitest (313 files, 2,786 tests), Pint, PHPStan
+    (0 errors) and Pest (6,013 tests, 33,487 assertions) all passed.
+  - `git diff --check`: clean.
+- **Not run.** PR CI, SAST and the `develop` deploy (`[skip ci]`, as
+  authorized), MySQL (Pest and Playwright use SQLite), the full Playwright
+  suite (only the three trip and driver specs), and `npm run build` with the
+  remote font.
+- **Known limits.** Mark as delivered and the invoice number still apply to
+  any order the caller can name, as the Blade handlers did (no status
+  precondition); the map picker's popup reloads after a successful response
+  instead of reading the old JSON `success`.
+- **Inventory** (from the files and `route:list`). **38** backend Blade
+  files; **19**/**3** literal consumers of the app/layout shells; **1,048**
+  `/temp` and **436** `/temp/admin` registrations; Blade editor: **8** fields
+  in **8** views.
