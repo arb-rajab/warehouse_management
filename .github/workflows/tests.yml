@@ -14,7 +14,7 @@ name: tests
 # full suite on a branch on demand -- notably to re-establish that gate when a
 # merge lands content no PR run covered, because the base moved under the PR.
 on:
-  # Draft PRs are skipped (see the per-job `if`); marking one ready runs the suite.
+  # Draft PRs are skipped (see the `plan` job); marking one ready runs the suite.
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
   workflow_dispatch:
@@ -36,6 +36,118 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Decides which job groups this run needs, so a pull request pays only for
+  # the checks its changes can affect. Two reasons to skip, both on pull
+  # request events only -- workflow_dispatch and deploy.yml's workflow_call
+  # always run everything:
+  #
+  # 1. Content already tested. A release PR (develop -> staging, staging -> main)
+  #    proposes a head whose tree is byte-identical to a PR head this suite
+  #    already passed on, so re-running it cannot produce a different result.
+  #    Mirrors deploy.yml's verify-tested: the PR's merge tree must equal its
+  #    head's tree (the base adds nothing), and a successful tests run must
+  #    exist for that head or, when the head is a merge with an identical tree,
+  #    for its second parent.
+  # 2. Paths. .github/scripts/ci_plan.py maps the PR's changed files to groups;
+  #    its docstring carries the rules (docs-only needs nothing, PHP tests
+  #    skip the JS jobs and E2E, any .github/ change needs everything).
+  #
+  # Every lookup fails open: an API error runs everything. A job skipped by its
+  # `if:` still reports a successful check run, so required checks are
+  # satisfied rather than left pending. Draft PRs skip this job, and with it
+  # every job below.
+  plan:
+    name: Plan CI jobs
+    if: github.event.pull_request.draft != true
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      actions: read
+      pull-requests: read
+    outputs:
+      php: ${{ steps.plan.outputs.php }}
+      js: ${{ steps.plan.outputs.js }}
+      e2e: ${{ steps.plan.outputs.e2e }}
+      audit: ${{ steps.plan.outputs.audit }}
+      deploy-script: ${{ steps.plan.outputs.deploy-script }}
+    steps:
+      - name: Checkout CI scripts
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout: .github/scripts
+          sparse-checkout-cone-mode: false
+
+      - name: Test the planner
+        run: python3 .github/scripts/ci_plan_test.py
+
+      - name: Decide which jobs this change needs
+        id: plan
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          EVENT_NAME: ${{ github.event_name }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          MERGE_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+
+          finish() {
+            echo "$1"
+            python3 .github/scripts/ci_plan.py "${@:2}" | tee -a "$GITHUB_OUTPUT"
+            exit 0
+          }
+
+          if [ "$EVENT_NAME" != 'pull_request' ]; then
+            finish "A $EVENT_NAME run checks everything." --all
+          fi
+
+          tree_of() {
+            gh api "repos/$REPO/commits/$1" --jq '.commit.tree.sha'
+          }
+
+          if ! merge_tree="$(tree_of "$MERGE_SHA")" || ! head_json="$(gh api "repos/$REPO/commits/$HEAD_SHA")"; then
+            finish "Could not read the PR's commits; checking everything." --all
+          fi
+
+          head_tree="$(jq -r '.commit.tree.sha' <<< "$head_json")"
+          candidates=()
+
+          if [ "$merge_tree" = "$head_tree" ]; then
+            candidates+=("$HEAD_SHA")
+            second_parent="$(jq -r 'if (.parents | length) == 2 then .parents[1].sha else "" end' <<< "$head_json")"
+
+            if [ -n "$second_parent" ] && [ "$(tree_of "$second_parent" || true)" = "$head_tree" ]; then
+              candidates+=("$second_parent")
+            fi
+          else
+            echo "The base adds content the head lacks; the merged tree is new."
+          fi
+
+          for sha in "${candidates[@]}"; do
+            successes="$(gh api "repos/$REPO/actions/workflows/tests.yml/runs?head_sha=$sha&per_page=100" \
+              --jq '[.workflow_runs[] | select(.conclusion == "success")] | length' || echo 0)"
+
+            if [ "${successes:-0}" -gt 0 ]; then
+              finish "Tree $head_tree already passed at $sha; skipping the suite. Run this workflow by hand to force it." --none
+            fi
+          done
+
+          # The files API lists at most 3000 files; a PR that large checks everything.
+          if ! files="$(gh api --paginate "repos/$REPO/pulls/$PR_NUMBER/files?per_page=100" \
+            --jq '.[] | .filename, (.previous_filename // empty)')"; then
+            finish "Could not list the PR's files; checking everything." --all
+          fi
+
+          if [ "$(wc -l <<< "$files")" -ge 3000 ]; then
+            finish "The PR lists 3000+ files; checking everything." --all
+          fi
+
+          echo "$files"
+          finish "Planned from the $(wc -l <<< "$files") changed paths above:" <<< "$files"
+
   # resources/js/actions and resources/js/wayfinder are gitignored,
   # generated from the app's routes/controllers by `php artisan
   # wayfinder:generate` (the same command the Vite Wayfinder plugin shells
@@ -45,7 +157,8 @@ jobs:
   # produce the same output.
   generate-wayfinder:
     name: Generate Wayfinder types
-    if: github.event.pull_request.draft != true
+    needs: plan
+    if: needs.plan.outputs.js == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -71,8 +184,8 @@ jobs:
 
   lint-js:
     name: ESLint
-    if: github.event.pull_request.draft != true
-    needs: generate-wayfinder
+    needs: [plan, generate-wayfinder]
+    if: needs.plan.outputs.js == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -95,7 +208,8 @@ jobs:
 
   format-js:
     name: Prettier
-    if: github.event.pull_request.draft != true
+    needs: plan
+    if: needs.plan.outputs.js == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -112,8 +226,8 @@ jobs:
 
   types-js:
     name: vue-tsc
-    if: github.event.pull_request.draft != true
-    needs: generate-wayfinder
+    needs: [plan, generate-wayfinder]
+    if: needs.plan.outputs.js == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -136,8 +250,8 @@ jobs:
 
   test-js:
     name: Vitest
-    if: github.event.pull_request.draft != true
-    needs: generate-wayfinder
+    needs: [plan, generate-wayfinder]
+    if: needs.plan.outputs.js == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -160,7 +274,8 @@ jobs:
 
   lint-php:
     name: Pint
-    if: github.event.pull_request.draft != true
+    needs: plan
+    if: needs.plan.outputs.php == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -181,7 +296,8 @@ jobs:
   # mode to discover in production.
   test-deploy-script:
     name: Deploy script
-    if: github.event.pull_request.draft != true
+    needs: plan
+    if: needs.plan.outputs.deploy-script == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -195,7 +311,8 @@ jobs:
 
   types-php:
     name: PHPStan
-    if: github.event.pull_request.draft != true
+    needs: plan
+    if: needs.plan.outputs.php == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -212,8 +329,15 @@ jobs:
 
   test-php:
     name: Pest
-    needs: [lint-php, format-js]
-    if: github.event.pull_request.draft != true
+    needs: [plan, lint-php, format-js]
+    # Prettier is skipped when only PHP files changed, and a skipped need would
+    # skip this job too, so require Pint to have passed and Prettier to have
+    # passed or been skipped -- never failed or cancelled.
+    if: >-
+      !cancelled() &&
+      needs.plan.outputs.php == 'true' &&
+      needs.lint-php.result == 'success' &&
+      contains(fromJSON('["success", "skipped"]'), needs.format-js.result)
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -237,8 +361,15 @@ jobs:
       - name: Build frontend assets
         run: npm run build
 
+      # `composer test:pest` runs the suite in one process: about 6.5 minutes,
+      # the longest job in the workflow. Paratest (already a Pest dependency)
+      # splits it across the runner's cores; every test uses its own in-memory
+      # SQLite database, and the same `--parallel` run is what
+      # pre_push_check.py uses locally.
       - name: Run Pest
-        run: composer test:pest
+        run: |
+          php artisan config:clear --ansi
+          php artisan test --parallel
 
   # The suite runs on in-memory SQLite, but production is MySQL. These are the
   # migration tests whose behaviour differs between the two (foreign-key
@@ -247,8 +378,15 @@ jobs:
   # schema) ran past 20 minutes there without output, so only these run.
   test-php-mysql:
     name: Pest (MySQL migrations)
-    needs: [lint-php, format-js]
-    if: github.event.pull_request.draft != true
+    needs: [plan, lint-php, format-js]
+    # Prettier is skipped when only PHP files changed, and a skipped need would
+    # skip this job too, so require Pint to have passed and Prettier to have
+    # passed or been skipped -- never failed or cancelled.
+    if: >-
+      !cancelled() &&
+      needs.plan.outputs.php == 'true' &&
+      needs.lint-php.result == 'success' &&
+      contains(fromJSON('["success", "skipped"]'), needs.format-js.result)
     runs-on: ubuntu-latest
     timeout-minutes: 20
     services:
@@ -294,7 +432,8 @@ jobs:
   # packages are reported but do not fail the run; advisories do.
   audit:
     name: Dependency audit
-    if: github.event.pull_request.draft != true
+    needs: plan
+    if: needs.plan.outputs.audit == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -323,8 +462,8 @@ jobs:
 
   e2e:
     name: Playwright E2E
-    needs: [lint-php, format-js]
-    if: github.event.pull_request.draft != true
+    needs: [plan, lint-php, format-js]
+    if: needs.plan.outputs.e2e == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
