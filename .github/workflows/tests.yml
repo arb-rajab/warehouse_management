@@ -115,9 +115,15 @@ jobs:
 
           head_tree="$(jq -r '.commit.tree.sha' <<< "$head_json")"
           candidates=()
+          attest_args=()
 
           if [ "$merge_tree" = "$head_tree" ]; then
             candidates+=("$HEAD_SHA")
+            # The head commit may attest a local run of some groups on this tree
+            # (.claude/scripts/pre_push_check.py --attest). ci_plan.py honours it
+            # only for exactly this tree, and never for a change under .github/.
+            jq -r '.commit.message' <<< "$head_json" > "$RUNNER_TEMP/head-message.txt"
+            attest_args=(--attested-message-file "$RUNNER_TEMP/head-message.txt" --tree "$head_tree")
             second_parent="$(jq -r 'if (.parents | length) == 2 then .parents[1].sha else "" end' <<< "$head_json")"
 
             if [ -n "$second_parent" ] && [ "$(tree_of "$second_parent" || true)" = "$head_tree" ]; then
@@ -147,7 +153,7 @@ jobs:
           fi
 
           echo "$files"
-          finish "Planned from the $(wc -l <<< "$files") changed paths above:" <<< "$files"
+          finish "Planned from the $(wc -l <<< "$files") changed paths above:" "${attest_args[@]}" <<< "$files"
 
   format-js:
     name: Prettier
@@ -266,13 +272,14 @@ jobs:
   test-php:
     name: Pest
     needs: [plan, lint-php, format-js]
-    # Prettier is skipped when only PHP files changed, and a skipped need would
-    # skip this job too, so require Pint to have passed and Prettier to have
-    # passed or been skipped -- never failed or cancelled.
+    # Prettier is skipped when only PHP files changed, and Pint when a head-commit
+    # attestation already vouches for the php group, and a skipped need would
+    # skip this job too, so require each to have passed or been skipped --
+    # never failed or cancelled.
     if: >-
       !cancelled() &&
       needs.plan.outputs.php == 'true' &&
-      needs.lint-php.result == 'success' &&
+      contains(fromJSON('["success", "skipped"]'), needs.lint-php.result) &&
       contains(fromJSON('["success", "skipped"]'), needs.format-js.result)
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -315,13 +322,14 @@ jobs:
   test-php-mysql:
     name: Pest (MySQL migrations)
     needs: [plan, lint-php, format-js]
-    # Prettier is skipped when only PHP files changed, and a skipped need would
-    # skip this job too, so require Pint to have passed and Prettier to have
-    # passed or been skipped -- never failed or cancelled.
+    # Prettier is skipped when only PHP files changed, and Pint when a head-commit
+    # attestation already vouches for the php group, and a skipped need would
+    # skip this job too, so require each to have passed or been skipped --
+    # never failed or cancelled.
     if: >-
       !cancelled() &&
       needs.plan.outputs.mysql == 'true' &&
-      needs.lint-php.result == 'success' &&
+      contains(fromJSON('["success", "skipped"]'), needs.lint-php.result) &&
       contains(fromJSON('["success", "skipped"]'), needs.format-js.result)
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -399,7 +407,14 @@ jobs:
   e2e:
     name: Playwright E2E
     needs: [plan, lint-php, format-js]
-    if: needs.plan.outputs.e2e == 'true'
+    # Pint and Prettier are skipped when their group is not planned, which
+    # includes a group a head-commit attestation already vouches for, so a
+    # skipped need must not skip this job too.
+    if: >-
+      !cancelled() &&
+      needs.plan.outputs.e2e == 'true' &&
+      contains(fromJSON('["success", "skipped"]'), needs.lint-php.result) &&
+      contains(fromJSON('["success", "skipped"]'), needs.format-js.result)
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
