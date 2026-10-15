@@ -27,7 +27,7 @@ test('deleting a user referenced by a cell status log is restricted', function (
     $log = CellStatusLog::factory()->create();
     $user = $log->user;
 
-    expect(fn () => $user->delete())->toThrow(QueryException::class);
+    expect(fn () => $user->forceDelete())->toThrow(QueryException::class);
     expect(User::find($user->id))->not->toBeNull();
 });
 

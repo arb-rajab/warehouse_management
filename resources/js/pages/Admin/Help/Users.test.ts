@@ -55,6 +55,7 @@ describe('Help Users', () => {
         expect(headings).toEqual([
             t('help.users.accounts.heading'),
             t('help.users.roles.heading'),
+            t('help.users.removing.heading'),
         ]);
     });
 
@@ -68,6 +69,18 @@ describe('Help Users', () => {
         const wrapper = mountPage();
 
         expect(wrapper.text()).toContain(t('help.users.roles.body'));
+    });
+
+    it('explains that removing an account keeps its history', () => {
+        const wrapper = mountPage();
+
+        expect(wrapper.text()).toContain(t('help.users.removing.body'));
+    });
+
+    it('renders a preview of the "Delete" button', () => {
+        const wrapper = mountPage();
+
+        expect(wrapper.text()).toContain(t('users.index.delete'));
     });
 
     it('renders a preview of the "Add user" button', () => {

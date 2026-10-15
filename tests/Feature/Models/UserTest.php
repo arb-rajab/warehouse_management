@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\CellStatusLog;
+use App\Models\CellStatusLogFlag;
 use App\Models\CellVerificationReport;
 use App\Models\CellVerificationRound;
 use App\Models\User;
@@ -35,33 +36,41 @@ test('filterOptions returns an empty collection when there are no users', functi
     expect(User::filterOptions())->toBeEmpty();
 });
 
-test('hasHistory is false for a user with no recorded activity', function () {
-    $user = User::factory()->create();
-    $otherUser = User::factory()->create();
-    CellStatusLog::factory()->create(['user_id' => $otherUser->id]);
+test('filterOptions includes users who have been deleted, so their history stays filterable', function () {
+    $active = User::factory()->create(['name' => 'Alpha']);
+    $removed = User::factory()->mobileUser()->create(['name' => 'Bravo']);
+    $removed->delete();
 
-    expect($user->hasHistory())->toBeFalse();
+    expect(User::filterOptions()->pluck('id')->all())->toBe([$active->id, $removed->id]);
 });
 
-test('hasHistory is true for a user with a cell status log', function () {
-    $user = User::factory()->create();
+test('a deleted user is soft deleted: skipped by default queries but still stored', function () {
+    $user = User::factory()->mobileUser()->create();
+    $other = User::factory()->mobileUser()->create();
     CellStatusLog::factory()->create(['user_id' => $user->id]);
 
-    expect($user->hasHistory())->toBeTrue();
+    $user->delete();
+
+    expect(User::find($user->id))->toBeNull();
+    expect(User::find($other->id))->not->toBeNull();
+    expect(User::withTrashed()->find($user->id)->deleted_at)->toBeInstanceOf(CarbonImmutable::class);
+    expect(CellStatusLog::where('user_id', $user->id)->exists())->toBeTrue();
 });
 
-test('hasHistory is true for a user with a verification round', function () {
-    $user = User::factory()->create();
-    CellVerificationRound::factory()->create(['user_id' => $user->id]);
+test('every relation to a user still resolves them after they are deleted', function () {
+    $user = User::factory()->create(['name' => 'Bob Mover']);
+    $log = CellStatusLog::factory()->create(['user_id' => $user->id]);
+    $round = CellVerificationRound::factory()->create(['user_id' => $user->id]);
+    $report = CellVerificationReport::factory()->accepted()->create(['user_id' => $user->id, 'accepted_by' => $user->id]);
+    $flag = CellStatusLogFlag::factory()->create(['acknowledged_at' => now(), 'acknowledged_by' => $user->id]);
 
-    expect($user->hasHistory())->toBeTrue();
-});
+    $user->delete();
 
-test('hasHistory is true for a user with a verification report', function () {
-    $user = User::factory()->create();
-    CellVerificationReport::factory()->create(['user_id' => $user->id]);
-
-    expect($user->hasHistory())->toBeTrue();
+    expect($log->fresh()->user->name)->toBe('Bob Mover');
+    expect($round->fresh()->user->name)->toBe('Bob Mover');
+    expect($report->fresh()->user->name)->toBe('Bob Mover');
+    expect($report->fresh()->acceptedBy->name)->toBe('Bob Mover');
+    expect($flag->fresh()->acknowledgedBy->name)->toBe('Bob Mover');
 });
 
 test('the email_verified_at attribute is cast to a datetime', function () {

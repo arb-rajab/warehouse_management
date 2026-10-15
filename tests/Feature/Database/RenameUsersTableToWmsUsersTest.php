@@ -25,7 +25,7 @@ test('deleting a user referenced by a cell status log is still restricted after 
     $log = CellStatusLog::factory()->create();
     $user = $log->user;
 
-    expect(fn () => $user->delete())->toThrow(QueryException::class);
+    expect(fn () => $user->forceDelete())->toThrow(QueryException::class);
     expect(User::find($user->id))->not->toBeNull();
 });
 
@@ -36,7 +36,7 @@ test('deleting the user who acknowledged a flag still nulls acknowledged_by afte
         'acknowledged_by' => $user->id,
     ]);
 
-    $user->delete();
+    $user->forceDelete();
 
     $fresh = $flag->fresh();
     expect($fresh)->not->toBeNull();

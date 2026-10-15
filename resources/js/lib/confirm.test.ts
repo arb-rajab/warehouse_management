@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
     confirmAcceptVerificationReport,
     confirmDelete,
+    confirmDeleteUser,
     confirmLogout,
 } from './confirm';
 
@@ -27,6 +28,27 @@ describe('confirmDelete', () => {
 
         vi.stubGlobal('confirm', () => true);
         expect(confirmDelete('Jane Doe')).toBe(true);
+    });
+});
+
+describe('confirmDeleteUser', () => {
+    it('says the user loses access but keeps their history', () => {
+        const confirmSpy = vi.fn(() => true);
+        vi.stubGlobal('confirm', confirmSpy);
+
+        confirmDeleteUser('Jane Doe');
+
+        expect(confirmSpy).toHaveBeenCalledWith(
+            'Remove Jane Doe? They will lose access to the system immediately, but their activity history is kept.',
+        );
+    });
+
+    it('passes the user’s answer straight back to the caller', () => {
+        vi.stubGlobal('confirm', () => false);
+        expect(confirmDeleteUser('Jane Doe')).toBe(false);
+
+        vi.stubGlobal('confirm', () => true);
+        expect(confirmDeleteUser('Jane Doe')).toBe(true);
     });
 });
 
