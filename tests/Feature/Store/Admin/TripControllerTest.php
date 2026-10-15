@@ -722,7 +722,7 @@ describe('trip lists', function () {
 
         $this->get(route('trips.index'))->assertInertia(fn (Assert $page) => $page->has('trips.data', 20)->where('trips.meta.total', 21)->where('trips.meta.last_page', 2));
         $this->get(route('trips.index', ['page' => 2]))->assertInertia(fn (Assert $page) => $page->has('trips.data', 1));
-        $this->get(route('trips.index', ['per_page' => 10, 'search' => 'Trip']))->assertInertia(fn (Assert $page) => $page->has('trips.data', 10)->where('filters.per_page', 10));
+        $this->get(route('trips.index', ['per_page' => 10, 'search' => 'Delivery truck']))->assertInertia(fn (Assert $page) => $page->has('trips.data', 10)->where('filters.per_page', 10));
         $this->get(route('trips.index', ['per_page' => 999]))->assertSessionHasErrors('per_page');
         $this->get(route('trips.index', ['search' => ['bad']]))->assertSessionHasErrors('search');
         $this->get(route('trips.index', ['status' => ['destroyed']]))->assertSessionHasErrors('status.0');

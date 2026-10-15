@@ -481,7 +481,7 @@ class ProductController extends Controller implements HasMiddleware
             'lang' => $lang,
             'languages' => $this->languageOptions(),
             'listType' => $listType,
-            'variants' => [...$variants, 'rows' => $this->editVariantRows($request, $product, $names, (string) $product->unit_price)],
+            'variants' => [...$variants, 'rows' => $this->editVariantRows($request, $product, $names, (string) $product->getAttribute('unit_price'))],
             'initialFiles' => $this->uploadIdPreviews($request, [
                 'photos' => $product->getAttribute('photos'),
                 'thumbnail_img' => $product->thumbnail_img,
@@ -523,8 +523,8 @@ class ProductController extends Controller implements HasMiddleware
         $attributeValues = [];
         $choiceOptions = [];
         foreach ($choices as $id => $storedValues) {
-            $attributeValues[$id] = ($values->get($id) ?? collect())->unique(fn (AttributeValue $value): string => (string) $value->getAttribute('value'))->values()
-                ->map(fn (AttributeValue $value): array => ['id' => (int) $value->getKey(), 'value' => (string) $value->getAttribute('value')])->all();
+            $attributeValues[$id] = array_values(($values->get($id) ?? collect())->unique(fn (AttributeValue $value): string => (string) $value->getAttribute('value'))
+                ->map(fn (AttributeValue $value): array => ['id' => (int) $value->getKey(), 'value' => (string) $value->getAttribute('value')])->all());
             $choiceOptions[] = [
                 'attribute_id' => $id,
                 'values' => array_values(array_filter(array_column($attributeValues[$id], 'value'), fn (string $value): bool => in_array($value, $storedValues, true))),

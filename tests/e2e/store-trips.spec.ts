@@ -81,9 +81,16 @@ test("the Blade map picker deletes a truck's open trip through the spoofed DELET
     const truck = `Map truck ${code}`;
     seedTrip(code, truck);
     await loginAsStoreAdmin(page);
-    await page.goto('/temp/admin/trips/create-from-map');
+    const response = await page.goto('/temp/admin/trips/create-from-map');
+    expect(response?.status()).toBe(200);
+    await expect(
+        page.getByRole('heading', { name: 'Create Trip', exact: true }),
+    ).toBeVisible();
     const card = page.locator('.truck-card', { hasText: truck });
-    await expect(card).toBeVisible();
+    await expect(
+        card,
+        `truck cards: ${(await page.locator('.truck-card .card-title').allInnerTexts()).join(' | ')}`,
+    ).toBeVisible();
 
     await card.locator('.confirm-delete').click();
     const modal = page.locator('#delete-modal');
