@@ -198,3 +198,27 @@ export async function pickUploads(
     await dialog.getByRole('button', { name: 'Use selected files' }).click();
     await expect(dialog).toBeHidden();
 }
+
+/**
+ * Asserts the editor's bold text. Bolding by keyboard has failed
+ * intermittently in CI with no record of why, so a failure names the
+ * editor's HTML and the document selection at that point.
+ */
+export async function expectBold(
+    page: Page,
+    editor: string,
+    text: string,
+): Promise<void> {
+    try {
+        await expect(page.locator(`${editor} strong`)).toHaveText(text);
+    } catch (error) {
+        const html = await page.locator(editor).innerHTML();
+        const selection = await page.evaluate(() =>
+            String(document.getSelection()),
+        );
+
+        throw new Error(
+            `${(error as Error).message}\neditor HTML: ${html}\nselection: ${JSON.stringify(selection)}`,
+        );
+    }
+}

@@ -637,6 +637,14 @@ test('checkpoint write controls require edit trip while readers retain notes and
     $response->assertSee('tripMapPopup([[null, marker.label]])', false);
 })->with([false, true]);
 
+test('the retained map picker renders an available truck with its pallet capacity', function () {
+    Truck::create(['name' => 'Free truck', 'is_available' => true, 'max_pallets_number' => 18]);
+    Truck::create(['name' => 'Busy truck', 'is_available' => false, 'max_pallets_number' => 7]);
+    actingAsStoreUser(createStoreStaff('add_trip'));
+
+    $this->get(route('trips.create-from-map'))->assertOk()->assertSee('Free truck')->assertSee('Max Pallets Number:18')->assertDontSee('Max Pallets Number:7');
+});
+
 test('the retained map picker renders a busy truck with no open trip without a broken link', function () {
     Truck::create(['name' => 'Busy without trip', 'is_available' => false]);
     actingAsStoreUser(createStoreStaff('add_trip'));
