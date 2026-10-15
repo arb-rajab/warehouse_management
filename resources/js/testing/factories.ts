@@ -65,6 +65,7 @@ import type {
     StoreTicketReply,
     StoreDriver,
     StoreOrder,
+    StoreTrip,
 } from '@/types/store';
 
 import type {
@@ -1001,6 +1002,23 @@ export function storeDriver(overrides: Partial<StoreDriver> = {}): StoreDriver {
         email: 'sam@example.com',
         phone: '0612345678',
         country: 'Netherlands',
+        ...overrides,
+    };
+}
+
+export function storeTrip(overrides: Partial<StoreTrip> = {}): StoreTrip {
+    return {
+        id: 41,
+        code: '20261014-080000',
+        status: 'started',
+        due_date: '2026-10-14',
+        started_at: '2026-10-14T08:30:00+00:00',
+        closed_at: null,
+        distance: 12345.67,
+        duration: 3720,
+        notes: 'Ring at the back',
+        driver: { id: 31, name: 'Sam Driver' },
+        truck: { id: 11, name: 'Cargo truck' },
         ...overrides,
     };
 }

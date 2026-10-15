@@ -3,11 +3,14 @@
 namespace App\Http\Requests\Store\Admin;
 
 use App\Enums\TripStatus;
+use App\Http\Requests\Concerns\ValidatesStoreTripList;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 class UpdateTripStatusRequest extends FormRequest
 {
+    use ValidatesStoreTripList;
+
     /**
      * Get the validation rules that apply to the request.
      *
@@ -15,6 +18,6 @@ class UpdateTripStatusRequest extends FormRequest
      */
     public function rules(): array
     {
-        return ['id' => ['required', 'integer'], 'status' => ['required', Rule::enum(TripStatus::class)]];
+        return [...$this->tripListRules(), 'status' => ['required', 'string', Rule::enum(TripStatus::class)]];
     }
 }

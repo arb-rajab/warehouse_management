@@ -9,6 +9,7 @@ paths:
   - 'resources/js/components/StoreNewsletterFormFields.vue,resources/js/components/StoreNewsletterRecipients.vue,resources/js/components/StoreTicketReplyForm.vue,resources/js/lib/storeSupportTicket.ts,app/Services/Store/**'
   - 'resources/js/components/StoreWebsite*'
   - 'resources/js/components/StoreProduct*,resources/js/lib/storeProductForm.ts'
+  - 'resources/js/components/StoreTripStatusDialog.vue'
   - 'app/Http/Controllers/Store/**,app/Http/Requests/Store/**,app/Http/Resources/Store/**'
   - 'app/Http/Middleware/HandleInertiaRequests.php,app/Http/Middleware/HandleStoreBladePages.php,app/Http/Middleware/SendSecureHeaders.php'
   - 'routes/shop-admin.php'
@@ -17,7 +18,8 @@ paths:
 
 # Moving the store back office from Blade to Inertia
 
-Latest follow-up: [the physical product edit form and two orphaned Blade files](#23-physical-product-edit-form-2026-10-14).
+Latest follow-up: [the trip lists and their status, notes and delete actions](#24-trip-lists-and-status-actions-2026-10-14).
+Edit-form follow-up: [the physical product edit form and two orphaned Blade files](#23-physical-product-edit-form-2026-10-14).
 Create-form follow-up: [the physical product create form](#22-physical-product-create-form-2026-10-13).
 Digital-form follow-up: [the digital product create and edit forms](#21-digital-product-create-and-edit-forms-2026-10-13).
 Website follow-up: [the website footer, appearance and custom pages, and the generic settings writer's retirement](#20-website-footer-appearance-and-custom-pages-2026-10-13).
@@ -32,7 +34,7 @@ Customer-package follow-up: [customer package migration verification](#12-custom
 Carrier follow-up: [carrier migration verification](#11-carrier-administration-follow-up-2026-10-12).
 PR #377 verification: [final all-store browser results](../store-backoffice-reconciliation-20261011.md#final-all-store-browser-verification-2026-10-12)
 close the pending browser gate. Earlier dated verification sections remain
-historical evidence; §10 records reconciliation results and §§11–23 record
+historical evidence; §10 records reconciliation results and §§11–24 record
 subsequent module verification and limits.
 
 ## 1. Decision and scope
@@ -493,7 +495,7 @@ modules too:
 This reflects integrated code and the carrier, customer-package, category,
 brand, digital-product, in-house/all-products list, general-settings,
 blog-editor, newsletter/ticket-detail, website-settings, digital-product
-form and physical product create and edit form follow-ups in §§11–23. The original
+form, physical product create and edit form and trip list follow-ups in §§11–24. The original
 reconciliation was based on `8e3f82b60b2b4dc951b97ccfed985a75e9e6be69` and
 merged through PR #377. Carrier administration was then implemented separately
 from latest `origin/develop` at `018dd1802c0b2fc99ffbf0e097594fe0f0f3dfef`.
@@ -511,7 +513,7 @@ Verification below distinguishes the original reconciliation from this follow-up
 | Catalogue | Partial | Attributes/values, colors, brand discount, reviews, bulk import/export and offers catalogue implemented; category (§13) and brand (§14) administration complete; digital product list, deletion, download and switches converted (§15); digital product create/edit converted on the shared editor and canonical uploader (§21); in-house and all-products lists with their switches, duplicate, delete and bulk delete converted (§16); physical product create converted with its typed variant/SKU endpoint (§22); physical product edit converted with translation tabs and stored variant rows (§23); the seller product list stays Blade with seller administration |
 | Website/support | Complete selected subset | Header/home, footer, appearance, custom pages (§20), conversations, product queries, the ticket list and the ticket detail with its typed reply use Inertia; footer, appearance and page rich text use the shared editor, cleaned on write (§20); the header/footer scripts stay on their compatibility endpoint as plain code fields; script policy, `manage_website_scripts` and rich-text WAF exceptions stay held |
 | Marketing/blog | Complete selected subset | Coupons, flash/offer deals, campaign products, popups, subscribers and blog categories/list/actions integrated; blog post create/edit (§18) and the newsletter form (§19) use Inertia with the shared Tiptap editor; the typed newsletter send and bounded recipient search are unchanged |
-| Logistics | Partial | Drivers/trucks converted; visits use customer Inertia list plus hardened Blade maps; trips/maps retain Blade, with compatible hardening |
+| Logistics | Partial | Drivers/trucks converted; the all-trips and today's-trips lists with their status dialog, notes, delete and bulk delete converted (§24); visits use customer Inertia list plus hardened Blade maps; the trip forms, checkpoints, map picker, trip orders and CMR download retain Blade (Leaflet/Google Maps approval unverified), with compatible hardening |
 | Orders/dashboard | Partial | Orders and entry forms converted; stored tax metadata and line-price-only grand total preserved; shell utilities integrated; dashboard/chart conversion held |
 | Seller administration | Decision-blocked | Existing seller Blade screens remain, including the seller product list (`products.seller`, §16); feature-use/removal decision is still required |
 | Public/seller/auth/PDF consumers | Retained | Blade coexistence, PDF layouts, Inertia root and CSP middleware remain |
@@ -596,14 +598,14 @@ dedicated allowlisted compatibility endpoint, not a general settings writer.
 
 ### 5.1 Actual retained backend Blade files
 
-The current backend inventory contains **45 Blade files**, down from 73 after
+The current backend inventory contains **43 Blade files**, down from 73 after
 removing three screens each for carriers, customer packages and categories, the
 two brand screens, the digital product list (§15), general settings (§17), the
 two blog post forms (§18), the newsletter and ticket detail (§19), the
 footer, appearance and three custom-page screens (§20), the two digital
 product forms (§21), the physical product create form (§22), and the
 physical product edit form, its choice script and the unconsumed blank shell
-(§23).
+(§23), and the trip list with its status modal (§24).
 The in-house and all-products lists (§16) removed none:
 `product/products/index.blade.php` is shared with the retained seller product
 list. The Google Map settings screen stays (§17).
@@ -621,7 +623,7 @@ as conversion. Protected shells/downloads/invoices are not conversion targets.
 - **sellers:** `sellers/create.blade.php`, `sellers/edit.blade.php`, `sellers/index.blade.php`, `sellers/payment.blade.php`, `sellers/payment_histories/index.blade.php`, `sellers/payment_modal.blade.php`, `sellers/profile_modal.blade.php`, `sellers/seller_commission/index.blade.php`, `sellers/seller_verification_form/index.blade.php`, `sellers/seller_withdraw_requests/index.blade.php`, `sellers/seller_withdraw_requests/payment_modal.blade.php`, `sellers/seller_withdraw_requests/withdraw_message_modal.blade.php`, `sellers/verification.blade.php`.
 - **setup_configurations:** `setup_configurations/google_configuration/google_map.blade.php`.
 - **system:** `system/server_status.blade.php`.
-- **trips:** `trips/checkpoints/index.blade.php`, `trips/components/checkpoint-template.blade.php`, `trips/components/checkpoint.blade.php`, `trips/components/update-checkpoint-status-modal.blade.php`, `trips/components/update-trip-status-modal.blade.php`, `trips/create-from-map.blade.php`, `trips/create.blade.php`, `trips/edit.blade.php`, `trips/inc/map-popups.blade.php`, `trips/inc/map-scripts.blade.php`, `trips/inc/scripts.blade.php`, `trips/index.blade.php`, `trips/orders.blade.php`.
+- **trips:** `trips/checkpoints/index.blade.php`, `trips/components/checkpoint-template.blade.php`, `trips/components/checkpoint.blade.php`, `trips/components/update-checkpoint-status-modal.blade.php`, `trips/create-from-map.blade.php`, `trips/create.blade.php`, `trips/edit.blade.php`, `trips/inc/map-popups.blade.php`, `trips/inc/map-scripts.blade.php`, `trips/inc/scripts.blade.php`, `trips/orders.blade.php`.
 
 ## 6. Registered migrated controllers and consumers
 
@@ -686,6 +688,7 @@ line numbers or count sibling snapshots.
 | `SubscriberController` | `admin.subscribers.index`, `subscriber.destroy` | `Store/Admin/Marketing/Subscribers/Index.vue` |
 | `SupportTicketController` | `support_ticket.admin_index`, `support_ticket.admin_store`, `support_ticket.admin_show` | `Store/Admin/Support/Tickets/Index.vue`, `Show.vue` (§19); reply → redirect to the detail; customer/seller ticket pages stay on root/seller `SupportTicketController` (Blade) |
 | `TaxController` | `tax.index`, `tax.store`, `tax.update`, `tax.destroy`, `tax.edit`, `taxes.tax-status` | `Store/Admin/Setup/Taxes/Index.vue`, `Store/Admin/Setup/Taxes/Edit.vue` |
+| `TripController` (Store/Admin) | `trips.index`, `trips.today-trips`, `trips.update-status`, `trips.update-notes`, `trips.destroy`, `trips.bulk-trip-delete` | `Store/Admin/Trips/Trips/Index.vue` (both lists, `listType` `all`/`today`) with `StoreTripStatusDialog` (§24); writes redirect to the screen named by `list` (`all`, `today`, or `map` → the Blade map picker, whose truck cards send `trips.destroy` as a spoofed DELETE); the trip forms, checkpoints, map picker, trip orders and CMR download stay on root `Trip\TripController` (Blade) |
 | `TruckController` | `trucks.create`, `trucks.index`, `trucks.photos`, `trucks.store`, `trucks.update`, `trucks.edit`, `trucks.qr` | `Store/Admin/Trips/Trucks/Index.vue`, `Store/Admin/Trips/Trucks/Create.vue`, `Store/Admin/Trips/Trucks/Edit.vue` |
 | `UploadController` | `all-file`, `bulk-uploaded-files-delete`, `uploaded-files.index`, `uploaded-files.store`, `uploaded-files.create`, `uploaded-files.files`, `uploaded-files.info`, `uploaded-files.destroy` | `Store/Admin/Uploads/Index.vue`, `Store/Admin/Uploads/Create.vue` |
 | `VisitController` | `bulk-visit-delete`, `admin.rep.visits.destroy`, `admin.rep.visits.index` | `Store/Admin/Representatives/Visits/Index.vue` |
@@ -696,8 +699,9 @@ line numbers or count sibling snapshots.
 | `WebsitePageController` | `website.pages`, `custom-pages.create`, `custom-pages.store`, `custom-pages.edit`, `custom-pages.update`, `custom-pages.destroy` | `Store/Admin/Website/Pages/Index.vue`, `Create.vue`, `Edit.vue` (§20); the public `custom-pages.show_custom_page` and `mobile.custom-pages` stay on root `PageController` (Blade) |
 | `ZoneController` | `zones.index`, `zones.store`, `zones.create`, `zones.update`, `zones.destroy`, `zones.edit` | `Store/Admin/Setup/Zones/Index.vue`, `Store/Admin/Setup/Zones/Edit.vue`, `Store/Admin/Setup/Zones/Create.vue` |
 
-Visit details/day maps are served by retained root `VisitController`; trips and
-Google map settings also retain their Blade GET consumers. Root
+Visit details/day maps are served by retained root `VisitController`; the trip
+forms, checkpoints, map picker and trip orders (§24) and the Google map settings
+also retain their Blade GET consumers. Root
 `BusinessSettingsController` keeps the Google Map GET, the seller
 commission/verification screens and `env_key_update` (the generic settings
 writer and its refusing `.env` stub are gone, §20), so it stays in both
@@ -2376,5 +2380,130 @@ blank shell. Registrations are unchanged at **1,048** under `/temp` and
 **436** under `/temp/admin`: four replace four (counted from the route files;
 `route:list` could not run). Blade editor: **8** fields in **8** views.
 Verification is recorded in the product edit form section of
+[the reconciliation ledger](../store-backoffice-reconciliation-20261011.md).
+No deployment or production-data mutation is authorized.
+
+## 24. Trip lists and status actions (2026-10-14)
+
+The all-trips and today's-trips lists now share `Store/Admin/Trips/Trips/Index`
+(`listType` `all` or `today`); the Blade status modal is `StoreTripStatusDialog`.
+Work is on `ccr-861a6e50-1xombz`, from `develop` at `4cbb84d` (the PR #403
+merge). The owner authorized this session's commit, PR (#404), its merge into
+`develop` and `[skip ci]` on all of them, because the checks run locally. So no
+PR CI, no PR or merge SAST and no `develop` deploy ran. The ledger records what
+ran here (Vitest, vue-tsc, ESLint and Prettier, against stand-in Wayfinder
+modules) and what did not (Pest, Pint, PHPStan, Wayfinder generation, the build
+and Playwright: no PHP 8.5 or `vendor/` in the session).
+
+**Routes and gates: names and permissions kept.** Six routes moved from root
+`Trip\TripController` to `Store\Admin\TripController` (`HasMiddleware`):
+
+- `trips.index` (GET `/trips/index`) and `trips.today-trips` (GET
+  `/trips/today-trips`): `view_all_trips`; `FilterTripsRequest` (`per_page`,
+  `search`, `status[]`).
+- `trips.update-status` (PUT `/trips/{trip}/status`; was POST
+  `/trips/update-trip-status` with `id`) and `trips.update-notes` (PUT
+  `/trips/{trip}/notes`; was POST `/trips/update-trip-notes` with `trip_id`):
+  `edit_trip`.
+- `trips.destroy` (DELETE `/trips/{trip}`; was POST `/trips/delete/{id}`) and
+  `trips.bulk-trip-delete` (POST `/trips/bulk-trips-delete`, URI kept):
+  `delete_trip`.
+
+Every write takes `list` (`StoreTripList`: `all`, `today` or `map`) and returns
+to that screen with the rest of its query, as the product lists' `list` does
+(§16). A missing bound trip is a 404. The root controller keeps the trip forms,
+the checkpoints page and its actions, the map picker, the trip orders and the
+CMR download, and stays in both analysis exclusion lists. Its
+`lockTruckForTrip()` moved unchanged to `Concerns\ReservesTripTrucks`, which
+both controllers use. No gate changed, so `LegacyAdminPermissionsTest` is
+unchanged; `LegacyAdminOwnershipTest`'s four trip-list rows moved to
+`TripControllerTest`'s per-permission dataset.
+
+**Behaviour kept.**
+
+- **Status transitions:** the legacy body, unchanged, in one transaction.
+  Closing keeps the first close time, marks the trip's order checkpoints
+  delivered and frees the truck only when no other open trip holds it; starting
+  or reopening reserves the truck again (a `truck_id` error, shown in the
+  dialog, when another open trip holds it) and keeps the first start time. The
+  response is a redirect instead of the jQuery `1`.
+- **Departure ID 9:** untouched; only the retained create and map writers add
+  the departure checkpoint.
+- **Search:** the `Trip::search()` scope, unchanged (exact code; status,
+  driver, truck and checkpoint customer by `LIKE`).
+- **Deleting** removes the checkpoints with one query, so no checkpoint
+  `deleting` hook runs and the orders keep their delivery status, as before.
+
+**Deliberate changes.**
+
+- **Truck availability on delete.** The legacy single delete freed the truck
+  even while another open trip held it, and the bulk delete never freed it (a
+  truck whose only open trip was bulk-deleted could not be assigned again).
+  Both now free it only when no other open trip holds it, with the trip locked.
+- **Bulk selection** is validated (1–100 distinct existing trips; otherwise a
+  field error and nothing deleted). The legacy handler skipped unknown ids.
+- **Notes** take the edit form's rule (`ValidatesStoreTrip`: nullable string,
+  at most 255); the inline Blade field accepted any length. They still save on
+  change; "Notes saved." shows under the row instead of a toast.
+- **Lists** page 20 at a time with the per-page selector (was 15), newest
+  first then by id. The status filter is `status[]` (any of pending, started,
+  closed) instead of the `pending`/`started`/`closed`/`allTrips` flags. Today's
+  list uses `whereDate('due_date', today())`, equal to the old comparison on
+  MySQL.
+- **Display.** Start and close times use `formatDateTime` (the browser's locale
+  and time zone; Blade printed server-time `Y-m-d H:i`); the distance is in
+  kilometres to two places in the locale's number format; the duration uses
+  the shared `formatDuration` with translated units (Blade printed Carbon's
+  English short span, `1s` where the page now shows `0s`).
+- **Links.** Driver and truck names link to their Inertia edit pages for a
+  viewer with `edit_driver`/`edit_truck` (pages.md). The trip code (checkpoints
+  page), Edit and Create trip load their Blade pages in full; Create order
+  (`add_order`) is an Inertia visit to the order entry.
+
+**Map picker.** Its truck cards' delete link is now `data-method="delete"` with
+`route('trips.destroy', ['trip' => …, 'list' => 'map'])`. `aiz-core.js`
+`postLink` also handles `a[data-method="delete"]`, adding `_method=DELETE` to
+the CSRF form; `.confirm-delete` passes the mark on to the modal's link as
+before. After the delete the picker reloads (it was Blade `back()`).
+`LegacyStoreStateChangingRoutesTest` accepts `data-method="post"` or `"delete"`
+and pins the `_method` field.
+
+**Consumers traced and files deleted (`git rm`).**
+
+- `trips/index.blade.php`: rendered only by the removed root `getTrips()`.
+- `trips/components/update-trip-status-modal.blade.php`: included only by
+  `trips/index.blade.php`.
+- `trips.update-status`, `trips.update-notes` and `trips.bulk-trip-delete` had
+  no consumer outside those two views; `trips.destroy` also serves the map
+  picker (above). Traced with `rg` over `resources/views`, `app`, `routes`,
+  `public/assets/js`, `resources/js` and `tests`.
+- Kept: `trips/inc/scripts.blade.php` (create, edit and map picker),
+  `inc/map-popups`, `inc/map-scripts`, the checkpoint components and
+  `update-checkpoint-status-modal` (checkpoints page) and
+  `shop.modals.delete_modal`. `admin_sidenav.blade.php` links the lists by name
+  and needs no change.
+
+**Menu.** All trips and Today's trips are Inertia entries from the new
+controller (`storeAdminMenu.ts` and its test); Create trip, Create trip from
+the map and Orders stay Blade.
+
+**Tests.** `TripControllerTest.php` keeps the root controller's cases; its
+status cases now use the bound PUT route and assert the redirect, and new cases
+cover the list payload, filters with noise rows, pagination and `per_page`,
+refused callers, the per-permission matrix, notes, delete (orders, trucks, the
+map picker's spoofed DELETE, 404/405) and bulk delete with a DB-unchanged
+assertion on every refusal. The Blade list's permission-rendering case became
+Vitest gating cases. New: `Trips/Trips/Index.test.ts`,
+`StoreTripStatusDialog.test.ts` and `store-trips.spec.ts` (native confirms, the
+dialog, notes on change, the map picker's modal delete);
+`store-drivers.spec.ts` now expects the Inertia list and continues to the
+Blade create form.
+
+Current inventory: **43** backend Blade files, **22** direct literal consumers
+of `shop.backend.layouts.app`, **3** of `shop.backend.layouts.layout`.
+Registrations are unchanged at **1,048** under `/temp` and **436** under
+`/temp/admin`: six replace six (counted from the route files; `route:list`
+could not run). Blade editor: **8** fields in **8** views. Verification is
+recorded in the trip list section of
 [the reconciliation ledger](../store-backoffice-reconciliation-20261011.md).
 No deployment or production-data mutation is authorized.

@@ -8,7 +8,8 @@ use Spatie\Permission\Models\Permission;
  * took any account by id (so a staff member could reset an admin's password),
  * and the trip screens had no permission at all. The staff and driver screens' cases,
  * which saved unvalidated input, half-written, for any role and any member,
- * moved to tests/Feature/Store/Admin with their modules.
+ * moved to tests/Feature/Store/Admin with their modules, as did the trip
+ * lists' and their status and delete actions' (TripControllerTest).
  */
 describe('trip, driver and truck permissions', function () {
     test('a staff member needs the permission of each trip, driver and truck action', function (string $verb, string $uri, string $permission) {
@@ -22,13 +23,9 @@ describe('trip, driver and truck permissions', function () {
 
         expect($this->call($verb, $uri)->getStatusCode())->not->toBe(403);
     })->with([
-        ['GET', '/temp/admin/trips/index', 'view_all_trips'],
         ['GET', '/temp/admin/trips/create', 'add_trip'],
         ['POST', '/temp/admin/trips/store', 'add_trip'],
         ['POST', '/temp/admin/trips/update', 'edit_trip'],
-        ['POST', '/temp/admin/trips/update-trip-status', 'edit_trip'],
-        ['POST', '/temp/admin/trips/delete/1', 'delete_trip'],
-        ['POST', '/temp/admin/trips/bulk-trips-delete', 'delete_trip'],
     ]);
 
 });

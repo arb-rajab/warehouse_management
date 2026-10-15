@@ -68,6 +68,7 @@ use App\Http\Controllers\SupportTicketController;
 use App\Http\Controllers\Store\Admin\TaxController;
 use App\Http\Controllers\Store\Admin\DriverController;
 use App\Http\Controllers\Trip\TripController;
+use App\Http\Controllers\Store\Admin\TripController as StoreTripController;
 use App\Http\Controllers\Store\Admin\TruckController;
 use App\Http\Controllers\VisitController;
 use App\Http\Controllers\Store\Admin\ZoneController;
@@ -263,13 +264,21 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
         Route::post('/representatives/packages/set_package', 'assign')->name('rep.set-package');
     });
     Route::group(['prefix' => 'trips'], function () {
+        // The trip lists and their row actions (store-backoffice-migration.md §24).
+        Route::controller(StoreTripController::class)->group(function () {
+            Route::get('/index', 'index')->name('trips.index');
+            Route::get('/today-trips', 'today')->name('trips.today-trips');
+            Route::put('/{trip}/status', 'updateStatus')->name('trips.update-status');
+            Route::put('/{trip}/notes', 'updateNotes')->name('trips.update-notes');
+            Route::delete('/{trip}', 'destroy')->name('trips.destroy');
+            Route::post('/bulk-trips-delete', 'bulkDestroy')->name('trips.bulk-trip-delete');
+        });
+
         Route::controller(TripController::class)->group(function() {
-            Route::get('/index', 'getAllTrips')->name('trips.index')->middleware('permission:view_all_trips');
             Route::get('/orders', 'all_orders')->name('trips.orders')->middleware('permission:view_all_trips');
             Route::post('/orders/bulk-change-delivery-status', 'bulk_change_delivery_status')->name('trips.orders.bulk-change-delivery-status')->middleware('permission:edit_trip');
             Route::post('/orders/update-invoice-number', 'updateInvoiceNumber')->name('trips.orders.update_invoice_number')->middleware('permission:edit_trip');
             Route::post('/orders/update-order-status', 'updateOrderStatusToDelivered')->name('trips.orders.update_order_status_to_delivered')->middleware('permission:edit_trip');
-            Route::get('/today-trips', 'getTodayTrips')->name('trips.today-trips')->middleware('permission:view_all_trips');
             Route::get('/create', 'create')->name('trips.create')->middleware('permission:add_trip');
             Route::get('/create-from-map', 'create_from_map')->name('trips.create-from-map')->middleware('permission:add_trip');
             Route::post('/store', 'store')->name('trips.store')->middleware('permission:add_trip');
@@ -277,10 +286,6 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
             Route::get('/show/{id}', 'show')->name('trips.show')->middleware('permission:view_all_trips');
             Route::get('/edit/{id}', 'edit')->name('trips.edit')->middleware('permission:edit_trip');
             Route::post('/update', 'update')->name('trips.update')->middleware('permission:edit_trip');
-            Route::post('/delete/{id}', 'delete')->name('trips.destroy')->middleware('permission:delete_trip');
-            Route::post('/bulk-trips-delete', 'bulk_trip_delete')->name('trips.bulk-trip-delete')->middleware('permission:delete_trip');
-            Route::post('/update-trip-status', 'update_trip_status')->name('trips.update-status')->middleware('permission:edit_trip');
-            Route::post('/update-trip-notes', 'update_trip_notes')->name('trips.update-notes')->middleware('permission:edit_trip');
             Route::post('/update-checkpoint-notes', 'update_checkpoint_notes')->name('checkpoints.update-notes')->middleware('permission:edit_trip');
             Route::post('/update-checkpoint-status', 'update_checkpoint_status')->name('checkpoints.update-status')->middleware('permission:edit_trip');
             Route::get('/print-cmr/{id}', 'print_cmr')->name('checkpoints.print-cmr')->middleware('permission:view_all_trips');

@@ -1655,25 +1655,34 @@ $.fn.toggleAttr = function (attr, attr1, attr2) {
         // A link with `data-method="post"` submits a POST form to its href
         // with the CSRF token. State-changing store routes accept POST only,
         // because a GET can be fired by any page the signed-in user visits.
+        // `data-method="delete"` does the same with `_method=DELETE`, for a
+        // retained Blade link to a route moved to Inertia (`trips.destroy`).
         postLink: function () {
             $(document)
                 .off("click.aizPostLink")
-                .on("click.aizPostLink", 'a[data-method="post"]', function (e) {
+                .on("click.aizPostLink", 'a[data-method="post"], a[data-method="delete"]', function (e) {
                     var url = $(this).attr("href");
                     if (!url || url === "#" || url.indexOf("javascript:") === 0) {
                         return;
                     }
                     e.preventDefault();
-                    $("<form>", { method: "POST", action: url })
-                        .append(
+                    var form = $("<form>", { method: "POST", action: url }).append(
+                        $("<input>", {
+                            type: "hidden",
+                            name: "_token",
+                            value: AIZ.data.csrf,
+                        })
+                    );
+                    if ($(this).attr("data-method") === "delete") {
+                        form.append(
                             $("<input>", {
                                 type: "hidden",
-                                name: "_token",
-                                value: AIZ.data.csrf,
+                                name: "_method",
+                                value: "DELETE",
                             })
-                        )
-                        .appendTo("body")
-                        .trigger("submit");
+                        );
+                    }
+                    form.appendTo("body").trigger("submit");
                 });
         },
         bytesToSize: function (bytes) {

@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { loginAsStoreAdmin } from './support/auth';
 
-/** Driver navigation and native confirmation alongside the remaining Blade pages. */
+/** Driver navigation and native confirmation alongside the trip list (Inertia) and the remaining Blade trip form. */
 test('drivers navigate between Inertia and Blade and confirm deletion', async ({
     page,
 }) => {
@@ -68,8 +68,18 @@ test('drivers navigate between Inertia and Blade and confirm deletion', async ({
     await expect(page.locator('#app')).toHaveCount(1);
     await menu.getByRole('button', { name: 'Trips', exact: true }).click();
     await menu.getByRole('link', { name: 'All trips', exact: true }).click();
+    await expect(page).toHaveURL(/\/temp\/admin\/trips\/index$/);
     await expect(
-        page.getByRole('heading', { name: 'All Trips', exact: true }),
+        page.getByRole('heading', { name: 'All trips', exact: true }),
+    ).toBeVisible();
+    await expect(page.locator('#app')).toHaveCount(1);
+    await page
+        .getByRole('main')
+        .getByRole('link', { name: 'Create trip', exact: true })
+        .click();
+    await expect(page).toHaveURL(/\/temp\/admin\/trips\/create$/);
+    await expect(
+        page.getByRole('heading', { name: 'Create Trip', exact: true }),
     ).toBeVisible();
     await expect(page.locator('#app')).toHaveCount(0);
     await page.goto('/temp/admin/trips/drivers/index');
