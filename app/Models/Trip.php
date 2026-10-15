@@ -43,7 +43,8 @@ class Trip extends Model
         return $this->belongsTo(StoreUser::class, 'driver_id');
     }
 
-    public function truck()
+    /** @return BelongsTo<Truck, $this> */
+    public function truck(): BelongsTo
     {
         return $this->belongsTo(Truck::class, 'truck_id');
     }

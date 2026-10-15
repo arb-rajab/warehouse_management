@@ -51,7 +51,7 @@ function row(page: Page, name: string): Locator {
     return page.getByRole('row', { name: new RegExp(`${name}\\b`) });
 }
 
-test('product list switches, native single and bulk delete confirmations, and full-load hops into the retained Blade edit form and seller list', async ({
+test('product list switches, native single and bulk delete confirmations, an Inertia visit into the edit form and a full-load hop into the retained Blade seller list', async ({
     page,
 }) => {
     seedProducts();
@@ -148,13 +148,15 @@ test('product list switches, native single and bulk delete confirmations, and fu
         /\/temp\/admin\/products\/admin\/\d+\/edit/.test(request.url()),
     );
     await kept.getByRole('link', { name: 'Edit', exact: true }).click();
-    expect((await editRequest).headers()['x-inertia']).toBeUndefined();
+    // The physical product edit form is an Inertia page now, so the link
+    // visits it without a full load.
+    expect((await editRequest).headers()['x-inertia']).toBe('true');
     await expect(page).toHaveURL(
         /\/temp\/admin\/products\/admin\/\d+\/edit\?lang=en$/,
     );
-    await expect(page.locator('#app')).toHaveCount(0);
+    await expect(page.locator('#app')).toHaveCount(1);
     await expect(
-        page.getByRole('heading', { name: 'Edit Product' }),
+        page.getByRole('heading', { name: 'Edit product', exact: true }),
     ).toBeVisible();
 
     await page.goto('/temp/admin/products/all?search=Browser');

@@ -244,17 +244,17 @@ class TripController extends Controller implements HasMiddleware
      */
     private function formOptions(): array
     {
-        $orders = Order::query()->select(['id', 'code', 'by_rep', 'user_id', 'for_customer'])
+        $orders = array_values(Order::query()->select(['id', 'code', 'by_rep', 'user_id', 'for_customer'])
             ->with(['user:id,name', 'rep:id,name'])
             ->where('delivery_status', 'on_delivery')
             ->orderByDesc('code')->orderByDesc('id')->get()
             ->map(fn (Order $order) => ['id' => $order->id, 'code' => (string) $order->code, 'customer' => $order->customer?->name])
-            ->values()->all();
-        $customers = StoreUser::query()->select(['id', 'name'])
+            ->all());
+        $customers = array_values(StoreUser::query()->select(['id', 'name'])
             ->where('is_rep', false)
             ->orderBy('name')->orderBy('id')->get()
             ->map(fn (StoreUser $user) => ['id' => $user->id, 'name' => (string) $user->name])
-            ->values()->all();
+            ->all());
 
         return ['orders' => $orders, 'customers' => $customers];
     }
@@ -283,11 +283,11 @@ class TripController extends Controller implements HasMiddleware
                 continue;
             }
             if ($type === Order::class) {
-                $order = Order::query()->findOrFail($row['checkpoint_related_id']);
+                $order = Order::query()->findOrFail((int) $row['checkpoint_related_id']);
                 $address = json_decode($order->shipping_address);
                 $coordinates = $this->userService->getUserLongLat($order->customer, $order);
             } else {
-                $customer = StoreUser::query()->findOrFail($row['checkpoint_related_id']);
+                $customer = StoreUser::query()->findOrFail((int) $row['checkpoint_related_id']);
                 $address = formateAddressArray($customer->addresses()->where('set_default', true)->first());
                 $coordinates = $this->userService->getUserLongLat($customer);
             }
