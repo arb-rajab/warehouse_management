@@ -2656,7 +2656,7 @@ No deployment or production-data mutation is authorized.
 The trip orders screen now uses `Store/Admin/Trips/Orders/Index`
 (`StoreAdminLayout`, `DataTable`, `Pagination`). Work is on
 `ccr-23c5d0cb-ziq8z5`, from `develop` at `78c9c3a` (the PR #413 merge). The
-owner authorized this session's commits, PR (number recorded once opened), its merge into
+owner authorized this session's commits, PR (#419), its merge into
 `develop` and `[skip ci]` on all of them, because the checks run locally. So
 no PR CI, no PR or merge SAST and no `develop` deploy ran. Unlike #404 and
 #406, this session had PHP 8.5.11, `vendor/`, the dev tools, generated
