@@ -7,7 +7,8 @@ One classifier for two callers: the `plan` job in .github/workflows/tests.yml
 touches.
 
 Groups:
-  php            Pint, PHPStan, Pest, Pest (MySQL migrations)
+  php            Pint, PHPStan, Pest
+  mysql          Pest (MySQL migrations)
   js             Wayfinder, ESLint, Prettier, vue-tsc, Vitest
   e2e            Playwright
   audit          composer audit / npm audit
@@ -28,6 +29,9 @@ regression through):
     tests/Fixtures/ is not in that list: playwright.config.ts seeds from it.
   - Vitest files (resources/js/**/*.test.ts) are never bundled, so they need
     `php` and `js` but not `e2e`.
+  - The MySQL job runs only the migration/schema tests, so it is needed only
+    when something that can change them does: database/, tests/Feature/Database/,
+    config/database.php and composer.json/composer.lock.
   - Everything else needs `php`, `js` and `e2e`; dependency manifests also need
     `audit`.
 
@@ -42,7 +46,7 @@ the files API is more likely a fault than a change touching nothing.
 import sys
 from collections.abc import Iterable
 
-GROUPS = ('php', 'js', 'e2e', 'audit', 'deploy-script')
+GROUPS = ('php', 'mysql', 'js', 'e2e', 'audit', 'deploy-script')
 
 NO_CI_PREFIXES = ('.ai/', '.claude/')
 
@@ -55,6 +59,10 @@ PHP_ONLY_FILES = frozenset({
     'phpstan.neon',
     'pint.json',
 })
+
+MYSQL_PREFIXES = ('database/', 'tests/Feature/Database/')
+
+MYSQL_FILES = frozenset({'config/database.php', 'composer.json', 'composer.lock'})
 
 DEPENDENCY_FILES = frozenset({
     'composer.json',
@@ -91,6 +99,9 @@ def plan(paths: Iterable[str]) -> dict[str, bool]:
             return dict.fromkeys(GROUPS, True)
 
         needed['php'] = True
+
+        if path.startswith(MYSQL_PREFIXES) or path in MYSQL_FILES:
+            needed['mysql'] = True
 
         if path in DEPENDENCY_FILES:
             needed['audit'] = True
