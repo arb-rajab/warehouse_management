@@ -14,7 +14,7 @@ paths:
 | Vitest | tests related to changed `resources/js` files | full suite, when `js` is planned |
 | Pint | changed PHP files (needs the dev tools) | whole repo, when `php` is planned |
 | PHPStan, Pest | full, `--parallel` (needs the dev tools) | full, `--parallel`, when `php` is planned |
-| Pest on MySQL, Playwright, dependency audit, deploy-script test | never | when planned |
+| Pest on MySQL (only for schema-related paths), Playwright, dependency audit, deploy-script test | never | when planned |
 
 CI is the gate; the sandbox run exists to catch the common failure before it
 costs a CI round. `pre_push_check.py --full` runs the whole-repo sequence. The
@@ -33,6 +33,14 @@ before planning). Its docstring is the rule list. The constraints behind it:
   under `resources/js`. A "frontend-only skips Pest" rule would be wrong.
 - `tests/Fixtures/` reaches the browser (`playwright.config.ts` seeds from it),
   so it is not a PHP-test-only path.
+- The MySQL job runs only the migration/schema tests, so it has its own `mysql`
+  group (`database/`, `tests/Feature/Database/`, `config/database.php`,
+  composer manifests) instead of riding on `php`.
+- Playwright (3 shards) and Vitest (2 shards) run as matrices. Each runs on its
+  own runner, so the fixed port and e2e SQLite files are not shared. A
+  same-named aggregator job (`Playwright E2E`, `Vitest`) needs the shards, so
+  the check names stay stable; add a shard by editing the matrix and the
+  `--shard=i/N` total together.
 - Any `.github/` change runs everything, so a workflow change is exercised by
   the run that introduces it.
 - A release PR whose merged tree equals a head the suite already passed on

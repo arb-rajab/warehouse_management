@@ -73,7 +73,13 @@ class PlanTest(unittest.TestCase):
 
     def test_dependency_manifests_need_the_audit(self):
         self.assertEqual(_needed('package-lock.json'), {'php', 'js', 'e2e', 'audit'})
-        self.assertEqual(_needed('composer.lock'), {'php', 'js', 'e2e', 'audit'})
+        self.assertEqual(_needed('composer.lock'), {'php', 'mysql', 'js', 'e2e', 'audit'})
+
+    def test_mysql_runs_only_for_schema_related_changes(self):
+        self.assertEqual(_needed('database/migrations/2026_10_15_000000_add_x.php'), {'php', 'mysql', 'js', 'e2e'})
+        self.assertEqual(_needed('tests/Feature/Database/SchemaIdentifierLengthTest.php'), {'php', 'mysql'})
+        self.assertEqual(_needed('config/database.php'), {'php', 'mysql', 'js', 'e2e'})
+        self.assertNotIn('mysql', _needed('app/Models/Pallet.php', 'resources/js/app.ts', 'tests/Feature/FooTest.php'))
 
     def test_groups_accumulate_across_files(self):
         self.assertEqual(_needed('tests/Feature/FooTest.php', 'resources/js/app.ts'), {'php', 'js', 'e2e'})
@@ -86,7 +92,7 @@ class CliTest(unittest.TestCase):
     def test_prints_github_output_lines(self):
         self.assertEqual(
             _cli([], 'tests/Feature/FooTest.php\n'),
-            'php=true\njs=false\ne2e=false\naudit=false\ndeploy-script=false\n',
+            'php=true\nmysql=false\njs=false\ne2e=false\naudit=false\ndeploy-script=false\n',
         )
 
     def test_empty_input_fails_open(self):
