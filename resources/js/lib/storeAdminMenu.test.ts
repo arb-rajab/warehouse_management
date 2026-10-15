@@ -55,6 +55,7 @@ import { index as staffIndex } from '@/actions/App/Http/Controllers/Store/Admin/
 import { index as subscribersIndex } from '@/actions/App/Http/Controllers/Store/Admin/SubscriberController';
 import { index as supportTicketsIndex } from '@/actions/App/Http/Controllers/Store/Admin/SupportTicketController';
 import {
+    create as tripsCreate,
     index as tripsIndex,
     today as todayTrips,
 } from '@/actions/App/Http/Controllers/Store/Admin/TripController';
@@ -187,6 +188,7 @@ describe('storeAdminMenu', () => {
                 trucksCreate.url(),
                 tripsIndex.url(),
                 todayTrips.url(),
+                tripsCreate.url(),
                 all_orders['/temp/admin/all_orders'].url(),
                 all_orders['/temp/admin/seller_orders'].url(),
                 all_orders['/temp/admin/orders_by_pickup_point'].url(),

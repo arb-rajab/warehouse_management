@@ -6,17 +6,15 @@ import { edit as driverEdit } from '@/actions/App/Http/Controllers/Store/Admin/D
 import { shippingCreate } from '@/actions/App/Http/Controllers/Store/Admin/OrderEntryController';
 import {
     bulkDestroy,
+    create as tripsCreate,
     destroy,
+    edit as tripsEdit,
     index as allTrips,
     today as todayTrips,
     updateNotes,
 } from '@/actions/App/Http/Controllers/Store/Admin/TripController';
 import { edit as truckEdit } from '@/actions/App/Http/Controllers/Store/Admin/TruckController';
-import {
-    create as tripsCreate,
-    edit as tripsEdit,
-    show as tripsShow,
-} from '@/actions/App/Http/Controllers/Trip/TripController';
+import { show as tripsShow } from '@/actions/App/Http/Controllers/Trip/TripController';
 import AddResourceLink from '@/components/AddResourceLink.vue';
 import DataTable from '@/components/DataTable.vue';
 import FieldError from '@/components/FieldError.vue';
@@ -142,7 +140,6 @@ function onPerPageChange(perPage: number): void {
                 <AddResourceLink
                     v-if="access.can('add_trip')"
                     :href="tripsCreate()"
-                    :inertia="false"
                     :label="t('store.trips.index.createTrip')"
                 />
             </div>
@@ -370,7 +367,6 @@ function onPerPageChange(perPage: number): void {
                         <TableActionLink
                             v-if="access.can('edit_trip')"
                             :href="tripsEdit(trip)"
-                            :inertia="false"
                             ><Pencil class="h-3.5 w-3.5" />{{
                                 t('store.trips.index.edit')
                             }}</TableActionLink

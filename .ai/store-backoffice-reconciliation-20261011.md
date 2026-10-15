@@ -2969,3 +2969,145 @@ argument types are not checked.
 Required before relying on it: the full `pre_push_check.py` gate with PHP 8.5,
 the dev tools, generated Wayfinder files and `node_modules`, plus the two
 browser specs above.
+
+## Trip create and edit forms migration (2026-10-15)
+
+Work on `ccr-0ba426e7-qihjvq` from `develop` at `1f68656` (the PR #404 merge);
+the branch had no commits beyond that base. The owner authorized a commit,
+push, PR (#406) and merge into `develop`, each with `[skip ci]`, because the
+checks run locally. **No PR CI, no PR or merge SAST and no `develop` deploy ran
+for this PR or its merge.** No other branch, deployment or production data was
+touched. The guide's §25 records the result.
+
+### #404 checks carried over
+
+The session was asked to first run the checks this ledger lists as not run for
+#404 (`TripControllerTest`, `LegacyAdminPermissionsTest`,
+`LegacyStoreStateChangingRoutesTest`, Pint, PHPStan, `wayfinder:generate`,
+`route:list`, `store-trips.spec.ts`, `store-drivers.spec.ts`) and fix what
+they exposed in a separate commit. **None could run:** the session had PHP
+8.3.6 and no `vendor/`; `wait_for_setup.py` exited 0 with "frontend (vitest,
+vue-tsc, prettier, eslint): ready. App (artisan, migrations): unavailable.
+Vite build … not built" and `install_php.sh --check` exited 1. Nothing was
+exposed, so there is no separate fix commit; the #404 PHP and browser checks
+remain outstanding, now together with this section's.
+
+### Prerequisites and audit evidence (develop line numbers)
+
+- **Root handlers** (`app/Http/Controllers/Trip/TripController.php`).
+  `create` (`:62-67`, `$trip = null` for the shared script), `edit`
+  (`:137-142`, `findOrFail($id)`), `store` (`:117-135`: one transaction,
+  `lockTruckForTrip()`, departure checkpoint first, `createTrip($request)`,
+  shortest-path sort, driver notified, `trips.show`), `update` (`:144-190`:
+  trip locked, closed trips not reserved, stored rows kept, others deleted by
+  query, new rows created, both trucks released only when no other open trip
+  holds them, driver notified when changed, `trips.show`) and
+  `prepareCheckpointRows` (`:194-224`). Shared with the map writer
+  `store_from_map` (`:81-115`): `createTrip` (`:330-342`),
+  `formatCheckpointsArray` (`:344-356`), `hasValidCoordinates` (`:389-394`),
+  `sortBasedOnShortestPath` (`:396-429`), `applyDefaultFirstCheckpoint`
+  (`:431-446`).
+- **Requests.** `UpdateTripRequest` 404'd a missing `id` in
+  `prepareForValidation` (`:16`) and required `id` (`:26`);
+  `ValidatesStoreTrip::validateCheckpointReferences` checked each reference
+  with a query in an after hook (`:47`).
+- **Routes** (`routes/shop-admin.php`): `trips.create` `:282`, `trips.store`
+  `:284`, `trips.edit` `:287` (`/edit/{id}`), `trips.update` `:288` (POST
+  `/update`); the lookups `:296-297`.
+- **Views.** `trips/create.blade.php` and `trips/edit.blade.php` (date,
+  driver and truck from `trips.available-vehicles`, notes, checkpoint rows,
+  the Leaflet map from `inc/map-scripts`); `components/checkpoint-template`
+  and `components/checkpoint` (the order and customer row selects, customer
+  notes `required` in markup only); `inc/scripts.blade.php` (SortableJS from
+  jsDelivr `@latest`, the vehicle lookup).
+- **Consumers.** `create.blade.php`/`edit.blade.php`: only the root
+  `create`/`edit`. The two checkpoint components: only those forms.
+  `inc/scripts.blade.php`: those forms and `create-from-map.blade.php:173`.
+  `inc/map-scripts.blade.php`: only those forms (and
+  `storeTripBladeMap.test.ts`). `trips.store`/`trips.update`: only those
+  forms. `trips.create`: `admin_sidenav.blade.php:723`, the menu and the
+  Inertia list; `trips.edit`: the Inertia list.
+- **Tests treating the forms as Blade.** `TripControllerTest` (update via
+  POST with `id`, the Blade edit view), `LegacyAdminOwnershipTest:26-28`,
+  `Index.test.ts` (full-page links), `store-drivers.spec.ts` (Blade create
+  heading).
+
+### Completed scope
+
+- **Backend.** `Store\Admin\TripController` gains `create`, `store`, `edit`,
+  `update` (`add_trip`, `edit_trip`); `Controllers\Concerns\WritesTripCheckpoints`
+  (the moved shared steps, used by both controllers);
+  `Resources\Store\TripFormResource`; `UpdateTripRequest` takes the bound
+  trip; `ValidatesStoreTrip` validates each row's reference with
+  `Rule::exists`. Root loses `create`, `store`, `edit`, `update`,
+  `prepareCheckpointRows`, the moved helpers and two imports.
+  `ReservesTripTrucks` is unchanged apart from its docblock.
+- **Frontend.** `Store/Admin/Trips/Trips/Create.vue`, `Edit.vue`,
+  `StoreTripFormFields.vue`, six types and a fixture, 34 `store.trips.*` keys
+  in each of English and Arabic, the list's links and the menu's Create trip
+  entry as Inertia visits.
+- **Routes.** Four registrations replace four; names kept.
+- **Removed (`git rm`).** `trips/create.blade.php`, `trips/edit.blade.php`,
+  `trips/components/checkpoint-template.blade.php`,
+  `trips/components/checkpoint.blade.php`; `tests/Feature/LegacyAdminOwnershipTest.php`
+  (its three rows moved to `TripControllerTest`).
+- **Unchanged.** Permission names and grants, departure ID 9, the truck lock
+  and release rules, the vehicle and coordinate lookups and the driver API,
+  the checkpoints page, the map picker and its writer, `inc/scripts`,
+  `inc/map-popups`, `inc/map-scripts`, trip orders, CMR, CSP and `blade_csp`,
+  shells and `HandleStoreBladePages`. No dependency or lockfile change.
+
+### Verification and limits
+
+The session had PHP 8.3.6, no `vendor/`, and installed `node_modules`
+(above). Laravel Boost failed to connect. As for #404, the session wrote
+throwaway stand-ins for every imported `@/actions/...` module and
+`@/wayfinder` into the gitignored `resources/js/actions` and
+`resources/js/wayfinder` (fake `/temp/stub/...` URLs, actions typed `any`) and
+deleted them afterwards. They let the code and tests run, but URL literals
+cannot match and action argument types are not checked.
+
+- **Ran.**
+  - `php -l` (PHP 8.3.6) on every changed or new PHP file: no syntax errors.
+    Syntax only, not PHP 8.5 behaviour.
+  - Vitest, the four trip form and list files (`Create.test.ts`,
+    `Edit.test.ts`, `Index.test.ts`, `StoreTripFormFields.test.ts`): 35 tests
+    passed; `storeAdminMenu.test.ts` fails only its literal `/temp/admin/...`
+    URL assertion, as on `develop`.
+  - Vitest, the full suite, on this branch and on a worktree of `develop` at
+    `1f68656` with the same stand-ins: `develop` 2,748 tests, 77 failed; this
+    branch 2,766 tests, 77 failed, the identical 77 (compared by file and test
+    name: assertions on real `/temp/admin/...` URLs and stand-in action
+    shapes, in the menu, layout and other existing tests). This stand-in set
+    differs from #404's, so its 65 is not comparable.
+  - `npm run types:check` (vue-tsc): 0 errors, with `any`-typed actions.
+  - ESLint (repository config) and Prettier (the locked version, with its
+    plugins) on every changed frontend and spec file: clean.
+  - Both locale files round-trip through the repository's 4-space JSON
+    format; `git diff --check`: clean.
+  - `python3 .claude/scripts/pre_push_check.py`, with the stand-ins:
+    exit 1. ESLint (whole repository), Prettier (`resources/`) and vue-tsc
+    passed; Vitest failed with the same 77 stand-in failures (2,766 tests,
+    2,689 passed), so the gate stopped there. Pint, PHPStan and Pest were not
+    reached and could not have run (no `vendor/`).
+- **Not run.** Pest (`TripControllerTest`, `LegacyShopRouteAccessTest`,
+  `LegacyAdminPermissionsTest`, `LegacyStoreStateChangingRoutesTest`,
+  `StoreBackOfficeShellTest`, `ControllerRedirectsTest` or the suite), Pint,
+  PHPStan (the new trait, resource and controller code is analysed at level
+  7; the moved helpers were in an excluded file until now),
+  `wayfinder:generate`, `npm run build`, `route:list`, Playwright
+  (`store-trips.spec.ts`, `store-drivers.spec.ts`) and MySQL. Every PHP test
+  and both browser specs written or changed here, and #404's, are unexecuted.
+- **Known limits.** The update writer's driver comparison is the legacy one:
+  the posted `driver_id` is a string, so the driver is notified on every
+  save that keeps a driver (unchanged behaviour). The customer choice list is
+  every non-representative store user, as the Blade forms loaded it, sent
+  once with only id and name.
+- **Inventory** (from the files, not `route:list`). **39** backend Blade files;
+  **20**/**3** literal consumers of the app/layout shells; **1,048** `/temp` and
+  **436** `/temp/admin` registrations (four replace four); Blade editor: **8**
+  fields in **8** views.
+
+Required before relying on it: the full `pre_push_check.py` gate with PHP 8.5,
+the dev tools, generated Wayfinder files and `node_modules`, plus the two
+browser specs above, for this PR and #404.
