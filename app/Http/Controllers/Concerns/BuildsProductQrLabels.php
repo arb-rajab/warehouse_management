@@ -62,6 +62,9 @@ trait BuildsProductQrLabels
 
     private const int PRODUCT_LABEL_NAME_FONT_SIZE = 28;
 
+    /** The name never takes more lines than this, however tall the label may be. */
+    private const int PRODUCT_LABEL_NAME_MAX_LINES = 2;
+
     /**
      * The bar/space module widths of $data as a Code 128 subset B symbol:
      * start B, one symbol per character, the mod-103 checksum, then stop.
@@ -144,7 +147,7 @@ trait BuildsProductQrLabels
         return $this->productLabelImage(
             $product,
             (string) $product->id,
-            __('messages.qr_label_product_id', ['id' => $product->id]),
+            (string) $product->id,
             $width,
             $height,
         );
@@ -191,12 +194,16 @@ trait BuildsProductQrLabels
         $idY = $barcodeBottom + 12 + (int) round($idFontSize * 0.8);
         $idLines = $this->clampLinesToHeight($this->wrapLabelText($caption, $textMaxWidth, $idFontSize), $idY, $idLineHeight, $maxTextY);
         $idMarkup = $this->textLinesMarkup($idLines, $centerX, $idY, $idLineHeight, $idFontSize, '#111111', 'ltr', bold: true);
-        $contentBottom = $idLines !== [] ? $idY : $barcodeBottom;
+        // The id block's bottom is its *last* line's baseline: a long value
+        // (a stored barcode) wraps onto several lines, and anchoring the name
+        // to the first line only would draw the name over the rest.
+        $contentBottom = $idLines !== [] ? $idY + (count($idLines) - 1) * $idLineHeight : $barcodeBottom;
 
         $nameFontSize = self::PRODUCT_LABEL_NAME_FONT_SIZE;
         $nameLineHeight = (int) round($nameFontSize * 1.2);
         $nameY = $contentBottom + ($idLines !== [] ? 16 : 12) + (int) round($nameFontSize * 0.8);
         $nameLines = $this->wrapLabelText($this->productLabelName($product), $textMaxWidth, $nameFontSize);
+        $nameLines = $this->limitLabelLines($nameLines, self::PRODUCT_LABEL_NAME_MAX_LINES);
         $nameLines = $this->clampLinesToHeight($nameLines, $nameY, $nameLineHeight, $maxTextY);
         $nameDirection = app()->getLocale() === 'ar' ? 'rtl' : 'ltr';
         $nameMarkup = $this->textLinesMarkup($nameLines, $centerX, $nameY, $nameLineHeight, $nameFontSize, '#111111', $nameDirection, bold: true);

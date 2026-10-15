@@ -1382,7 +1382,9 @@ test('an authenticated admin can export a Code 128 barcode label for a product, 
         ->and($svg)->not->toContain('<image');
     expect($svg)->toContain('Widgets');
     expect($svg)->not->toContain('ودجات');
-    expect($svg)->toContain("ID: {$product->id}");
+    expect($svg)->toContain(">{$product->id}</text>")
+        ->and($svg)->not->toContain('ID:')
+        ->and($svg)->not->toContain('المعرف');
     // One <text> for the id, one for the (short, unwrapped) name.
     expect(substr_count($svg, '<text'))->toBe(2);
 });
@@ -1417,7 +1419,7 @@ test('a product barcode label draws the id and name in enlarged type', function 
 
     $svg = $this->get("/admin/products/{$product->id}/export-qr")->getContent();
 
-    expect($svg)->toMatch('/<text[^>]*font-size="34"[^>]*>ID: '.$product->id.'<\/text>/')
+    expect($svg)->toMatch('/<text[^>]*font-size="34"[^>]*>'.$product->id.'<\/text>/')
         ->and($svg)->toMatch('/<text[^>]*font-size="28"[^>]*>Widgets<\/text>/');
 });
 
@@ -1445,11 +1447,47 @@ test('a product with a long name has its barcode label text wrapped, up to the c
     expect($svg)->toContain('…');
     // The id is drawn and budget-clamped before the name, so truncating a
     // long name never costs the id its own line.
-    expect($svg)->toContain("ID: {$product->id}");
+    expect($svg)->toContain(">{$product->id}</text>");
 
     preg_match('/<svg[^>]*height="(\d+)"/', $svg, $matches);
     expect((int) $matches[1])->toBeLessThanOrEqual(380);
 });
+
+test('a product barcode label has no id label word in either locale', function (string $locale) {
+    actingAsAdmin();
+
+    $product = Product::factory()->create(['id' => 7, 'name' => 'Widgets', 'ar_name' => 'ودجات']);
+
+    $svg = $this->withSession(['locale' => $locale])->get("/admin/products/{$product->id}/export-qr")->getContent();
+
+    expect($svg)->toContain('>7</text>')
+        ->and($svg)->not->toContain('ID:')
+        ->and($svg)->not->toContain('المعرف');
+})->with(['en', 'ar']);
+
+test('a very long product name is capped at two lines and never overlaps the id', function (string $name) {
+    actingAsAdmin();
+    Setting::factory()->create(['qr_code_width' => 280, 'qr_code_height' => 900]);
+
+    $product = Product::factory()->create(['name' => $name, 'ar_name' => '']);
+
+    $svg = $this->get("/admin/products/{$product->id}/export-qr")->getContent();
+
+    preg_match_all('/<text[^>]*y="(\d+)"[^>]*font-size="(\d+)"[^>]*>/', $svg, $matches, PREG_SET_ORDER);
+    $idY = (int) $matches[0][1];
+    $nameYs = array_map(fn (array $m): int => (int) $m[1], array_slice($matches, 1));
+
+    expect($matches[0][2])->toBe('34')
+        ->and($nameYs)->toHaveCount(2)
+        ->and($svg)->toContain('…')
+        // The first name baseline sits clear of the id's baseline by more
+        // than the name's ascent, so the two blocks cannot collide.
+        ->and($nameYs[0] - $idY)->toBeGreaterThan(28);
+})->with([
+    'with spaces' => [str_repeat('Widget Component ', 30)],
+    'no spaces' => [str_repeat('W', 300)],
+    'arabic' => [str_repeat('مكون ودجات ', 30)],
+]);
 
 test('a multi-digit product id encodes to a longer barcode', function () {
     actingAsAdmin();
