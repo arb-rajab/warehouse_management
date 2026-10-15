@@ -67,6 +67,7 @@ import type {
     StoreOrder,
     StoreTrip,
     StoreTripForm,
+    StoreTripOrder,
 } from '@/types/store';
 
 import type {
@@ -1020,6 +1021,47 @@ export function storeTrip(overrides: Partial<StoreTrip> = {}): StoreTrip {
         notes: 'Ring at the back',
         driver: { id: 31, name: 'Sam Driver' },
         truck: { id: 11, name: 'Cargo truck' },
+        ...overrides,
+    };
+}
+
+/** A trip orders row: a representative's order on a started trip. */
+export function storeTripOrder(
+    overrides: Partial<StoreTripOrder> = {},
+): StoreTripOrder {
+    return {
+        id: 77,
+        code: '20261015-0001',
+        is_new: true,
+        details_count: 3,
+        otajer_order_id: 'OT-9',
+        order_from: 'app',
+        wms_status: 'picked',
+        customer: {
+            id: 21,
+            name: 'Alma Customer',
+            accounting_id: 'ACC-7',
+            company_name: 'Alma BV',
+        },
+        by_rep: true,
+        representative: { id: 22, name: 'Rita Rep' },
+        address: 'Main street 5',
+        country: 'Netherlands',
+        phone: '0611111111',
+        invoice_number: 'INV-1',
+        customer_notes: 'Ring twice',
+        manager_notes: 'Handle with care',
+        amount: '€42.50',
+        delivery_status: 'on_delivery',
+        delivery_date: '2026-10-16',
+        editable: true,
+        checkpoint: { id: 501, photos: [601] },
+        trip: {
+            id: 41,
+            code: 'TRIP-LAST',
+            driver: { id: 31, name: 'Sam Driver' },
+            truck: { id: 11, name: 'Cargo truck' },
+        },
         ...overrides,
     };
 }

@@ -19,6 +19,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
@@ -136,6 +137,9 @@ class OrderController extends Controller implements HasMiddleware
                 $this->deleteOrder($order);
             }
         });
+        if ($request->validated('return_to') === 'trip_orders') {
+            return redirect()->route('trips.orders', Arr::except($request->query(), ['return_to']));
+        }
 
         return $this->redirectPreservingQuery('all_orders.index', $request);
     }

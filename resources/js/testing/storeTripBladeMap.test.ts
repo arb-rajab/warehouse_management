@@ -241,6 +241,52 @@ describe('the retained Blade trip maps', () => {
         expect(content.querySelector('button')?.dataset.orderId).toBe('42');
     });
 
+    it("marks the popup's order delivered with a spoofed PUT to its bound route and reloads", async () => {
+        const { context } = mapContext();
+        const fetch = vi.fn().mockResolvedValue({ ok: true });
+        const location = { reload: vi.fn() };
+        const alert = vi.fn();
+        document.head.innerHTML = '<meta name="csrf-token" content="token">';
+        const script = scriptFrom('create-from-map.blade.php')
+            .replace('@json($long_lat_array)', '[]')
+            .replace(
+                '{{ route("trips.orders.update_order_status_to_delivered", ["order" => "__order__"]) }}',
+                '/temp/admin/trips/orders/__order__/delivered',
+            );
+        runInNewContext(script, { ...context, fetch, location, alert });
+        const onClick = context.document.addEventListener.mock.calls.find(
+            ([event]) => event === 'click',
+        )?.[1] as (event: { target: HTMLElement }) => void;
+        const button = document.createElement('button');
+        button.className = 'mark-delivered';
+        button.setAttribute('data-order-id', '42');
+
+        onClick({ target: button });
+        expect(fetch).toHaveBeenCalledExactlyOnceWith(
+            '/temp/admin/trips/orders/42/delivered',
+            {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': 'token',
+                },
+                body: JSON.stringify({ _method: 'PUT', return_to: 'map' }),
+            },
+        );
+        await vi.waitFor(() => expect(location.reload).toHaveBeenCalledOnce());
+        expect(alert).not.toHaveBeenCalled();
+
+        fetch.mockResolvedValue({ ok: false });
+        onClick({ target: button });
+        await vi.waitFor(() =>
+            expect(alert).toHaveBeenCalledWith(
+                'Failed to mark order as delivered.',
+            ),
+        );
+        expect(location.reload).toHaveBeenCalledOnce();
+        document.head.innerHTML = '';
+    });
+
     it('fetches every initial checkpoint and accepts zero-valued lookup coordinates', async () => {
         const { context, leaflet, popup } = mapContext();
         document.body.innerHTML +=
