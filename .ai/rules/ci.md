@@ -36,11 +36,12 @@ before planning). Its docstring is the rule list. The constraints behind it:
 - The MySQL job runs only the migration/schema tests, so it has its own `mysql`
   group (`database/`, `tests/Feature/Database/`, `config/database.php`,
   composer manifests) instead of riding on `php`.
-- Playwright (3 shards) and Vitest (2 shards) run as matrices. Each runs on its
-  own runner, so the fixed port and e2e SQLite files are not shared. A
-  same-named aggregator job (`Playwright E2E`, `Vitest`) needs the shards, so
-  the check names stay stable; add a shard by editing the matrix and the
-  `--shard=i/N` total together.
+- Billing rounds every job up to a whole minute, and sharding repeats setup per
+  shard, so it costs more minutes than it saves: Playwright stays one job and
+  Vitest runs inside `js-checks` (Wayfinder types, ESLint, vue-tsc, Vitest in
+  one job, each step reporting even if an earlier one failed). Prettier and Pint
+  stay separate cheap gates ahead of Pest and Playwright. Prefer more workers on
+  one runner to more jobs.
 - Any `.github/` change runs everything, so a workflow change is exercised by
   the run that introduces it.
 - A release PR whose merged tree equals a head the suite already passed on
