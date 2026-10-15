@@ -9,6 +9,7 @@ import {
     arrowTo,
     colorsOf,
     documentViolations,
+    expectBold,
     expectStrictPolicy,
     focusedToolbarItem,
     php,
@@ -226,7 +227,7 @@ test('a ticket is answered with formatting and a library image, and its status c
     await page.keyboard.press('Enter');
     await page.keyboard.type('Shipped today');
     await boldCurrentLine(page, '#reply');
-    await expect(page.locator('#reply strong')).toHaveText('Shipped today');
+    await expectBold(page, '#reply', 'Shipped today');
 
     await page
         .getByRole('button', { name: 'Choose files', exact: true })
@@ -240,7 +241,7 @@ test('a ticket is answered with formatting and a library image, and its status c
     await page.locator('#status').selectOption('solved');
     // Still bold after the file dialog: tells a lost format apart from a
     // bolding that never happened (checked right after the keystrokes).
-    await expect(page.locator('#reply strong')).toHaveText('Shipped today');
+    await expectBold(page, '#reply', 'Shipped today');
     expect(await documentViolations(page)).toEqual([]);
 
     const sent = page.waitForResponse(

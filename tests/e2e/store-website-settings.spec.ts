@@ -8,6 +8,7 @@ import { contrastRatio } from './support/contrast';
 import {
     colorsOf,
     documentViolations,
+    expectBold,
     expectStrictPolicy,
     focusedToolbarItem,
     php,
@@ -132,7 +133,7 @@ async function typeBold(page: Page, editor: string, text: string) {
     expect(await focusedToolbarItem(page)).toBe('bold');
     await page.keyboard.press('Enter');
     await expect(page.locator(editor)).toBeFocused();
-    await expect(page.locator(`${editor} strong`)).toHaveText(text);
+    await expectBold(page, editor, text);
 }
 
 test('the footer saves and reloads a canonical logo, editor content and link rows, and the storefront renders them', async ({
