@@ -62,9 +62,6 @@ trait BuildsProductQrLabels
 
     private const int PRODUCT_LABEL_NAME_FONT_SIZE = 28;
 
-    /** The name never takes more lines than this, however tall the label may be. */
-    private const int PRODUCT_LABEL_NAME_MAX_LINES = 2;
-
     /**
      * The bar/space module widths of $data as a Code 128 subset B symbol:
      * start B, one symbol per character, the mod-103 checksum, then stop.
@@ -203,7 +200,6 @@ trait BuildsProductQrLabels
         $nameLineHeight = (int) round($nameFontSize * 1.2);
         $nameY = $contentBottom + ($idLines !== [] ? 16 : 12) + (int) round($nameFontSize * 0.8);
         $nameLines = $this->wrapLabelText($this->productLabelName($product), $textMaxWidth, $nameFontSize);
-        $nameLines = $this->limitLabelLines($nameLines, self::PRODUCT_LABEL_NAME_MAX_LINES);
         $nameLines = $this->clampLinesToHeight($nameLines, $nameY, $nameLineHeight, $maxTextY);
         $nameDirection = app()->getLocale() === 'ar' ? 'rtl' : 'ltr';
         $nameMarkup = $this->textLinesMarkup($nameLines, $centerX, $nameY, $nameLineHeight, $nameFontSize, '#111111', $nameDirection, bold: true);
