@@ -205,8 +205,10 @@ class ProductController extends Controller
     }
 
     /**
-     * One Code 128 barcode per product id, meant to be printed and stuck on every
-     * box/pallet of that product — see BuildsProductQrLabels.
+     * The product's default barcode — its id as a Code 128 label, meant to be
+     * printed and stuck on every box/pallet of that product — see
+     * BuildsProductQrLabels. Derived from the id, never stored, so it cannot
+     * be edited or deleted like a custom barcode.
      */
     public function exportQr(Product $product): HttpResponse
     {
@@ -215,6 +217,34 @@ class ProductController extends Controller
         return response($this->productQrLabelImage($product, $setting->qr_code_width, $setting->qr_code_height))
             ->header('Content-Type', 'image/svg+xml')
             ->header('Content-Disposition', "attachment; filename=\"product-{$product->id}-barcode.svg\"");
+    }
+
+    /**
+     * The default barcode's label from {@see exportQr()}, served inline so the
+     * products page can show it in an `<img>` without downloading it.
+     */
+    public function previewDefaultBarcode(Request $request, Product $product): HttpResponse
+    {
+        $setting = Setting::current();
+
+        $etag = md5(implode('|', [
+            $this->productLabelName($product),
+            $product->id,
+            $setting->qr_code_width,
+            $setting->qr_code_height,
+        ]));
+
+        $notModified = $this->notModifiedResponse($request, $etag, 'private, no-cache');
+
+        if ($notModified !== null) {
+            return $notModified;
+        }
+
+        return response($this->productQrLabelImage($product, $setting->qr_code_width, $setting->qr_code_height))
+            ->header('Content-Type', 'image/svg+xml')
+            ->header('Content-Disposition', 'inline')
+            ->header('Cache-Control', 'private, no-cache')
+            ->setEtag($etag);
     }
 
     /**
@@ -282,16 +312,14 @@ class ProductController extends Controller
     }
 
     /**
-     * A ZIP holding one SVG label per barcode attached to the product — all of
-     * them and none belonging to any other product. Built whole or not at all:
-     * a barcode that cannot be rendered fails the download rather than being
-     * left out of a ZIP that looks complete.
+     * A ZIP holding one SVG label per barcode of the product — its default
+     * (id) barcode plus every custom one, and none belonging to any other
+     * product. Built whole or not at all: a barcode that cannot be rendered
+     * fails the download rather than being left out of a ZIP that looks complete.
      */
     public function downloadAllBarcodes(Product $product): BinaryFileResponse
     {
         $barcodes = $product->barcodes()->orderBy('id')->get(['id', 'product_id', 'barcode']);
-
-        abort_if($barcodes->isEmpty(), HttpResponse::HTTP_NOT_FOUND, __('messages.product_has_no_barcodes'));
 
         $setting = Setting::current();
         $path = tempnam(sys_get_temp_dir(), 'barcodes');
@@ -301,8 +329,16 @@ class ProductController extends Controller
             abort(HttpResponse::HTTP_INTERNAL_SERVER_ERROR);
         }
 
+        $current = (string) $product->id;
+
         try {
+            $zip->addFromString(
+                "product-{$product->id}-barcode.svg",
+                $this->productQrLabelImage($product, $setting->qr_code_width, $setting->qr_code_height),
+            );
+
             foreach ($barcodes as $barcode) {
+                $current = $barcode->barcode;
                 $zip->addFromString(
                     $this->barcodeFileName($product, $barcode),
                     $this->productBarcodeLabelImage($product, $barcode->barcode, $setting->qr_code_width, $setting->qr_code_height),
@@ -311,7 +347,7 @@ class ProductController extends Controller
         } catch (InvalidArgumentException) {
             $zip->close();
             @unlink($path);
-            abort(HttpResponse::HTTP_UNPROCESSABLE_ENTITY, __('messages.barcode_not_printable', ['barcode' => $barcode->barcode]));
+            abort(HttpResponse::HTTP_UNPROCESSABLE_ENTITY, __('messages.barcode_not_printable', ['barcode' => $current]));
         }
 
         if (! $zip->close()) {

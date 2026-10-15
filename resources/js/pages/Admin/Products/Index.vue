@@ -1,14 +1,7 @@
 <script setup lang="ts">
 import type { FormDataConvertible } from '@inertiajs/core';
 import { Form, Head, Link, router } from '@inertiajs/vue3';
-import {
-    Barcode,
-    Download,
-    Eye,
-    Plus,
-    SlidersHorizontal,
-    X,
-} from '@lucide/vue';
+import { Download, Eye, Plus, SlidersHorizontal, X } from '@lucide/vue';
 import { computed, reactive, ref, watch } from 'vue';
 import { index as cellsIndex } from '@/actions/App/Http/Controllers/Admin/CellController';
 import { show as showHelp } from '@/actions/App/Http/Controllers/Admin/HelpController';
@@ -17,6 +10,7 @@ import {
     downloadAllBarcodes,
     downloadBarcode,
     previewBarcode,
+    previewDefaultBarcode,
     exportQr,
     index as productsIndex,
     storeBarcode,
@@ -295,9 +289,9 @@ function isLowStock(product: ProductSummary): boolean {
 
 const barcodesDialogProduct = ref<ProductSummary | null>(null);
 /** The barcode whose printable label is shown inline in the dialog, if any. */
-const previewedBarcodeId = ref<number | null>(null);
+const previewedBarcodeId = ref<number | 'default' | null>(null);
 
-function togglePreview(barcodeId: number): void {
+function togglePreview(barcodeId: number | 'default'): void {
     previewedBarcodeId.value =
         previewedBarcodeId.value === barcodeId ? null : barcodeId;
 }
@@ -627,124 +621,173 @@ function refreshBarcodesDialogProduct(): void {
                 </Form>
 
                 <ActionErrorBanner class="mt-4" :message="downloadError" />
+                <button
+                    type="button"
+                    :class="[filterApplyButtonClass, 'mt-4']"
+                    @click="
+                        downloadFile(
+                            downloadAllBarcodes.url(barcodesDialogProduct),
+                        )
+                    "
+                >
+                    <Download class="h-4 w-4 shrink-0" />
+                    {{ t('products.downloadAllBarcodes') }}
+                </button>
+                <ul
+                    class="mt-4 divide-y divide-gray-100 dark:divide-neutral-700"
+                >
+                    <li data-testid="default-barcode" class="py-2 text-sm">
+                        <div class="flex items-center justify-between gap-2">
+                            <span class="flex items-center gap-2">
+                                {{ barcodesDialogProduct.id }}
+                                <span
+                                    :title="t('products.defaultBarcodeHint')"
+                                    class="rounded bg-gray-100 px-1.5 py-0.5 text-xs text-gray-600 dark:bg-neutral-700 dark:text-neutral-300"
+                                >
+                                    {{ t('products.defaultBarcode') }}
+                                </span>
+                            </span>
+                            <span class="flex items-center gap-3">
+                                <button
+                                    type="button"
+                                    :aria-label="
+                                        t('products.viewBarcode', {
+                                            barcode: barcodesDialogProduct.id,
+                                        })
+                                    "
+                                    :aria-pressed="
+                                        previewedBarcodeId === 'default'
+                                    "
+                                    class="cursor-pointer text-gray-400 hover:text-blue-600 dark:text-neutral-500 dark:hover:text-blue-400"
+                                    @click="togglePreview('default')"
+                                >
+                                    <Eye class="h-4 w-4" />
+                                </button>
+                                <button
+                                    type="button"
+                                    :aria-label="
+                                        t('products.downloadBarcode', {
+                                            barcode: barcodesDialogProduct.id,
+                                        })
+                                    "
+                                    class="cursor-pointer text-gray-400 hover:text-blue-600 dark:text-neutral-500 dark:hover:text-blue-400"
+                                    @click="
+                                        downloadFile(
+                                            exportQr.url(barcodesDialogProduct),
+                                        )
+                                    "
+                                >
+                                    <Download class="h-4 w-4" />
+                                </button>
+                            </span>
+                        </div>
+                        <img
+                            v-if="previewedBarcodeId === 'default'"
+                            :src="
+                                previewDefaultBarcode.url(barcodesDialogProduct)
+                            "
+                            :alt="String(barcodesDialogProduct.id)"
+                            class="mt-2 max-w-full rounded border border-gray-200 bg-white dark:border-neutral-700"
+                        />
+                    </li>
+                    <li
+                        v-for="barcode in barcodesDialogProduct.barcodes"
+                        :key="barcode.id"
+                        class="py-2 text-sm"
+                    >
+                        <div class="flex items-center justify-between gap-2">
+                            {{ barcode.barcode }}
+                            <span class="flex items-center gap-3">
+                                <button
+                                    type="button"
+                                    :aria-label="
+                                        t('products.viewBarcode', {
+                                            barcode: barcode.barcode,
+                                        })
+                                    "
+                                    :aria-pressed="
+                                        previewedBarcodeId === barcode.id
+                                    "
+                                    class="cursor-pointer text-gray-400 hover:text-blue-600 dark:text-neutral-500 dark:hover:text-blue-400"
+                                    @click="togglePreview(barcode.id)"
+                                >
+                                    <Eye class="h-4 w-4" />
+                                </button>
+                                <button
+                                    type="button"
+                                    :aria-label="
+                                        t('products.downloadBarcode', {
+                                            barcode: barcode.barcode,
+                                        })
+                                    "
+                                    class="cursor-pointer text-gray-400 hover:text-blue-600 dark:text-neutral-500 dark:hover:text-blue-400"
+                                    @click="
+                                        downloadFile(
+                                            downloadBarcode.url({
+                                                product: barcodesDialogProduct,
+                                                barcode,
+                                            }),
+                                        )
+                                    "
+                                >
+                                    <Download class="h-4 w-4" />
+                                </button>
+                                <Link
+                                    :href="
+                                        destroyBarcode(
+                                            {
+                                                product: barcodesDialogProduct,
+                                                barcode,
+                                            },
+                                            { mergeQuery: {} },
+                                        )
+                                    "
+                                    as="button"
+                                    preserve-scroll
+                                    preserve-state
+                                    :aria-label="
+                                        t('products.removeBarcode', {
+                                            barcode: barcode.barcode,
+                                        })
+                                    "
+                                    :on-before="
+                                        () => confirmDelete(barcode.barcode)
+                                    "
+                                    :on-success="refreshBarcodesDialogProduct"
+                                    class="cursor-pointer text-gray-400 hover:text-red-600 dark:text-neutral-500 dark:hover:text-red-400"
+                                >
+                                    <X class="h-4 w-4" />
+                                </Link>
+                            </span>
+                        </div>
+                        <img
+                            v-if="previewedBarcodeId === barcode.id"
+                            :src="
+                                previewBarcode.url({
+                                    product: barcodesDialogProduct,
+                                    barcode,
+                                })
+                            "
+                            :alt="barcode.barcode"
+                            class="mt-2 max-w-full rounded border border-gray-200 bg-white dark:border-neutral-700"
+                        />
+                    </li>
+                </ul>
                 <p
                     v-if="barcodesDialogProduct.barcodes.length === 0"
                     class="mt-4 text-sm text-gray-500 dark:text-neutral-400"
                 >
                     {{ t('products.noBarcodes') }}
                 </p>
-                <template v-else>
-                    <button
-                        type="button"
-                        :class="[filterApplyButtonClass, 'mt-4']"
-                        @click="
-                            downloadFile(
-                                downloadAllBarcodes.url(barcodesDialogProduct),
-                            )
-                        "
-                    >
-                        <Download class="h-4 w-4 shrink-0" />
-                        {{ t('products.downloadAllBarcodes') }}
-                    </button>
-                    <ul
-                        class="mt-4 divide-y divide-gray-100 dark:divide-neutral-700"
-                    >
-                        <li
-                            v-for="barcode in barcodesDialogProduct.barcodes"
-                            :key="barcode.id"
-                            class="py-2 text-sm"
-                        >
-                            <div
-                                class="flex items-center justify-between gap-2"
-                            >
-                                {{ barcode.barcode }}
-                                <span class="flex items-center gap-3">
-                                    <button
-                                        type="button"
-                                        :aria-label="
-                                            t('products.viewBarcode', {
-                                                barcode: barcode.barcode,
-                                            })
-                                        "
-                                        :aria-pressed="
-                                            previewedBarcodeId === barcode.id
-                                        "
-                                        class="cursor-pointer text-gray-400 hover:text-blue-600 dark:text-neutral-500 dark:hover:text-blue-400"
-                                        @click="togglePreview(barcode.id)"
-                                    >
-                                        <Eye class="h-4 w-4" />
-                                    </button>
-                                    <button
-                                        type="button"
-                                        :aria-label="
-                                            t('products.downloadBarcode', {
-                                                barcode: barcode.barcode,
-                                            })
-                                        "
-                                        class="cursor-pointer text-gray-400 hover:text-blue-600 dark:text-neutral-500 dark:hover:text-blue-400"
-                                        @click="
-                                            downloadFile(
-                                                downloadBarcode.url({
-                                                    product:
-                                                        barcodesDialogProduct,
-                                                    barcode,
-                                                }),
-                                            )
-                                        "
-                                    >
-                                        <Download class="h-4 w-4" />
-                                    </button>
-                                    <Link
-                                        :href="
-                                            destroyBarcode(
-                                                {
-                                                    product:
-                                                        barcodesDialogProduct,
-                                                    barcode,
-                                                },
-                                                { mergeQuery: {} },
-                                            )
-                                        "
-                                        as="button"
-                                        preserve-scroll
-                                        preserve-state
-                                        :aria-label="
-                                            t('products.removeBarcode', {
-                                                barcode: barcode.barcode,
-                                            })
-                                        "
-                                        :on-before="
-                                            () => confirmDelete(barcode.barcode)
-                                        "
-                                        :on-success="
-                                            refreshBarcodesDialogProduct
-                                        "
-                                        class="cursor-pointer text-gray-400 hover:text-red-600 dark:text-neutral-500 dark:hover:text-red-400"
-                                    >
-                                        <X class="h-4 w-4" />
-                                    </Link>
-                                </span>
-                            </div>
-                            <img
-                                v-if="previewedBarcodeId === barcode.id"
-                                :src="
-                                    previewBarcode.url({
-                                        product: barcodesDialogProduct,
-                                        barcode,
-                                    })
-                                "
-                                :alt="barcode.barcode"
-                                class="mt-2 max-w-full rounded border border-gray-200 bg-white dark:border-neutral-700"
-                            />
-                        </li>
-                    </ul>
-                </template>
             </template>
         </FilterDialog>
 
         <DataTable
             v-model:open-filter-key="openFilterKey"
             :columns="[
+                {
+                    label: t('products.columns.id'),
+                },
                 {
                     label: t('products.columns.product'),
                     filtered: productColumnFiltered,
@@ -788,9 +831,6 @@ function refreshBarcodesDialogProduct(): void {
                     filterKey: 'occupancy',
                     filterIconAlwaysVisible: false,
                 },
-                {
-                    label: t('products.columns.qr'),
-                },
             ]"
             :rows="products.data"
             :empty-message="t('products.empty')"
@@ -833,6 +873,9 @@ function refreshBarcodesDialogProduct(): void {
             </template>
 
             <template #row="{ row: product }">
+                <td class="px-4 py-2 text-gray-500 dark:text-neutral-400">
+                    {{ product.id }}
+                </td>
                 <td class="px-4 py-2">
                     <div
                         class="flex items-center gap-2 font-medium text-gray-900 dark:text-neutral-100"
@@ -900,7 +943,7 @@ function refreshBarcodesDialogProduct(): void {
                         :class="filterTriggerButtonClass"
                         @click="openBarcodesDialog(product)"
                     >
-                        {{ product.barcodes.length }}
+                        {{ product.barcodes.length + 1 }}
                     </button>
                 </td>
                 <td class="px-4 py-2">
@@ -934,23 +977,6 @@ function refreshBarcodesDialogProduct(): void {
                     >
                         {{ product.expiring_soon_count }}
                     </TableLink>
-                </td>
-                <td class="px-4 py-2">
-                    <a
-                        :href="exportQr.url(product)"
-                        :aria-label="
-                            t('products.exportQrLabel', {
-                                product: productName(
-                                    product.name,
-                                    product.ar_name,
-                                ),
-                            })
-                        "
-                        :title="t('products.columns.qr')"
-                        class="inline-flex text-gray-400 hover:text-blue-600 dark:text-neutral-500 dark:hover:text-blue-400"
-                    >
-                        <Barcode class="h-4 w-4" />
-                    </a>
                 </td>
             </template>
         </DataTable>
