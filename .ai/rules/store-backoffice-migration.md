@@ -2517,7 +2517,7 @@ The trip create and edit forms now use `Store/Admin/Trips/Trips/Create` and
 `Edit` (`ResourceFormPage`, `wide`, `StoreAdminLayout`) with
 `StoreTripFormFields`. Work is on `ccr-0ba426e7-qihjvq`, from `develop` at
 `1f68656` (the PR #404 merge). The owner authorized this session's commit,
-PR (number recorded on merge), its merge into `develop` and `[skip ci]` on all of them, because the
+PR (#406), its merge into `develop` and `[skip ci]` on all of them, because the
 checks run locally. So no PR CI, no PR or merge SAST and no `develop` deploy
 ran. The ledger records what ran here (Vitest, vue-tsc, ESLint and Prettier,
 against stand-in Wayfinder modules) and what did not (Pest, Pint, PHPStan,

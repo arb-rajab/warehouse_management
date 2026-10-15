@@ -2974,7 +2974,7 @@ browser specs above.
 
 Work on `ccr-0ba426e7-qihjvq` from `develop` at `1f68656` (the PR #404 merge);
 the branch had no commits beyond that base. The owner authorized a commit,
-push, PR (number recorded on merge) and merge into `develop`, each with `[skip ci]`, because the
+push, PR (#406) and merge into `develop`, each with `[skip ci]`, because the
 checks run locally. **No PR CI, no PR or merge SAST and no `develop` deploy ran
 for this PR or its merge.** No other branch, deployment or production data was
 touched. The guide's §25 records the result.
