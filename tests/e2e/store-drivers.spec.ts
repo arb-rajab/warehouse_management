@@ -1,8 +1,8 @@
 import { expect, test } from '@playwright/test';
 import { loginAsStoreAdmin } from './support/auth';
 
-/** Driver navigation and native confirmation alongside the trip list (Inertia) and the remaining Blade trip form. */
-test('drivers navigate between Inertia and Blade and confirm deletion', async ({
+/** Driver navigation and native confirmation alongside the visit list, the trip list and the trip form, all Inertia pages. */
+test('drivers navigate between the Inertia logistics pages and confirm deletion', async ({
     page,
 }) => {
     await loginAsStoreAdmin(page);
@@ -79,9 +79,9 @@ test('drivers navigate between Inertia and Blade and confirm deletion', async ({
         .click();
     await expect(page).toHaveURL(/\/temp\/admin\/trips\/create$/);
     await expect(
-        page.getByRole('heading', { name: 'Create Trip', exact: true }),
+        page.getByRole('heading', { name: 'Create trip', exact: true }),
     ).toBeVisible();
-    await expect(page.locator('#app')).toHaveCount(0);
+    await expect(page.locator('#app')).toHaveCount(1);
     await page.goto('/temp/admin/trips/drivers/index');
     page.once('dialog', (dialog) => dialog.accept());
     await page

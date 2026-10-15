@@ -81,9 +81,16 @@ test("the Blade map picker deletes a truck's open trip through the spoofed DELET
     const truck = `Map truck ${code}`;
     seedTrip(code, truck);
     await loginAsStoreAdmin(page);
-    await page.goto('/temp/admin/trips/create-from-map');
+    const response = await page.goto('/temp/admin/trips/create-from-map');
+    expect(response?.status()).toBe(200);
+    await expect(
+        page.getByRole('heading', { name: 'Create Trip', exact: true }),
+    ).toBeVisible();
     const card = page.locator('.truck-card', { hasText: truck });
-    await expect(card).toBeVisible();
+    await expect(
+        card,
+        `truck cards: ${(await page.locator('.truck-card .card-title').allInnerTexts()).join(' | ')}`,
+    ).toBeVisible();
 
     await card.locator('.confirm-delete').click();
     const modal = page.locator('#delete-modal');
@@ -100,6 +107,90 @@ test("the Blade map picker deletes a truck's open trip through the spoofed DELET
     seedStoreFixtures(String.raw`
         if (!App\Models\Truck::query()->where('name', ${php(truck)})->value('is_available')) {
             throw new RuntimeException('The truck was not freed');
+        }
+    `);
+});
+
+test('the trip form loads free vehicles for its date, needs a checkpoint natively and lands on the Blade checkpoints page', async ({
+    page,
+}) => {
+    const stamp = Date.now();
+    const truck = `Form truck ${stamp}`;
+    const customer = `Form customer ${stamp}`;
+    seedStoreFixtures(String.raw`
+        if (App\Models\StoreUser::query()->whereKey(9)->doesntExist()) {
+            (new App\Models\StoreUser)->forceFill(['id' => 9, 'name' => 'E2E departure', 'email' => 'e2e-departure@example.com', 'phone' => '0600000009', 'password' => 'unused-password', 'user_type' => 'staff'])->save();
+        }
+        App\Models\Truck::create(['name' => ${php(truck)}, 'model' => 'E2E', 'is_available' => true]);
+        (new App\Models\StoreUser)->forceFill(['name' => ${php(customer)}, 'email' => ${php(`trip-form-${stamp}@example.com`)}, 'phone' => '0612345670', 'password' => 'unused-password', 'user_type' => 'customer'])->save();
+    `);
+    await loginAsStoreAdmin(page);
+    await page.goto('/temp/admin/trips/create');
+    await expect(
+        page.getByRole('heading', { name: 'Create trip', exact: true }),
+    ).toBeVisible();
+
+    await page.locator('#due_date').fill('2031-01-15');
+    await expect(
+        page.locator('#truck_id option', { hasText: truck }),
+    ).toHaveCount(1);
+    await page.locator('#truck_id').selectOption({ label: `${truck} E2E` });
+
+    await page
+        .getByRole('button', { name: 'Create trip', exact: true })
+        .click();
+    await expect(page).toHaveURL(/\/temp\/admin\/trips\/create$/);
+    expect(
+        await page
+            .locator('input.sr-only[required]')
+            .evaluate((input: HTMLInputElement) => input.validationMessage),
+    ).toBe('Add at least one checkpoint.');
+
+    await page
+        .getByRole('button', { name: 'Add customer checkpoint', exact: true })
+        .click();
+    await page
+        .getByLabel('Customer', { exact: true })
+        .selectOption({ label: customer });
+    await page
+        .getByLabel('Checkpoint notes', { exact: true })
+        .fill('Ring twice');
+    await page
+        .getByRole('button', { name: 'Create trip', exact: true })
+        .click();
+
+    await expect(page).toHaveURL(/\/temp\/admin\/trips\/show\/\d+$/);
+    await expect(page.locator('#app')).toHaveCount(0);
+    const tripId = page.url().match(/\/show\/(\d+)$/)?.[1];
+    seedStoreFixtures(String.raw`
+        $trip = App\Models\Trip::query()->with('checkpoints')->find(${php(String(tripId))});
+        $truck = App\Models\Truck::query()->where('name', ${php(truck)})->first();
+        $customer = App\Models\StoreUser::query()->where('name', ${php(customer)})->value('id');
+        if ($trip === null || $trip->truck_id !== $truck->id || $truck->is_available || $trip->due_date->toDateString() !== '2031-01-15'
+            || $trip->checkpoints->pluck('relationable_id')->sort()->values()->all() !== collect([9, $customer])->sort()->values()->all()
+            || $trip->checkpoints->firstWhere('relationable_id', $customer)?->notes !== 'Ring twice') {
+            throw new RuntimeException('Unexpected stored trip');
+        }
+    `);
+
+    await page.goto(`/temp/admin/trips/${tripId}/edit`);
+    await expect(page.locator('#truck_id')).toHaveValue(/\d+/);
+    await expect(page.locator('#truck_id option:checked')).toHaveText(
+        `${truck} E2E`,
+    );
+    await expect(page.getByTestId('trip-checkpoint')).toHaveCount(2);
+    await page
+        .getByRole('button', { name: 'Move stop 2 up', exact: true })
+        .click();
+    await page.locator('#notes').fill('Edited in the browser');
+    await page.getByRole('button', { name: 'Save trip', exact: true }).click();
+    await expect(page).toHaveURL(
+        new RegExp(`/temp/admin/trips/show/${tripId}$`),
+    );
+    seedStoreFixtures(String.raw`
+        $trip = App\Models\Trip::query()->find(${php(String(tripId))});
+        if ($trip?->notes !== 'Edited in the browser' || $trip->checkpoints()->count() !== 2) {
+            throw new RuntimeException('Unexpected updated trip');
         }
     `);
 });

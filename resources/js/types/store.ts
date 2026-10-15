@@ -514,6 +514,54 @@ export interface StoreTrip {
     truck: { id: number; name: string } | null;
 }
 
+/** A trip checkpoint's kind: an order's delivery or another stop at a customer. */
+export type StoreTripCheckpointType = 'delivery' | 'other';
+
+/** An order the trip forms offer for a new delivery checkpoint. */
+export interface StoreTripOrderOption {
+    id: number;
+    code: string;
+    customer: string | null;
+}
+
+/** A truck from the available-vehicles lookup. */
+export interface StoreTripTruckOption {
+    id: number;
+    name: string;
+    model: string | null;
+}
+
+/** The available-vehicles lookup's answer, narrowed to what the form shows. */
+export interface StoreTripVehicles {
+    drivers: StoreReferenceOption[];
+    trucks: StoreTripTruckOption[];
+}
+
+/**
+ * A stored checkpoint on the trip edit form, with what the form shows for its
+ * order (code and customer) or customer.
+ */
+export interface StoreTripCheckpoint {
+    id: number;
+    type: StoreTripCheckpointType;
+    related_id: number;
+    notes: string | null;
+    order_code: string | null;
+    customer: string | null;
+}
+
+/** The trip being edited: the due date as `YYYY-MM-DD`. */
+export interface StoreTripForm {
+    id: number;
+    code: string;
+    status: StoreTripStatus;
+    driver_id: number | null;
+    truck_id: number | null;
+    due_date: string | null;
+    notes: string | null;
+    checkpoints: StoreTripCheckpoint[];
+}
+
 export interface StoreTripFilters {
     per_page: number;
     search: string;

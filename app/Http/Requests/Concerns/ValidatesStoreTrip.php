@@ -22,10 +22,16 @@ trait ValidatesStoreTrip
         ];
     }
 
-    /** @return array<string, mixed> */
+    /**
+     * The trip form's checkpoint rows. Each row's reference must exist in
+     * the table its type names (an order for a delivery, a store user
+     * otherwise), so a missing one is a field error rather than a 404.
+     *
+     * @return array<string, mixed>
+     */
     protected function checkpointRules(): array
     {
-        return [
+        $rules = [
             'checkpoints_array' => ['required', 'array', 'min:1'],
             'checkpoints_array.*' => ['required', 'array:id,checkpoint_type,checkpoint_related_id,checkpoint_notes'],
             'checkpoints_array.*.id' => ['nullable', 'integer', 'min:0'],
@@ -33,8 +39,20 @@ trait ValidatesStoreTrip
             'checkpoints_array.*.checkpoint_related_id' => ['required', 'integer'],
             'checkpoints_array.*.checkpoint_notes' => ['nullable', 'string', 'max:1000'],
         ];
+        $rows = $this->input('checkpoints_array');
+        foreach (is_array($rows) ? $rows : [] as $index => $row) {
+            $table = is_array($row) && ($row['checkpoint_type'] ?? null) === CheckpointType::Delivery->value ? 'orders' : 'users';
+            $rules["checkpoints_array.$index.checkpoint_related_id"] = [Rule::exists($table, 'id')];
+        }
+
+        return $rules;
     }
 
+    /**
+     * A stored row (non-zero id) must belong to the trip being edited, appear
+     * once and keep its type and reference; the create form has no stored
+     * rows, so any id there is refused.
+     */
     protected function validateCheckpointReferences(Validator $validator, ?int $tripId = null): void
     {
         if ($validator->errors()->isNotEmpty()) {
@@ -44,10 +62,6 @@ trait ValidatesStoreTrip
         $seen = [];
         foreach ($this->input('checkpoints_array', []) as $index => $checkpoint) {
             $type = $checkpoint['checkpoint_type'] === CheckpointType::Delivery->value ? Order::class : StoreUser::class;
-            if (! $type::query()->whereKey($checkpoint['checkpoint_related_id'])->exists()) {
-                $validator->errors()->add("checkpoints_array.$index.checkpoint_related_id", __('validation.exists', ['attribute' => 'checkpoint']));
-            }
-
             $id = (int) ($checkpoint['id'] ?? 0);
             if ($id === 0) {
                 continue;

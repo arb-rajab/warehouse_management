@@ -14,8 +14,8 @@ use Illuminate\Support\Facades\Schema;
  *
  * The per-record ownership rules (another seller's coupon, a conversation one is
  * not in, a staff account, a driver) are pinned in LegacyOwnershipGapsTest and
- * LegacyAdminOwnershipTest; this sweep is what stops a newly added mutating
- * route from skipping the gate altogether.
+ * the converted modules' tests under tests/Feature/Store/Admin; this sweep is
+ * what stops a newly added mutating route from skipping the gate altogether.
  *
  * @return list<RoutingRoute>
  */

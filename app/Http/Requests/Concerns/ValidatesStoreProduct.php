@@ -75,7 +75,7 @@ trait ValidatesStoreProduct
             'discount_type' => ['required', 'string', Rule::in(['amount', 'percent'])],
             'current_stock' => ['required', ...$int, 'min:0'],
             'sku' => ['nullable', 'string', 'max:255'],
-            'variants' => [$variantCount > 0 ? 'required' : 'prohibited', 'array', 'list', 'size:'.$variantCount],
+            'variants' => [$variantCount > 0 ? 'required' : 'prohibited', 'nullable', 'array', 'list', 'size:'.$variantCount],
             'variants.*' => ['required', 'array:variant,price,sku,qty,image'],
             'variants.*.variant' => ['required', 'string', 'max:255'],
             'variants.*.price' => ['required', ...self::AMOUNT_RULES],

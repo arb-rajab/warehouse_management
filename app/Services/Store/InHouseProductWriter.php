@@ -228,13 +228,13 @@ class InHouseProductWriter
     {
         return $variantNames === []
             ? [['variant' => '', 'price' => $data['unit_price'], 'sku' => $data['sku'] ?? null, 'qty' => $data['current_stock'], 'image' => null]]
-            : array_map(fn (array $variant): array => [
-                'variant' => $variant['variant'],
+            : array_values(array_map(fn (array $variant): array => [
+                'variant' => (string) $variant['variant'],
                 'price' => $variant['price'],
                 'sku' => $variant['sku'] ?? null,
                 'qty' => $variant['qty'],
                 'image' => $variant['image'] ?? null,
-            ], $data['variants']);
+            ], $data['variants']));
     }
 
     /**
