@@ -1506,6 +1506,20 @@ test('a very long product name fills the configured height, ends in an ellipsis 
     'arabic' => [str_repeat('مكون ودجات ', 60)],
 ]);
 
+test('an Arabic product name wraps by characters, not bytes', function () {
+    actingAsAdmin();
+    Setting::factory()->create(['qr_code_width' => 360, 'qr_code_height' => 1000]);
+
+    $product = Product::factory()->create(['id' => 104001, 'name' => 'x', 'ar_name' => 'العائلة جريش الكبة 5كغ ايراني']);
+
+    $svg = $this->withSession(['locale' => 'ar'])->get("/admin/products/{$product->id}/export-qr")->getContent();
+
+    preg_match_all('/font-size="28"[^>]*>([^<]*)</u', $svg, $matches);
+
+    // 20 characters fit a line: "العائلة جريش الكبة" (18) is one line, not three.
+    expect($matches[1])->toBe(['العائلة جريش الكبة', '5كغ ايراني']);
+});
+
 test('a multi-digit product id encodes to a longer barcode', function () {
     actingAsAdmin();
 
