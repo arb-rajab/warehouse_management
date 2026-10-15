@@ -85,7 +85,7 @@ For documentation-only changes, verify links, instruction consistency, and
 | Frontend formatting | `npx prettier --check <changed-files>` |
 | Production assets | `npm run build` |
 | End-to-end tests | `npm run test:e2e` |
-| Before pushing code | `python3 .claude/scripts/pre_push_check.py` |
+| Before pushing code | `python3 .claude/scripts/pre_push_check.py` (scoped to the branch's changes; `--full` for everything) |
 
 Backend feature tests need a configured local `APP_KEY` and a Vite manifest;
 generated Wayfinder files may also be required. Never print environment secrets.
