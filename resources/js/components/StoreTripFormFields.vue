@@ -337,13 +337,15 @@ function requireOneRow(event: Event): void {
                                 :name="`checkpoints_array[${index}][checkpoint_related_id]`"
                                 :value="row.relatedId"
                             />
-                            <p class="py-2 text-sm">{{
-                                tripCheckpointLabel(
-                                    row.type,
-                                    row.orderCode ?? row.relatedId,
-                                    row.customer,
-                                )
-                            }}</p>
+                            <p class="py-2 text-sm">
+                                {{
+                                    tripCheckpointLabel(
+                                        row.type,
+                                        row.orderCode ?? row.relatedId,
+                                        row.customer,
+                                    )
+                                }}
+                            </p>
                         </div>
                         <div v-else>
                             <label

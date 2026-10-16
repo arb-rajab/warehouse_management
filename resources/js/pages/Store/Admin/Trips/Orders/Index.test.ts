@@ -1,5 +1,6 @@
 import { Form, Head, Link } from '@inertiajs/vue3';
 import { mount } from '@vue/test-utils';
+import type { VueWrapper } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { DefineComponent } from 'vue';
 import { edit as customerEdit } from '@/actions/App/Http/Controllers/Store/Admin/CustomerController';
@@ -10,15 +11,15 @@ import {
     shippingCreate,
 } from '@/actions/App/Http/Controllers/Store/Admin/OrderEntryController';
 import {
+    printCmr,
+    show as tripsShow,
+} from '@/actions/App/Http/Controllers/Store/Admin/TripCheckpointController';
+import {
     bulkUpdateDeliveryStatus,
     index as tripOrders,
     markDelivered,
     updateInvoiceNumber,
 } from '@/actions/App/Http/Controllers/Store/Admin/TripOrderController';
-import {
-    printCmr,
-    show as tripsShow,
-} from '@/actions/App/Http/Controllers/Store/Admin/TripCheckpointController';
 import { edit as truckEdit } from '@/actions/App/Http/Controllers/Store/Admin/TruckController';
 import AddResourceLink from '@/components/AddResourceLink.vue';
 import DataTable from '@/components/DataTable.vue';
@@ -330,7 +331,7 @@ describe('Store trip orders list', () => {
         expect(
             rows[0]
                 .findAllComponents(Link)
-                .find((link) => link.text() === 'TRIP-LAST')
+                .find((link: VueWrapper) => link.text() === 'TRIP-LAST')
                 ?.props('href'),
         ).toEqual(tripsShow(order.trip!));
         expect(rows[0].findAll('img').map((img) => img.attributes())).toEqual([

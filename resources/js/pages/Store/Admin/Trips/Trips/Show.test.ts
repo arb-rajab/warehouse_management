@@ -1,5 +1,6 @@
 import { Head } from '@inertiajs/vue3';
 import { mount } from '@vue/test-utils';
+import type { VueWrapper } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { edit as customerEdit } from '@/actions/App/Http/Controllers/Store/Admin/CustomerController';
 import { edit as driverEdit } from '@/actions/App/Http/Controllers/Store/Admin/DriverController';
@@ -13,8 +14,6 @@ import {
 import { edit as tripsEdit } from '@/actions/App/Http/Controllers/Store/Admin/TripController';
 import { edit as truckEdit } from '@/actions/App/Http/Controllers/Store/Admin/TruckController';
 import ActionErrorBanner from '@/components/ActionErrorBanner.vue';
-import DataTable from '@/components/DataTable.vue';
-import FieldError from '@/components/FieldError.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
 import TableLink from '@/components/TableLink.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
@@ -153,10 +152,12 @@ describe('Store trip detail', () => {
                 t('store.trips.show.checkpoints'),
             );
             expect(
-                wrapper.findAll('dl > div').map((field) => [
-                    field.get('dt').text(),
-                    field.get('dd').text(),
-                ]),
+                wrapper
+                    .findAll('dl > div')
+                    .map((field) => [
+                        field.get('dt').text(),
+                        field.get('dd').text(),
+                    ]),
             ).toEqual([
                 [
                     t('store.trips.index.status'),
@@ -197,9 +198,6 @@ describe('Store trip detail', () => {
             expect(wrapper.findAll('thead th').map((th) => th.text())).toEqual(
                 columns.map((key) => t(`store.trips.show.${key}`)),
             );
-            expect(wrapper.getComponent(DataTable).props('emptyMessage')).toBe(
-                t('store.trips.show.empty'),
-            );
             expect(wrapper.text()).toContain(t('store.trips.show.empty'));
             expect(wrapper.text()).toContain(t('store.trips.show.print'));
         },
@@ -232,25 +230,25 @@ describe('Store trip detail', () => {
             t('store.trips.show.printCmr'),
         ]);
         expect(
-            rows[0].findAllComponents(TableLink).map((link) => link.props()),
+            rows[0]
+                .findAllComponents(TableLink)
+                .map((link: VueWrapper) => link.props()),
         ).toEqual([
             {
                 href: orderShow['/temp/admin/orders/{order}/show'](77),
             },
             { href: customerEdit({ id: 21 }) },
         ]);
-        expect(rows[0].findAll('img').map((img) => img.attributes())).toEqual(
-            [
-                expect.objectContaining({
-                    src: 'https://cdn.example.com/door.jpg',
-                    alt: t('store.trips.show.photoOf', {
-                        stop: t('store.trips.show.stop', { position: 1 }),
-                    }),
-                    width: '100',
-                    height: '100',
+        expect(rows[0].findAll('img').map((img) => img.attributes())).toEqual([
+            expect.objectContaining({
+                src: 'https://cdn.example.com/door.jpg',
+                alt: t('store.trips.show.photoOf', {
+                    stop: t('store.trips.show.stop', { position: 1 }),
                 }),
-            ],
-        );
+                width: '100',
+                height: '100',
+            }),
+        ]);
         const cmr = rows[0].getComponent(TableActionLink);
         expect(cmr.props()).toMatchObject({
             href: printCmr(delivery),
@@ -375,10 +373,9 @@ describe('Store trip detail', () => {
             }),
         );
         expect(
-            select.findAll('option').map((option) => [
-                option.attributes('value'),
-                option.text(),
-            ]),
+            select
+                .findAll('option')
+                .map((option) => [option.attributes('value'), option.text()]),
         ).toEqual(
             ['pending', 'delivered', 'has_issue'].map((status) => [
                 status,
@@ -417,11 +414,7 @@ describe('Store trip detail', () => {
         const wrapper = mountPage([storeTripCheckpointRow(), visit]);
         await wrapper.get('#checkpoint-status-501').setValue('pending');
         const rows = wrapper.findAll('tbody tr');
-        expect(
-            rows[0]
-                .findAllComponents(FieldError)
-                .map((error) => error.props('message')),
-        ).toContain('The selected status is invalid.');
+        expect(rows[0].text()).toContain('The selected status is invalid.');
         expect(rows[1].text()).not.toContain('The selected status is invalid.');
     });
 

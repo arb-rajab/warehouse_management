@@ -49,10 +49,11 @@ class TripCheckpointController extends Controller implements HasMiddleware
             ->select(['id', 'trip_id', 'relationable_type', 'relationable_id', 'type', 'status', 'arrived_at', 'sort_order_in_trip', 'eta', 'notes', 'cmr_file', 'photos'])
             ->with(['relationable' => function (MorphTo $relation) use ($customer): void {
                 $relation->morphWith([Order::class => ['user' => $customer, 'rep' => $customer]]);
-                $relation->morphWithCount([Order::class => ['orderDetails']]);
                 $relation->constrain([
                     StoreUser::class => $customer,
-                    Order::class => fn ($query) => $query->select(['id', 'by_rep', 'for_customer', 'user_id', 'code', 'grand_total', 'invoice_number']),
+                    // The count goes after the select: `morphWithCount()` runs before
+                    // this constraint, whose select() would drop it.
+                    Order::class => fn ($query) => $query->select(['id', 'by_rep', 'for_customer', 'user_id', 'code', 'grand_total', 'invoice_number'])->withCount('orderDetails'),
                 ]);
             }])
             ->orderBy('sort_order_in_trip')->orderBy('id')->get();

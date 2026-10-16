@@ -2,13 +2,13 @@
 import { Head, router } from '@inertiajs/vue3';
 import { Pencil, Printer } from '@lucide/vue';
 import { ref } from 'vue';
+import { show as showTrip } from '@/actions/App/Http/Controllers/Store/Admin/TripCheckpointController';
 import {
     create,
     edit,
     index as trucksIndex,
     qr,
 } from '@/actions/App/Http/Controllers/Store/Admin/TruckController';
-import { show as showTrip } from '@/actions/App/Http/Controllers/Store/Admin/TripCheckpointController';
 import AddResourceLink from '@/components/AddResourceLink.vue';
 import DataTable from '@/components/DataTable.vue';
 import FormField from '@/components/FormField.vue';

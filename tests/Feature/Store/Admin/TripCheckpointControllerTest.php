@@ -73,7 +73,7 @@ describe('trip detail', function () {
         $second = Upload::factory()->create(['file_original_name' => 'box.jpg', 'type' => 'image', 'external_link' => 'https://cdn.example.com/box.jpg']);
         Upload::factory()->create(['file_original_name' => 'noise.jpg', 'type' => 'image']);
         $visit = createStoreUser();
-        $visit->forceFill(['name' => 'Visit Customer', 'phone' => '0622222222', 'company_name' => null, 'shipping_address' => null])->save();
+        $visit->forceFill(['name' => 'Visit Customer', 'phone' => '0622222222', 'company_name' => '', 'shipping_address' => null])->save();
         $later = checkpointDetailStop($trip, ['relationable_id' => $visit->id, 'sort_order_in_trip' => 2, 'notes' => 'Ring twice']);
         $delivery = checkpointDetailStop($trip, [
             'relationable_type' => Order::class, 'relationable_id' => $order->id, 'type' => 'delivery',
@@ -105,7 +105,7 @@ describe('trip detail', function () {
                 ->where('id', $later->id)->where('position', 2)->where('type', 'other')
                 ->where('status', 'pending')->where('arrived_at', null)->where('eta', null)->where('notes', 'Ring twice')
                 ->where('order', null)
-                ->where('customer', ['id' => $visit->id, 'name' => 'Visit Customer', 'phone' => '0622222222', 'company_name' => null, 'address' => null])
+                ->where('customer', ['id' => $visit->id, 'name' => 'Visit Customer', 'phone' => '0622222222', 'company_name' => '', 'address' => null])
                 ->where('representative', null)->where('has_cmr', false)->where('photos', []))
             ->where('photos', [
                 ['id' => $photo->id, 'name' => 'door.jpg', 'url' => 'https://cdn.example.com/door.jpg'],

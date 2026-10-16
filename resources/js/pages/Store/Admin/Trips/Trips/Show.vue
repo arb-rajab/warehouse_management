@@ -84,6 +84,7 @@ function saveNotes(checkpoint: StoreTripCheckpointRow, event: Event): void {
 function saveStatus(checkpoint: StoreTripCheckpointRow, event: Event): void {
     const select = event.target as HTMLSelectElement;
     const status = select.value as StoreTripCheckpointStatus;
+
     if (!confirmDeliveryStatus(stop(checkpoint), statusLabel(status))) {
         select.value = checkpoint.status;
 
@@ -113,7 +114,10 @@ function kilometres(metres: number | null): string {
     }).format((metres ?? 0) / 1000);
 }
 function truckLabel(truck: { id: number; name: string }): string {
-    return t('store.trips.index.truckLabel', { id: truck.id, name: truck.name });
+    return t('store.trips.index.truckLabel', {
+        id: truck.id,
+        name: truck.name,
+    });
 }
 function print(): void {
     window.print();
@@ -160,7 +164,9 @@ function print(): void {
                 <dt class="text-gray-500 dark:text-neutral-400">
                     {{ t('store.trips.index.dueDate') }}
                 </dt>
-                <dd>{{ trip.due_date ?? t('store.trips.index.notAvailable') }}</dd>
+                <dd>
+                    {{ trip.due_date ?? t('store.trips.index.notAvailable') }}
+                </dd>
             </div>
             <div>
                 <dt class="text-gray-500 dark:text-neutral-400">
@@ -277,8 +283,7 @@ function print(): void {
                 <td class="px-4 py-2">
                     <TableLink
                         v-if="
-                            checkpoint.order &&
-                            access.can('view_order_details')
+                            checkpoint.order && access.can('view_order_details')
                         "
                         :href="
                             orderShow['/temp/admin/orders/{order}/show'](
@@ -303,7 +308,9 @@ function print(): void {
                 </td>
                 <td class="px-4 py-2">
                     <TableLink
-                        v-if="checkpoint.customer && access.can('edit_customer')"
+                        v-if="
+                            checkpoint.customer && access.can('edit_customer')
+                        "
                         :href="customerEdit(checkpoint.customer)"
                         >{{
                             checkpoint.customer.name ??

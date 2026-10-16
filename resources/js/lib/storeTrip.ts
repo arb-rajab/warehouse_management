@@ -14,6 +14,9 @@ export function tripCheckpointLabel(
     const name = customer ?? t('store.trips.form.unknownCustomer');
 
     return type === 'delivery'
-        ? t('store.trips.form.orderOption', { code: orderCode ?? '-', customer: name })
+        ? t('store.trips.form.orderOption', {
+              code: orderCode ?? '-',
+              customer: name,
+          })
         : name;
 }

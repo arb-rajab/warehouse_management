@@ -10,16 +10,16 @@ import {
     shippingCreate,
 } from '@/actions/App/Http/Controllers/Store/Admin/OrderEntryController';
 import {
+    printCmr,
+    show as tripsShow,
+} from '@/actions/App/Http/Controllers/Store/Admin/TripCheckpointController';
+import {
     bulkUpdateDeliveryStatus,
     index as tripOrders,
     markDelivered,
     updateInvoiceNumber,
 } from '@/actions/App/Http/Controllers/Store/Admin/TripOrderController';
 import { edit as truckEdit } from '@/actions/App/Http/Controllers/Store/Admin/TruckController';
-import {
-    printCmr,
-    show as tripsShow,
-} from '@/actions/App/Http/Controllers/Store/Admin/TripCheckpointController';
 import AddResourceLink from '@/components/AddResourceLink.vue';
 import DataTable from '@/components/DataTable.vue';
 import FieldError from '@/components/FieldError.vue';
