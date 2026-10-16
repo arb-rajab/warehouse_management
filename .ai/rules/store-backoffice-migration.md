@@ -2801,8 +2801,8 @@ No deployment or production-data mutation is authorized.
 The trip checkpoints page (`trips.show`) now uses
 `Store/Admin/Trips/Trips/Show` (`StoreAdminLayout`, `DataTable`). Work is on
 `claude/store-backoffice-trip-checkpoints-2ga29g`, from `develop` at `9eb862a`
-(the PR #420 merge). The owner authorized this session's commits, PR, its
-merge into `develop` and `[skip ci]` on all of them, because the checks run
+(the PR #420 merge). The owner authorized this session's commits, PR (#421),
+its merge into `develop` and `[skip ci]` on all of them, because the checks run
 locally. So no PR CI, no PR or merge SAST and no `develop` deploy ran. The
 session had PHP 8.5.11, `vendor/` with the dev tools, generated Wayfinder
 files and the font-less Vite build; the ledger records what ran.
