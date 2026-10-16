@@ -3260,3 +3260,122 @@ files, the font-less build). No stand-in Wayfinder modules were needed.
   files; **19**/**3** literal consumers of the app/layout shells; **1,048**
   `/temp` and **436** `/temp/admin` registrations; Blade editor: **8** fields
   in **8** views.
+
+## Trip detail and checkpoints migration (2026-10-16)
+
+Work on `claude/store-backoffice-trip-checkpoints-2ga29g` from `develop` at
+`9eb862a` (the PR #420 merge). The owner authorized commits, a push, a PR and
+its merge into `develop`, each with `[skip ci]`, because the checks run
+locally. **No PR CI, no PR or merge SAST and no `develop` deploy ran for this
+PR or its merge.** No other branch, deployment or production data was
+touched. The guide's §27 records the result.
+
+### Setup and baseline on `develop`
+
+PHP 8.5.11, `vendor/` with the dev tools and `node_modules`.
+`wait_for_setup.py` (in the background) exited 0: "frontend (vitest, vue-tsc,
+prettier, eslint): ready. App (artisan, migrations): ready. Vite build (needed
+by Pest feature tests): built (without the remote font: fonts.bunny.net is
+unreachable). Pint, Pest, PHPStan and Larastan are installed". Laravel Boost
+failed to connect (`CONNECTION_CLOSED`); repository files and installed
+package source were used instead. On a detached checkout of `develop` at
+`9eb862a`, before any change was applied there:
+
+- `php artisan wayfinder:generate --skip-routes --with-form`: generated.
+- Pest, `TripControllerTest`, `TripOrderControllerTest`,
+  `LegacyAdminPermissionsTest`, `LegacyStoreStateChangingRoutesTest`,
+  `LegacyShopRouteAccessTest` and `LegacyTempRoutesReachableTest`:
+  **182 passed** (1,355 assertions).
+
+### Prerequisites and audit evidence (develop line numbers)
+
+- **Root handlers** (`app/Http/Controllers/Trip/TripController.php`). `show`
+  (`:42-60`): `findOrFail($id)`, checkpoints with the morph eager loads,
+  `getCheckpointsMapData()` (`:214-243` with `checkpointMapPoints()`, an OSRM request with 2 s/5 s
+  timeouts whenever two or more stops have coordinates). `update_checkpoint_notes`
+  (`:110-125`): no validation, `Checkpoint::find($request->checkpoint_id)`,
+  JSON `success`. `update_checkpoint_status` (`:127-140`):
+  `UpdateCheckpointStatusRequest` (`id`, enum `status`), `lockForUpdate`,
+  `arrived_at ??= now()` on delivered, returned `1`. `print_cmr` (`:142-153`):
+  `redirect()->to(url(uploaded_asset($cmr_file)))`, else `back()` with an
+  `error` flash; `uploaded_asset()` answers the placeholder image for an
+  unknown upload.
+- **Routes** (`routes/shop-admin.php:296-299`): `trips.show`
+  (`view_all_trips`), the two POST writes (`edit_trip`), `checkpoints.print-cmr`
+  (`view_all_trips`).
+- **Views.** `trips/checkpoints/index.blade.php`: the table (`:70-192`), the
+  status button under `edit_trip` (`:118`), notes textarea under `edit_trip`
+  saved on change (`:140`, `:340-368`), Print CMR when `cmr_file` (`:184`), the
+  Leaflet map (`:198`, `:281-334`), the print button (`:22`, `:371`) and print
+  CSS.
+  `trips/components/update-checkpoint-status-modal.blade.php`: the select and
+  `$.post` to `checkpoints.update-status`, reading `data == 1`.
+- **Consumers.** Both views: only the root `show`. `trips.show`:
+  `create-from-map.blade.php:81` (by name), the Inertia trip list, trucks list
+  and trip orders list (Wayfinder, root action), the two trip writers'
+  redirects. `checkpoints.print-cmr`: the trip orders list. The two writes:
+  only the two views. `inc/map-popups`: also the map picker and
+  `inc/map-scripts`. No `public/assets/js` or `config` reference.
+
+### Completed scope
+
+- **Backend.** `Store\Admin\TripCheckpointController` (`show`, `updateNotes`,
+  `updateStatus`, `printCmr`); `UpdateCheckpointNotesRequest`;
+  `UpdateCheckpointStatusRequest` without `id` (bound); `TripCheckpointResource`
+  (its `uploadIds()` now also reads the photo ids for `TripOrderResource` and
+  `TripOrderController`); `messages.trip_cmr_unavailable` in English and
+  Arabic. The root controller loses `show`, the two writes, `print_cmr` and the
+  two map helpers; it stays in both exclusion lists for the map picker.
+- **Frontend.** `Store/Admin/Trips/Trips/Show.vue`, `StoreTripCheckpointStatus`
+  and `StoreTripCheckpointRow` types, a fixture, `lib/storeTrip.ts`
+  (`tripCheckpointLabel`, shared with `StoreTripFormFields`), 30
+  `store.trips.show.*` leaf keys in each of English and Arabic,
+  `confirmDeliveryStatus`'s docblock, `print:hidden` on `StoreAdminLayout`'s
+  sidebar and mobile bar, Inertia links to the detail from the trip list,
+  trucks list and trip orders list.
+- **Routes.** Four registrations replace four; names kept.
+- **Removed (`git rm`).** `trips/checkpoints/index.blade.php`,
+  `trips/components/update-checkpoint-status-modal.blade.php`.
+- **Unchanged.** Permission names and grants, the trip status flow (§24), the
+  map picker and its writer, the driver API's checkpoint endpoints, CSP and
+  `blade_csp`, shells and `HandleStoreBladePages`. No dependency or lockfile
+  change.
+
+### Verification and limits
+
+- **Ran (on the branch).**
+  - Pest: `TripCheckpointControllerTest.php` 34 passed (new);
+    `TripControllerTest.php` 112 passed; `TripOrderControllerTest.php` 34
+    passed; `LegacyAdminPermissionsTest`, `LegacyStoreStateChangingRoutesTest`,
+    `LegacyShopRouteAccessTest` and `LegacyTempRoutesReachableTest` 24 passed.
+    The first run found a real defect: `morphWithCount()` runs before a
+    `constrain()` callback, whose `select()` dropped the product count
+    (`MissingAttributeException` under strict mode); the count now follows the
+    select inside the constraint.
+  - Vitest: the trip pages, `lib/storeTrip.test.ts`, `confirm.test.ts`,
+    `StoreTripFormFields.test.ts`, `storeTripBladeMap.test.ts`,
+    `storeAdminMenu.test.ts` and the layout tests: 168 passed.
+  - Playwright, with `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/opt/pw-browsers/chromium`:
+    `store-trip-detail.spec.ts` (1, new), `store-trips.spec.ts` (3),
+    `store-trip-orders.spec.ts` (2) and `store-drivers.spec.ts` (1): 7 passed.
+  - `npm run build`: failed only on `getaddrinfo ENOTFOUND fonts.bunny.net`;
+    `python3 .claude/scripts/build_without_fonts.py`: built, and is what Pest
+    and Playwright used.
+  - `route:list`: 1,048 under `/temp`, 436 under `/temp/admin`.
+  - `python3 .claude/scripts/pre_push_check.py --full`: exit 0. ESLint,
+    Prettier, vue-tsc, Vitest (315 files, 2,800 tests), Pint, PHPStan
+    (0 errors) and Pest (6,043 tests, 33,683 assertions) all passed.
+  - `git diff --check`: clean.
+- **Not run.** PR CI, SAST and the `develop` deploy (`[skip ci]`, as
+  authorized), MySQL (Pest and Playwright use SQLite), the full Playwright
+  suite (only the four trip and driver specs), and `npm run build` with the
+  remote font.
+- **Known limits.** A checkpoint status still applies to any checkpoint of any
+  trip, closed or not, as the Blade handler did; the CMR download opens only
+  the first upload id in `cmr_file` (the driver API stores one); printing
+  relies on the browser's own print of the Inertia page, not the Blade card
+  layout.
+- **Inventory** (from the files and `route:list`). **36** backend Blade
+  files; **18**/**3** literal consumers of the app/layout shells; **1,048**
+  `/temp` and **436** `/temp/admin` registrations; Blade editor: **8** fields
+  in **8** views.

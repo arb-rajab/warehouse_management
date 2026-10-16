@@ -2795,3 +2795,129 @@ Registrations are unchanged at **1,048** under `/temp` and **436** under
 fields in **8** views. Verification is recorded in the trip orders section of
 [the reconciliation ledger](../store-backoffice-reconciliation-20261011.md).
 No deployment or production-data mutation is authorized.
+
+## 27. Trip detail and checkpoints (2026-10-16)
+
+The trip checkpoints page (`trips.show`) now uses
+`Store/Admin/Trips/Trips/Show` (`StoreAdminLayout`, `DataTable`). Work is on
+`claude/store-backoffice-trip-checkpoints-2ga29g`, from `develop` at `9eb862a`
+(the PR #420 merge). The owner authorized this session's commits, PR, its
+merge into `develop` and `[skip ci]` on all of them, because the checks run
+locally. So no PR CI, no PR or merge SAST and no `develop` deploy ran. The
+session had PHP 8.5.11, `vendor/` with the dev tools, generated Wayfinder
+files and the font-less Vite build; the ledger records what ran.
+
+**Routes and gates: names and permissions kept.** Four routes moved from root
+`Trip\TripController` to `Store\Admin\TripCheckpointController`
+(`HasMiddleware`):
+
+- `trips.show` (GET `/trips/show/{trip}`, URI kept, now bound) and
+  `checkpoints.print-cmr` (GET `/trips/print-cmr/{checkpoint}`, URI kept,
+  now bound): `view_all_trips`.
+- `checkpoints.update-notes` (PUT `/trips/checkpoints/{checkpoint}/notes`; was
+  POST `/trips/update-checkpoint-notes` with `checkpoint_id`) and
+  `checkpoints.update-status` (PUT `/trips/checkpoints/{checkpoint}/status`;
+  was POST `/trips/update-checkpoint-status` with `id`): `edit_trip`.
+
+A missing trip or checkpoint is a 404; a POST to either old write URI is a 405
+(the trip update PUT owns the one-segment pattern). Both writes redirect to the
+trip detail with the request's query instead of answering JSON `{success}` (the
+notes) or the bare `1` (the status). No other caller read those answers: the
+retained map picker only links `trips.show` by name (its truck cards) and
+needed no change. The root controller keeps only the map picker and its
+writer and stays in both analysis exclusion lists. No gate changed, so
+`LegacyAdminPermissionsTest` and `LegacyStoreStateChangingRoutesTest` needed no
+change (both ran and pass).
+
+**Behaviour kept.**
+
+- **Status:** the legacy transition in one transaction: the checkpoint is
+  locked (`lockForUpdate`), takes any `CheckpointStatus` value, and a delivered
+  checkpoint keeps its first `arrived_at`. The trip's own status flow (§24) is
+  untouched: a checkpoint status never changes the trip.
+- **CMR download:** still a GET that sends the browser to the uploaded file.
+- **Columns:** every Blade column: customer (for an order, the customer it was
+  placed for), representative, the customer's stored shipping address, status,
+  arrival, estimated time, notes, phone, product count, company, amount
+  (`single_price()` of the stored grand total), invoice number, photos and the
+  CMR link. Stops keep their stored order (`sort_order_in_trip`, then id).
+
+**Deliberate changes.**
+
+- **No map.** The Blade page drew a Leaflet map (unpkg) with an OSRM route
+  fetched on every page load. The map dependency's approval is unverified (§5),
+  so the Inertia page shows the stops as an ordered table and the server no
+  longer calls the routing service on this page. The root
+  `getCheckpointsMapData()`/`checkpointMapPoints()` had no other caller and were
+  removed with the two Pest cases and two Vitest cases that tested only them.
+  `inc/map-popups` stays (map picker and `inc/map-scripts`).
+- **Notes are validated** with the trip form's checkpoint notes rule
+  (`ValidatesStoreTrip`: nullable string, at most 1000) through
+  `UpdateCheckpointNotesRequest`; the Blade handler saved any value for any id.
+  They save on change; "Notes saved." shows under the row instead of a toast.
+- **Status** changes inline from a select, after a native confirmation
+  (`confirmDeliveryStatus`, "Mark stop N as …?"); a refused confirmation or a
+  server error puts the select back. The Blade modal saved without asking.
+- **CMR safety.** The download resolves the first upload id in `cmr_file` and
+  redirects only to a managed local file (`uploads/all/…`) or an HTTP(S) URL,
+  the upload library's rule (`UploadResource`, §2.4). A checkpoint with no
+  file, an unknown upload, a script link or a path outside the uploads returns
+  to its trip detail with a `cmr` field error (`messages.trip_cmr_unavailable`)
+  instead of `back()` with a session flash; the legacy helper sent the
+  placeholder image for an unknown upload.
+- **Display.** A trip header (status, due date, driver, truck, start and close
+  times, distance, duration, notes) replaces the "checkpoints | driver" title;
+  the stop column uses the §25 text (`#code customer`, or the customer) through
+  the shared `lib/storeTrip.ts` `tripCheckpointLabel()`, which the trip form now
+  uses too. Arrival uses `formatDateTime` (Blade: server-time `Y-m-d H:i`); the
+  estimated time is the stored seconds through `formatDuration` (Blade: Carbon's
+  English short span), or "-" when none; a missing photo upload is left out.
+  Links follow pages.md: order (`view_order_details`), customer
+  (`edit_customer`), driver and truck (`edit_driver`, `edit_truck`), and Edit
+  trip (`edit_trip`, Inertia).
+- **Printing.** The Print button calls `window.print()`; `StoreAdminLayout`'s
+  sidebar and mobile bar carry `print:hidden`, so a printed store page shows
+  only its content (the Blade page hid everything but its card).
+- **Links to the detail** from the trip lists, the trucks list and the trip
+  orders list are Inertia visits now (the trucks list through `TableLink`);
+  the trip forms' store and update redirect there as before.
+
+**Consumers traced and files deleted (`git rm`).** Traced with `rg` over
+`resources/views`, `app`, `routes`, `public/assets/js`, `resources/js`,
+`config` and `tests`.
+
+- `trips/checkpoints/index.blade.php`: rendered only by the removed root
+  `show`.
+- `trips/components/update-checkpoint-status-modal.blade.php`: included only by
+  that page; the only Blade poster of `checkpoints.update-status`.
+- `checkpoints.update-notes`: posted only by that page. `trips.show`: also the
+  map picker's truck cards (by name). `checkpoints.print-cmr`: also the trip
+  orders list (Wayfinder action moved to the new controller).
+- Kept: `create-from-map`, `inc/map-popups`, `inc/map-scripts`, `inc/scripts`
+  and `shop.modals.delete_modal` (other consumers). `admin_sidenav.blade.php`
+  has no entry for the detail; `storeAdminMenu.ts` needed no change (no menu
+  entry points at the detail).
+
+**Tests.** New `TripCheckpointControllerTest.php`: the full payload (a
+representative's order with photos, a customer stop, another trip's checkpoint,
+an unrelated upload and another order's lines as noise), an empty trip and a
+deleted order, 404s, refused callers on every route with a DB-unchanged
+assertion on the writes, the per-permission matrix, notes (save, clear,
+validation, old URI), status (every value, first arrival kept, validation, old
+URI) and the CMR hit (HTTPS and managed local) and miss dataset.
+`TripControllerTest`'s three checkpoint status cases, its empty-detail case and
+the trips.show refusal moved there; its Blade rendering case became Vitest
+gating cases. Vitest: a full mount of `Trips/Trips/Show.test.ts`,
+`lib/storeTrip.test.ts`, and the trip list, trucks and trip orders tests
+expecting Inertia links. Playwright: new `store-trip-detail.spec.ts` (native
+confirm dismissed and accepted, notes on change, print media hiding the
+sidebar, the CMR miss banner); `store-trips.spec.ts` now lands on the Inertia
+detail after saving a trip.
+
+Current inventory: **36** backend Blade files, **18** direct literal consumers
+of `shop.backend.layouts.app`, **3** of `shop.backend.layouts.layout`.
+Registrations are unchanged at **1,048** under `/temp` and **436** under
+`/temp/admin`: four replace four (from `route:list`). Blade editor: **8**
+fields in **8** views. Verification is recorded in the trip detail section of
+[the reconciliation ledger](../store-backoffice-reconciliation-20261011.md).
+No deployment or production-data mutation is authorized.
