@@ -188,31 +188,6 @@ describe('the retained Blade trip maps', () => {
         expect(leaflet.marker).not.toHaveBeenCalled();
     });
 
-    it('does not initialize a missing map on a trip without checkpoints', () => {
-        const { context, leaflet } = mapContext(false);
-        const script = scriptFrom('checkpoints/index.blade.php')
-            .replace('@json($long_lat_array)', '[]')
-            .replace('@json($coordinates)', '[]');
-        runInNewContext(script, context);
-        expect(leaflet.map).not.toHaveBeenCalled();
-        expect(leaflet.marker).not.toHaveBeenCalled();
-    });
-
-    it('renders zero coordinates once and treats the checkpoint label as text', () => {
-        const { context, leaflet, popup } = mapContext();
-        const script = scriptFrom('checkpoints/index.blade.php')
-            .replace(
-                '@json($long_lat_array)',
-                JSON.stringify([{ latitude: 0, longitude: 0, label: unsafe }]),
-            )
-            .replace('@json($coordinates)', '[]');
-        runInNewContext(script, context);
-        expect(leaflet.marker).toHaveBeenCalledExactlyOnceWith([0, 0]);
-        const content = popup.mock.calls[0][0] as HTMLElement;
-        expect(content.textContent).toBe(unsafe);
-        expect(content.querySelector('img')).toBeNull();
-    });
-
     it('renders picker metadata as text and keeps the order id for the delivered action', () => {
         const { context, leaflet, popup } = mapContext();
         const marker = {

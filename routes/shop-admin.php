@@ -61,6 +61,7 @@ use App\Http\Controllers\Store\Admin\StateController;
 use App\Http\Controllers\Store\Admin\SubscriberController;
 use App\Http\Controllers\Store\Admin\SupportTicketController as AdminSupportTicketController;
 use App\Http\Controllers\Store\Admin\TaxController;
+use App\Http\Controllers\Store\Admin\TripCheckpointController;
 use App\Http\Controllers\Store\Admin\TripController as StoreTripController;
 use App\Http\Controllers\Store\Admin\TripOrderController;
 use App\Http\Controllers\Store\Admin\TruckController;
@@ -290,13 +291,18 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
             Route::put('/orders/{order}/delivered', 'markDelivered')->name('trips.orders.update_order_status_to_delivered');
         });
 
+        // The trip detail with its checkpoint notes, status and CMR download (§27).
+        Route::controller(TripCheckpointController::class)->group(function () {
+            Route::get('/show/{trip}', 'show')->name('trips.show');
+            Route::put('/checkpoints/{checkpoint}/notes', 'updateNotes')->name('checkpoints.update-notes');
+            Route::put('/checkpoints/{checkpoint}/status', 'updateStatus')->name('checkpoints.update-status');
+            Route::get('/print-cmr/{checkpoint}', 'printCmr')->name('checkpoints.print-cmr');
+        });
+
+        // The map picker and its writer stay Blade (map decision, §5).
         Route::controller(TripController::class)->group(function () {
             Route::get('/create-from-map', 'create_from_map')->name('trips.create-from-map')->middleware('permission:add_trip');
             Route::post('/store-from-map', 'store_from_map')->name('trips.store-from-map')->middleware('permission:add_trip');
-            Route::get('/show/{id}', 'show')->name('trips.show')->middleware('permission:view_all_trips');
-            Route::post('/update-checkpoint-notes', 'update_checkpoint_notes')->name('checkpoints.update-notes')->middleware('permission:edit_trip');
-            Route::post('/update-checkpoint-status', 'update_checkpoint_status')->name('checkpoints.update-status')->middleware('permission:edit_trip');
-            Route::get('/print-cmr/{id}', 'print_cmr')->name('checkpoints.print-cmr')->middleware('permission:view_all_trips');
         });
 
         // The trip forms' lookups: the driver API's own handlers, reached with

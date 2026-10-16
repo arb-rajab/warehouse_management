@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { Form, Head, router, useForm } from '@inertiajs/vue3';
+import { Form, Head, Link, router, useForm } from '@inertiajs/vue3';
 import { Pencil, RefreshCw, Trash2 } from '@lucide/vue';
 import { computed, ref, watch } from 'vue';
 import { edit as driverEdit } from '@/actions/App/Http/Controllers/Store/Admin/DriverController';
 import { shippingCreate } from '@/actions/App/Http/Controllers/Store/Admin/OrderEntryController';
+import { show as tripsShow } from '@/actions/App/Http/Controllers/Store/Admin/TripCheckpointController';
 import {
     bulkDestroy,
     create as tripsCreate,
@@ -14,7 +15,6 @@ import {
     updateNotes,
 } from '@/actions/App/Http/Controllers/Store/Admin/TripController';
 import { edit as truckEdit } from '@/actions/App/Http/Controllers/Store/Admin/TruckController';
-import { show as tripsShow } from '@/actions/App/Http/Controllers/Trip/TripController';
 import AddResourceLink from '@/components/AddResourceLink.vue';
 import DataTable from '@/components/DataTable.vue';
 import FieldError from '@/components/FieldError.vue';
@@ -252,10 +252,10 @@ function onPerPageChange(perPage: number): void {
                     />
                 </td>
                 <td class="px-4 py-2 whitespace-nowrap">
-                    <a
-                        :href="tripsShow.url(trip)"
+                    <Link
+                        :href="tripsShow(trip)"
                         class="font-medium text-gray-900 underline dark:text-neutral-100"
-                        >{{ trip.code }}</a
+                        >{{ trip.code }}</Link
                     >
                 </td>
                 <td class="px-4 py-2">

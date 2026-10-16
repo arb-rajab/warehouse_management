@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Form, Head, router, useForm } from '@inertiajs/vue3';
+import { Form, Head, Link, router, useForm } from '@inertiajs/vue3';
 import { CircleCheck, Pencil, Printer } from '@lucide/vue';
 import { computed, ref, watch } from 'vue';
 import { edit as customerEdit } from '@/actions/App/Http/Controllers/Store/Admin/CustomerController';
@@ -17,9 +17,9 @@ import {
 } from '@/actions/App/Http/Controllers/Store/Admin/TripOrderController';
 import { edit as truckEdit } from '@/actions/App/Http/Controllers/Store/Admin/TruckController';
 import {
-    print_cmr,
+    printCmr,
     show as tripsShow,
-} from '@/actions/App/Http/Controllers/Trip/TripController';
+} from '@/actions/App/Http/Controllers/Store/Admin/TripCheckpointController';
 import AddResourceLink from '@/components/AddResourceLink.vue';
 import DataTable from '@/components/DataTable.vue';
 import FieldError from '@/components/FieldError.vue';
@@ -345,11 +345,11 @@ function onPerPageChange(perPage: number): void {
                     }}</template>
                 </td>
                 <td class="px-4 py-2 whitespace-nowrap">
-                    <a
+                    <Link
                         v-if="order.trip"
-                        :href="tripsShow.url(order.trip)"
+                        :href="tripsShow(order.trip)"
                         class="font-medium text-gray-900 underline dark:text-neutral-100"
-                        >{{ order.trip.code }}</a
+                        >{{ order.trip.code }}</Link
                     >
                     <template v-else>-</template>
                 </td>
@@ -467,7 +467,7 @@ function onPerPageChange(perPage: number): void {
                     <div class="flex items-center gap-2">
                         <TableActionLink
                             v-if="order.checkpoint"
-                            :href="print_cmr(order.checkpoint)"
+                            :href="printCmr(order.checkpoint)"
                             :inertia="false"
                             ><Printer class="h-3.5 w-3.5" />{{
                                 t('store.trips.orders.printCmr')

@@ -9,8 +9,9 @@ export function confirmDelete(label: string): boolean {
 }
 
 /**
- * Ask before moving orders to another delivery status, which the trip orders
- * list does at once. `label` names the orders and `status` the new status.
+ * Ask before moving orders or a trip checkpoint to another delivery status,
+ * which the trip orders list and the trip detail do at once. `label` names
+ * the orders or the stop and `status` the new status.
  */
 export function confirmDeliveryStatus(label: string, status: string): boolean {
     return confirm(t('store.trips.orders.confirmStatus', { label, status }));

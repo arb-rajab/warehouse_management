@@ -15,11 +15,11 @@ import {
     markDelivered,
     updateInvoiceNumber,
 } from '@/actions/App/Http/Controllers/Store/Admin/TripOrderController';
-import { edit as truckEdit } from '@/actions/App/Http/Controllers/Store/Admin/TruckController';
 import {
-    print_cmr,
+    printCmr,
     show as tripsShow,
-} from '@/actions/App/Http/Controllers/Trip/TripController';
+} from '@/actions/App/Http/Controllers/Store/Admin/TripCheckpointController';
+import { edit as truckEdit } from '@/actions/App/Http/Controllers/Store/Admin/TruckController';
 import AddResourceLink from '@/components/AddResourceLink.vue';
 import DataTable from '@/components/DataTable.vue';
 import FieldError from '@/components/FieldError.vue';
@@ -329,10 +329,10 @@ describe('Store trip orders list', () => {
         });
         expect(
             rows[0]
-                .findAll('a')
+                .findAllComponents(Link)
                 .find((link) => link.text() === 'TRIP-LAST')
-                ?.attributes('href'),
-        ).toBe(tripsShow.url(order.trip!));
+                ?.props('href'),
+        ).toEqual(tripsShow(order.trip!));
         expect(rows[0].findAll('img').map((img) => img.attributes())).toEqual([
             expect.objectContaining({
                 src: 'https://cdn.example.com/cmr.jpg',
@@ -371,7 +371,7 @@ describe('Store trip orders list', () => {
             wrapper
                 .findAllComponents(TableActionLink)
                 .map((link) => [link.props('href'), link.props('inertia')]),
-        ).toEqual([[print_cmr(order.checkpoint!), false]]);
+        ).toEqual([[printCmr(order.checkpoint!), false]]);
     });
 
     it("names a representative's deleted account and links customer, driver and truck for viewers who may edit them", () => {
