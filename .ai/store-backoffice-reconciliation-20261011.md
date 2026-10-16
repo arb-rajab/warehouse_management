@@ -3264,8 +3264,9 @@ files, the font-less build). No stand-in Wayfinder modules were needed.
 ## Trip detail and checkpoints migration (2026-10-16)
 
 Work on `claude/store-backoffice-trip-checkpoints-2ga29g` from `develop` at
-`9eb862a` (the PR #420 merge). The owner authorized commits, a push, a PR and
-its merge into `develop`, each with `[skip ci]`, because the checks run
+`9eb862a` (the PR #420 merge). The owner authorized commits, a push, a PR
+(#421, merged as `fb04f56`) and its merge into `develop`, each with
+`[skip ci]`, because the checks run
 locally. **No PR CI, no PR or merge SAST and no `develop` deploy ran for this
 PR or its merge.** No other branch, deployment or production data was
 touched. The guide's §27 records the result.
