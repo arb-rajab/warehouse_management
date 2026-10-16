@@ -568,6 +568,41 @@ export interface StoreTripFilters {
     status: StoreTripStatus[];
 }
 
+export type StoreTripCheckpointStatus = 'pending' | 'delivered' | 'has_issue';
+
+/**
+ * A row of the trip detail: the customer (for an order, the customer it was
+ * placed for), the order with its amount as the store formats prices, the
+ * arrival as an ISO timestamp, the estimated time in seconds and the photo
+ * upload ids.
+ */
+export interface StoreTripCheckpointRow {
+    id: number;
+    position: number | null;
+    type: StoreTripCheckpointType;
+    status: StoreTripCheckpointStatus;
+    arrived_at: string | null;
+    eta: number | null;
+    notes: string | null;
+    order: {
+        id: number;
+        code: string;
+        invoice_number: string | null;
+        products: number;
+        amount: string;
+    } | null;
+    customer: {
+        id: number;
+        name: string | null;
+        phone: string | null;
+        company_name: string | null;
+        address: string | null;
+    } | null;
+    representative: { id: number; name: string | null } | null;
+    has_cmr: boolean;
+    photos: number[];
+}
+
 /**
  * A row of the trip orders list: the customer (for a representative's order,
  * the customer it was placed for), the amount as the store formats prices,

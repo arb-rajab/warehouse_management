@@ -2,26 +2,20 @@
 
 namespace App\Http\Controllers\Trip;
 
-use App\Enums\CheckpointStatus;
 use App\Enums\TripStatus;
 use App\Events\SetTruckAvailability;
 use App\Http\Controllers\Concerns\ReservesTripTrucks;
 use App\Http\Controllers\Concerns\WritesTripCheckpoints;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Store\Admin\StoreMapTripRequest;
-use App\Http\Requests\Store\Admin\UpdateCheckpointStatusRequest;
 use App\Models\Checkpoint;
 use App\Models\Order;
-use App\Models\StoreUser;
 use App\Models\Trip;
 use App\Models\Truck;
 use App\Services\DriverService;
 use App\Services\UserService;
-use Illuminate\Database\Eloquent\Relations\MorphTo;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Validation\ValidationException;
 
 class TripController extends Controller
@@ -37,26 +31,6 @@ class TripController extends Controller
     {
         $this->userService = $userService;
         $this->driverService = $driverService;
-    }
-
-    public function show($id)
-    {
-        $trip = Trip::findOrFail($id);
-
-        $checkpoints = $trip->checkpoints()->select(['id', 'trip_id', 'relationable_type', 'relationable_id', 'type', 'status', 'arrived_at', 'longitudes', 'latitudes', 'sort_order_in_trip', 'eta', 'notes', 'cmr_file', 'photos'])->with(['relationable' => function (MorphTo $relation): void {
-            $relation->morphWith([Order::class => ['user:id,name,phone,company_name,shipping_address', 'rep:id,name,phone,company_name,shipping_address', 'orderDetails:id,order_id']]);
-            $relation->constrain([
-                StoreUser::class => fn ($query) => $query->select(['id', 'name', 'phone', 'company_name', 'shipping_address']),
-                Order::class => fn ($query) => $query->select(['id', 'by_rep', 'for_customer', 'user_id', 'code', 'grand_total', 'invoice_number']),
-            ]);
-        }])->orderBy('sort_order_in_trip')->get();
-
-        $map_array = $this->getCheckpointsMapData($checkpoints);
-        $coordinates = $map_array['coordinates'];
-        $long_lat_array = $map_array['long_lat_array'];
-
-        return view('shop.backend.trips.checkpoints.index', compact('trip', 'checkpoints', 'coordinates', 'long_lat_array'));
-
     }
 
     public function create_from_map()
@@ -105,51 +79,6 @@ class TripController extends Controller
         $this->driverService->notifyDriver($trip);
 
         return response()->json(['success' => true]);
-    }
-
-    public function update_checkpoint_notes(Request $request)
-    {
-        $checkpoint = Checkpoint::find($request->checkpoint_id);
-
-        if (! $checkpoint) {
-            return response()->json(['success' => false]);
-        }
-
-        $checkpoint->notes = $request->notes;
-
-        if ($checkpoint->save()) {
-            return response()->json(['success' => true]);
-        }
-
-        return response()->json(['success' => false]);
-    }
-
-    public function update_checkpoint_status(UpdateCheckpointStatusRequest $request)
-    {
-        $data = $request->validated();
-        DB::transaction(function () use ($data): void {
-            $checkpoint = Checkpoint::query()->lockForUpdate()->findOrFail($data['id']);
-            $checkpoint->status = $data['status'];
-            if ($data['status'] === CheckpointStatus::Delivered->value) {
-                $checkpoint->arrived_at ??= now();
-            }
-            $checkpoint->save();
-        });
-
-        return 1;
-    }
-
-    public function print_cmr($id)
-    {
-        $checkpoint = Checkpoint::find($id);
-
-        if ($checkpoint && $checkpoint->cmr_file) {
-            $filePath = uploaded_asset($checkpoint->cmr_file);
-
-            return redirect()->to(url($filePath));
-        }
-
-        return redirect()->back()->with('error', 'File not found on the server');
     }
 
     protected function getOrdersCoordinates($orders)
@@ -209,36 +138,5 @@ class TripController extends Controller
         }
 
         return $checkpoints_array;
-    }
-
-    protected function getCheckpointsMapData($checkpoints)
-    {
-        $points = $this->checkpointMapPoints($checkpoints);
-        $coordinates = [];
-        if (count($points) < 2) {
-            return ['long_lat_array' => $points, 'coordinates' => $coordinates];
-        }
-        try {
-            $coordinateString = implode(';', array_map(fn ($point) => "{$point['longitude']},{$point['latitude']}", $points));
-            $response = Http::connectTimeout(2)->timeout(5)->get("https://router.project-osrm.org/route/v1/driving/{$coordinateString}", [
-                'overview' => 'full',
-                'geometries' => 'geojson',
-            ])->throw();
-            $coordinates = $response->json('routes.0.geometry.coordinates', []);
-        } catch (\Exception $exception) {
-            // Keep the independently useful markers when routing is unavailable.
-        }
-
-        return ['long_lat_array' => $points, 'coordinates' => $coordinates];
-    }
-
-    protected function checkpointMapPoints($checkpoints): array
-    {
-        return $checkpoints->filter(fn ($checkpoint) => $this->hasValidCoordinates($checkpoint->latitudes, $checkpoint->longitudes))
-            ->map(fn ($checkpoint) => [
-                'longitude' => $checkpoint->longitudes,
-                'latitude' => $checkpoint->latitudes,
-                'label' => $checkpoint->sort_order_in_trip.' | '.($checkpoint->getCustomerForCheckpoint()?->name ?? '-'),
-            ])->values()->all();
     }
 }

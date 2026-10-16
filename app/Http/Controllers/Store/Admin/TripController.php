@@ -38,8 +38,9 @@ use Inertia\Response;
 /**
  * The all-trips and today's-trips lists with their status, notes and delete
  * actions, and the trip create and edit forms. The trip orders list is
- * `TripOrderController`; the checkpoints page, map picker and CMR download
- * stay Blade on the root `Trip\TripController`.
+ * `TripOrderController` and the trip detail with its checkpoints
+ * `TripCheckpointController`; the map picker stays Blade on the root
+ * `Trip\TripController`.
  */
 class TripController extends Controller implements HasMiddleware
 {
@@ -78,7 +79,7 @@ class TripController extends Controller implements HasMiddleware
      * The legacy writer, unchanged: the departure checkpoint (store user 9)
      * first, then the posted rows; the truck is reserved in the same
      * transaction, the route sorted by the routing service when it answers
-     * and the driver notified. Returns to the trip's Blade checkpoints page.
+     * and the driver notified. Returns to the trip's detail.
      */
     public function store(StoreTripRequest $request): RedirectResponse
     {

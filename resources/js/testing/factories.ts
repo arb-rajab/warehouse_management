@@ -66,6 +66,7 @@ import type {
     StoreDriver,
     StoreOrder,
     StoreTrip,
+    StoreTripCheckpointRow,
     StoreTripForm,
     StoreTripOrder,
 } from '@/types/store';
@@ -1021,6 +1022,42 @@ export function storeTrip(overrides: Partial<StoreTrip> = {}): StoreTrip {
         notes: 'Ring at the back',
         driver: { id: 31, name: 'Sam Driver' },
         truck: { id: 11, name: 'Cargo truck' },
+        ...overrides,
+    };
+}
+
+/**
+ * A trip detail row: a representative's delivered order with photos and a
+ * CMR file.
+ */
+export function storeTripCheckpointRow(
+    overrides: Partial<StoreTripCheckpointRow> = {},
+): StoreTripCheckpointRow {
+    return {
+        id: 501,
+        position: 1,
+        type: 'delivery',
+        status: 'delivered',
+        arrived_at: '2026-10-14T10:30:00+00:00',
+        eta: 1830,
+        notes: 'Back door',
+        order: {
+            id: 77,
+            code: '20261015-0001',
+            invoice_number: 'INV-1',
+            products: 3,
+            amount: '€42.50',
+        },
+        customer: {
+            id: 21,
+            name: 'Alma Customer',
+            phone: '0611111111',
+            company_name: 'Alma BV',
+            address: 'Main street 5',
+        },
+        representative: { id: 22, name: 'Rita Rep' },
+        has_cmr: true,
+        photos: [601],
         ...overrides,
     };
 }

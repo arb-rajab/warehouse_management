@@ -229,7 +229,7 @@ test('repeated transitions retain the first start close and arrival timestamps',
     actingAsStoreUser(createStoreStaff('edit_trip'));
 
     $this->put(route('trips.update-status', [$trip, 'list' => 'all']), ['status' => 'started'])->assertRedirect();
-    $this->post(route('checkpoints.update-status'), ['id' => $checkpoint->id, 'status' => 'delivered'])->assertOk();
+    $this->put(route('checkpoints.update-status', $checkpoint), ['status' => 'delivered'])->assertRedirect(route('trips.show', $trip));
     $this->put(route('trips.update-status', [$trip, 'list' => 'all']), ['status' => 'closed'])->assertRedirect();
     $closedAt = $trip->fresh()->closed_at;
     $this->travel(1)->hours();
@@ -283,39 +283,6 @@ test('a status change returns to the list it was made from with that list\'s fil
         ->assertRedirect(route('trips.today-trips', ['page' => 2, 'search' => 'Trip', 'status' => ['pending']]));
 
     expect($trip->fresh()->status)->toBe('started');
-});
-
-test('checkpoint statuses set arrival only when delivered', function (string $status) {
-    $checkpoint = createTripTestCheckpoint(createTripTestRecord());
-    actingAsStoreUser(createStoreStaff('edit_trip'));
-
-    $this->post(route('checkpoints.update-status'), ['id' => $checkpoint->id, 'status' => $status])->assertOk();
-
-    expect($checkpoint->fresh()->status)->toBe($status);
-    if ($status === 'delivered') {
-        expect($checkpoint->fresh()->arrived_at)->not->toBeNull();
-    } else {
-        expect($checkpoint->fresh()->arrived_at)->toBeNull();
-    }
-})->with(['pending', 'has_issue', 'delivered']);
-
-test('checkpoint status transitions refuse callers and preserve checkpoint identity and attachments', function (string $caller) {
-    $checkpoint = createTripTestCheckpoint(createTripTestRecord(), ['cmr_file' => '17', 'photos' => '18']);
-    actingAsRefusedStoreCaller($caller);
-
-    assertStoreCallerRefused($this->post(route('checkpoints.update-status'), ['id' => $checkpoint->id, 'status' => 'delivered']), $caller);
-
-    expect($checkpoint->fresh()->status)->toBe('pending')->and($checkpoint->fresh()->arrived_at)->toBeNull()->and($checkpoint->fresh()->cmr_file)->toBe('17')->and($checkpoint->fresh()->photos)->toBe('18');
-})->with('refused store admin callers');
-
-test('checkpoint status validation rejects invalid enums and missing checkpoints without writes', function () {
-    $checkpoint = createTripTestCheckpoint(createTripTestRecord());
-    actingAsStoreUser(createStoreStaff('edit_trip'));
-
-    $this->post(route('checkpoints.update-status'), ['id' => $checkpoint->id, 'status' => 'closed'])->assertSessionHasErrors('status');
-    $this->post(route('checkpoints.update-status'), ['id' => 999999, 'status' => 'delivered'])->assertNotFound();
-
-    expect($checkpoint->fresh()->status)->toBe('pending')->and($checkpoint->fresh()->arrived_at)->toBeNull();
 });
 
 test('map creation and appending preserve the original truck driver and checkpoints', function () {
@@ -383,23 +350,6 @@ test('an order on an open trip cannot be assigned again from the map', function 
     expect(Trip::count())->toBe(1)->and(Checkpoint::count())->toBe(1)->and($checkpoint->fresh()->trip_id)->toBe($trip->id)->and($truck->fresh()->is_available)->toBeTrue();
 });
 
-test('map data handles empty invalid and zero coordinates and retains markers on routing failure', function () {
-    $trip = createTripTestRecord();
-    $valid = createTripTestCheckpoint($trip, ['latitudes' => '0', 'longitudes' => '0']);
-    $invalid = createTripTestCheckpoint($trip, ['latitudes' => '91', 'longitudes' => '4.2', 'sort_order_in_trip' => 2]);
-    $controller = app(TripController::class);
-    $map = new ReflectionMethod($controller, 'getCheckpointsMapData');
-
-    expect($map->invoke($controller, collect()))->toBe(['long_lat_array' => [], 'coordinates' => []]);
-    expect($map->invoke($controller, collect([$valid, $invalid])))->toBe(['long_lat_array' => [['longitude' => '0', 'latitude' => '0', 'label' => '1 | '.$this->departure->name]], 'coordinates' => []]);
-    Http::assertNothingSent();
-    $second = createTripTestCheckpoint($trip, ['sort_order_in_trip' => 3]);
-    $result = $map->invoke($controller, collect([$valid, $second]));
-
-    expect($result['long_lat_array'])->toHaveCount(2)->and($result['coordinates'])->toBe([]);
-    Http::assertSent(fn ($request) => str_starts_with($request->url(), 'https://router.project-osrm.org/route/'));
-});
-
 describe('trip forms', function () {
     test('the create form renders the orders out for delivery and the non-representative store users', function () {
         $customer = createStoreUser();
@@ -453,7 +403,7 @@ describe('trip forms', function () {
             ->has('customers'));
     });
 
-    test('a new trip and an update return to the trip\'s Blade checkpoints page', function () {
+    test('a new trip and an update return to the trip\'s detail', function () {
         actingAsStoreUser(createStoreStaff('add_trip', 'edit_trip'));
         $truck = Truck::create(['name' => 'Available truck']);
 
@@ -614,20 +564,6 @@ test('closed trip edits do not reserve the truck again', function () {
     expect($trip->fresh()->status)->toBe('closed')->and($trip->fresh()->active)->toBeFalse()->and($trip->truck->fresh()->is_available)->toBeTrue();
 });
 
-test('map route geometry comes from HTTPS routing and uses only valid points', function () {
-    $this->routingResponse = Http::response(['routes' => [['geometry' => ['coordinates' => [[0, 0], [4.2, 52.1]]]]]]);
-    $trip = createTripTestRecord();
-    $first = createTripTestCheckpoint($trip, ['latitudes' => '0', 'longitudes' => '0']);
-    $second = createTripTestCheckpoint($trip, ['sort_order_in_trip' => 2]);
-    $invalid = createTripTestCheckpoint($trip, ['latitudes' => null, 'sort_order_in_trip' => 3]);
-    $controller = app(TripController::class);
-
-    $result = (new ReflectionMethod($controller, 'getCheckpointsMapData'))->invoke($controller, collect([$first, $second, $invalid]));
-
-    expect($result['coordinates'])->toBe([[0, 0], [4.2, 52.1]])->and($result['long_lat_array'])->toHaveCount(2);
-    Http::assertSent(fn ($request) => str_contains($request->url(), 'https://router.project-osrm.org/route/v1/driving/0,0;4.2,52.1'));
-});
-
 test('shortest path sorting maps waypoint indexes to checkpoint identities with nearby coordinates', function () {
     $this->routingResponse = Http::response([
         'waypoints' => [['waypoint_index' => 1], ['waypoint_index' => 0]],
@@ -647,31 +583,6 @@ test('shortest path sorting maps waypoint indexes to checkpoint identities with 
         ->and($trip->fresh()->duration)->toBe('120.00')->and($trip->fresh()->distance)->toBe('1000.00');
 });
 
-test('trip checkpoint screens display empty trips safely', function () {
-    $trip = createTripTestRecord();
-    actingAsStoreUser(createStoreStaff('view_all_trips'));
-
-    $this->get(route('trips.show', $trip->id))->assertOk()->assertViewIs('shop.backend.trips.checkpoints.index')->assertSee('No Checkpoints found on this Trip')->assertViewHas('long_lat_array', []);
-
-    Http::assertNothingSent();
-});
-
-test('checkpoint write controls require edit trip while readers retain notes and map labels', function (bool $canEdit) {
-    seedStoreCurrency();
-    $trip = createTripTestRecord();
-    $checkpoint = createTripTestCheckpoint($trip, ['notes' => 'Visible checkpoint note']);
-    createTripTestCheckpoint($trip, ['relationable_id' => createStoreUser()->id, 'sort_order_in_trip' => 2]);
-    actingAsStoreUser(createStoreStaff('view_all_trips', ...($canEdit ? ['edit_trip'] : [])));
-
-    $response = $this->get(route('trips.show', $trip->id))->assertOk()->assertSee('Visible checkpoint note');
-    if ($canEdit) {
-        $response->assertSee('data-checkpoint-id="'.$checkpoint->id.'"', false)->assertSee('class="form-control checkpoint-notes"', false)->assertSee('onclick="openUpdateModal(this)"', false);
-    } else {
-        $response->assertDontSee('class="form-control checkpoint-notes"', false)->assertDontSee('onclick="openUpdateModal(this)"', false);
-    }
-    $response->assertSee('tripMapPopup([[null, marker.label]])', false);
-})->with([false, true]);
-
 test('the retained map picker renders an available truck with its pallet capacity', function () {
     Truck::create(['name' => 'Free truck', 'is_available' => true, 'max_pallets_number' => 18]);
     Truck::create(['name' => 'Busy truck', 'is_available' => false, 'max_pallets_number' => 7]);
@@ -687,11 +598,9 @@ test('the retained map picker renders a busy truck with no open trip without a b
     $this->get(route('trips.create-from-map'))->assertOk()->assertViewIs('shop.backend.trips.create-from-map')->assertSee('Busy without trip')->assertSee('No current trip information')->assertDontSee('confirm-delete', false);
 });
 
-test('trip checkpoint and map picker screens refuse unauthorized callers', function (string $caller) {
-    $trip = createTripTestRecord();
+test('the map picker and trip list refuse unauthorized callers', function (string $caller) {
     actingAsRefusedStoreCaller($caller);
 
-    assertStoreCallerRefused($this->get(route('trips.show', $trip->id)), $caller);
     assertStoreCallerRefused($this->get(route('trips.create-from-map')), $caller);
     assertStoreCallerRefused($this->get(route('trips.index')), $caller);
 })->with('refused store admin callers');

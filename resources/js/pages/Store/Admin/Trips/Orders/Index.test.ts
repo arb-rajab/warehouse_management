@@ -1,5 +1,6 @@
 import { Form, Head, Link } from '@inertiajs/vue3';
 import { mount } from '@vue/test-utils';
+import type { VueWrapper } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { DefineComponent } from 'vue';
 import { edit as customerEdit } from '@/actions/App/Http/Controllers/Store/Admin/CustomerController';
@@ -10,16 +11,16 @@ import {
     shippingCreate,
 } from '@/actions/App/Http/Controllers/Store/Admin/OrderEntryController';
 import {
+    printCmr,
+    show as tripsShow,
+} from '@/actions/App/Http/Controllers/Store/Admin/TripCheckpointController';
+import {
     bulkUpdateDeliveryStatus,
     index as tripOrders,
     markDelivered,
     updateInvoiceNumber,
 } from '@/actions/App/Http/Controllers/Store/Admin/TripOrderController';
 import { edit as truckEdit } from '@/actions/App/Http/Controllers/Store/Admin/TruckController';
-import {
-    print_cmr,
-    show as tripsShow,
-} from '@/actions/App/Http/Controllers/Trip/TripController';
 import AddResourceLink from '@/components/AddResourceLink.vue';
 import DataTable from '@/components/DataTable.vue';
 import FieldError from '@/components/FieldError.vue';
@@ -329,10 +330,10 @@ describe('Store trip orders list', () => {
         });
         expect(
             rows[0]
-                .findAll('a')
-                .find((link) => link.text() === 'TRIP-LAST')
-                ?.attributes('href'),
-        ).toBe(tripsShow.url(order.trip!));
+                .findAllComponents(Link)
+                .find((link: VueWrapper) => link.text() === 'TRIP-LAST')
+                ?.props('href'),
+        ).toEqual(tripsShow(order.trip!));
         expect(rows[0].findAll('img').map((img) => img.attributes())).toEqual([
             expect.objectContaining({
                 src: 'https://cdn.example.com/cmr.jpg',
@@ -371,7 +372,7 @@ describe('Store trip orders list', () => {
             wrapper
                 .findAllComponents(TableActionLink)
                 .map((link) => [link.props('href'), link.props('inertia')]),
-        ).toEqual([[print_cmr(order.checkpoint!), false]]);
+        ).toEqual([[printCmr(order.checkpoint!), false]]);
     });
 
     it("names a representative's deleted account and links customer, driver and truck for viewers who may edit them", () => {

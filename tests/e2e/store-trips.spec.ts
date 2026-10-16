@@ -118,7 +118,7 @@ test("the Blade map picker deletes a truck's open trip through the spoofed DELET
     `);
 });
 
-test('the trip form loads free vehicles for its date, needs a checkpoint natively and lands on the Blade checkpoints page', async ({
+test('the trip form loads free vehicles for its date, needs a checkpoint natively and lands on the trip detail', async ({
     page,
 }) => {
     const stamp = Date.now();
@@ -167,7 +167,12 @@ test('the trip form loads free vehicles for its date, needs a checkpoint nativel
         .click();
 
     await expect(page).toHaveURL(/\/temp\/admin\/trips\/show\/\d+$/);
-    await expect(page.locator('#app')).toHaveCount(0);
+    await expect(page.locator('#app')).toHaveCount(1);
+    await expect(
+        page
+            .getByRole('row', { name: new RegExp(`Form customer ${stamp}`) })
+            .getByRole('textbox'),
+    ).toHaveValue('Ring twice');
     const tripId = page.url().match(/\/show\/(\d+)$/)?.[1];
     seedStoreFixtures(String.raw`
         $trip = App\Models\Trip::query()->with('checkpoints')->find(${php(String(tripId))});
