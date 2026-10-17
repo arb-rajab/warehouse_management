@@ -9,7 +9,7 @@ use Illuminate\Validation\ValidationException;
 
 /**
  * Locks a trip's truck and refuses one another open trip holds, shared by
- * the retained Blade map picker's writer (root `Trip\TripController`) and
+ * the trip map picker's writer (`Store\Admin\TripMapController`) and
  * the trip forms and the trip list's status action
  * (`Store\Admin\TripController`).
  */

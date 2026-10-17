@@ -74,50 +74,6 @@ test('the trip list confirms deletion natively, changes status in its dialog and
     expectStoredTrip(code, '$trip === null');
 });
 
-test("the Blade map picker deletes a truck's open trip through the spoofed DELETE and returns to the picker", async ({
-    page,
-}) => {
-    const code = `E2E-MAP-${Date.now()}`;
-    const truck = `Map truck ${code}`;
-    seedTrip(code, truck);
-    await loginAsStoreAdmin(page);
-    const response = await page.goto('/temp/admin/trips/create-from-map');
-    // This page has returned 500 intermittently in CI; name the exception
-    // from the debug page instead of only the status.
-    expect(
-        response?.status(),
-        response?.ok()
-            ? undefined
-            : `${await page.title()}\n${(await page.locator('body').innerText()).slice(0, 1500)}`,
-    ).toBe(200);
-    await expect(
-        page.getByRole('heading', { name: 'Create Trip', exact: true }),
-    ).toBeVisible();
-    const card = page.locator('.truck-card', { hasText: truck });
-    await expect(
-        card,
-        `truck cards: ${(await page.locator('.truck-card .card-title').allInnerTexts()).join(' | ')}`,
-    ).toBeVisible();
-
-    await card.locator('.confirm-delete').click();
-    const modal = page.locator('#delete-modal');
-    await expect(modal).toBeVisible();
-    await expect(modal.locator('#delete-link')).toHaveAttribute(
-        'data-method',
-        'delete',
-    );
-    await modal.locator('#delete-link').click();
-
-    await expect(page).toHaveURL(/\/temp\/admin\/trips\/create-from-map$/);
-    await expect(page.locator('.truck-card', { hasText: truck })).toBeVisible();
-    expectStoredTrip(code, '$trip === null');
-    seedStoreFixtures(String.raw`
-        if (!App\Models\Truck::query()->where('name', ${php(truck)})->value('is_available')) {
-            throw new RuntimeException('The truck was not freed');
-        }
-    `);
-});
-
 test('the trip form loads free vehicles for its date, needs a checkpoint natively and lands on the trip detail', async ({
     page,
 }) => {

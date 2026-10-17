@@ -250,18 +250,14 @@ describe('trip order actions', function () {
             ->and($other->fresh()->delivery_status)->toBe('on_delivery');
     });
 
-    test('the map picker\'s JSON post with a spoofed PUT marks the order delivered and returns to the picker', function () {
+    test('the map picker\'s PUT with return_to in its query marks the order delivered and returns to the picker', function () {
         $order = createStoreOrder(createStoreUser(), ['delivery_status' => 'on_delivery']);
         actingAsStoreUser(createStoreStaff('edit_trip'));
 
-        $this->postJson(route('trips.orders.update_order_status_to_delivered', $order), ['_method' => 'PUT', 'return_to' => 'map'])
+        $this->put(route('trips.orders.update_order_status_to_delivered', [$order, 'return_to' => 'map']), [], inertiaHeaders())
             ->assertRedirect(route('trips.create-from-map'));
-        expect($order->fresh()->delivery_status)->toBe('delivered');
 
-        $script = file_get_contents(resource_path('views/shop/backend/trips/create-from-map.blade.php'));
-        expect($script)->toContain('\'{{ route("trips.orders.update_order_status_to_delivered", ["order" => "__order__"]) }}\'.replace(\'__order__\', encodeURIComponent(orderId))')
-            ->and($script)->toContain("_method: 'PUT'")
-            ->and($script)->toContain("return_to: 'map'");
+        expect($order->fresh()->delivery_status)->toBe('delivered');
     });
 
     test('a missing order is a 404 and the old order-id URIs are gone', function () {
@@ -320,10 +316,3 @@ describe('trip order actions', function () {
         expect(Order::find($order->id))->toBeNull()->and(Order::find($kept->id))->not->toBeNull();
     });
 });
-
-test('the retained map picker still offers mark as delivered only to trip editors', function (bool $canEdit) {
-    actingAsStoreUser(createStoreStaff(...($canEdit ? ['add_trip', 'edit_trip'] : ['add_trip'])));
-
-    $this->get(route('trips.create-from-map'))->assertOk()
-        ->assertSee('if (orderId !== null && '.($canEdit ? 'true' : 'false').')', false);
-})->with(['editor' => [true], 'creator only' => [false]]);

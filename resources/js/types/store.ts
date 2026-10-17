@@ -514,6 +514,51 @@ export interface StoreTrip {
     truck: { id: number; name: string } | null;
 }
 
+/**
+ * An order on the trip map picker (`TripMapController::create`): its
+ * customer's coordinates, the postal code of the lookup and the stored
+ * shipping address (else the customer's).
+ */
+export interface StoreTripMapOrder {
+    id: number;
+    code: string;
+    latitude: number;
+    longitude: number;
+    postal_code: string | null;
+    address: string | null;
+    customer: {
+        id: number;
+        name: string | null;
+        phone: string | null;
+        accounting_id: string | null;
+    };
+}
+
+/**
+ * A truck card of the trip map picker (`TripMapTruckResource`): the first
+ * photo's upload id, the latest open trip (where its stops are added) and
+ * every open trip, latest first, with each stop's customer.
+ */
+export interface StoreTripMapTruck {
+    id: number;
+    name: string;
+    max_pallets_number: string | null;
+    photo: number | null;
+    trip: {
+        id: number;
+        code: string;
+        driver: { id: number; name: string | null } | null;
+    } | null;
+    open_trips: {
+        id: number;
+        code: string;
+        stops: {
+            id: number;
+            customer: { id: number; name: string | null } | null;
+        }[];
+    }[];
+}
+
 /** A trip checkpoint's kind: an order's delivery or another stop at a customer. */
 export type StoreTripCheckpointType = 'delivery' | 'other';
 

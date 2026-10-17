@@ -114,6 +114,7 @@ import {
     index as tripsIndex,
     today as todayTrips,
 } from '@/actions/App/Http/Controllers/Store/Admin/TripController';
+import { create as tripsCreateFromMap } from '@/actions/App/Http/Controllers/Store/Admin/TripMapController';
 import { index as tripOrders } from '@/actions/App/Http/Controllers/Store/Admin/TripOrderController';
 import {
     create as trucksCreate,
@@ -127,7 +128,6 @@ import { edit as header } from '@/actions/App/Http/Controllers/Store/Admin/Websi
 import { edit as homeEdit } from '@/actions/App/Http/Controllers/Store/Admin/WebsiteHomeController';
 import { index as pages } from '@/actions/App/Http/Controllers/Store/Admin/WebsitePageController';
 import { index as zonesIndex } from '@/actions/App/Http/Controllers/Store/Admin/ZoneController';
-import { create_from_map } from '@/actions/App/Http/Controllers/Trip/TripController';
 import type { StoreAccess } from '@/lib/storeAccess';
 
 /**
@@ -465,7 +465,8 @@ export const storeAdminMenu: StoreMenuItem[] = [
                     },
                     {
                         labelKey: 'store.nav.createTripFromMap',
-                        href: create_from_map(),
+                        inertia: true,
+                        href: tripsCreateFromMap(),
                         permission: 'add_trip',
                     },
                     {

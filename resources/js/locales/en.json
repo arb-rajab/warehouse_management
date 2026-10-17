@@ -2458,6 +2458,33 @@
                 "markDelivered": "Mark as delivered",
                 "order": "order {code}",
                 "edit": "Edit"
+            },
+            "map": {
+                "title": "Create trip from the map",
+                "help": "Click the orders on the map to add them as stops, put the stops in order, then choose a truck. A free truck starts a new trip at the departure checkpoint; a busy truck adds the stops to its latest open trip.",
+                "mapLabel": "Map of the orders out for delivery",
+                "noOrders": "No order out for delivery has a location on the map.",
+                "stops": "Selected stops ({count})",
+                "noStops": "No stops selected. Click an order on the map to add it.",
+                "customerId": "Customer ID",
+                "postalCode": "Postal code",
+                "phone": "Phone",
+                "address": "Shipping address",
+                "accountingId": "Otajer ID",
+                "freeTrucks": "Free trucks",
+                "busyTrucks": "Trucks on a trip",
+                "selectFirst": "Select orders on the map to assign them to a truck.",
+                "noFreeTrucks": "No trucks are available.",
+                "allFree": "All trucks are available.",
+                "photoOf": "Photo of {name}",
+                "maxPallets": "Max pallets: {count}",
+                "assign": "Assign the stops to {name}",
+                "addToTrip": "Add the stops to {name}'s trip",
+                "assigning": "Assigning…",
+                "nextStop": "Next stop",
+                "checkpointsCount": "Trip {code}: {count} checkpoints",
+                "noTripInformation": "No current trip information.",
+                "deleteTrip": "Delete trip"
             }
         },
         "orders": {

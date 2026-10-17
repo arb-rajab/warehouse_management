@@ -27,8 +27,8 @@ use Inertia\Response;
  * The trip orders list: every order past confirmation that is not
  * cancelled, with its latest trip, the bulk "mark as confirmed / ready for
  * delivery" actions, the inline invoice number and "mark as delivered". The
- * retained Blade map picker marks an order delivered through the same
- * endpoint (`return_to=map`).
+ * trip map picker (`TripMapController`) marks an order delivered through the
+ * same endpoint (`return_to=map`).
  */
 class TripOrderController extends Controller implements HasMiddleware
 {

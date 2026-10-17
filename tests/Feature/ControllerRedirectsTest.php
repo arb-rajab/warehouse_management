@@ -59,7 +59,6 @@ test('no controller redirects with back(), other than the intentional LocaleCont
             '#^ProductQueryController\.php$#',
             '#^RepresentativePackageController\.php$#',
             '#^RepresentativePaymentController\.php$#',
-            '#^Trip/TripController\.php$#',
             '#^VisitController\.php$#',
         ]);
 
