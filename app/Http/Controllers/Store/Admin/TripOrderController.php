@@ -7,6 +7,7 @@ use App\Http\Requests\Store\Admin\BulkUpdateTripOrdersRequest;
 use App\Http\Requests\Store\Admin\FilterTripOrdersRequest;
 use App\Http\Requests\Store\Admin\MarkTripOrderDeliveredRequest;
 use App\Http\Requests\Store\Admin\UpdateTripOrderInvoiceRequest;
+use App\Http\Resources\Store\TripCheckpointResource;
 use App\Http\Resources\Store\TripOrderResource;
 use App\Http\Resources\Store\TruckPhotoResource;
 use App\Models\Order;
@@ -26,8 +27,8 @@ use Inertia\Response;
  * The trip orders list: every order past confirmation that is not
  * cancelled, with its latest trip, the bulk "mark as confirmed / ready for
  * delivery" actions, the inline invoice number and "mark as delivered". The
- * retained Blade map picker marks an order delivered through the same
- * endpoint (`return_to=map`).
+ * trip map picker (`TripMapController`) marks an order delivered through the
+ * same endpoint (`return_to=map`).
  */
 class TripOrderController extends Controller implements HasMiddleware
 {
@@ -82,8 +83,8 @@ class TripOrderController extends Controller implements HasMiddleware
         }
         $orders = $orders->orderByDesc('created_at')->orderByDesc('id')->paginate($perPage)->withQueryString();
         $photoIds = array_values($orders->getCollection()
-            ->flatMap(fn (Order $order) => explode(',', (string) $order->checkpoints->last()?->photos))
-            ->filter(fn (string $id) => ctype_digit($id))->map(fn (string $id) => (int) $id)->unique()->all());
+            ->flatMap(fn (Order $order) => TripCheckpointResource::uploadIds($order->checkpoints->last()?->photos))
+            ->unique()->all());
 
         return Inertia::render('Store/Admin/Trips/Orders/Index', [
             'orders' => $this->paginated(TripOrderResource::collection($orders)),

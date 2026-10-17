@@ -66,6 +66,9 @@ import type {
     StoreDriver,
     StoreOrder,
     StoreTrip,
+    StoreTripCheckpointRow,
+    StoreTripMapOrder,
+    StoreTripMapTruck,
     StoreTripForm,
     StoreTripOrder,
 } from '@/types/store';
@@ -1026,6 +1029,78 @@ export function storeTrip(overrides: Partial<StoreTrip> = {}): StoreTrip {
         notes: 'Ring at the back',
         driver: { id: 31, name: 'Sam Driver' },
         truck: { id: 11, name: 'Cargo truck' },
+        ...overrides,
+    };
+}
+
+/**
+ * A trip detail row: a representative's delivered order with photos and a
+ * CMR file.
+ */
+export function storeTripCheckpointRow(
+    overrides: Partial<StoreTripCheckpointRow> = {},
+): StoreTripCheckpointRow {
+    return {
+        id: 501,
+        position: 1,
+        type: 'delivery',
+        status: 'delivered',
+        arrived_at: '2026-10-14T10:30:00+00:00',
+        eta: 1830,
+        notes: 'Back door',
+        order: {
+            id: 77,
+            code: '20261015-0001',
+            invoice_number: 'INV-1',
+            products: 3,
+            amount: '€42.50',
+        },
+        customer: {
+            id: 21,
+            name: 'Alma Customer',
+            phone: '0611111111',
+            company_name: 'Alma BV',
+            address: 'Main street 5',
+        },
+        representative: { id: 22, name: 'Rita Rep' },
+        has_cmr: true,
+        photos: [601],
+        ...overrides,
+    };
+}
+
+/** A trip map picker order: Alma's order with every popup detail. */
+export function storeTripMapOrder(
+    overrides: Partial<StoreTripMapOrder> = {},
+): StoreTripMapOrder {
+    return {
+        id: 77,
+        code: '20261017-0001',
+        latitude: 52.37,
+        longitude: 4.89,
+        postal_code: '1011AB',
+        address: 'Dock road 5',
+        customer: {
+            id: 21,
+            name: 'Alma Customer',
+            phone: '0611111111',
+            accounting_id: 'ACC-7',
+        },
+        ...overrides,
+    };
+}
+
+/** A trip map picker truck: a free truck with a photo and no trip. */
+export function storeTripMapTruck(
+    overrides: Partial<StoreTripMapTruck> = {},
+): StoreTripMapTruck {
+    return {
+        id: 11,
+        name: 'Cargo truck',
+        max_pallets_number: '18',
+        photo: 601,
+        trip: null,
+        open_trips: [],
         ...overrides,
     };
 }

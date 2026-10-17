@@ -24,6 +24,9 @@
 #                                    absent, and done before the slow installs so
 #                                    a timeout cannot skip it; without a key every
 #                                    test that boots the app errors.
+#   MySQL server              ~30s   .claude/scripts/install_mysql.sh, Ubuntu's mysql-server
+#                                    over https mirrors (plain-http apt is not
+#                                    reachable here), started on every session.
 #   npm run build             ~1m    public/build/manifest.json, which every
 #                                    Inertia feature test needs: without it ~200
 #                                    Pest tests fail with ViteManifestNotFound.
@@ -71,6 +74,15 @@ trap '[ "$(cat "$stateDir/state" 2>/dev/null)" = running ] && recordState failed
 # the Vite build are all unavailable). A no-op when they are already present;
 # failure is non-fatal, the install below then reports the platform error.
 bash .claude/scripts/install_php.sh >/dev/null 2>&1 || true
+
+# A local MySQL server so pre_push_check.py can run the migration tests CI runs
+# on MySQL. Installed once per container, but the process does not survive a
+# resume, so this also starts it again. Non-fatal: without it that one stage is
+# skipped and reported as such.
+mysqlState='unavailable'
+if bash .claude/scripts/install_mysql.sh >/dev/null 2>&1; then
+    mysqlState='ready'
+fi
 
 # A fresh container has no .env and phpunit.xml sets no APP_KEY, so every test
 # that boots the app fails with "No application encryption key has been
@@ -135,7 +147,8 @@ fi
 # wait_for_setup.py (an asynchronous hook's stdout never reaches the session) and
 # printed for a manual run.
 summary="Local tooling — frontend (vitest, vue-tsc, prettier, eslint): ${frontend}. App (artisan, migrations): ${backend}. Vite build (needed by Pest feature tests): ${build}.
-Pint, Pest, PHPStan and Larastan ${phpTools}."
+Pint, Pest, PHPStan and Larastan ${phpTools}.
+MySQL (migration tests, root/password, database warehouse_test): ${mysqlState}."
 
 printf '%s\n' "$summary" > "$stateDir/summary.txt"
 recordState done

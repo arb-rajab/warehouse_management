@@ -58,7 +58,7 @@ class TripOrderResource extends JsonResource
             'editable' => ! $this->by_rep && $this->payment_status === 'unpaid' && ! $this->getAttribute('commission_calculated') && ! in_array($this->delivery_status, ['delivered', 'cancelled'], true),
             'checkpoint' => $checkpoint === null ? null : [
                 'id' => $checkpoint->id,
-                'photos' => array_values(array_map('intval', array_filter(explode(',', (string) $checkpoint->photos), fn (string $id) => ctype_digit($id)))),
+                'photos' => TripCheckpointResource::uploadIds($checkpoint->photos),
             ],
             'trip' => $trip === null ? null : [
                 'id' => $trip->id,

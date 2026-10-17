@@ -1,16 +1,17 @@
 import { Head } from '@inertiajs/vue3';
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { show as showTrip } from '@/actions/App/Http/Controllers/Store/Admin/TripCheckpointController';
 import {
     create,
     edit,
     index as trucksIndex,
     qr,
 } from '@/actions/App/Http/Controllers/Store/Admin/TruckController';
-import { show as showTrip } from '@/actions/App/Http/Controllers/Trip/TripController';
 import AddResourceLink from '@/components/AddResourceLink.vue';
 import Pagination from '@/components/Pagination.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
+import TableLink from '@/components/TableLink.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
 import { t } from '@/lib/i18n';
 import {
@@ -100,9 +101,10 @@ describe('truck list', () => {
         expect(wrapper.get(`a[href="${qr.url(storeTruck())}"]`).text()).toBe(
             t('store.trucks.index.print'),
         );
-        expect(wrapper.get(`a[href="${showTrip.url(14)}"]`).text()).toBe(
-            'Cargo truck',
+        expect(wrapper.getComponent(TableLink).props('href')).toEqual(
+            showTrip(14),
         );
+        expect(wrapper.getComponent(TableLink).text()).toBe('Cargo truck');
         expect(wrapper.get('tbody img').attributes('src')).toBe(
             truckPhoto().url,
         );
@@ -116,9 +118,7 @@ describe('truck list', () => {
         const wrapper = mountPage(['view_all_trucks']);
         expect(wrapper.findComponent(AddResourceLink).exists()).toBe(false);
         expect(wrapper.findComponent(TableActionLink).exists()).toBe(false);
-        expect(wrapper.find(`a[href="${showTrip.url(14)}"]`).exists()).toBe(
-            false,
-        );
+        expect(wrapper.findComponent(TableLink).exists()).toBe(false);
         expect(wrapper.find(`a[href="${qr.url(storeTruck())}"]`).exists()).toBe(
             true,
         );

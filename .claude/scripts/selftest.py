@@ -167,6 +167,103 @@ def main() -> int:
             pre_push_check.changed_files('refs/does-not-exist') is None,
         )
 
+        print('pre_push_check.py --attest')
+        workflow = (SCRIPTS.parent.parent / '.github' / 'workflows' / 'tests.yml').read_text()
+        check(
+            'the MySQL files attest runs are the ones the CI job runs',
+            all(path in workflow for path in pre_push_check.MYSQL_TESTS),
+        )
+        check(
+            'attest runs groups in dependency order',
+            pre_push_check.ATTEST_ORDER == ('js', 'php', 'mysql', 'e2e', 'audit', 'deploy-script')
+            and set(pre_push_check.ATTEST_ORDER) == set(pre_push_check.ci_plan.GROUPS),
+        )
+        pre_push_check.php_tools_installed = lambda: True
+        check(
+            'the php group attest runs Pint, PHPStan and Pest in full',
+            [label for label, _, _ in pre_push_check.attest_steps('php')] == ['Pint', 'PHPStan', 'Clear config cache', 'Pest'],
+        )
+        check(
+            'the js group attest regenerates the Wayfinder types, then runs the four JS checks unscoped',
+            [label for label, _, _ in pre_push_check.attest_steps('js')] == ['Wayfinder types', 'ESLint', 'Prettier', 'vue-tsc', 'Vitest'],
+        )
+        pre_push_check.php_tools_installed = lambda: False
+        check(
+            'without the PHP tools the php group is left to CI, not attested',
+            pre_push_check.unavailable_reason('php') is not None,
+        )
+
+        saved = (pre_push_check.dirty_paths, pre_push_check.hidden_paths, pre_push_check.head_is_pushed)
+        pre_push_check.dirty_paths, pre_push_check.hidden_paths, pre_push_check.head_is_pushed = (lambda: []), (lambda: []), (lambda: False)
+        try:
+            blocker = pre_push_check.attest_blocker
+            check('a clean tree, unpushed head and an app change attest by default', blocker(['resources/js/app.ts']) is None)
+            check('no known base means no default attest', blocker(None) is not None)
+            check('docs-only changes have nothing to attest', blocker(['AGENTS.md', '.ai/rules/ci.md']) is not None)
+            check('a change under .github/ never attests, CI ignores the trailer', blocker(['.github/workflows/tests.yml', 'app/Models/Pallet.php']) is not None)
+
+            pre_push_check.dirty_paths = lambda: [' M app/Models/Pallet.php']
+            check('uncommitted changes fall back to the scoped checks', blocker(['app/Models/Pallet.php']) is not None)
+            pre_push_check.dirty_paths = lambda: []
+
+            pre_push_check.hidden_paths = lambda: ['composer.lock']
+            check('a skip-worktree file blocks the default attest', blocker(['app/Models/Pallet.php']) is not None)
+            pre_push_check.hidden_paths = lambda: []
+
+            pre_push_check.head_is_pushed = lambda: True
+            check('a pushed head commit falls back to the scoped checks', blocker(['app/Models/Pallet.php']) is not None)
+        finally:
+            pre_push_check.dirty_paths, pre_push_check.hidden_paths, pre_push_check.head_is_pushed = saved
+
+        with tempfile.TemporaryDirectory() as repo_dir:
+            repo = Path(repo_dir)
+            env = {**os.environ, 'GIT_AUTHOR_NAME': 't', 'GIT_AUTHOR_EMAIL': 't@t', 'GIT_COMMITTER_NAME': 't', 'GIT_COMMITTER_EMAIL': 't@t'}
+            git = lambda *args, **kw: subprocess.run(['git', *args], cwd=repo, env=env, capture_output=True, text=True, **kw)
+            git('init', '-q')
+            (repo / 'a.txt').write_text('one\n')
+            git('add', '-A')
+            git('commit', '-q', '-m', 'Subject\n\nBody\n\nCo-Authored-By: Someone <s@s>')
+
+            saved_root, saved_env = pre_push_check.ROOT, dict(os.environ)
+            pre_push_check.ROOT = repo
+            os.environ.update(env)
+
+            try:
+                tree = pre_push_check.head_tree()
+                trailer = pre_push_check.ci_plan.format_attestation(tree, ['js', 'php'])
+                check('a clean work tree has no dirty paths', pre_push_check.dirty_paths() == [])
+                check('an unpushed commit is not reported as pushed', not pre_push_check.head_is_pushed())
+
+                check('amending adds the trailer and keeps the tree', pre_push_check.amend_with_trailer(trailer) and pre_push_check.head_tree() == tree)
+                message = git('log', '-1', '--format=%B').stdout
+                check(
+                    'the trailer sits in the existing trailer block and CI reads it back',
+                    trailer in message and 'Co-Authored-By: Someone' in message
+                    and pre_push_check.ci_plan.attested_groups(message, tree) == {'js', 'php'},
+                    message,
+                )
+
+                newer = pre_push_check.ci_plan.format_attestation(tree, ['js'])
+                pre_push_check.amend_with_trailer(newer)
+                message = git('log', '-1', '--format=%B').stdout
+                check('re-attesting replaces the earlier trailer', message.count('CI-Verified:') == 1 and newer in message, message)
+
+                (repo / 'a.txt').write_text('two\n')
+                (repo / 'b.txt').write_text('new\n')
+                check('modified and untracked files make the tree dirty', len(pre_push_check.dirty_paths()) == 2)
+                check(
+                    'only the modified file counts as a tracked change, not the untracked one',
+                    len(pre_push_check.tracked_changes()) == 1 and pre_push_check.tracked_changes()[0].endswith('a.txt'),
+                )
+
+                git('add', 'a.txt')
+                git('update-index', '--skip-worktree', 'a.txt')
+                check('skip-worktree files are reported even though git status hides them', pre_push_check.hidden_paths() == ['a.txt'])
+            finally:
+                pre_push_check.ROOT = saved_root
+                os.environ.clear()
+                os.environ.update(saved_env)
+
         print('install-retry-guard.sh')
         guard = SCRIPTS.parent / 'hooks' / 'install-retry-guard.sh'
 

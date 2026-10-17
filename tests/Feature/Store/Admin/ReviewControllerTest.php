@@ -2,6 +2,7 @@
 
 use App\Models\Review;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Route;
 use Inertia\Testing\AssertableInertia as Assert;
 
 function catalogueReview(array $attributes = []): Review
@@ -94,12 +95,28 @@ test('review publication refuses unauthorized store callers without writing', fu
     expect((int) $review->fresh()->status)->toBe(1);
 })->with('refused store admin callers');
 
-test('the preserved public review route still renders Blade and targets the admin publication route', function () {
-    actingAsStoreUser(createStoreStaff('view_product_reviews', 'publish_product_review'));
-    $review = catalogueReview();
-    Review::forceCreate(['product_id' => $review->product_id, 'user_id' => $review->user_id, 'rating' => 3, 'comment' => 'Another review', 'status' => 1]);
+test('the old reviews.index URL redirects to the Inertia list keeping the query string', function () {
+    actingAsStoreUser(createStoreStaff('view_product_reviews'));
     expect(route('reviews.index'))->toBe(url('/temp/reviews'));
-    $this->get('/temp/reviews')->assertOk()->assertViewIs('shop.backend.product.reviews.index')
-        ->assertSee(route('reviews.published', ['review' => $review->id]))
-        ->assertSee(route('admin.reviews.index'));
+    $this->get('/temp/reviews')->assertRedirect(route('admin.reviews.index'));
+    $this->get('/temp/reviews?rating=rating,asc&per_page=10&page=2')
+        ->assertRedirect(route('admin.reviews.index', ['rating' => 'rating,asc', 'per_page' => 10, 'page' => 2]));
+});
+
+test('the old reviews.index URL refuses unauthorized callers without redirecting to the list', function (string $caller, ?int $status) {
+    actingAsRefusedStoreCaller($caller);
+    $response = $this->get('/temp/reviews?per_page=10');
+    // The legacy route sits outside the store admin group, so a customer is refused by the permission gate (403), not hidden as a 404.
+    $status === null ? $response->assertRedirect(route('shop.login')) : $response->assertStatus($status);
+    expect((string) $response->headers->get('Location'))->not->toContain('/temp/admin/reviews');
+})->with([
+    'guest' => ['guest', null],
+    'customer' => ['customer', 403],
+    'staff without the permission' => ['staff without the permission', 403],
+]);
+
+test('the root review route still stores customer reviews and no longer lists them', function () {
+    expect(Route::has('reviews.store'))->toBeTrue()
+        ->and(Route::getRoutes()->getByName('reviews.index')->getActionName())->toContain('Store\\Admin\\ReviewController@redirectLegacyIndex')
+        ->and(view()->exists('shop.backend.product.reviews.index'))->toBeFalse();
 });

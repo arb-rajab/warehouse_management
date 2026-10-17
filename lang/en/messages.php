@@ -51,6 +51,7 @@ return [
     'Manage Website Scripts' => 'Manage website scripts',
     'upload_refused' => 'This file type is not allowed.',
     'store_trip_departure_unavailable' => 'The default departure checkpoint is unavailable.',
+    'trip_cmr_unavailable' => 'This checkpoint has no CMR file to open.',
     'order_submission_conflict' => 'This submission key has already been used for a different order.',
     'order_stock_unavailable' => 'The requested stock is unavailable.',
     'order_product_unavailable' => 'One of the selected products is unavailable.',

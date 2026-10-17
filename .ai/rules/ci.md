@@ -14,12 +14,47 @@ paths:
 | Vitest | tests related to changed `resources/js` files | full suite, when `js` is planned |
 | Pint | changed PHP files (needs the dev tools) | whole repo, when `php` is planned |
 | PHPStan, Pest | full, `--parallel` (needs the dev tools) | full, `--parallel`, when `php` is planned |
-| Pest on MySQL (only for schema-related paths), Playwright, dependency audit, deploy-script test | never | when planned |
+| Pest on MySQL (only for schema-related paths), Playwright, dependency audit, deploy-script test | only in the attested run (the default on a clean tree) | when planned, unless attested |
 
 CI is the gate; the sandbox run exists to catch the common failure before it
-costs a CI round. `pre_push_check.py --full` runs the whole-repo sequence. The
+costs a CI round (or, with `--attest`, to replace the run). `pre_push_check.py --full` runs the whole-repo sequence. The
 Claude web sandbox cannot install Pint, Pest or PHPStan (dev dists are 403), so
 there those come from CI only.
+
+## `--attest` lets CI skip what already passed here
+
+`pre_push_check.py` attests **by default** when its preconditions hold (clean work
+tree, no hidden skip-worktree files, unpushed head commit, a change outside
+`.github/` that some CI group reads); otherwise it runs the quick scoped checks
+and prints why. `--quick` forces the scoped checks and `--attest` forces
+attesting. The auto-selection is `attest_blocker` in the script.
+
+`pre_push_check.py --attest` runs every group the planner says the branch needs,
+in full, including Playwright (preinstalled Chromium), the migration tests on
+the local MySQL that `install_mysql.sh` provides, the composer and npm audits
+and the deploy-script test. When they pass it amends the *unpushed* head commit
+with `CI-Verified: tree=<head tree> groups=<passed groups>`. The `plan` job
+reads that trailer from the PR head commit and skips exactly those groups, but
+only when:
+
+- the PR's merged tree equals its head tree (the base adds nothing), and the
+  trailer's tree equals that head tree, so any later content change voids it;
+- no path is under `.github/`, so a workflow change still runs everything.
+
+Constraints that keep it honest:
+
+- It refuses unless the work tree is clean and nothing is skip-worktree, so what
+  ran is what the commit holds. A group that cannot run here is left out of the
+  trailer and CI runs it; a failing check records nothing.
+- It is self-attested: CI cannot prove the local run happened, and the sandbox
+  differs from CI (local MySQL 8.0 against `mysql:8.4`). Do not amend a trailer
+  in by hand.
+- Jobs that `needs` Pint or Prettier must accept a skipped result, or an
+  attested php/js group would silently skip Pest, MySQL and E2E too.
+- A run that skipped on a trailer still concludes `success`, so `deploy.yml`'s
+  `verify-tested` counts that tree as tested.
+- Add a CI-run group to `ATTEST_ORDER` in `pre_push_check.py` when you add one to
+  `ci_plan.py`; the selftest compares them.
 
 ## The `plan` job decides what a pull request runs
 
