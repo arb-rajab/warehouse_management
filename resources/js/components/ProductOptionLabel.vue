@@ -18,8 +18,9 @@ const alternateLabel = computed(() =>
 </script>
 
 <template>
-    <span class="min-w-0">
-        <!--
+    <span class="flex w-full min-w-0 items-start gap-2">
+        <span class="min-w-0 flex-1">
+            <!--
             `dir="auto"` per line, not on a shared wrapper: the document's
             direction is set once on `<html>` (see resources/views/app.blade.php),
             so the Latin name inside the Arabic panel — or the Arabic one inside
@@ -27,26 +28,27 @@ const alternateLabel = computed(() =>
             its own isolation. Two elements rather than one interpolated string
             for the same reason: no shared punctuation to be reordered.
         -->
-        <span class="flex items-baseline gap-1">
+            <span class="flex flex-wrap items-baseline gap-x-1">
+                <span
+                    dir="auto"
+                    class="block min-w-0 [overflow-wrap:anywhere]"
+                    data-testid="product-option-name"
+                    >{{ label }}</span
+                >
+                <span
+                    class="shrink-0 text-xs text-gray-400 dark:text-neutral-500"
+                    data-testid="product-option-id"
+                    >#{{ product.id }}</span
+                >
+            </span>
             <span
+                v-if="alternateLabel"
                 dir="auto"
-                class="block break-words"
-                data-testid="product-option-name"
-                >{{ label }}</span
+                class="block text-xs [overflow-wrap:anywhere] text-gray-500 dark:text-neutral-400"
+                data-testid="product-option-alternate-name"
+                >{{ alternateLabel }}</span
             >
-            <span
-                class="shrink-0 text-xs text-gray-400 dark:text-neutral-500"
-                data-testid="product-option-id"
-                >#{{ product.id }}</span
-            >
-            <ProductActiveBadge :active="product.active" />
         </span>
-        <span
-            v-if="alternateLabel"
-            dir="auto"
-            class="block text-xs break-words text-gray-500 dark:text-neutral-400"
-            data-testid="product-option-alternate-name"
-            >{{ alternateLabel }}</span
-        >
+        <ProductActiveBadge :active="product.active" />
     </span>
 </template>

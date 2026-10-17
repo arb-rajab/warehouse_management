@@ -53,13 +53,13 @@ Apply these on every file add/edit in this project, not as an occasional audit.
   run` (all files) plus one full `npx vue-tsc --noEmit` (no per-file mode
   exists for it) for right before each commit, as the final confirmation
   that nothing else regressed — not after every intermediate edit. Before
-  every push, run `python3 .claude/scripts/pre_push_check.py` once: it picks
-  the checks the branch's changes need with the same classifier as CI's `plan`
-  job, scoping ESLint, Prettier, Vitest and Pint to the changed files and
-  running vue-tsc, PHPStan and Pest whole; a docs-only change runs nothing.
-  `--full` runs the unscoped sequence in CI's order. It skips the PHP steps,
-  with a note, when the dev tools are not installed. Which check runs where is
-  tabled in `.ai/rules/ci.md`.
+  every push or PR publication, commit and run
+  `python3 .claude/scripts/pre_push_check.py --for-pr`. Require exit zero and
+  a GREEN report for the current commit and tree. This runs every planned CI
+  group in full, including browser tests; missing tools or failures in unchanged
+  code are blockers. Scoped `--quick` checks remain useful while editing, but
+  cannot authorize publication. Which check runs where is tabled in
+  `.ai/rules/ci.md`.
 
 ## Sandbox: dev tools install from git, and Pest needs the Vite build
 
@@ -163,7 +163,7 @@ The scripts in `.claude/scripts/`:
 | `install_dev_tools.py` | the dependency installer described above (shallow git fetches as local dists), run by the SessionStart hook |
 | `build_without_fonts.py` | Vite build from a temporary font-less copy of `vite.config.ts`, for sandboxes where `fonts.bunny.net` is blocked (403) and `npm run build` fails; the SessionStart hook falls back to it, `vite.config.ts` is never modified |
 | `wait_for_setup.py` | blocks until the background SessionStart setup has finished and prints its summary; exit 0 ready, 1 failed/interrupted/timed out |
-| `pre_push_check.py` | the one command to run before every push: waits for setup, then the ESLint, Prettier, vue-tsc, Vitest, Pint, PHPStan and Pest steps the branch's changes need, scoped to the changed files where the tool allows (`--full` for all of them, unscoped) |
+| `pre_push_check.py` | use `--quick` while editing; before publishing, commit and require `--for-pr` to report GREEN for that commit and tree, with all required CI groups checked |
 | `php_duplicate_blocks.py` | the cross-file duplication survey the threshold rule above needs; a deliberate review tool, not a per-push gate |
 | `selftest.py` | verifies the scripts above and the install guard hook |
 

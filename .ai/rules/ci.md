@@ -5,6 +5,21 @@ paths:
 
 # CI
 
+## A green local report gates PR publication
+
+Run `python3 .claude/scripts/pre_push_check.py --for-pr` on the committed tree
+before pushing or creating, reopening, or updating a PR. This runs every planned
+CI group in full without amending the commit, and records the result, commit,
+tree, and completed groups in the git directory's `codex-pre-push-report.json`.
+Only an exit-zero GREEN report matching the current commit and tree permits
+publication. Failures in unchanged code, missing tools, skipped groups, failed
+setup, and changes during verification are blockers, not exceptions. A scoped
+run or partial attestation is not a PR gate. CI verifies the result again.
+After successful browser tests, the gate removes only untracked files under
+`public/uploads/all` owned by the dedicated `database/e2e.sqlite` upload table.
+Tracked assets, source files, and unrelated uploads are never removed. Any
+remaining worktree changes invalidate the report.
+
 ## Where each check runs
 
 | Check | Sandbox (`pre_push_check.py`, default scoped mode) | CI (`tests.yml`) |
@@ -14,7 +29,7 @@ paths:
 | Vitest | tests related to changed `resources/js` files | full suite, when `js` is planned |
 | Pint | changed PHP files (needs the dev tools) | whole repo, when `php` is planned |
 | PHPStan, Pest | full, `--parallel` (needs the dev tools) | full, `--parallel`, when `php` is planned |
-| Pest on MySQL (only for schema-related paths), Playwright, dependency audit, deploy-script test | only in the attested run (the default on a clean tree) | when planned, unless attested |
+| Pest on MySQL (only for schema-related paths), Playwright, dependency audit, deploy-script test | in `--for-pr` and the attested run | when planned, unless attested |
 
 CI is the gate; the sandbox run exists to catch the common failure before it
 costs a CI round (or, with `--attest`, to replace the run). `pre_push_check.py --full` runs the whole-repo sequence. In the

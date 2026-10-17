@@ -276,6 +276,7 @@ export interface ProductSummary {
 }
 
 export type ProductSortBy =
+    | 'id'
     | 'name'
     | 'full_cells_count'
     | 'opened_cells_count'

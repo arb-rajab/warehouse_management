@@ -50,6 +50,29 @@ function mountSelect(
 }
 
 describe('FilterProductSelect', () => {
+    it.each([true, false])(
+        'keeps the selected product status visible on the closed trigger (active=%s)',
+        async (active) => {
+            const product = { id: 99, name: 'Widget', ar_name: 'ودجة', active };
+            const wrapper = mountSelect({
+                selected: [product],
+                modelValue: ['99'],
+            });
+            const trigger = wrapper.get('button');
+
+            expect(
+                trigger.get('[data-testid="product-active-badge"]').text(),
+            ).toBe(
+                t(
+                    active
+                        ? 'products.status.active'
+                        : 'products.status.inactive',
+                ),
+            );
+            expect(trigger.attributes('aria-expanded')).toBe('false');
+        },
+    );
+
     beforeEach(() => {
         getMock.mockClear();
     });
@@ -79,7 +102,7 @@ describe('FilterProductSelect', () => {
             modelValue: ['99'],
         });
 
-        expect(wrapper.get('button').text()).toBe('Widget');
+        expect(wrapper.get('button > span:first-child').text()).toBe('Widget');
         expect(getMock).not.toHaveBeenCalled();
     });
 
@@ -426,7 +449,7 @@ describe('FilterProductSelect', () => {
         );
         await wrapper.vm.$nextTick();
 
-        expect(wrapper.get('button').text()).toBe('Widgets');
+        expect(wrapper.get('button > span:first-child').text()).toBe('Widgets');
     });
 
     it('closes the panel when Escape is pressed', async () => {
@@ -514,8 +537,10 @@ describe('FilterProductSelect', () => {
             modelValue: ['98'],
         });
 
-        expect(translated.get('button').text()).toBe('ودجة');
-        expect(untranslated.get('button').text()).toBe('Gadget');
+        expect(translated.get('button > span:first-child').text()).toBe('ودجة');
+        expect(untranslated.get('button > span:first-child').text()).toBe(
+            'Gadget',
+        );
     });
 
     it('hands each result to ProductOptionLabel with both raw name columns', async () => {

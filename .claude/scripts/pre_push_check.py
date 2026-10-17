@@ -13,8 +13,8 @@ change touches:
   - PHP group: Pint on the changed PHP files; PHPStan; Pest (`--parallel`).
 
 CI stays the full gate: it runs every check in the planned groups over the
-whole repository, and the E2E, MySQL and audit jobs only run there unless
-`--attest` ran them here. Scoping
+whole repository. `--for-pr` and `--attest` also run the planned E2E, MySQL and
+audit jobs locally. Scoping
 here trades a rare CI round (an unchanged file broken by a changed one, which
 ESLint/Prettier/Vitest cannot see from the changed files alone) for not
 re-running whole-repo suites on every push.
@@ -31,9 +31,9 @@ base cannot be resolved, e.g. a clone too shallow to reach it):
      `composer test:pest` hits the 300s default on this suite)
 
 The PHP steps need the PHP dev tools, which the SessionStart hook installs
-through `.claude/scripts/install_dev_tools.py`. When `vendor/bin/pint` is absent
-(that install failed), they are skipped with a note rather than failed: read
-them from CI instead. Pest also needs `.env` with an APP_KEY and
+through `.claude/scripts/install_dev_tools.py`. Missing required tools produce
+a non-zero exit and a RED report; a partial run cannot authorize publication.
+Pest also needs `.env` with an APP_KEY and
 `public/build/manifest.json`; the same hook provides both.
 
 Attesting is automatic: with no flag, a clean work tree, an unpushed head commit
@@ -64,7 +64,14 @@ that fails stops the run and records nothing. The trailer is self-attested: it
 is only as good as the local run, so a commit amended by hand is trusted too.
 
 Usage:
-    python3 .claude/scripts/pre_push_check.py [--full] [--quick] [--attest] [--base <ref>]
+    python3 .claude/scripts/pre_push_check.py [--full | --quick | --attest | --for-pr] [--base <ref>]
+
+Before opening or updating a PR, use --for-pr on the committed changes. It runs
+every planned CI group without amending the commit. Missing tools, skipped
+groups, failed checks, or changes during the run produce a RED report and a
+non-zero exit. Only a complete run produces GREEN, recorded with its commit and
+tree in the git directory's codex-pre-push-report.json. Scoped checks and partial
+attestations do not authorize opening a PR.
 
 It first waits for the background SessionStart setup (wait_for_setup.py) so the
 PHP steps are chosen from a finished install, not a half-installed one.
@@ -75,7 +82,9 @@ Exits non-zero, and stops at the first failing step, if any check fails.
 import argparse
 import concurrent.futures
 import importlib.util
+import json
 import os
+import sqlite3
 import shutil
 import signal
 import subprocess
@@ -329,6 +338,23 @@ def attest_steps(group: str) -> list[Step]:
     }[group]()
 
 
+def clean_e2e_uploads() -> None:
+    """Remove only untracked uploads owned by the dedicated browser-test DB."""
+    database = ROOT / 'database/e2e.sqlite'
+    if not database.is_file():
+        return
+
+    with sqlite3.connect(database.resolve().as_uri() + '?mode=ro', uri=True) as connection:
+        owned = {
+            'public/' + row[0]
+            for row in connection.execute('SELECT file_name FROM uploads')
+            if isinstance(row[0], str)
+        }
+    uploads = (ROOT / 'public/uploads/all').resolve()
+    for relative in git_lines('ls-files', '--others', '--exclude-standard', '--', 'public/uploads/all') or []:
+        path = ROOT / relative
+        if relative in owned and not path.is_symlink() and path.is_file() and path.resolve().is_relative_to(uploads):
+            path.unlink()
 def attest_prerequisites(groups: list[str]) -> list[Step]:
     """What must finish, alone, before the lanes start.
 
@@ -606,6 +632,9 @@ def attest(base: str, *, serial: bool = False) -> int:
 
     print(f'\nAll {len(attested)} lane(s) passed in {time.monotonic() - started:.0f}s.')
 
+    if 'e2e' in attested:
+        clean_e2e_uploads()
+
     # Tests write files (E2E uploads under public/uploads) that no commit holds
     # and CI's fresh checkout would also start without; those are reported, not
     # fatal. A change to a tracked file is: what ran would no longer be the commit.
@@ -640,13 +669,81 @@ def attest(base: str, *, serial: bool = False) -> int:
     return 0
 
 
+def write_pr_report(status: str, commit: str, tree: str, groups: list[str], reason: str = '') -> None:
+    """Keep the PR gate's result tied to the exact commit that was checked."""
+    paths = git_lines('rev-parse', '--git-path', 'codex-pre-push-report.json')
+
+    if not paths:
+        raise RuntimeError('Cannot locate the git directory for the pre-push report.')
+
+    path = Path(paths[0])
+    if not path.is_absolute():
+        path = ROOT / path
+    path.write_text(json.dumps({
+        'status': status, 'commit': commit, 'tree': tree,
+        'groups': groups, 'reason': reason,
+    }, indent=2) + '\n')
+
+
+def check_for_pr(base: str) -> int:
+    """Run every required group; a partial or stale result can never be green."""
+    commit = (git_lines('rev-parse', 'HEAD') or [''])[0]
+    tree = head_tree()
+    completed: list[str] = []
+
+    def red(reason: str) -> int:
+        write_pr_report('RED', commit, tree, completed, reason)
+        print(f'\nPre-push report: RED — {reason}\nDo not push or open a PR until --for-pr reports GREEN.')
+        return 1
+
+    write_pr_report('RED', commit, tree, [], 'Verification has not completed.')
+    files = changed_files(base)
+    if files is None:
+        return red(f'Cannot resolve the branch base {base}.')
+    if dirty_paths() or hidden_paths():
+        return red('Commit the changes and remove hidden changes before checking the PR.')
+
+    needed = ci_plan.plan(files)
+    wanted = [group for group in ATTEST_ORDER if needed.get(group)]
+    if any(path.startswith('.claude/scripts/') for path in files):
+        if not run_step('Agent script self-tests', [sys.executable, '.claude/scripts/selftest.py']):
+            return red('Agent script self-tests failed.')
+
+    for group in wanted:
+        reason = unavailable_reason(group)
+        if reason:
+            return red(f'{group} cannot run: {reason}')
+
+    for label, command, env in attest_prerequisites(wanted):
+        if not run_step(f'before the groups: {label}', command, env=env):
+            return red(f'Prerequisite: {label} failed.')
+
+    for group in wanted:
+        for label, command, env in attest_steps(group):
+            if not run_step(f'{group}: {label}', command, env=env):
+                return red(f'{group}: {label} failed.')
+        completed.append(group)
+
+    if 'e2e' in completed:
+        clean_e2e_uploads()
+
+    if dirty_paths() or hidden_paths() or (git_lines('rev-parse', 'HEAD') or [''])[0] != commit or head_tree() != tree:
+        return red('The checked commit or work tree changed during verification; run the gate again.')
+
+    write_pr_report('GREEN', commit, tree, completed)
+    print(f'\nPre-push report: GREEN — every required CI group passed for {commit}.')
+    return 0
+
+
 def main(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(description='Run the CI checks this branch needs before a push.')
-    parser.add_argument('--full', action='store_true', help='run every check unscoped, in CI order')
-    parser.add_argument('--quick', action='store_true',
+    modes = parser.add_mutually_exclusive_group()
+    modes.add_argument('--for-pr', action='store_true', help='require a complete GREEN report for this commit before pushing or opening a PR')
+    modes.add_argument('--full', action='store_true', help='run every check unscoped, in CI order')
+    modes.add_argument('--quick', action='store_true',
                         help='never attest: run the scoped checks only (the default does this itself when the tree is '
                              'dirty, the head commit is pushed, or the change is under .github/)')
-    parser.add_argument('--attest', action='store_true',
+    modes.add_argument('--attest', action='store_true',
                         help='run every planned group in full (E2E, MySQL and audits included) and, when they pass, '
                              'record a CI-Verified trailer on the unpushed head commit')
     parser.add_argument('--serial', action='store_true',
@@ -655,11 +752,19 @@ def main(argv: list[str]) -> int:
     parser.add_argument('--base', default=DEFAULT_BASE, help=f'the ref the branch is compared with (default {DEFAULT_BASE})')
     args = parser.parse_args(argv)
 
-    # The SessionStart setup runs in the background: steps are chosen from what
-    # is installed, so wait for it first. A failed or interrupted setup is not
-    # fatal here; the steps simply reflect whatever did get installed.
+    # A failed or interrupted setup cannot authorize publication.
     print('\n=== Session setup ===')
-    print(wait_for_setup.wait(wait_for_setup.state_dir(), wait_for_setup.DEFAULT_TIMEOUT_SECONDS)[1])
+    setup_code, summary = wait_for_setup.wait(wait_for_setup.state_dir(), wait_for_setup.DEFAULT_TIMEOUT_SECONDS)
+    print(summary)
+
+    if setup_code != 0:
+        if args.for_pr:
+            write_pr_report('RED', (git_lines('rev-parse', 'HEAD') or [''])[0], head_tree(), [], summary)
+        print('\nPre-push report: RED — session setup failed or did not finish.')
+        return 1
+
+    if args.for_pr:
+        return check_for_pr(args.base)
 
     if args.attest:
         return attest(args.base, serial=args.serial)
@@ -694,20 +799,19 @@ def main(argv: list[str]) -> int:
 
     for label, command, env in steps:
         if not run_step(label, command, env=env):
-            print(f'\nStopping: "{label}" failed. Fix it and re-run '
+            print(f'\nPre-push report: RED — "{label}" failed. Fix it and re-run '
                   f'`python3 .claude/scripts/pre_push_check.py` before pushing.')
             return 1
 
     if needed['php'] and not php_tools_installed():
-        print('\nEvery check that ran passed. Pint, PHPStan and Pest were skipped: '
+        print('\nPre-push report: RED — Pint, PHPStan and Pest could not run: '
               'vendor/bin/pint is missing, so the dev-tools install did not complete. '
-              'Read them from CI.')
+              'Install the tools and run the gate again.')
 
-        return 0
+        return 1
 
-    print('\nAll applicable checks passed locally.' if files is not None else '\nAll CI checks passed locally.')
-    print('E2E, MySQL and the audits run only in CI. Commit, then re-run this on a clean tree to attest '
-          'them here and let CI skip what passed.')
+    print('\nThe selected checks passed locally. This is not a complete PR gate.')
+    print('Commit, then run with --for-pr and require its GREEN report before publication.')
 
     return 0
 
