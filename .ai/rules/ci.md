@@ -17,9 +17,10 @@ paths:
 | Pest on MySQL (only for schema-related paths), Playwright, dependency audit, deploy-script test | only in the attested run (the default on a clean tree) | when planned, unless attested |
 
 CI is the gate; the sandbox run exists to catch the common failure before it
-costs a CI round (or, with `--attest`, to replace the run). `pre_push_check.py --full` runs the whole-repo sequence. The
-Claude web sandbox cannot install Pint, Pest or PHPStan (dev dists are 403), so
-there those come from CI only.
+costs a CI round (or, with `--attest`, to replace the run). `pre_push_check.py --full` runs the whole-repo sequence. In the
+Claude web sandbox, dev dists are 403, so Pint, Pest and PHPStan come from
+`install_dev_tools.py` (shallow git fetches); when that install fails, they come
+from CI only.
 
 ## `--attest` lets CI skip what already passed here
 
