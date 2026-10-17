@@ -53,7 +53,12 @@ deploy-script test. When all of them pass it amends the unpushed head commit wit
 and the `plan` job skips exactly those groups for a pull request whose merged
 tree equals that head tree (see .github/scripts/ci_plan.py). It refuses unless
 the work tree is clean (what ran is what the commit holds) and nothing is hidden
-with skip-worktree/assume-unchanged. A group that cannot run here (no PHP dev
+with skip-worktree/assume-unchanged. The groups run as parallel lanes (about 10
+minutes, against about 25 one after another): the Wayfinder files, the Vite build
+and the config cache run first, alone, then js, php, mysql, e2e, audit and
+deploy-script run at the same time, each logging to its own file. Playwright keeps
+normal CPU priority and the other lanes run niced; the first failing lane stops
+the rest and everything they started. `--serial` runs them one at a time. A group that cannot run here (no PHP dev
 tools, no database, no app) is left out of the trailer and CI runs it; a check
 that fails stops the run and records nothing. The trailer is self-attested: it
 is only as good as the local run, so a commit amended by hand is trusted too.
@@ -666,7 +671,7 @@ def main(argv: list[str]) -> int:
 
         if blocker is None:
             print('\nClean tree, unpushed head commit: running the full attested run '
-                  '(about 25 minutes). Use --quick for the scoped checks only.')
+                  '(about 10 minutes). Use --quick for the scoped checks only.')
             return attest(args.base, serial=args.serial)
 
         print(f'\nNot attesting: {blocker}. Running the scoped checks.')

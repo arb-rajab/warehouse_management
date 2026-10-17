@@ -41,6 +41,26 @@ only when:
   trailer's tree equals that head tree, so any later content change voids it;
 - no path is under `.github/`, so a workflow change still runs everything.
 
+The groups run as **parallel lanes** (about 10 minutes, against about 25 one after
+another). `attest_prerequisites` runs first, alone: Wayfinder generation, the Vite
+build and `config:clear`, which write into the tree or cache every lane reads. Then
+`run_lanes` runs js, php, mysql, e2e, audit and deploy-script together, one log per
+lane (printed when the lane ends), and the first failure stops the other lanes and
+everything they started. Constraints this imposes:
+
+- Playwright's output directory is outside the work tree (`--output=<tmp>`):
+  Playwright empties `test-results/` when it starts, and Pint walking the repo in
+  another lane dies on the vanished directory.
+- Stopping a lane kills its whole process tree, not just the process group: the
+  Playwright web server (`node` plus `php artisan serve` on 8010/8011) runs in its
+  own session and would otherwise keep the port, failing the next run.
+- E2E keeps normal CPU priority and the other lanes run under `nice`: its 5s
+  expectations are timing-sensitive and the machine has 4 cores that Pest, Vitest
+  and the browser all want. Do not add Playwright workers (measured: flaky).
+- A new group or a step that writes into the work tree during the lanes needs the
+  same thought: it must not race a lane that scans or reads that path.
+  `--serial` is the fallback for a machine with too few cores.
+
 Constraints that keep it honest:
 
 - It refuses unless the work tree is clean and nothing is skip-worktree, so what
