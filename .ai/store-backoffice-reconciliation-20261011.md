@@ -3452,7 +3452,7 @@ Work on `ccr-ff665fd6-s90gn3` from `develop` at `ead3b91` (the PR #422 merge).
 **Owner decision:** delete the server status page (a controller-less
 `Route::view`, PHP 7.3/7.4 and MySQL 5.6 checks, a red cross on every working
 install, no other users). The owner authorized commits, one PR into `develop`,
-its merge and `[skip ci]` on all of them. **No PR CI, no PR or merge SAST and
+its merge (PR #423) and `[skip ci]` on all of them. **No PR CI, no PR or merge SAST and
 no `develop` deploy ran.** The guide's §29 records the result.
 
 ### Setup and baseline on `develop`
