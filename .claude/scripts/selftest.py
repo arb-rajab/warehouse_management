@@ -105,6 +105,7 @@ def main() -> int:
         import pre_push_check
 
         pre_push_check.php_tools_installed = lambda: True
+        pre_push_check.backend_installed = lambda: False
         labels = [label for label, _, _ in pre_push_check.full_steps()]
         check(
             'with the PHP tools installed, --full runs every CI step in CI order',
@@ -144,6 +145,22 @@ def main() -> int:
             'vue-tsc' in labels and 'ESLint' not in labels,
             str(labels),
         )
+
+        pre_push_check.php_tools_installed = lambda: True
+        pre_push_check.backend_installed = lambda: True
+        check(
+            'with the app installed, --full regenerates the Wayfinder types before the JS checks',
+            [label for label, _, _ in pre_push_check.full_steps()][:2] == ['Wayfinder types', 'ESLint'],
+        )
+        check(
+            'with the app installed, a JS change regenerates the Wayfinder types first',
+            list(scoped('resources/js/app.ts'))[:2] == ['Wayfinder types', 'ESLint'],
+        )
+        check(
+            'a PHP-test-only change does not regenerate them (no JS check runs)',
+            'Wayfinder types' not in scoped('tests/Pest.php'),
+        )
+        pre_push_check.backend_installed = lambda: False
 
         pre_push_check.php_tools_installed = lambda: False
         labels = [label for label, _, _ in pre_push_check.full_steps()]

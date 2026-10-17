@@ -164,6 +164,7 @@ def changed_files(base: str) -> list[str] | None:
 def full_steps() -> list[Step]:
     """Every CI step, unscoped, in CI's order."""
     steps: list[Step] = [
+        *wayfinder_steps(),
         ('ESLint', ['npm', 'run', 'lint:check'], None),
         ('Prettier', ['npm', 'run', 'format:check'], None),
         ('vue-tsc', ['npm', 'run', 'types:check'], None),
@@ -192,6 +193,8 @@ def scoped_steps(files: list[str]) -> list[Step]:
     steps: list[Step] = []
 
     if needed['js']:
+        steps += wayfinder_steps()
+
         lintable = [path for path in existing if path.endswith(ESLINT_SUFFIXES)]
         formattable = [path for path in existing if path.startswith('resources/')]
         frontend = [path for path in existing if path.startswith('resources/js/')]
@@ -228,11 +231,17 @@ def build_step() -> Step:
     return ('Build assets', ['bash', '-c', 'npm run build || python3 .claude/scripts/build_without_fonts.py'], None)
 
 
+def wayfinder_steps() -> list[Step]:
+    """The Wayfinder regeneration, when the app is installed to generate from."""
+    return [wayfinder_step()] if backend_installed() else []
+
+
 def wayfinder_step() -> Step:
     """Regenerate the gitignored Wayfinder types, as CI does before ESLint, vue-tsc and Vitest.
 
     Stale ones (a controller added since the session started) make ESLint report
-    import/order errors on `@/actions/...` imports that CI does not have.
+    import/order errors on `@/actions/...` imports that CI does not have, so every
+    mode that runs a JS check regenerates them first, not only --attest.
     """
     return ('Wayfinder types', ['php', 'artisan', 'wayfinder:generate', '--skip-routes', '--with-form'], PHP_ENV)
 
