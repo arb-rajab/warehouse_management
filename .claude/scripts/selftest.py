@@ -193,6 +193,28 @@ def main() -> int:
             pre_push_check.unavailable_reason('php') is not None,
         )
 
+        saved = (pre_push_check.dirty_paths, pre_push_check.hidden_paths, pre_push_check.head_is_pushed)
+        pre_push_check.dirty_paths, pre_push_check.hidden_paths, pre_push_check.head_is_pushed = (lambda: []), (lambda: []), (lambda: False)
+        try:
+            blocker = pre_push_check.attest_blocker
+            check('a clean tree, unpushed head and an app change attest by default', blocker(['resources/js/app.ts']) is None)
+            check('no known base means no default attest', blocker(None) is not None)
+            check('docs-only changes have nothing to attest', blocker(['AGENTS.md', '.ai/rules/ci.md']) is not None)
+            check('a change under .github/ never attests, CI ignores the trailer', blocker(['.github/workflows/tests.yml', 'app/Models/Pallet.php']) is not None)
+
+            pre_push_check.dirty_paths = lambda: [' M app/Models/Pallet.php']
+            check('uncommitted changes fall back to the scoped checks', blocker(['app/Models/Pallet.php']) is not None)
+            pre_push_check.dirty_paths = lambda: []
+
+            pre_push_check.hidden_paths = lambda: ['composer.lock']
+            check('a skip-worktree file blocks the default attest', blocker(['app/Models/Pallet.php']) is not None)
+            pre_push_check.hidden_paths = lambda: []
+
+            pre_push_check.head_is_pushed = lambda: True
+            check('a pushed head commit falls back to the scoped checks', blocker(['app/Models/Pallet.php']) is not None)
+        finally:
+            pre_push_check.dirty_paths, pre_push_check.hidden_paths, pre_push_check.head_is_pushed = saved
+
         with tempfile.TemporaryDirectory() as repo_dir:
             repo = Path(repo_dir)
             env = {**os.environ, 'GIT_AUTHOR_NAME': 't', 'GIT_AUTHOR_EMAIL': 't@t', 'GIT_COMMITTER_NAME': 't', 'GIT_COMMITTER_EMAIL': 't@t'}
