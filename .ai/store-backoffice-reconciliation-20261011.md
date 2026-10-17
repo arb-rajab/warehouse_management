@@ -106,7 +106,7 @@ objects. These changes remain available in Git and have not been silently lost.
 | `468d235c`: unconverted `TripController` / visit map Blade consumers | Existing Leaflet/Google assets, hardened coordinates/DOM output and HTTPS routing; existing departure ID 9 semantics retained | New Vue Leaflet dependency and departure business policy require decisions; no map conversion claimed |
 | `7ab01926`: `Store/Admin/DashboardController` chart implementation, `Store/Admin/Dashboard/Index.vue`, `StoreDashboardCharts.vue`, chart tests and Chart.js dependency additions | Root Blade dashboard with existing chart assets; shell counts/search/notifications and scoped cache clear integrated | Chart.js dependency approval before Inertia dashboard activation; checked-in claim is not independent evidence |
 | `7ab01926`: `app/Services/StoreAdminOrderService.php` line tax/grand-total arithmetic and corresponding UI/test expectations | Raw product tax metadata stored; grand total sums line prices, as existing entry/edit handlers did | Percentage tax conversion and adding tax/shipping/subtracting coupon require business approval; regression expectations reflect established behavior |
-| Sources touching `seller_app_link`, SVG, shared logout/session or server status | Existing behavior and routes/templates remain | Explicit owner decisions before removal or shared policy changes; admin conversion alone is insufficient |
+| Sources touching `seller_app_link`, SVG or shared logout/session (server status was deleted on the owner's decision, guide §29) | Existing behavior and routes/templates remain | Explicit owner decisions before removal or shared policy changes; admin conversion alone is insufficient |
 | `e5523338`: duplicate reference controllers/requests/pages/routes/translations/progress | Selected `35ae3133` implementation remains | Superseded, not awaiting activation; retain only independently useful adapted tests/fixes |
 
 No independently verified approvals were found for the above dependency or
@@ -3444,4 +3444,57 @@ On `develop`'s code (only the docs cherry-pick on top, changes stashed):
   can be made permanent once no bookmark traffic remains.
 - **Inventory.** **35** backend Blade files; **17**/**3** literal consumers of
   the app/layout shells; **1,048** `/temp` and **436** `/temp/admin`
+  registrations; Blade editor: **8** fields in **8** views.
+
+## Server status page deletion (2026-10-17)
+
+Work on `ccr-ff665fd6-s90gn3` from `develop` at `ead3b91` (the PR #422 merge).
+**Owner decision:** delete the server status page (a controller-less
+`Route::view`, PHP 7.3/7.4 and MySQL 5.6 checks, a red cross on every working
+install, no other users). The owner authorized commits, one PR into `develop`,
+its merge (PR #423) and `[skip ci]` on all of them. **No PR CI, no PR or merge SAST and
+no `develop` deploy ran.** The guide's §29 records the result.
+
+### Setup and baseline on `develop`
+
+PHP 8.5.11, `vendor/` with the dev tools, `node_modules` and the Vite build
+(`wait_for_setup.py` exited 0; the build is without the remote font). Laravel
+Boost failed to connect (`CONNECTION_CLOSED`); repository files were used.
+Before any change, `StoreBackOfficeShellTest`, `LegacyAdminPermissionsTest`,
+`LegacyStoreStateChangingRoutesTest`, `LegacyShopRouteAccessTest` and
+`LegacyTempRoutesReachableTest`: **25 passed** (92 assertions).
+
+### Audit evidence
+
+- Route and view: `routes/shop-admin.php` (`system_server`, `RaizerSuperAdmin`)
+  and `system/server_status.blade.php`.
+- Consumers: only `inc/admin_sidenav.blade.php` (a System group whose sole
+  child was the page, gated by `server_status`), `StoreBackOfficeShellTest` and
+  the `storeAdminMenu.ts` comment. No `public/assets/js`, `config`, `lang` or
+  Vue reference.
+- `RaizerSuperAdmin` stays: `cache.clear`, commission activation and
+  `SettingsController` use it.
+
+### Completed scope
+
+- Removed: the route, the view (`git rm`, `system/` gone), the sidebar group.
+- Updated: `StoreBackOfficeShellTest` (asserts the route and view are gone),
+  a new 404/unregistered case, the `storeAdminMenu.ts` comment, guide §§1, 2.2,
+  4, 5.1 (35 → 34), 6 and the new §29.
+- Unchanged: the `server_status` permission name, translations, middleware
+  alias, other tests and ratchets, CSP, shells, dependencies and lockfiles.
+
+### Verification and limits
+
+- **Ran.** The five files above after the change: 26 tests, 96 assertions
+  passed. `route:list`: 1,047 under `/temp`, 435 under `/temp/admin`.
+  `wayfinder:generate --skip-routes --with-form` ran with no tracked change.
+  `python3 .claude/scripts/pre_push_check.py --full`: exit 0. ESLint,
+  Prettier, vue-tsc, Vitest (315 files, 2,800 tests), Pint, PHPStan (0
+  errors) and Pest (6,048 tests, 33,697 assertions) all passed.
+- **Not run.** PR CI, SAST and the `develop` deploy (`[skip ci]`, as
+  authorized), MySQL (Pest uses SQLite), Playwright (no spec references the
+  page) and `npm run build` with the remote font.
+- **Inventory.** **34** backend Blade files; **17**/**3** literal consumers of
+  the app/layout shells; **1,047** `/temp` and **435** `/temp/admin`
   registrations; Blade editor: **8** fields in **8** views.
