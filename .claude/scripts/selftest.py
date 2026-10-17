@@ -9,14 +9,18 @@ the install guard hook:
 Exits non-zero if any case failed.
 """
 
+import io
 import json
 import os
 import re
 import signal
+import sqlite3
 import subprocess
 import sys
 import tempfile
+from contextlib import redirect_stdout
 from pathlib import Path
+from unittest.mock import patch
 
 SCRIPTS = Path(__file__).parent
 
@@ -167,6 +171,53 @@ def main() -> int:
             pre_push_check.changed_files('refs/does-not-exist') is None,
         )
 
+        print('pre_push_check.py --for-pr')
+
+        def pr_gate(*, failure: str = '', unavailable: str = '', dirty: bool = False, stale: bool = False, unknown_base: bool = False):
+            reports = []
+            labels = []
+            status_calls = iter([[' M changed.php'] if dirty else [], [' M changed.php'] if stale else []])
+
+            def step(label, command, *, env=None):
+                labels.append(label)
+                return label != failure
+
+            with patch.multiple(pre_push_check,
+                changed_files=lambda base: None if unknown_base else ['app/Models/Pallet.php'],
+                dirty_paths=lambda: next(status_calls), hidden_paths=lambda: [],
+                git_lines=lambda *args: ['commit'], head_tree=lambda: 'tree',
+                unavailable_reason=lambda group: 'missing tools' if group == unavailable else None,
+                attest_steps=lambda group: [('PHPStan', [], None), ('Pest', [], None)] if group == 'php' else [(group, [], None)],
+                build_step=lambda: ('Build', [], None), run_step=step,
+                clean_e2e_uploads=lambda: None,
+                write_pr_report=lambda *args: reports.append(args),
+            ), patch.object(pre_push_check.ci_plan, 'plan', return_value={'js': True, 'php': True, 'e2e': True}), redirect_stdout(io.StringIO()):
+                code = pre_push_check.check_for_pr('origin/develop')
+
+            return code, reports, labels
+
+        code, reports, labels = pr_gate(failure='php: PHPStan')
+        check('a PHPStan failure blocks publication and never reports green',
+              code != 0 and reports[-1][0] == 'RED' and 'php: Pest' not in labels
+              and not any(report[0] == 'GREEN' for report in reports))
+        code, reports, labels = pr_gate(failure='e2e: e2e')
+        check('the PR gate catches browser failures a quick check does not run', code != 0 and reports[-1][0] == 'RED')
+        code, reports, labels = pr_gate(unavailable='php')
+        check('missing tools cannot produce a partial green PR report', code != 0 and reports[-1][0] == 'RED')
+        for name, options in [('dirty tree', {'dirty': True}), ('changed tree', {'stale': True}), ('unknown base', {'unknown_base': True})]:
+            code, reports, labels = pr_gate(**options)
+            check(f'{name} blocks the PR gate', code != 0 and reports[-1][0] == 'RED')
+        code, reports, labels = pr_gate()
+        check('only a complete run reports green for the checked commit and tree',
+              code == 0 and reports[-1] == ('GREEN', 'commit', 'tree', ['js', 'php', 'e2e'])
+              and labels == ['js: js', 'php: Build', 'php: PHPStan', 'php: Pest', 'e2e: e2e'])
+        reports = []
+        with patch.object(pre_push_check.wait_for_setup, 'wait', return_value=(1, 'Setup failed')), \
+             patch.object(pre_push_check, 'write_pr_report', side_effect=lambda *args: reports.append(args)), \
+             redirect_stdout(io.StringIO()):
+            code = pre_push_check.main(['--for-pr'])
+        check('failed setup invalidates an earlier green report', code != 0 and reports[-1][0] == 'RED')
+
         print('pre_push_check.py --attest')
         workflow = (SCRIPTS.parent.parent / '.github' / 'workflows' / 'tests.yml').read_text()
         check(
@@ -221,6 +272,15 @@ def main() -> int:
             git = lambda *args, **kw: subprocess.run(['git', *args], cwd=repo, env=env, capture_output=True, text=True, **kw)
             git('init', '-q')
             (repo / 'a.txt').write_text('one\n')
+            uploads = repo / 'public/uploads/all'
+            uploads.mkdir(parents=True)
+            (uploads / 'tracked.webp').write_bytes(b'original')
+            (repo / 'database').mkdir()
+            with sqlite3.connect(repo / 'database/e2e.sqlite') as connection:
+                connection.execute('CREATE TABLE uploads (file_name TEXT)')
+                connection.executemany('INSERT INTO uploads VALUES (?)', [('uploads/all/generated.webp',), ('uploads/all/tracked.webp',)])
+            git('config', 'core.excludesFile', '/dev/null')
+            (repo / '.gitignore').write_text('/database/e2e.sqlite\n')
             git('add', '-A')
             git('commit', '-q', '-m', 'Subject\n\nBody\n\nCo-Authored-By: Someone <s@s>')
 
@@ -230,6 +290,54 @@ def main() -> int:
 
             try:
                 tree = pre_push_check.head_tree()
+                pre_push_check.write_pr_report('GREEN', git('rev-parse', 'HEAD').stdout.strip(), tree, ['php'])
+                report = json.loads((repo / '.git/codex-pre-push-report.json').read_text())
+                check('the PR report records the exact commit and tree outside tracked files',
+                      report['status'] == 'GREEN' and report['tree'] == tree
+                      and report['commit'] == git('rev-parse', 'HEAD').stdout.strip()
+                      and pre_push_check.dirty_paths() == [])
+
+                def browser_step(label, command, *, env=None):
+                    if label == 'e2e: Browser':
+                        (uploads / 'generated.webp').write_bytes(b'test output')
+                    return True
+
+                with patch.object(pre_push_check.ci_plan, 'plan', return_value={'e2e': True}), \
+                     patch.object(pre_push_check, 'unavailable_reason', return_value=None), \
+                     patch.object(pre_push_check, 'attest_steps', return_value=[('Browser', [], None)]), \
+                     patch.object(pre_push_check, 'run_step', side_effect=browser_step), redirect_stdout(io.StringIO()):
+                    code = pre_push_check.check_for_pr('HEAD')
+                check('successful browser checks clean only uploads created by the run',
+                      code == 0 and not (uploads / 'generated.webp').exists()
+                      and (uploads / 'tracked.webp').read_bytes() == b'original'
+                      and pre_push_check.dirty_paths() == [])
+
+                def changing_step(label, command, *, env=None):
+                    (repo / 'unexpected.php').write_text('<?php // new source\n')
+                    return True
+
+                with patch.object(pre_push_check.ci_plan, 'plan', return_value={'e2e': True}), \
+                     patch.object(pre_push_check, 'unavailable_reason', return_value=None), \
+                     patch.object(pre_push_check, 'attest_steps', return_value=[('Browser', [], None)]), \
+                     patch.object(pre_push_check, 'run_step', side_effect=changing_step), redirect_stdout(io.StringIO()):
+                    code = pre_push_check.check_for_pr('HEAD')
+                check('new source files still invalidate the report and are never deleted',
+                      code != 0 and (repo / 'unexpected.php').exists()
+                      and json.loads((repo / '.git/codex-pre-push-report.json').read_text())['status'] == 'RED')
+                (repo / 'unexpected.php').unlink()
+
+                def unrelated_upload_step(label, command, *, env=None):
+                    (uploads / 'unrelated.webp').write_bytes(b'not owned by tests')
+                    return True
+
+                with patch.object(pre_push_check.ci_plan, 'plan', return_value={'e2e': True}), \
+                     patch.object(pre_push_check, 'unavailable_reason', return_value=None), \
+                     patch.object(pre_push_check, 'attest_steps', return_value=[('Browser', [], None)]), \
+                     patch.object(pre_push_check, 'run_step', side_effect=unrelated_upload_step), redirect_stdout(io.StringIO()):
+                    code = pre_push_check.check_for_pr('HEAD')
+                check('uploads absent from the dedicated test DB are preserved and block green',
+                      code != 0 and (uploads / 'unrelated.webp').exists())
+                (uploads / 'unrelated.webp').unlink()
                 trailer = pre_push_check.ci_plan.format_attestation(tree, ['js', 'php'])
                 check('a clean work tree has no dirty paths', pre_push_check.dirty_paths() == [])
                 check('an unpushed commit is not reported as pushed', not pre_push_check.head_is_pushed())

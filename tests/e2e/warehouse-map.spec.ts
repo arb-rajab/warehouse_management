@@ -69,6 +69,8 @@ test.describe('desktop', () => {
             timeout: 15_000,
         });
         await expect(page.locator('.wms-crosshair')).toBeVisible();
+        await expect(map).toHaveAttribute('data-captured', 'true');
+        await expect(page.locator('canvas.wms-canvas')).toBeFocused();
 
         await page.keyboard.press('g');
         await expect(map).toHaveAttribute('data-nav', 'guided');

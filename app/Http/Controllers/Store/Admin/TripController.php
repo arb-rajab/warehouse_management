@@ -25,6 +25,7 @@ use App\Models\Truck;
 use App\Services\DriverService;
 use App\Services\UserService;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
+use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -104,7 +105,11 @@ class TripController extends Controller implements HasMiddleware
     {
         $trip->setRelation('checkpoints', $trip->checkpoints()
             ->select(['id', 'trip_id', 'relationable_type', 'relationable_id', 'type', 'notes', 'sort_order_in_trip'])
-            ->with(['relationable' => function (MorphTo $relation): void {
+            ->with(['relationable' => function (Relation $relation): void {
+                if (! $relation instanceof MorphTo) {
+                    return;
+                }
+
                 $relation->morphWith([Order::class => ['user:id,name', 'rep:id,name']]);
                 $relation->constrain([
                     StoreUser::class => fn ($query) => $query->select(['id', 'name']),
