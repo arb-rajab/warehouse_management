@@ -189,6 +189,25 @@ describe('Products Index', () => {
         expect(wrapper.find('[role="dialog"]').exists()).toBe(false);
     });
 
+    it('lets the toolbar wrap on mobile with every quick filter still visible', () => {
+        const wrapper = mountPage([]);
+        const toolbar = wrapper
+            .get('#products-quick-search')
+            .element.closest('.flex-wrap');
+
+        expect(toolbar).not.toBeNull();
+        expect(toolbar?.classList.contains('w-full')).toBe(true);
+
+        for (const id of [
+            'products-quick-search',
+            'products-quick-inactive',
+            'products-quick-hide-inactive',
+            'products-quick-low-stock',
+        ]) {
+            expect(toolbar?.querySelector(`#${id}`)).not.toBeNull();
+        }
+    });
+
     it('renders the quick inactive checkbox in the toolbar, without opening the filter dialog', () => {
         const wrapper = mountPage([]);
 
