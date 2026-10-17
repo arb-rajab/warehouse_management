@@ -143,6 +143,8 @@ export interface ProductDetails {
     ar_name: string;
     image_url: string | null;
     boxes_count: number;
+    /** False once the product is no longer sold (unpublished in the store). */
+    active: boolean;
 }
 
 export interface ProductFilterOption {
@@ -315,6 +317,8 @@ export interface MatchingPallet {
     remaining_boxes: number;
     product: ProductDetails;
     location: CellSlotLocation;
+    /** False when the pallet's cell is out of service. */
+    cell_active: boolean;
 }
 
 /**

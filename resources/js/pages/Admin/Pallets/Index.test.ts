@@ -97,6 +97,7 @@ describe('Pallets Index', () => {
                     ar_name: 'ودجات',
                     image_url: 'https://cdn.example.com/widgets.png',
                     boxes_count: 10,
+                    active: true,
                 },
                 location: { row_letter: 'A', cell_number: 3, flat_number: 2 },
             }),
@@ -112,6 +113,34 @@ describe('Pallets Index', () => {
         expect(cells[3].text()).not.toBe('—');
         expect(cells[4].text()).not.toBe('—');
         expect(cells[5].text()).toBe('4');
+    });
+
+    it('marks an inactive product and an out-of-service cell, and only those', () => {
+        const pallet = matchingPallet();
+        const wrapper = mountPage([
+            pallet,
+            matchingPallet({
+                id: 2,
+                product: { ...pallet.product, id: 11, active: false },
+                cell_active: false,
+            }),
+        ]);
+        const rows = wrapper.findAll('tbody tr');
+        const [activeProduct, activeLocation] = [0, 2].map(
+            (i) => rows[0].findAll('td')[i],
+        );
+        const [inactiveProduct, inactiveLocation] = [0, 2].map(
+            (i) => rows[1].findAll('td')[i],
+        );
+
+        expect(activeProduct.text()).toContain(t('products.status.active'));
+        expect(
+            activeLocation.find('[data-testid="cell-inactive-badge"]').exists(),
+        ).toBe(false);
+        expect(inactiveProduct.text()).toContain(t('products.status.inactive'));
+        expect(
+            inactiveLocation.get('[data-testid="cell-inactive-badge"]').text(),
+        ).toBe(t('cells.inactiveBadge'));
     });
 
     it('links a pallet location to its row page with the matching cell/flat query', () => {

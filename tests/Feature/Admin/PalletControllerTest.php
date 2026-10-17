@@ -49,6 +49,33 @@ test('the matching pallets list orders by expiration date ascending, then add da
     );
 });
 
+test('the matching pallets list says whether each product is still sold and each cell in service', function () {
+    actingAsAdmin();
+    $row = Row::factory()->create(['cells_count' => 1, 'flats_count' => 2]);
+    $cells = $row->cells()->orderBy('flat_number')->get();
+    $cells[1]->update(['is_active' => false]);
+    $sold = Pallet::factory()->create([
+        'cell_id' => $cells[0]->id,
+        'product_id' => Product::factory()->create(['published' => true])->id,
+        'expiration_date' => '2026-09-01',
+    ]);
+    $retired = Pallet::factory()->create([
+        'cell_id' => $cells[1]->id,
+        'product_id' => Product::factory()->create(['published' => false])->id,
+        'expiration_date' => '2026-09-02',
+    ]);
+
+    $this->get('/admin/pallets')->assertOk()->assertInertia(
+        fn (Assert $page) => $page->component('Admin/Pallets/Index')
+            ->where('pallets.data.0.id', $sold->id)
+            ->where('pallets.data.0.product.active', true)
+            ->where('pallets.data.0.cell_active', true)
+            ->where('pallets.data.1.id', $retired->id)
+            ->where('pallets.data.1.product.active', false)
+            ->where('pallets.data.1.cell_active', false)
+    );
+});
+
 test('the matching pallets list filters by cell state, excluding a pallet in a different state', function () {
     actingAsAdmin();
     $row = Row::factory()->create(['cells_count' => 1, 'flats_count' => 2]);

@@ -682,6 +682,7 @@ describe('CellVerificationRounds Show', () => {
                         ar_name: 'ودجات',
                         image_url: null,
                         boxes_count: 10,
+                        active: true,
                     },
                     boxes_count: 5,
                     expiration_date: null,
