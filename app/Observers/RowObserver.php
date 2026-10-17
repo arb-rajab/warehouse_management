@@ -21,17 +21,17 @@ class RowObserver
     }
 
     /**
-     * Handle the Row "updated" event by regenerating its cells when the layout changed.
+     * Handle the Row "updated" event by adding or removing cells so the grid
+     * matches the new dimensions. Cells inside both the old and new bounds are
+     * kept (with their pallets and history).
      *
-     * Callers must guarantee the row has no pallets and no history (see
-     * Row::hasPallets()/hasHistory()) before changing its dimensions, since
-     * regenerating cells discards the previous ones — deleting a cell with
-     * status logs or verification reports against it fails the
+     * Callers must guarantee the cells being removed hold no pallets and no
+     * history (see Row::hasPalletsBeyond()/hasHistoryBeyond()) — deleting a
+     * cell with status logs or verification reports against it fails the
      * `restrictOnDelete` constraint on those tables.
      *
-     * The delete and the regeneration run in one transaction (a savepoint when,
-     * as from RowController, the caller already holds one), so a failed insert
-     * can't leave the row with no cells at all.
+     * The delete and the insert run in one transaction (a savepoint when,
+     * as from RowController, the caller already holds one).
      */
     public function updated(Row $row): void
     {
@@ -39,10 +39,17 @@ class RowObserver
             return;
         }
 
-        DB::transaction(function () use ($row) {
-            $row->cells()->delete();
+        $oldCells = (int) ($row->getPrevious()['cells_count'] ?? $row->cells_count);
+        $oldFlats = (int) ($row->getPrevious()['flats_count'] ?? $row->flats_count);
 
-            $this->generateCells($row);
+        DB::transaction(function () use ($row, $oldCells, $oldFlats) {
+            $row->cells()
+                ->where(fn ($query) => $query
+                    ->where('cell_number', '>', $row->cells_count)
+                    ->orWhere('flat_number', '>', $row->flats_count))
+                ->delete();
+
+            $this->generateCells($row, $oldCells, $oldFlats);
         });
 
         DashboardStatsCache::flush();
@@ -60,15 +67,21 @@ class RowObserver
     }
 
     /**
-     * Generate all of a row's empty cells for its current dimensions.
+     * Generate the row's empty cells for its current dimensions that lie
+     * outside the previous `$existingCells` x `$existingFlats` grid (all of
+     * them for a new row).
      */
-    private function generateCells(Row $row): void
+    private function generateCells(Row $row, int $existingCells = 0, int $existingFlats = 0): void
     {
         $now = now();
         $cells = [];
 
         for ($cellNumber = 1; $cellNumber <= $row->cells_count; $cellNumber++) {
             for ($flatNumber = 1; $flatNumber <= $row->flats_count; $flatNumber++) {
+                if ($cellNumber <= $existingCells && $flatNumber <= $existingFlats) {
+                    continue;
+                }
+
                 $cells[] = [
                     'row_id' => $row->id,
                     'cell_number' => $cellNumber,
@@ -80,6 +93,8 @@ class RowObserver
             }
         }
 
-        Cell::insert($cells);
+        if ($cells !== []) {
+            Cell::insert($cells);
+        }
     }
 }

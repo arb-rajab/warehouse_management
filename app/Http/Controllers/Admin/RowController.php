@@ -114,18 +114,33 @@ class RowController extends Controller
         $validated = $request->validated();
 
         return DB::transaction(function () use ($validated, $row) {
-            $dimensionsChanging = $validated['cells_count'] !== $row->cells_count
-                || $validated['flats_count'] !== $row->flats_count;
+            $shrinksColumns = $validated['cells_count'] < $row->cells_count;
+            $shrinksLevels = $validated['flats_count'] < $row->flats_count;
 
-            if ($dimensionsChanging) {
-                $blockReason = $this->lockedRowBlockReason(
-                    $row,
-                    'messages.row_cannot_resize_has_pallets',
-                    'messages.row_cannot_resize_has_history',
-                );
+            if ($shrinksColumns || $shrinksLevels) {
+                $row->cells()->lockForUpdate()->get();
 
-                if ($blockReason !== null) {
-                    return redirect()->route('admin.rows.edit', $row)->withErrors(['cells_count' => $blockReason]);
+                $errors = [];
+
+                foreach ([
+                    'cells_count' => $shrinksColumns ? [$validated['cells_count'], null, 'columns'] : null,
+                    'flats_count' => $shrinksLevels ? [null, $validated['flats_count'], 'levels'] : null,
+                ] as $field => $removal) {
+                    if ($removal === null) {
+                        continue;
+                    }
+
+                    [$cellsBound, $flatsBound, $axis] = $removal;
+
+                    if ($row->hasPalletsBeyond($cellsBound, $flatsBound)) {
+                        $errors[$field] = __("messages.row_cannot_reduce_{$axis}_has_pallets");
+                    } elseif ($row->hasHistoryBeyond($cellsBound, $flatsBound)) {
+                        $errors[$field] = __("messages.row_cannot_reduce_{$axis}_has_history");
+                    }
+                }
+
+                if ($errors !== []) {
+                    return redirect()->route('admin.rows.edit', $row)->withErrors($errors);
                 }
             }
 

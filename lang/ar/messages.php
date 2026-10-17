@@ -3,9 +3,11 @@
 return [
     'upload_rejected' => 'هذا الملف غير مدعوم أو غير صالح أو يتجاوز حدود الرفع.',
     'admin_cannot_remove_own_access' => 'لا يمكنك إزالة صلاحية المسؤول الخاصة بك.',
-    'row_cannot_resize_has_pallets' => 'لا يمكن تغيير أبعاد ممر يحتوي على منصات نقالة.',
+    'row_cannot_reduce_columns_has_pallets' => 'لا يمكن تقليل عدد الأعمدة: بعض الأعمدة المراد حذفها تحتوي على منصات نقالة.',
+    'row_cannot_reduce_levels_has_pallets' => 'لا يمكن تقليل عدد المستويات: بعض المستويات المراد حذفها تحتوي على منصات نقالة.',
     'row_cannot_delete_has_pallets' => 'لا يمكن حذف ممر يحتوي على منصات نقالة.',
-    'row_cannot_resize_has_history' => 'لا يمكن تغيير أبعاد ممر تم تسجيل نشاط على خلاياه.',
+    'row_cannot_reduce_columns_has_history' => 'لا يمكن تقليل عدد الأعمدة: تم تسجيل نشاط على خلايا بعض الأعمدة المراد حذفها.',
+    'row_cannot_reduce_levels_has_history' => 'لا يمكن تقليل عدد المستويات: تم تسجيل نشاط على خلايا بعض المستويات المراد حذفها.',
     'row_cannot_delete_has_history' => 'لا يمكن حذف ممر تم تسجيل نشاط على خلاياه.',
     'slot_does_not_exist' => 'هذا الموقع غير موجود في هذا الممر.',
     'cannot_delete_own_account' => 'لا يمكنك حذف حسابك الخاص.',
