@@ -74,17 +74,22 @@ test.describe('desktop', () => {
 
         await page.keyboard.press('g');
         await expect(map).toHaveAttribute('data-nav', 'guided');
+        await expect(map).toHaveAttribute('data-captured', 'false');
 
         const caption = page.locator('.wms-minimap__caption');
         const before = await caption.textContent();
 
-        for (let i = 0; i < 6; i++) {
-            await page.keyboard.press('w');
-            await page.waitForTimeout(450);
-        }
-
+        // Guided movement ignores keys during a glide. Keep stepping until
+        // the rendered location changes, including on software-rendered CI.
         await expect
-            .poll(() => caption.textContent(), { timeout: 5_000 })
+            .poll(
+                async () => {
+                    await page.keyboard.press('w');
+
+                    return caption.textContent();
+                },
+                { timeout: 15_000, intervals: [500] },
+            )
             .not.toBe(before);
 
         // back to the overview, then to the plan with the filter intact
