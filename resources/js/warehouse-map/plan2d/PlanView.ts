@@ -57,9 +57,10 @@ const ZOOM_SETTLE_MS = 160;
 
 /**
  * The 2D floor plan: a top-down view of the same warehouse as the 3D scene,
- * entrance at the bottom, aisle pairs side by side with A on the left, one
+ * entrance at the bottom, aisle pairs side by side with A on the right, one
  * strip of tiles per rack row (column 1 at the entrance end). It decides its
- * own orientation to fit the screen.
+ * own orientation to fit the screen. The DOM keeps A-B first and column 1
+ * first; the stylesheet places them, right to left.
  */
 export class PlanView extends View implements PlanControls {
     private readonly stage: HTMLElement;
@@ -278,7 +279,7 @@ export class PlanView extends View implements PlanControls {
                     return;
                 }
 
-                // A on the left, B on the right: as you walk in from the entrance
+                // A on the right, B on the left: as you walk in from the entrance
                 const place = side ? 'b' : 'a';
                 const plate = el('span', {
                     class: 'wms-plate',
@@ -295,7 +296,7 @@ export class PlanView extends View implements PlanControls {
                     class: `wms-rack-strip wms-rack-strip--${place}`,
                 });
 
-                // column 1 sits at the entrance end (the strip is laid out bottom-up)
+                // column 1 sits at the entrance end (the strip runs bottom-up, or right to left lying down)
                 for (let c = 1; c <= warehouse.cols; c++) {
                     const tile = new Tile(row.letter, c);
 
