@@ -35,16 +35,30 @@ regression through):
   - Everything else needs `php`, `js` and `e2e`; dependency manifests also need
     `audit`.
 
+Attestation: .claude/scripts/pre_push_check.py --attest runs the planned groups
+locally and, when they all pass, records a trailer on the head commit:
+
+    CI-Verified: tree=<head tree sha> groups=js,php,e2e
+
+A trailer vouches only for the groups it lists and only for the tree it names,
+so any later content change makes it stale. `--attested-message-file` and
+`--tree` let the `plan` job subtract those groups for a pull request whose
+merged tree equals its head tree. It is ignored when the change touches
+.github/, so a workflow change is still exercised by the run that introduces it.
+
 Usage (CI): changed paths on stdin, one per line; prints `group=true|false`
 lines for $GITHUB_OUTPUT. An empty list prints all-true: an empty answer from
 the files API is more likely a fault than a change touching nothing.
     python3 .github/scripts/ci_plan.py < changed-files.txt
     python3 .github/scripts/ci_plan.py --all    # every group
     python3 .github/scripts/ci_plan.py --none   # no group
+    python3 .github/scripts/ci_plan.py --attested-message-file msg.txt --tree <sha> < changed-files.txt
 """
 
+import re
 import sys
 from collections.abc import Iterable
+from pathlib import Path
 
 GROUPS = ('php', 'mysql', 'js', 'e2e', 'audit', 'deploy-script')
 
@@ -70,6 +84,27 @@ DEPENDENCY_FILES = frozenset({
     'package.json',
     'package-lock.json',
 })
+
+
+ATTESTATION = re.compile(r'^CI-Verified: tree=([0-9a-f]{40,64}) groups=([a-z0-9,-]*)$')
+
+
+def format_attestation(tree: str, groups: Iterable[str]) -> str:
+    """The commit-message trailer that vouches for `groups` on `tree`."""
+    return f"CI-Verified: tree={tree} groups={','.join(group for group in GROUPS if group in set(groups))}"
+
+
+def attested_groups(message: str, tree: str) -> frozenset[str]:
+    """The groups a commit message vouches for on `tree`; the last matching trailer wins."""
+    attested: frozenset[str] = frozenset()
+
+    for line in message.splitlines():
+        match = ATTESTATION.match(line.strip())
+
+        if match and match.group(1) == tree:
+            attested = frozenset(group for group in match.group(2).split(',') if group in GROUPS)
+
+    return attested
 
 
 def needs_no_ci(path: str) -> bool:
@@ -117,6 +152,11 @@ def plan(paths: Iterable[str]) -> dict[str, bool]:
     return needed
 
 
+def option(argv: list[str], name: str) -> str | None:
+    """The value after `name` in argv, or None when the option is absent."""
+    return argv[argv.index(name) + 1] if name in argv and argv.index(name) + 1 < len(argv) else None
+
+
 def main(argv: list[str]) -> int:
     if '--all' in argv:
         needed = dict.fromkeys(GROUPS, True)
@@ -125,6 +165,18 @@ def main(argv: list[str]) -> int:
     else:
         paths = [line.strip() for line in sys.stdin if line.strip()]
         needed = plan(paths) if paths else dict.fromkeys(GROUPS, True)
+        message_file, tree = option(argv, '--attested-message-file'), option(argv, '--tree')
+
+        # Never for a change under .github/: it must run everything it touches.
+        if paths and message_file and tree and not any(path.startswith('.github/') for path in paths):
+            vouched = attested_groups(Path(message_file).read_text(), tree)
+            skipped = sorted(group for group in vouched if needed[group])
+
+            for group in skipped:
+                needed[group] = False
+
+            if skipped:
+                print(f"Skipping {', '.join(skipped)}: the head commit attests a local run on tree {tree}.", file=sys.stderr)
 
     for group, value in needed.items():
         print(f'{group}={str(value).lower()}')
