@@ -842,6 +842,56 @@ test('the products index can be sorted by the full cells count', function () {
     );
 });
 
+test('product name and material id sorting applies to the full filtered result set across pages', function (string $sortBy, string $direction) {
+    actingAsAdmin();
+
+    $products = collect(range(1, 25))->map(fn (int $index) => Product::factory()->create([
+        'name' => sprintf('Widget %02d', 26 - $index),
+    ]));
+    $excluded = Product::factory()->inactive()->create(['name' => 'AAA excluded']);
+    $expected = $direction === 'asc'
+        ? $products->sortBy($sortBy)->values()
+        : $products->sortByDesc($sortBy)->values();
+
+    foreach ([1, 2, 3] as $pageNumber) {
+        $this->get(route('admin.products.index', [
+            'sort_by' => $sortBy, 'sort_direction' => $direction,
+            'hide_inactive' => true, 'per_page' => 10, 'page' => $pageNumber,
+        ]))->assertOk()->assertInertia(
+            fn (Assert $page) => $page
+                ->where('products.meta.total', 25)
+                ->where('products.meta.current_page', $pageNumber)
+                ->where('products.data', fn ($rows) => collect($rows)->pluck('id')->all() === $expected->slice(($pageNumber - 1) * 10, 10)->pluck('id')->all())
+                ->where('filters.sort_by', $sortBy)
+                ->where('filters.sort_direction', $direction)
+                ->where('filters.hide_inactive', true)
+        );
+    }
+
+    expect($expected->pluck('id'))->not->toContain($excluded->id);
+})->with([
+    ['name', 'asc'], ['name', 'desc'], ['id', 'asc'], ['id', 'desc'],
+]);
+
+test('product name sorting uses material id to break ties consistently', function (string $direction) {
+    actingAsAdmin();
+    $first = Product::factory()->create(['name' => 'Duplicate']);
+    $second = Product::factory()->create(['name' => 'Duplicate']);
+    Product::factory()->create(['name' => $direction === 'asc' ? 'Zulu' : 'Alpha']);
+    $ids = $direction === 'asc' ? [$first->id, $second->id] : [$second->id, $first->id];
+
+    $this->get('/admin/products?sort_by=name&sort_direction='.$direction)
+        ->assertOk()->assertInertia(fn (Assert $page) => $page
+        ->where('products.data.0.id', $ids[0])
+        ->where('products.data.1.id', $ids[1]));
+})->with(['asc', 'desc']);
+
+test('product sorting rejects unsupported columns and directions', function () {
+    actingAsAdmin();
+    $this->getJson('/admin/products?sort_by=published&sort_direction=sideways')
+        ->assertUnprocessable()->assertJsonValidationErrors(['sort_by', 'sort_direction']);
+});
+
 test('a mobile app user cannot view the products index', function () {
     actingAsMobilePanelUser();
 

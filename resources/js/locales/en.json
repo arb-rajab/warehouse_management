@@ -853,6 +853,10 @@
         },
         "products": {
             "title": "Help: Products & box counts",
+            "findingProducts": {
+                "heading": "Finding and sorting products",
+                "body": "Product search results show an Active or Inactive badge beside each name. The badge stays visible when you select a product. On the Products page, click the ID (material ID) or Product column heading to sort; click again to reverse the order. Sorting includes every page of your filtered results."
+            },
             "defaultBoxes": {
                 "heading": "Why every product starts at 50 boxes",
                 "body": "Products themselves come from the main store system, not from this app, so this app doesn't know how many boxes actually fit on one pallet of a given product. Until someone sets the real number, every product is assumed to hold 50 boxes per full pallet so the rest of the system has something to work with."

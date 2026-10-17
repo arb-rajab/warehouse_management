@@ -1672,6 +1672,47 @@ describe('Products Index', () => {
         ).toBe(true);
     });
 
+    it.each([
+        ['id', 'products.columns.id'],
+        ['name', 'products.columns.product'],
+    ])(
+        'sorts by %s in both directions while preserving filters and resetting pagination',
+        async (key, label) => {
+            const wrapper = mountPage([], {
+                hide_inactive: true,
+                per_page: 50,
+            });
+            const header = wrapper
+                .findAll('thead th')
+                .find((th) => th.text().includes(t(label)))!;
+            const sortButton = header.get('button');
+
+            await sortButton.trigger('click');
+            const firstDirection = key === 'name' ? 'desc' : 'asc';
+            expect(routerGetMock).toHaveBeenLastCalledWith(
+                productsIndex.url(),
+                expect.objectContaining({
+                    sort_by: key,
+                    sort_direction: firstDirection,
+                    hide_inactive: true,
+                    per_page: 50,
+                }),
+                { preserveState: true, replace: true },
+            );
+            expect(routerGetMock.mock.calls.at(-1)?.[1]).not.toHaveProperty(
+                'page',
+            );
+
+            await sortButton.trigger('click');
+            expect(routerGetMock.mock.calls.at(-1)?.[1]).toEqual(
+                expect.objectContaining({
+                    sort_by: key,
+                    sort_direction: firstDirection === 'asc' ? 'desc' : 'asc',
+                }),
+            );
+        },
+    );
+
     it('applies a sort immediately when a sortable column header is clicked, without waiting for Apply', async () => {
         const wrapper = mountPage([]);
 
