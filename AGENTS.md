@@ -86,9 +86,39 @@ For documentation-only changes, verify links, instruction consistency, and
 | Production assets | `npm run build` |
 | End-to-end tests | `npm run test:e2e` |
 | Before pushing code | `python3 .claude/scripts/pre_push_check.py` (scoped to the branch's changes; `--full` for everything) |
+| Before a PR's first push | `python3 .claude/scripts/pre_push_check.py --attest` (full run of every group the change needs; lets CI skip what passed) |
 
 Backend feature tests need a configured local `APP_KEY` and a Vite manifest;
 generated Wayfinder files may also be required. Never print environment secrets.
 The pre-push script can skip unavailable PHP tools: report skipped checks, rather
 than describing a partial run as full verification. Do not commit or push unless
 authorized by the user or the applicable task instructions.
+
+### Attested pre-push run (`--attest`)
+
+`pre_push_check.py --attest` runs, unscoped, every CI group the branch's changes
+need, including the ones CI alone ran before (Playwright, the MySQL migration
+tests, the composer/npm audits, the deploy-script test). When all of them pass it
+amends the **unpushed** head commit with a trailer:
+
+```
+CI-Verified: tree=<head tree sha> groups=<groups that passed>
+```
+
+CI's `plan` job then skips exactly those groups for that tree, which cuts a
+typical pull request from about 24 billed minutes to about 1. Rules:
+
+- Commit everything first and run it on a clean work tree, then push the commit
+  it amends. Do not push before it finishes: the amend needs an unpushed commit.
+- Any later content change (a new commit, a rebase, a merge of the base) makes the
+  trailer stale; run it again before pushing that change. A stale trailer is
+  ignored, never trusted.
+- It takes about 25 minutes. Run it in the background and wait for completion; it
+  stops at the first failing check and records nothing. Fix the cause (do not skip
+  or loosen a test), then run it again.
+- A change under `.github/` always runs everything in CI; the trailer is ignored.
+- It needs the Claude web sandbox's tooling (local MySQL from `session-start.sh`,
+  the preinstalled Chromium). A group that cannot run is left out of the trailer
+  and CI runs it, so state which groups were attested.
+- Never write or edit the trailer by hand: it vouches for a run that must have
+  happened. Details and constraints are in [.ai/rules/ci.md](.ai/rules/ci.md).
