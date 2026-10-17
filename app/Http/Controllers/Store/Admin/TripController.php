@@ -39,8 +39,7 @@ use Inertia\Response;
  * The all-trips and today's-trips lists with their status, notes and delete
  * actions, and the trip create and edit forms. The trip orders list is
  * `TripOrderController` and the trip detail with its checkpoints
- * `TripCheckpointController`; the map picker stays Blade on the root
- * `Trip\TripController`.
+ * `TripCheckpointController`, the map picker `TripMapController`.
  */
 class TripController extends Controller implements HasMiddleware
 {

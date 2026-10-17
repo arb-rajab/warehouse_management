@@ -166,7 +166,6 @@
         "app/Http/Controllers/ShopController.php",
         "app/Http/Controllers/SubscriberController.php",
         "app/Http/Controllers/SupportTicketController.php",
-        "app/Http/Controllers/Trip/TripController.php",
         "app/Http/Controllers/VisitController.php",
         "app/Http/Controllers/WalletController.php",
         "app/Http/Controllers/WishlistController.php",

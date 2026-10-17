@@ -1,6 +1,6 @@
 <?php
 
-use App\Http\Controllers\Trip\TripController;
+use App\Http\Controllers\Store\Admin\TripController;
 use App\Models\Checkpoint;
 use App\Models\Order;
 use App\Models\StoreUser;
@@ -285,71 +285,6 @@ test('a status change returns to the list it was made from with that list\'s fil
     expect($trip->fresh()->status)->toBe('started');
 });
 
-test('map creation and appending preserve the original truck driver and checkpoints', function () {
-    actingAsStoreUser(createStoreStaff('add_trip', 'edit_trip'));
-    $truck = Truck::create(['name' => 'Map truck']);
-    $order = createStoreOrder(createStoreUser(), ['delivery_status' => 'on_delivery']);
-    $second = createStoreOrder(createStoreUser(), ['delivery_status' => 'on_delivery']);
-    $driver = createStoreUser('driver');
-
-    $this->postJson(route('trips.store-from-map'), ['truck_id' => $truck->id, 'driver_id' => $driver->id, 'markers' => [['order_id' => $order->id, 'latitude' => 99]]])->assertOk()->assertExactJson(['success' => true]);
-    $trip = Trip::firstOrFail();
-    $original = $trip->checkpoints()->get()->map->only(['id', 'trip_id', 'latitudes', 'longitudes', 'status', 'arrived_at', 'cmr_file', 'photos'])->all();
-    $this->postJson(route('trips.store-from-map'), ['trip_id' => $trip->id, 'truck_id' => $truck->id, 'markers' => [['order_id' => $second->id]]])->assertOk();
-
-    expect(Trip::count())->toBe(1)->and($trip->fresh()->driver_id)->toBe($driver->id)->and($trip->checkpoints()->count())->toBe(3)
-        ->and($trip->checkpoints()->whereIn('id', array_column($original, 'id'))->get()->map->only(['id', 'trip_id', 'latitudes', 'longitudes', 'status', 'arrived_at', 'cmr_file', 'photos'])->all())->toBe($original)
-        ->and($trip->checkpoints()->where('relationable_type', Order::class)->pluck('latitudes')->all())->toBe(['52.1', '52.1'])
-        ->and($truck->fresh()->is_available)->toBeFalse();
-});
-
-test('map creation refuses callers without reserving a truck or creating checkpoints', function (string $caller) {
-    $truck = Truck::create(['name' => 'Map truck']);
-    $order = createStoreOrder(createStoreUser(), ['delivery_status' => 'on_delivery']);
-    actingAsRefusedStoreCaller($caller);
-
-    assertStoreCallerRefused($this->post(route('trips.store-from-map'), ['truck_id' => $truck->id, 'markers' => [['order_id' => $order->id]]]), $caller);
-
-    expect(Trip::count())->toBe(0)->and(Checkpoint::count())->toBe(0)->and($truck->fresh()->is_available)->toBeTrue()->and($order->fresh()->delivery_status)->toBe('on_delivery');
-})->with('refused store admin callers');
-
-test('adding map markers to an existing trip additionally requires edit permission', function () {
-    $trip = createTripTestRecord();
-    $order = createStoreOrder(createStoreUser(), ['delivery_status' => 'on_delivery']);
-    actingAsStoreUser(createStoreStaff('add_trip'));
-
-    $this->postJson(route('trips.store-from-map'), ['trip_id' => $trip->id, 'truck_id' => $trip->truck_id, 'markers' => [['order_id' => $order->id]]])->assertForbidden();
-
-    expect(Checkpoint::count())->toBe(0)->and($trip->fresh()->truck_id)->toBe($trip->truck_id);
-});
-
-test('map markers require distinct existing delivery orders and matching trip truck', function () {
-    $trip = createTripTestRecord();
-    $truck = Truck::create(['name' => 'Other truck']);
-    $order = createStoreOrder(createStoreUser(), ['delivery_status' => 'pending']);
-    actingAsStoreUser(createStoreStaff('add_trip', 'edit_trip'));
-
-    $this->postJson(route('trips.store-from-map'), ['truck_id' => $truck->id, 'markers' => [['order_id' => 999999]]])->assertUnprocessable()->assertJsonValidationErrors('markers.0.order_id');
-    $this->postJson(route('trips.store-from-map'), ['truck_id' => $truck->id, 'markers' => [['order_id' => $order->id]]])->assertUnprocessable();
-    $order->update(['delivery_status' => 'on_delivery']);
-    $this->postJson(route('trips.store-from-map'), ['truck_id' => $truck->id, 'markers' => [['order_id' => $order->id], ['order_id' => $order->id]]])->assertUnprocessable();
-    $this->postJson(route('trips.store-from-map'), ['truck_id' => $truck->id, 'trip_id' => $trip->id, 'markers' => [['order_id' => $order->id]]])->assertUnprocessable()->assertJsonValidationErrors('trip_id');
-
-    expect(Trip::count())->toBe(1)->and(Checkpoint::count())->toBe(0)->and($truck->fresh()->is_available)->toBeTrue()->and($trip->fresh()->truck_id)->toBe($trip->truck_id);
-});
-
-test('an order on an open trip cannot be assigned again from the map', function () {
-    $trip = createTripTestRecord();
-    $order = createStoreOrder(createStoreUser(), ['delivery_status' => 'on_delivery']);
-    $checkpoint = createTripTestCheckpoint($trip, ['type' => 'delivery', 'relationable_type' => Order::class, 'relationable_id' => $order->id]);
-    $truck = Truck::create(['name' => 'Other truck']);
-    actingAsStoreUser(createStoreStaff('add_trip'));
-
-    $this->postJson(route('trips.store-from-map'), ['truck_id' => $truck->id, 'markers' => [['order_id' => $order->id]]])->assertUnprocessable()->assertJsonValidationErrors('markers.0.order_id');
-
-    expect(Trip::count())->toBe(1)->and(Checkpoint::count())->toBe(1)->and($checkpoint->fresh()->trip_id)->toBe($trip->id)->and($truck->fresh()->is_available)->toBeTrue();
-});
-
 describe('trip forms', function () {
     test('the create form renders the orders out for delivery and the non-representative store users', function () {
         $customer = createStoreUser();
@@ -542,17 +477,6 @@ describe('trip forms', function () {
     });
 });
 
-test('map creation fails departure validation before writing any rows', function () {
-    $this->departure->delete();
-    $truck = Truck::create(['name' => 'Map truck']);
-    $order = createStoreOrder(createStoreUser(), ['delivery_status' => 'on_delivery']);
-    actingAsStoreUser(createStoreStaff('add_trip'));
-
-    $this->postJson(route('trips.store-from-map'), ['truck_id' => $truck->id, 'markers' => [['order_id' => $order->id]]])->assertUnprocessable()->assertJsonValidationErrors('departure');
-
-    expect(Trip::count())->toBe(0)->and(Checkpoint::count())->toBe(0)->and($truck->fresh()->is_available)->toBeTrue();
-});
-
 test('closed trip edits do not reserve the truck again', function () {
     $trip = createTripTestRecord(['status' => 'closed', 'active' => false, 'closed_at' => '2026-10-09 10:00:00']);
     $trip->truck->update(['is_available' => true]);
@@ -583,25 +507,9 @@ test('shortest path sorting maps waypoint indexes to checkpoint identities with 
         ->and($trip->fresh()->duration)->toBe('120.00')->and($trip->fresh()->distance)->toBe('1000.00');
 });
 
-test('the retained map picker renders an available truck with its pallet capacity', function () {
-    Truck::create(['name' => 'Free truck', 'is_available' => true, 'max_pallets_number' => 18]);
-    Truck::create(['name' => 'Busy truck', 'is_available' => false, 'max_pallets_number' => 7]);
-    actingAsStoreUser(createStoreStaff('add_trip'));
-
-    $this->get(route('trips.create-from-map'))->assertOk()->assertSee('Free truck')->assertSee('Max Pallets Number:18')->assertDontSee('Max Pallets Number:7');
-});
-
-test('the retained map picker renders a busy truck with no open trip without a broken link', function () {
-    Truck::create(['name' => 'Busy without trip', 'is_available' => false]);
-    actingAsStoreUser(createStoreStaff('add_trip'));
-
-    $this->get(route('trips.create-from-map'))->assertOk()->assertViewIs('shop.backend.trips.create-from-map')->assertSee('Busy without trip')->assertSee('No current trip information')->assertDontSee('confirm-delete', false);
-});
-
-test('the map picker and trip list refuse unauthorized callers', function (string $caller) {
+test('the trip list refuses unauthorized callers', function (string $caller) {
     actingAsRefusedStoreCaller($caller);
 
-    assertStoreCallerRefused($this->get(route('trips.create-from-map')), $caller);
     assertStoreCallerRefused($this->get(route('trips.index')), $caller);
 })->with('refused store admin callers');
 
@@ -775,17 +683,6 @@ describe('trip deletion', function () {
         $this->delete(route('trips.destroy', [$trip, 'list' => 'today']))->assertRedirect(route('trips.today-trips'));
 
         expect(Trip::find($trip->id))->toBeNull()->and($other->fresh())->not->toBeNull()->and($trip->truck->fresh()->is_available)->toBeFalse();
-    });
-
-    test('the map picker deletes a truck\'s open trip through a spoofed DELETE and returns to the picker', function () {
-        $trip = createTripTestRecord();
-        actingAsStoreUser(createStoreStaff('add_trip', 'delete_trip'));
-        $link = route('trips.destroy', ['trip' => $trip->id, 'list' => 'map']);
-
-        $this->get(route('trips.create-from-map'))->assertOk()->assertSee('data-method="delete" data-href="'.e($link).'"', false);
-        $this->post($link, ['_method' => 'DELETE'])->assertRedirect(route('trips.create-from-map'));
-
-        expect(Trip::find($trip->id))->toBeNull()->and($trip->truck->fresh()->is_available)->toBeTrue();
     });
 
     test('deleting needs a list and an existing trip and is never a GET or a POST', function () {

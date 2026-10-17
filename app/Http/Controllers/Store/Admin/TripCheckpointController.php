@@ -26,9 +26,9 @@ use Inertia\Response;
 
 /**
  * A trip's detail: its checkpoints in their order, with the inline notes and
- * status writes and the CMR download. The Blade page's Leaflet map is not
- * carried over (the map dependency's approval is unverified); the retained
- * map picker stays on the root `Trip\TripController`.
+ * status writes and the CMR download. The Blade page's Leaflet map was not
+ * carried over when this page converted (§27); the map picker is
+ * `TripMapController`.
  */
 class TripCheckpointController extends Controller implements HasMiddleware
 {

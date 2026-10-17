@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Truck extends Model
 {
@@ -25,7 +26,8 @@ class Truck extends Model
         'is_available' => 'boolean',
     ];
 
-    public function trips()
+    /** @return HasMany<Trip, $this> */
+    public function trips(): HasMany
     {
         return $this->hasMany(Trip::class);
     }

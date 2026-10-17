@@ -11,16 +11,24 @@ use Inertia\Testing\AssertableInertia as Assert;
  */
 
 /**
- * The response's script-src directive (report-only outside production).
+ * The response's `$name` directive (report-only outside production).
  */
-function scriptSrcOf(TestResponse $response): string
+function cspDirectiveOf(TestResponse $response, string $name): string
 {
     $policy = $response->headers->get('Content-Security-Policy-Report-Only')
         ?? $response->headers->get('Content-Security-Policy');
 
     return collect(explode(';', (string) $policy))
         ->map(fn (string $directive) => trim($directive))
-        ->first(fn (string $directive) => str_starts_with($directive, 'script-src ')) ?? '';
+        ->first(fn (string $directive) => str_starts_with($directive, $name.' ')) ?? '';
+}
+
+/**
+ * The response's script-src directive.
+ */
+function scriptSrcOf(TestResponse $response): string
+{
+    return cspDirectiveOf($response, 'script-src');
 }
 
 test('an Inertia visit that lands on a Blade page is sent to load it in full', function () {
@@ -60,6 +68,17 @@ test("a Blade page's policy ends with its request", function () {
     $this->get('/temp/admin/sellers')->assertOk();
 
     expect(scriptSrcOf($this->get('/temp/admin/staffs')->assertOk()))->toBe("script-src 'self'");
+});
+
+test('the trip map picker keeps the strict policy, its images widened only to the OpenStreetMap tile host', function () {
+    actingAsStoreUser(createStoreStaff('add_trip'));
+
+    $response = $this->get('/temp/admin/trips/create-from-map')->assertOk();
+
+    expect(scriptSrcOf($response))->toBe("script-src 'self'")
+        ->and(explode(' ', cspDirectiveOf($response, 'img-src')))->toEqualCanonicalizing(['img-src', "'self'", 'https://tile.openstreetmap.org', 'data:', 'blob:'])
+        ->and(cspDirectiveOf($response, 'connect-src'))->not->toContain('openstreetmap')
+        ->and(config('store.blade_csp.img-src'))->toBe(['self' => true, 'schemes' => ['https:', 'data:', 'blob:']]);
 });
 
 test('a warehouse page keeps the strict policy', function () {

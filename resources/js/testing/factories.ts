@@ -67,6 +67,8 @@ import type {
     StoreOrder,
     StoreTrip,
     StoreTripCheckpointRow,
+    StoreTripMapOrder,
+    StoreTripMapTruck,
     StoreTripForm,
     StoreTripOrder,
 } from '@/types/store';
@@ -1058,6 +1060,42 @@ export function storeTripCheckpointRow(
         representative: { id: 22, name: 'Rita Rep' },
         has_cmr: true,
         photos: [601],
+        ...overrides,
+    };
+}
+
+/** A trip map picker order: Alma's order with every popup detail. */
+export function storeTripMapOrder(
+    overrides: Partial<StoreTripMapOrder> = {},
+): StoreTripMapOrder {
+    return {
+        id: 77,
+        code: '20261017-0001',
+        latitude: 52.37,
+        longitude: 4.89,
+        postal_code: '1011AB',
+        address: 'Dock road 5',
+        customer: {
+            id: 21,
+            name: 'Alma Customer',
+            phone: '0611111111',
+            accounting_id: 'ACC-7',
+        },
+        ...overrides,
+    };
+}
+
+/** A trip map picker truck: a free truck with a photo and no trip. */
+export function storeTripMapTruck(
+    overrides: Partial<StoreTripMapTruck> = {},
+): StoreTripMapTruck {
+    return {
+        id: 11,
+        name: 'Cargo truck',
+        max_pallets_number: '18',
+        photo: 601,
+        trip: null,
+        open_trips: [],
         ...overrides,
     };
 }

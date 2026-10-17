@@ -62,7 +62,8 @@ use App\Http\Controllers\Store\Admin\SubscriberController;
 use App\Http\Controllers\Store\Admin\SupportTicketController as AdminSupportTicketController;
 use App\Http\Controllers\Store\Admin\TaxController;
 use App\Http\Controllers\Store\Admin\TripCheckpointController;
-use App\Http\Controllers\Store\Admin\TripController as StoreTripController;
+use App\Http\Controllers\Store\Admin\TripController;
+use App\Http\Controllers\Store\Admin\TripMapController;
 use App\Http\Controllers\Store\Admin\TripOrderController;
 use App\Http\Controllers\Store\Admin\TruckController;
 use App\Http\Controllers\Store\Admin\UploadController;
@@ -72,7 +73,6 @@ use App\Http\Controllers\Store\Admin\WebsiteHeaderController;
 use App\Http\Controllers\Store\Admin\WebsiteHomeController;
 use App\Http\Controllers\Store\Admin\WebsitePageController;
 use App\Http\Controllers\Store\Admin\ZoneController;
-use App\Http\Controllers\Trip\TripController;
 use App\Http\Controllers\VisitController;
 use App\Models\Ticket;
 use Aws\Middleware;
@@ -270,7 +270,7 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
     Route::group(['prefix' => 'trips'], function () {
         // The trip lists and their row actions (store-backoffice-migration.md §24)
         // and the trip create and edit forms (§25).
-        Route::controller(StoreTripController::class)->group(function () {
+        Route::controller(TripController::class)->group(function () {
             Route::get('/index', 'index')->name('trips.index');
             Route::get('/today-trips', 'today')->name('trips.today-trips');
             Route::get('/create', 'create')->name('trips.create');
@@ -299,10 +299,10 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
             Route::get('/print-cmr/{checkpoint}', 'printCmr')->name('checkpoints.print-cmr');
         });
 
-        // The map picker and its writer stay Blade (map decision, §5).
-        Route::controller(TripController::class)->group(function () {
-            Route::get('/create-from-map', 'create_from_map')->name('trips.create-from-map')->middleware('permission:add_trip');
-            Route::post('/store-from-map', 'store_from_map')->name('trips.store-from-map')->middleware('permission:add_trip');
+        // The trip map picker and its writer (§30).
+        Route::controller(TripMapController::class)->group(function () {
+            Route::get('/create-from-map', 'create')->name('trips.create-from-map');
+            Route::post('/store-from-map', 'store')->name('trips.store-from-map');
         });
 
         // The trip forms' lookups: the driver API's own handlers, reached with

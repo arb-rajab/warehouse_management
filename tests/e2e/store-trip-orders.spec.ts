@@ -23,28 +23,6 @@ function seedOrder(id: number, code: string, status: string): void {
     `);
 }
 
-/**
- * Stands in for the picker's Leaflet (loaded from unpkg, which not every
- * runner reaches, and whose approval is unverified, §5): without `L` the
- * picker's inline script stops before it registers its click handlers. The
- * spec checks the order popup's request, not the map.
- */
-const leafletStandIn = String.raw`
-window.L = (() => {
-    const layer = () => {
-        const self = { options: {}, getZoom: () => 2, getLatLng: () => [0, 0] };
-        for (const name of ['addTo', 'bindPopup', 'on', 'setIcon', 'setView', 'fitBounds', 'setZoom']) {
-            self[name] = () => self;
-        }
-        return self;
-    };
-    function LatLngBounds() { this.points = []; }
-    LatLngBounds.prototype.extend = function (point) { this.points.push(point); return this; };
-    LatLngBounds.prototype.isValid = function () { return this.points.length > 0; };
-    return { icon: () => ({}), map: layer, tileLayer: layer, marker: layer, polyline: layer, LatLngBounds, Icon: { Default: { prototype: {} } } };
-})();
-`;
-
 /** Fails the spec unless `$order` (the order with `code`) satisfies `$check`. */
 function expectStoredOrder(code: string, check: string): void {
     seedStoreFixtures(String.raw`
@@ -127,68 +105,6 @@ test('the trip orders list saves an invoice number on change and confirms status
     expectStoredOrder(
         other,
         "$order?->delivery_status === 'ready_for_delivery'",
-    );
-    expectStoredOrder(code, "$order?->delivery_status === 'delivered'");
-});
-
-test("the Blade map picker's order popup marks an order delivered through the spoofed PUT and reloads", async ({
-    page,
-}) => {
-    const stamp = Date.now();
-    const code = `E2E-MAPORD-${stamp}`;
-    const id = 900000 + (stamp % 100000);
-    seedOrder(id, code, 'on_delivery');
-    await loginAsStoreAdmin(page);
-    await page.route(
-        'https://unpkg.com/leaflet@1.7.1/dist/leaflet.js',
-        (route) =>
-            route.fulfill({
-                contentType: 'text/javascript',
-                body: leafletStandIn,
-            }),
-    );
-    const errors: string[] = [];
-    page.on('pageerror', (error) => errors.push(error.message));
-    const response = await page.goto('/temp/admin/trips/create-from-map');
-    expect(response?.status()).toBe(200);
-    const alerts: string[] = [];
-    page.on('dialog', (dialog) => {
-        alerts.push(dialog.message());
-        void dialog.dismiss();
-    });
-
-    // The popup the map builds for an order marker, with its real
-    // document-level click handler.
-    await page.evaluate((orderId) => {
-        const popup = (
-            window as unknown as {
-                tripMapPopup: (
-                    rows: [string | null, string][],
-                    orderId: number,
-                ) => HTMLElement;
-            }
-        ).tripMapPopup([['Order', 'browser']], orderId);
-        popup.style.cssText =
-            'position: fixed; top: 1rem; right: 1rem; z-index: 10000; background: #fff';
-        document.body.append(popup);
-    }, id);
-    const put = page.waitForRequest(
-        (request) =>
-            request.method() === 'POST' &&
-            request.url().endsWith(`/temp/admin/trips/orders/${id}/delivered`),
-    );
-    const reload = page.waitForEvent('load');
-    await page.getByRole('button', { name: 'Mark as Delivered' }).click();
-    expect((await put).postDataJSON()).toEqual({
-        _method: 'PUT',
-        return_to: 'map',
-    });
-    await reload;
-
-    await expect(page).toHaveURL(/\/temp\/admin\/trips\/create-from-map$/);
-    expect(alerts).toEqual([]);
-    expect(errors.filter((message) => message.includes('L is not'))).toEqual(
-        [],
     );
     expectStoredOrder(code, "$order?->delivery_status === 'delivered'");
 });
