@@ -3000,7 +3000,7 @@ working PHP 8.5 install, and nothing else used it. Work is on
 `ccr-ff665fd6-s90gn3`, from `develop` at `ead3b91` (the PR #422 merge). The
 owner authorized this session's commits, one PR into `develop`, its merge and
 `[skip ci]` on all of them, because the checks run locally. So no PR CI, no PR
-or merge SAST and no `develop` deploy ran. The PR number is recorded below.
+or merge SAST and no `develop` deploy ran. The PR is #423.
 
 **Removed.**
 
