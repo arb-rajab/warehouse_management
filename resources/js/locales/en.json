@@ -105,8 +105,7 @@
         "fields": {
             "letter": "Letter",
             "cellsPerFlat": "Cells per level",
-            "flats": "Levels",
-            "dimensionsLocked": "This row has pallets stored in it, so its dimensions can't be changed."
+            "flats": "Levels"
         }
     },
     "users": {
@@ -759,7 +758,7 @@
             },
             "editing": {
                 "heading": "Changing a row's size",
-                "body": "Open a row and choose Edit to change its letter or its cells/levels count. The size can only be changed while the row is completely empty — if any slot in it currently holds a pallet, resizing is blocked until that pallet is moved or removed."
+                "body": "Open a row and choose Edit to change its letter or its cells/levels count. Growing the row, or shrinking it where the removed columns or levels are empty, works even while the row holds pallets. Reducing the number of columns or levels is blocked only when a pallet sits in a column or level that would be removed — move or remove that pallet first."
             },
             "deleting": {
                 "heading": "Deleting a row",

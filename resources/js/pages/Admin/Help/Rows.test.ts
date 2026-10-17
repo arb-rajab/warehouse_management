@@ -112,16 +112,11 @@ describe('Help Rows', () => {
         expect(wrapper.find('#help-row-create-letter').exists()).toBe(true);
     });
 
-    it('renders a preview of the resize-blocked-while-occupied warning', () => {
+    it('renders a preview of the row-edit form fields', () => {
         const wrapper = mountPage();
 
-        expect(wrapper.text()).toContain(t('rows.fields.dimensionsLocked'));
-
-        const cellsInput = wrapper.find('#help-row-edit-cells_count');
-        expect((cellsInput.element as HTMLInputElement).readOnly).toBe(true);
-
-        const flatsInput = wrapper.find('#help-row-edit-flats_count');
-        expect((flatsInput.element as HTMLInputElement).readOnly).toBe(true);
+        expect(wrapper.find('#help-row-edit-cells_count').exists()).toBe(true);
+        expect(wrapper.find('#help-row-edit-flats_count').exists()).toBe(true);
     });
 
     it('links to the rows page', () => {

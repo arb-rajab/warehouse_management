@@ -187,7 +187,49 @@ class Row extends Model
      */
     public function hasHistory(): bool
     {
-        $cellIds = $this->cells()->pluck('id');
+        return $this->cellsHaveHistory($this->cells());
+    }
+
+    /**
+     * Whether any of this row's cells in the given columns (`cell_number`) or
+     * levels (`flat_number`) beyond the new bounds hold a pallet — the cells a
+     * shrink to `$cellsCount` x `$flatsCount` would delete. Pass the current
+     * dimension for the axis that is not shrinking so that axis matches nothing.
+     */
+    public function hasPalletsBeyond(?int $cellsCount, ?int $flatsCount): bool
+    {
+        return $this->cellsBeyond($cellsCount, $flatsCount)->whereHas('pallet')->exists();
+    }
+
+    /**
+     * Whether any of this row's cells beyond the given bounds has history —
+     * see hasHistory() and hasPalletsBeyond().
+     */
+    public function hasHistoryBeyond(?int $cellsCount, ?int $flatsCount): bool
+    {
+        return $this->cellsHaveHistory($this->cellsBeyond($cellsCount, $flatsCount));
+    }
+
+    /**
+     * The cells outside a `$cellsCount` x `$flatsCount` grid; a null bound
+     * excludes nothing on that axis.
+     *
+     * @return HasMany<Cell, $this>
+     */
+    private function cellsBeyond(?int $cellsCount, ?int $flatsCount): HasMany
+    {
+        return $this->cells()->where(fn ($query) => $query
+            ->when($cellsCount !== null, fn ($q) => $q->orWhere('cell_number', '>', $cellsCount))
+            ->when($flatsCount !== null, fn ($q) => $q->orWhere('flat_number', '>', $flatsCount))
+            ->when($cellsCount === null && $flatsCount === null, fn ($q) => $q->whereRaw('1 = 0')));
+    }
+
+    /**
+     * @param  HasMany<Cell, $this>  $cells
+     */
+    private function cellsHaveHistory(HasMany $cells): bool
+    {
+        $cellIds = $cells->pluck('id');
 
         return CellStatusLog::query()
             ->where(fn (Builder $query) => $query->whereIn('cell_id', $cellIds)->orWhereIn('related_cell_id', $cellIds))

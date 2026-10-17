@@ -559,39 +559,104 @@ test('resizing a row with no pallets regenerates its cells', function () {
     expect($row->cells()->count())->toBe(12);
 });
 
-test('resizing a row that has a pallet is rejected and nothing changes', function () {
+test('growing a row that has pallets succeeds and keeps its pallets in place', function () {
     actingAsAdmin();
     $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 2, 'flats_count' => 1]);
-    $cell = $row->cells()->first();
+    $cell = $row->cells()->where('cell_number', 2)->first();
+    $pallet = Pallet::factory()->create(['cell_id' => $cell->id]);
+
+    $this->put("/admin/rows/{$row->letter}", [
+        'letter' => 'Z',
+        'cells_count' => 5,
+        'flats_count' => 3,
+    ])->assertRedirect(route('admin.rows.show', $row->fresh()));
+
+    expect($row->cells()->count())->toBe(15);
+    expect($pallet->fresh()->cell_id)->toBe($cell->id);
+    $this->assertDatabaseHas('cells', ['id' => $cell->id]);
+});
+
+test('shrinking columns or levels that are empty succeeds while the row has pallets', function () {
+    actingAsAdmin();
+    $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 4, 'flats_count' => 3]);
+    $cell = $row->cells()->where('cell_number', 1)->where('flat_number', 1)->first();
+    $pallet = Pallet::factory()->create(['cell_id' => $cell->id]);
+
+    $this->put("/admin/rows/{$row->letter}", [
+        'letter' => 'Z',
+        'cells_count' => 2,
+        'flats_count' => 1,
+    ])->assertRedirect(route('admin.rows.show', $row->fresh()));
+
+    expect($row->cells()->count())->toBe(2);
+    expect($pallet->fresh()->cell_id)->toBe($cell->id);
+});
+
+test('growing one dimension while shrinking the other into empty cells succeeds', function () {
+    actingAsAdmin();
+    $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 4, 'flats_count' => 2]);
+    $cell = $row->cells()->where('cell_number', 1)->where('flat_number', 2)->first();
+    Pallet::factory()->create(['cell_id' => $cell->id]);
+
+    $this->put("/admin/rows/{$row->letter}", [
+        'letter' => 'Z',
+        'cells_count' => 2,
+        'flats_count' => 4,
+    ])->assertRedirect(route('admin.rows.show', $row->fresh()));
+
+    expect($row->cells()->count())->toBe(8);
+});
+
+test('reducing columns that hold a pallet is rejected and nothing changes', function () {
+    actingAsAdmin();
+    $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 4, 'flats_count' => 2]);
+    $cell = $row->cells()->where('cell_number', 4)->where('flat_number', 1)->first();
+    Pallet::factory()->create(['cell_id' => $cell->id]);
+
+    $response = $this->put("/admin/rows/{$row->letter}", [
+        'letter' => 'Z',
+        'cells_count' => 3,
+        'flats_count' => 2,
+    ]);
+
+    $response->assertRedirect(route('admin.rows.edit', $row));
+    $response->assertSessionHasErrors(['cells_count' => __('messages.row_cannot_reduce_columns_has_pallets')]);
+    expect($row->fresh()->cells_count)->toBe(4);
+    expect($row->cells()->count())->toBe(8);
+});
+
+test('reducing levels that hold a pallet is rejected even when columns grow', function () {
+    actingAsAdmin();
+    $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 2, 'flats_count' => 3]);
+    $cell = $row->cells()->where('cell_number', 1)->where('flat_number', 3)->first();
     Pallet::factory()->create(['cell_id' => $cell->id]);
 
     $response = $this->put("/admin/rows/{$row->letter}", [
         'letter' => 'Z',
         'cells_count' => 5,
-        'flats_count' => 5,
+        'flats_count' => 2,
     ]);
 
     $response->assertRedirect(route('admin.rows.edit', $row));
-    $response->assertSessionHasErrors(['cells_count' => __('messages.row_cannot_resize_has_pallets')]);
-    expect($row->fresh()->cells_count)->toBe(2);
-    expect($row->fresh()->flats_count)->toBe(1);
-    expect($row->cells()->count())->toBe(2);
+    $response->assertSessionHasErrors(['flats_count' => __('messages.row_cannot_reduce_levels_has_pallets')]);
+    expect($row->fresh()->flats_count)->toBe(3);
+    expect($row->cells()->count())->toBe(6);
 });
 
-test('resizing a row that has history but no pallet is rejected and nothing changes', function () {
+test('shrinking a row over cells that have history is rejected and nothing changes', function () {
     actingAsAdmin();
     $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 2, 'flats_count' => 1]);
-    $cell = $row->cells()->first();
+    $cell = $row->cells()->where('cell_number', 2)->first();
     CellStatusLog::factory()->create(['cell_id' => $cell->id]);
 
     $response = $this->put("/admin/rows/{$row->letter}", [
         'letter' => 'Z',
-        'cells_count' => 5,
-        'flats_count' => 5,
+        'cells_count' => 1,
+        'flats_count' => 1,
     ]);
 
     $response->assertRedirect(route('admin.rows.edit', $row));
-    $response->assertSessionHasErrors(['cells_count' => __('messages.row_cannot_resize_has_history')]);
+    $response->assertSessionHasErrors(['cells_count' => __('messages.row_cannot_reduce_columns_has_history')]);
     expect($row->fresh()->cells_count)->toBe(2);
     expect($row->fresh()->flats_count)->toBe(1);
     expect($row->cells()->count())->toBe(2);
@@ -611,7 +676,7 @@ test('resizing a row with invalid dimensions and an existing pallet reports the 
     ]);
 
     $response->assertSessionHasErrors('cells_count');
-    expect(session('errors')->get('cells_count'))->not->toContain(__('messages.row_cannot_resize_has_pallets'));
+    expect(session('errors')->get('cells_count'))->not->toContain(__('messages.row_cannot_reduce_columns_has_pallets'));
     expect($row->fresh()->cells_count)->toBe(2);
 });
 
