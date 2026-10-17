@@ -146,10 +146,23 @@ describe('Pallets Index', () => {
             .find((link) => link.text().includes(t('pallets.viewOnMap')));
     }
 
-    it('links the "view on map" button to the warehouse map', () => {
-        const wrapper = mountPage([], { state: 'full', per_page: 50 });
+    it('links the "view on map" button to the warehouse map, filtered to the same products and state', () => {
+        const wrapper = mountPage([], {
+            state: 'full',
+            product_id: [3, 8],
+            expires_within_days: 5,
+            per_page: 50,
+        });
 
-        expect(mapLink(wrapper)?.props('href')).toEqual(warehouseMapIndex());
+        expect(mapLink(wrapper)?.props('href')).toBe(
+            `${warehouseMapIndex.url()}#products=3,8&state=full`,
+        );
+    });
+
+    it('links the "view on map" button to the whole warehouse map without a product or state filter', () => {
+        const wrapper = mountPage([], { expired: true });
+
+        expect(mapLink(wrapper)?.props('href')).toBe(warehouseMapIndex.url());
     });
 
     it('shows a chip for every active filter', () => {

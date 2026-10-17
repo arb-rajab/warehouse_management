@@ -18,6 +18,7 @@ function slot(level: number, partial: Partial<Slot> = {}): Slot {
             expirationDate: null,
             productName: 'Rice',
             productArName: '',
+            productActive: true,
             productImageUrl: null,
             remainingBoxes: null,
             productBoxesCount: null,
@@ -35,6 +36,7 @@ const noMatch = buildMatchIndex([], {
     terms: [],
     state: 'all',
     expiring: false,
+    productIds: [],
 });
 
 describe('tileModel', () => {
@@ -108,11 +110,13 @@ describe('tileModel', () => {
             terms: ['rice'],
             state: 'all',
             expiring: false,
+            productIds: [],
         });
         const sugar = buildMatchIndex(column, {
             terms: ['sugar'],
             state: 'all',
             expiring: false,
+            productIds: [],
         });
 
         expect(
@@ -135,11 +139,13 @@ describe('tileModel', () => {
             terms: ['rice'],
             state: 'all',
             expiring: false,
+            productIds: [],
         });
         const miss = buildMatchIndex([withImage], {
             terms: ['sugar'],
             state: 'all',
             expiring: false,
+            productIds: [],
         });
 
         expect(

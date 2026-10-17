@@ -414,6 +414,14 @@
         "appTitle": "Warehouse Map",
         "appSub": "Live 2D / 3D",
         "searchPh": "Search products…",
+        "productsLabel": "Filter by product",
+        "productsAll": "All products",
+        "productsSearchPh": "Find a product…",
+        "productsSelected": "Selected",
+        "productsDeselectAll": "Deselect all",
+        "productsNone": "No products found",
+        "productActive": "Active",
+        "productInactive": "Inactive",
         "stAll": "All",
         "stFull": "Full",
         "stOpened": "Opened",
@@ -871,7 +879,7 @@
             },
             "search": {
                 "heading": "Searching and filtering",
-                "body": "Type in the search box: every word must match the product name, in English or Arabic. The state chips narrow the map to full, opened or empty slots, and “Expiring ≤ 30 d” shows pallets that expire within 30 days or already have. The floor strip limits the map to one shelf level. Matches are highlighted and the rest dimmed; the result button opens the list of matched products, grouped by product with the earliest expiry first, and “View on map” takes you to the slot."
+                "body": "Type in the search box: every word must match the product name, in English or Arabic. To look for several products at once, open “All products” and tick each one: a slot matches when it holds any of them, the ticked products stay at the top of the list, and “Deselect all” clears them. Products that are no longer sold are marked “Inactive”, here and in the list of matched products, and a slot that is out of service is marked there too. The state chips narrow the map to full, opened or empty slots, and “Expiring ≤ 30 d” shows pallets that expire within 30 days or already have. The floor strip limits the map to one shelf level. Matches are highlighted and the rest dimmed; the result button opens the list of matched products, grouped by product with the earliest expiry first, and “View on map” takes you to the slot."
             },
             "walking": {
                 "heading": "Walking through the warehouse",

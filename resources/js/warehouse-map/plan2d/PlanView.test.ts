@@ -27,7 +27,12 @@ function slice(
     };
 }
 
-const none = buildMatchIndex([], { terms: [], state: 'all', expiring: false });
+const none = buildMatchIndex([], {
+    terms: [],
+    state: 'all',
+    expiring: false,
+    productIds: [],
+});
 const t = (key: string) => key;
 
 function setup(rows = 4, cols = 6) {
@@ -207,6 +212,7 @@ describe('PlanView', () => {
             terms: ['rice'],
             state: 'all',
             expiring: false,
+            productIds: [],
         });
 
         state.set({ match });

@@ -3,6 +3,7 @@ import { normalizeRows } from '../domain/normalizeRows';
 import { createActions } from './actions';
 import {
     createMatchSelector,
+    createProductOptionsSelector,
     selectKeyHintKind,
     selectTarget,
 } from './selectors';
@@ -73,6 +74,7 @@ describe('search and filter', () => {
             terms: ['x'],
             state: 'opened',
             expiring: true,
+            productIds: [],
         });
 
         actions.toggleExpiring();
@@ -91,6 +93,77 @@ describe('search and filter', () => {
         expect(store.get().filter.state).toBe('full');
         expect(store.get().floor).toBe(2);
         expect(selectTarget(store.get())?.id).toBe(1);
+    });
+});
+
+describe('the product picker', () => {
+    it('checks and unchecks products, keeping the other filters', () => {
+        const { store, actions } = setup();
+
+        actions.setStateFilter('full');
+        actions.toggleProduct(4);
+        actions.toggleProduct(9);
+        expect(store.get().filter.productIds).toEqual([4, 9]);
+
+        actions.toggleProduct(4);
+        expect(store.get().filter.productIds).toEqual([9]);
+        expect(store.get().filter.state).toBe('full');
+
+        actions.clearProducts();
+        expect(store.get().filter.productIds).toEqual([]);
+        expect(store.get().filter.state).toBe('full');
+    });
+
+    it('takes the products, and a named state, from a filter link', () => {
+        const { store, actions } = setup();
+
+        actions.setStateFilter('opened');
+        actions.toggleProduct(1);
+        actions.applyFilterLink({ productIds: [2, 3], state: null });
+        expect(store.get().filter).toMatchObject({
+            productIds: [2, 3],
+            state: 'opened',
+        });
+
+        actions.applyFilterLink({ productIds: [5], state: 'full' });
+        expect(store.get().filter).toMatchObject({
+            productIds: [5],
+            state: 'full',
+        });
+    });
+
+    it('narrows the match index to the checked products', () => {
+        const { store, actions } = setup({ warehouse });
+        const matchOf = createMatchSelector();
+
+        actions.toggleProduct(1);
+        expect([...matchOf(store.get()).ids]).toEqual([1]);
+
+        actions.toggleProduct(1);
+        actions.toggleProduct(2);
+        expect(matchOf(store.get()).count).toBe(0);
+    });
+
+    it('lists the products again only when the warehouse changed', () => {
+        const { store, actions } = setup({ warehouse });
+        const optionsOf = createProductOptionsSelector();
+        const first = optionsOf(store.get());
+
+        expect(first).toEqual([
+            {
+                id: 1,
+                name: 'Basmati Rice',
+                arName: '',
+                active: true,
+                pallets: 1,
+            },
+        ]);
+
+        actions.toggleProduct(1);
+        expect(optionsOf(store.get())).toBe(first);
+
+        actions.setWarehouse(normalizeRows([]));
+        expect(optionsOf(store.get())).toEqual([]);
     });
 });
 

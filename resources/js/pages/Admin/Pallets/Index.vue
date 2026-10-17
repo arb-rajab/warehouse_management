@@ -18,6 +18,7 @@ import type {
     Paginated,
     ProductFilterOptions,
 } from '@/types/admin';
+import { filterHash } from '@/warehouse-map/domain/SlotCode';
 import type { QueryParams } from '@/wayfinder';
 
 const props = defineProps<{
@@ -35,6 +36,20 @@ const filterQuery = computed<QueryParams>(() => {
 
     return query;
 });
+
+/**
+ * The warehouse map, opened on the same products (any of them) and cell state
+ * through its `#products=…&state=…` filter link. The other filters (expiry,
+ * staleness, inactive cells) have no equivalent there and are left behind.
+ */
+const mapHref = computed(
+    () =>
+        warehouseMapIndex.url() +
+        filterHash({
+            productIds: props.filters.product_id ?? [],
+            state: props.filters.state ?? null,
+        }),
+);
 
 const filterChips = computed<string[]>(() => {
     const chips: string[] = [];
@@ -86,7 +101,7 @@ function onPerPageChange(perPage: number): void {
 
     <AdminLayout>
         <PageHeader :title="t('pallets.title')">
-            <Link :href="warehouseMapIndex()" :class="filterTriggerButtonClass">
+            <Link :href="mapHref" :class="filterTriggerButtonClass">
                 <Map class="h-4 w-4" />
                 {{ t('pallets.viewOnMap') }}
             </Link>
