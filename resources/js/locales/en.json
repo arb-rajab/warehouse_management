@@ -479,7 +479,7 @@
         "kRotate": "Rotate the plan",
         "plan_auto": "Plan: orientation chosen to fit your screen",
         "plan_v": "Plan: entrance at the bottom",
-        "plan_h": "Plan: entrance on the left",
+        "plan_h": "Plan: entrance on the right",
         "entrance": "Entrance",
         "navFree": "Free",
         "navGuided": "Guided",
@@ -870,7 +870,7 @@
             "title": "Help: Warehouse map (2D / 3D)",
             "views": {
                 "heading": "Two views of the same warehouse",
-                "body": "The 2D | 3D switch at the top changes the view; the search, the state chips, the floor strip and the selected location stay as they are. 2D is a top-down floor plan: the entrance is at the bottom, aisles run upward in pairs (A-B, C-D, …) with A on the left, and each strip of tiles is one rack row. A tile is one column of shelves; the small bars on it are its shelf levels. Click a tile to see its shelves, top level first. The plan turns itself to fit your screen; press R (or the rotate button on a touch screen) to cycle automatic, vertical and horizontal. 3D is a real model of the racks: drag to orbit, right-drag or W A S D to pan, scroll to zoom, and press 1-9 to jump into an aisle."
+                "body": "The 2D | 3D switch at the top changes the view; the search, the state chips, the floor strip and the selected location stay as they are. 2D is a top-down floor plan: the entrance is at the bottom, aisles run upward in pairs (A-B, C-D, …) starting from the right with A on the right, and each strip of tiles is one rack row. A tile is one column of shelves; the small bars on it are its shelf levels. Click a tile to see its shelves, top level first. The plan turns itself to fit your screen; press R (or the rotate button on a touch screen) to cycle automatic, vertical and horizontal. 3D is a real model of the racks: drag to orbit, right-drag or W A S D to pan, scroll to zoom, and press 1-9 to jump into an aisle."
             },
             "legend": {
                 "heading": "What the colours mean",

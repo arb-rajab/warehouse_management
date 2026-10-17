@@ -27,8 +27,10 @@ export interface Bounds {
 
 /**
  * Where everything stands in the 3D model. Everything looks in from the
- * entrance end (+z); the first aisle is on the viewer's left, rows A-B share
- * one aisle with A on the left when you walk in.
+ * entrance end (+z, so the viewer's right is -x); the first aisle is on the
+ * viewer's right, rows A-B share one aisle with A on the right when you walk in.
+ * The layout is mirrored by position only: meshes and labels are never scaled
+ * by -1, so text stays readable and every rack front still faces its aisle.
  */
 export class WarehouseGeometry {
     readonly aisles: number;
@@ -77,12 +79,12 @@ export class WarehouseGeometry {
     }
 
     aisleCx(aisle: number): number {
-        return ((this.aisles - 1) / 2 - aisle) * this.layout.aisleGap;
+        return (aisle - (this.aisles - 1) / 2) * this.layout.aisleGap;
     }
 
-    /** Rows 0,2,4.. stand on the +x side of their aisle, rows 1,3,5.. on the -x side. */
+    /** Rows 0,2,4.. stand on the -x side of their aisle (the walker's right), rows 1,3,5.. on the +x side. */
     rowSide(rowIdx: number): 1 | -1 {
-        return rowIdx % 2 === 0 ? 1 : -1;
+        return rowIdx % 2 === 0 ? -1 : 1;
     }
 
     rowX(rowIdx: number): number {

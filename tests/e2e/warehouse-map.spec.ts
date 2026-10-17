@@ -187,6 +187,47 @@ test.describe('desktop', () => {
         });
     });
 
+    test('starts the rows from the right of the plan, standing up and lying down', async ({
+        page,
+    }) => {
+        await loginAsAdmin(page);
+        await page.goto('/admin/warehouse-map');
+        await expect(page.locator('.wms-tile').first()).toBeVisible();
+
+        const world = page.locator('.wms-plan__world');
+        const box = async (selector: string) => {
+            const bounds = await page.locator(selector).first().boundingBox();
+
+            expect(bounds, selector).not.toBeNull();
+
+            return bounds!;
+        };
+        const tile = (col: number) =>
+            box(`.wms-tile[data-row="A"][data-col="${col}"]`);
+
+        // auto -> vertical: aisle A-B at the right, A on the right of its aisle, column 1 at the entrance (bottom)
+        await page.keyboard.press('r');
+        await expect(world).not.toHaveClass(/is-horizontal/);
+        expect((await box('.wms-pair')).x).toBeGreaterThan(
+            (await box('.wms-pair:nth-child(2)')).x,
+        );
+        expect((await box('.wms-rack-strip--a')).x).toBeGreaterThan(
+            (await box('.wms-rack-strip--b')).x,
+        );
+        expect((await tile(1)).y).toBeGreaterThan((await tile(2)).y);
+
+        // vertical -> horizontal: entrance at the right, column 1 at the right, aisle A still at the top
+        await page.keyboard.press('r');
+        await expect(world).toHaveClass(/is-horizontal/);
+        expect((await box('.wms-plan__entrance')).x).toBeGreaterThan(
+            (await box('.wms-plan__pairs')).x,
+        );
+        expect((await tile(1)).x).toBeGreaterThan((await tile(2)).x);
+        expect((await box('.wms-rack-strip--a')).y).toBeLessThan(
+            (await box('.wms-rack-strip--b')).y,
+        );
+    });
+
     test('mirrors the whole page in Arabic', async ({ page }) => {
         await loginAsAdmin(page);
         await page.goto('/admin/warehouse-map');

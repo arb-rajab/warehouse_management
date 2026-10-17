@@ -224,6 +224,31 @@ describe('scene builders', () => {
         expect(backs.count).toBe(4);
     });
 
+    it('closes each rack on the side away from its aisle, so the shelves face the aisle', () => {
+        const { geometry } = world(4, 10, 3);
+        const group = new RackBuilder(geometry, DEFAULT_PALETTE).build();
+        const backs = group.children[2] as THREE.InstancedMesh;
+        const matrix = new THREE.Matrix4();
+        const position = new THREE.Vector3();
+
+        for (let i = 0; i < 4; i++) {
+            backs.getMatrixAt(i, matrix);
+            position.setFromMatrixPosition(matrix);
+
+            const aisle = geometry.aisleCx(i >> 1);
+
+            expect(Math.abs(position.x - aisle)).toBeGreaterThan(
+                Math.abs(geometry.rowX(i) - aisle),
+            );
+        }
+
+        // row A (on the walker's right, -x) is backed on its -x side
+        backs.getMatrixAt(0, matrix);
+        expect(
+            new THREE.Vector3().setFromMatrixPosition(matrix).x,
+        ).toBeLessThan(geometry.rowX(0));
+    });
+
     it('relabels the aisle signs in the current language', () => {
         const { warehouse, geometry, atlas } = world(4, 4, 2);
         let label = 'Aisle';
