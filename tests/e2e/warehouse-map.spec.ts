@@ -202,37 +202,47 @@ test.describe('desktop', () => {
         await expect(page.locator('.wms-tile').first()).toBeVisible();
 
         const world = page.locator('.wms-plan__world');
-        const box = async (selector: string) => {
-            const bounds = await page.locator(selector).first().boundingBox();
+        // Read both rectangles in one browser task: the world is animated,
+        // so separate protocol calls can compare two different camera positions.
+        const delta = (first: string, second: string, axis: 'x' | 'y') =>
+            page.evaluate(
+                ({ first, second, axis }) => {
+                    const a = document.querySelector(first)!;
+                    const b = document.querySelector(second)!;
 
-            expect(bounds, selector).not.toBeNull();
-
-            return bounds!;
-        };
+                    return (
+                        a.getBoundingClientRect()[axis] -
+                        b.getBoundingClientRect()[axis]
+                    );
+                },
+                { first, second, axis },
+            );
         const tile = (col: number) =>
-            box(`.wms-tile[data-row="A"][data-col="${col}"]`);
+            `.wms-tile[data-row="A"][data-col="${col}"]`;
 
         // auto -> vertical: aisle A-B at the right, A on the right of its aisle, column 1 at the entrance (bottom)
         await page.keyboard.press('r');
         await expect(world).not.toHaveClass(/is-horizontal/);
-        expect((await box('.wms-pair')).x).toBeGreaterThan(
-            (await box('.wms-pair:nth-child(2)')).x,
-        );
-        expect((await box('.wms-rack-strip--a')).x).toBeGreaterThan(
-            (await box('.wms-rack-strip--b')).x,
-        );
-        expect((await tile(1)).y).toBeGreaterThan((await tile(2)).y);
+        await expect(world).not.toHaveClass(/is-animating/);
+        expect(
+            await delta('.wms-pair', '.wms-pair:nth-child(2)', 'x'),
+        ).toBeGreaterThan(0);
+        expect(
+            await delta('.wms-rack-strip--a', '.wms-rack-strip--b', 'x'),
+        ).toBeGreaterThan(0);
+        expect(await delta(tile(1), tile(2), 'y')).toBeGreaterThan(0);
 
         // vertical -> horizontal: entrance at the right, column 1 at the right, aisle A still at the top
         await page.keyboard.press('r');
         await expect(world).toHaveClass(/is-horizontal/);
-        expect((await box('.wms-plan__entrance')).x).toBeGreaterThan(
-            (await box('.wms-plan__pairs')).x,
-        );
-        expect((await tile(1)).x).toBeGreaterThan((await tile(2)).x);
-        expect((await box('.wms-rack-strip--a')).y).toBeLessThan(
-            (await box('.wms-rack-strip--b')).y,
-        );
+        await expect(world).not.toHaveClass(/is-animating/);
+        expect(
+            await delta('.wms-plan__entrance', '.wms-plan__pairs', 'x'),
+        ).toBeGreaterThan(0);
+        expect(await delta(tile(1), tile(2), 'x')).toBeGreaterThan(0);
+        expect(
+            await delta('.wms-rack-strip--a', '.wms-rack-strip--b', 'y'),
+        ).toBeLessThan(0);
     });
 
     test('mirrors the whole page in Arabic', async ({ page }) => {
