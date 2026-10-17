@@ -3385,8 +3385,8 @@ package source were used instead. On a detached checkout of `develop` at
 ## Legacy reviews screen retirement (2026-10-17)
 
 Work on `claude/store-backoffice-reviews-step-28-lqx4cm` from `develop` at
-`fb04f56` (the PR #421 merge). The owner authorized commits, a push, a PR, its
-merge into `develop` and `[skip ci]` on all of them, because the checks run
+`fb04f56` (the PR #421 merge). The owner authorized commits, a push, a PR
+(#422), its merge into `develop` and `[skip ci]` on all of them, because the checks run
 locally. **No PR CI, no PR or merge SAST and no `develop` deploy ran for this
 PR or its merge.** No other branch, deployment or production data was
 touched. The guide's §28 records the result. The branch also carries the

@@ -2933,8 +2933,8 @@ root `ReviewController::index` at `reviews.index`) is gone. The Inertia list
 working screen since the reviews migration; the Blade list was only still
 reachable through the Blade sidebar. Work is on
 `claude/store-backoffice-reviews-step-28-lqx4cm`, from `develop` at `fb04f56`
-(the PR #421 merge). The owner authorized this session's commits, PR, its merge
-into `develop` and `[skip ci]` on all of them, because the checks run locally.
+(the PR #421 merge). The owner authorized this session's commits, PR (#422),
+its merge into `develop` and `[skip ci]` on all of them, because the checks run locally.
 So no PR CI, no PR or merge SAST and no `develop` deploy ran.
 
 **Routes and gates: name and permission kept.**
