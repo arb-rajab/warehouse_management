@@ -3589,3 +3589,58 @@ and locale/type additions existed), `TripControllerTest`,
   traits' code, departure ID 9, the truck rules (§§24–25), the trip lists,
   forms, detail and orders, the driver API, `trips.user-coordinates`, shells,
   `HandleStoreBladePages`, `blade_csp`, the Blade visit maps (unpkg Leaflet).
+
+### Verification and limits
+
+- **Ran (on the branch).**
+  - Pest: `TripMapControllerTest.php` 28 passed (new); with
+    `TripControllerTest`, `TripOrderControllerTest`,
+    `TripCheckpointControllerTest`, `HandleStoreBladePagesTest`,
+    `ControllerRedirectsTest`, `StaticAnalysisExclusionsTest`,
+    `LegacyAdminPermissionsTest`, `LegacyStoreStateChangingRoutesTest`,
+    `LegacyShopRouteAccessTest`, `LegacyTempRoutesReachableTest` and
+    `LegacyDataExposureTest`: 262 passed (1,737 assertions). After the
+    PHPStan fixes, the five trip/truck files: 232 passed (1,792 assertions).
+  - Vitest: `StoreTripMap.test.ts`, `CreateFromMap.test.ts` and
+    `storeAdminMenu.test.ts` passed while iterating.
+  - Playwright, with `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/opt/pw-browsers/chromium`
+    and the enforced CSP: `store-trip-map.spec.ts` (3, new, real Leaflet from
+    `node_modules`, tiles answered locally), `store-trips.spec.ts` (2),
+    `store-trip-orders.spec.ts` (1), `store-trip-detail.spec.ts` (1) and
+    `store-drivers.spec.ts` (1): 8 passed. The first runs found a real defect
+    (markers added before the map had a view never got `aria-pressed`; fixed,
+    with a Vitest ordering assertion), Enter not toggling a focused marker
+    (Leaflet maps Enter only to popups; handled), and spec issues (stale map
+    orders from earlier runs in the persistent browser database, retired by
+    the spec; Blade login/dashboard script errors and CSP reports, now
+    watched only after login). Negative check: with the tile host removed
+    from `img-src`, the browser blocked every tile and the spec failed; the
+    entry was restored.
+  - `php artisan wayfinder:generate --skip-routes --with-form`: generated
+    `TripMapController` actions, no root `Trip` actions. `route:list`: 1,047
+    under `/temp`, 435 under `/temp/admin`.
+  - `python3 .claude/scripts/build_without_fonts.py`: built (the bundle
+    holds `CreateFromMap` JS and CSS and Leaflet's marker and layer images).
+  - `python3 .claude/scripts/pre_push_check.py --full`: the first run stopped
+    at PHPStan (16 errors: untyped `Truck::trips()`/`Trip::checkpoints()`,
+    `findOrFail()` on mixed ids, a nested `MorphTo` constraint); after typing
+    those relations, casting the validated ids and loading the open trips
+    with typed queries, the second run exited 0: ESLint, Prettier, vue-tsc,
+    Vitest (316 files, 2,801 tests), Pint, PHPStan (0 errors) and Pest (6,064
+    tests, 33,769 assertions) all passed.
+  - `git diff --check`: clean.
+- **Not run.** PR CI, SAST and the `develop` deploy (`[skip ci]`, as
+  authorized), MySQL (Pest and Playwright use SQLite), the full Playwright
+  suite (only the five trip and driver specs), `npm run build` with the
+  remote font (fonts.bunny.net is unreachable here), and live OpenStreetMap
+  tiles (answered locally in the browser spec).
+- **Known limits.** `npm audit` reports 6 pre-existing dev-tooling findings
+  unrelated to Leaflet (guide §30). Selection is client state: a reload after
+  an assignment clears it, and a stale selection of orders that left the map
+  is dropped. The page still geocodes customers without coordinates through
+  `UserService` on load, as the Blade page did. The Blade visit maps still
+  load Leaflet 1.7.1 from unpkg under `blade_csp`.
+- **Inventory** (from the files and `route:list`). **30** backend Blade
+  files; **16**/**3** literal consumers of the app/layout shells; **1,047**
+  `/temp` and **435** `/temp/admin` registrations; Blade editor: **8** fields
+  in **8** views.
