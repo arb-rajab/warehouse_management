@@ -1,6 +1,7 @@
 import { createInertiaApp } from '@inertiajs/vue3';
 import { i18n, isSupportedLocale } from '@/lib/i18n';
 
+// Falls back to 'Laravel' when VITE_APP_NAME is unset.
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 
 createInertiaApp({
