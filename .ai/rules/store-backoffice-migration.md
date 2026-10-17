@@ -18,7 +18,8 @@ paths:
 
 # Moving the store back office from Blade to Inertia
 
-Latest follow-up: [the legacy reviews screen's retirement](#28-legacy-reviews-screen-retirement-2026-10-17).
+Latest follow-up: [the server status page's deletion](#29-server-status-page-deletion-2026-10-17).
+Reviews follow-up: [the legacy reviews screen's retirement](#28-legacy-reviews-screen-retirement-2026-10-17).
 Trip-detail follow-up: [the trip detail and its checkpoint actions](#27-trip-detail-and-checkpoints-2026-10-16).
 Trip-orders follow-up: [the trip orders list and its order actions](#26-trip-orders-list-2026-10-15).
 Trip-form follow-up: [the trip create and edit forms](#25-trip-create-and-edit-forms-2026-10-15).
@@ -130,8 +131,10 @@ edit (§23) forms are Inertia pages.
 - **Dropped:**
   - the 12 removed-addon blocks: their routes no longer exist;
   - the stray duplicate top-level Shipping group;
-  - System → Server status: it is a `Route::view` with no Wayfinder action,
-    and its removal still requires an owner decision; the route and template remain.
+  - System → Server status: the page is deleted, on the owner's decision (§29).
+    It was a `Route::view` with no controller whose PHP 7.3/7.4 and MySQL 5.6
+    requirements showed a red cross on every working install. Both sidebars
+    drop it.
 - **Fixed:**
   - Home Banners now links inside `/temp`;
   - Product reviews and Subscribers link to the admin URI. Their route names
@@ -358,8 +361,9 @@ foundation and pilot; their presence does not establish full runtime readiness.
 - The integrated route/file inventory is in §§4–6. Product search and dedicated
   settings boundaries are implemented; unconverted handlers retain their needed
   exclusions. Production permission vocabulary and role grants still require
-  operational review. Seller/classified feature use, server-status deletion and
-  new editor/map/chart dependencies retain their owner prerequisites.
+  operational review. Seller/classified feature use and new editor/map/chart
+  dependencies retain their owner prerequisites. The server-status deletion was
+  decided by the owner and is done (§29).
 
 ## 3. Per-module checklist (the staff pattern)
 
@@ -593,7 +597,7 @@ dedicated allowlisted compatibility endpoint, not a general settings writer.
   tax metadata and summed line prices for grand total. Percentage conversion and
   tax/shipping/coupon adjustments need a business decision.
 - Preserve departure ID 9 behavior, Seller app link behavior, shared-session
-  logout semantics and server status. Missing data is handled without inventing
+  logout semantics. Missing data is handled without inventing
   new business policy. Shared image-normalization changes remain a policy gap.
 - Remove static-analysis/legacy-test exclusions only for migrated or cleaned
   handlers. Root controllers still serving public/Blade consumers remain excluded
@@ -603,7 +607,7 @@ dedicated allowlisted compatibility endpoint, not a general settings writer.
 
 ### 5.1 Actual retained backend Blade files
 
-The current backend inventory contains **35 Blade files**, down from 73 after
+The current backend inventory contains **34 Blade files**, down from 73 after
 removing three screens each for carriers, customer packages and categories, the
 two brand screens, the digital product list (§15), general settings (§17), the
 two blog post forms (§18), the newsletter and ticket detail (§19), the
@@ -612,8 +616,8 @@ product forms (§21), the physical product create form (§22), and the
 physical product edit form, its choice script and the unconsumed blank shell
 (§23), the trip list with its status modal (§24), the two trip forms
 with their two checkpoint row partials (§25), the trip orders list
-(§26), the trip checkpoints page with its status modal (§27), and the legacy product
-reviews list (§28).
+(§26), the trip checkpoints page with its status modal (§27), the legacy product
+reviews list (§28), and the server status page (§29).
 The in-house and all-products lists (§16) removed none:
 `product/products/index.blade.php` is shared with the retained seller product
 list. The Google Map settings screen stays (§17).
@@ -630,7 +634,6 @@ as conversion. Protected shells/downloads/invoices are not conversion targets.
 - **representatives:** `representatives/visits/map.blade.php`, `representatives/visits/rep-show.blade.php`, `representatives/visits/show.blade.php`.
 - **sellers:** `sellers/create.blade.php`, `sellers/edit.blade.php`, `sellers/index.blade.php`, `sellers/payment.blade.php`, `sellers/payment_histories/index.blade.php`, `sellers/payment_modal.blade.php`, `sellers/profile_modal.blade.php`, `sellers/seller_commission/index.blade.php`, `sellers/seller_verification_form/index.blade.php`, `sellers/seller_withdraw_requests/index.blade.php`, `sellers/seller_withdraw_requests/payment_modal.blade.php`, `sellers/seller_withdraw_requests/withdraw_message_modal.blade.php`, `sellers/verification.blade.php`.
 - **setup_configurations:** `setup_configurations/google_configuration/google_map.blade.php`.
-- **system:** `system/server_status.blade.php`.
 - **trips:** `trips/create-from-map.blade.php`, `trips/inc/map-popups.blade.php` (included by the map picker and `inc/map-scripts`), `trips/inc/map-scripts.blade.php` (no Blade includer since §25; kept with the map decision), `trips/inc/scripts.blade.php`.
 
 ## 6. Registered migrated controllers and consumers
@@ -2984,5 +2987,55 @@ Registrations are unchanged at **1,048** under `/temp` and **436** under
 `/temp/admin` (`reviews.index` was a resource route and is now an explicit one;
 from `route:list`). Blade editor: **8** fields in **8** views. Verification is
 recorded in the reviews retirement section of
+[the reconciliation ledger](../store-backoffice-reconciliation-20261011.md).
+No deployment or production-data mutation is authorized.
+
+## 29. Server status page deletion (2026-10-17)
+
+The System → Server status page is gone, on the owner's decision. It was a
+`Route::view('/system/server-status', 'shop.backend.system.server_status')`
+named `system_server` (middleware `RaizerSuperAdmin`) with no controller. Its
+checks targeted PHP 7.3/7.4 and MySQL 5.6, so it showed a red cross on every
+working PHP 8.5 install, and nothing else used it. Work is on
+`ccr-ff665fd6-s90gn3`, from `develop` at `ead3b91` (the PR #422 merge). The
+owner authorized this session's commits, one PR into `develop`, its merge and
+`[skip ci]` on all of them, because the checks run locally. So no PR CI, no PR
+or merge SAST and no `develop` deploy ran. The PR number is recorded below.
+
+**Removed.**
+
+- The route `system_server` (`routes/shop-admin.php`); `GET
+  /temp/admin/system/server-status` now answers 404, even for a super admin.
+- `system/server_status.blade.php` (`git rm`); the `system/` directory is gone.
+- The Blade sidebar's whole System group in `inc/admin_sidenav.blade.php`: its
+  only child was Server status. `storeAdminMenu.ts` never had an entry; its
+  doc comment now says the page was deleted.
+
+**Traced and kept.** `rg` over `app`, `routes`, `resources`, `config`,
+`public/assets/js`, `tests`, `lang` and `.ai` found only the files above plus
+documentation. No Vue, Wayfinder or search-index reference.
+
+- `RaizerSuperAdmin` (alias in `bootstrap/app.php`) is still used by
+  `cache.clear` (`routes/shop-admin.php`), the business-settings commission
+  activation route and `Store\Admin\SettingsController`; kept.
+- The `server_status` permission name was used only by the removed sidebar
+  gates. It is not seeded or migrated in this repository (it may exist as a
+  production row); nothing was changed, and a data cleanup needs operational
+  review. The `System` and `Server status` translation strings are shared
+  `translate()` keys, left alone.
+
+**Tests.** `StoreBackOfficeShellTest` no longer lists the view or pins the
+`Route::view` line; it asserts the view is absent and `routes/shop-admin.php`
+no longer mentions `server_status`. A new case asserts `system_server` is
+unregistered, no route URI contains `server-status`, `system/` is gone and a
+super admin gets a 404. The Legacy ratchets (`LegacyAdminPermissionsTest`,
+`LegacyStoreStateChangingRoutesTest`, `LegacyShopRouteAccessTest`,
+`LegacyTempRoutesReachableTest`) did not pin the route and needed no change.
+
+Current inventory: **34** backend Blade files, **17** direct literal consumers
+of `shop.backend.layouts.app`, **3** of `shop.backend.layouts.layout`.
+Registrations fall to **1,047** under `/temp` and **435** under `/temp/admin`
+(from `route:list`). Blade editor: **8** fields in **8** views. Verification is
+recorded in the server status section of
 [the reconciliation ledger](../store-backoffice-reconciliation-20261011.md).
 No deployment or production-data mutation is authorized.

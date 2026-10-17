@@ -677,8 +677,6 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
     Route::delete('/cities/{city}', [CityController::class, 'destroy'])->name('cities.destroy');
     Route::post('/cities/{city}/status', [CityController::class, 'updateStatus'])->name('cities.status');
 
-    Route::view('/system/server-status', 'shop.backend.system.server_status')->name('system_server')->middleware('RaizerSuperAdmin');
-
     // Admin JSON file manager; the shared Blade uploader remains in shop-web/seller.
     Route::get('/uploads', [UploadController::class, 'index'])->name('uploaded-files.index');
     Route::get('/uploads/create', [UploadController::class, 'create'])->name('uploaded-files.create');
