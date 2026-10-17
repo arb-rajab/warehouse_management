@@ -3076,9 +3076,10 @@ The trip map picker (`trips.create-from-map`) now uses
 `Store/Admin/Trips/Trips/CreateFromMap` (`StoreAdminLayout`) with the new
 `components/StoreTripMap.vue`, on Leaflet installed from npm. Work is on
 `ccr-a8851ce2-oefr1s`, from `develop` at `2e3d8cf` (the PR #423 merge). The
-owner authorized this session's commits, one PR into `develop`, its merge and
-`[skip ci]` on all of them, because the checks run locally. So no PR CI, no
-PR or merge SAST and no `develop` deploy ran. The ledger records what ran.
+owner authorized this session's commits, one PR into `develop` (#427), its
+merge and `[skip ci]` on all of them, because the checks run locally. So no PR
+CI, no PR or merge SAST and no `develop` deploy ran. The ledger records what
+ran.
 
 **Owner decisions (2026-10-17), recorded in §5.** Leaflet and Chart.js are
 owner-approved frontend dependencies (npm through Vite, no CDN). Sellers and

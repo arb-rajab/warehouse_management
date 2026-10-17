@@ -3505,8 +3505,8 @@ Work on `ccr-a8851ce2-oefr1s` from `develop` at `2e3d8cf` (the PR #423 merge).
 **Owner decisions:** Leaflet and Chart.js are owner-approved frontend
 dependencies (npm, bundled through Vite, no CDN); sellers and classified
 products will be converted, not deleted (later steps). Both are recorded in the
-guide's §5. The owner authorized commits, one PR into `develop`, its merge and
-`[skip ci]` on every commit, the PR title and the merge commit. **No PR CI, no
+guide's §5. The owner authorized commits, one PR into `develop` (#427), its
+merge and `[skip ci]` on every commit, the PR title and the merge commit. **No PR CI, no
 PR or merge SAST and no `develop` deploy ran.** No other branch, deployment or
 production data was touched. The guide's §30 records the result.
 
