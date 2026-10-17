@@ -7,7 +7,6 @@ import {
     CircleUser,
     ClipboardCheck,
     LayoutDashboard,
-    Map,
     Menu,
     Package,
     Rows3,
@@ -17,7 +16,6 @@ import {
     X,
 } from '@lucide/vue';
 import { computed, ref } from 'vue';
-import { index as cellsIndex } from '@/actions/App/Http/Controllers/Admin/CellController';
 import { index as cellLogsIndex } from '@/actions/App/Http/Controllers/Admin/CellStatusLogController';
 import { index as cellVerificationRoundsIndex } from '@/actions/App/Http/Controllers/Admin/CellVerificationRoundController';
 import { index as dashboardIndex } from '@/actions/App/Http/Controllers/Admin/DashboardController';
@@ -52,7 +50,6 @@ const navItems = computed(() => [
         icon: LayoutDashboard,
     },
     { labelKey: 'nav.rows', href: rowsIndex(), icon: Rows3 },
-    { labelKey: 'nav.map', href: cellsIndex(), icon: Map },
     {
         labelKey: 'nav.warehouseMap',
         href: warehouseMapIndex(),

@@ -220,8 +220,8 @@ Four consequences worth knowing before changing any of this:
   the English name, with nothing to explain the match. Nowhere else has that
   gap — elsewhere the user is reading a label, not verifying a query — and a
   second name costs real space there: `CellSlot.vue` already truncates at one
-  line, table rows would grow on every row, and `alt`/`aria-label` text and the
-  3D map's `aria-live` announcement would just read both names aloud each time.
+  line, table rows would grow on every row, and `alt`/`aria-label` text would
+  just read both names aloud each time.
   The dropdown *trigger* button stays single-label for the same reason.
 - **Both names in one place means two elements with `dir="auto"`, never one
   interpolated string.** Direction is set once, on `<html>`
@@ -229,11 +229,10 @@ Four consequences worth knowing before changing any of this:
   element — so a Latin name inside the Arabic panel (or an Arabic one inside
   the English panel) reorders against the surrounding layout unless it isolates
   itself, and any punctuation shared between the two names reorders with it.
-- **Resolve once, at the render site — never twice.** `CellMap3D.vue`
-  re-projects a `CellMap3DItem` back into a `CellPallet`-shaped object it hands
-  to `CellSlot.vue`, which resolves the label itself; that re-projection passes
-  `product_ar_name` straight through. Resolving in both places double-applies
-  the choice. The one memo that stores a *resolved* label rather than raw
+- **Resolve once, at the render site — never twice.** Anything that hands a
+  `CellPallet`-shaped object to `CellSlot.vue` passes `product_ar_name` straight
+  through, since `CellSlot.vue` resolves the label itself; resolving in both
+  places double-applies the choice. The one memo that stores a *resolved* label rather than raw
   columns is `useProductSearch`'s `namesById`, which deliberately outlives the
   result page a selection came from — it holds the primary label only, since
   the trigger button it feeds shows one line.

@@ -796,6 +796,7 @@ describe('CellStatusLogs Index', () => {
                     ar_name: 'ودجات',
                     image_url: '/img/widgets.png',
                     boxes_count: 10,
+                    active: true,
                 },
             }),
         ]);

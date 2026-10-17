@@ -4,6 +4,7 @@ import type { Slice } from '../state/slices';
 import type { ViewKind } from '../state/state';
 import { el } from '../utils/dom';
 import { icon } from './icons';
+import type { ProductPicker } from './ProductPicker';
 import type { SearchBox } from './SearchBox';
 import type { Translator } from './SliceView';
 import type { StateChips } from './StateChips';
@@ -25,7 +26,7 @@ export interface ToolbarIntents {
 }
 
 /**
- * The top bar: brand, the product search with its chips, the 2D | 3D toggle
+ * The top bar: brand, the product search, the product picker and the chips, the 2D | 3D toggle
  * and the legend / help / theme / language buttons. On a phone the search
  * folds behind a button so the bar never wraps over the content.
  */
@@ -82,6 +83,7 @@ export class Toolbar extends View {
         private readonly intents: ToolbarIntents,
         private readonly search: SearchBox,
         private readonly chips: StateChips,
+        private readonly products: ProductPicker,
         private readonly helpUrl?: string,
     ) {
         super();
@@ -100,6 +102,7 @@ export class Toolbar extends View {
             { class: 'wms-pill wms-bar wms-filters' },
             this.searchToggle,
             this.search.element,
+            this.products.element,
             this.chips.element,
         );
         const actions = el(
@@ -144,8 +147,10 @@ export class Toolbar extends View {
         );
 
         this.search.mount();
+        this.products.mount();
         this.chips.mount();
         this.own(() => this.search.dispose());
+        this.own(() => this.products.dispose());
         this.own(() => this.chips.dispose());
 
         if (this.helpUrl) {

@@ -41,6 +41,7 @@ class MatchingPalletResource extends JsonResource
             ...$this->resource->toListingSummaryArray(),
             'product' => $this->whenLoaded('product', fn () => new ProductResource($this->product)),
             'location' => $this->whenLoaded('cell', fn () => $this->cell->toLocationArray()),
+            'cell_active' => $this->whenLoaded('cell', fn () => $this->cell->is_active),
         ];
     }
 }

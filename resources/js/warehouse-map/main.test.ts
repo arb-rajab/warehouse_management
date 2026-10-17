@@ -134,6 +134,61 @@ describe('mountWarehouseMap', () => {
         ).not.toBeNull();
     });
 
+    it('matches slots holding any of the products checked in the picker', async () => {
+        const { container } = await mount();
+        const holding = (ids: number[]) =>
+            warehouse.slots.filter(
+                (s) => s.pallet && ids.includes(s.pallet.productId),
+            ).length;
+        const pill = () =>
+            container.querySelector('.wms-result-pill')?.textContent;
+
+        container
+            .querySelector<HTMLButtonElement>('.wms-products__trigger')!
+            .click();
+        container
+            .querySelector<HTMLInputElement>('[data-product-id="1"]')!
+            .click();
+        expect(pill()).toBe(`${holding([1])} matches`);
+
+        container
+            .querySelector<HTMLInputElement>('[data-product-id="3"]')!
+            .click();
+        expect(pill()).toBe(`${holding([1, 3])} matches`);
+        expect(
+            container.querySelectorAll('.wms-tile.is-dim').length,
+        ).toBeGreaterThan(0);
+        expect(
+            container.querySelector('.wms-products__trigger')?.textContent,
+        ).toBe('products');
+
+        container
+            .querySelector<HTMLButtonElement>('.wms-products__clear')!
+            .click();
+        expect(container.querySelectorAll('.wms-tile.is-dim')).toHaveLength(0);
+    });
+
+    it('opens a filter link for several products', async () => {
+        window.location.hash = '#products=2,4&state=full';
+
+        const { container } = await mount();
+        const expected = warehouse.slots.filter(
+            (s) =>
+                s.state === 'full' &&
+                s.pallet &&
+                [2, 4].includes(s.pallet.productId),
+        ).length;
+
+        await vi.waitFor(() =>
+            expect(
+                container.querySelector('.wms-result-pill')?.textContent,
+            ).toBe(`${expected} matches`),
+        );
+        expect(
+            container.querySelector('.wms-chips .wms-chip.is-on')?.textContent,
+        ).toBe('stFull');
+    });
+
     it('narrows by state chip and clears the search', async () => {
         const { container } = await mount();
         const chips = container.querySelectorAll<HTMLButtonElement>(

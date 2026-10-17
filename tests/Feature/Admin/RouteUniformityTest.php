@@ -48,4 +48,6 @@ test('the retired PATCH verbs and URIs no longer route', function () {
     $this->patch("/admin/products/{$product->id}/minimum-pallets", ['minimum_pallets' => 5])->assertMethodNotAllowed();
     $this->put("/admin/pallets/{$pallet->id}/update", [])->assertNotFound();
     $this->get("/admin/cells/{$pallet->cell_id}/export-qr")->assertNotFound();
+    $this->get('/admin/cells')->assertNotFound();
+    $this->get("/admin/products/{$product->id}/image")->assertNotFound();
 });

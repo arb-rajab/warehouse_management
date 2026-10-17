@@ -49,19 +49,6 @@ class Row extends Model
     public const int MAX_DIMENSION = 500;
 
     /**
-     * Every row's id/letter/cells_count/flats_count, ordered by letter — the
-     * cell-map's row list (flat-tab layout, transfer/pallet-action destination
-     * dropdown), shared by CellController::index() and RowController::show()
-     * so both render the same set of rows a pallet can be transferred into.
-     *
-     * @return Collection<int, self>
-     */
-    public static function mapOptions(): Collection
-    {
-        return self::query()->select(self::SELECT_COLUMNS)->orderBy('letter')->get();
-    }
-
-    /**
      * The highest level any row has — the number of level checkboxes the
      * settings page offers. 1 when there are no rows yet, so the default
      * level is always selectable.

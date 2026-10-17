@@ -5,8 +5,9 @@ import { View } from './View';
 
 /**
  * Keeps the page fragment in step with the view (`#2d` / `#3d`) and opens deep
- * links (`#slot=B5-2` shows the 3D view in front of that slot), also when the
- * fragment changes while the page is open. The history state is preserved so
+ * links (`#slot=B5-2` shows the 3D view in front of that slot,
+ * `#products=12,34&state=full` filters the map), also when the fragment
+ * changes while the page is open. The history state is preserved so
  * the panel's own navigation keeps working.
  */
 export class HashSync extends View {
@@ -21,17 +22,15 @@ export class HashSync extends View {
         this.on(this.win, 'hashchange', () => this.applyCurrent());
     }
 
-    /** Opens whatever the current fragment points at. Returns whether it pointed at anything. */
-    applyCurrent(): boolean {
+    /** Opens whatever the current fragment points at, and returns it (null when it points at nothing). */
+    applyCurrent(): HashTarget | null {
         const target = parseHash(this.win.location.hash);
 
-        if (!target) {
-            return false;
+        if (target) {
+            this.onTarget(target);
         }
 
-        this.onTarget(target);
-
-        return true;
+        return target;
     }
 
     writeView(view: ViewKind): void {

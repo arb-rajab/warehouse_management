@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // Built entirely from CELL_STATE_COLOR/CELL_STATES/cellStateLabel — the same
-// source CellSlot.vue and CellMap3D.vue use — so this legend (used by the
+// source CellSlot.vue uses — so this legend (used by the
 // Cells and CellLogs help pages) can never drift from the actual cell colors
 // in the app. No colors or labels are hardcoded here.
 import {

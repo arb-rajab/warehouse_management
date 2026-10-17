@@ -4,6 +4,7 @@ import { computed } from 'vue';
 import { show as showRow } from '@/actions/App/Http/Controllers/Admin/RowController';
 import { show as showUser } from '@/actions/App/Http/Controllers/Admin/UserController';
 import CellLogFlagBadges from '@/components/CellLogFlagBadges.vue';
+import ProductActiveBadge from '@/components/ProductActiveBadge.vue';
 import TableLink from '@/components/TableLink.vue';
 import { cellStateLabel } from '@/lib/cellStateColor';
 import {
@@ -142,6 +143,7 @@ const pair = computed(() => transferPair(props.log));
                 class="h-8 w-8 shrink-0 rounded object-cover"
             />
             {{ productName(log.product.name, log.product.ar_name) }}
+            <ProductActiveBadge :active="log.product.active" />
         </div>
         <span v-else class="text-gray-400 dark:text-neutral-600">—</span>
     </td>

@@ -27,6 +27,7 @@ function apiRows(): ApiRow[] {
                         expiration_date: '2026-10-20',
                         product_name: 'Basmati Rice',
                         product_ar_name: 'أرز',
+                        product_active: false,
                         product_image_url: 'https://cdn.example/rice.png',
                         remaining_boxes: 31,
                         product_boxes_count: 48,
@@ -108,6 +109,7 @@ describe('normalizeRows', () => {
             pallet: {
                 id: 90,
                 productId: 14,
+                productActive: false,
                 productImageUrl: 'https://cdn.example/rice.png',
                 remainingBoxes: 31,
                 productBoxesCount: 48,
@@ -136,6 +138,7 @@ describe('normalizeRows', () => {
         expect(slot.active).toBe(true);
         expect(slot.pallet).toMatchObject({
             productName: '',
+            productActive: true,
             productImageUrl: null,
             remainingBoxes: null,
             productBoxesCount: null,

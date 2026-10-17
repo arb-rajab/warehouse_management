@@ -61,7 +61,7 @@ class RowController extends Controller
 
         return Inertia::render('Admin/Rows/Show', [
             'row' => new RowResource($row->loadHasPallets()),
-            'rows' => Row::mapOptions(),
+            'rows' => Row::query()->select(Row::SELECT_COLUMNS)->orderBy('letter')->get(),
             'cells' => CellResource::collection(
                 $row->cells()
                     ->select(Cell::SELECT_COLUMNS)

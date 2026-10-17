@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { click, fakeSlice, host, keyI18n } from '../testing/ui';
 import { Notch } from './Notch';
+import { ProductPicker } from './ProductPicker';
 import { SearchBox } from './SearchBox';
 import { StateChips } from './StateChips';
 import { Toolbar } from './Toolbar';
@@ -155,7 +156,21 @@ function toolbar(partial: Partial<ToolbarState> = {}, helpUrl?: string) {
         i18n,
         { setState: vi.fn(), toggleExpiring: vi.fn() },
     );
-    const bar = new Toolbar(root, slice, i18n, intents, search, chips, helpUrl);
+    const products = new ProductPicker(
+        fakeSlice({ options: [], selected: [], locale: 'en' as const }),
+        i18n,
+        { toggle: vi.fn(), clear: vi.fn() },
+    );
+    const bar = new Toolbar(
+        root,
+        slice,
+        i18n,
+        intents,
+        search,
+        chips,
+        products,
+        helpUrl,
+    );
 
     bar.mount();
 
@@ -198,6 +213,17 @@ describe('Toolbar', () => {
         expect(intents.toggleTheme).toHaveBeenCalled();
         expect(intents.toggleSearchOpen).toHaveBeenCalled();
         bar.dispose();
+    });
+
+    it('puts the product picker between the search box and the chips', () => {
+        const { bar, root } = toolbar();
+        const filters = root.querySelector('.wms-filters')!;
+
+        expect(
+            [...filters.children].map((child) => child.className.split(' ')[0]),
+        ).toEqual(['wms-icon-btn', 'wms-search', 'wms-products', 'wms-chips']);
+        bar.dispose();
+        expect(root.querySelector('.wms-products')).toBeNull();
     });
 
     it('offers the other language on the language button', () => {

@@ -115,6 +115,7 @@ describe('scene builders', () => {
                 terms: [],
                 state: 'all',
                 expiring: false,
+                productIds: [],
             }),
             floor: null,
         });
@@ -129,6 +130,7 @@ describe('scene builders', () => {
             terms: ['nothing-matches'],
             state: 'all',
             expiring: false,
+            productIds: [],
         });
 
         builder.applyFilter({ match, floor: null });
@@ -150,6 +152,7 @@ describe('scene builders', () => {
             terms: [],
             state: 'all',
             expiring: false,
+            productIds: [],
         });
 
         builder.applyFilter({ match: none, floor: 2 });
@@ -186,6 +189,7 @@ describe('scene builders', () => {
                 terms: [],
                 state: 'all',
                 expiring: false,
+                productIds: [],
             }),
             floor: null,
         });

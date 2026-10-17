@@ -455,8 +455,8 @@ class StagingRealisticDataSeeder extends Seeder
     }
 
     /**
-     * Deactivate some occupied and some empty cells (the cell map's inactive
-     * highlight and the `deactivated` log action), and deactivate-then-
+     * Deactivate some occupied and some empty cells (the inactive highlight
+     * and the `deactivated` log action), and deactivate-then-
      * reactivate a few more so both actions exist without changing their state.
      *
      * @param  list<array{cell: Cell, pallet: Pallet, product: Product, last_at: CarbonInterface}>  $occupied

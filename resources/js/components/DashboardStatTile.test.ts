@@ -2,13 +2,13 @@ import { Link } from '@inertiajs/vue3';
 import { CircleDashed } from '@lucide/vue';
 import { mount } from '@vue/test-utils';
 import { describe, expect, it } from 'vitest';
-import { index as cellsIndex } from '@/actions/App/Http/Controllers/Admin/CellController';
+import { index as palletsIndex } from '@/actions/App/Http/Controllers/Admin/PalletController';
 import DashboardStatTile from './DashboardStatTile.vue';
 
 describe('DashboardStatTile', () => {
     it('renders the label and value', () => {
         const wrapper = mount(DashboardStatTile, {
-            props: { label: 'Empty', value: 12, href: cellsIndex.url() },
+            props: { label: 'Empty', value: 12, href: palletsIndex.url() },
         });
 
         expect(wrapper.text()).toContain('12');
@@ -17,21 +17,23 @@ describe('DashboardStatTile', () => {
 
     it('passes a string href straight to the link', () => {
         const wrapper = mount(DashboardStatTile, {
-            props: { label: 'Empty', value: 12, href: cellsIndex.url() },
+            props: { label: 'Empty', value: 12, href: palletsIndex.url() },
         });
 
-        expect(wrapper.getComponent(Link).props('href')).toBe(cellsIndex.url());
+        expect(wrapper.getComponent(Link).props('href')).toBe(
+            palletsIndex.url(),
+        );
     });
 
     it('passes a Wayfinder route object, with its query, straight to the link', () => {
-        const href = cellsIndex({ query: { state: 'empty' } });
+        const href = palletsIndex({ query: { state: 'empty' } });
         const wrapper = mount(DashboardStatTile, {
             props: { label: 'Empty', value: 12, href },
         });
 
         const link = wrapper.getComponent(Link);
         expect(link.props('href')).toEqual({
-            url: cellsIndex.url({ query: { state: 'empty' } }),
+            url: palletsIndex.url({ query: { state: 'empty' } }),
             method: 'get',
         });
         // The query rides in the route object, not a separate data payload.
@@ -40,7 +42,7 @@ describe('DashboardStatTile', () => {
 
     it('defaults to the default tone', () => {
         const wrapper = mount(DashboardStatTile, {
-            props: { label: 'Empty', value: 12, href: cellsIndex.url() },
+            props: { label: 'Empty', value: 12, href: palletsIndex.url() },
         });
 
         expect(wrapper.find('.text-gray-900').exists()).toBe(true);
@@ -51,7 +53,7 @@ describe('DashboardStatTile', () => {
             props: {
                 label: 'Expiring soon',
                 value: 3,
-                href: cellsIndex.url(),
+                href: palletsIndex.url(),
                 tone: 'warning',
             },
         });
@@ -64,7 +66,7 @@ describe('DashboardStatTile', () => {
             props: {
                 label: 'Expired',
                 value: 2,
-                href: cellsIndex.url(),
+                href: palletsIndex.url(),
                 tone: 'danger',
             },
         });
@@ -77,7 +79,7 @@ describe('DashboardStatTile', () => {
             props: {
                 label: 'Empty',
                 value: 12,
-                href: cellsIndex.url(),
+                href: palletsIndex.url(),
                 icon: CircleDashed,
             },
         });
@@ -87,7 +89,7 @@ describe('DashboardStatTile', () => {
 
     it('renders no icon when none is given', () => {
         const wrapper = mount(DashboardStatTile, {
-            props: { label: 'Empty', value: 12, href: cellsIndex.url() },
+            props: { label: 'Empty', value: 12, href: palletsIndex.url() },
         });
 
         expect(wrapper.find('svg').exists()).toBe(false);
@@ -95,7 +97,7 @@ describe('DashboardStatTile', () => {
 
     it('applies the hover/border classes to the root element, not just the link', () => {
         const wrapper = mount(DashboardStatTile, {
-            props: { label: 'Empty', value: 12, href: cellsIndex.url() },
+            props: { label: 'Empty', value: 12, href: palletsIndex.url() },
         });
 
         expect(wrapper.classes()).toContain('hover:border-gray-300');
@@ -104,7 +106,7 @@ describe('DashboardStatTile', () => {
 
     it('renders footer slot content outside the link', () => {
         const wrapper = mount(DashboardStatTile, {
-            props: { label: 'Empty', value: 12, href: cellsIndex.url() },
+            props: { label: 'Empty', value: 12, href: palletsIndex.url() },
             slots: { footer: '<button>Custom</button>' },
         });
 
