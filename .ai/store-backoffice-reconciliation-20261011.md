@@ -3489,7 +3489,9 @@ Before any change, `StoreBackOfficeShellTest`, `LegacyAdminPermissionsTest`,
 - **Ran.** The five files above after the change: 26 tests, 96 assertions
   passed. `route:list`: 1,047 under `/temp`, 435 under `/temp/admin`.
   `wayfinder:generate --skip-routes --with-form` ran with no tracked change.
-  The full pre-push result is appended below.
+  `python3 .claude/scripts/pre_push_check.py --full`: exit 0. ESLint,
+  Prettier, vue-tsc, Vitest (315 files, 2,800 tests), Pint, PHPStan (0
+  errors) and Pest (6,048 tests, 33,697 assertions) all passed.
 - **Not run.** PR CI, SAST and the `develop` deploy (`[skip ci]`, as
   authorized), MySQL (Pest uses SQLite), Playwright (no spec references the
   page) and `npm run build` with the remote font.
