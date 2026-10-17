@@ -81,6 +81,14 @@ describe('AdminLayout', () => {
         expect(wrapper.get('main').classes()).not.toContain('flex-1');
     });
 
+    it('scrolls wide page content inside the column instead of stretching the page sideways', () => {
+        const wrapper = mountLayout(rowsIndex.url());
+
+        expect(wrapper.get('main').classes()).toEqual(
+            expect.arrayContaining(['min-w-0', 'overflow-x-auto']),
+        );
+    });
+
     it('hands the whole area under the app bar to a full-bleed page', () => {
         const wrapper = mountLayout(warehouseMapIndex.url(), {
             fullBleed: true,

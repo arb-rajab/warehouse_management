@@ -212,7 +212,7 @@ function navLinkStateClass(href: UrlMethodPair): string[] {
             :class="
                 fullBleed
                     ? 'relative min-h-0 flex-1'
-                    : 'mx-auto max-w-6xl px-4 py-8 sm:px-6'
+                    : 'mx-auto max-w-6xl min-w-0 overflow-x-auto px-4 py-8 sm:px-6'
             "
         >
             <slot />

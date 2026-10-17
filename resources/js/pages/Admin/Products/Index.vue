@@ -369,10 +369,10 @@ function refreshBarcodesDialogProduct(): void {
 
     <AdminLayout>
         <PageHeader :title="t('products.title')">
-            <div class="flex items-end gap-2">
+            <div class="flex w-full flex-wrap items-end gap-2 md:w-auto">
                 <ProductSelect
                     id="products-quick-search"
-                    class="w-64"
+                    class="w-full md:w-64"
                     v-model="quickSearchProduct"
                     :label="t('products.quickSearch.label')"
                     :placeholder="t('products.quickSearch.placeholder')"
