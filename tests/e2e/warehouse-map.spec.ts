@@ -70,8 +70,15 @@ test.describe('desktop', () => {
         });
         await expect(page.locator('.wms-crosshair')).toBeVisible();
 
-        await page.keyboard.press('g');
-        await expect(map).toHaveAttribute('data-nav', 'guided');
+        // data-mode already reads "walk" while the camera is still flying in,
+        // and keys are dropped (not queued) until it lands: press G until it
+        // takes, which a dropped press cannot undo
+        await expect(async () => {
+            await page.keyboard.press('g');
+            await expect(map).toHaveAttribute('data-nav', 'guided', {
+                timeout: 500,
+            });
+        }).toPass({ timeout: 15_000 });
 
         const caption = page.locator('.wms-minimap__caption');
         const before = await caption.textContent();
