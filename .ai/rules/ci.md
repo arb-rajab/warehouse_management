@@ -14,7 +14,7 @@ paths:
 | Vitest | tests related to changed `resources/js` files | full suite, when `js` is planned |
 | Pint | changed PHP files (needs the dev tools) | whole repo, when `php` is planned |
 | PHPStan, Pest | full, `--parallel` (needs the dev tools) | full, `--parallel`, when `php` is planned |
-| Pest on MySQL (only for schema-related paths), Playwright, dependency audit, deploy-script test | only with `--attest` | when planned, unless attested |
+| Pest on MySQL (only for schema-related paths), Playwright, dependency audit, deploy-script test | only in the attested run (the default on a clean tree) | when planned, unless attested |
 
 CI is the gate; the sandbox run exists to catch the common failure before it
 costs a CI round (or, with `--attest`, to replace the run). `pre_push_check.py --full` runs the whole-repo sequence. The
@@ -22,6 +22,12 @@ Claude web sandbox cannot install Pint, Pest or PHPStan (dev dists are 403), so
 there those come from CI only.
 
 ## `--attest` lets CI skip what already passed here
+
+`pre_push_check.py` attests **by default** when its preconditions hold (clean work
+tree, no hidden skip-worktree files, unpushed head commit, a change outside
+`.github/` that some CI group reads); otherwise it runs the quick scoped checks
+and prints why. `--quick` forces the scoped checks and `--attest` forces
+attesting. The auto-selection is `attest_blocker` in the script.
 
 `pre_push_check.py --attest` runs every group the planner says the branch needs,
 in full, including Playwright (preinstalled Chromium), the migration tests on

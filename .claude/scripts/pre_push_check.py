@@ -36,6 +36,12 @@ through `.claude/scripts/install_dev_tools.py`. When `vendor/bin/pint` is absent
 them from CI instead. Pest also needs `.env` with an APP_KEY and
 `public/build/manifest.json`; the same hook provides both.
 
+Attesting is automatic: with no flag, a clean work tree, an unpushed head commit
+and a change outside .github/ select `--attest` below; anything else (edits not
+committed yet, a pushed head, a workflow change) runs the scoped checks above
+and says why. `--quick` forces the scoped checks; `--attest` forces attesting
+and fails loudly when it cannot.
+
 `--attest` is the mode that lets CI skip work. It runs every group the planner
 says the branch needs, unscoped and in full, *including* the ones the modes
 above leave to CI: the migration tests on a local MySQL (install_mysql.sh),
@@ -53,7 +59,7 @@ that fails stops the run and records nothing. The trailer is self-attested: it
 is only as good as the local run, so a commit amended by hand is trusted too.
 
 Usage:
-    python3 .claude/scripts/pre_push_check.py [--full] [--attest] [--base <ref>]
+    python3 .claude/scripts/pre_push_check.py [--full] [--quick] [--attest] [--base <ref>]
 
 It first waits for the background SessionStart setup (wait_for_setup.py) so the
 PHP steps are chosen from a finished install, not a half-installed one.
@@ -334,6 +340,31 @@ def amend_with_trailer(trailer: str) -> bool:
     return subprocess.run(['git', 'commit', '--amend', '-q', '-F', '-'], cwd=ROOT, input=merged.stdout, text=True).returncode == 0
 
 
+def attest_blocker(files: list[str] | None) -> str | None:
+    """Why the default run should not attest, or None when it should.
+
+    Attesting needs a clean work tree and an unpushed head commit to amend, and
+    is pointless when CI ignores the trailer (a change under .github/) or has
+    nothing to run. Anything else attests, so there is no flag to forget.
+    """
+    if files is None:
+        return 'the branch base could not be found'
+
+    if not any(ci_plan.plan(files).values()):
+        return 'no CI check reads the changed files'
+
+    if any(path.startswith('.github/') for path in files):
+        return 'a change under .github/ runs every CI job and ignores the trailer'
+
+    if dirty_paths() or hidden_paths():
+        return 'there are uncommitted, untracked or hidden changes (commit them first)'
+
+    if head_is_pushed():
+        return 'the head commit is already on a remote branch, so it cannot be amended'
+
+    return None
+
+
 def attest(base: str) -> int:
     """Run every planned group in full and record what passed on the head commit."""
     files = changed_files(base)
@@ -420,6 +451,9 @@ def attest(base: str) -> int:
 def main(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(description='Run the CI checks this branch needs before a push.')
     parser.add_argument('--full', action='store_true', help='run every check unscoped, in CI order')
+    parser.add_argument('--quick', action='store_true',
+                        help='never attest: run the scoped checks only (the default does this itself when the tree is '
+                             'dirty, the head commit is pushed, or the change is under .github/)')
     parser.add_argument('--attest', action='store_true',
                         help='run every planned group in full (E2E, MySQL and audits included) and, when they pass, '
                              'record a CI-Verified trailer on the unpushed head commit')
@@ -436,6 +470,16 @@ def main(argv: list[str]) -> int:
         return attest(args.base)
 
     files = None if args.full else changed_files(args.base)
+
+    if not args.full and not args.quick:
+        blocker = attest_blocker(files)
+
+        if blocker is None:
+            print('\nClean tree, unpushed head commit: running the full attested run '
+                  '(about 25 minutes). Use --quick for the scoped checks only.')
+            return attest(args.base)
+
+        print(f'\nNot attesting: {blocker}. Running the scoped checks.')
 
     if files is None:
         if not args.full:
@@ -467,7 +511,8 @@ def main(argv: list[str]) -> int:
         return 0
 
     print('\nAll applicable checks passed locally.' if files is not None else '\nAll CI checks passed locally.')
-    print('E2E, MySQL and the audits run only in CI. `--attest` runs them here too and lets CI skip what passed.')
+    print('E2E, MySQL and the audits run only in CI. Commit, then re-run this on a clean tree to attest '
+          'them here and let CI skip what passed.')
 
     return 0
 
