@@ -10,6 +10,7 @@ use App\Models\Product;
 use App\Models\Review;
 use App\Models\Shop;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
 use Illuminate\Support\Facades\DB;
@@ -22,7 +23,7 @@ class ReviewController extends Controller implements HasMiddleware
     public static function middleware(): array
     {
         return [
-            new Middleware('permission:view_product_reviews', only: ['index']),
+            new Middleware('permission:view_product_reviews', only: ['index', 'redirectLegacyIndex']),
             new Middleware('permission:publish_product_review', only: ['updatePublished']),
         ];
     }
@@ -43,6 +44,12 @@ class ReviewController extends Controller implements HasMiddleware
             'reviews' => $this->paginated(ReviewResource::collection($reviews)),
             'filters' => ['per_page' => $perPage, 'rating' => $rating],
         ]);
+    }
+
+    /** Old `reviews.index` bookmarks (`/temp/reviews`) land on the Inertia list, query kept. */
+    public function redirectLegacyIndex(Request $request): RedirectResponse
+    {
+        return $this->redirectPreservingQuery('admin.reviews.index', $request);
     }
 
     public function updatePublished(UpdateReviewPublishedRequest $request, Review $review): RedirectResponse

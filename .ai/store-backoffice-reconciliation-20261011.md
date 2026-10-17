@@ -3380,3 +3380,68 @@ package source were used instead. On a detached checkout of `develop` at
   files; **18**/**3** literal consumers of the app/layout shells; **1,048**
   `/temp` and **436** `/temp/admin` registrations; Blade editor: **8** fields
   in **8** views.
+
+
+## Legacy reviews screen retirement (2026-10-17)
+
+Work on `claude/store-backoffice-reviews-step-28-lqx4cm` from `develop` at
+`fb04f56` (the PR #421 merge). The owner authorized commits, a push, a PR, its
+merge into `develop` and `[skip ci]` on all of them, because the checks run
+locally. **No PR CI, no PR or merge SAST and no `develop` deploy ran for this
+PR or its merge.** No other branch, deployment or production data was
+touched. The guide's §28 records the result. The branch also carries the
+cherry-picked "Record PR #421" docs commit (`0523efb`, applied cleanly; it was
+not yet in `develop`).
+
+### Setup and baseline on `develop`
+
+PHP 8.5.11, `vendor/` with the dev tools, `node_modules` and the Vite build
+(`wait_for_setup.py` exited 0). Laravel Boost failed to connect
+(`CONNECTION_CLOSED`); repository files and installed package source were used.
+On `develop`'s code (only the docs cherry-pick on top, changes stashed):
+`ReviewControllerTest`, `LegacyReviewTest`, `LegacyAdminPermissionsTest`,
+`LegacyStoreStateChangingRoutesTest`, `LegacyShopRouteAccessTest` and
+`LegacyTempRoutesReachableTest`: **42 passed** (180 assertions).
+
+### Audit evidence
+
+- Root `ReviewController::index` (`app/Http/Controllers/ReviewController.php`):
+  `permission:view_product_reviews` (`only: ['index']`), `Review::with(...)`,
+  an unvalidated `rating` sort, `paginate(15)`, then the Blade view.
+- Route: `Route::resource('/reviews', ReviewController::class)` in
+  `routes/shop-web.php` (the `auth` group).
+- Consumers of `reviews.index` and the view: `inc/admin_sidenav.blade.php:183`
+  and `ReviewControllerTest`; no `public/assets/js`, `config`, `lang`,
+  Playwright or Vue reference (`storeAdminMenu.ts` already used the Inertia
+  action).
+
+### Completed scope
+
+- Sidebar link points at `admin.reviews.index`.
+- `reviews.index` GET is a gated 302 to `admin.reviews.index` keeping the query
+  string (`Store\Admin\ReviewController::redirectLegacyIndex`); route name and
+  `view_product_reviews` kept.
+- Root `ReviewController::index` and its `HasMiddleware` removed; `store`,
+  `product_review_modal` and the stubs untouched.
+- Removed (`git rm`): `product/reviews/index.blade.php`.
+- Unchanged: permission names and grants, `LegacyAdminPermissionsTest` (no gate
+  changed), route ratchets, CSP, shells, dependencies and lockfiles.
+
+### Verification and limits
+
+- **Ran (on the branch).**
+  - Pest, the six files above: 46 tests; after correcting two assertions in my
+    new refusal case (a customer gets 403 on the legacy URL, not 404) all
+    passed; `ReviewControllerTest` alone: 18 passed (101 assertions).
+  - `route:list`: 1,048 under `/temp`, 436 under `/temp/admin` (unchanged).
+  - `python3 .claude/scripts/pre_push_check.py --full`: exit 0. ESLint,
+    Prettier, vue-tsc, Vitest (315 files, 2,800 tests), Pint, PHPStan (0
+    errors) and Pest (6,047 tests, 33,693 assertions) all passed.
+- **Not run.** PR CI, SAST and the `develop` deploy (`[skip ci]`, as
+  authorized), MySQL (Pest uses SQLite), Playwright (no frontend change, and no
+  spec referenced the screen) and `npm run build` with the remote font.
+- **Known limit.** The redirect is a 302, so browsers re-ask on each visit; it
+  can be made permanent once no bookmark traffic remains.
+- **Inventory.** **35** backend Blade files; **17**/**3** literal consumers of
+  the app/layout shells; **1,048** `/temp` and **436** `/temp/admin`
+  registrations; Blade editor: **8** fields in **8** views.
