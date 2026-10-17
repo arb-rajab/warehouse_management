@@ -12,6 +12,7 @@ __pycache__/
 /public/fonts-manifest.dev.json
 /public/hot
 /public/storage
+/public/uploads
 /resources/js/actions
 /resources/js/routes
 /resources/js/wayfinder

@@ -105,6 +105,7 @@ def main() -> int:
         import pre_push_check
 
         pre_push_check.php_tools_installed = lambda: True
+        pre_push_check.backend_installed = lambda: False
         labels = [label for label, _, _ in pre_push_check.full_steps()]
         check(
             'with the PHP tools installed, --full runs every CI step in CI order',
@@ -145,6 +146,22 @@ def main() -> int:
             str(labels),
         )
 
+        pre_push_check.php_tools_installed = lambda: True
+        pre_push_check.backend_installed = lambda: True
+        check(
+            'with the app installed, --full regenerates the Wayfinder types before the JS checks',
+            [label for label, _, _ in pre_push_check.full_steps()][:2] == ['Wayfinder types', 'ESLint'],
+        )
+        check(
+            'with the app installed, a JS change regenerates the Wayfinder types first',
+            list(scoped('resources/js/app.ts'))[:2] == ['Wayfinder types', 'ESLint'],
+        )
+        check(
+            'a PHP-test-only change does not regenerate them (no JS check runs)',
+            'Wayfinder types' not in scoped('tests/Pest.php'),
+        )
+        pre_push_check.backend_installed = lambda: False
+
         pre_push_check.php_tools_installed = lambda: False
         labels = [label for label, _, _ in pre_push_check.full_steps()]
         check(
@@ -180,13 +197,68 @@ def main() -> int:
         )
         pre_push_check.php_tools_installed = lambda: True
         check(
-            'the php group attest runs Pint, PHPStan and Pest in full',
-            [label for label, _, _ in pre_push_check.attest_steps('php')] == ['Pint', 'PHPStan', 'Clear config cache', 'Pest'],
+            'the php lane runs Pint, PHPStan and Pest in full',
+            [label for label, _, _ in pre_push_check.attest_steps('php')] == ['Pint', 'PHPStan', 'Pest'],
+        )
+        e2e = {label: command for label, command, _ in pre_push_check.attest_steps('e2e')}
+        check(
+            'Playwright writes its output outside the work tree so a lane scanning the repo cannot race it',
+            any(arg.startswith('--output=') and not arg.startswith('--output=' + str(pre_push_check.ROOT))
+                for arg in e2e['Playwright E2E']),
+            str(e2e),
         )
         check(
-            'the js group attest regenerates the Wayfinder types, then runs the four JS checks unscoped',
-            [label for label, _, _ in pre_push_check.attest_steps('js')] == ['Wayfinder types', 'ESLint', 'Prettier', 'vue-tsc', 'Vitest'],
+            'the js lane runs the four JS checks unscoped',
+            [label for label, _, _ in pre_push_check.attest_steps('js')] == ['ESLint', 'Prettier', 'vue-tsc', 'Vitest'],
         )
+        pre_push_check.backend_installed = lambda: True
+        prereq = lambda *groups: [label for label, _, _ in pre_push_check.attest_prerequisites(list(groups))]
+        check(
+            'php and e2e need the Wayfinder files, the Vite build and a cleared config before any lane starts',
+            prereq('php', 'e2e') == ['Wayfinder types', 'Build assets', 'Clear config cache'],
+            str(prereq('php', 'e2e')),
+        )
+        check('a js-only attest regenerates the Wayfinder types and builds nothing', prereq('js') == ['Wayfinder types'])
+        check('mysql, audit and deploy-script need no prerequisite', prereq('mysql', 'audit', 'deploy-script') == [])
+        pre_push_check.backend_installed = lambda: False
+
+        with tempfile.TemporaryDirectory() as lane_dir:
+            import time as _time
+
+            sleep = lambda seconds: ('sleep', ['sleep', str(seconds)], None)
+            started = _time.monotonic()
+            failed = pre_push_check.run_lanes({'a': [sleep(1.5)], 'b': [sleep(1.5)], 'c': [sleep(1.5)]}, log_dir=Path(lane_dir))
+            took = _time.monotonic() - started
+            check('lanes run at the same time: three 1.5s lanes finish in well under 4.5s', failed is None and took < 3.2, f'{took:.1f}s')
+
+            started = _time.monotonic()
+            failed = pre_push_check.run_lanes({'a': [sleep(1.5)], 'b': [sleep(1.5)]}, serial=True, log_dir=Path(lane_dir))
+            took = _time.monotonic() - started
+            check('--serial runs them one after another', failed is None and took > 2.8, f'{took:.1f}s')
+
+            started = _time.monotonic()
+            failed = pre_push_check.run_lanes(
+                {'slow': [sleep(30)], 'bad': [sleep(0.5), ('false', ['false'], None), sleep(30)]}, log_dir=Path(lane_dir))
+            took = _time.monotonic() - started
+            check('a failing lane is reported and stops the others at once', failed == 'bad' and took < 6, f'{failed} {took:.1f}s')
+
+            # A command that starts a child in a session of its own (as Playwright does its web server)
+            # must not leave that child behind when another lane fails.
+            orphan = ('orphan', ['sh', '-c', 'setsid sleep 47.123 & sleep 47.123'], None)
+            pre_push_check.run_lanes({'tree': [orphan], 'bad': [sleep(0.5), ('false', ['false'], None)]}, log_dir=Path(lane_dir))
+            _time.sleep(0.5)
+            left = subprocess.run(['pgrep', '-f', r'sleep 47\.12[3]'], capture_output=True, text=True).stdout.split()
+            check('stopping a lane also stops the children it started in other sessions', left == [], str(left))
+
+            echo = ('echo', ['sh', '-c', 'echo first; echo second'], None)
+            pre_push_check.run_lanes({'x': [echo, ('false', ['false'], None)]}, log_dir=Path(lane_dir))
+            log = (Path(lane_dir) / 'x.log').read_text()
+            check(
+                "each lane writes its own log with its steps and the failing step",
+                '=== echo ===' in log and 'second' in log and '--- false: FAILED (exit 1)' in log,
+                log,
+            )
+
         pre_push_check.php_tools_installed = lambda: False
         check(
             'without the PHP tools the php group is left to CI, not attested',

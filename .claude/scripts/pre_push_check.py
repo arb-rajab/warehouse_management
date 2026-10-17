@@ -53,7 +53,12 @@ deploy-script test. When all of them pass it amends the unpushed head commit wit
 and the `plan` job skips exactly those groups for a pull request whose merged
 tree equals that head tree (see .github/scripts/ci_plan.py). It refuses unless
 the work tree is clean (what ran is what the commit holds) and nothing is hidden
-with skip-worktree/assume-unchanged. A group that cannot run here (no PHP dev
+with skip-worktree/assume-unchanged. The groups run as parallel lanes (about 10
+minutes, against about 25 one after another): the Wayfinder files, the Vite build
+and the config cache run first, alone, then js, php, mysql, e2e, audit and
+deploy-script run at the same time, each logging to its own file. Playwright keeps
+normal CPU priority and the other lanes run niced; the first failing lane stops
+the rest and everything they started. `--serial` runs them one at a time. A group that cannot run here (no PHP dev
 tools, no database, no app) is left out of the trailer and CI runs it; a check
 that fails stops the run and records nothing. The trailer is self-attested: it
 is only as good as the local run, so a commit amended by hand is trusted too.
@@ -68,10 +73,16 @@ Exits non-zero, and stops at the first failing step, if any check fails.
 """
 
 import argparse
+import concurrent.futures
 import importlib.util
 import os
+import shutil
+import signal
 import subprocess
 import sys
+import tempfile
+import threading
+import time
 from pathlib import Path
 
 import wait_for_setup
@@ -164,6 +175,7 @@ def changed_files(base: str) -> list[str] | None:
 def full_steps() -> list[Step]:
     """Every CI step, unscoped, in CI's order."""
     steps: list[Step] = [
+        *wayfinder_steps(),
         ('ESLint', ['npm', 'run', 'lint:check'], None),
         ('Prettier', ['npm', 'run', 'format:check'], None),
         ('vue-tsc', ['npm', 'run', 'types:check'], None),
@@ -192,6 +204,8 @@ def scoped_steps(files: list[str]) -> list[Step]:
     steps: list[Step] = []
 
     if needed['js']:
+        steps += wayfinder_steps()
+
         lintable = [path for path in existing if path.endswith(ESLINT_SUFFIXES)]
         formattable = [path for path in existing if path.startswith('resources/')]
         frontend = [path for path in existing if path.startswith('resources/js/')]
@@ -228,11 +242,17 @@ def build_step() -> Step:
     return ('Build assets', ['bash', '-c', 'npm run build || python3 .claude/scripts/build_without_fonts.py'], None)
 
 
+def wayfinder_steps() -> list[Step]:
+    """The Wayfinder regeneration, when the app is installed to generate from."""
+    return [wayfinder_step()] if backend_installed() else []
+
+
 def wayfinder_step() -> Step:
     """Regenerate the gitignored Wayfinder types, as CI does before ESLint, vue-tsc and Vitest.
 
     Stale ones (a controller added since the session started) make ESLint report
-    import/order errors on `@/actions/...` imports that CI does not have.
+    import/order errors on `@/actions/...` imports that CI does not have, so every
+    mode that runs a JS check regenerates them first, not only --attest.
     """
     return ('Wayfinder types', ['php', 'artisan', 'wayfinder:generate', '--skip-routes', '--with-form'], PHP_ENV)
 
@@ -251,7 +271,11 @@ def e2e_steps() -> list[Step]:
 
     return [
         ('SQLite database files', ['php', '-r', ensure_databases], None),
-        ('Playwright E2E', ['npx', 'playwright', 'test'], env),
+        # Playwright empties and recreates its output directory when it starts. In
+        # the repository that is `test-results/`, which Pint walks at the same time
+        # in another lane and dies on ("Failed to open directory"), so keep it out
+        # of the work tree.
+        ('Playwright E2E', ['npx', 'playwright', 'test', f'--output={tempfile.mkdtemp(prefix="pw-results-")}'], env),
     ]
 
 
@@ -294,14 +318,181 @@ def unavailable_reason(group: str) -> str | None:
 
 
 def attest_steps(group: str) -> list[Step]:
+    """One group's steps, run in order inside its lane (prerequisites excluded)."""
     return {
-        'js': lambda: [wayfinder_step(), *js_steps()],
-        'php': lambda: [step for step in full_steps() if step[0] in ('Pint', 'PHPStan', 'Clear config cache', 'Pest')],
+        'js': js_steps,
+        'php': lambda: [step for step in full_steps() if step[0] in ('Pint', 'PHPStan', 'Pest')],
         'mysql': mysql_steps,
         'e2e': e2e_steps,
         'audit': audit_steps,
         'deploy-script': deploy_script_steps,
     }[group]()
+
+
+def attest_prerequisites(groups: list[str]) -> list[Step]:
+    """What must finish, alone, before the lanes start.
+
+    The Wayfinder files and the Vite build are written into the work tree that
+    ESLint, vue-tsc, Vitest, Pest and Playwright all read, and `config:clear`
+    deletes a cache every `php artisan` process reads, so none of them can run
+    beside those lanes.
+    """
+    steps: list[Step] = []
+
+    if backend_installed() and {'js', 'php', 'e2e'} & set(groups):
+        steps.append(wayfinder_step())
+
+    if {'php', 'e2e'} & set(groups):
+        steps.append(build_step())
+
+    if 'php' in groups:
+        steps.append(('Clear config cache', ['php', 'artisan', 'config:clear'], PHP_ENV))
+
+    return steps
+
+
+# The lane that holds Playwright is the long pole and its 5s expectations are
+# timing-sensitive, so every other lane runs at lower CPU priority beside it.
+PRIORITY_LANE = 'e2e'
+
+
+def run_lane(name: str, steps: list[Step], log_path: Path, stop: threading.Event,
+             running: dict[str, subprocess.Popen]) -> tuple[bool | None, str, float]:
+    """Run one lane's steps in order, writing everything to `log_path`.
+
+    Returns (passed, failed step label, seconds); passed is None when another
+    lane's failure stopped this one before it finished.
+    """
+    started = time.monotonic()
+    nice = ['nice', '-n', '10'] if name != PRIORITY_LANE and shutil.which('nice') else []
+
+    with log_path.open('w') as log:
+        for label, command, env in steps:
+            if stop.is_set():
+                return None, label, time.monotonic() - started
+
+            log.write(f'\n=== {label} ===\n')
+            log.flush()
+            process = subprocess.Popen([*nice, *command], cwd=ROOT, env=env, stdout=log, stderr=subprocess.STDOUT,
+                                       start_new_session=True)
+            running[name] = process
+
+            # A failure elsewhere may have stopped the lanes between the check above
+            # and this registration, when stop_lanes could not see this process yet.
+            if stop.is_set():
+                stop_lanes(stop, running)
+
+            code = process.wait()
+
+            if stop.is_set() and code != 0:
+                return None, label, time.monotonic() - started
+
+            if code != 0:
+                log.write(f'\n--- {label}: FAILED (exit {code})\n')
+                return False, label, time.monotonic() - started
+
+    return True, '', time.monotonic() - started
+
+
+def descendants(pid: int) -> list[int]:
+    """Every process below `pid`, found through /proc (Linux), children before parents."""
+    children: dict[int, list[int]] = {}
+
+    for entry in Path('/proc').iterdir():
+        if not entry.name.isdigit():
+            continue
+
+        try:
+            fields = (entry / 'stat').read_text().rsplit(')', 1)[1].split()
+            children.setdefault(int(fields[1]), []).append(int(entry.name))
+        except (OSError, IndexError, ValueError):
+            continue
+
+    found: list[int] = []
+    pending = [pid]
+
+    while pending:
+        for child in children.get(pending.pop(), []):
+            found.append(child)
+            pending.append(child)
+
+    return list(reversed(found))
+
+
+def stop_lanes(stop: threading.Event, running: dict[str, subprocess.Popen]) -> None:
+    """Stop every lane still running, and everything its commands started.
+
+    A process group is not enough: Playwright starts its web server (`node` and
+    `php artisan serve` on port 8010/8011) in a session of its own, and killing
+    only the group leaves that server holding the port, so the next run fails
+    with "already used". So the whole tree is collected first (once a parent dies
+    its children are re-parented and can no longer be found) and terminated,
+    with a SIGKILL for whatever has not exited a few seconds later.
+    """
+    stop.set()
+    doomed: list[int] = []
+
+    for process in list(running.values()):
+        if process.poll() is None:
+            doomed += [*descendants(process.pid), process.pid]
+
+    def alive() -> list[int]:
+        return [pid for pid in doomed if Path(f'/proc/{pid}').exists()]
+
+    for sig in (signal.SIGTERM, signal.SIGKILL):
+        for pid in alive():
+            try:
+                os.kill(pid, sig)
+            except (ProcessLookupError, PermissionError):
+                pass
+
+        if sig == signal.SIGTERM:
+            deadline = time.monotonic() + 5
+
+            while time.monotonic() < deadline and alive():
+                time.sleep(0.2)
+
+
+def tail(path: Path, lines: int) -> str:
+    return '\n'.join(path.read_text(errors='replace').splitlines()[-lines:])
+
+
+def run_lanes(lanes: dict[str, list[Step]], *, serial: bool = False, log_dir: Path | None = None) -> str | None:
+    """Run the lanes at the same time and return the first lane that failed, else None.
+
+    Each lane's output goes to its own log, so parallel runs never interleave:
+    a lane's tail is printed when it ends, and a failing lane's log is printed
+    in full (last 120 lines). The first failure stops the other lanes, since an
+    attestation needs every lane to pass.
+    """
+    log_dir = log_dir or Path(tempfile.mkdtemp(prefix='pre-push-'))
+    stop = threading.Event()
+    running: dict[str, subprocess.Popen] = {}
+    failed: str | None = None
+    names = list(lanes)
+    print(f'\nRunning {len(names)} lane(s){" one at a time" if serial else " at the same time"}: {", ".join(names)}. Logs: {log_dir}')
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=1 if serial else max(1, len(names))) as pool:
+        futures = {pool.submit(run_lane, name, lanes[name], log_dir / f'{name}.log', stop, running): name for name in names}
+
+        for future in concurrent.futures.as_completed(futures):
+            name = futures[future]
+            passed, label, seconds = future.result()
+            log = log_dir / f'{name}.log'
+
+            if passed is None:
+                print(f'--- {name}: stopped after {seconds:.0f}s (another lane failed)')
+            elif passed:
+                print(f'--- {name}: passed in {seconds:.0f}s')
+            else:
+                print(f'--- {name}: FAILED at "{label}" after {seconds:.0f}s; its log (last 120 lines):\n')
+                print(tail(log, 120))
+
+                if failed is None:
+                    failed = name
+                    stop_lanes(stop, running)
+
+    return failed
 
 
 def dirty_paths() -> list[str]:
@@ -365,7 +556,7 @@ def attest_blocker(files: list[str] | None) -> str | None:
     return None
 
 
-def attest(base: str) -> int:
+def attest(base: str, *, serial: bool = False) -> int:
     """Run every planned group in full and record what passed on the head commit."""
     files = changed_files(base)
 
@@ -391,7 +582,6 @@ def attest(base: str) -> int:
 
     attested: list[str] = []
     left_to_ci: list[str] = []
-    built = False
 
     for group in wanted:
         reason = unavailable_reason(group)
@@ -399,20 +589,22 @@ def attest(base: str) -> int:
         if reason:
             print(f'\n--- {group}: cannot run here ({reason}); CI will run it.')
             left_to_ci.append(group)
-            continue
+        else:
+            attested.append(group)
 
-        steps = attest_steps(group)
+    for label, command, env in attest_prerequisites(attested):
+        if not run_step(f'before the lanes: {label}', command, env=env):
+            print(f'\nStopping: "{label}" failed, so nothing is attested. Fix it and re-run with --attest.')
+            return 1
 
-        if group in ('php', 'e2e') and not built:
-            steps = [build_step(), *steps]
-            built = True
+    started = time.monotonic()
+    failed = run_lanes({group: attest_steps(group) for group in attested}, serial=serial)
 
-        for label, command, env in steps:
-            if not run_step(f'{group}: {label}', command, env=env):
-                print(f'\nStopping: "{label}" failed, so nothing is attested. Fix it and re-run with --attest.')
-                return 1
+    if failed:
+        print(f'\nStopping: the "{failed}" lane failed, so nothing is attested. Fix it and re-run with --attest.')
+        return 1
 
-        attested.append(group)
+    print(f'\nAll {len(attested)} lane(s) passed in {time.monotonic() - started:.0f}s.')
 
     # Tests write files (E2E uploads under public/uploads) that no commit holds
     # and CI's fresh checkout would also start without; those are reported, not
@@ -457,6 +649,9 @@ def main(argv: list[str]) -> int:
     parser.add_argument('--attest', action='store_true',
                         help='run every planned group in full (E2E, MySQL and audits included) and, when they pass, '
                              'record a CI-Verified trailer on the unpushed head commit')
+    parser.add_argument('--serial', action='store_true',
+                        help='run the attested groups one after another instead of at the same time '
+                             '(for a machine with too few cores)')
     parser.add_argument('--base', default=DEFAULT_BASE, help=f'the ref the branch is compared with (default {DEFAULT_BASE})')
     args = parser.parse_args(argv)
 
@@ -467,7 +662,7 @@ def main(argv: list[str]) -> int:
     print(wait_for_setup.wait(wait_for_setup.state_dir(), wait_for_setup.DEFAULT_TIMEOUT_SECONDS)[1])
 
     if args.attest:
-        return attest(args.base)
+        return attest(args.base, serial=args.serial)
 
     files = None if args.full else changed_files(args.base)
 
@@ -476,8 +671,8 @@ def main(argv: list[str]) -> int:
 
         if blocker is None:
             print('\nClean tree, unpushed head commit: running the full attested run '
-                  '(about 25 minutes). Use --quick for the scoped checks only.')
-            return attest(args.base)
+                  '(about 10 minutes). Use --quick for the scoped checks only.')
+            return attest(args.base, serial=args.serial)
 
         print(f'\nNot attesting: {blocker}. Running the scoped checks.')
 
