@@ -28,7 +28,7 @@ case "$state" in
         ;;
     *)
         cat <<NOTICE
-Environment setup (PHP 8.5, composer dev tools, .env, Vite build) is running in the background and takes about 10 minutes on a fresh container. Work that does not need it can start now. Before using composer, artisan, Pint, PHPStan, Pest, the Wayfinder files or the built assets, run \`python3 .claude/scripts/wait_for_setup.py\` once (in the background if the shell tool caps foreground commands, then wait for its completion notice instead of polling): it exits 0 when setup is done and prints its summary, 1 if setup failed or was interrupted.
+Environment setup (PHP 8.5, composer dev tools, .env, Vite build) is running in the background and takes one to two minutes on a fresh container. Work that does not need it can start now. Before using composer, artisan, Pint, PHPStan, Pest, the Wayfinder files or the built assets, run \`python3 .claude/scripts/wait_for_setup.py\` once (in the background if the shell tool caps foreground commands, then wait for its completion notice instead of polling): it exits 0 when setup is done and prints its summary, 1 if setup failed or was interrupted.
 NOTICE
         ;;
 esac
