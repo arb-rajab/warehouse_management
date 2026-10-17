@@ -197,6 +197,7 @@ describe('Products Index', () => {
 
         expect(toolbar).not.toBeNull();
         expect(toolbar?.classList.contains('w-full')).toBe(true);
+
         for (const id of [
             'products-quick-search',
             'products-quick-inactive',
