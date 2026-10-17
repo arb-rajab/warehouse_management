@@ -68,7 +68,7 @@ function fullCell(remainingBoxes: number): CellWithLocation {
 
 /**
  * Mounts closed and transitions to open, matching how the dialog is always
- * used in the real app (Cells/Index.vue, Rows/Show.vue start it at
+ * used in the real app (Rows/Show.vue starts it at
  * `open: false` and flip it to `true` later) — `selectedAction`'s default
  * is only set by the `watch(open, ...)` handler, which needs a false→true
  * transition to fire (see FilterDialog.test.ts for the same pattern).
@@ -222,7 +222,6 @@ describe('PalletActionsDialog', () => {
             product_id: null,
             expiration_date: '2026-12-25',
             note: 'Fragile',
-            return_to: null,
         });
     });
 
@@ -361,7 +360,6 @@ describe('PalletActionsDialog', () => {
         expect(submitMock).toHaveBeenCalledTimes(1);
         expect(submitMock.mock.calls[0][1]).toEqual({
             note: 'Damaged boxes',
-            return_to: null,
         });
     });
 
@@ -442,7 +440,6 @@ describe('PalletActionsDialog', () => {
             expiration_date: '2027-01-01',
             remaining_boxes: 4,
             confirm_empty: false,
-            return_to: null,
         });
     });
 
@@ -569,25 +566,6 @@ describe('PalletActionsDialog', () => {
         expect(submitMock.mock.calls[0][0]).toEqual(
             removeBoxes(42, { mergeQuery: {} }),
         );
-    });
-
-    it('sends return_to when the dialog was opened from a row page', async () => {
-        const wrapper = mount(PalletActionsDialog, {
-            props: {
-                cell: emptyCell(),
-                label: 'A2·1',
-                rows,
-                returnTo: 'row',
-                open: false,
-                'onUpdate:open': () => {},
-            },
-        });
-        await wrapper.setProps({ open: true });
-        await wrapper.get('form').trigger('submit');
-
-        expect(submitMock.mock.calls[0][1]).toMatchObject({
-            return_to: 'row',
-        });
     });
 
     it('does not submit when there is no cell', async () => {

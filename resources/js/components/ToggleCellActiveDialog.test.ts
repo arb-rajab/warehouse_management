@@ -36,7 +36,6 @@ function cell(isActive: boolean): Cell {
 function mountDialog(
     props: Partial<{
         cell: Cell | null;
-        returnTo: 'row';
         'onUpdate:open': (open: boolean) => void;
     }> = {},
 ) {
@@ -44,7 +43,6 @@ function mountDialog(
         props: {
             cell: 'cell' in props ? (props.cell as Cell | null) : cell(true),
             label: 'A2·1',
-            returnTo: props.returnTo,
             open: true,
             'onUpdate:open': props['onUpdate:open'] ?? (() => {}),
         },
@@ -119,18 +117,10 @@ describe('ToggleCellActiveDialog', () => {
         expect(note.attributes('maxlength')).toBe('1000');
     });
 
-    it('sends no return_to field by default', () => {
+    it('sends no return_to field', () => {
         const wrapper = mountDialog();
 
         expect(wrapper.find('input[name="return_to"]').exists()).toBe(false);
-    });
-
-    it('sends return_to as a hidden field when given', () => {
-        const wrapper = mountDialog({ returnTo: 'row' });
-
-        expect(wrapper.get('input[name="return_to"]').attributes('value')).toBe(
-            'row',
-        );
     });
 
     it('renders no form when there is no cell', () => {

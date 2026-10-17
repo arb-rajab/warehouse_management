@@ -13,7 +13,6 @@ import type { Cell } from '@/types/admin';
 const props = defineProps<{
     cell: Cell | null;
     label: string;
-    returnTo?: 'row';
 }>();
 
 const open = defineModel<boolean>('open', { required: true });
@@ -66,13 +65,6 @@ const submitLabel = computed(() =>
             <p class="text-sm text-gray-600 dark:text-neutral-300">
                 {{ confirmText }}
             </p>
-
-            <input
-                v-if="returnTo"
-                type="hidden"
-                name="return_to"
-                :value="returnTo"
-            />
 
             <div>
                 <label :for="'toggle-active-note'" :class="fieldLabelClass">

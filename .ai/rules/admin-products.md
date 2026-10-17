@@ -13,7 +13,7 @@ Never use `back()` in `ProductController` or any controller action reachable onl
 1. `Referrer-Policy: no-referrer` strips the Referer header, so Laravel's `back()` has no URL to return to.
 2. Inertia SPA visits don't update the session's "previous URL" — it stays frozen at whatever the last full browser page load was (typically the dashboard after login). `back()` therefore lands on the dashboard, not the products page.
 
-The fix (already applied to `updateBoxCount`) is to redirect explicitly: `redirect()->route('admin.products.index', $request->query())`. The same pattern is documented in `RedirectsAfterCellAction` (for pallet actions) and `CellStatusLogController::redirectAfterAcknowledge()` (for flag acknowledgements).
+The fix (already applied to `updateBoxCount`) is to redirect explicitly: `redirect()->route('admin.products.index', $request->query())`. The same pattern is used by `RedirectsAfterCellAction` (pallet actions and toggle-active, which always return to the cell's row page) and `CellStatusLogController::redirectAfterAcknowledge()` (for flag acknowledgements).
 
 ## Box count is edited via FilterDialog, not a live input
 

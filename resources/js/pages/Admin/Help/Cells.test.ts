@@ -1,12 +1,12 @@
 import { Head } from '@inertiajs/vue3';
-import { Ban, Box, LayoutGrid, Search } from '@lucide/vue';
+import { Ban } from '@lucide/vue';
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { index as cellsIndex } from '@/actions/App/Http/Controllers/Admin/CellController';
 import {
     show as helpShow,
     index as helpIndex,
 } from '@/actions/App/Http/Controllers/Admin/HelpController';
+import { index as rowsIndex } from '@/actions/App/Http/Controllers/Admin/RowController';
 import { CELL_STATES, cellStateLabel } from '@/lib/cellStateColor';
 import { t } from '@/lib/i18n';
 import { defaultAuthProps, resetMocks } from '@/testing/inertiaPageMocks';
@@ -55,17 +55,10 @@ describe('Help Cells', () => {
 
         const headings = wrapper.findAll('h2').map((h2) => h2.text());
         expect(headings).toEqual([
-            t('help.cells.map.heading'),
             t('help.cells.legend.heading'),
             t('help.cells.managingPallets.heading'),
             t('help.cells.deactivating.heading'),
         ]);
-    });
-
-    it('explains how to read the map', () => {
-        const wrapper = mountPage();
-
-        expect(wrapper.text()).toContain(t('help.cells.map.body'));
     });
 
     it('renders the cell-state legend from the real cell state colors, not hardcoded labels', () => {
@@ -83,12 +76,10 @@ describe('Help Cells', () => {
         expect(wrapper.text()).toContain(t('help.cells.deactivating.body'));
     });
 
-    it('renders a preview of the search, manageable cell, and deactivate controls', () => {
+    it('renders a preview of the manageable cell and deactivate controls', () => {
         const wrapper = mountPage();
 
-        expect(wrapper.findComponent(Search).exists()).toBe(true);
         expect(wrapper.findComponent(Ban).exists()).toBe(true);
-        expect(wrapper.text()).toContain(t('cells.search.placeholder'));
         expect(wrapper.text()).toContain('Example product');
         expect(
             wrapper
@@ -98,13 +89,6 @@ describe('Help Cells', () => {
         expect(wrapper.text()).toContain(
             t('cells.toggleActive.deactivateLabel'),
         );
-    });
-
-    it('renders a preview of the 2D/3D view toggle', () => {
-        const wrapper = mountPage();
-
-        expect(wrapper.findComponent(LayoutGrid).exists()).toBe(true);
-        expect(wrapper.findComponent(Box).exists()).toBe(true);
     });
 
     it('renders a preview of the pallet action tabs named in the managingPallets text', () => {
@@ -197,13 +181,13 @@ describe('Help Cells', () => {
         );
     });
 
-    it('links to the warehouse map page', () => {
+    it('links to the rows page, where cells and pallets are managed', () => {
         const wrapper = mountPage();
 
-        const cellsLink = wrapper
+        const rowsLink = wrapper
             .findAll('a')
-            .find((a) => a.text() === t('cells.title'));
-        expect(cellsLink?.attributes('href')).toBe(cellsIndex.url());
+            .find((a) => a.text() === t('nav.rows'));
+        expect(rowsLink?.attributes('href')).toBe(rowsIndex.url());
     });
 
     it('links back to the help landing page', () => {

@@ -8,7 +8,7 @@ use Symfony\Component\Finder\Finder;
  * make unreliable (see `StoreInertiaPreviousUrl`'s docblock), so every
  * mutating controller action must redirect via an explicit route instead —
  * `Controller::redirectPreservingQuery()` for the common case, or an explicit
- * `return_to`-based branch like `RedirectsAfterCellAction`. See
+ * route like `RedirectsAfterCellAction`. See
  * .ai/rules/controllers.md.
  */
 test('no controller redirects with back(), other than the intentional LocaleController exception', function () {

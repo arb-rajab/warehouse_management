@@ -2,7 +2,7 @@
 
 The SessionStart hook (.claude/hooks/session-start.sh) runs asynchronously: a
 session starts at once while PHP, the dev tools and the Vite build are still
-being provisioned, which takes about 10 minutes on a fresh container. Anything
+being provisioned, which takes one to two minutes on a fresh container. Anything
 that needs them (composer, artisan, Pint, PHPStan, Pest, the Wayfinder files,
 the built assets) must wait for it first:
 

@@ -3,8 +3,7 @@ import type { Cell, CellPallet } from '@/types/admin';
 
 /**
  * The minimal cell shape these status checks need — satisfied by a full
- * `Cell` and by the lighter per-flat `CellHighlightSample` the cell map loads
- * for every flat to compute highlight-match counts (see cellHighlight.ts).
+ * `Cell` (see cellHighlight.ts).
  */
 export interface MatchableCell {
     state: Cell['state'];

@@ -135,8 +135,9 @@ typical pull request from about 24 billed minutes to about 1. Rules:
 - Any later content change (a new commit, a rebase, a merge of the base) makes the
   trailer stale; run it again before pushing that change. A stale trailer is
   ignored, never trusted.
-- It takes about 25 minutes. Run it in the background and wait for completion; it
-  stops at the first failing check and records nothing. Fix the cause (do not skip
+- It takes about 10 minutes (the groups run as parallel lanes; `--serial` runs them
+  one at a time, about 25). Run it in the background and wait for completion; the
+  first failing lane stops the rest and records nothing. Fix the cause (do not skip
   or loosen a test), then run it again.
 - A change under `.github/` always runs everything in CI; the trailer is ignored.
 - It needs the Claude web sandbox's tooling (local MySQL from `session-start.sh`,

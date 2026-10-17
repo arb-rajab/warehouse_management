@@ -64,14 +64,18 @@ Apply these on every file add/edit in this project, not as an occasional audit.
 ## Sandbox: dev tools install from git, and Pest needs the Vite build
 
 A plain `composer install` cannot succeed in a Claude Code web session: every
-dev package's dist URL (`api.github.com/repos/<vendor>/<package>/zipball/...`)
-returns 403 through the egress proxy for any repository the session does not
-have attached. Anonymous `git clone` of public repositories *is* served, so the
-SessionStart hook (`.claude/hooks/session-start.sh`) runs
-`python3 .claude/scripts/install_dev_tools.py`: it installs everything,
-including Pint, Pest, PHPStan, Larastan and faker, with `--prefer-source`,
-shallow-clones the locked `phpstan/phpstan` tag (it is dist-only), and restores
-`composer.lock` byte for byte afterwards. While it patches the lock for the
+locked package's dist URL (`api.github.com/repos/<vendor>/<package>/zipball/...`,
+and codeload/archive URLs alike) returns 403 through the egress proxy for any
+repository the session does not have attached. Anonymous git fetches of public
+repositories *are* served, so the SessionStart hook
+(`.claude/hooks/session-start.sh`) runs
+`python3 .claude/scripts/install_dev_tools.py`: it shallow-fetches every locked
+commit in parallel, archives each into the zip GitHub would have served, installs
+everything (including Pint, Pest, PHPStan, Larastan and faker) from those local
+dists, and restores `composer.lock` byte for byte afterwards. Measured cold: about
+35 seconds and 1.3 GB, against about 11 minutes and 7 GB for the
+`--prefer-source` install it replaced; a package whose fetch fails falls back to
+a source clone on its own. While it patches the lock for the
 install, git is told to ignore the file (`--skip-worktree`), so a tree that looks
 dirty never invites a commit of the patched lock; if `composer.lock` ever does
 show as modified, setup is still running or was killed (check
@@ -87,9 +91,10 @@ and needs root; `--check` reports whether PHP is satisfied without changing
 anything.
 
 **The hook runs asynchronously** (`"async": true` in `.claude/settings.json`), so
-a session starts at once while the whole setup takes about 10 minutes on a fresh
-container; blocking on it made every fresh session wait that long before its
-first action. A short notice in the session's context says setup is running.
+a session starts at once while the whole setup takes one to two minutes on a
+fresh container (MySQL and `npm ci` run alongside composer; each phase's time is
+in `timings.txt` next to the setup state); blocking on it would still delay every
+fresh session's first action. A short notice in the session's context says setup is running.
 Work that does not need it (reading code, editing docs) can start immediately.
 Before composer, artisan, Pint, PHPStan, Pest, the Wayfinder files or the built
 assets, run `python3 .claude/scripts/wait_for_setup.py` once, in the background,
@@ -128,9 +133,9 @@ itself fails, the proxy policy has changed: report the error, fall back to
 `composer install --no-dev` for a bootable app, write and update the tests as
 normal, and read Pint/PHPStan/Pest from CI (`composer ci:check`).
 
-**While a long-running command like `composer install --no-dev` or the dev-tools
-script (~9 minutes cold, ~7 GB of disk: the hook's timeout is 1800s) is in flight
-in the background:** wait for exactly one
+**While a long-running command like `composer install --no-dev` or the setup
+hook (the hook's timeout stays 1800s for the slow source-clone fallback) is in
+flight in the background:** wait for exactly one
 completion notification — don't spawn a second or third background loop polling
 the same PID/condition, and don't fill the intervening turns with no-op
 `Bash`/`ReadNotifications` calls just to "do something while waiting". The
@@ -155,7 +160,7 @@ The scripts in `.claude/scripts/`:
 | Script | Purpose |
 | --- | --- |
 | `install_php.sh` | installs PHP 8.5 and its extensions from the ondrej PPA (key pinned by fingerprint); run first by the SessionStart hook |
-| `install_dev_tools.py` | the dev-tools installer described above, run by the SessionStart hook |
+| `install_dev_tools.py` | the dependency installer described above (shallow git fetches as local dists), run by the SessionStart hook |
 | `build_without_fonts.py` | Vite build from a temporary font-less copy of `vite.config.ts`, for sandboxes where `fonts.bunny.net` is blocked (403) and `npm run build` fails; the SessionStart hook falls back to it, `vite.config.ts` is never modified |
 | `wait_for_setup.py` | blocks until the background SessionStart setup has finished and prints its summary; exit 0 ready, 1 failed/interrupted/timed out |
 | `pre_push_check.py` | use `--quick` while editing; before publishing, commit and require `--for-pr` to report GREEN for that commit and tree, with all required CI groups checked |

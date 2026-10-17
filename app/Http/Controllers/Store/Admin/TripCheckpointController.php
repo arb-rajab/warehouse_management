@@ -48,18 +48,18 @@ class TripCheckpointController extends Controller implements HasMiddleware
         $customer = fn ($query) => $query->select(['id', 'name', 'phone', 'company_name', 'shipping_address']);
         $checkpoints = $trip->checkpoints()
             ->select(['id', 'trip_id', 'relationable_type', 'relationable_id', 'type', 'status', 'arrived_at', 'sort_order_in_trip', 'eta', 'notes', 'cmr_file', 'photos'])
+            // `with()` types its constraints as taking any relation;
+            // `relationable` is always `Checkpoint`'s MorphTo.
             ->with(['relationable' => function (Relation $relation) use ($customer): void {
-                if (! $relation instanceof MorphTo) {
-                    return;
+                if ($relation instanceof MorphTo) {
+                    $relation->morphWith([Order::class => ['user' => $customer, 'rep' => $customer]]);
+                    $relation->constrain([
+                        StoreUser::class => $customer,
+                        // The count goes after the select: `morphWithCount()` runs before
+                        // this constraint, whose select() would drop it.
+                        Order::class => fn ($query) => $query->select(['id', 'by_rep', 'for_customer', 'user_id', 'code', 'grand_total', 'invoice_number'])->withCount('orderDetails'),
+                    ]);
                 }
-
-                $relation->morphWith([Order::class => ['user' => $customer, 'rep' => $customer]]);
-                $relation->constrain([
-                    StoreUser::class => $customer,
-                    // The count goes after the select: `morphWithCount()` runs before
-                    // this constraint, whose select() would drop it.
-                    Order::class => fn ($query) => $query->select(['id', 'by_rep', 'for_customer', 'user_id', 'code', 'grand_total', 'invoice_number'])->withCount('orderDetails'),
-                ]);
             }])
             ->orderBy('sort_order_in_trip')->orderBy('id')->get();
         $photoIds = array_values($checkpoints

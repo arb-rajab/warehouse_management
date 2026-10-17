@@ -1,6 +1,7 @@
 import { DEFAULT_SETTINGS } from '../config';
 import type { UserSettings } from '../config';
 import type { Theme } from '../data/SettingsStore';
+import { NO_FILTER } from '../domain/SlotFilter';
 import type { Locale, SlotFilter, Warehouse } from '../domain/types';
 
 export type ViewKind = '2d' | '3d';
@@ -96,7 +97,7 @@ export function initialState(overrides: Partial<MapState> = {}): MapState {
         planOrientation: 'auto',
         settings: { ...DEFAULT_SETTINGS },
         query: '',
-        filter: { terms: [], state: 'all', expiring: false },
+        filter: { ...NO_FILTER },
         floor: null,
         targetId: null,
         searchOpen: false,

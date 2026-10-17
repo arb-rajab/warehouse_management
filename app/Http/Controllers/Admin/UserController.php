@@ -108,7 +108,12 @@ class UserController extends Controller
 
             if ($request->filled('password')) {
                 $user->password = $request->validated('password');
-                $user->must_change_password = true;
+
+                // An admin resetting their own password just chose it, so only
+                // another user's reset forces them to pick a new one.
+                if (! $request->user()->is($user)) {
+                    $user->must_change_password = true;
+                }
             }
 
             $user->save();

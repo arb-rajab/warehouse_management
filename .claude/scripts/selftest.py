@@ -109,6 +109,7 @@ def main() -> int:
         import pre_push_check
 
         pre_push_check.php_tools_installed = lambda: True
+        pre_push_check.backend_installed = lambda: False
         labels = [label for label, _, _ in pre_push_check.full_steps()]
         check(
             'with the PHP tools installed, --full runs every CI step in CI order',
@@ -149,6 +150,22 @@ def main() -> int:
             str(labels),
         )
 
+        pre_push_check.php_tools_installed = lambda: True
+        pre_push_check.backend_installed = lambda: True
+        check(
+            'with the app installed, --full regenerates the Wayfinder types before the JS checks',
+            [label for label, _, _ in pre_push_check.full_steps()][:2] == ['Wayfinder types', 'ESLint'],
+        )
+        check(
+            'with the app installed, a JS change regenerates the Wayfinder types first',
+            list(scoped('resources/js/app.ts'))[:2] == ['Wayfinder types', 'ESLint'],
+        )
+        check(
+            'a PHP-test-only change does not regenerate them (no JS check runs)',
+            'Wayfinder types' not in scoped('tests/Pest.php'),
+        )
+        pre_push_check.backend_installed = lambda: False
+
         pre_push_check.php_tools_installed = lambda: False
         labels = [label for label, _, _ in pre_push_check.full_steps()]
         check(
@@ -188,7 +205,7 @@ def main() -> int:
                 git_lines=lambda *args: ['commit'], head_tree=lambda: 'tree',
                 unavailable_reason=lambda group: 'missing tools' if group == unavailable else None,
                 attest_steps=lambda group: [('PHPStan', [], None), ('Pest', [], None)] if group == 'php' else [(group, [], None)],
-                build_step=lambda: ('Build', [], None), run_step=step,
+                attest_prerequisites=lambda groups: [('Wayfinder', [], None), ('Build', [], None)], run_step=step,
                 clean_e2e_uploads=lambda: None,
                 write_pr_report=lambda *args: reports.append(args),
             ), patch.object(pre_push_check.ci_plan, 'plan', return_value={'js': True, 'php': True, 'e2e': True}), redirect_stdout(io.StringIO()):
@@ -200,6 +217,9 @@ def main() -> int:
         check('a PHPStan failure blocks publication and never reports green',
               code != 0 and reports[-1][0] == 'RED' and 'php: Pest' not in labels
               and not any(report[0] == 'GREEN' for report in reports))
+        code, reports, labels = pr_gate(failure='before the groups: Wayfinder')
+        check('a failed shared prerequisite blocks the PR gate before any group',
+              code != 0 and reports[-1][0] == 'RED' and 'js: js' not in labels)
         code, reports, labels = pr_gate(failure='e2e: e2e')
         check('the PR gate catches browser failures a quick check does not run', code != 0 and reports[-1][0] == 'RED')
         code, reports, labels = pr_gate(unavailable='php')
@@ -210,7 +230,7 @@ def main() -> int:
         code, reports, labels = pr_gate()
         check('only a complete run reports green for the checked commit and tree',
               code == 0 and reports[-1] == ('GREEN', 'commit', 'tree', ['js', 'php', 'e2e'])
-              and labels == ['js: js', 'php: Build', 'php: PHPStan', 'php: Pest', 'e2e: e2e'])
+              and labels == ['before the groups: Wayfinder', 'before the groups: Build', 'js: js', 'php: PHPStan', 'php: Pest', 'e2e: e2e'])
         reports = []
         with patch.object(pre_push_check.wait_for_setup, 'wait', return_value=(1, 'Setup failed')), \
              patch.object(pre_push_check, 'write_pr_report', side_effect=lambda *args: reports.append(args)), \
@@ -231,13 +251,68 @@ def main() -> int:
         )
         pre_push_check.php_tools_installed = lambda: True
         check(
-            'the php group attest runs Pint, PHPStan and Pest in full',
-            [label for label, _, _ in pre_push_check.attest_steps('php')] == ['Pint', 'PHPStan', 'Clear config cache', 'Pest'],
+            'the php lane runs Pint, PHPStan and Pest in full',
+            [label for label, _, _ in pre_push_check.attest_steps('php')] == ['Pint', 'PHPStan', 'Pest'],
+        )
+        e2e = {label: command for label, command, _ in pre_push_check.attest_steps('e2e')}
+        check(
+            'Playwright writes its output outside the work tree so a lane scanning the repo cannot race it',
+            any(arg.startswith('--output=') and not arg.startswith('--output=' + str(pre_push_check.ROOT))
+                for arg in e2e['Playwright E2E']),
+            str(e2e),
         )
         check(
-            'the js group attest regenerates the Wayfinder types, then runs the four JS checks unscoped',
-            [label for label, _, _ in pre_push_check.attest_steps('js')] == ['Wayfinder types', 'ESLint', 'Prettier', 'vue-tsc', 'Vitest'],
+            'the js lane runs the four JS checks unscoped',
+            [label for label, _, _ in pre_push_check.attest_steps('js')] == ['ESLint', 'Prettier', 'vue-tsc', 'Vitest'],
         )
+        pre_push_check.backend_installed = lambda: True
+        prereq = lambda *groups: [label for label, _, _ in pre_push_check.attest_prerequisites(list(groups))]
+        check(
+            'php and e2e need the Wayfinder files, the Vite build and a cleared config before any lane starts',
+            prereq('php', 'e2e') == ['Wayfinder types', 'Build assets', 'Clear config cache'],
+            str(prereq('php', 'e2e')),
+        )
+        check('a js-only attest regenerates the Wayfinder types and builds nothing', prereq('js') == ['Wayfinder types'])
+        check('mysql, audit and deploy-script need no prerequisite', prereq('mysql', 'audit', 'deploy-script') == [])
+        pre_push_check.backend_installed = lambda: False
+
+        with tempfile.TemporaryDirectory() as lane_dir:
+            import time as _time
+
+            sleep = lambda seconds: ('sleep', ['sleep', str(seconds)], None)
+            started = _time.monotonic()
+            failed = pre_push_check.run_lanes({'a': [sleep(1.5)], 'b': [sleep(1.5)], 'c': [sleep(1.5)]}, log_dir=Path(lane_dir))
+            took = _time.monotonic() - started
+            check('lanes run at the same time: three 1.5s lanes finish in well under 4.5s', failed is None and took < 3.2, f'{took:.1f}s')
+
+            started = _time.monotonic()
+            failed = pre_push_check.run_lanes({'a': [sleep(1.5)], 'b': [sleep(1.5)]}, serial=True, log_dir=Path(lane_dir))
+            took = _time.monotonic() - started
+            check('--serial runs them one after another', failed is None and took > 2.8, f'{took:.1f}s')
+
+            started = _time.monotonic()
+            failed = pre_push_check.run_lanes(
+                {'slow': [sleep(30)], 'bad': [sleep(0.5), ('false', ['false'], None), sleep(30)]}, log_dir=Path(lane_dir))
+            took = _time.monotonic() - started
+            check('a failing lane is reported and stops the others at once', failed == 'bad' and took < 6, f'{failed} {took:.1f}s')
+
+            # A command that starts a child in a session of its own (as Playwright does its web server)
+            # must not leave that child behind when another lane fails.
+            orphan = ('orphan', ['sh', '-c', 'setsid sleep 47.123 & sleep 47.123'], None)
+            pre_push_check.run_lanes({'tree': [orphan], 'bad': [sleep(0.5), ('false', ['false'], None)]}, log_dir=Path(lane_dir))
+            _time.sleep(0.5)
+            left = subprocess.run(['pgrep', '-f', r'sleep 47\.12[3]'], capture_output=True, text=True).stdout.split()
+            check('stopping a lane also stops the children it started in other sessions', left == [], str(left))
+
+            echo = ('echo', ['sh', '-c', 'echo first; echo second'], None)
+            pre_push_check.run_lanes({'x': [echo, ('false', ['false'], None)]}, log_dir=Path(lane_dir))
+            log = (Path(lane_dir) / 'x.log').read_text()
+            check(
+                "each lane writes its own log with its steps and the failing step",
+                '=== echo ===' in log and 'second' in log and '--- false: FAILED (exit 1)' in log,
+                log,
+            )
+
         pre_push_check.php_tools_installed = lambda: False
         check(
             'without the PHP tools the php group is left to CI, not attested',
@@ -420,27 +495,101 @@ def main() -> int:
         print('install_dev_tools.py')
         import install_dev_tools
 
+        sha_a, sha_b = 'a' * 40, 'b' * 40
+
+        def zipball(repository: str, sha: str) -> str:
+            return f'https://api.github.com/repos/{repository}/zipball/{sha}'
+
         lock = {
+            'packages': [
+                {
+                    'name': 'laravel/framework',
+                    'source': {'type': 'git', 'url': 'https://github.com/laravel/framework.git', 'reference': sha_a},
+                    'dist': {'type': 'zip', 'url': zipball('laravel/framework', sha_a), 'reference': sha_a, 'shasum': ''},
+                },
+            ],
             'packages-dev': [
-                {'name': 'laravel/pint', 'source': {'type': 'git'}, 'dist': {'type': 'zip', 'reference': 'aaa'}},
-                {'name': 'phpstan/phpstan', 'source': {'type': 'git'}, 'dist': {'type': 'zip', 'reference': 'bbb'}},
+                {'name': 'phpstan/phpstan', 'dist': {'type': 'zip', 'url': zipball('phpstan/phpstan', sha_b), 'reference': sha_b, 'shasum': ''}},
+                {'name': 'example/elsewhere', 'dist': {'type': 'zip', 'url': 'https://example.com/elsewhere.zip', 'reference': sha_b}},
             ],
         }
-        patched = install_dev_tools.patch_lock(lock, '/tmp/phpstan-src')
-        phpstan, pint = patched['packages-dev'][1], patched['packages-dev'][0]
         check(
-            'phpstan dist becomes a path to the clone at the locked reference',
-            phpstan['dist'] == {'type': 'path', 'url': '/tmp/phpstan-src', 'reference': 'bbb'},
-            str(phpstan),
+            'a GitHub zipball dist is read as owner, repo and sha',
+            install_dev_tools.github_commit(lock['packages'][0]) == ('laravel', 'framework', sha_a),
         )
-        check('phpstan source is dropped', 'source' not in phpstan, str(phpstan))
-        check('other packages keep their git source and zip dist', pint['source'] == {'type': 'git'} and pint['dist']['type'] == 'zip', str(pint))
+        check('a dist hosted elsewhere is not a GitHub commit', install_dev_tools.github_commit(lock['packages-dev'][1]) is None)
+        check('the committed shape of the lock is not patched', not install_dev_tools.is_patched(lock))
 
-        try:
-            install_dev_tools.patch_lock({'packages-dev': [pint]}, '/tmp/phpstan-src')
-            check('lock without phpstan is refused', False)
-        except SystemExit as error:
-            check('lock without phpstan is refused', 'not in composer.lock' in str(error), str(error))
+        patched = install_dev_tools.patch_lock(
+            json.loads(json.dumps(lock)),
+            {'laravel/framework': '/tmp/framework.zip', 'phpstan/phpstan': '/tmp/phpstan.zip'},
+        )
+        framework, phpstan, elsewhere = patched['packages'][0], patched['packages-dev'][0], patched['packages-dev'][1]
+        check(
+            'an archived package dist becomes its local zip at the locked reference',
+            framework['dist'] == {'type': 'zip', 'url': '/tmp/framework.zip', 'reference': sha_a, 'shasum': ''},
+            str(framework),
+        )
+        check('dev packages are patched too', phpstan['dist']['url'] == '/tmp/phpstan.zip', str(phpstan))
+        check(
+            'the git source is kept, so installed references match the real lock',
+            framework['source'] == lock['packages'][0]['source'],
+            str(framework),
+        )
+        check('a package without an archive keeps its dist', elsewhere == lock['packages-dev'][1], str(elsewhere))
+        check('the patched lock is recognised as patched', install_dev_tools.is_patched(patched))
+
+        # A real fetch, offline: a local repository stands in for github.com.
+        # The lock pins the first commit, so the archive must hold that one, not
+        # the branch tip, with export-ignore applied as a GitHub zipball does.
+        upstream = root / 'upstream' / 'acme' / 'tool.git'
+        upstream.mkdir(parents=True)
+        commit_env = {**os.environ, 'GIT_AUTHOR_NAME': 't', 'GIT_AUTHOR_EMAIL': 't@t', 'GIT_COMMITTER_NAME': 't', 'GIT_COMMITTER_EMAIL': 't@t'}
+
+        def upstream_git(*arguments: str) -> str:
+            return subprocess.run(['git', *arguments], cwd=upstream, env=commit_env, check=True, capture_output=True, text=True).stdout
+
+        upstream_git('init', '-q')
+        (upstream / 'composer.json').write_text('{"name": "acme/tool"}\n')
+        (upstream / 'VERSION').write_text('locked\n')
+        (upstream / 'tests').mkdir()
+        (upstream / 'tests' / 'ToolTest.php').write_text('<?php\n')
+        (upstream / '.gitattributes').write_text('/tests export-ignore\n')
+        upstream_git('add', '-A')
+        upstream_git('commit', '-q', '-m', 'locked')
+        locked_sha = upstream_git('rev-parse', 'HEAD').strip()
+        (upstream / 'VERSION').write_text('newer\n')
+        upstream_git('commit', '-q', '-am', 'newer')
+
+        fetch_lock = {
+            'packages': [
+                {'name': 'acme/tool', 'dist': {'type': 'zip', 'url': zipball('acme/tool', locked_sha), 'reference': locked_sha}},
+                {'name': 'acme/missing', 'dist': {'type': 'zip', 'url': zipball('acme/missing', sha_a), 'reference': sha_a}},
+            ],
+        }
+        archive_dir = root / 'archives'
+        base_url = f'file://{root / "upstream"}'
+        archives = install_dev_tools.fetch_archives(fetch_lock, archive_dir, {}, base_url=base_url)
+        check('a fetchable commit is archived', set(archives) == {'acme/tool'}, str(archives))
+        check('a commit that cannot be fetched is left to composer', 'acme/missing' not in archives, str(archives))
+        check('no partial file is left behind', not list(archive_dir.rglob('*.partial')), str(list(archive_dir.rglob('*'))))
+
+        if 'acme/tool' in archives:
+            listing = subprocess.run(['unzip', '-Z1', archives['acme/tool']], capture_output=True, text=True).stdout.split()
+            version = subprocess.run(['unzip', '-p', archives['acme/tool'], 'package/VERSION'], capture_output=True, text=True).stdout
+            check('the archive has one top-level directory, as a GitHub zipball does', all(name.startswith('package/') for name in listing), str(listing))
+            check('the archive holds the locked commit, not the branch tip', version == 'locked\n', version)
+            check('export-ignore paths are left out, as a GitHub zipball does', not any('tests' in name for name in listing), str(listing))
+
+        check(
+            'a package vendor/ holds at the locked reference is not fetched again',
+            install_dev_tools.fetch_archives(fetch_lock, root / 'archives-warm', {'acme/tool': locked_sha, 'acme/missing': sha_a}, base_url=base_url) == {},
+        )
+
+        installed_json = root / 'installed.json'
+        installed_json.write_text(json.dumps({'packages': [{'name': 'acme/tool', 'dist': {'reference': locked_sha}}]}))
+        check('installed references are read from installed.json', install_dev_tools.installed_references(installed_json) == {'acme/tool': locked_sha})
+        check('no installed.json means nothing is installed', install_dev_tools.installed_references(root / 'absent.json') == {})
 
         # The lock-restore guarantees, exercised against a real file with a
         # non-ASCII author (the escaping a re-serialised lock would change).
@@ -460,7 +609,7 @@ def main() -> int:
         ).encode() + b'\n'
         lock_file = root / 'composer.lock'
         backup_file = root / 'composer.lock.original'
-        clone = root / 'phpstan-src'
+        archived = {'phpstan/phpstan': str(root / 'phpstan.zip')}
 
         def fresh_lock() -> None:
             lock_file.write_bytes(pristine_lock)
@@ -474,7 +623,7 @@ def main() -> int:
             return 7
 
         fresh_lock()
-        code = install_dev_tools.install_with_patched_lock(lock_file, backup_file, clone, peek_then_return)
+        code = install_dev_tools.install_with_patched_lock(lock_file, backup_file, archived, peek_then_return)
         check('the install runs against the patched lock', seen.get('patched') is True)
         check('the install exit code is returned', code == 7)
         check('the lock is restored byte for byte afterwards', lock_file.read_bytes() == pristine_lock)
@@ -485,7 +634,7 @@ def main() -> int:
 
         fresh_lock()
         try:
-            install_dev_tools.install_with_patched_lock(lock_file, backup_file, clone, explode)
+            install_dev_tools.install_with_patched_lock(lock_file, backup_file, archived, explode)
         except RuntimeError:
             pass
         check('the lock is restored when the install raises', lock_file.read_bytes() == pristine_lock)
@@ -498,13 +647,13 @@ def main() -> int:
 
         fresh_lock()
         try:
-            install_dev_tools.install_with_patched_lock(lock_file, backup_file, clone, terminated)
+            install_dev_tools.install_with_patched_lock(lock_file, backup_file, archived, terminated)
         except SystemExit:
             pass
         check('the lock is restored when the run is sent SIGTERM', lock_file.read_bytes() == pristine_lock)
 
         # A run killed with SIGKILL leaves the patched lock and the backup.
-        lock_file.write_text(json.dumps(install_dev_tools.patch_lock(json.loads(pristine_lock), str(clone)), indent=4))
+        lock_file.write_text(json.dumps(install_dev_tools.patch_lock(json.loads(pristine_lock), archived), indent=4))
         backup_file.write_bytes(pristine_lock)
         install_dev_tools.recover_original(lock_file, backup_file)
         check('a stale backup restores the lock a killed run left patched', lock_file.read_bytes() == pristine_lock)
@@ -519,7 +668,7 @@ def main() -> int:
         for command in (['init', '-q'], ['add', 'composer.lock'], ['commit', '-q', '-m', 'lock']):
             subprocess.run(['git', *command], cwd=repo, env=git_env, check=True, capture_output=True)
 
-        repo_lock.write_text(json.dumps(install_dev_tools.patch_lock(json.loads(pristine_lock), str(clone)), indent=4))
+        repo_lock.write_text(json.dumps(install_dev_tools.patch_lock(json.loads(pristine_lock), archived), indent=4))
         install_dev_tools.recover_original(repo_lock, root / 'no-such-backup')
         check('a patched lock with no backup is restored from HEAD', repo_lock.read_bytes() == pristine_lock)
 
@@ -527,7 +676,7 @@ def main() -> int:
         check('a clean lock is left alone', repo_lock.read_bytes() == pristine_lock)
 
         # While the lock is patched, git must see a clean tree: the install runs
-        # for ~10 minutes in the background and a "commit uncommitted changes"
+        # in the background and a "commit uncommitted changes"
         # Stop hook would otherwise commit the patched lock.
         def git_output(*arguments: str) -> str:
             return subprocess.run(['git', *arguments], cwd=repo, capture_output=True, text=True).stdout
@@ -541,7 +690,7 @@ def main() -> int:
 
             return 0
 
-        install_dev_tools.install_with_patched_lock(repo_lock, root / 'repo-backup', clone, inspect_tree_mid_install)
+        install_dev_tools.install_with_patched_lock(repo_lock, root / 'repo-backup', archived, inspect_tree_mid_install)
         check('the lock really is patched mid-install', during.get('patched') == 'True', str(during))
         check('git reports a clean tree while the lock is patched', during.get('status') == '' and during.get('diff') == '', str(during))
         check('the lock is back to HEAD afterwards', git_output('status', '--porcelain') == '' and repo_lock.read_bytes() == pristine_lock)
@@ -549,7 +698,7 @@ def main() -> int:
 
         # A run killed with SIGKILL leaves the flag set and the lock patched.
         subprocess.run(['git', 'update-index', '--skip-worktree', 'composer.lock'], cwd=repo, check=True)
-        repo_lock.write_text(json.dumps(install_dev_tools.patch_lock(json.loads(pristine_lock), str(clone)), indent=4))
+        repo_lock.write_text(json.dumps(install_dev_tools.patch_lock(json.loads(pristine_lock), archived), indent=4))
         install_dev_tools.recover_original(repo_lock, root / 'no-such-backup')
         check(
             'recovery clears a stale skip-worktree flag and restores the lock',
@@ -621,7 +770,7 @@ def main() -> int:
 
         check('a local checkout gets no notice', notice(root / 's-done', remote=False) == '')
         started = notice(root / 'never-started')
-        check('a setup that has not started yet gets the wait instructions', 'wait_for_setup.py' in started and '10 minutes' in started, started)
+        check('a setup that has not started yet gets the wait instructions', 'wait_for_setup.py' in started and 'two minutes' in started, started)
         check('a finished setup gets its summary instead', notice(root / 's-done').strip() == 'tools ready')
         check('a failed setup is called out', 'FAILED' in notice(root / 's-failed'))
 
@@ -635,7 +784,13 @@ def main() -> int:
         for stub in ('php', 'composer'):
             (stub_bin / stub).write_text('#!/bin/sh\nexit 0\n')
             (stub_bin / stub).chmod(0o755)
-        (stub_bin / 'npm').write_text('#!/bin/sh\n[ -n "$STUB_NPM_SLEEP" ] && sleep "$STUB_NPM_SLEEP"\nexit 0\n')
+        (stub_bin / 'npm').write_text(
+            '#!/bin/sh\n'
+            '[ -n "$STUB_NPM_LOG" ] && echo "$*" >> "$STUB_NPM_LOG"\n'
+            '[ -n "$STUB_NPM_SLEEP" ] && sleep "$STUB_NPM_SLEEP"\n'
+            '[ "$1" = ci ] && mkdir -p node_modules\n'
+            'exit 0\n'
+        )
         (stub_bin / 'npm').chmod(0o755)
 
         def hook_environment(state_dir: Path, **extra: str) -> dict[str, str]:
@@ -653,6 +808,25 @@ def main() -> int:
         check('a completed run records done', (done_dir / 'state').read_text().strip() == 'done')
         check('a completed run records the summary the waiter prints', 'Vite build' in (done_dir / 'summary.txt').read_text())
         check('a completed run records its pid', (done_dir / 'pid').read_text().strip().isdigit())
+        timings = (done_dir / 'timings.txt').read_text()
+        check('a completed run records how long each phase took', 'composer' in timings and 'total' in timings, timings)
+
+        # npm ci is skipped while node_modules matches package-lock.json, and
+        # runs again once the lock changes.
+        npm_log = root / 'npm-calls.log'
+        (project / 'package-lock.json').write_text('{"lockfileVersion": 3}\n')
+
+        def npm_ci_runs() -> int:
+            return sum(line.startswith('ci') for line in npm_log.read_text().splitlines()) if npm_log.exists() else 0
+
+        for _ in range(2):
+            subprocess.run(['bash', str(hook)], capture_output=True, text=True, env=hook_environment(root / 'hook-npm', STUB_NPM_LOG=str(npm_log)))
+        check('npm ci is skipped when node_modules already matches the lock', npm_ci_runs() == 1, npm_log.read_text())
+        check('a skipped npm ci still reports the frontend ready', 'frontend (vitest, vue-tsc, prettier, eslint): ready' in (root / 'hook-npm' / 'summary.txt').read_text())
+
+        (project / 'package-lock.json').write_text('{"lockfileVersion": 3, "changed": true}\n')
+        subprocess.run(['bash', str(hook)], capture_output=True, text=True, env=hook_environment(root / 'hook-npm', STUB_NPM_LOG=str(npm_log)))
+        check('npm ci runs again after package-lock.json changes', npm_ci_runs() == 2, npm_log.read_text())
 
         killed_dir = root / 'hook-killed'
         process = subprocess.Popen(

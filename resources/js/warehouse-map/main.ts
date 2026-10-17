@@ -26,6 +26,7 @@ import type { SceneHost } from './scene3d/SceneView';
 import { createActions } from './state/actions';
 import {
     createMatchSelector,
+    createProductOptionsSelector,
     selectAisleCount,
     selectHover,
     selectKeyHintKind,
@@ -51,6 +52,7 @@ import { MapLayout } from './ui/MapLayout';
 import { MatchedDrawer } from './ui/MatchedDrawer';
 import { NameCard } from './ui/NameCard';
 import { Notch } from './ui/Notch';
+import { ProductPicker } from './ui/ProductPicker';
 import { RackDialog } from './ui/RackDialog';
 import { ResultPill } from './ui/ResultPill';
 import { RootAttributes } from './ui/RootAttributes';
@@ -156,6 +158,7 @@ export function mountWarehouseMap(
     );
     const actions = createActions(store);
     const matchOf = createMatchSelector();
+    const productOptionsOf = createProductOptionsSelector();
     const slice = <T extends object>(select: (s: MapState) => T) =>
         createSlice(store, select);
     const t = i18n.t;
@@ -264,6 +267,12 @@ export function mountWarehouseMap(
             return;
         }
 
+        if (target.kind === 'filter') {
+            actions.applyFilterLink(target.filter);
+
+            return;
+        }
+
         const slot = store
             .get()
             .warehouse?.slots.find(
@@ -347,6 +356,18 @@ export function mountWarehouseMap(
             clear: () => actions.clearSearch(),
         },
     );
+    const products = new ProductPicker(
+        slice((s) => ({
+            options: productOptionsOf(s),
+            selected: s.filter.productIds,
+            locale: s.locale,
+        })),
+        i18n,
+        {
+            toggle: (id) => actions.toggleProduct(id),
+            clear: () => actions.clearProducts(),
+        },
+    );
     const chips = new StateChips(
         slice((s) => ({ state: s.filter.state, expiring: s.filter.expiring })),
         i18n,
@@ -421,6 +442,7 @@ export function mountWarehouseMap(
             },
             search,
             chips,
+            products,
             options.helpUrl,
         ),
     );
@@ -803,7 +825,10 @@ export function mountWarehouseMap(
             refetcher.markFresh();
             actions.setWarehouse(snapshot.warehouse);
 
-            if (!hash.applyCurrent()) {
+            const target = hash.applyCurrent();
+
+            // a filter link only narrows the map: the 3D scene still warms up as usual
+            if (!target || target.kind === 'filter') {
                 void loadFonts().then(() =>
                     setTimeout(() => scene.prepareWhenIdle(), 1500),
                 );

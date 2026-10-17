@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { TriangleAlert } from '@lucide/vue';
 import FormField from '@/components/FormField.vue';
 import { t } from '@/lib/i18n';
 
@@ -20,7 +19,6 @@ withDefaults(
         letter?: string;
         cellsCount?: number;
         flatsCount?: number;
-        disableDimensions?: boolean;
         errors: Partial<
             Record<'letter' | 'cells_count' | 'flats_count', string>
         >;
@@ -28,7 +26,6 @@ withDefaults(
     {
         idPrefix: '',
         letter: '',
-        disableDimensions: false,
     },
 );
 </script>
@@ -54,7 +51,6 @@ withDefaults(
             min="1"
             :max="MAX_DIMENSION"
             step="1"
-            :readonly="disableDimensions"
             required
         />
 
@@ -67,16 +63,7 @@ withDefaults(
             min="1"
             :max="MAX_DIMENSION"
             step="1"
-            :readonly="disableDimensions"
             required
         />
-
-        <p
-            v-if="disableDimensions"
-            class="flex items-center gap-1 text-sm text-amber-600 dark:text-amber-400"
-        >
-            <TriangleAlert class="h-3.5 w-3.5 shrink-0" />
-            {{ t('rows.fields.dimensionsLocked') }}
-        </p>
     </div>
 </template>

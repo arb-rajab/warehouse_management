@@ -32,9 +32,10 @@ remaining worktree changes invalidate the report.
 | Pest on MySQL (only for schema-related paths), Playwright, dependency audit, deploy-script test | in `--for-pr` and the attested run | when planned, unless attested |
 
 CI is the gate; the sandbox run exists to catch the common failure before it
-costs a CI round (or, with `--attest`, to replace the run). `pre_push_check.py --full` runs the whole-repo sequence. The
-Claude web sandbox cannot install Pint, Pest or PHPStan (dev dists are 403), so
-there those come from CI only.
+costs a CI round (or, with `--attest`, to replace the run). `pre_push_check.py --full` runs the whole-repo sequence. In the
+Claude web sandbox, dev dists are 403, so Pint, Pest and PHPStan come from
+`install_dev_tools.py` (shallow git fetches); when that install fails, they come
+from CI only.
 
 ## `--attest` lets CI skip what already passed here
 
@@ -55,6 +56,26 @@ only when:
 - the PR's merged tree equals its head tree (the base adds nothing), and the
   trailer's tree equals that head tree, so any later content change voids it;
 - no path is under `.github/`, so a workflow change still runs everything.
+
+The groups run as **parallel lanes** (about 10 minutes, against about 25 one after
+another). `attest_prerequisites` runs first, alone: Wayfinder generation, the Vite
+build and `config:clear`, which write into the tree or cache every lane reads. Then
+`run_lanes` runs js, php, mysql, e2e, audit and deploy-script together, one log per
+lane (printed when the lane ends), and the first failure stops the other lanes and
+everything they started. Constraints this imposes:
+
+- Playwright's output directory is outside the work tree (`--output=<tmp>`):
+  Playwright empties `test-results/` when it starts, and Pint walking the repo in
+  another lane dies on the vanished directory.
+- Stopping a lane kills its whole process tree, not just the process group: the
+  Playwright web server (`node` plus `php artisan serve` on 8010/8011) runs in its
+  own session and would otherwise keep the port, failing the next run.
+- E2E keeps normal CPU priority and the other lanes run under `nice`: its 5s
+  expectations are timing-sensitive and the machine has 4 cores that Pest, Vitest
+  and the browser all want. Do not add Playwright workers (measured: flaky).
+- A new group or a step that writes into the work tree during the lanes needs the
+  same thought: it must not race a lane that scans or reads that path.
+  `--serial` is the fallback for a machine with too few cores.
 
 Constraints that keep it honest:
 

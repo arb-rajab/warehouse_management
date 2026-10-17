@@ -1,3 +1,4 @@
+import type { FilterRef } from '../domain/SlotCode';
 import { parseTerms } from '../domain/SlotFilter';
 import type { Slot, StateFilter } from '../domain/types';
 import type {
@@ -64,6 +65,37 @@ export function createActions(store: Store<MapState>) {
 
         setStateFilter(state: StateFilter): void {
             store.update((s) => ({ filter: { ...s.filter, state } }));
+        },
+
+        /** Checks or unchecks one product in the product picker. */
+        toggleProduct(id: number): void {
+            store.update((s) => {
+                const { productIds } = s.filter;
+
+                return {
+                    filter: {
+                        ...s.filter,
+                        productIds: productIds.includes(id)
+                            ? productIds.filter((other) => other !== id)
+                            : [...productIds, id],
+                    },
+                };
+            });
+        },
+
+        clearProducts(): void {
+            store.update((s) => ({ filter: { ...s.filter, productIds: [] } }));
+        },
+
+        /** A filter deep link replaces the checked products, and the state chip when it names one. */
+        applyFilterLink(ref: FilterRef): void {
+            store.update((s) => ({
+                filter: {
+                    ...s.filter,
+                    productIds: ref.productIds,
+                    state: ref.state ?? s.filter.state,
+                },
+            }));
         },
 
         toggleExpiring(): void {

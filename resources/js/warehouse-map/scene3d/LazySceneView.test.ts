@@ -45,7 +45,12 @@ describe('LazySceneView', () => {
         const { view, create } = lazy();
 
         view.setFilter(
-            buildMatchIndex([], { terms: [], state: 'all', expiring: false }),
+            buildMatchIndex([], {
+                terms: [],
+                state: 'all',
+                expiring: false,
+                productIds: [],
+            }),
             null,
         );
         view.hide();
@@ -82,6 +87,7 @@ describe('LazySceneView', () => {
             terms: ['rice'],
             state: 'all',
             expiring: false,
+            productIds: [],
         });
 
         view.setWarehouse(warehouse);

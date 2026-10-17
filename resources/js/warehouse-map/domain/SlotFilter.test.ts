@@ -17,6 +17,7 @@ function slot(partial: Partial<Slot> & { id: number }): Slot {
             expirationDate: null,
             productName: 'x',
             productArName: '',
+            productActive: true,
             productImageUrl: null,
             remainingBoxes: null,
             productBoxesCount: null,
@@ -28,7 +29,12 @@ function slot(partial: Partial<Slot> & { id: number }): Slot {
     };
 }
 
-const none: SlotFilter = { terms: [], state: 'all', expiring: false };
+const none: SlotFilter = {
+    terms: [],
+    state: 'all',
+    expiring: false,
+    productIds: [],
+};
 
 describe('parseTerms', () => {
     it('splits on whitespace and lower-cases', () => {
@@ -89,8 +95,34 @@ describe('slotMatches', () => {
         ).toBe(false);
     });
 
+    it('matches a slot holding any of the checked products, and nothing else', () => {
+        const rice = slot({ id: 1, haystack: 'basmati rice' });
+        const sugar = slot({ id: 2, haystack: 'white sugar' });
+        const empty = slot({
+            id: 3,
+            state: 'empty',
+            pallet: null,
+            haystack: '',
+        });
+
+        rice.pallet = { ...rice.pallet!, productId: 10 };
+        sugar.pallet = { ...sugar.pallet!, productId: 20 };
+
+        const both = { ...none, productIds: [10, 20] };
+        const onlyRice = { ...none, productIds: [10] };
+
+        expect(slotMatches(rice, both)).toBe(true);
+        expect(slotMatches(sugar, both)).toBe(true);
+        expect(slotMatches(sugar, onlyRice)).toBe(false);
+        expect(slotMatches(empty, both)).toBe(false);
+        expect(slotMatches(rice, { ...both, terms: ['sugar'] })).toBe(false);
+        expect(slotMatches(sugar, { ...both, terms: ['sugar'] })).toBe(true);
+        expect(slotMatches(rice, { ...both, state: 'opened' })).toBe(false);
+    });
+
     it('knows whether anything is being filtered', () => {
         expect(isFiltering(none)).toBe(false);
+        expect(isFiltering({ ...none, productIds: [3] })).toBe(true);
         expect(isFiltering({ ...none, terms: ['a'] })).toBe(true);
         expect(isFiltering({ ...none, state: 'full' })).toBe(true);
         expect(isFiltering({ ...none, expiring: true })).toBe(true);

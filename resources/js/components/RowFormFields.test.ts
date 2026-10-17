@@ -1,4 +1,3 @@
-import { TriangleAlert } from '@lucide/vue';
 import { mount } from '@vue/test-utils';
 import { describe, expect, it } from 'vitest';
 import { t } from '@/lib/i18n';
@@ -96,20 +95,14 @@ describe('RowFormFields', () => {
         expect(wrapper.find('#letter').exists()).toBe(false);
     });
 
-    it('marks the dimension inputs readonly when disableDimensions is true', () => {
-        const wrapper = mount(RowFormFields, {
-            props: { errors: {}, disableDimensions: true },
-        });
+    it('never renders the dimension inputs as readonly', () => {
+        const wrapper = mount(RowFormFields, { props: { errors: {} } });
 
         expect(
             (wrapper.find('#cells_count').element as HTMLInputElement).readOnly,
-        ).toBe(true);
+        ).toBe(false);
         expect(
             (wrapper.find('#flats_count').element as HTMLInputElement).readOnly,
-        ).toBe(true);
-        expect(wrapper.text()).toContain(
-            "This row has pallets stored in it, so its dimensions can't be changed.",
-        );
-        expect(wrapper.findComponent(TriangleAlert).exists()).toBe(true);
+        ).toBe(false);
     });
 });

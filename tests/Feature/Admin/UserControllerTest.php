@@ -594,6 +594,24 @@ test('resetting a users password requires them to change it again on their next 
     expect($target->fresh()->must_change_password)->toBeTrue();
 });
 
+test('an admin changing their own password is not asked to change it again', function () {
+    $admin = actingAsAdmin();
+    $admin->forceFill(['must_change_password' => false])->save();
+    $originalPassword = $admin->fresh()->password;
+
+    $this->put("/admin/users/{$admin->id}", [
+        'name' => $admin->name,
+        'email' => $admin->email,
+        'password' => 'newpassword123',
+        'password_confirmation' => 'newpassword123',
+        'is_admin' => '1',
+    ])->assertRedirect(route('admin.users.index'));
+
+    $admin = $admin->fresh();
+    expect($admin->password)->not->toBe($originalPassword)
+        ->and($admin->must_change_password)->toBeFalse();
+});
+
 test('leaving the password blank while updating a user does not affect their must_change_password flag', function () {
     actingAsAdmin();
     $target = User::factory()->mobileUser()->create(['must_change_password' => false]);

@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { formatSlotCode, parseHash, parseSlotCode, slotHash } from './SlotCode';
+import {
+    filterHash,
+    formatSlotCode,
+    parseHash,
+    parseSlotCode,
+    slotHash,
+} from './SlotCode';
 
 describe('SlotCode', () => {
     it('formats the printed shelf label', () => {
@@ -38,5 +44,35 @@ describe('SlotCode', () => {
         expect(parseHash('#2d')).toEqual({ kind: 'view', view: '2d' });
         expect(parseHash('#slot=nope')).toBeNull();
         expect(parseHash('')).toBeNull();
+    });
+
+    it('builds and reads a filter link for several products and a state', () => {
+        expect(filterHash({ productIds: [12, 34], state: 'full' })).toBe(
+            '#products=12,34&state=full',
+        );
+        expect(filterHash({ productIds: [7], state: null })).toBe(
+            '#products=7',
+        );
+        expect(filterHash({ productIds: [], state: 'empty' })).toBe(
+            '#state=empty',
+        );
+        expect(filterHash({ productIds: [], state: null })).toBe('');
+
+        expect(parseHash('#products=12,34&state=full')).toEqual({
+            kind: 'filter',
+            filter: { productIds: [12, 34], state: 'full' },
+        });
+        expect(parseHash('#state=opened')).toEqual({
+            kind: 'filter',
+            filter: { productIds: [], state: 'opened' },
+        });
+    });
+
+    it('drops what a filter link cannot mean', () => {
+        expect(parseHash('#products=12,x,-3,12,%2034&state=sealed')).toEqual({
+            kind: 'filter',
+            filter: { productIds: [12, 34], state: null },
+        });
+        expect(parseHash('#products=&state=bogus')).toBeNull();
     });
 });

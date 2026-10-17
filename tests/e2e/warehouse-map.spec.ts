@@ -72,8 +72,15 @@ test.describe('desktop', () => {
         await expect(map).toHaveAttribute('data-captured', 'true');
         await expect(page.locator('canvas.wms-canvas')).toBeFocused();
 
-        await page.keyboard.press('g');
-        await expect(map).toHaveAttribute('data-nav', 'guided');
+        // data-mode already reads "walk" while the camera is still flying in,
+        // and keys are dropped (not queued) until it lands: press G until it
+        // takes, which a dropped press cannot undo
+        await expect(async () => {
+            await page.keyboard.press('g');
+            await expect(map).toHaveAttribute('data-nav', 'guided', {
+                timeout: 500,
+            });
+        }).toPass({ timeout: 15_000 });
         await expect(map).toHaveAttribute('data-captured', 'false');
 
         const caption = page.locator('.wms-minimap__caption');
@@ -104,6 +111,60 @@ test.describe('desktop', () => {
         expect(pageErrors).toEqual([]);
     });
 
+    test('filters by several products from the picker, and opens a products link', async ({
+        page,
+    }) => {
+        await loginAsAdmin(page);
+        await page.goto('/admin/warehouse-map');
+        await expect(page.locator('.wms-tile').first()).toBeVisible();
+
+        const trigger = page.locator('.wms-products__trigger');
+        const panel = page.locator('.wms-products__panel');
+        const options = page.locator('.wms-products__option');
+
+        await trigger.click();
+        await expect(panel).toBeVisible();
+        await expect(page.locator('.wms-products__search')).toBeFocused();
+        expect(
+            await options.count(),
+            'the seeded warehouse holds two products',
+        ).toBeGreaterThanOrEqual(2);
+
+        const ids = await page
+            .locator('.wms-products__check')
+            .evaluateAll((boxes) =>
+                boxes
+                    .slice(0, 2)
+                    .map((box) => (box as HTMLElement).dataset.productId),
+            );
+
+        // by id: a checked product moves up into the pinned section
+        const box = (id: string | undefined) =>
+            page.locator(`.wms-products__check[data-product-id="${id}"]`);
+
+        await box(ids[0]).check();
+        await expect(page.locator('.wms-result-pill.is-shown')).toBeVisible();
+        await box(ids[1]).check();
+        await expect(trigger).toHaveText('2 products');
+        await expect(page.locator('.wms-products__head')).toBeVisible();
+        await expect(trigger).toHaveClass(/is-on/);
+        await expect(page.locator('.wms-tile.is-match').first()).toBeVisible();
+
+        // the checklist stays inside the window
+        const bounds = await panel.boundingBox();
+
+        expect(bounds!.x).toBeGreaterThanOrEqual(0);
+        expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(1920);
+
+        await page.keyboard.press('Escape');
+        await expect(panel).toBeHidden();
+        await expect(trigger).toBeFocused();
+
+        await page.goto(`/admin/warehouse-map#products=${ids.join(',')}`);
+        await expect(page.locator('.wms-result-pill.is-shown')).toBeVisible();
+        await expect(trigger).toHaveClass(/is-on/);
+    });
+
     test('opens a rack from the plan, copies a deep link and follows it into 3D', async ({
         page,
         context,
@@ -131,6 +192,47 @@ test.describe('desktop', () => {
         await expect(page.locator('.wms')).toHaveAttribute('data-view', '3d', {
             timeout: 20_000,
         });
+    });
+
+    test('starts the rows from the right of the plan, standing up and lying down', async ({
+        page,
+    }) => {
+        await loginAsAdmin(page);
+        await page.goto('/admin/warehouse-map');
+        await expect(page.locator('.wms-tile').first()).toBeVisible();
+
+        const world = page.locator('.wms-plan__world');
+        const box = async (selector: string) => {
+            const bounds = await page.locator(selector).first().boundingBox();
+
+            expect(bounds, selector).not.toBeNull();
+
+            return bounds!;
+        };
+        const tile = (col: number) =>
+            box(`.wms-tile[data-row="A"][data-col="${col}"]`);
+
+        // auto -> vertical: aisle A-B at the right, A on the right of its aisle, column 1 at the entrance (bottom)
+        await page.keyboard.press('r');
+        await expect(world).not.toHaveClass(/is-horizontal/);
+        expect((await box('.wms-pair')).x).toBeGreaterThan(
+            (await box('.wms-pair:nth-child(2)')).x,
+        );
+        expect((await box('.wms-rack-strip--a')).x).toBeGreaterThan(
+            (await box('.wms-rack-strip--b')).x,
+        );
+        expect((await tile(1)).y).toBeGreaterThan((await tile(2)).y);
+
+        // vertical -> horizontal: entrance at the right, column 1 at the right, aisle A still at the top
+        await page.keyboard.press('r');
+        await expect(world).toHaveClass(/is-horizontal/);
+        expect((await box('.wms-plan__entrance')).x).toBeGreaterThan(
+            (await box('.wms-plan__pairs')).x,
+        );
+        expect((await tile(1)).x).toBeGreaterThan((await tile(2)).x);
+        expect((await box('.wms-rack-strip--a')).y).toBeLessThan(
+            (await box('.wms-rack-strip--b')).y,
+        );
     });
 
     test('mirrors the whole page in Arabic', async ({ page }) => {
@@ -181,6 +283,36 @@ test.describe('phone', () => {
 
         expect(floors?.y ?? 0).toBeGreaterThan(844 / 2);
         await expect(page.locator('.wms-keys')).toBeHidden();
+    });
+
+    test('opens the product picker across the whole bar on a phone', async ({
+        page,
+    }) => {
+        await loginAsAdmin(page);
+        await page.goto('/admin/warehouse-map');
+        await expect(page.locator('.wms-tile').first()).toBeVisible();
+
+        await expect(page.locator('.wms-products')).toBeHidden();
+        await page.locator('.wms-search-toggle').tap();
+        await page.locator('.wms-products__trigger').tap();
+
+        const panel = page.locator('.wms-products__panel');
+
+        await expect(panel).toBeVisible();
+
+        const box = await panel.boundingBox();
+
+        expect(box!.x).toBeGreaterThanOrEqual(0);
+        expect(box!.x + box!.width).toBeLessThanOrEqual(390);
+
+        const first = page.locator('.wms-products__option input').first();
+
+        await first.tap();
+        await expect(first).toBeChecked();
+        await expect(page.locator('.wms-products__trigger')).toHaveClass(
+            /is-on/,
+        );
+        await expect(page.locator('.wms-tile.is-dim').first()).toBeAttached();
     });
 
     test('walks with touch controls: joystick area, lift buttons and the guided pad', async ({

@@ -134,11 +134,8 @@ class Pallet extends Model
     }
 
     /**
-     * Scope a query by the cell map's highlight-filter query params. This is
-     * the one server-side definition of them: the "matching pallets" list
-     * uses it directly and `CellController::firstHighlightMatch()` reuses it
-     * through a correlated `whereExists`, so the two can never disagree about
-     * which pallets match. It must stay in lockstep with the frontend's
+     * Scope a query by the highlight-filter query params (the "matching
+     * pallets" list's). It must stay in lockstep with the frontend's
      * `matchesCellHighlight()`/`isCellExpired()`/`isCellExpiringWithin()`/
      * `isCellStale()`. `state`/`is_active` live on the pallet's `Cell`, not on
      * the pallet itself, so those two go through `whereHas('cell', ...)`; the
@@ -253,9 +250,8 @@ class Pallet extends Model
     }
 
     /**
-     * The pallet fields shown on the admin cell map — its own CellResource entry and the
-     * warehouse-wide cellHighlightSamples() summary both build on this shared shape so a
-     * field can't be renamed/dropped in one without the other.
+     * The pallet fields a CellResource entry shows (a row's cells and the
+     * warehouse map's rows payload).
      *
      * @return array{product_id: int, product_name: string, product_ar_name: string, product_active: bool, product_image_url: string|null, expiration_date: string|null, added_at: string|null, cell_entered_at: string|null}
      */

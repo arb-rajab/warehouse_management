@@ -1,104 +1,173 @@
 """Install the full composer dependency set (Pint, Pest, PHPStan, Larastan) in
 a Claude Code web session, where `composer install` alone cannot.
 
-Why a plain install fails there: every locked dev package's dist URL is
-`api.github.com/repos/<vendor>/<package>/zipball/...`, and the egress proxy
-returns 403 for any repository the session does not have attached. Anonymous
-git clones of public repositories are served, though, so:
+Why a plain install fails there: every locked package's dist URL is
+`api.github.com/repos/<owner>/<repo>/zipball/<ref>`, and the egress proxy
+returns 403 for any repository the session does not have attached (so do
+codeload.github.com and github.com/<owner>/<repo>/archive, measured). Anonymous
+git fetches of public repositories are served, though, and GitHub answers a
+shallow fetch of a single commit by its sha. So this script:
 
-  * `--prefer-source` makes composer `git clone` the packages that carry a git
-    `source` in composer.lock (Pint, Pest, Larastan and the rest). It covers
-    every package, not just the dev ones: a cold run's 150 failed downloads were
-    149 dist attempts, so a runtime-only dist pass first saves nothing and
-    composer silently falls back to cloning anyway. Cost on a cold container:
-    ~9 minutes and ~7 GB (about 4.6 GB of full-history clones in composer's cache
-    plus ~2.8 GB in vendor/), so the SessionStart hook's timeout must allow for it.
-  * `phpstan/phpstan` is the exception: it is locked dist-only, and a full
-    mirror clone of its repository (which keeps every release phar in history)
-    exceeds composer's process timeout. So this script shallow-clones the
-    locked tag and points that one lock entry at the clone as a path dist.
+  * fetches every locked commit with `git fetch --depth 1 <repo> <ref>`, many at
+    once, and turns each into the zip GitHub would have served: `git archive`
+    applies the same export-ignore rules the zipball does, and the commit is
+    addressed by the sha composer.lock pins, so the content is what the lock
+    says. Fetched archives are kept in the archive directory and reused, and
+    packages vendor/ already holds at the locked reference are not fetched.
+  * points each lock entry's dist at its local zip and runs
+    `composer install --prefer-dist`, which installs them as it would any
+    download. The git `source` entries stay, so the installed references match
+    the real lock and a later `composer install` finds nothing to do.
+
+It replaces `composer install --prefer-source`, which cloned the full history of
+every package one after another into composer's cache (~9 minutes and ~7 GB on a
+cold container; phpstan's history, which keeps every release phar, did not even
+fit composer's process timeout). A package whose fetch fails keeps its original
+dist, so composer falls back to cloning its source, the old route, for that one
+package only.
 
 composer.lock is patched on disk for the install and restored byte for byte
 afterwards, whatever the outcome (including SIGTERM/SIGHUP), so nothing here can
 reach a commit; git is told to ignore the lock's working-tree changes
-(`--skip-worktree`) for as long as the patch is on disk, so the ~10 minute
+(`--skip-worktree`) for as long as the patch is on disk, so the background
 install never shows a dirty tree that something might commit. The pristine copy
 is also kept in the system temp directory
 while the install runs: a SIGKILL, such as a hook timeout, skips every cleanup,
 and the next run uses that copy (or, failing that, `git show HEAD:composer.lock`)
 to undo the leftover patch instead of mistaking it for the original. Usage:
 
-    python3 .claude/scripts/install_dev_tools.py [clone-dir]
+    python3 .claude/scripts/install_dev_tools.py [archive-dir]
 
-The clone directory defaults to <system temp>/phpstan-src and is reused when it
-already holds the locked commit. Exits with composer's own exit code.
+The archive directory defaults to <system temp>/composer-git-dists. Exits with
+composer's own exit code.
 """
 
 import hashlib
 import json
 import os
+import re
 import signal
 import subprocess
 import sys
 import tempfile
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
-PACKAGE = 'phpstan/phpstan'
+GITHUB = 'https://github.com'
+GITHUB_ZIPBALL = re.compile(r'^https://api\.github\.com/repos/([^/]+)/([^/]+)/zipball/([0-9a-f]{40})$')
+
+# Concurrent fetches. Each is a few small requests through the proxy, so the run
+# is bound by round trips, not bandwidth: at 16, the ~210 packages of the lock
+# installed in ~35s on a cold container.
+FETCH_WORKERS = 16
+FETCH_TIMEOUT_SECONDS = 300
 
 
-def patch_lock(lock: dict, clone_dir: str) -> dict:
-    """Return the lock with PACKAGE's dist swapped for a path to clone_dir."""
-    for package in lock['packages-dev']:
-        if package['name'] != PACKAGE:
+def locked_packages(lock: dict) -> list[dict]:
+    """Every package entry in the lock, runtime and dev."""
+    return lock.get('packages', []) + lock.get('packages-dev', [])
+
+
+def github_commit(package: dict) -> tuple[str, str, str] | None:
+    """(owner, repo, sha) for a package locked to a GitHub zipball, else None."""
+    match = GITHUB_ZIPBALL.match(package.get('dist', {}).get('url', ''))
+
+    return match.groups() if match else None
+
+
+def archive_path(archive_dir: Path, owner: str, repo: str, reference: str) -> Path:
+    """Where the zip of one locked commit is kept."""
+    return archive_dir / owner / repo / f'{reference}.zip'
+
+
+def archive_locked_commit(owner: str, repo: str, reference: str, archive: Path, base_url: str = GITHUB) -> bool:
+    """Write the zip of `reference` to `archive` unless it is already there.
+
+    Returns whether the archive exists afterwards. Failures are not raised: the
+    package then keeps its original dist and composer clones its source instead.
+    """
+    if archive.exists():
+        return True
+
+    archive.parent.mkdir(parents=True, exist_ok=True)
+    partial = archive.with_name(archive.name + '.partial')
+    environment = {**os.environ, 'GIT_TERMINAL_PROMPT': '0'}
+
+    with tempfile.TemporaryDirectory(prefix='composer-git-') as git_dir:
+        commands = [
+            ['git', 'init', '-q', '--bare', git_dir],
+            ['git', '-C', git_dir, 'fetch', '-q', '--depth', '1', f'{base_url}/{owner}/{repo}.git', reference],
+            # --prefix gives the single top-level directory a GitHub zipball has,
+            # which composer strips; -0 stores rather than deflates, since the zip
+            # is unpacked once, locally.
+            ['git', '-C', git_dir, 'archive', '--format=zip', '-0', '--prefix=package/', '-o', str(partial), reference],
+        ]
+        for command in commands:
+            try:
+                result = subprocess.run(command, capture_output=True, env=environment, timeout=FETCH_TIMEOUT_SECONDS)
+            except subprocess.TimeoutExpired:
+                result = None
+
+            if result is None or result.returncode != 0:
+                partial.unlink(missing_ok=True)
+
+                return False
+
+    partial.replace(archive)
+
+    return True
+
+
+def installed_references(installed_json: Path) -> dict[str, str]:
+    """{package name: dist reference} for what vendor/ already holds; empty without it."""
+    try:
+        installed = json.loads(installed_json.read_bytes())
+    except (OSError, ValueError):
+        return {}
+
+    packages = installed.get('packages', []) if isinstance(installed, dict) else installed
+
+    return {package['name']: package.get('dist', {}).get('reference', '') for package in packages}
+
+
+def fetch_archives(lock: dict, archive_dir: Path, installed: dict[str, str], base_url: str = GITHUB) -> dict[str, str]:
+    """Archive every GitHub-locked commit at once; return {package name: zip path}.
+
+    Packages vendor/ already holds at the locked reference are skipped: composer
+    leaves them alone, so a warm container or a one-package lock bump fetches
+    only what changed.
+    """
+    jobs = {}
+    for package in locked_packages(lock):
+        commit = github_commit(package)
+        if commit is not None and installed.get(package['name']) != commit[2]:
+            jobs[package['name']] = (*commit, archive_path(archive_dir, *commit))
+
+    with ThreadPoolExecutor(max_workers=FETCH_WORKERS) as pool:
+        results = pool.map(lambda job: archive_locked_commit(*job, base_url=base_url), jobs.values())
+
+        return {name: str(job[3]) for (name, job), ok in zip(jobs.items(), results) if ok}
+
+
+def patch_lock(lock: dict, archives: dict[str, str]) -> dict:
+    """Return the lock with each archived package's dist swapped for its local zip."""
+    for package in locked_packages(lock):
+        if package['name'] not in archives:
             continue
 
         package['dist'] = {
-            'type': 'path',
-            'url': clone_dir,
+            'type': 'zip',
+            'url': archives[package['name']],
             'reference': package['dist']['reference'],
+            'shasum': '',
         }
-        package.pop('source', None)
 
-        return lock
-
-    raise SystemExit(f'{PACKAGE} is not in composer.lock packages-dev; nothing to patch.')
-
-
-def locked_package(lock: dict) -> dict:
-    """Return PACKAGE's entry from the lock's dev packages."""
-    return next(package for package in lock['packages-dev'] if package['name'] == PACKAGE)
-
-
-def clone_locked_commit(version: str, reference: str, clone_dir: Path) -> None:
-    """Shallow-clone `version` into clone_dir unless it already holds `reference`."""
-    head = subprocess.run(
-        ['git', '-C', str(clone_dir), 'rev-parse', 'HEAD'],
-        capture_output=True,
-        text=True,
-    )
-    if head.returncode == 0 and head.stdout.strip() == reference:
-        return
-
-    subprocess.run(['rm', '-rf', str(clone_dir)], check=True)
-    subprocess.run(
-        ['git', 'clone', '--depth', '1', '--branch', version, f'https://github.com/{PACKAGE}', str(clone_dir)],
-        check=True,
-        env={**os.environ, 'GIT_LFS_SKIP_SMUDGE': '1'},
-    )
-
-    cloned = subprocess.run(
-        ['git', '-C', str(clone_dir), 'rev-parse', 'HEAD'],
-        capture_output=True,
-        text=True,
-        check=True,
-    ).stdout.strip()
-    if cloned != reference:
-        raise SystemExit(f'Tag {version} is at {cloned}, but composer.lock pins {reference}.')
+    return lock
 
 
 def is_patched(lock: dict) -> bool:
-    """Whether the lock still carries this script's path dist for PACKAGE."""
-    return locked_package(lock)['dist']['type'] == 'path'
+    """Whether any dist in the lock still points at a local archive of this script's."""
+    return any(not package.get('dist', {}).get('url', 'https://').startswith('https://') for package in locked_packages(lock))
 
 
 def backup_path_for(lock_path: Path) -> Path:
@@ -111,10 +180,10 @@ def backup_path_for(lock_path: Path) -> Path:
 def set_skip_worktree(lock_path: Path, enabled: bool) -> None:
     """Hide (or stop hiding) the lock's working-tree changes from git.
 
-    The patch lives on disk for the whole install, ~10 minutes and in the
-    background, so `git status` would show a modified composer.lock the entire
-    time and anything that commits "uncommitted changes" (the Stop hook does)
-    would commit the patched lock, a path into /tmp, and break CI. With the flag
+    The patch lives on disk for the whole install, in the background, so
+    `git status` would show a modified composer.lock the entire time and
+    anything that commits "uncommitted changes" (the Stop hook does) would
+    commit the patched lock, with paths into /tmp, and break CI. With the flag
     set, git treats the file as unchanged. Failures are ignored: outside a git
     repository there is nothing to hide.
     """
@@ -155,7 +224,7 @@ def recover_original(lock_path: Path, backup: Path) -> None:
     lock_path.write_bytes(committed.stdout)
 
 
-def install_with_patched_lock(lock_path: Path, backup: Path, clone_dir: Path, run_install) -> int:
+def install_with_patched_lock(lock_path: Path, backup: Path, archives: dict[str, str], run_install) -> int:
     """Patch the lock, run `run_install()`, and put the original bytes back.
 
     The original is saved to `backup` first, so a run killed past saving can be
@@ -170,7 +239,7 @@ def install_with_patched_lock(lock_path: Path, backup: Path, clone_dir: Path, ru
     previous = {signum: signal.signal(signum, lambda *_: sys.exit(128 + signum)) for signum in (signal.SIGTERM, signal.SIGHUP)}
     try:
         set_skip_worktree(lock_path, True)
-        lock_path.write_text(json.dumps(patch_lock(lock, str(clone_dir)), indent=4, ensure_ascii=False))
+        lock_path.write_text(json.dumps(patch_lock(lock, archives), indent=4, ensure_ascii=False))
 
         return run_install()
     finally:
@@ -184,20 +253,25 @@ def install_with_patched_lock(lock_path: Path, backup: Path, clone_dir: Path, ru
 
 def main() -> int:
     lock_path = Path('composer.lock')
-    clone_dir = Path(sys.argv[1] if len(sys.argv) > 1 else Path(tempfile.gettempdir()) / 'phpstan-src')
+    archive_dir = Path(sys.argv[1] if len(sys.argv) > 1 else Path(tempfile.gettempdir()) / 'composer-git-dists')
     backup = backup_path_for(lock_path)
 
     recover_original(lock_path, backup)
 
-    package = locked_package(json.loads(lock_path.read_bytes()))
-    clone_locked_commit(package['version'], package['dist']['reference'], clone_dir)
+    archives = fetch_archives(
+        json.loads(lock_path.read_bytes()),
+        archive_dir,
+        installed_references(Path('vendor/composer/installed.json')),
+    )
 
     return install_with_patched_lock(
         lock_path,
         backup,
-        clone_dir,
+        archives,
+        # --no-cache: composer would otherwise copy every local zip into its own
+        # cache, a second ~550 MB of the same files on a capped disk.
         lambda: subprocess.run(
-            ['composer', 'install', '--prefer-source', '--no-interaction', '--no-progress'],
+            ['composer', 'install', '--prefer-dist', '--no-cache', '--no-interaction', '--no-progress'],
             env={**os.environ, 'COMPOSER_ALLOW_SUPERUSER': '1', 'COMPOSER_PROCESS_TIMEOUT': '0'},
         ).returncode,
     )

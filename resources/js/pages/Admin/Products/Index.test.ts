@@ -2,8 +2,8 @@ import { Form, Head, Link } from '@inertiajs/vue3';
 import { Check, Filter, X } from '@lucide/vue';
 import { flushPromises, mount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { index as cellsIndex } from '@/actions/App/Http/Controllers/Admin/CellController';
 import { show as helpShow } from '@/actions/App/Http/Controllers/Admin/HelpController';
+import { index as palletsIndex } from '@/actions/App/Http/Controllers/Admin/PalletController';
 import {
     index as productsIndex,
     updateBoxCount,
@@ -187,6 +187,25 @@ describe('Products Index', () => {
             t('products.quickSearch.placeholder'),
         );
         expect(wrapper.find('[role="dialog"]').exists()).toBe(false);
+    });
+
+    it('lets the toolbar wrap on mobile with every quick filter still visible', () => {
+        const wrapper = mountPage([]);
+        const toolbar = wrapper
+            .get('#products-quick-search')
+            .element.closest('.flex-wrap');
+
+        expect(toolbar).not.toBeNull();
+        expect(toolbar?.classList.contains('w-full')).toBe(true);
+
+        for (const id of [
+            'products-quick-search',
+            'products-quick-inactive',
+            'products-quick-hide-inactive',
+            'products-quick-low-stock',
+        ]) {
+            expect(toolbar?.querySelector(`#${id}`)).not.toBeNull();
+        }
     });
 
     it('renders the quick inactive checkbox in the toolbar, without opening the filter dialog', () => {
@@ -1234,28 +1253,28 @@ describe('Products Index', () => {
         );
     });
 
-    it('renders the full count linking to the map filtered to this product and state=full', () => {
+    it('renders the full count linking to the pallets list filtered to this product and state=full', () => {
         const wrapper = mountPage([product({ id: 42, full_cells_count: 3 })]);
 
         const cell = rowCells(wrapper)[5];
         expect(cell.text()).toBe('3');
         const href = cell.get('a').attributes('href') ?? '';
-        expect(href).toContain(cellsIndex.url());
+        expect(href).toContain(palletsIndex.url());
         expect(href).toContain('product_id%5B%5D=42');
         expect(href).toContain('state=full');
     });
 
-    it('renders the opened count linking to the map filtered to this product and state=opened', () => {
+    it('renders the opened count linking to the pallets list filtered to this product and state=opened', () => {
         const wrapper = mountPage([product({ id: 42, opened_cells_count: 2 })]);
 
         const cell = rowCells(wrapper)[6];
         expect(cell.text()).toBe('2');
         const href = cell.get('a').attributes('href') ?? '';
-        expect(href).toContain(cellsIndex.url());
+        expect(href).toContain(palletsIndex.url());
         expect(href).toContain('state=opened');
     });
 
-    it('renders the expired count linking to the map filtered to this product and expired=true', () => {
+    it('renders the expired count linking to the pallets list filtered to this product and expired=true', () => {
         const wrapper = mountPage([
             product({ id: 42, expired_cells_count: 1 }),
         ]);
@@ -1263,11 +1282,11 @@ describe('Products Index', () => {
         const cell = rowCells(wrapper)[7];
         expect(cell.text()).toBe('1');
         const href = cell.get('a').attributes('href') ?? '';
-        expect(href).toContain(cellsIndex.url());
+        expect(href).toContain(palletsIndex.url());
         expect(href).toContain('expired=1');
     });
 
-    it('renders the expiring-soon count linking to the map with the resolved day window', () => {
+    it('renders the expiring-soon count linking to the pallets list with the resolved day window', () => {
         const wrapper = mountPage(
             [product({ id: 42, expiring_soon_count: 5 })],
             {},
@@ -1277,7 +1296,7 @@ describe('Products Index', () => {
         const cell = rowCells(wrapper)[8];
         expect(cell.text()).toBe('5');
         const href = cell.get('a').attributes('href') ?? '';
-        expect(href).toContain(cellsIndex.url());
+        expect(href).toContain(palletsIndex.url());
         expect(href).toContain('expires_within_days=30');
     });
 

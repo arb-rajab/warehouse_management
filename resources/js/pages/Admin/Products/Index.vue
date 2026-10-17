@@ -3,8 +3,8 @@ import type { FormDataConvertible } from '@inertiajs/core';
 import { Form, Head, Link, router } from '@inertiajs/vue3';
 import { Download, Eye, Plus, SlidersHorizontal, X } from '@lucide/vue';
 import { computed, reactive, ref, watch } from 'vue';
-import { index as cellsIndex } from '@/actions/App/Http/Controllers/Admin/CellController';
 import { show as showHelp } from '@/actions/App/Http/Controllers/Admin/HelpController';
+import { index as palletsIndex } from '@/actions/App/Http/Controllers/Admin/PalletController';
 import {
     destroyBarcode,
     downloadAllBarcodes,
@@ -140,8 +140,7 @@ const occupancyColumnsFiltered = computed(
  * `expired`/`inactive`/`low_stock` are only ever included when checked —
  * sending the unchecked `false` would still be a non-empty query value the
  * backend treats as "filled" (see FilterProductsRequest), so each must be
- * omitted rather than sent as literal `false`. Mirrors Cells/Index.vue's
- * `highlightQuery()`.
+ * omitted rather than sent as literal `false`.
  */
 function filterQuery(): Record<string, FormDataConvertible> {
     const { expired, inactive, hide_inactive, low_stock, ...rest } = filters;
@@ -224,7 +223,7 @@ function occupancyHref(
     product: ProductSummary,
     overrides: QueryParams,
 ): string {
-    return cellsIndex.url({
+    return palletsIndex.url({
         query: { product_id: [product.id], ...overrides },
     });
 }
@@ -370,10 +369,10 @@ function refreshBarcodesDialogProduct(): void {
 
     <AdminLayout>
         <PageHeader :title="t('products.title')">
-            <div class="flex items-end gap-2">
+            <div class="flex w-full flex-wrap items-end gap-2 md:w-auto">
                 <ProductSelect
                     id="products-quick-search"
-                    class="w-64"
+                    class="w-full md:w-64"
                     v-model="quickSearchProduct"
                     :label="t('products.quickSearch.label')"
                     :placeholder="t('products.quickSearch.placeholder')"

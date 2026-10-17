@@ -61,7 +61,7 @@ describe('Rows Edit', () => {
         );
     });
 
-    it('passes the row values and dimension lock to the row form fields', () => {
+    it('passes the row values to the row form fields', () => {
         const wrapper = mountPage({
             letter: 'C',
             cells_count: 3,
@@ -73,7 +73,6 @@ describe('Rows Edit', () => {
             letter: 'C',
             cellsCount: 3,
             flatsCount: 4,
-            disableDimensions: true,
         });
     });
 

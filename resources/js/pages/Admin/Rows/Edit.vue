@@ -26,7 +26,6 @@ defineProps<{
             :letter="row.letter"
             :cells-count="row.cells_count"
             :flats-count="row.flats_count"
-            :disable-dimensions="row.has_pallets"
             :errors="errors"
         />
     </ResourceFormPage>

@@ -105,16 +105,16 @@ class TripController extends Controller implements HasMiddleware
     {
         $trip->setRelation('checkpoints', $trip->checkpoints()
             ->select(['id', 'trip_id', 'relationable_type', 'relationable_id', 'type', 'notes', 'sort_order_in_trip'])
+            // `with()` types its constraints as taking any relation;
+            // `relationable` is always `Checkpoint`'s MorphTo.
             ->with(['relationable' => function (Relation $relation): void {
-                if (! $relation instanceof MorphTo) {
-                    return;
+                if ($relation instanceof MorphTo) {
+                    $relation->morphWith([Order::class => ['user:id,name', 'rep:id,name']]);
+                    $relation->constrain([
+                        StoreUser::class => fn ($query) => $query->select(['id', 'name']),
+                        Order::class => fn ($query) => $query->select(['id', 'code', 'by_rep', 'user_id', 'for_customer']),
+                    ]);
                 }
-
-                $relation->morphWith([Order::class => ['user:id,name', 'rep:id,name']]);
-                $relation->constrain([
-                    StoreUser::class => fn ($query) => $query->select(['id', 'name']),
-                    Order::class => fn ($query) => $query->select(['id', 'code', 'by_rep', 'user_id', 'for_customer']),
-                ]);
             }])->get());
 
         return Inertia::render('Store/Admin/Trips/Trips/Edit', [

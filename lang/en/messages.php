@@ -3,9 +3,11 @@
 return [
     'upload_rejected' => 'This file is unsupported, invalid, or exceeds the upload limits.',
     'admin_cannot_remove_own_access' => 'You cannot remove your own admin access.',
-    'row_cannot_resize_has_pallets' => 'Cannot resize a row that has pallets in it.',
+    'row_cannot_reduce_columns_has_pallets' => 'Cannot reduce the columns: some of the columns being removed hold pallets.',
+    'row_cannot_reduce_levels_has_pallets' => 'Cannot reduce the levels: some of the levels being removed hold pallets.',
     'row_cannot_delete_has_pallets' => 'Cannot delete a row that has pallets in it.',
-    'row_cannot_resize_has_history' => 'Cannot resize a row that has history logged against its cells.',
+    'row_cannot_reduce_columns_has_history' => 'Cannot reduce the columns: some of the columns being removed have history logged against their cells.',
+    'row_cannot_reduce_levels_has_history' => 'Cannot reduce the levels: some of the levels being removed have history logged against their cells.',
     'row_cannot_delete_has_history' => 'Cannot delete a row that has history logged against its cells.',
     'slot_does_not_exist' => 'This slot does not exist for this row.',
     'cannot_delete_own_account' => 'You cannot delete your own account.',

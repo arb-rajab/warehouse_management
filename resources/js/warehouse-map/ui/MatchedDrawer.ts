@@ -4,8 +4,9 @@ import { formatDate, palletName } from '../i18n/format';
 import { el } from '../utils/dom';
 import { dialogHead } from './Dialog';
 import { icon } from './icons';
+import { productStatusBadge } from './ProductPicker';
 import { SliceView } from './SliceView';
-import { expiryText, slotCode, stateDot } from './slotInfo';
+import { expiryText, slotCode, stateDot, tag } from './slotInfo';
 
 export interface DrawerState {
     open: boolean;
@@ -16,7 +17,11 @@ export interface DrawerState {
 
 type StateTab = 'all' | 'full' | 'opened';
 
-/** The Matched Products drawer: matches grouped by product, earliest expiry first. */
+/**
+ * The Matched Products drawer: matches grouped by product, earliest expiry
+ * first. A product that is no longer sold and a slot that is out of service
+ * are marked, so an inactive match never reads like an active one.
+ */
 export class MatchedDrawer extends SliceView<DrawerState> {
     readonly element = el('aside', {
         class: 'wms-drawer',
@@ -149,7 +154,17 @@ export class MatchedDrawer extends SliceView<DrawerState> {
             el(
                 'span',
                 { class: 'wms-pgroup__title' },
-                el('b', { class: 'wms-bidi', text: palletName(first, locale) }),
+                el(
+                    'span',
+                    { class: 'wms-pgroup__name' },
+                    el('b', {
+                        class: 'wms-bidi',
+                        text: palletName(first, locale),
+                    }),
+                    first.productActive
+                        ? null
+                        : productStatusBadge(false, (key) => this.t(key)),
+                ),
                 el('small', {
                     text: this.t('pallets', { count: sorted.length }),
                 }),
@@ -191,6 +206,7 @@ export class MatchedDrawer extends SliceView<DrawerState> {
                         { class: 'wms-loc' },
                         slotCode(slot.code),
                         stateDot(slot.state),
+                        slot.active ? null : tag(this.t('outOfService'), 'off'),
                         el('span', {
                             class: `wms-loc__date wms-exp wms-exp--${expiry?.tone ?? 'ok'}`,
                             text: formatDate(
