@@ -180,7 +180,7 @@
                             @if (Auth::user()->raizer_admin == true || get_setting('Product_Reviews_Section') == '1')
                                 @can('view_product_reviews')
                                     <li class="aiz-side-nav-item">
-                                        <a href="{{ route('reviews.index') }}" class="aiz-side-nav-link">
+                                        <a href="{{ route('admin.reviews.index') }}" class="aiz-side-nav-link">
                                             <span class="aiz-side-nav-text">{{ translate('Product Reviews') }}</span>
                                         </a>
                                     </li>

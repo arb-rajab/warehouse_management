@@ -38,6 +38,7 @@ use App\Http\Controllers\ProductQueryController;
 use App\Http\Controllers\PurchaseHistoryController;
 use App\Http\Controllers\RepresentativePaymentController;
 use App\Http\Controllers\ReviewController;
+use App\Http\Controllers\Store\Admin\ReviewController as StoreAdminReviewController;
 use App\Http\Controllers\SearchController;
 use App\Http\Controllers\ShopController;
 use App\Http\Controllers\SubscriberController;
@@ -350,7 +351,9 @@ Route::group(['middleware' => ['auth']], function() {
     Route::get('invoice/{order_id}', [InvoiceController::class, 'invoice_download'])->name('invoice.download');
 
     // Reviews
-    Route::resource('/reviews', ReviewController::class);
+    // The admin list moved to admin.reviews.index (Inertia); this keeps old bookmarks working.
+    Route::get('/reviews', [StoreAdminReviewController::class, 'redirectLegacyIndex'])->name('reviews.index');
+    Route::resource('/reviews', ReviewController::class)->except('index');
 
     // Product Conversation
     Route::resource('conversations', ConversationController::class);
