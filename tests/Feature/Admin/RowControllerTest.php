@@ -939,6 +939,33 @@ test('the row QR export still succeeds and produces one page per cell with a con
     expect($pdf->getPages())->toHaveCount(4);
 });
 
+test('row QR PDF pages fit the label canvas without unused paper below it', function (int $width, int $height) {
+    actingAsAdmin();
+    Setting::factory()->create(['qr_code_width' => $width, 'qr_code_height' => $height]);
+    $row = Row::factory()->create(['letter' => 'AS', 'cells_count' => 1, 'flats_count' => 3]);
+    $cells = $row->cells()->orderBy('flat_number')->get();
+    $pdfResponse = $this->get("/admin/rows/{$row->letter}/export-qr-codes")->assertOk();
+    $pdf = (new PdfParser)->parseContent($pdfResponse->getContent());
+    expect($pdf->getPages())->toHaveCount(3);
+
+    foreach ($pdf->getPages() as $index => $page) {
+        $svgResponse = $this->get("/admin/cells/{$cells[$index]->id}/export-qr-code")->assertOk();
+        $svg = simplexml_load_string($svgResponse->getContent());
+        $mediaBox = $page->get('MediaBox')->getContent();
+        // PDF points are 3/4 of a CSS pixel at dompdf's default 96 DPI.
+        expect((float) $mediaBox[2]->getContent())->toBe((float) $svg['width'] * 0.75)
+            ->and((float) $mediaBox[3]->getContent())->toBe((float) $svg['height'] * 0.75)
+            ->and((int) $svg['width'])->toBe($width)
+            ->and((int) $svg['height'])->toBeLessThanOrEqual($height)
+            ->and($page->get('Contents')->getContent())->toMatch('/^f\*$/m');
+    }
+})->with([
+    'default portrait settings' => [850, 1000],
+    'square settings' => [280, 280],
+    'custom settings' => [900, 950],
+    'wide short settings' => [1000, 100],
+]);
+
 test('the qr-labels Blade view sizes the PDF page from the configured QR settings and embeds each label image verbatim', function () {
     // Renders the exact view RowController::exportQrCodes() feeds to
     // Pdf::loadView(), bypassing the PDF conversion step. Each entry's
