@@ -2812,6 +2812,38 @@
             "dateHelp": "Leave the date range empty for a discount without a scheduled period.",
             "discount": "Discount",
             "discountType": "Discount type"
+        },
+        "representatives": {
+            "visits": {
+                "details": "Visit details",
+                "dayTitle": "{name}’s visits",
+                "back": "Back to visits",
+                "customer": "Customer name",
+                "company": "Company name",
+                "email": "Email",
+                "phone": "Phone",
+                "serial": "Customer serial",
+                "accountId": "Account ID",
+                "date": "Visit date",
+                "order": "Order #",
+                "status": "Order status",
+                "orderDate": "Order date",
+                "amount": "Total amount",
+                "paymentMethod": "Payment method",
+                "customerNotes": "Customer notes",
+                "customerOtajerId": "Customer Otajer ID",
+                "deliveryDate": "Delivery date",
+                "noOrder": "There is no specific order for this visit.",
+                "missingCustomer": "Unknown customer",
+                "note": "Visit note",
+                "saveNote": "Save note",
+                "saving": "Saving…",
+                "saved": "Note saved.",
+                "mapLabel": "Map of representative visits",
+                "filterDate": "Filter by date",
+                "emptyDay": "No visits found on this date",
+                "tryDate": "Please try selecting a different date."
+            }
         }
     },
     "store.attributes.index.title": "Product attributes",

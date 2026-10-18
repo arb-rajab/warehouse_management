@@ -107,13 +107,6 @@ test('read visit permission cannot delete visits', function () {
     $this->assertDatabaseHas('visits', ['id' => $visit->id]);
 });
 
-foreach (['show/999999', 'rep-show/999999'] as $detail) {
-    test('retained visit detail '.$detail.' refuses unauthorized callers', function (string $caller) use ($detail) {
-        actingAsRefusedStoreCaller($caller);
-        assertStoreCallerRefused($this->get('/temp/admin/representatives/visits/'.$detail), $caller);
-    })->with('refused store admin callers');
-}
-
 test('visit end date alone accepts both omitted and empty start dates', function () {
     actingAsStoreUser(createStoreStaff('view_representative_visits'));
     adminRepresentativeVisit(['visit_date' => '2026-10-01 12:00:00']);

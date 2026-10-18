@@ -20,11 +20,9 @@ import {
     bulkDestroy,
     destroy as destroyVisit,
     index as visitsIndex,
-} from '@/actions/App/Http/Controllers/Store/Admin/VisitController';
-import {
     show,
     show_all_visits_in_a_day,
-} from '@/actions/App/Http/Controllers/VisitController';
+} from '@/actions/App/Http/Controllers/Store/Admin/VisitController';
 import AddResourceLink from '@/components/AddResourceLink.vue';
 import DataTable from '@/components/DataTable.vue';
 import FieldError from '@/components/FieldError.vue';
@@ -454,6 +452,16 @@ describe('representative visits index', () => {
                 (link) => link.text() === 'Representative visits on this day',
             );
         expect(details?.attributes('href')).toBe(show.url(visit));
+        expect(
+            wrapper.findAllComponents(Link).map((link) => link.props('href')),
+        ).toContainEqual(show(visit));
+        expect(
+            wrapper.findAllComponents(Link).map((link) => link.props('href')),
+        ).toContainEqual(
+            show_all_visits_in_a_day(visit.representative!, {
+                query: { date: '2026-10-08' },
+            }),
+        );
         expect(day?.attributes('href')).toBe(
             show_all_visits_in_a_day.url(visit.representative!, {
                 query: { date: '2026-10-08' },

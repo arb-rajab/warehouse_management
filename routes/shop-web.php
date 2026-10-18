@@ -43,7 +43,7 @@ use App\Http\Controllers\SearchController;
 use App\Http\Controllers\ShopController;
 use App\Http\Controllers\SubscriberController;
 use App\Http\Controllers\SupportTicketController;
-use App\Http\Controllers\VisitController;
+use App\Http\Controllers\Store\Admin\VisitController;
 use App\Http\Controllers\WalletController;
 use App\Http\Controllers\WishlistController;
 
