@@ -10,6 +10,8 @@ use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Inertia\Inertia;
+use Inertia\Response;
 
 class GoogleMapController extends Controller implements HasMiddleware
 {
@@ -17,6 +19,17 @@ class GoogleMapController extends Controller implements HasMiddleware
     public static function middleware(): array
     {
         return [new Middleware('permission:google_map_setting')];
+    }
+
+    public function index(): Response
+    {
+        return Inertia::render('Store/Admin/Setup/GoogleMap/Index', [
+            'settings' => [
+                'google_map' => (bool) get_setting('google_map', false),
+                'google_map_latitude' => (string) get_setting('google_map_latitude', ''),
+                'google_map_longtitude' => (string) get_setting('google_map_longtitude', ''),
+            ],
+        ]);
     }
 
     public function update(UpdateGoogleMapRequest $request): RedirectResponse

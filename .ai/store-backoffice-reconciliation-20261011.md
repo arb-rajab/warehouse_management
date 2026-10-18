@@ -3791,3 +3791,100 @@ app-shell consumers including the shell test, **3** actual layout-shell
 extending views, **1,048** `/temp` and **436** `/temp/admin` registrations.
 The retained editor remains **8 fields in 8 views** across the protected
 storefront/seller surfaces. No production data was changed.
+
+
+## Google Map settings step 32 (2026-10-18)
+
+**Working tree only; runtime verification and shipping blocked.** Branch
+`codex/step-32-google-map` is based on fetched `origin/develop` at `4cb3c44a`
+(PR #440). No commit, push, PR or merge has happened. The owner authorized
+one PR into develop and its merge, `[skip ci]` in every commit/PR title/merge
+message, and a follow-up `[skip ci]` commit recording the PR number before
+merging. Those shipping steps remain outstanding. No attribution or
+CI-Verified trailer was added. Model: GPT-6 Codex; the exact variant and
+configured effort are not exposed to this session.
+
+### Scope and decisions
+
+- The owner approved npm Leaflet/OpenStreetMap for the default-location picker,
+  lifting the historical §17 Google Map hold. The GET now renders
+  `Store/Admin/Setup/GoogleMap/Index` from `Store\Admin\GoogleMapController`.
+  Names, URIs, `google_map_setting` and the typed allowlisted writer remain.
+  Coordinates retain the `google_map_longtitude` spelling. The request already
+  had both range rules; no range-validation behavior changed.
+- The page uses `StoreAdminLayout`, `ResourceFormPage`, Wayfinder,
+  `StoreBooleanField` and module fields on the shared `StoreLeafletMap`.
+  Numeric fields are editable with native min/max/step and paired-required
+  constraints; clicking or dragging updates them, manual edits move the marker.
+  Blank/invalid points have no marker; unset locations start at a world view.
+  Disabling preserves coordinates by omitting those fields from submission.
+  The toggle label explicitly refers to the storefront's Google map.
+  English/Arabic keys and the menu's Inertia flag/test are updated.
+- Only the back-office Blade view was removed (`git rm`), after tracing its
+  sole renderer and the shared partial's other consumers. The protected
+  `shop/frontend/partials/google_map.blade.php`, frontend address modal,
+  profile/dashboard and seller profile/shop behavior remain unchanged.
+  No CSP, package manifest or lockfile changed. The existing OSM tile host
+  allowance is reused. The root controller stays in Pint/PHPStan exclusions
+  for seller commission/verification screens. No permission/route ratchet
+  changed; its root middleware test drops only the moved action.
+- Pest was expanded for Inertia render/full payload, missing settings, routes
+  and gate, boundary validation, with existing refused-write/DB/cache and
+  allowlist tests retained. Full-mount page/field Vitest and a real Leaflet
+  Playwright spec were added. The browser spec covers clicks, drag, manual
+  input, native range rejection, persistence, disabled preservation, RTL/LTR
+  and dark contrast under enforced CSP with locally answered tile images.
+  These new tests have not passed locally; see the precise limits below.
+
+### Runtime and verification
+
+- `AGENTS.md` and shared framework/conventions/index were read first. No
+  Claude hook was assumed or started; Boost is unavailable. Installed sources
+  report Laravel 13.34.0, Inertia Laravel 3.3.1, Wayfinder 0.1.21, Pest 5.0.4,
+  Pint 1.30.4 and PHPStan 2.2.8. Both vendor/ and node_modules/ exist, but
+  generated actions are stale/incomplete and Leaflet/types are absent from
+  node_modules despite being pinned in the fetched package manifests.
+- `git fetch origin develop` succeeded after requesting sandbox network
+  access. The host has no `php` or Composer executable. Docker daemon inspection
+  succeeded and local images include `wms-cloud-php:8.5`, `php:8.5-cli` and
+  `composer:2`. The requested Docker PHP run was **not executed**: automatic
+  approval review failed because the workspace was out of credits. The
+  reviewer explicitly called this a review failure, not an unsafe-action
+  determination. No approval or network restriction was bypassed.
+- **Develop baseline Pest: skipped**, including GoogleMapControllerTest,
+  settings tests and Legacy permission/route files; PHP could not be started.
+  No baseline result is inferred from prior sessions.
+- **Passed:** scoped Prettier on all new/changed JS/Vue/JSON/spec files;
+  scoped ESLint for the new field component, its test and Playwright spec;
+  existing FormField and StoreBooleanField Vitest: **2 files, 10 tests passed**;
+  `git diff --check`.
+- **Attempted, blocked:** page/menu Vitest failed during import resolution
+  (missing generated GoogleMapController and existing OfferController actions),
+  before any tests ran. Field/base-map Vitest failed during import resolution
+  (missing Leaflet package/CSS), before any tests ran. Scoped menu/page ESLint
+  reported import-order errors influenced by missing generated modules; the
+  intended generated-action import ordering is preserved pending regeneration.
+  `npm run types:check` ran twice: 458 errors, then 456 after fixing the local
+  wrapper.exists and CSP helper argument errors. Remaining new-file errors
+  are missing Leaflet/types and generated GoogleMapController; the project
+  check still fails and is not claimed as passing.
+- **Required explicit command attempted:**
+  `python3 .claude/scripts/pre_push_check.py --full` exited 1. Setup status
+  reported "No session setup is in progress"; the first step, Wayfinder types
+  (`php artisan wayfinder:generate --skip-routes --with-form`), could not
+  start: `FileNotFoundError: [Errno 2] No such file or directory: 'php'`.
+  Consequently **none** of that run's ESLint, Prettier, vue-tsc, Vitest, Pint,
+  PHPStan, config-cache clearing or Pest steps ran. The separate scoped results
+  above are not a full pre-push pass. Bare/attested mode was never invoked.
+- **Skipped/not run:** PHP 8.5 execution, baseline and changed Pest, Pint,
+  PHPStan, successful Wayfinder generation, production build, Playwright,
+  full Vitest, MySQL-specific tests, dependency audits, deploy-script tests
+  and live OSM requests. **PR CI, PR/merge SAST and deploy did not run.**
+
+Working-tree inventory confirmed from files/searches: **26** backend Blade
+files, **13** literal app-shell consumers including StoreBackOfficeShellTest,
+**3** layout-shell extending views. No route was added or removed; prior
+verified counts were 1,048 `/temp`, 436 `/temp/admin`; route:list is unrun.
+No production data was changed. Resume by restoring approval-review credits,
+starting PHP 8.5, completing dependency/Wayfinder setup, running the baseline
+on develop and all affected/final checks, then the authorized shipping flow.

@@ -113,3 +113,12 @@ test('visit maps use the strict CSP without expanding its tile allowance', funct
             ->and(explode(' ', cspDirectiveOf($response, 'img-src')))->toEqualCanonicalizing(['img-src', "'self'", 'https://tile.openstreetmap.org', 'data:', 'blob:']);
     }
 });
+
+
+test('Google Map settings keep the strict policy and existing tile allowance', function () {
+    actingAsStoreUser(createStoreStaff('google_map_setting'));
+    $response = $this->get(route('google-map.index'))->assertOk();
+    expect(scriptSrcOf($response))->toBe("script-src 'self'")
+        ->and(explode(' ', cspDirectiveOf($response, 'img-src')))->toEqualCanonicalizing(['img-src', "'self'", 'https://tile.openstreetmap.org', 'data:', 'blob:'])
+        ->and(cspDirectiveOf($response, 'connect-src'))->not->toContain('openstreetmap');
+});

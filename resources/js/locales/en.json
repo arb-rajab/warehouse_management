@@ -369,6 +369,15 @@
                 "edit": "Edit"
             },
             "store": {
+                "googleMap": {
+                    "title": "Google map settings",
+                    "enabled": "Enable the storefront’s Google map",
+                    "location": "Default location",
+                    "latitude": "Latitude",
+                    "longitude": "Longitude",
+                    "mapLabel": "Choose the default location",
+                    "hint": "Click the map, drag the marker, or enter coordinates."
+                },
                 "productLabel": "Product",
                 "productPlaceholder": "Select a product…",
                 "expirationLabel": "Expiration date",

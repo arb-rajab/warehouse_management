@@ -25,7 +25,6 @@ class BusinessSettingsController extends Controller implements HasMiddleware
             new Middleware('permission:seller_commission_configuration', only: ['vendor_commission', 'vendor_commission_update']),
             new Middleware('permission:seller_verification_form_configuration', only: ['seller_verification_form', 'seller_verification_form_update']),
             new Middleware('permission:features_activation', only: ['updateSellerCommissionActivation']),
-            new Middleware('permission:google_map_setting', only: ['google_map']),
         ];
     }
     public function updateSellerCommissionActivation(\App\Http\Requests\Store\Admin\UpdateSellerCommissionActivationRequest $request): Response
@@ -37,10 +36,6 @@ class BusinessSettingsController extends Controller implements HasMiddleware
         \Illuminate\Support\Facades\Cache::forget('business_settings');
 
         return response('1');
-    }
-
-    public function google_map(Request $request) {
-        return view('shop.backend.setup_configurations.google_configuration.google_map');
     }
 
     /**

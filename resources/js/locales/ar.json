@@ -369,6 +369,15 @@
                 "edit": "تعديل"
             },
             "store": {
+                "googleMap": {
+                    "title": "إعدادات خريطة Google",
+                    "enabled": "تفعيل خريطة Google لواجهة المتجر",
+                    "location": "الموقع الافتراضي",
+                    "latitude": "خط العرض",
+                    "longitude": "خط الطول",
+                    "mapLabel": "اختيار الموقع الافتراضي",
+                    "hint": "انقر على الخريطة أو اسحب العلامة أو أدخل الإحداثيات."
+                },
                 "productLabel": "المنتج",
                 "productPlaceholder": "اختر منتجًا…",
                 "expirationLabel": "تاريخ انتهاء الصلاحية",
