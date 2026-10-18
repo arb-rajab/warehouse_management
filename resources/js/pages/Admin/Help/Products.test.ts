@@ -52,10 +52,20 @@ describe('Help Products', () => {
 
         const headings = wrapper.findAll('h2').map((h2) => h2.text());
         expect(headings).toEqual([
+            t('help.products.findingProducts.heading'),
             t('help.products.defaultBoxes.heading'),
             t('help.products.settingBoxes.heading'),
             t('help.products.exportingQr.heading'),
         ]);
+    });
+
+    it('explains product status and sorting with real status previews', () => {
+        const wrapper = mountPage();
+        expect(wrapper.text()).toContain(
+            t('help.products.findingProducts.body'),
+        );
+        expect(wrapper.text()).toContain(t('products.status.active'));
+        expect(wrapper.text()).toContain(t('products.status.inactive'));
     });
 
     it('explains why products default to 50 boxes per pallet', () => {

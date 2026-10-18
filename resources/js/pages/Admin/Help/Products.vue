@@ -6,13 +6,19 @@ import DataTable from '@/components/DataTable.vue';
 import FilterNumberField from '@/components/FilterNumberField.vue';
 import HelpTopicPage from '@/components/HelpTopicPage.vue';
 import HelpUiPreview from '@/components/HelpUiPreview.vue';
+import ProductOptionLabel from '@/components/ProductOptionLabel.vue';
 import {
     filterSectionHeadingClass as sectionHeadingClass,
     filterTriggerButtonClass,
 } from '@/lib/filters';
 import { t } from '@/lib/i18n';
 
-const sections = ['defaultBoxes', 'settingBoxes', 'exportingQr'];
+const sections = [
+    'findingProducts',
+    'defaultBoxes',
+    'settingBoxes',
+    'exportingQr',
+];
 const previewBoxCountDraft = ref('50');
 
 /**
@@ -50,13 +56,38 @@ const previewProducts = [
                 {{ t(`help.products.${section}.body`) }}
             </p>
             <HelpUiPreview
+                v-if="section === 'findingProducts'"
+                class="mt-2 block"
+            >
+                <ProductOptionLabel
+                    :product="{
+                        id: 1,
+                        name: 'Example product',
+                        ar_name: '',
+                        active: true,
+                    }"
+                />
+                <ProductOptionLabel
+                    :product="{
+                        id: 2,
+                        name: 'Example product',
+                        ar_name: '',
+                        active: false,
+                    }"
+                />
+            </HelpUiPreview>
+            <HelpUiPreview
                 v-if="section === 'settingBoxes'"
                 inert
                 class="mt-2 block"
             >
                 <DataTable
                     :columns="[
-                        { label: t('products.columns.product') },
+                        { label: t('products.columns.id'), sortKey: 'id' },
+                        {
+                            label: t('products.columns.product'),
+                            sortKey: 'name',
+                        },
                         { label: t('products.columns.boxesPerPallet') },
                         {
                             label: t('products.columns.full'),
@@ -77,10 +108,12 @@ const previewProducts = [
                             sortKey: 'expiring_soon_count',
                         },
                     ]"
+                    :sort="{ by: 'name', direction: 'asc' }"
                     :rows="previewProducts"
                     :empty-message="t('products.empty')"
                 >
                     <template #row="{ row }">
+                        <td class="px-4 py-2">{{ row.id }}</td>
                         <td
                             class="px-4 py-2 font-medium text-gray-900 dark:text-neutral-100"
                         >

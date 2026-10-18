@@ -1,3 +1,4 @@
+import { CircleCheck, CircleSlash } from '@lucide/vue';
 import { mount } from '@vue/test-utils';
 import { describe, expect, it } from 'vitest';
 import { t } from '@/lib/i18n';
@@ -8,6 +9,9 @@ describe('ProductActiveBadge', () => {
         const wrapper = mount(ProductActiveBadge, { props: { active: true } });
 
         expect(wrapper.text()).toBe(t('products.status.active'));
+        expect(
+            wrapper.getComponent(CircleCheck).attributes('aria-hidden'),
+        ).toBe('true');
     });
 
     it('labels an inactive product as inactive', () => {
@@ -16,5 +20,8 @@ describe('ProductActiveBadge', () => {
         });
 
         expect(wrapper.text()).toBe(t('products.status.inactive'));
+        expect(
+            wrapper.getComponent(CircleSlash).attributes('aria-hidden'),
+        ).toBe('true');
     });
 });

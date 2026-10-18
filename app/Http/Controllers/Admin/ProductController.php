@@ -36,7 +36,7 @@ class ProductController extends Controller
      * @var list<string>
      */
     private const array SORTABLE_COLUMNS = [
-        'name', 'full_cells_count', 'opened_cells_count', 'expired_cells_count',
+        'id', 'name', 'full_cells_count', 'opened_cells_count', 'expired_cells_count',
         'expiring_soon_count',
     ];
 

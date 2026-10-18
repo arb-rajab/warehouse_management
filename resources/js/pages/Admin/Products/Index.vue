@@ -83,8 +83,8 @@ const filters = reactive({
     date_from: props.filters.date_from ?? '',
     date_to: props.filters.date_to ?? '',
     created_within_days: props.filters.created_within_days?.toString() ?? '',
-    sort_by: props.filters.sort_by ?? '',
-    sort_direction: props.filters.sort_direction ?? '',
+    sort_by: props.filters.sort_by ?? 'name',
+    sort_direction: props.filters.sort_direction ?? 'asc',
     per_page: props.filters.per_page ?? 20,
 });
 
@@ -200,8 +200,8 @@ function clearFilters(): void {
     filters.date_from = '';
     filters.date_to = '';
     filters.created_within_days = '';
-    filters.sort_by = '';
-    filters.sort_direction = '';
+    filters.sort_by = 'name';
+    filters.sort_direction = 'asc';
     router.get(
         productsIndex().url,
         { per_page: filters.per_page },
@@ -786,9 +786,11 @@ function refreshBarcodesDialogProduct(): void {
             :columns="[
                 {
                     label: t('products.columns.id'),
+                    sortKey: 'id',
                 },
                 {
                     label: t('products.columns.product'),
+                    sortKey: 'name',
                     filtered: productColumnFiltered,
                     filterKey: 'product',
                 },

@@ -21,6 +21,22 @@ function idBadge(wrapper: ReturnType<typeof mountLabel>) {
 }
 
 describe('ProductOptionLabel', () => {
+    it('keeps status outside the wrapping name area for long product names', () => {
+        const wrapper = mountLabel({
+            id: 42,
+            name: 'VeryLongProductName'.repeat(20),
+            ar_name: '',
+            active: false,
+        });
+        const badge = wrapper.get('[data-testid="product-active-badge"]');
+
+        expect(badge.text()).toBe(t('products.status.inactive'));
+        expect(badge.element.parentElement).toBe(wrapper.element);
+        expect(primary(wrapper).classes()).toContain(
+            '[overflow-wrap:anywhere]',
+        );
+    });
+
     afterEach(() => {
         i18n.global.locale.value = 'en';
     });
