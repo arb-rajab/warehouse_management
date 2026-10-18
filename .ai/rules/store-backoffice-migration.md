@@ -9,6 +9,7 @@ paths:
   - 'resources/js/components/StoreNewsletterFormFields.vue,resources/js/components/StoreNewsletterRecipients.vue,resources/js/components/StoreTicketReplyForm.vue,resources/js/lib/storeSupportTicket.ts,app/Services/Store/**'
   - 'resources/js/components/StoreWebsite*'
   - 'resources/js/components/StoreProduct*,resources/js/lib/storeProductForm.ts'
+  - 'resources/js/components/StoreGoogleMapFormFields.vue'
   - 'resources/js/components/StoreTripStatusDialog.vue,resources/js/components/StoreTripFormFields.vue,resources/js/components/StoreTripMap.vue,resources/js/components/StoreLeafletMap.vue,resources/js/components/StoreVisitMap.vue,resources/js/lib/storeTrip.ts'
   - 'app/Http/Controllers/Store/**,app/Http/Requests/Store/**,app/Http/Resources/Store/**'
   - 'app/Http/Middleware/HandleInertiaRequests.php,app/Http/Middleware/HandleStoreBladePages.php,app/Http/Middleware/SendSecureHeaders.php'
@@ -18,7 +19,8 @@ paths:
 
 # Moving the store back office from Blade to Inertia
 
-Latest follow-up: [representative visit details and day maps](#31-representative-visit-details-and-day-maps-2026-10-18).
+Latest follow-up: [Google Map settings](#32-google-map-settings-2026-10-18).
+Visit follow-up: [representative visit details and day maps](#31-representative-visit-details-and-day-maps-2026-10-18).
 Trip-map follow-up: [the trip map picker on Leaflet from npm](#30-trip-map-picker-2026-10-17).
 Server-status follow-up: [the server status page's deletion](#29-server-status-page-deletion-2026-10-17).
 Reviews follow-up: [the legacy reviews screen's retirement](#28-legacy-reviews-screen-retirement-2026-10-17).
@@ -32,7 +34,7 @@ Digital-form follow-up: [the digital product create and edit forms](#21-digital-
 Website follow-up: [the website footer, appearance and custom pages, and the generic settings writer's retirement](#20-website-footer-appearance-and-custom-pages-2026-10-13).
 Ticket/newsletter follow-up: [the newsletter and the support ticket detail on the shared editor](#19-newsletter-and-support-ticket-detail-on-the-shared-editor-2026-10-13).
 Editor follow-up: [the shared Tiptap editor and blog post forms](#18-shared-rich-text-editor-and-blog-post-forms-2026-10-13).
-Setup-settings follow-up: [general settings verification and the Google Map hold](#17-setup-configuration-settings-follow-up-2026-10-12).
+Setup-settings follow-up: [general settings verification and the former Google Map hold](#17-setup-configuration-settings-follow-up-2026-10-12).
 Product-list follow-up: [in-house and all-products list verification](#16-in-house-and-all-products-lists-follow-up-2026-10-12).
 Digital-product follow-up: [digital product list verification](#15-digital-product-list-follow-up-2026-10-12).
 Brand follow-up: [brand migration verification](#14-brand-administration-follow-up-2026-10-12).
@@ -41,7 +43,7 @@ Customer-package follow-up: [customer package migration verification](#12-custom
 Carrier follow-up: [carrier migration verification](#11-carrier-administration-follow-up-2026-10-12).
 PR #377 verification: [final all-store browser results](../store-backoffice-reconciliation-20261011.md#final-all-store-browser-verification-2026-10-12)
 close the pending browser gate. Earlier dated verification sections remain
-historical evidence; §10 records reconciliation results and §§11–31 record
+historical evidence; §10 records reconciliation results and §§11–32 record
 subsequent module verification and limits.
 
 ## 1. Decision and scope
@@ -530,7 +532,7 @@ Verification below distinguishes the original reconciliation from this follow-up
 | Staff and roles | Complete pilot | Existing six Inertia pages retained; action gates unchanged |
 | Reference/shipping/tax/currency | Complete selected subset | Canonical `35ae3133` controllers/forms/routes; duplicate `e5523338` implementation superseded |
 | Carrier administration | Complete | List/create/edit and CRUD/status use Inertia; existing `manage_carriers` gate, tariff contract and public/API consumers preserved (§11) |
-| Language/settings | Complete selected subset | Language CRUD and translation-selector validation separated; dedicated settings endpoints with reserved-key protection; general settings use Inertia with a typed writer and a config-managed timezone (§17); the generic `business_settings.update` writer is retired (§20); the Google Map settings GET stays Blade because its enabled form loads the Google Maps script (map decision, §17) |
+| Language/settings | Complete selected subset | Language CRUD and translation-selector validation separated; dedicated settings endpoints with reserved-key protection; general settings use Inertia with a typed writer and a config-managed timezone (§17); the generic `business_settings.update` writer is retired (§20); the Google Map settings GET uses Inertia and the approved Leaflet picker (§32; verification pending) |
 | Reports/notifications | Complete selected subset | Inertia report/admin notification routes; public/customer/seller notification consumers remain |
 | Uploads/profile | Complete selected subset | Canonical `944e2e1e` backend/picker; per-action authorization and authenticated-user profile |
 | Customers/representatives | Partial | Customers, addresses, representatives/packages/payments, customer package administration (§12) and visit list/detail/day maps (§31) implemented; classified products are to be converted (owner decision, §5), a later step |
@@ -605,7 +607,7 @@ dedicated allowlisted compatibility endpoint, not a general settings writer.
   map picker is its first consumer, with OpenStreetMap tiles (the provider
   the Blade maps already used) allowed in the strict `img-src` (§2.5).
   Chart.js is approved but not yet installed: the dashboard conversion adds it.
-  The visit detail/day maps use its shared base since §31; their unpkg
+  The visit detail/day maps use its shared base since §31; Google Map settings reuse it in §32, replacing only the admin picker with OpenStreetMap tiles, without widening CSP or changing the storefront Google Maps partial. Their unpkg
   Leaflet 1.7.1 imports are removed. The Blade dashboard's chart assets stay
   while that screen remains Blade.
 - **Sellers and classified products: convert, not delete (owner decision,
@@ -638,7 +640,7 @@ dedicated allowlisted compatibility endpoint, not a general settings writer.
 
 ### 5.1 Actual retained backend Blade files
 
-The current backend inventory contains **27 Blade files**, down from 73 after
+The current backend inventory contains **26 Blade files**, down from 73 after
 removing three screens each for carriers, customer packages and categories, the
 two brand screens, the digital product list (§15), general settings (§17), the
 two blog post forms (§18), the newsletter and ticket detail (§19), the
@@ -650,10 +652,10 @@ with their two checkpoint row partials (§25), the trip orders list
 (§26), the trip checkpoints page with its status modal (§27), the legacy product
 reviews list (§28), the server status page (§29), and the trip map picker with
 its three `trips/inc` partials (§30), and the two representative visit
-detail screens with their map partial (§31).
+detail screens with their map partial (§31), and Google Map settings (§32).
 The in-house and all-products lists (§16) removed none:
 `product/products/index.blade.php` is shared with the retained seller product
-list. The Google Map settings screen stays (§17).
+list. Google Map settings are converted in §32.
 These files remain physically present. Hardening a Blade handler does not count
 as conversion. Protected shells/downloads/invoices are not conversion targets.
 
@@ -665,7 +667,6 @@ as conversion. Protected shells/downloads/invoices are not conversion targets.
 - **layouts:** `layouts/app.blade.php`, `layouts/layout.blade.php`.
 - **product:** `product/products/index.blade.php`, `product/products/sku_combinations.blade.php`, `product/products/sku_combinations_edit.blade.php`.
 - **sellers:** `sellers/create.blade.php`, `sellers/edit.blade.php`, `sellers/index.blade.php`, `sellers/payment.blade.php`, `sellers/payment_histories/index.blade.php`, `sellers/payment_modal.blade.php`, `sellers/profile_modal.blade.php`, `sellers/seller_commission/index.blade.php`, `sellers/seller_verification_form/index.blade.php`, `sellers/seller_withdraw_requests/index.blade.php`, `sellers/seller_withdraw_requests/payment_modal.blade.php`, `sellers/seller_withdraw_requests/withdraw_message_modal.blade.php`, `sellers/verification.blade.php`.
-- **setup_configurations:** `setup_configurations/google_configuration/google_map.blade.php`.
 
 ## 6. Registered migrated controllers and consumers
 
@@ -702,7 +703,7 @@ line numbers or count sibling snapshots.
 | `DynamicPopupController` | `bulk-dynamic-popup-delete`, `dynamic-popups.index`, `dynamic-popups.store`, `dynamic-popups.update-status`, `dynamic-popups.create`, `dynamic-popups.update`, `dynamic-popups.destroy`, `dynamic-popups.edit` | `Store/Admin/Marketing/DynamicPopups/Index.vue`, `Store/Admin/Marketing/DynamicPopups/Create.vue`, `Store/Admin/Marketing/DynamicPopups/Edit.vue` |
 | `FlashDealController` | `flash_deals.index`, `flash_deals.store`, `flash_deals.create`, `flash_deals.update`, `flash_deals.destroy`, `flash_deals.edit`, `flash_deals.update_featured`, `flash_deals.update_status` | `Store/Admin/Marketing/FlashDeals/Index.vue`, `Store/Admin/Marketing/FlashDeals/Create.vue`, `Store/Admin/Marketing/FlashDeals/Edit.vue` |
 | `GeneralSettingsController` | `general_setting.index`, `general_setting.update` | `Store/Admin/Setup/GeneralSettings/Index.vue` |
-| `GoogleMapController` | `google-map.update` | Redirect to the retained Blade `google-map.index` GET (root `BusinessSettingsController::google_map`; map decision, §17) |
+| `GoogleMapController` | `google-map.index`, `google-map.update` | `Store/Admin/Setup/GoogleMap/Index.vue` with `StoreGoogleMapFormFields` and the shared npm Leaflet base (§32); writer redirects to the same index |
 | `LanguageController` | `languages.index`, `languages.store`, `app-translations.export`, `app-translations.import`, `app-translations.store`, `app-translations.show`, `languages.create`, `languages.key_value_store`, `languages.update-status`, `languages.update_rtl_status`, `languages.destroy`, `languages.show`, `languages.edit`, `languages.update` | `Store/Admin/Languages/Index.vue`, `Store/Admin/Languages/Create.vue`, `Store/Admin/Languages/Edit.vue`, `Store/Admin/Languages/Translations.vue` |
 | `LegacyWebsiteScriptsController` | `website.scripts.compatibility.update` | Redirect to `website.appearance`; posted by the plain-code scripts form of `Store/Admin/Website/Appearance.vue` (§20) |
 | `NewsletterController` | `newsletters.index`, `newsletters.recipients`, `newsletters.send` | `Store/Admin/Marketing/Newsletters/Index.vue` (§19); typed send redirecting to the retained Blade dashboard; bounded JSON recipient search |
@@ -744,11 +745,10 @@ line numbers or count sibling snapshots.
 | `WebsitePageController` | `website.pages`, `custom-pages.create`, `custom-pages.store`, `custom-pages.edit`, `custom-pages.update`, `custom-pages.destroy` | `Store/Admin/Website/Pages/Index.vue`, `Create.vue`, `Edit.vue` (§20); the public `custom-pages.show_custom_page` and `mobile.custom-pages` stay on root `PageController` (Blade) |
 | `ZoneController` | `zones.index`, `zones.store`, `zones.create`, `zones.update`, `zones.destroy`, `zones.edit` | `Store/Admin/Setup/Zones/Index.vue`, `Store/Admin/Setup/Zones/Edit.vue`, `Store/Admin/Setup/Zones/Create.vue` |
 
-Visit details/day maps are served by retained root `VisitController`; the
-Google map settings also retain their Blade GET consumer. The trip map picker
-is Inertia since §30. Root
-`BusinessSettingsController` keeps the Google Map GET, the seller
-commission/verification screens and `env_key_update` (the generic settings
+Visit details/day maps use `Store\Admin\VisitController` since §31.
+Google Map settings use `Store\Admin\GoogleMapController` since §32.
+The trip map picker is Inertia since §30. Root
+`BusinessSettingsController` keeps the seller commission/verification screens and `env_key_update` (the generic settings
 writer and its refusing `.env` stub are gone, §20), so it stays in both
 analysis exclusion lists. Seller/classified screens use retained root handlers. The newsletter and
 the ticket detail use their typed admin controllers and Inertia pages (§19). Explicit approval and implementation gaps are tracked
@@ -1506,13 +1506,13 @@ No deployment or production-data mutation is authorized.
 ## 17. Setup configuration settings follow-up (2026-10-12)
 
 General settings now use `Store/Admin/Setup/GeneralSettings/Index`. The Google
-Map settings screen stays Blade. Work is on `ccr-b39fe4ad-n2p9xs`, branched from
+Map settings screen stayed Blade in this historical step; §32 lifts that hold. Work is on `ccr-b39fe4ad-n2p9xs`, branched from
 `develop` at `e3eb0f5` (the PR #390 merge, after PR #389 at `a14c659`). The
 owner authorized this session's PR (#391), its merge into `develop` and
 `[skip ci]` on both. Every commit, the PR and its merge commit carry `[skip ci]`, so no PR CI,
 no PR or merge SAST and no `develop` deploy ran for them.
 
-**Google Map settings: held, map decision.** The screen's enabled state loads a
+**Google Map settings: historical hold, lifted in §32.** The screen's enabled state loads a
 map script. `google_map.blade.php:105-107` includes
 `shop.frontend.partials.google_map` whenever `google_map == 1`, and that partial
 loads `https://maps.googleapis.com/maps/api/js?…&libraries=places` (`:117`) and
@@ -3322,3 +3322,73 @@ direct literal app-shell consumers counting `StoreBackOfficeShellTest`,
 under `/temp`, **436** under `/temp/admin` (one new note alias). The retained
 Blade editor inventory is unchanged from §30. No production-data mutation
 or deployment was performed.
+
+
+## 32. Google Map settings (2026-10-18)
+
+Drafted by a Codex session on `codex/step-32-google-map` from `develop` at
+`4cb3c44a` (PR #440), then verified, fixed and shipped from a Claude session
+that had PHP 8.5.11, `vendor/` and `node_modules`. The owner authorized one PR
+into `develop` (PR #442), its merge, `[skip ci]` on every commit, the PR title
+and the merge message, and a follow-up commit recording the PR number. So no PR CI, PR
+or merge SAST and no `develop` deploy ran; the local checks in the ledger are
+the verification.
+
+**Owner map decision.** The §17 hold is lifted for this screen: Leaflet from
+npm with OpenStreetMap tiles replaces the admin Google script. The storefront's
+Google map still follows `google_map`; its script partial and consumers are
+unchanged. No dependency or CSP configuration change is needed or made.
+
+**Backend.** GET `google-map.index` (`/temp/admin/google-map`) moves to
+`Store\Admin\GoogleMapController::index`, rendering
+`Store/Admin/Setup/GoogleMap/Index` with an exhaustive `settings` object:
+`google_map` (boolean), `google_map_latitude` and `google_map_longtitude`
+(stored strings, empty if absent). The existing spelling is preserved.
+POST `google-map.update`, its URI, `google_map_setting`, typed request,
+allowlist, transaction, cache invalidation and redirect remain unchanged.
+Range rules already existed (-90..90 latitude, -180..180 longitude); this
+step adds coverage of both sides and positive boundaries, with no new
+validation behavior. Root `google_map()` and its middleware entry are removed;
+`BusinessSettingsController` stays in Pint/PHPStan exclusions for the seller
+commission/verification screens. No permission gate or ratchet changed.
+
+**Vue.** `ResourceFormPage` uses `StoreAdminLayout`, Wayfinder and the module's
+`StoreGoogleMapFormFields`. `StoreBooleanField` retains its enabled/disabled
+select API; its label explicitly says it controls the storefront's Google map.
+Enabling reveals the shared `StoreLeafletMap`, an accessible draggable marker,
+click selection and two editable numeric fields with native min/max/step and
+paired-required constraints. Manual edits move the marker; clicks/drags update
+the inputs. Blank/invalid coordinates do not create a marker. The world view
+makes an unset location selectable. Disabling omits coordinates from the POST,
+preserving the stored location. The map stays LTR and isolated inside RTL.
+English/Arabic keys are `store.googleMap.*`; the sidebar is an Inertia visit.
+
+**Consumers/removal.** Searches of app/routes/resources/tests/public JS found
+only the removed root action rendered the admin `google_map.blade.php`; it is
+removed with `git rm`. `shop/frontend/partials/google_map.blade.php` stays:
+its consumers include the frontend address modal, user profile, customer
+dashboard and seller profile. Seller shop also reads the stored default
+latitude. None of those files or any storefront behavior changed.
+
+**Tests and verification.** Pest covers render, exhaustive enabled/disabled/
+missing settings, route action/gate, existing write/refusal/cache/allowlist
+behavior and expanded coordinate boundaries. The root middleware test drops
+only the migrated action. Full-mounted Vitest covers the page shell, module
+fields and real input synchronization with a mocked Leaflet geometry engine.
+`store-google-map.spec.ts` drives real npm Leaflet clicks/drags/manual edits,
+native range rejection, save/reload, disabled preservation, RTL/LTR and dark
+contrast under enforced CSP, with tile images answered locally. Verification
+found and fixed two defects in the draft: its `store.googleMap.*` strings sat
+under `cells.palletActions.store` in both locale files (so the page showed raw
+keys), and the spec's fixture mass-assigned `BusinessSetting`, whose `type` is
+guarded. The spec also now waits for the map's pan to settle before dragging
+the marker and switches back to English by its Arabic label. See
+[the ledger](../store-backoffice-reconciliation-20261011.md#google-map-settings-step-32-2026-10-18)
+for exactly which checks ran.
+
+Inventory: **26** backend Blade files (27 minus this screen),
+**13** direct literal app-shell consumers including the shell test, **3**
+layout-shell extending views. Routes replace one GET with one GET; no route
+is added or removed (`route:list` still shows 1,048 under `/temp` and 436
+under `/temp/admin`).
+No production data, CI, SAST or deployment was run.

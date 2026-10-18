@@ -1,7 +1,11 @@
 <?php
 
+use App\Http\Controllers\BusinessSettingsController;
+use App\Http\Controllers\Store\Admin\GoogleMapController;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Route;
+use Inertia\Testing\AssertableInertia as Assert;
 
 beforeEach(function () {
     DB::table('business_settings')->insert([
@@ -12,31 +16,53 @@ beforeEach(function () {
     ]);
 });
 
-test('the Google Maps configuration retains its Blade picker until the map dependency is approved', function () {
+test('the Google Maps settings screen can be rendered', function () {
     actingAsStoreUser(createStoreStaff('google_map_setting'));
-    config(['services.google_maps.key' => 'server-managed-key']);
 
-    $this->get('/temp/admin/google-map')->assertOk()
-        ->assertViewIs('shop.backend.setup_configurations.google_configuration.google_map')
-        ->assertSee(route('google-map.update'), false)
-        ->assertDontSee('name="MAP_API_KEY"', false)
-        ->assertDontSee(retiredSettingsWriterUri(), false);
+    $this->get(route('google-map.index'))->assertOk()->assertInertia(
+        fn (Assert $page) => $page->component('Store/Admin/Setup/GoogleMap/Index')
+    );
 });
 
-// The enabled screen's default-location form loads the Google Maps script
-// through shop.frontend.partials.google_map; map activation is an owner
-// decision, so this GET stays Blade.
-test('the enabled Google Maps screen loads the Google Maps script and the disabled one does not', function () {
+test('the Google Maps page exposes exactly its stored settings', function (string $enabled) {
     actingAsStoreUser(createStoreStaff('google_map_setting'));
+    DB::table('business_settings')->where('type', 'google_map')->update(['value' => $enabled]);
+    Cache::forget('business_settings');
 
-    $this->get('/temp/admin/google-map')->assertOk()
-        ->assertSee('https://maps.googleapis.com/maps/api/js?key=', false)
-        ->assertSee('name="google_map_latitude"', false);
+    $this->get(route('google-map.index'))->assertOk()->assertInertia(
+        fn (Assert $page) => $page->component('Store/Admin/Setup/GoogleMap/Index')
+            ->has('settings', fn (Assert $settings) => $settings
+                ->where('google_map', $enabled === '1')
+                ->where('google_map_latitude', '33.513')
+                ->where('google_map_longtitude', '36.291'))
+    );
+})->with(['enabled' => '1', 'disabled' => '0']);
 
-    DB::table('business_settings')->where('type', 'google_map')->update(['value' => '0']);
-    $this->get('/temp/admin/google-map')->assertOk()
-        ->assertDontSee('maps.googleapis.com', false)
-        ->assertDontSee('name="google_map_latitude"', false);
+test('missing Google Maps settings render empty coordinates with the storefront map disabled', function () {
+    actingAsStoreUser(createStoreStaff('google_map_setting'));
+    DB::table('business_settings')->whereIn('type', ['google_map', 'google_map_latitude', 'google_map_longtitude'])->delete();
+    Cache::forget('business_settings');
+
+    $this->get(route('google-map.index'))->assertOk()->assertInertia(
+        fn (Assert $page) => $page
+            ->has('settings', fn (Assert $settings) => $settings
+                ->where('google_map', false)
+                ->where('google_map_latitude', '')
+                ->where('google_map_longtitude', ''))
+    );
+});
+
+test('Google Maps routes retain their names URIs and permission on the admin controller', function () {
+    foreach (['index' => 'GET', 'update' => 'POST'] as $action => $method) {
+        $route = Route::getRoutes()->getByName('google-map.'.$action);
+        expect($route->uri())->toBe('temp/admin/google-map')
+            ->and($route->methods())->toContain($method)
+            ->and($route->getActionName())->toBe(GoogleMapController::class.'@'.$action)
+            ->and($route->gatherMiddleware())->toContain('permission:google_map_setting');
+    }
+    expect(method_exists(BusinessSettingsController::class, 'google_map'))->toBeFalse()
+        ->and(file_exists(resource_path('views/shop/backend/setup_configurations/google_configuration/google_map.blade.php')))->toBeFalse()
+        ->and(file_exists(resource_path('views/shop/frontend/partials/google_map.blade.php')))->toBeTrue();
 });
 
 test('the Google Maps configuration refuses unauthorized callers', function (string $caller) {
@@ -103,6 +129,8 @@ test('invalid Google Maps updates preserve settings', function (array $payload, 
 })->with([
     'empty update' => [[], ['google_map']],
     'invalid toggle' => [['google_map' => 'enabled'], ['google_map']],
+    'longitude below range' => [['google_map_longtitude' => -181, 'google_map_latitude' => 0], ['google_map_longtitude']],
+    'latitude above range' => [['google_map_longtitude' => 0, 'google_map_latitude' => 91], ['google_map_latitude']],
     'longitude range' => [['google_map_longtitude' => 181, 'google_map_latitude' => 0], ['google_map_longtitude']],
     'latitude range' => [['google_map_longtitude' => 0, 'google_map_latitude' => -91], ['google_map_latitude']],
     'longitude missing' => [['google_map_latitude' => 33], ['google_map_longtitude']],
@@ -167,4 +195,12 @@ test('map writes preserve localized rows and unrelated settings', function () {
     $this->post(route('google-map.update'), ['google_map' => false])->assertRedirect(route('google-map.index'));
     $this->assertDatabaseHas('business_settings', ['type' => 'google_map', 'lang' => 'ar', 'value' => 'translated legacy value']);
     $this->assertDatabaseHas('business_settings', ['type' => 'google_map', 'lang' => null, 'value' => '0']);
+});
+
+test('Google Maps coordinates accept their positive boundaries', function () {
+    actingAsStoreUser(createStoreStaff('google_map_setting'));
+    $this->post(route('google-map.update'), ['google_map_latitude' => 90, 'google_map_longtitude' => 180])
+        ->assertRedirect(route('google-map.index'));
+    $this->assertDatabaseHas('business_settings', ['type' => 'google_map_latitude', 'value' => '90']);
+    $this->assertDatabaseHas('business_settings', ['type' => 'google_map_longtitude', 'value' => '180']);
 });

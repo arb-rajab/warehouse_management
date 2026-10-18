@@ -18,6 +18,7 @@ import {
 } from '@/actions/App/Http/Controllers/Store/Admin/DriverController';
 import { index as dynamicPopupsIndex } from '@/actions/App/Http/Controllers/Store/Admin/DynamicPopupController';
 import { index as flashDealsIndex } from '@/actions/App/Http/Controllers/Store/Admin/FlashDealController';
+import { index as googleMapIndex } from '@/actions/App/Http/Controllers/Store/Admin/GoogleMapController';
 import { index as languagesIndex } from '@/actions/App/Http/Controllers/Store/Admin/LanguageController';
 import { index as newslettersIndex } from '@/actions/App/Http/Controllers/Store/Admin/NewsletterController';
 import { index as offerDealsIndex } from '@/actions/App/Http/Controllers/Store/Admin/OfferController';
@@ -207,6 +208,7 @@ describe('storeAdminMenu', () => {
                 facebookComments.url(),
                 analytics.url(),
                 recaptcha.url(),
+                googleMapIndex.url(),
                 firebase.url(),
                 payments.url(),
                 filesystem.url(),

@@ -352,7 +352,7 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
     Route::controller(BusinessSettingsController::class)->group(function () {
         Route::post('/business-settings/update/seller-commission-activation', 'updateSellerCommissionActivation')->name('business_settings.seller_commission.activation')->middleware('RaizerSuperAdmin');
 
-        Route::get('/google-map', 'google_map')->name('google-map.index');
+        Route::get('/google-map', [GoogleMapController::class, 'index'])->name('google-map.index');
 
         Route::post('/env_key_update', 'env_key_update')->name('env_key_update.update');
         Route::post('/google-map', [GoogleMapController::class, 'update'])->name('google-map.update');

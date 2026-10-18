@@ -3791,3 +3791,78 @@ app-shell consumers including the shell test, **3** actual layout-shell
 extending views, **1,048** `/temp` and **436** `/temp/admin` registrations.
 The retained editor remains **8 fields in 8 views** across the protected
 storefront/seller surfaces. No production data was changed.
+
+
+## Google Map settings step 32 (2026-10-18)
+
+**Drafted by Codex, verified and shipped from Claude.** Branch
+`codex/step-32-google-map` (commit `bd339c61`) is based on `origin/develop` at
+`4cb3c44a` (PR #440). The Codex session had no PHP 8.5 and could verify
+nothing beyond formatting; this section records the later verification on a
+Claude cloud session with PHP 8.5.11, `vendor/`, `node_modules/` and a font-less
+Vite build. The owner authorized one PR into develop (PR #442) and its merge, `[skip ci]`
+in every commit, the PR title and the merge message, and a follow-up `[skip ci]`
+commit recording the PR number. No CI-Verified trailer was added.
+
+### Scope and decisions
+
+- The owner approved npm Leaflet/OpenStreetMap for the default-location picker,
+  lifting the historical §17 Google Map hold. The GET now renders
+  `Store/Admin/Setup/GoogleMap/Index` from `Store\Admin\GoogleMapController`.
+  Names, URIs, `google_map_setting` and the typed allowlisted writer remain.
+  Coordinates retain the `google_map_longtitude` spelling. The request already
+  had both range rules; no range-validation behavior changed.
+- The page uses `StoreAdminLayout`, `ResourceFormPage`, Wayfinder,
+  `StoreBooleanField` and module fields on the shared `StoreLeafletMap`.
+  Numeric fields are editable with native min/max/step and paired-required
+  constraints; clicking or dragging updates them, manual edits move the marker.
+  Blank/invalid points have no marker; unset locations start at a world view.
+  Disabling preserves coordinates by omitting those fields from submission.
+  The toggle label explicitly refers to the storefront's Google map.
+  English/Arabic keys and the menu's Inertia flag/test are updated.
+- Only the back-office Blade view was removed (`git rm`), after tracing its
+  sole renderer and the shared partial's other consumers. The protected
+  `shop/frontend/partials/google_map.blade.php`, frontend address modal,
+  profile/dashboard and seller profile/shop behavior remain unchanged.
+  No CSP, package manifest or lockfile changed. The existing OSM tile host
+  allowance is reused. The root controller stays in Pint/PHPStan exclusions
+  for seller commission/verification screens. No permission/route ratchet
+  changed; its root middleware test drops only the moved action.
+- Pest was expanded for Inertia render/full payload, missing settings, routes
+  and gate, boundary validation, with existing refused-write/DB/cache and
+  allowlist tests retained. Full-mount page/field Vitest and a real Leaflet
+  Playwright spec were added. The browser spec covers clicks, drag, manual
+  input, native range rejection, persistence, disabled preservation, RTL/LTR
+  and dark contrast under enforced CSP with locally answered tile images.
+  They pass locally; see below.
+
+### Runtime and verification
+
+- `AGENTS.md` was read first; Laravel Boost was unavailable, so repository
+  files and installed package source were used. PHP 8.5.11, `vendor/`,
+  `node_modules/` and a font-less build (`build_without_fonts.py`) were present.
+  Wayfinder generation succeeded.
+- **Defects found by verification and fixed** (separate commits): the
+  `store.googleMap.*` keys had been inserted under `cells.palletActions.store`
+  in `en.json` and `ar.json` (two field-component Vitest cases failed on raw
+  keys); `HandleStoreBladePagesTest.php` had an extra blank line (Pint); the
+  Playwright fixture mass-assigned the guarded `BusinessSetting`, the drag
+  step read the marker mid-pan, and the final locale switch used the English
+  label on the Arabic page.
+- **Passed:** `python3 .claude/scripts/pre_push_check.py --full` (run twice;
+  the first stopped at Pint): Wayfinder, ESLint, Prettier, vue-tsc, Vitest
+  (318 files, 2,501 tests), Pint, PHPStan (0 errors) and Pest (6,043 tests,
+  34,206 assertions). `store-google-map.spec.ts` passes under the enforced CSP
+  with real Leaflet from `node_modules` (1 test). `route:list` still shows
+  1,048 under `/temp` and 436 under `/temp/admin`.
+- **Not run:** a separate Pest baseline on unmodified develop; the full
+  Playwright suite (only this spec ran); MySQL-specific tests, dependency
+  audits and deploy-script tests; the build with the remote font
+  (`fonts.bunny.net` is unreachable here); live OpenStreetMap requests (tiles
+  are answered locally). **PR CI, PR/merge SAST and the develop deploy did not
+  run** (`[skip ci]`).
+
+Inventory confirmed from files/searches: **26** backend Blade files, **13**
+literal app-shell consumers including StoreBackOfficeShellTest, **3**
+layout-shell extending views. No route was added or removed. No production
+data was changed.
