@@ -85,24 +85,13 @@ For documentation-only changes, verify links, instruction consistency, and
 | Frontend formatting | `npx prettier --check <changed-files>` |
 | Production assets | `npm run build` |
 | End-to-end tests | `npm run test:e2e` |
-| Before pushing or publishing a PR | `python3 .claude/scripts/pre_push_check.py --for-pr` (all required CI groups; require a GREEN report for the current commit and tree) |
+| Before pushing code | `python3 .claude/scripts/pre_push_check.py` (scoped to the branch's changes; on a clean tree with an unpushed head commit it does the full attested run itself, see below; `--quick` forces the scoped checks, `--full` runs everything) |
 
 Backend feature tests need a configured local `APP_KEY` and a Vite manifest;
 generated Wayfinder files may also be required. Never print environment secrets.
-Do not commit or push unless authorized by the user or the applicable task
-instructions.
-
-### A green report is required before pushing or opening a PR
-
-After committing, run `python3 .claude/scripts/pre_push_check.py --for-pr`.
-It must exit zero and write `status: GREEN` to the git directory's
-`codex-pre-push-report.json` for the exact current commit and tree. Only then
-push the commit or create, reopen, or update a pull request. Run the gate again
-after any change. A red report, failed setup, unavailable tools, skipped required
-checks, or a stale report blocks publication. Fix the cause first, including
-failures in unchanged code; calling a failure pre-existing is not an exception.
-`--quick`, `--full`, focused tests, and partial attestations do not substitute
-for this complete PR gate. Never open a PR to use CI as the first complete check.
+The pre-push script can skip unavailable PHP tools: report skipped checks, rather
+than describing a partial run as full verification. Do not commit or push unless
+authorized by the user or the applicable task instructions.
 
 ### Attested pre-push run
 
@@ -115,9 +104,8 @@ With no flag, `pre_push_check.py` chooses its mode:
   attest. `--quick` forces this; `--attest` forces attesting and fails loudly when
   it cannot.
 
-The publication flow is: iterate with uncommitted changes (quick checks), commit,
-run `pre_push_check.py --for-pr`, require its GREEN report, then push. Attestation
-is optional; if it amends a commit, rerun the PR gate for the amended head.
+So the normal flow is: iterate with uncommitted changes (quick checks), commit,
+run `pre_push_check.py` once more (attested run), then push.
 
 The attested run executes, unscoped, every CI group the branch's changes need,
 including the ones CI alone ran before (Playwright, the MySQL migration tests,
