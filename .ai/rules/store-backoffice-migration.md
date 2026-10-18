@@ -3490,6 +3490,10 @@ not inferred from earlier steps. PR CI, PR/merge SAST and deploy do not run unde
 
 ## 34. Seller list and accounts (2026-10-19)
 
+[PR #445](https://github.com/arb-rajab/warehouse_management/pull/445) is the single
+PR into `develop`. Its number is recorded in a documentation-only `[skip ci]`
+follow-up commit before the authorized merge. Implementation commit: `c98dff89`.
+
 Stage 1 of 3, implemented on `codex/step-34-sellers` from freshly fetched
 `origin/develop` **fc8e73de** (PR #444). Model: **GPT-6 Codex**; the exact
 variant and configured effort are not exposed by this runtime. The owner

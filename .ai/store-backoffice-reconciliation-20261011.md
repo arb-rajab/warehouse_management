@@ -4192,7 +4192,13 @@ The bare attested mode was never invoked and no CI-Verified trailer was added
 or edited by hand. Model/effort metadata variables were also checked explicitly;
 the exact variant and effort remain unexposed, so no setting is invented.
 
-**Shipping:** the authorized single PR and its number will be recorded in the
-required documentation-only follow-up commit before merging. Every implementation,
-follow-up and merge commit, and the PR title, use `[skip ci]`. No Claude
-attribution line is added.
+**Shipping record.** [PR #445](https://github.com/arb-rajab/warehouse_management/pull/445)
+is the single PR into `develop`, from `codex/step-34-sellers`. Implementation
+commit **c98dff89** (`Migrate seller administration screens to Inertia [skip ci]`)
+was pushed after the final full gate passed. This documentation-only follow-up
+records the PR number before merging, as requested. `git diff --check` and an
+explicit `pre_push_check.py --quick --base HEAD` verify this follow-up; its two
+documentation files select no application checks, and the full code results
+above remain applicable. Every implementation/follow-up commit and the PR title
+contain `[skip ci]`; the authorized merge message does too. No Claude attribution
+or CI-Verified trailer is added. PR CI, PR/merge SAST and deploy do not run.
