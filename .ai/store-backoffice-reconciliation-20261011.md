@@ -3800,7 +3800,7 @@ storefront/seller surfaces. No production data was changed.
 `4cb3c44a` (PR #440). The Codex session had no PHP 8.5 and could verify
 nothing beyond formatting; this section records the later verification on a
 Claude cloud session with PHP 8.5.11, `vendor/`, `node_modules/` and a font-less
-Vite build. The owner authorized one PR into develop and its merge, `[skip ci]`
+Vite build. The owner authorized one PR into develop (PR #442) and its merge, `[skip ci]`
 in every commit, the PR title and the merge message, and a follow-up `[skip ci]`
 commit recording the PR number. No CI-Verified trailer was added.
 

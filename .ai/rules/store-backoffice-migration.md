@@ -3329,8 +3329,8 @@ or deployment was performed.
 Drafted by a Codex session on `codex/step-32-google-map` from `develop` at
 `4cb3c44a` (PR #440), then verified, fixed and shipped from a Claude session
 that had PHP 8.5.11, `vendor/` and `node_modules`. The owner authorized one PR
-into `develop`, its merge, `[skip ci]` on every commit, the PR title and the
-merge message, and a follow-up commit recording the PR number. So no PR CI, PR
+into `develop` (PR #442), its merge, `[skip ci]` on every commit, the PR title
+and the merge message, and a follow-up commit recording the PR number. So no PR CI, PR
 or merge SAST and no `develop` deploy ran; the local checks in the ledger are
 the verification.
 
