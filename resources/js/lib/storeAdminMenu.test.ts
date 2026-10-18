@@ -130,6 +130,7 @@ describe('storeAdminMenu', () => {
         expect(inertiaUrls.sort()).toEqual(
             [
                 '/temp/admin',
+                '/temp/admin/sellers',
                 '/temp/admin/order-configuration',
                 '/temp/admin/general-setting',
                 '/temp/admin/currency',

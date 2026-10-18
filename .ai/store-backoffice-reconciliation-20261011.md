@@ -22,7 +22,7 @@ were activated. The table and deferred paths below define actual scope.
 | Source branch | Exact source commit | Disposition | Initial integration commit / rationale |
 | --- | --- | --- | --- |
 | `codex/store-backoffice-foundation-verification-20261011` | `67b621635e0cd290ddfa7aa3f43889f4cf17cf6f` | Included, documentation reconciled | `3ff704ff1b09d6699f5e36f2c505c6a3ae4bff83`; foundation constraints retained, historical progress replaced by actual integrated inventory |
-| `codex/seller-admin-prerequisite-review-20261011` | `1c005f6efdddee958ba8d739afd35eb0935007bd` | Included, documentation reconciled | `b234db6880b0153938d5b4c56e10f0716eb5bbcc`; seller feature-use prerequisite remains unresolved |
+| `codex/seller-admin-prerequisite-review-20261011` | `1c005f6efdddee958ba8d739afd35eb0935007bd` | Included, documentation reconciled | `b234db6880b0153938d5b4c56e10f0716eb5bbcc`; historical seller hold superseded by the owner’s convert decision; stage 34 below records the account migration |
 | `codex/store-backoffice-audit-2026-10-11` | `2062177776722e3dfb37ae968b8c9b0aeeba67f7` | Excluded as a separate integration source | Ancestor with no unique code contribution; no independent audit-code merge |
 | `codex/store-backoffice-reference-config-2026-10-11` | `35ae3133e0cf6f1d6f938eda5e01fdebe695d98e` | Included, canonical | `9645e25d541b6a219816697b5f95a5f3c8226a6b`; reference/shipping forms, controllers and routes selected |
 | `codex/store-backoffice-language-settings` | `465578796ff01c47276c24d5d8e504ce04198d36` | Included, adapted | `9b61a38915d4b62d50119bf8b95e7d8fed7e2fb0`; distinct language CRUD and translation-selector validation |
@@ -94,8 +94,8 @@ objects. These changes remain available in Git and have not been silently lost.
 
 | Source / paths or symbol | Established behavior retained | Proposed activation / prerequisite |
 | --- | --- | --- |
-| `218f05f1`: `app/Http/Controllers/Store/Admin/ClassifiedProductController.php`, classified requests/resources/pages/tests and routes | Root `CustomerProductController`, classified Blade and feature flag remain | Classified migration requires feature-use approval; no applicable evidence located |
-| `1c005f6e`: seller prerequisite review; existing seller controllers/views | Seller administration and seller-facing Blade area remain | Establish seller feature usage or explicitly authorize scoped removal; feature flags are not evidence |
+| `218f05f1`: `app/Http/Controllers/Store/Admin/ClassifiedProductController.php`, classified requests/resources/pages/tests and routes | Root `CustomerProductController`, classified Blade and feature flag remain | **Owner decided convert, not delete.** Historical activation hold superseded; classified conversion follows in a later step, with no role grants |
+| `1c005f6e`: seller prerequisite review; existing seller controllers/views | Seller administration and seller-facing Blade area remain | **Owner decided convert, not delete.** Seller list/accounts convert in step 34 below; stages 35/36 retain payout/commission/product Blade and the protected seller area |
 | `e3995898`: `resources/js/components/StoreRichTextField.vue`, its tests and Tiptap additions in `package.json` / `package-lock.json` | Existing Blade editors and their assets remain for their remaining consumers | **Owner-approved and active (2026-10-13).** Adapted as the shared editor with Tiptap 3.31.3 and `@floating-ui/dom` 1.8.0 (the recorded 3.31.4 failed the two-week rule); blog post forms, the newsletter and the ticket reply use it. Lifts the editor hold on the rows below (footer/appearance/custom pages, ticket detail/reply, newsletter, blog) and on the editor part of product/digital-product forms (the digital product forms use it since 2026-10-13, `[skip ci]`; see [the digital product forms section](#digital-product-create-and-edit-forms-migration-2026-10-13)); script policy, `manage_website_scripts` and rich-text WAF exceptions stay held. See [the editor section](#shared-rich-text-editor-and-blog-post-forms-2026-10-13) |
 | `e3995898`: `Store/Admin/WebsiteFooterController.php`, `WebsiteAppearanceController.php`, `WebsitePageController.php` and corresponding requests/resources/Vue forms/pages/tests | Stored formats, translations, image references, page slugs, gates and the storefront/mobile/email rendering of footer, appearance and pages; the scripts compatibility endpoint | **Activated (2026-10-13).** Inertia footer, appearance and custom pages on the shared editor and canonical uploader, with typed writers cleaning rich text; the Blade views, root `WebsiteController` and root page admin actions removed; the generic `business_settings.update` writer retired with its last consumers. This PR and its merge used `[skip ci]`. See [the website settings section](#website-footer-appearance-and-custom-pages-migration-2026-10-13) |
 | `e3995898`: `Store/Admin/SupportTicketController::show` Inertia implementation, `StoreTicketReplyForm.vue`, `Store/Admin/Support/Tickets/Show.vue` and editor-dependent frontend tests | Ticket list, typed reply, gates, sanitation, `viewed`/`client_viewed`/status effects, reply email and the customer/seller ticket pages | **Activated (2026-10-13).** Inertia detail/reply on the shared editor and the canonical `StoreUploadField`/`UploadResource`; Blade detail and root `admin_show` removed. This PR and its merge used `[skip ci]`. See [the newsletter and ticket section](#newsletter-and-support-ticket-detail-migration-2026-10-13) |
@@ -161,8 +161,9 @@ checks; native host binaries remain absent. No Claude hooks were assumed to run.
   remain unimplemented in the selected migration sources.
 - Website footer/appearance/custom pages, ticket detail/reply Vue editor, blog
   editor forms/newsletters and dashboard conversion remain held as above.
-- Trip/map conversion remains unimplemented; seller/classified scope remains
-  decision-blocked. Production role grants require explicit review.
+- Trip/map conversion was unimplemented at reconciliation; later sections record its migration.
+  The historical seller/classified decision block is superseded by the owner’s
+  convert decision; step 34 below records seller account conversion. Production role grants require explicit review.
 - Keep legacy admin shells/assets/includes/CSP exceptions while consumers remain;
   keep PDF layouts/downloads, `resources/views/app.blade.php`, storefront/seller/
   authentication `HandleStoreBladePages` and `store.blade_csp`.
@@ -4031,3 +4032,167 @@ selects no application checks; `git diff --check` verifies its whitespace.
 The final full code gate remains the seventh explicit `--full` run above.
 All new commit messages and the PR title contain `[skip ci]`; the authorized
 merge message does too. No CI-Verified trailer or Claude attribution line.
+
+
+## Seller list and account screens step 34 (2026-10-19)
+
+Branch: `codex/step-34-sellers`, from freshly fetched `origin/develop`
+**fc8e73de** (PR #444). Model: **GPT-6 Codex**; exact variant and configured
+reasoning effort are not exposed to this runtime. AGENTS.md portability rules
+were read first; no Claude hooks/tools/setup were assumed. Boost is unavailable;
+repository files and installed Laravel 13.34.0/Inertia 3/Wayfinder source supplied
+the contracts. Temporary runtime, logs and installers are outside the checkout
+under `/workspace/work/step34`.
+
+**Owner decision and boundaries.** Sellers and classified products are converted
+to Inertia, not deleted. This explicitly overrides the historical decision-blocked
+status in the prerequisite/source tables. It grants no roles. Stage 34 covers
+seller list/accounts/verification/profile and their existing actions. Commission,
+payment/withdrawal/balance behavior, storefront and the seller area remain as
+established. Payment histories, withdrawals, commission and verification config,
+and the seller product list remain Blade for stages 35/36. The single list-only
+payment modal stays Blade, now with its existing admin shell and native CSRF POST
+entry; its money writer is untouched. Root SellerController and both exclusions
+remain. The guide’s §34 records routes, consumers and implementation precisely.
+
+**Runtime and develop baseline.** `vendor/` and `node_modules/` existed but were
+not assumed current. Host PHP is absent. Sandbox network/socket restrictions
+initially refused fetch/Docker access; authorized network/socket execution then
+worked. `git fetch origin develop` succeeded and the branch was created at the
+required commit. Docker PHP **8.5.11** and Laravel **13.34.0** boot successfully.
+The preinstalled image needed WebP, Composer and a child-process 1 GB memory
+limit; the temporary `wms-step34-php:8.5` image provides them without changing
+Composer manifests/locks or ignoring platform requirements. It runs as workspace
+UID 1000. Wrappers pass the browser harness’s isolated DB settings and adapt the
+container bind address; only its session-owned server uses port 8011.
+
+On the unchanged develop tree, the requested baseline ran:
+
+- LegacySellerAreaTest, LegacySellerScopingTest,
+  LegacySellerProductAuthorizationTest, LegacySellerPackageTest,
+  LegacySellerWithdrawRequestTest, LegacyAdminPermissionsTest,
+  LegacyStoreStateChangingRoutesTest, LegacyTempRoutesReachableTest,
+  LegacyUploadSecurityTest, StoreIntegrationPermissionsTest:
+  **65 passed / 238 assertions**.
+- Additional traced document/route/middleware ratchets:
+  LegacyShopVerificationTest, RouteServiceProviderTest,
+  LegacyControllerMiddlewareConversionTest: **17 passed / 52 assertions**.
+
+**Implementation and verification findings.** The existing approved route
+requires `edit_seller`; only its old Blade switch incorrectly used
+`approve_seller`. The Vue gate matches the server without changing permissions.
+Admin document cases moved from LegacyShopVerificationTest into the new seller
+file; upload cases remain. LegacyAdminPermissionsTest lists are unchanged.
+The state-changing route ratchet keeps its route list and drops only the deleted
+Blade ban-modal scan. RouteServiceProviderTest drops the obsolete unnamed seller
+resource destroy duplicate, retaining its other duplicate-name cases. The Blade visit-nav test uses the retained payment-history screen and permission
+now that sellers.index is Inertia. A subsequent literal-URI trace also found
+HandleStoreBladePagesTest and three browser specs using the seller list as their
+Blade example. Their fallback, inline-policy, shell-logo and full-load assertions
+now use payment histories; the coexistence fixture enables its existing Payouts
+setting, and no gate changes. The full check is repeated after these test updates.
+
+Focused Pest initially exposed fixture deficiencies (missing currency, a
+strict-mode Shop value query that omitted user_id, and an event fake attached
+after the session guard had captured its dispatcher). Tests now seed the real
+currency helper, read the scalar through the DB builder and observe the actual
+Login event. Traversal tests account for the existing WAF’s 403 as well as the
+storage/route 404; no path escapes private storage. The new controller’s eager
+load callbacks use Relation, and the paid-line sum uses a scoped parent-order
+subquery, matching the legacy aggregate. PHPStan then passed **824 files,
+0 errors**. The focused seller/verification/visit run passed **114 tests /
+1,038 assertions** before the additional rollback cases.
+
+The initial frontend check found stale installed Leaflet/Chart.js/Tiptap packages.
+`npm ci` first failed because the default npm cache was outside writable roots;
+rerunning with a scratch cache installed the existing lockfile successfully
+(557 packages), with no dependency changes. Full page/component mounting then
+caught missing exports in the confirmation mock and selectors matching the
+layout’s search/storefront link instead of page controls; those tests now use
+shared stubs, a partial mock and scoped selectors. Generic DataTable props use
+the repository’s ComponentPublicInstance test type. Focused Vitest passed
+**31 tests in 7 files**, including all four pages, both components and the menu.
+Formatting/lint issues were fixed without weakening checks.
+
+`npm run build` initially failed resolving fonts.bunny.net because Node fetch
+was not using the configured proxy. With Node 24’s `NODE_USE_ENV_PROXY=1`, the
+normal build, fresh Wayfinder generation and real remote font fetch passed;
+no font-less fallback or Vite/CSP change. Existing large-chunk/plugin timing
+warnings remain warnings.
+
+Browser setup first lacked Playwright FFmpeg; its download failed, so the
+installed system FFmpeg was provided in the temporary browser directory beside
+system Chromium. A guarded BusinessSetting fixture was corrected to assign its
+type explicitly. Docker exec left a PHP server child on 8011 after harness
+shutdown; runtime cleanup now stops both session-owned PHP server processes
+before a fresh run. The stale ignored `public/hot` pointed at an absent Vite server; it was moved
+to scratch and the production bundle rebuilt. The RTL selector now follows the
+login link’s stable URI rather than its English label after switching to Arabic.
+Unrelated dashboard Faker thumbnails are set to null only in the dedicated
+browser fixture, avoiding delayed dashboard image CSP reports without changing
+policy. No application/CSP assertion was weakened.
+
+The final `store-sellers.spec.ts` run passed **1 real Chromium test** (18.1s
+including harness setup, 11.7s test): real profile HTTP request and escaped bank
+text, focus trap/Escape/focus return, dismissed and accepted ban confirms,
+dismissed delete confirm, LTR/Arabic RTL arrow rotation, dark input contrast
+at least 4.5:1, no page errors or CSP reports/violations. The final Vue bundle
+includes the restored select-all-on-this-page bulk control. The expanded affected
+Pest set passed **139 tests / 1,140 assertions** across seller, permission,
+route, shell, seller-upload and visit files. Frontend types and affected ESLint
+also passed before the full run.
+
+**Inventory.** 20 backend Blade files; 9 direct literal app-shell consumers
+including the shell test (8 actual extending views); 3 layout-shell extending
+views; route:list confirms 1,046 `/temp` and 434 `/temp/admin` registrations.
+Five replaced seller views were removed with git rm after tracing app/routes/
+resources/public/assets/js/tests. The payment view remains Blade. The editor
+inventory stays 8 fields in 8 views. No production data or schema was changed.
+
+**Final browser/repair verification.** The four affected Chromium cases passed
+**4 tests in 29.6s**: the seller workflow, the retained Blade-to-Inertia uploader
+navigation, saved general-settings logo/name in the retained shell, and sidebar
+Blade navigation plus logout. The seller spec also posts the list’s native CSRF
+payment form and verifies a 200 Blade page with the same shop ID; it makes no
+payment. The corrected seller/general-settings Pest run passed **111 tests /
+861 assertions**. The earlier broader repair run passed 209 cases and failed
+only because its already-loaded general-settings fixture still lacked the
+payment-history permission; the corrected fresh process passes.
+
+**First explicit full run.** `pre_push_check.py --full` ran Wayfinder, whole-repo
+ESLint, Prettier, vue-tsc, Vitest (**326 files / 2,529 tests**), Pint (**1,251
+files**), PHPStan (**824 files, 0 errors**), config-cache clearing and parallel
+Pest. The frontend/Pint/PHPStan stages passed. Pest finished with **4 failed,
+6,130 passed / 35,056 assertions**, five processes. Two failures were stale
+vendor Composer class-map entries for the already-deleted root DigitalProduct
+and Trip controllers; `composer dump-autoload --no-scripts` refreshed generated
+metadata without installing packages or changing locks. Its existing non-PSR-4
+StubProductImportCommand test-fixture warning is unchanged. Two more tests used
+the seller list to inspect retained Blade logos/uploader metadata; they now use
+payment histories and that screen’s existing permission. Their original
+assertions remain. No unrelated application fix or gate weakening was needed.
+The final explicit --full run on the finished code and tests is recorded below.
+
+**Final full verification — passed.** Before committing, the second explicit
+`python3 .claude/scripts/pre_push_check.py --full` **exited 0** on the finished
+code/tests. Exactly these stages ran and passed: Wayfinder generation, whole-repo
+ESLint, Prettier, vue-tsc, Vitest (**326 files / 2,529 tests**), Pint (**1,251
+files**), PHPStan (**824 files, 0 errors**), config-cache clearing, and Pest
+(**6,134 passed / 35,071 assertions**, five processes, 154.26s). The normal
+production build and four affected real Chromium tests passed separately as
+recorded above. The existing jsdom navigation notices and optional-fontaine /
+large-chunk notices are non-fatal. `git diff --check` passes. The final code is
+covered by this run; subsequent PR-number recording is documentation only.
+
+**Skipped/not run:** full Playwright suite (four affected tests ran), separate
+MySQL migration job, Composer/npm audits and deploy-script checks. Those are not
+part of explicit --full. No production mutation or deployment. PR CI, PR/merge
+SAST and deploy do not run under the owner’s required `[skip ci]` messages.
+The bare attested mode was never invoked and no CI-Verified trailer was added
+or edited by hand. Model/effort metadata variables were also checked explicitly;
+the exact variant and effort remain unexposed, so no setting is invented.
+
+**Shipping:** the authorized single PR and its number will be recorded in the
+required documentation-only follow-up commit before merging. Every implementation,
+follow-up and merge commit, and the PR title, use `[skip ci]`. No Claude
+attribution line is added.

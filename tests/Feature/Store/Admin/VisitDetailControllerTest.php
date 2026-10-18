@@ -102,9 +102,9 @@ test('visit map markers safely preserve zero and boundary coordinates and reject
 
 test('the Blade navigation exposes visits to visit-only staff and hides it without permission', function (bool $allowed) {
     actingAsStoreUser($allowed
-        ? createStoreStaff('view_all_seller', 'view_representative_visits')
-        : createStoreStaff('view_all_seller'));
-    $response = $this->get(route('sellers.index'))->assertOk();
+        ? createStoreStaff('seller_payment_history', 'view_representative_visits')
+        : createStoreStaff('seller_payment_history'));
+    $response = $this->get(route('sellers.payment_histories'))->assertOk();
 
     if ($allowed) {
         $response->assertSee('href="'.route('admin.rep.visits.index').'"', false);

@@ -5,7 +5,8 @@ use App\Http\Controllers\CommissionController;
 use App\Http\Controllers\CustomerProductController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\ProductController;
-use App\Http\Controllers\SellerController;
+use App\Http\Controllers\SellerController as LegacySellerController;
+use App\Http\Controllers\Store\Admin\SellerController;
 use App\Http\Controllers\SellerWithdrawRequestController;
 use App\Http\Controllers\Store\Admin\AddressController;
 use App\Http\Controllers\Store\Admin\AttributeController;
@@ -174,21 +175,23 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
     Route::get('/bulk-upload/download/brand', [ProductBulkUploadController::class, 'pdfDownloadBrand'])->name('pdf.download_brand');
     Route::get('/bulk-upload/download/seller', [ProductBulkUploadController::class, 'pdfDownloadSeller'])->name('pdf.download_seller');
 
-    // Seller
-    Route::resource('sellers', SellerController::class);
-    Route::controller(SellerController::class)->group(function () {
-        Route::post('sellers_ban/{id}', 'ban')->name('sellers.ban');
-        Route::post('/sellers/destroy/{id}', 'destroy')->name('sellers.destroy');
-        Route::post('/bulk-seller-delete', 'bulk_seller_delete')->name('bulk-seller-delete');
-        Route::get('/sellers/view/{id}/verification', 'show_verification_request')->name('sellers.show_verification_request');
-        Route::get('/sellers/verification-file/{name}', 'download_verification_file')->name('sellers.verification_file');
-        Route::post('/sellers/approve/{id}', 'approve_seller')->name('sellers.approve');
-        Route::post('/sellers/reject/{id}', 'reject_seller')->name('sellers.reject');
-        Route::get('/sellers/login/{id}', 'login')->name('sellers.login');
-        Route::post('/sellers/payment_modal', 'payment_modal')->name('sellers.payment_modal');
-        Route::post('/sellers/profile_modal', 'profile_modal')->name('sellers.profile_modal');
-        Route::post('/sellers/approved', 'updateApproved')->name('sellers.approved');
-    });
+    // Seller account administration; payouts remain Blade for stage 35.
+    Route::get('/sellers', [SellerController::class, 'index'])->name('sellers.index');
+    Route::get('/sellers/create', [SellerController::class, 'create'])->name('sellers.create');
+    Route::post('/sellers', [SellerController::class, 'store'])->name('sellers.store');
+    Route::get('/sellers/{seller}/edit', [SellerController::class, 'edit'])->name('sellers.edit');
+    Route::match(['PUT', 'PATCH'], '/sellers/{seller}', [SellerController::class, 'update'])->name('sellers.update');
+    Route::post('/sellers_ban/{seller}', [SellerController::class, 'ban'])->name('sellers.ban');
+    Route::delete('/sellers/destroy/{seller}', [SellerController::class, 'destroy'])->name('sellers.destroy');
+    Route::delete('/bulk-seller-delete', [SellerController::class, 'bulkDestroy'])->name('bulk-seller-delete');
+    Route::get('/sellers/view/{seller}/verification', [SellerController::class, 'verification'])->name('sellers.show_verification_request');
+    Route::get('/sellers/verification-file/{name}', [SellerController::class, 'verificationFile'])->name('sellers.verification_file');
+    Route::post('/sellers/approve/{seller}', [SellerController::class, 'approve'])->name('sellers.approve');
+    Route::post('/sellers/reject/{seller}', [SellerController::class, 'reject'])->name('sellers.reject');
+    Route::get('/sellers/login/{seller}', [SellerController::class, 'login'])->name('sellers.login');
+    Route::post('/sellers/profile_modal', [SellerController::class, 'profile'])->name('sellers.profile_modal');
+    Route::post('/sellers/approved', [SellerController::class, 'approved'])->name('sellers.approved');
+    Route::post('/sellers/payment_modal', [LegacySellerController::class, 'payment_modal'])->name('sellers.payment_modal');
 
     // Seller Payment
     Route::controller(PaymentController::class)->group(function () {

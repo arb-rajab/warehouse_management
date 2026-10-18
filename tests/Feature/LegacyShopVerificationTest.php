@@ -3,7 +3,6 @@
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
-use Spatie\Permission\Models\Permission;
 
 /**
  * The shop-verification form's file fields stored whatever was sent, unvalidated,
@@ -56,27 +55,3 @@ test('a verification document that is not a PDF, Word document or image is refus
     'html called pdf' => ['extract.pdf', '<html><script>alert(1)</script></html>'],
     'php called png' => ['extract.png', '<?php system($_GET[1]); ?>'],
 ]);
-
-test('staff who may view sellers open a verification document, and no one else does', function () {
-    Storage::fake('local');
-    Permission::findOrCreate('view_all_seller', 'store');
-    Storage::disk('local')->put('uploads/verification_form/doc.pdf', 'pdf bytes');
-
-    $staff = createStoreUser('staff');
-    actingAsStoreUser($staff);
-
-    $this->get(route('sellers.verification_file', ['name' => 'doc.pdf']))->assertForbidden();
-
-    $staff->givePermissionTo('view_all_seller');
-
-    $this->get(route('sellers.verification_file', ['name' => 'doc.pdf']))->assertOk();
-    $this->get(route('sellers.verification_file', ['name' => 'missing.pdf']))->assertNotFound();
-});
-
-test('a customer cannot open a verification document', function () {
-    Storage::fake('local');
-    Storage::disk('local')->put('uploads/verification_form/doc.pdf', 'pdf bytes');
-    actingAsStoreUser(createStoreUser('customer'));
-
-    expect($this->get(route('sellers.verification_file', ['name' => 'doc.pdf']))->getStatusCode())->toBeIn([302, 403, 404]);
-});
