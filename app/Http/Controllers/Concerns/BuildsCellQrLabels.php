@@ -65,20 +65,20 @@ trait BuildsCellQrLabels
 
     /**
      * 'up' when this cell sits on its row's highest flat_number, 'down' when
-     * it sits on the lowest, and 'horizontal' for every level in between.
+     * it sits on the lowest, and 'dash' for every level in between.
      * flat_number runs 1..$flatsCount (see RowObserver::updated()), so 1 is
      * always the lowest level and $flatsCount the highest. A row with only
      * one level ($flatsCount < 2) is simultaneously its own highest and
      * lowest cell — there's no up/down direction to indicate, so it falls
-     * back to 'horizontal' the same way an actual mid-level cell does.
+     * back to 'dash' the same way an actual mid-level cell does.
      */
     private function cellLevelArrowDirection(int $flatNumber, int $flatsCount): string
     {
         return match (true) {
-            $flatsCount < 2 => 'horizontal',
+            $flatsCount < 2 => 'dash',
             $flatNumber === $flatsCount => 'up',
             $flatNumber === 1 => 'down',
-            default => 'horizontal',
+            default => 'dash',
         };
     }
 
