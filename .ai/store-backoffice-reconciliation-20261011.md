@@ -3644,3 +3644,145 @@ and locale/type additions existed), `TripControllerTest`,
   files; **16**/**3** literal consumers of the app/layout shells; **1,047**
   `/temp` and **435** `/temp/admin` registrations; Blade editor: **8** fields
   in **8** views.
+
+## Representative visit detail migration (2026-10-18)
+
+Step 31 on `codex/store-visit-details-step-31`, branched from fetched
+`origin/develop` at `57e1e51f` (PR #438), after reading `AGENTS.md` and the
+shared framework, conventions, applicable rules and this ledger. PR #428
+changed the pre-push default to attestation; this session uses explicit
+`--full` on the uncommitted tree. No attestation trailer is written or edited.
+Model: GPT-6 Codex; exact variant and configured effort are not exposed to
+this session. The owner authorized commits, one PR into `develop`, a
+follow-up commit recording its number before merging, and the merge, with
+`[skip ci]` on every commit message, the PR title and the merge message.
+
+### Runtime and baseline
+
+The host has no PHP executable. `vendor/` and `node_modules/` existed, but
+the latter lacked Leaflet. Initial fetch failed inside the restricted command
+sandbox; enabling the command's network permission made `git fetch origin
+develop` succeed through the configured proxy. The PHP installer could not
+write apt state as the non-root task user, so it installed nothing. An
+existing local `wms-cloud-php:8.5` Docker image supplied PHP **8.5.11** and
+the required extensions (WebP support repaired below). Backend results below are from that container,
+with the repository mounted at its actual path and a 1GB PHP memory limit.
+The first baseline attempt hit the image's 128MB default; the rerun passed.
+The first full run also exposed stale optimized Composer class-map entries
+for previously deleted controllers and GD without WebP. `composer dump-autoload
+--no-scripts` refreshed only generated vendor files; GD was rebuilt with WebP
+in the disposable container (no application dependencies or lockfiles changed).
+The two controller test files then passed **82 tests, 625 assertions**; the
+upload/GD files passed **87 tests, 403 assertions**.
+No Claude setup hook or direct `wait_for_setup.py` invocation was used.
+
+`npm ci --ignore-scripts --no-audit --no-fund` restored the locked Node
+installation. Neither lockfile changed; Composer dependencies were not
+installed or updated. Installed source/metadata: Laravel **13.34.0**, Inertia
+Laravel **3.3.1**, Wayfinder **0.1.21**, Pest **5.0.4**, Pint **1.30.4**,
+PHPStan **2.2.8**; Node **24.19.0**, npm **11.9.0**, Vue **3.5.43**,
+Inertia Vue **3.6.1**, Leaflet **1.9.4**, Leaflet types **1.9.22**,
+Vitest **4.1.11**, Playwright **1.62.1**, Tailwind **4.3.3**.
+Boost is unavailable; repository files and installed package source were used.
+
+Before editing tracked application code, the fetched-develop baseline ran:
+`VisitControllerTest`, `VisitDetailControllerTest`,
+`RepresentativePackageControllerTest`, `RepresentativePaymentControllerTest`,
+`LegacyRepresentativePaymentLinksTest`, `LegacyAdminPermissionsTest`,
+`LegacyStoreStateChangingRoutesTest`, `LegacyShopRouteAccessTest`,
+`LegacyTempRoutesReachableTest`, `LegacyDataExposureTest`: **187 passed,
+866 assertions**.
+
+### Consumer findings and completed scope
+
+- Root `VisitController` served only the two detail views, `mapMarkers()` and
+  the retained web `update_note`. They moved into the existing
+  `Store\Admin\VisitController`; the root file and its Pint/PHPStan/redirect
+  path exclusions are removed. Both read permissions are still
+  `view_representative_visits`. Detail uses bound `{visit}`; day uses bound
+  `{user}` plus `ShowRepresentativeVisitsRequest` for its id and optional day.
+  A query cannot forge the bound user; nonexistent records and non-reps are
+  404. `mapMarkers()` retains its numeric/finite/range checks, labels, one-based
+  rank and order-id colour rule. Rank-descending day order is retained, with
+  id-ascending ties.
+- The old note route `visits.note` is inside the customer/verified/unbanned
+  group, so moving it to admin middleware would break the retained caller.
+  It stays there, pointing to the moved handler. New permission-gated PUT
+  `admin.rep.visits.note` aliases that handler for the admin editor. The bound
+  visit overrides a forged body id. Both use the typed note request and save
+  only the current store actor's own visit; even Super Admin leaves a foreign
+  visit unchanged. Numeric `1`/`0` answers become redirect-back; missing ids
+  are 404. `ControllerRedirectsTest` exempts only this method, not its class.
+- Grep found one old UI note caller, the AJAX writer in
+  `shop/frontend/view_customer.blade.php`. It is now a native POST/CSRF form,
+  with the current visit id in a hidden input and no numeric-response branch.
+  The mobile API is separate and unchanged. Web ownership/validation cases
+  moved from the Legacy payment-links and reconstruction tests into the
+  migrated detail tests; the API cases remain in their original file.
+- `Show.vue` and `RepShow.vue` use `StoreAdminLayout`, a narrow
+  `VisitDetailResource`, Wayfinder, translated labels, permission/ownership
+  gating, native constraints and RTL/dark styling. Existing list links now
+  visit these pages with Inertia. The sidebar destination was already the
+  Inertia visit index; no menu change was needed and its tests run.
+- Shared `StoreLeafletMap` owns step 30's npm Leaflet/tile/lifecycle code;
+  `StoreTripMap` and `StoreVisitMap` use it. Visit maps preserve red/blue ranks,
+  safe text popups, exact marker coordinates, route order, polyline and map
+  fitting; empty days avoid initializing a map. The map stays LTR and isolated
+  inside Arabic. White rank text uses darker red/blue for contrast. Leaflet
+  and its CSS are bundled; no CSP directive or dependency manifest changed.
+- Consumer tracing covered `app`, `routes`, `resources`, `tests` and
+  `public/assets/js`. Only the two views included the visit map partial;
+  `layouts/app.blade.php` has no visit-map include, and no public JS helper
+  references it. `git rm` removed the two views, their partial and their Blade
+  map test, replacing the latter with full-mounted map coverage. Protected
+  shells and shared assets remain. No departure, tax, logout, permission
+  definition or role-grant policy changed, and no Legacy ratchet list changed.
+
+### Verification and limits
+
+- Focused expanded backend run: **209 passed, 1,207 assertions**, including
+  all baseline files plus `HandleStoreBladePagesTest`,
+  `ControllerRedirectsTest` and `StaticAnalysisExclusionsTest`.
+  A separate seven-file run including `ReconstructedMigrationAuditTest`:
+  **86 passed, 658 assertions**. PHPStan: **no errors**. Pint: passed.
+- Focused Vitest: **40 passed** across the new base/visit maps, existing trip
+  map, detail/day pages, representative pages and menu. All use full mounts;
+  Leaflet's recording mock replaces only the browser geometry engine.
+  TypeScript and scoped ESLint/Prettier passed while iterating.
+- Browser: the new `store-visit-details.spec.ts` **passed** on real npm
+  Leaflet under enforced CSP, including Inertia list/detail/day navigation,
+  own-note persistence with foreign DB unchanged, ranked markers/polyline,
+  safe popups, date filtering, empty day, Arabic with LTR map, both arrow
+  directions and dark input contrast. Existing trip-map specs **3 passed**
+  after extracting their shared base, and representative specs **2 passed**.
+  Earlier attempts exposed environment/test-fixture issues: missing Playwright
+  FFmpeg, stale `public/hot` pointing at an unavailable Vite server, a missing
+  fixture `shipping_type`, and incorrect button labels in the new spec.
+  The stale hot file was saved under ignored `work/`; system Chromium and
+  FFmpeg were used. FFmpeg download was blocked by network policy; no policy
+  was bypassed. OSM tiles were answered locally, while CSP stayed enforced.
+- `npm run build` failed resolving the remote font host (`EAI_AGAIN`);
+  `python3 .claude/scripts/build_without_fonts.py` **built production assets**
+  without changing Vite config. Wayfinder generation ran with
+  `--skip-routes --with-form`. `git diff --check`: clean.
+- `python3 .claude/scripts/pre_push_check.py --full`, first attempt: Wayfinder,
+  ESLint, Prettier, vue-tsc, Vitest (**316 files, 2,493 tests**), Pint,
+  PHPStan and config-cache clearing ran successfully. Pest completed with
+  **7 failed, 6,029 passed, 34,088 assertions**: two stale class-map entries
+  and five missing-WebP failures, repaired as above. The second explicit
+  `--full` run **exited 0**: Wayfinder types, ESLint, Prettier, vue-tsc,
+  Vitest (**316 files, 2,493 tests**), Pint, PHPStan (**no errors**),
+  config-cache clearing and Pest (**6,036 passed, 34,132 assertions**,
+  five processes) all ran and passed. E2E, MySQL, audits and deploy-script
+  checks are not part of this mode; browser results are recorded separately
+  above. The bare/attested mode was never run and no trailer was added.
+- Not run: PR CI, PR/merge SAST or develop deployment (`[skip ci]`, owner
+  authorized); MySQL-specific tests, the full Playwright suite, dependency
+  audits, deploy-script tests, live OSM tile requests, or a successful build
+  with the remote font. Pest and Playwright use isolated SQLite databases.
+
+Inventory: **27** backend Blade files (30 minus three), **14** literal
+app-shell consumers including the shell test, **3** actual layout-shell
+extending views, **1,048** `/temp` and **436** `/temp/admin` registrations.
+The retained editor remains **8 fields in 8 views** across the protected
+storefront/seller surfaces. No production data was changed.

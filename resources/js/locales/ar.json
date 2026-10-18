@@ -2812,6 +2812,38 @@
             "dateHelp": "اترك فترة الخصم فارغة لخصم دون فترة محددة.",
             "discount": "الخصم",
             "discountType": "نوع الخصم"
+        },
+        "representatives": {
+            "visits": {
+                "details": "تفاصيل الزيارة",
+                "dayTitle": "زيارات {name}",
+                "back": "العودة إلى الزيارات",
+                "customer": "اسم العميل",
+                "company": "اسم الشركة",
+                "email": "البريد الإلكتروني",
+                "phone": "الهاتف",
+                "serial": "الرقم التسلسلي للعميل",
+                "accountId": "رقم الحساب",
+                "date": "تاريخ الزيارة",
+                "order": "رقم الطلب",
+                "status": "حالة الطلب",
+                "orderDate": "تاريخ الطلب",
+                "amount": "المبلغ الإجمالي",
+                "paymentMethod": "طريقة الدفع",
+                "customerNotes": "ملاحظات العميل",
+                "customerOtajerId": "رقم العميل في أوتاجر",
+                "deliveryDate": "تاريخ التسليم",
+                "noOrder": "لا يوجد طلب محدد لهذه الزيارة.",
+                "missingCustomer": "عميل غير معروف",
+                "note": "ملاحظة الزيارة",
+                "saveNote": "حفظ الملاحظة",
+                "saving": "جارٍ الحفظ…",
+                "saved": "تم حفظ الملاحظة.",
+                "mapLabel": "خريطة زيارات المندوب",
+                "filterDate": "التصفية حسب التاريخ",
+                "emptyDay": "لا توجد زيارات في هذا التاريخ",
+                "tryDate": "يرجى اختيار تاريخ آخر."
+            }
         }
     },
     "store.attributes.index.title": "خصائص المنتجات",

@@ -73,7 +73,7 @@ use App\Http\Controllers\Store\Admin\WebsiteHeaderController;
 use App\Http\Controllers\Store\Admin\WebsiteHomeController;
 use App\Http\Controllers\Store\Admin\WebsitePageController;
 use App\Http\Controllers\Store\Admin\ZoneController;
-use App\Http\Controllers\VisitController;
+use App\Http\Controllers\Store\Admin\VisitController;
 use App\Models\Ticket;
 use Aws\Middleware;
 use Illuminate\Contracts\Encryption\DecryptException;
@@ -249,15 +249,14 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
         Route::get('admin/representatives/payments/export/{payment}', 'export')->name('admin.rep.payments.export');
     });
 
-    Route::controller(App\Http\Controllers\Store\Admin\VisitController::class)->group(function () {
+    Route::controller(VisitController::class)->group(function () {
         Route::get('/representatives/visits/index', 'index')->name('admin.rep.visits.index');
+        Route::get('/representatives/visits/show/{visit}', 'show')->name('admin.rep.visits.show');
+        Route::get('/representatives/visits/rep-show/{user}', 'show_all_visits_in_a_day')->name('admin.rep.visits.rep-show');
+        Route::put('/representatives/visits/{visit}/note', 'update_note')->name('admin.rep.visits.note')->middleware('permission:view_representative_visits');
         Route::delete('/representatives/visits/delete/{visit}', 'destroy')->name('admin.rep.visits.destroy');
         Route::post('/representatives/visits/bulk-visit-delete', 'bulkDestroy')->name('bulk-visit-delete');
     });
-    // Map details remain server-rendered until the logistics patch.
-    Route::get('/representatives/visits/show/{id}', [VisitController::class, 'show'])->name('admin.rep.visits.show')->middleware('permission:view_representative_visits');
-    Route::get('/representatives/visits/rep-show/{id}', [VisitController::class, 'show_all_visits_in_a_day'])->name('admin.rep.visits.rep-show')->middleware('permission:view_representative_visits');
-
     Route::controller(RepresentativePackageController::class)->group(function () {
         Route::get('/representatives/packages/index', 'index')->name('rep.packages.index');
         Route::get('/representatives/packages/create', 'create')->name('rep.packages.create');

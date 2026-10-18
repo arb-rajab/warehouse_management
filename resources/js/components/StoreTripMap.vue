@@ -1,17 +1,11 @@
 <script setup lang="ts">
-import {
-    icon,
-    latLngBounds,
-    map as leafletMap,
-    marker,
-    tileLayer,
-} from 'leaflet';
+import { icon, latLngBounds, marker } from 'leaflet';
 import type { LeafletKeyboardEvent, Map as LeafletMap, Marker } from 'leaflet';
 import markerIconRetinaUrl from 'leaflet/dist/images/marker-icon-2x.png';
 import markerIconUrl from 'leaflet/dist/images/marker-icon.png';
 import markerShadowUrl from 'leaflet/dist/images/marker-shadow.png';
-import 'leaflet/dist/leaflet.css';
-import { onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { watch } from 'vue';
+import StoreLeafletMap from '@/components/StoreLeafletMap.vue';
 import { t } from '@/lib/i18n';
 
 /** A point on the map: an order, labelled for its marker. */
@@ -35,7 +29,6 @@ const props = defineProps<{
 }>();
 const emit = defineEmits<{ toggle: [id: number] }>();
 
-const container = ref<HTMLElement | null>(null);
 const iconOptions = {
     iconUrl: markerIconUrl,
     iconRetinaUrl: markerIconRetinaUrl,
@@ -127,19 +120,10 @@ function drawMarkers(): void {
     }
 }
 
-onMounted(() => {
-    map = leafletMap(container.value!);
-    tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 19,
-        attribution:
-            '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-    }).addTo(map);
+function initialize(readyMap: LeafletMap): void {
+    map = readyMap;
     drawMarkers();
-});
-onBeforeUnmount(() => {
-    map?.remove();
-    map = null;
-});
+}
 watch(() => props.points, drawMarkers);
 watch(
     () => props.selected,
@@ -149,12 +133,9 @@ watch(
 </script>
 
 <template>
-    <div
-        ref="container"
-        dir="ltr"
-        role="region"
-        :aria-label="t('store.trips.map.mapLabel')"
-        class="isolate h-120 w-full rounded-md border border-gray-200 dark:border-neutral-700"
+    <StoreLeafletMap
+        :label="t('store.trips.map.mapLabel')"
+        @ready="initialize"
         data-testid="store-trip-map"
     />
 </template>

@@ -95,6 +95,8 @@ import type {
     RepresentativePackage,
     RepresentativePayment,
     RepresentativeVisit,
+    RepresentativeVisitDetail,
+    RepresentativeVisitMarker,
 } from '@/types/storeRepresentatives';
 import type { StoreTruck, TruckPhoto } from '@/types/storeTruck';
 
@@ -1495,6 +1497,51 @@ export function storeCategoryForm(
         meta_title: 'Food SEO',
         meta_description: 'Food description',
         filtering_attributes: [2],
+        ...overrides,
+    };
+}
+
+export function representativeVisitDetail(
+    overrides: Partial<RepresentativeVisitDetail> = {},
+): RepresentativeVisitDetail {
+    return {
+        id: 81,
+        note: 'Visit note',
+        visit_date: '2026-10-09 12:00:00',
+        representative: { id: 18, name: 'Representative Aya' },
+        customer: {
+            id: 21,
+            name: 'Customer Noor',
+            company_name: 'Noor BV',
+            email: 'noor@example.com',
+            phone: '0612345678',
+            member_serial: '42',
+            accounting_id: 'AC-21',
+        },
+        order: {
+            id: 31,
+            code: 'VISIT-31',
+            delivery_status: 'delivered',
+            date: 1791547200,
+            amount: '€12.50',
+            payment_type: 'Cash on delivery',
+            customer_notes: 'Leave at reception',
+            customer_otajer_id: 'OT-21',
+            delivery_date: '2026-10-10',
+        },
+        ...overrides,
+    };
+}
+export function representativeVisitMarker(
+    overrides: Partial<RepresentativeVisitMarker> = {},
+): RepresentativeVisitMarker {
+    return {
+        id: 81,
+        lat: 0,
+        lng: 0,
+        rank: 1,
+        has_order: true,
+        label: 'Customer Noor',
         ...overrides,
     };
 }

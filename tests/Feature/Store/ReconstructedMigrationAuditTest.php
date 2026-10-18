@@ -6,7 +6,6 @@ use App\Models\CustomerPackage;
 use App\Models\Page;
 use App\Models\ProductQuery;
 use App\Models\Upload;
-use App\Models\Visit;
 use Database\Seeders\PageSeeder;
 
 // These checks reconstruct findings from the integrated implementation;
@@ -83,14 +82,4 @@ test('retained product query read aliases redirect authorized staff and refuse c
     actingAsStoreUser(createStoreUser('customer'));
     $this->get('/temp/product-queries')->assertForbidden();
     $this->get('/temp/product-queries/'.encrypt($query->id))->assertForbidden();
-});
-
-test('representative web visit notes reject malformed writes before saving', function () {
-    $owner = createStoreUser('customer');
-    $owner->forceFill(['is_rep' => 1])->save();
-    $visit = Visit::forceCreate(['rep_id' => $owner->id, 'customer_id' => createStoreUser('customer')->id, 'note' => 'Original note']);
-    actingAsStoreUser($owner);
-    $this->postJson(route('visits.note'), ['visit_id' => $visit->id, 'note' => ['invalid']])->assertUnprocessable()->assertJsonValidationErrors('note');
-    $this->postJson(route('visits.note'), ['visit_id' => 'invalid', 'note' => 'Ignored'])->assertUnprocessable()->assertJsonValidationErrors('visit_id');
-    expect($visit->fresh()->note)->toBe('Original note');
 });

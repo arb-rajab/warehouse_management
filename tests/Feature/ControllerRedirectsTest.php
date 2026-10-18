@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Store\Admin\VisitController;
 use Symfony\Component\Finder\Finder;
 
 /**
@@ -11,7 +12,7 @@ use Symfony\Component\Finder\Finder;
  * route like `RedirectsAfterCellAction`. See
  * .ai/rules/controllers.md.
  */
-test('no controller redirects with back(), other than the intentional LocaleController exception', function () {
+test('no controller redirects with back(), other than locale switching and the representative visit note writer', function () {
     // Whether the source's actual PHP tokens contain a `->back(` method
     // call — a plain text/regex scan would also match the literal string
     // inside a docblock explaining why `back()` must not be used, like the
@@ -59,13 +60,21 @@ test('no controller redirects with back(), other than the intentional LocaleCont
             '#^ProductQueryController\.php$#',
             '#^RepresentativePackageController\.php$#',
             '#^RepresentativePaymentController\.php$#',
-            '#^VisitController\.php$#',
         ]);
 
     $offenders = [];
 
     foreach ($finder as $file) {
-        if ($callsBack($file->getContents())) {
+        $source = $file->getContents();
+        if ($file->getRelativePathname() === 'Store/Admin/VisitController.php') {
+            // The note writer serves the retained storefront and the visit
+            // detail; step 31 explicitly preserves a redirect back for both.
+            $method = new ReflectionMethod(VisitController::class, 'update_note');
+            $lines = explode("\n", $source);
+            array_splice($lines, $method->getStartLine() - 1, $method->getEndLine() - $method->getStartLine() + 1);
+            $source = implode("\n", $lines);
+        }
+        if ($callsBack($source)) {
             $offenders[] = $file->getRelativePathname();
         }
     }

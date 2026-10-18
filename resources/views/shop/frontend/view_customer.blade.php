@@ -17,11 +17,13 @@
                     <h4 class="modal-title h6">{{translate('Visit Note')}}</h4>
                     <button type="button" class="close" data-dismiss="modal" aria-hidden="true"></button>
                 </div>
-                <div class="modal-body text-center">
-                    <textarea id="note" class="form-control" rows="4" value=""></textarea>
+                <form id="visit-note-form" class="modal-body text-center" action="{{ route('visits.note') }}" method="POST">
+                    @csrf
+                    <input type="hidden" id="visit-note-id" name="visit_id">
+                    <textarea id="note" name="note" class="form-control" rows="4"></textarea>
                     <button type="button" class="btn btn-secondary rounded-0 mt-2" data-dismiss="modal">{{translate('Cancel')}}</button>
-                    <button type="button" class="btn btn-primary rounded-0 mt-2" onclick="update_notes()">{{translate('Update')}}</button>
-                </div>
+                    <button type="submit" class="btn btn-primary rounded-0 mt-2">{{translate('Update')}}</button>
+                </form>
             </div>
         </div>
     </div><!-- /.modal -->
@@ -34,7 +36,6 @@
             removeFromCart(key);
         }
 
-        let visit_id = null;
 
         function getCurrentPosition() {
         return new Promise((resolve, reject) => {
@@ -79,7 +80,7 @@
         // Handle the success case
         function onCustomerChooseSuccess(data) {
             if (data.open_visit['has_open_visit'] == true) {
-                        visit_id = data.open_visit['visit_id'];
+                        document.getElementById('visit-note-id').value = data.open_visit['visit_id'];
                         $('#note-modal').modal('show');
                     }
                     $(element).addClass('disabled');
@@ -102,19 +103,6 @@
             AIZ.plugins.notify('warning', data.responseJSON.error);
         }
 
-
-        function update_notes(id){
-            var updatedNotes = document.getElementById('note').value;
-            $('#note-modal').modal('hide');
-            $.post('{{ route('visits.note') }}', {_token:'{{ csrf_token() }}', visit_id:visit_id, note:updatedNotes }, function(data){
-                if(data == 1){
-                    AIZ.plugins.notify('success', '{{ translate('Notes updated successfully') }}');
-                }
-                else{
-                    AIZ.plugins.notify('danger', '{{ translate('Something went wrong') }}');
-                }
-            });
-        }
 
         function showLoginModal() {
             $('#login_modal').modal();

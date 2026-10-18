@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Visit;
 use Illuminate\Testing\TestResponse;
 use Inertia\Testing\AssertableInertia as Assert;
 
@@ -99,4 +100,16 @@ test('an Inertia store page renders inside the root view as usual', function () 
     $this->get('/temp/admin/staffs')
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page->component('Store/Admin/Staff/Staffs/Index'));
+});
+
+test('visit maps use the strict CSP without expanding its tile allowance', function () {
+    actingAsStoreUser(createStoreStaff('view_representative_visits'));
+    $rep = createStoreUser('customer');
+    $rep->forceFill(['is_rep' => true])->save();
+    $visit = Visit::create(['rep_id' => $rep->id, 'customer_id' => createStoreUser('customer')->id, 'visit_date' => '2026-10-09']);
+    foreach (['admin.rep.visits.show' => $visit->id, 'admin.rep.visits.rep-show' => $visit->rep_id] as $route => $id) {
+        $response = $this->get(route($route, $id), inertiaHeaders())->assertOk()->assertHeader('X-Inertia', 'true');
+        expect(scriptSrcOf($response))->toBe("script-src 'self'")
+            ->and(explode(' ', cspDirectiveOf($response, 'img-src')))->toEqualCanonicalizing(['img-src', "'self'", 'https://tile.openstreetmap.org', 'data:', 'blob:']);
+    }
 });
