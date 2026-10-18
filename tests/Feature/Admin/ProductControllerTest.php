@@ -145,12 +145,12 @@ test('the products index ships an empty ar_name for a product the store never tr
 
     $response->assertOk()->assertInertia(
         fn (Assert $page) => $page->has('products.data', 2)
-            // Ordering deliberately stays on the base `name` column in both
-            // locales, so "Aardvarks" still sorts first.
-            ->where('products.data.0.name', 'Aardvarks')
-            ->where('products.data.0.ar_name', 'حيوانات')
-            ->where('products.data.1.name', 'Widgets')
-            ->where('products.data.1.ar_name', '')
+            // Sort by the displayed name: the untranslated English label
+            // precedes the translated Arabic label in ascending order.
+            ->where('products.data.0.name', 'Widgets')
+            ->where('products.data.0.ar_name', '')
+            ->where('products.data.1.name', 'Aardvarks')
+            ->where('products.data.1.ar_name', 'حيوانات')
     );
 });
 
@@ -869,6 +869,33 @@ test('product name and material id sorting applies to the full filtered result s
     expect($expected->pluck('id'))->not->toContain($excluded->id);
 })->with([
     ['name', 'asc'], ['name', 'desc'], ['id', 'asc'], ['id', 'desc'],
+]);
+
+test('product name sorting follows the panel language and falls back to the displayed English name', function (string $locale, string $direction) {
+    actingAsAdmin();
+    $apple = Product::factory()->create(['name' => 'Apple', 'ar_name' => 'تفاح']);
+    $orange = Product::factory()->create(['name' => 'Orange', 'ar_name' => 'برتقال']);
+    $untranslated = Product::factory()->create(['name' => 'Zebra', 'ar_name' => '']);
+    $ids = $locale === 'ar'
+        ? [$untranslated->id, $orange->id, $apple->id]
+        : [$apple->id, $orange->id, $untranslated->id];
+    if ($direction === 'desc') {
+        $ids = array_reverse($ids);
+    }
+
+    $this->withSession(['locale' => $locale])
+        ->get('/admin/products?sort_by=name&sort_direction='.$direction)
+        ->assertOk()->assertInertia(fn (Assert $page) => $page
+        ->where('products.data', fn ($rows) => collect($rows)->pluck('id')->all() === $ids)
+        ->where('filters.sort_by', 'name'));
+
+    if ($direction === 'asc') {
+        $this->get('/admin/products')
+            ->assertOk()->assertInertia(fn (Assert $page) => $page
+            ->where('products.data', fn ($rows) => collect($rows)->pluck('id')->all() === $ids));
+    }
+})->with([
+    ['en', 'asc'], ['en', 'desc'], ['ar', 'asc'], ['ar', 'desc'],
 ]);
 
 test('product name sorting uses material id to break ties consistently', function (string $direction) {
