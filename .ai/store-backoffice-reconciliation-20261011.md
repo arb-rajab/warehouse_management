@@ -3657,6 +3657,11 @@ this session. The owner authorized commits, one PR into `develop`, a
 follow-up commit recording its number before merging, and the merge, with
 `[skip ci]` on every commit message, the PR title and the merge message.
 
+Shipping through [PR #440](https://github.com/arb-rajab/warehouse_management/pull/440) into `develop`. Implementation commit:
+`061c8d9a`. This follow-up `[skip ci]` commit records the PR number before
+merging; application verification above is unchanged, and the documentation
+follow-up is checked with `git diff --check`.
+
 ### Runtime and baseline
 
 The host has no PHP executable. `vendor/` and `node_modules/` existed, but

@@ -3239,6 +3239,8 @@ Work on `codex/store-visit-details-step-31` from fetched `origin/develop`
 this run uses explicit `--full` before committing and never writes an
 attestation trailer. The owner authorized one PR into `develop`, its merge,
 and `[skip ci]` on every commit, the PR title and the merge commit.
+[PR #440](https://github.com/arb-rajab/warehouse_management/pull/440) is the single PR; its number is recorded in a follow-up
+`[skip ci]` commit before merging.
 Model: GPT-6 Codex; the exact variant and configured effort are not exposed
 to this session. The reconciliation ledger records verification and shipping.
 
