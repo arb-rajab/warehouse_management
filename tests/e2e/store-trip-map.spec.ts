@@ -101,8 +101,8 @@ test('the map picker selects orders on the real Leaflet map, reorders the stops 
     const tiles = await serveTiles(page);
     const errors: string[] = [];
     await loginAsStoreAdmin(page);
-    // From here on: the Blade login and dashboard pages' own scripts are not
-    // this page's concern.
+    // Observe this map workflow after the retained Blade login; the Inertia
+    // dashboard has its own real-chart browser spec.
     page.on('pageerror', (error) => errors.push(error.message));
     const reports = await watchCsp(page);
     await expectStrictPolicy(page, '/temp/admin/trips/create-from-map');

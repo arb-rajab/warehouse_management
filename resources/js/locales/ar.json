@@ -2508,9 +2508,9 @@
         "dashboard": {
             "smtpMissing": "لم يتم إعداد SMTP.",
             "configure": "إعداد SMTP",
-            "customers": "العملاء الموثقون",
-            "orders": "الطلبات",
-            "categories": "الفئات",
+            "customers": "العملاء المؤكدون",
+            "orders": "إجمالي الطلبات",
+            "categories": "فئات المنتجات",
             "brands": "العلامات التجارية",
             "products": "المنتجات",
             "active": "المنتجات النشطة",
@@ -2520,8 +2520,28 @@
             "local": "المنتجات المحلية",
             "sales": "المبيعات حسب الفئة",
             "stock": "المخزون حسب الفئة",
-            "topProducts": "أفضل 12 منتجًا",
-            "rating": "التقييم"
+            "topProducts": "أفضل 12 منتجاً",
+            "rating": "التقييم: {rating} / 5",
+            "title": "لوحة التحكم",
+            "totalProducts": "إجمالي المنتجات",
+            "activeProducts": "إجمالي المنتجات المنشورة",
+            "apiProducts": "منتجات واجهة API",
+            "adminProducts": "منتجات الإدارة",
+            "count": "المنتجات",
+            "numberOfSales": "عدد المبيعات",
+            "numberOfStock": "الكمية في المخزون",
+            "numberOfVisits": "عدد الزيارات",
+            "category": "الفئة / البلد",
+            "emptyProducts": "لا توجد منتجات بعد.",
+            "smtpWarning": "يرجى إعداد SMTP لتعمل جميع وظائف إرسال البريد الإلكتروني.",
+            "configureNow": "الإعداد الآن",
+            "charts": {
+                "products": "المنتجات",
+                "sources": "مصادر المنتجات",
+                "sales": "مبيعات المنتجات حسب الفئة",
+                "stock": "مخزون المنتجات حسب الفئة",
+                "visits": "إجمالي زيارات الموقع"
+            }
         },
         "carriers": {
             "title": "شركات الشحن",

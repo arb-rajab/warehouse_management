@@ -977,3 +977,34 @@ export interface StoreCategoryOptions {
     attributes: StoreReferenceOption[];
     commissionEnabled: boolean;
 }
+
+export interface StoreDashboardSeries {
+    labels: string[];
+    values: number[];
+}
+export interface StoreDashboardProduct {
+    id: number;
+    name: string;
+    public_url: string | null;
+    thumbnail_url: string;
+    base_price: string;
+    discounted_price: string;
+    rating: number;
+}
+export interface StoreDashboardProps {
+    stats: {
+        customers: number;
+        orders: number;
+        categories: number;
+        brands: number;
+    };
+    series: {
+        products: number[];
+        sources: number[];
+        sales: StoreDashboardSeries;
+        stock: StoreDashboardSeries;
+        visits: StoreDashboardSeries;
+    };
+    topProducts: StoreDashboardProduct[];
+    showSmtpAlert: boolean;
+}

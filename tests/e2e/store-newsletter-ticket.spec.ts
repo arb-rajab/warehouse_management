@@ -186,10 +186,8 @@ test('a newsletter is composed with formatting, keeps its draft after a refused 
     expect(posted).not.toContain('forged-recipient');
     expect(posted).toContain('<strong>Fresh dates</strong>');
     expect(posted).not.toContain('user_emails_search');
-    // The send keeps its established return to the retained Blade
-    // dashboard. That page is not asserted here: under the harness's strict
-    // mode it lazy-loads product translations and answers 500, which is
-    // unrelated to the newsletter.
+    // The send keeps its established dashboard destination. Its Inertia
+    // rendering and charts are covered by store-dashboard.spec.ts.
     expect(response.headers()['location']).toMatch(/\/temp\/admin$/);
     expect(reports.filter((report) => report.includes('/temp/admin/'))).toEqual(
         [],

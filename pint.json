@@ -425,7 +425,6 @@
         "routes/shop-seller.php",
         "routes/shop-web.php",
         "app/Models/CustomerProduct.php",
-        "app/Http/Controllers/PageController.php",
-        "app/Http/Controllers/AdminController.php"
+        "app/Http/Controllers/PageController.php"
     ]
 }
