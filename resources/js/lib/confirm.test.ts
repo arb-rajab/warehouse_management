@@ -3,6 +3,7 @@ import {
     confirmAcceptVerificationReport,
     confirmDelete,
     confirmDeleteUser,
+    confirmDeliveryStatus,
     confirmLogout,
 } from './confirm';
 
@@ -28,6 +29,20 @@ describe('confirmDelete', () => {
 
         vi.stubGlobal('confirm', () => true);
         expect(confirmDelete('Jane Doe')).toBe(true);
+    });
+});
+
+describe('confirmDeliveryStatus', () => {
+    it('names the orders and the status they move to', () => {
+        const confirmSpy = vi.fn(() => false);
+        vi.stubGlobal('confirm', confirmSpy);
+
+        expect(confirmDeliveryStatus('2 selected orders', 'Delivered')).toBe(
+            false,
+        );
+        expect(confirmSpy).toHaveBeenCalledWith(
+            'Mark 2 selected orders as Delivered?',
+        );
     });
 });
 

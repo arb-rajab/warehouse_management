@@ -1,20 +1,21 @@
 <script setup lang="ts">
 import { Head, router } from '@inertiajs/vue3';
-import { ArrowUpRight, Pencil, Printer } from '@lucide/vue';
+import { Pencil, Printer } from '@lucide/vue';
 import { ref } from 'vue';
+import { show as showTrip } from '@/actions/App/Http/Controllers/Store/Admin/TripCheckpointController';
 import {
     create,
     edit,
     index as trucksIndex,
     qr,
 } from '@/actions/App/Http/Controllers/Store/Admin/TruckController';
-import { show as showTrip } from '@/actions/App/Http/Controllers/Trip/TripController';
 import AddResourceLink from '@/components/AddResourceLink.vue';
 import DataTable from '@/components/DataTable.vue';
 import FormField from '@/components/FormField.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import Pagination from '@/components/Pagination.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
+import TableLink from '@/components/TableLink.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
 import { t } from '@/lib/i18n';
 import { useStoreAccess } from '@/lib/storeAccess';
@@ -83,15 +84,13 @@ function photoUrl(truck: StoreTruck): string | null {
                             :src="photoUrl(truck) ?? ''"
                             alt=""
                             class="h-12 w-12 rounded object-cover"
-                        /><a
+                        /><TableLink
                             v-if="
                                 truck.open_trip_id &&
                                 access.can('view_all_trips')
                             "
-                            :href="showTrip.url(truck.open_trip_id)"
-                            class="inline-flex items-center gap-1 text-blue-600 hover:underline dark:text-blue-400"
-                            >{{ truck.name
-                            }}<ArrowUpRight class="h-3 w-3 shrink-0" /></a
+                            :href="showTrip(truck.open_trip_id)"
+                            >{{ truck.name }}</TableLink
                         ><span v-else>{{ truck.name }}</span>
                     </div>
                 </td>

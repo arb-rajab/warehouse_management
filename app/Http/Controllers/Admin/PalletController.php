@@ -19,7 +19,6 @@ use App\Models\Product;
 use App\Models\User;
 use App\Services\PalletActionService;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -30,12 +29,11 @@ class PalletController extends Controller
     public function __construct(private readonly PalletActionService $palletActions) {}
 
     /**
-     * The "matching pallets" list a dashboard stat tile now links to instead
-     * of jumping straight to the cell map — same highlight-filter query
-     * params the map understands (see FilterMatchingPalletsRequest), ordered
-     * by expiration date then add date so the most urgent pallets lead. The
-     * page itself offers a button that hands this same query to the cell
-     * map, so switching between "list" and "map" never loses the filter.
+     * The "matching pallets" list a dashboard stat tile or a product's
+     * occupancy count links to (see FilterMatchingPalletsRequest), ordered by
+     * expiration date then add date so the most urgent pallets lead. The page
+     * itself offers a button that opens the warehouse map on the filtered
+     * products.
      */
     public function index(FilterMatchingPalletsRequest $request): Response
     {
@@ -64,7 +62,7 @@ class PalletController extends Controller
         /** @var User $user */
         $user = $request->user();
 
-        return $this->handle($request, $cell, function () use ($request, $cell, $user) {
+        return $this->handle($cell, function () use ($request, $cell, $user) {
             $this->palletActions->store(
                 $cell->id,
                 $request->integer('product_id'),
@@ -80,7 +78,7 @@ class PalletController extends Controller
         /** @var User $user */
         $user = $request->user();
 
-        return $this->handle($request, $this->cellFor($pallet), function () use ($request, $pallet, $user) {
+        return $this->handle($this->cellFor($pallet), function () use ($request, $pallet, $user) {
             $this->palletActions->open(
                 $pallet,
                 $request->filled('boxes_count') ? $request->integer('boxes_count') : null,
@@ -96,7 +94,7 @@ class PalletController extends Controller
         /** @var User $user */
         $user = $request->user();
 
-        return $this->handle($request, $this->cellFor($pallet), function () use ($request, $pallet, $user) {
+        return $this->handle($this->cellFor($pallet), function () use ($request, $pallet, $user) {
             $this->palletActions->removeBoxes(
                 $pallet,
                 $request->integer('boxes_count'),
@@ -112,7 +110,7 @@ class PalletController extends Controller
         /** @var User $user */
         $user = $request->user();
 
-        return $this->handle($request, $this->cellFor($pallet), function () use ($request, $pallet, $user) {
+        return $this->handle($this->cellFor($pallet), function () use ($request, $pallet, $user) {
             $this->palletActions->emptyPallet($pallet, $user->id, $request->input('note'));
         });
     }
@@ -122,7 +120,7 @@ class PalletController extends Controller
         /** @var User $user */
         $user = $request->user();
 
-        return $this->handle($request, $this->cellFor($pallet), function () use ($request, $pallet, $user) {
+        return $this->handle($this->cellFor($pallet), function () use ($request, $pallet, $user) {
             $this->palletActions->transfer(
                 $pallet,
                 $request->resolvedSlot()->id,
@@ -137,7 +135,7 @@ class PalletController extends Controller
         /** @var User $user */
         $user = $request->user();
 
-        return $this->handle($request, $this->cellFor($pallet), function () use ($request, $pallet, $user) {
+        return $this->handle($this->cellFor($pallet), function () use ($request, $pallet, $user) {
             $this->palletActions->update(
                 $pallet,
                 $request->integer('product_id'),
@@ -150,25 +148,21 @@ class PalletController extends Controller
     }
 
     /**
-     * Run a pallet-action closure, redirecting on success back to wherever the action
-     * was triggered from, or surfacing an InvalidSlotStateException as a non-field
-     * `action` error for ActionErrorBanner to render otherwise — the target state can
-     * legitimately have changed since the page was rendered (another admin, or the
-     * mobile app).
-     *
-     * The redirect target itself comes from `RedirectsAfterCellAction`, shared with
-     * CellController::toggleActive() — see that trait for why it can't be inferred
-     * from Referer/session state.
+     * Run a pallet-action closure, redirecting back to the cell's row page (via
+     * `RedirectsAfterCellAction`, shared with CellController::toggleActive()), and
+     * surfacing an InvalidSlotStateException as a non-field `action` error for
+     * ActionErrorBanner to render — the target state can legitimately have changed
+     * since the page was rendered (another admin, or the mobile app).
      */
-    private function handle(Request $request, Cell $cell, callable $action): RedirectResponse
+    private function handle(Cell $cell, callable $action): RedirectResponse
     {
         try {
             $action();
         } catch (InvalidSlotStateException $e) {
-            return $this->redirectAfterCellAction($request, $cell)->withErrors(['action' => $e->getMessage()]);
+            return $this->redirectAfterCellAction($cell)->withErrors(['action' => $e->getMessage()]);
         }
 
-        return $this->redirectAfterCellAction($request, $cell);
+        return $this->redirectAfterCellAction($cell);
     }
 
     private function cellFor(Pallet $pallet): Cell

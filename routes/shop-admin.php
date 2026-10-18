@@ -61,7 +61,10 @@ use App\Http\Controllers\Store\Admin\StateController;
 use App\Http\Controllers\Store\Admin\SubscriberController;
 use App\Http\Controllers\Store\Admin\SupportTicketController as AdminSupportTicketController;
 use App\Http\Controllers\Store\Admin\TaxController;
-use App\Http\Controllers\Store\Admin\TripController as StoreTripController;
+use App\Http\Controllers\Store\Admin\TripCheckpointController;
+use App\Http\Controllers\Store\Admin\TripController;
+use App\Http\Controllers\Store\Admin\TripMapController;
+use App\Http\Controllers\Store\Admin\TripOrderController;
 use App\Http\Controllers\Store\Admin\TruckController;
 use App\Http\Controllers\Store\Admin\UploadController;
 use App\Http\Controllers\Store\Admin\WebsiteAppearanceController;
@@ -70,8 +73,7 @@ use App\Http\Controllers\Store\Admin\WebsiteHeaderController;
 use App\Http\Controllers\Store\Admin\WebsiteHomeController;
 use App\Http\Controllers\Store\Admin\WebsitePageController;
 use App\Http\Controllers\Store\Admin\ZoneController;
-use App\Http\Controllers\Trip\TripController;
-use App\Http\Controllers\VisitController;
+use App\Http\Controllers\Store\Admin\VisitController;
 use App\Models\Ticket;
 use Aws\Middleware;
 use Illuminate\Contracts\Encryption\DecryptException;
@@ -247,15 +249,14 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
         Route::get('admin/representatives/payments/export/{payment}', 'export')->name('admin.rep.payments.export');
     });
 
-    Route::controller(App\Http\Controllers\Store\Admin\VisitController::class)->group(function () {
+    Route::controller(VisitController::class)->group(function () {
         Route::get('/representatives/visits/index', 'index')->name('admin.rep.visits.index');
+        Route::get('/representatives/visits/show/{visit}', 'show')->name('admin.rep.visits.show');
+        Route::get('/representatives/visits/rep-show/{user}', 'show_all_visits_in_a_day')->name('admin.rep.visits.rep-show');
+        Route::put('/representatives/visits/{visit}/note', 'update_note')->name('admin.rep.visits.note')->middleware('permission:view_representative_visits');
         Route::delete('/representatives/visits/delete/{visit}', 'destroy')->name('admin.rep.visits.destroy');
         Route::post('/representatives/visits/bulk-visit-delete', 'bulkDestroy')->name('bulk-visit-delete');
     });
-    // Map details remain server-rendered until the logistics patch.
-    Route::get('/representatives/visits/show/{id}', [VisitController::class, 'show'])->name('admin.rep.visits.show')->middleware('permission:view_representative_visits');
-    Route::get('/representatives/visits/rep-show/{id}', [VisitController::class, 'show_all_visits_in_a_day'])->name('admin.rep.visits.rep-show')->middleware('permission:view_representative_visits');
-
     Route::controller(RepresentativePackageController::class)->group(function () {
         Route::get('/representatives/packages/index', 'index')->name('rep.packages.index');
         Route::get('/representatives/packages/create', 'create')->name('rep.packages.create');
@@ -268,7 +269,7 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
     Route::group(['prefix' => 'trips'], function () {
         // The trip lists and their row actions (store-backoffice-migration.md §24)
         // and the trip create and edit forms (§25).
-        Route::controller(StoreTripController::class)->group(function () {
+        Route::controller(TripController::class)->group(function () {
             Route::get('/index', 'index')->name('trips.index');
             Route::get('/today-trips', 'today')->name('trips.today-trips');
             Route::get('/create', 'create')->name('trips.create');
@@ -281,17 +282,26 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
             Route::post('/bulk-trips-delete', 'bulkDestroy')->name('trips.bulk-trip-delete');
         });
 
-        Route::controller(TripController::class)->group(function () {
-            Route::get('/orders', 'all_orders')->name('trips.orders')->middleware('permission:view_all_trips');
-            Route::post('/orders/bulk-change-delivery-status', 'bulk_change_delivery_status')->name('trips.orders.bulk-change-delivery-status')->middleware('permission:edit_trip');
-            Route::post('/orders/update-invoice-number', 'updateInvoiceNumber')->name('trips.orders.update_invoice_number')->middleware('permission:edit_trip');
-            Route::post('/orders/update-order-status', 'updateOrderStatusToDelivered')->name('trips.orders.update_order_status_to_delivered')->middleware('permission:edit_trip');
-            Route::get('/create-from-map', 'create_from_map')->name('trips.create-from-map')->middleware('permission:add_trip');
-            Route::post('/store-from-map', 'store_from_map')->name('trips.store-from-map')->middleware('permission:add_trip');
-            Route::get('/show/{id}', 'show')->name('trips.show')->middleware('permission:view_all_trips');
-            Route::post('/update-checkpoint-notes', 'update_checkpoint_notes')->name('checkpoints.update-notes')->middleware('permission:edit_trip');
-            Route::post('/update-checkpoint-status', 'update_checkpoint_status')->name('checkpoints.update-status')->middleware('permission:edit_trip');
-            Route::get('/print-cmr/{id}', 'print_cmr')->name('checkpoints.print-cmr')->middleware('permission:view_all_trips');
+        // The trip orders list and its order actions (§26).
+        Route::controller(TripOrderController::class)->group(function () {
+            Route::get('/orders', 'index')->name('trips.orders');
+            Route::post('/orders/bulk-change-delivery-status', 'bulkUpdateDeliveryStatus')->name('trips.orders.bulk-change-delivery-status');
+            Route::put('/orders/{order}/invoice-number', 'updateInvoiceNumber')->name('trips.orders.update_invoice_number');
+            Route::put('/orders/{order}/delivered', 'markDelivered')->name('trips.orders.update_order_status_to_delivered');
+        });
+
+        // The trip detail with its checkpoint notes, status and CMR download (§27).
+        Route::controller(TripCheckpointController::class)->group(function () {
+            Route::get('/show/{trip}', 'show')->name('trips.show');
+            Route::put('/checkpoints/{checkpoint}/notes', 'updateNotes')->name('checkpoints.update-notes');
+            Route::put('/checkpoints/{checkpoint}/status', 'updateStatus')->name('checkpoints.update-status');
+            Route::get('/print-cmr/{checkpoint}', 'printCmr')->name('checkpoints.print-cmr');
+        });
+
+        // The trip map picker and its writer (§30).
+        Route::controller(TripMapController::class)->group(function () {
+            Route::get('/create-from-map', 'create')->name('trips.create-from-map');
+            Route::post('/store-from-map', 'store')->name('trips.store-from-map');
         });
 
         // The trip forms' lookups: the driver API's own handlers, reached with
@@ -342,7 +352,7 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
     Route::controller(BusinessSettingsController::class)->group(function () {
         Route::post('/business-settings/update/seller-commission-activation', 'updateSellerCommissionActivation')->name('business_settings.seller_commission.activation')->middleware('RaizerSuperAdmin');
 
-        Route::get('/google-map', 'google_map')->name('google-map.index');
+        Route::get('/google-map', [GoogleMapController::class, 'index'])->name('google-map.index');
 
         Route::post('/env_key_update', 'env_key_update')->name('env_key_update.update');
         Route::post('/google-map', [GoogleMapController::class, 'update'])->name('google-map.update');
@@ -665,8 +675,6 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
     Route::put('/cities/{city}', [CityController::class, 'update'])->name('cities.update');
     Route::delete('/cities/{city}', [CityController::class, 'destroy'])->name('cities.destroy');
     Route::post('/cities/{city}/status', [CityController::class, 'updateStatus'])->name('cities.status');
-
-    Route::view('/system/server-status', 'shop.backend.system.server_status')->name('system_server')->middleware('RaizerSuperAdmin');
 
     // Admin JSON file manager; the shared Blade uploader remains in shop-web/seller.
     Route::get('/uploads', [UploadController::class, 'index'])->name('uploaded-files.index');

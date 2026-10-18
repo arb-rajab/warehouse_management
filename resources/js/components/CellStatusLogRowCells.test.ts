@@ -14,6 +14,7 @@ import { defaultAuthProps, resetMocks } from '@/testing/inertiaPageMocks';
 import type { CellStatusLog } from '@/types/admin';
 import CellLogFlagBadges from './CellLogFlagBadges.vue';
 import CellStatusLogRowCells from './CellStatusLogRowCells.vue';
+import ProductActiveBadge from './ProductActiveBadge.vue';
 import TableLink from './TableLink.vue';
 
 const { usePageMock, routerPostMock } = vi.hoisted(() => ({
@@ -169,6 +170,7 @@ describe('CellStatusLogRowCells', () => {
                     ar_name: 'ودجات',
                     image_url: '/img/widgets.png',
                     boxes_count: 10,
+                    active: true,
                 },
             }),
         );
@@ -177,6 +179,33 @@ describe('CellStatusLogRowCells', () => {
         expect(productCell.text()).toContain('Widgets');
         expect(productCell.get('img').attributes('src')).toBe(
             '/img/widgets.png',
+        );
+    });
+
+    it("marks whether the log's product is still sold", () => {
+        const product = cellLog().product!;
+        const active = mountCells(cellLog());
+        const inactive = mountCells(
+            cellLog({ product: { ...product, active: false } }),
+        );
+
+        expect(
+            active
+                .findAll('td')[2]
+                .getComponent(ProductActiveBadge)
+                .props('active'),
+        ).toBe(true);
+        expect(active.findAll('td')[2].text()).toContain(
+            t('products.status.active'),
+        );
+        expect(
+            inactive
+                .findAll('td')[2]
+                .getComponent(ProductActiveBadge)
+                .props('active'),
+        ).toBe(false);
+        expect(inactive.findAll('td')[2].text()).toContain(
+            t('products.status.inactive'),
         );
     });
 
@@ -250,6 +279,7 @@ describe('CellStatusLogRowCells', () => {
                     ar_name: 'ودجات',
                     image_url: '/img/widgets.png',
                     boxes_count: 10,
+                    active: true,
                 },
             }),
         );
@@ -271,6 +301,7 @@ describe('CellStatusLogRowCells', () => {
                     ar_name: '',
                     image_url: '/img/widgets.png',
                     boxes_count: 10,
+                    active: true,
                 },
             }),
         );

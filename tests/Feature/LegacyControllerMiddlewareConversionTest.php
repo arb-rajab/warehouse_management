@@ -72,6 +72,5 @@ test('the root settings controller keeps the gates of its remaining Blade and co
         'permission:seller_commission_configuration' => ['vendor_commission', 'vendor_commission_update'],
         'permission:seller_verification_form_configuration' => ['seller_verification_form', 'seller_verification_form_update'],
         'permission:features_activation' => ['updateSellerCommissionActivation'],
-        'permission:google_map_setting' => ['google_map'],
     ])->and(method_exists(BusinessSettingsController::class, 'update'))->toBeFalse();
 });

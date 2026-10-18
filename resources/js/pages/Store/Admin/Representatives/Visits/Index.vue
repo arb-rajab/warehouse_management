@@ -1,16 +1,14 @@
 <script setup lang="ts">
-import { Head, router, useForm } from '@inertiajs/vue3';
+import { Head, Link, router, useForm } from '@inertiajs/vue3';
 import { Eye, Trash2 } from '@lucide/vue';
 import { ref } from 'vue';
 import {
     bulkDestroy,
     destroy,
     index as visitsIndex,
-} from '@/actions/App/Http/Controllers/Store/Admin/VisitController';
-import {
     show,
     show_all_visits_in_a_day,
-} from '@/actions/App/Http/Controllers/VisitController';
+} from '@/actions/App/Http/Controllers/Store/Admin/VisitController';
 import ActionErrorBanner from '@/components/ActionErrorBanner.vue';
 import DataTable from '@/components/DataTable.vue';
 import FilterDateField from '@/components/FilterDateField.vue';
@@ -153,17 +151,17 @@ function deleteSelection(): void {
                     </td>
                     <td class="px-4 py-2">
                         <div class="flex flex-wrap items-center gap-2">
-                            <a
-                                :href="show.url(visit)"
+                            <Link
+                                :href="show(visit)"
                                 class="inline-flex items-center gap-1 text-sm underline"
                                 ><Eye class="h-3.5 w-3.5" />{{
                                     t('store.representativeVisits.details')
-                                }}</a
+                                }}</Link
                             >
-                            <a
+                            <Link
                                 v-if="visit.representative && visit.visit_date"
                                 :href="
-                                    show_all_visits_in_a_day.url(
+                                    show_all_visits_in_a_day(
                                         visit.representative,
                                         {
                                             query: {
@@ -178,7 +176,7 @@ function deleteSelection(): void {
                                 class="inline-flex items-center gap-1 text-sm underline"
                                 ><Eye class="h-3.5 w-3.5" />{{
                                     t('store.representativeVisits.day')
-                                }}</a
+                                }}</Link
                             >
                             <TableActionLink
                                 v-if="access.can('delete_representative_visit')"

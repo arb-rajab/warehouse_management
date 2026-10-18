@@ -3,14 +3,12 @@
 namespace App\Http\Requests\Admin;
 
 use App\Http\Requests\Concerns\ValidatesOptionalNote;
-use App\Http\Requests\Concerns\ValidatesReturnTo;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 
 class ToggleCellActiveRequest extends FormRequest
 {
     use ValidatesOptionalNote;
-    use ValidatesReturnTo;
 
     /**
      * Get the validation rules that apply to the request.
@@ -21,7 +19,6 @@ class ToggleCellActiveRequest extends FormRequest
     {
         return [
             ...$this->noteRules(),
-            ...$this->returnToRules(),
         ];
     }
 }

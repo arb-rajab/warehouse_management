@@ -1,6 +1,8 @@
 <script setup lang="ts">
+import { Ban } from '@lucide/vue';
 import { show as showRow } from '@/actions/App/Http/Controllers/Admin/RowController';
 import DataTable from '@/components/DataTable.vue';
+import ProductActiveBadge from '@/components/ProductActiveBadge.vue';
 import TableLink from '@/components/TableLink.vue';
 import { cellStateLabel } from '@/lib/cellStateColor';
 import { formatDate } from '@/lib/date';
@@ -47,6 +49,7 @@ defineProps<{
                     {{
                         productName(pallet.product.name, pallet.product.ar_name)
                     }}
+                    <ProductActiveBadge :active="pallet.product.active" />
                 </div>
             </td>
             <td class="px-4 py-2">
@@ -74,6 +77,14 @@ defineProps<{
                         )
                     }}
                 </TableLink>
+                <span
+                    v-if="!pallet.cell_active"
+                    class="ms-2 inline-flex items-center gap-0.5 rounded bg-red-600 px-1 py-0.5 align-middle text-[10px] font-semibold text-white"
+                    data-testid="cell-inactive-badge"
+                >
+                    <Ban class="h-3 w-3 shrink-0" stroke-width="2.5" />
+                    {{ t('cells.inactiveBadge') }}
+                </span>
             </td>
             <td class="px-4 py-2">
                 <span v-if="pallet.expiration_date">

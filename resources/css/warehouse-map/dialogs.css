@@ -418,6 +418,13 @@
     white-space: nowrap;
 }
 
+.wms-pgroup__name {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+}
+
 .wms-pgroup__title small {
     color: var(--wms-muted);
     font-size: 11px;

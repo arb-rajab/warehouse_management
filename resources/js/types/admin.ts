@@ -143,6 +143,8 @@ export interface ProductDetails {
     ar_name: string;
     image_url: string | null;
     boxes_count: number;
+    /** False once the product is no longer sold (unpublished in the store). */
+    active: boolean;
 }
 
 export interface ProductFilterOption {
@@ -163,82 +165,10 @@ export interface ProductFilterOptions {
     products: ProductFilterOption[];
 }
 
-export interface CellHighlightSeed {
-    state: Cell['state'] | null;
-    productIds: number[];
-    expiresWithinDays: number | null;
-    staleAfterDays: number | null;
-    expired: boolean;
-    inactive: boolean;
-}
-
-/**
- * The pallet detail the cell map carries for every flat — `CellPallet` minus
- * `is_stale`, which only the current flat's fully-loaded cells compute. Shared
- * by the 2D map's per-flat highlight samples and the 3D map's items, which are
- * built from those same samples.
- */
-export type CellPalletSummary = Pick<
-    CellPallet,
-    | 'id'
-    | 'product_id'
-    | 'product_name'
-    | 'product_ar_name'
-    | 'product_image_url'
-    | 'expiration_date'
-    | 'added_at'
-    | 'remaining_boxes'
->;
-
-/**
- * The minimal per-cell data the warehouse map loads for every flat (not just
- * the one on screen) to compute a highlight-match count per flat tab, order
- * matches for next/previous-match navigation, and (via the 3D map's "faced
- * cell" panel) show the same product/date detail the 2D grid shows, and let
- * that panel drive real pallet actions/toggle-active via `cell_id`/
- * `pallet.id`/`pallet.remaining_boxes`.
- */
-export interface CellHighlightSample {
-    cell_id: number;
-    row_letter: string;
-    cell_number: number;
-    flat_number: number;
-    state: Cell['state'];
-    is_active: boolean;
-    pallet: CellPalletSummary | null;
-}
-
 export interface CellSlotLocation {
     row_letter: string;
     cell_number: number;
     flat_number: number;
-}
-
-/**
- * One cell's worth of data for the 3D warehouse map (CellMap3D.vue) — built
- * from `CellHighlightSample` (all flats, already loaded for the 2D map's
- * per-flat match badges) rather than the current-flat-only `Cell`/
- * `CellWithLocation`, since the 3D view renders every flat at once. Carries
- * the same pallet detail `CellSlot.vue` shows in 2D, for the 3D "faced cell"
- * detail panel — including `cellId`/`pallet.id`/`pallet.remaining_boxes` so
- * that panel's manage-pallet/toggle-active buttons can drive the same
- * `PalletActionsDialog`/`ToggleCellActiveDialog` the 2D grid uses.
- */
-export interface CellMap3DItem {
-    cellId: number;
-    cellNumber: number;
-    flatNumber: number;
-    state: Cell['state'];
-    isActive: boolean;
-    highlighted: boolean;
-    dimmed: boolean;
-    pulsing: boolean;
-    pallet: CellPalletSummary | null;
-}
-
-export interface CellMap3DBand {
-    letter: string;
-    items: CellMap3DItem[];
 }
 
 export type CellLogAction =
@@ -346,6 +276,7 @@ export interface ProductSummary {
 }
 
 export type ProductSortBy =
+    | 'id'
     | 'name'
     | 'full_cells_count'
     | 'opened_cells_count'
@@ -374,10 +305,10 @@ export type ProductIndexFilterOptions = CellStatusLogFilterOptions;
 
 /**
  * One row of the "matching pallets" admin list (Admin\PalletController::index) —
- * the dashboard's map-linking stat tiles land here instead of jumping straight
- * to the cell map. Carries the full `ProductDetails` (the list spans every
- * product, unlike the cell map's per-flat `CellPallet`) plus `added_at`, the
- * list's sort tiebreaker after `expiration_date`.
+ * where the dashboard's stat tiles and a product's occupancy counts land.
+ * Carries the full `ProductDetails` (the list spans every product, unlike a
+ * row's per-cell `CellPallet`) plus `added_at`, the list's sort tiebreaker
+ * after `expiration_date`.
  */
 export interface MatchingPallet {
     id: number;
@@ -387,12 +318,13 @@ export interface MatchingPallet {
     remaining_boxes: number;
     product: ProductDetails;
     location: CellSlotLocation;
+    /** False when the pallet's cell is out of service. */
+    cell_active: boolean;
 }
 
 /**
- * The same highlight-filter query params `CellHighlightSeed` seeds the cell
- * map from — this list accepts and means exactly the same shape so a
- * dashboard tile's query works unchanged on either page.
+ * The highlight-filter query params a dashboard tile or a product's occupancy
+ * count links to the matching pallets list with.
  */
 export interface MatchingPalletFilters {
     state?: Cell['state'];

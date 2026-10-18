@@ -57,7 +57,6 @@ test('store Blade shells and retained templates match their remaining consumers'
             'resources/views/shop/backend/downloads/brand.blade.php',
             'resources/views/shop/backend/downloads/category.blade.php',
             'resources/views/shop/backend/downloads/user.blade.php',
-            'resources/views/shop/backend/system/server_status.blade.php',
         ])
         ->and($sideNavConsumers)->toBe([$adminLayout])
         ->and($adminNavConsumers)->toBe([$adminLayout])
@@ -83,8 +82,19 @@ test('store Blade shells and retained templates match their remaining consumers'
         // consumer and is gone (store-backoffice-migration.md §23).
         ->and($sources)->not->toHaveKey($blankLayout)
         ->and(array_keys(array_filter([...$sources, ...$controllerSources], fn (string $source): bool => str_contains($source, 'shop.backend.layouts.blank'))))->toBe([])
-        ->and(file_get_contents(base_path('routes/shop-admin.php')))->toContain(
-            "Route::view('/system/server-status', 'shop.backend.system.server_status')",
-        )
+        // The server status page (a controller-less Route::view) was deleted
+        // on the owner's decision (store-backoffice-migration.md §29).
+        ->and($sources)->not->toHaveKey('resources/views/shop/backend/system/server_status.blade.php')
+        ->and(file_get_contents(base_path('routes/shop-admin.php')))->not->toContain('server_status')
         ->and(config('store.blade_csp.script-src.unsafe-inline'))->toBeTrue();
+});
+
+test('the server status page is gone: its route is unregistered and a super admin gets a 404', function () {
+    expect(Route::has('system_server'))->toBeFalse()
+        ->and(collect(Route::getRoutes()->getRoutes())->map->uri()->filter(fn (string $uri): bool => str_contains($uri, 'server-status')))->toBeEmpty()
+        ->and(base_path('resources/views/shop/backend/system'))->not->toBeDirectory();
+
+    actingAsStoreUser(createStoreAdmin(raizerAdmin: true));
+
+    $this->get('/temp/admin/system/server-status')->assertNotFound();
 });

@@ -21,6 +21,7 @@ const none = buildMatchIndex(warehouse.slots, {
     terms: [],
     state: 'all',
     expiring: false,
+    productIds: [],
 });
 const occupied = warehouse.slots.find((s) => s.state !== 'empty')!;
 const empty = warehouse.slots.find((s) => s.state === 'empty')!;
@@ -239,6 +240,7 @@ describe('RackDialog', () => {
             terms: ['no-such-product'],
             state: 'all',
             expiring: false,
+            productIds: [],
         });
         const { view, root } = rack({ match });
 
@@ -371,6 +373,7 @@ describe('MatchedDrawer', () => {
             terms,
             state: 'all',
             expiring: false,
+            productIds: [],
         });
         const root = host();
         const slice = fakeSlice({
@@ -436,6 +439,58 @@ describe('MatchedDrawer', () => {
 
         expect(intents.viewOnMap).toHaveBeenCalledTimes(1);
         expect(intents.viewOnMap.mock.calls[0][0].haystack).toContain('rice');
+        view.dispose();
+    });
+
+    it('marks a product that is no longer sold and a slot that is out of service', () => {
+        const hits = warehouse.slots.filter(
+            (s) => s.state !== 'empty' && s.haystack.includes('rice'),
+        );
+        const [first, ...rest] = hits;
+        const stored: Slot[] = [
+            {
+                ...first,
+                active: false,
+                pallet: { ...first.pallet!, productActive: false },
+            },
+            ...rest.map((s) => ({
+                ...s,
+                active: true,
+                pallet: { ...s.pallet!, productActive: false },
+            })),
+        ];
+        const marked = {
+            ...warehouse,
+            byId: new Map(stored.map((s) => [s.id, s])),
+            slots: warehouse.slots.map(
+                (s) => stored.find((m) => m.id === s.id) ?? s,
+            ),
+        };
+        const { view, root, slice } = drawer(['rice']);
+
+        expect(root.querySelector('.wms-badge--off')).toBeNull();
+
+        slice.set({ warehouse: marked });
+
+        const group = [...root.querySelectorAll('.wms-pgroup')].find(
+            (g) =>
+                g.querySelector('.wms-pgroup__name b')?.textContent ===
+                first.pallet!.productName,
+        )!;
+
+        expect(group.querySelector('.wms-badge--off')?.textContent).toBe(
+            'productInactive',
+        );
+
+        click(group.querySelector('.wms-pgroup__head'));
+
+        const offTags = [...group.querySelectorAll('.wms-loc .wms-tag--off')];
+
+        expect(offTags.map((t) => t.textContent)).toEqual(['outOfService']);
+        expect(
+            offTags[0].closest('.wms-loc')?.querySelector('.wms-slotcode')
+                ?.textContent,
+        ).toBe(first.code);
         view.dispose();
     });
 

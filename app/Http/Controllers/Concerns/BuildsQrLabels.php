@@ -215,7 +215,7 @@ trait BuildsQrLabels
 
     /**
      * A filled arrow-shaped polygon (shaft + triangular head) pointing 'up',
-     * 'down', or 'horizontal' (pointing right), sized to exactly fill the
+     * 'down', 'horizontal' (pointing right), or a solid 'dash', filling the
      * given box. Used to draw a same-height, easily-readable level indicator
      * beside a label's primary text (see qrLabelImage()'s $primaryArrow) —
      * a plain vector shape rather than a text glyph (e.g. "↑"/"↓") because
@@ -236,6 +236,7 @@ trait BuildsQrLabels
         $points = match ($direction) {
             'up' => $this->verticalArrowPoints($x0, $y0, $x1, $y1, pointingUp: true),
             'down' => $this->verticalArrowPoints($x0, $y0, $x1, $y1, pointingUp: false),
+            'dash' => $this->polygonPoints([[$x0, $y0], [$x1, $y0], [$x1, $y1], [$x0, $y1]]),
             default => $this->horizontalArrowPoints($x0, $y0, $x1, $y1),
         };
 
@@ -324,13 +325,17 @@ trait BuildsQrLabels
      * clampLinesToHeight() like any other line, and the primary line's start
      * position only shifts down when it actually got drawn.
      *
-     * $expandPrimaryText grows the primary line's font size to fill whatever
+     * Cell labels ($expandPrimaryText with $primaryArrow) use a horizontal
+     * QR beside a bold, single-line slot up to 160px with its arrow below.
+     * The label/arrow block is centered vertically beside the QR square.
+     *
+     * Otherwise, $expandPrimaryText grows the primary line's font size to fill whatever
      * vertical space is left below the QR (only BuildsCellQrLabels passes
      * true, since a cell label carries no secondary/explanation line to
      * occupy that space) — see pickExpandedPrimaryFontSize() for how the size
      * is chosen.
      *
-     * $primaryArrow ('up'/'down'/'horizontal', see arrowMarkup()) reserves a
+     * $primaryArrow ('up'/'down'/'dash', see arrowMarkup()) reserves a
      * column to the right of the primary text — only BuildsCellQrLabels
      * passes one, to mark a cell's level. The reservation comes out of the
      * *same* $textMaxWidth the primary text itself wraps within (rather than
@@ -344,6 +349,40 @@ trait BuildsQrLabels
     private function qrLabelImage(string $qrData, string $primaryText, ?string $secondaryText, string $secondaryDirection, int $width, int $height, ?string $idText = null, bool $expandPrimaryText = false, ?string $primaryArrow = null): string
     {
         $padding = self::LABEL_PADDING;
+
+        if ($expandPrimaryText && $primaryArrow !== null) {
+            $padding = min($padding, (int) floor(min($width, $height) * 0.05));
+            $contentWidth = $width - $padding * 2;
+            $gap = max(4, (int) round($contentWidth * 0.03));
+            $qrSize = min($height - $padding * 2, (int) floor($contentWidth * 0.52));
+            $labelWidth = $contentWidth - $qrSize - $gap;
+            // The text uses the whole right-hand column; its arrow sits below
+            // it, with both centered as one block beside the QR square.
+            $fontSize = max(1, min(160, (int) floor($qrSize * 0.4), (int) floor($labelWidth / (mb_strlen($primaryText) * 0.75))));
+            $arrowGap = max(1, (int) round($fontSize * 0.2));
+            $arrowSize = max(4, min((int) floor($labelWidth * 0.65), $qrSize - $fontSize - $arrowGap, (int) round($fontSize * 1.6)));
+            $indicatorHeight = $primaryArrow === 'dash' ? max(4, (int) round($arrowSize * 0.2)) : $arrowSize;
+            $labelLeft = $padding + $qrSize + $gap;
+            $centerX = (int) round($labelLeft + $labelWidth / 2);
+            $labelHeight = $qrSize + $padding * 2;
+            $blockTop = (int) round(($labelHeight - $fontSize - $arrowGap - $indicatorHeight) / 2);
+            $baseline = $blockTop + (int) round($fontSize * 0.8);
+            $arrowTop = $blockTop + $fontSize + $arrowGap;
+            $arrowLeft = (int) round($centerX - $arrowSize / 2);
+            $qrMarkup = $this->qrSvgInnerMarkup($qrData, $qrSize);
+            $primaryMarkup = $this->textLinesMarkup([$primaryText], $centerX, $baseline, $fontSize, $fontSize, '#111111', 'ltr', bold: true);
+            $arrowMarkup = $this->arrowMarkup($primaryArrow, $arrowLeft, $arrowTop, $arrowLeft + $arrowSize, $arrowTop + $indicatorHeight);
+
+            return <<<SVG
+                <svg xmlns="http://www.w3.org/2000/svg" width="{$width}" height="{$labelHeight}" viewBox="0 0 {$width} {$labelHeight}">
+                    <rect width="100%" height="100%" fill="#ffffff"/>
+                    <g transform="translate({$padding},{$padding})">{$qrMarkup}</g>
+                    {$primaryMarkup}
+                    {$arrowMarkup}
+                </svg>
+                SVG;
+        }
+
         $qrSize = $width - $padding * 2;
         $qrBottom = $padding + $qrSize;
         $qrX = $padding;

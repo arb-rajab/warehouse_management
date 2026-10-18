@@ -15,6 +15,6 @@ class UpdateCheckpointStatusRequest extends FormRequest
      */
     public function rules(): array
     {
-        return ['id' => ['required', 'integer'], 'status' => ['required', Rule::enum(CheckpointStatus::class)]];
+        return ['status' => ['required', Rule::enum(CheckpointStatus::class)]];
     }
 }

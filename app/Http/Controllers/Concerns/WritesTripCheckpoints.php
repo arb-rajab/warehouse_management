@@ -11,10 +11,10 @@ use Illuminate\Validation\ValidationException;
 
 /**
  * The trip writers' shared steps, used by the trip forms
- * (`Store\Admin\TripController`) and the retained Blade map picker's writer
- * (root `Trip\TripController::store_from_map`): the departure checkpoint
+ * (`Store\Admin\TripController`) and the trip map picker's writer
+ * (`Store\Admin\TripMapController::store`): the departure checkpoint
  * (store user 9), a checkpoint row, the trip row and the shortest-path sort.
- * Moved unchanged from the root controller.
+ * Moved unchanged from the root `Trip\TripController`, since removed.
  */
 trait WritesTripCheckpoints
 {

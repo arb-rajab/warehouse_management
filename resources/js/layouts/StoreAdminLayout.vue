@@ -123,7 +123,7 @@ function toggle(labelKey: string): void {
     >
         <SkipToContentLink />
         <div
-            class="flex items-center justify-between border-b border-gray-200 bg-white px-4 lg:hidden dark:border-neutral-800 dark:bg-neutral-900"
+            class="flex items-center justify-between border-b border-gray-200 bg-white px-4 lg:hidden dark:border-neutral-800 dark:bg-neutral-900 print:hidden"
         >
             <span class="inline-flex items-center gap-1.5 py-3 font-semibold">
                 <Store class="h-5 w-5 shrink-0" />
@@ -144,7 +144,7 @@ function toggle(labelKey: string): void {
         </div>
         <aside
             id="store-admin-sidebar"
-            class="border-gray-200 bg-white lg:sticky lg:top-0 lg:flex lg:h-screen lg:w-64 lg:shrink-0 lg:flex-col lg:border-e dark:border-neutral-800 dark:bg-neutral-900"
+            class="border-gray-200 bg-white lg:sticky lg:top-0 lg:flex lg:h-screen lg:w-64 lg:shrink-0 lg:flex-col lg:border-e dark:border-neutral-800 dark:bg-neutral-900 print:hidden"
             :class="isSidebarOpen ? 'flex flex-col border-b' : 'hidden'"
         >
             <span

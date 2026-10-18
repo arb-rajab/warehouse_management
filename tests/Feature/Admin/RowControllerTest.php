@@ -6,6 +6,7 @@ use App\Models\Product;
 use App\Models\Row;
 use App\Models\Setting;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\File;
 use Inertia\Testing\AssertableInertia as Assert;
 use Smalot\PdfParser\Parser as PdfParser;
 
@@ -559,39 +560,104 @@ test('resizing a row with no pallets regenerates its cells', function () {
     expect($row->cells()->count())->toBe(12);
 });
 
-test('resizing a row that has a pallet is rejected and nothing changes', function () {
+test('growing a row that has pallets succeeds and keeps its pallets in place', function () {
     actingAsAdmin();
     $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 2, 'flats_count' => 1]);
-    $cell = $row->cells()->first();
+    $cell = $row->cells()->where('cell_number', 2)->first();
+    $pallet = Pallet::factory()->create(['cell_id' => $cell->id]);
+
+    $this->put("/admin/rows/{$row->letter}", [
+        'letter' => 'Z',
+        'cells_count' => 5,
+        'flats_count' => 3,
+    ])->assertRedirect(route('admin.rows.show', $row->fresh()));
+
+    expect($row->cells()->count())->toBe(15);
+    expect($pallet->fresh()->cell_id)->toBe($cell->id);
+    $this->assertDatabaseHas('cells', ['id' => $cell->id]);
+});
+
+test('shrinking columns or levels that are empty succeeds while the row has pallets', function () {
+    actingAsAdmin();
+    $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 4, 'flats_count' => 3]);
+    $cell = $row->cells()->where('cell_number', 1)->where('flat_number', 1)->first();
+    $pallet = Pallet::factory()->create(['cell_id' => $cell->id]);
+
+    $this->put("/admin/rows/{$row->letter}", [
+        'letter' => 'Z',
+        'cells_count' => 2,
+        'flats_count' => 1,
+    ])->assertRedirect(route('admin.rows.show', $row->fresh()));
+
+    expect($row->cells()->count())->toBe(2);
+    expect($pallet->fresh()->cell_id)->toBe($cell->id);
+});
+
+test('growing one dimension while shrinking the other into empty cells succeeds', function () {
+    actingAsAdmin();
+    $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 4, 'flats_count' => 2]);
+    $cell = $row->cells()->where('cell_number', 1)->where('flat_number', 2)->first();
+    Pallet::factory()->create(['cell_id' => $cell->id]);
+
+    $this->put("/admin/rows/{$row->letter}", [
+        'letter' => 'Z',
+        'cells_count' => 2,
+        'flats_count' => 4,
+    ])->assertRedirect(route('admin.rows.show', $row->fresh()));
+
+    expect($row->cells()->count())->toBe(8);
+});
+
+test('reducing columns that hold a pallet is rejected and nothing changes', function () {
+    actingAsAdmin();
+    $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 4, 'flats_count' => 2]);
+    $cell = $row->cells()->where('cell_number', 4)->where('flat_number', 1)->first();
+    Pallet::factory()->create(['cell_id' => $cell->id]);
+
+    $response = $this->put("/admin/rows/{$row->letter}", [
+        'letter' => 'Z',
+        'cells_count' => 3,
+        'flats_count' => 2,
+    ]);
+
+    $response->assertRedirect(route('admin.rows.edit', $row));
+    $response->assertSessionHasErrors(['cells_count' => __('messages.row_cannot_reduce_columns_has_pallets')]);
+    expect($row->fresh()->cells_count)->toBe(4);
+    expect($row->cells()->count())->toBe(8);
+});
+
+test('reducing levels that hold a pallet is rejected even when columns grow', function () {
+    actingAsAdmin();
+    $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 2, 'flats_count' => 3]);
+    $cell = $row->cells()->where('cell_number', 1)->where('flat_number', 3)->first();
     Pallet::factory()->create(['cell_id' => $cell->id]);
 
     $response = $this->put("/admin/rows/{$row->letter}", [
         'letter' => 'Z',
         'cells_count' => 5,
-        'flats_count' => 5,
+        'flats_count' => 2,
     ]);
 
     $response->assertRedirect(route('admin.rows.edit', $row));
-    $response->assertSessionHasErrors(['cells_count' => __('messages.row_cannot_resize_has_pallets')]);
-    expect($row->fresh()->cells_count)->toBe(2);
-    expect($row->fresh()->flats_count)->toBe(1);
-    expect($row->cells()->count())->toBe(2);
+    $response->assertSessionHasErrors(['flats_count' => __('messages.row_cannot_reduce_levels_has_pallets')]);
+    expect($row->fresh()->flats_count)->toBe(3);
+    expect($row->cells()->count())->toBe(6);
 });
 
-test('resizing a row that has history but no pallet is rejected and nothing changes', function () {
+test('shrinking a row over cells that have history is rejected and nothing changes', function () {
     actingAsAdmin();
     $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 2, 'flats_count' => 1]);
-    $cell = $row->cells()->first();
+    $cell = $row->cells()->where('cell_number', 2)->first();
     CellStatusLog::factory()->create(['cell_id' => $cell->id]);
 
     $response = $this->put("/admin/rows/{$row->letter}", [
         'letter' => 'Z',
-        'cells_count' => 5,
-        'flats_count' => 5,
+        'cells_count' => 1,
+        'flats_count' => 1,
     ]);
 
     $response->assertRedirect(route('admin.rows.edit', $row));
-    $response->assertSessionHasErrors(['cells_count' => __('messages.row_cannot_resize_has_history')]);
+    $response->assertSessionHasErrors(['cells_count' => __('messages.row_cannot_reduce_columns_has_history')]);
     expect($row->fresh()->cells_count)->toBe(2);
     expect($row->fresh()->flats_count)->toBe(1);
     expect($row->cells()->count())->toBe(2);
@@ -611,7 +677,7 @@ test('resizing a row with invalid dimensions and an existing pallet reports the 
     ]);
 
     $response->assertSessionHasErrors('cells_count');
-    expect(session('errors')->get('cells_count'))->not->toContain(__('messages.row_cannot_resize_has_pallets'));
+    expect(session('errors')->get('cells_count'))->not->toContain(__('messages.row_cannot_reduce_columns_has_pallets'));
     expect($row->fresh()->cells_count)->toBe(2);
 });
 
@@ -789,6 +855,11 @@ test('deleting a non-existent row returns a 404', function () {
 });
 
 test('an authenticated user can export QR codes for every cell in a row', function () {
+    $fontCache = storage_path('framework/testing/qr-fonts-'.bin2hex(random_bytes(8)));
+    File::ensureDirectoryExists($fontCache);
+    $this->beforeApplicationDestroyed(fn () => File::deleteDirectory($fontCache));
+    config(['dompdf.options.font_cache' => $fontCache]);
+
     actingAsAdmin();
     $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 2, 'flats_count' => 2]);
 
@@ -807,6 +878,7 @@ test('an authenticated user can export QR codes for every cell in a row', functi
     // covers that SVG's content directly against the single-cell export, which
     // the row-wide PDF sheet now embeds verbatim (see cellQrLabels()).
     expect($pdf->getPages())->toHaveCount(4);
+    expect($response->getContent())->toContain('/BaseFont /Helvetica-Bold');
 
     // Regression guard for the QR silently missing from every page while the
     // label text still drew: dompdf draws an SVG label straight into the page
@@ -866,6 +938,33 @@ test('the row QR export still succeeds and produces one page per cell with a con
     $pdf = (new PdfParser)->parseContent($response->getContent());
     expect($pdf->getPages())->toHaveCount(4);
 });
+
+test('row QR PDF pages fit the label canvas without unused paper below it', function (int $width, int $height) {
+    actingAsAdmin();
+    Setting::factory()->create(['qr_code_width' => $width, 'qr_code_height' => $height]);
+    $row = Row::factory()->create(['letter' => 'AS', 'cells_count' => 1, 'flats_count' => 3]);
+    $cells = $row->cells()->orderBy('flat_number')->get();
+    $pdfResponse = $this->get("/admin/rows/{$row->letter}/export-qr-codes")->assertOk();
+    $pdf = (new PdfParser)->parseContent($pdfResponse->getContent());
+    expect($pdf->getPages())->toHaveCount(3);
+
+    foreach ($pdf->getPages() as $index => $page) {
+        $svgResponse = $this->get("/admin/cells/{$cells[$index]->id}/export-qr-code")->assertOk();
+        $svg = simplexml_load_string($svgResponse->getContent());
+        $mediaBox = $page->get('MediaBox')->getContent();
+        // PDF points are 3/4 of a CSS pixel at dompdf's default 96 DPI.
+        expect((float) $mediaBox[2]->getContent())->toBe((float) $svg['width'] * 0.75)
+            ->and((float) $mediaBox[3]->getContent())->toBe((float) $svg['height'] * 0.75)
+            ->and((int) $svg['width'])->toBe($width)
+            ->and((int) $svg['height'])->toBeLessThanOrEqual($height)
+            ->and($page->get('Contents')->getContent())->toMatch('/^f\*$/m');
+    }
+})->with([
+    'default portrait settings' => [850, 1000],
+    'square settings' => [280, 280],
+    'custom settings' => [900, 950],
+    'wide short settings' => [1000, 100],
+]);
 
 test('the qr-labels Blade view sizes the PDF page from the configured QR settings and embeds each label image verbatim', function () {
     // Renders the exact view RowController::exportQrCodes() feeds to

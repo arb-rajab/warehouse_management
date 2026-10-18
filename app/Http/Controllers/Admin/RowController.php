@@ -21,6 +21,7 @@ use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
+use SimpleXMLElement;
 
 class RowController extends Controller
 {
@@ -61,7 +62,7 @@ class RowController extends Controller
 
         return Inertia::render('Admin/Rows/Show', [
             'row' => new RowResource($row->loadHasPallets()),
-            'rows' => Row::mapOptions(),
+            'rows' => Row::query()->select(Row::SELECT_COLUMNS)->orderBy('letter')->get(),
             'cells' => CellResource::collection(
                 $row->cells()
                     ->select(Cell::SELECT_COLUMNS)
@@ -101,12 +102,29 @@ class RowController extends Controller
             ->orderedByCoordinates()
             ->get();
         $setting = Setting::current();
+        $labels = $this->cellQrLabels($row->letter, $cells, $setting->qr_code_width, $setting->qr_code_height, $row->flats_count);
+        $pageHeight = $setting->qr_code_height;
 
-        return Pdf::loadView('pdf.qr-labels', [
-            'labels' => $this->cellQrLabels($row->letter, $cells, $setting->qr_code_width, $setting->qr_code_height, $row->flats_count),
+        if ($labels !== []) {
+            // All labels share the same canvas. Read its actual height instead
+            // of filling the unused part of the configured maximum with paper.
+            $svg = new SimpleXMLElement(base64_decode(explode(',', $labels[0]['labelImage'], 2)[1]));
+            $pageHeight = (int) $svg['height'];
+        }
+
+        $pdf = Pdf::loadView('pdf.qr-labels', [
+            'labels' => $labels,
             'qrWidth' => $setting->qr_code_width,
-            'qrHeight' => $setting->qr_code_height,
-        ])->download("row-{$row->letter}-qr-codes.pdf");
+            'qrHeight' => $pageHeight,
+        ]);
+
+        // php-svg-lib selects core fonts by basename. Load bold Helvetica's
+        // metrics into dompdf's cache before SVG text asks for that basename;
+        // on a fresh installation it otherwise falls back to regular Times.
+        $fontMetrics = $pdf->getDomPDF()->getFontMetrics();
+        $fontMetrics->getTextWidth(' ', $fontMetrics->getFont('sans-serif', 'bold'), 1);
+
+        return $pdf->download("row-{$row->letter}-qr-codes.pdf");
     }
 
     public function update(UpdateRowRequest $request, Row $row): RedirectResponse
@@ -114,18 +132,33 @@ class RowController extends Controller
         $validated = $request->validated();
 
         return DB::transaction(function () use ($validated, $row) {
-            $dimensionsChanging = $validated['cells_count'] !== $row->cells_count
-                || $validated['flats_count'] !== $row->flats_count;
+            $shrinksColumns = $validated['cells_count'] < $row->cells_count;
+            $shrinksLevels = $validated['flats_count'] < $row->flats_count;
 
-            if ($dimensionsChanging) {
-                $blockReason = $this->lockedRowBlockReason(
-                    $row,
-                    'messages.row_cannot_resize_has_pallets',
-                    'messages.row_cannot_resize_has_history',
-                );
+            if ($shrinksColumns || $shrinksLevels) {
+                $row->cells()->lockForUpdate()->get();
 
-                if ($blockReason !== null) {
-                    return redirect()->route('admin.rows.edit', $row)->withErrors(['cells_count' => $blockReason]);
+                $errors = [];
+
+                foreach ([
+                    'cells_count' => $shrinksColumns ? [$validated['cells_count'], null, 'columns'] : null,
+                    'flats_count' => $shrinksLevels ? [null, $validated['flats_count'], 'levels'] : null,
+                ] as $field => $removal) {
+                    if ($removal === null) {
+                        continue;
+                    }
+
+                    [$cellsBound, $flatsBound, $axis] = $removal;
+
+                    if ($row->hasPalletsBeyond($cellsBound, $flatsBound)) {
+                        $errors[$field] = __("messages.row_cannot_reduce_{$axis}_has_pallets");
+                    } elseif ($row->hasHistoryBeyond($cellsBound, $flatsBound)) {
+                        $errors[$field] = __("messages.row_cannot_reduce_{$axis}_has_history");
+                    }
+                }
+
+                if ($errors !== []) {
+                    return redirect()->route('admin.rows.edit', $row)->withErrors($errors);
                 }
             }
 

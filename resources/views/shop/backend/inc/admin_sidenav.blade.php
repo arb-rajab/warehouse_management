@@ -180,7 +180,7 @@
                             @if (Auth::user()->raizer_admin == true || get_setting('Product_Reviews_Section') == '1')
                                 @can('view_product_reviews')
                                     <li class="aiz-side-nav-item">
-                                        <a href="{{ route('reviews.index') }}" class="aiz-side-nav-link">
+                                        <a href="{{ route('admin.reviews.index') }}" class="aiz-side-nav-link">
                                             <span class="aiz-side-nav-text">{{ translate('Product Reviews') }}</span>
                                         </a>
                                     </li>
@@ -1720,28 +1720,6 @@
                             </ul>
                         </li>
                     @endcanany
-                @endif
-
-                {{-- Server Status --}}
-                @if (Auth::user()->raizer_admin == true)
-                    @can('server_status')
-                        <li class="aiz-side-nav-item">
-                            <a href="#" class="aiz-side-nav-link">
-                                <i class="las la-user-tie aiz-side-nav-icon"></i>
-                                <span class="aiz-side-nav-text">{{ translate('System') }}</span>
-                                <span class="aiz-side-nav-arrow"></span>
-                            </a>
-                            <ul class="aiz-side-nav-list level-2">
-                                @can('server_status')
-                                    <li class="aiz-side-nav-item">
-                                        <a href="{{ route('system_server') }}" class="aiz-side-nav-link">
-                                            <span class="aiz-side-nav-text">{{ translate('Server status') }}</span>
-                                        </a>
-                                    </li>
-                                @endcan
-                            </ul>
-                        </li>
-                    @endcan
                 @endif
 
                 </ul><!-- .aiz-side-nav -->

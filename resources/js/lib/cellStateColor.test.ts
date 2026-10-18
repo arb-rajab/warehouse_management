@@ -3,7 +3,7 @@ import { t } from '@/lib/i18n';
 import { CELL_STATE_COLOR, cellStateLabel } from './cellStateColor';
 
 describe('CELL_STATE_COLOR', () => {
-    it('defines a background class, border class, hex color, and icon for every cell state', () => {
+    it('defines a background class, border class, and icon for every cell state', () => {
         const states: Array<keyof typeof CELL_STATE_COLOR> = [
             'empty',
             'full',
@@ -14,8 +14,6 @@ describe('CELL_STATE_COLOR', () => {
             const color = CELL_STATE_COLOR[state];
             expect(color.backgroundClass).toBeTruthy();
             expect(color.borderClass).toBeTruthy();
-            expect(color.hex).toBeGreaterThanOrEqual(0);
-            expect(color.hex).toBeLessThanOrEqual(0xffffff);
             expect(color.icon).toBeTruthy();
         }
     });
@@ -24,18 +22,6 @@ describe('CELL_STATE_COLOR', () => {
         const icons = Object.values(CELL_STATE_COLOR).map((c) => c.icon);
 
         expect(new Set(icons).size).toBe(icons.length);
-    });
-
-    it('gives every state a distinct hex color', () => {
-        const hexValues = Object.values(CELL_STATE_COLOR).map((c) => c.hex);
-
-        expect(new Set(hexValues).size).toBe(hexValues.length);
-    });
-
-    it('pins the exact hex color for every cell state, so the 3D map matches the 2D map and the hand-mirrored Flutter literals', () => {
-        expect(CELL_STATE_COLOR.empty.hex).toBe(0x9ca3af);
-        expect(CELL_STATE_COLOR.full.hex).toBe(0x22c55e);
-        expect(CELL_STATE_COLOR.opened.hex).toBe(0xf97316);
     });
 
     it('pins the exact background and border classes for every cell state', () => {

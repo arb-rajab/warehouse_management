@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { Ban, Box, LayoutGrid, Search } from '@lucide/vue';
+import { Ban } from '@lucide/vue';
 import { ref } from 'vue';
-import { index as cellsIndex } from '@/actions/App/Http/Controllers/Admin/CellController';
+import { index as rowsIndex } from '@/actions/App/Http/Controllers/Admin/RowController';
 import CellSlot from '@/components/CellSlot.vue';
 import CellStateLegend from '@/components/CellStateLegend.vue';
 import HelpTopicPage from '@/components/HelpTopicPage.vue';
@@ -10,7 +10,6 @@ import ProductSelect from '@/components/ProductSelect.vue';
 import {
     fieldLabelClass,
     filterSectionHeadingClass as sectionHeadingClass,
-    mapToolbarButtonClass,
     plainFieldInputClass,
     selectedToggleClass,
 } from '@/lib/filters';
@@ -52,45 +51,9 @@ const previewProduct = ref<ProductFilterOption | null>(null);
 <template>
     <HelpTopicPage
         :title="t('help.cells.title')"
-        :feature-href="cellsIndex()"
-        :feature-label="t('cells.title')"
+        :feature-href="rowsIndex()"
+        :feature-label="t('nav.rows')"
     >
-        <section>
-            <h2 :class="sectionHeadingClass">
-                {{ t('help.cells.map.heading') }}
-            </h2>
-            <p class="text-sm text-gray-700 dark:text-neutral-300">
-                {{ t('help.cells.map.body') }}
-            </p>
-            <HelpUiPreview class="mt-2">
-                <span
-                    tabindex="-1"
-                    class="w-40 truncate rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-400 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-500"
-                >
-                    {{ t('cells.search.placeholder') }}
-                </span>
-                <span :class="mapToolbarButtonClass" tabindex="-1">
-                    <Search class="h-4 w-4" />
-                </span>
-            </HelpUiPreview>
-            <HelpUiPreview class="mt-2">
-                <span
-                    tabindex="-1"
-                    :title="t('cells.map.view2d')"
-                    :class="[mapToolbarButtonClass, selectedToggleClass]"
-                >
-                    <LayoutGrid class="h-4 w-4" />
-                </span>
-                <span
-                    tabindex="-1"
-                    :title="t('cells.map.view3d')"
-                    :class="mapToolbarButtonClass"
-                >
-                    <Box class="h-4 w-4" />
-                </span>
-            </HelpUiPreview>
-        </section>
-
         <section>
             <h2 :class="sectionHeadingClass">
                 {{ t('help.cells.legend.heading') }}

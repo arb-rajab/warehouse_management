@@ -11,6 +11,7 @@ export interface ApiPallet {
     expiration_date: string | null;
     product_name?: string | null;
     product_ar_name?: string | null;
+    product_active?: boolean | null;
     product_image_url?: string | null;
     remaining_boxes?: number | null;
     product_boxes_count?: number | null;
@@ -40,6 +41,8 @@ export interface Pallet {
     expirationDate: string | null;
     productName: string;
     productArName: string;
+    /** False once the product is no longer sold (unpublished in the store). */
+    productActive: boolean;
     productImageUrl: string | null;
     remainingBoxes: number | null;
     productBoxesCount: number | null;
@@ -85,6 +88,18 @@ export interface SlotFilter {
     terms: string[];
     state: StateFilter;
     expiring: boolean;
+    /** The products checked in the product picker: a slot matches when it holds any of them. */
+    productIds: readonly number[];
+}
+
+/** One product the warehouse currently holds, as the product picker lists it. */
+export interface ProductOption {
+    id: number;
+    name: string;
+    arName: string;
+    active: boolean;
+    /** How many slots hold one of its pallets. */
+    pallets: number;
 }
 
 export interface MatchIndex {

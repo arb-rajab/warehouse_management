@@ -132,20 +132,20 @@ describe('FreeWalkMode', () => {
         const walk = startWalk();
         const mode = new FreeWalkMode(walk);
 
-        walk.pose.x = geometry.rowX(0) - 2; // just inside the aisle next to rack A
+        walk.pose.x = geometry.rowX(0) + 2; // just inside the aisle next to rack A
         mode.enter(ctx);
         mode.handle({
             type: 'move',
             source: 'keyboard',
             forward: 0,
-            strafe: -1,
-        }); // strafe left = +x
+            strafe: 1,
+        }); // strafe right = -x, towards rack A
 
         for (let i = 0; i < 240; i++) {
             mode.update(1 / 60);
         }
 
-        expect(walk.pose.x).toBeLessThan(geometry.rowX(0));
+        expect(walk.pose.x).toBeGreaterThan(geometry.rowX(0));
     });
 
     it('rises with the lift axis and can fly over the racks', () => {
