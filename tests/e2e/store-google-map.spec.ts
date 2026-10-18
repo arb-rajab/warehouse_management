@@ -18,7 +18,10 @@ test('default location uses real Leaflet with editable coordinates under enforce
 }) => {
     seedStoreFixtures(String.raw`
         foreach (['google_map' => '1', 'google_map_latitude' => '33.513', 'google_map_longtitude' => '36.291'] as $type => $value) {
-            App\Models\BusinessSetting::query()->updateOrCreate(['type' => $type, 'lang' => null], ['value' => $value]);
+            $setting = App\Models\BusinessSetting::query()->where('type', $type)->whereNull('lang')->first() ?? new App\Models\BusinessSetting;
+            $setting->type = $type;
+            $setting->value = $value;
+            $setting->save();
         }
         Illuminate\Support\Facades\Cache::forget('business_settings');
     `);
@@ -49,6 +52,17 @@ test('default location uses real Leaflet with editable coordinates under enforce
     await expect(lat).not.toHaveValue(initialLat);
     const clickedLat = await lat.inputValue();
     const pin = map.locator('.store-default-location-marker');
+    // The map pans to the new pin; drag only once the marker has stopped moving.
+    let previous = '';
+    await expect
+        .poll(async () => {
+            const current = JSON.stringify(await pin.boundingBox());
+            const settled = current === previous;
+            previous = current;
+
+            return settled;
+        })
+        .toBe(true);
     const markerBox = (await pin.boundingBox())!;
     await page.mouse.move(markerBox.x + 15, markerBox.y + 15);
     await page.mouse.down();
@@ -111,5 +125,5 @@ test('default location uses real Leaflet with editable coordinates under enforce
     expect(await documentViolations(page)).toEqual([]);
     expect(reports).toEqual([]);
     expect(errors).toEqual([]);
-    await switchLocale(page, 'English');
+    await switchLocale(page, 'الإنجليزية');
 });

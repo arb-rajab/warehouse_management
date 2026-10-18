@@ -655,7 +655,7 @@ its three `trips/inc` partials (§30), and the two representative visit
 detail screens with their map partial (§31), and Google Map settings (§32).
 The in-house and all-products lists (§16) removed none:
 `product/products/index.blade.php` is shared with the retained seller product
-list. Google Map settings are converted in §32 (verification pending).
+list. Google Map settings are converted in §32.
 These files remain physically present. Hardening a Blade handler does not count
 as conversion. Protected shells/downloads/invoices are not conversion targets.
 
@@ -3326,12 +3326,13 @@ or deployment was performed.
 
 ## 32. Google Map settings (2026-10-18)
 
-Draft implementation on `codex/step-32-google-map`, branched from fetched
-`origin/develop` at `4cb3c44a` (PR #440). **Verification and shipping are
-blocked by runtime access; this section describes the working tree, not a
-merged or verified result.** The owner authorized one PR into `develop`, its
-merge, `[skip ci]` in every commit/PR title/merge message and a follow-up commit
-recording the PR number before merge. No commit or PR has been created yet.
+Drafted by a Codex session on `codex/step-32-google-map` from `develop` at
+`4cb3c44a` (PR #440), then verified, fixed and shipped from a Claude session
+that had PHP 8.5.11, `vendor/` and `node_modules`. The owner authorized one PR
+into `develop`, its merge, `[skip ci]` on every commit, the PR title and the
+merge message, and a follow-up commit recording the PR number. So no PR CI, PR
+or merge SAST and no `develop` deploy ran; the local checks in the ledger are
+the verification.
 
 **Owner map decision.** The §17 hold is lifted for this screen: Leaflet from
 npm with OpenStreetMap tiles replaces the admin Google script. The storefront's
@@ -3376,13 +3377,18 @@ only the migrated action. Full-mounted Vitest covers the page shell, module
 fields and real input synchronization with a mocked Leaflet geometry engine.
 `store-google-map.spec.ts` drives real npm Leaflet clicks/drags/manual edits,
 native range rejection, save/reload, disabled preservation, RTL/LTR and dark
-contrast under enforced CSP, with tile images answered locally. These tests
-are drafted, not claimed passing. See [the ledger](../store-backoffice-reconciliation-20261011.md#google-map-settings-step-32-2026-10-18)
-for exact attempted, blocked and skipped checks.
+contrast under enforced CSP, with tile images answered locally. Verification
+found and fixed two defects in the draft: its `store.googleMap.*` strings sat
+under `cells.palletActions.store` in both locale files (so the page showed raw
+keys), and the spec's fixture mass-assigned `BusinessSetting`, whose `type` is
+guarded. The spec also now waits for the map's pan to settle before dragging
+the marker and switches back to English by its Arabic label. See
+[the ledger](../store-backoffice-reconciliation-20261011.md#google-map-settings-step-32-2026-10-18)
+for exactly which checks ran.
 
-Working-tree inventory: **26** backend Blade files (27 minus this screen),
+Inventory: **26** backend Blade files (27 minus this screen),
 **13** direct literal app-shell consumers including the shell test, **3**
 layout-shell extending views. Routes replace one GET with one GET; no route
-is added or removed (the prior verified registration counts were 1,048 under
-`/temp`, 436 under `/temp/admin`; route:list could not run here).
+is added or removed (`route:list` still shows 1,048 under `/temp` and 436
+under `/temp/admin`).
 No production data, CI, SAST or deployment was run.

@@ -3795,14 +3795,14 @@ storefront/seller surfaces. No production data was changed.
 
 ## Google Map settings step 32 (2026-10-18)
 
-**Working tree only; runtime verification and shipping blocked.** Branch
-`codex/step-32-google-map` is based on fetched `origin/develop` at `4cb3c44a`
-(PR #440). No commit, push, PR or merge has happened. The owner authorized
-one PR into develop and its merge, `[skip ci]` in every commit/PR title/merge
-message, and a follow-up `[skip ci]` commit recording the PR number before
-merging. Those shipping steps remain outstanding. No attribution or
-CI-Verified trailer was added. Model: GPT-6 Codex; the exact variant and
-configured effort are not exposed to this session.
+**Drafted by Codex, verified and shipped from Claude.** Branch
+`codex/step-32-google-map` (commit `bd339c61`) is based on `origin/develop` at
+`4cb3c44a` (PR #440). The Codex session had no PHP 8.5 and could verify
+nothing beyond formatting; this section records the later verification on a
+Claude cloud session with PHP 8.5.11, `vendor/`, `node_modules/` and a font-less
+Vite build. The owner authorized one PR into develop and its merge, `[skip ci]`
+in every commit, the PR title and the merge message, and a follow-up `[skip ci]`
+commit recording the PR number. No CI-Verified trailer was added.
 
 ### Scope and decisions
 
@@ -3834,57 +3834,35 @@ configured effort are not exposed to this session.
   Playwright spec were added. The browser spec covers clicks, drag, manual
   input, native range rejection, persistence, disabled preservation, RTL/LTR
   and dark contrast under enforced CSP with locally answered tile images.
-  These new tests have not passed locally; see the precise limits below.
+  They pass locally; see below.
 
 ### Runtime and verification
 
-- `AGENTS.md` and shared framework/conventions/index were read first. No
-  Claude hook was assumed or started; Boost is unavailable. Installed sources
-  report Laravel 13.34.0, Inertia Laravel 3.3.1, Wayfinder 0.1.21, Pest 5.0.4,
-  Pint 1.30.4 and PHPStan 2.2.8. Both vendor/ and node_modules/ exist, but
-  generated actions are stale/incomplete and Leaflet/types are absent from
-  node_modules despite being pinned in the fetched package manifests.
-- `git fetch origin develop` succeeded after requesting sandbox network
-  access. The host has no `php` or Composer executable. Docker daemon inspection
-  succeeded and local images include `wms-cloud-php:8.5`, `php:8.5-cli` and
-  `composer:2`. The requested Docker PHP run was **not executed**: automatic
-  approval review failed because the workspace was out of credits. The
-  reviewer explicitly called this a review failure, not an unsafe-action
-  determination. No approval or network restriction was bypassed.
-- **Develop baseline Pest: skipped**, including GoogleMapControllerTest,
-  settings tests and Legacy permission/route files; PHP could not be started.
-  No baseline result is inferred from prior sessions.
-- **Passed:** scoped Prettier on all new/changed JS/Vue/JSON/spec files;
-  scoped ESLint for the new field component, its test and Playwright spec;
-  existing FormField and StoreBooleanField Vitest: **2 files, 10 tests passed**;
-  `git diff --check`.
-- **Attempted, blocked:** page/menu Vitest failed during import resolution
-  (missing generated GoogleMapController and existing OfferController actions),
-  before any tests ran. Field/base-map Vitest failed during import resolution
-  (missing Leaflet package/CSS), before any tests ran. Scoped menu/page ESLint
-  reported import-order errors influenced by missing generated modules; the
-  intended generated-action import ordering is preserved pending regeneration.
-  `npm run types:check` ran twice: 458 errors, then 456 after fixing the local
-  wrapper.exists and CSP helper argument errors. Remaining new-file errors
-  are missing Leaflet/types and generated GoogleMapController; the project
-  check still fails and is not claimed as passing.
-- **Required explicit command attempted:**
-  `python3 .claude/scripts/pre_push_check.py --full` exited 1. Setup status
-  reported "No session setup is in progress"; the first step, Wayfinder types
-  (`php artisan wayfinder:generate --skip-routes --with-form`), could not
-  start: `FileNotFoundError: [Errno 2] No such file or directory: 'php'`.
-  Consequently **none** of that run's ESLint, Prettier, vue-tsc, Vitest, Pint,
-  PHPStan, config-cache clearing or Pest steps ran. The separate scoped results
-  above are not a full pre-push pass. Bare/attested mode was never invoked.
-- **Skipped/not run:** PHP 8.5 execution, baseline and changed Pest, Pint,
-  PHPStan, successful Wayfinder generation, production build, Playwright,
-  full Vitest, MySQL-specific tests, dependency audits, deploy-script tests
-  and live OSM requests. **PR CI, PR/merge SAST and deploy did not run.**
+- `AGENTS.md` was read first; Laravel Boost was unavailable, so repository
+  files and installed package source were used. PHP 8.5.11, `vendor/`,
+  `node_modules/` and a font-less build (`build_without_fonts.py`) were present.
+  Wayfinder generation succeeded.
+- **Defects found by verification and fixed** (separate commits): the
+  `store.googleMap.*` keys had been inserted under `cells.palletActions.store`
+  in `en.json` and `ar.json` (two field-component Vitest cases failed on raw
+  keys); `HandleStoreBladePagesTest.php` had an extra blank line (Pint); the
+  Playwright fixture mass-assigned the guarded `BusinessSetting`, the drag
+  step read the marker mid-pan, and the final locale switch used the English
+  label on the Arabic page.
+- **Passed:** `python3 .claude/scripts/pre_push_check.py --full` (run twice;
+  the first stopped at Pint): Wayfinder, ESLint, Prettier, vue-tsc, Vitest
+  (318 files, 2,501 tests), Pint, PHPStan (0 errors) and Pest (6,043 tests,
+  34,206 assertions). `store-google-map.spec.ts` passes under the enforced CSP
+  with real Leaflet from `node_modules` (1 test). `route:list` still shows
+  1,048 under `/temp` and 436 under `/temp/admin`.
+- **Not run:** a separate Pest baseline on unmodified develop; the full
+  Playwright suite (only this spec ran); MySQL-specific tests, dependency
+  audits and deploy-script tests; the build with the remote font
+  (`fonts.bunny.net` is unreachable here); live OpenStreetMap requests (tiles
+  are answered locally). **PR CI, PR/merge SAST and the develop deploy did not
+  run** (`[skip ci]`).
 
-Working-tree inventory confirmed from files/searches: **26** backend Blade
-files, **13** literal app-shell consumers including StoreBackOfficeShellTest,
-**3** layout-shell extending views. No route was added or removed; prior
-verified counts were 1,048 `/temp`, 436 `/temp/admin`; route:list is unrun.
-No production data was changed. Resume by restoring approval-review credits,
-starting PHP 8.5, completing dependency/Wayfinder setup, running the baseline
-on develop and all affected/final checks, then the authorized shipping flow.
+Inventory confirmed from files/searches: **26** backend Blade files, **13**
+literal app-shell consumers including StoreBackOfficeShellTest, **3**
+layout-shell extending views. No route was added or removed. No production
+data was changed.
