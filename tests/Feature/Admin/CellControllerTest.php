@@ -53,7 +53,7 @@ test('a single-cell QR export draws a larger upward arrow below the label for th
     expect($svg)->toContain('<polygon points="648,206 551,303 609,303 609,400 687,400 687,303 745,303" fill="#111111"/>');
 });
 
-test('a single-cell QR export draws a horizontal arrow below the label for a middle level', function () {
+test('a single-cell QR export draws a dash below the label for a middle level', function () {
     actingAsAdmin();
     $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 1, 'flats_count' => 3]);
     $cell = $row->cells()->where('flat_number', 2)->first();
@@ -62,10 +62,11 @@ test('a single-cell QR export draws a horizontal arrow below the label for a mid
 
     $response->assertOk();
     $svg = $response->getContent();
-    expect($svg)->toContain('<polygon points="745,303 648,206 648,264 551,264 551,342 648,342 648,400" fill="#111111"/>');
+    expect($svg)->toContain('<polygon points="551,284 745,284 745,323 551,323" fill="#111111"/>')
+        ->and($svg)->not->toContain('points="745,303 648,206');
 });
 
-test('a single-cell QR export draws a horizontal arrow below the label when the row has only one level', function () {
+test('a single-cell QR export draws a dash below the label when the row has only one level', function () {
     actingAsAdmin();
     $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 1, 'flats_count' => 1]);
     $cell = $row->cells()->first();
@@ -74,7 +75,8 @@ test('a single-cell QR export draws a horizontal arrow below the label when the 
 
     $response->assertOk();
     $svg = $response->getContent();
-    expect($svg)->toContain('<polygon points="745,303 648,206 648,264 551,264 551,342 648,342 648,400" fill="#111111"/>');
+    expect($svg)->toContain('<polygon points="551,284 745,284 745,323 551,323" fill="#111111"/>')
+        ->and($svg)->not->toContain('points="745,303 648,206');
 });
 
 test('a single-cell QR export uses the configured QR code size instead of the default', function () {
@@ -144,7 +146,7 @@ test('a horizontal cell QR keeps the full bold slot and arrow inside the canvas'
         ->and((int) $svg['width'])->toBe($width)
         ->and((int) $svg['height'])->toBeLessThanOrEqual($height)
         ->and((int) $text['x'] - mb_strlen((string) $text) * $fontSize * 0.75 / 2)->toBeGreaterThan($qrRight)
-        ->and((int) $text['y'])->toBeLessThan($centerY);
+        ->and((int) $text['y'] - $fontSize * 0.8)->toBeLessThan($centerY);
 
     $arrowXs = [];
     $arrowYs = [];
