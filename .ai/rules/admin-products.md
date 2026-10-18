@@ -27,3 +27,11 @@ State is managed with two refs: `boxCountDialogProduct` (`ProductSummary | null`
 Full/Opened/Expired/Expiring-soon share one `occupancy` filter popover — tapping any sibling's icon opens the identical popover. Only the "primary" column in the group (Full) always shows its filter icon (`DataTable.vue`'s `filterIconAlwaysVisible` defaults to `true`); the other siblings (Opened, Expired, Expiring-soon) set `filterIconAlwaysVisible: false` so their icon only appears once the group's shared `filtered` computed is actually true. Product has no sibling, so it stays always-visible. When adding a new column that shares a `filterKey` with an existing one, default the new one to `filterIconAlwaysVisible: false` unless it's meant to be the group's advertised entry point.
 
 The main Filters dialog's "Activity" section (user/action/date-range fields) still narrows which product rows appear at all, via the `Product::matchingHistoryFilters()` scope (a `whereExists` over `CellStatusLog::matchingHistoryFilters()`) — it isn't tied to a column. There used to be an `activity` column-popover group (Activity Today/This week columns) sharing those same fields; it was removed, but the underlying row-filtering behavior of user/action/date-range stayed.
+
+## Name sorting follows the panel language
+
+The Products listing keeps `sort_by=name` as its public sort key. Resolve it to
+`name` in English and `COALESCE(NULLIF(ar_name, ''), name)` in Arabic so ordering
+matches the displayed label, including untranslated products. Apply it before
+pagination and keep material ID as the stable tie-breaker. Other sort keys are
+independent of the panel language.

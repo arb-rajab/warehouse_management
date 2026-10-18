@@ -66,7 +66,11 @@ class ProductController extends Controller
             ->when($request->boolean('low_stock'), fn (Builder $query) => $query->whereExists($this->lowStockExistsSubquery()))
             ->matchingOccupancyFilters($request)
             ->matchingHistoryFilters($request)
-            ->orderBy($sortBy, $direction)
+            ->when(
+                $sortBy === 'name' && app()->getLocale() === 'ar',
+                fn (Builder $query) => $query->orderByRaw("COALESCE(NULLIF(ar_name, ''), name) {$direction}"),
+                fn (Builder $query) => $query->orderBy($sortBy, $direction),
+            )
             ->orderBy('id', $direction)
             ->paginate($perPage)
             ->withQueryString();
