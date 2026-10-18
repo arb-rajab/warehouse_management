@@ -114,7 +114,6 @@ test('visit maps use the strict CSP without expanding its tile allowance', funct
     }
 });
 
-
 test('Google Map settings keep the strict policy and existing tile allowance', function () {
     actingAsStoreUser(createStoreStaff('google_map_setting'));
     $response = $this->get(route('google-map.index'))->assertOk();
