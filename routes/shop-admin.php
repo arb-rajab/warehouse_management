@@ -1,6 +1,5 @@
 <?php
 
-use App\Http\Controllers\AdminController;
 use App\Http\Controllers\BusinessSettingsController;
 use App\Http\Controllers\CommissionController;
 use App\Http\Controllers\CustomerProductController;
@@ -89,7 +88,7 @@ use Illuminate\Contracts\Encryption\DecryptException;
   |
  */
 // test majd
-Route::get('/admin', [AdminController::class, 'admin_dashboard'])->name('shop.admin.dashboard')->middleware(['auth', 'admin']);
+Route::get('/admin', [DashboardController::class, 'index'])->name('shop.admin.dashboard')->middleware(['auth', 'admin']);
 Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function () {
 
     // category

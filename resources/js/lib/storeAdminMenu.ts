@@ -20,7 +20,6 @@ import {
     Users,
 } from '@lucide/vue';
 import type { Component } from 'vue';
-import { admin_dashboard } from '@/actions/App/Http/Controllers/AdminController';
 import {
     seller_verification_form,
     vendor_commission,
@@ -51,6 +50,7 @@ import {
 } from '@/actions/App/Http/Controllers/Store/Admin/CustomerController';
 import { index as customerNotificationsIndex } from '@/actions/App/Http/Controllers/Store/Admin/CustomerNotificationController';
 import { index as customerPackagesIndex } from '@/actions/App/Http/Controllers/Store/Admin/CustomerPackageController';
+import { index as admin_dashboard } from '@/actions/App/Http/Controllers/Store/Admin/DashboardController';
 import { index as digitalProductsIndex } from '@/actions/App/Http/Controllers/Store/Admin/DigitalProductController';
 import {
     create as driversCreate,
@@ -181,6 +181,7 @@ export const storeAdminMenu: StoreMenuItem[] = [
     {
         labelKey: 'store.nav.dashboard',
         href: admin_dashboard(),
+        inertia: true,
         icon: LayoutDashboard,
         permission: 'admin_dashboard',
     },

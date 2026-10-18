@@ -32,7 +32,6 @@ parameters:
     # by hand going forward — a genuinely new legacy-style file belongs in
     # its own reviewed exclusion, not silently folded into this one.
     excludePaths:
-        - app/Http/Controllers/AdminController.php
         - app/Http/Controllers/PageController.php
         - app/Models/CustomerProduct.php
         - app/Console/Commands/AllProductsCommand.php

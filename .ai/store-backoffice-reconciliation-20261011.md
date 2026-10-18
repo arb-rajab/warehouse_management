@@ -3866,3 +3866,157 @@ Inventory confirmed from files/searches: **26** backend Blade files, **13**
 literal app-shell consumers including StoreBackOfficeShellTest, **3**
 layout-shell extending views. No route was added or removed. No production
 data was changed.
+
+
+## Admin dashboard step 33 (2026-10-18)
+
+**Scope and runtime.** Work is on `codex/step-33-dashboard`, created after
+`git fetch origin develop` from `63e676f4` (PR #442). `AGENTS.md` was read first,
+including its Codex portability rules. Model: GPT-6 Codex; the exact variant and
+configured reasoning-effort value are not exposed by this session. No Claude
+hooks, simulated remote mode, subagents or Boost results were assumed. Installed
+package source and repository files supplied the framework references.
+
+The host has no PHP. The existing managed `wms-cloud-php:8.5` Docker image runs
+**PHP 8.5.11** with SQLite, MySQL, GD, intl, zip and pcntl extensions;
+its GD initially lacked WebP encoding (diagnosis and runtime fix below). `vendor/` and `node_modules/` were already present. Installed versions:
+Laravel 13.34.0, inertia-laravel 3.3.1, Wayfinder 0.1.21, Pest 5.0.4, Vitest
+4.1.11 and Vite 8.2.1. Composer's executable was copied from the local Composer
+image into temporary runtime storage; the local class map was refreshed after
+removing the root controller. No Composer manifest/lock change. Scratch wrappers,
+PHP INI, browser-runtime setup and logs are outside the repository in
+`/workspace/work/step33`. The temporary server is published on loopback only;
+the HTTPS harness and enforced CSP remain in use.
+
+**Owner decisions and implementation.** Chart.js is explicitly owner-approved,
+recorded in §5 and §33 of the migration guide: npm `chart.js` **4.5.1**, exact
+pin, plus resolved `@kurkle/color` 0.3.4. Only the used Chart.js pieces are
+registered; no CDN or CSP change. `Store\Admin\DashboardController::index`
+returns the Inertia dashboard with explicit selections and eager product
+translations, taxes and thumbnails. Separate category sales/stock SQL aggregates
+are proven equal to the old nested loop. A new 24-hour v2 numeric cache never
+reads old comma strings; visits labels and values share a snapshot. The SMTP
+condition, product filtering, price helpers and chart meanings are preserved.
+The requested route-level `admin_dashboard` gate removes one Legacy read-ratchet
+exception. Cache clear keeps its vendor-only route gate and scoped behavior.
+The root controller's last routed action moved; its unused operational cache
+method, file and both analysis exclusions are removed. The dashboard Blade view
+is removed with `git rm`; seller Blade still consumes AIZ charts, so shared
+assets remain. No storefront file or production data changes.
+
+**Baseline on unmodified develop.** The following Pest files ran through PHP
+8.5 before application edits, passing **47 tests / 172 assertions**:
+
+- `tests/Feature/LegacyAdminPanelTest.php`
+- `tests/Feature/Store/Admin/DashboardUtilitiesTest.php`
+- `tests/Feature/Store/StoreBackOfficeShellTest.php`
+- `tests/Feature/LegacyAdminPermissionsTest.php`
+- `tests/Feature/LegacyStoreStateChangingRoutesTest.php`
+- `tests/Feature/LegacyShopRouteAccessTest.php`
+- `tests/Feature/LegacyTempRoutesReachableTest.php`
+- `tests/Feature/RouteServiceProviderTest.php`
+
+**Focused checks and defects found.** The new dashboard Pest file passed
+**19 tests / 226 assertions**: full stats/series/product payload, empty shop,
+aggregate equality with nested categories/variants/stockless/noise products,
+24-hour expiry, top-12 filtering and translation query count, SMTP shown/hidden,
+refused callers with unchanged DB, strict CSP, routes and moved shell cases.
+The focused frontend run passed **37 tests in 5 files** (page/chart/menu/layout/
+nav); a later missing-slug page test is included in the final full run.
+The first backend fixture needed `product_taxes.tax_id` and an explicit null
+thumbnail instead of a Faker-generated upload. Both were corrected.
+Initial focused frontend mounts also exposed use of `useI18n()` without an
+installed test-app plugin; the implementation now follows the repository's
+shared `lib/i18n` convention. The existing layout test now expects an Inertia
+Dashboard link. Standalone vue-tsc attempts first reported missing generated
+actions after Wayfinder exhausted the default 128 MB limit, then a mocked
+Chart constructor's static-register type inference error. Fresh route generation
+with the runtime memory allowance and an explicit mock type resolved both;
+the later full vue-tsc runs pass.
+
+`store-dashboard.spec.ts` passed **1 real Chromium test** under enforced CSP:
+five painted canvases with labelled table fallbacks, real Inertia dashboard
+menu navigation, Arabic RTL with LTR geometry, translated category data, dark
+label/fill contrast, no page errors and no CSP console/event reports during the
+converted workflow. Dedicated SQLite browser fixtures replace unrelated Faker
+remote thumbnail URLs with local placeholders; no external image host or CSP
+exception is added. The initial login is protected Blade and precedes the
+converted-page error/CSP observers, as in the other store browser specs.
+
+Browser setup/verification exposed and resolved:
+
+- Missing Playwright FFmpeg: the installed system executable was supplied in
+  the temporary browser runtime, with `/usr/bin/chromium` selected explicitly.
+- Docker exec left an orphan PHP test server after the harness stopped; temporary
+  runtime cleanup now terminates only that session-owned port-8011 server.
+- A new category fixture lacked its slug, causing the retained login menu to
+  fail. Its fixture now supplies one; no storefront code changed.
+- Published WMS products may have no storefront slug. The new resource now
+  returns a null public URL, and the grid keeps the card readable without
+  inventing a link, matching the existing product-list contract. Pest and Vitest
+  cover this actual application fix.
+- An ignored, stale `public/hot` pointed to an absent development server and
+  prevented the production bundle from booting. It was moved to scratch.
+- The English page's locale button is named `Arabic`, not `العربية`; the spec
+  now selects its displayed label and uses the existing full-reload helper.
+
+**Build and dependency audit.** `npm run build` passed with fresh Wayfinder
+and the actual remote Instrument Sans font fetch; no font-less fallback. A
+second build passed after the missing-slug fix. Existing optional-fontaine and
+large-chunk notices remain warnings. The requested before/after `npm audit
+--json` ran: both report exactly **6 existing dev-tool findings (4 high,
+2 moderate)**, affecting `braces`, `micromatch`, `fast-glob`,
+`@vue/eslint-config-typescript`, `eslint-plugin-vue` and
+`postcss-selector-parser`. Chart.js and its new transitive add **zero new
+findings**. The first audit attempt was rejected by automatic approval review
+for metadata disclosure; the explicit user-requested audit scope was supplied
+and the subsequent before/after audits were approved and completed. These
+commands exit 1 for the existing findings; they are not described as clean.
+
+**Full pre-push verification.** Every attempt used explicit
+`python3 .claude/scripts/pre_push_check.py --full` on uncommitted changes;
+the bare attested mode was never invoked and no CI-Verified trailer was written.
+The first attempt stopped at a fixture type-import lint error; the second at
+formatting left by ESLint. Both were fixed. The third passed Wayfinder, ESLint,
+Prettier, vue-tsc, Vitest (**320 files / 2,508 tests**), Pint (**1,240 files**),
+PHPStan (**0 errors**) and config-cache clearing, then failed before Pest could
+run tests because a child PHP process retained its default **128 MB** memory
+limit. A temporary PHP INI now passes the 1 GB limit to child processes too.
+The fourth attempt passed all frontend/Pint/PHPStan stages, including
+**320 files / 2,509 Vitest tests**, then Pest completed with **7 failed, 6,054
+passed / 34,387 assertions**. Five upload failures came from GD without WebP,
+not changed upload code. Two were a prior visit-navigation test rendering the
+now-permission-gated dashboard; it now checks the same retained Blade sidebar
+on `sellers.index` with `view_all_seller`, preserving both allowed/refused
+visit cases. Its focused run passed **2 tests / 4 assertions**. The temporary
+`wms-step33-php:8.5` image now has GD WebP support, confirmed by `gd_info()`.
+The initial apt build needed its public proxy CA mounted readably for the
+`_apt` user; TLS verification stayed enabled. The two affected upload files
+then passed **87 tests / 403 assertions**. No application extension or Composer
+requirement changed. The fifth attempt stopped at ESLint because root-run upload tests had left a
+mode-0700 fixture directory owned by root under `storage/app/private/uploads`.
+Ownership of session-created runtime artifacts was restored to the workspace
+user, and the temporary PHP wrapper now runs as that user. The sixth run passed all frontend/Pint/PHPStan stages and reached **6,057
+passing Pest tests / 34,402 assertions**, with four failures from an existing
+`public/uploads/tests` directory owned by UID 65534: workspace-user PHP could
+not write the download fixtures. Ownership of only that isolated fixture
+directory was restored. The three affected download/API files then passed
+**111 tests / 957 assertions**. No production code or assertion was weakened
+for runtime failures. The seventh explicit `--full` run **exited 0**: Wayfinder generation, whole-repo
+ESLint, Prettier, vue-tsc, Vitest (**320 files / 2,509 tests**), Pint (**1,240
+files**), PHPStan (**814 files, 0 errors**), config-cache clearing and Pest
+(**6,061 tests / 34,431 assertions**, five processes) all passed. The existing
+jsdom navigation notices are non-fatal. The bare/attested mode was never run;
+no CI-Verified trailer was added. The final code is covered by this run; later
+PR-number recording changes only documentation.
+
+**Inventory.** **25** backend Blade files (26 minus the dashboard), **12**
+literal app-shell consumer files including the shell test (11 extending views),
+**3** layout-shell extending views. `route:list --path=temp --json` confirms
+**1,048** `/temp` and **436** `/temp/admin` registrations, unchanged. Retained
+Blade editor inventory stays **8 fields in 8 views**.
+
+**Not run:** the full Playwright suite (only the new dashboard spec ran), the
+separate MySQL migration job, Composer audit or deploy-script checks. None is
+part of explicit `--full`. No production mutation. PR CI, PR/merge SAST and
+develop deployment do not run under the owner's required `[skip ci]` messages.

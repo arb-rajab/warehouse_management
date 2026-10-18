@@ -12,6 +12,7 @@ import type {
     User,
 } from '@/types/admin';
 import type {
+    StoreDashboardProps,
     StoreConversation,
     StoreMessage,
     StoreProductQuery,
@@ -1543,5 +1544,30 @@ export function representativeVisitMarker(
         has_order: true,
         label: 'Customer Noor',
         ...overrides,
+    };
+}
+
+export function storeDashboardProps(): StoreDashboardProps {
+    return {
+        stats: { customers: 8, orders: 12, categories: 3, brands: 4 },
+        series: {
+            products: [10, 7],
+            sources: [6, 4],
+            sales: { labels: ['Oils'], values: [18] },
+            stock: { labels: ['Oils'], values: [45] },
+            visits: { labels: ['SY'], values: [25] },
+        },
+        showSmtpAlert: true,
+        topProducts: [
+            {
+                id: 1,
+                name: 'Olive oil',
+                public_url: '/temp/product/oil',
+                thumbnail_url: '/oil.png',
+                base_price: '€22.00',
+                discounted_price: '€19.80',
+                rating: 4.5,
+            },
+        ],
     };
 }

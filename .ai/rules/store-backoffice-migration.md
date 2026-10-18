@@ -9,7 +9,7 @@ paths:
   - 'resources/js/components/StoreNewsletterFormFields.vue,resources/js/components/StoreNewsletterRecipients.vue,resources/js/components/StoreTicketReplyForm.vue,resources/js/lib/storeSupportTicket.ts,app/Services/Store/**'
   - 'resources/js/components/StoreWebsite*'
   - 'resources/js/components/StoreProduct*,resources/js/lib/storeProductForm.ts'
-  - 'resources/js/components/StoreGoogleMapFormFields.vue'
+  - 'resources/js/components/StoreGoogleMapFormFields.vue,resources/js/components/StoreDashboardChart.vue'
   - 'resources/js/components/StoreTripStatusDialog.vue,resources/js/components/StoreTripFormFields.vue,resources/js/components/StoreTripMap.vue,resources/js/components/StoreLeafletMap.vue,resources/js/components/StoreVisitMap.vue,resources/js/lib/storeTrip.ts'
   - 'app/Http/Controllers/Store/**,app/Http/Requests/Store/**,app/Http/Resources/Store/**'
   - 'app/Http/Middleware/HandleInertiaRequests.php,app/Http/Middleware/HandleStoreBladePages.php,app/Http/Middleware/SendSecureHeaders.php'
@@ -19,7 +19,8 @@ paths:
 
 # Moving the store back office from Blade to Inertia
 
-Latest follow-up: [Google Map settings](#32-google-map-settings-2026-10-18).
+Latest follow-up: [admin dashboard](#33-admin-dashboard-2026-10-18).
+Map-settings follow-up: [Google Map settings](#32-google-map-settings-2026-10-18).
 Visit follow-up: [representative visit details and day maps](#31-representative-visit-details-and-day-maps-2026-10-18).
 Trip-map follow-up: [the trip map picker on Leaflet from npm](#30-trip-map-picker-2026-10-17).
 Server-status follow-up: [the server status page's deletion](#29-server-status-page-deletion-2026-10-17).
@@ -43,7 +44,7 @@ Customer-package follow-up: [customer package migration verification](#12-custom
 Carrier follow-up: [carrier migration verification](#11-carrier-administration-follow-up-2026-10-12).
 PR #377 verification: [final all-store browser results](../store-backoffice-reconciliation-20261011.md#final-all-store-browser-verification-2026-10-12)
 close the pending browser gate. Earlier dated verification sections remain
-historical evidence; §10 records reconciliation results and §§11–32 record
+historical evidence; §10 records reconciliation results and §§11–33 record
 subsequent module verification and limits.
 
 ## 1. Decision and scope
@@ -152,8 +153,8 @@ edit (§23) forms are Inertia pages.
 - **Integrated shell:** permission-filtered badge counts, menu search, the
   current account’s notifications dropdown and narrowly scoped Clear Cache.
   Profile and notification links use the selected migrated controllers. The
-  dashboard itself remains Blade; Chart.js is now owner-approved (§5) and its
-  conversion is a later step.
+  dashboard uses Inertia with bundled Chart.js since §33; its menu entry is
+  an Inertia visit.
 
 **Shared with WMS.** Both layouts genuinely need these:
 
@@ -521,7 +522,8 @@ brand, digital-product, in-house/all-products list, general-settings,
 blog-editor, newsletter/ticket-detail, website-settings, digital-product
 form, physical product create and edit form, trip list, trip form, trip
 orders, trip detail, legacy reviews retirement, server status deletion and trip map
-picker and representative visit detail follow-ups in §§11–31. The original
+picker, representative visit detail, Google Map settings and dashboard
+follow-ups in §§11–33. The original
 reconciliation was based on `8e3f82b60b2b4dc951b97ccfed985a75e9e6be69` and
 merged through PR #377. Carrier administration was then implemented separately
 from latest `origin/develop` at `018dd1802c0b2fc99ffbf0e097594fe0f0f3dfef`.
@@ -532,7 +534,7 @@ Verification below distinguishes the original reconciliation from this follow-up
 | Staff and roles | Complete pilot | Existing six Inertia pages retained; action gates unchanged |
 | Reference/shipping/tax/currency | Complete selected subset | Canonical `35ae3133` controllers/forms/routes; duplicate `e5523338` implementation superseded |
 | Carrier administration | Complete | List/create/edit and CRUD/status use Inertia; existing `manage_carriers` gate, tariff contract and public/API consumers preserved (§11) |
-| Language/settings | Complete selected subset | Language CRUD and translation-selector validation separated; dedicated settings endpoints with reserved-key protection; general settings use Inertia with a typed writer and a config-managed timezone (§17); the generic `business_settings.update` writer is retired (§20); the Google Map settings GET uses Inertia and the approved Leaflet picker (§32; verification pending) |
+| Language/settings | Complete selected subset | Language CRUD and translation-selector validation separated; dedicated settings endpoints with reserved-key protection; general settings use Inertia with a typed writer and a config-managed timezone (§17); the generic `business_settings.update` writer is retired (§20); the Google Map settings GET uses Inertia and the approved Leaflet picker (§32) |
 | Reports/notifications | Complete selected subset | Inertia report/admin notification routes; public/customer/seller notification consumers remain |
 | Uploads/profile | Complete selected subset | Canonical `944e2e1e` backend/picker; per-action authorization and authenticated-user profile |
 | Customers/representatives | Partial | Customers, addresses, representatives/packages/payments, customer package administration (§12) and visit list/detail/day maps (§31) implemented; classified products are to be converted (owner decision, §5), a later step |
@@ -540,7 +542,7 @@ Verification below distinguishes the original reconciliation from this follow-up
 | Website/support | Complete selected subset | Header/home, footer, appearance, custom pages (§20), conversations, product queries, the ticket list and the ticket detail with its typed reply use Inertia; footer, appearance and page rich text use the shared editor, cleaned on write (§20); the header/footer scripts stay on their compatibility endpoint as plain code fields; script policy, `manage_website_scripts` and rich-text WAF exceptions stay held |
 | Marketing/blog | Complete selected subset | Coupons, flash/offer deals, campaign products, popups, subscribers and blog categories/list/actions integrated; blog post create/edit (§18) and the newsletter form (§19) use Inertia with the shared Tiptap editor; the typed newsletter send and bounded recipient search are unchanged |
 | Logistics | Partial | Drivers/trucks converted; the all-trips and today's-trips lists with their status dialog, notes, delete and bulk delete converted (§24); the trip create and edit forms converted without their map (§25); the trip orders list with its bulk status, invoice number and delivered actions converted (§26); the trip detail with its checkpoint notes, status and CMR download converted without its map (§27); the trip map picker converted on Leaflet from npm (§30); visit list/detail/day maps use Inertia and bundled Leaflet (§31) |
-| Orders/dashboard | Partial | Orders and entry forms converted; stored tax metadata and line-price-only grand total preserved; shell utilities integrated; dashboard conversion is a later step (Chart.js owner-approved, §5) |
+| Orders/dashboard | Complete selected subset | Orders and entry forms converted; stored tax metadata and line-price-only grand total preserved; shell utilities integrated; dashboard converted to Inertia with bundled Chart.js (§33) |
 | Seller administration | To convert | Existing seller Blade screens remain, including the seller product list (`products.seller`, §16); the owner decided they are converted, not deleted (§5), in later steps |
 | Public/seller/auth/PDF consumers | Retained | Blade coexistence, PDF layouts, Inertia root and CSP middleware remain |
 
@@ -587,7 +589,7 @@ dedicated allowlisted compatibility endpoint, not a general settings writer.
   forms use its existing route name. Preserve upload URL safety and download/PDF
   behavior. No Composer manifest or lock changes; the frontend manifests
   changed only for the owner-approved Tiptap packages (§18) and Leaflet with
-  its types (§30).
+  its types (§30), and Chart.js (§33).
 - **Tiptap: owner-approved and active (2026-10-13, §18).** The owner approved
   Tiptap as the shared back-office editor. `StoreRichTextField` is the one
   rich-text field for converted screens; blog post create/edit (§18), the
@@ -606,10 +608,13 @@ dedicated allowlisted compatibility endpoint, not a general settings writer.
   resolves them (it adds `@types/geojson` 7946.0.16 for the types); the trip
   map picker is its first consumer, with OpenStreetMap tiles (the provider
   the Blade maps already used) allowed in the strict `img-src` (§2.5).
-  Chart.js is approved but not yet installed: the dashboard conversion adds it.
-  The visit detail/day maps use its shared base since §31; Google Map settings reuse it in §32, replacing only the admin picker with OpenStreetMap tiles, without widening CSP or changing the storefront Google Maps partial. Their unpkg
-  Leaflet 1.7.1 imports are removed. The Blade dashboard's chart assets stay
-  while that screen remains Blade.
+  Chart.js is active since §33: `chart.js` **4.5.1**, pinned exactly, with
+  `@kurkle/color` 0.3.4 resolved by npm. Only bar/doughnut controllers, arc/bar
+  elements, category/linear scales and legend/tooltip plugins are registered.
+  Canvas rendering needs no CSP change.
+  The visit detail/day maps use the shared Leaflet base since §31; Google Map settings reuse it in §32, replacing only the admin picker with OpenStreetMap tiles, without widening CSP or changing the storefront Google Maps partial. Their unpkg
+  Leaflet 1.7.1 imports are removed. The shared AIZ chart helper and vendor assets stay: the seller dashboard
+  still calls `AIZ.plugins.chart`.
 - **Sellers and classified products: convert, not delete (owner decision,
   2026-10-17).** The seller administration screens (§5.1 `sellers/`, the
   seller product list) and the customer classified products are converted in
@@ -640,7 +645,7 @@ dedicated allowlisted compatibility endpoint, not a general settings writer.
 
 ### 5.1 Actual retained backend Blade files
 
-The current backend inventory contains **26 Blade files**, down from 73 after
+The current backend inventory contains **25 Blade files**, down from 73 after
 removing three screens each for carriers, customer packages and categories, the
 two brand screens, the digital product list (§15), general settings (§17), the
 two blog post forms (§18), the newsletter and ticket detail (§19), the
@@ -652,7 +657,8 @@ with their two checkpoint row partials (§25), the trip orders list
 (§26), the trip checkpoints page with its status modal (§27), the legacy product
 reviews list (§28), the server status page (§29), and the trip map picker with
 its three `trips/inc` partials (§30), and the two representative visit
-detail screens with their map partial (§31), and Google Map settings (§32).
+detail screens with their map partial (§31), Google Map settings (§32) and the
+admin dashboard (§33).
 The in-house and all-products lists (§16) removed none:
 `product/products/index.blade.php` is shared with the retained seller product
 list. Google Map settings are converted in §32.
@@ -660,7 +666,6 @@ These files remain physically present. Hardening a Blade handler does not count
 as conversion. Protected shells/downloads/invoices are not conversion targets.
 
 - **customer:** `customer/classified_products/index.blade.php`.
-- **(root):** `dashboard.blade.php`.
 - **downloads:** `downloads/brand.blade.php`, `downloads/category.blade.php`, `downloads/user.blade.php`.
 - **inc:** `inc/admin_nav.blade.php`, `inc/admin_sidenav.blade.php`.
 - **invoices:** `invoices/invoice.blade.php`.
@@ -697,7 +702,7 @@ line numbers or count sibling snapshots.
 | `CustomerController` | `bulk-customer-delete`, `change_password`, `customers.important`, `customers.not_important`, `customers.store`, `customers.whatsapp_contact`, `customers.page-views`, `customers.index`, `customers.archive`, `customers.create`, `download.trade_license`, `customers.login`, `customers.restore`, `customers.sendAgreement`, `customers.verify`, `customers.update`, `customers.destroy`, `customers.change_activity_status`, `customers.edit`, `customers.update_customer_notes`, `update_password`, `customers.ban`, `representatives.index`, `representatives.create`, `representatives.store` | `Store/Admin/Customers/Customers/Index.vue`, `Store/Admin/Customers/Customers/Create.vue`, `Store/Admin/Customers/Customers/Edit.vue`, `Store/Admin/Customers/Customers/Views.vue` |
 | `CustomerPackageController` (Store/Admin) | `customer_packages.index`, `customer_packages.create`, `customer_packages.store`, `customer_packages.edit`, `customer_packages.update`, `customer_packages.destroy` | `Store/Admin/Customers/Packages/Index.vue`, `Create.vue`, `Edit.vue`; root purchase/payment controller and mobile API retained |
 | `CustomerNotificationController` | `admin.notifications.all`, `admin.notifications.create`, `admin.notifications.send`, `admin.notifications.delete` | `Store/Admin/Notifications/Customers/Index.vue`, `Store/Admin/Notifications/Customers/Create.vue` |
-| `DashboardController` | `cache.clear` | Scoped cache clear only; dashboard route → root `AdminController` / retained Blade |
+| `DashboardController` | `shop.admin.dashboard`, `cache.clear` | `Store/Admin/Dashboard/Index.vue` (§33); scoped cache clear retained |
 | `DigitalProductController` (Store/Admin) | `digitalproducts.index`, `digitalproducts.create`, `digitalproducts.store`, `digitalproducts.edit`, `digitalproducts.update`, `digitalproducts.destroy`, `digitalproducts.download`, `digitalproducts.published`, `digitalproducts.featured`, `digitalproducts.todays_deal` | `Store/Admin/Product/DigitalProducts/Index.vue`, `Create.vue`, `Edit.vue` (§21); store → list, update → edit form in the same language; download → file response; root `DigitalProductController` removed; seller, mobile and storefront digital product and download consumers separate |
 | `DriverController` | `drivers.create`, `drivers.index`, `drivers.store`, `drivers.update`, `drivers.destroy`, `drivers.edit` | `Store/Admin/Trips/Drivers/Index.vue`, `Store/Admin/Trips/Drivers/Create.vue`, `Store/Admin/Trips/Drivers/Edit.vue` |
 | `DynamicPopupController` | `bulk-dynamic-popup-delete`, `dynamic-popups.index`, `dynamic-popups.store`, `dynamic-popups.update-status`, `dynamic-popups.create`, `dynamic-popups.update`, `dynamic-popups.destroy`, `dynamic-popups.edit` | `Store/Admin/Marketing/DynamicPopups/Index.vue`, `Store/Admin/Marketing/DynamicPopups/Create.vue`, `Store/Admin/Marketing/DynamicPopups/Edit.vue` |
@@ -706,7 +711,7 @@ line numbers or count sibling snapshots.
 | `GoogleMapController` | `google-map.index`, `google-map.update` | `Store/Admin/Setup/GoogleMap/Index.vue` with `StoreGoogleMapFormFields` and the shared npm Leaflet base (§32); writer redirects to the same index |
 | `LanguageController` | `languages.index`, `languages.store`, `app-translations.export`, `app-translations.import`, `app-translations.store`, `app-translations.show`, `languages.create`, `languages.key_value_store`, `languages.update-status`, `languages.update_rtl_status`, `languages.destroy`, `languages.show`, `languages.edit`, `languages.update` | `Store/Admin/Languages/Index.vue`, `Store/Admin/Languages/Create.vue`, `Store/Admin/Languages/Edit.vue`, `Store/Admin/Languages/Translations.vue` |
 | `LegacyWebsiteScriptsController` | `website.scripts.compatibility.update` | Redirect to `website.appearance`; posted by the plain-code scripts form of `Store/Admin/Website/Appearance.vue` (§20) |
-| `NewsletterController` | `newsletters.index`, `newsletters.recipients`, `newsletters.send` | `Store/Admin/Marketing/Newsletters/Index.vue` (§19); typed send redirecting to the retained Blade dashboard; bounded JSON recipient search |
+| `NewsletterController` | `newsletters.index`, `newsletters.recipients`, `newsletters.send` | `Store/Admin/Marketing/Newsletters/Index.vue` (§19); typed send redirecting to the Inertia dashboard; bounded JSON recipient search |
 | `NotificationController` | `admin.all-notification` | `Store/Admin/Notifications/Index.vue` |
 | `OfferController` | `offer_deals.brands.create`, `offer_deals.create`, `offer_deals.index`, `offer_deals.store`, `offer_deals.update`, `offer_deals.destroy`, `offer_deals.edit`, `offer_deals.update_multiple_usage`, `offer_deals.update_repeatable`, `offer_deals.update_status` | `Store/Admin/Marketing/Offers/Index.vue`, `Store/Admin/Marketing/Offers/Create.vue`, `Store/Admin/Marketing/Offers/Edit.vue` |
 | `OffersCatalogController` | `offers.destroy`, `(unnamed compatibility)`, `offers.index`, `offers.store` | `Store/Admin/Catalogue/Offers/Index.vue` |
@@ -807,8 +812,8 @@ JSON-LD or itemscope structured data; do not describe absent features as migrate
 
 Retained-module issues are separate from integration regressions: populated
 brand admin pages referenced absent `brands.order_level` (resolved by §14 without
-schema change); the populated retained
-dashboard lacks product-translation eager loading; legacy API/seller resource
+schema change); the populated dashboard
+product-translation eager load was fixed in §33; legacy API/seller resource
 routes still include nonexistent handlers, and legacy uploader deletion
 failure handling remains weaker than the selected admin controller. These need
 separate scoped work; do not activate core catalogue/seller migrations or change
@@ -3392,3 +3397,79 @@ layout-shell extending views. Routes replace one GET with one GET; no route
 is added or removed (`route:list` still shows 1,048 under `/temp` and 436
 under `/temp/admin`).
 No production data, CI, SAST or deployment was run.
+
+
+## 33. Admin dashboard (2026-10-18)
+
+Implemented on `codex/step-33-dashboard`, from fetched `origin/develop` at
+`63e676f4` (PR #442). Model: GPT-6 Codex; the exact model variant and configured
+reasoning-effort value are not exposed to this session. The owner authorized
+Chart.js and one PR into develop and its merge only after the requested checks
+could run, with `[skip ci]` in every commit, PR title and merge message.
+Verification and shipping are recorded in the reconciliation ledger.
+
+**Backend and gate.** `Store\Admin\DashboardController::index` replaces root
+`AdminController::admin_dashboard`, keeping `shop.admin.dashboard`, GET
+`/temp/admin` and `auth` + `admin`. `HasMiddleware` adds the explicit
+`permission:admin_dashboard` gate requested for the whole response. The Legacy
+read ratchet drops only this formerly ungated action. Scoped `cache.clear`
+keeps its separate `RaizerSuperAdmin` route gate; its index-only permission
+does not restrict cache clear. The root controller has no remaining consumer:
+its obsolete, unrouted `clearCache` method is removed with the file and both
+Pint/PHPStan exclusions. No storefront file changes.
+
+The response contains typed stats, real numeric chart arrays, and
+`DashboardProductResource` rows. Pie 1 preserves the legacy **all products vs
+published products** series, not active vs inactive; pie 2 preserves
+`from_api = 1` vs `from_api = 0`. Category sales sum every descendant product's
+`num_of_sale`, and stock sums all its variant quantities, including unpublished
+and seller products as before. Separate SQL aggregates avoid multiplying sales
+by the stock-row count; category traversal is in memory with a cycle guard.
+Equality is tested against the former `CategoryUtility`/product/stock loop with
+multiple roots, nested children, variants, stockless and unrelated products.
+
+Only category totals and visits are cached for 86,400 seconds, under the new
+`store.admin.dashboard.graphs.v2` key. Old comma-string `cached_graph_data` is
+never read. Category totals are keyed by root id, so current translated labels
+cannot shift onto another root's totals; visits labels and values share a
+snapshot. Missing `total_visits` yields empty arrays. Stats and Top 12 stay
+fresh. Cache clear forgets the new key and the legacy key. The SMTP flag retains
+`can('smtp_settings') && username == null && password == null`, including the
+legacy loose comparison for empty strings.
+
+Top products keep `filter_products`, published ordering by sales, existing
+tax/discount/currency helpers and storefront URLs. Explicit selections and
+scoped eager loads cover product translations (the §7 defect), taxes and
+thumbnails, with no per-product image lookup. The grid uses escaped names,
+prices and numeric ratings with plain storefront anchors. Products without
+a storefront slug remain readable without an invented link (the same null-URL
+contract as the product lists); browser verification found this in seeded WMS
+products.
+
+**Frontend and dependency.** `Store/Admin/Dashboard/Index.vue` uses
+`StoreAdminLayout`, English/Arabic `store.dashboard.*` and an Inertia sidebar
+entry. `StoreDashboardChart` bundles exactly pinned npm Chart.js 4.5.1 (§5),
+registers only its used pieces, destroys charts/listeners on unmount and
+rebuilds for data, locale and system dark-mode changes. Five labelled canvases
+have visually hidden data-table fallbacks. Chart geometry stays LTR; Arabic
+legend and tooltip text use RTL. Light/dark palettes have contrasting labels
+and fills. No CSP directive or Composer dependency changes. The audit adds
+zero findings; the same six pre-existing dev-tool findings remain (ledger).
+
+**Consumers and inventory.** `git rm` removes `dashboard.blade.php` after
+tracing its sole renderer and all action/menu/test imports. AIZ's chart helper
+in `public/assets/js/aiz-core.js` remains because
+`shop/seller/dashboard.blade.php` still calls it; shared vendor assets and
+protected Blade shells remain. Current counts: **25** backend Blade files,
+**12** literal app-shell consumer files including the shell test (11 actual
+extending views), **3** layout-shell extending views, **1,048** `/temp` and
+**436** `/temp/admin` registrations. One GET replaces one GET.
+
+Pest covers render/full payload, unchanged refused-callers DB, SMTP branches,
+24-hour cache expiry, aggregate equality, top-12 filtering/translations, route
+and shell contracts. Vitest full-mounts the page/chart with Chart.js mocked;
+Playwright exercises real bundled charts under enforced CSP, Inertia menu
+visits, Arabic RTL/LTR geometry and dark label/fill contrast. Exact results,
+failed attempts and skipped checks are in the
+[step 33 ledger](../store-backoffice-reconciliation-20261011.md#admin-dashboard-step-33-2026-10-18),
+not inferred from earlier steps. PR CI, PR/merge SAST and deploy do not run under `[skip ci]`.
