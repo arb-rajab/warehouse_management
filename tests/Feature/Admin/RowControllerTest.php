@@ -6,6 +6,7 @@ use App\Models\Product;
 use App\Models\Row;
 use App\Models\Setting;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\File;
 use Inertia\Testing\AssertableInertia as Assert;
 use Smalot\PdfParser\Parser as PdfParser;
 
@@ -854,6 +855,11 @@ test('deleting a non-existent row returns a 404', function () {
 });
 
 test('an authenticated user can export QR codes for every cell in a row', function () {
+    $fontCache = storage_path('framework/testing/qr-fonts-'.bin2hex(random_bytes(8)));
+    File::ensureDirectoryExists($fontCache);
+    $this->beforeApplicationDestroyed(fn () => File::deleteDirectory($fontCache));
+    config(['dompdf.options.font_cache' => $fontCache]);
+
     actingAsAdmin();
     $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 2, 'flats_count' => 2]);
 
@@ -872,6 +878,7 @@ test('an authenticated user can export QR codes for every cell in a row', functi
     // covers that SVG's content directly against the single-cell export, which
     // the row-wide PDF sheet now embeds verbatim (see cellQrLabels()).
     expect($pdf->getPages())->toHaveCount(4);
+    expect($response->getContent())->toContain('/BaseFont /Helvetica-Bold');
 
     // Regression guard for the QR silently missing from every page while the
     // label text still drew: dompdf draws an SVG label straight into the page
