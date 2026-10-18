@@ -94,8 +94,8 @@ test('general settings round-trip the system name and a canonical logo pick thro
         if (Illuminate\Support\Facades\DB::table('business_settings')->where('type', 'timezone')->exists()) { throw new RuntimeException('Timezone was stored'); }
     `);
 
-    // The seller list is a retained Blade page in the admin shell.
-    await page.goto('/temp/admin/sellers');
+    // Payment histories remain a Blade page in the admin shell.
+    await page.goto('/temp/admin/seller/payments');
     await expect(page.locator('#app')).toHaveCount(0);
     const shellLogo = page.locator('.aiz-side-nav-logo-wrap img').first();
     await expect(shellLogo).toHaveAttribute('alt', 'Browser store renamed');

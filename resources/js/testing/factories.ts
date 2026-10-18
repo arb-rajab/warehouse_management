@@ -12,6 +12,9 @@ import type {
     User,
 } from '@/types/admin';
 import type {
+    StoreSeller,
+    StoreSellerProfile,
+    StoreSellerVerification,
     StoreDashboardProps,
     StoreConversation,
     StoreMessage,
@@ -1569,5 +1572,80 @@ export function storeDashboardProps(): StoreDashboardProps {
                 rating: 4.5,
             },
         ],
+    };
+}
+
+export function storeSeller(overrides: Partial<StoreSeller> = {}): StoreSeller {
+    return {
+        id: 17,
+        user_id: 27,
+        name: 'Acme shop',
+        account_name: 'Sam Seller',
+        email: 'sam@example.com',
+        phone: '123',
+        banned: false,
+        approved: false,
+        has_verification: true,
+        products_count: 3,
+        due: '125 €',
+        due_to_admin: false,
+        payment_history_url: '/temp/admin/seller/payments/show/encrypted',
+        ...overrides,
+    };
+}
+
+export function storeSellerProfile(
+    overrides: Partial<StoreSellerProfile> = {},
+): StoreSellerProfile {
+    return {
+        id: 17,
+        name: 'Sam Seller',
+        shop_name: 'Acme shop',
+        address: 'Shop street',
+        phone: '123',
+        avatar_url: '/avatar.png',
+        shop_url: '/temp/shop/acme',
+        social: {
+            facebook: 'https://example.com/facebook',
+            twitter: 'https://example.com/twitter',
+            google: 'https://example.com/google',
+        },
+        bank_name: 'Bank',
+        bank_acc_name: 'Sam',
+        bank_acc_no: '12345',
+        bank_routing_no: 'ABC',
+        products_count: 3,
+        orders_count: 5,
+        sold_amount: '50 €',
+        wallet_balance: '10 €',
+        ...overrides,
+    };
+}
+
+export function storeSellerVerification(
+    overrides: Partial<StoreSellerVerification> = {},
+): StoreSellerVerification {
+    return {
+        id: 17,
+        name: 'Acme shop',
+        address: 'Shop street',
+        approved: false,
+        has_verification: true,
+        user: {
+            name: 'Sam Seller',
+            email: 'sam@example.com',
+            address: 'User street',
+            phone: '123',
+        },
+        verification: [
+            { label: 'Company', value: 'Acme', file_url: null },
+            {
+                label: 'Certificate',
+                value: 'certificate.pdf',
+                file_url:
+                    '/temp/admin/sellers/verification-file/certificate.pdf',
+            },
+        ],
+        ...overrides,
     };
 }

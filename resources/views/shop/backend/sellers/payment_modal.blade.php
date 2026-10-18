@@ -1,10 +1,12 @@
+@extends('shop.backend.layouts.app')
+
+@section('content')
 <form action="{{ route('commissions.pay_to_seller') }}" method="POST">
     @csrf
     <input type="hidden" name="shop_id" value="{{ $shop->id }}">
     <div class="modal-header">
     	<h5 class="modal-title h6">{{translate('Pay to seller')}}</h5>
-    	<button type="button" class="close" data-dismiss="modal">
-    	</button>
+
     </div>
     <div class="modal-body">
       <table class="table table-striped table-bordered" >
@@ -88,10 +90,13 @@
       @else
           <button type="submit" class="btn btn-primary">{{translate('Clear due')}}</button>
       @endif
-      <button type="button" class="btn btn-light" data-dismiss="modal">{{translate('Cancel')}}</button>
+      <a href="{{ route('sellers.index') }}" class="btn btn-light">{{translate('Cancel')}}</a>
     </div>
 </form>
 
+@endsection
+
+@section('script')
 <script>
   $(document).ready(function(){
       $('#payment_option').on('change', function() {
@@ -108,3 +113,5 @@
       AIZ.plugins.bootstrapSelect('refresh');
   });
 </script>
+
+@endsection

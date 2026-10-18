@@ -27,7 +27,6 @@ import {
 import { customer_product_index as classifiedProductsIndex } from '@/actions/App/Http/Controllers/CustomerProductController';
 import { payment_histories } from '@/actions/App/Http/Controllers/PaymentController';
 import { seller_products } from '@/actions/App/Http/Controllers/ProductController';
-import { index as sellersIndex } from '@/actions/App/Http/Controllers/SellerController';
 import { index as withdrawRequestsIndex } from '@/actions/App/Http/Controllers/SellerWithdrawRequestController';
 import { index as attributesIndex } from '@/actions/App/Http/Controllers/Store/Admin/AttributeController';
 import { index as blogCategoriesIndex } from '@/actions/App/Http/Controllers/Store/Admin/BlogCategoryController';
@@ -91,6 +90,7 @@ import { index as representativePackagesIndex } from '@/actions/App/Http/Control
 import { index as representativePaymentsIndex } from '@/actions/App/Http/Controllers/Store/Admin/RepresentativePaymentController';
 import { index as reviewsIndex } from '@/actions/App/Http/Controllers/Store/Admin/ReviewController';
 import { index as rolesIndex } from '@/actions/App/Http/Controllers/Store/Admin/RoleController';
+import { index as sellersIndex } from '@/actions/App/Http/Controllers/Store/Admin/SellerController';
 import {
     activation,
     smtp,
@@ -391,6 +391,7 @@ export const storeAdminMenu: StoreMenuItem[] = [
                 labelKey: 'store.nav.allSellers',
                 badgeKey: 'sellers',
                 href: sellersIndex(),
+                inertia: true,
                 permission: 'view_all_seller',
             },
             {

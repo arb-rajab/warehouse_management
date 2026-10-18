@@ -1008,3 +1008,53 @@ export interface StoreDashboardProps {
     topProducts: StoreDashboardProduct[];
     showSmtpAlert: boolean;
 }
+
+export interface StoreSeller {
+    id: number;
+    user_id: number;
+    name: string | null;
+    account_name: string;
+    email: string;
+    phone: string | null;
+    banned: boolean;
+    approved: boolean;
+    has_verification: boolean;
+    products_count: number;
+    due: string | null;
+    due_to_admin: boolean;
+    payment_history_url: string | null;
+}
+
+export interface StoreSellerProfile {
+    id: number;
+    name: string;
+    shop_name: string | null;
+    address: string | null;
+    phone: string | null;
+    avatar_url: string | null;
+    shop_url: string | null;
+    social: Record<'facebook' | 'twitter' | 'google', string | null>;
+    bank_name: string | null;
+    bank_acc_name: string | null;
+    bank_acc_no: string | null;
+    bank_routing_no: string | null;
+    products_count: number;
+    orders_count: number;
+    sold_amount: string;
+    wallet_balance: string;
+}
+
+export interface StoreSellerVerification {
+    id: number;
+    name: string | null;
+    address: string | null;
+    approved: boolean;
+    has_verification: boolean;
+    user: {
+        name: string;
+        email: string;
+        address: string | null;
+        phone: string | null;
+    };
+    verification: { label: string; value: string; file_url: string | null }[];
+}

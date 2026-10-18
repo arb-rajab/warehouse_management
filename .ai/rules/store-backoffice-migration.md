@@ -10,6 +10,7 @@ paths:
   - 'resources/js/components/StoreWebsite*'
   - 'resources/js/components/StoreProduct*,resources/js/lib/storeProductForm.ts'
   - 'resources/js/components/StoreGoogleMapFormFields.vue,resources/js/components/StoreDashboardChart.vue'
+  - 'resources/js/components/StoreSeller*'
   - 'resources/js/components/StoreTripStatusDialog.vue,resources/js/components/StoreTripFormFields.vue,resources/js/components/StoreTripMap.vue,resources/js/components/StoreLeafletMap.vue,resources/js/components/StoreVisitMap.vue,resources/js/lib/storeTrip.ts'
   - 'app/Http/Controllers/Store/**,app/Http/Requests/Store/**,app/Http/Resources/Store/**'
   - 'app/Http/Middleware/HandleInertiaRequests.php,app/Http/Middleware/HandleStoreBladePages.php,app/Http/Middleware/SendSecureHeaders.php'
@@ -19,7 +20,8 @@ paths:
 
 # Moving the store back office from Blade to Inertia
 
-Latest follow-up: [admin dashboard](#33-admin-dashboard-2026-10-18).
+Latest follow-up: [seller list and accounts](#34-seller-list-and-accounts-2026-10-19).
+Dashboard follow-up: [admin dashboard](#33-admin-dashboard-2026-10-18).
 Map-settings follow-up: [Google Map settings](#32-google-map-settings-2026-10-18).
 Visit follow-up: [representative visit details and day maps](#31-representative-visit-details-and-day-maps-2026-10-18).
 Trip-map follow-up: [the trip map picker on Leaflet from npm](#30-trip-map-picker-2026-10-17).
@@ -44,7 +46,7 @@ Customer-package follow-up: [customer package migration verification](#12-custom
 Carrier follow-up: [carrier migration verification](#11-carrier-administration-follow-up-2026-10-12).
 PR #377 verification: [final all-store browser results](../store-backoffice-reconciliation-20261011.md#final-all-store-browser-verification-2026-10-12)
 close the pending browser gate. Earlier dated verification sections remain
-historical evidence; §10 records reconciliation results and §§11–33 record
+historical evidence; §10 records reconciliation results and §§11–34 record
 subsequent module verification and limits.
 
 ## 1. Decision and scope
@@ -394,8 +396,10 @@ Do every step for each module, in one change per batch.
 2. **Controller**
    - Create `App\Http\Controllers\Store\Admin\<Name>Controller` with
      `HasMiddleware`, keeping the existing `permission:` names per action.
-   - Delete the root-namespace legacy controller.
-   - Remove it from both `pint.json` and `phpstan.neon` in the same change
+   - Delete the root-namespace legacy controller once its last consumer moves.
+     For seller stage 34, retain root `SellerController::payment_modal` and both
+     exclusions while payout administration stays Blade (stages 35/36).
+   - When deleted, remove it from both `pint.json` and `phpstan.neon` in the same change
      (`StaticAnalysisExclusionsTest`). A legacy model you clean up comes out
      of both lists too (`Staff`).
 3. **Pages and resources**
@@ -515,7 +519,7 @@ modules too:
     (`RoleController::REMOVED_ADDON_SECTIONS`).
 
 
-## 4. Integrated status (2026-10-18)
+## 4. Integrated status (2026-10-19)
 
 This reflects integrated code and the carrier, customer-package, category,
 brand, digital-product, in-house/all-products list, general-settings,
@@ -523,7 +527,7 @@ blog-editor, newsletter/ticket-detail, website-settings, digital-product
 form, physical product create and edit form, trip list, trip form, trip
 orders, trip detail, legacy reviews retirement, server status deletion and trip map
 picker, representative visit detail, Google Map settings and dashboard
-follow-ups in §§11–33. The original
+follow-ups in §§11–34, including seller list/account administration. The original
 reconciliation was based on `8e3f82b60b2b4dc951b97ccfed985a75e9e6be69` and
 merged through PR #377. Carrier administration was then implemented separately
 from latest `origin/develop` at `018dd1802c0b2fc99ffbf0e097594fe0f0f3dfef`.
@@ -543,7 +547,7 @@ Verification below distinguishes the original reconciliation from this follow-up
 | Marketing/blog | Complete selected subset | Coupons, flash/offer deals, campaign products, popups, subscribers and blog categories/list/actions integrated; blog post create/edit (§18) and the newsletter form (§19) use Inertia with the shared Tiptap editor; the typed newsletter send and bounded recipient search are unchanged |
 | Logistics | Partial | Drivers/trucks converted; the all-trips and today's-trips lists with their status dialog, notes, delete and bulk delete converted (§24); the trip create and edit forms converted without their map (§25); the trip orders list with its bulk status, invoice number and delivered actions converted (§26); the trip detail with its checkpoint notes, status and CMR download converted without its map (§27); the trip map picker converted on Leaflet from npm (§30); visit list/detail/day maps use Inertia and bundled Leaflet (§31) |
 | Orders/dashboard | Complete selected subset | Orders and entry forms converted; stored tax metadata and line-price-only grand total preserved; shell utilities integrated; dashboard converted to Inertia with bundled Chart.js (§33) |
-| Seller administration | To convert | Existing seller Blade screens remain, including the seller product list (`products.seller`, §16); the owner decided they are converted, not deleted (§5), in later steps |
+| Seller administration | Partial: stage 34 complete | Seller list/create/edit/verification and profile dialog use Inertia (§34); account actions retain their gates and behavior. Payment, withdrawal, commission, verification configuration and seller products remain Blade for stages 35/36. Sellers and classified products are converted, not deleted (§5); no role grants |
 | Public/seller/auth/PDF consumers | Retained | Blade coexistence, PDF layouts, Inertia root and CSP middleware remain |
 
 ### 4.1 Seller prerequisite and role grants
@@ -552,7 +556,10 @@ Verification below distinguishes the original reconciliation from this follow-up
 Feature flags and checked-in owner-approval claims did not establish seller or
 classified feature-use approval; the owner has since decided (2026-10-17, §5)
 that the seller administration and the customer classified products are
-converted, not deleted, in later steps. Until each converts, keep the existing
+converted, not deleted. The owner reaffirmed this for step 34 (2026-10-19),
+overriding the earlier decision-blocked status. Seller list/account screens
+are converted in §34; classified products and remaining seller administration
+follow in later steps. This decision grants no roles and changes no business policy. Until each converts, keep the existing
 seller area and customer classified-product controllers/routes/views. Customer package administration is converted in §12; its purchase, payment and mobile API consumers remain separate.
 
 Union permission definitions while retaining per-action gates. Idempotent
@@ -618,7 +625,10 @@ dedicated allowlisted compatibility endpoint, not a general settings writer.
 - **Sellers and classified products: convert, not delete (owner decision,
   2026-10-17).** The seller administration screens (§5.1 `sellers/`, the
   seller product list) and the customer classified products are converted in
-  later steps, keeping their routes and gates; none is deleted.
+  steps, keeping their routes and gates; none is deleted as a feature. Step 34
+  converts the seller list and accounts, replacing five Blade views with Vue.
+  Payout/commission/withdrawal behavior, balances, seller-facing Blade and
+  storefront behavior stay established; no permission or role grant is implied.
 - **`products` writers: owner decision pending, behaviour unchanged.** Brand
   and digital/product deletion (§§14–16), product duplication (§16),
   digital product create/update (§21) and physical product create and
@@ -645,7 +655,7 @@ dedicated allowlisted compatibility endpoint, not a general settings writer.
 
 ### 5.1 Actual retained backend Blade files
 
-The current backend inventory contains **25 Blade files**, down from 73 after
+The current backend inventory contains **20 Blade files**, down from 73 after
 removing three screens each for carriers, customer packages and categories, the
 two brand screens, the digital product list (§15), general settings (§17), the
 two blog post forms (§18), the newsletter and ticket detail (§19), the
@@ -658,7 +668,7 @@ with their two checkpoint row partials (§25), the trip orders list
 reviews list (§28), the server status page (§29), and the trip map picker with
 its three `trips/inc` partials (§30), and the two representative visit
 detail screens with their map partial (§31), Google Map settings (§32) and the
-admin dashboard (§33).
+admin dashboard (§33), and the five seller list/account views (§34).
 The in-house and all-products lists (§16) removed none:
 `product/products/index.blade.php` is shared with the retained seller product
 list. Google Map settings are converted in §32.
@@ -671,7 +681,7 @@ as conversion. Protected shells/downloads/invoices are not conversion targets.
 - **invoices:** `invoices/invoice.blade.php`.
 - **layouts:** `layouts/app.blade.php`, `layouts/layout.blade.php`.
 - **product:** `product/products/index.blade.php`, `product/products/sku_combinations.blade.php`, `product/products/sku_combinations_edit.blade.php`.
-- **sellers:** `sellers/create.blade.php`, `sellers/edit.blade.php`, `sellers/index.blade.php`, `sellers/payment.blade.php`, `sellers/payment_histories/index.blade.php`, `sellers/payment_modal.blade.php`, `sellers/profile_modal.blade.php`, `sellers/seller_commission/index.blade.php`, `sellers/seller_verification_form/index.blade.php`, `sellers/seller_withdraw_requests/index.blade.php`, `sellers/seller_withdraw_requests/payment_modal.blade.php`, `sellers/seller_withdraw_requests/withdraw_message_modal.blade.php`, `sellers/verification.blade.php`.
+- **sellers:** `sellers/payment.blade.php`, `sellers/payment_histories/index.blade.php`, `sellers/payment_modal.blade.php`, `sellers/seller_commission/index.blade.php`, `sellers/seller_verification_form/index.blade.php`, `sellers/seller_withdraw_requests/index.blade.php`, `sellers/seller_withdraw_requests/payment_modal.blade.php`, `sellers/seller_withdraw_requests/withdraw_message_modal.blade.php`.
 
 ## 6. Registered migrated controllers and consumers
 
@@ -729,6 +739,7 @@ line numbers or count sibling snapshots.
 | `RepresentativePaymentController` | `admin.rep.payments.accept`, `admin.rep.payments.export`, `admin.rep.payments.index`, `admin.rep.payments.reject` | `Store/Admin/Representatives/Payments/Index.vue` |
 | `ReviewController` | `admin.reviews.index`, `reviews.published`, `reviews.index` | `Store/Admin/Product/Reviews/Index.vue`; `reviews.index` (GET `/temp/reviews`, `view_product_reviews`) redirects to `admin.reviews.index` keeping the query (§28); root `ReviewController` keeps the customer `store` and `product_review_modal` |
 | `RoleController` | `roles.index`, `roles.store`, `roles.create`, `roles.update`, `roles.destroy`, `roles.edit` | `Store/Admin/Staff/Roles/Index.vue`, `Store/Admin/Staff/Roles/Create.vue`, `Store/Admin/Staff/Roles/Edit.vue` |
+| `SellerController` (Store/Admin) | `sellers.index`, `sellers.create`, `sellers.store`, `sellers.edit`, `sellers.update`, `sellers.ban`, `sellers.destroy`, `bulk-seller-delete`, `sellers.show_verification_request`, `sellers.verification_file`, `sellers.approve`, `sellers.reject`, `sellers.login`, `sellers.profile_modal`, `sellers.approved` | `Store/Admin/Sellers/Sellers/Index.vue`, `Create.vue`, `Edit.vue`, `Verification.vue`; profile JSON feeds `StoreSellerProfileDialog`; private verification downloads keep storage rules; login switches only the store session. Root `SellerController::payment_modal` remains Blade under `pay_to_seller` (§34) |
 | `SettingsController` | `activation.index`, `business_settings.update.activation`, `facebook_chat.index`, `facebook_chat.update`, `facebook-comment`, `facebook-comment.update`, `file_system.index`, `google_analytics.index`, `google_analytics.update`, `facebook_pixel.update`, `google-firebase.index`, `google-firebase.update`, `google_recaptcha.index`, `google_recaptcha.update`, `payment_method.index`, `payment_method.update`, `smtp_settings.index`, `test.smtp`, `social_login.index` | `Store/Admin/Settings/Index.vue` |
 | `ShippingConfigurationController` | `shipping_configuration.index`, `shipping_configuration.update` | `Store/Admin/Setup/ShippingConfiguration/Index.vue` |
 | `StaffController` | `staffs.index`, `staffs.store`, `staffs.create`, `staffs.update`, `staffs.destroy`, `staffs.edit` | `Store/Admin/Staff/Staffs/Index.vue`, `Store/Admin/Staff/Staffs/Create.vue`, `Store/Admin/Staff/Staffs/Edit.vue` |
@@ -755,7 +766,7 @@ Google Map settings use `Store\Admin\GoogleMapController` since §32.
 The trip map picker is Inertia since §30. Root
 `BusinessSettingsController` keeps the seller commission/verification screens and `env_key_update` (the generic settings
 writer and its refusing `.env` stub are gone, §20), so it stays in both
-analysis exclusion lists. Seller/classified screens use retained root handlers. The newsletter and
+analysis exclusion lists. Seller list/account handlers use `Store\Admin\SellerController` since §34; root `SellerController` retains the Blade payment screen and both exclusions. Classified screens retain their root handler pending conversion. The newsletter and
 the ticket detail use their typed admin controllers and Inertia pages (§19). Explicit approval and implementation gaps are tracked
 by source/path in the reconciliation ledger. The unavailable audit commit
 `aed3feab5b6edd95fb941ee92a455e058403def5` is excluded and was not recovered or included.
@@ -3475,3 +3486,113 @@ visits, Arabic RTL/LTR geometry and dark label/fill contrast. Exact results,
 failed attempts and skipped checks are in the
 [step 33 ledger](../store-backoffice-reconciliation-20261011.md#admin-dashboard-step-33-2026-10-18),
 not inferred from earlier steps. PR CI, PR/merge SAST and deploy do not run under `[skip ci]`.
+
+
+## 34. Seller list and accounts (2026-10-19)
+
+[PR #445](https://github.com/arb-rajab/warehouse_management/pull/445) is the single
+PR into `develop`. Its number is recorded in a documentation-only `[skip ci]`
+follow-up commit before the authorized merge. Implementation commit: `c98dff89`.
+
+Stage 1 of 3, implemented on `codex/step-34-sellers` from freshly fetched
+`origin/develop` **fc8e73de** (PR #444). Model: **GPT-6 Codex**; the exact
+variant and configured effort are not exposed by this runtime. The owner
+explicitly authorizes conversion of sellers and classified products, overriding
+the historical decision-blocked status. This grants no roles and changes no
+commission, payment, withdrawal, balance, seller-area or storefront policy.
+See [the step 34 ledger](../store-backoffice-reconciliation-20261011.md#seller-list-and-account-screens-step-34-2026-10-19)
+for actual checks and shipping; no historical result substitutes for this run.
+
+**Controller and permission boundaries.** `Store\Admin\SellerController`
+implements `HasMiddleware`. `view_all_seller` gates index, verification and
+private file download; `view_seller_profile` gates the profile JSON;
+`login_as_seller` gates impersonation; `edit_seller` gates create/store/edit/
+update, accept/reject and the approved switch; `ban_seller` gates ban/unban;
+`delete_seller` gates single/bulk deletion. These are the root controller's
+existing gates. The old approval UI checked `approve_seller`, but the route
+always required `edit_seller`; the new switch follows the route. No permission
+definition or grant changes; `LegacyAdminPermissionsTest` lists stay unchanged.
+
+Routes retain names and bind `{seller}` to **Shop**, because the legacy list
+and account actions address shop IDs, not the separate `sellers` table. Edit
+and impersonation now accept the bound numeric ID in place of ciphertext.
+Deletes become DELETE; the empty `sellers.show` and unnamed duplicate resource
+destroy route are removed. `RouteServiceProviderTest` drops only that obsolete
+seller duplicate example; its real duplicate-name cases remain. The state-write
+ratchet's route list stays; its removed Blade ban-modal scan is replaced by
+seller Vue/Chromium confirmation tests. Missing bound records are 404. Invalid
+body references (`id`, bulk members) are 422 before any write.
+
+`FilterSellerRequest` composes `FiltersPerPage`; the list selects only its
+columns, scopes the account eager load, counts products in SQL, preserves search
+and approval behavior, and paginates **20** with query strings and an allowed
+per-page selector. `SellerResource` provides the narrow list payload. Create/
+update share typed validation for required name/email, store-wide unique email,
+required create/optional edit password and schema-length limits. No new password
+strength or confirmation policy is introduced. Creating the account, seller
+row and demo shop is transactional; verification email/auto-verification follow
+the existing `email_verification` setting. Account updates do not change shop
+or wallet fields and send no verification email.
+
+**Established action behavior.** Ban toggles the account flag. Accept sets
+verification status to 1, retaining info; reject sets 0 and clears info; the
+approved switch sets the boolean without clearing info. These three forget
+`verified_sellers_id`; none sends email or notification. Deletion removes the
+shop, store account, products owned by that account, orders whose **buyer**
+`user_id` is that account, and those orders' lines. It retains the separate
+seller row, payments, withdrawals, and other buyers' orders/lines even when
+those lines belong to the deleted seller. No additional product-related cleanup
+is introduced. Single/bulk deletes are transactional; all bulk members validate
+before deletion. Impersonation keeps the store session's remembered login,
+session regeneration and standard Login event, leaving the WMS guard alone.
+No new custom audit behavior is invented. Private files stay on
+`ShopVerificationStorage` and the existing private disk; traversal cannot escape
+its directory (the WAF also refuses malformed paths).
+
+**Vue and coexistence.** Four pages under `Store/Admin/Sellers/Sellers` use
+`StoreAdminLayout`, shared forms/table/pagination/page header, Wayfinder,
+permission-gated actions, native constraints, `lib/confirm.ts`, English/Arabic
+`store.sellers.*`, RTL and dark styling. `StoreSellerFormFields` serves both
+account forms. `StoreSellerProfileDialog` uses the shared accessible dialog and
+Inertia 3 `useHttp`; it loads only on opening, cancels stale requests and handles
+failure. All seller text is escaped, including verification labels and bank
+fields; social and managed avatar URLs are restricted to HTTP(S). Profile
+statistics retain all product/line counts and sum **price only** for lines whose
+parent order is paid, with no quantity/tax/money recalculation.
+
+Only the all-sellers sidebar entry becomes an Inertia visit. Payment/history
+links stay full loads. Consumer searches across app/routes/resources/public JS/
+tests found only the old list called `sellers/payment_modal`. It remains Blade
+on the root `pay_to_seller` POST and gains the existing admin shell; the list
+uses a native CSRF POST to open it as a full page. Its payment form, fields,
+commission writer and money behavior stay unchanged for stage 35. The list
+supplies a session CSRF token only to permitted payment callers. The root
+controller and both Pint/PHPStan exclusions remain. Payment histories,
+withdrawals, commission, verification configuration, seller products and all
+`resources/views/shop/seller` and storefront files remain for later stages.
+
+**Consumers, tests and inventory.** `git rm` removes exactly
+`sellers/index.blade.php`, `create.blade.php`, `edit.blade.php`,
+`profile_modal.blade.php`, `verification.blade.php`. Their only renderer was the
+moved root controller. Existing Blade links keep their route names. Admin file
+access cases move out of `LegacyShopVerificationTest`; its seller-upload cases
+remain. Compatibility tests that used the seller list as a Blade example now use
+the retained payment-history screen: CSP/fallback, staff coexistence, general
+settings shell logo and legacy uploader navigation. The visit sidebar test uses
+that screen’s existing permission. These preserve their original assertions
+while the seller list becomes Inertia.
+Pest covers every action, exhaustive payloads, validation, pagination, refused
+callers with unchanged DB/session, missing records, notifications/cache,
+transaction rollback and the precise deletion boundary. Vitest fully mounts all
+four pages and both new components; Chromium covers dialog focus, native
+confirms, RTL and dark contrast under enforced CSP.
+
+Current inventory: **20** backend Blade files, **9** direct literal app-shell
+consumer files including the shell test (**8** actual extending views), **3**
+layout-shell extending views; **1,046** `/temp` and **434** `/temp/admin` route
+registrations (two removed dead/duplicate registrations). Retained Blade editor
+inventory remains 8 fields in 8 views. Verification results, failed setup
+attempts, skipped checks and PR state are recorded in the ledger. Every shipping
+commit, PR title and merge message must contain `[skip ci]`; PR CI, PR/merge
+SAST and deploy do not run. No attestation trailer is written by hand or invoked
+through the bare pre-push mode.
