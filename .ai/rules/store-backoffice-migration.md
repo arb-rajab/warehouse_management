@@ -3407,6 +3407,8 @@ reasoning-effort value are not exposed to this session. The owner authorized
 Chart.js and one PR into develop and its merge only after the requested checks
 could run, with `[skip ci]` in every commit, PR title and merge message.
 Verification and shipping are recorded in the reconciliation ledger.
+[PR #444](https://github.com/arb-rajab/warehouse_management/pull/444) is the single PR into `develop`;
+its number is recorded in a follow-up `[skip ci]` commit before merging.
 
 **Backend and gate.** `Store\Admin\DashboardController::index` replaces root
 `AdminController::admin_dashboard`, keeping `shop.admin.dashboard`, GET

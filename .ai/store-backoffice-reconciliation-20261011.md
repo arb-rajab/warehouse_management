@@ -4020,3 +4020,14 @@ Blade editor inventory stays **8 fields in 8 views**.
 separate MySQL migration job, Composer audit or deploy-script checks. None is
 part of explicit `--full`. No production mutation. PR CI, PR/merge SAST and
 develop deployment do not run under the owner's required `[skip ci]` messages.
+
+
+**Shipping record.** [PR #444](https://github.com/arb-rajab/warehouse_management/pull/444)
+is the single PR into `develop` from `codex/step-33-dashboard`. Implementation
+commit: `87f1d9cf` (`Migrate the store admin dashboard to Inertia [skip ci]`).
+The PR number is recorded in this documentation-only follow-up commit before
+merging, as requested. `pre_push_check.py --quick --base HEAD` on this follow-up
+selects no application checks; `git diff --check` verifies its whitespace.
+The final full code gate remains the seventh explicit `--full` run above.
+All new commit messages and the PR title contain `[skip ci]`; the authorized
+merge message does too. No CI-Verified trailer or Claude attribution line.
