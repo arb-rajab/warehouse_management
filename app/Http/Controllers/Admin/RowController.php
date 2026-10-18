@@ -21,6 +21,7 @@ use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
+use SimpleXMLElement;
 
 class RowController extends Controller
 {
@@ -101,11 +102,20 @@ class RowController extends Controller
             ->orderedByCoordinates()
             ->get();
         $setting = Setting::current();
+        $labels = $this->cellQrLabels($row->letter, $cells, $setting->qr_code_width, $setting->qr_code_height, $row->flats_count);
+        $pageHeight = $setting->qr_code_height;
+
+        if ($labels !== []) {
+            // All labels share the same canvas. Read its actual height instead
+            // of filling the unused part of the configured maximum with paper.
+            $svg = new SimpleXMLElement(base64_decode(explode(',', $labels[0]['labelImage'], 2)[1]));
+            $pageHeight = (int) $svg['height'];
+        }
 
         $pdf = Pdf::loadView('pdf.qr-labels', [
-            'labels' => $this->cellQrLabels($row->letter, $cells, $setting->qr_code_width, $setting->qr_code_height, $row->flats_count),
+            'labels' => $labels,
             'qrWidth' => $setting->qr_code_width,
-            'qrHeight' => $setting->qr_code_height,
+            'qrHeight' => $pageHeight,
         ]);
 
         // php-svg-lib selects core fonts by basename. Load bold Helvetica's

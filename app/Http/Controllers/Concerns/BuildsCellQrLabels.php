@@ -20,19 +20,10 @@ trait BuildsCellQrLabels
      * caller (RowController::exportQrCodes) rather than re-queried per cell
      * here — a row can hold Row::MAX_DIMENSION² cells.
      *
-     * The multi-label PDF sheet (see resources/views/pdf/qr-labels.blade.php)
-     * gives every cell its own page, sized via `@page { size: $qrWidth
-     * $qrHeight }` to exactly the admin-configured dimensions, and each page
-     * embeds exactly the same label image cellQrLabelImage() produces for the
-     * single-cell download — same QR, same expanded slot label, no separate
-     * description line. Reusing that one label-rendering method rather than
-     * re-deriving similar layout here keeps the row-wide PDF sheet and the
-     * single-cell export permanently in lockstep: any future change to
-     * qrLabelImage()'s padding/font-sizing/QR-shrink behavior applies to both
-     * automatically, and the sheet can't silently drift from what a worker
-     * gets from the single-cell button. That's also why this call site is
-     * safe to wire up without a stricter bound than the one
-     * UpdateSettingRequest/Setting already enforce.
+     * The multi-label PDF sheet gives every cell its own page, cropped to
+     * this image's actual canvas rather than the configured maximum height.
+     * It embeds the same SVG as the single-cell download, keeping the QR,
+     * bold slot text, and arrow below the text identical in both exports.
      *
      * @param  Collection<int, Cell>  $cells
      * @return array<int, array{label: string, labelImage: string}>
@@ -50,9 +41,8 @@ trait BuildsCellQrLabels
     }
 
     /**
-     * One standalone SVG label (see qrLabelImage()) — QR plus the slot label
-     * expanded to fill the space a description line would otherwise leave
-     * blank, plus a same-height level-arrow beside it — for downloading/
+     * One standalone SVG label (see qrLabelImage()) — QR beside a large bold
+     * slot label with a level arrow below the text — for downloading/
      * printing just this cell, and (base64-encoded, see cellQrLabels()) for
      * embedding as-is into the row-wide PDF sheet.
      *
