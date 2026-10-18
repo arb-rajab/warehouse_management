@@ -102,11 +102,19 @@ class RowController extends Controller
             ->get();
         $setting = Setting::current();
 
-        return Pdf::loadView('pdf.qr-labels', [
+        $pdf = Pdf::loadView('pdf.qr-labels', [
             'labels' => $this->cellQrLabels($row->letter, $cells, $setting->qr_code_width, $setting->qr_code_height, $row->flats_count),
             'qrWidth' => $setting->qr_code_width,
             'qrHeight' => $setting->qr_code_height,
-        ])->download("row-{$row->letter}-qr-codes.pdf");
+        ]);
+
+        // php-svg-lib selects core fonts by basename. Load bold Helvetica's
+        // metrics into dompdf's cache before SVG text asks for that basename;
+        // on a fresh installation it otherwise falls back to regular Times.
+        $fontMetrics = $pdf->getDomPDF()->getFontMetrics();
+        $fontMetrics->getTextWidth(' ', $fontMetrics->getFont('sans-serif', 'bold'), 1);
+
+        return $pdf->download("row-{$row->letter}-qr-codes.pdf");
     }
 
     public function update(UpdateRowRequest $request, Row $row): RedirectResponse

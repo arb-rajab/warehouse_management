@@ -21,34 +21,15 @@ test('an authenticated user can export a QR code image for a single cell', funct
     $response->assertHeader('content-type', 'image/svg+xml');
 
     $svg = $response->getContent();
-    // A real QR is spliced in as inline SVG markup rather than a nested
-    // `<image>` reference, which dompdf silently skips (see
-    // BuildsQrLabels::qrSvgInnerMarkup()) — regression guard for the QR
-    // failing to render rather than just the surrounding text.
     expect($svg)->toContain('<g transform="translate(20,20)"><rect x="0" y="0"')
         ->and($svg)->toContain('<path fill-rule="evenodd"')
         ->and($svg)->not->toContain('<image');
     expect($svg)->toContain(Cell::slotLabel('Z', $cell->cell_number, $cell->flat_number));
 
-    // With no description line to share the label with, the slot label grows
-    // to fill the freed vertical space (BuildsQrLabels::qrLabelImage()'s
-    // expandPrimaryText) — well past the 18px used everywhere else (e.g. the
-    // product QR export's primary line). Neither this single-cell SVG export
-    // nor the row-wide PDF sheet (see RowControllerTest, which now embeds
-    // this exact same SVG verbatim on each cell's page — see
-    // BuildsCellQrLabels::cellQrLabels()) carries a spelled-out description
-    // line at all any more.
-    expect($svg)->toContain('font-size="64"');
+    expect($svg)->toContain('font-size="121" font-weight="bold"');
 });
 
-test('a single-cell QR export draws a same-height downward arrow beside the label for the lowest level of a multi-level row', function () {
-    // The row has no Setting, so Setting::current() defaults to
-    // qr_code_width=850 (Setting::DEFAULT_QR_CODE_WIDTH), and the label is
-    // short enough to stay on one line at the max 64px font — both pin the
-    // arrow's box to these exact points (see
-    // BuildsQrLabels::qrLabelImage()'s $primaryArrow reservation math).
-    // A downward arrow's shaft points away from its head, which sits at the
-    // bottom (708,906 is the tip; 587..830 the shaft/head span above it).
+test('a single-cell QR export draws a larger downward arrow below the label for the lowest level of a multi-level row', function () {
     actingAsAdmin();
     $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 1, 'flats_count' => 3]);
     $cell = $row->cells()->where('flat_number', 1)->first();
@@ -57,12 +38,10 @@ test('a single-cell QR export draws a same-height downward arrow beside the labe
 
     $response->assertOk();
     $svg = $response->getContent();
-    expect($svg)->toContain('<polygon points="708,906 587,874 659,874 659,842 757,842 757,874 830,874" fill="#111111"/>');
+    expect($svg)->toContain('<polygon points="648,400 551,303 609,303 609,206 687,206 687,303 745,303" fill="#111111"/>');
 });
 
-test('a single-cell QR export draws a same-height upward arrow beside the label for the highest level of a multi-level row', function () {
-    // Same geometry as the downward-arrow test above, mirrored vertically —
-    // the tip (708,842) sits at the top instead of the bottom.
+test('a single-cell QR export draws a larger upward arrow below the label for the highest level of a multi-level row', function () {
     actingAsAdmin();
     $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 1, 'flats_count' => 3]);
     $cell = $row->cells()->where('flat_number', 3)->first();
@@ -71,13 +50,10 @@ test('a single-cell QR export draws a same-height upward arrow beside the label 
 
     $response->assertOk();
     $svg = $response->getContent();
-    expect($svg)->toContain('<polygon points="708,842 587,874 659,874 659,906 757,906 757,874 830,874" fill="#111111"/>');
+    expect($svg)->toContain('<polygon points="648,206 551,303 609,303 609,400 687,400 687,303 745,303" fill="#111111"/>');
 });
 
-test('a single-cell QR export draws a horizontal arrow beside the label for a middle level', function () {
-    // A horizontal (rightward) arrow's tip is on the right (830,874) with
-    // the shaft/head extending left to x=587 — see verticalArrowPoints()'s
-    // sibling horizontalArrowPoints().
+test('a single-cell QR export draws a horizontal arrow below the label for a middle level', function () {
     actingAsAdmin();
     $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 1, 'flats_count' => 3]);
     $cell = $row->cells()->where('flat_number', 2)->first();
@@ -86,14 +62,10 @@ test('a single-cell QR export draws a horizontal arrow beside the label for a mi
 
     $response->assertOk();
     $svg = $response->getContent();
-    expect($svg)->toContain('<polygon points="830,874 708,842 708,861 587,861 587,887 708,887 708,906" fill="#111111"/>');
+    expect($svg)->toContain('<polygon points="745,303 648,206 648,264 551,264 551,342 648,342 648,400" fill="#111111"/>');
 });
 
-test('a single-cell QR export draws a horizontal arrow beside the label when the row has only one level', function () {
-    // A single-level row's one cell is simultaneously its own highest and
-    // lowest — there's no up/down direction to indicate, so it gets the same
-    // horizontal arrow a genuine mid-level cell does (see
-    // BuildsCellQrLabels::cellLevelArrowDirection()).
+test('a single-cell QR export draws a horizontal arrow below the label when the row has only one level', function () {
     actingAsAdmin();
     $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 1, 'flats_count' => 1]);
     $cell = $row->cells()->first();
@@ -102,7 +74,7 @@ test('a single-cell QR export draws a horizontal arrow beside the label when the
 
     $response->assertOk();
     $svg = $response->getContent();
-    expect($svg)->toContain('<polygon points="830,874 708,842 708,861 587,861 587,887 708,887 708,906" fill="#111111"/>');
+    expect($svg)->toContain('<polygon points="745,303 648,206 648,264 551,264 551,342 648,342 648,400" fill="#111111"/>');
 });
 
 test('a single-cell QR export uses the configured QR code size instead of the default', function () {
@@ -115,12 +87,8 @@ test('a single-cell QR export uses the configured QR code size instead of the de
 
     $response->assertOk();
     $svg = $response->getContent();
-    // The label canvas width is exactly the configured total-box width, and
-    // the embedded QR square is that width minus padding on both sides
-    // (padding=20 — see BuildsQrLabels::qrLabelImage()); qr_code_height is a
-    // ceiling on the whole label including text, not the QR's own size.
     expect($svg)->toContain('<svg xmlns="http://www.w3.org/2000/svg" width="400"')
-        ->and($svg)->toContain('<g transform="translate(20,20)"><rect x="0" y="0" width="360" height="360"');
+        ->and($svg)->toContain('<g transform="translate(20,20)"><rect x="0" y="0" width="187" height="187"');
 });
 
 test('a single-cell QR export keeps the full slot label visible for large cell/flat numbers', function () {
@@ -132,15 +100,11 @@ test('a single-cell QR export keeps the full slot label visible for large cell/f
 
     $response->assertOk();
     $svg = $response->getContent();
-    // BuildsQrLabels::pickExpandedPrimaryFontSize() must shrink the font
-    // rather than let clampLinesToHeight() truncate the label — a fixed
-    // large font size would cut the flat number off behind an ellipsis for
-    // a label this long, silently hiding real cell coordinates.
     expect($svg)->toContain('Z123·456')
         ->and($svg)->not->toContain('…');
 });
 
-test('a single-cell QR export shrinks the QR slightly to keep the label visible when width and height are equal', function () {
+test('a single-cell QR export keeps QR and label side by side when width and height are equal', function () {
     actingAsAdmin();
     Setting::factory()->create(['qr_code_width' => 280, 'qr_code_height' => 280]);
     $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 1, 'flats_count' => 1]);
@@ -150,17 +114,60 @@ test('a single-cell QR export shrinks the QR slightly to keep the label visible 
 
     $response->assertOk();
     $svg = $response->getContent();
-    // Equal width/height used to leave no room below the QR at all, so
-    // clampLinesToHeight() dropped the label entirely (see BuildsQrLabels'
-    // $minPrimaryZone guard). The QR now shrinks just enough to guarantee
-    // the label always has room, rather than disappearing.
-    // 280 - 16 (bottom margin) - 46 ($minPrimaryZone) = 218 is the lowest the
-    // QR's bottom edge may sit; the unshrunk 240px QR ends at 20+240=260, so
-    // it shrinks by 42px to 198px and re-centers at x=(280-198)/2=41.
     expect($svg)->toContain(Cell::slotLabel('Z', $cell->cell_number, $cell->flat_number))
-        ->and($svg)->toContain('<g transform="translate(41,20)"><rect x="0" y="0" width="198" height="198"')
-        ->and($svg)->not->toContain('width="240" height="240"');
+        ->and($svg)->toContain('<g transform="translate(14,14)"><rect x="0" y="0" width="131" height="131"')
+        ->and($svg)->toContain('height="159"')
+        ->and($svg)->toContain('font-weight="bold"');
 });
+
+test('a horizontal cell QR keeps the full bold slot and arrow inside the canvas', function (int $width, int $height, string $locale) {
+    actingAsAdmin();
+    app()->setLocale($locale);
+    Setting::factory()->create(['qr_code_width' => $width, 'qr_code_height' => $height]);
+    $row = Row::factory()->create(['letter' => 'ZZ', 'cells_count' => 1, 'flats_count' => 1]);
+    $cell = Cell::factory()->for($row)->create(['cell_number' => 123, 'flat_number' => 456]);
+
+    $response = $this->get("/admin/cells/{$cell->id}/export-qr-code")->assertOk();
+    $svg = simplexml_load_string($response->getContent());
+    $svg->registerXPathNamespace('s', 'http://www.w3.org/2000/svg');
+    $text = $svg->xpath('//s:text')[0];
+    $qr = $svg->xpath('//s:g/s:rect')[0];
+    $arrow = $svg->xpath('//s:polygon')[0];
+    preg_match('/translate\((\d+),(\d+)\)/', (string) $svg->xpath('//s:g')[0]['transform'], $translation);
+    $qrRight = (int) $translation[1] + (int) $qr['width'];
+    $centerY = (int) $translation[2] + (int) $qr['height'] / 2;
+    $fontSize = (int) $text['font-size'];
+
+    expect((string) $text)->toBe('ZZ123·456')
+        ->and((string) $text['font-weight'])->toBe('bold')
+        ->and((string) $text['direction'])->toBe('ltr')
+        ->and((int) $svg['width'])->toBe($width)
+        ->and((int) $svg['height'])->toBeLessThanOrEqual($height)
+        ->and((int) $text['x'] - mb_strlen((string) $text) * $fontSize * 0.75 / 2)->toBeGreaterThan($qrRight)
+        ->and((int) $text['y'])->toBeLessThan($centerY);
+
+    $arrowXs = [];
+    $arrowYs = [];
+
+    foreach (explode(' ', (string) $arrow['points']) as $point) {
+        [$x, $y] = array_map('intval', explode(',', $point));
+        $arrowXs[] = $x;
+        $arrowYs[] = $y;
+        expect($x)->toBeGreaterThan($qrRight)->toBeLessThan($width)
+            ->and($y)->toBeGreaterThanOrEqual(0)->toBeLessThan((int) $svg['height']);
+    }
+
+    expect(min($arrowYs))->toBeGreaterThan((int) $text['y'] + $fontSize * 0.2)
+        ->and(abs((min($arrowXs) + max($arrowXs)) / 2 - (int) $text['x']))->toBeLessThanOrEqual(1)
+        ->and(abs(((int) $text['y'] - round($fontSize * 0.8) + max($arrowYs)) / 2 - $centerY))->toBeLessThanOrEqual(1);
+})->with([
+    [850, 1000, 'en'],
+    [280, 280, 'en'],
+    [100, 100, 'en'],
+    [1000, 100, 'en'],
+    [100, 1000, 'en'],
+    [850, 1000, 'ar'],
+]);
 
 test('a mobile app user cannot export a single cells QR code', function () {
     actingAsMobilePanelUser();
