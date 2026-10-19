@@ -4951,3 +4951,17 @@ separately and passed. PR CI, PR/merge SAST and deploy do not run under [skip ci
 No CI-Verified trailer is added/edited and the bare pre-push mode is never used.
 Shipping uses one PR into develop; its number is recorded in a documentation-only
 [skip ci] follow-up before the authorized merge.
+
+
+**Shipping record.** [PR #449](https://github.com/arb-rajab/warehouse_management/pull/449)
+is the single PR into `develop` from `codex/step-38-seller-product-list`.
+Implementation **c41f0a79**, `Migrate admin seller product list to Inertia
+[skip ci]`, was committed and pushed after the successful explicit full gate,
+normal production build and all ten affected Chromium checks. GitHub REST
+confirmed no existing PR before creating this one. This documentation-only
+follow-up records its number before merging, with anchor/whitespace checks and
+explicit `pre_push_check.py --quick --base HEAD`. No application or test content
+changed, so the completed full results remain applicable. The scoped check runs
+no application groups for these two docs. Every commit, PR title and authorized
+merge message contains [skip ci]; no Claude attribution or attestation trailer.
+PR CI, PR/merge SAST and deploy do not run.

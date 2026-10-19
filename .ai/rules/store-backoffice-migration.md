@@ -3928,6 +3928,11 @@ skipped CI-only groups. The root customer publishing compatibility action stays.
 
 ## 38. Admin seller product list (2026-10-20)
 
+[PR #449](https://github.com/arb-rajab/warehouse_management/pull/449) is the single
+PR into `develop`. Implementation commit **c41f0a79** passed the explicit full
+gate and all ten affected Chromium cases before pushing. This documentation-only
+[skip ci] follow-up records the PR number before the authorized merge.
+
 Implemented on `codex/step-38-seller-product-list`, based on freshly fetched
 `origin/develop` **47aec0d6** (PR #448). Model: **GPT-6 Codex**; the exact
 variant and configured reasoning effort are not exposed by this runtime.
