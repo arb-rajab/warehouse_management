@@ -2,7 +2,6 @@ import { Form, Link } from '@inertiajs/vue3';
 import { flushPromises, mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ComponentPublicInstance } from 'vue';
-import { payment_modal } from '@/actions/App/Http/Controllers/SellerController';
 import {
     approved,
     ban,
@@ -16,6 +15,7 @@ import {
 import AddResourceLink from '@/components/AddResourceLink.vue';
 import DataTable from '@/components/DataTable.vue';
 import Pagination from '@/components/Pagination.vue';
+import StoreSellerPaymentDialog from '@/components/StoreSellerPaymentDialog.vue';
 import StoreSellerProfileDialog from '@/components/StoreSellerProfileDialog.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
@@ -75,7 +75,6 @@ function mountPage(
             filters: { search: '', approved_status: null, per_page: 20 },
             payouts,
             payment_links: payouts,
-            payment_csrf: 'session-token',
         },
     });
 }
@@ -144,11 +143,20 @@ describe('seller list', () => {
         expect(
             wrapper.find(`a[href="${login.url({ id: 17 })}"]`).exists(),
         ).toBe(true);
-        const payment = wrapper.get(`form[action="${payment_modal.url()}"]`);
-        expect(payment.attributes('method')).toBe('post');
-        expect(payment.get('input[name="_token"]').attributes('value')).toBe(
-            'session-token',
-        );
+        const payment = wrapper
+            .findAll('button')
+            .find((button) => button.text() === t('store.sellers.payment'));
+        expect(payment).toBeDefined();
+    });
+    it('opens the Vue payment dialog for the selected shop', async () => {
+        const wrapper = mountPage();
+        await wrapper
+            .findAll('button')
+            .find((button) => button.text() === t('store.sellers.payment'))!
+            .trigger('click');
+        expect(
+            wrapper.getComponent(StoreSellerPaymentDialog).props(),
+        ).toMatchObject({ open: true, shopId: 17 });
     });
     it('hides every unpermitted action including profile fetch login and approval', () => {
         const wrapper = mountPage([]);
@@ -162,7 +170,9 @@ describe('seller list', () => {
             wrapper.find(`a[href="${login.url({ id: 17 })}"]`).exists(),
         ).toBe(false);
         expect(
-            wrapper.find(`form[action="${payment_modal.url()}"]`).exists(),
+            wrapper
+                .findAll('button')
+                .some((button) => button.text() === t('store.sellers.payment')),
         ).toBe(false);
     });
     it('uses edit_seller for approval and keeps payout links behind their setting', () => {

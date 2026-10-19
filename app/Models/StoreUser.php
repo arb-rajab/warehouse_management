@@ -36,6 +36,7 @@ use Spatie\Permission\Traits\HasRoles;
  * @property string $activity_status
  * @property string|null $rep_id
  * @property string|null $rep_serial
+ * @property-read Shop|null $shop
  * @property-read RepresentativePackage|null $representativePackage
  * @property bool $is_rep
  * @property bool|null $raizer_admin
@@ -185,7 +186,8 @@ class StoreUser extends Authenticatable implements MustVerifyEmail
         return $this->hasMany(Product::class);
     }
 
-    public function shop()
+    /** @return HasOne<Shop, $this> */
+    public function shop(): HasOne
     {
         return $this->hasOne(Shop::class);
     }

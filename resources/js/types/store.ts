@@ -1058,3 +1058,35 @@ export interface StoreSellerVerification {
     };
     verification: { label: string; value: string; file_url: string | null }[];
 }
+
+export interface StoreSellerPayment {
+    id: number;
+    seller: { id: number; name: string; shop_name: string | null };
+    date: string | null;
+    amount: string;
+    payment_method: string;
+    txn_code: string | null;
+}
+export interface StoreSellerWithdrawal {
+    id: number;
+    seller: StoreSellerPayment['seller'];
+    date: string | null;
+    due: string;
+    amount: string;
+    message: string | null;
+    paid: boolean;
+}
+export interface StoreSellerPayout {
+    shop: {
+        id: number;
+        due: string;
+        admin_to_pay: number;
+        cash_enabled: boolean;
+        bank_enabled: boolean;
+        bank_name: string | null;
+        bank_acc_name: string | null;
+        bank_acc_no: string | null;
+        bank_routing_no: string | null;
+    };
+    withdrawal: { id: number; amount: number } | null;
+}

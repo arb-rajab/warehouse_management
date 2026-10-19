@@ -1,7 +1,7 @@
 <?php
 
-use App\Http\Controllers\SellerController as LegacySellerController;
 use App\Http\Controllers\Store\Admin\SellerController;
+use App\Http\Controllers\Store\Admin\SellerPaymentController;
 use App\Models\Order;
 use App\Models\OrderDetail;
 use App\Models\Product;
@@ -58,14 +58,14 @@ test('the seller list returns the complete narrow payload and filters out orphan
             ->where('due', null)->where('due_to_admin', false)->where('payment_history_url', null)));
 });
 
-test('the list retains payout sign and encrypted history links only for permitted callers', function () {
+test('the list retains payout sign and bound history links only for permitted callers', function () {
     actingAsStoreUser(createStoreStaff('view_all_seller', 'seller_payment_history'));
     DB::table('business_settings')->insert(['type' => 'Payouts_Section', 'value' => '1']);
     $shop = sellerAdminShop(['admin_to_pay' => -12.5]);
     $row = $this->get(route('sellers.index'))->assertOk()->inertiaProps('sellers.data.0');
     expect($row['due'])->toBe(single_price(12.5))->and($row['due_to_admin'])->toBeTrue();
     $token = basename(parse_url($row['payment_history_url'], PHP_URL_PATH));
-    expect((int) decrypt($token))->toBe($shop->user_id);
+    expect((int) $token)->toBe($shop->user_id);
 });
 
 test('seller pages paginate twenty by default preserve queries and accept only allowed page sizes', function () {
@@ -343,7 +343,7 @@ test('seller permission names routes and retained payout handler match their pre
     expect(Route::has('sellers.show'))->toBeFalse()
         ->and(Route::getRoutes()->getByName('bulk-seller-delete')->methods())->toBe(['DELETE'])
         ->and(Route::getRoutes()->getByName('sellers.destroy')->methods())->toBe(['DELETE'])
-        ->and(Route::getRoutes()->getByName('sellers.payment_modal')->getControllerClass())->toBe(LegacySellerController::class);
+        ->and(Route::getRoutes()->getByName('sellers.payment_modal')->getControllerClass())->toBe(SellerPaymentController::class);
     $onlyApproval = createStoreStaff('approve_seller');
     actingAsStoreUser($onlyApproval);
     $shop = sellerAdminShop();

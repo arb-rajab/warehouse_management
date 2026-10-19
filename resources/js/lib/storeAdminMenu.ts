@@ -25,9 +25,7 @@ import {
     vendor_commission,
 } from '@/actions/App/Http/Controllers/BusinessSettingsController';
 import { customer_product_index as classifiedProductsIndex } from '@/actions/App/Http/Controllers/CustomerProductController';
-import { payment_histories } from '@/actions/App/Http/Controllers/PaymentController';
 import { seller_products } from '@/actions/App/Http/Controllers/ProductController';
-import { index as withdrawRequestsIndex } from '@/actions/App/Http/Controllers/SellerWithdrawRequestController';
 import { index as attributesIndex } from '@/actions/App/Http/Controllers/Store/Admin/AttributeController';
 import { index as blogCategoriesIndex } from '@/actions/App/Http/Controllers/Store/Admin/BlogCategoryController';
 import { index as blogIndex } from '@/actions/App/Http/Controllers/Store/Admin/BlogController';
@@ -91,6 +89,8 @@ import { index as representativePaymentsIndex } from '@/actions/App/Http/Control
 import { index as reviewsIndex } from '@/actions/App/Http/Controllers/Store/Admin/ReviewController';
 import { index as rolesIndex } from '@/actions/App/Http/Controllers/Store/Admin/RoleController';
 import { index as sellersIndex } from '@/actions/App/Http/Controllers/Store/Admin/SellerController';
+import { index as sellerPaymentsIndex } from '@/actions/App/Http/Controllers/Store/Admin/SellerPaymentController';
+import { index as withdrawRequestsIndex } from '@/actions/App/Http/Controllers/Store/Admin/SellerWithdrawRequestController';
 import {
     activation,
     smtp,
@@ -396,7 +396,8 @@ export const storeAdminMenu: StoreMenuItem[] = [
             },
             {
                 labelKey: 'store.nav.payouts',
-                href: payment_histories(),
+                href: sellerPaymentsIndex(),
+                inertia: true,
                 permission: 'seller_payment_history',
                 setting: 'Payouts_Section',
             },
@@ -405,6 +406,7 @@ export const storeAdminMenu: StoreMenuItem[] = [
                 href: withdrawRequestsIndex[
                     '/temp/admin/withdraw_requests_all'
                 ](),
+                inertia: true,
                 permission: 'view_seller_payout_requests',
                 setting: 'Payout_request_Section',
             },

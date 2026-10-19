@@ -20,7 +20,8 @@ paths:
 
 # Moving the store back office from Blade to Inertia
 
-Latest follow-up: [seller list and accounts](#34-seller-list-and-accounts-2026-10-19).
+Latest follow-up: [seller payments and withdrawals](#35-seller-payments-and-withdrawals-2026-10-19).
+Seller-account follow-up: [seller list and accounts](#34-seller-list-and-accounts-2026-10-19).
 Dashboard follow-up: [admin dashboard](#33-admin-dashboard-2026-10-18).
 Map-settings follow-up: [Google Map settings](#32-google-map-settings-2026-10-18).
 Visit follow-up: [representative visit details and day maps](#31-representative-visit-details-and-day-maps-2026-10-18).
@@ -46,7 +47,7 @@ Customer-package follow-up: [customer package migration verification](#12-custom
 Carrier follow-up: [carrier migration verification](#11-carrier-administration-follow-up-2026-10-12).
 PR #377 verification: [final all-store browser results](../store-backoffice-reconciliation-20261011.md#final-all-store-browser-verification-2026-10-12)
 close the pending browser gate. Earlier dated verification sections remain
-historical evidence; §10 records reconciliation results and §§11–34 record
+historical evidence; §10 records reconciliation results and §§11–35 record
 subsequent module verification and limits.
 
 ## 1. Decision and scope
@@ -397,8 +398,11 @@ Do every step for each module, in one change per batch.
    - Create `App\Http\Controllers\Store\Admin\<Name>Controller` with
      `HasMiddleware`, keeping the existing `permission:` names per action.
    - Delete the root-namespace legacy controller once its last consumer moves.
-     For seller stage 34, retain root `SellerController::payment_modal` and both
-     exclusions while payout administration stays Blade (stages 35/36).
+     Through seller stage 34, root `SellerController::payment_modal` retained
+     its exclusions while payout administration remained Blade; §35 removes it.
+   - Since §35 the three root seller/payment/withdrawal controllers are removed.
+     Root `CommissionController` remains only for `calculateCommission`, called
+     by `Helpers.php` checkout; its exclusion pair stays.
    - When deleted, remove it from both `pint.json` and `phpstan.neon` in the same change
      (`StaticAnalysisExclusionsTest`). A legacy model you clean up comes out
      of both lists too (`Staff`).
@@ -527,7 +531,7 @@ blog-editor, newsletter/ticket-detail, website-settings, digital-product
 form, physical product create and edit form, trip list, trip form, trip
 orders, trip detail, legacy reviews retirement, server status deletion and trip map
 picker, representative visit detail, Google Map settings and dashboard
-follow-ups in §§11–34, including seller list/account administration. The original
+follow-ups in §§11–35, including seller list/account and payment/withdrawal administration. The original
 reconciliation was based on `8e3f82b60b2b4dc951b97ccfed985a75e9e6be69` and
 merged through PR #377. Carrier administration was then implemented separately
 from latest `origin/develop` at `018dd1802c0b2fc99ffbf0e097594fe0f0f3dfef`.
@@ -547,7 +551,7 @@ Verification below distinguishes the original reconciliation from this follow-up
 | Marketing/blog | Complete selected subset | Coupons, flash/offer deals, campaign products, popups, subscribers and blog categories/list/actions integrated; blog post create/edit (§18) and the newsletter form (§19) use Inertia with the shared Tiptap editor; the typed newsletter send and bounded recipient search are unchanged |
 | Logistics | Partial | Drivers/trucks converted; the all-trips and today's-trips lists with their status dialog, notes, delete and bulk delete converted (§24); the trip create and edit forms converted without their map (§25); the trip orders list with its bulk status, invoice number and delivered actions converted (§26); the trip detail with its checkpoint notes, status and CMR download converted without its map (§27); the trip map picker converted on Leaflet from npm (§30); visit list/detail/day maps use Inertia and bundled Leaflet (§31) |
 | Orders/dashboard | Complete selected subset | Orders and entry forms converted; stored tax metadata and line-price-only grand total preserved; shell utilities integrated; dashboard converted to Inertia with bundled Chart.js (§33) |
-| Seller administration | Partial: stage 34 complete | Seller list/create/edit/verification and profile dialog use Inertia (§34); account actions retain their gates and behavior. Payment, withdrawal, commission, verification configuration and seller products remain Blade for stages 35/36. Sellers and classified products are converted, not deleted (§5); no role grants |
+| Seller administration | Partial: stages 34/35 complete | Seller list/create/edit/verification/profile use Inertia (§34); payment histories and payout/withdrawal dialogs use Inertia (§35), with established money behavior. Commission, verification configuration and seller products remain Blade for stage 36. Sellers and classified products are converted, not deleted (§5); no role grants |
 | Public/seller/auth/PDF consumers | Retained | Blade coexistence, PDF layouts, Inertia root and CSP middleware remain |
 
 ### 4.1 Seller prerequisite and role grants
@@ -558,7 +562,7 @@ classified feature-use approval; the owner has since decided (2026-10-17, §5)
 that the seller administration and the customer classified products are
 converted, not deleted. The owner reaffirmed this for step 34 (2026-10-19),
 overriding the earlier decision-blocked status. Seller list/account screens
-are converted in §34; classified products and remaining seller administration
+are converted in §34 and payments/withdrawals in §35; classified products and remaining seller administration
 follow in later steps. This decision grants no roles and changes no business policy. Until each converts, keep the existing
 seller area and customer classified-product controllers/routes/views. Customer package administration is converted in §12; its purchase, payment and mobile API consumers remain separate.
 
@@ -627,6 +631,7 @@ dedicated allowlisted compatibility endpoint, not a general settings writer.
   seller product list) and the customer classified products are converted in
   steps, keeping their routes and gates; none is deleted as a feature. Step 34
   converts the seller list and accounts, replacing five Blade views with Vue.
+  Step 35 converts payments and withdrawals, replacing six more views.
   Payout/commission/withdrawal behavior, balances, seller-facing Blade and
   storefront behavior stay established; no permission or role grant is implied.
 - **`products` writers: owner decision pending, behaviour unchanged.** Brand
@@ -655,7 +660,7 @@ dedicated allowlisted compatibility endpoint, not a general settings writer.
 
 ### 5.1 Actual retained backend Blade files
 
-The current backend inventory contains **20 Blade files**, down from 73 after
+The current backend inventory contains **14 Blade files**, down from 73 after
 removing three screens each for carriers, customer packages and categories, the
 two brand screens, the digital product list (§15), general settings (§17), the
 two blog post forms (§18), the newsletter and ticket detail (§19), the
@@ -668,7 +673,8 @@ with their two checkpoint row partials (§25), the trip orders list
 reviews list (§28), the server status page (§29), and the trip map picker with
 its three `trips/inc` partials (§30), and the two representative visit
 detail screens with their map partial (§31), Google Map settings (§32) and the
-admin dashboard (§33), and the five seller list/account views (§34).
+admin dashboard (§33), the five seller list/account views (§34), and six
+seller payment/withdrawal views (§35).
 The in-house and all-products lists (§16) removed none:
 `product/products/index.blade.php` is shared with the retained seller product
 list. Google Map settings are converted in §32.
@@ -681,7 +687,7 @@ as conversion. Protected shells/downloads/invoices are not conversion targets.
 - **invoices:** `invoices/invoice.blade.php`.
 - **layouts:** `layouts/app.blade.php`, `layouts/layout.blade.php`.
 - **product:** `product/products/index.blade.php`, `product/products/sku_combinations.blade.php`, `product/products/sku_combinations_edit.blade.php`.
-- **sellers:** `sellers/payment.blade.php`, `sellers/payment_histories/index.blade.php`, `sellers/payment_modal.blade.php`, `sellers/seller_commission/index.blade.php`, `sellers/seller_verification_form/index.blade.php`, `sellers/seller_withdraw_requests/index.blade.php`, `sellers/seller_withdraw_requests/payment_modal.blade.php`, `sellers/seller_withdraw_requests/withdraw_message_modal.blade.php`.
+- **sellers:** `sellers/seller_commission/index.blade.php`, `sellers/seller_verification_form/index.blade.php`.
 
 ## 6. Registered migrated controllers and consumers
 
@@ -739,7 +745,9 @@ line numbers or count sibling snapshots.
 | `RepresentativePaymentController` | `admin.rep.payments.accept`, `admin.rep.payments.export`, `admin.rep.payments.index`, `admin.rep.payments.reject` | `Store/Admin/Representatives/Payments/Index.vue` |
 | `ReviewController` | `admin.reviews.index`, `reviews.published`, `reviews.index` | `Store/Admin/Product/Reviews/Index.vue`; `reviews.index` (GET `/temp/reviews`, `view_product_reviews`) redirects to `admin.reviews.index` keeping the query (§28); root `ReviewController` keeps the customer `store` and `product_review_modal` |
 | `RoleController` | `roles.index`, `roles.store`, `roles.create`, `roles.update`, `roles.destroy`, `roles.edit` | `Store/Admin/Staff/Roles/Index.vue`, `Store/Admin/Staff/Roles/Create.vue`, `Store/Admin/Staff/Roles/Edit.vue` |
-| `SellerController` (Store/Admin) | `sellers.index`, `sellers.create`, `sellers.store`, `sellers.edit`, `sellers.update`, `sellers.ban`, `sellers.destroy`, `bulk-seller-delete`, `sellers.show_verification_request`, `sellers.verification_file`, `sellers.approve`, `sellers.reject`, `sellers.login`, `sellers.profile_modal`, `sellers.approved` | `Store/Admin/Sellers/Sellers/Index.vue`, `Create.vue`, `Edit.vue`, `Verification.vue`; profile JSON feeds `StoreSellerProfileDialog`; private verification downloads keep storage rules; login switches only the store session. Root `SellerController::payment_modal` remains Blade under `pay_to_seller` (§34) |
+| `SellerController` (Store/Admin) | `sellers.index`, `sellers.create`, `sellers.store`, `sellers.edit`, `sellers.update`, `sellers.ban`, `sellers.destroy`, `bulk-seller-delete`, `sellers.show_verification_request`, `sellers.verification_file`, `sellers.approve`, `sellers.reject`, `sellers.login`, `sellers.profile_modal`, `sellers.approved` | `Store/Admin/Sellers/Sellers/Index.vue`, `Create.vue`, `Edit.vue`, `Verification.vue`; profile JSON feeds `StoreSellerProfileDialog`; private verification downloads keep storage rules; login switches only the store session. Payout dialogs use `SellerPaymentController` since §35; root `SellerController` is removed |
+| `SellerPaymentController` | `sellers.payment_modal`, `sellers.payment_histories`, `sellers.payment_history`, `commissions.pay_to_seller` | `Store/Admin/Sellers/Payments/Index.vue` (global/scoped history); modal JSON feeds `StoreSellerPaymentDialog` on seller/withdrawal lists; store retains the locked money transaction (§35) |
+| `SellerWithdrawRequestController` | `withdraw_requests.index`, `withdraw_requests.create`, `withdraw_requests.show`, `withdraw_requests.edit`, `withdraw_requests.update`, `withdraw_requests.destroy`, `withdraw_requests_all`, `withdraw_request.payment_modal`, `withdraw_request.message_modal` | `Store/Admin/Sellers/Withdrawals/Index.vue`; typed payment/message JSON, shared payment dialog and readonly `StoreSellerWithdrawMessageDialog`; former empty resource actions redirect without writes (§35) |
 | `SettingsController` | `activation.index`, `business_settings.update.activation`, `facebook_chat.index`, `facebook_chat.update`, `facebook-comment`, `facebook-comment.update`, `file_system.index`, `google_analytics.index`, `google_analytics.update`, `facebook_pixel.update`, `google-firebase.index`, `google-firebase.update`, `google_recaptcha.index`, `google_recaptcha.update`, `payment_method.index`, `payment_method.update`, `smtp_settings.index`, `test.smtp`, `social_login.index` | `Store/Admin/Settings/Index.vue` |
 | `ShippingConfigurationController` | `shipping_configuration.index`, `shipping_configuration.update` | `Store/Admin/Setup/ShippingConfiguration/Index.vue` |
 | `StaffController` | `staffs.index`, `staffs.store`, `staffs.create`, `staffs.update`, `staffs.destroy`, `staffs.edit` | `Store/Admin/Staff/Staffs/Index.vue`, `Store/Admin/Staff/Staffs/Create.vue`, `Store/Admin/Staff/Staffs/Edit.vue` |
@@ -766,7 +774,7 @@ Google Map settings use `Store\Admin\GoogleMapController` since §32.
 The trip map picker is Inertia since §30. Root
 `BusinessSettingsController` keeps the seller commission/verification screens and `env_key_update` (the generic settings
 writer and its refusing `.env` stub are gone, §20), so it stays in both
-analysis exclusion lists. Seller list/account handlers use `Store\Admin\SellerController` since §34; root `SellerController` retains the Blade payment screen and both exclusions. Classified screens retain their root handler pending conversion. The newsletter and
+analysis exclusion lists. Seller list/account handlers use `Store\Admin\SellerController` since §34; payments/withdrawals use their admin controllers since §35; root `SellerController`, `PaymentController` and `SellerWithdrawRequestController` and both exclusions are removed. Classified screens retain their root handler pending conversion. The newsletter and
 the ticket detail use their typed admin controllers and Inertia pages (§19). Explicit approval and implementation gaps are tracked
 by source/path in the reconciliation ledger. The unavailable audit commit
 `aed3feab5b6edd95fb941ee92a455e058403def5` is excluded and was not recovered or included.
@@ -3596,3 +3604,109 @@ attempts, skipped checks and PR state are recorded in the ledger. Every shipping
 commit, PR title and merge message must contain `[skip ci]`; PR CI, PR/merge
 SAST and deploy do not run. No attestation trailer is written by hand or invoked
 through the bare pre-push mode.
+
+
+## 35. Seller payments and withdrawals (2026-10-19)
+
+Stage 2 of 3 on `codex/step-35-seller-payments`, branched from freshly fetched
+`origin/develop` **cbbb3c3c** (PR #445). Model: **GPT-6 Codex**; the exact
+variant and configured reasoning effort are not exposed by this runtime.
+The owner authorizes conversion, not feature deletion. No role grants,
+commission calculation, wallet, storefront or seller-area policy changes.
+[The step 35 ledger](../store-backoffice-reconciliation-20261011.md#seller-payments-and-withdrawals-step-35-2026-10-19)
+records actual checks, failures, skips and shipping; earlier results are historical.
+
+**Routes and controllers.** `Store\Admin\SellerPaymentController` uses
+`HasMiddleware`: `pay_to_seller` for modal/store and `seller_payment_history`
+for both histories. `Store\Admin\SellerWithdrawRequestController` keeps
+`view_seller_payout_requests` for every action, including both JSON modals.
+Names and HTTP verbs remain, including `commissions.pay_to_seller` and every
+resource name except the already-absent store. History binds `{seller}` to
+StoreUser (numeric account ID replaces ciphertext); withdrawal resource routes
+bind `{withdrawRequest}`. POST body references validate as 422, including a
+withdrawal belonging to another seller. Already-paid/nonpending requests remain
+404 state conflicts inside the existing locked transaction.
+
+The three moved root controllers have no remaining renderer/caller and are
+removed with both Pint/PHPStan exclusions. Root `CommissionController` retains
+only `calculateCommission`, still called by `Helpers.php` during checkout;
+its exclusions remain. `Payment::seller` is a typed relation, with its own
+noise-data test, and this cleaned model leaves both exclusion lists.
+StoreUser's existing shop and SellerWithdrawRequest's existing user relation gain
+types/documentation only; other legacy model behavior/exclusions remain.
+
+**Money pinned before refactoring.** Both payout branches already used a
+transaction and shop row lock; withdrawal payouts also locked their pending
+request. The migration preserves those boundaries, adding no transaction.
+Amounts remain numeric and greater than zero, with **no backend maximum** based
+on balance or requested amount. `cash` and `bank_payment` debit only
+`shops.admin_to_pay`; every other nonempty method (up to 100 characters) credits
+it and records `Seller paid to admin`. The seller account wallet never changes.
+The payment row retains the account ID, amount, method, nullable 191-character
+transaction code and null details. Temporary payment session keys are cleared
+in `finally`. No email/notification was sent by either payout branch; none is
+added. Seller withdrawal creation/API notifications are untouched.
+
+A cash/bank withdrawal payout changes pending status (0/null) to 1 and viewed
+to 1, then debits the submitted amount and inserts the payment once. A partial
+payment still closes the **whole** request; its amount and seller message stay
+unchanged. Repeated/nonpending payment and record-save failure leave all money
+and request data unchanged. Arbitrary-method crediting does not close a request.
+These established semantics are deliberately retained, not new approval policy.
+
+**Existing defects recorded, not silently fixed.** The root resource's
+create/show/edit/update/destroy methods were empty. There is no functioning
+approve, reject, admin-message-write or delete workflow to migrate. Those route
+names/gates remain; now they redirect to the list with no mutation, rather than
+returning an empty 200. Tests submit approval/rejection statuses and messages and
+prove no data or notifications change. The legacy negative/zero-due form omitted
+`payment_option` even though the writer required it; its Clear due submission
+still receives that validation error. The withdrawal form still has no txn-code
+field. No new method choice or withdrawal policy is invented to fix either.
+
+**Lists, dialogs and deliberate presentation changes.** Histories and both
+withdrawal-list aliases use `FilterSellerPayoutRequest`, `FiltersPerPage`,
+`resolvePerPage(..., 20)`, explicit selections, scoped eager loads, stable newest
+ordering, `paginate()->withQueryString()` and narrow Resources. Global lists
+retain Blade's orphan handling: hide rows without a live account/shop **after**
+pagination, preserving the original raw total/window. Seller history now also
+paginates, and an empty history renders an empty state instead of redirecting
+with a flash. No new monetary total or recalculation is introduced. Existing
+amount/date/method/txn contents are retained; the number column shows record IDs.
+
+The seller list's native Blade POST is replaced by `StoreSellerPaymentDialog`;
+it and the withdrawal list load typed JSON with Inertia 3 `useHttp`, cancel stale
+requests, and use the shared accessible dialog. The payment form uses Inertia
+Form, native amount min/step, conditional shop-enabled payment methods, escaped
+bank text, and `lib/confirm.ts` before recording money. Default withdrawal amount
+remains min(requested, balance); that is not a new server maximum. Messages are
+readonly escaped text. The old message action omitted an accountant response
+despite the admin group's permission; the new read uses that same permission
+and the message already exposed by the list. Vue action gates now match actual routes: message viewing
+uses `view_seller_payout_requests`; submitting money requires `pay_to_seller`.
+Both sidebar entries and history links use Inertia. Both locales add
+`store.sellers.*`; logical styling, dark mode and RTL are retained. Success
+flashes are removed as in the per-module pattern.
+
+**Consumers and inventory.** Searches covered app, routes, resources,
+public/assets/js and tests before deleting all six replaced Blade files.
+In this checkout only `shop/seller/money_withdraw_requests/index.blade.php`
+references the admin `withdraw_request.message_modal`; its JS helper has no
+trigger, and the seller caller is already refused by the admin group. That
+route name and refusal stay. The seller's payment history is its own
+`seller.payments.index`/`Seller\PaymentController`, not the admin history/modal.
+No seller Blade or seller-route file changes. No second seller-area view calling
+these admin modals was found. Shared assets, the frontend message partial,
+Blade shells/CSP and stage-36 commission/verification views remain.
+
+Existing Legacy commission-payout cases move to the new payment controller test;
+the admin no-store case moves out of LegacySellerWithdrawRequestTest while all
+seller/API cases remain. LegacyAdminPermissionsTest and state/route ratchet lists
+are unchanged: no gate or registration is added/removed. Former payment-history
+Blade samples in shell/CSP/logo/uploader/sidebar tests now use retained commission
+settings and its existing permission. Current inventory: **14** backend Blade
+files; **5** literal app-shell consumer files including the shell test (**4**
+actual extending views); **3** layout-shell extending views; **1,046** `/temp`
+and **434** `/temp/admin` registrations. The retained rich-editor inventory stays
+8 fields in 8 views. Exact final verification and shipping are in the ledger.
+PR CI, PR/merge SAST and deploy do not run under `[skip ci]`.
