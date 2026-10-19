@@ -3608,6 +3608,11 @@ through the bare pre-push mode.
 
 ## 35. Seller payments and withdrawals (2026-10-19)
 
+[PR #446](https://github.com/arb-rajab/warehouse_management/pull/446) is the
+single PR into `develop`. Implementation commit **f4ca952d** passed the explicit
+full gate before pushing. This documentation-only `[skip ci]` follow-up records
+the PR number before the authorized merge.
+
 Stage 2 of 3 on `codex/step-35-seller-payments`, branched from freshly fetched
 `origin/develop` **cbbb3c3c** (PR #445). Model: **GPT-6 Codex**; the exact
 variant and configured reasoning effort are not exposed by this runtime.

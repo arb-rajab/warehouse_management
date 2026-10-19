@@ -4320,3 +4320,16 @@ PR/merge SAST and deploy did not run under the required `[skip ci]` messages.
 `[skip ci]` commit, one PR into develop, a PR-number documentation `[skip ci]`
 commit, and the explicitly authorized `[skip ci]` merge. No Claude attribution.
 The exact PR number and resulting commits are recorded below before merging.
+
+
+**Shipping record.** [PR #446](https://github.com/arb-rajab/warehouse_management/pull/446)
+is the single PR into `develop` from `codex/step-35-seller-payments`.
+Implementation **f4ca952d**, `Migrate seller payments and withdrawals to Inertia
+[skip ci]`, was pushed after the explicit full gate, final build and browser
+checks passed. This documentation-only follow-up records the number before
+merging. `git diff --check` and explicit
+`pre_push_check.py --quick --base HEAD` verify this follow-up; documentation
+selects no application checks. The complete code results above remain applicable.
+Every implementation/follow-up commit, PR title and authorized merge message
+contains `[skip ci]`. No Claude attribution or hand-written attestation trailer.
+PR CI, PR/merge SAST and deploy did not run.
