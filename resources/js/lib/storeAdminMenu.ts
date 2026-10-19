@@ -20,7 +20,6 @@ import {
     Users,
 } from '@lucide/vue';
 import type { Component } from 'vue';
-import { seller_products } from '@/actions/App/Http/Controllers/ProductController';
 import { index as attributesIndex } from '@/actions/App/Http/Controllers/Store/Admin/AttributeController';
 import { index as blogCategoriesIndex } from '@/actions/App/Http/Controllers/Store/Admin/BlogCategoryController';
 import { index as blogIndex } from '@/actions/App/Http/Controllers/Store/Admin/BlogController';
@@ -69,6 +68,7 @@ import {
     all as allProducts,
     create as productsCreate,
     inHouse as inHouseProducts,
+    seller as sellerProducts,
 } from '@/actions/App/Http/Controllers/Store/Admin/ProductController';
 import { index as productQueriesIndex } from '@/actions/App/Http/Controllers/Store/Admin/ProductQueryController';
 import {
@@ -208,7 +208,8 @@ export const storeAdminMenu: StoreMenuItem[] = [
             },
             {
                 labelKey: 'store.nav.sellerProducts',
-                href: seller_products(),
+                inertia: true,
+                href: sellerProducts(),
                 permission: 'show_seller_products',
                 setting: 'vendor_system_activation',
             },

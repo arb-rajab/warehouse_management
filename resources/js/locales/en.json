@@ -2671,6 +2671,12 @@
             }
         },
         "products": {
+            "seller": "Seller",
+            "allSellers": "All sellers",
+            "approvalStatus": "Approval status",
+            "allApprovals": "All approval statuses",
+            "approved": "Approved",
+            "unapproved": "Not approved",
             "inHouseTitle": "In-house products",
             "allTitle": "All products",
             "create": "Add new product",

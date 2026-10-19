@@ -104,12 +104,13 @@ test('the Blade navigation exposes visits to visit-only staff and hides it witho
     actingAsStoreUser($allowed
         ? createStoreStaff('show_seller_products', 'view_representative_visits')
         : createStoreStaff('show_seller_products'));
-    $response = $this->get(route('products.seller'))->assertOk();
+    app('auth')->shouldUse('store');
+    $html = view('shop.backend.inc.admin_sidenav')->render();
 
     if ($allowed) {
-        $response->assertSee('href="'.route('admin.rep.visits.index').'"', false);
+        expect($html)->toContain('href="'.route('admin.rep.visits.index').'"');
     } else {
-        $response->assertDontSee('href="'.route('admin.rep.visits.index').'"', false);
+        expect($html)->not->toContain('href="'.route('admin.rep.visits.index').'"');
     }
 })->with([true, false]);
 

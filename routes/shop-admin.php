@@ -112,9 +112,7 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
     Route::get('/brands-wise-product-discount', [BrandDiscountController::class, 'index'])->name('brands_wise_product_discount');
     Route::post('/set-product-discount', [BrandDiscountController::class, 'update'])->name('set_product_discount');
 
-    // Products: the in-house and all-products lists, their row actions and
-    // the create and edit forms are Inertia. The seller list and the jQuery
-    // endpoints it posts to stay on the root ProductController's Blade.
+    // Product lists and forms share Inertia; seller action aliases fix their scope.
     Route::get('/products/admin', [StoreProductController::class, 'inHouse'])->name('products.admin');
     Route::get('/products/all', [StoreProductController::class, 'all'])->name('products.all');
     Route::post('/products/{product}/published', [StoreProductController::class, 'updatePublished'])->name('products.list.published');
@@ -130,21 +128,20 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
     Route::get('/products/seller/{product}/edit', [StoreProductController::class, 'sellerEdit'])->name('products.seller.edit');
     Route::post('/products/update/{product}', [StoreProductController::class, 'update'])->name('products.update');
     Route::post('/products/{product}/variant-combinations', [StoreProductController::class, 'editVariantCombinations'])->name('products.edit_variant_combinations');
+    Route::get('/products/seller', [StoreProductController::class, 'seller'])->name('products.seller');
+    Route::post('/products/seller/{product}/todays-deal', [StoreProductController::class, 'updateTodaysDeal'])->defaults('productList', 'seller')->name('products.todays_deal');
+    Route::post('/products/seller/{product}/for-sale', [StoreProductController::class, 'updateSaleStatus'])->defaults('productList', 'seller')->name('products.update_sale');
+    Route::post('/products/seller/{product}/featured', [StoreProductController::class, 'sellerFeatured'])->defaults('productList', 'seller')->name('products.featured');
+    Route::post('/products/seller/{product}/published', [StoreProductController::class, 'sellerPublished'])->defaults('productList', 'seller')->name('products.published');
+    Route::post('/products/seller/{product}/approved', [StoreProductController::class, 'updateProductApproval'])->name('products.approved');
+    Route::post('/products/duplicate/{product}', [StoreProductController::class, 'sellerDuplicate'])->defaults('productList', 'seller')->name('products.duplicate');
+    Route::delete('/products/destroy/{product}', [StoreProductController::class, 'sellerDestroy'])->defaults('productList', 'seller')->name('products.destroy');
+    Route::delete('/bulk-product-delete', [StoreProductController::class, 'sellerBulkDestroy'])->defaults('productList', 'seller')->name('bulk-product-delete');
     Route::controller(ProductController::class)->group(function () {
-        Route::get('/products/seller', 'seller_products')->name('products.seller');
-        Route::post('/products/todays_deal', 'updateTodaysDeal')->name('products.todays_deal');
-        Route::post('/products/sale_status', 'updateSaleStatus')->name('products.update_sale');
-        Route::post('/products/featured', 'updateFeatured')->name('products.featured');
-        Route::post('/products/published', 'updatePublished')->name('products.published');
-        Route::post('/products/approved', 'updateProductApproval')->name('products.approved');
         Route::post('/products/get_products_by_subcategory', 'get_products_by_subcategory')->name('products.get_products_by_subcategory');
-        Route::post('/products/duplicate/{id}', 'duplicate')->name('products.duplicate');
-        Route::post('/products/destroy/{id}', 'destroy')->name('products.destroy');
-        Route::post('/bulk-product-delete', 'bulk_product_delete')->name('bulk-product-delete');
         Route::post('/products/fetch', 'fetch')->name('products.fetch');
         Route::post('/products/search', 'search')->name('products.search');
         Route::get('products/get-details/{id}', 'getDetails')->name('products.get-details');
-
         Route::post('/products/sku_combination', 'sku_combination')->name('products.sku_combination');
     });
 

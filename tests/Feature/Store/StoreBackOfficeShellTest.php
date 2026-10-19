@@ -46,7 +46,7 @@ test('store Blade shells and retained templates match their remaining consumers'
     sort($brandDownloadConsumers);
     sort($categoryDownloadConsumers);
 
-    expect($adminLayoutConsumers)->not->toBeEmpty()
+    expect($adminLayoutConsumers)->toBe([])
         ->and($sources)->toHaveKeys([
             $adminLayout,
             $plainLayout,

@@ -929,7 +929,7 @@ export interface StoreProductFormSections {
     cashOnDelivery: boolean;
 }
 /** The list a product row action names (`list`): its URI segment. */
-export type StoreProductListType = 'admin' | 'all';
+export type StoreProductListType = 'admin' | 'all' | 'seller';
 /** The all-products list's legacy one-flag presets. */
 export type StoreProductListPreset =
     'allProducts' | 'allDeleted' | 'allActive' | 'allForSale' | 'allFeatured';
@@ -951,6 +951,8 @@ export interface StoreProductListRow {
     for_sale: boolean;
     published: boolean;
     featured: boolean;
+    approved: boolean;
+    todays_deal: boolean;
     deleted_from_api: boolean;
     public_url: string | null;
 }
@@ -964,6 +966,7 @@ export interface StoreProductListFilters {
     /** The all-products list only. */
     deleted?: boolean;
     user_id?: number | null;
+    approved?: boolean | null;
     preset?: StoreProductListPreset | null;
     per_page: number;
 }

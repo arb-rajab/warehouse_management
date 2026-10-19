@@ -139,7 +139,7 @@ test('the in-house list exposes the full narrow row for in-house physical produc
             ->where('thumbnail_url', 'https://example.com/oil.png')->where('mat_id', '100027')->where('unit', 'Box(12)')
             ->where('num_of_sale', 7)->where('base_price', single_price(12.5))->where('profit', single_price(1.25))
             ->where('variant_stocks', null)->where('stock_quantity', 40)->where('low_stock', false)
-            ->where('category', 'Oils')->where('for_sale', true)->where('published', true)->where('featured', false)
+            ->where('category', 'Oils')->where('for_sale', true)->where('published', true)->where('featured', false)->where('approved', true)->where('todays_deal', false)
             ->where('deleted_from_api', false)->where('public_url', route('product', 'olive-oil')))
         ->has('products.data.1', fn (Assert $row) => $row
             ->where('id', $variant->id)->where('name', 'Variant oil')->where('ar_name', '')
@@ -147,7 +147,7 @@ test('the in-house list exposes the full narrow row for in-house physical produc
             ->where('num_of_sale', 0)->where('base_price', single_price(2.5))->where('profit', single_price(0))
             ->where('variant_stocks', [['variant' => 'Small', 'qty' => 2], ['variant' => 'Large', 'qty' => 5]])
             ->where('stock_quantity', 7)->where('low_stock', true)->where('category', null)
-            ->where('for_sale', true)->where('published', true)->where('featured', false)->where('deleted_from_api', false)
+            ->where('for_sale', true)->where('published', true)->where('featured', false)->where('approved', true)->where('todays_deal', false)->where('deleted_from_api', false)
             ->where('public_url', null))
         ->where('filters', ['search' => null, 'category_id' => null, 'type' => null, 'active' => true, 'for_sale' => true, 'featured' => false, 'per_page' => 20])
         ->where('categories', [['id' => $this->category->id, 'name' => 'Oils']])
@@ -354,7 +354,7 @@ foreach (['published', 'featured', 'for_sale'] as $flag) {
         foreach ([null, 'yes', 2, ['1']] as $status) {
             $this->postJson(route('products.list.'.$flag, [$this->product, 'list' => 'admin']), ['status' => $status])->assertUnprocessable()->assertJsonValidationErrors('status');
         }
-        foreach ([[], ['list' => 'seller'], ['list' => ['admin']]] as $query) {
+        foreach ([[], ['list' => 'unknown'], ['list' => ['admin']]] as $query) {
             $this->postJson(route('products.list.'.$flag, [$this->product, ...$query]), ['status' => 0])->assertUnprocessable()->assertJsonValidationErrors('list');
         }
         expect(productListSnapshot())->toEqual($before);
@@ -581,33 +581,6 @@ test('WMS authentication grants no product list action and no store writes', fun
     expect(productListSnapshot())->toEqual($before);
 });
 
-test('the seller list still renders the shared Blade view and keeps its jQuery endpoints', function () {
-    $seller = createStoreUser('seller');
-    $sellerProduct = createStoreProduct(['name' => 'Seller olive oil', 'added_by' => 'seller', 'user_id' => $seller->id, 'thumbnail_img' => null]);
-    DB::table('products')->where('id', $sellerProduct->id)->update(['for_sale' => 0]);
-    actingAsStoreUser(createStoreStaff('show_seller_products', 'product_edit', 'product_delete', 'product_duplicate'));
-    $this->get(route('products.seller', ['active' => 1]))->assertOk()->assertViewIs('shop.backend.product.products.index')
-        ->assertSee('Seller olive oil')->assertDontSee('Olive oil</span>', false)
-        ->assertSee(route('products.seller.edit', ['product' => $sellerProduct->id, 'lang' => 'en']), false)
-        ->assertSee(route('products.destroy', $sellerProduct->id), false)
-        ->assertSee(route('bulk-product-delete'), false)
-        ->assertSee(route('products.update_sale'), false)
-        ->assertSee(route('products.all', ['allActive' => true]), false);
-    $this->get(route('products.seller'), inertiaHeaders())->assertConflict()->assertHeader('X-Inertia-Location', route('products.seller'));
-    foreach ([
-        'products.todays_deal' => 'updateTodaysDeal', 'products.update_sale' => 'updateSaleStatus', 'products.featured' => 'updateFeatured',
-        'products.published' => 'updatePublished', 'products.approved' => 'updateProductApproval', 'products.duplicate' => 'duplicate',
-        'products.destroy' => 'destroy', 'bulk-product-delete' => 'bulk_product_delete', 'products.fetch' => 'fetch',
-    ] as $name => $method) {
-        expect(Route::getRoutes()->getByName($name)->getActionName())->toBe(LegacyProductController::class.'@'.$method)
-            ->and(Route::getRoutes()->getByName($name)->methods())->toBe(['POST']);
-    }
-    Artisan::shouldReceive('call')->with('view:clear')->once()->andReturn(0);
-    Artisan::shouldReceive('call')->with('cache:clear')->once()->andReturn(0);
-    $this->post(route('products.update_sale'), ['id' => $sellerProduct->id, 'status' => 1])->assertOk()->assertSee('1');
-    expect($sellerProduct->fresh()->getAttribute('for_sale'))->toBe(1);
-});
-
 test('the create and edit forms are Inertia on the store controller with their route names and gates', function () {
     actingAsStoreUser(createStoreStaff('add_new_product', 'product_edit'));
     expect(route('products.create', [], false))->toBe('/temp/admin/products/create')
@@ -645,7 +618,7 @@ test('the product fetch button keeps the legacy JSON endpoint and its one-reques
 });
 
 test('the list migration keeps storefront, seller and app product contracts', function () {
-    expect(view()->exists('shop.backend.product.products.index'))->toBeTrue()
+    expect(view()->exists('shop.backend.product.products.index'))->toBeFalse()
         ->and(view()->exists('shop.backend.product.products.sku_combinations'))->toBeTrue()
         ->and(view()->exists('shop.backend.product.products.sku_combinations_edit'))->toBeTrue()
         // Only the deleted Blade edit form included the choice script.

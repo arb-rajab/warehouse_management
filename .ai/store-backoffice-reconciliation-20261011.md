@@ -4743,3 +4743,211 @@ explicit `pre_push_check.py --quick --base HEAD` (no application files changed).
 The successful full application results above remain applicable. Every commit,
 PR title and authorized merge message contains `[skip ci]`. No Claude attribution
 or hand-written attestation trailer. PR CI, PR/merge SAST and deploy do not run.
+
+
+## Admin seller product list step 38 (2026-10-20)
+
+Branch `codex/step-38-seller-product-list`, from freshly fetched `origin/develop`
+**47aec0d6** (PR #448). Model: **GPT-6 Codex**; the exact model variant and
+configured reasoning effort are not exposed by this runtime. AGENTS.md was
+read first, followed by framework/conventions/index, applicable rules, the
+requested migration sections and this ledger. Repository Inertia/Vue,
+Wayfinder, Pest and Tailwind skills were applied. Boost tools are unavailable;
+repository files and installed package source supplied the APIs. No Claude
+hooks, simulated setup state or remote-mode variables were used.
+
+**Runtime and baseline.** Native `php` was initially absent from PATH. The
+sandbox's first fetch/Docker checks could not reach the proxy/socket; supported
+sandbox escalation allowed `git fetch origin develop` and Docker inspection.
+Both the existing `wms-cloud-php:8.5` image and the extracted runtime exposed by
+`source /workspace/cloud-setup/activate.sh` report **PHP 8.5.11**. Vendor and
+node_modules were present, but JS dependencies/Wayfinder/assets were stale.
+Network-enabled `npm ci` restored the unchanged lockfile; the ignored stale
+`public/hot` pointer moved to scratch, and a normal `npm run build` passed.
+`composer dump-autoload --no-scripts --no-interaction` refreshed generated
+metadata for previously deleted controllers; no dependency/platform bypass.
+Installed versions: Laravel **13.34.0**, Inertia Laravel **3.3.1**, Wayfinder
+**0.1.21**, Pest **5.0.4**, Vite **8.2.1**, Vitest **4.1.11**, Node **24.19.0**,
+npm **11.9.0**. Scratch/logs: `/workspace/work/step38`.
+
+The initial develop run completed **326 tests: 325 passed, 1 error / 2,813
+assertions**. Its sole error was the stale Composer classmap trying to include
+the previously deleted root DigitalProductController. After the generated
+metadata/assets repair, the unchanged application baseline passed **326 Pest
+tests / 2,816 assertions**, **105.588s**, before application edits. The exact
+`php artisan test --compact` file set was:
+
+- `Store/Admin/ProductControllerTest.php`, `ProductCreateFormTest.php`,
+  `ProductEditFormTest.php`, `DigitalProductControllerTest.php`,
+  `DigitalProductFormTest.php`;
+- `LegacySellerProductAuthorizationTest.php`, `LegacySellerScopingTest.php`;
+- `LegacyAdminPermissionsTest.php`, `LegacyControllerMiddlewareConversionTest.php`,
+  `LegacyStoreStateChangingRoutesTest.php`, `StaticAnalysisExclusionsTest.php`.
+
+The page/menu frontend baseline passed **2 files / 20 Vitest tests**.
+Ten new pre-refactor action cases passed **108 assertions** against the legacy
+handlers before moving them: both availability directions, featuring/approval,
+package refusal both ways, today's-deal cache, copying, deletion and bulk delete.
+Their first attempt had two incorrect test expectations (the shared fixture's
+stock defaults to 50, not 40); correcting that expectation produced the passing
+run. The new seller Inertia-render case failed as expected against Blade
+(`Not a valid Inertia response`), establishing the migration's red test.
+
+**Trace, scope and established behavior.** The admin seller list was the last
+view extending `shop.backend.layouts.app`. It now uses the existing Inertia
+products list with type `seller`, the existing Resource/filter pattern and
+`show_seller_products`. Base scope excludes admin/customer-added, digital,
+auction and wholesale products; name-only phrase search and exact state
+matching stay. The requested seller/category/approval filters now work: the old
+seller select was commented out, category_id was ignored and approval filtering
+was absent. Today's-deal markup was also commented out; its existing capability
+is offered as requested. The old ineffective deleted filter is omitted.
+Pagination follows the validated 20-row pattern. The previously unordered seller
+query now orders newest first with an ID tie break; six offered sorts are
+allowlisted. These changes/defects are explicit in guide §38.
+
+All route names stay. Former root switches, approval, duplicate, single/bulk
+DELETE move to Store\Admin ProductController with typed requests and bound
+products. Seller adapters use fixed server route defaults so `list=all` cannot
+escape the seller scope. The action permissions are unchanged, independent of
+the read gate. Staff with product_delete may delete seller-owned products;
+seller accounts cannot use admin actions. The shared §16 writer/transactions
+preserve stocks, flags, copying boundaries, deletion dependants, warehouse FK
+outcomes and pending WMS second-writer policy. Approval writes only approved,
+checks subscription eligibility even for unapproval, clears views/cache and
+emits no notifications/audit records. Today's deal forgets only its dedicated
+cache. The legacy root publishing defect (stock changed before package refusal)
+is reported; the required existing shared writer refuses before any write.
+Bulk cache clearing is once per request under the existing §16 pattern.
+
+Seller-panel views/routes use their own Seller\ProductController actions.
+Both backend SKU partials stay because seller create/edit render them. The root
+admin SKU route stays as a compatibility/parity oracle. The JSON `products.fetch`
+cron trigger remains on root ProductController, still called by both existing
+lists, with its gate/response/30-minute command/status checks unchanged. Root
+search/detail routes remain; the missing get_products_by_subcategory method and
+non-returning search are recorded existing defects, with names retained. Only
+unregistered/unconsumed show and brand-selector methods were removed. The root
+controller and both analysis exclusions stay.
+
+Only `product/products/index.blade.php` is removed with `git rm`. Protected
+shells, plain layout, downloads, invoice and both SKU partials stay. Actual
+inventory: **10** backend Blade files, **0** app-shell extenders, **3** plain
+layout extenders; **1,046** `/temp`, **434** `/temp/admin` registrations. The
+unused app shell still includes admin_nav/admin_sidenav; all three have no
+remaining extender and are deliberately kept for the next step. The editor
+inventory is unchanged (8 fields in 8 views).
+
+**Tests and verification.** The old root middleware case moves out
+of LegacyControllerMiddlewareConversionTest into SellerProductListTest, where
+it proves the migrated action gates/container resolution. LegacyAdminPermissionsTest,
+state-changing route lists and route-name ratchets stay unchanged because gates
+and names stay. Existing product-list exhaustive row assertions gain approved
+and todays_deal. Coexistence now uses actual public/seller/auth Blade pages;
+unused-shell settings/sidebar readers are tested directly while retained.
+
+Focused results so far: **109 Pest tests / 772 assertions** for coexistence,
+logo/sidebar, reconstructed audit and Legacy permission/middleware/state tests;
+**31 Vitest tests / 3 files** for the extended page/status component/menu;
+normal production build; vue-tsc; scoped ESLint; Pint. The first expanded action
+run passed **150/151** with one new-test missing-import error, then the repaired
+bulk rollback case passed **1 test / 15 assertions**. A complete affected rerun
+is recorded below when complete. Restricted-sandbox PHPStan parallel attempts
+exited 1 without diagnostics; its serial debug run exited 0. The subsequent
+normal network/socket-enabled `PAO_DISABLE=1 composer types:check` passed
+**844 files / 0 errors**. PAO_DISABLE only exposes ordinary diagnostic output;
+no check, assertion, schema requirement or budget was relaxed.
+
+The explicit pre-commit `python3 .claude/scripts/pre_push_check.py --full`,
+affected Chromium results and shipping outcome are recorded below after they
+complete. No prior run substitutes for this task's required gate.
+
+
+The complete affected backend rerun passed **375 tests / 3,324 assertions**
+(**99.903s**), including all product forms/lists, seller-area authorization and
+scoping, static-analysis exclusions and route service provider tests. A later
+new filter-options case passed **1 test / 20 assertions**. After strengthening
+locale coverage, the page alone passed **15 Vitest tests**. Scoped browser-spec
+TypeScript compilation also passed.
+
+The first affected Chromium run completed **8 passed / 2 failed (4.1m)**.
+The new approval button exposed six labels inserted into the wrong JSON
+namespace (help topics instead of store.products); they were moved, and the
+unit test now rejects untranslated fallback keys. The existing logo-upload
+case exposed this environment's GD lacking WebP. A scratch Docker rebuild
+added libwebp-dev and GD --with-webp using the session proxy and a read-only CA
+secret. The first build failed because apt's unprivileged downloader could not
+read the CA mount; a public-CA mode=0444 mount fixed it. The extracted extension
+reports WebP support and successfully encodes WebP locally. No source dependency,
+lockfile, application assertion, CSP directive or test budget was changed to
+work around that missing runtime capability. A fresh normal production build
+passed after the locale correction. The entire affected browser set is rerun
+against the finished assets/runtime; the final outcome is recorded below.
+
+
+**Affected Chromium — passed.** All **10 cases in 5 files** passed (**2.2m**)
+using system Chromium/ffmpeg and the repaired PHP 8.5 GD runtime:
+`PLAYWRIGHT_BROWSERS_PATH=/workspace/work/step38/playwright
+PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium npx playwright test
+ tests/e2e/store-seller-products.spec.ts tests/e2e/store-products.spec.ts
+ tests/e2e/store-staff-coexistence.spec.ts tests/e2e/store-legacy-uploader.spec.ts
+ tests/e2e/store-setup-settings.spec.ts --project=chromium --timeout=120000`.
+This covers native single/bulk confirmation, seller approval, Inertia menu/edit
+visits, per-page query retention, Arabic RTL/dark contrast, enforced strict CSP,
+the retained seller uploader, Blade login/SPA/logout handoffs and logo settings.
+The final successful log is `/workspace/work/step38/playwright-final.log`.
+No browser assertion or production policy was relaxed. The earlier failed
+attempt is separately identified above.
+
+
+**First explicit full gate attempt.** `pre_push_check.py --full` exited 1 at
+ESLint: two missing blank lines in the added seller-page tests. Setup inspection
+and Wayfinder ran; Prettier/vue-tsc/Vitest/Pint/PHPStan/Pest did not run in that
+attempt. Scoped ESLint --fix plus Prettier corrected only those two style issues,
+and scoped ESLint passed before the full retry. No assertion or budget changed.
+
+
+The second explicit full attempt passed whole-repo ESLint/Prettier, then
+vue-tsc found a new-test type error: the mounted Link's generic optional
+onBefore signature was invoked without the type refinement used by the existing
+confirmation tests. The new test now uses that same zero-argument callback
+type, matching the actual handler. This preserves the false-return/native-confirm
+assertions. Vitest and all PHP stages did not run in that failed full attempt.
+Scoped lint and a separate full vue-tsc run precede the next full retry.
+
+
+**Final explicit full gate — passed before committing.** With the activated
+PHP 8.5.11 runtime and `PAO_DISABLE=1` for ordinary diagnostics,
+`python3 .claude/scripts/pre_push_check.py --full` exited **0**. This was the
+ordinary explicit full sequence, without a custom wrapper, budget override,
+attested mode or hand-written trailer. Exactly these stages ran; none skipped:
+
+- Setup-state inspection: no setup in progress.
+- `php artisan wayfinder:generate --skip-routes --with-form`.
+- Whole-repository `npm run lint:check` and `npm run format:check`.
+- `npm run types:check` (vue-tsc).
+- `npm run test:unit`: **333 files / 2,575 tests passed**, **299.54s**.
+- `composer lint:check` (Pint): passed.
+- `composer types:check` (PHPStan): **844 files / 0 errors**.
+- `php artisan config:clear`.
+- `php artisan test --parallel --compact`: **6,322 tests / 36,783 assertions
+  passed**, **348.82s**, five processes.
+
+The successful log is `/workspace/work/step38/pre-push-verified.log`; build and
+browser logs are `build-final.log` and `playwright-final.log` in the same scratch
+directory. All source/test changes were present before their successful checks.
+Only documentation of completed results is added afterward, with anchors,
+locale parity, retained-file inventory and `git diff --check` verified before
+committing. A separate full vue-tsc run passed after the new-test type correction
+before this final full retry. Earlier failed attempts are not counted as full
+verification. GET boolean normalization also follows §16: literal 0/false is off
+rather than the legacy seller handler's presence-only interpretation.
+
+**Skipped/not run:** the unrelated complete Playwright suite, separate MySQL
+migration job, Composer/npm audits, deploy-script check, production data/schema
+changes and deployment. Those are outside the requested explicit --full
+sequence and are not claimed as passing; all ten affected Chromium cases ran
+separately and passed. PR CI, PR/merge SAST and deploy do not run under [skip ci].
+No CI-Verified trailer is added/edited and the bare pre-push mode is never used.
+Shipping uses one PR into develop; its number is recorded in a documentation-only
+[skip ci] follow-up before the authorized merge.

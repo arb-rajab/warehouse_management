@@ -11,6 +11,16 @@ import {
     duplicate,
     edit,
     inHouse as inHouseProducts,
+    seller as sellerProducts,
+    sellerPublished,
+    sellerFeatured,
+    updateSaleStatus,
+    updateTodaysDeal,
+    updateProductApproval,
+    sellerDuplicate,
+    sellerDestroy,
+    sellerBulkDestroy,
+    sellerEdit,
     updateFeatured,
     updateForSale,
     updatePublished,
@@ -41,17 +51,43 @@ import type {
     StoreProductListType,
 } from '@/types/store';
 
-const props = defineProps<{
-    listType: StoreProductListType;
-    products: Paginated<StoreProductListRow>;
-    filters: StoreProductListFilters;
-    categories: { id: number; name: string }[];
-    defaultLanguage: string;
-}>();
+const props = withDefaults(
+    defineProps<{
+        listType: StoreProductListType;
+        products: Paginated<StoreProductListRow>;
+        filters: StoreProductListFilters;
+        categories: { id: number; name: string }[];
+        defaultLanguage: string;
+        approvalEnabled?: boolean;
+        sellers?: { id: number; name: string }[];
+    }>(),
+    { approvalEnabled: false, sellers: () => [] },
+);
 const access = useStoreAccess();
 const isAllList = computed(() => props.listType === 'all');
-const listIndex = computed(() =>
-    isAllList.value ? allProducts : inHouseProducts,
+const isSellerList = computed(() => props.listType === 'seller');
+const titleKey = computed(() =>
+    isSellerList.value
+        ? 'store.nav.sellerProducts'
+        : isAllList.value
+          ? 'store.products.allTitle'
+          : 'store.products.inHouseTitle',
+);
+const listActions = computed(() =>
+    isSellerList.value
+        ? {
+              edit: sellerEdit,
+              duplicate: sellerDuplicate,
+              destroy: sellerDestroy,
+              bulkDestroy: sellerBulkDestroy,
+          }
+        : { edit, duplicate, destroy, bulkDestroy },
+);
+const listIndex = computed(
+    () =>
+        ({ admin: inHouseProducts, all: allProducts, seller: sellerProducts })[
+            props.listType
+        ],
 );
 /** Every row action names the list it came from and returns to it. */
 const listQuery = computed(() => ({ mergeQuery: { list: props.listType } }));
@@ -76,11 +112,49 @@ const presets: { name: StoreProductListPreset; label: string }[] = [
     { name: 'allFeatured', label: 'presetAllFeatured' },
     { name: 'allDeleted', label: 'presetAllDeleted' },
 ];
-const switches = [
-    { field: 'for_sale', label: 'forSale', action: updateForSale },
-    { field: 'published', label: 'active', action: updatePublished },
-    { field: 'featured', label: 'featured', action: updateFeatured },
-] as const;
+const switches = computed(
+    () =>
+        [
+            {
+                field: 'for_sale',
+                label: 'store.products.forSale',
+                action: isSellerList.value ? updateSaleStatus : updateForSale,
+                inputName: 'status',
+            },
+            {
+                field: 'published',
+                label: 'store.products.active',
+                action: isSellerList.value ? sellerPublished : updatePublished,
+                inputName: 'status',
+            },
+            ...(isSellerList.value && props.approvalEnabled
+                ? [
+                      {
+                          field: 'approved',
+                          label: 'store.products.approved',
+                          action: updateProductApproval,
+                          inputName: 'approved',
+                      } as const,
+                  ]
+                : []),
+            {
+                field: 'featured',
+                label: 'store.products.featured',
+                action: isSellerList.value ? sellerFeatured : updateFeatured,
+                inputName: 'status',
+            },
+            ...(isSellerList.value
+                ? [
+                      {
+                          field: 'todays_deal',
+                          label: 'store.products.form.todaysDeal',
+                          action: updateTodaysDeal,
+                          inputName: 'status',
+                      } as const,
+                  ]
+                : []),
+        ] as const,
+);
 const selected = ref<number[]>([]);
 const allSelected = computed(
     () =>
@@ -108,11 +182,17 @@ function currentQuery(perPage: number): Record<string, string | number> {
     const flags = stateFilters.value.map((filter) => filter.name);
     const query: Record<string, string | number> = { per_page: perPage };
 
-    for (const key of ['search', 'category_id', 'type', 'user_id'] as const) {
+    for (const key of [
+        'search',
+        'category_id',
+        'type',
+        'user_id',
+        'approved',
+    ] as const) {
         const value = props.filters[key];
 
         if (value !== null && value !== undefined && value !== '') {
-            query[key] = value;
+            query[key] = typeof value === 'boolean' ? Number(value) : value;
         }
     }
 
@@ -147,27 +227,11 @@ async function requestFetch(): Promise<void> {
 </script>
 
 <template>
-    <Head
-        :title="
-            t(
-                isAllList
-                    ? 'store.products.allTitle'
-                    : 'store.products.inHouseTitle',
-            )
-        "
-    />
+    <Head :title="t(titleKey)" />
     <StoreAdminLayout>
-        <PageHeader
-            :title="
-                t(
-                    isAllList
-                        ? 'store.products.allTitle'
-                        : 'store.products.inHouseTitle',
-                )
-            "
-        >
+        <PageHeader :title="t(titleKey)">
             <div
-                v-if="access.can('add_new_product')"
+                v-if="!isSellerList && access.can('add_new_product')"
                 class="flex flex-wrap items-center gap-2"
             >
                 <button
@@ -229,6 +293,50 @@ async function requestFetch(): Promise<void> {
                 :error="errors.search"
                 maxlength="255"
             />
+            <div v-if="isSellerList">
+                <label for="user_id" :class="fieldLabelClass">{{
+                    t('store.products.seller')
+                }}</label>
+                <select
+                    id="user_id"
+                    name="user_id"
+                    :class="plainFieldInputClass"
+                >
+                    <option value="">
+                        {{ t('store.products.allSellers') }}
+                    </option>
+                    <option
+                        v-for="seller in sellers"
+                        :key="seller.id"
+                        :value="seller.id"
+                        :selected="filters.user_id === seller.id"
+                    >
+                        {{ seller.name }}
+                    </option>
+                </select>
+                <FieldError :message="errors.user_id" />
+            </div>
+            <div v-if="isSellerList && approvalEnabled">
+                <label for="approved" :class="fieldLabelClass">{{
+                    t('store.products.approvalStatus')
+                }}</label>
+                <select
+                    id="approved"
+                    name="approved"
+                    :class="plainFieldInputClass"
+                >
+                    <option value="">
+                        {{ t('store.products.allApprovals') }}
+                    </option>
+                    <option value="1" :selected="filters.approved === true">
+                        {{ t('store.products.approved') }}
+                    </option>
+                    <option value="0" :selected="filters.approved === false">
+                        {{ t('store.products.unapproved') }}
+                    </option>
+                </select>
+                <FieldError :message="errors.approved" />
+            </div>
             <div>
                 <label for="category_id" :class="fieldLabelClass">{{
                     t('store.products.category')
@@ -312,7 +420,7 @@ async function requestFetch(): Promise<void> {
         </Form>
         <Form
             v-if="access.can('product_delete')"
-            :action="bulkDestroy(listQuery)"
+            :action="listActions.bulkDestroy(listQuery)"
             :on-before="
                 () =>
                     selected.length > 0 &&
@@ -352,9 +460,7 @@ async function requestFetch(): Promise<void> {
                 t('store.products.info'),
                 t('store.products.totalStock'),
                 t('store.products.category'),
-                t('store.products.forSale'),
-                t('store.products.active'),
-                t('store.products.featured'),
+                ...switches.map((item) => t(item.label)),
                 t('store.products.deletedFromOtajer'),
                 t('store.products.actions'),
             ]"
@@ -446,7 +552,8 @@ async function requestFetch(): Promise<void> {
                         v-if="access.can('product_edit')"
                         :action="item.action(product, listQuery)"
                         :active="product[item.field]"
-                        :label="t(`store.products.${item.label}`)"
+                        :label="t(item.label)"
+                        :input-name="item.inputName"
                     />
                     <span v-else>{{
                         t(
@@ -478,7 +585,7 @@ async function requestFetch(): Promise<void> {
                         <TableActionLink
                             v-if="access.can('product_edit')"
                             :href="
-                                edit(product, {
+                                listActions.edit(product, {
                                     query: { lang: defaultLanguage },
                                 })
                             "
@@ -488,7 +595,7 @@ async function requestFetch(): Promise<void> {
                         >
                         <TableActionLink
                             v-if="access.can('product_duplicate')"
-                            :href="duplicate(product, listQuery)"
+                            :href="listActions.duplicate(product, listQuery)"
                             method="post"
                             as="button"
                             ><Copy class="h-3.5 w-3.5" />{{
@@ -497,7 +604,7 @@ async function requestFetch(): Promise<void> {
                         >
                         <TableActionLink
                             v-if="access.can('product_delete')"
-                            :href="destroy(product, listQuery)"
+                            :href="listActions.destroy(product, listQuery)"
                             variant="danger"
                             method="delete"
                             as="button"
