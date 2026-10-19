@@ -20,10 +20,6 @@ import {
     Users,
 } from '@lucide/vue';
 import type { Component } from 'vue';
-import {
-    seller_verification_form,
-    vendor_commission,
-} from '@/actions/App/Http/Controllers/BusinessSettingsController';
 import { customer_product_index as classifiedProductsIndex } from '@/actions/App/Http/Controllers/CustomerProductController';
 import { seller_products } from '@/actions/App/Http/Controllers/ProductController';
 import { index as attributesIndex } from '@/actions/App/Http/Controllers/Store/Admin/AttributeController';
@@ -88,8 +84,10 @@ import { index as representativePackagesIndex } from '@/actions/App/Http/Control
 import { index as representativePaymentsIndex } from '@/actions/App/Http/Controllers/Store/Admin/RepresentativePaymentController';
 import { index as reviewsIndex } from '@/actions/App/Http/Controllers/Store/Admin/ReviewController';
 import { index as rolesIndex } from '@/actions/App/Http/Controllers/Store/Admin/RoleController';
+import { index as sellerCommissionIndex } from '@/actions/App/Http/Controllers/Store/Admin/SellerCommissionController';
 import { index as sellersIndex } from '@/actions/App/Http/Controllers/Store/Admin/SellerController';
 import { index as sellerPaymentsIndex } from '@/actions/App/Http/Controllers/Store/Admin/SellerPaymentController';
+import { index as sellerVerificationFormIndex } from '@/actions/App/Http/Controllers/Store/Admin/SellerVerificationFormController';
 import { index as withdrawRequestsIndex } from '@/actions/App/Http/Controllers/Store/Admin/SellerWithdrawRequestController';
 import {
     activation,
@@ -412,13 +410,15 @@ export const storeAdminMenu: StoreMenuItem[] = [
             },
             {
                 labelKey: 'store.nav.sellerCommission',
-                href: vendor_commission(),
+                href: sellerCommissionIndex(),
+                inertia: true,
                 permission: 'seller_commission_configuration',
                 setting: 'Seller_Commission_Section',
             },
             {
                 labelKey: 'store.nav.sellerVerificationForm',
-                href: seller_verification_form(),
+                href: sellerVerificationFormIndex(),
+                inertia: true,
                 permission: 'seller_verification_form_configuration',
                 setting: 'Seller_Verify_Form_Section',
             },

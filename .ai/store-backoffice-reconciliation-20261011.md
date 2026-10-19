@@ -4333,3 +4333,215 @@ selects no application checks. The complete code results above remain applicable
 Every implementation/follow-up commit, PR title and authorized merge message
 contains `[skip ci]`. No Claude attribution or hand-written attestation trailer.
 PR CI, PR/merge SAST and deploy did not run.
+
+
+## Seller commission and verification form step 36 (2026-10-19)
+
+Branch `codex/step-36-seller-settings`, based on freshly fetched
+`origin/develop` **5ae9eba0** (PR #446). Model: **GPT-6 Codex**; the exact variant
+and configured reasoning effort are not exposed by this runtime. AGENTS.md was
+read first, then shared framework/conventions/index,
+applicable path rules, migration §§2.2/3/4.1/5/5.1/6/34/35, the reconciliation
+ledger and legacy-store constraints. Repository Inertia/Vue, Wayfinder, Pest
+and Tailwind skills were applied. Laravel Boost is unavailable; repository and
+installed package source supplied the APIs. No Claude hooks or forced Claude
+remote mode were used. Task scratch/logs are in `/workspace/work/step36`.
+
+**Setup and develop baseline.** Host PHP was absent, while vendor and
+node_modules existed. Git network and Docker socket access worked through the
+supported sandbox escalation; fetch reached the required PR #446 base.
+The existing Docker image and extracted runtime both report PHP **8.5.11**;
+Composer **2.10.3**, Node **24.19.0**, npm **11.9.0** are available. Package
+versions match Laravel 13.34.0, Inertia Laravel 3.3.1, Wayfinder 0.1.21,
+Vue 3.5.43, Inertia Vue 3.6.1, Pest 5.0.4, Vitest 4.1.11, Vite 8.2.1.
+Stale node_modules lacked `@fontsource/inter`; `npm ci` restored 557 packages
+against the unchanged lockfile. The stale ignored `public/hot` pointer was
+moved to scratch. Composer's generated autoload metadata was refreshed with
+`dump-autoload --no-scripts`, without installing/updating packages. Its existing
+non-PSR-4 StubProductImportCommand test-fixture notice remains.
+
+Initial serial baseline attempts were interrupted before completion; they
+establish no test result. An attempted ParaTest invocation with multiple paths
+was rejected by that runner and ran no tests. The supported filename-filter
+parallel baseline then ran **781 cases: 744 passed, 37 failed / 4,637 assertions**;
+the failures were stale/missing Vite entries. After the normal fresh production
+build, the unchanged-develop baseline passed **781 tests / 5,353 assertions**,
+five processes, **165.534s**, before repository implementation edits.
+The filter covered SellerControllerTest, SellerPaymentControllerTest,
+SellerWithdrawRequestControllerTest, SettingsControllerTest,
+SettingsReconciliationTest, ReferenceSettingsIsolationTest,
+GeneralSettingsControllerTest, CreateBusinessSettingsTableTest,
+LegacyControllerMiddlewareConversionTest, LegacyAdminPermissionsTest,
+LegacyStoreStateChangingRoutesTest, LegacyTempRoutesReachableTest,
+LegacySellerAreaTest, LegacySellerScopingTest, LegacyShopVerificationTest,
+and StaticAnalysisExclusionsTest.
+
+The initial GD lacked WebP. A scratch Docker image rebuilt GD with WebP,
+using the session proxy and a read-only CA build secret. The extension and
+required libraries were extracted into task scratch; the task activation script
+verifies PHP 8.5.11 with WebP support. System Chromium and FFmpeg are available;
+a temporary Playwright browser directory selects that FFmpeg. No TLS bypass,
+CSP weakening, platform bypass, dependency/lockfile change or production mutation.
+
+**Implementation and consumer trace.** Guide §36 records the contracts and
+remaining root controller consumers. Seller administration conversion is
+complete through all three stages; seller catalogue listing remains separate.
+Checkout commission calculation, seller registration/verification controllers,
+withdrawal service, storefront and role grants are unchanged. Searches covered
+app/routes/resources/public JS/tests, including the double-decoded stored
+verification options, answer writer and public/mobile settings response.
+No registration-page read of `verification_form` was found. The two admin Blade
+views are removed after tracing their sole renderers; existing Blade route links
+remain valid. Two deliberate fixes create a missing verification setting on save
+and persist an empty form as `[]`. Labels/options/types are validated and field
+order and legacy JSON bytes are preserved. Settings reuse the shared narrow
+writer; cache tests keep unrelated WMS/seller entries. The activation endpoint
+keeps its exact existing allowlists, permission/vendor gate and literal response.
+Root BusinessSettingsController retains only that endpoint and env_key_update,
+so its Pint/PHPStan exclusions remain.
+
+Existing middleware seller gate cases move to the migrated controller tests;
+activation compatibility cases move from SettingsReconciliationTest. Legacy
+permission/state/route ratchet lists remain unchanged: no gates, registered
+names, URIs or verbs changed. Seven retained-Blade sample tests/specs now use
+classified products and its permission, preserving their original assertions.
+
+**Iteration.** Initial focused PHPStan found two request-shape documentation/
+input-narrowing errors; corrected request types pass focused analysis (4 files,
+0 errors). Initial Vitest failures selected the layout's cache-clear form and
+sidebar input instead of the page form/fields; selectors are scoped to the
+actual controls. Initial focused Pest started while assets were rebuilding and
+failed on the temporarily missing manifest; subsequent payload assertions were
+corrected to use full-page Inertia responses, with X-Inertia requests checked
+separately. A focused Pest run then passed 165 cases and failed one WMS-guard
+fixture assertion; correcting that fixture passed its isolated rerun (11
+assertions). The first explicit full gate stopped at two browser-spec ESLint
+spacing errors. The second passed ESLint/Prettier and stopped at a test-only
+TypeScript wrapper assertion; `findComponent` fixes that assertion. No later
+step in either stopped gate is claimed as having run.
+
+Browser iterations corrected POST's expected redirect status (302), a unique
+contrast selector, the already-expanded seller menu, and the Arabic label of
+the final English locale cleanup. One interrupted affected-browser batch has
+no complete result. The subsequent affected batch passed eight cases and
+failed only the builder's final locale cleanup, after its add/reorder/remove,
+save/reload, RTL/dark contrast and empty-form workflows passed. The corrected
+seller spec is rerun below. These failed attempts are not claimed as passing.
+Final results and the explicit pre-commit full gate are recorded below when
+complete.
+
+The first full command to reach Pest passed Wayfinder, whole-repo ESLint,
+Prettier, vue-tsc, **332 Vitest files / 2,561 tests** (1,119.67s), Pint,
+PHPStan (**0 errors**) and config-cache clearing. Pest completed **6,234 cases:
+6,232 passed, 2 errors / 36,015 assertions** (664.385s). Both errors were in
+the new render tests: `scriptSrcOf` had been defined inside
+HandleStoreBladePagesTest and was unavailable to separate parallel workers.
+The existing CSP helpers move into `tests/Pest.php` without changing their
+assertions or duplicating them. Independent-file reruns passed **3 tests / 38
+assertions**, verifying helper loading and the WMS/activation guard;
+the complete explicit gate is repeated before committing. The WMS guard
+fixture now restores the web guard before using the shared `actingAsAdmin`
+helper. No application behavior changes result from these test-support fixes.
+
+The next explicit full attempt passed Wayfinder/ESLint/Prettier/vue-tsc, then
+reported an existing Products Arabic-label test failure during Vitest. That
+known-failing unit run was stopped (exit 130); its remaining unit files and
+PHP stages are not claimed as complete. An independent run of the unchanged
+Products file confirmed **107 passed / 2 failed**, both 5,000ms timeouts
+(78.23s). That file retained previous mounted pages, so a locale flip reran
+their watchers. `enableAutoUnmount(afterEach)` now tears down its wrappers,
+and also those of the new seller page tests; the commission HTTP cancellation
+mock resets per case. Assertions and timeouts remain unchanged. The supported
+`VITEST_MAX_WORKERS=2` environment setting is used for the new run; installed
+Vitest 4.1.11 explicitly reads it. Only test support/cleanup changes address
+these findings; WMS and store application behavior is unchanged.
+
+After teardown, the focused four-file run passed both Arabic cases but had one
+different Products quick-pick timeout (**135 passed, 1 failed**; that case took
+29.208s against the unchanged 5,000ms budget). An unchanged retry passed **all
+136 tests in 4 files** (**66.24s**), including all 109 Products cases and the
+seller/menu cases. The final complete attempt runs as
+`VITEST_MAX_WORKERS=2 python3 .claude/scripts/pre_push_check.py --full`.
+No test assertion, timeout, dependency, lockfile or application code was
+altered for that resource limit. Application/browser code remains as exercised
+by the nine passing affected Chromium cases.
+
+That two-worker full attempt passed Wayfinder/ESLint/Prettier/vue-tsc, but
+StoreProductFormFields' English-label full mount exceeded the unchanged
+5,000ms default (8.206s). The known-failing Vitest run was stopped (exit 130);
+its remaining unit files/PHP stages did not complete. The unchanged component
+file then passed **10/10 tests** independently (**16.48s**) with supported
+`--testTimeout=60000 --hookTimeout=60000` default-budget flags. Repeated
+timeouts in different existing full mounts demonstrate this runtime needs a
+larger execution budget; no behavioral assertion or explicit test-level
+performance budget is removed.
+
+The final full attempt uses `VITEST_MAX_WORKERS=2` and a temporary npm wrapper
+in `/workspace/work/step36/bin`, prepended to PATH only for this command. The
+wrapper forwards all npm calls unchanged except `npm run test:unit`, which
+executes `npm run test:unit -- --testTimeout=60000 --hookTimeout=60000`.
+Npm prints that exact Vitest command in the full log. All 332 unit files and
+all assertions run; repository/CI timeout configuration is unchanged. No
+wrapper, runtime file, dependency/lockfile change or generated asset is
+committed. The actual command remains explicit
+`python3 .claude/scripts/pre_push_check.py --full`, after task activation and
+the stated session environment configuration. Bare attested mode is not used.
+
+**Completed focused and browser checks.** Focused full-mount Vitest and menu
+coverage initially passed **27 tests in 3 files**; the final focused cleanup
+retry passed **136 tests in 4 files**, as detailed above. Focused PHPStan passed
+**4 files, 0 errors**. The normal production Vite build passed with bundled fonts and
+fresh Wayfinder actions (**1m 52s**). PHP formatting and `git diff --check`
+passed. English/Arabic seller key counts match (**122** each); the added
+step-36 documentation link resolves.
+
+The corrected seller-settings Chromium spec passed **2/2** (**3.1m**): builder
+add/reorder/remove/save/reload, nested JSON bytes, missing/empty forms, Arabic
+RTL/dark input/select contrast >= 4.5, numeric constraints, both exact
+compatibility switch requests/responses, persistence and Inertia navigation.
+The preceding affected batch passed all **7** retained-Blade uploader/CSP,
+settings/logo/RTL and staff/sidebar coexistence cases (plus the commission
+case), so all **9 distinct affected browser cases** now have passing results.
+No console/CSP assertion was loosened. Browser commands used the system
+Chromium and `--timeout=120000` for the constrained runtime. The entire
+unrelated browser suite was not run.
+
+**Explicit full verification — passed before committing.**
+`python3 .claude/scripts/pre_push_check.py --full` exited **0**, using the
+documented task activation, npm runtime wrapper and two-worker environment.
+Exactly these stages ran: setup-state inspection (none in progress),
+`php artisan wayfinder:generate --skip-routes --with-form`, whole-repo
+`npm run lint:check`, `npm run format:check`, `npm run types:check`,
+`npm run test:unit -- --testTimeout=60000 --hookTimeout=60000`,
+`composer lint:check`, `composer types:check`, `php artisan config:clear`,
+and `php artisan test --parallel --compact`. Vitest passed **332 files /
+2,561 tests** (**1,082.38s**), Pint passed, PHPStan passed with **0 errors**,
+and parallel Pest passed **6,234 tests / 36,018 assertions** (**849.754s**,
+five workers). No stage in this explicit sequence was skipped. All application
+and test-support changes were present before their applicable stages. The
+log is `/workspace/work/step36/pre-push-full-runtime-budget.log`.
+
+The normal production build, nine distinct affected Chromium cases, final
+focused Vitest and independent Pest checks passed as recorded above. Final
+`git diff --check`, local documentation links and locale-key parity pass.
+Seller administration conversion is complete.
+
+**Skipped/not run:** the unrelated full Playwright suite, separate MySQL
+migration job, Composer/npm audits, deploy-script checks, production data/schema
+changes and deployment. Those groups are outside the explicit --full sequence
+and are not claimed as passing. Bare attested mode was never invoked; no
+CI-Verified trailer was added or edited by hand. PR CI, PR/merge SAST and deploy
+do not run under the required `[skip ci]` messages. The single PR number and
+shipping commits are recorded in a documentation-only follow-up before merging.
+
+**Shipping record.** [PR #447](https://github.com/arb-rajab/warehouse_management/pull/447)
+is the single PR into `develop` from `codex/step-36-seller-settings`.
+Implementation **90a3e973**, `Migrate seller commission and verification form
+to Inertia [skip ci]`, was pushed after the explicit full gate, normal build
+and affected browser checks passed. This documentation-only follow-up records
+the number before merging. `git diff --check`, local-link verification and
+explicit `pre_push_check.py --quick --base HEAD` verify this follow-up;
+documentation selects no application checks. The complete application results
+above remain applicable. Every implementation/follow-up commit, PR title and
+authorized merge message contains `[skip ci]`. No Claude attribution or
+hand-written attestation trailer. PR CI, PR/merge SAST and deploy did not run.
