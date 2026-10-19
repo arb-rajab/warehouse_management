@@ -4202,3 +4202,134 @@ documentation files select no application checks, and the full code results
 above remain applicable. Every implementation/follow-up commit and the PR title
 contain `[skip ci]`; the authorized merge message does too. No Claude attribution
 or CI-Verified trailer is added. PR CI, PR/merge SAST and deploy do not run.
+
+
+## Seller payments and withdrawals step 35 (2026-10-19)
+
+Branch `codex/step-35-seller-payments`, from freshly fetched `origin/develop`
+**cbbb3c3c** (PR #445). Model: **GPT-6 Codex**; exact variant and configured
+reasoning effort are not exposed by this runtime, so neither is invented.
+AGENTS.md was read first, then shared conventions/framework/index, applicable
+rules, seller-stage constraints and the legacy guide. Boost is unavailable;
+installed package source/repository files supply APIs. No Claude hooks, forced
+remote-mode variables or assumed setup readiness. Work files/logs live outside
+the checkout in `/workspace/work/step35`.
+
+**Setup and baseline.** Fetch succeeded after granting the supported network
+capability. Host PATH initially had no PHP/Composer; vendor and node_modules
+existed. Docker socket access required supported escalation, and the existing
+`wms-cloud-php:8.5` image verified PHP **8.5.11**. The existing extracted runtime
+works via `/workspace/cloud-setup/activate.sh`. Installed lockfile packages
+include Laravel 13.34.0, Inertia Laravel 3.3.1, Wayfinder 0.1.21, Vue 3.5.43 and
+Inertia Vue 3.6.1. Stale JS dependencies were refreshed with `npm ci` against
+the unchanged lockfile (557 packages). No platform bypass/manifest/lock change.
+
+The unchanged develop baseline (before implementation) ran in PHP 8.5 Docker:
+Store/Admin/SellerControllerTest, LegacyCommissionPayoutTest,
+LegacySellerWithdrawRequestTest, LegacySellerAreaTest, LegacySellerScopingTest,
+LegacyAdminPermissionsTest, LegacyStoreStateChangingRoutesTest,
+LegacyTempRoutesReachableTest and StaticAnalysisExclusionsTest:
+**130 passed / 828 assertions**. Before refactoring, five additional money
+characterizations (methods, overdraft, wallet/no-mail/no-notification, partial
+withdrawal and empty approve/reject/delete routes) were added to the existing
+Legacy payout file. That entire file passed **17 tests / 102 assertions**, then
+moved into the converted controller tests. These are actual local baseline runs.
+
+**Implemented scope and retained defects.** Guide §35 records routes, exact
+money semantics and deliberate response/UI changes. Six admin Blade files and
+three obsolete root controllers are removed after consumer tracing. Root
+CommissionController stays for checkout commission calculation; its exclusions
+remain. The cleaned Payment model leaves both exclusions; its seller relation
+has a dedicated noise-data test. No seller-area/storefront/commission-config
+behavior or role grants change. Both former money transactions/locks remain;
+no new transaction is added. There is no existing functioning approval/rejection
+or admin message-write workflow: those retained resource routes still write
+nothing. Negative/zero-due Clear due still lacks the required method as in Blade;
+withdrawal UI still has no txn-code field. Missing/wrong-owner references are
+422, while already-paid state conflicts remain 404. Amounts still have no
+backend maximum; partial withdrawal payout still closes the whole request.
+
+Only one seller Blade file references these admin modal routes in this checkout:
+its unused message helper points to the already-refused admin route. Seller
+payment history uses its own seller controller/route. Protected seller files,
+route names and access boundaries are unchanged. No second seller view caller
+was found. Seven retained-Blade sample tests/specs move from now-Inertia payment
+histories to commission settings without changing those assertions or gates.
+Legacy permission/state-route ratchet lists stay unchanged.
+
+**Iteration and verification so far.** Focused backend tests passed
+**113 / 1,179 assertions**, then the broader affected set passed
+**240 / 1,982 assertions**, including account, payout, withdrawal, permission,
+route, model, shell/CSP, settings and representative-visit coverage. An initial
+run found a bank-routing fixture type, session-assertion API and ordering fixture
+mistakes; corrected tests now assert the real schema/API. PHPStan exposed missing
+legacy relation type documentation and validated mixed IDs; relation annotations
+and integer accessors fixed those without suppression. Final focused PHPStan
+passed with zero errors. The first full-mount Vue run caught a computed-ref
+access in the new dialog; it is fixed. The focused run passed **42 tests in
+7 files**. Formatting/lint errors were corrected using the configured tools.
+
+Runtime recovery: the supplied PHP GD lacked WebP. A temporary Docker image
+rebuild first failed because apt's sandbox user could not read its CA secret;
+a read-only public CA mount with mode 0444 fixed it. The verified WebP-enabled
+GD extension is loaded through a temporary scan directory, outside the repo.
+Playwright's FFmpeg download was denied by network policy; installed system
+FFmpeg is supplied through its temporary browser directory, with system
+Chromium. The stale ignored public/hot pointer was moved to work so tests use
+the real production build. Normal `npm run build` with the configured proxy
+passed, including fresh Wayfinder generation and font fetch. No fallback build,
+TLS bypass, CSP weakening or dependency change.
+
+The initial browser batch passed eight cases and caught a real missing initial
+`useHttp` field: Inertia serializes declared initial keys, so the withdrawal
+request ID was omitted. Adding that initial key fixed the request; the focused
+payment/withdrawal browser spec passed. The final affected batch then passed
+**9 Chromium tests in 42.0s**, covering the new payment/withdrawal workflow,
+existing seller profile/confirmation/RTL/dark behavior, retained uploader,
+settings, Blade sidebar coexistence and logout. CSP stayed enforced. Native
+payout confirmation was dismissed and accepted, amount zero was refused by the
+browser, bank txn submission and history navigation worked, messages/bank text
+were escaped, focus returned after Escape, and RTL/dark contrast passed.
+
+**Explicit full verification — passed before committing.**
+`python3 .claude/scripts/pre_push_check.py --full` exited **0**. Exactly these
+stages ran: setup-state inspection (none in progress), Wayfinder generation,
+whole-repo ESLint, Prettier, vue-tsc, full Vitest (**330 files / 2,545 tests**),
+Pint, PHPStan (**0 errors**), config-cache clearing, and parallel Pest
+(**6,165 passed / 35,583 assertions**, 101.718s). All application changes,
+including the final exact `== 1` shop-method flags and extra withdrawal-state
+cases, were present before the applicable verification stages. No check in this
+explicit sequence was skipped. `git diff --check`, local documentation links,
+and literal UI keys in both locales also pass. The full run is not an attested
+run and does not cover every CI-only group.
+
+The normal production build passed with real font retrieval and fresh Wayfinder.
+The nine affected real Chromium cases passed as above; a final production build
+and focused payment/withdrawal browser run verify the shipped dialog/status UI:
+**1 Chromium test passed in 9.3s** (4.0s test), with the same enforced-CSP,
+confirmation, typed request, escaped message, focus, RTL and dark assertions.
+
+**Skipped/not run:** the full Playwright suite (nine affected cases ran), the
+separate MySQL migration job, Composer/npm audits, deploy-script checks,
+production data/schema changes, and deployment. These groups are outside the
+explicit --full sequence and are not claimed as passing. The bare attested mode
+was never invoked; no CI-Verified trailer was added or edited by hand. PR CI,
+PR/merge SAST and deploy did not run under the required `[skip ci]` messages.
+
+**Shipping:** final build/browser verification passed. Shipping uses one implementation
+`[skip ci]` commit, one PR into develop, a PR-number documentation `[skip ci]`
+commit, and the explicitly authorized `[skip ci]` merge. No Claude attribution.
+The exact PR number and resulting commits are recorded below before merging.
+
+
+**Shipping record.** [PR #446](https://github.com/arb-rajab/warehouse_management/pull/446)
+is the single PR into `develop` from `codex/step-35-seller-payments`.
+Implementation **f4ca952d**, `Migrate seller payments and withdrawals to Inertia
+[skip ci]`, was pushed after the explicit full gate, final build and browser
+checks passed. This documentation-only follow-up records the number before
+merging. `git diff --check` and explicit
+`pre_push_check.py --quick --base HEAD` verify this follow-up; documentation
+selects no application checks. The complete code results above remain applicable.
+Every implementation/follow-up commit, PR title and authorized merge message
+contains `[skip ci]`. No Claude attribution or hand-written attestation trailer.
+PR CI, PR/merge SAST and deploy did not run.

@@ -95,17 +95,15 @@ test('seller profile focus native confirmations and RTL work under strict CSP', 
     expect(reports).toEqual([]);
     expect(await documentViolations(page)).toEqual([]);
 
-    // The list's native CSRF form must still reach its stage-35 Blade payment screen.
-    const paymentForm = row.locator('form[action$="/sellers/payment_modal"]');
-    const shopId = await paymentForm.locator('input[name="id"]').inputValue();
-    const paymentResponse = page.waitForResponse(
-        (response) =>
-            new URL(response.url()).pathname ===
-                '/temp/admin/sellers/payment_modal' &&
-            response.request().isNavigationRequest(),
-    );
-    await paymentForm.getByRole('button').click();
-    expect((await paymentResponse).status()).toBe(200);
-    await expect(page.locator('#app')).toHaveCount(0);
-    await expect(page.locator('input[name="shop_id"]')).toHaveValue(shopId);
+    // The migrated payment entry stays inside the Inertia shell.
+    await row
+        .getByRole('button', { name: 'الانتقال إلى الدفع', exact: true })
+        .click();
+    const paymentDialog = page.getByRole('dialog', {
+        name: 'الانتقال إلى الدفع',
+    });
+    await expect(paymentDialog).toBeVisible();
+    await expect(paymentDialog.locator('input[name="shop_id"]')).toHaveCount(1);
+    await page.keyboard.press('Escape');
+    await expect(paymentDialog).not.toBeVisible();
 });

@@ -1,8 +1,7 @@
 <script setup lang="ts">
-import { Form, Head, router } from '@inertiajs/vue3';
+import { Form, Head, Link, router } from '@inertiajs/vue3';
 import { Ban, Check, Eye, LogIn, Trash2 } from '@lucide/vue';
 import { computed, ref } from 'vue';
-import { payment_modal } from '@/actions/App/Http/Controllers/SellerController';
 import {
     approved,
     ban,
@@ -18,6 +17,7 @@ import AddResourceLink from '@/components/AddResourceLink.vue';
 import DataTable from '@/components/DataTable.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import Pagination from '@/components/Pagination.vue';
+import StoreSellerPaymentDialog from '@/components/StoreSellerPaymentDialog.vue';
 import StoreSellerProfileDialog from '@/components/StoreSellerProfileDialog.vue';
 import SubmitButton from '@/components/SubmitButton.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
@@ -42,7 +42,6 @@ const props = defineProps<{
     };
     payouts: boolean;
     payment_links: boolean;
-    payment_csrf: string | null;
 }>();
 const access = useStoreAccess();
 const search = ref(props.filters.search);
@@ -50,6 +49,8 @@ const approval = ref(props.filters.approved_status?.toString() ?? '');
 const selected = ref<number[]>([]);
 const profileId = ref<number | null>(null);
 const profileOpen = ref(false);
+const paymentId = ref<number | null>(null);
+const paymentOpen = ref(false);
 const columns = computed(() => [
     t('store.sellers.select'),
     t('store.sellers.shopName'),
@@ -263,27 +264,18 @@ function showProfile(seller: StoreSeller): void {
                                 t('store.sellers.login')
                             }}</a
                         >
-                        <form
+                        <button
                             v-if="payment_links && access.can('pay_to_seller')"
-                            :action="payment_modal.url()"
-                            method="post"
+                            type="button"
+                            class="cursor-pointer text-blue-700 underline dark:text-blue-400"
+                            @click="
+                                paymentId = row.id;
+                                paymentOpen = true;
+                            "
                         >
-                            <input
-                                type="hidden"
-                                name="_token"
-                                :value="payment_csrf"
-                            /><input
-                                type="hidden"
-                                name="id"
-                                :value="row.id"
-                            /><button
-                                type="submit"
-                                class="cursor-pointer text-blue-700 underline dark:text-blue-400"
-                            >
-                                {{ t('store.sellers.payment') }}
-                            </button>
-                        </form>
-                        <a
+                            {{ t('store.sellers.payment') }}
+                        </button>
+                        <Link
                             v-if="
                                 payment_links &&
                                 access.can('seller_payment_history') &&
@@ -291,7 +283,7 @@ function showProfile(seller: StoreSeller): void {
                             "
                             :href="row.payment_history_url"
                             class="text-blue-700 underline dark:text-blue-400"
-                            >{{ t('store.sellers.paymentHistory') }}</a
+                            >{{ t('store.sellers.paymentHistory') }}</Link
                         >
                         <TableActionLink
                             v-if="access.can('edit_seller')"
@@ -334,6 +326,10 @@ function showProfile(seller: StoreSeller): void {
             :links="sellers.meta.links"
             :per-page="filters.per_page"
             @update:per-page="apply"
+        />
+        <StoreSellerPaymentDialog
+            v-model:open="paymentOpen"
+            :shop-id="paymentId"
         />
         <StoreSellerProfileDialog
             v-if="access.can('view_seller_profile')"

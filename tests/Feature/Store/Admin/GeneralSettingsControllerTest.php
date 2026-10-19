@@ -222,7 +222,7 @@ test('WMS authentication grants no general settings action and no store writes',
 });
 
 test('saved logos and site name still reach the Blade shells, the login pages and the mobile settings API', function () {
-    $staff = actingAsStoreUser(createStoreStaff('general_settings', 'seller_payment_history'));
+    $staff = actingAsStoreUser(createStoreStaff('general_settings', 'seller_commission_configuration'));
     $white = Upload::factory()->create(['user_id' => $staff->id, 'type' => 'image', 'external_link' => 'https://example.com/system-white.png']);
     $black = Upload::factory()->create(['user_id' => $staff->id, 'type' => 'image', 'external_link' => 'https://example.com/system-black.png']);
     DB::table('business_settings')->insert(['type' => 'vendor_system_activation', 'value' => '1']);
@@ -233,7 +233,7 @@ test('saved logos and site name still reach the Blade shells, the login pages an
         'system_logo_black' => (string) $black->id,
     ])])->assertRedirect(route('general_setting.index'));
 
-    $this->get(route('sellers.payment_histories'))->assertOk()
+    $this->get(route('business_settings.vendor_commission'))->assertOk()
         ->assertSee('https://example.com/system-white.png', false)
         ->assertSee('alt="Holland Store"', false)
         ->assertSee('&copy; Holland Store', false);

@@ -95,7 +95,7 @@ test('general settings round-trip the system name and a canonical logo pick thro
     `);
 
     // Payment histories remain a Blade page in the admin shell.
-    await page.goto('/temp/admin/seller/payments');
+    await page.goto('/temp/admin/vendor_commission');
     await expect(page.locator('#app')).toHaveCount(0);
     const shellLogo = page.locator('.aiz-side-nav-logo-wrap img').first();
     await expect(shellLogo).toHaveAttribute('alt', 'Browser store renamed');

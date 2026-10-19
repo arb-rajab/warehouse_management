@@ -1,13 +1,11 @@
 <?php
 
 use App\Http\Controllers\BusinessSettingsController;
-use App\Http\Controllers\CommissionController;
 use App\Http\Controllers\CustomerProductController;
-use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\ProductController;
-use App\Http\Controllers\SellerController as LegacySellerController;
 use App\Http\Controllers\Store\Admin\SellerController;
-use App\Http\Controllers\SellerWithdrawRequestController;
+use App\Http\Controllers\Store\Admin\SellerPaymentController;
+use App\Http\Controllers\Store\Admin\SellerWithdrawRequestController;
 use App\Http\Controllers\Store\Admin\AddressController;
 use App\Http\Controllers\Store\Admin\AttributeController;
 use App\Http\Controllers\Store\Admin\AttributeValueController;
@@ -175,7 +173,7 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
     Route::get('/bulk-upload/download/brand', [ProductBulkUploadController::class, 'pdfDownloadBrand'])->name('pdf.download_brand');
     Route::get('/bulk-upload/download/seller', [ProductBulkUploadController::class, 'pdfDownloadSeller'])->name('pdf.download_seller');
 
-    // Seller account administration; payouts remain Blade for stage 35.
+    // Seller account and payout administration.
     Route::get('/sellers', [SellerController::class, 'index'])->name('sellers.index');
     Route::get('/sellers/create', [SellerController::class, 'create'])->name('sellers.create');
     Route::post('/sellers', [SellerController::class, 'store'])->name('sellers.store');
@@ -191,21 +189,18 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
     Route::get('/sellers/login/{seller}', [SellerController::class, 'login'])->name('sellers.login');
     Route::post('/sellers/profile_modal', [SellerController::class, 'profile'])->name('sellers.profile_modal');
     Route::post('/sellers/approved', [SellerController::class, 'approved'])->name('sellers.approved');
-    Route::post('/sellers/payment_modal', [LegacySellerController::class, 'payment_modal'])->name('sellers.payment_modal');
-
-    // Seller Payment
-    Route::controller(PaymentController::class)->group(function () {
-        Route::get('/seller/payments', 'payment_histories')->name('sellers.payment_histories');
-        Route::get('/seller/payments/show/{id}', 'show')->name('sellers.payment_history');
-    });
-
-    // Seller Withdraw Request
-    Route::resource('/withdraw_requests', SellerWithdrawRequestController::class)->except(['store']);
-    Route::controller(SellerWithdrawRequestController::class)->group(function () {
-        Route::get('/withdraw_requests_all', 'index')->name('withdraw_requests_all');
-        Route::post('/withdraw_request/payment_modal', 'payment_modal')->name('withdraw_request.payment_modal');
-        Route::post('/withdraw_request/message_modal', 'message_modal')->name('withdraw_request.message_modal');
-    });
+    Route::post('/sellers/payment_modal', [SellerPaymentController::class, 'modal'])->name('sellers.payment_modal');
+    Route::get('/seller/payments', [SellerPaymentController::class, 'index'])->name('sellers.payment_histories');
+    Route::get('/seller/payments/show/{seller}', [SellerPaymentController::class, 'show'])->name('sellers.payment_history');
+    Route::get('/withdraw_requests', [SellerWithdrawRequestController::class, 'index'])->name('withdraw_requests.index');
+    Route::get('/withdraw_requests_all', [SellerWithdrawRequestController::class, 'index'])->name('withdraw_requests_all');
+    Route::get('/withdraw_requests/create', [SellerWithdrawRequestController::class, 'create'])->name('withdraw_requests.create');
+    Route::get('/withdraw_requests/{withdrawRequest}', [SellerWithdrawRequestController::class, 'show'])->name('withdraw_requests.show');
+    Route::get('/withdraw_requests/{withdrawRequest}/edit', [SellerWithdrawRequestController::class, 'edit'])->name('withdraw_requests.edit');
+    Route::match(['PUT', 'PATCH'], '/withdraw_requests/{withdrawRequest}', [SellerWithdrawRequestController::class, 'update'])->name('withdraw_requests.update');
+    Route::delete('/withdraw_requests/{withdrawRequest}', [SellerWithdrawRequestController::class, 'destroy'])->name('withdraw_requests.destroy');
+    Route::post('/withdraw_request/payment_modal', [SellerWithdrawRequestController::class, 'paymentModal'])->name('withdraw_request.payment_modal');
+    Route::post('/withdraw_request/message_modal', [SellerWithdrawRequestController::class, 'messageModal'])->name('withdraw_request.message_modal');
 
     // Customers and representatives share customer records, with explicit write gates.
     Route::controller(CustomerController::class)->group(function () {
@@ -533,7 +528,7 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
     Route::post('/orders/update_manager_notes', [OrderController::class, 'update_manager_notes'])->name('orders.update_manager_notes');
     Route::post('/orders/item/edit_price', [OrderController::class, 'edit_item_price'])->name('order.item.edit_price');
 
-    Route::post('/pay_to_seller', [CommissionController::class, 'pay_to_seller'])->name('commissions.pay_to_seller')->middleware('permission:pay_to_seller');
+    Route::post('/pay_to_seller', [SellerPaymentController::class, 'store'])->name('commissions.pay_to_seller');
 
     // Reports
     Route::get('/in_house_sale_report', [ReportController::class, 'in_house_sale_report'])->name('in_house_sale_report.index');

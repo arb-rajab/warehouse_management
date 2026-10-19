@@ -13,6 +13,9 @@ import type {
 } from '@/types/admin';
 import type {
     StoreSeller,
+    StoreSellerPayment,
+    StoreSellerPayout,
+    StoreSellerWithdrawal,
     StoreSellerProfile,
     StoreSellerVerification,
     StoreDashboardProps,
@@ -1646,6 +1649,53 @@ export function storeSellerVerification(
                     '/temp/admin/sellers/verification-file/certificate.pdf',
             },
         ],
+        ...overrides,
+    };
+}
+
+export function storeSellerPayment(
+    overrides: Partial<StoreSellerPayment> = {},
+): StoreSellerPayment {
+    return {
+        id: 7,
+        seller: { id: 21, name: 'Sam Seller', shop_name: 'Acme shop' },
+        date: '2026-10-19 08:00:00',
+        amount: '€12.50',
+        payment_method: 'Bank payment',
+        txn_code: 'T-1',
+        ...overrides,
+    };
+}
+export function storeSellerWithdrawal(
+    overrides: Partial<StoreSellerWithdrawal> = {},
+): StoreSellerWithdrawal {
+    return {
+        id: 8,
+        seller: storeSellerPayment().seller,
+        date: '2026-10-19 08:00:00',
+        amount: '€40.00',
+        due: '€100.00',
+        message: 'Please pay',
+        paid: false,
+        ...overrides,
+    };
+}
+export function storeSellerPayout(
+    overrides: Partial<StoreSellerPayout> = {},
+): StoreSellerPayout {
+    return {
+        shop: {
+            id: 17,
+            admin_to_pay: 100,
+            due: '€100.00',
+            cash_enabled: true,
+            bank_enabled: true,
+            bank_name: 'Bank',
+            bank_acc_name: 'Sam',
+            bank_acc_no: '123',
+            bank_routing_no: '456',
+        },
+        withdrawal: null,
         ...overrides,
     };
 }

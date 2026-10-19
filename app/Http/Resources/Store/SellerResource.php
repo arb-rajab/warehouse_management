@@ -34,7 +34,7 @@ class SellerResource extends JsonResource
             'due' => get_setting('Payouts_Section') == 1 ? single_price(abs($this->admin_to_pay)) : null,
             'due_to_admin' => $this->admin_to_pay < 0,
             'payment_history_url' => $request->user('store')?->can('seller_payment_history')
-                ? route('sellers.payment_history', encrypt($this->user_id)) : null,
+                ? route('sellers.payment_history', $this->user_id) : null,
         ];
     }
 }

@@ -40,7 +40,7 @@ test('the sidebar loads a Blade page in full, and an Inertia redirect to one doe
 }) => {
     seedStoreFixtures(String.raw`
         Illuminate\Support\Facades\DB::table('business_settings')->updateOrInsert(['type' => 'vendor_system_activation'], ['value' => '1']);
-        Illuminate\Support\Facades\DB::table('business_settings')->updateOrInsert(['type' => 'Payouts_Section'], ['value' => '1']);
+        Illuminate\Support\Facades\DB::table('business_settings')->updateOrInsert(['type' => 'Seller_Commission_Section'], ['value' => '1']);
     `);
     await loginAsStoreAdmin(page);
     await page.goto('/temp/admin/staffs');
@@ -49,21 +49,21 @@ test('the sidebar loads a Blade page in full, and an Inertia redirect to one doe
     const navigation = page.getByRole('navigation', {
         name: 'Store admin menu',
     });
-    // Payout histories stay Blade for stage 35; the seller account list is Inertia.
+    // Commission settings remain Blade for stage 36.
     await navigation
         .getByRole('button', { name: 'Sellers', exact: true })
         .click();
     const response = page.waitForResponse(
         (response) =>
             new URL(response.url()).pathname ===
-                '/temp/admin/seller/payments' &&
+                '/temp/admin/vendor_commission' &&
             response.request().isNavigationRequest(),
     );
     await navigation
-        .getByRole('link', { name: 'Payouts', exact: true })
+        .getByRole('link', { name: 'Seller commission', exact: true })
         .click();
     expect((await response).status()).toBe(200);
-    await expect(page).toHaveURL(/\/temp\/admin\/seller\/payments$/);
+    await expect(page).toHaveURL(/\/temp\/admin\/vendor_commission$/);
     await expect(page.locator('#app')).toHaveCount(0);
 
     await page.goto('/temp/admin/staffs');

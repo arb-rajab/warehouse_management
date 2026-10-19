@@ -40,3 +40,8 @@ export function confirmLogout(): boolean {
 export function confirmAcceptVerificationReport(slot: string): boolean {
     return confirm(t('cellVerificationReport.acceptConfirm', { slot }));
 }
+
+/** Confirm the submitted seller payout before money is recorded. */
+export function confirmSellerPayment(): boolean {
+    return confirm(t('store.sellers.confirmPayment'));
+}

@@ -65,7 +65,6 @@ class SellerController extends Controller implements HasMiddleware
             'sellers' => $this->paginated(SellerResource::collection($sellers)),
             'filters' => ['per_page' => $perPage, 'search' => $request->string('search')->toString(), 'approved_status' => $request->filled('approved_status') ? (int) $request->boolean('approved_status') : null],
             'payouts' => get_setting('Payouts_Section') == 1,
-            'payment_csrf' => $request->user('store')?->can('pay_to_seller') ? csrf_token() : null,
             'payment_links' => get_setting('Payouts_Section') == 1 || (bool) $request->user('store')?->raizer_admin,
         ]);
     }
