@@ -764,6 +764,16 @@ export interface StoreOrder {
     details?: StoreOrderLine[];
 }
 
+export interface StoreClassifiedProduct {
+    id: number;
+    name: string | null;
+    public_url: string;
+    thumbnail_url: string;
+    added_by: string | null;
+    status: boolean;
+    published: boolean;
+}
+
 export interface StoreCustomerPackage {
     id: number;
     name: string | null;

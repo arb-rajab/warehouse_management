@@ -12,15 +12,15 @@ use Inertia\Testing\AssertableInertia as Assert;
 test('an Inertia visit that lands on a Blade page is sent to load it in full', function () {
     actingAsStoreUser(createStoreAdmin());
 
-    $this->get('/temp/admin/classified_products', inertiaHeaders())
+    $this->get('/temp/admin/products/seller', inertiaHeaders())
         ->assertConflict()
-        ->assertHeader('X-Inertia-Location', url('/temp/admin/classified_products'));
+        ->assertHeader('X-Inertia-Location', url('/temp/admin/products/seller'));
 });
 
 test('a plain visit to a Blade page renders it, under the inline-script policy', function () {
     $admin = actingAsStoreUser(createStoreAdmin());
 
-    $response = $this->get('/temp/admin/classified_products')->assertOk()->assertSee($admin->name);
+    $response = $this->get('/temp/admin/products/seller')->assertOk()->assertSee($admin->name);
 
     expect(scriptSrcOf($response))
         ->toContain("'self'")
@@ -43,7 +43,7 @@ test('an Inertia store page keeps the strict policy, on a full load and on an In
 test("a Blade page's policy ends with its request", function () {
     actingAsStoreUser(createStoreAdmin());
 
-    $this->get('/temp/admin/classified_products')->assertOk();
+    $this->get('/temp/admin/products/seller')->assertOk();
 
     expect(scriptSrcOf($this->get('/temp/admin/staffs')->assertOk()))->toBe("script-src 'self'");
 });

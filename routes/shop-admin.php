@@ -1,7 +1,7 @@
 <?php
 
 use App\Http\Controllers\BusinessSettingsController;
-use App\Http\Controllers\CustomerProductController;
+use App\Http\Controllers\Store\Admin\ClassifiedProductController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\Store\Admin\SellerController;
 use App\Http\Controllers\Store\Admin\SellerCommissionController;
@@ -633,11 +633,9 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
     Route::delete('/customer_packages/destroy/{customerPackage}', [CustomerPackageController::class, 'destroy'])->name('customer_packages.destroy');
 
     // Classified Products
-    Route::controller(CustomerProductController::class)->group(function () {
-        Route::get('/classified_products', 'customer_product_index')->name('classified_products');
-        Route::post('/classified_products/published', 'updatePublished')->name('classified_products.published');
-        Route::post('/classified_products/destroy/{id}', 'destroy_by_admin')->name('classified_products.destroy');
-    });
+    Route::get('/classified_products', [ClassifiedProductController::class, 'customer_product_index'])->name('classified_products');
+    Route::put('/classified_products/{classifiedProduct}/published', [ClassifiedProductController::class, 'updatePublished'])->name('classified_products.published');
+    Route::delete('/classified_products/{classifiedProduct}', [ClassifiedProductController::class, 'destroy_by_admin'])->name('classified_products.destroy');
 
     // Countries
     Route::get('/countries', [CountryController::class, 'index'])->name('countries.index');

@@ -52,6 +52,7 @@ import type {
     StoreCity,
     StoreZone,
     StoreCarrier,
+    StoreClassifiedProduct,
     StoreCustomerPackage,
     StoreCategory,
     StoreCategoryForm,
@@ -1281,6 +1282,21 @@ export function storeCarrier(
                 prices: { 11: '8', 12: '9' },
             },
         ],
+        ...overrides,
+    };
+}
+
+export function storeClassifiedProduct(
+    overrides: Partial<StoreClassifiedProduct> = {},
+): StoreClassifiedProduct {
+    return {
+        id: 17,
+        name: 'Bicycle',
+        public_url: '/temp/customer-product/bicycle',
+        thumbnail_url: '/uploads/bicycle.png',
+        added_by: 'customer',
+        status: true,
+        published: false,
         ...overrides,
     };
 }

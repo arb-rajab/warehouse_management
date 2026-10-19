@@ -20,7 +20,8 @@ paths:
 
 # Moving the store back office from Blade to Inertia
 
-Latest follow-up: [seller commission and verification form](#36-seller-commission-and-verification-form-2026-10-19).
+Latest follow-up: [admin classified products](#37-admin-classified-products-2026-10-19).
+Seller-settings follow-up: [seller commission and verification form](#36-seller-commission-and-verification-form-2026-10-19).
 Payment follow-up: [seller payments and withdrawals](#35-seller-payments-and-withdrawals-2026-10-19).
 Seller-account follow-up: [seller list and accounts](#34-seller-list-and-accounts-2026-10-19).
 Dashboard follow-up: [admin dashboard](#33-admin-dashboard-2026-10-18).
@@ -48,7 +49,7 @@ Customer-package follow-up: [customer package migration verification](#12-custom
 Carrier follow-up: [carrier migration verification](#11-carrier-administration-follow-up-2026-10-12).
 PR #377 verification: [final all-store browser results](../store-backoffice-reconciliation-20261011.md#final-all-store-browser-verification-2026-10-12)
 close the pending browser gate. Earlier dated verification sections remain
-historical evidence; §10 records reconciliation results and §§11–36 record
+historical evidence; §10 records reconciliation results and §§11–37 record
 subsequent module verification and limits.
 
 ## 1. Decision and scope
@@ -532,7 +533,7 @@ blog-editor, newsletter/ticket-detail, website-settings, digital-product
 form, physical product create and edit form, trip list, trip form, trip
 orders, trip detail, legacy reviews retirement, server status deletion and trip map
 picker, representative visit detail, Google Map settings and dashboard
-follow-ups in §§11–36, including all three seller administration stages. The original
+follow-ups in §§11–37, including all three seller administration stages and admin classified products. The original
 reconciliation was based on `8e3f82b60b2b4dc951b97ccfed985a75e9e6be69` and
 merged through PR #377. Carrier administration was then implemented separately
 from latest `origin/develop` at `018dd1802c0b2fc99ffbf0e097594fe0f0f3dfef`.
@@ -546,7 +547,7 @@ Verification below distinguishes the original reconciliation from this follow-up
 | Language/settings | Complete selected subset | Language CRUD and translation-selector validation separated; dedicated settings endpoints with reserved-key protection; general settings use Inertia with a typed writer and a config-managed timezone (§17); the generic `business_settings.update` writer is retired (§20); the Google Map settings GET uses Inertia and the approved Leaflet picker (§32) |
 | Reports/notifications | Complete selected subset | Inertia report/admin notification routes; public/customer/seller notification consumers remain |
 | Uploads/profile | Complete selected subset | Canonical `944e2e1e` backend/picker; per-action authorization and authenticated-user profile |
-| Customers/representatives | Partial | Customers, addresses, representatives/packages/payments, customer package administration (§12) and visit list/detail/day maps (§31) implemented; classified products are to be converted (owner decision, §5), a later step |
+| Customers/representatives | Complete selected subset | Customers, addresses, representatives/packages/payments, customer package administration (§12), visit list/detail/day maps (§31) and the admin classified-products list/publish/delete (§37) use Inertia; customer-facing classified pages and the mobile API remain separate |
 | Catalogue | Partial | Attributes/values, colors, brand discount, reviews (the legacy Blade list retired, §28), bulk import/export and offers catalogue implemented; category (§13) and brand (§14) administration complete; digital product list, deletion, download and switches converted (§15); digital product create/edit converted on the shared editor and canonical uploader (§21); in-house and all-products lists with their switches, duplicate, delete and bulk delete converted (§16); physical product create converted with its typed variant/SKU endpoint (§22); physical product edit converted with translation tabs and stored variant rows (§23); the seller product list stays Blade for later catalogue conversion |
 | Website/support | Complete selected subset | Header/home, footer, appearance, custom pages (§20), conversations, product queries, the ticket list and the ticket detail with its typed reply use Inertia; footer, appearance and page rich text use the shared editor, cleaned on write (§20); the header/footer scripts stay on their compatibility endpoint as plain code fields; script policy, `manage_website_scripts` and rich-text WAF exceptions stay held |
 | Marketing/blog | Complete selected subset | Coupons, flash/offer deals, campaign products, popups, subscribers and blog categories/list/actions integrated; blog post create/edit (§18) and the newsletter form (§19) use Inertia with the shared Tiptap editor; the typed newsletter send and bounded recipient search are unchanged |
@@ -564,11 +565,11 @@ that the seller administration and the customer classified products are
 converted, not deleted. The owner reaffirmed this for step 34 (2026-10-19),
 overriding the earlier decision-blocked status. Seller list/account screens
 are converted in §34, payments/withdrawals in §35, and commission/verification
-configuration in §36. Seller administration conversion is complete; classified
-products and the retained seller catalogue list follow separately. This decision
+configuration in §36. Seller administration conversion is complete; admin
+classified products use Inertia in §37. The seller catalogue list remains Blade. This decision
 grants no roles and changes no business policy. The seller area
 remains outside this conversion, with its controllers/routes/views retained.
-Customer classified-product handlers stay until that catalogue subset converts.
+Customer-facing classified-product handlers stay; only the admin list and writes use the §37 controller.
 Customer package administration is converted in §12; its purchase, payment and
 mobile API consumers remain separate.
 
@@ -675,7 +676,7 @@ dedicated allowlisted compatibility endpoint, not a general settings writer.
 
 ### 5.1 Actual retained backend Blade files
 
-The current backend inventory contains **12 Blade files**, down from 73 after
+The current backend inventory contains **11 Blade files**, down from 73 after
 removing three screens each for carriers, customer packages and categories, the
 two brand screens, the digital product list (§15), general settings (§17), the
 two blog post forms (§18), the newsletter and ticket detail (§19), the
@@ -689,14 +690,13 @@ reviews list (§28), the server status page (§29), and the trip map picker with
 its three `trips/inc` partials (§30), and the two representative visit
 detail screens with their map partial (§31), Google Map settings (§32) and the
 admin dashboard (§33), the five seller list/account views (§34), and six
-seller payment/withdrawal views (§35), and the two seller settings views (§36).
+seller payment/withdrawal views (§35), and the two seller settings views (§36), and the admin classified-products list (§37).
 The in-house and all-products lists (§16) removed none:
 `product/products/index.blade.php` is shared with the retained seller product
 list. Google Map settings are converted in §32.
 These files remain physically present. Hardening a Blade handler does not count
 as conversion. Protected shells/downloads/invoices are not conversion targets.
 
-- **customer:** `customer/classified_products/index.blade.php`.
 - **downloads:** `downloads/brand.blade.php`, `downloads/category.blade.php`, `downloads/user.blade.php`.
 - **inc:** `inc/admin_nav.blade.php`, `inc/admin_sidenav.blade.php`.
 - **invoices:** `invoices/invoice.blade.php`.
@@ -723,6 +723,7 @@ line numbers or count sibling snapshots.
 | `CampaignProductController` | `admin.campaign-products.brands`, `admin.campaign-products.index` | JSON / redirects / PDF as applicable |
 | `CarrierController` | `carriers.index`, `carriers.create`, `carriers.store`, `carriers.edit`, `carriers.update`, `carriers.destroy`, `carriers.update_status` | `Store/Admin/Setup/Carriers/Index.vue`, `Create.vue`, `Edit.vue`; public/API carrier controller remains separate |
 | `CategoryController` | `categories.index`, `categories.create`, `categories.store`, `categories.edit`, `categories.update`, `categories.destroy`, `categories.featured` | `Store/Admin/Product/Categories/Index.vue`, `Create.vue`, `Edit.vue`; public/seller/mobile category consumers and shared hierarchy utility retained |
+| `ClassifiedProductController` | `classified_products`, `classified_products.published`, `classified_products.destroy` | `Store/Admin/Customers/ClassifiedProducts/Index.vue`; bound PUT publish and DELETE delete, existing per-action gates; customer-facing root handler retained (§37) |
 | `CityController` | `cities.index`, `cities.store`, `cities.update`, `cities.destroy`, `cities.edit`, `cities.status` | `Store/Admin/Setup/Cities/Index.vue`, `Store/Admin/Setup/Cities/Edit.vue` |
 | `ColorController` | `colors`, `colors.destroy`, `colors.edit`, `colors.store`, `colors.update` | `Store/Admin/Product/Colors/Index.vue`, `Store/Admin/Product/Colors/Edit.vue` |
 | `ConversationController` | `conversations.admin_index`, `conversations.admin_destroy`, `conversations.admin_reply`, `conversations.admin_show` | `Store/Admin/Support/Conversations/Index.vue`, `Store/Admin/Support/Conversations/Show.vue` |
@@ -790,7 +791,7 @@ Google Map settings use `Store\Admin\GoogleMapController` since §32.
 The trip map picker is Inertia since §30. Root
 `BusinessSettingsController` keeps only the seller activation compatibility endpoint and refusing `env_key_update` action; commission/verification screens use their Store/Admin controllers since §36 (the generic settings
 writer and its refusing `.env` stub are gone, §20), so it stays in both
-analysis exclusion lists. Seller list/account handlers use `Store\Admin\SellerController` since §34; payments/withdrawals use their admin controllers since §35; root `SellerController`, `PaymentController` and `SellerWithdrawRequestController` and both exclusions are removed. Classified screens retain their root handler pending conversion. The newsletter and
+analysis exclusion lists. Seller list/account handlers use `Store\Admin\SellerController` since §34; payments/withdrawals use their admin controllers since §35; root `SellerController`, `PaymentController` and `SellerWithdrawRequestController` and both exclusions are removed. Admin classified products use `ClassifiedProductController` since §37. Root `CustomerProductController` and both exclusions remain for the customer area, including its shared `updatePublished` compatibility action. The newsletter and
 the ticket detail use their typed admin controllers and Inertia pages (§19). Explicit approval and implementation gaps are tracked
 by source/path in the reconciliation ledger. The unavailable audit commit
 `aed3feab5b6edd95fb941ee92a455e058403def5` is excluded and was not recovered or included.
@@ -3827,3 +3828,93 @@ into `develop`; this documentation-only follow-up records its number before
 merging. Implementation commit: **90a3e973**. Both commits, the PR title and
 the authorized merge message carry `[skip ci]`.
 PR CI, PR/merge SAST and deploy do not run under `[skip ci]`.
+
+
+## 37. Admin classified products (2026-10-19)
+
+[PR #448](https://github.com/arb-rajab/warehouse_management/pull/448) is the single
+PR into `develop`. Implementation commit **4b8e6249** passed the explicit full
+gate before pushing. This documentation-only `[skip ci]` follow-up records the
+PR number before the authorized merge.
+
+Implemented on `codex/step-37-classified-products` from freshly fetched
+`origin/develop` **c6f8d0fd** (PR #447). Model: **GPT-6 Codex**; this runtime
+does not expose the exact model variant or configured reasoning effort.
+The owner authorizes conversion, not deletion of the feature or a business
+policy change. [The step 37 ledger](../store-backoffice-reconciliation-20261011.md#admin-classified-products-step-37-2026-10-19)
+records this run's checks, failures, skips and shipping state.
+
+`Store\Admin\ClassifiedProductController` implements `HasMiddleware` and owns
+`customer_product_index`, `updatePublished` and `destroy_by_admin` for the three
+existing admin route names. The existing `view_classified_products`,
+`publish_classified_product` and `delete_classified_product` gates remain.
+Publishing is now PUT `/classified_products/{classifiedProduct}/published`,
+validated by `UpdateClassifiedProductPublishedRequest` (`status` is a required
+boolean); delete is DELETE `/classified_products/{classifiedProduct}`. Both bind
+`CustomerProduct`, return 404 for a missing ID, and redirect to the named index
+with its query. Publishing changes only `published`; customer `status`, upload
+limits and notifications are unchanged. Delete transactionally removes the
+product's translations and product, retaining upload rows/files and other
+owners' products, exactly as the previous handler did.
+
+**Shared customer action found during tracing.** `routes/shop-web.php` also
+registers `customer_products.published` on root
+`CustomerProductController::updatePublished`. To obey the explicit requirement
+that customer routes and behavior stay unchanged, this root method and its
+`publish_classified_product` gate remain byte-for-byte; only the admin route
+uses the new method. The root admin index/delete methods and their middleware
+entries are removed. The root controller and both Pint/PHPStan exclusions stay.
+No customer-facing route/view, upload/edit form, search, activation setting or
+mobile API is changed. The customer compatibility route retains its response
+and authorization, pinned in the new controller test.
+
+`FilterClassifiedProductRequest` uses `FiltersPerPage`; the list defaults to
+20 rows with the selector. An explicit selection and scoped translation/thumbnail
+eager loads avoid per-row queries; the displayed uploader is the stored
+`added_by` string, so no account lookup is needed. Legacy `created_at desc` is
+preserved with an `id desc` tie break. Pagination keeps query strings.
+`ClassifiedProductResource` documents its narrow row with `@property-read`;
+thumbnail URL resolution preserves `uploaded_asset` precedence and placeholder
+behavior using the eager-loaded upload. `CustomerProduct` gains only the typed
+thumbnail relation and a return type on its existing translation relation.
+
+The Vue page uses `StoreAdminLayout`, `DataTable`, `PageHeader`, `Pagination`,
+`TableActionLink`, Wayfinder, `useStoreAccess` and `lib/confirm.ts`. Rows retain
+page-relative numbers, escaped translated names/uploader text, thumbnail,
+customer PUBLISHED/UNPUBLISHED badge, independently gated publishing switch and
+delete. Both storefront links are plain anchors with `target="_blank"` and
+`rel="noopener"`. Delete passes `{ mergeQuery: {} }`. English/Arabic
+`store.classifiedProducts.*`, logical switch positioning and dark styling are
+included. The sidebar entry becomes an Inertia visit; its setting and permission
+gates stay. The replacement removes the old Blade view's malformed delete
+`data-href` (extra braces) and stray JavaScript `s`; these existing template
+defects are recorded rather than reproduced in Vue.
+
+Consumer searches covered app/routes/resources/public JS/tests before `git rm`
+removed exactly `customer/classified_products/index.blade.php`. Ten remaining
+views still include the shared delete modal, so it stays. Retained-Blade
+CSP/uploader/logo/sidebar test samples move to `products.seller` and its existing
+`show_seller_products` permission, retaining their assertions. No Legacy*
+classified action cases existed to move; the only classified-specific Legacy*
+entry is the existing destroy route ratchet. `LegacyAdminPermissionsTest` and
+route/state ratchet lists stay unchanged because names and permission gates
+stay, and the state-write ratchet already accepts DELETE. New Pest tests cover
+render/whole-row closures, both flags, translation fallback, bounded queries,
+pagination/validation, both publish directions, missing IDs, every refused
+caller and exact deletion boundaries. Vitest fully mounts the page; Chromium
+covers the native confirm and real publish/menu/RTL/dark/CSP behavior.
+
+Current inventory: **11** backend Blade files; **2** literal app-shell consumer
+files including the shell test (**1** actual extending view); **3** layout-shell
+extending views; **1,046** `/temp` and **434** `/temp/admin` registrations.
+The editor inventory stays 8 fields in 8 views. Shared shells, assets, CSP
+coexistence and protected downloads/invoices stay. Actual verification and the
+shipping record are in the ledger. PR CI, PR/merge SAST and deploy do not run
+under the required `[skip ci]` messages. No attestation is claimed.
+
+The explicit full pre-commit gate passed: **333 Vitest files / 2,568 tests**,
+Pint, PHPStan (**0 errors**) and **6,264 Pest tests / 36,230 assertions**, plus
+Wayfinder, whole-repo lint/format/types and config clearing. The normal production
+build and all **8 affected Chromium cases** passed. Baseline: **102 Pest tests /
+563 assertions**. The ledger distinguishes initial failures, runtime repairs and
+skipped CI-only groups. The root customer publishing compatibility action stays.

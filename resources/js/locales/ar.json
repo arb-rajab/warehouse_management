@@ -1524,7 +1524,12 @@
             "actions": "الإجراءات",
             "view": "عرض",
             "delete": "حذف",
-            "saving": "جارٍ الحفظ…"
+            "saving": "جارٍ الحفظ…",
+            "number": "#",
+            "statusPublished": "منشور",
+            "statusUnpublished": "غير منشور",
+            "toggle": "تبديل النشر للمنتج {name}",
+            "show": "عرض"
         },
         "representativePackages": {
             "title": "باقات المندوبين",
