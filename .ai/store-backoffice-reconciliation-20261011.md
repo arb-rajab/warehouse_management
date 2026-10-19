@@ -4533,3 +4533,15 @@ and are not claimed as passing. Bare attested mode was never invoked; no
 CI-Verified trailer was added or edited by hand. PR CI, PR/merge SAST and deploy
 do not run under the required `[skip ci]` messages. The single PR number and
 shipping commits are recorded in a documentation-only follow-up before merging.
+
+**Shipping record.** [PR #447](https://github.com/arb-rajab/warehouse_management/pull/447)
+is the single PR into `develop` from `codex/step-36-seller-settings`.
+Implementation **90a3e973**, `Migrate seller commission and verification form
+to Inertia [skip ci]`, was pushed after the explicit full gate, normal build
+and affected browser checks passed. This documentation-only follow-up records
+the number before merging. `git diff --check`, local-link verification and
+explicit `pre_push_check.py --quick --base HEAD` verify this follow-up;
+documentation selects no application checks. The complete application results
+above remain applicable. Every implementation/follow-up commit, PR title and
+authorized merge message contains `[skip ci]`. No Claude attribution or
+hand-written attestation trailer. PR CI, PR/merge SAST and deploy did not run.

@@ -3822,4 +3822,8 @@ Pint, PHPStan (**0 errors**) and **6,234 Pest tests / 36,018 assertions**, plus
 Wayfinder/lint/format/types/config clearing. The normal production build and
 all **9 distinct affected Chromium cases** passed. The ledger records the
 bounded session budgets and skipped CI-only groups. No attestation was used.
+Shipping is through [PR #447](https://github.com/arb-rajab/warehouse_management/pull/447)
+into `develop`; this documentation-only follow-up records its number before
+merging. Implementation commit: **90a3e973**. Both commits, the PR title and
+the authorized merge message carry `[skip ci]`.
 PR CI, PR/merge SAST and deploy do not run under `[skip ci]`.
