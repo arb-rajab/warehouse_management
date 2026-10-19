@@ -1524,7 +1524,12 @@
             "actions": "Actions",
             "view": "View",
             "delete": "Delete",
-            "saving": "Saving…"
+            "saving": "Saving…",
+            "number": "#",
+            "statusPublished": "PUBLISHED",
+            "statusUnpublished": "UNPUBLISHED",
+            "toggle": "Toggle publishing for {name}",
+            "show": "Show"
         },
         "representativePackages": {
             "title": "Representative packages",

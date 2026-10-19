@@ -20,7 +20,6 @@ import {
     Users,
 } from '@lucide/vue';
 import type { Component } from 'vue';
-import { customer_product_index as classifiedProductsIndex } from '@/actions/App/Http/Controllers/CustomerProductController';
 import { seller_products } from '@/actions/App/Http/Controllers/ProductController';
 import { index as attributesIndex } from '@/actions/App/Http/Controllers/Store/Admin/AttributeController';
 import { index as blogCategoriesIndex } from '@/actions/App/Http/Controllers/Store/Admin/BlogCategoryController';
@@ -30,6 +29,7 @@ import { index as brandsWiseProductDiscount } from '@/actions/App/Http/Controlle
 import { index as carriersIndex } from '@/actions/App/Http/Controllers/Store/Admin/CarrierController';
 import { index as categoriesIndex } from '@/actions/App/Http/Controllers/Store/Admin/CategoryController';
 import { index as citiesIndex } from '@/actions/App/Http/Controllers/Store/Admin/CityController';
+import { customer_product_index as classifiedProductsIndex } from '@/actions/App/Http/Controllers/Store/Admin/ClassifiedProductController';
 import { index as colors } from '@/actions/App/Http/Controllers/Store/Admin/ColorController';
 import { index as conversationsIndex } from '@/actions/App/Http/Controllers/Store/Admin/ConversationController';
 import { index as countriesIndex } from '@/actions/App/Http/Controllers/Store/Admin/CountryController';
@@ -332,6 +332,7 @@ export const storeAdminMenu: StoreMenuItem[] = [
             {
                 labelKey: 'store.nav.classifiedProducts',
                 href: classifiedProductsIndex(),
+                inertia: true,
                 permission: 'view_classified_products',
                 setting: 'classified_product',
             },
