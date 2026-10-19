@@ -113,28 +113,22 @@ test('retained Blade uploader uploads, selects, removes and deletes an attachmen
     ).not.toContain(selectedId);
 });
 
-test('a retained Blade admin page still hands over to an Inertia page in a full load', async ({
+test('the retained Blade login hands over to Inertia in a full load', async ({
     page,
 }) => {
-    await loginAsStoreAdmin(page);
-    const response = await page.goto('/temp/admin/products/seller');
+    const response = await page.goto('/temp/login');
     expect(response?.headers()['content-security-policy']).toContain(
         "'unsafe-inline'",
     );
     const inertiaLoad = page.waitForResponse(
         (r) =>
-            new URL(r.url()).pathname === '/temp/admin/staffs' &&
+            new URL(r.url()).pathname === '/temp/admin' &&
             r.request().isNavigationRequest(),
     );
-    await page
-        .getByRole('link', { name: /Staffs/, exact: false })
-        .filter({ hasText: 'Staffs' })
-        .first()
-        .click();
-    await page.locator('a[href$="/temp/admin/staffs"]').click();
+    await loginAsStoreAdmin(page);
     expect((await inertiaLoad).status()).toBe(200);
     await expect(page.locator('#app')).toHaveCount(1);
     await expect(
-        page.getByRole('heading', { name: 'Staff', exact: true }),
+        page.getByRole('heading', { name: 'Dashboard', exact: true }),
     ).toBeVisible();
 });

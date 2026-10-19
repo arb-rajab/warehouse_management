@@ -6,8 +6,7 @@ use App\Http\Requests\Concerns\ValidatesStoreProductList;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
- * The for-sale, published and featured switches of the in-house and
- * all-products lists: each posts the switch's new state as `status`.
+ * The for-sale, published, featured and today's-deal product-list switches: each posts the switch's new state as `status`.
  */
 class UpdateProductListFlagRequest extends FormRequest
 {

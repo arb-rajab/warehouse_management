@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Visit;
+use Database\Seeders\PageSeeder;
 use Inertia\Testing\AssertableInertia as Assert;
 
 /**
@@ -11,16 +12,18 @@ use Inertia\Testing\AssertableInertia as Assert;
  */
 test('an Inertia visit that lands on a Blade page is sent to load it in full', function () {
     actingAsStoreUser(createStoreAdmin());
+    $this->seed(PageSeeder::class);
 
-    $this->get('/temp/admin/products/seller', inertiaHeaders())
+    $this->get('/temp/terms', inertiaHeaders())
         ->assertConflict()
-        ->assertHeader('X-Inertia-Location', url('/temp/admin/products/seller'));
+        ->assertHeader('X-Inertia-Location', url('/temp/terms'));
 });
 
 test('a plain visit to a Blade page renders it, under the inline-script policy', function () {
-    $admin = actingAsStoreUser(createStoreAdmin());
+    actingAsStoreUser(createStoreAdmin());
+    $this->seed(PageSeeder::class);
 
-    $response = $this->get('/temp/admin/products/seller')->assertOk()->assertSee($admin->name);
+    $response = $this->get('/temp/terms')->assertOk()->assertSee('Terms &amp; Conditions', false);
 
     expect(scriptSrcOf($response))
         ->toContain("'self'")
@@ -42,8 +45,9 @@ test('an Inertia store page keeps the strict policy, on a full load and on an In
 
 test("a Blade page's policy ends with its request", function () {
     actingAsStoreUser(createStoreAdmin());
+    $this->seed(PageSeeder::class);
 
-    $this->get('/temp/admin/products/seller')->assertOk();
+    $this->get('/temp/terms')->assertOk();
 
     expect(scriptSrcOf($this->get('/temp/admin/staffs')->assertOk()))->toBe("script-src 'self'");
 });

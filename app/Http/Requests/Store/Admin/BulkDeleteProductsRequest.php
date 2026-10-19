@@ -6,7 +6,7 @@ use App\Http\Requests\Concerns\ValidatesStoreProductList;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
- * The selection of one page of the in-house or all-products list. Whether
+ * The selection of one page of a store admin product list. Whether
  * every member is a product that list shows is checked under lock by the
  * controller, before anything is deleted.
  */

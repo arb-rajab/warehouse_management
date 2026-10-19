@@ -26,7 +26,6 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
@@ -237,12 +236,7 @@ class DigitalProductController extends Controller implements HasMiddleware
 
     public function updateTodaysDeal(UpdateDigitalProductFlagRequest $request, Product $product): RedirectResponse
     {
-        DB::transaction(function () use ($request, $product): void {
-            $product = $this->lockedDigitalProduct($product);
-            $product->setAttribute('todays_deal', (int) $request->boolean('status'));
-            $product->save();
-        });
-        Cache::forget('todays_deal_products');
+        $this->updateProductTodaysDeal(Product::query()->digital(), $product, $request->boolean('status'));
 
         return $this->redirectPreservingQuery('digitalproducts.index', $request);
     }

@@ -94,17 +94,13 @@ test('general settings round-trip the system name and a canonical logo pick thro
         if (Illuminate\Support\Facades\DB::table('business_settings')->where('type', 'timezone')->exists()) { throw new RuntimeException('Timezone was stored'); }
     `);
 
-    // Seller products remain a Blade page in the admin shell.
-    await page.goto('/temp/admin/products/seller');
-    await expect(page.locator('#app')).toHaveCount(0);
-    const shellLogo = page.locator('.aiz-side-nav-logo-wrap img').first();
-    await expect(shellLogo).toHaveAttribute('alt', 'Browser store renamed');
-    await expect(shellLogo).toHaveAttribute('src', /\/uploads\/all\//);
-    await expect
-        .poll(() =>
-            shellLogo.evaluate((img: HTMLImageElement) => img.naturalWidth),
-        )
-        .toBeGreaterThan(0);
+    // The last admin Blade list is now Inertia. The retained shell's logo
+    // reader remains covered in GeneralSettingsControllerTest until step 39.
+    const sellerList = await page.goto('/temp/admin/products/seller');
+    await expect(page.locator('#app')).toHaveCount(1);
+    expect(sellerList?.headers()['content-security-policy']).toContain(
+        "script-src 'self';",
+    );
 });
 
 test('a refused timezone keeps the draft, in Arabic RTL with dark contrast', async ({

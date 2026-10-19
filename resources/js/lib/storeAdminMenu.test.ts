@@ -131,6 +131,7 @@ describe('storeAdminMenu', () => {
             [
                 '/temp/admin',
                 '/temp/admin/classified_products',
+                '/temp/admin/products/seller',
                 '/temp/admin/sellers',
                 '/temp/admin/vendor_commission',
                 '/temp/admin/verification/form',

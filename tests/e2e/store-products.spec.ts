@@ -51,7 +51,7 @@ function row(page: Page, name: string): Locator {
     return page.getByRole('row', { name: new RegExp(`${name}\\b`) });
 }
 
-test('product list switches, native single and bulk delete confirmations, an Inertia visit into the edit form and a full-load hop into the retained Blade seller list', async ({
+test('product list switches, native single and bulk delete confirmations, an Inertia visit into the edit form and an Inertia visit into the seller list', async ({
     page,
 }) => {
     seedProducts();
@@ -179,8 +179,8 @@ test('product list switches, native single and bulk delete confirmations, an Ine
     await navigation
         .getByRole('link', { name: 'Seller products', exact: true })
         .click();
-    expect((await sellerRequest).headers()['x-inertia']).toBeUndefined();
-    await expect(page.locator('#app')).toHaveCount(0);
+    expect((await sellerRequest).headers()['x-inertia']).toBe('true');
+    await expect(page.locator('#app')).toHaveCount(1);
     await expect(page.getByText('Browser seller oil')).toBeVisible();
     await expect(page.getByText('Browser kept oil')).toHaveCount(0);
 });

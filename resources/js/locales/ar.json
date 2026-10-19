@@ -2671,6 +2671,12 @@
             }
         },
         "products": {
+            "seller": "البائع",
+            "allSellers": "جميع البائعين",
+            "approvalStatus": "حالة الموافقة",
+            "allApprovals": "جميع حالات الموافقة",
+            "approved": "موافق عليه",
+            "unapproved": "غير موافق عليه",
             "inHouseTitle": "المنتجات الداخلية",
             "allTitle": "جميع المنتجات",
             "create": "إضافة منتج جديد",

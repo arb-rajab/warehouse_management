@@ -6,7 +6,7 @@ use App\Http\Requests\Concerns\ValidatesStoreProductList;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
- * Duplicating or deleting one product from the in-house or all-products list.
+ * Duplicating or deleting one product from a store admin product list.
  */
 class ProductListActionRequest extends FormRequest
 {

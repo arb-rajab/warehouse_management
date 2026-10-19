@@ -42,6 +42,20 @@ describe('StoreStatusButton', () => {
             );
         },
     );
+    it('posts the inverse approval using its typed field name', () => {
+        const wrapper = mount(StoreStatusButton, {
+            props: {
+                action: updateStatus(storeCountry()),
+                active: false,
+                label: 'Approved',
+                inputName: 'approved',
+            },
+        });
+        expect(wrapper.get('input[name=approved]').attributes('value')).toBe(
+            '1',
+        );
+        expect(wrapper.find('input[name=status]').exists()).toBe(false);
+    });
     it('submits caller fields inside the shared status form', () => {
         const wrapper = mount(StoreStatusButton, {
             props: {

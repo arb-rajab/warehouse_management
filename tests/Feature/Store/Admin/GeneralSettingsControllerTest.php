@@ -233,10 +233,10 @@ test('saved logos and site name still reach the Blade shells, the login pages an
         'system_logo_black' => (string) $black->id,
     ])])->assertRedirect(route('general_setting.index'));
 
-    $this->get(route('products.seller'))->assertOk()
-        ->assertSee('https://example.com/system-white.png', false)
-        ->assertSee('alt="Holland Store"', false)
-        ->assertSee('&copy; Holland Store', false);
+    // The unused admin shell stays for step 39; its settings reader is retained.
+    expect(view('shop.backend.layouts.app')->render())->toContain(
+        'https://example.com/system-white.png', 'alt="Holland Store"', '&copy; Holland Store',
+    );
     $this->getJson('/temp/api/v2/business-settings')->assertOk()
         ->assertJsonFragment(['type' => 'site_name', 'value' => 'Holland Store']);
 
