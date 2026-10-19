@@ -4,6 +4,8 @@ use App\Http\Controllers\BusinessSettingsController;
 use App\Http\Controllers\CustomerProductController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\Store\Admin\SellerController;
+use App\Http\Controllers\Store\Admin\SellerCommissionController;
+use App\Http\Controllers\Store\Admin\SellerVerificationFormController;
 use App\Http\Controllers\Store\Admin\SellerPaymentController;
 use App\Http\Controllers\Store\Admin\SellerWithdrawRequestController;
 use App\Http\Controllers\Store\Admin\AddressController;
@@ -354,10 +356,10 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
         Route::post('/env_key_update', 'env_key_update')->name('env_key_update.update');
         Route::post('/google-map', [GoogleMapController::class, 'update'])->name('google-map.update');
 
-        Route::get('/verification/form', 'seller_verification_form')->name('seller_verification_form.index');
-        Route::post('/verification/form', 'seller_verification_form_update')->name('seller_verification_form.update');
-        Route::get('/vendor_commission', 'vendor_commission')->name('business_settings.vendor_commission');
-        Route::post('/vendor_commission_update', 'vendor_commission_update')->name('business_settings.vendor_commission.update');
+        Route::get('/verification/form', [SellerVerificationFormController::class, 'index'])->name('seller_verification_form.index');
+        Route::post('/verification/form', [SellerVerificationFormController::class, 'update'])->name('seller_verification_form.update');
+        Route::get('/vendor_commission', [SellerCommissionController::class, 'index'])->name('business_settings.vendor_commission');
+        Route::post('/vendor_commission_update', [SellerCommissionController::class, 'update'])->name('business_settings.vendor_commission.update');
 
         // Shipping Configuration
 

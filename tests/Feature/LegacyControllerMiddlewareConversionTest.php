@@ -61,7 +61,7 @@ test('a controller with dependency-injected constructor arguments keeps them alo
     expect($controller)->toBeInstanceOf(ProductController::class);
 });
 
-test('the root settings controller keeps the gates of its remaining Blade and compatibility actions', function () {
+test('the root settings controller keeps the gates of its remaining compatibility actions', function () {
     $middleware = collect(BusinessSettingsController::middleware())
         ->mapWithKeys(fn (Middleware $entry): array => [$entry->middleware => $entry->only]);
 
@@ -69,8 +69,6 @@ test('the root settings controller keeps the gates of its remaining Blade and co
     // gate; the generic `update` writer and its four-permission gate retired
     // with the footer and appearance forms (store-backoffice-migration.md §20).
     expect($middleware->all())->toBe([
-        'permission:seller_commission_configuration' => ['vendor_commission', 'vendor_commission_update'],
-        'permission:seller_verification_form_configuration' => ['seller_verification_form', 'seller_verification_form_update'],
         'permission:features_activation' => ['updateSellerCommissionActivation'],
     ])->and(method_exists(BusinessSettingsController::class, 'update'))->toBeFalse();
 });

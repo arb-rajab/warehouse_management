@@ -39,7 +39,7 @@ test('retained uploader layouts preserve the request scheme port and temp prefix
             ->assertSee('name="file-base-url" content="https://store.example.test:8443/"', false);
     }
     actingAsStoreUser(createStoreAdmin());
-    $this->get('https://store.example.test:8443/temp/admin/vendor_commission')->assertOk()->assertSee('name="app-url" content="https://store.example.test:8443/temp"', false)
+    $this->get('https://store.example.test:8443/temp/admin/classified_products')->assertOk()->assertSee('name="app-url" content="https://store.example.test:8443/temp"', false)
         ->assertSee('name="file-base-url" content="https://store.example.test:8443/"', false);
 });
 

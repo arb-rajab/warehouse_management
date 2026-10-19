@@ -537,6 +537,23 @@ function inertiaHeaders(): array
     ];
 }
 
+/** The response's `$name` CSP directive (report-only outside production). */
+function cspDirectiveOf(TestResponse $response, string $name): string
+{
+    $policy = $response->headers->get('Content-Security-Policy-Report-Only')
+        ?? $response->headers->get('Content-Security-Policy');
+
+    return collect(explode(';', (string) $policy))
+        ->map(fn (string $directive) => trim($directive))
+        ->first(fn (string $directive) => str_starts_with($directive, $name.' ')) ?? '';
+}
+
+/** The response's script-src directive, shared across independent Pest workers. */
+function scriptSrcOf(TestResponse $response): string
+{
+    return cspDirectiveOf($response, 'script-src');
+}
+
 /**
  * Set a model's `created_at` to a specific timestamp after creation.
  *

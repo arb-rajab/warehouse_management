@@ -13,6 +13,8 @@ import type {
 } from '@/types/admin';
 import type {
     StoreSeller,
+    StoreSellerCommissionSettings,
+    StoreSellerVerificationField,
     StoreSellerPayment,
     StoreSellerPayout,
     StoreSellerWithdrawal,
@@ -1698,4 +1700,23 @@ export function storeSellerPayout(
         withdrawal: null,
         ...overrides,
     };
+}
+
+export function storeSellerCommissionSettings(
+    overrides: Partial<StoreSellerCommissionSettings> = {},
+): StoreSellerCommissionSettings {
+    return {
+        vendor_commission: '12.50',
+        minimum_seller_amount_withdraw: '20',
+        vendor_commission_activation: true,
+        category_wise_commission: false,
+        ...overrides,
+    };
+}
+
+export function storeSellerVerificationFields(): StoreSellerVerificationField[] {
+    return [
+        { type: 'text', label: 'Company' },
+        { type: 'select', label: 'Country', options: ['NL', 'Syria'] },
+    ];
 }

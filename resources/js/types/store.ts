@@ -1090,3 +1090,16 @@ export interface StoreSellerPayout {
     };
     withdrawal: { id: number; amount: number } | null;
 }
+
+export interface StoreSellerCommissionSettings {
+    vendor_commission: string;
+    minimum_seller_amount_withdraw: string;
+    vendor_commission_activation: boolean;
+    category_wise_commission: boolean;
+}
+
+export interface StoreSellerVerificationField {
+    type: 'text' | 'file' | 'select' | 'multi_select' | 'radio';
+    label: string;
+    options?: string[];
+}

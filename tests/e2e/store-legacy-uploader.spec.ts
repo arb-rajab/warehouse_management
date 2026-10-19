@@ -117,7 +117,7 @@ test('a retained Blade admin page still hands over to an Inertia page in a full 
     page,
 }) => {
     await loginAsStoreAdmin(page);
-    const response = await page.goto('/temp/admin/vendor_commission');
+    const response = await page.goto('/temp/admin/classified_products');
     expect(response?.headers()['content-security-policy']).toContain(
         "'unsafe-inline'",
     );

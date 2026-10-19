@@ -131,6 +131,8 @@ describe('storeAdminMenu', () => {
             [
                 '/temp/admin',
                 '/temp/admin/sellers',
+                '/temp/admin/vendor_commission',
+                '/temp/admin/verification/form',
                 '/temp/admin/seller/payments',
                 '/temp/admin/withdraw_requests_all',
                 '/temp/admin/order-configuration',
