@@ -4723,3 +4723,23 @@ ran separately and passed. PR CI, PR/merge SAST and deploy do not run under
 `[skip ci]`. No `CI-Verified` trailer is added or edited, and the bare pre-push
 mode is never invoked. Shipping uses one PR into develop; its number is recorded
 in a documentation-only `[skip ci]` follow-up before the authorized merge.
+
+
+**Shipping record.** [PR #448](https://github.com/arb-rajab/warehouse_management/pull/448)
+is the single PR into `develop` from `codex/step-37-classified-products`.
+Implementation **4b8e6249**, `Migrate admin classified products to Inertia
+[skip ci]`, was committed and pushed after the final explicit full gate, normal
+production build and all eight affected Chromium checks passed. The first push
+was rejected by automatic approval review for lacking source/history export
+authorization. The original attached request's explicit shipping instruction,
+the existing source-repository destination and the one-commit delta were checked;
+review then approved the same push with that evidence. No alternate transport
+was used to bypass the rejection.
+
+The CLI's GraphQL PR lookup returned 401; the configured REST API succeeded,
+confirmed no existing PR and created #448. This documentation-only follow-up
+records its number before merging, with `git diff --check`, anchor checks and
+explicit `pre_push_check.py --quick --base HEAD` (no application files changed).
+The successful full application results above remain applicable. Every commit,
+PR title and authorized merge message contains `[skip ci]`. No Claude attribution
+or hand-written attestation trailer. PR CI, PR/merge SAST and deploy do not run.

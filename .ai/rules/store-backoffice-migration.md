@@ -3832,6 +3832,11 @@ PR CI, PR/merge SAST and deploy do not run under `[skip ci]`.
 
 ## 37. Admin classified products (2026-10-19)
 
+[PR #448](https://github.com/arb-rajab/warehouse_management/pull/448) is the single
+PR into `develop`. Implementation commit **4b8e6249** passed the explicit full
+gate before pushing. This documentation-only `[skip ci]` follow-up records the
+PR number before the authorized merge.
+
 Implemented on `codex/step-37-classified-products` from freshly fetched
 `origin/develop` **c6f8d0fd** (PR #447). Model: **GPT-6 Codex**; this runtime
 does not expose the exact model variant or configured reasoning effort.
