@@ -11,7 +11,7 @@ import {
 /**
  * General settings moved to Inertia with a typed writer
  * (.ai/rules/store-backoffice-migration.md §17). The timezone stays
- * config-managed, and the Blade admin shell keeps reading the saved logo.
+ * config-managed; saved logos are previewed through the canonical uploader.
  */
 function resetGeneralSettings(): void {
     seedStoreFixtures(String.raw`
@@ -94,8 +94,7 @@ test('general settings round-trip the system name and a canonical logo pick thro
         if (Illuminate\Support\Facades\DB::table('business_settings')->where('type', 'timezone')->exists()) { throw new RuntimeException('Timezone was stored'); }
     `);
 
-    // The last admin Blade list is now Inertia. The retained shell's logo
-    // reader remains covered in GeneralSettingsControllerTest until step 39.
+    // Seller products use the Inertia shell and retain its strict policy.
     const sellerList = await page.goto('/temp/admin/products/seller');
     await expect(page.locator('#app')).toHaveCount(1);
     expect(sellerList?.headers()['content-security-policy']).toContain(

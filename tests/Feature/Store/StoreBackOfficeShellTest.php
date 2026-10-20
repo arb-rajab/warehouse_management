@@ -1,28 +1,41 @@
 <?php
 
-test('store Blade shells and retained templates match their remaining consumers', function () {
+use Illuminate\Support\Facades\File;
+
+test('the retired admin shells are absent and no executable source references them', function () {
+    foreach (['layouts/app', 'inc/admin_nav', 'inc/admin_sidenav'] as $shell) {
+        expect(resource_path('views/shop/backend/'.$shell.'.blade.php'))->not->toBeFile();
+    }
+
+    expect(resource_path('views/shop/backend/inc'))->not->toBeDirectory();
+
+    $references = [];
+    foreach (['app', 'routes', 'resources', 'config', 'tests', 'public/assets/js'] as $directory) {
+        foreach (File::allFiles(base_path($directory)) as $file) {
+            if ($file->getRealPath() === __FILE__ || ! in_array($file->getExtension(), ['php', 'js', 'ts', 'vue'], true)) {
+                continue;
+            }
+
+            // Match dot/slash view names regardless of directive, quoting or renderer.
+            if (preg_match('~shop[./]backend[./](?:layouts[./]app|inc[./]admin_(?:nav|sidenav))\b~i', $file->getContents())) {
+                $references[] = str_replace(base_path().'/', '', $file->getPathname());
+            }
+        }
+    }
+
+    expect($references)->toBe([]);
+});
+
+test('retained store Blade templates still serve their protected consumers', function () {
     $sources = iterator_to_array(sourceFilesUnder(['resources/views']));
     $controllerSources = iterator_to_array(sourceFilesUnder(['app/Http/Controllers']));
 
-    $adminLayout = 'resources/views/shop/backend/layouts/app.blade.php';
     $plainLayout = 'resources/views/shop/backend/layouts/layout.blade.php';
     $blankLayout = 'resources/views/shop/backend/layouts/blank.blade.php';
 
-    $adminLayoutConsumers = array_keys(array_filter(
-        $sources,
-        fn (string $source): bool => str_contains($source, "@extends('shop.backend.layouts.app')"),
-    ));
     $plainLayoutConsumers = array_keys(array_filter(
         $sources,
         fn (string $source): bool => str_contains($source, "@extends('shop.backend.layouts.layout')"),
-    ));
-    $sideNavConsumers = array_keys(array_filter(
-        $sources,
-        fn (string $source): bool => str_contains($source, "@include('shop.backend.inc.admin_sidenav')"),
-    ));
-    $adminNavConsumers = array_keys(array_filter(
-        $sources,
-        fn (string $source): bool => str_contains($source, "@include('shop.backend.inc.admin_nav')"),
     ));
     $invoiceConsumers = array_keys(array_filter(
         $controllerSources,
@@ -46,20 +59,16 @@ test('store Blade shells and retained templates match their remaining consumers'
     sort($brandDownloadConsumers);
     sort($categoryDownloadConsumers);
 
-    expect($adminLayoutConsumers)->toBe([])
-        ->and($sources)->toHaveKeys([
-            $adminLayout,
-            $plainLayout,
-            'resources/views/shop/backend/inc/admin_sidenav.blade.php',
-            'resources/views/shop/backend/inc/admin_nav.blade.php',
-            'resources/views/app.blade.php',
-            'resources/views/shop/backend/invoices/invoice.blade.php',
-            'resources/views/shop/backend/downloads/brand.blade.php',
-            'resources/views/shop/backend/downloads/category.blade.php',
-            'resources/views/shop/backend/downloads/user.blade.php',
-        ])
-        ->and($sideNavConsumers)->toBe([$adminLayout])
-        ->and($adminNavConsumers)->toBe([$adminLayout])
+    expect($sources)->toHaveKeys([
+        $plainLayout,
+        'resources/views/app.blade.php',
+        'resources/views/shop/backend/invoices/invoice.blade.php',
+        'resources/views/shop/backend/downloads/brand.blade.php',
+        'resources/views/shop/backend/downloads/category.blade.php',
+        'resources/views/shop/backend/downloads/user.blade.php',
+        'resources/views/shop/backend/product/products/sku_combinations.blade.php',
+        'resources/views/shop/backend/product/products/sku_combinations_edit.blade.php',
+    ])
         ->and($plainLayoutConsumers)->toBe([
             'resources/views/shop/errors/503.blade.php',
             'resources/views/shop/frontend/deliveryboy_login.blade.php',
