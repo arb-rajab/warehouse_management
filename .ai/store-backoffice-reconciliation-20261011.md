@@ -5142,3 +5142,84 @@ checked for this follow-up. All commits, the PR title and merge message include
 `[skip ci]`; no Claude attribution or CI-Verified trailer is added. PR CI,
 PR/merge SAST and deploy do not run. The whole-browser/MySQL/audit/deploy-script
 checks remain separately identified as not run above.
+
+## Permission sync, fetch gate and login landing step 40 (2026-10-20)
+
+Branch `ccr-a467622f-lvqqvo`, from `origin/develop` **b0384e6e** (PR #451, the
+role-grants audit). Model: **claude-sonnet-5-5**, effort **high**. AGENTS.md,
+the framework and convention guides, the index, the rules for the changed paths
+and the audit (`.md`, `.json`, `.sql`) were read first; `wait_for_setup.py`
+reported the tooling ready before any composer, artisan or Pest use. The Boost
+MCP tools were not used. The decision, the command, the section mapping and the
+guard are in [guide §40](rules/store-backoffice-migration.md#40-launch-with-super-admin-only-permission-sync-fetch-gate-and-login-landing-2026-10-20).
+
+**Launch decision.** Production launches with only the Super Admin role
+(`Gate::before()` passes it through every gate); staff roles are created later
+in the app's role screen. Nothing here creates or grants a role.
+
+**Three commits, each `[skip ci]`:**
+
+1. **Permission sync** (`6373c291`, audit risk 3). `App\Support\StorePermissions`
+   (182 names: the 181 enforced plus `delete_truck`; **38** already defined by
+   migrations, **144** new), `store:sync-permissions [--dry-run]`, migration
+   `2026_10_20_120000_sync_store_permissions.php`, and a call from
+   `StoreRoleSeeder` (its roles unchanged). Additive, idempotent, `store` guard
+   only, no grants, spatie cache forgotten after a write, `down()` preserves
+   data. Guard test `StorePermissionsTest`, command, migration and seeder tests.
+   Twelve sections reused, six new (`dashboard`, `seller`, `reports`,
+   `marketing`, `website_setup`, `staffs`). Fixture fallout: `RoleControllerTest`
+   created `view_all_orders`/`delete_order` itself and deleted the sections the
+   earlier migrations define; it now deletes every section but `uploads` and
+   `offers_catalog` and uses the defined rows, and gained a test that a migrated
+   database offers the whole list in the role form. A mutation check (removing
+   `add_coupon`, `edit_trip`, `view_pickup_point_orders` and
+   `file_system_&_cache_configuration` from the list) made the guard name all
+   four with their enforcing files.
+2. **`products.fetch` gate** (`d4470d00`, risk 4). `permission:add_new_product` on
+   the route: the Inertia products list and the legacy Blade list both showed the
+   button under it. `LegacyAdminPermissionsTest` dropped
+   `ProductController@fetch` from `ADMIN_WRITES_STILL_UNGATED` because the route
+   is gated now (the ratchet fails on a gated route still listed); the three
+   other listed helpers stay. New tests: guest, customer, staff without the
+   permission and staff with other product permissions are refused with no
+   `cron_jobs` row; a guest JSON request gets 401; a Super Admin queues the job.
+3. **Login landing** (`ba13a884`, risk 2). `Auth\LoginController::authenticated()`
+   sends admin and staff to `shop.admin.dashboard` when they can
+   `admin_dashboard`, else to `profile.index` (no permission middleware;
+   verified by test: a staff member with no permissions gets 200 there, 403 on the
+   dashboard). Tests: Super Admin and staff with `admin_dashboard` land on the
+   dashboard; staff without it land on the profile with a 200; seller and
+   customer redirects unchanged. The new staff test fails on the unfixed
+   controller (checked by stashing the change).
+
+**Scratch SQLite run (not production, not MySQL).** The 155 migrations other
+than the new one were applied to a scratch SQLite file in the session scratchpad
+(Telescope, Pulse and Health pointed at scratch files too): 38 `store` rows, 0
+role grants. `store:sync-permissions --dry-run`: "Dry run, nothing written: **144
+would be created**, 38 already exist (182 store permissions defined in code)";
+still 38 rows. `store:sync-permissions`: "**144 created**, 38 already existed";
+182 rows, 0 grants. Second run: "**0 created**, 182 already existed". Then
+`migrate --force` ran the new migration with no change (182 rows, 0 grants).
+
+**Verification (`pre_push_check.py --full`, run on the clean tree with the three
+commits, exit 0).** Wayfinder generation; ESLint (`eslint .`); Prettier
+(`prettier --check resources/`); vue-tsc; Vitest **333 files / 2,577 tests**
+passed; Pint passed; PHPStan **0 errors**; config cache cleared; Pest
+**6,345 tests / 36,937 assertions** passed. Before it, a full parallel Pest run
+(6,336 tests) passed after the fixture fix, and each change's affected files
+were run on their own.
+
+**Not run:** Playwright, the MySQL migration group, the composer/npm audits and
+the deploy-script test (CI or attested-run only; no attestation was run and no
+`CI-Verified` trailer exists). The command and migration were not run on MySQL
+or against any production data. PR CI, PR/merge SAST and deployment do not run:
+every commit, the PR title and the merge message carry `[skip ci]`. The ledger,
+guide and audit edits came after the gate and change no executable source.
+
+**Shipping reference, recorded before merge.** The single
+[PR #452](https://github.com/arb-rajab/warehouse_management/pull/452) targets
+`develop`, titled `Store permission sync, products.fetch gate and login landing
+[skip ci]`. This documentation-only follow-up records the number before the
+owner-authorized merge and changes no executable source. All commits, the PR
+title and the merge message include `[skip ci]`; PR CI, PR/merge SAST and deploy
+do not run.

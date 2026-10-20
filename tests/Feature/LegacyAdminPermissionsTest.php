@@ -43,7 +43,6 @@ const ADMIN_WRITES_STILL_UNGATED = [
     'ProfileController@update',
 
     // Read-only AJAX helpers the product forms post to.
-    'ProductController@fetch',
     'ProductController@get_products_by_subcategory',
     'ProductController@search',
     'ProductController@sku_combination',

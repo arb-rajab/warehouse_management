@@ -4146,3 +4146,119 @@ All **7 affected Chromium cases / 3 files** passed (**27.8s**), covering the
 Inertia menu/settings, strict CSP, logo/timezone behavior, Arabic RTL/dark,
 Blade login/logout handoffs and retained seller uploader. No timeout or test
 budget was changed.
+
+## 40. Launch with Super Admin only: permission sync, fetch gate and login landing (2026-10-20)
+
+Model: **claude-sonnet-5-5**, effort **high**. Shipped in
+[PR #452](https://github.com/arb-rajab/warehouse_management/pull/452) into
+`develop`. Starts from `origin/develop` **b0384e6e** (PR #451, the
+[role-grants audit](../role-grants-audit-20261020.md)). Three separately
+committed changes close audit risks 3, 4 and 2. The
+[step 40 ledger](../store-backoffice-reconciliation-20261011.md#permission-sync-fetch-gate-and-login-landing-step-40-2026-10-20)
+records the verification and the shipping, including what was not run.
+
+**Launch decision.** Nobody uses production yet, so the owner launches with
+**only the Super Admin role**: `Gate::before()` in `AuthServiceProvider` passes a
+Super Admin through every gate. Staff roles are created later in the app's own
+role screen (`/temp/admin/roles`), from the permissions the sync below defines.
+No migration, seeder or command in this step creates a staff role, assigns a
+permission to a role or grants one to a user; `StoreRoleSeeder` still creates
+exactly `Super Admin` and `Clerk`.
+
+**Permission sync.** `App\Support\StorePermissions` is the one versioned list
+(`name => section`). `php artisan store:sync-permissions` inserts the rows it
+lacks, the migration `2026_10_20_120000_sync_store_permissions.php` calls the
+same method, and so does `StoreRoleSeeder` (fresh local and e2e databases). It
+only inserts missing `store`-guard rows (`guard_name`, `section`,
+`created_at`/`updated_at`); it never updates, renames or deletes a row, never
+reads or writes the `web` guard, grants nothing to any role or user, and
+forgets spatie's permission cache after a write. Running it again creates
+nothing. The migration's `down()` preserves data, like the other definition
+migrations. Production, in this order:
+
+1. `php artisan store:sync-permissions --dry-run` lists what it would create
+   and writes nothing (and leaves the cache alone);
+2. `php artisan store:sync-permissions` creates them and prints
+   `N created, M already existed`.
+
+The deploy script runs `artisan migrate --force`
+(`.github/scripts/deploy-remote.sh:326`), so the migration defines the rows on
+deploy without step 2; the command is for a later list change and for checking
+first. Existing rows keep their section, so a production database that already
+holds some of these names under another section name is not regrouped.
+
+**The list: 182 names = 38 + 144.** Every name in the audit JSON whose status is
+`enforced` (181) plus `delete_truck` (defined by the logistics migration,
+enforced nowhere, kept). 38 were already defined by migrations and keep the
+section those migrations assigned; **144** existed only in production data, if at
+all. `RoleController::REMOVED_ADDON_SECTIONS` stay out, and no addon permission
+was invented. A section is the sidebar module (`storeAdminMenu.ts`, the same
+groups the legacy sidebar had) of the route or controller that enforces the
+name, using an existing section name wherever one fits:
+
+| Section | Names | Source of the name | Covers |
+| --- | --- | --- | --- |
+| `dashboard` | 1 | new | the admin dashboard |
+| `product` | 33 | only named in the section migration's docblock | Products menu: product lists, digital products, bulk import/export, categories, brands, attributes, colours, reviews |
+| `sales` | 14 | order-entry migration (5) | orders and their status writes, order configuration |
+| `customer` | 13 | customer migration (1) | customers, notifications, classified products and packages (the Customers menu) |
+| `representatives` | 10 | migrations | packages, payments, visits |
+| `seller` | 11 | new | seller list and accounts, payouts, commission, verification form |
+| `trips`, `trucks`, `drivers` | 4 each | migrations | logistics |
+| `uploads` | 4 | migration | uploaded files |
+| `offers_catalog` | 3 | migration | offers catalogue |
+| `blog` | 9 | blog migration (1) | posts and categories |
+| `support` | 7 | support migration (1) | tickets, conversations, product queries |
+| `reports` | 7 | new | the seven report pages |
+| `marketing` | 21 | new | flash deals, offer deals, pop-ups, newsletters, subscribers, coupons |
+| `website_setup` | 7 | new | header, footer, pages, appearance |
+| `setup_configurations` | 22 | migration (1: `google_map_setting`) | settings pages and the shipping pages nested under Setup & Configurations |
+| `staffs` | 8 | new | staff and staff roles |
+
+Six section names are new (`dashboard`, `seller`, `reports`, `marketing`,
+`website_setup`, `staffs`); the other twelve already existed. The legacy
+section vocabulary lives in the production database and is not in the
+repository (a legacy `Permission` row took a free-text `parent`), so these
+names are the sidebar's module names, not a copy of production's. **Least
+certain:** the order permissions under `sales` (the order-entry migration's
+section) while older test fixtures show `order` for `view_all_orders`; and the
+size of `product` (33), which follows the Products menu rather than splitting
+brands, categories or attributes out.
+
+**Guard test.** `StorePermissionsTest` scans `routes/shop-admin.php`, the
+`permission:` middleware, settings map, inline `can()`/`Gate::authorize()` and
+`$permission = match` selectors of `app/Http/Controllers/Store`, and
+`storeAdminMenu.ts` for permission names, and fails naming any that
+`StorePermissions` lacks, so a new module cannot add an undefined gate. It also
+requires all three sources to contribute and over 150 names, so a regex that
+stops matching cannot pass. A new gate means adding its name to the list in the
+module's section, in the same change. The same file, the command, migration and
+seeder tests pin: a second run creates nothing, an existing row's section is
+never changed, no role grant is created, the `web` guard is untouched, and
+`--dry-run` writes nothing. `RoleControllerTest` also asserts that a migrated
+database offers the whole list in the role form, grouped by these sections.
+
+**`products.fetch`.** `POST /products/fetch` (root `ProductController::fetch`,
+queues the catalogue import) now carries `permission:add_new_product` on its
+route, keeping its name. That is the permission the Inertia products list shows
+the button under (`Products/Index.vue`) and the legacy Blade list showed it
+under. `LegacyAdminPermissionsTest` listed `ProductController@fetch` as an
+ungated "read-only AJAX helper"; it is gated now, so that entry came off the
+ratchet (the test fails on a gated route that is still listed).
+`ProductControllerTest` pins refusal (guest, customer, staff without it, staff
+with other product permissions) with no `cron_jobs` row created, and success for
+`add_new_product` and for a Super Admin.
+
+**Login landing.** `Auth\LoginController::authenticated()` sends admin and staff
+accounts to `shop.admin.dashboard` when they can `admin_dashboard` (Super Admin
+through `Gate::before()`), and to `profile.index` otherwise. The profile page is
+the signed-in account's own page; `ProfileController::middleware()` is empty and
+the route sits only behind `auth` and `admin`, so any admin or staff account can
+open it (pinned: a staff member with no permissions gets a 200 there and a 403 on
+the dashboard). Seller and customer redirects are unchanged and pinned.
+Accountants, whom `IsAdmin` admits but this redirect never matched, are not
+changed.
+
+Not verified: production data (which of these rows exist, under which
+sections), and the MySQL migration group, which runs in CI or an attested run
+only. The command and migration ran on scratch SQLite, not MySQL.

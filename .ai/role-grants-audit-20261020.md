@@ -93,6 +93,25 @@ until the owner grants them only a Super Admin passes their gates.
     who relied on posting a write without the page's permission lose it; that is
     the intended fix, but it is an access change to confirm per role (Q6).
 
+**Follow-up (2026-10-20, step 40, [PR #452](https://github.com/arb-rajab/warehouse_management/pull/452); this report's findings above are unchanged).**
+The owner launches with only the Super Admin role and creates staff roles later
+in the app, so risk 1's grants are not made here. Three risks were fixed in code
+([guide §40](rules/store-backoffice-migration.md#40-launch-with-super-admin-only-permission-sync-fetch-gate-and-login-landing-2026-10-20)):
+
+- **Risk 3 (undefined permissions):** `php artisan store:sync-permissions`, an
+  additive migration and `StoreRoleSeeder` now define all 182 names (the 181
+  enforced plus `delete_truck`) from `App\Support\StorePermissions`, inserting
+  only missing `store` rows and granting nothing; run it with `--dry-run` first.
+  A guard test fails when a gate names a permission the list lacks. Existing
+  production rows are never touched, so query Q2 still shows what production
+  holds.
+- **Risk 4 (`products.fetch`):** the route now enforces `add_new_product`, the
+  permission the Vue and legacy Blade buttons used.
+- **Risk 2 (login landing):** admin and staff accounts that cannot
+  `admin_dashboard` are sent to `profile.index` instead of the 403 dashboard.
+
+Risks 1, 5 to 10 are unchanged.
+
 **What this audit could not verify: production data.** There is no production
 database here. Which permission rows exist, which roles exist, who holds what,
 whether legacy rows were moved to guard `store` with `model_type`
