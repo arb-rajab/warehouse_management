@@ -1,6 +1,6 @@
 # Go-live checklist (store back office, storefront and warehouse app)
 
-Prepared 2026-10-20 against `develop` at `8cf1dd9` (the PR #452 merge) · shipped in PR #TBD · documentation only: no application code, migration, seeder, workflow or database was changed to produce it.
+Prepared 2026-10-20 against `develop` at `8cf1dd9` (the PR #452 merge) · shipped in [PR #453](https://github.com/arb-rajab/warehouse_management/pull/453) · documentation only: no application code, migration, seeder, workflow or database was changed to produce it.
 
 Work it top to bottom in one sitting; the appendices carry the longer explanations. Every item says **who** does it, cites the **evidence** that justifies it and says how to **verify** it.
 
