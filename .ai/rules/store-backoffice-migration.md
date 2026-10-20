@@ -4396,8 +4396,8 @@ Model: **claude-sonnet-5-5**, effort **high**. Branch `claude/storefront-seo-bwo
 from `develop` **74830af** (the PR #454 merge). Scope: the public storefront, which
 stays Blade (search engines need server-rendered HTML). No visible content, URL,
 route name, panel behaviour or sanitization changed. Five commits, one per item,
-plus this documentation; the owner runs CI separately, so every commit carries
-`[skip ci]`. §7 recorded the gaps; each was re-read in the code before changing it
+plus this documentation, shipped in [PR #455](https://github.com/arb-rajab/warehouse_management/pull/455);
+the owner runs CI separately, so every commit, the PR title and the merge commit carry `[skip ci]`. §7 recorded the gaps; each was re-read in the code before changing it
 and was right: the layout printed `robots=index, follow`, `og:url=route('home')`,
 `twitter:card=product` and the `@publisher_handle` / `@author_handle` placeholders on
 every generic page; there was no canonical, JSON-LD or hreflang; and `/sitemap.xml`
