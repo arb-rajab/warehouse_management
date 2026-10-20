@@ -5215,3 +5215,11 @@ the deploy-script test (CI or attested-run only; no attestation was run and no
 or against any production data. PR CI, PR/merge SAST and deployment do not run:
 every commit, the PR title and the merge message carry `[skip ci]`. The ledger,
 guide and audit edits came after the gate and change no executable source.
+
+**Shipping reference, recorded before merge.** The single
+[PR #452](https://github.com/arb-rajab/warehouse_management/pull/452) targets
+`develop`, titled `Store permission sync, products.fetch gate and login landing
+[skip ci]`. This documentation-only follow-up records the number before the
+owner-authorized merge and changes no executable source. All commits, the PR
+title and the merge message include `[skip ci]`; PR CI, PR/merge SAST and deploy
+do not run.

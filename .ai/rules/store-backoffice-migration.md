@@ -4149,8 +4149,9 @@ budget was changed.
 
 ## 40. Launch with Super Admin only: permission sync, fetch gate and login landing (2026-10-20)
 
-Model: **claude-sonnet-5-5**, effort **high**. Starts from `origin/develop`
-**b0384e6e** (PR #451, the
+Model: **claude-sonnet-5-5**, effort **high**. Shipped in
+[PR #452](https://github.com/arb-rajab/warehouse_management/pull/452) into
+`develop`. Starts from `origin/develop` **b0384e6e** (PR #451, the
 [role-grants audit](../role-grants-audit-20261020.md)). Three separately
 committed changes close audit risks 3, 4 and 2. The
 [step 40 ledger](../store-backoffice-reconciliation-20261011.md#permission-sync-fetch-gate-and-login-landing-step-40-2026-10-20)
