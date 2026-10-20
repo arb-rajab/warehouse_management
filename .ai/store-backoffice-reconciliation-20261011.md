@@ -5223,3 +5223,65 @@ guide and audit edits came after the gate and change no executable source.
 owner-authorized merge and changes no executable source. All commits, the PR
 title and the merge message include `[skip ci]`; PR CI, PR/merge SAST and deploy
 do not run.
+
+## Go-live hardening step 41 (2026-10-20)
+
+Branch `claude/go-live-hardening-fdk4me`, from `origin/develop` **2e1f097** (the
+PR #453 merge). Model: **claude-sonnet-5-5**, effort **high**. AGENTS.md, the
+framework and convention guides, the index, `ci.md`, the go-live checklist, the
+rules for the changed paths and guide §29 and §40 were read first;
+`wait_for_setup.py` reported the tooling ready (local MySQL included) before any
+composer, artisan or Pest use. The Boost MCP tools were not used. The decisions
+and behaviour changes are in
+[guide §41](rules/store-backoffice-migration.md#41-go-live-hardening-seeders-the-first-admin-the-production-env-template-event-cache-and-migrate---pretend-2026-10-20).
+This PR does **not** carry `[skip ci]`: it is the first to run the full `tests`
+workflow and SAST since about 40 PRs merged without them.
+
+**Commits (in order).**
+
+1. Account-writing seeders refuse production (`RefusesProduction`;
+   `StoreRoleSeeder` creates `Clerk` only in `local`/`testing`).
+   `SeedersRefuseProductionTest`: 13 cases, a dataset of five seeders run in
+   `production` against a filled database. Mutation check: removing the guard
+   from `StoreUserSeeder` and `CellStatusLogSeeder` made exactly those cases fail.
+2. `store:create-admin` and checklist 4.4/4.5. `CreateStoreAdminCommandTest`: 21
+   cases. The first run found a real defect: the success line wrapped the email
+   in `<...>`, which the console formatter drops as a style tag.
+3. `.env.production.example`, README and checklist §2. `ProductionEnvExampleTest`:
+   6 cases. Mutation check: a flipped `CSP_REPORT_ONLY`, a typo'd key and a filled
+   `DB_PASSWORD` each failed it. A first run flagged `TRUSTED_PROXIES` (read through
+   `Env::get()` in `bootstrap/app.php`); the scanner now covers that form.
+4. `event:cache` in `.github/scripts/deploy-remote.sh` (between `config:cache` and
+   `route:cache`), with two new cases in `deploy-remote-test.sh`. Mutation check:
+   deleting the line fails six checks. No workflow file was edited.
+5. The health migration names its connection, so `migrate --pretend` no longer
+   creates the health table (plus a follow-up commit narrowing the return type to
+   `string` after PHPStan `return.unusedType`). Three cases in
+   `CreateHealthTablesTest` (the existing `down()` test is kept); reverting the
+   migration fails the two new ones. `wms_migrations` is still created by Laravel's
+   own `prepareDatabase()`; documented, not fixable in app code.
+6. Documentation: checklist (F1, F2, F3, F4, F9, 2, 3.2, 3.4, 4.4, 4.5, 5.4, 5.9,
+   8.9, Appendix F), guide §41, this entry.
+
+One slip, caught before commit: a `cat >` overwrote the existing
+`CreateHealthTablesTest.php`; it was restored from git and the new cases appended.
+
+**Local verification.** `python3 .claude/scripts/pre_push_check.py --full`, run with
+the documentation edits uncommitted (so it did not attest and no `CI-Verified`
+trailer exists), exit 0: Wayfinder generation; ESLint (`eslint .`); Prettier;
+vue-tsc; Vitest **333 files / 2,577 tests**; Pint; PHPStan **0 errors**; config
+cache cleared; Pest **6,387 tests / 37,478 assertions** passed. Its first run
+stopped at PHPStan on the return type above and was repeated after the fix.
+Also run by hand: `bash .github/scripts/deploy-remote-test.sh` (passes); the four
+MySQL migration test files from `tests.yml` against the local MySQL
+(`warehouse_test`): 36 tests, 31 passed, 5 skipped (the sqlite-only cases).
+On scratch SQLite files: the Playwright seed command under `APP_ENV=testing`;
+`db:seed --class=StoreUserSeeder --force`, `store:create-admin --no-interaction`
+(new and existing email) and `migrate --pretend` then `migrate` under
+`APP_ENV=production`.
+
+**Not run locally:** Playwright, the composer/npm audits, a font-bearing
+`npm run build`, SAST, a real terminal for the hidden password prompt (the harness
+answers it), any migration or command against production data. Results of PR CI
+and SAST are in the pull request; they are not copied here because recording them
+would need another push.

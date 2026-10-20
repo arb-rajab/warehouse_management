@@ -496,7 +496,8 @@ Do every step for each module, in one change per batch.
     - Write a `tests/e2e/store-*.spec.ts` for browser-only behaviour: native
       confirms, RTL arrows, dark-mode contrast.
     - `loginAsStoreAdmin()` signs in as the seeded
-      `store-admin@example.com` / `password` (`StoreUserSeeder`).
+      `store-admin@example.com` / `password` (`StoreUserSeeder`, which refuses
+      production since §41; Playwright seeds with `APP_ENV=testing`).
 12. **Verify:** run `python3 .claude/scripts/pre_push_check.py`.
 
 **What the staff pilot changed in behaviour.** Keep these deliberate in later
@@ -4163,7 +4164,7 @@ Super Admin through every gate. Staff roles are created later in the app's own
 role screen (`/temp/admin/roles`), from the permissions the sync below defines.
 No migration, seeder or command in this step creates a staff role, assigns a
 permission to a role or grants one to a user; `StoreRoleSeeder` still creates
-exactly `Super Admin` and `Clerk`.
+exactly `Super Admin` and `Clerk` (since [§41](#41-go-live-hardening-seeders-the-first-admin-the-production-env-template-event-cache-and-migrate---pretend-2026-10-20) `Clerk` only in `local` and `testing`).
 
 **Permission sync.** `App\Support\StorePermissions` is the one versioned list
 (`name => section`). `php artisan store:sync-permissions` inserts the rows it
@@ -4262,3 +4263,129 @@ changed.
 Not verified: production data (which of these rows exist, under which
 sections), and the MySQL migration group, which runs in CI or an attested run
 only. The command and migration ran on scratch SQLite, not MySQL.
+
+## 41. Go-live hardening: seeders, the first admin, the production env template, event:cache and migrate --pretend (2026-10-20)
+
+Model: **claude-sonnet-5-5**, effort **high**. Branch `claude/go-live-hardening-fdk4me`
+from `origin/develop` **2e1f097** (the PR #453 merge, which added the
+[go-live checklist](../go-live-checklist-20261021.md)). The back-office
+migration is complete and nobody uses production yet; the checklist found five
+problems that code can fix, and this PR fixes them as five separate commits plus
+a documentation commit. It deliberately does **not** carry `[skip ci]`: about 40
+earlier PRs merged without CI, so this is the first PR to run the full `tests`
+workflow and SAST. The [ledger entry](../store-backoffice-reconciliation-20261011.md#go-live-hardening-step-41-2026-10-20)
+lists the checks that ran.
+
+**1. Seeders refuse production (checklist F1, 4.5, 8.9).** Only `DatabaseSeeder`
+refused production, so `db:seed --class=StoreUserSeeder --force` created
+`store-admin@example.com` / `password` as a Super Admin there.
+`Database\Seeders\Concerns\RefusesProduction::refuseInProduction()` is the one
+guard (`app()->isProduction()`, a `RuntimeException`, called first in `run()`), now
+used by `DatabaseSeeder`, `StagingRealisticDataSeeder` (both had the same inline
+check), `StoreUserSeeder`, and the two seeders that create mobile users with the
+factory's known password, `CellStatusLogSeeder` and `CellVerificationRoundSeeder`.
+`StoreRoleSeeder` keeps creating `Super Admin` and the permission rows in every
+environment (the first-admin command and local setup need them) and creates the
+`Clerk` demo role only when the environment is `local` or `testing`; nothing in
+`app/`, `routes/`, `config/`, `database/migrations` or the Blade views refers to
+`Clerk` (only tests and e2e fixtures do, under `testing`). Playwright seeds with
+`APP_ENV=testing` (`playwright.config.ts`), so `loginAsStoreAdmin()` and the e2e
+fixtures are unchanged; the Playwright seed path was run by hand under
+`APP_ENV=testing` on scratch SQLite. **Not guarded, on purpose:** `ProductSeeder`,
+`RowSeeder`, `PalletSeeder`, `CellVerificationReportSeeder` and `PageSeeder` write
+demo data but no accounts. Calling one by name in production still works and is
+still wrong (checklist 8.9); guarding them is a follow-up if the owner wants it.
+`SeedersRefuseProductionTest` runs each guarded seeder in `production` against a
+filled database and asserts no account, role, grant or log row changed.
+
+**2. `store:create-admin {email} {--name=} {--promote}` (F9, 4.4).** After
+`migrate` there is no `Super Admin` role and seeders must not run, so the checklist
+carried a tinker recipe. The command, in one transaction: creates the `Super
+Admin` role (guard `store`) if missing; creates the store user (`user_type`
+`admin`, `email_verified_at` set, email lower-cased, name from `--name` or the part
+before the `@`); assigns the role. Decisions:
+
+- The password is read only from `secret()` prompts (enter, then confirm), so it is
+  in no argument, option, environment variable, shell history, process list, log
+  or output. Minimum 12 characters; the production `Password::defaults()` rule
+  (mixed case, digit, symbol, breach list) is **not** applied, because the breach
+  check calls an external service. A mismatch, a short or an empty password
+  (which is what `--no-interaction` yields) writes nothing and exits 1.
+- An email that already belongs to a store user (compared case-insensitively) is
+  refused with nothing written, before any prompt. `--promote` then only assigns
+  the role: no prompt, no change to the password or other fields, and it is a
+  no-op if the user already holds `Super Admin`. This command adds one limit the
+  brief did not ask for: `--promote` refuses an account that is banned or whose
+  `user_type` is not `admin`, `staff` or `accountant`, because `IsAdmin` would
+  answer it 404 and a customer or seller account holding Super Admin would pass
+  every `Gate::before()` check elsewhere.
+- Permissions: if `wms_permissions` has no `store` row at all it runs the same
+  `StorePermissions::sync()` (inside the transaction); if only some are missing it
+  prints the exact `store:sync-permissions` command and writes nothing; if none
+  are missing it says nothing. It never gives any permission to any role or user;
+  the only grant it can write is the one `Super Admin` assignment.
+- Output lists what was created or already existed. It avoids `<...>` around the
+  email: the console formatter reads that as a style tag and silently drops it
+  (found by the test).
+
+`CreateStoreAdminCommandTest` covers a new user, an existing email refused,
+`--promote` (and its refusals), a confirmation mismatch, a short and an empty
+password, an invalid email, no password argument or option, `APP_ENV=production`
+while `StoreUserSeeder` refuses, a synced and an unsynced permission table, a
+rollback when the user cannot be saved, and the grant tables.
+
+**3. `.env.production.example` (F3, checklist §2).** `.env.example` is unchanged
+(local development and CI depend on it). The new file holds production values and
+a comment on every key checklist §2 flags: `APP_ENV=production`, `APP_DEBUG=false`,
+a placeholder `APP_URL`, `SESSION_SECURE_COOKIE=true`, `CSP_REPORT_ONLY=false`
+(the comment says there is no report endpoint, so the browser console is the only
+signal), `TELESCOPE_ENABLED=false`, SMTP mail, MySQL, database drivers for
+session, cache and queue, daily logs, the backup and health settings. It holds
+only placeholders: secrets are empty or `CHANGE_ME`. Optional keys whose empty
+value would override a safer default (`HEALTH_TO_ADDRESS`,
+`BACKUP_NOTIFICATION_EMAIL`, `TRUSTED_PROXIES`) are commented out, because `KEY=`
+sets an empty string, not "unset". `PULSE_ENABLED` is left `true` and marked as the
+owner's decision (checklist 2.12). `BROADCAST_CONNECTION`, in `.env.example`, is
+omitted: nothing reads it. `ProductionEnvExampleTest` pins the safe values, the
+absence of anything secret-looking, that every key (active or commented as a bare
+`# KEY=value`) is read by `env()`/`Env::get()`/`import.meta.env` somewhere, and
+that, loaded as the process environment, the template yields production,
+`debug=false`, secure cookies, an enforced CSP, Telescope off and SMTP mail in the
+real config. README Deployment and checklist §2 point to it.
+
+**4. `event:cache` in the deploy (F4, 5.4, 5.9).** The caches are in the
+repo-owned `.github/scripts/deploy-remote.sh`, not only in a workflow, and the
+existing `deploy-remote-test.sh` covers that script. It now runs `config:cache`,
+`event:cache`, `route:cache`, `view:cache` (the order `artisan optimize` uses)
+after `migrate` and before the release is published, inside the live window, so a
+failure rolls back like any other step. The test stub logs every artisan call; two
+new cases pin the order (before `queue:restart`, the first command after the
+flip) and the rollback on `FAIL_EVENT_CACHE`. No workflow file was edited.
+Production health's `OptimizedAppCheck` therefore passes from the first deploy
+made by the updated script. The change under `.github/` makes CI run every group.
+
+**5. `migrate --pretend` (F2, 3.4).** Cause: `Migrator::pretendToRun()` pretends on
+the connection returned by the migration's `getConnection()`. The health
+migration wrote to the `health` connection with `Schema::connection()` but did not
+name it (Telescope's migration does), so the migrator pretended on the default
+connection only and the health table was created for real; the real `migrate`
+afterwards then failed with "table already exists". Fix: the migration now
+overrides `getConnection()` (small and safe: the same pattern as Telescope's; a
+real run behaves as before, now inside a transaction on the health connection).
+`CreateHealthTablesTest` runs `migrate --pretend` and then `migrate` against
+scratch SQLite files and asserts the pretend run printed the health SQL and
+created nothing but `wms_migrations`. **Not fixed, because app code cannot:**
+`migrate --pretend` still installs the empty migration table (Laravel's own
+`prepareDatabase()`), so it remains unsafe before the one-time `migrations` →
+`wms_migrations` rename on an existing database. The checklist records the safe
+alternative, `migrate:status --pending`, which writes nothing.
+
+**Behaviour changes, for the next person:** `db:seed --class=<account seeder>`
+now throws in production; `StoreRoleSeeder` no longer creates `Clerk` outside
+`local`/`testing` (staging included); `store:create-admin` is new; the deploy runs
+one more artisan command and fails the deploy (with rollback) if it fails; the
+health migration names its connection. No route, permission, schema or data
+change. Still open for the owner (checklist §12) and not touched here: everything
+that depends on systems the repository cannot show, the accepted-risk register,
+the payment-gateway and fetch-button decisions, and the unguarded demo seeders
+above.

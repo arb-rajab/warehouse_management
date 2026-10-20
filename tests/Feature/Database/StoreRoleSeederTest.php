@@ -6,7 +6,7 @@ use App\Support\StorePermissions;
 use Database\Seeders\StoreRoleSeeder;
 use Illuminate\Support\Facades\DB;
 
-test('the store role seeder defines every store permission and still creates only Super Admin and Clerk, with no grants', function () {
+test('the store role seeder defines every store permission, and in testing still creates only Super Admin and Clerk, with no grants', function () {
     DB::table('wms_permissions')->where('guard_name', 'store')->delete();
 
     (new StoreRoleSeeder)->run();

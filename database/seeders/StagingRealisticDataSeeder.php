@@ -15,6 +15,7 @@ use App\Models\Row;
 use App\Models\User;
 use App\Services\DashboardStatsCache;
 use Carbon\CarbonInterface;
+use Database\Seeders\Concerns\RefusesProduction;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -54,6 +55,8 @@ use RuntimeException;
  */
 class StagingRealisticDataSeeder extends Seeder
 {
+    use RefusesProduction;
+
     public const int COLUMNS = 44;
 
     public const int LEVELS = 3;
@@ -89,9 +92,7 @@ class StagingRealisticDataSeeder extends Seeder
 
     public function run(): void
     {
-        if (app()->isProduction()) {
-            throw new RuntimeException('Refusing to run database seeders in production.');
-        }
+        $this->refuseInProduction();
 
         // Fixed seed: every run on a given database makes the same choices.
         $this->random = new Randomizer(new Mt19937(20261001));
