@@ -20,6 +20,10 @@
 @section('meta_title'){{ $meta_title }}@stop
 @section('meta_description'){{ $meta_description }}@stop
 
+@section('structured_data')
+    @include('shop.frontend.partials.json_ld', ['schemas' => \App\Support\StructuredData::listing($category_id ?? null, $brand_id ?? null)])
+@endsection
+
 
 @section('content')
 

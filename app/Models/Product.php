@@ -47,6 +47,13 @@ use Illuminate\Support\Facades\App;
  * @property int|null $thumbnail_img
  * @property bool $published
  * @property int|null $user_id
+ * @property string|null $description
+ * @property string|null $meta_description
+ * @property string|null $meta_img
+ * @property string|null $photos
+ * @property string|null $mat_id
+ * @property int $digital
+ * @property int $variant_product
  * @property-read string|null $image_url
  * @property-read int $boxes_count
  * @property-read int|null $minimum_pallets

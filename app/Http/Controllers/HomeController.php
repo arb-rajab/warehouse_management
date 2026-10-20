@@ -260,7 +260,7 @@ class HomeController extends Controller
 
             $product_queries = ProductQuery::where('product_id', $detailedProduct->id)->where('customer_id', '!=', Auth::id())->latest('id')->paginate(3);
             $total_query = ProductQuery::where('product_id', $detailedProduct->id)->count();
-            $reviews = $detailedProduct->reviews()->paginate(3);
+            $reviews = $detailedProduct->reviews()->with('user')->paginate(3);
 
             // Pagination using Ajax
             if (request()->ajax()) {

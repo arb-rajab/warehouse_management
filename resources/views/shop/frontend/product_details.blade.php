@@ -10,6 +10,10 @@
 
 @section('og_type', 'product')
 
+@section('structured_data')
+    @include('shop.frontend.partials.json_ld', ['schemas' => \App\Support\StructuredData::product($detailedProduct)])
+@endsection
+
 @section('meta')
     <meta property="product:price:currency"
         content="{{ \App\Models\Currency::findOrFail(get_setting('system_default_currency'))->code }}" />

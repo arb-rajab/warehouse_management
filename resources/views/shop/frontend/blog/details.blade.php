@@ -10,6 +10,10 @@
 
 @section('og_type', 'article')
 
+@section('structured_data')
+    @include('shop.frontend.partials.json_ld', ['schemas' => [\App\Support\StructuredData::blogPost($blog)]])
+@endsection
+
 {{-- An unpublished post is reachable by its link; it is not for the index. --}}
 @section('robots'){{ $blog->status == 1 ? 'index, follow' : 'noindex, nofollow' }}@stop
 
