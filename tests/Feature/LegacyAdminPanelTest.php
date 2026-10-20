@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\RepresentativePaymentController;
 use App\Models\StoreUser;
+use Inertia\Testing\AssertableInertia as Assert;
 
 /**
  * Regression coverage for the legacy store's admin panel under /temp/admin,
@@ -24,6 +25,49 @@ test('a store admin logging in is sent to the store admin dashboard', function (
 
     $this->post('/temp/login', ['email' => $admin->email, 'password' => 'correct-password'])
         ->assertRedirect(route('shop.admin.dashboard'));
+});
+
+test('a staff member holding admin_dashboard logging in is sent to the store admin dashboard', function () {
+    $staff = createStoreStaff('admin_dashboard');
+
+    $this->post('/temp/login', ['email' => $staff->email, 'password' => 'correct-password'])
+        ->assertRedirect(route('shop.admin.dashboard'));
+
+    $this->get(route('shop.admin.dashboard'))->assertOk();
+});
+
+test('a staff member without admin_dashboard logging in lands on their profile page, not a 403', function () {
+    $staff = createStoreStaff('view_all_orders');
+    $noPermissions = createStoreStaff();
+
+    foreach ([$staff, $noPermissions] as $user) {
+        $this->post('/temp/login', ['email' => $user->email, 'password' => 'correct-password'])
+            ->assertRedirect(route('profile.index'));
+
+        $this->get(route('profile.index'))->assertOk()->assertInertia(
+            fn (Assert $page) => $page->component('Store/Admin/Profile/Index')->where('profile.id', $user->id)
+        );
+        $this->get(route('shop.admin.dashboard'))->assertForbidden();
+
+        $this->post('/temp/logout');
+        $this->flushSession();
+        app('auth')->forgetGuards();
+    }
+});
+
+test('logging in as a seller or a customer still lands where it did', function () {
+    $seller = createStoreUser('seller');
+    $customer = createStoreUser('customer');
+
+    $this->post('/temp/login', ['email' => $seller->email, 'password' => 'correct-password'])
+        ->assertRedirect(route('seller.dashboard'));
+
+    $this->post('/temp/logout');
+    $this->flushSession();
+    app('auth')->forgetGuards();
+
+    $this->post('/temp/login', ['email' => $customer->email, 'password' => 'correct-password'])
+        ->assertRedirect(route('dashboard'));
 });
 
 test('a permission-gated admin page renders for a Super Admin', function () {

@@ -214,7 +214,10 @@ class LoginController extends Controller implements HasMiddleware
         }
 
         if (auth()->user()->user_type == 'admin' || auth()->user()->user_type == 'staff') {
-            return redirect()->route('shop.admin.dashboard');
+            // The dashboard needs admin_dashboard; a staff member without it
+            // would get a 403 straight after signing in. Their own profile
+            // page has no permission check, so anyone signed in can open it.
+            return redirect()->route(auth()->user()->can('admin_dashboard') ? 'shop.admin.dashboard' : 'profile.index');
         } elseif (auth()->user()->user_type == 'seller') {
             return redirect()->route('seller.dashboard');
         } else {
