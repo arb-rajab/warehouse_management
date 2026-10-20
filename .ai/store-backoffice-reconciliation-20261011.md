@@ -5127,3 +5127,18 @@ uploader. The harness reset only its dedicated e2e SQLite databases; no normal
 application database was reset. Final log: `/workspace/work/step39/playwright.log`.
 Every requested local check ran; no required `--full` stage was skipped.
 The separately listed CI-only/unscoped checks remain not run.
+
+
+**Shipping reference, recorded before merge.** Implementation commit
+**630b2a49** (`Retire the unused Blade admin shells [skip ci]`) was committed
+only after the successful full gate and affected Chromium run, then pushed to
+`origin/codex/step-39-retire-shells`. The single
+[PR #450](https://github.com/arb-rajab/warehouse_management/pull/450) targets
+`develop`, titled `Retire the unused Blade admin shells [skip ci]`.
+This documentation-only follow-up records the number before the explicitly
+authorized merge. It changes no executable source; prior verification remains
+applicable, and documentation links/consistency plus `git diff --check` are
+checked for this follow-up. All commits, the PR title and merge message include
+`[skip ci]`; no Claude attribution or CI-Verified trailer is added. PR CI,
+PR/merge SAST and deploy do not run. The whole-browser/MySQL/audit/deploy-script
+checks remain separately identified as not run above.

@@ -4043,6 +4043,11 @@ repairs and skipped CI-only groups. No attestation was used.
 
 ## 39. Retire the unused admin shells (2026-10-20)
 
+[PR #450](https://github.com/arb-rajab/warehouse_management/pull/450) is the single
+PR into `develop`. Implementation commit **630b2a49** passed the explicit full
+pre-commit gate and all seven affected Chromium cases. This documentation-only
+`[skip ci]` follow-up records the PR number before the owner-authorized merge.
+
 Implemented on `codex/step-39-retire-shells` from freshly fetched `origin/develop`
 **ee668d6e** (PR #449). Model: **GPT-6 Codex**; the exact model variant and
 configured reasoning effort are not exposed by this runtime. The
