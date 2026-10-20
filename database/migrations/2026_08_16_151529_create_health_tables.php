@@ -16,7 +16,7 @@ return new class extends Migration
      * created the table and the real migrate that followed failed with
      * "table already exists". Telescope's migration does the same.
      */
-    public function getConnection(): ?string
+    public function getConnection(): string
     {
         return (new HealthCheckResultHistoryItem)->getConnectionName();
     }
