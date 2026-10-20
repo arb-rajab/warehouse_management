@@ -95,7 +95,8 @@ test('every view that overrides the meta sections names its own URL as canonical
         ->and($head['twitter']['twitter:card'])->toHaveCount(1)
         ->and($head['twitter']['twitter:title'])->toHaveCount(1)
         ->and($head['twitter'])->not->toHaveKeys(['twitter:site', 'twitter:creator']);
-    $response->assertDontSee('@publisher_handle')->assertDontSee('@author_handle')->assertDontSee('itemprop=', false);
+    $response->assertDontSee('@publisher_handle')->assertDontSee('@author_handle');
+    expect(substr_count($response->getContent(), 'itemprop="name"'))->toBe(1);
 })->with(fn () => collect(metaViewPages())->map(fn (array $page) => $page)->all());
 
 test('digital_product_details, which no route renders, also leaves the URL to the layout', function () {

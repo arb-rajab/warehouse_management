@@ -4,6 +4,13 @@
 <meta name="keywords" content="{{ $seo['keywords'] }}">
 <link rel="canonical" href="{{ $seo['canonical'] }}">
 
+<!-- Schema.org markup for Google+ -->
+<meta itemprop="name" content="{{ $seo['ogTitle'] }}">
+<meta itemprop="description" content="{{ $seo['ogDescription'] }}">
+@if ($seo['image'])
+    <meta itemprop="image" content="{{ $seo['image'] }}">
+@endif
+
 <!-- Twitter Card data -->
 <meta name="twitter:card" content="{{ $seo['twitterCard'] }}">
 <meta name="twitter:title" content="{{ $seo['ogTitle'] }}">
