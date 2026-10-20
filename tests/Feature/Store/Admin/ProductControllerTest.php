@@ -617,6 +617,36 @@ test('the product fetch button keeps the legacy JSON endpoint and its one-reques
     expect(DB::table('cron_jobs')->count())->toBe(1);
 });
 
+test('the product fetch import is refused to a caller without add_new_product and queues nothing', function (string $caller) {
+    actingAsRefusedStoreCaller($caller);
+
+    assertStoreCallerRefused($this->post(route('products.fetch')), $caller);
+
+    expect(DB::table('cron_jobs')->count())->toBe(0);
+})->with('refused store admin callers');
+
+test('the product fetch import answers a guest JSON request with 401 and queues nothing', function () {
+    $this->postJson(route('products.fetch'))->assertUnauthorized();
+
+    expect(DB::table('cron_jobs')->count())->toBe(0);
+});
+
+test('the product fetch import is refused to staff holding other product permissions only', function () {
+    actingAsStoreUser(createStoreStaff('show_all_products', 'product_edit', 'product_bulk_import'));
+
+    $this->postJson(route('products.fetch'))->assertForbidden();
+
+    expect(DB::table('cron_jobs')->count())->toBe(0);
+});
+
+test('the product fetch import is allowed for a Super Admin', function () {
+    actingAsStoreUser(createStoreAdmin());
+
+    $this->postJson(route('products.fetch'))->assertOk()->assertExactJson(['success' => true]);
+
+    $this->assertDatabaseHas('cron_jobs', ['command' => 'fetching-products-by-admin', 'status' => 'pending']);
+});
+
 test('the list migration keeps storefront, seller and app product contracts', function () {
     expect(view()->exists('shop.backend.product.products.index'))->toBeFalse()
         ->and(view()->exists('shop.backend.product.products.sku_combinations'))->toBeTrue()
