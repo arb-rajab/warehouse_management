@@ -4551,7 +4551,7 @@ exists), `sameAs` social links in `Organization`, prices in markup, redirects fr
 hosts, automatic sitemap invalidation (it expires), per-page `<meta name="keywords">` cleanup (still
 printed, as before).
 
-**Found on the way, not fixed (outside this scope).** The product page divides by `unit_equal` for a
+**Found on the way, not fixed (outside this scope; the first three were fixed afterwards, see §43).** The product page divides by `unit_equal` for a
 discounted product when it is `0` / `null` (`details.blade.php`, "Price Per Piece": a 500 for a verified
 customer); `top_selling_products.blade.php` lazy-loads `product_translations` and builds `route('product')`
 for products without a slug (a 500 in `local` / `testing`, where strict mode is on, or with a slugless
@@ -4611,3 +4611,56 @@ edited**. Not run: Playwright, the MySQL migration tests, the composer / npm aud
 `forPage()` / `cursor()` queries were only exercised on SQLite); no rich-results test, no Search Console, no real
 crawler; the headers were read from `php artisan serve`, not from the production proxy. The PR was merged
 without CI, SAST or deploy (all skipped on purpose).
+
+## 43. Storefront 500s fixed: unit_equal, top sellers, missing rows (2026-10-20)
+
+Model: **claude-sonnet-5-5**, effort **medium**. Branch `claude/storefront-seo-bugs-dvyhna` from
+`develop` **508d883** (the PR #455 merge). Scope: the four defects §42 listed under "Found on the way, not
+fixed" as 500s. The storefront stays Blade; no visible content for a valid row, price rule (prices only for a
+signed-in, admin-verified customer), URL or route name changed. Shipped in
+[PR #456](https://github.com/arb-rajab/warehouse_management/pull/456). Each fix is its own commit, with its test
+written first and seen failing. Every commit, the PR title and the merge commit carry `[skip ci]`.
+
+| # | Bug | Fix | Proving test |
+| --- | --- | --- | --- |
+| 1 | `unit_price / unit_equal` threw `DivisionByZeroError` for a verified customer when `unit_equal` is `0` or `null` (the discounted branch of `product_details/details.blade.php`, and `partials/product_box_1.blade.php`, which every listing card uses). The undiscounted branch was already guarded by `@if (unit_equal > 0)`. | `Product::$price_per_piece` (`pricePerPiece()` accessor): `unit_price / unit_equal`, or `null` unless `unit_equal > 0`. The three views print the per-piece line only when it is not `null`. The value and the `€` formatting for a valid `unit_equal` are the same expression as before. | `StorefrontUnitEqualTest` (0 and null on the product page, discounted and not, and the listing, for a verified customer and a guest; a valid `unit_equal` prints the same `€0.625`), `ProductTest` (accessor: 4, 1, 0, null, negative). Before the fix 4 of 9 failed with `DivisionByZeroError`. |
+| 2 | The top-selling widget built `route('product', $slug)` for up to six products, so a product with a null or empty slug threw `UrlGenerationException` (a 500), and it lazy-loaded translations, taxes, stocks and the thumbnail per product. | `Product::topSellingOf($sellerId, $limit = 6)` scope: same seller, `filter_products()` rules, `num_of_sale desc` and limit of six, plus `slug` not null and not empty, a column list of what the view and price helpers read, and eager loads (`product_translations`, `taxes`, `stocks`, `thumbnailUpload`, each column-limited). `uploaded_asset()` takes an optional preloaded `Upload` (the old call is unchanged). | `StorefrontTopSellingProductsTest` (slugless and blank-slug products not listed and the page is 200; order, six-item limit, seller scoping, unpublished and auction products excluded; translated names and tax-inclusive prices under strict mode; same query count for 1 and 6 products), `ProductTest` (scope). Before the fix all 4 failed (a 500, and lazy-loading violations). |
+| 3 | `BlogController::blog_details` and the five policy actions (`HomeController`) read a row with `first()` and passed `null` to the view: a 500 instead of a 404. `blog_details` also ignored `status`, so an unpublished post could be opened by its slug while the sitemap excludes it. | `firstOrFail()` on all six; `blog_details` also requires `status = 1`. | `StorefrontMissingRowsTest` (11 tests: missing, unpublished and soft-deleted post; the published post still renders its content; each policy page with and without its row; custom page and mobile page missing). Before the fix 9 of 11 failed. |
+
+**Deliberate behaviour change.** An unpublished blog post (`status = 0`) now answers **404** at
+`/temp/blog/{slug}`; before, it rendered with `noindex, nofollow`. The sitemap already left it out. A post
+that is published, and every existing policy or custom page, is unchanged. `pages` has **no** status or
+visibility column (`id, type, title, slug, content, meta_*, keywords, timestamps`), so no published rule
+applies to policy or custom pages; `PageController::show_custom_page` (and `mobile_custom_page`) already
+answered 404 for a missing row and only gained tests. The two existing tests that opened an unpublished post
+(`StorefrontRobotsTest` "a view can set its own robots directive and it wins", `StorefrontSeoMetaTest` "a blog
+post is an article and an unpublished one is not indexable") had that one request replaced by rendering
+`shop.frontend.blog.details` directly with the unpublished `Blog`, so they still pin the view's own robots rule;
+no other assertion changed.
+
+**Found on the way, not fixed (for the owner; checklist D15).** Each is a 500 (in `local` / `testing`, and with a
+slugless row in production) only for a row that lacks the column:
+
+- `route('product', $x->slug)` with a possibly empty slug, unguarded: `product_details/related_products.blade.php:16,27`
+  (same defect as the top sellers, same category, plus lazy loading under strict mode),
+  `product_details/offered_products.blade.php:21,32`, `partials/product_box_1.blade.php:20,22` (every listing card),
+  `index.blade.php:105,107,173`, `flash_deal_details.blade.php:36,38`, `partials/search_content.blade.php:33`,
+  `partials/cart.blade.php:58`, `partials/addedToCart.blade.php:56,66`, `partials/coupon_box.blade.php:74`,
+  `view_compare.blade.php:26` (also two `Product::find()` per row), `order_confirmed.blade.php:169`,
+  `user/order_details_customer.blade.php:159,162`, `user/view_wishlist.blade.php:19,38`,
+  `user/customer/dashboard.blade.php:263,279`, `user/digital_purchase_history.blade.php:23`, and
+  `digital_product_details.blade.php:477,489,637,648` (no route renders that view).
+- `route('products.category' / 'products.brand', $x->slug)` with no guard: `product_details/details.blade.php:88`,
+  `all_brand.blade.php:31`, `all_category.blade.php:34`, `product_listing.blade.php:59-85,273`, `index.blade.php:303`.
+- Division by a column that can be zero, outside the storefront views: `app/Console/Commands/NewFetchProductsCommand.php:272,491`
+  and `AllProductsCommand.php:388,408` divide by the feed's `Unit_Equal` (a console sync, not a page).
+  `get_price_per_piece()` (`app/Http/Helpers.php:1391`, used by two API resources) treats 0 and null as 1
+  and prints a per-piece price; it was left alone because the API contract is not in scope.
+
+None was fixed: each would hide or replace a product link (visible content) or needs a query change and a
+decision on what to show for a product without a slug, so it is not a one-line, risk-free change.
+
+**What was verified, and what was not.** See the final report of the PR for the exact commands. Not run:
+Playwright, the MySQL migration tests, the composer / npm audits and the deploy-script test (the attested run
+was not used, so no `CI-Verified` trailer exists); nothing ran on MySQL; no real browser or crawler.
+PR CI, SAST and deploy did not run (skipped on purpose).

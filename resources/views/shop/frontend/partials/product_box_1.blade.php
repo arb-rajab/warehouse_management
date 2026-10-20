@@ -138,7 +138,9 @@
                 <!-- price -->
                 <div class="">
                     <span class="mx-2 fw-400 text-primary">{{ home_discounted_base_price($product) . "  \t ||   "}}</span>
-                    <span class="mx-2 fw-800 text-primary">{{ " €" . $product->unit_price  / $product->unit_equal }}</span>
+                    @if ($product->price_per_piece !== null)
+                        <span class="mx-2 fw-800 text-primary">{{ " €" . $product->price_per_piece }}</span>
+                    @endif
                 </div>
             @endif
             @if($product->auction_product == 1)

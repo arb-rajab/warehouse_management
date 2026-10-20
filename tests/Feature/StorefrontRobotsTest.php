@@ -1,9 +1,11 @@
 <?php
 
+use App\Models\Blog;
 use App\Support\Seo;
 use Database\Seeders\PageSeeder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\ViewErrorBag;
 
 /**
  * Which storefront pages may be indexed (App\Support\Seo::robots()), the
@@ -101,7 +103,9 @@ test('a view can set its own robots directive and it wins', function () {
     $this->seed(PageSeeder::class);
     DB::table('blogs')->insert(['category_id' => 1, 'title' => 'Draft', 'slug' => 'draft', 'status' => 0]);
 
-    expect(storefrontHead($this->get('/temp/blog/draft')->assertOk())['robots'])->toBe('noindex, nofollow');
+    // Rendered directly: the controller answers 404 for an unpublished post. The $errors bag is the session middleware's.
+    view()->share('errors', new ViewErrorBag);
+    expect(storefrontHead(view('shop.frontend.blog.details', ['blog' => Blog::where('slug', 'draft')->firstOrFail(), 'recent_blogs' => collect()])->render())['robots'])->toBe('noindex, nofollow');
 });
 
 test('the rendered login, registration and password pages print noindex, nofollow', function (string $uri) {

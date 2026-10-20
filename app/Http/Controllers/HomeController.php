@@ -519,31 +519,31 @@ class HomeController extends Controller
 
     public function sellerpolicy()
     {
-        $page =  Page::where('type', 'seller_policy_page')->first();
+        $page =  Page::where('type', 'seller_policy_page')->firstOrFail();
         return view("shop.frontend.policies.sellerpolicy", compact('page'));
     }
 
     public function returnpolicy()
     {
-        $page =  Page::where('type', 'return_policy_page')->first();
+        $page =  Page::where('type', 'return_policy_page')->firstOrFail();
         return view("shop.frontend.policies.returnpolicy", compact('page'));
     }
 
     public function supportpolicy()
     {
-        $page =  Page::where('type', 'support_policy_page')->first();
+        $page =  Page::where('type', 'support_policy_page')->firstOrFail();
         return view("shop.frontend.policies.supportpolicy", compact('page'));
     }
 
     public function terms()
     {
-        $page =  Page::where('type', 'terms_conditions_page')->first();
+        $page =  Page::where('type', 'terms_conditions_page')->firstOrFail();
         return view("shop.frontend.policies.terms", compact('page'));
     }
 
     public function privacypolicy()
     {
-        $page =  Page::where('type', 'privacy_policy_page')->first();
+        $page =  Page::where('type', 'privacy_policy_page')->firstOrFail();
         return view("shop.frontend.policies.privacypolicy", compact('page'));
     }
 

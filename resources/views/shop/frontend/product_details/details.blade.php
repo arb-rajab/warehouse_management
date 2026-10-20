@@ -291,16 +291,18 @@
                             </div>
                         </div>
                     </div>
-                    <div class="row no-gutters mb-3">
-                        <div class="col-sm-2">
-                            <div class="text-secondary fs-14 fw-400">{{ translate('Price Per Piece') }}</div>
+                    @if ($detailedProduct->price_per_piece !== null)
+                        <div class="row no-gutters mb-3">
+                            <div class="col-sm-2">
+                                <div class="text-secondary fs-14 fw-400">{{ translate('Price Per Piece') }}</div>
+                            </div>
+                            <div class="col-sm-10">
+                                <strong
+                                    class="fs-16 fw-700 text-primary">{{ '€' . $detailedProduct->price_per_piece }}</strong>
+                                <span class="opacity-70"> / PIECE</span>
+                            </div>
                         </div>
-                        <div class="col-sm-10">
-                            <strong
-                                class="fs-16 fw-700 text-primary">{{ '€' . $detailedProduct->unit_price / $detailedProduct->unit_equal }}</strong>
-                            <span class="opacity-70"> / PIECE</span>
-                        </div>
-                    </div>
+                    @endif
                 @endif
 
 
@@ -373,7 +375,7 @@
                         </div>
                     </div>
 
-                    @if ($detailedProduct->unit_equal > 0)
+                    @if ($detailedProduct->price_per_piece !== null)
                         <div class="row no-gutters mb-3">
                             <div class="col-sm-2">
                                 <div class="text-secondary fs-14 fw-400">{{ translate('Price Per Piece') }}</div>
@@ -382,7 +384,7 @@
 
                             <div class="col-sm-10">
                                 <strong
-                                    class="fs-16 fw-700 text-primary">{{ '€' . $detailedProduct->unit_price / $detailedProduct->unit_equal }}</strong>
+                                    class="fs-16 fw-700 text-primary">{{ '€' . $detailedProduct->price_per_piece }}</strong>
                                 <span class="opacity-70"> / PIECE</span>
                             </div>
 

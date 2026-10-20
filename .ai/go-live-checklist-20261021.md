@@ -6,6 +6,8 @@ Prepared 2026-10-20 against `develop` at `8cf1dd9` (the PR #452 merge) · shippe
 
 **Updated by the storefront SEO PR** ([PR #455](https://github.com/arb-rajab/warehouse_management/pull/455), [guide §42](rules/store-backoffice-migration.md#42-storefront-seo-canonical-robots-sitemap-and-json-ld-2026-10-20)). The storefront now prints canonical, robots, Open Graph and JSON-LD tags, serves a generated `/robots.txt` and a cached sitemap, and sends `X-Robots-Tag` on the back offices and APIs. Items 11.4 to 11.9 and gate G14 are the search-engine steps only the owner can do, after launch and outside the repository. Nothing in that PR was applied to any production system.
 
+**Updated by the storefront 500-fixes PR** ([PR #456](https://github.com/arb-rajab/warehouse_management/pull/456), guide [§43](rules/store-backoffice-migration.md#43-storefront-500s-fixed-unit_equal-top-sellers-missing-rows-2026-10-20)). A product with `unit_equal` of 0 or null, a slugless top seller, and a missing blog post or policy row no longer return a 500, and an unpublished blog post is now a 404 (deliberate; the sitemap already excluded it). The remaining slug-less cases are defect D15 in 11.3.
+
 Work it top to bottom in one sitting; the appendices carry the longer explanations. Every item says **who** does it, cites the **evidence** that justifies it and says how to **verify** it.
 
 ## How to read this file
@@ -494,6 +496,7 @@ URLs after the first one in a cell are relative to `/temp/admin`. Run it twice: 
   | D12 | Header/footer scripts and rich-text WAF exceptions are held (R8) | guide `store-backoffice-migration.md:601-604` |
   | D13 | On MySQL stored decimals display as `12.50` in the product edit form; a product whose stored choice order does not match its stock names shows default rows and saving deletes the unmatched rows | guide `store-backoffice-migration.md:2456-2462` |
   | D14 | Blade rich-text (summernote) remains on 8 fields in 8 views; the mobile API has GET routes that change data | guide `store-backoffice-migration.md:621-626`, `.ai/rules/legacy-albaraka-holland.md:1734-1742` |
+  | D15 | Storefront views that build `route('product' / 'products.category' / 'products.brand', $x->slug)` without a null-slug guard (related and offered products, every listing card, cart, wishlist, search, compare, order pages): a 500 for a row without a slug. The `unit_equal` division, the top-selling widget and the missing blog / policy rows were fixed in guide §43 | guide `store-backoffice-migration.md` §43, "Found on the way" |
 
   - Verify: §12 (G13) lists each defect with accept / ticket.
 - [ ] **11.4** **[owner]** Search engines, once the real domain serves the storefront (the checks below mean nothing on a staging host): confirm the **canonical host**. Every canonical URL, `og:url`, sitemap URL and the `Sitemap:` line is built from `APP_URL` (`app/Support/Seo.php`), not from the host that was asked. `APP_URL` must be the one public address (scheme, host, www or not): `curl -s https://<HOST>/temp | grep -E 'rel="canonical"|og:url'` must print that address. Then make every other spelling (http, the other of www / non-www) redirect to it at the web server or CDN: the application does not.
@@ -530,7 +533,7 @@ URLs after the first one in a cell are relative to `/temp/admin`. Run it twice: 
 | G10 Uploads persist across releases; backups and restore rehearsal done; off-host copies confirmed | 5.6, 9.2, 9.3 | | | |
 | G11 Rollback owner and procedure named | 10.2, 10.4 | | | |
 | G12 First-week watch list owner assigned | 11.1 | | | |
-| G13 Known defects D1 to D14 accepted or ticketed | 11.3 | | | |
+| G13 Known defects D1 to D15 accepted or ticketed | 11.3 | | | |
 | G14 Search-engine steps after launch: canonical host, robots, sitemap submitted, rich-results test, `/temp` removal plan, deliberate omissions accepted | 11.4 to 11.9 | | | |
 | **Go / no-go** | all of the above | | | |
 

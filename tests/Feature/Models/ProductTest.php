@@ -723,3 +723,32 @@ test('matchingHistoryFilters narrows the matching logs to cells in the filtered 
 
     expect(Product::query()->matchingHistoryFilters($request)->pluck('id')->all())->toBe([$matching->id]);
 });
+
+test('price_per_piece divides unit_price by a positive unit_equal and is null for zero, null or negative', function (mixed $unitEqual, int|float|null $expected) {
+    $product = Product::factory()->make(['unit_price' => 2.5, 'unit_equal' => $unitEqual]);
+
+    expect($product->price_per_piece)->toBe($expected);
+})->with([
+    'four pieces' => [4, 0.625],
+    'one piece' => [1, 2.5],
+    'zero' => [0, null],
+    'null' => [null, null],
+    'negative' => [-3, null],
+]);
+
+test('topSellingOf lists the seller\'s best selling visible products with a slug, at most the limit, and skips noise', function () {
+    $seller = 41;
+    $make = fn (string $slug, int $sales, array $extra = []) => Product::factory()->create([
+        'slug' => $slug, 'user_id' => $seller, 'num_of_sale' => $sales, 'added_by' => 'admin', 'auction_product' => 0, ...$extra,
+    ]);
+    $make('low', 1);
+    $make('high', 9);
+    $make('middle', 5);
+    $make('no-slug-hit', 99, ['slug' => null]);
+    $make('blank-slug-hit', 98, ['slug' => '']);
+    $make('unpublished-hit', 97, ['published' => false]);
+    Product::factory()->create(['slug' => 'other-seller', 'user_id' => $seller + 1, 'num_of_sale' => 100, 'added_by' => 'admin', 'auction_product' => 0]);
+
+    expect(Product::topSellingOf($seller)->pluck('slug')->all())->toBe(['high', 'middle', 'low'])
+        ->and(Product::topSellingOf($seller, 2)->pluck('slug')->all())->toBe(['high', 'middle']);
+});
