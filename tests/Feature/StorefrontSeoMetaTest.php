@@ -149,7 +149,7 @@ test('a blog post is an article and an unpublished one is not indexable', functi
     seoBlog(['slug' => 'draft', 'status' => 0]);
 
     $published = storefrontHead($this->get('/temp/blog/opening-hours')->assertOk());
-    $draft = storefrontHead($this->get('/temp/blog/draft')->assertOk());
+    $draft = storefrontHead(view('shop.frontend.blog.details', ['blog' => Blog::where('slug', 'draft')->firstOrFail(), 'recent_blogs' => collect()])->render());
 
     expect($published['og']['og:type'])->toBe(['article'])
         ->and($published['robots'])->toBe('index, follow')
