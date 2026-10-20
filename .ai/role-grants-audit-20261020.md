@@ -12,7 +12,7 @@ code, migrations, seeders or any database was changed. Deliverables:
   for a later session to diff.
 
 Audited tree: `6ec65e405f1270255b8f01e5235b7238f1838aee` (`origin/develop`,
-PR #450 merge). Shipped in PR #TBD.
+PR #450 merge). Shipped in PR #451.
 
 ## 0. Summary
 
