@@ -212,6 +212,21 @@ class Product extends Model
     }
 
     /**
+     * The storefront's "price per piece": `unit_price` over `unit_equal`, or
+     * `null` when `unit_equal` is not a positive number (the store's column is
+     * nullable and holds 0 for some synced products), so a page can leave the
+     * line out instead of dividing by zero.
+     *
+     * @return Attribute<int|float|null, never>
+     */
+    protected function pricePerPiece(): Attribute
+    {
+        return Attribute::make(
+            get: fn (): int|float|null => $this->unit_equal > 0 ? $this->unit_price / $this->unit_equal : null,
+        );
+    }
+
+    /**
      * The id/name list used to populate the mobile app's product filter dropdown.
      *
      * @return Collection<int, array{id: int, name: string, ar_name: string, active: bool}>
