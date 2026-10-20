@@ -4601,7 +4601,7 @@ one-hour cache working as designed.
 
 **What was verified, and what was not.** Run here: the focused Pest files while developing
 (`StorefrontSeoMetaTest`, `StorefrontMetaViewsTest`, `StorefrontRobotsTest`, `StorefrontSitemapTest`,
-`StorefrontStructuredDataTest`: 18 + 18 + 71 + 18 + 12 tests, all real routes rendered); the server run above;
+`StorefrontStructuredDataTest`: 16 + 18 + 71 + 18 + 12 tests, all real routes rendered); the server run above;
 and `python3 .claude/scripts/pre_push_check.py --full`, which passed on the final code: ESLint, Prettier,
 vue-tsc, Vitest (333 files, 2577 tests), Pint, PHPStan (0 errors) and Pest (**6522 tests, 38091 assertions**).
 The first `--full` run failed on two existing tests that assert the blog page's `itemprop` tags
