@@ -169,9 +169,9 @@ export function isStoreMenuGroup(item: StoreMenuItem): item is StoreMenuGroup {
 }
 
 /**
- * The back office's sidebar, from resources/views/shop/backend/inc/admin_sidenav.blade.php
- * less the removed addons' blocks and the stray duplicate Shipping group. The
- * System → Server status page was deleted from both sidebars (guide §29).
+ * The back office's only sidebar. It preserves the established permission and
+ * setting gates, excluding removed addons, the duplicate Shipping group and
+ * System → Server status (guide §§29, 39).
  * Where the Blade gate disagreed with the route's own permission, the
  * route's wins, so a link never leads to a 403.
  */

@@ -20,7 +20,8 @@ paths:
 
 # Moving the store back office from Blade to Inertia
 
-Latest follow-up: [admin seller product list](#38-admin-seller-product-list-2026-10-20).
+Latest follow-up: [retire the unused admin shells](#39-retire-the-unused-admin-shells-2026-10-20).
+Catalogue follow-up: [admin seller product list](#38-admin-seller-product-list-2026-10-20).
 Classified-products follow-up: [admin classified products](#37-admin-classified-products-2026-10-19).
 Seller-settings follow-up: [seller commission and verification form](#36-seller-commission-and-verification-form-2026-10-19).
 Payment follow-up: [seller payments and withdrawals](#35-seller-payments-and-withdrawals-2026-10-19).
@@ -50,7 +51,7 @@ Customer-package follow-up: [customer package migration verification](#12-custom
 Carrier follow-up: [carrier migration verification](#11-carrier-administration-follow-up-2026-10-12).
 PR #377 verification: [final all-store browser results](../store-backoffice-reconciliation-20261011.md#final-all-store-browser-verification-2026-10-12)
 close the pending browser gate. Earlier dated verification sections remain
-historical evidence; §10 records reconciliation results and §§11–38 record
+historical evidence; §10 records reconciliation results and §§11–39 record
 subsequent module verification and limits.
 
 ## 1. Decision and scope
@@ -64,8 +65,9 @@ new dependencies, feature usage, removal or changes in business behavior.
 - **Not in scope:** the storefront, the seller area, the store's auth pages,
   its emails and its PDFs. They stay Blade.
 
-The back office moves one module at a time. While it does, converted and
-unconverted pages share `/temp` (§2.6).
+The back-office Blade to Inertia conversion is complete (§39). The storefront,
+seller panel, auth pages, emails and PDFs remain outside it. They share `/temp`
+with the Inertia back office through the coexistence mechanism (§2.6).
 
 - The original audit baseline predates the staff/roles pilot. Do not add
   independently developed branch counts or treat their progress snapshots as
@@ -119,8 +121,8 @@ keeps WMS's `locale === 'ar'`.
   and `LogoutLink` posting to the store's `shop.logout`;
 - below `lg`, a menu button.
 
-**Gates.** The menu data is `lib/storeAdminMenu.ts`. It is the Blade sidebar
-(`inc/admin_sidenav`), with every entry gated as Blade gated it:
+**Gates.** The menu data is `lib/storeAdminMenu.ts`, now the only back-office
+sidebar. It preserves the established gates of the retired Blade sidebar (§39):
 
 - `permission`, which may be any-of;
 - `setting`: a business setting that switches the section on. The vendor's
@@ -534,28 +536,30 @@ blog-editor, newsletter/ticket-detail, website-settings, digital-product
 form, physical product create and edit form, trip list, trip form, trip
 orders, trip detail, legacy reviews retirement, server status deletion and trip map
 picker, representative visit detail, Google Map settings and dashboard
-follow-ups in §§11–38, including all three seller administration stages, admin classified products and the admin seller product list. The original
+follow-ups in §§11–39, including all three seller administration stages, admin classified products and the admin seller product list. The original
 reconciliation was based on `8e3f82b60b2b4dc951b97ccfed985a75e9e6be69` and
 merged through PR #377. Carrier administration was then implemented separately
 from latest `origin/develop` at `018dd1802c0b2fc99ffbf0e097594fe0f0f3dfef`.
-Verification below distinguishes the original reconciliation from this follow-up.
+Verification below distinguishes the original reconciliation from each follow-up.
+The back-office Blade to Inertia conversion is complete; §39 retires its dead shells.
 
 | Module/subset | State | Actual behavior / remaining work |
 | --- | --- | --- |
 | Staff and roles | Complete pilot | Existing six Inertia pages retained; action gates unchanged |
-| Reference/shipping/tax/currency | Complete selected subset | Canonical `35ae3133` controllers/forms/routes; duplicate `e5523338` implementation superseded |
+| Reference/shipping/tax/currency | Complete | Canonical `35ae3133` controllers/forms/routes; duplicate `e5523338` implementation superseded |
 | Carrier administration | Complete | List/create/edit and CRUD/status use Inertia; existing `manage_carriers` gate, tariff contract and public/API consumers preserved (§11) |
-| Language/settings | Complete selected subset | Language CRUD and translation-selector validation separated; dedicated settings endpoints with reserved-key protection; general settings use Inertia with a typed writer and a config-managed timezone (§17); the generic `business_settings.update` writer is retired (§20); the Google Map settings GET uses Inertia and the approved Leaflet picker (§32) |
-| Reports/notifications | Complete selected subset | Inertia report/admin notification routes; public/customer/seller notification consumers remain |
-| Uploads/profile | Complete selected subset | Canonical `944e2e1e` backend/picker; per-action authorization and authenticated-user profile |
-| Customers/representatives | Complete selected subset | Customers, addresses, representatives/packages/payments, customer package administration (§12), visit list/detail/day maps (§31) and the admin classified-products list/publish/delete (§37) use Inertia; customer-facing classified pages and the mobile API remain separate |
-| Catalogue | Complete selected subset | Attributes/values, colors, brand discount, reviews (the legacy Blade list retired, §28), bulk import/export and offers catalogue implemented; category (§13) and brand (§14) administration complete; digital product list, deletion, download and switches converted (§15); digital product create/edit converted on the shared editor and canonical uploader (§21); in-house and all-products lists with their switches, duplicate, delete and bulk delete converted (§16); physical product create converted with its typed variant/SKU endpoint (§22); physical product edit converted with translation tabs and stored variant rows (§23); the admin seller product list, its approval and remaining row actions use the same Inertia list and shared writer (§38) |
-| Website/support | Complete selected subset | Header/home, footer, appearance, custom pages (§20), conversations, product queries, the ticket list and the ticket detail with its typed reply use Inertia; footer, appearance and page rich text use the shared editor, cleaned on write (§20); the header/footer scripts stay on their compatibility endpoint as plain code fields; script policy, `manage_website_scripts` and rich-text WAF exceptions stay held |
-| Marketing/blog | Complete selected subset | Coupons, flash/offer deals, campaign products, popups, subscribers and blog categories/list/actions integrated; blog post create/edit (§18) and the newsletter form (§19) use Inertia with the shared Tiptap editor; the typed newsletter send and bounded recipient search are unchanged |
-| Logistics | Partial | Drivers/trucks converted; the all-trips and today's-trips lists with their status dialog, notes, delete and bulk delete converted (§24); the trip create and edit forms converted without their map (§25); the trip orders list with its bulk status, invoice number and delivered actions converted (§26); the trip detail with its checkpoint notes, status and CMR download converted without its map (§27); the trip map picker converted on Leaflet from npm (§30); visit list/detail/day maps use Inertia and bundled Leaflet (§31) |
-| Orders/dashboard | Complete selected subset | Orders and entry forms converted; stored tax metadata and line-price-only grand total preserved; shell utilities integrated; dashboard converted to Inertia with bundled Chart.js (§33) |
+| Language/settings | Complete | Language CRUD and translation-selector validation separated; dedicated settings endpoints with reserved-key protection; general settings use Inertia with a typed writer and a config-managed timezone (§17); the generic `business_settings.update` writer is retired (§20); the Google Map settings GET uses Inertia and the approved Leaflet picker (§32) |
+| Reports/notifications | Complete | Inertia report/admin notification routes; public/customer/seller notification consumers remain |
+| Uploads/profile | Complete | Canonical `944e2e1e` backend/picker; per-action authorization and authenticated-user profile |
+| Customers/representatives | Complete | Customers, addresses, representatives/packages/payments, customer package administration (§12), visit list/detail/day maps (§31) and the admin classified-products list/publish/delete (§37) use Inertia; customer-facing classified pages and the mobile API remain separate |
+| Catalogue | Complete | Attributes/values, colors, brand discount, reviews (the legacy Blade list retired, §28), bulk import/export and offers catalogue implemented; category (§13) and brand (§14) administration complete; digital product list, deletion, download and switches converted (§15); digital product create/edit converted on the shared editor and canonical uploader (§21); in-house and all-products lists with their switches, duplicate, delete and bulk delete converted (§16); physical product create converted with its typed variant/SKU endpoint (§22); physical product edit converted with translation tabs and stored variant rows (§23); the admin seller product list, its approval and remaining row actions use the same Inertia list and shared writer (§38) |
+| Website/support | Complete | Header/home, footer, appearance, custom pages (§20), conversations, product queries, the ticket list and the ticket detail with its typed reply use Inertia; footer, appearance and page rich text use the shared editor, cleaned on write (§20); the header/footer scripts stay on their compatibility endpoint as plain code fields; script policy, `manage_website_scripts` and rich-text WAF exceptions stay held |
+| Marketing/blog | Complete | Coupons, flash/offer deals, campaign products, popups, subscribers and blog categories/list/actions integrated; blog post create/edit (§18) and the newsletter form (§19) use Inertia with the shared Tiptap editor; the typed newsletter send and bounded recipient search are unchanged |
+| Logistics | Complete | Drivers/trucks converted; the all-trips and today's-trips lists with their status dialog, notes, delete and bulk delete converted (§24); the trip create and edit forms converted without their map (§25); the trip orders list with its bulk status, invoice number and delivered actions converted (§26); the trip detail with its checkpoint notes, status and CMR download converted without its map (§27); the trip map picker converted on Leaflet from npm (§30); visit list/detail/day maps use Inertia and bundled Leaflet (§31) |
+| Orders/dashboard | Complete | Orders and entry forms converted; stored tax metadata and line-price-only grand total preserved; shell utilities integrated; dashboard converted to Inertia with bundled Chart.js (§33) |
 | Seller administration | Complete: stages 34–36 | Seller accounts/verification/profile (§34), payments/withdrawals (§35), commission and verification form configuration (§36) use Inertia. Seller administration conversion is complete. The admin seller product list is converted with the catalogue in §38; no checkout, seller-area, storefront or role-grant policy changes |
-| Public/seller/auth/PDF consumers | Retained | Blade coexistence, PDF layouts, Inertia root and CSP middleware remain |
+| Back-office shells | Retired | No application consumer remains; three dead files removed, seven protected backend templates retained (§39) |
+| Public/seller/auth/email/PDF consumers | Retained | Blade coexistence, PDF layouts, Inertia root and CSP middleware remain |
 
 ### 4.1 Seller prerequisite and role grants
 
@@ -679,35 +683,16 @@ dedicated allowlisted compatibility endpoint, not a general settings writer.
 
 ### 5.1 Actual retained backend Blade files
 
-The current backend inventory contains **10 Blade files**, down from 73 after
-removing three screens each for carriers, customer packages and categories, the
-two brand screens, the digital product list (§15), general settings (§17), the
-two blog post forms (§18), the newsletter and ticket detail (§19), the
-footer, appearance and three custom-page screens (§20), the two digital
-product forms (§21), the physical product create form (§22), and the
-physical product edit form, its choice script and the unconsumed blank shell
-(§23), the trip list with its status modal (§24), the two trip forms
-with their two checkpoint row partials (§25), the trip orders list
-(§26), the trip checkpoints page with its status modal (§27), the legacy product
-reviews list (§28), the server status page (§29), and the trip map picker with
-its three `trips/inc` partials (§30), and the two representative visit
-detail screens with their map partial (§31), Google Map settings (§32) and the
-admin dashboard (§33), the five seller list/account views (§34), and six
-seller payment/withdrawal views (§35), and the two seller settings views (§36), and the admin classified-products list (§37), then the admin seller product list (§38).
-The in-house and all-products lists (§16) removed none at that stage;
-§38 removes their formerly shared `product/products/index.blade.php` after
-its last consumer, the admin seller product list, moves to Inertia.
-`layouts/app`, `inc/admin_nav` and `inc/admin_sidenav` now have no remaining
-extender. The unused shell still includes both navigation partials; all three
-files are deliberately retained for deletion in the next step.
-These files remain physically present. Hardening a Blade handler does not count
-as conversion. Protected shells/downloads/invoices are not conversion targets.
+The current backend inventory contains **7 Blade files**, down from 10 in §38
+and 73 at reconciliation. Step 39 removes the unused `layouts/app`,
+`inc/admin_nav` and `inc/admin_sidenav`, including the now-empty `inc/` directory.
+There are **0** admin app-shell extenders and **3** plain-layout extenders.
+Every retained file has a protected consumer; none is an unconverted back-office screen.
 
-- **downloads:** `downloads/brand.blade.php`, `downloads/category.blade.php`, `downloads/user.blade.php`.
-- **inc:** `inc/admin_nav.blade.php`, `inc/admin_sidenav.blade.php`.
-- **invoices:** `invoices/invoice.blade.php`.
-- **layouts:** `layouts/app.blade.php`, `layouts/layout.blade.php`.
-- **product:** `product/products/sku_combinations.blade.php`, `product/products/sku_combinations_edit.blade.php`.
+- **downloads:** `downloads/brand.blade.php`, `downloads/category.blade.php`, `downloads/user.blade.php` (PDF bulk-upload reference downloads).
+- **invoices:** `invoices/invoice.blade.php` (admin/seller invoice PDF rendering).
+- **layouts:** `layouts/layout.blade.php` (seller login, delivery-boy login and 503).
+- **product:** `product/products/sku_combinations.blade.php`, `product/products/sku_combinations_edit.blade.php` (seller create/edit AJAX fragments and retained compatibility tests).
 
 ## 6. Registered migrated controllers and consumers
 
@@ -801,6 +786,14 @@ analysis exclusion lists. Seller list/account handlers use `Store\Admin\SellerCo
 the ticket detail use their typed admin controllers and Inertia pages (§19). Explicit approval and implementation gaps are tracked
 by source/path in the reconciliation ledger. The unavailable audit commit
 `aed3feab5b6edd95fb941ee92a455e058403def5` is excluded and was not recovered or included.
+
+
+**Completion (§39).** All back-office screens use Inertia. The seven backend
+Blade templates in §5.1 serve downloads/PDFs, protected login/error pages and
+seller SKU fragments. `StoreAdminLayout` and `storeAdminMenu.ts` are the only
+admin shell/sidebar. No route or controller changes in step 39: **1,046**
+`/temp` and **434** `/temp/admin` registrations remain. `HandleStoreBladePages`
+and `store.blade_csp` stay for the storefront, seller panel, auth and 503 pages.
 
 
 ## 7. Independent reconstructed audit (2026-10-11, prompt 3)
@@ -3928,6 +3921,8 @@ skipped CI-only groups. The root customer publishing compatibility action stays.
 
 ## 38. Admin seller product list (2026-10-20)
 
+The inventory below records the step 38 checkpoint; §39 supersedes its shell-retention notes.
+
 [PR #449](https://github.com/arb-rajab/warehouse_management/pull/449) is the single
 PR into `develop`. Implementation commit **c41f0a79** passed the explicit full
 gate and all ten affected Chromium cases before pushing. This documentation-only
@@ -4045,3 +4040,109 @@ lint/format/types and config clearing. The normal production build and all
 **10 affected Chromium cases** passed. Develop baseline: **326 Pest tests /
 2,816 assertions**. The ledger separately records failed attempts, runtime
 repairs and skipped CI-only groups. No attestation was used.
+
+## 39. Retire the unused admin shells (2026-10-20)
+
+[PR #450](https://github.com/arb-rajab/warehouse_management/pull/450) is the single
+PR into `develop`. Implementation commit **630b2a49** passed the explicit full
+pre-commit gate and all seven affected Chromium cases. This documentation-only
+`[skip ci]` follow-up records the PR number before the owner-authorized merge.
+
+Implemented on `codex/step-39-retire-shells` from freshly fetched `origin/develop`
+**ee668d6e** (PR #449). Model: **GPT-6 Codex**; the exact model variant and
+configured reasoning effort are not exposed by this runtime. The
+[step 39 ledger](../store-backoffice-reconciliation-20261011.md#retire-the-unused-admin-shells-step-39-2026-10-20)
+records actual verification and shipping, including skipped checks.
+
+**Completion and deletion proof.** The back-office Blade to Inertia conversion
+is complete. Searches covered `app`, `routes`, all `resources/views` (including
+seller, frontend, auth, emails and PDFs), `config`, `tests`, `public/assets/js`
+and `.ai`. No application extends, includes or renders the three dead shells.
+Before deletion, only the dead layout itself included its two navigation
+partials; the two explicitly identified tests rendered them directly. Other
+matches in `.ai` are historical evidence, preserved as such. Those test pins
+are rewritten against live surfaces. `git rm` removes exactly:
+
+- `resources/views/shop/backend/layouts/app.blade.php`;
+- `resources/views/shop/backend/inc/admin_nav.blade.php`;
+- `resources/views/shop/backend/inc/admin_sidenav.blade.php`.
+
+The empty `inc/` directory disappears. Inventory is **10 → 7** backend Blade
+files, **0** removed-shell consumers and **3** plain-layout extenders. No menu
+data, gates, routes, business behavior, dependency or lockfile changes.
+
+**Test contracts.** `StoreBackOfficeShellTest` now rejects resurrected shells
+and dot/slash references anywhere in executable app/route/resource/config/test
+sources or public JS, and retains the plain-layout/PDF consumer assertions.
+It also explicitly protects both seller SKU fragments. The settings test was
+actually pinning saved logo/site-name readers, not timezone/CSP/head behavior:
+it now reads the saved settings and both preview URLs from the Inertia settings
+screen. Mobile API and protected login readers remain checked. Only the removed
+sidebar's `alt="Holland Store"` and shell's `&copy; Holland Store` markup
+assertions are dropped; Inertia uses the established translated brand and
+configured application title. Existing timezone and strict-CSP cases remain.
+The visit test now pins `HandleInertiaRequests` permissions for ordinary staff
+with/without only `view_representative_visits`. Vitest checks the actual
+`visibleStoreMenu` result in both cases, including the visit URL, label,
+permission and Inertia-link flag. No unrelated product permission is required.
+
+**Asset audit: what the deleted layout loaded first.** Its head loaded external
+Poppins CSS from Google Fonts, then `assets/css/vendors.css`, conditional
+`bootstrap-rtl.min.css`, and `aiz-core.css`. Its body loaded
+`assets/js/vendors.js`, then `aiz-core.js`, followed by `@yield('script')`.
+It defined inline body font sizing, `AIZ.local` uploader translations, flash
+notifications, a language-change POST handler and `menuSearch()`, and yielded
+`content`/`modal`. Its navigation partials loaded no additional JS/CSS files.
+It had no `@push`/`@stack`; no retained backend view defines a script section.
+
+Each asset name was searched across seller, frontend, auth, emails and PDF
+views, then all views/public JS for indirect users. **No public asset is proven
+admin-shell-only, so no asset file is deleted.** Remaining consumers:
+
+| Asset | Retained consumers / reason it stays |
+| --- | --- |
+| `js/vendors.js`, `js/aiz-core.js` | Seller layout; frontend layout; plain backend layout used by seller login, delivery-boy login and 503. The standalone bKash app also loads vendors.js. jQuery/Bootstrap, uploader, widgets and notification behavior remain needed. |
+| `css/vendors.css`, `css/bootstrap-rtl.min.css` | Seller, frontend and plain backend layouts (RTL CSS conditional); standalone bKash/mobile custom-page views also use vendors.css. |
+| `css/aiz-core.css` | Frontend and plain backend layouts, standalone bKash app and mobile custom pages. Seller uses its own aiz-seller.css. |
+| `js/intlTelutils.js` (not loaded by the removed shell) | Auth login/register/password email, frontend login/registration/create-user and frontend layout telephone widgets. |
+| `css/aiz-seller.css` (not loaded by the removed shell) | Seller layout. |
+| `css/custom-style.css` (not loaded by the removed shell) | Frontend layout, bKash app and mobile custom page. |
+| Summernote in `js/vendors.js`, initialized by `aiz-core.js` `textEditor()`; CSS/fonts in `css/vendors.css` and `css/font/summernote.*` | Eight editor fields in eight seller/frontend views: seller physical/digital product create/edit, seller ticket reply, frontend customer product create/edit and customer ticket reply. Bundled Chart.js/AIZ chart helper also stays for `shop/seller/dashboard.blade.php`. |
+
+Emails and PDF views have no direct consumers of those bundles; invoice and
+reference-download PDF styling remains self-contained. Auth views inherit the
+frontend layout; seller/delivery-boy login and 503 inherit the plain layout.
+The shared font/image references inside retained CSS stay with it.
+
+**Blade helpers.** Deleting the shell removes its own inline helpers and script
+outlet. Seller `menuSearch()` and its sidenav caller remain; seller/frontend
+`AIZ.local`, flash notifications and language handlers remain. Script sections
+in seller, frontend and auth views are consumed by their retained layouts;
+login script sections are consumed by `layouts/layout`. None is removed.
+`HandleStoreBladePages` and `store.blade_csp` are still required for their
+inline scripts and full-load Inertia handoffs (§§2.5–2.6).
+
+**What stays Blade on purpose and why:**
+
+- Storefront and customer area: public commerce/customer UI, outside this migration.
+- Seller panel: independent seller workflows, including both backend SKU fragments.
+- Auth pages and 503: login/recovery/registration and error flows; retain the plain backend layout and Blade CSP/coexistence handling.
+- Emails: server-rendered mail templates.
+- PDFs: invoices and bulk-upload reference downloads; retain all four backend PDF templates.
+- `resources/views/app.blade.php`: the Inertia root document, required to boot Vue.
+
+Verification and the final PR reference are recorded in the ledger. Every
+shipping commit, PR title and merge message uses `[skip ci]`. PR CI/SAST/deploy
+do not run. No attestation trailer is written by hand.
+
+The explicit full pre-commit gate passed with no skipped stages: **333 Vitest
+files / 2,577 tests**, **6,323 Pest tests / 36,823 assertions**, whole-repo
+lint/format/types, Pint, PHPStan (0 errors), Wayfinder and config clearing.
+The unchanged develop baseline passed **118 Pest tests / 772 assertions**.
+The normal production build passed; route listings are identical as
+parsed JSON (**1,046** `/temp`, **434** `/temp/admin`). CI-only groups outside
+`--full` and the affected browser results are identified separately in the ledger.
+All **7 affected Chromium cases / 3 files** passed (**27.8s**), covering the
+Inertia menu/settings, strict CSP, logo/timezone behavior, Arabic RTL/dark,
+Blade login/logout handoffs and retained seller uploader. No timeout or test
+budget was changed.
