@@ -16,39 +16,32 @@ lang="{{ str_replace('_', '-', app()->getLocale()) }}"
     <meta name="app-url" content="{{ url('/temp') }}">
     <meta name="file-base-url" content="{{ my_asset('') }}">
 
-    <title>@yield('meta_title', get_setting('website_name').' | '.get_setting('site_motto'))</title>
+    {{-- Title, description, canonical, robots and the Open Graph / Twitter tags
+         come from App\Support\Seo: a view sets them with the meta_title,
+         meta_description, meta_keywords, meta_image, og_type, robots and
+         canonical sections, and the settings fill in whatever it leaves blank.
+         @yield('meta') below stays for a view's own extra tags and
+         @yield('structured_data') for its JSON-LD. --}}
+    @php
+        $seo = app(\App\Support\Seo::class)->head([
+            'title' => $__env->yieldContent('meta_title'),
+            'description' => $__env->yieldContent('meta_description'),
+            'keywords' => $__env->yieldContent('meta_keywords'),
+            'image' => $__env->yieldContent('meta_image'),
+            'type' => $__env->yieldContent('og_type'),
+            'robots' => $__env->yieldContent('robots'),
+            'canonical' => $__env->yieldContent('canonical'),
+        ]);
+    @endphp
+    <title>{{ $seo['title'] }}</title>
 
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="robots" content="index, follow">
-    <meta name="description" content="@yield('meta_description', get_setting('meta_description') )" />
-    <meta name="keywords" content="@yield('meta_keywords', get_setting('meta_keywords') )">
+    @include('shop.frontend.partials.seo_meta')
 
     @yield('meta')
 
-    @if(!isset($detailedProduct) && !isset($customer_product) && !isset($shop) && !isset($page) && !isset($blog))
-        <!-- Schema.org markup for Google+ -->
-        <meta itemprop="name" content="{{ get_setting('meta_title') }}">
-        <meta itemprop="description" content="{{ get_setting('meta_description') }}">
-        <meta itemprop="image" content="{{ uploaded_asset(get_setting('meta_image')) }}">
-
-        <!-- Twitter Card data -->
-        <meta name="twitter:card" content="product">
-        <meta name="twitter:site" content="@publisher_handle">
-        <meta name="twitter:title" content="{{ get_setting('meta_title') }}">
-        <meta name="twitter:description" content="{{ get_setting('meta_description') }}">
-        <meta name="twitter:creator" content="@author_handle">
-        <meta name="twitter:image" content="{{ uploaded_asset(get_setting('meta_image')) }}">
-
-        <!-- Open Graph data -->
-        <meta property="og:title" content="{{ get_setting('meta_title') }}" />
-        <meta property="og:type" content="website" />
-        <meta property="og:url" content="{{ route('home') }}" />
-        <meta property="og:image" content="{{ uploaded_asset(get_setting('meta_image')) }}" />
-        <meta property="og:description" content="{{ get_setting('meta_description') }}" />
-        <meta property="og:site_name" content="{{ config('app.name') }}" />
-        <meta property="fb:app_id" content="{{ config('services.facebook.pixel_id') }}">
-    @endif
+    @yield('structured_data')
 
     <!-- Favicon -->
     <link rel="icon" href="{{ uploaded_asset(get_setting('site_icon')) }}">

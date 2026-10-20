@@ -205,6 +205,57 @@ function createStoreProduct(array $attributes = []): Product
 }
 
 /**
+ * Set a storefront setting (a `business_settings` row, read by get_setting()).
+ */
+function storeSetting(string $type, string|int|null $value): void
+{
+    DB::table('business_settings')->updateOrInsert(['type' => $type], ['value' => $value]);
+}
+
+/**
+ * The <head> a storefront response printed, as search engines read it: the
+ * title, the robots / description / canonical values, every Open Graph and
+ * Twitter tag by name, and each JSON-LD block decoded. Pass a response or the
+ * HTML itself.
+ *
+ * @return array{title: string|null, robots: string|null, description: string|null, canonical: list<string>, og: array<string, list<string>>, twitter: array<string, list<string>>, jsonLd: list<array<string, mixed>>, jsonLdRaw: list<string>}
+ */
+function storefrontHead(TestResponse|string $page): array
+{
+    $html = is_string($page) ? $page : $page->getContent();
+    $document = new DOMDocument;
+    libxml_use_internal_errors(true);
+    $document->loadHTML('<?xml encoding="utf-8"?>'.$html);
+    libxml_clear_errors();
+    $xpath = new DOMXPath($document);
+
+    $first = fn (string $query): ?string => ($node = $xpath->query($query)->item(0)) === null ? null : $node->nodeValue;
+    $grouped = function (string $attribute, string $prefix) use ($xpath): array {
+        $values = [];
+        foreach ($xpath->query("//head/meta[starts-with(@{$attribute}, '{$prefix}')]") as $node) {
+            $values[$node->getAttribute($attribute)][] = $node->getAttribute('content');
+        }
+
+        return $values;
+    };
+    $raw = [];
+    foreach ($xpath->query('//script[@type="application/ld+json"]') as $node) {
+        $raw[] = $node->textContent;
+    }
+
+    return [
+        'title' => $first('//head/title'),
+        'robots' => $first('//head/meta[@name="robots"]/@content'),
+        'description' => $first('//head/meta[@name="description"]/@content'),
+        'canonical' => array_map(fn (DOMNode $node) => $node->nodeValue, iterator_to_array($xpath->query('//head/link[@rel="canonical"]/@href'))),
+        'og' => $grouped('property', 'og:'),
+        'twitter' => $grouped('name', 'twitter:'),
+        'jsonLd' => array_map(fn (string $json) => json_decode($json, true, flags: JSON_THROW_ON_ERROR), $raw),
+        'jsonLdRaw' => $raw,
+    ];
+}
+
+/**
  * A default delivery address in the Netherlands for store user `$userId`.
  */
 function addStoreAddress(int $userId): int

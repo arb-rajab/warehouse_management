@@ -5,6 +5,7 @@ namespace App\Providers;
 use App\Http\Middleware\HandleStoreBladePages;
 use App\Http\Middleware\HttpsProtocol;
 use App\Http\Middleware\Language;
+use App\Http\Middleware\SendNoIndexHeader;
 use App\Http\Middleware\UseStoreAuthGuard;
 use App\Http\Middleware\WrapStoreApiResources;
 use Illuminate\Foundation\Support\Providers\RouteServiceProvider as ServiceProvider;
@@ -61,10 +62,13 @@ class RouteServiceProvider extends ServiceProvider
             // docblock for why every one of these three route files needs it.
             // HandleStoreBladePages last: it inspects the page each route
             // answers with, so Blade and Inertia pages can share /temp.
-            Route::middleware(['web', UseStoreAuthGuard::class, Language::class, HttpsProtocol::class, HandleStoreBladePages::class])
+            // The store back office and the seller area are never for a search
+            // index: SendNoIndexHeader first, so it also marks the redirect a
+            // guest gets and the error a rejected caller gets.
+            Route::middleware([SendNoIndexHeader::class.':always', 'web', UseStoreAuthGuard::class, Language::class, HttpsProtocol::class, HandleStoreBladePages::class])
                 ->group(base_path('routes/shop-admin.php'));
 
-            Route::middleware(['web', UseStoreAuthGuard::class, Language::class, HttpsProtocol::class, HandleStoreBladePages::class])
+            Route::middleware([SendNoIndexHeader::class.':always', 'web', UseStoreAuthGuard::class, Language::class, HttpsProtocol::class, HandleStoreBladePages::class])
                 ->group(base_path('routes/shop-seller.php'));
 
             // No outer `api` group, matching the legacy app's own
@@ -73,8 +77,8 @@ class RouteServiceProvider extends ServiceProvider
             // one group of throttle:wms + wms.auth, the trip routes auth:store_api
             // and driver). WrapStoreApiResources is this app's own
             // addition, as above.
-            Route::prefix('api')->middleware(WrapStoreApiResources::class)->group(base_path('routes/shop-api_warehouse.php'));
-            Route::prefix('api')->middleware(WrapStoreApiResources::class)->group(base_path('routes/shop-api_trip.php'));
+            Route::prefix('api')->middleware([SendNoIndexHeader::class.':always', WrapStoreApiResources::class])->group(base_path('routes/shop-api_warehouse.php'));
+            Route::prefix('api')->middleware([SendNoIndexHeader::class.':always', WrapStoreApiResources::class])->group(base_path('routes/shop-api_trip.php'));
 
             Route::middleware(['web', UseStoreAuthGuard::class, Language::class, HttpsProtocol::class, HandleStoreBladePages::class])
                 ->group(base_path('routes/shop-web.php'));

@@ -4389,3 +4389,225 @@ change. Still open for the owner (checklist §12) and not touched here: everythi
 that depends on systems the repository cannot show, the accepted-risk register,
 the payment-gateway and fetch-button decisions, and the unguarded demo seeders
 above.
+
+## 42. Storefront SEO: canonical, robots, sitemap and JSON-LD (2026-10-20)
+
+Model: **claude-sonnet-5-5**, effort **high**. Branch `claude/storefront-seo-bwo5h0`
+from `develop` **74830af** (the PR #454 merge). Scope: the public storefront, which
+stays Blade (search engines need server-rendered HTML). No visible content, URL,
+route name, panel behaviour or sanitization changed. Five commits, one per item,
+plus this documentation, shipped in [PR #455](https://github.com/arb-rajab/warehouse_management/pull/455);
+the owner runs CI separately, so every commit, the PR title and the merge commit carry `[skip ci]`. §7 recorded the gaps; each was re-read in the code before changing it
+and was right: the layout printed `robots=index, follow`, `og:url=route('home')`,
+`twitter:card=product` and the `@publisher_handle` / `@author_handle` placeholders on
+every generic page; there was no canonical, JSON-LD or hreflang; and `/sitemap.xml`
+returned `base_path('sitemap.xml')`, which is the *string* of a path that nothing
+writes (no command or job generates it), so the route never worked.
+
+**Corrections to the brief.** (1) The storefront is under `/temp`, so the sitemap
+is `/temp/sitemap.xml`; only `robots.txt` must sit at the domain root. (2)
+`digital_product_details` is one of the 14 views but no route renders it
+(`HomeController::product()` always renders `product_details`), so its test serves
+it from a route the test registers. (3) Every price on the storefront is shown only
+to a signed-in, admin-verified account (`Auth::check() && Auth::user()->admin_verified`
+in `product_details/details.blade.php`, `product_box_1`, listings, cart), which
+changed what the JSON-LD may say (below). (4) Several `og:url`s were not only
+generic: the classified product page pointed at the *ordinary product* route, and
+CMS / policy pages used `URL($slug)`, which lacks the prefix.
+
+**1. Meta foundation (`App\Support\Seo`, `partials/seo_meta.blade.php`).** The
+layout asks `Seo::head()` for everything in `<head>`; views keep the `meta_title`,
+`meta_description`, `meta_keywords` and `meta` sections and may add `meta_image`,
+`og_type`, `robots` and `canonical`. The 14 views no longer print `og:url`, twitter,
+`itemprop` or placeholder tags themselves: the layout owns them (and still prints the
+`itemprop` name / description / image once, as before, because tests assert them; they are
+Google+ leftovers outside any `itemscope`), so none can name another page. They keep only
+price extras (`product:price:currency`, `og:price:amount`, `twitter:data1`).
+
+- **Canonical** = the origin of `APP_URL` + the request path (no trailing slash) +
+  the content-changing query keys in a fixed order (`Seo::CONTENT_QUERY_KEYS`: `page`,
+  `keyword`, `sort_by`, `min_price`, `max_price`, `brand`, `category`, `color`,
+  `condition`, `rating`, `search`, `selected_attribute_values`, `selected_categories`,
+  `seller_id`); `page=1` and empty values are dropped; `utm_*`, `fbclid`, `gclid`,
+  referral codes and every other key are dropped. `og:url` is the same string. A
+  filtered or sorted URL is its own canonical (it *is* different content) and is kept
+  out of the index by robots, not by a canonical pointing elsewhere: a `noindex` page
+  that canonicalizes to an indexable one tells Google to index neither. The one
+  deliberate exception is a policy `Page` also served at its slug by the
+  `/{slug}` catch-all: its canonical is the policy route (`Page::POLICY_ROUTES`).
+- **APP_URL, not the asked host,** is the origin, so every alias of the site names
+  one address (the go-live checklist, 11.4, makes the redirects). With no host in
+  `APP_URL` it falls back to the request.
+- **Fallbacks.** A blank section value falls back to the settings (`meta_title`,
+  `meta_description`, `meta_keywords`, `meta_image`), and `<title>` to
+  `website_name | site_motto`; before, a product without a `meta_title` printed an
+  empty `<title>` and empty `og:title`. `og:image` is the page's own upload, else the
+  settings image; the placeholder image never counts as an image. Product pages use
+  `meta_img`, then the thumbnail.
+- **Twitter.** `summary_large_image` when an image exists, else `summary`. **No
+  `twitter:site` / `twitter:creator`**: no setting holds a handle (`twitter_link` is a
+  profile URL), and none was invented. `og:type` is `website`, `product` (the product
+  pages; the old `og:product` was invalid) or `article` (blog).
+- All values are decoded once from the section and escaped once by the template.
+
+**2. Robots.** `Seo::robots()`; a view's own `robots` section wins.
+
+| Page | Directive |
+| --- | --- |
+| Home, product, category / brand, `?page=N` of a plain listing, brands / categories index, blog index and published posts, custom and policy pages, shops, classifieds | `index, follow` |
+| **Listings rule:** internal search (`search`, with or without a keyword) and any listing carrying one of the content keys other than `page` (a sort, a price range, a brand / attribute / category / rating / condition filter, a blog search) | `noindex, follow` |
+| Login, register, password reset, email verification, `users/login`, `users/registration`, seller and delivery-boy login, cart, compare, order tracking, `checkout.*`, order confirmation; every route behind `auth`, `user`, `customer`, `seller`, `admin`, `rep_or_admin`, `verified`, `unbanned` or `signed` (dashboard, profile, purchase history, wallet, ...); the 403 / 404 / 500 views; an unpublished blog post | `noindex, nofollow` |
+
+The rule for listings: the plain listing and its pages are what we want indexed;
+every filtered or sorted variant duplicates it, but its links to products are still
+worth following, hence `noindex, follow`. Tracking-only or empty parameters do not
+make a variant. Search results and filtered listings are **not** in `robots.txt`: a
+crawler that may not fetch a page cannot see its `noindex`.
+
+`SendNoIndexHeader` sends `X-Robots-Tag: noindex, nofollow`: always on the store
+back office (`routes/shop-admin.php`), the seller area, the four store API files and the
+`api` group (so also on a guest's redirect and on a 401), and on every Inertia response
+(root view `app`, or an Inertia visit) through the `web` group, which is the WMS back
+office and the Inertia store admin. It sits in the middleware priority list ahead of
+`auth`, otherwise the 401 / redirect `auth` throws is produced outside it. The
+backend and seller Blade layouts (seller login, the 503 page) print a robots meta. A
+guest's redirect from a WMS page to its login carries no header (only Inertia pages do);
+the login page does.
+
+`robots.txt` is a route (`RobotsController`, name `robots`), not a file: a file in
+`public/` is served by the web server before Laravel, so `public/robots.txt` was
+deleted and a test fails if it returns. The Disallow lines come from `route(..., false)`
+(the storefront prefix follows the routes) and the `Sitemap:` line from `APP_URL`. The
+storefront stays open; disallowed: `/admin`, the store back office, `/password/change`,
+`/health`, cart, checkout, the account pages, `<storefront>/seller/` (with the slash:
+`/seller-policy` is public), `<storefront>/api/` and `/api/`. Account paths are prefix
+matches, so a CMS page whose slug *starts with* one of them (e.g. `dashboard-info`)
+would be blocked.
+
+**3. Sitemap (`App\Services\Sitemap`, `SitemapController`).** `GET <storefront>/sitemap.xml`
+is always a `<sitemapindex>`; its files are `sitemap-{source}-{n}.xml` for `static`
+(home, brands / categories / blog index, the policy pages that exist), `pages`,
+`categories`, `brands`, `products`, `blog` and `classifieds`, each file at most 50,000
+URLs (`MAX_URLS_PER_FILE`; about 150 bytes a URL, so the count binds, not the 50 MB).
+Content type `application/xml`. Visible content only:
+
+- **Products:** `filter_products()` (the listing's own rules: published, `auction_product = 0`,
+  in-house, or from a *verified* seller while the vendor system is on) **and `approved = 1`**
+  (the product page 404s otherwise, though `filter_products()` does not check it when the
+  vendor system is off), with a non-empty slug. Digital products are ordinary products on
+  this storefront and follow the same rules. Classifieds: only while `classified_product = 1`,
+  `published = 1` and `status = 1`.
+- **Posts** `status = 1` and not soft-deleted; **categories** except `Uncategorized`
+  (as `all_categories` hides it for non-admins), **brands** and **pages** with a slug; a
+  policy page is listed at its policy route, never at its slug; the `home_page` row is not.
+  Not listed: shops, flash deals, coupons, compare, anything private.
+- **`lastmod`** from `updated_at` for posts, pages, categories and brands; **never for
+  products**: `products:sync` upserts every product in the feed each hour and Eloquent
+  bumps `updated_at` with it, so the date would claim everything changed at the last sync.
+- Explicit column selects on the base query builder (no hydration, no `$with` translations),
+  `forPage()` + `cursor()` per file, so the queries per file do not grow with the rows (a test
+  pins this). Every URL is `APP_URL`'s origin + `route(..., false)`.
+- **Cache** (the default store, `Sitemap::TTL` = 3600 s, nothing evicts by hand; a change
+  shows within the hour): `sitemap.counts` (URLs per source) and `sitemap.{source}.{page}`
+  (the rendered file). The index is rebuilt from `sitemap.counts`. A page outside
+  `1..ceil(count / 50,000)` or an unknown source is a 404 *before* any cache key is written.
+- Not in the sitemap on purpose: images, news, hreflang alternates.
+
+**4. JSON-LD (`App\Support\StructuredData`, `partials/json_ld.blade.php`).** Printed only as
+`json_encode(... JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS |
+JSON_HEX_QUOT | JSON_INVALID_UTF8_SUBSTITUTE | JSON_THROW_ON_ERROR)` inside
+`<script type="application/ld+json">`. Types: **Product** (name, url, up to 5 images, plain-text
+description (sanitized, stripped, 500 characters), sku (first stock sku, else `mat_id`), brand,
+`offers`, `aggregateRating`) + **BreadcrumbList** (Home, the category chain, the product) on
+product pages; **WebSite** with a `SearchAction` (`<storefront>/search?keyword={search_term_string}`,
+a real GET route) + **Organization** (name, url, `header_logo` when set) on the home page;
+**BreadcrumbList** on category and brand listings (none for search or the plain listing);
+**BlogPosting** (headline, description, `datePublished`, `dateModified`, image, publisher,
+`mainEntityOfPage`) on posts.
+
+- **Offers follow the page.** `offers` (price in the default currency with tax and discount,
+  `priceCurrency`, `InStock` / `OutOfStock` from the stock rows, digital products always in
+  stock) is printed only to a visitor the page shows prices to, and never for variant products
+  (the page prints a range). **A crawler is a guest, so production markup carries no price.**
+  Publishing prices in markup while the page hides them breaks Google's rule that markup must
+  match the page and defeats the gate; making prices public is a business decision for the owner
+  (checklist 11.7), not done here.
+- **`aggregateRating`** only when the reviews section is on and published reviews exist: the mean
+  of those reviews and their count.
+- **No author** on `BlogPosting`: `blogs` has no author column.
+- Tests: the exact JSON of a product without and with reviews (and with tax, discount and zero
+  stock), the home page and a blog post; `</script><script>alert(1)</script>`, quotes, `&` and `<b>`
+  in a product, brand and category name cannot leave the script or the JSON.
+
+**The `/temp` prefix.** No new code names it. `Seo`, `Sitemap`, `StructuredData` and
+`RobotsController` take paths from the request and `route(..., false)`, so they follow the prefix
+when it is removed. It is still named by `RouteServiceProvider`, `bootstrap/app.php` (`redirectTo`)
+and the `app-url` meta in the layouts (all established, untouched). Removing it changes every
+indexed URL: see checklist 11.8.
+
+**Not done.** `hreflang` (Arabic and English share one URL by session language), AMP, an image
+sitemap, Search Console / Bing set-up, real `twitter:site` / `twitter:creator` handles (no setting
+exists), `sameAs` social links in `Organization`, prices in markup, redirects from non-canonical
+hosts, automatic sitemap invalidation (it expires), per-page `<meta name="keywords">` cleanup (still
+printed, as before).
+
+**Found on the way, not fixed (outside this scope).** The product page divides by `unit_equal` for a
+discounted product when it is `0` / `null` (`details.blade.php`, "Price Per Piece": a 500 for a verified
+customer); `top_selling_products.blade.php` lazy-loads `product_translations` and builds `route('product')`
+for products without a slug (a 500 in `local` / `testing`, where strict mode is on, or with a slugless
+product); the policy and blog views read `$page` / `$blog` without a null check (a missing row is a 500
+rather than a 404); the two seller-shop views printed `$shop->meta_img` in `twitter:image`, a column
+`shops` does not have (that tag is gone). **Fixed because a test
+needed it:** the product page's review list lazy-loaded each review's `user` (a 500 under strict mode with
+two or more reviews); it now eager loads it.
+
+**Evidence: the rendered `<head>`, from a real server.** `php artisan serve` on a scratch SQLite
+database (`migrate:fresh --seed`, then one category pair, a brand, a blog post, a custom page, the
+settings and slugs added by hand; `APP_ENV=staging`, because `local` turns strict mode on and the
+seeded products have no slug, see "Found on the way"), `APP_URL=http://127.0.0.1:8123`. Lines are
+as printed, `curl -s`; `og:image` and JSON-LD are omitted where a page had none.
+
+| URL | status | `robots` | `canonical` = `og:url` | `og:type` | `twitter:card` |
+| --- | --- | --- | --- | --- | --- |
+| `/temp` | 200 | `index, follow` | `http://127.0.0.1:8123/temp` | website | summary |
+| `/temp/product/salty-crisps` | 200 | `index, follow` | `http://127.0.0.1:8123/temp/product/salty-crisps` | product | summary_large_image (`og:image` = the thumbnail) |
+| `/temp/category/snacks` | 200 | `index, follow` | `http://127.0.0.1:8123/temp/category/snacks` | website | summary |
+| `/temp/category/snacks?page=2` | 200 | `index, follow` | `.../temp/category/snacks?page=2` | website | summary |
+| `/temp/category/snacks?sort_by=newest&utm_source=x` | 200 | `noindex, follow` | `.../temp/category/snacks?sort_by=newest` | website | summary |
+| `/temp/search?keyword=crisps` | 200 | `noindex, follow` | `.../temp/search?keyword=crisps` | website | summary |
+| `/temp/blog/opening-hours` | 200 | `index, follow` | `.../temp/blog/opening-hours` | article | summary |
+| `/temp/about-us` (custom page) | 200 | `index, follow` | `.../temp/about-us` | website | summary |
+| `/temp/terms` (policy) | 200 | `index, follow` | `.../temp/terms` | website | summary |
+| `/temp/terms-conditions` (the same policy at its slug) | 200 | `index, follow` | `.../temp/terms` | website | summary |
+| `/temp/login` | 200 | `noindex, nofollow` | `.../temp/login` | website | summary |
+| `/temp/cart` | 200 | `noindex, nofollow` | `.../temp/cart` | website | summary |
+
+`<title>`s were the page's own (`Salty Crisps | Albaraka`, `Snacks wholesale`, `Opening hours`, `About us`,
+`Terms & Conditions`) or the settings' `Albaraka Holland wholesale` (home, search, login, cart). Headers:
+`/admin/login`, `/temp/admin` (a 302 to the login) and `/temp/api/v2/currencies` each answered
+`X-Robots-Tag: noindex, nofollow`. `/robots.txt` (`text/plain`) printed `User-agent: *`, the 24
+`Disallow:` lines (`/admin` ... `/api/`) and
+`Sitemap: http://127.0.0.1:8123/temp/sitemap.xml`. `/temp/sitemap.xml` (`application/xml`) listed six
+files. Product JSON-LD on that page, as printed (guest, so no `offers`):
+`{"@context":"https://schema.org","@type":"Product","name":"Cumque Ut","url":"http://127.0.0.1:8123/temp/product/salty-crisps","image":["https://via.placeholder.com/640x480.png/006633?text=in"],"description":"Crunchy crisps","sku":"SKU-1","brand":{"@type":"Brand","name":"Acme"}}`
+plus a four-item BreadcrumbList (Home, Food, Snacks, the product).
+
+**Sitemap URL counts on the seeded data** (same database, cache cleared first): `static` 9 (home, brands,
+categories, blog, 5 policy pages), `pages` 1, `categories` 2, `brands` 1, `products` 34, `blog` 1 = **48 URLs in
+6 files**. The seeder's 33 products have no slug and are not listed (the sitemap, and the product page, need
+one); the count above is after giving every scratch product a slug. Before that, `products` was 1 and the total
+**15**. A request made before the slugs were added kept answering 15 until the cache was cleared, which is the
+one-hour cache working as designed.
+
+**What was verified, and what was not.** Run here: the focused Pest files while developing
+(`StorefrontSeoMetaTest`, `StorefrontMetaViewsTest`, `StorefrontRobotsTest`, `StorefrontSitemapTest`,
+`StorefrontStructuredDataTest`: 16 + 18 + 71 + 18 + 12 tests, all real routes rendered); the server run above;
+and `python3 .claude/scripts/pre_push_check.py --full`, which passed on the final code: ESLint, Prettier,
+vue-tsc, Vitest (333 files, 2577 tests), Pint, PHPStan (0 errors) and Pest (**6522 tests, 38091 assertions**).
+The first `--full` run failed on two existing tests that assert the blog page's `itemprop` tags
+(`MarketingPublicRenderingTest`, `BlogControllerTest`); the tags are printed again and **no existing test was
+edited**. Not run: Playwright, the MySQL migration tests, the composer / npm audits and the deploy-script test
+(the attested run was not used, so no `CI-Verified` trailer exists); nothing ran on MySQL (the sitemap's
+`forPage()` / `cursor()` queries were only exercised on SQLite); no rich-results test, no Search Console, no real
+crawler; the headers were read from `php artisan serve`, not from the production proxy. The PR was merged
+without CI, SAST or deploy (all skipped on purpose).

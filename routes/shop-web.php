@@ -41,6 +41,7 @@ use App\Http\Controllers\ReviewController;
 use App\Http\Controllers\Store\Admin\ReviewController as StoreAdminReviewController;
 use App\Http\Controllers\SearchController;
 use App\Http\Controllers\ShopController;
+use App\Http\Controllers\SitemapController;
 use App\Http\Controllers\SubscriberController;
 use App\Http\Controllers\SupportTicketController;
 use App\Http\Controllers\Store\Admin\VisitController;
@@ -182,8 +183,11 @@ Route::get('translation-check/{check}', [LanguageController::class, 'getTranslat
 Route::post('/currency', [CurrencyController::class, 'changeCurrency'])->name('currency.change');
 
 
-Route::get('/sitemap.xml', function() {
-    return base_path('sitemap.xml');
+// Generated and cached by App\Services\Sitemap (it used to return the path of a
+// sitemap.xml file that nothing ever wrote).
+Route::controller(SitemapController::class)->group(function () {
+    Route::get('/sitemap.xml', 'index')->name('sitemap');
+    Route::get('/sitemap-{source}-{page}.xml', 'show')->name('sitemap.show')->where(['source' => '[a-z]+', 'page' => '[1-9][0-9]*']);
 });
 
 Route::controller(CartOfferedController::class)->group(function () {
