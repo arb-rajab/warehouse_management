@@ -15,12 +15,18 @@ class StoreRoleSeeder extends Seeder
      * every ability, and one ordinary staff role to give a staff member.
      * Also re-runs the store permission sync (no grants), so a database
      * migrated before the list last grew still gets every row.
+     *
+     * Clerk is a demo role for local and test databases only; production
+     * gets Super Admin alone and builds its staff roles in the app.
      */
     public function run(): void
     {
         StorePermissions::sync();
 
         Role::findOrCreate(Role::SUPER_ADMIN, 'store');
-        Role::findOrCreate('Clerk', 'store');
+
+        if (app()->environment('local', 'testing')) {
+            Role::findOrCreate('Clerk', 'store');
+        }
     }
 }
