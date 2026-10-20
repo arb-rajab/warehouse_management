@@ -2,6 +2,8 @@
 
 Prepared 2026-10-20 against `develop` at `8cf1dd9` (the PR #452 merge) · shipped in [PR #453](https://github.com/arb-rajab/warehouse_management/pull/453) · documentation only: no application code, migration, seeder, workflow or database was changed to produce it.
 
+**Updated by the go-live hardening PR** (branch `claude/go-live-hardening-fdk4me`, [guide §41](rules/store-backoffice-migration.md#41-go-live-hardening-seeders-the-first-admin-the-production-env-template-event-cache-and-migrate---pretend-2026-10-20)). It changed code for five findings: **F1** (seeders refuse production, items 4.5 and 8.9), **F9** (the `store:create-admin` command, 4.4), **F3** (`.env.production.example`, §2), **F4** (`event:cache` in the deploy script, 5.4 and 5.9) and **F2** (the health migration, 3.4). Where an item below says "fixed in the hardening PR", read it as the state after that PR is merged; every other item, the owner decisions and the Appendix A to E text are unchanged. Nothing in it was applied to any production system.
+
 Work it top to bottom in one sitting; the appendices carry the longer explanations. Every item says **who** does it, cites the **evidence** that justifies it and says how to **verify** it.
 
 ## How to read this file
@@ -646,10 +648,17 @@ Mobile-API contract tests (run inside `Pest`): `tests/Feature/Api/V1/*Test.php` 
 - Artisan command names via `php artisan list` / `--help`: `migrate` (`--pretend`, `--force`), `migrate:status`, `store:sync-permissions` (`--dry-run`), `store:move-trade-licenses` (`--dry-run`), `backup:run` (`--only-db`), `backup:clean`, `backup:list`, `queue:work` (`--stop-when-empty`, `--max-time`), `queue:restart`, `queue:failed`, `health:check`, `health:list`, `products:sync`, `schedule:run`, `schedule:list` (9 entries), `storage:link`, `config:cache`, `route:cache`, `view:cache`, `event:cache`, `down`, `up`, `tinker --execute`, `app:set-minimum-app-version`. Composer and npm script names against `composer.json` / `package.json`; workflow names against `.github/workflows`; route names against `php artisan route:list --json` (1,190 routes, 434 under `/temp/admin`).
 - In `APP_ENV=production` on throwaway SQLite files outside the repository: fresh `migrate` (156 migrations, 182 store permissions, 0 store roles, 0 grants); `store:sync-permissions` dry-run and real; `migrate:status` on an empty database; `migrate --pretend` side effects (F2); seeder behaviour with and without `--force` (F1); the prohibited destructive commands (F10); the two account-creation recipes (4.4, 4.6).
 
+**Checked in the hardening PR (on this tree, not on any production system).**
+
+- Pest files for each change: `SeedersRefuseProductionTest`, `DatabaseSeederTest`, `StoreRoleSeederTest` and the other seeder tests; `CreateStoreAdminCommandTest`; `ProductionEnvExampleTest`; `CreateHealthTablesTest`; each was also run with its fix reverted or a value changed to confirm it fails.
+- `bash .github/scripts/deploy-remote-test.sh` (the deploy-script test) against stubbed binaries, with and without the `event:cache` line.
+- In `APP_ENV=production` on scratch SQLite files: `db:seed --class=StoreUserSeeder --force` refused; `store:create-admin` with `--no-interaction` and with an existing email; `migrate --pretend` then `migrate`. Under `APP_ENV=testing`: the Playwright seed command (`migrate:fresh --seed`) still creates `Super Admin`, `Clerk` and `store-admin@example.com`.
+- The ledger entry for step 41 lists the full local gate (`pre_push_check.py --full`) and what CI ran.
+
 **Not verified (and not claimed).**
 
 - Anything external: DNS, TLS, the web server and PHP configuration of the host, `proc_open`, mail provider, backup storage, GitHub secrets, environment protection, cron entries, who is on call.
 - Any MySQL behaviour: collation, signed foreign keys, FULLTEXT, locking and DDL timing were taken from the documents and CI configuration, not run. No `migrate` was run on MySQL.
 - Production data: which permission rows, roles or accounts exist; whether an existing store database is being reused.
 - Real login over HTTP with the recipe-created account; the browser walks in §6.3 and §7; the full deploy script on a host; `event:cache` and `OptimizedAppCheck` together (read from code only).
-- `pre_push_check.py` was not run (docs-only change); PR CI, SAST and deploy did not run for the pull request that carries this file (`[skip ci]`).
+- For the original PR #453 that carried this file: `pre_push_check.py` was not run (docs-only change); PR CI, SAST and deploy did not run (`[skip ci]`). The hardening PR is not `[skip ci]`, so it is the first to run them.
