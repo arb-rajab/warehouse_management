@@ -567,9 +567,6 @@ describe('Rows Show', () => {
             method: 'post',
         });
         expect(form.props('options')).toEqual({ preserveScroll: true });
-        expect(dialog.get('input[name="return_to"]').attributes('value')).toBe(
-            'row',
-        );
     });
 
     it('does not show a toggle-active button for a coordinate with no cell record', () => {
@@ -608,7 +605,7 @@ describe('Rows Show', () => {
 
         expect(formSubmitMock).toHaveBeenCalledWith(
             { url: openPallet.url({ pallet: 9 }), method: 'post' },
-            expect.objectContaining({ boxes_count: 3, return_to: 'row' }),
+            expect.objectContaining({ boxes_count: 3 }),
             expect.objectContaining({ preserveScroll: true }),
         );
     });

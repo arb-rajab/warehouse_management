@@ -1,9 +1,9 @@
 import { Form, Head, Link } from '@inertiajs/vue3';
-import { Barcode, Check, Filter, X } from '@lucide/vue';
+import { Check, Filter, X } from '@lucide/vue';
 import { flushPromises, mount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { index as cellsIndex } from '@/actions/App/Http/Controllers/Admin/CellController';
 import { show as helpShow } from '@/actions/App/Http/Controllers/Admin/HelpController';
+import { index as palletsIndex } from '@/actions/App/Http/Controllers/Admin/PalletController';
 import {
     index as productsIndex,
     updateBoxCount,
@@ -14,6 +14,7 @@ import {
     downloadBarcode,
     previewBarcode,
     exportQr as productExportQr,
+    previewDefaultBarcode,
 } from '@/actions/App/Http/Controllers/Admin/ProductController';
 import ActionErrorBanner from '@/components/ActionErrorBanner.vue';
 import SubmitButton from '@/components/SubmitButton.vue';
@@ -147,6 +148,7 @@ describe('Products Index', () => {
 
         const headers = wrapper.findAll('thead th').map((th) => th.text());
         expect(headers).toEqual([
+            t('products.columns.id'),
             t('products.columns.product'),
             t('products.columns.boxesPerPallet'),
             t('products.columns.minimumPallets'),
@@ -155,7 +157,6 @@ describe('Products Index', () => {
             t('products.columns.opened'),
             t('products.columns.expired'),
             t('products.columns.expiringSoon', { days: 45 }),
-            t('products.columns.qr'),
         ]);
     });
 
@@ -186,6 +187,25 @@ describe('Products Index', () => {
             t('products.quickSearch.placeholder'),
         );
         expect(wrapper.find('[role="dialog"]').exists()).toBe(false);
+    });
+
+    it('lets the toolbar wrap on mobile with every quick filter still visible', () => {
+        const wrapper = mountPage([]);
+        const toolbar = wrapper
+            .get('#products-quick-search')
+            .element.closest('.flex-wrap');
+
+        expect(toolbar).not.toBeNull();
+        expect(toolbar?.classList.contains('w-full')).toBe(true);
+
+        for (const id of [
+            'products-quick-search',
+            'products-quick-inactive',
+            'products-quick-hide-inactive',
+            'products-quick-low-stock',
+        ]) {
+            expect(toolbar?.querySelector(`#${id}`)).not.toBeNull();
+        }
     });
 
     it('renders the quick inactive checkbox in the toolbar, without opening the filter dialog', () => {
@@ -513,7 +533,7 @@ describe('Products Index', () => {
             }),
         ]);
 
-        const productCell = rowCells(wrapper)[0];
+        const productCell = rowCells(wrapper)[1];
         expect(productCell.text()).toContain('Widgets');
         const img = productCell.get('img');
         expect(img.attributes('src')).toBe('/img/widgets.png');
@@ -523,7 +543,7 @@ describe('Products Index', () => {
     it('does not render an image when the product has none', () => {
         const wrapper = mountPage([product({ image_url: null })]);
 
-        expect(rowCells(wrapper)[0].find('img').exists()).toBe(false);
+        expect(rowCells(wrapper)[1].find('img').exists()).toBe(false);
     });
 
     it("renders the product's stored box count as a clickable trigger button", () => {
@@ -536,19 +556,19 @@ describe('Products Index', () => {
             }),
         ]);
 
-        const button = rowCells(wrapper)[1].get('button');
+        const button = rowCells(wrapper)[2].get('button');
         expect(button.text()).toBe('24');
         expect(button.attributes('aria-label')).toBe(
             t('products.boxesPerPalletLabel', { product: 'Widgets' }),
         );
         // No bare number input in the cell — changes must go through the dialog.
-        expect(rowCells(wrapper)[1].find('input').exists()).toBe(false);
+        expect(rowCells(wrapper)[2].find('input').exists()).toBe(false);
     });
 
     it('offers no column filter on the box count, unlike every other column', () => {
         const wrapper = mountPage([]);
 
-        const header = wrapper.findAll('thead th')[1];
+        const header = wrapper.findAll('thead th')[2];
         expect(header.text()).toBe(t('products.columns.boxesPerPallet'));
         expect(header.find('button[title]').exists()).toBe(false);
     });
@@ -556,7 +576,7 @@ describe('Products Index', () => {
     it('offers no column filter on the minimum-pallets threshold either', () => {
         const wrapper = mountPage([]);
 
-        const header = wrapper.findAll('thead th')[2];
+        const header = wrapper.findAll('thead th')[3];
         expect(header.text()).toBe(t('products.columns.minimumPallets'));
         expect(header.find('button[title]').exists()).toBe(false);
     });
@@ -564,7 +584,7 @@ describe('Products Index', () => {
     it("opens the box-count dialog pre-seeded with the product's stored count", async () => {
         const wrapper = mountPage([product({ boxes_count: 24 })]);
 
-        await rowCells(wrapper)[1].get('button').trigger('click');
+        await rowCells(wrapper)[2].get('button').trigger('click');
 
         expect(
             (wrapper.get('#products-box-count').element as HTMLInputElement)
@@ -581,7 +601,7 @@ describe('Products Index', () => {
 
         const wrapper = mountPage([product({ id: 42, boxes_count: 12 })]);
 
-        await rowCells(wrapper)[1].get('button').trigger('click');
+        await rowCells(wrapper)[2].get('button').trigger('click');
 
         const form = wrapper.getComponent(Form);
         expect(form.props('action')).toEqual({
@@ -602,7 +622,7 @@ describe('Products Index', () => {
     it('names and constrains the box-count field so the form submits and validates it', async () => {
         const wrapper = mountPage([product({ boxes_count: 12 })]);
 
-        await rowCells(wrapper)[1].get('button').trigger('click');
+        await rowCells(wrapper)[2].get('button').trigger('click');
 
         const input = wrapper.get('#products-box-count');
         expect(input.attributes('name')).toBe('boxes_count');
@@ -617,8 +637,8 @@ describe('Products Index', () => {
             product({ id: 11, minimum_pallets: null }),
         ]);
 
-        expect(rowCells(wrapper, 0)[2].get('button').text()).toBe('10');
-        expect(rowCells(wrapper, 1)[2].get('button').text()).toBe('—');
+        expect(rowCells(wrapper, 0)[3].get('button').text()).toBe('10');
+        expect(rowCells(wrapper, 1)[3].get('button').text()).toBe('—');
     });
 
     it('flags the minimum-pallets trigger button when the current pallet count is below the threshold', () => {
@@ -627,10 +647,10 @@ describe('Products Index', () => {
             product({ id: 43, minimum_pallets: 5, pallets_count: 5 }),
         ]);
 
-        expect(rowCells(wrapper, 0)[2].get('button').classes()).toContain(
+        expect(rowCells(wrapper, 0)[3].get('button').classes()).toContain(
             'text-red-600',
         );
-        expect(rowCells(wrapper, 1)[2].get('button').classes()).not.toContain(
+        expect(rowCells(wrapper, 1)[3].get('button').classes()).not.toContain(
             'text-red-600',
         );
     });
@@ -638,7 +658,7 @@ describe('Products Index', () => {
     it("opens the minimum-pallets dialog pre-seeded with the product's stored threshold, or empty when unconfigured", async () => {
         const wrapper = mountPage([product({ minimum_pallets: 10 })]);
 
-        await rowCells(wrapper)[2].get('button').trigger('click');
+        await rowCells(wrapper)[3].get('button').trigger('click');
 
         expect(
             (
@@ -657,7 +677,7 @@ describe('Products Index', () => {
 
         const wrapper = mountPage([product({ id: 42, minimum_pallets: 5 })]);
 
-        await rowCells(wrapper)[2].get('button').trigger('click');
+        await rowCells(wrapper)[3].get('button').trigger('click');
 
         const form = wrapper.getComponent(Form);
         expect(form.props('action')).toEqual({
@@ -678,7 +698,7 @@ describe('Products Index', () => {
     it('names the minimum-pallets field, and leaves it optional so an emptied field clears the threshold', async () => {
         const wrapper = mountPage([product({ minimum_pallets: 10 })]);
 
-        await rowCells(wrapper)[2].get('button').trigger('click');
+        await rowCells(wrapper)[3].get('button').trigger('click');
 
         const input = wrapper.get('#products-minimum-pallets');
         expect(input.attributes('name')).toBe('minimum_pallets');
@@ -696,8 +716,9 @@ describe('Products Index', () => {
             }),
         ]);
 
-        const button = rowCells(wrapper)[3].get('button');
-        expect(button.text()).toBe('1');
+        const button = rowCells(wrapper)[4].get('button');
+        // The default (id) barcode plus the one custom barcode.
+        expect(button.text()).toBe('2');
         expect(button.attributes('aria-label')).toBe(
             t('products.barcodesLabel', { product: 'Widgets' }),
         );
@@ -706,7 +727,7 @@ describe('Products Index', () => {
     it('offers no column filter on the barcodes column either', () => {
         const wrapper = mountPage([]);
 
-        const header = wrapper.findAll('thead th')[3];
+        const header = wrapper.findAll('thead th')[4];
         expect(header.text()).toBe(t('products.columns.barcodes'));
         expect(header.find('button[title]').exists()).toBe(false);
     });
@@ -721,12 +742,90 @@ describe('Products Index', () => {
             }),
         ]);
 
-        await rowCells(wrapper)[3].get('button').trigger('click');
+        await rowCells(wrapper)[4].get('button').trigger('click');
 
         const items = wrapper.findAll('li');
-        expect(items).toHaveLength(2);
-        expect(items[0].text()).toContain('1111111111111');
-        expect(items[1].text()).toContain('2222222222222');
+        expect(items).toHaveLength(3);
+        expect(items[1].text()).toContain('1111111111111');
+        expect(items[2].text()).toContain('2222222222222');
+    });
+
+    it('lists the product id first as a default barcode that cannot be removed', async () => {
+        const wrapper = mountPage([
+            product({
+                id: 42,
+                barcodes: [{ id: 7, barcode: '1111111111111' }],
+            }),
+        ]);
+
+        await rowCells(wrapper)[4].get('button').trigger('click');
+
+        const items = wrapper.findAll('li');
+        const fallback = items[0];
+        expect(fallback.attributes('data-testid')).toBe('default-barcode');
+        expect(fallback.text()).toContain('42');
+        expect(fallback.text()).toContain(t('products.defaultBarcode'));
+        expect(
+            fallback
+                .find(
+                    `[aria-label="${t('products.removeBarcode', { barcode: '42' })}"]`,
+                )
+                .exists(),
+        ).toBe(false);
+        expect(fallback.findAllComponents(Link)).toHaveLength(0);
+        // Only the custom barcode can be removed.
+        expect(items[1].findAllComponents(Link)).toHaveLength(1);
+    });
+
+    it('previews and downloads the default barcode through its own routes', async () => {
+        const fetchMock = vi.fn().mockResolvedValue(
+            new Response('<svg/>', {
+                status: 200,
+                headers: {
+                    'Content-Disposition':
+                        'attachment; filename="product-42-barcode.svg"',
+                },
+            }),
+        );
+        vi.stubGlobal('fetch', fetchMock);
+        URL.createObjectURL = vi.fn(() => 'blob:test');
+        URL.revokeObjectURL = vi.fn();
+        const wrapper = mountPage([product({ id: 42, barcodes: [] })]);
+        await rowCells(wrapper)[4].get('button').trigger('click');
+
+        await wrapper
+            .get(
+                `button[aria-label="${t('products.viewBarcode', { barcode: '42' })}"]`,
+            )
+            .trigger('click');
+        expect(wrapper.get('img').attributes('src')).toBe(
+            previewDefaultBarcode.url(42),
+        );
+
+        await wrapper
+            .get(
+                `button[aria-label="${t('products.downloadBarcode', { barcode: '42' })}"]`,
+            )
+            .trigger('click');
+        await flushPromises();
+
+        expect(fetchMock.mock.calls[0][0]).toBe(productExportQr.url(42));
+        vi.unstubAllGlobals();
+    });
+
+    it('renders the product id in the first column', () => {
+        const wrapper = mountPage([product({ id: 42 })]);
+
+        expect(rowCells(wrapper)[0].text()).toBe('42');
+    });
+
+    it('no longer renders the separate id-based barcode export column or link', () => {
+        const wrapper = mountPage([product({ id: 42 })]);
+
+        expect(rowCells(wrapper)).toHaveLength(9);
+        expect(
+            wrapper.find(`a[href="${productExportQr.url(42)}"]`).exists(),
+        ).toBe(false);
     });
 
     it('shows a barcode’s printable label inline when its view button is toggled', async () => {
@@ -740,7 +839,7 @@ describe('Products Index', () => {
             }),
         ]);
 
-        await rowCells(wrapper)[3].get('button').trigger('click');
+        await rowCells(wrapper)[4].get('button').trigger('click');
         expect(wrapper.find('img').exists()).toBe(false);
 
         const view = wrapper.get(
@@ -758,12 +857,13 @@ describe('Products Index', () => {
         expect(wrapper.find('img').exists()).toBe(false);
     });
 
-    it('shows an empty-state message in the barcodes dialog when the product has none', async () => {
+    it('shows an empty-state message for custom barcodes, still listing the default', async () => {
         const wrapper = mountPage([product({ barcodes: [] })]);
 
-        await rowCells(wrapper)[3].get('button').trigger('click');
+        await rowCells(wrapper)[4].get('button').trigger('click');
 
         expect(wrapper.text()).toContain(t('products.noBarcodes'));
+        expect(wrapper.findAll('li')).toHaveLength(1);
     });
 
     describe('downloading barcodes', () => {
@@ -809,7 +909,7 @@ describe('Products Index', () => {
         it('offers one download button per barcode, each fetching that barcode’s route', async () => {
             fetchMock.mockResolvedValue(fileResponse());
             const wrapper = mountWithBarcodes();
-            await rowCells(wrapper)[3].get('button').trigger('click');
+            await rowCells(wrapper)[4].get('button').trigger('click');
 
             const second = wrapper.get(
                 `button[aria-label="${t('products.downloadBarcode', { barcode: '2222222222222' })}"]`,
@@ -827,7 +927,7 @@ describe('Products Index', () => {
         it('offers a Download all button fetching the product’s ZIP route', async () => {
             fetchMock.mockResolvedValue(fileResponse());
             const wrapper = mountWithBarcodes();
-            await rowCells(wrapper)[3].get('button').trigger('click');
+            await rowCells(wrapper)[4].get('button').trigger('click');
 
             const all = wrapper
                 .findAll('button')
@@ -846,7 +946,7 @@ describe('Products Index', () => {
         it('shows an error and downloads nothing when the server rejects the request', async () => {
             fetchMock.mockResolvedValue(new Response('no', { status: 422 }));
             const wrapper = mountWithBarcodes();
-            await rowCells(wrapper)[3].get('button').trigger('click');
+            await rowCells(wrapper)[4].get('button').trigger('click');
 
             await wrapper
                 .get(
@@ -862,7 +962,7 @@ describe('Products Index', () => {
         it('shows an error when the network request itself fails', async () => {
             fetchMock.mockRejectedValue(new TypeError('offline'));
             const wrapper = mountWithBarcodes();
-            await rowCells(wrapper)[3].get('button').trigger('click');
+            await rowCells(wrapper)[4].get('button').trigger('click');
 
             await wrapper
                 .findAll('button')
@@ -875,16 +975,14 @@ describe('Products Index', () => {
             expect(wrapper.text()).toContain(t('products.downloadFailed'));
         });
 
-        it('offers no download actions for a product without barcodes', async () => {
-            const wrapper = mountPage([product({ barcodes: [] })]);
-            await rowCells(wrapper)[3].get('button').trigger('click');
+        it('still offers downloads for the default barcode of a product without custom ones', async () => {
+            const wrapper = mountPage([product({ id: 42, barcodes: [] })]);
+            await rowCells(wrapper)[4].get('button').trigger('click');
 
-            expect(wrapper.text()).not.toContain(
-                t('products.downloadAllBarcodes'),
-            );
+            expect(wrapper.text()).toContain(t('products.downloadAllBarcodes'));
             expect(
-                wrapper.find('[aria-label^="Download barcode"]').exists(),
-            ).toBe(false);
+                wrapper.findAll('[aria-label^="Download barcode"]'),
+            ).toHaveLength(1);
         });
     });
 
@@ -897,7 +995,7 @@ describe('Products Index', () => {
 
         const wrapper = mountPage([product({ id: 42, barcodes: [] })]);
 
-        await rowCells(wrapper)[3].get('button').trigger('click');
+        await rowCells(wrapper)[4].get('button').trigger('click');
 
         const form = wrapper.getComponent(Form);
         expect(form.props('action')).toEqual({
@@ -918,7 +1016,7 @@ describe('Products Index', () => {
     it('names and requires the barcode field, and clears it once the barcode is added', async () => {
         const wrapper = mountPage([product({ id: 42, barcodes: [] })]);
 
-        await rowCells(wrapper)[3].get('button').trigger('click');
+        await rowCells(wrapper)[4].get('button').trigger('click');
 
         const input = wrapper.get('#products-new-barcode');
         expect(input.attributes('name')).toBe('barcode');
@@ -929,7 +1027,7 @@ describe('Products Index', () => {
     it('re-points the barcodes dialog at the updated product once adding succeeds', async () => {
         const wrapper = mountPage([product({ id: 42, barcodes: [] })]);
 
-        await rowCells(wrapper)[3].get('button').trigger('click');
+        await rowCells(wrapper)[4].get('button').trigger('click');
         expect(wrapper.text()).toContain(t('products.noBarcodes'));
 
         await wrapper.setProps({
@@ -944,8 +1042,8 @@ describe('Products Index', () => {
         await flushPromises();
 
         const items = wrapper.findAll('li');
-        expect(items).toHaveLength(1);
-        expect(items[0].text()).toContain('9999999999999');
+        expect(items).toHaveLength(2);
+        expect(items[1].text()).toContain('9999999999999');
     });
 
     describe('removing a barcode', () => {
@@ -980,7 +1078,7 @@ describe('Products Index', () => {
             );
             const wrapper = mountWithBarcode();
 
-            await rowCells(wrapper)[3].get('button').trigger('click');
+            await rowCells(wrapper)[4].get('button').trigger('click');
 
             const link = removeLink(wrapper);
             expect(link.props('href')).toEqual({
@@ -1002,7 +1100,7 @@ describe('Products Index', () => {
             vi.stubGlobal('confirm', confirmMock);
             const wrapper = mountWithBarcode();
 
-            await rowCells(wrapper)[3].get('button').trigger('click');
+            await rowCells(wrapper)[4].get('button').trigger('click');
 
             const onBefore = removeLink(wrapper).props(
                 'onBefore',
@@ -1019,14 +1117,14 @@ describe('Products Index', () => {
         it('re-points the dialog at the updated product once removal succeeds', async () => {
             const wrapper = mountWithBarcode();
 
-            await rowCells(wrapper)[3].get('button').trigger('click');
+            await rowCells(wrapper)[4].get('button').trigger('click');
             await wrapper.setProps({
                 products: paginated([product({ id: 42, barcodes: [] })]),
             });
             (removeLink(wrapper).props('onSuccess') as () => void)();
             await flushPromises();
 
-            expect(wrapper.findAll('li')).toHaveLength(0);
+            expect(wrapper.findAll('li')).toHaveLength(1);
             expect(wrapper.text()).toContain(t('products.noBarcodes'));
         });
     });
@@ -1035,7 +1133,7 @@ describe('Products Index', () => {
         it('closes the box-count dialog only once the form succeeds', async () => {
             const wrapper = mountPage([product({ boxes_count: 12 })]);
 
-            await rowCells(wrapper)[1].get('button').trigger('click');
+            await rowCells(wrapper)[2].get('button').trigger('click');
             expect(wrapper.find('#products-box-count').exists()).toBe(true);
 
             wrapper.getComponent(Form).vm.$emit('success');
@@ -1047,7 +1145,7 @@ describe('Products Index', () => {
         it('closes the minimum-pallets dialog only once the form succeeds', async () => {
             const wrapper = mountPage([product({ minimum_pallets: 5 })]);
 
-            await rowCells(wrapper)[2].get('button').trigger('click');
+            await rowCells(wrapper)[3].get('button').trigger('click');
             expect(wrapper.find('#products-minimum-pallets').exists()).toBe(
                 true,
             );
@@ -1064,7 +1162,7 @@ describe('Products Index', () => {
             formSlotPropsMock.mockReturnValue({ errors: {}, processing: true });
             const wrapper = mountPage([product({ boxes_count: 12 })]);
 
-            await rowCells(wrapper)[1].get('button').trigger('click');
+            await rowCells(wrapper)[2].get('button').trigger('click');
 
             const submit = wrapper.getComponent(SubmitButton);
             expect(submit.props('processing')).toBe(true);
@@ -1075,7 +1173,7 @@ describe('Products Index', () => {
             formSlotPropsMock.mockReturnValue({ errors: {}, processing: true });
             const wrapper = mountPage([product({ minimum_pallets: 5 })]);
 
-            await rowCells(wrapper)[2].get('button').trigger('click');
+            await rowCells(wrapper)[3].get('button').trigger('click');
 
             expect(wrapper.getComponent(SubmitButton).props('processing')).toBe(
                 true,
@@ -1086,7 +1184,7 @@ describe('Products Index', () => {
             formSlotPropsMock.mockReturnValue({ errors: {}, processing: true });
             const wrapper = mountPage([product({ id: 42, barcodes: [] })]);
 
-            await rowCells(wrapper)[3].get('button').trigger('click');
+            await rowCells(wrapper)[4].get('button').trigger('click');
 
             expect(
                 wrapper
@@ -1098,9 +1196,9 @@ describe('Products Index', () => {
         });
 
         it.each([
-            ['box-count', 1, { boxes_count: 'The boxes count is too large.' }],
-            ['minimum-pallets', 2, { minimum_pallets: 'Must be at most 500.' }],
-            ['barcodes', 3, { barcode: 'Barcode already taken.' }],
+            ['box-count', 2, { boxes_count: 'The boxes count is too large.' }],
+            ['minimum-pallets', 3, { minimum_pallets: 'Must be at most 500.' }],
+            ['barcodes', 4, { barcode: 'Barcode already taken.' }],
         ])(
             'shows the %s form’s server error in a banner',
             async (_dialog, column, errors) => {
@@ -1121,7 +1219,7 @@ describe('Products Index', () => {
         it('shows no error banner message when the form has none', async () => {
             const wrapper = mountPage([product({ boxes_count: 12 })]);
 
-            await rowCells(wrapper)[1].get('button').trigger('click');
+            await rowCells(wrapper)[2].get('button').trigger('click');
 
             expect(
                 wrapper.getComponent(ActionErrorBanner).props('message'),
@@ -1155,66 +1253,51 @@ describe('Products Index', () => {
         );
     });
 
-    it('renders the full count linking to the map filtered to this product and state=full', () => {
+    it('renders the full count linking to the pallets list filtered to this product and state=full', () => {
         const wrapper = mountPage([product({ id: 42, full_cells_count: 3 })]);
 
-        const cell = rowCells(wrapper)[4];
+        const cell = rowCells(wrapper)[5];
         expect(cell.text()).toBe('3');
         const href = cell.get('a').attributes('href') ?? '';
-        expect(href).toContain(cellsIndex.url());
+        expect(href).toContain(palletsIndex.url());
         expect(href).toContain('product_id%5B%5D=42');
         expect(href).toContain('state=full');
     });
 
-    it('renders the opened count linking to the map filtered to this product and state=opened', () => {
+    it('renders the opened count linking to the pallets list filtered to this product and state=opened', () => {
         const wrapper = mountPage([product({ id: 42, opened_cells_count: 2 })]);
 
-        const cell = rowCells(wrapper)[5];
+        const cell = rowCells(wrapper)[6];
         expect(cell.text()).toBe('2');
         const href = cell.get('a').attributes('href') ?? '';
-        expect(href).toContain(cellsIndex.url());
+        expect(href).toContain(palletsIndex.url());
         expect(href).toContain('state=opened');
     });
 
-    it('renders the expired count linking to the map filtered to this product and expired=true', () => {
+    it('renders the expired count linking to the pallets list filtered to this product and expired=true', () => {
         const wrapper = mountPage([
             product({ id: 42, expired_cells_count: 1 }),
         ]);
 
-        const cell = rowCells(wrapper)[6];
+        const cell = rowCells(wrapper)[7];
         expect(cell.text()).toBe('1');
         const href = cell.get('a').attributes('href') ?? '';
-        expect(href).toContain(cellsIndex.url());
+        expect(href).toContain(palletsIndex.url());
         expect(href).toContain('expired=1');
     });
 
-    it('renders the expiring-soon count linking to the map with the resolved day window', () => {
+    it('renders the expiring-soon count linking to the pallets list with the resolved day window', () => {
         const wrapper = mountPage(
             [product({ id: 42, expiring_soon_count: 5 })],
             {},
             { expiringSoonDays: 30 },
         );
 
-        const cell = rowCells(wrapper)[7];
+        const cell = rowCells(wrapper)[8];
         expect(cell.text()).toBe('5');
         const href = cell.get('a').attributes('href') ?? '';
-        expect(href).toContain(cellsIndex.url());
+        expect(href).toContain(palletsIndex.url());
         expect(href).toContain('expires_within_days=30');
-    });
-
-    it('renders a barcode export link for the product', () => {
-        const wrapper = mountPage([product({ id: 42, name: 'Widgets' })]);
-
-        const cell = rowCells(wrapper)[8];
-        const link = cell.get('a');
-        expect(link.attributes('href')).toBe(
-            productExportQr.url({ product: 42 }),
-        );
-        expect(link.attributes('aria-label')).toBe(
-            t('products.exportQrLabel', { product: 'Widgets' }),
-        );
-        expect(link.attributes('title')).toBe(t('products.columns.qr'));
-        expect(link.findComponent(Barcode).exists()).toBe(true);
     });
 
     it('requests the current filter values when the filter form is submitted', async () => {
@@ -1608,6 +1691,47 @@ describe('Products Index', () => {
         ).toBe(true);
     });
 
+    it.each([
+        ['id', 'products.columns.id'],
+        ['name', 'products.columns.product'],
+    ])(
+        'sorts by %s in both directions while preserving filters and resetting pagination',
+        async (key, label) => {
+            const wrapper = mountPage([], {
+                hide_inactive: true,
+                per_page: 50,
+            });
+            const header = wrapper
+                .findAll('thead th')
+                .find((th) => th.text().includes(t(label)))!;
+            const sortButton = header.get('button');
+
+            await sortButton.trigger('click');
+            const firstDirection = key === 'name' ? 'desc' : 'asc';
+            expect(routerGetMock).toHaveBeenLastCalledWith(
+                productsIndex.url(),
+                expect.objectContaining({
+                    sort_by: key,
+                    sort_direction: firstDirection,
+                    hide_inactive: true,
+                    per_page: 50,
+                }),
+                { preserveState: true, replace: true },
+            );
+            expect(routerGetMock.mock.calls.at(-1)?.[1]).not.toHaveProperty(
+                'page',
+            );
+
+            await sortButton.trigger('click');
+            expect(routerGetMock.mock.calls.at(-1)?.[1]).toEqual(
+                expect.objectContaining({
+                    sort_by: key,
+                    sort_direction: firstDirection === 'asc' ? 'desc' : 'asc',
+                }),
+            );
+        },
+    );
+
     it('applies a sort immediately when a sortable column header is clicked, without waiting for Apply', async () => {
         const wrapper = mountPage([]);
 
@@ -1679,12 +1803,12 @@ describe('Products Index', () => {
             }),
         ]);
 
-        const productCell = rowCells(wrapper)[0];
+        const productCell = rowCells(wrapper)[1];
         expect(productCell.text()).toContain('ودجات');
         expect(productCell.text()).not.toContain('Widgets');
         expect(productCell.get('img').attributes('alt')).toBe('ودجات');
         expect(
-            rowCells(wrapper)[1].get('button').attributes('aria-label'),
+            rowCells(wrapper)[2].get('button').attributes('aria-label'),
         ).toBe(t('products.boxesPerPalletLabel', { product: 'ودجات' }));
     });
 
@@ -1700,11 +1824,11 @@ describe('Products Index', () => {
             }),
         ]);
 
-        const productCell = rowCells(wrapper)[0];
+        const productCell = rowCells(wrapper)[1];
         expect(productCell.text()).toContain('Widgets');
         expect(productCell.get('img').attributes('alt')).toBe('Widgets');
         expect(
-            rowCells(wrapper)[1].get('button').attributes('aria-label'),
+            rowCells(wrapper)[2].get('button').attributes('aria-label'),
         ).toBe(t('products.boxesPerPalletLabel', { product: 'Widgets' }));
     });
 });

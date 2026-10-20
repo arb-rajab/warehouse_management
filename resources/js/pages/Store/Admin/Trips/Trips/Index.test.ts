@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { DefineComponent } from 'vue';
 import { edit as driverEdit } from '@/actions/App/Http/Controllers/Store/Admin/DriverController';
 import { shippingCreate } from '@/actions/App/Http/Controllers/Store/Admin/OrderEntryController';
+import { show as tripsShow } from '@/actions/App/Http/Controllers/Store/Admin/TripCheckpointController';
 import {
     bulkDestroy,
     create as tripsCreate,
@@ -14,7 +15,6 @@ import {
     updateNotes,
 } from '@/actions/App/Http/Controllers/Store/Admin/TripController';
 import { edit as truckEdit } from '@/actions/App/Http/Controllers/Store/Admin/TruckController';
-import { show as tripsShow } from '@/actions/App/Http/Controllers/Trip/TripController';
 import AddResourceLink from '@/components/AddResourceLink.vue';
 import DataTable from '@/components/DataTable.vue';
 import FieldError from '@/components/FieldError.vue';
@@ -254,8 +254,8 @@ describe('Store trip lists', () => {
             '',
         ]);
         expect(formatDuration(3720)).toBe('1h 2m');
-        expect(rows[0].get('td a').attributes('href')).toBe(
-            tripsShow.url(trip),
+        expect(rows[0].getComponent(Link).props('href')).toEqual(
+            tripsShow(trip),
         );
         expect(rows[1].findAll('td').map((td) => td.text())).toEqual([
             '20261014-090000',

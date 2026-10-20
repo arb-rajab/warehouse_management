@@ -12,17 +12,23 @@ describe('WarehouseGeometry', () => {
         expect(geo.aisleRows(1)).toEqual([2, 3]);
     });
 
-    it("puts the first aisle on the viewer's left (larger x)", () => {
-        expect(geo.aisleCx(0)).toBeCloseTo(LAYOUT.aisleGap / 2);
-        expect(geo.aisleCx(1)).toBeCloseTo(-LAYOUT.aisleGap / 2);
+    it("puts the first aisle on the viewer's right (smaller x)", () => {
+        expect(geo.aisleCx(0)).toBeCloseTo(-LAYOUT.aisleGap / 2);
+        expect(geo.aisleCx(1)).toBeCloseTo(LAYOUT.aisleGap / 2);
     });
 
-    it('stands row A left of the aisle centre line and row B right of it, when walking in', () => {
-        // walking in means looking along +z, where the viewer's left is +x
-        expect(geo.rowX(0)).toBeCloseTo(geo.aisleCx(0) + LAYOUT.aisleWidth / 2);
-        expect(geo.rowX(1)).toBeCloseTo(geo.aisleCx(0) - LAYOUT.aisleWidth / 2);
-        expect(geo.rowSide(0)).toBe(1);
-        expect(geo.rowSide(1)).toBe(-1);
+    it('stands row A right of the aisle centre line and row B left of it, when walking in', () => {
+        // walking in means looking along +z, where the viewer's right is -x
+        expect(geo.rowX(0)).toBeCloseTo(geo.aisleCx(0) - LAYOUT.aisleWidth / 2);
+        expect(geo.rowX(1)).toBeCloseTo(geo.aisleCx(0) + LAYOUT.aisleWidth / 2);
+        expect(geo.rowSide(0)).toBe(-1);
+        expect(geo.rowSide(1)).toBe(1);
+    });
+
+    it('orders every row from right to left: A, B | C, D', () => {
+        const xs = [0, 1, 2, 3].map((i) => geo.rowX(i));
+
+        expect(xs).toEqual([...xs].sort((p, q) => p - q));
     });
 
     it('starts column 1 at the entrance and spaces bays by 1.6 m', () => {

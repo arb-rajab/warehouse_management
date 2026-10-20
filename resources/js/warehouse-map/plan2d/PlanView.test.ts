@@ -27,7 +27,12 @@ function slice(
     };
 }
 
-const none = buildMatchIndex([], { terms: [], state: 'all', expiring: false });
+const none = buildMatchIndex([], {
+    terms: [],
+    state: 'all',
+    expiring: false,
+    productIds: [],
+});
 const t = (key: string) => key;
 
 function setup(rows = 4, cols = 6) {
@@ -116,7 +121,7 @@ describe('PlanView', () => {
         ).toBe(true);
     });
 
-    it('puts row A on the left and row B on the right of its aisle', () => {
+    it('puts row A on the right and row B on the left of its aisle', () => {
         const { stage } = setup();
         const strips = stage
             .querySelectorAll('.wms-pair')[0]
@@ -207,6 +212,7 @@ describe('PlanView', () => {
             terms: ['rice'],
             state: 'all',
             expiring: false,
+            productIds: [],
         });
 
         state.set({ match });

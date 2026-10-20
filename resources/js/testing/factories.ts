@@ -66,7 +66,11 @@ import type {
     StoreDriver,
     StoreOrder,
     StoreTrip,
+    StoreTripCheckpointRow,
+    StoreTripMapOrder,
+    StoreTripMapTruck,
     StoreTripForm,
+    StoreTripOrder,
 } from '@/types/store';
 
 import type {
@@ -91,6 +95,8 @@ import type {
     RepresentativePackage,
     RepresentativePayment,
     RepresentativeVisit,
+    RepresentativeVisitDetail,
+    RepresentativeVisitMarker,
 } from '@/types/storeRepresentatives';
 import type { StoreTruck, TruckPhoto } from '@/types/storeTruck';
 
@@ -196,6 +202,7 @@ export function cellVerificationReport(
                 ar_name: 'ودجات',
                 image_url: null,
                 boxes_count: 10,
+                active: true,
             },
             boxes_count: 10,
             expiration_date: null,
@@ -208,6 +215,7 @@ export function cellVerificationReport(
                 ar_name: 'ودجات',
                 image_url: null,
                 boxes_count: 10,
+                active: true,
             },
             boxes_count: 10,
             expiration_date: null,
@@ -254,8 +262,10 @@ export function matchingPallet(
             ar_name: 'ودجات',
             image_url: null,
             boxes_count: 10,
+            active: true,
         },
         location: { row_letter: 'A', cell_number: 3, flat_number: 2 },
+        cell_active: true,
         ...overrides,
     };
 }
@@ -276,6 +286,7 @@ export function cellLog(overrides: Partial<CellStatusLog> = {}): CellStatusLog {
             ar_name: 'ودجات',
             image_url: null,
             boxes_count: 10,
+            active: true,
         },
         pallet: { id: 55, expiration_date: '2026-09-01' },
         user: { id: 7, name: 'Jane Doe' },
@@ -1024,6 +1035,119 @@ export function storeTrip(overrides: Partial<StoreTrip> = {}): StoreTrip {
     };
 }
 
+/**
+ * A trip detail row: a representative's delivered order with photos and a
+ * CMR file.
+ */
+export function storeTripCheckpointRow(
+    overrides: Partial<StoreTripCheckpointRow> = {},
+): StoreTripCheckpointRow {
+    return {
+        id: 501,
+        position: 1,
+        type: 'delivery',
+        status: 'delivered',
+        arrived_at: '2026-10-14T10:30:00+00:00',
+        eta: 1830,
+        notes: 'Back door',
+        order: {
+            id: 77,
+            code: '20261015-0001',
+            invoice_number: 'INV-1',
+            products: 3,
+            amount: '€42.50',
+        },
+        customer: {
+            id: 21,
+            name: 'Alma Customer',
+            phone: '0611111111',
+            company_name: 'Alma BV',
+            address: 'Main street 5',
+        },
+        representative: { id: 22, name: 'Rita Rep' },
+        has_cmr: true,
+        photos: [601],
+        ...overrides,
+    };
+}
+
+/** A trip map picker order: Alma's order with every popup detail. */
+export function storeTripMapOrder(
+    overrides: Partial<StoreTripMapOrder> = {},
+): StoreTripMapOrder {
+    return {
+        id: 77,
+        code: '20261017-0001',
+        latitude: 52.37,
+        longitude: 4.89,
+        postal_code: '1011AB',
+        address: 'Dock road 5',
+        customer: {
+            id: 21,
+            name: 'Alma Customer',
+            phone: '0611111111',
+            accounting_id: 'ACC-7',
+        },
+        ...overrides,
+    };
+}
+
+/** A trip map picker truck: a free truck with a photo and no trip. */
+export function storeTripMapTruck(
+    overrides: Partial<StoreTripMapTruck> = {},
+): StoreTripMapTruck {
+    return {
+        id: 11,
+        name: 'Cargo truck',
+        max_pallets_number: '18',
+        photo: 601,
+        trip: null,
+        open_trips: [],
+        ...overrides,
+    };
+}
+
+/** A trip orders row: a representative's order on a started trip. */
+export function storeTripOrder(
+    overrides: Partial<StoreTripOrder> = {},
+): StoreTripOrder {
+    return {
+        id: 77,
+        code: '20261015-0001',
+        is_new: true,
+        details_count: 3,
+        otajer_order_id: 'OT-9',
+        order_from: 'app',
+        wms_status: 'picked',
+        customer: {
+            id: 21,
+            name: 'Alma Customer',
+            accounting_id: 'ACC-7',
+            company_name: 'Alma BV',
+        },
+        by_rep: true,
+        representative: { id: 22, name: 'Rita Rep' },
+        address: 'Main street 5',
+        country: 'Netherlands',
+        phone: '0611111111',
+        invoice_number: 'INV-1',
+        customer_notes: 'Ring twice',
+        manager_notes: 'Handle with care',
+        amount: '€42.50',
+        delivery_status: 'on_delivery',
+        delivery_date: '2026-10-16',
+        editable: true,
+        checkpoint: { id: 501, photos: [601] },
+        trip: {
+            id: 41,
+            code: 'TRIP-LAST',
+            driver: { id: 31, name: 'Sam Driver' },
+            truck: { id: 11, name: 'Cargo truck' },
+        },
+        ...overrides,
+    };
+}
+
 /** A trip on the edit form: the departure checkpoint, then a delivery. */
 export function storeTripForm(
     overrides: Partial<StoreTripForm> = {},
@@ -1373,6 +1497,51 @@ export function storeCategoryForm(
         meta_title: 'Food SEO',
         meta_description: 'Food description',
         filtering_attributes: [2],
+        ...overrides,
+    };
+}
+
+export function representativeVisitDetail(
+    overrides: Partial<RepresentativeVisitDetail> = {},
+): RepresentativeVisitDetail {
+    return {
+        id: 81,
+        note: 'Visit note',
+        visit_date: '2026-10-09 12:00:00',
+        representative: { id: 18, name: 'Representative Aya' },
+        customer: {
+            id: 21,
+            name: 'Customer Noor',
+            company_name: 'Noor BV',
+            email: 'noor@example.com',
+            phone: '0612345678',
+            member_serial: '42',
+            accounting_id: 'AC-21',
+        },
+        order: {
+            id: 31,
+            code: 'VISIT-31',
+            delivery_status: 'delivered',
+            date: 1791547200,
+            amount: '€12.50',
+            payment_type: 'Cash on delivery',
+            customer_notes: 'Leave at reception',
+            customer_otajer_id: 'OT-21',
+            delivery_date: '2026-10-10',
+        },
+        ...overrides,
+    };
+}
+export function representativeVisitMarker(
+    overrides: Partial<RepresentativeVisitMarker> = {},
+): RepresentativeVisitMarker {
+    return {
+        id: 81,
+        lat: 0,
+        lng: 0,
+        rank: 1,
+        has_order: true,
+        label: 'Customer Noor',
         ...overrides,
     };
 }

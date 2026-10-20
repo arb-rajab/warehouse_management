@@ -2,8 +2,8 @@
 import { Head, Link, router } from '@inertiajs/vue3';
 import { Map } from '@lucide/vue';
 import { computed } from 'vue';
-import { index as cellsIndex } from '@/actions/App/Http/Controllers/Admin/CellController';
 import { index as palletsIndex } from '@/actions/App/Http/Controllers/Admin/PalletController';
+import { index as warehouseMapIndex } from '@/actions/App/Http/Controllers/Admin/WarehouseMapController';
 import MatchingPalletsTable from '@/components/MatchingPalletsTable.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import Pagination from '@/components/Pagination.vue';
@@ -18,6 +18,7 @@ import type {
     Paginated,
     ProductFilterOptions,
 } from '@/types/admin';
+import { filterHash } from '@/warehouse-map/domain/SlotCode';
 import type { QueryParams } from '@/wayfinder';
 
 const props = defineProps<{
@@ -27,9 +28,7 @@ const props = defineProps<{
 }>();
 
 /**
- * The active filter, minus `per_page` (a page-size choice the cell map
- * doesn't understand) — reused both for the "view on map" button's query and
- * for the human-readable chips above the table.
+ * The active filter, minus `per_page` — kept across a page-size change.
  */
 const filterQuery = computed<QueryParams>(() => {
     const query: QueryParams = { ...props.filters };
@@ -37,6 +36,20 @@ const filterQuery = computed<QueryParams>(() => {
 
     return query;
 });
+
+/**
+ * The warehouse map, opened on the same products (any of them) and cell state
+ * through its `#products=…&state=…` filter link. The other filters (expiry,
+ * staleness, inactive cells) have no equivalent there and are left behind.
+ */
+const mapHref = computed(
+    () =>
+        warehouseMapIndex.url() +
+        filterHash({
+            productIds: props.filters.product_id ?? [],
+            state: props.filters.state ?? null,
+        }),
+);
 
 const filterChips = computed<string[]>(() => {
     const chips: string[] = [];
@@ -88,10 +101,7 @@ function onPerPageChange(perPage: number): void {
 
     <AdminLayout>
         <PageHeader :title="t('pallets.title')">
-            <Link
-                :href="cellsIndex({ query: filterQuery })"
-                :class="filterTriggerButtonClass"
-            >
+            <Link :href="mapHref" :class="filterTriggerButtonClass">
                 <Map class="h-4 w-4" />
                 {{ t('pallets.viewOnMap') }}
             </Link>

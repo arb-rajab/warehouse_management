@@ -8,10 +8,8 @@ use App\Models\ProductBarcode;
 use App\Models\Row;
 use App\Models\Setting;
 use App\Models\User;
-use Illuminate\Http\Client\Request as ClientRequest;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Http;
 use Inertia\Testing\AssertableInertia as Assert;
 
 test('an authenticated admin can view the products index with every property the table renders', function () {
@@ -147,12 +145,12 @@ test('the products index ships an empty ar_name for a product the store never tr
 
     $response->assertOk()->assertInertia(
         fn (Assert $page) => $page->has('products.data', 2)
-            // Ordering deliberately stays on the base `name` column in both
-            // locales, so "Aardvarks" still sorts first.
-            ->where('products.data.0.name', 'Aardvarks')
-            ->where('products.data.0.ar_name', 'حيوانات')
-            ->where('products.data.1.name', 'Widgets')
-            ->where('products.data.1.ar_name', '')
+            // Sort by the displayed name: the untranslated English label
+            // precedes the translated Arabic label in ascending order.
+            ->where('products.data.0.name', 'Widgets')
+            ->where('products.data.0.ar_name', '')
+            ->where('products.data.1.name', 'Aardvarks')
+            ->where('products.data.1.ar_name', 'حيوانات')
     );
 });
 
@@ -842,6 +840,83 @@ test('the products index can be sorted by the full cells count', function () {
     );
 });
 
+test('product name and material id sorting applies to the full filtered result set across pages', function (string $sortBy, string $direction) {
+    actingAsAdmin();
+
+    $products = collect(range(1, 25))->map(fn (int $index) => Product::factory()->create([
+        'name' => sprintf('Widget %02d', 26 - $index),
+    ]));
+    $excluded = Product::factory()->inactive()->create(['name' => 'AAA excluded']);
+    $expected = $direction === 'asc'
+        ? $products->sortBy($sortBy)->values()
+        : $products->sortByDesc($sortBy)->values();
+
+    foreach ([1, 2, 3] as $pageNumber) {
+        $this->get(route('admin.products.index', [
+            'sort_by' => $sortBy, 'sort_direction' => $direction,
+            'hide_inactive' => true, 'per_page' => 10, 'page' => $pageNumber,
+        ]))->assertOk()->assertInertia(
+            fn (Assert $page) => $page
+                ->where('products.meta.total', 25)
+                ->where('products.meta.current_page', $pageNumber)
+                ->where('products.data', fn ($rows) => collect($rows)->pluck('id')->all() === $expected->slice(($pageNumber - 1) * 10, 10)->pluck('id')->all())
+                ->where('filters.sort_by', $sortBy)
+                ->where('filters.sort_direction', $direction)
+                ->where('filters.hide_inactive', true)
+        );
+    }
+
+    expect($expected->pluck('id'))->not->toContain($excluded->id);
+})->with([
+    ['name', 'asc'], ['name', 'desc'], ['id', 'asc'], ['id', 'desc'],
+]);
+
+test('product name sorting follows the panel language and falls back to the displayed English name', function (string $locale, string $direction) {
+    actingAsAdmin();
+    $apple = Product::factory()->create(['name' => 'Apple', 'ar_name' => 'تفاح']);
+    $orange = Product::factory()->create(['name' => 'Orange', 'ar_name' => 'برتقال']);
+    $untranslated = Product::factory()->create(['name' => 'Zebra', 'ar_name' => '']);
+    $ids = $locale === 'ar'
+        ? [$untranslated->id, $orange->id, $apple->id]
+        : [$apple->id, $orange->id, $untranslated->id];
+    if ($direction === 'desc') {
+        $ids = array_reverse($ids);
+    }
+
+    $this->withSession(['locale' => $locale])
+        ->get('/admin/products?sort_by=name&sort_direction='.$direction)
+        ->assertOk()->assertInertia(fn (Assert $page) => $page
+        ->where('products.data', fn ($rows) => collect($rows)->pluck('id')->all() === $ids)
+        ->where('filters.sort_by', 'name'));
+
+    if ($direction === 'asc') {
+        $this->get('/admin/products')
+            ->assertOk()->assertInertia(fn (Assert $page) => $page
+            ->where('products.data', fn ($rows) => collect($rows)->pluck('id')->all() === $ids));
+    }
+})->with([
+    ['en', 'asc'], ['en', 'desc'], ['ar', 'asc'], ['ar', 'desc'],
+]);
+
+test('product name sorting uses material id to break ties consistently', function (string $direction) {
+    actingAsAdmin();
+    $first = Product::factory()->create(['name' => 'Duplicate']);
+    $second = Product::factory()->create(['name' => 'Duplicate']);
+    Product::factory()->create(['name' => $direction === 'asc' ? 'Zulu' : 'Alpha']);
+    $ids = $direction === 'asc' ? [$first->id, $second->id] : [$second->id, $first->id];
+
+    $this->get('/admin/products?sort_by=name&sort_direction='.$direction)
+        ->assertOk()->assertInertia(fn (Assert $page) => $page
+        ->where('products.data.0.id', $ids[0])
+        ->where('products.data.1.id', $ids[1]));
+})->with(['asc', 'desc']);
+
+test('product sorting rejects unsupported columns and directions', function () {
+    actingAsAdmin();
+    $this->getJson('/admin/products?sort_by=published&sort_direction=sideways')
+        ->assertUnprocessable()->assertJsonValidationErrors(['sort_by', 'sort_direction']);
+});
+
 test('a mobile app user cannot view the products index', function () {
     actingAsMobilePanelUser();
 
@@ -1265,6 +1340,42 @@ test('a barcode must be unique across every product, not just the one it is bein
     $this->assertDatabaseCount('wms_product_barcodes', 1);
 });
 
+test('a barcode cannot equal the id of another product', function () {
+    actingAsAdmin();
+
+    $product = Product::factory()->create();
+    $otherProduct = Product::factory()->create();
+
+    $response = $this->post("/admin/products/{$product->id}/barcodes", ['barcode' => (string) $otherProduct->id]);
+
+    $response->assertSessionHasErrors(['barcode' => __('messages.barcode_is_product_id')]);
+    $this->assertDatabaseCount('wms_product_barcodes', 0);
+});
+
+test('a barcode cannot equal the product\'s own id either, since that is its default barcode', function () {
+    actingAsAdmin();
+
+    $product = Product::factory()->create();
+
+    $response = $this->post("/admin/products/{$product->id}/barcodes", ['barcode' => " {$product->id} "]);
+
+    $response->assertSessionHasErrors('barcode');
+    $this->assertDatabaseCount('wms_product_barcodes', 0);
+});
+
+test('a numeric barcode that is not the id of any product can be added', function (string $barcode) {
+    actingAsAdmin();
+
+    $product = Product::factory()->create();
+
+    $this->post("/admin/products/{$product->id}/barcodes", ['barcode' => $barcode])->assertSessionHasNoErrors();
+    $this->assertDatabaseHas('wms_product_barcodes', ['product_id' => $product->id, 'barcode' => $barcode]);
+})->with([
+    'no product has this id' => ['99999999'],
+    'leading zeros are not the canonical id' => ['00001'],
+    'a longer code that merely starts with an id' => ['1234567890123'],
+]);
+
 test('a mobile app user cannot add a barcode', function () {
     actingAsMobilePanelUser();
 
@@ -1558,216 +1669,6 @@ test('exporting a QR code for a non-existent product returns a 404', function ()
 });
 
 /**
- * Encoded bytes of a solid-color JPEG, or a fully transparent PNG, of the given size.
- */
-function productImageFixtureBytes(int $width, int $height, string $format): string
-{
-    $image = imagecreatetruecolor($width, $height);
-    ob_start();
-
-    if ($format === 'png') {
-        imagealphablending($image, false);
-        imagesavealpha($image, true);
-        imagefill($image, 0, 0, imagecolorallocatealpha($image, 0, 0, 0, 127));
-        imagepng($image);
-    } else {
-        imagefill($image, 0, 0, imagecolorallocate($image, 200, 30, 30));
-        imagejpeg($image);
-    }
-
-    return (string) ob_get_clean();
-}
-
-test('the product image route answers a repeat request that already holds the image with a 304 without fetching it again', function () {
-    actingAsAdmin();
-    Http::fake([
-        'cdn.example.com/*' => Http::response(productImageFixtureBytes(600, 300, 'jpeg'), 200, ['Content-Type' => 'image/jpeg']),
-    ]);
-    $product = Product::factory()->imageUrl('https://cdn.example.com/widgets.jpg')->create();
-
-    $etag = $this->get("/admin/products/{$product->id}/image")->assertOk()->headers->get('ETag');
-
-    expect($etag)->not->toBeNull();
-
-    $this->get("/admin/products/{$product->id}/image", ['If-None-Match' => $etag])->assertNotModified();
-
-    Http::assertSentCount(1);
-});
-
-test('the product image route re-serves the store image as a downscaled png from this apps origin', function () {
-    actingAsAdmin();
-    Http::fake([
-        'cdn.example.com/*' => Http::response(productImageFixtureBytes(600, 300, 'jpeg'), 200, ['Content-Type' => 'image/jpeg']),
-    ]);
-    $product = Product::factory()->imageUrl('https://cdn.example.com/widgets.jpg')->create();
-
-    $response = $this->get("/admin/products/{$product->id}/image");
-
-    $response->assertOk();
-    $response->assertHeader('Content-Type', 'image/png');
-    expect($response->headers->get('Cache-Control'))
-        ->toContain('private')
-        ->toContain('max-age=86400');
-
-    $size = getimagesizefromstring((string) $response->getContent());
-
-    expect($size)->not->toBeFalse()
-        ->and([$size[0], $size[1], $size[2]])->toBe([256, 128, IMAGETYPE_PNG]);
-    Http::assertSent(fn (ClientRequest $request): bool => $request->url() === 'https://cdn.example.com/widgets.jpg');
-});
-
-test('the product image route never upscales a small image and keeps its transparency', function () {
-    actingAsAdmin();
-    Http::fake([
-        'cdn.example.com/*' => Http::response(productImageFixtureBytes(64, 32, 'png'), 200, ['Content-Type' => 'image/png']),
-    ]);
-    $product = Product::factory()->imageUrl('https://cdn.example.com/widgets.png')->create();
-
-    $response = $this->get("/admin/products/{$product->id}/image");
-
-    $response->assertOk();
-    $image = imagecreatefromstring((string) $response->getContent());
-
-    expect($image)->not->toBeFalse()
-        ->and([imagesx($image), imagesy($image)])->toBe([64, 32])
-        ->and((imagecolorat($image, 10, 10) >> 24) & 0x7F)->toBe(127);
-});
-
-test('the product image route returns a 404 for a product with no image, without calling the store', function () {
-    actingAsAdmin();
-    Http::fake();
-    $product = Product::factory()->imageUrl(null)->create();
-
-    $response = $this->get("/admin/products/{$product->id}/image");
-
-    $response->assertNotFound();
-    Http::assertNothingSent();
-});
-
-test('the product image route reports a bad gateway when the store image host errors', function () {
-    actingAsAdmin();
-    Http::fake(['cdn.example.com/*' => Http::response('', 500)]);
-    $product = Product::factory()->imageUrl('https://cdn.example.com/widgets.png')->create();
-
-    $response = $this->get("/admin/products/{$product->id}/image");
-
-    $response->assertStatus(502);
-});
-
-test('the product image route reports a bad gateway when the store image host is unreachable', function () {
-    actingAsAdmin();
-    Http::fake(['cdn.example.com/*' => Http::failedConnection()]);
-    $product = Product::factory()->imageUrl('https://cdn.example.com/widgets.png')->create();
-
-    $response = $this->get("/admin/products/{$product->id}/image");
-
-    $response->assertStatus(502);
-});
-
-test('the product image route never re-serves a store response that is not a raster image', function () {
-    actingAsAdmin();
-    $svg = '<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>';
-    Http::fake([
-        'cdn.example.com/*' => Http::response($svg, 200, ['Content-Type' => 'image/svg+xml']),
-    ]);
-    $product = Product::factory()->imageUrl('https://cdn.example.com/widgets.svg')->create();
-
-    $response = $this->get("/admin/products/{$product->id}/image");
-
-    // Not a substring check: in testing the 502 body is Laravel's debug page,
-    // whose stack-frame source excerpts include this very test file.
-    $response->assertStatus(502);
-    expect($response->headers->get('Content-Type'))->not->toContain('svg')
-        ->and($response->getContent())->not->toBe($svg);
-});
-
-test('the product image route refuses a host that is not allowlisted without calling it', function (string $url) {
-    actingAsAdmin();
-    Http::fake();
-    $product = Product::factory()->imageUrl($url)->create();
-
-    $this->get("/admin/products/{$product->id}/image")->assertStatus(502);
-
-    Http::assertNothingSent();
-})->with([
-    'internal address' => ['https://169.254.169.254/latest/meta-data'],
-    'another host' => ['https://evil.example.org/widgets.png'],
-    'plain http' => ['http://cdn.example.com/widgets.png'],
-    'a custom port' => ['https://cdn.example.com:8443/widgets.png'],
-    'a lookalike host' => ['https://cdn.example.com.evil.org/widgets.png'],
-]);
-
-test('the product image route allows the asset base urls host', function () {
-    actingAsAdmin();
-    config(['store.asset_base_url' => 'https://assets.example.net']);
-    Http::fake(['assets.example.net/*' => Http::response(productImageFixtureBytes(32, 32, 'png'), 200)]);
-    $product = Product::factory()->imageUrl('https://assets.example.net/uploads/widget.png')->create();
-
-    $this->get("/admin/products/{$product->id}/image")->assertOk();
-});
-
-test('the product image route does not follow redirects and refuses a redirecting host', function () {
-    actingAsAdmin();
-    Http::fake(['cdn.example.com/*' => Http::response('', 302, ['Location' => 'http://127.0.0.1/admin'])]);
-    $product = Product::factory()->imageUrl('https://cdn.example.com/widgets.png')->create();
-
-    $this->get("/admin/products/{$product->id}/image")->assertStatus(502);
-
-    Http::assertSentCount(1);
-    Http::assertSent(fn ($request) => $request->url() === 'https://cdn.example.com/widgets.png');
-});
-
-test('the product image route refuses an oversized response body', function () {
-    actingAsAdmin();
-    Http::fake(['cdn.example.com/*' => Http::response(str_repeat('a', 5 * 1024 * 1024 + 1), 200)]);
-    $product = Product::factory()->imageUrl('https://cdn.example.com/widgets.png')->create();
-
-    $this->get("/admin/products/{$product->id}/image")->assertStatus(502);
-});
-
-test('the product image route refuses an image that declares an enormous canvas', function () {
-    actingAsAdmin();
-    // Rewrites the IHDR width and height (bytes 16-23) of a 1x1 PNG to 20000x20000.
-    $tiny = productImageFixtureBytes(1, 1, 'png');
-    $png = substr($tiny, 0, 16).pack('N2', 20000, 20000).substr($tiny, 24);
-    Http::fake(['cdn.example.com/*' => Http::response($png, 200)]);
-    $product = Product::factory()->imageUrl('https://cdn.example.com/widgets.png')->create();
-
-    $this->get("/admin/products/{$product->id}/image")->assertStatus(502);
-});
-
-test('a mobile app user cannot fetch a products image', function () {
-    actingAsMobilePanelUser();
-    Http::fake();
-    $product = Product::factory()->imageUrl('https://cdn.example.com/widgets.png')->create();
-
-    $response = $this->get("/admin/products/{$product->id}/image");
-
-    $response->assertForbidden();
-    Http::assertNothingSent();
-});
-
-test('an unauthenticated caller cannot fetch a products image', function () {
-    Http::fake();
-    $product = Product::factory()->imageUrl('https://cdn.example.com/widgets.png')->create();
-
-    $response = $this->get("/admin/products/{$product->id}/image");
-
-    $response->assertRedirect(route('login'));
-    Http::assertNothingSent();
-});
-
-test('fetching the image of a non-existent product returns a 404', function () {
-    actingAsAdmin();
-    Http::fake();
-
-    $response = $this->get('/admin/products/999999/image');
-
-    $response->assertNotFound();
-    Http::assertNothingSent();
-});
-
-/**
  * The files of a downloaded barcode ZIP, keyed by name.
  *
  * @return array<string, string>
@@ -1873,6 +1774,7 @@ test('an admin can download every barcode of a product, and only that product\'s
     $entries = barcodeZipEntries($response->baseResponse->getFile()->getContent());
 
     expect(array_keys($entries))->toBe([
+        "product-{$product->id}-barcode.svg",
         "product-{$product->id}-barcode-{$first->id}-1111111111111.svg",
         "product-{$product->id}-barcode-{$second->id}-2222222222222.svg",
         "product-{$product->id}-barcode-{$third->id}-ABC_def_3.svg",
@@ -1882,13 +1784,19 @@ test('an admin can download every barcode of a product, and only that product\'s
         ->and(implode('', $entries))->not->toContain('9999999999999');
 });
 
-test('downloading all barcodes of a product without any returns a 404', function () {
+test('downloading all barcodes of a product without custom ones still yields its default barcode', function () {
     actingAsAdmin();
 
     $product = Product::factory()->create();
     ProductBarcode::factory()->create(['product_id' => Product::factory()->create()->id, 'barcode' => '9999999999999']);
 
-    $this->get("/admin/products/{$product->id}/barcodes/download")->assertNotFound();
+    $response = $this->get("/admin/products/{$product->id}/barcodes/download");
+
+    $response->assertOk();
+    $entries = barcodeZipEntries($response->baseResponse->getFile()->getContent());
+
+    expect(array_keys($entries))->toBe(["product-{$product->id}-barcode.svg"])
+        ->and(implode('', $entries))->not->toContain('9999999999999');
 });
 
 test('one barcode that cannot be rendered fails the whole ZIP instead of omitting it', function () {
@@ -1920,6 +1828,35 @@ test('a barcode label can be previewed inline as the same SVG that is downloaded
         ->assertHeader('Content-Disposition', 'inline');
     expect($response->getContent())
         ->toBe($this->get("/admin/products/{$product->id}/barcodes/{$barcode->id}/download")->getContent());
+});
+
+test('the default barcode can be previewed inline as the same SVG that is exported', function () {
+    actingAsAdmin();
+
+    $product = Product::factory()->create();
+
+    $response = $this->get("/admin/products/{$product->id}/export-qr/preview");
+
+    $response->assertOk()
+        ->assertHeader('Content-Type', 'image/svg+xml')
+        ->assertHeader('Content-Disposition', 'inline');
+    expect($response->getContent())->toBe($this->get("/admin/products/{$product->id}/export-qr")->getContent());
+
+    $etag = $response->headers->get('ETag');
+    $this->get("/admin/products/{$product->id}/export-qr/preview", ['If-None-Match' => $etag])->assertNotModified();
+});
+
+test('mobile app and unauthenticated users cannot preview the default barcode, and a missing product is a 404', function () {
+    $product = Product::factory()->create();
+    $url = "/admin/products/{$product->id}/export-qr/preview";
+
+    $this->get($url)->assertRedirect(route('login'));
+
+    actingAsMobilePanelUser();
+    $this->get($url)->assertForbidden();
+
+    actingAsAdmin();
+    $this->get('/admin/products/999999/export-qr/preview')->assertNotFound();
 });
 
 test('a barcode preview answers a repeat request that already holds the current label with a 304', function () {

@@ -9,7 +9,8 @@ paths:
   - 'resources/js/components/StoreNewsletterFormFields.vue,resources/js/components/StoreNewsletterRecipients.vue,resources/js/components/StoreTicketReplyForm.vue,resources/js/lib/storeSupportTicket.ts,app/Services/Store/**'
   - 'resources/js/components/StoreWebsite*'
   - 'resources/js/components/StoreProduct*,resources/js/lib/storeProductForm.ts'
-  - 'resources/js/components/StoreTripStatusDialog.vue,resources/js/components/StoreTripFormFields.vue'
+  - 'resources/js/components/StoreGoogleMapFormFields.vue'
+  - 'resources/js/components/StoreTripStatusDialog.vue,resources/js/components/StoreTripFormFields.vue,resources/js/components/StoreTripMap.vue,resources/js/components/StoreLeafletMap.vue,resources/js/components/StoreVisitMap.vue,resources/js/lib/storeTrip.ts'
   - 'app/Http/Controllers/Store/**,app/Http/Requests/Store/**,app/Http/Resources/Store/**'
   - 'app/Http/Middleware/HandleInertiaRequests.php,app/Http/Middleware/HandleStoreBladePages.php,app/Http/Middleware/SendSecureHeaders.php'
   - 'routes/shop-admin.php'
@@ -18,7 +19,14 @@ paths:
 
 # Moving the store back office from Blade to Inertia
 
-Latest follow-up: [the trip create and edit forms](#25-trip-create-and-edit-forms-2026-10-15).
+Latest follow-up: [Google Map settings](#32-google-map-settings-2026-10-18).
+Visit follow-up: [representative visit details and day maps](#31-representative-visit-details-and-day-maps-2026-10-18).
+Trip-map follow-up: [the trip map picker on Leaflet from npm](#30-trip-map-picker-2026-10-17).
+Server-status follow-up: [the server status page's deletion](#29-server-status-page-deletion-2026-10-17).
+Reviews follow-up: [the legacy reviews screen's retirement](#28-legacy-reviews-screen-retirement-2026-10-17).
+Trip-detail follow-up: [the trip detail and its checkpoint actions](#27-trip-detail-and-checkpoints-2026-10-16).
+Trip-orders follow-up: [the trip orders list and its order actions](#26-trip-orders-list-2026-10-15).
+Trip-form follow-up: [the trip create and edit forms](#25-trip-create-and-edit-forms-2026-10-15).
 Trip-list follow-up: [the trip lists and their status, notes and delete actions](#24-trip-lists-and-status-actions-2026-10-14).
 Edit-form follow-up: [the physical product edit form and two orphaned Blade files](#23-physical-product-edit-form-2026-10-14).
 Create-form follow-up: [the physical product create form](#22-physical-product-create-form-2026-10-13).
@@ -26,7 +34,7 @@ Digital-form follow-up: [the digital product create and edit forms](#21-digital-
 Website follow-up: [the website footer, appearance and custom pages, and the generic settings writer's retirement](#20-website-footer-appearance-and-custom-pages-2026-10-13).
 Ticket/newsletter follow-up: [the newsletter and the support ticket detail on the shared editor](#19-newsletter-and-support-ticket-detail-on-the-shared-editor-2026-10-13).
 Editor follow-up: [the shared Tiptap editor and blog post forms](#18-shared-rich-text-editor-and-blog-post-forms-2026-10-13).
-Setup-settings follow-up: [general settings verification and the Google Map hold](#17-setup-configuration-settings-follow-up-2026-10-12).
+Setup-settings follow-up: [general settings verification and the former Google Map hold](#17-setup-configuration-settings-follow-up-2026-10-12).
 Product-list follow-up: [in-house and all-products list verification](#16-in-house-and-all-products-lists-follow-up-2026-10-12).
 Digital-product follow-up: [digital product list verification](#15-digital-product-list-follow-up-2026-10-12).
 Brand follow-up: [brand migration verification](#14-brand-administration-follow-up-2026-10-12).
@@ -35,7 +43,7 @@ Customer-package follow-up: [customer package migration verification](#12-custom
 Carrier follow-up: [carrier migration verification](#11-carrier-administration-follow-up-2026-10-12).
 PR #377 verification: [final all-store browser results](../store-backoffice-reconciliation-20261011.md#final-all-store-browser-verification-2026-10-12)
 close the pending browser gate. Earlier dated verification sections remain
-historical evidence; §10 records reconciliation results and §§11–25 record
+historical evidence; §10 records reconciliation results and §§11–32 record
 subsequent module verification and limits.
 
 ## 1. Decision and scope
@@ -127,8 +135,10 @@ edit (§23) forms are Inertia pages.
 - **Dropped:**
   - the 12 removed-addon blocks: their routes no longer exist;
   - the stray duplicate top-level Shipping group;
-  - System → Server status: it is a `Route::view` with no Wayfinder action,
-    and its removal still requires an owner decision; the route and template remain.
+  - System → Server status: the page is deleted, on the owner's decision (§29).
+    It was a `Route::view` with no controller whose PHP 7.3/7.4 and MySQL 5.6
+    requirements showed a red cross on every working install. Both sidebars
+    drop it.
 - **Fixed:**
   - Home Banners now links inside `/temp`;
   - Product reviews and Subscribers link to the admin URI. Their route names
@@ -142,7 +152,8 @@ edit (§23) forms are Inertia pages.
 - **Integrated shell:** permission-filtered badge counts, menu search, the
   current account’s notifications dropdown and narrowly scoped Clear Cache.
   Profile and notification links use the selected migrated controllers. The
-  dashboard itself remains Blade until chart dependency approval is verified.
+  dashboard itself remains Blade; Chart.js is now owner-approved (§5) and its
+  conversion is a later step.
 
 **Shared with WMS.** Both layouts genuinely need these:
 
@@ -257,6 +268,16 @@ govern; Tiptap's injected base stylesheet is a `<style>` element, which the
 strict `style-src` already allows. No directive, `blade_csp` entry or WAF
 setting changed for it.
 
+**Map tiles under the strict policy (§30).** The trip map picker bundles
+Leaflet and its stylesheet through Vite (`script-src`/`style-src 'self'`; the
+marker and control images are bundled assets, `img-src 'self'`). Its
+OpenStreetMap tiles are `<img>` elements from `https://tile.openstreetmap.org`,
+so the strict `img-src` gained exactly that host in
+`config/secure-headers.php` (`img-src.allow`), and nothing else: no
+`connect-src`, `script-src` or `style-src` change, and `blade_csp` is
+untouched. The representative visit maps reuse the same bundled Leaflet
+base and tile allowance since §31; none loads code or CSS from unpkg.
+
 **Tests:** tests/Feature/Store/HandleStoreBladePagesTest.php.
 
 ### 2.6 Coexistence under /temp
@@ -355,8 +376,10 @@ foundation and pilot; their presence does not establish full runtime readiness.
 - The integrated route/file inventory is in §§4–6. Product search and dedicated
   settings boundaries are implemented; unconverted handlers retain their needed
   exclusions. Production permission vocabulary and role grants still require
-  operational review. Seller/classified feature use, server-status deletion and
-  new editor/map/chart dependencies retain their owner prerequisites.
+  operational review. The owner decided that sellers and classified products
+  are converted, not deleted (later steps), and approved Tiptap (§18), Leaflet
+  (in use since §30) and Chart.js as frontend dependencies (§5). The
+  server-status deletion was decided by the owner and is done (§29).
 
 ## 3. Per-module checklist (the staff pattern)
 
@@ -491,13 +514,14 @@ modules too:
     (`RoleController::REMOVED_ADDON_SECTIONS`).
 
 
-## 4. Integrated status (2026-10-15)
+## 4. Integrated status (2026-10-18)
 
 This reflects integrated code and the carrier, customer-package, category,
 brand, digital-product, in-house/all-products list, general-settings,
 blog-editor, newsletter/ticket-detail, website-settings, digital-product
-form, physical product create and edit form, trip list and trip form
-follow-ups in §§11–25. The original
+form, physical product create and edit form, trip list, trip form, trip
+orders, trip detail, legacy reviews retirement, server status deletion and trip map
+picker and representative visit detail follow-ups in §§11–31. The original
 reconciliation was based on `8e3f82b60b2b4dc951b97ccfed985a75e9e6be69` and
 merged through PR #377. Carrier administration was then implemented separately
 from latest `origin/develop` at `018dd1802c0b2fc99ffbf0e097594fe0f0f3dfef`.
@@ -508,24 +532,26 @@ Verification below distinguishes the original reconciliation from this follow-up
 | Staff and roles | Complete pilot | Existing six Inertia pages retained; action gates unchanged |
 | Reference/shipping/tax/currency | Complete selected subset | Canonical `35ae3133` controllers/forms/routes; duplicate `e5523338` implementation superseded |
 | Carrier administration | Complete | List/create/edit and CRUD/status use Inertia; existing `manage_carriers` gate, tariff contract and public/API consumers preserved (§11) |
-| Language/settings | Complete selected subset | Language CRUD and translation-selector validation separated; dedicated settings endpoints with reserved-key protection; general settings use Inertia with a typed writer and a config-managed timezone (§17); the generic `business_settings.update` writer is retired (§20); the Google Map settings GET stays Blade because its enabled form loads the Google Maps script (map decision, §17) |
+| Language/settings | Complete selected subset | Language CRUD and translation-selector validation separated; dedicated settings endpoints with reserved-key protection; general settings use Inertia with a typed writer and a config-managed timezone (§17); the generic `business_settings.update` writer is retired (§20); the Google Map settings GET uses Inertia and the approved Leaflet picker (§32; verification pending) |
 | Reports/notifications | Complete selected subset | Inertia report/admin notification routes; public/customer/seller notification consumers remain |
 | Uploads/profile | Complete selected subset | Canonical `944e2e1e` backend/picker; per-action authorization and authenticated-user profile |
-| Customers/representatives | Partial | Customers, addresses, representatives/packages/payments, customer package administration (§12) and visit list implemented; classified-product activation remains decision-blocked |
-| Catalogue | Partial | Attributes/values, colors, brand discount, reviews, bulk import/export and offers catalogue implemented; category (§13) and brand (§14) administration complete; digital product list, deletion, download and switches converted (§15); digital product create/edit converted on the shared editor and canonical uploader (§21); in-house and all-products lists with their switches, duplicate, delete and bulk delete converted (§16); physical product create converted with its typed variant/SKU endpoint (§22); physical product edit converted with translation tabs and stored variant rows (§23); the seller product list stays Blade with seller administration |
+| Customers/representatives | Partial | Customers, addresses, representatives/packages/payments, customer package administration (§12) and visit list/detail/day maps (§31) implemented; classified products are to be converted (owner decision, §5), a later step |
+| Catalogue | Partial | Attributes/values, colors, brand discount, reviews (the legacy Blade list retired, §28), bulk import/export and offers catalogue implemented; category (§13) and brand (§14) administration complete; digital product list, deletion, download and switches converted (§15); digital product create/edit converted on the shared editor and canonical uploader (§21); in-house and all-products lists with their switches, duplicate, delete and bulk delete converted (§16); physical product create converted with its typed variant/SKU endpoint (§22); physical product edit converted with translation tabs and stored variant rows (§23); the seller product list stays Blade with seller administration |
 | Website/support | Complete selected subset | Header/home, footer, appearance, custom pages (§20), conversations, product queries, the ticket list and the ticket detail with its typed reply use Inertia; footer, appearance and page rich text use the shared editor, cleaned on write (§20); the header/footer scripts stay on their compatibility endpoint as plain code fields; script policy, `manage_website_scripts` and rich-text WAF exceptions stay held |
 | Marketing/blog | Complete selected subset | Coupons, flash/offer deals, campaign products, popups, subscribers and blog categories/list/actions integrated; blog post create/edit (§18) and the newsletter form (§19) use Inertia with the shared Tiptap editor; the typed newsletter send and bounded recipient search are unchanged |
-| Logistics | Partial | Drivers/trucks converted; the all-trips and today's-trips lists with their status dialog, notes, delete and bulk delete converted (§24); the trip create and edit forms converted without their map (§25); visits use customer Inertia list plus hardened Blade maps; the checkpoints page, map picker, trip orders and CMR download retain Blade (Leaflet/Google Maps approval unverified), with compatible hardening |
-| Orders/dashboard | Partial | Orders and entry forms converted; stored tax metadata and line-price-only grand total preserved; shell utilities integrated; dashboard/chart conversion held |
-| Seller administration | Decision-blocked | Existing seller Blade screens remain, including the seller product list (`products.seller`, §16); feature-use/removal decision is still required |
+| Logistics | Partial | Drivers/trucks converted; the all-trips and today's-trips lists with their status dialog, notes, delete and bulk delete converted (§24); the trip create and edit forms converted without their map (§25); the trip orders list with its bulk status, invoice number and delivered actions converted (§26); the trip detail with its checkpoint notes, status and CMR download converted without its map (§27); the trip map picker converted on Leaflet from npm (§30); visit list/detail/day maps use Inertia and bundled Leaflet (§31) |
+| Orders/dashboard | Partial | Orders and entry forms converted; stored tax metadata and line-price-only grand total preserved; shell utilities integrated; dashboard conversion is a later step (Chart.js owner-approved, §5) |
+| Seller administration | To convert | Existing seller Blade screens remain, including the seller product list (`products.seller`, §16); the owner decided they are converted, not deleted (§5), in later steps |
 | Public/seller/auth/PDF consumers | Retained | Blade coexistence, PDF layouts, Inertia root and CSP middleware remain |
 
 ### 4.1 Seller prerequisite and role grants
 
 `1c005f6efdddee958ba8d739afd35eb0935007bd` records the prerequisite review.
-Feature flags and checked-in owner-approval claims do not establish seller or
-classified feature-use approval. Keep the existing seller area and customer
-classified-product controllers/routes/views. Customer package administration is converted in §12; its purchase, payment and mobile API consumers remain separate.
+Feature flags and checked-in owner-approval claims did not establish seller or
+classified feature-use approval; the owner has since decided (2026-10-17, §5)
+that the seller administration and the customer classified products are
+converted, not deleted, in later steps. Until each converts, keep the existing
+seller area and customer classified-product controllers/routes/views. Customer package administration is converted in §12; its purchase, payment and mobile API consumers remain separate.
 
 Union permission definitions while retaining per-action gates. Idempotent
 definition migrations do not assign permissions to existing roles and do not
@@ -560,7 +586,8 @@ dedicated allowlisted compatibility endpoint, not a general settings writer.
 - Preserve bounded translated catalogue product search while selected reference
   forms use its existing route name. Preserve upload URL safety and download/PDF
   behavior. No Composer manifest or lock changes; the frontend manifests
-  changed only for the owner-approved Tiptap packages (§18).
+  changed only for the owner-approved Tiptap packages (§18) and Leaflet with
+  its types (§30).
 - **Tiptap: owner-approved and active (2026-10-13, §18).** The owner approved
   Tiptap as the shared back-office editor. `StoreRichTextField` is the one
   rich-text field for converted screens; blog post create/edit (§18), the
@@ -572,8 +599,21 @@ dedicated allowlisted compatibility endpoint, not a general settings writer.
   Blade editor (summernote in `public/assets/js/vendors.js`, started by
   `aiz-core.js` `textEditor()`) and its assets stay while those Blade
   consumers remain: 8 fields in 8 views since §23.
-- Chart.js and new Leaflet dependencies still lack independently verified
-  approval. Preserve existing Blade chart/map assets.
+- **Leaflet and Chart.js: owner-approved (2026-10-17).** The owner approved
+  both as frontend dependencies, installed from npm and bundled through Vite,
+  never from a CDN. Leaflet is active since §30: `leaflet` 1.9.4 (dependency)
+  and `@types/leaflet` 1.9.22 (dev dependency), pinned exactly as the lockfile
+  resolves them (it adds `@types/geojson` 7946.0.16 for the types); the trip
+  map picker is its first consumer, with OpenStreetMap tiles (the provider
+  the Blade maps already used) allowed in the strict `img-src` (§2.5).
+  Chart.js is approved but not yet installed: the dashboard conversion adds it.
+  The visit detail/day maps use its shared base since §31; Google Map settings reuse it in §32, replacing only the admin picker with OpenStreetMap tiles, without widening CSP or changing the storefront Google Maps partial. Their unpkg
+  Leaflet 1.7.1 imports are removed. The Blade dashboard's chart assets stay
+  while that screen remains Blade.
+- **Sellers and classified products: convert, not delete (owner decision,
+  2026-10-17).** The seller administration screens (§5.1 `sellers/`, the
+  seller product list) and the customer classified products are converted in
+  later steps, keeping their routes and gates; none is deleted.
 - **`products` writers: owner decision pending, behaviour unchanged.** Brand
   and digital/product deletion (§§14–16), product duplication (§16),
   digital product create/update (§21) and physical product create and
@@ -589,8 +629,8 @@ dedicated allowlisted compatibility endpoint, not a general settings writer.
 - Order tax changes are held: the established entry handlers stored raw product
   tax metadata and summed line prices for grand total. Percentage conversion and
   tax/shipping/coupon adjustments need a business decision.
-- Preserve departure ID 9 behavior, Seller app link behavior, shared-session
-  logout semantics and server status. Missing data is handled without inventing
+- Preserve departure ID 9 behavior (the map picker's writer keeps it, §30), Seller app link behavior, shared-session
+  logout semantics. Missing data is handled without inventing
   new business policy. Shared image-normalization changes remain a policy gap.
 - Remove static-analysis/legacy-test exclusions only for migrated or cleaned
   handlers. Root controllers still serving public/Blade consumers remain excluded
@@ -600,18 +640,22 @@ dedicated allowlisted compatibility endpoint, not a general settings writer.
 
 ### 5.1 Actual retained backend Blade files
 
-The current backend inventory contains **39 Blade files**, down from 73 after
+The current backend inventory contains **26 Blade files**, down from 73 after
 removing three screens each for carriers, customer packages and categories, the
 two brand screens, the digital product list (§15), general settings (§17), the
 two blog post forms (§18), the newsletter and ticket detail (§19), the
 footer, appearance and three custom-page screens (§20), the two digital
 product forms (§21), the physical product create form (§22), and the
 physical product edit form, its choice script and the unconsumed blank shell
-(§23), the trip list with its status modal (§24), and the two trip forms
-with their two checkpoint row partials (§25).
+(§23), the trip list with its status modal (§24), the two trip forms
+with their two checkpoint row partials (§25), the trip orders list
+(§26), the trip checkpoints page with its status modal (§27), the legacy product
+reviews list (§28), the server status page (§29), and the trip map picker with
+its three `trips/inc` partials (§30), and the two representative visit
+detail screens with their map partial (§31), and Google Map settings (§32).
 The in-house and all-products lists (§16) removed none:
 `product/products/index.blade.php` is shared with the retained seller product
-list. The Google Map settings screen stays (§17).
+list. Google Map settings are converted in §32.
 These files remain physically present. Hardening a Blade handler does not count
 as conversion. Protected shells/downloads/invoices are not conversion targets.
 
@@ -621,12 +665,8 @@ as conversion. Protected shells/downloads/invoices are not conversion targets.
 - **inc:** `inc/admin_nav.blade.php`, `inc/admin_sidenav.blade.php`.
 - **invoices:** `invoices/invoice.blade.php`.
 - **layouts:** `layouts/app.blade.php`, `layouts/layout.blade.php`.
-- **product:** `product/products/index.blade.php`, `product/products/sku_combinations.blade.php`, `product/products/sku_combinations_edit.blade.php`, `product/reviews/index.blade.php`.
-- **representatives:** `representatives/visits/map.blade.php`, `representatives/visits/rep-show.blade.php`, `representatives/visits/show.blade.php`.
+- **product:** `product/products/index.blade.php`, `product/products/sku_combinations.blade.php`, `product/products/sku_combinations_edit.blade.php`.
 - **sellers:** `sellers/create.blade.php`, `sellers/edit.blade.php`, `sellers/index.blade.php`, `sellers/payment.blade.php`, `sellers/payment_histories/index.blade.php`, `sellers/payment_modal.blade.php`, `sellers/profile_modal.blade.php`, `sellers/seller_commission/index.blade.php`, `sellers/seller_verification_form/index.blade.php`, `sellers/seller_withdraw_requests/index.blade.php`, `sellers/seller_withdraw_requests/payment_modal.blade.php`, `sellers/seller_withdraw_requests/withdraw_message_modal.blade.php`, `sellers/verification.blade.php`.
-- **setup_configurations:** `setup_configurations/google_configuration/google_map.blade.php`.
-- **system:** `system/server_status.blade.php`.
-- **trips:** `trips/checkpoints/index.blade.php`, `trips/components/update-checkpoint-status-modal.blade.php`, `trips/create-from-map.blade.php`, `trips/inc/map-popups.blade.php`, `trips/inc/map-scripts.blade.php` (no Blade includer since §25; kept with the map decision), `trips/inc/scripts.blade.php`, `trips/orders.blade.php`.
 
 ## 6. Registered migrated controllers and consumers
 
@@ -663,7 +703,7 @@ line numbers or count sibling snapshots.
 | `DynamicPopupController` | `bulk-dynamic-popup-delete`, `dynamic-popups.index`, `dynamic-popups.store`, `dynamic-popups.update-status`, `dynamic-popups.create`, `dynamic-popups.update`, `dynamic-popups.destroy`, `dynamic-popups.edit` | `Store/Admin/Marketing/DynamicPopups/Index.vue`, `Store/Admin/Marketing/DynamicPopups/Create.vue`, `Store/Admin/Marketing/DynamicPopups/Edit.vue` |
 | `FlashDealController` | `flash_deals.index`, `flash_deals.store`, `flash_deals.create`, `flash_deals.update`, `flash_deals.destroy`, `flash_deals.edit`, `flash_deals.update_featured`, `flash_deals.update_status` | `Store/Admin/Marketing/FlashDeals/Index.vue`, `Store/Admin/Marketing/FlashDeals/Create.vue`, `Store/Admin/Marketing/FlashDeals/Edit.vue` |
 | `GeneralSettingsController` | `general_setting.index`, `general_setting.update` | `Store/Admin/Setup/GeneralSettings/Index.vue` |
-| `GoogleMapController` | `google-map.update` | Redirect to the retained Blade `google-map.index` GET (root `BusinessSettingsController::google_map`; map decision, §17) |
+| `GoogleMapController` | `google-map.index`, `google-map.update` | `Store/Admin/Setup/GoogleMap/Index.vue` with `StoreGoogleMapFormFields` and the shared npm Leaflet base (§32); writer redirects to the same index |
 | `LanguageController` | `languages.index`, `languages.store`, `app-translations.export`, `app-translations.import`, `app-translations.store`, `app-translations.show`, `languages.create`, `languages.key_value_store`, `languages.update-status`, `languages.update_rtl_status`, `languages.destroy`, `languages.show`, `languages.edit`, `languages.update` | `Store/Admin/Languages/Index.vue`, `Store/Admin/Languages/Create.vue`, `Store/Admin/Languages/Edit.vue`, `Store/Admin/Languages/Translations.vue` |
 | `LegacyWebsiteScriptsController` | `website.scripts.compatibility.update` | Redirect to `website.appearance`; posted by the plain-code scripts form of `Store/Admin/Website/Appearance.vue` (§20) |
 | `NewsletterController` | `newsletters.index`, `newsletters.recipients`, `newsletters.send` | `Store/Admin/Marketing/Newsletters/Index.vue` (§19); typed send redirecting to the retained Blade dashboard; bounded JSON recipient search |
@@ -671,7 +711,7 @@ line numbers or count sibling snapshots.
 | `OfferController` | `offer_deals.brands.create`, `offer_deals.create`, `offer_deals.index`, `offer_deals.store`, `offer_deals.update`, `offer_deals.destroy`, `offer_deals.edit`, `offer_deals.update_multiple_usage`, `offer_deals.update_repeatable`, `offer_deals.update_status` | `Store/Admin/Marketing/Offers/Index.vue`, `Store/Admin/Marketing/Offers/Create.vue`, `Store/Admin/Marketing/Offers/Edit.vue` |
 | `OffersCatalogController` | `offers.destroy`, `(unnamed compatibility)`, `offers.index`, `offers.store` | `Store/Admin/Catalogue/Offers/Index.vue` |
 | `OrderConfigurationController` | `order_configuration.index`, `order_configuration.update`, `order_configuration.representative.update` | `Store/Admin/Setup/OrderConfiguration/Index.vue` |
-| `OrderController` | `all_orders.index`, `bulk-order-delete`, `inhouse_orders.index`, `inhouse_orders.show`, `orders.details`, `order.item.edit_price`, `orders.update_delivery_status`, `orders.update_manager_notes`, `orders.update_payment_status`, `orders.update_tracking_code`, `orders.show`, `orders.destroy`, `all_orders.show`, `pick_up_point.index`, `pick_up_point.order_show`, `seller_orders.index`, `seller_orders.show` | `Store/Admin/Sales/Orders/Index.vue`, `Store/Admin/Sales/Orders/Show.vue` |
+| `OrderController` | `all_orders.index`, `bulk-order-delete`, `inhouse_orders.index`, `inhouse_orders.show`, `orders.details`, `order.item.edit_price`, `orders.update_delivery_status`, `orders.update_manager_notes`, `orders.update_payment_status`, `orders.update_tracking_code`, `orders.show`, `orders.destroy`, `all_orders.show`, `pick_up_point.index`, `pick_up_point.order_show`, `seller_orders.index`, `seller_orders.show` | `Store/Admin/Sales/Orders/Index.vue`, `Store/Admin/Sales/Orders/Show.vue`; `bulk-order-delete` returns to the trip orders list for `return_to=trip_orders` (§26) |
 | `OrderEntryController` | `new.feat-order.trip.create`, `new.feat-order.trip.edit`, `new.feat-order.trip.store`, `new.feat-order.trip.update`, `feat-order.create`, `feat-order.store`, `orders.search-options` | `Store/Admin/Sales/Orders/Create.vue`, `Store/Admin/Sales/Orders/Edit.vue` |
 | `PickupPointController` | `pick_up_points.index`, `pick_up_points.store`, `pick_up_points.create`, `pick_up_points.update`, `pick_up_points.destroy`, `pick_up_points.edit` | `Store/Admin/Setup/PickupPoints/Index.vue`, `Store/Admin/Setup/PickupPoints/Edit.vue`, `Store/Admin/Setup/PickupPoints/Create.vue` |
 | `ProductController` (Store/Admin) | `products.admin`, `products.all`, `products.list.published`, `products.list.featured`, `products.list.for_sale`, `products.list.duplicate`, `products.list.destroy`, `products.list.bulk_destroy`, `products.create`, `products.store`, `products.variant_combinations`, `products.admin.edit`, `products.seller.edit`, `products.update`, `products.edit_variant_combinations` | `Store/Admin/Product/Products/Index.vue` (both lists, `listType`), `Create.vue` (§22; store → in-house list, `products.variant_combinations` → JSON variant rows), `Edit.vue` (§23; both edit routes, `listType` `admin`/`seller`; update → the edit form in the same language; `products.edit_variant_combinations` → JSON rows keeping stored stock values); `products.admin.edit`/`seller.edit` send a digital product to `digitalproducts.edit` (§21); `products.seller`, the jQuery switches, approval, duplicate, destroy, bulk delete, `products.fetch` (JSON) and the Blade SKU helper `products.sku_combination` stay on root `ProductController` for the Blade seller list |
@@ -682,7 +722,7 @@ line numbers or count sibling snapshots.
 | `ReportController` | `commission-log.index`, `in_house_sale_report.index`, `seller_sale_report.index`, `stock_report.index`, `user_search_report.index`, `wallet-history.index`, `wish_report.index` | `Store/Admin/Reports/CommissionHistory.vue`, `Store/Admin/Reports/InHouseSales.vue`, `Store/Admin/Reports/Searches.vue`, `Store/Admin/Reports/SellerSales.vue`, `Store/Admin/Reports/Stock.vue`, `Store/Admin/Reports/WalletHistory.vue`, `Store/Admin/Reports/Wishlist.vue` |
 | `RepresentativePackageController` | `rep.packages.create`, `rep.packages.destroy`, `rep.packages.index`, `rep.set-package`, `rep.packages.store`, `rep.packages.update`, `rep.packages.edit` | `Store/Admin/Representatives/Packages/Index.vue`, `Store/Admin/Representatives/Packages/Create.vue`, `Store/Admin/Representatives/Packages/Edit.vue` |
 | `RepresentativePaymentController` | `admin.rep.payments.accept`, `admin.rep.payments.export`, `admin.rep.payments.index`, `admin.rep.payments.reject` | `Store/Admin/Representatives/Payments/Index.vue` |
-| `ReviewController` | `admin.reviews.index`, `reviews.published` | `Store/Admin/Product/Reviews/Index.vue` |
+| `ReviewController` | `admin.reviews.index`, `reviews.published`, `reviews.index` | `Store/Admin/Product/Reviews/Index.vue`; `reviews.index` (GET `/temp/reviews`, `view_product_reviews`) redirects to `admin.reviews.index` keeping the query (§28); root `ReviewController` keeps the customer `store` and `product_review_modal` |
 | `RoleController` | `roles.index`, `roles.store`, `roles.create`, `roles.update`, `roles.destroy`, `roles.edit` | `Store/Admin/Staff/Roles/Index.vue`, `Store/Admin/Staff/Roles/Create.vue`, `Store/Admin/Staff/Roles/Edit.vue` |
 | `SettingsController` | `activation.index`, `business_settings.update.activation`, `facebook_chat.index`, `facebook_chat.update`, `facebook-comment`, `facebook-comment.update`, `file_system.index`, `google_analytics.index`, `google_analytics.update`, `facebook_pixel.update`, `google-firebase.index`, `google-firebase.update`, `google_recaptcha.index`, `google_recaptcha.update`, `payment_method.index`, `payment_method.update`, `smtp_settings.index`, `test.smtp`, `social_login.index` | `Store/Admin/Settings/Index.vue` |
 | `ShippingConfigurationController` | `shipping_configuration.index`, `shipping_configuration.update` | `Store/Admin/Setup/ShippingConfiguration/Index.vue` |
@@ -691,10 +731,13 @@ line numbers or count sibling snapshots.
 | `SubscriberController` | `admin.subscribers.index`, `subscriber.destroy` | `Store/Admin/Marketing/Subscribers/Index.vue` |
 | `SupportTicketController` | `support_ticket.admin_index`, `support_ticket.admin_store`, `support_ticket.admin_show` | `Store/Admin/Support/Tickets/Index.vue`, `Show.vue` (§19); reply → redirect to the detail; customer/seller ticket pages stay on root/seller `SupportTicketController` (Blade) |
 | `TaxController` | `tax.index`, `tax.store`, `tax.update`, `tax.destroy`, `tax.edit`, `taxes.tax-status` | `Store/Admin/Setup/Taxes/Index.vue`, `Store/Admin/Setup/Taxes/Edit.vue` |
-| `TripController` (Store/Admin) | `trips.index`, `trips.today-trips`, `trips.create`, `trips.store`, `trips.edit`, `trips.update`, `trips.update-status`, `trips.update-notes`, `trips.destroy`, `trips.bulk-trip-delete` | `Store/Admin/Trips/Trips/Index.vue` (both lists, `listType` `all`/`today`) with `StoreTripStatusDialog` (§24); `Create.vue` and `Edit.vue` with `StoreTripFormFields` (§25; store and update → the Blade checkpoints page `trips.show`); list writes redirect to the screen named by `list` (`all`, `today`, or `map` → the Blade map picker, whose truck cards send `trips.destroy` as a spoofed DELETE); the checkpoints page, map picker and its writer, trip orders and CMR download stay on root `Trip\TripController` (Blade); the forms' vehicle lookup `trips.available-vehicles` (JSON) stays on `Api\V2\Trip\DriverController` |
+| `TripController` (Store/Admin) | `trips.index`, `trips.today-trips`, `trips.create`, `trips.store`, `trips.edit`, `trips.update`, `trips.update-status`, `trips.update-notes`, `trips.destroy`, `trips.bulk-trip-delete` | `Store/Admin/Trips/Trips/Index.vue` (both lists, `listType` `all`/`today`) with `StoreTripStatusDialog` (§24); `Create.vue` and `Edit.vue` with `StoreTripFormFields` (§25; store and update → the trip detail `trips.show`, §27); list writes redirect to the screen named by `list` (`all`, `today`, or `map` → the Inertia map picker, whose busy truck cards send `trips.destroy` as a DELETE, §30); the map picker and its writer are `TripMapController`; the forms' vehicle lookup `trips.available-vehicles` (JSON) stays on `Api\V2\Trip\DriverController` |
+| `TripCheckpointController` | `trips.show`, `checkpoints.update-notes`, `checkpoints.update-status`, `checkpoints.print-cmr` | `Store/Admin/Trips/Trips/Show.vue` (§27); the notes and status writes redirect to the detail with its query; `checkpoints.print-cmr` redirects to a managed local or HTTP(S) CMR file, else to the detail with a `cmr` error; the map picker's busy truck names link to `trips.show` (§30) |
+| `TripOrderController` | `trips.orders`, `trips.orders.bulk-change-delivery-status`, `trips.orders.update_invoice_number`, `trips.orders.update_order_status_to_delivered` | `Store/Admin/Trips/Orders/Index.vue` (§26); writes redirect to the list with its query; `trips.orders.update_order_status_to_delivered` also serves the map picker's selected stops (PUT, `return_to=map` → `trips.create-from-map`, §30) |
+| `TripMapController` | `trips.create-from-map`, `trips.store-from-map` | `Store/Admin/Trips/Trips/CreateFromMap.vue` with `StoreTripMap` (Leaflet from npm, §30); the writer (`add_trip`, plus `edit_trip` with `trip_id`) returns to the picker; root `Trip\TripController` removed |
 | `TruckController` | `trucks.create`, `trucks.index`, `trucks.photos`, `trucks.store`, `trucks.update`, `trucks.edit`, `trucks.qr` | `Store/Admin/Trips/Trucks/Index.vue`, `Store/Admin/Trips/Trucks/Create.vue`, `Store/Admin/Trips/Trucks/Edit.vue` |
 | `UploadController` | `all-file`, `bulk-uploaded-files-delete`, `uploaded-files.index`, `uploaded-files.store`, `uploaded-files.create`, `uploaded-files.files`, `uploaded-files.info`, `uploaded-files.destroy` | `Store/Admin/Uploads/Index.vue`, `Store/Admin/Uploads/Create.vue` |
-| `VisitController` | `bulk-visit-delete`, `admin.rep.visits.destroy`, `admin.rep.visits.index` | `Store/Admin/Representatives/Visits/Index.vue` |
+| `VisitController` | `bulk-visit-delete`, `admin.rep.visits.destroy`, `admin.rep.visits.index`, `admin.rep.visits.show`, `admin.rep.visits.rep-show`, `admin.rep.visits.note`, `visits.note` | `Store/Admin/Representatives/Visits/Index.vue`, `Show.vue`, `RepShow.vue`; both note routes redirect back, with own-visit-only writes (§31); the customer route keeps its middleware |
 | `WebsiteAppearanceController` | `website.appearance`, `website.appearance.update` | `Store/Admin/Website/Appearance.vue` (§20) |
 | `WebsiteFooterController` | `website.footer`, `website.footer.update` | `Store/Admin/Website/Footer.vue` (§20) |
 | `WebsiteHeaderController` | `website.header`, `website.header.update` | `Store/Admin/Website/Header.vue` |
@@ -702,11 +745,10 @@ line numbers or count sibling snapshots.
 | `WebsitePageController` | `website.pages`, `custom-pages.create`, `custom-pages.store`, `custom-pages.edit`, `custom-pages.update`, `custom-pages.destroy` | `Store/Admin/Website/Pages/Index.vue`, `Create.vue`, `Edit.vue` (§20); the public `custom-pages.show_custom_page` and `mobile.custom-pages` stay on root `PageController` (Blade) |
 | `ZoneController` | `zones.index`, `zones.store`, `zones.create`, `zones.update`, `zones.destroy`, `zones.edit` | `Store/Admin/Setup/Zones/Index.vue`, `Store/Admin/Setup/Zones/Edit.vue`, `Store/Admin/Setup/Zones/Create.vue` |
 
-Visit details/day maps are served by retained root `VisitController`; the trip
-checkpoints page, map picker and trip orders (§§24–25) and the Google map
-settings also retain their Blade GET consumers. Root
-`BusinessSettingsController` keeps the Google Map GET, the seller
-commission/verification screens and `env_key_update` (the generic settings
+Visit details/day maps use `Store\Admin\VisitController` since §31.
+Google Map settings use `Store\Admin\GoogleMapController` since §32.
+The trip map picker is Inertia since §30. Root
+`BusinessSettingsController` keeps the seller commission/verification screens and `env_key_update` (the generic settings
 writer and its refusing `.env` stub are gone, §20), so it stays in both
 analysis exclusion lists. Seller/classified screens use retained root handlers. The newsletter and
 the ticket detail use their typed admin controllers and Inertia pages (§19). Explicit approval and implementation gaps are tracked
@@ -737,7 +779,9 @@ commands and limits are in [the reconciliation ledger](../store-backoffice-recon
   `218f05f15693a06f748b9d20b799cad5f8a75e81`; real receipt PDF tests pass.
 - Retained representative web visit-note writes must save only the current store
   actor's own visit. The former integration no-op is fixed with a typed validated
-  request; foreign visits retain the established `0` response. No departure,
+  request; foreign visits retained the established `0` response until §31,
+  which replaces both numeric answers with a redirect back and keeps foreign
+  visits unchanged. No departure,
   tax, logout or role-grant policy changes accompany this fix.
 - Retained `/temp/product-queries` read aliases preserve the previous
   `view_all_product_queries` gate and redirect to selected admin handlers.
@@ -1462,13 +1506,13 @@ No deployment or production-data mutation is authorized.
 ## 17. Setup configuration settings follow-up (2026-10-12)
 
 General settings now use `Store/Admin/Setup/GeneralSettings/Index`. The Google
-Map settings screen stays Blade. Work is on `ccr-b39fe4ad-n2p9xs`, branched from
+Map settings screen stayed Blade in this historical step; §32 lifts that hold. Work is on `ccr-b39fe4ad-n2p9xs`, branched from
 `develop` at `e3eb0f5` (the PR #390 merge, after PR #389 at `a14c659`). The
 owner authorized this session's PR (#391), its merge into `develop` and
 `[skip ci]` on both. Every commit, the PR and its merge commit carry `[skip ci]`, so no PR CI,
 no PR or merge SAST and no `develop` deploy ran for them.
 
-**Google Map settings: held, map decision.** The screen's enabled state loads a
+**Google Map settings: historical hold, lifted in §32.** The screen's enabled state loads a
 map script. `google_map.blade.php:105-107` includes
 `shop.frontend.partials.google_map` whenever `google_map == 1`, and that partial
 loads `https://maps.googleapis.com/maps/api/js?…&libraries=places` (`:117`) and
@@ -2647,3 +2691,704 @@ could not run). Blade editor: **8** fields in **8** views. Verification is
 recorded in the trip form section of
 [the reconciliation ledger](../store-backoffice-reconciliation-20261011.md).
 No deployment or production-data mutation is authorized.
+
+## 26. Trip orders list (2026-10-15)
+
+The trip orders screen now uses `Store/Admin/Trips/Orders/Index`
+(`StoreAdminLayout`, `DataTable`, `Pagination`). Work is on
+`ccr-23c5d0cb-ziq8z5`, from `develop` at `78c9c3a` (the PR #413 merge). The
+owner authorized this session's commits, PR (#419), its merge into
+`develop` and `[skip ci]` on all of them, because the checks run locally. So
+no PR CI, no PR or merge SAST and no `develop` deploy ran. Unlike #404 and
+#406, this session had PHP 8.5.11, `vendor/`, the dev tools, generated
+Wayfinder files and the Vite build: Pest, Pint, PHPStan, `route:list`, the
+build and Playwright ran here, for this change and for the checks #404 and
+#406 had left outstanding (the ledger records each).
+
+**Routes and gates: names and permissions kept.** Four routes moved from root
+`Trip\TripController` to `Store\Admin\TripOrderController` (`HasMiddleware`):
+
+- `trips.orders` (GET `/trips/orders`): `view_all_trips`;
+  `FilterTripOrdersRequest` (`per_page`, `search`, `delivery_status`, `from`,
+  `to`).
+- `trips.orders.bulk-change-delivery-status` (POST, URI kept),
+  `trips.orders.update_invoice_number` (PUT `/trips/orders/{order}/invoice-number`;
+  was POST `/trips/orders/update-invoice-number` with `order_id`) and
+  `trips.orders.update_order_status_to_delivered` (PUT
+  `/trips/orders/{order}/delivered`; was POST `/trips/orders/update-order-status`
+  with `order_id`): `edit_trip`. A missing bound order is a 404; the two old
+  URIs are now 404s.
+
+Every write returns to the list with its query (`redirect()->route()`, no
+`back()`). The root controller keeps the checkpoints page and its actions,
+the map picker and its writer and the CMR download, and stays in both
+analysis exclusion lists. No gate changed, so `LegacyAdminPermissionsTest`
+and `LegacyStoreStateChangingRoutesTest` needed no change (both ran and
+pass: the permission sweep accepts the 404 a bound route gives for an
+unknown id before its permission check, and no route here answers GET with
+a write).
+
+**Behaviour kept.**
+
+- **Statuses shown:** every order except pending and cancelled ones.
+- **Bulk transition:** each selected order takes confirmed or ready for
+  delivery, whatever it had, saved per order in one transaction.
+- **Invoice number:** stored as typed (an empty field clears it) and the
+  order goes out for delivery (`on_delivery`) whatever its status, saved on
+  change as before.
+- **Mark as delivered:** sets `delivered`.
+- **Order totals:** the stored grand total through `single_price()`; nothing
+  recomputes tax or totals (the order tax hold, §5, is untouched).
+- **Columns:** every Blade column, including the latest checkpoint's trip,
+  driver, truck and photos (upload ids resolved in one query, as the truck
+  list does) and the Print CMR link (Blade redirect, full page). The Edit link
+  keeps the Blade condition (not a representative's order, unpaid, no
+  commission, not delivered or cancelled) under `edit_order`.
+
+**Deliberate changes.**
+
+- **Search** is grouped inside the list's statuses: code, invoice number,
+  shipping address, or the customer (for a representative's order, the
+  customer it was placed for) by name, phone or accounting id. The Blade
+  query called `orWhereHas('customer')`, an accessor rather than a relation,
+  so every search answered 500; its ungrouped `orWhere`s would also have
+  matched pending and cancelled orders.
+- **Filters** live in the query string: the delivery status filter (the
+  Blade list's four choices plus All) no longer sticks in the session, and
+  the date range is two `type="date"` fields (`from`/`to`, `Y-m-d`) instead
+  of the `d-m-Y to d-m-Y` picker. The list pages 20 at a time with the
+  per-page selector (was 15), newest first then by id.
+- **Validation:** the bulk action takes 1–100 distinct existing orders and
+  one of its two statuses, the invoice number at most 255 characters (the
+  column); anything else is a 422 field error with nothing written. The
+  Blade handlers ignored an empty selection and saved an unknown status
+  unchanged.
+- **Controls are gated by the route's permission:** the bulk status buttons,
+  the invoice field and Mark as delivered need `edit_trip` (the Blade list
+  showed the bulk menu under `delete_order` and the delivered button to
+  everyone); Delete selection keeps `delete_order` and posts to
+  `bulk-order-delete` with `return_to=trip_orders`, which now returns to this
+  list instead of the all-orders list. Status changes and deletes ask with
+  a native confirmation (`confirmDeliveryStatus`, `confirmDelete`); the Blade
+  delivered button, titled "Change status", changed the order on one click.
+  It is not offered for an order already delivered.
+- **Removed dead code:** the Blade page's manager-notes modal was never
+  opened (`openUpdateModal()` had no caller), so the page shows the notes as
+  text; they stay editable on the order detail page.
+- **Display.** Delivery dates show as `YYYY-MM-DD` (Blade `d-m-Y`), statuses
+  use the order module's translated labels, a missing upload is left out
+  (Blade showed the placeholder image), the address links to Google Maps in
+  a new tab with `rel="noopener noreferrer"`, and customer, driver and truck
+  link to their Inertia edit pages for viewers with `edit_customer`,
+  `edit_driver` and `edit_truck` (pages.md). The trip code opens the Blade
+  checkpoints page in full.
+
+**Map picker.** Its order popup's Mark as delivered (`create-from-map.blade.php`)
+now posts JSON `{ _method: 'PUT', return_to: 'map' }` to the bound route,
+built from `route(..., ['order' => '__order__'])` with the popup's order id,
+and reloads on any successful response: the 302 to `trips.create-from-map`
+is followed as a GET. The popup button stays under `edit_trip`.
+
+**Consumers traced and file deleted (`git rm`).** Traced with `rg` over
+`resources/views`, `app`, `routes`, `public/assets/js`, `resources/js`,
+`config` and `tests`.
+
+- `trips/orders.blade.php`: rendered only by the removed root `all_orders`.
+- `trips.orders.update_order_status_to_delivered`: also the map picker
+  (above); the other three routes had no consumer outside the Blade list.
+  `admin_sidenav.blade.php` links `trips.orders` by name and needs no change.
+- Kept: `shop.modals.delete_modal` (other consumers),
+  `checkpoints/index`, `components/update-checkpoint-status-modal`,
+  `create-from-map`, `inc/map-popups`, `inc/map-scripts`, `inc/scripts` and
+  the CMR download.
+
+**Menu.** Orders under Trips is an Inertia entry (`storeAdminMenu.ts` and its
+test); Create trip from the map stays Blade.
+
+**Tests.** New `TripOrderControllerTest.php`: the full row payload for an
+order with a trip and photos and one without (with an older checkpoint and an
+unrelated upload as noise), the hidden statuses, every filter and the search
+branches with noise rows, the session filter no longer sticking, pagination
+and `per_page`, refused callers on the list and on every write with a
+DB-unchanged assertion, the per-permission matrix, each write's behaviour and
+redirect, validation datasets, 404s and the gone URIs, the map picker's JSON
+spoofed PUT and its script, and `bulk-order-delete`'s `return_to`. No
+`Legacy*Test` case covered this screen, so none moved. Vitest: a full mount of
+`Trips/Orders/Index.test.ts`, `confirmDeliveryStatus` in `confirm.test.ts`,
+the menu, and a `storeTripBladeMap.test.ts` case for the popup's request. New
+`store-trip-orders.spec.ts`: the invoice saved on change, the native confirms
+for delivered and the bulk status, and the map picker's popup request and
+reload (with a stand-in for the unpkg Leaflet, which this sandbox cannot
+reach and without which the picker's script stops before its click handler).
+
+**Driver notification fix.** In the same session, ahead of this step, the
+trip update writer (§25) compares the stored and posted driver as integers,
+so saving a trip with its driver unchanged no longer notifies the driver
+(the ledger's #406 "known limit"); `TripControllerTest` covers unchanged,
+changed, removed and no-driver saves.
+
+Current inventory: **38** backend Blade files, **19** direct literal consumers
+of `shop.backend.layouts.app`, **3** of `shop.backend.layouts.layout`.
+Registrations are unchanged at **1,048** under `/temp` and **436** under
+`/temp/admin`: four replace four (from `route:list`). Blade editor: **8**
+fields in **8** views. Verification is recorded in the trip orders section of
+[the reconciliation ledger](../store-backoffice-reconciliation-20261011.md).
+No deployment or production-data mutation is authorized.
+
+## 27. Trip detail and checkpoints (2026-10-16)
+
+The trip checkpoints page (`trips.show`) now uses
+`Store/Admin/Trips/Trips/Show` (`StoreAdminLayout`, `DataTable`). Work is on
+`claude/store-backoffice-trip-checkpoints-2ga29g`, from `develop` at `9eb862a`
+(the PR #420 merge). The owner authorized this session's commits, PR (#421),
+its merge into `develop` and `[skip ci]` on all of them, because the checks run
+locally. So no PR CI, no PR or merge SAST and no `develop` deploy ran. The
+session had PHP 8.5.11, `vendor/` with the dev tools, generated Wayfinder
+files and the font-less Vite build; the ledger records what ran.
+
+**Routes and gates: names and permissions kept.** Four routes moved from root
+`Trip\TripController` to `Store\Admin\TripCheckpointController`
+(`HasMiddleware`):
+
+- `trips.show` (GET `/trips/show/{trip}`, URI kept, now bound) and
+  `checkpoints.print-cmr` (GET `/trips/print-cmr/{checkpoint}`, URI kept,
+  now bound): `view_all_trips`.
+- `checkpoints.update-notes` (PUT `/trips/checkpoints/{checkpoint}/notes`; was
+  POST `/trips/update-checkpoint-notes` with `checkpoint_id`) and
+  `checkpoints.update-status` (PUT `/trips/checkpoints/{checkpoint}/status`;
+  was POST `/trips/update-checkpoint-status` with `id`): `edit_trip`.
+
+A missing trip or checkpoint is a 404; a POST to either old write URI is a 405
+(the trip update PUT owns the one-segment pattern). Both writes redirect to the
+trip detail with the request's query instead of answering JSON `{success}` (the
+notes) or the bare `1` (the status). No other caller read those answers: the
+retained map picker only links `trips.show` by name (its truck cards) and
+needed no change. The root controller keeps only the map picker and its
+writer and stays in both analysis exclusion lists. No gate changed, so
+`LegacyAdminPermissionsTest` and `LegacyStoreStateChangingRoutesTest` needed no
+change (both ran and pass).
+
+**Behaviour kept.**
+
+- **Status:** the legacy transition in one transaction: the checkpoint is
+  locked (`lockForUpdate`), takes any `CheckpointStatus` value, and a delivered
+  checkpoint keeps its first `arrived_at`. The trip's own status flow (§24) is
+  untouched: a checkpoint status never changes the trip.
+- **CMR download:** still a GET that sends the browser to the uploaded file.
+- **Columns:** every Blade column: customer (for an order, the customer it was
+  placed for), representative, the customer's stored shipping address, status,
+  arrival, estimated time, notes, phone, product count, company, amount
+  (`single_price()` of the stored grand total), invoice number, photos and the
+  CMR link. Stops keep their stored order (`sort_order_in_trip`, then id).
+
+**Deliberate changes.**
+
+- **No map.** The Blade page drew a Leaflet map (unpkg) with an OSRM route
+  fetched on every page load. The map dependency's approval is unverified (§5),
+  so the Inertia page shows the stops as an ordered table and the server no
+  longer calls the routing service on this page. The root
+  `getCheckpointsMapData()`/`checkpointMapPoints()` had no other caller and were
+  removed with the two Pest cases and two Vitest cases that tested only them.
+  `inc/map-popups` stays (map picker and `inc/map-scripts`).
+- **Notes are validated** with the trip form's checkpoint notes rule
+  (`ValidatesStoreTrip`: nullable string, at most 1000) through
+  `UpdateCheckpointNotesRequest`; the Blade handler saved any value for any id.
+  They save on change; "Notes saved." shows under the row instead of a toast.
+- **Status** changes inline from a select, after a native confirmation
+  (`confirmDeliveryStatus`, "Mark stop N as …?"); a refused confirmation or a
+  server error puts the select back. The Blade modal saved without asking.
+- **CMR safety.** The download resolves the first upload id in `cmr_file` and
+  redirects only to a managed local file (`uploads/all/…`) or an HTTP(S) URL,
+  the upload library's rule (`UploadResource`, §2.4). A checkpoint with no
+  file, an unknown upload, a script link or a path outside the uploads returns
+  to its trip detail with a `cmr` field error (`messages.trip_cmr_unavailable`)
+  instead of `back()` with a session flash; the legacy helper sent the
+  placeholder image for an unknown upload.
+- **Display.** A trip header (status, due date, driver, truck, start and close
+  times, distance, duration, notes) replaces the "checkpoints | driver" title;
+  the stop column uses the §25 text (`#code customer`, or the customer) through
+  the shared `lib/storeTrip.ts` `tripCheckpointLabel()`, which the trip form now
+  uses too. Arrival uses `formatDateTime` (Blade: server-time `Y-m-d H:i`); the
+  estimated time is the stored seconds through `formatDuration` (Blade: Carbon's
+  English short span), or "-" when none; a missing photo upload is left out.
+  Links follow pages.md: order (`view_order_details`), customer
+  (`edit_customer`), driver and truck (`edit_driver`, `edit_truck`), and Edit
+  trip (`edit_trip`, Inertia).
+- **Printing.** The Print button calls `window.print()`; `StoreAdminLayout`'s
+  sidebar and mobile bar carry `print:hidden`, so a printed store page shows
+  only its content (the Blade page hid everything but its card).
+- **Links to the detail** from the trip lists, the trucks list and the trip
+  orders list are Inertia visits now (the trucks list through `TableLink`);
+  the trip forms' store and update redirect there as before.
+
+**Consumers traced and files deleted (`git rm`).** Traced with `rg` over
+`resources/views`, `app`, `routes`, `public/assets/js`, `resources/js`,
+`config` and `tests`.
+
+- `trips/checkpoints/index.blade.php`: rendered only by the removed root
+  `show`.
+- `trips/components/update-checkpoint-status-modal.blade.php`: included only by
+  that page; the only Blade poster of `checkpoints.update-status`.
+- `checkpoints.update-notes`: posted only by that page. `trips.show`: also the
+  map picker's truck cards (by name). `checkpoints.print-cmr`: also the trip
+  orders list (Wayfinder action moved to the new controller).
+- Kept: `create-from-map`, `inc/map-popups`, `inc/map-scripts`, `inc/scripts`
+  and `shop.modals.delete_modal` (other consumers). `admin_sidenav.blade.php`
+  has no entry for the detail; `storeAdminMenu.ts` needed no change (no menu
+  entry points at the detail).
+
+**Tests.** New `TripCheckpointControllerTest.php`: the full payload (a
+representative's order with photos, a customer stop, another trip's checkpoint,
+an unrelated upload and another order's lines as noise), an empty trip and a
+deleted order, 404s, refused callers on every route with a DB-unchanged
+assertion on the writes, the per-permission matrix, notes (save, clear,
+validation, old URI), status (every value, first arrival kept, validation, old
+URI) and the CMR hit (HTTPS and managed local) and miss dataset.
+`TripControllerTest`'s three checkpoint status cases, its empty-detail case and
+the trips.show refusal moved there; its Blade rendering case became Vitest
+gating cases. Vitest: a full mount of `Trips/Trips/Show.test.ts`,
+`lib/storeTrip.test.ts`, and the trip list, trucks and trip orders tests
+expecting Inertia links. Playwright: new `store-trip-detail.spec.ts` (native
+confirm dismissed and accepted, notes on change, print media hiding the
+sidebar, the CMR miss banner); `store-trips.spec.ts` now lands on the Inertia
+detail after saving a trip.
+
+Current inventory: **36** backend Blade files, **18** direct literal consumers
+of `shop.backend.layouts.app`, **3** of `shop.backend.layouts.layout`.
+Registrations are unchanged at **1,048** under `/temp` and **436** under
+`/temp/admin`: four replace four (from `route:list`). Blade editor: **8**
+fields in **8** views. Verification is recorded in the trip detail section of
+[the reconciliation ledger](../store-backoffice-reconciliation-20261011.md).
+No deployment or production-data mutation is authorized.
+
+
+## 28. Legacy reviews screen retirement (2026-10-17)
+
+The Blade product reviews list (`shop.backend.product.reviews.index`, served by
+root `ReviewController::index` at `reviews.index`) is gone. The Inertia list
+`admin.reviews.index` (`Store/Admin/Product/Reviews/Index`, §6) has been the
+working screen since the reviews migration; the Blade list was only still
+reachable through the Blade sidebar. Work is on
+`claude/store-backoffice-reviews-step-28-lqx4cm`, from `develop` at `fb04f56`
+(the PR #421 merge). The owner authorized this session's commits, PR (#422),
+its merge into `develop` and `[skip ci]` on all of them, because the checks run locally.
+So no PR CI, no PR or merge SAST and no `develop` deploy ran.
+
+**Routes and gates: name and permission kept.**
+
+- `reviews.index` (GET `/temp/reviews`, `view_product_reviews`) is kept as a
+  redirect: `Store\Admin\ReviewController::redirectLegacyIndex` answers a 302
+  to `admin.reviews.index` carrying the whole query string (`rating`,
+  `per_page`, `page`), so old bookmarks and the one-line habit of typing
+  `/temp/reviews` still work. It sits in the same `auth` group of
+  `routes/shop-web.php` as before, ahead of
+  `Route::resource('/reviews', ...)->except('index')`, and the Store
+  controller's `permission:view_product_reviews` middleware now lists it
+  beside `index`.
+- The refused answers are those of the legacy group, not of the store admin
+  group: a guest goes to the shop login, and a customer or a staff member
+  without the permission gets 403 (the admin list itself answers a customer
+  with 404). No gate was added or removed, so `LegacyAdminPermissionsTest` and
+  the route ratchets needed no change (they ran and pass).
+- The root `ReviewController` stays for customers: `store`
+  (`reviews.store`, `LegacyReviewTest`), `product_review_modal` and the empty
+  resource stubs. It loses `index` and, with it, its `HasMiddleware`
+  declaration: the only route that middleware gated was `index`. The rest of
+  the controller is untouched, and it stays in both analysis exclusion lists.
+
+**Consumers traced and files deleted (`git rm`).** Traced with `rg` over `app`,
+`routes`, `resources`, `tests`, `public/assets/js`, `config` and `lang`.
+
+- `product/reviews/index.blade.php`: rendered only by the removed root `index`.
+  Its form already posted to `admin.reviews.index` and its switches to
+  `reviews.published`.
+- `reviews.index`: linked only by `inc/admin_sidenav.blade.php`, now pointing at
+  `admin.reviews.index` (the Inertia `storeAdminMenu.ts` already did), and
+  asserted by `ReviewControllerTest`. `api.reviews.index`, `reviews` in the
+  seller routes and the customer `reviews.store` form are separate.
+- No `public/assets/js`, `config`, `lang` or Playwright reference.
+
+**Tests.** `ReviewControllerTest`: the case that rendered the Blade page now
+asserts the redirect (plain, and with `rating`, `per_page` and `page` kept); a
+dataset case refuses a guest (login), a customer and a staff member without the
+permission, and never redirects them to the list; a third case pins
+`reviews.index` to the redirect action, `reviews.store` as still registered and
+the view as gone.
+
+Current inventory: **35** backend Blade files, **17** direct literal consumers
+of `shop.backend.layouts.app`, **3** of `shop.backend.layouts.layout`.
+Registrations are unchanged at **1,048** under `/temp` and **436** under
+`/temp/admin` (`reviews.index` was a resource route and is now an explicit one;
+from `route:list`). Blade editor: **8** fields in **8** views. Verification is
+recorded in the reviews retirement section of
+[the reconciliation ledger](../store-backoffice-reconciliation-20261011.md).
+No deployment or production-data mutation is authorized.
+
+## 29. Server status page deletion (2026-10-17)
+
+The System → Server status page is gone, on the owner's decision. It was a
+`Route::view('/system/server-status', 'shop.backend.system.server_status')`
+named `system_server` (middleware `RaizerSuperAdmin`) with no controller. Its
+checks targeted PHP 7.3/7.4 and MySQL 5.6, so it showed a red cross on every
+working PHP 8.5 install, and nothing else used it. Work is on
+`ccr-ff665fd6-s90gn3`, from `develop` at `ead3b91` (the PR #422 merge). The
+owner authorized this session's commits, one PR into `develop`, its merge and
+`[skip ci]` on all of them, because the checks run locally. So no PR CI, no PR
+or merge SAST and no `develop` deploy ran. The PR is #423.
+
+**Removed.**
+
+- The route `system_server` (`routes/shop-admin.php`); `GET
+  /temp/admin/system/server-status` now answers 404, even for a super admin.
+- `system/server_status.blade.php` (`git rm`); the `system/` directory is gone.
+- The Blade sidebar's whole System group in `inc/admin_sidenav.blade.php`: its
+  only child was Server status. `storeAdminMenu.ts` never had an entry; its
+  doc comment now says the page was deleted.
+
+**Traced and kept.** `rg` over `app`, `routes`, `resources`, `config`,
+`public/assets/js`, `tests`, `lang` and `.ai` found only the files above plus
+documentation. No Vue, Wayfinder or search-index reference.
+
+- `RaizerSuperAdmin` (alias in `bootstrap/app.php`) is still used by
+  `cache.clear` (`routes/shop-admin.php`), the business-settings commission
+  activation route and `Store\Admin\SettingsController`; kept.
+- The `server_status` permission name was used only by the removed sidebar
+  gates. It is not seeded or migrated in this repository (it may exist as a
+  production row); nothing was changed, and a data cleanup needs operational
+  review. The `System` and `Server status` translation strings are shared
+  `translate()` keys, left alone.
+
+**Tests.** `StoreBackOfficeShellTest` no longer lists the view or pins the
+`Route::view` line; it asserts the view is absent and `routes/shop-admin.php`
+no longer mentions `server_status`. A new case asserts `system_server` is
+unregistered, no route URI contains `server-status`, `system/` is gone and a
+super admin gets a 404. The Legacy ratchets (`LegacyAdminPermissionsTest`,
+`LegacyStoreStateChangingRoutesTest`, `LegacyShopRouteAccessTest`,
+`LegacyTempRoutesReachableTest`) did not pin the route and needed no change.
+
+Current inventory: **34** backend Blade files, **17** direct literal consumers
+of `shop.backend.layouts.app`, **3** of `shop.backend.layouts.layout`.
+Registrations fall to **1,047** under `/temp` and **435** under `/temp/admin`
+(from `route:list`). Blade editor: **8** fields in **8** views. Verification is
+recorded in the server status section of
+[the reconciliation ledger](../store-backoffice-reconciliation-20261011.md).
+No deployment or production-data mutation is authorized.
+
+## 30. Trip map picker (2026-10-17)
+
+The trip map picker (`trips.create-from-map`) now uses
+`Store/Admin/Trips/Trips/CreateFromMap` (`StoreAdminLayout`) with the new
+`components/StoreTripMap.vue`, on Leaflet installed from npm. Work is on
+`ccr-a8851ce2-oefr1s`, from `develop` at `2e3d8cf` (the PR #423 merge). The
+owner authorized this session's commits, one PR into `develop` (#427), its
+merge and `[skip ci]` on all of them, because the checks run locally. So no PR
+CI, no PR or merge SAST and no `develop` deploy ran. The ledger records what
+ran.
+
+**Owner decisions (2026-10-17), recorded in §5.** Leaflet and Chart.js are
+owner-approved frontend dependencies (npm through Vite, no CDN). Sellers and
+classified products will be converted, not deleted, in later steps.
+
+**Dependency.** `leaflet` 1.9.4 (`dependencies`) and `@types/leaflet` 1.9.22
+(`devDependencies`), pinned exactly at the versions the lockfile resolves;
+`package-lock.json` adds those two and `@types/geojson` 7946.0.16 (required by
+the types). No Composer change. The component imports Leaflet's ESM build
+by name, its stylesheet (`leaflet/dist/leaflet.css`) and its marker images
+through Vite, so they ship as bundled assets of the page chunk. `npm audit`
+reports 6 findings, all in dev tooling (`braces`, `micromatch`, `fast-glob`,
+`@vue/eslint-config-typescript`, `eslint-plugin-vue`,
+`postcss-selector-parser`); they exist without Leaflet too and were left for
+a separate change.
+
+**CSP (§2.5).** Tiles come from OpenStreetMap, the provider the Blade maps
+already used, at the tile server's current host
+`https://tile.openstreetmap.org/{z}/{x}/{y}.png` (the Blade pages used the
+`{s}.` subdomain form, which OpenStreetMap no longer recommends). Leaflet loads tiles as `<img>`, so
+`config/secure-headers.php` gained exactly `img-src.allow:
+['https://tile.openstreetmap.org']`. No other directive changed, and
+`store.blade_csp` is untouched. The browser spec runs under the enforced
+policy and reports no violation; without the entry, the browser blocked every
+tile and the same spec failed (checked once in this session, then restored).
+
+**Routes and gates: names, URIs and permission kept.** Both routes moved from
+root `Trip\TripController` to `Store\Admin\TripMapController` (`HasMiddleware`,
+`permission:add_trip`):
+
+- `trips.create-from-map` (GET `/trips/create-from-map`): the page.
+- `trips.store-from-map` (POST `/trips/store-from-map`): the writer, with
+  `StoreMapTripRequest` (unchanged); a `trip_id` also needs `edit_trip`
+  (`Gate::authorize`, a 403), as before.
+
+Root `Trip\TripController` had nothing else left and is deleted, with its
+`pint.json` and `phpstan.neon` entries (`StaticAnalysisExclusionsTest`) and
+the `ControllerRedirectsTest` path exclusion; the `Trip/` directory is gone.
+`routes/shop-admin.php` no longer aliases `Store\Admin\TripController`.
+For PHPStan, `Truck::trips()`, `Trip::checkpoints()` and
+`Checkpoint::relationable()` gained their relation return types (behaviour
+unchanged; the three models stay in both exclusion lists). The page loads
+the trucks' open trips, their drivers and checkpoints, and the checkpoints'
+orders or users in a fixed number of queries (`loadOpenTrips()`). No gate
+changed, so `LegacyAdminPermissionsTest` and the route ratchets needed no
+change (they ran and pass).
+
+**Writer: behaviour kept.** The legacy body, moved unchanged except for its
+answer, in one transaction: without `trip_id` a new trip on the truck
+(due today, no driver) starting with the departure checkpoint (store user 9;
+a `departure` field error when missing); with `trip_id` the truck's open trip
+gains the orders after its last stop. `Concerns\ReservesTripTrucks` and
+`Concerns\WritesTripCheckpoints` are reused unchanged (only their docblocks
+name the new caller): a truck another open trip holds is a `truck_id` error,
+an order already on an open trip or no longer out for delivery a `markers`
+error. The orders keep their posted order, then the shortest-path sort
+reorders when routing answers; the driver is notified. `prepareCheckpoints`
+moved with the writer (now `findOrFail` on the validated order).
+
+**Deliberate changes.**
+
+- **Answer.** The writer redirects to the picker (`trips.create-from-map`)
+  instead of answering JSON `{success: true}`; a refusal is an Inertia field
+  error shown in a banner, where the Blade page only logged a failed fetch.
+- **Stops.** A marker click (or Enter or Space on the focused marker, which is
+  a `role="button"` with the order's label) selects or drops an order; the
+  selected orders show as an ordered list of stops with every popup detail
+  (code and customer, customer ID, postal code, phone, address, Otajer ID) and
+  the §25 Move up, Move down and Remove buttons, and are posted in that order.
+  The Blade page posted them in click order with no way to reorder. Leaflet
+  popups are gone; the selected marker takes a hue-shifted copy of the marker
+  icon plus `aria-pressed`.
+- **Address.** The order's stored shipping address (`address`), else the
+  customer's, as the trip orders list shows it (§26); the Blade popup printed
+  the raw JSON column.
+- **Gates follow the routes.** Mark as delivered (`edit_trip`, as the Blade
+  popup) now asks with `confirmDeliveryStatus`; Delete trip (`delete_trip`)
+  asks with `confirmDelete` instead of the Blade modal; adding stops to a busy
+  truck's trip is offered only with `edit_trip`, which its write needs (the
+  Blade button was offered to everyone and failed). Assign buttons stay
+  disabled until a stop is selected (the Blade page alerted).
+- **Display.** Truck photos are the first upload id resolved through
+  `TruckPhotoResource` (HTTP(S) only), else a truck icon (Blade: the
+  placeholder image); a busy truck's name links to its latest open trip's
+  Inertia detail, a stop's customer to the Inertia customer edit
+  (`edit_customer`, pages.md); "Unknown customer" is translated (Blade printed
+  Arabic text in every locale). Trucks are listed by id, trips latest first
+  then by id, stops by position then id; the Blade page queried each truck's
+  trips several times per card.
+- **Map.** The container is `dir="ltr"` (map geometry does not mirror in
+  Arabic) and `isolate`, so Leaflet's pane z-indexes stay under the layout's
+  menu. Markers at the same spot are still spread east by 0.0011°.
+
+**Consumers traced and files deleted (`git rm`).** Traced with `rg` over
+`app`, `routes`, `resources`, `config`, `public/assets/js`, `tests` and `lang`.
+
+- `trips/create-from-map.blade.php`: rendered only by the removed root
+  `create_from_map`.
+- `trips/inc/map-popups.blade.php`, `trips/inc/scripts.blade.php`: included
+  only by the picker; `trips/inc/map-scripts.blade.php`: no includer since §25.
+  `resources/views/shop/backend/trips/` is gone.
+- `resources/js/testing/storeTripBladeMap.test.ts` tested only those three
+  scripts and is removed with them; `StoreTripMap.test.ts` and
+  `CreateFromMap.test.ts` cover the new map and page.
+- Kept: `trips.user-coordinates` (its only UI consumer was `inc/map-scripts`;
+  `LegacyDataExposureTest` pins it, and the driver API shares the handler),
+  `public/assets/img/selected-marker.png` and `default_truck.png` (public
+  assets, not removed here), the visit maps and `admin_sidenav.blade.php`
+  (links the picker by name, no change).
+
+**Menu.** Create trip from the map is an Inertia entry from
+`TripMapController` (`storeAdminMenu.ts` and its test).
+
+**Tests.** New `TripMapControllerTest.php`: the full payload (a
+representative's order for another customer, unlocated, out-of-range, pending
+and delivered orders as noise; free, plain, busy and idle trucks; a closed
+trip, a deleted order's stop and an unrelated upload as noise), the empty
+page, refused callers on both routes with a DB-unchanged assertion on the
+write, the routes' names, action and permission with the root controller and
+views gone, a new trip and an append (posted order, departure, truck, driver
+notification), `edit_trip` for an append, an 11-case validation dataset and the
+departure error with nothing written, GET on the writer (405), and the row
+actions' DELETE/PUT with their 404s. `TripControllerTest`'s nine map cases moved
+there; its reflection case now uses `Store\Admin\TripController`.
+`TripOrderControllerTest`'s Blade-script and Blade-rendering cases became the
+PUT-with-query case and Vitest gating. `HandleStoreBladePagesTest` pins the
+picker's strict `script-src` and its exact `img-src`. Vitest: full mounts of
+`StoreTripMap.test.ts` (Leaflet mocked with `vi.mock('leaflet')`, as
+`CellMap3D.test.ts` mocks three.js) and `CreateFromMap.test.ts`. Playwright:
+new `store-trip-map.spec.ts` with the real bundled Leaflet (pointer and
+keyboard selection, reorder, assignment, native confirms for delete and
+delivered, Arabic RTL with an LTR map, dark-mode contrast, enforced CSP); the
+two Blade map cases in `store-trips.spec.ts` and `store-trip-orders.spec.ts`
+(with their unpkg stand-in) moved there. The first browser run found a real
+defect: Leaflet adds a marker only once the map has a view, so the markers'
+`aria-pressed` was never set; the view is now set first, with a Vitest
+ordering assertion.
+
+Current inventory: **30** backend Blade files, **16** direct literal consumers
+of `shop.backend.layouts.app` (counted as before, including
+`StoreBackOfficeShellTest`), **3** of `shop.backend.layouts.layout`.
+Registrations are unchanged at **1,047** under `/temp` and **435** under
+`/temp/admin`: two replace two (from `route:list`). Blade editor: **8** fields
+in **8** views. Verification is recorded in the trip map picker section of
+[the reconciliation ledger](../store-backoffice-reconciliation-20261011.md).
+No deployment or production-data mutation is authorized.
+
+
+## 31. Representative visit details and day maps (2026-10-18)
+
+Work on `codex/store-visit-details-step-31` from fetched `origin/develop`
+`57e1e51f` (PR #438). PR #428 changed the pre-push default to attestation;
+this run uses explicit `--full` before committing and never writes an
+attestation trailer. The owner authorized one PR into `develop`, its merge,
+and `[skip ci]` on every commit, the PR title and the merge commit.
+[PR #440](https://github.com/arb-rajab/warehouse_management/pull/440) is the single PR; its number is recorded in a follow-up
+`[skip ci]` commit before merging.
+Model: GPT-6 Codex; the exact variant and configured effort are not exposed
+to this session. The reconciliation ledger records verification and shipping.
+
+**Controller and routes.** `show`, `show_all_visits_in_a_day`, `mapMarkers`
+and `update_note` moved into the existing `Store\Admin\VisitController`.
+The two GET names and paths stay; `{visit}` is bound on detail, `{user}`
+on the day route. `ShowRepresentativeVisitsRequest` validates the bound
+user id (query input cannot replace it) and optional `date` (`Y-m-d`). A
+missing visit/user and a user without `is_rep` return 404. With no date the
+day remains the first visit by id, else today. Visits stay scoped to that
+representative and day, rank descending, with id ascending for tied ranks.
+`VisitDetailResource` exposes only the displayed customer, representative,
+order and note fields; missing related rows render safely.
+
+Both GETs keep `view_representative_visits`. The retained POST `visits.note`
+keeps its URI and `customer`, `verified`, `unbanned` middleware. The new PUT
+`admin.rep.visits.note` at `/representatives/visits/{visit}/note` is the
+permission-gated admin alias to the same writer, needed for the inline editor
+without changing the customer-only perimeter. It uses the bound visit in
+preference to a forged body id. Both use `UpdateRepresentativeVisitNoteRequest`;
+only the current store actor's own visit is saved, with no Super Admin
+bypass. A foreign visit remains unchanged. Both now redirect back instead of
+answering `1`/`0`; a missing id is 404. The retained storefront customer
+chooser, the only old UI caller, now posts a native CSRF form and no longer
+interprets numeric AJAX responses. The mobile API is unchanged.
+
+The root controller is empty and deleted; its Pint, PHPStan and redirect-test
+path exclusions are removed. `ControllerRedirectsTest` exempts only this
+writer's method from its back-redirect scan, because step 31 explicitly
+requires a redirect back for these two consumers. No permission definitions
+or grants, departure, tax or logout policy changed. No Legacy ratchet list
+changed: the existing gates remain and the new alias has its read permission.
+
+**Vue and maps.** `Show.vue` and `RepShow.vue` use `StoreAdminLayout`,
+Wayfinder, English/Arabic `store.representatives.visits.*` labels, native
+constraints matching the nullable note/date rules, RTL and dark styles.
+The editor requires both `useStoreAccess().can('view_representative_visits')`
+and server-provided ownership. Customer/order links follow their destination
+permissions. Visit-list detail/day links are now Inertia Links. The sidebar
+still targets the same Inertia visit index, so `storeAdminMenu.ts` is unchanged;
+its test runs.
+
+`StoreLeafletMap` extracts the npm Leaflet/tile/container lifecycle from
+step 30's `StoreTripMap`, now reused by `StoreVisitMap`. The trip picker's
+selection behaviour stays covered. Visit markers keep the controller's safe
+coordinate checks, including zero and boundaries, one-based rank, red without
+an order and blue with an order, customer-name text popups and the day polyline
+in supplied order. Empty bounds keep a world view; one point uses zoom 14;
+multiple points fit with 24px padding and maximum zoom 14. Marker colours use
+darker red/blue for legible white ranks. The map stays LTR inside Arabic and
+isolated under layout menus. Leaflet 1.9.4 and CSS come from npm through Vite.
+The existing OpenStreetMap `img-src` allowance and all other CSP directives
+are unchanged; no unpkg imports remain in these screens.
+
+**Consumers and removals (`git rm`).** The root handler was the only renderer
+of `show.blade.php` and `rep-show.blade.php`; each included `map.blade.php`.
+Those are its only includers. The backend app shell includes only the shared
+admin nav/sidenav and has no visit-map include. Searches of `app`, `routes`,
+`resources`, `tests` and `public/assets/js` found no other map consumer or
+visit-specific public map helper to remove. The three Blade files and the
+old `storeVisitBladeMap.test.ts` are deleted. Protected shells and shared
+public assets remain for their actual consumers.
+
+**Tests and inventory.** The existing detail tests were converted to Inertia;
+the web note cases moved out of `LegacyRepresentativePaymentLinksTest` and
+`ReconstructedMigrationAuditTest`, leaving the API note cases in place.
+Tests cover the full payload, ownership, no-op foreign writes with unchanged
+DB attributes, validation, missing ids, refused callers, scoping, coordinate
+edge cases and strict CSP. Vitest full-mounts both pages and all maps;
+Playwright drives real npm Leaflet, safe popups, Inertia navigation, notes,
+ranked markers/polyline, date filtering, RTL/LTR and dark contrast under
+enforced CSP, with locally answered tile images. Verification results are
+recorded in [the ledger](../store-backoffice-reconciliation-20261011.md#representative-visit-detail-migration-2026-10-18), including failed setup attempts and skipped
+checks; none is inferred from a prior run.
+
+Current inventory: **27** backend Blade files (30 minus these three), **14**
+direct literal app-shell consumers counting `StoreBackOfficeShellTest`,
+**3** actual layout-shell extending views. Route registrations: **1,048**
+under `/temp`, **436** under `/temp/admin` (one new note alias). The retained
+Blade editor inventory is unchanged from §30. No production-data mutation
+or deployment was performed.
+
+
+## 32. Google Map settings (2026-10-18)
+
+Drafted by a Codex session on `codex/step-32-google-map` from `develop` at
+`4cb3c44a` (PR #440), then verified, fixed and shipped from a Claude session
+that had PHP 8.5.11, `vendor/` and `node_modules`. The owner authorized one PR
+into `develop` (PR #442), its merge, `[skip ci]` on every commit, the PR title
+and the merge message, and a follow-up commit recording the PR number. So no PR CI, PR
+or merge SAST and no `develop` deploy ran; the local checks in the ledger are
+the verification.
+
+**Owner map decision.** The §17 hold is lifted for this screen: Leaflet from
+npm with OpenStreetMap tiles replaces the admin Google script. The storefront's
+Google map still follows `google_map`; its script partial and consumers are
+unchanged. No dependency or CSP configuration change is needed or made.
+
+**Backend.** GET `google-map.index` (`/temp/admin/google-map`) moves to
+`Store\Admin\GoogleMapController::index`, rendering
+`Store/Admin/Setup/GoogleMap/Index` with an exhaustive `settings` object:
+`google_map` (boolean), `google_map_latitude` and `google_map_longtitude`
+(stored strings, empty if absent). The existing spelling is preserved.
+POST `google-map.update`, its URI, `google_map_setting`, typed request,
+allowlist, transaction, cache invalidation and redirect remain unchanged.
+Range rules already existed (-90..90 latitude, -180..180 longitude); this
+step adds coverage of both sides and positive boundaries, with no new
+validation behavior. Root `google_map()` and its middleware entry are removed;
+`BusinessSettingsController` stays in Pint/PHPStan exclusions for the seller
+commission/verification screens. No permission gate or ratchet changed.
+
+**Vue.** `ResourceFormPage` uses `StoreAdminLayout`, Wayfinder and the module's
+`StoreGoogleMapFormFields`. `StoreBooleanField` retains its enabled/disabled
+select API; its label explicitly says it controls the storefront's Google map.
+Enabling reveals the shared `StoreLeafletMap`, an accessible draggable marker,
+click selection and two editable numeric fields with native min/max/step and
+paired-required constraints. Manual edits move the marker; clicks/drags update
+the inputs. Blank/invalid coordinates do not create a marker. The world view
+makes an unset location selectable. Disabling omits coordinates from the POST,
+preserving the stored location. The map stays LTR and isolated inside RTL.
+English/Arabic keys are `store.googleMap.*`; the sidebar is an Inertia visit.
+
+**Consumers/removal.** Searches of app/routes/resources/tests/public JS found
+only the removed root action rendered the admin `google_map.blade.php`; it is
+removed with `git rm`. `shop/frontend/partials/google_map.blade.php` stays:
+its consumers include the frontend address modal, user profile, customer
+dashboard and seller profile. Seller shop also reads the stored default
+latitude. None of those files or any storefront behavior changed.
+
+**Tests and verification.** Pest covers render, exhaustive enabled/disabled/
+missing settings, route action/gate, existing write/refusal/cache/allowlist
+behavior and expanded coordinate boundaries. The root middleware test drops
+only the migrated action. Full-mounted Vitest covers the page shell, module
+fields and real input synchronization with a mocked Leaflet geometry engine.
+`store-google-map.spec.ts` drives real npm Leaflet clicks/drags/manual edits,
+native range rejection, save/reload, disabled preservation, RTL/LTR and dark
+contrast under enforced CSP, with tile images answered locally. Verification
+found and fixed two defects in the draft: its `store.googleMap.*` strings sat
+under `cells.palletActions.store` in both locale files (so the page showed raw
+keys), and the spec's fixture mass-assigned `BusinessSetting`, whose `type` is
+guarded. The spec also now waits for the map's pan to settle before dragging
+the marker and switches back to English by its Arabic label. See
+[the ledger](../store-backoffice-reconciliation-20261011.md#google-map-settings-step-32-2026-10-18)
+for exactly which checks ran.
+
+Inventory: **26** backend Blade files (27 minus this screen),
+**13** direct literal app-shell consumers including the shell test, **3**
+layout-shell extending views. Routes replace one GET with one GET; no route
+is added or removed (`route:list` still shows 1,048 under `/temp` and 436
+under `/temp/admin`).
+No production data, CI, SAST or deployment was run.

@@ -22,7 +22,6 @@ import {
 import type { Component } from 'vue';
 import { admin_dashboard } from '@/actions/App/Http/Controllers/AdminController';
 import {
-    google_map,
     seller_verification_form,
     vendor_commission,
 } from '@/actions/App/Http/Controllers/BusinessSettingsController';
@@ -60,6 +59,7 @@ import {
 import { index as dynamicPopupsIndex } from '@/actions/App/Http/Controllers/Store/Admin/DynamicPopupController';
 import { index as flashDealsIndex } from '@/actions/App/Http/Controllers/Store/Admin/FlashDealController';
 import { edit as generalSettingsEdit } from '@/actions/App/Http/Controllers/Store/Admin/GeneralSettingsController';
+import { index as googleMapIndex } from '@/actions/App/Http/Controllers/Store/Admin/GoogleMapController';
 import { index as languagesIndex } from '@/actions/App/Http/Controllers/Store/Admin/LanguageController';
 import { index as newslettersIndex } from '@/actions/App/Http/Controllers/Store/Admin/NewsletterController';
 import { index as offerDealsIndex } from '@/actions/App/Http/Controllers/Store/Admin/OfferController';
@@ -114,6 +114,8 @@ import {
     index as tripsIndex,
     today as todayTrips,
 } from '@/actions/App/Http/Controllers/Store/Admin/TripController';
+import { create as tripsCreateFromMap } from '@/actions/App/Http/Controllers/Store/Admin/TripMapController';
+import { index as tripOrders } from '@/actions/App/Http/Controllers/Store/Admin/TripOrderController';
 import {
     create as trucksCreate,
     index as trucksIndex,
@@ -126,10 +128,6 @@ import { edit as header } from '@/actions/App/Http/Controllers/Store/Admin/Websi
 import { edit as homeEdit } from '@/actions/App/Http/Controllers/Store/Admin/WebsiteHomeController';
 import { index as pages } from '@/actions/App/Http/Controllers/Store/Admin/WebsitePageController';
 import { index as zonesIndex } from '@/actions/App/Http/Controllers/Store/Admin/ZoneController';
-import {
-    all_orders as tripOrders,
-    create_from_map,
-} from '@/actions/App/Http/Controllers/Trip/TripController';
 import type { StoreAccess } from '@/lib/storeAccess';
 
 /**
@@ -174,8 +172,8 @@ export function isStoreMenuGroup(item: StoreMenuItem): item is StoreMenuGroup {
 
 /**
  * The back office's sidebar, from resources/views/shop/backend/inc/admin_sidenav.blade.php
- * less the removed addons' blocks, the stray duplicate Shipping group and the
- * server-status page (a `Route::view` with no controller, marked for deletion).
+ * less the removed addons' blocks and the stray duplicate Shipping group. The
+ * System → Server status page was deleted from both sidebars (guide §29).
  * Where the Blade gate disagreed with the route's own permission, the
  * route's wins, so a link never leads to a 403.
  */
@@ -467,11 +465,13 @@ export const storeAdminMenu: StoreMenuItem[] = [
                     },
                     {
                         labelKey: 'store.nav.createTripFromMap',
-                        href: create_from_map(),
+                        inertia: true,
+                        href: tripsCreateFromMap(),
                         permission: 'add_trip',
                     },
                     {
                         labelKey: 'store.nav.tripOrders',
+                        inertia: true,
                         href: tripOrders(),
                         permission: 'view_all_trips',
                     },
@@ -824,7 +824,8 @@ export const storeAdminMenu: StoreMenuItem[] = [
                     },
                     {
                         labelKey: 'store.nav.googleMap',
-                        href: google_map(),
+                        href: googleMapIndex(),
+                        inertia: true,
                         permission: 'google_map_setting',
                     },
                     {

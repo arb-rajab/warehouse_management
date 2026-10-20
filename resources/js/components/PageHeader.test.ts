@@ -19,4 +19,12 @@ describe('PageHeader', () => {
 
         expect(wrapper.get('button').text()).toBe('Add row');
     });
+
+    it('wraps its slot below the title on narrow screens instead of overflowing', () => {
+        const wrapper = mount(PageHeader, {
+            props: { title: 'Rows' },
+        });
+
+        expect(wrapper.classes()).toContain('flex-wrap');
+    });
 });

@@ -19,15 +19,12 @@ use App\Models\ProductBarcode;
 use App\Models\ProductSetting;
 use App\Models\Setting;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
-use Illuminate\Support\Facades\Http;
 use Inertia\Inertia;
 use Inertia\Response;
 use InvalidArgumentException;
-use Psr\Http\Message\StreamInterface;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use ZipArchive;
 
@@ -39,16 +36,9 @@ class ProductController extends Controller
      * @var list<string>
      */
     private const array SORTABLE_COLUMNS = [
-        'name', 'full_cells_count', 'opened_cells_count', 'expired_cells_count',
+        'id', 'name', 'full_cells_count', 'opened_cells_count', 'expired_cells_count',
         'expiring_soon_count',
     ];
-
-    /** Longest side, in pixels, of an image served by {@see image()} — ample for a 3D map box face. */
-    private const int PRODUCT_IMAGE_MAX_SIZE = 256;
-
-    private const int PRODUCT_IMAGE_MAX_BYTES = 5 * 1024 * 1024;
-
-    private const int PRODUCT_IMAGE_MAX_PIXELS = 25_000_000;
 
     public function index(FilterProductsRequest $request): Response
     {
@@ -76,7 +66,11 @@ class ProductController extends Controller
             ->when($request->boolean('low_stock'), fn (Builder $query) => $query->whereExists($this->lowStockExistsSubquery()))
             ->matchingOccupancyFilters($request)
             ->matchingHistoryFilters($request)
-            ->orderBy($sortBy, $direction)
+            ->when(
+                $sortBy === 'name' && app()->getLocale() === 'ar',
+                fn (Builder $query) => $query->orderByRaw("COALESCE(NULLIF(ar_name, ''), name) {$direction}"),
+                fn (Builder $query) => $query->orderBy($sortBy, $direction),
+            )
             ->orderBy('id', $direction)
             ->paginate($perPage)
             ->withQueryString();
@@ -205,8 +199,10 @@ class ProductController extends Controller
     }
 
     /**
-     * One Code 128 barcode per product id, meant to be printed and stuck on every
-     * box/pallet of that product — see BuildsProductQrLabels.
+     * The product's default barcode — its id as a Code 128 label, meant to be
+     * printed and stuck on every box/pallet of that product — see
+     * BuildsProductQrLabels. Derived from the id, never stored, so it cannot
+     * be edited or deleted like a custom barcode.
      */
     public function exportQr(Product $product): HttpResponse
     {
@@ -215,6 +211,34 @@ class ProductController extends Controller
         return response($this->productQrLabelImage($product, $setting->qr_code_width, $setting->qr_code_height))
             ->header('Content-Type', 'image/svg+xml')
             ->header('Content-Disposition', "attachment; filename=\"product-{$product->id}-barcode.svg\"");
+    }
+
+    /**
+     * The default barcode's label from {@see exportQr()}, served inline so the
+     * products page can show it in an `<img>` without downloading it.
+     */
+    public function previewDefaultBarcode(Request $request, Product $product): HttpResponse
+    {
+        $setting = Setting::current();
+
+        $etag = md5(implode('|', [
+            $this->productLabelName($product),
+            $product->id,
+            $setting->qr_code_width,
+            $setting->qr_code_height,
+        ]));
+
+        $notModified = $this->notModifiedResponse($request, $etag, 'private, no-cache');
+
+        if ($notModified !== null) {
+            return $notModified;
+        }
+
+        return response($this->productQrLabelImage($product, $setting->qr_code_width, $setting->qr_code_height))
+            ->header('Content-Type', 'image/svg+xml')
+            ->header('Content-Disposition', 'inline')
+            ->header('Cache-Control', 'private, no-cache')
+            ->setEtag($etag);
     }
 
     /**
@@ -282,16 +306,14 @@ class ProductController extends Controller
     }
 
     /**
-     * A ZIP holding one SVG label per barcode attached to the product — all of
-     * them and none belonging to any other product. Built whole or not at all:
-     * a barcode that cannot be rendered fails the download rather than being
-     * left out of a ZIP that looks complete.
+     * A ZIP holding one SVG label per barcode of the product — its default
+     * (id) barcode plus every custom one, and none belonging to any other
+     * product. Built whole or not at all: a barcode that cannot be rendered
+     * fails the download rather than being left out of a ZIP that looks complete.
      */
     public function downloadAllBarcodes(Product $product): BinaryFileResponse
     {
         $barcodes = $product->barcodes()->orderBy('id')->get(['id', 'product_id', 'barcode']);
-
-        abort_if($barcodes->isEmpty(), HttpResponse::HTTP_NOT_FOUND, __('messages.product_has_no_barcodes'));
 
         $setting = Setting::current();
         $path = tempnam(sys_get_temp_dir(), 'barcodes');
@@ -301,8 +323,16 @@ class ProductController extends Controller
             abort(HttpResponse::HTTP_INTERNAL_SERVER_ERROR);
         }
 
+        $current = (string) $product->id;
+
         try {
+            $zip->addFromString(
+                "product-{$product->id}-barcode.svg",
+                $this->productQrLabelImage($product, $setting->qr_code_width, $setting->qr_code_height),
+            );
+
             foreach ($barcodes as $barcode) {
+                $current = $barcode->barcode;
                 $zip->addFromString(
                     $this->barcodeFileName($product, $barcode),
                     $this->productBarcodeLabelImage($product, $barcode->barcode, $setting->qr_code_width, $setting->qr_code_height),
@@ -311,7 +341,7 @@ class ProductController extends Controller
         } catch (InvalidArgumentException) {
             $zip->close();
             @unlink($path);
-            abort(HttpResponse::HTTP_UNPROCESSABLE_ENTITY, __('messages.barcode_not_printable', ['barcode' => $barcode->barcode]));
+            abort(HttpResponse::HTTP_UNPROCESSABLE_ENTITY, __('messages.barcode_not_printable', ['barcode' => $current]));
         }
 
         if (! $zip->close()) {
@@ -333,150 +363,6 @@ class ProductController extends Controller
         $safeValue = trim((string) preg_replace('/[^A-Za-z0-9._-]+/', '_', $barcode->barcode), '_');
 
         return "product-{$product->id}-barcode-{$barcode->id}".($safeValue !== '' ? "-{$safeValue}" : '').'.svg';
-    }
-
-    /**
-     * The product's store-hosted image, re-served from this app's own origin.
-     *
-     * The 3D map draws product images as WebGL textures, and WebGL rejects a
-     * cross-origin image unless its host sends CORS headers — which the
-     * store's image host doesn't, even though a plain `<img>` of the same URL
-     * displays fine. The upstream bytes are decoded and re-encoded as a
-     * downscaled PNG rather than passed through, so only a real raster image
-     * (never SVG/HTML) is ever served from this origin.
-     */
-    public function image(Request $request, Product $product): HttpResponse
-    {
-        $product->loadMissing('thumbnailUpload:id,file_name,external_link');
-        $url = $product->image_url;
-
-        if ($url === null) {
-            abort(HttpResponse::HTTP_NOT_FOUND);
-        }
-
-        abort_unless($this->isAllowedImageUrl($url), HttpResponse::HTTP_BAD_GATEWAY);
-
-        // The served PNG is a pure function of the image URL, so a browser
-        // that already holds it revalidates without the upstream fetch.
-        $etag = md5($url);
-        $notModified = $this->notModifiedResponse($request, $etag, 'private, max-age=86400');
-
-        if ($notModified !== null) {
-            return $notModified;
-        }
-
-        try {
-            $upstream = Http::timeout(10)
-                ->withOptions(['allow_redirects' => false, 'stream' => true])
-                ->get($url);
-        } catch (ConnectionException) {
-            abort(HttpResponse::HTTP_BAD_GATEWAY);
-        }
-
-        abort_unless($upstream->successful(), HttpResponse::HTTP_BAD_GATEWAY);
-
-        $body = $this->readCapped($upstream->toPsrResponse()->getBody(), self::PRODUCT_IMAGE_MAX_BYTES);
-
-        $png = $body === null ? null : $this->normalizedProductImage($body);
-
-        if ($png === null) {
-            abort(HttpResponse::HTTP_BAD_GATEWAY);
-        }
-
-        return response($png)
-            ->header('Content-Type', 'image/png')
-            ->header('Cache-Control', 'private, max-age=86400')
-            ->setEtag($etag);
-    }
-
-    /**
-     * Whether the image may be fetched server-side: https, the default port and
-     * a host the store serves its images from (the asset base URL's host plus
-     * `store.image_hosts`). `external_link` is whatever the store's uploads
-     * table holds, so it is never trusted to point somewhere harmless.
-     */
-    private function isAllowedImageUrl(string $url): bool
-    {
-        $parts = parse_url($url);
-        $host = strtolower((string) ($parts['host'] ?? ''));
-
-        if (strtolower((string) ($parts['scheme'] ?? '')) !== 'https' || $host === '') {
-            return false;
-        }
-
-        if (isset($parts['port']) && $parts['port'] !== 443) {
-            return false;
-        }
-
-        $assetHost = parse_url((string) config('store.asset_base_url'), PHP_URL_HOST);
-        $allowed = array_map('strtolower', array_filter([...config('store.image_hosts'), $assetHost]));
-
-        return in_array($host, $allowed, true);
-    }
-
-    /**
-     * The stream's bytes, or null once it holds more than `$maxBytes` — read
-     * in chunks so an oversized body is abandoned rather than buffered.
-     */
-    private function readCapped(StreamInterface $stream, int $maxBytes): ?string
-    {
-        $body = '';
-
-        while (! $stream->eof()) {
-            $body .= $stream->read(8192);
-
-            if (strlen($body) > $maxBytes) {
-                return null;
-            }
-        }
-
-        return $body;
-    }
-
-    /**
-     * Decodes any raster format GD reads, downscales it to fit
-     * PRODUCT_IMAGE_MAX_SIZE (never upscaling) and re-encodes it as PNG,
-     * keeping transparency. Null when the bytes aren't a decodable image.
-     */
-    private function normalizedProductImage(string $bytes): ?string
-    {
-        $dimensions = @getimagesizefromstring($bytes);
-
-        // Refuse before decoding: a small file can declare a huge canvas, and GD
-        // allocates width x height x 4 bytes for it.
-        if ($dimensions === false || $dimensions[0] * $dimensions[1] > self::PRODUCT_IMAGE_MAX_PIXELS) {
-            return null;
-        }
-
-        // `@`: GD warns on undecodable input; a false return is handled below.
-        $source = @imagecreatefromstring($bytes);
-
-        if ($source === false) {
-            return null;
-        }
-
-        imagepalettetotruecolor($source);
-
-        $width = imagesx($source);
-        $height = imagesy($source);
-        $scale = min(1, self::PRODUCT_IMAGE_MAX_SIZE / max($width, $height));
-        $target = imagescale(
-            $source,
-            max(1, (int) round($width * $scale)),
-            max(1, (int) round($height * $scale)),
-        );
-
-        if ($target === false) {
-            return null;
-        }
-
-        imagealphablending($target, false);
-        imagesavealpha($target, true);
-
-        ob_start();
-        imagepng($target);
-
-        return (string) ob_get_clean();
     }
 
     /**

@@ -18,6 +18,7 @@ import {
 } from '@/actions/App/Http/Controllers/Store/Admin/DriverController';
 import { index as dynamicPopupsIndex } from '@/actions/App/Http/Controllers/Store/Admin/DynamicPopupController';
 import { index as flashDealsIndex } from '@/actions/App/Http/Controllers/Store/Admin/FlashDealController';
+import { index as googleMapIndex } from '@/actions/App/Http/Controllers/Store/Admin/GoogleMapController';
 import { index as languagesIndex } from '@/actions/App/Http/Controllers/Store/Admin/LanguageController';
 import { index as newslettersIndex } from '@/actions/App/Http/Controllers/Store/Admin/NewsletterController';
 import { index as offerDealsIndex } from '@/actions/App/Http/Controllers/Store/Admin/OfferController';
@@ -59,6 +60,8 @@ import {
     index as tripsIndex,
     today as todayTrips,
 } from '@/actions/App/Http/Controllers/Store/Admin/TripController';
+import { create as tripsCreateFromMap } from '@/actions/App/Http/Controllers/Store/Admin/TripMapController';
+import { index as tripOrdersIndex } from '@/actions/App/Http/Controllers/Store/Admin/TripOrderController';
 import {
     index as trucksIndex,
     create as trucksCreate,
@@ -189,6 +192,8 @@ describe('storeAdminMenu', () => {
                 tripsIndex.url(),
                 todayTrips.url(),
                 tripsCreate.url(),
+                tripsCreateFromMap.url(),
+                tripOrdersIndex.url(),
                 all_orders['/temp/admin/all_orders'].url(),
                 all_orders['/temp/admin/seller_orders'].url(),
                 all_orders['/temp/admin/orders_by_pickup_point'].url(),
@@ -203,6 +208,7 @@ describe('storeAdminMenu', () => {
                 facebookComments.url(),
                 analytics.url(),
                 recaptcha.url(),
+                googleMapIndex.url(),
                 firebase.url(),
                 payments.url(),
                 filesystem.url(),

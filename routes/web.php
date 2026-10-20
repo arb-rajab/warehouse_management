@@ -51,7 +51,6 @@ Route::middleware('auth')->group(function () {
         Route::delete('rows/{row}', [RowController::class, 'destroy'])->name('rows.destroy');
         Route::get('rows/{row}/export-qr-codes', [RowController::class, 'exportQrCodes'])->name('rows.export-qr-codes');
 
-        Route::get('cells', [CellController::class, 'index'])->name('cells.index');
         Route::get('cells/{cell}/export-qr-code', [CellController::class, 'exportQrCode'])->name('cells.export-qr-code');
         Route::post('cells/{cell}/toggle-active', [CellController::class, 'toggleActive'])->name('cells.toggle-active');
 
@@ -80,7 +79,7 @@ Route::middleware('auth')->group(function () {
         Route::get('products', [ProductController::class, 'index'])->name('products.index');
         Route::get('products/search', [ProductController::class, 'search'])->middleware('cache.headers:private;etag')->name('products.search');
         Route::get('products/{product}/export-qr', [ProductController::class, 'exportQr'])->name('products.export-qr');
-        Route::get('products/{product}/image', [ProductController::class, 'image'])->name('products.image');
+        Route::get('products/{product}/export-qr/preview', [ProductController::class, 'previewDefaultBarcode'])->name('products.export-qr.preview');
         Route::put('products/{product}/box-count', [ProductController::class, 'updateBoxCount'])->name('products.box-count.update');
         Route::put('products/{product}/minimum-pallets', [ProductController::class, 'updateMinimumPallets'])->name('products.minimum-pallets.update');
         Route::post('products/{product}/barcodes', [ProductController::class, 'storeBarcode'])->name('products.barcodes.store');

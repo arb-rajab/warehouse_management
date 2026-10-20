@@ -106,7 +106,7 @@ objects. These changes remain available in Git and have not been silently lost.
 | `468d235c`: unconverted `TripController` / visit map Blade consumers | Existing Leaflet/Google assets, hardened coordinates/DOM output and HTTPS routing; existing departure ID 9 semantics retained | New Vue Leaflet dependency and departure business policy require decisions; no map conversion claimed |
 | `7ab01926`: `Store/Admin/DashboardController` chart implementation, `Store/Admin/Dashboard/Index.vue`, `StoreDashboardCharts.vue`, chart tests and Chart.js dependency additions | Root Blade dashboard with existing chart assets; shell counts/search/notifications and scoped cache clear integrated | Chart.js dependency approval before Inertia dashboard activation; checked-in claim is not independent evidence |
 | `7ab01926`: `app/Services/StoreAdminOrderService.php` line tax/grand-total arithmetic and corresponding UI/test expectations | Raw product tax metadata stored; grand total sums line prices, as existing entry/edit handlers did | Percentage tax conversion and adding tax/shipping/subtracting coupon require business approval; regression expectations reflect established behavior |
-| Sources touching `seller_app_link`, SVG, shared logout/session or server status | Existing behavior and routes/templates remain | Explicit owner decisions before removal or shared policy changes; admin conversion alone is insufficient |
+| Sources touching `seller_app_link`, SVG or shared logout/session (server status was deleted on the owner's decision, guide §29) | Existing behavior and routes/templates remain | Explicit owner decisions before removal or shared policy changes; admin conversion alone is insufficient |
 | `e5523338`: duplicate reference controllers/requests/pages/routes/translations/progress | Selected `35ae3133` implementation remains | Superseded, not awaiting activation; retain only independently useful adapted tests/fixes |
 
 No independently verified approvals were found for the above dependency or
@@ -3100,7 +3100,8 @@ cannot match and action argument types are not checked.
   and both browser specs written or changed here, and #404's, are unexecuted.
 - **Known limits.** The update writer's driver comparison is the legacy one:
   the posted `driver_id` is a string, so the driver is notified on every
-  save that keeps a driver (unchanged behaviour). The customer choice list is
+  save that keeps a driver (unchanged behaviour). Fixed on 2026-10-15 in
+  the trip orders session (below): both sides are compared as integers. The customer choice list is
   every non-representative store user, as the Blade forms loaded it, sent
   once with only id and name.
 - **Inventory** (from the files, not `route:list`). **39** backend Blade files;
@@ -3111,3 +3112,757 @@ cannot match and action argument types are not checked.
 Required before relying on it: the full `pre_push_check.py` gate with PHP 8.5,
 the dev tools, generated Wayfinder files and `node_modules`, plus the two
 browser specs above, for this PR and #404.
+
+## Trip orders migration (2026-10-15)
+
+Work on `ccr-23c5d0cb-ziq8z5` from `develop` at `78c9c3a` (the PR #413 merge);
+the branch had no commits beyond that base. The owner authorized commits, a
+push, a PR (#419) and its merge into `develop`, each with `[skip ci]`, because
+the checks run locally. **No PR CI, no PR or merge SAST and no `develop`
+deploy ran for this PR or its merge.** No other branch, deployment or
+production data was touched. The guide's §26 records the result.
+
+### #404 and #406 checks carried over
+
+This session had PHP 8.5.11, `vendor/` with the dev tools and
+`node_modules`. `wait_for_setup.py` (first run, with a 600 s `timeout`
+around it, was cut off while setup was still running; the second, in the
+background, exited 0): "frontend (vitest, vue-tsc, prettier, eslint): ready.
+App (artisan, migrations): ready. Vite build (needed by Pest feature tests):
+built (without the remote font: fonts.bunny.net is unreachable). Pint, Pest,
+PHPStan and Larastan are installed". Laravel Boost failed to connect. On
+`develop` at `78c9c3a`, before any change:
+
+- `php artisan wayfinder:generate --skip-routes --with-form`: generated.
+- Pest, `TripControllerTest`, `LegacyAdminPermissionsTest`,
+  `LegacyStoreStateChangingRoutesTest`, `LegacyShopRouteAccessTest`,
+  `StoreBackOfficeShellTest` and `ControllerRedirectsTest`: 141 passed.
+- Pest, every `tests/Feature/Legacy*.php` (43 files): 507 passed.
+- `vendor/bin/pint --test`: passed. PHPStan (`vendor/bin/phpstan analyse
+  --memory-limit=2G`; `composer types:check` refuses to run as root):
+  0 errors.
+- `php artisan route:list --path=temp --json`: **1,048** routes, **436**
+  under `temp/admin`, matching the counts #404 and #406 took from the route
+  files.
+- `npm run build`: failed only on `getaddrinfo ENOTFOUND fonts.bunny.net`;
+  `python3 .claude/scripts/build_without_fonts.py` (the repository's
+  font-less build): built.
+- Playwright, `store-trips.spec.ts` (3) and `store-drivers.spec.ts` (1):
+  4 passed, with `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/opt/pw-browsers/chromium`
+  (the locked Playwright looks for a headless shell build the container does
+  not have).
+
+Nothing failed, so there is no separate fix commit for them. The #404 and
+#406 PHP and browser checks are now run, against `develop` as merged.
+
+### Driver notification fix (own commit)
+
+`Store\Admin\TripController::update` compared the stored integer `driver_id`
+with the posted string, so it notified the driver on every save that kept
+one. It now compares both as integers (and stores the integer). New
+`TripControllerTest` cases post the id as a string: unchanged (no
+notification), changed and removed (one each), and no driver before or after
+(none). The unchanged case failed before the fix ("should be called exactly
+0 times but called 1 times") and passes after it.
+
+### Prerequisites and audit evidence (develop line numbers)
+
+- **Root handlers** (`app/Http/Controllers/Trip/TripController.php`).
+  `all_orders` (`:245-293`): `delivery_status` cached in the session (`:256`)
+  and read back when absent; `whereNotIn('delivery_status', ['pending',
+  'cancelled'])`; the search's `orWhere`s ungrouped, with
+  `orWhereHas('customer')` (`:270`), which fails ("Call to undefined method
+  App\Models\Order::customer()": `customer` is an accessor), so any search
+  answered 500 (reproduced here with a throwaway Pest probe, deleted); the
+  `d-m-Y to d-m-Y` range parsed with `strtotime`; `paginate(15)` (`:290`).
+  `bulk_change_delivery_status` (`:295-310`): `findOrFail` per id, only
+  `confirmed`/`ready_for_delivery` applied, returned `1`. `updateInvoiceNumber`
+  (`:312-324`): any value, `delivery_status = 'on_delivery'`, JSON `success`.
+  `updateOrderStatusToDelivered` (`:326-337`): `delivered`, JSON `success`.
+- **Routes** (`routes/shop-admin.php:285-288`): `trips.orders`
+  (`view_all_trips`); the three writes (`edit_trip`), all POST with
+  `order_id` or `id[]`.
+- **View** (`trips/orders.blade.php`): Create Order under `add_order`
+  (`:13`); the four status radios (the first with a broken `mnhbgnchange`
+  attribute, `:25`); the bulk menu (delete, mark confirmed, mark ready) under
+  `delete_order` (`:61`), the row checkboxes likewise (`:103`, `:151`); the
+  customer link (`:208`); the invoice textarea saved on change (`:278`,
+  `:494`); Print CMR (`:329`); the "Change status" button that marks the
+  order delivered for every viewer (`:336`); Edit under `edit_order` with the
+  editable condition (`:341-343`); bulk delete to `bulk-order-delete`
+  (`:406`); a manager-notes modal posting `orders.update_manager_notes`
+  (`:470`) whose opener `openUpdateModal` (`:486`) had no caller.
+- **Consumers.** `trips/orders.blade.php`: only `all_orders`.
+  `trips.orders.update_order_status_to_delivered`: also
+  `create-from-map.blade.php:346` (fetch from the order popup's
+  `.mark-delivered` button, built in `inc/map-popups.blade.php`). The other
+  two writes: only the view. `admin_sidenav.blade.php:734`: `trips.orders` by
+  name. No test referenced the screen or its routes.
+- **Driver comparison** (`Store\Admin\TripController.php:136` on `develop`).
+
+### Completed scope
+
+- **Backend.** `Store\Admin\TripOrderController` (`index`,
+  `bulkUpdateDeliveryStatus`, `updateInvoiceNumber`, `markDelivered`);
+  `FilterTripOrdersRequest`, `BulkUpdateTripOrdersRequest`,
+  `UpdateTripOrderInvoiceRequest`, `MarkTripOrderDeliveredRequest`;
+  `Resources\Store\TripOrderResource` (photos through the existing
+  `TruckPhotoResource`). `BulkDeleteOrdersRequest` and
+  `OrderController::bulk_order_delete` take `return_to=trip_orders`.
+  `Order`'s `invoice_number` docblock is `string|null` (the column is a
+  string). Root loses the four handlers.
+- **Frontend.** `Store/Admin/Trips/Orders/Index.vue`, two types and a
+  fixture, `confirmDeliveryStatus` in `lib/confirm.ts`, 53
+  `store.trips.orders.*` keys in each of English and Arabic, the menu's
+  Orders entry as an Inertia visit.
+- **Retained Blade.** `create-from-map.blade.php`'s Mark as delivered posts a
+  spoofed PUT with `return_to=map` to the bound route.
+- **Routes.** Four registrations replace four; names kept.
+- **Removed (`git rm`).** `trips/orders.blade.php`.
+- **Unchanged.** Permission names and grants, order tax and totals (held,
+  §5), the order detail and entry pages, the checkpoints page, the map
+  picker's other controls and its writer, CMR, CSP and `blade_csp`, shells
+  and `HandleStoreBladePages`. No dependency or lockfile change.
+
+### Verification and limits
+
+Same session and tools as above (PHP 8.5.11, dev tools, generated Wayfinder
+files, the font-less build). No stand-in Wayfinder modules were needed.
+
+- **Ran.**
+  - Pest, `TripOrderControllerTest.php`: 34 passed; `TripControllerTest.php`
+    with the new driver cases: 124 passed; `OrderControllerTest.php`,
+    `StoreBackOfficeShellTest.php`, `LegacyAdminPermissionsTest.php` and
+    `LegacyStoreStateChangingRoutesTest.php`: passed.
+  - Vitest, `Trips/Orders/Index.test.ts`, `confirm.test.ts`,
+    `storeAdminMenu.test.ts` and `storeTripBladeMap.test.ts`: passed.
+  - Playwright, `store-trip-orders.spec.ts` (2, new), `store-trips.spec.ts`
+    (3) and `store-drivers.spec.ts` (1): 6 passed, with the Chromium path
+    above. The map picker case serves a stand-in for the unpkg Leaflet
+    (unreachable here: `net::ERR_TUNNEL_CONNECTION_FAILED`; without it the
+    picker's script stops on `L is not defined` before its click handler).
+  - `npm run build`: fails only on `fonts.bunny.net`, as above; the
+    font-less build succeeded and is what Pest and Playwright used.
+  - `route:list`: 1,048 and 436 (four replace four).
+  - `python3 .claude/scripts/pre_push_check.py --full`: exit 0. ESLint,
+    Prettier, vue-tsc, Vitest (313 files, 2,786 tests), Pint, PHPStan
+    (0 errors) and Pest (6,013 tests, 33,487 assertions) all passed.
+  - `git diff --check`: clean.
+- **Not run.** PR CI, SAST and the `develop` deploy (`[skip ci]`, as
+  authorized), MySQL (Pest and Playwright use SQLite), the full Playwright
+  suite (only the three trip and driver specs), and `npm run build` with the
+  remote font.
+- **Known limits.** Mark as delivered and the invoice number still apply to
+  any order the caller can name, as the Blade handlers did (no status
+  precondition); the map picker's popup reloads after a successful response
+  instead of reading the old JSON `success`.
+- **Inventory** (from the files and `route:list`). **38** backend Blade
+  files; **19**/**3** literal consumers of the app/layout shells; **1,048**
+  `/temp` and **436** `/temp/admin` registrations; Blade editor: **8** fields
+  in **8** views.
+
+## Trip detail and checkpoints migration (2026-10-16)
+
+Work on `claude/store-backoffice-trip-checkpoints-2ga29g` from `develop` at
+`9eb862a` (the PR #420 merge). The owner authorized commits, a push, a PR
+(#421, merged as `fb04f56`) and its merge into `develop`, each with
+`[skip ci]`, because the checks run
+locally. **No PR CI, no PR or merge SAST and no `develop` deploy ran for this
+PR or its merge.** No other branch, deployment or production data was
+touched. The guide's §27 records the result.
+
+### Setup and baseline on `develop`
+
+PHP 8.5.11, `vendor/` with the dev tools and `node_modules`.
+`wait_for_setup.py` (in the background) exited 0: "frontend (vitest, vue-tsc,
+prettier, eslint): ready. App (artisan, migrations): ready. Vite build (needed
+by Pest feature tests): built (without the remote font: fonts.bunny.net is
+unreachable). Pint, Pest, PHPStan and Larastan are installed". Laravel Boost
+failed to connect (`CONNECTION_CLOSED`); repository files and installed
+package source were used instead. On a detached checkout of `develop` at
+`9eb862a`, before any change was applied there:
+
+- `php artisan wayfinder:generate --skip-routes --with-form`: generated.
+- Pest, `TripControllerTest`, `TripOrderControllerTest`,
+  `LegacyAdminPermissionsTest`, `LegacyStoreStateChangingRoutesTest`,
+  `LegacyShopRouteAccessTest` and `LegacyTempRoutesReachableTest`:
+  **182 passed** (1,355 assertions).
+
+### Prerequisites and audit evidence (develop line numbers)
+
+- **Root handlers** (`app/Http/Controllers/Trip/TripController.php`). `show`
+  (`:42-60`): `findOrFail($id)`, checkpoints with the morph eager loads,
+  `getCheckpointsMapData()` (`:214-243` with `checkpointMapPoints()`, an OSRM request with 2 s/5 s
+  timeouts whenever two or more stops have coordinates). `update_checkpoint_notes`
+  (`:110-125`): no validation, `Checkpoint::find($request->checkpoint_id)`,
+  JSON `success`. `update_checkpoint_status` (`:127-140`):
+  `UpdateCheckpointStatusRequest` (`id`, enum `status`), `lockForUpdate`,
+  `arrived_at ??= now()` on delivered, returned `1`. `print_cmr` (`:142-153`):
+  `redirect()->to(url(uploaded_asset($cmr_file)))`, else `back()` with an
+  `error` flash; `uploaded_asset()` answers the placeholder image for an
+  unknown upload.
+- **Routes** (`routes/shop-admin.php:296-299`): `trips.show`
+  (`view_all_trips`), the two POST writes (`edit_trip`), `checkpoints.print-cmr`
+  (`view_all_trips`).
+- **Views.** `trips/checkpoints/index.blade.php`: the table (`:70-192`), the
+  status button under `edit_trip` (`:118`), notes textarea under `edit_trip`
+  saved on change (`:140`, `:340-368`), Print CMR when `cmr_file` (`:184`), the
+  Leaflet map (`:198`, `:281-334`), the print button (`:22`, `:371`) and print
+  CSS.
+  `trips/components/update-checkpoint-status-modal.blade.php`: the select and
+  `$.post` to `checkpoints.update-status`, reading `data == 1`.
+- **Consumers.** Both views: only the root `show`. `trips.show`:
+  `create-from-map.blade.php:81` (by name), the Inertia trip list, trucks list
+  and trip orders list (Wayfinder, root action), the two trip writers'
+  redirects. `checkpoints.print-cmr`: the trip orders list. The two writes:
+  only the two views. `inc/map-popups`: also the map picker and
+  `inc/map-scripts`. No `public/assets/js` or `config` reference.
+
+### Completed scope
+
+- **Backend.** `Store\Admin\TripCheckpointController` (`show`, `updateNotes`,
+  `updateStatus`, `printCmr`); `UpdateCheckpointNotesRequest`;
+  `UpdateCheckpointStatusRequest` without `id` (bound); `TripCheckpointResource`
+  (its `uploadIds()` now also reads the photo ids for `TripOrderResource` and
+  `TripOrderController`); `messages.trip_cmr_unavailable` in English and
+  Arabic. The root controller loses `show`, the two writes, `print_cmr` and the
+  two map helpers; it stays in both exclusion lists for the map picker.
+- **Frontend.** `Store/Admin/Trips/Trips/Show.vue`, `StoreTripCheckpointStatus`
+  and `StoreTripCheckpointRow` types, a fixture, `lib/storeTrip.ts`
+  (`tripCheckpointLabel`, shared with `StoreTripFormFields`), 30
+  `store.trips.show.*` leaf keys in each of English and Arabic,
+  `confirmDeliveryStatus`'s docblock, `print:hidden` on `StoreAdminLayout`'s
+  sidebar and mobile bar, Inertia links to the detail from the trip list,
+  trucks list and trip orders list.
+- **Routes.** Four registrations replace four; names kept.
+- **Removed (`git rm`).** `trips/checkpoints/index.blade.php`,
+  `trips/components/update-checkpoint-status-modal.blade.php`.
+- **Unchanged.** Permission names and grants, the trip status flow (§24), the
+  map picker and its writer, the driver API's checkpoint endpoints, CSP and
+  `blade_csp`, shells and `HandleStoreBladePages`. No dependency or lockfile
+  change.
+
+### Verification and limits
+
+- **Ran (on the branch).**
+  - Pest: `TripCheckpointControllerTest.php` 34 passed (new);
+    `TripControllerTest.php` 112 passed; `TripOrderControllerTest.php` 34
+    passed; `LegacyAdminPermissionsTest`, `LegacyStoreStateChangingRoutesTest`,
+    `LegacyShopRouteAccessTest` and `LegacyTempRoutesReachableTest` 24 passed.
+    The first run found a real defect: `morphWithCount()` runs before a
+    `constrain()` callback, whose `select()` dropped the product count
+    (`MissingAttributeException` under strict mode); the count now follows the
+    select inside the constraint.
+  - Vitest: the trip pages, `lib/storeTrip.test.ts`, `confirm.test.ts`,
+    `StoreTripFormFields.test.ts`, `storeTripBladeMap.test.ts`,
+    `storeAdminMenu.test.ts` and the layout tests: 168 passed.
+  - Playwright, with `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/opt/pw-browsers/chromium`:
+    `store-trip-detail.spec.ts` (1, new), `store-trips.spec.ts` (3),
+    `store-trip-orders.spec.ts` (2) and `store-drivers.spec.ts` (1): 7 passed.
+  - `npm run build`: failed only on `getaddrinfo ENOTFOUND fonts.bunny.net`;
+    `python3 .claude/scripts/build_without_fonts.py`: built, and is what Pest
+    and Playwright used.
+  - `route:list`: 1,048 under `/temp`, 436 under `/temp/admin`.
+  - `python3 .claude/scripts/pre_push_check.py --full`: exit 0. ESLint,
+    Prettier, vue-tsc, Vitest (315 files, 2,800 tests), Pint, PHPStan
+    (0 errors) and Pest (6,043 tests, 33,683 assertions) all passed.
+  - `git diff --check`: clean.
+- **Not run.** PR CI, SAST and the `develop` deploy (`[skip ci]`, as
+  authorized), MySQL (Pest and Playwright use SQLite), the full Playwright
+  suite (only the four trip and driver specs), and `npm run build` with the
+  remote font.
+- **Known limits.** A checkpoint status still applies to any checkpoint of any
+  trip, closed or not, as the Blade handler did; the CMR download opens only
+  the first upload id in `cmr_file` (the driver API stores one); printing
+  relies on the browser's own print of the Inertia page, not the Blade card
+  layout.
+- **Inventory** (from the files and `route:list`). **36** backend Blade
+  files; **18**/**3** literal consumers of the app/layout shells; **1,048**
+  `/temp` and **436** `/temp/admin` registrations; Blade editor: **8** fields
+  in **8** views.
+
+
+## Legacy reviews screen retirement (2026-10-17)
+
+Work on `claude/store-backoffice-reviews-step-28-lqx4cm` from `develop` at
+`fb04f56` (the PR #421 merge). The owner authorized commits, a push, a PR
+(#422), its merge into `develop` and `[skip ci]` on all of them, because the checks run
+locally. **No PR CI, no PR or merge SAST and no `develop` deploy ran for this
+PR or its merge.** No other branch, deployment or production data was
+touched. The guide's §28 records the result. The branch also carries the
+cherry-picked "Record PR #421" docs commit (`0523efb`, applied cleanly; it was
+not yet in `develop`).
+
+### Setup and baseline on `develop`
+
+PHP 8.5.11, `vendor/` with the dev tools, `node_modules` and the Vite build
+(`wait_for_setup.py` exited 0). Laravel Boost failed to connect
+(`CONNECTION_CLOSED`); repository files and installed package source were used.
+On `develop`'s code (only the docs cherry-pick on top, changes stashed):
+`ReviewControllerTest`, `LegacyReviewTest`, `LegacyAdminPermissionsTest`,
+`LegacyStoreStateChangingRoutesTest`, `LegacyShopRouteAccessTest` and
+`LegacyTempRoutesReachableTest`: **42 passed** (180 assertions).
+
+### Audit evidence
+
+- Root `ReviewController::index` (`app/Http/Controllers/ReviewController.php`):
+  `permission:view_product_reviews` (`only: ['index']`), `Review::with(...)`,
+  an unvalidated `rating` sort, `paginate(15)`, then the Blade view.
+- Route: `Route::resource('/reviews', ReviewController::class)` in
+  `routes/shop-web.php` (the `auth` group).
+- Consumers of `reviews.index` and the view: `inc/admin_sidenav.blade.php:183`
+  and `ReviewControllerTest`; no `public/assets/js`, `config`, `lang`,
+  Playwright or Vue reference (`storeAdminMenu.ts` already used the Inertia
+  action).
+
+### Completed scope
+
+- Sidebar link points at `admin.reviews.index`.
+- `reviews.index` GET is a gated 302 to `admin.reviews.index` keeping the query
+  string (`Store\Admin\ReviewController::redirectLegacyIndex`); route name and
+  `view_product_reviews` kept.
+- Root `ReviewController::index` and its `HasMiddleware` removed; `store`,
+  `product_review_modal` and the stubs untouched.
+- Removed (`git rm`): `product/reviews/index.blade.php`.
+- Unchanged: permission names and grants, `LegacyAdminPermissionsTest` (no gate
+  changed), route ratchets, CSP, shells, dependencies and lockfiles.
+
+### Verification and limits
+
+- **Ran (on the branch).**
+  - Pest, the six files above: 46 tests; after correcting two assertions in my
+    new refusal case (a customer gets 403 on the legacy URL, not 404) all
+    passed; `ReviewControllerTest` alone: 18 passed (101 assertions).
+  - `route:list`: 1,048 under `/temp`, 436 under `/temp/admin` (unchanged).
+  - `python3 .claude/scripts/pre_push_check.py --full`: exit 0. ESLint,
+    Prettier, vue-tsc, Vitest (315 files, 2,800 tests), Pint, PHPStan (0
+    errors) and Pest (6,047 tests, 33,693 assertions) all passed.
+- **Not run.** PR CI, SAST and the `develop` deploy (`[skip ci]`, as
+  authorized), MySQL (Pest uses SQLite), Playwright (no frontend change, and no
+  spec referenced the screen) and `npm run build` with the remote font.
+- **Known limit.** The redirect is a 302, so browsers re-ask on each visit; it
+  can be made permanent once no bookmark traffic remains.
+- **Inventory.** **35** backend Blade files; **17**/**3** literal consumers of
+  the app/layout shells; **1,048** `/temp` and **436** `/temp/admin`
+  registrations; Blade editor: **8** fields in **8** views.
+
+## Server status page deletion (2026-10-17)
+
+Work on `ccr-ff665fd6-s90gn3` from `develop` at `ead3b91` (the PR #422 merge).
+**Owner decision:** delete the server status page (a controller-less
+`Route::view`, PHP 7.3/7.4 and MySQL 5.6 checks, a red cross on every working
+install, no other users). The owner authorized commits, one PR into `develop`,
+its merge (PR #423) and `[skip ci]` on all of them. **No PR CI, no PR or merge SAST and
+no `develop` deploy ran.** The guide's §29 records the result.
+
+### Setup and baseline on `develop`
+
+PHP 8.5.11, `vendor/` with the dev tools, `node_modules` and the Vite build
+(`wait_for_setup.py` exited 0; the build is without the remote font). Laravel
+Boost failed to connect (`CONNECTION_CLOSED`); repository files were used.
+Before any change, `StoreBackOfficeShellTest`, `LegacyAdminPermissionsTest`,
+`LegacyStoreStateChangingRoutesTest`, `LegacyShopRouteAccessTest` and
+`LegacyTempRoutesReachableTest`: **25 passed** (92 assertions).
+
+### Audit evidence
+
+- Route and view: `routes/shop-admin.php` (`system_server`, `RaizerSuperAdmin`)
+  and `system/server_status.blade.php`.
+- Consumers: only `inc/admin_sidenav.blade.php` (a System group whose sole
+  child was the page, gated by `server_status`), `StoreBackOfficeShellTest` and
+  the `storeAdminMenu.ts` comment. No `public/assets/js`, `config`, `lang` or
+  Vue reference.
+- `RaizerSuperAdmin` stays: `cache.clear`, commission activation and
+  `SettingsController` use it.
+
+### Completed scope
+
+- Removed: the route, the view (`git rm`, `system/` gone), the sidebar group.
+- Updated: `StoreBackOfficeShellTest` (asserts the route and view are gone),
+  a new 404/unregistered case, the `storeAdminMenu.ts` comment, guide §§1, 2.2,
+  4, 5.1 (35 → 34), 6 and the new §29.
+- Unchanged: the `server_status` permission name, translations, middleware
+  alias, other tests and ratchets, CSP, shells, dependencies and lockfiles.
+
+### Verification and limits
+
+- **Ran.** The five files above after the change: 26 tests, 96 assertions
+  passed. `route:list`: 1,047 under `/temp`, 435 under `/temp/admin`.
+  `wayfinder:generate --skip-routes --with-form` ran with no tracked change.
+  `python3 .claude/scripts/pre_push_check.py --full`: exit 0. ESLint,
+  Prettier, vue-tsc, Vitest (315 files, 2,800 tests), Pint, PHPStan (0
+  errors) and Pest (6,048 tests, 33,697 assertions) all passed.
+- **Not run.** PR CI, SAST and the `develop` deploy (`[skip ci]`, as
+  authorized), MySQL (Pest uses SQLite), Playwright (no spec references the
+  page) and `npm run build` with the remote font.
+- **Inventory.** **34** backend Blade files; **17**/**3** literal consumers of
+  the app/layout shells; **1,047** `/temp` and **435** `/temp/admin`
+  registrations; Blade editor: **8** fields in **8** views.
+
+## Trip map picker migration (2026-10-17)
+
+Work on `ccr-a8851ce2-oefr1s` from `develop` at `2e3d8cf` (the PR #423 merge).
+**Owner decisions:** Leaflet and Chart.js are owner-approved frontend
+dependencies (npm, bundled through Vite, no CDN); sellers and classified
+products will be converted, not deleted (later steps). Both are recorded in the
+guide's §5. The owner authorized commits, one PR into `develop` (#427), its
+merge and `[skip ci]` on every commit, the PR title and the merge commit. **No PR CI, no
+PR or merge SAST and no `develop` deploy ran.** No other branch, deployment or
+production data was touched. The guide's §30 records the result.
+
+### Setup and baseline on `develop`
+
+PHP 8.5.11, `vendor/` with the dev tools and `node_modules`.
+`wait_for_setup.py` (in the background) exited 0: "frontend (vitest, vue-tsc,
+prettier, eslint): ready. App (artisan, migrations): ready. Vite build (needed
+by Pest feature tests): built (without the remote font: fonts.bunny.net is
+unreachable). Pint, Pest, PHPStan and Larastan are installed". Laravel Boost
+failed to connect (`CONNECTION_CLOSED`); repository files and installed package
+source were used. Before any tracked PHP file changed (only new untracked files
+and locale/type additions existed), `TripControllerTest`,
+`TripOrderControllerTest`, `TripCheckpointControllerTest`,
+`LegacyAdminPermissionsTest`, `LegacyStoreStateChangingRoutesTest`,
+`LegacyShopRouteAccessTest` and `LegacyTempRoutesReachableTest`: **204 passed**
+(1,522 assertions).
+
+### Prerequisites and audit evidence (develop line numbers)
+
+- **Root handlers** (`app/Http/Controllers/Trip/TripController.php`).
+  `create_from_map` (`:36-46`): available/unavailable trucks, orders out for
+  delivery with `user`/`rep`, `getOrdersCoordinates()` (`:84-99`, through
+  `UserService::getUserLongLat()` and `hasValidCoordinates()`),
+  `formatCoordinates()` (`:101-115`), the Blade view. `store_from_map`
+  (`:48-82`): `StoreMapTripRequest`, `Gate::authorize('edit_trip')` with a
+  `trip_id`, `lockTruckForTrip()`, `createTrip()`, the per-order lock and open
+  trip check, `prepareCheckpoints()` (`:117-143`, departure first for a new
+  trip), `SetTruckAvailability`, the shortest-path sort, `notifyDriver()`, JSON
+  `{success: true}`. Nothing else was left in the class.
+- **Routes** (`routes/shop-admin.php:304-305`): both `permission:add_trip`.
+- **Views.** `trips/create-from-map.blade.php`: unpkg Leaflet 1.7.1, OSM
+  `{s}.tile` layer, markers toggled on click, popups with a Mark as Delivered
+  button (`edit_trip`, JSON spoofed PUT, §26), available and unavailable truck
+  cards, Select Truck posting `{truck_id, trip_id, markers}` with `fetch`, the
+  delete modal (`trips.destroy`, `list=map`, §24). `inc/map-popups`: the safe
+  popup and coordinate helpers. `inc/scripts`: SortableJS from jsDelivr
+  `@latest`, the form's vehicle lookup. `inc/map-scripts`: no includer.
+- **Consumers.** The four views: only each other and the root
+  `create_from_map`. `trips.create-from-map`: `admin_sidenav.blade.php:728` (by
+  name), `storeAdminMenu.ts` (root Wayfinder action), the two redirects
+  (`StoreTripList::Map`, `return_to=map`). `trips.store-from-map`: only the
+  picker. Tests: `TripControllerTest` (nine map cases and a reflection case on
+  the root class), `TripOrderControllerTest` (a Blade script case and a Blade
+  render case), `storeTripBladeMap.test.ts` (the three scripts),
+  `store-trips.spec.ts` and `store-trip-orders.spec.ts` (one Blade map case
+  each), `ControllerRedirectsTest` (a path exclusion). No `config`, `lang` or
+  `public/assets/js` reference. `trips.user-coordinates` was consumed only by
+  `inc/map-scripts`.
+- **CSP.** The strict `img-src` was `'self' data: blob:`; `blade_csp`
+  `img-src` was `'self' https: data: blob:`. Neither configured a tile provider
+  besides the Blade pages' OSM URL.
+
+### Completed scope
+
+- **Dependency.** `leaflet` 1.9.4 and `@types/leaflet` 1.9.22 (`npm install
+  --save-exact`, npm 10.9.4); `package-lock.json` +25 lines (those two and
+  `@types/geojson` 7946.0.16). No Composer manifest or lock change.
+- **CSP.** `config/secure-headers.php` `csp.img-src.allow`:
+  `['https://tile.openstreetmap.org']`, because Leaflet draws OSM tiles as
+  `<img>`. Nothing else; `store.blade_csp` unchanged.
+- **Backend.** `Store\Admin\TripMapController` (`create`, `store`,
+  `getOrdersCoordinates`, `formatCoordinates`, `prepareCheckpoints`, the
+  shared traits); `TripMapTruckResource`. Root `Trip\TripController` deleted
+  and removed from `pint.json` and `phpstan.neon`; the
+  `ControllerRedirectsTest` exclusion removed. Docblocks naming the root
+  class updated (`StoreTripList`, `TripController`, `TripCheckpointController`,
+  `TripOrderController`, `MarkTripOrderDeliveredRequest`, both traits).
+  Relation return types added to `Truck::trips()`, `Trip::checkpoints()` and
+  `Checkpoint::relationable()` (the three models stay excluded).
+- **Frontend.** `components/StoreTripMap.vue`,
+  `pages/Store/Admin/Trips/Trips/CreateFromMap.vue`, `StoreTripMapOrder` and
+  `StoreTripMapTruck` types, two fixtures, 25 `store.trips.map.*` leaf keys in
+  each of English and Arabic, the menu entry as an Inertia visit.
+- **Routes.** Two registrations replace two; names, URIs and permission kept.
+- **Removed (`git rm`).** `trips/create-from-map.blade.php`,
+  `trips/inc/map-popups.blade.php`, `trips/inc/map-scripts.blade.php`,
+  `trips/inc/scripts.blade.php`, `resources/js/testing/storeTripBladeMap.test.ts`.
+- **Unchanged.** Permission names and grants, `StoreMapTripRequest`, the two
+  traits' code, departure ID 9, the truck rules (§§24–25), the trip lists,
+  forms, detail and orders, the driver API, `trips.user-coordinates`, shells,
+  `HandleStoreBladePages`, `blade_csp`, the Blade visit maps (unpkg Leaflet).
+
+### Verification and limits
+
+- **Ran (on the branch).**
+  - Pest: `TripMapControllerTest.php` 28 passed (new); with
+    `TripControllerTest`, `TripOrderControllerTest`,
+    `TripCheckpointControllerTest`, `HandleStoreBladePagesTest`,
+    `ControllerRedirectsTest`, `StaticAnalysisExclusionsTest`,
+    `LegacyAdminPermissionsTest`, `LegacyStoreStateChangingRoutesTest`,
+    `LegacyShopRouteAccessTest`, `LegacyTempRoutesReachableTest` and
+    `LegacyDataExposureTest`: 262 passed (1,737 assertions). After the
+    PHPStan fixes, the five trip/truck files: 232 passed (1,792 assertions).
+  - Vitest: `StoreTripMap.test.ts`, `CreateFromMap.test.ts` and
+    `storeAdminMenu.test.ts` passed while iterating.
+  - Playwright, with `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/opt/pw-browsers/chromium`
+    and the enforced CSP: `store-trip-map.spec.ts` (3, new, real Leaflet from
+    `node_modules`, tiles answered locally), `store-trips.spec.ts` (2),
+    `store-trip-orders.spec.ts` (1), `store-trip-detail.spec.ts` (1) and
+    `store-drivers.spec.ts` (1): 8 passed. The first runs found a real defect
+    (markers added before the map had a view never got `aria-pressed`; fixed,
+    with a Vitest ordering assertion), Enter not toggling a focused marker
+    (Leaflet maps Enter only to popups; handled), and spec issues (stale map
+    orders from earlier runs in the persistent browser database, retired by
+    the spec; Blade login/dashboard script errors and CSP reports, now
+    watched only after login). Negative check: with the tile host removed
+    from `img-src`, the browser blocked every tile and the spec failed; the
+    entry was restored.
+  - `php artisan wayfinder:generate --skip-routes --with-form`: generated
+    `TripMapController` actions, no root `Trip` actions. `route:list`: 1,047
+    under `/temp`, 435 under `/temp/admin`.
+  - `python3 .claude/scripts/build_without_fonts.py`: built (the bundle
+    holds `CreateFromMap` JS and CSS and Leaflet's marker and layer images).
+  - `python3 .claude/scripts/pre_push_check.py --full`: the first run stopped
+    at PHPStan (16 errors: untyped `Truck::trips()`/`Trip::checkpoints()`,
+    `findOrFail()` on mixed ids, a nested `MorphTo` constraint); after typing
+    those relations, casting the validated ids and loading the open trips
+    with typed queries, the second run exited 0: ESLint, Prettier, vue-tsc,
+    Vitest (316 files, 2,801 tests), Pint, PHPStan (0 errors) and Pest (6,064
+    tests, 33,769 assertions) all passed.
+  - `git diff --check`: clean.
+- **Not run.** PR CI, SAST and the `develop` deploy (`[skip ci]`, as
+  authorized), MySQL (Pest and Playwright use SQLite), the full Playwright
+  suite (only the five trip and driver specs), `npm run build` with the
+  remote font (fonts.bunny.net is unreachable here), and live OpenStreetMap
+  tiles (answered locally in the browser spec).
+- **Known limits.** `npm audit` reports 6 pre-existing dev-tooling findings
+  unrelated to Leaflet (guide §30). Selection is client state: a reload after
+  an assignment clears it, and a stale selection of orders that left the map
+  is dropped. The page still geocodes customers without coordinates through
+  `UserService` on load, as the Blade page did. The Blade visit maps still
+  load Leaflet 1.7.1 from unpkg under `blade_csp`.
+- **Inventory** (from the files and `route:list`). **30** backend Blade
+  files; **16**/**3** literal consumers of the app/layout shells; **1,047**
+  `/temp` and **435** `/temp/admin` registrations; Blade editor: **8** fields
+  in **8** views.
+
+## Representative visit detail migration (2026-10-18)
+
+Step 31 on `codex/store-visit-details-step-31`, branched from fetched
+`origin/develop` at `57e1e51f` (PR #438), after reading `AGENTS.md` and the
+shared framework, conventions, applicable rules and this ledger. PR #428
+changed the pre-push default to attestation; this session uses explicit
+`--full` on the uncommitted tree. No attestation trailer is written or edited.
+Model: GPT-6 Codex; exact variant and configured effort are not exposed to
+this session. The owner authorized commits, one PR into `develop`, a
+follow-up commit recording its number before merging, and the merge, with
+`[skip ci]` on every commit message, the PR title and the merge message.
+
+Shipping through [PR #440](https://github.com/arb-rajab/warehouse_management/pull/440) into `develop`. Implementation commit:
+`061c8d9a`. This follow-up `[skip ci]` commit records the PR number before
+merging; application verification above is unchanged, and the documentation
+follow-up is checked with `git diff --check`.
+
+### Runtime and baseline
+
+The host has no PHP executable. `vendor/` and `node_modules/` existed, but
+the latter lacked Leaflet. Initial fetch failed inside the restricted command
+sandbox; enabling the command's network permission made `git fetch origin
+develop` succeed through the configured proxy. The PHP installer could not
+write apt state as the non-root task user, so it installed nothing. An
+existing local `wms-cloud-php:8.5` Docker image supplied PHP **8.5.11** and
+the required extensions (WebP support repaired below). Backend results below are from that container,
+with the repository mounted at its actual path and a 1GB PHP memory limit.
+The first baseline attempt hit the image's 128MB default; the rerun passed.
+The first full run also exposed stale optimized Composer class-map entries
+for previously deleted controllers and GD without WebP. `composer dump-autoload
+--no-scripts` refreshed only generated vendor files; GD was rebuilt with WebP
+in the disposable container (no application dependencies or lockfiles changed).
+The two controller test files then passed **82 tests, 625 assertions**; the
+upload/GD files passed **87 tests, 403 assertions**.
+No Claude setup hook or direct `wait_for_setup.py` invocation was used.
+
+`npm ci --ignore-scripts --no-audit --no-fund` restored the locked Node
+installation. Neither lockfile changed; Composer dependencies were not
+installed or updated. Installed source/metadata: Laravel **13.34.0**, Inertia
+Laravel **3.3.1**, Wayfinder **0.1.21**, Pest **5.0.4**, Pint **1.30.4**,
+PHPStan **2.2.8**; Node **24.19.0**, npm **11.9.0**, Vue **3.5.43**,
+Inertia Vue **3.6.1**, Leaflet **1.9.4**, Leaflet types **1.9.22**,
+Vitest **4.1.11**, Playwright **1.62.1**, Tailwind **4.3.3**.
+Boost is unavailable; repository files and installed package source were used.
+
+Before editing tracked application code, the fetched-develop baseline ran:
+`VisitControllerTest`, `VisitDetailControllerTest`,
+`RepresentativePackageControllerTest`, `RepresentativePaymentControllerTest`,
+`LegacyRepresentativePaymentLinksTest`, `LegacyAdminPermissionsTest`,
+`LegacyStoreStateChangingRoutesTest`, `LegacyShopRouteAccessTest`,
+`LegacyTempRoutesReachableTest`, `LegacyDataExposureTest`: **187 passed,
+866 assertions**.
+
+### Consumer findings and completed scope
+
+- Root `VisitController` served only the two detail views, `mapMarkers()` and
+  the retained web `update_note`. They moved into the existing
+  `Store\Admin\VisitController`; the root file and its Pint/PHPStan/redirect
+  path exclusions are removed. Both read permissions are still
+  `view_representative_visits`. Detail uses bound `{visit}`; day uses bound
+  `{user}` plus `ShowRepresentativeVisitsRequest` for its id and optional day.
+  A query cannot forge the bound user; nonexistent records and non-reps are
+  404. `mapMarkers()` retains its numeric/finite/range checks, labels, one-based
+  rank and order-id colour rule. Rank-descending day order is retained, with
+  id-ascending ties.
+- The old note route `visits.note` is inside the customer/verified/unbanned
+  group, so moving it to admin middleware would break the retained caller.
+  It stays there, pointing to the moved handler. New permission-gated PUT
+  `admin.rep.visits.note` aliases that handler for the admin editor. The bound
+  visit overrides a forged body id. Both use the typed note request and save
+  only the current store actor's own visit; even Super Admin leaves a foreign
+  visit unchanged. Numeric `1`/`0` answers become redirect-back; missing ids
+  are 404. `ControllerRedirectsTest` exempts only this method, not its class.
+- Grep found one old UI note caller, the AJAX writer in
+  `shop/frontend/view_customer.blade.php`. It is now a native POST/CSRF form,
+  with the current visit id in a hidden input and no numeric-response branch.
+  The mobile API is separate and unchanged. Web ownership/validation cases
+  moved from the Legacy payment-links and reconstruction tests into the
+  migrated detail tests; the API cases remain in their original file.
+- `Show.vue` and `RepShow.vue` use `StoreAdminLayout`, a narrow
+  `VisitDetailResource`, Wayfinder, translated labels, permission/ownership
+  gating, native constraints and RTL/dark styling. Existing list links now
+  visit these pages with Inertia. The sidebar destination was already the
+  Inertia visit index; no menu change was needed and its tests run.
+- Shared `StoreLeafletMap` owns step 30's npm Leaflet/tile/lifecycle code;
+  `StoreTripMap` and `StoreVisitMap` use it. Visit maps preserve red/blue ranks,
+  safe text popups, exact marker coordinates, route order, polyline and map
+  fitting; empty days avoid initializing a map. The map stays LTR and isolated
+  inside Arabic. White rank text uses darker red/blue for contrast. Leaflet
+  and its CSS are bundled; no CSP directive or dependency manifest changed.
+- Consumer tracing covered `app`, `routes`, `resources`, `tests` and
+  `public/assets/js`. Only the two views included the visit map partial;
+  `layouts/app.blade.php` has no visit-map include, and no public JS helper
+  references it. `git rm` removed the two views, their partial and their Blade
+  map test, replacing the latter with full-mounted map coverage. Protected
+  shells and shared assets remain. No departure, tax, logout, permission
+  definition or role-grant policy changed, and no Legacy ratchet list changed.
+
+### Verification and limits
+
+- Focused expanded backend run: **209 passed, 1,207 assertions**, including
+  all baseline files plus `HandleStoreBladePagesTest`,
+  `ControllerRedirectsTest` and `StaticAnalysisExclusionsTest`.
+  A separate seven-file run including `ReconstructedMigrationAuditTest`:
+  **86 passed, 658 assertions**. PHPStan: **no errors**. Pint: passed.
+- Focused Vitest: **40 passed** across the new base/visit maps, existing trip
+  map, detail/day pages, representative pages and menu. All use full mounts;
+  Leaflet's recording mock replaces only the browser geometry engine.
+  TypeScript and scoped ESLint/Prettier passed while iterating.
+- Browser: the new `store-visit-details.spec.ts` **passed** on real npm
+  Leaflet under enforced CSP, including Inertia list/detail/day navigation,
+  own-note persistence with foreign DB unchanged, ranked markers/polyline,
+  safe popups, date filtering, empty day, Arabic with LTR map, both arrow
+  directions and dark input contrast. Existing trip-map specs **3 passed**
+  after extracting their shared base, and representative specs **2 passed**.
+  Earlier attempts exposed environment/test-fixture issues: missing Playwright
+  FFmpeg, stale `public/hot` pointing at an unavailable Vite server, a missing
+  fixture `shipping_type`, and incorrect button labels in the new spec.
+  The stale hot file was saved under ignored `work/`; system Chromium and
+  FFmpeg were used. FFmpeg download was blocked by network policy; no policy
+  was bypassed. OSM tiles were answered locally, while CSP stayed enforced.
+- `npm run build` failed resolving the remote font host (`EAI_AGAIN`);
+  `python3 .claude/scripts/build_without_fonts.py` **built production assets**
+  without changing Vite config. Wayfinder generation ran with
+  `--skip-routes --with-form`. `git diff --check`: clean.
+- `python3 .claude/scripts/pre_push_check.py --full`, first attempt: Wayfinder,
+  ESLint, Prettier, vue-tsc, Vitest (**316 files, 2,493 tests**), Pint,
+  PHPStan and config-cache clearing ran successfully. Pest completed with
+  **7 failed, 6,029 passed, 34,088 assertions**: two stale class-map entries
+  and five missing-WebP failures, repaired as above. The second explicit
+  `--full` run **exited 0**: Wayfinder types, ESLint, Prettier, vue-tsc,
+  Vitest (**316 files, 2,493 tests**), Pint, PHPStan (**no errors**),
+  config-cache clearing and Pest (**6,036 passed, 34,132 assertions**,
+  five processes) all ran and passed. E2E, MySQL, audits and deploy-script
+  checks are not part of this mode; browser results are recorded separately
+  above. The bare/attested mode was never run and no trailer was added.
+- Not run: PR CI, PR/merge SAST or develop deployment (`[skip ci]`, owner
+  authorized); MySQL-specific tests, the full Playwright suite, dependency
+  audits, deploy-script tests, live OSM tile requests, or a successful build
+  with the remote font. Pest and Playwright use isolated SQLite databases.
+
+Inventory: **27** backend Blade files (30 minus three), **14** literal
+app-shell consumers including the shell test, **3** actual layout-shell
+extending views, **1,048** `/temp` and **436** `/temp/admin` registrations.
+The retained editor remains **8 fields in 8 views** across the protected
+storefront/seller surfaces. No production data was changed.
+
+
+## Google Map settings step 32 (2026-10-18)
+
+**Drafted by Codex, verified and shipped from Claude.** Branch
+`codex/step-32-google-map` (commit `bd339c61`) is based on `origin/develop` at
+`4cb3c44a` (PR #440). The Codex session had no PHP 8.5 and could verify
+nothing beyond formatting; this section records the later verification on a
+Claude cloud session with PHP 8.5.11, `vendor/`, `node_modules/` and a font-less
+Vite build. The owner authorized one PR into develop (PR #442) and its merge, `[skip ci]`
+in every commit, the PR title and the merge message, and a follow-up `[skip ci]`
+commit recording the PR number. No CI-Verified trailer was added.
+
+### Scope and decisions
+
+- The owner approved npm Leaflet/OpenStreetMap for the default-location picker,
+  lifting the historical §17 Google Map hold. The GET now renders
+  `Store/Admin/Setup/GoogleMap/Index` from `Store\Admin\GoogleMapController`.
+  Names, URIs, `google_map_setting` and the typed allowlisted writer remain.
+  Coordinates retain the `google_map_longtitude` spelling. The request already
+  had both range rules; no range-validation behavior changed.
+- The page uses `StoreAdminLayout`, `ResourceFormPage`, Wayfinder,
+  `StoreBooleanField` and module fields on the shared `StoreLeafletMap`.
+  Numeric fields are editable with native min/max/step and paired-required
+  constraints; clicking or dragging updates them, manual edits move the marker.
+  Blank/invalid points have no marker; unset locations start at a world view.
+  Disabling preserves coordinates by omitting those fields from submission.
+  The toggle label explicitly refers to the storefront's Google map.
+  English/Arabic keys and the menu's Inertia flag/test are updated.
+- Only the back-office Blade view was removed (`git rm`), after tracing its
+  sole renderer and the shared partial's other consumers. The protected
+  `shop/frontend/partials/google_map.blade.php`, frontend address modal,
+  profile/dashboard and seller profile/shop behavior remain unchanged.
+  No CSP, package manifest or lockfile changed. The existing OSM tile host
+  allowance is reused. The root controller stays in Pint/PHPStan exclusions
+  for seller commission/verification screens. No permission/route ratchet
+  changed; its root middleware test drops only the moved action.
+- Pest was expanded for Inertia render/full payload, missing settings, routes
+  and gate, boundary validation, with existing refused-write/DB/cache and
+  allowlist tests retained. Full-mount page/field Vitest and a real Leaflet
+  Playwright spec were added. The browser spec covers clicks, drag, manual
+  input, native range rejection, persistence, disabled preservation, RTL/LTR
+  and dark contrast under enforced CSP with locally answered tile images.
+  They pass locally; see below.
+
+### Runtime and verification
+
+- `AGENTS.md` was read first; Laravel Boost was unavailable, so repository
+  files and installed package source were used. PHP 8.5.11, `vendor/`,
+  `node_modules/` and a font-less build (`build_without_fonts.py`) were present.
+  Wayfinder generation succeeded.
+- **Defects found by verification and fixed** (separate commits): the
+  `store.googleMap.*` keys had been inserted under `cells.palletActions.store`
+  in `en.json` and `ar.json` (two field-component Vitest cases failed on raw
+  keys); `HandleStoreBladePagesTest.php` had an extra blank line (Pint); the
+  Playwright fixture mass-assigned the guarded `BusinessSetting`, the drag
+  step read the marker mid-pan, and the final locale switch used the English
+  label on the Arabic page.
+- **Passed:** `python3 .claude/scripts/pre_push_check.py --full` (run twice;
+  the first stopped at Pint): Wayfinder, ESLint, Prettier, vue-tsc, Vitest
+  (318 files, 2,501 tests), Pint, PHPStan (0 errors) and Pest (6,043 tests,
+  34,206 assertions). `store-google-map.spec.ts` passes under the enforced CSP
+  with real Leaflet from `node_modules` (1 test). `route:list` still shows
+  1,048 under `/temp` and 436 under `/temp/admin`.
+- **Not run:** a separate Pest baseline on unmodified develop; the full
+  Playwright suite (only this spec ran); MySQL-specific tests, dependency
+  audits and deploy-script tests; the build with the remote font
+  (`fonts.bunny.net` is unreachable here); live OpenStreetMap requests (tiles
+  are answered locally). **PR CI, PR/merge SAST and the develop deploy did not
+  run** (`[skip ci]`).
+
+Inventory confirmed from files/searches: **26** backend Blade files, **13**
+literal app-shell consumers including StoreBackOfficeShellTest, **3**
+layout-shell extending views. No route was added or removed. No production
+data was changed.

@@ -12,11 +12,13 @@ describe('HashSync', () => {
         const onTarget = vi.fn();
         const sync = new HashSync(window, onTarget);
 
-        expect(sync.applyCurrent()).toBe(true);
-        expect(onTarget).toHaveBeenCalledWith({
+        const target = {
             kind: 'slot',
             slot: { row: 'B', col: 5, level: 2 },
-        });
+        };
+
+        expect(sync.applyCurrent()).toEqual(target);
+        expect(onTarget).toHaveBeenCalledWith(target);
         sync.dispose();
     });
 
@@ -25,11 +27,27 @@ describe('HashSync', () => {
         const sync = new HashSync(window, onTarget);
 
         window.location.hash = '#3d';
-        expect(sync.applyCurrent()).toBe(true);
+        expect(sync.applyCurrent()).toEqual({ kind: 'view', view: '3d' });
         expect(onTarget).toHaveBeenCalledWith({ kind: 'view', view: '3d' });
 
         window.location.hash = '#something-else';
-        expect(sync.applyCurrent()).toBe(false);
+        expect(sync.applyCurrent()).toBeNull();
+        expect(onTarget).toHaveBeenCalledTimes(1);
+        sync.dispose();
+    });
+
+    it('opens a filter link for several products', () => {
+        window.location.hash = '#products=4,9';
+
+        const onTarget = vi.fn();
+        const sync = new HashSync(window, onTarget);
+        const target = {
+            kind: 'filter',
+            filter: { productIds: [4, 9], state: null },
+        };
+
+        expect(sync.applyCurrent()).toEqual(target);
+        expect(onTarget).toHaveBeenCalledWith(target);
         sync.dispose();
     });
 

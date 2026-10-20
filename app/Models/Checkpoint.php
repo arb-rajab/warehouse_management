@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -57,7 +58,8 @@ class Checkpoint extends Model
     }
 
     // Polymorphic relation: Can belong to any related model (Order, Customer)
-    public function relationable()
+    /** @return MorphTo<Model, $this> */
+    public function relationable(): MorphTo
     {
         return $this->morphTo();
     }

@@ -6,7 +6,7 @@ paths:
 # Requests
 
 ## Conventions: Filter* names, helper-only traits, one `use` per line
-- A request validating a list endpoint's query params is named `Filter*Request` (`Admin\FilterCellMapRequest`, `FilterMatchingPalletsRequest`, `Api\V1\FilterCellsRequest`, `FilterRowsFullRequest`, `FilterCellVerificationRoundsRequest`); `Show*Request` is reserved for a single record's detail page (`ShowRowRequest`, `ShowUserRequest`, `ShowDashboardRequest`).
+- A request validating a list endpoint's query params is named `Filter*Request` (`FilterMatchingPalletsRequest`, `Api\V1\FilterCellsRequest`, `FilterRowsFullRequest`, `FilterCellVerificationRoundsRequest`); `Show*Request` is reserved for a single record's detail page (`ShowRowRequest`, `ShowUserRequest`, `ShowDashboardRequest`).
 - Concern traits expose `xRules()` helpers only — never a public `rules()`. Every request declares its own explicit `rules()` that spreads the helpers it needs, even when it is a single helper (`return $this->noteRules();`). That keeps `rules()` greppable on the request and stops two traits from silently colliding on the method name.
 - One trait `use` per line (`use A;` / `use B;`), never `use A, B;`; every `rules()` carries the "Get the validation rules that apply to the request." docblock.
 - Cell-state filters use `Rule::enum(CellState::class)` (`->only([CellState::Full, CellState::Opened])` where an empty cell makes no sense), not an `in:empty,full,opened` string.
@@ -34,7 +34,7 @@ Admin\ShowDashboardRequest and Api\V1\ShowDashboardRequest both `use App\Http\Re
 ## GET-query booleans need prepareForValidation() before a 'boolean' rule
 Laravel's `boolean` validation rule only accepts `[true, false, 0, 1, '0', '1']` (strict in_array) — it rejects the literal string "true"/"false", which is exactly how a JS boolean serializes into an Inertia `<Link>` GET query string (e.g. `?expired=true`). A field validated as `['nullable', 'boolean']` will 422 (redirecting back) on that value.
 
-Fix: normalize in `prepareForValidation()` with `filter_var($this->input($field), FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE)`, merging back only when non-null — this coerces "true"/"1"/"on"/"yes" and "false"/"0"/"off"/"no" to real booleans while leaving genuinely invalid values (e.g. "bogus") untouched so the `boolean` rule still rejects them. See `FilterCellMapRequest::prepareForValidation()` for the pattern (fixed for the dashboard's "Expired" tile, which links with `expired=true`).
+Fix: normalize in `prepareForValidation()` with `filter_var($this->input($field), FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE)`, merging back only when non-null — this coerces "true"/"1"/"on"/"yes" and "false"/"0"/"off"/"no" to real booleans while leaving genuinely invalid values (e.g. "bogus") untouched so the `boolean` rule still rejects them. See `FilterMatchingPalletsRequest::prepareForValidation()` for the pattern (fixed for the dashboard's "Expired" tile, which links with `expired=true`).
 
 A test asserting `?expired=1` passes is not proof the feature works — the frontend actually sends `expired=true`; test that literal value too.
 

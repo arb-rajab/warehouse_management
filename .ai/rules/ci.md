@@ -14,12 +14,68 @@ paths:
 | Vitest | tests related to changed `resources/js` files | full suite, when `js` is planned |
 | Pint | changed PHP files (needs the dev tools) | whole repo, when `php` is planned |
 | PHPStan, Pest | full, `--parallel` (needs the dev tools) | full, `--parallel`, when `php` is planned |
-| Pest on MySQL (only for schema-related paths), Playwright, dependency audit, deploy-script test | never | when planned |
+| Pest on MySQL (only for schema-related paths), Playwright, dependency audit, deploy-script test | only in the attested run (the default on a clean tree) | when planned, unless attested |
 
 CI is the gate; the sandbox run exists to catch the common failure before it
-costs a CI round. `pre_push_check.py --full` runs the whole-repo sequence. The
-Claude web sandbox cannot install Pint, Pest or PHPStan (dev dists are 403), so
-there those come from CI only.
+costs a CI round (or, with `--attest`, to replace the run). `pre_push_check.py --full` runs the whole-repo sequence. In the
+Claude web sandbox, dev dists are 403, so Pint, Pest and PHPStan come from
+`install_dev_tools.py` (shallow git fetches); when that install fails, they come
+from CI only.
+
+## `--attest` lets CI skip what already passed here
+
+`pre_push_check.py` attests **by default** when its preconditions hold (clean work
+tree, no hidden skip-worktree files, unpushed head commit, a change outside
+`.github/` that some CI group reads); otherwise it runs the quick scoped checks
+and prints why. `--quick` forces the scoped checks and `--attest` forces
+attesting. The auto-selection is `attest_blocker` in the script.
+
+`pre_push_check.py --attest` runs every group the planner says the branch needs,
+in full, including Playwright (preinstalled Chromium), the migration tests on
+the local MySQL that `install_mysql.sh` provides, the composer and npm audits
+and the deploy-script test. When they pass it amends the *unpushed* head commit
+with `CI-Verified: tree=<head tree> groups=<passed groups>`. The `plan` job
+reads that trailer from the PR head commit and skips exactly those groups, but
+only when:
+
+- the PR's merged tree equals its head tree (the base adds nothing), and the
+  trailer's tree equals that head tree, so any later content change voids it;
+- no path is under `.github/`, so a workflow change still runs everything.
+
+The groups run as **parallel lanes** (about 10 minutes, against about 25 one after
+another). `attest_prerequisites` runs first, alone: Wayfinder generation, the Vite
+build and `config:clear`, which write into the tree or cache every lane reads. Then
+`run_lanes` runs js, php, mysql, e2e, audit and deploy-script together, one log per
+lane (printed when the lane ends), and the first failure stops the other lanes and
+everything they started. Constraints this imposes:
+
+- Playwright's output directory is outside the work tree (`--output=<tmp>`):
+  Playwright empties `test-results/` when it starts, and Pint walking the repo in
+  another lane dies on the vanished directory.
+- Stopping a lane kills its whole process tree, not just the process group: the
+  Playwright web server (`node` plus `php artisan serve` on 8010/8011) runs in its
+  own session and would otherwise keep the port, failing the next run.
+- E2E keeps normal CPU priority and the other lanes run under `nice`: its 5s
+  expectations are timing-sensitive and the machine has 4 cores that Pest, Vitest
+  and the browser all want. Do not add Playwright workers (measured: flaky).
+- A new group or a step that writes into the work tree during the lanes needs the
+  same thought: it must not race a lane that scans or reads that path.
+  `--serial` is the fallback for a machine with too few cores.
+
+Constraints that keep it honest:
+
+- It refuses unless the work tree is clean and nothing is skip-worktree, so what
+  ran is what the commit holds. A group that cannot run here is left out of the
+  trailer and CI runs it; a failing check records nothing.
+- It is self-attested: CI cannot prove the local run happened, and the sandbox
+  differs from CI (local MySQL 8.0 against `mysql:8.4`). Do not amend a trailer
+  in by hand.
+- Jobs that `needs` Pint or Prettier must accept a skipped result, or an
+  attested php/js group would silently skip Pest, MySQL and E2E too.
+- A run that skipped on a trailer still concludes `success`, so `deploy.yml`'s
+  `verify-tested` counts that tree as tested.
+- Add a CI-run group to `ATTEST_ORDER` in `pre_push_check.py` when you add one to
+  `ci_plan.py`; the selftest compares them.
 
 ## The `plan` job decides what a pull request runs
 
@@ -36,11 +92,12 @@ before planning). Its docstring is the rule list. The constraints behind it:
 - The MySQL job runs only the migration/schema tests, so it has its own `mysql`
   group (`database/`, `tests/Feature/Database/`, `config/database.php`,
   composer manifests) instead of riding on `php`.
-- Playwright (3 shards) and Vitest (2 shards) run as matrices. Each runs on its
-  own runner, so the fixed port and e2e SQLite files are not shared. A
-  same-named aggregator job (`Playwright E2E`, `Vitest`) needs the shards, so
-  the check names stay stable; add a shard by editing the matrix and the
-  `--shard=i/N` total together.
+- Billing rounds every job up to a whole minute, and sharding repeats setup per
+  shard, so it costs more minutes than it saves: Playwright stays one job and
+  Vitest runs inside `js-checks` (Wayfinder types, ESLint, vue-tsc, Vitest in
+  one job, each step reporting even if an earlier one failed). Prettier and Pint
+  stay separate cheap gates ahead of Pest and Playwright. Prefer more workers on
+  one runner to more jobs.
 - Any `.github/` change runs everything, so a workflow change is exercised by
   the run that introduces it.
 - A release PR whose merged tree equals a head the suite already passed on

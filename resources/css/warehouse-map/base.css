@@ -223,6 +223,27 @@
     background: var(--wms-danger);
 }
 
+/* a product's sales status: the words carry the meaning, the tint only supports them */
+.wms-badge {
+    display: inline-flex;
+    align-items: center;
+    flex: none;
+    padding: 1px 7px;
+    border-radius: 9px;
+    font-size: 10px;
+    font-weight: 800;
+    color: inherit;
+    white-space: nowrap;
+}
+
+.wms-badge--on {
+    background: rgb(16 185 129 / 0.22);
+}
+
+.wms-badge--off {
+    background: rgb(148 163 184 / 0.28);
+}
+
 .wms-exp--bad {
     color: var(--wms-danger);
     font-weight: 800;
@@ -233,7 +254,28 @@
     font-weight: 800;
 }
 
-.wms[data-theme='dark'] .wms-exp--bad {
+.wms[data-theme='dark'] /* a product's sales status: the words carry the meaning, the tint only supports them */
+.wms-badge {
+    display: inline-flex;
+    align-items: center;
+    flex: none;
+    padding: 1px 7px;
+    border-radius: 9px;
+    font-size: 10px;
+    font-weight: 800;
+    color: inherit;
+    white-space: nowrap;
+}
+
+.wms-badge--on {
+    background: rgb(16 185 129 / 0.22);
+}
+
+.wms-badge--off {
+    background: rgb(148 163 184 / 0.28);
+}
+
+.wms-exp--bad {
     color: var(--wms-danger-bright);
 }
 

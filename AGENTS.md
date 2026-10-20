@@ -85,10 +85,51 @@ For documentation-only changes, verify links, instruction consistency, and
 | Frontend formatting | `npx prettier --check <changed-files>` |
 | Production assets | `npm run build` |
 | End-to-end tests | `npm run test:e2e` |
-| Before pushing code | `python3 .claude/scripts/pre_push_check.py` (scoped to the branch's changes; `--full` for everything) |
+| Before pushing code | `python3 .claude/scripts/pre_push_check.py` (scoped to the branch's changes; on a clean tree with an unpushed head commit it does the full attested run itself, see below; `--quick` forces the scoped checks, `--full` runs everything) |
 
 Backend feature tests need a configured local `APP_KEY` and a Vite manifest;
 generated Wayfinder files may also be required. Never print environment secrets.
 The pre-push script can skip unavailable PHP tools: report skipped checks, rather
 than describing a partial run as full verification. Do not commit or push unless
 authorized by the user or the applicable task instructions.
+
+### Attested pre-push run
+
+With no flag, `pre_push_check.py` chooses its mode:
+
+- **Clean work tree, unpushed head commit, change outside `.github/`:** the full
+  attested run (`--attest`), described below.
+- **Anything else** (edits not committed yet, a head commit already pushed, a
+  workflow change): the quick scoped checks, with one line saying why it did not
+  attest. `--quick` forces this; `--attest` forces attesting and fails loudly when
+  it cannot.
+
+So the normal flow is: iterate with uncommitted changes (quick checks), commit,
+run `pre_push_check.py` once more (attested run), then push.
+
+The attested run executes, unscoped, every CI group the branch's changes need,
+including the ones CI alone ran before (Playwright, the MySQL migration tests,
+the composer/npm audits, the deploy-script test). When all of them pass it amends
+the **unpushed** head commit with a trailer:
+
+```
+CI-Verified: tree=<head tree sha> groups=<groups that passed>
+```
+
+CI's `plan` job then skips exactly those groups for that tree, which cuts a
+typical pull request from about 24 billed minutes to about 1. Rules:
+
+- Do not push before it finishes: the amend needs an unpushed commit.
+- Any later content change (a new commit, a rebase, a merge of the base) makes the
+  trailer stale; run it again before pushing that change. A stale trailer is
+  ignored, never trusted.
+- It takes about 10 minutes (the groups run as parallel lanes; `--serial` runs them
+  one at a time, about 25). Run it in the background and wait for completion; the
+  first failing lane stops the rest and records nothing. Fix the cause (do not skip
+  or loosen a test), then run it again.
+- A change under `.github/` always runs everything in CI; the trailer is ignored.
+- It needs the Claude web sandbox's tooling (local MySQL from `session-start.sh`,
+  the preinstalled Chromium). A group that cannot run is left out of the trailer
+  and CI runs it, so state which groups were attested.
+- Never write or edit the trailer by hand: it vouches for a run that must have
+  happened. Details and constraints are in [.ai/rules/ci.md](.ai/rules/ci.md).

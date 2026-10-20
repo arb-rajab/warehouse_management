@@ -30,7 +30,6 @@ const props = defineProps<{
     cell: Cell | null;
     label: string;
     rows: CellMapRow[];
-    returnTo?: 'row';
 }>();
 
 const open = defineModel<boolean>('open', { required: true });
@@ -124,7 +123,6 @@ function buildRequest(): PalletActionRequest | null {
         return null;
     }
 
-    const returnTo = props.returnTo ?? null;
     const query = { mergeQuery: {} };
 
     if (selectedAction.value === 'store') {
@@ -134,7 +132,6 @@ function buildRequest(): PalletActionRequest | null {
                 product_id: form.product?.id ?? null,
                 expiration_date: form.expiration_date,
                 note: noteOrNull(),
-                return_to: returnTo,
             },
         };
     }
@@ -153,7 +150,6 @@ function buildRequest(): PalletActionRequest | null {
                     boxes_count: boxesCountOrNull(),
                     confirm_empty: form.confirm_empty,
                     note: noteOrNull(),
-                    return_to: returnTo,
                 },
             };
         case 'remove-boxes':
@@ -163,13 +159,12 @@ function buildRequest(): PalletActionRequest | null {
                     boxes_count: form.boxes_count,
                     confirm_empty: form.confirm_empty,
                     note: noteOrNull(),
-                    return_to: returnTo,
                 },
             };
         case 'empty':
             return {
                 action: emptyPallet(pallet, query),
-                data: { note: noteOrNull(), return_to: returnTo },
+                data: { note: noteOrNull() },
             };
         case 'transfer':
             return {
@@ -179,7 +174,6 @@ function buildRequest(): PalletActionRequest | null {
                     cell_number: form.cell_number,
                     flat_number: form.flat_number,
                     note: noteOrNull(),
-                    return_to: returnTo,
                 },
             };
         case 'edit':
@@ -190,7 +184,6 @@ function buildRequest(): PalletActionRequest | null {
                     expiration_date: form.expiration_date,
                     remaining_boxes: form.boxes_count,
                     confirm_empty: form.confirm_empty,
-                    return_to: returnTo,
                 },
             };
         default:

@@ -8,633 +8,7 @@ use App\Models\Pallet;
 use App\Models\Product;
 use App\Models\Row;
 use App\Models\Setting;
-use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\DB;
-use Inertia\Testing\AssertableInertia as Assert;
-
-test('the warehouse map ships both raw product name columns, whatever the panel locale', function () {
-    // `lib/productName.ts` picks the label client-side, so the payload is the
-    // same in both locales. See .ai/rules/shared-database.md.
-    actingAsAdmin();
-
-    $row = Row::factory()->create(['letter' => 'A', 'cells_count' => 2, 'flats_count' => 1]);
-    $product = Product::factory()->imageUrl(null)->create(['name' => 'Widgets', 'ar_name' => 'ودجات']);
-    // Noise: an untranslated product in the next cell ships an empty ar_name,
-    // which is what the frontend resolver falls back on.
-    $untranslated = Product::factory()->imageUrl(null)->create(['name' => 'Gadgets', 'ar_name' => '']);
-    Pallet::factory()->create([
-        'product_id' => $product->id,
-        'cell_id' => $row->cells()->where('cell_number', 1)->first()->id,
-    ]);
-    Pallet::factory()->create([
-        'product_id' => $untranslated->id,
-        'cell_id' => $row->cells()->where('cell_number', 2)->first()->id,
-    ]);
-
-    $response = $this->withSession(['locale' => 'ar'])->get('/admin/cells');
-
-    $response->assertOk()->assertInertia(
-        fn (Assert $page) => $page
-            ->where('cells.0.pallet.product_name', 'Widgets')
-            ->where('cells.0.pallet.product_ar_name', 'ودجات')
-            ->where('cells.1.pallet.product_name', 'Gadgets')
-            ->where('cells.1.pallet.product_ar_name', '')
-            // cellHighlightSamples builds on the same shared shape, so it has
-            // to carry both columns identically or the flat-tab match badges
-            // would disagree with the cells they count.
-            ->where('cellHighlightSamples.0.pallet.product_name', 'Widgets')
-            ->where('cellHighlightSamples.0.pallet.product_ar_name', 'ودجات')
-            ->where('cellHighlightSamples.1.pallet.product_name', 'Gadgets')
-            ->where('cellHighlightSamples.1.pallet.product_ar_name', '')
-    );
-});
-
-test('an authenticated admin can view the warehouse map for the default flat, with every property the map renders', function () {
-    Carbon::setTestNow('2026-08-01 10:00:00');
-    actingAsAdmin();
-
-    $row = Row::factory()->create(['letter' => 'A', 'cells_count' => 2, 'flats_count' => 2]);
-    $cell = $row->cells()->where('cell_number', 1)->where('flat_number', 1)->first();
-    $product = Product::factory()->imageUrl('https://cdn.example.com/widgets.png')->create([
-        'name' => 'Widgets',
-        'ar_name' => 'ودجات',
-    ]);
-    $pallet = Pallet::factory()->create([
-        'product_id' => $product->id,
-        'cell_id' => $cell->id,
-        'expiration_date' => '2026-09-01',
-    ]);
-
-    $response = $this->get('/admin/cells');
-
-    $response->assertOk()->assertInertia(
-        fn (Assert $page) => $page->component('Admin/Cells/Index')
-            ->has('rows', 1)
-            ->where('rows.0.id', $row->id)
-            ->where('rows.0.letter', 'A')
-            ->where('rows.0.cells_count', 2)
-            ->where('rows.0.flats_count', 2)
-            ->where('flatNumber', 1)
-            ->where('maxFlatNumber', 2)
-            ->has('cells', 2)
-            ->has('cells.0', fn (Assert $cellProp) => $cellProp
-                ->where('id', $cell->id)
-                ->where('row_letter', 'A')
-                ->where('cell_number', 1)
-                ->where('flat_number', 1)
-                ->where('state', 'full')
-                ->where('is_active', true)
-                ->has('pallet', fn (Assert $palletProp) => $palletProp
-                    ->where('id', $pallet->id)
-                    ->where('product_id', $product->id)
-                    ->where('product_name', 'Widgets')
-                    ->where('product_ar_name', 'ودجات')
-                    ->where('product_active', true)
-                    ->where('product_image_url', 'https://cdn.example.com/widgets.png')
-                    ->where('expiration_date', '2026-09-01')
-                    ->where('added_at', $pallet->created_at->toIso8601String())
-                    ->where('cell_entered_at', null)
-                    ->where('is_stale', null)
-                    ->where('remaining_boxes', $pallet->remaining_boxes)
-                )
-            )
-            ->where('today', '2026-08-01')
-            ->where('initialHighlight.state', null)
-            ->where('initialHighlight.productIds', [])
-            ->where('initialHighlight.expiresWithinDays', null)
-            ->where('initialHighlight.staleAfterDays', null)
-            ->where('initialHighlight.expired', false)
-            ->where('initialHighlight.inactive', false)
-            ->where('jumpToCell', null)
-            ->where('searchError', false)
-            ->has('filterOptions.products', 0)
-            ->has('cellHighlightSamples', 4)
-            ->has('cellHighlightSamples.0', fn (Assert $sampleProp) => $sampleProp
-                ->where('cell_id', $cell->id)
-                ->where('row_letter', 'A')
-                ->where('cell_number', 1)
-                ->where('flat_number', 1)
-                ->where('state', 'full')
-                ->where('is_active', true)
-                ->has('pallet', fn (Assert $palletProp) => $palletProp
-                    ->where('id', $pallet->id)
-                    ->where('product_id', $product->id)
-                    ->where('product_name', 'Widgets')
-                    ->where('product_ar_name', 'ودجات')
-                    ->where('product_image_url', 'https://cdn.example.com/widgets.png')
-                    ->where('expiration_date', '2026-09-01')
-                    ->where('added_at', $pallet->created_at->toIso8601String())
-                    ->where('remaining_boxes', $pallet->remaining_boxes)
-                    ->missing('product_active')
-                    ->missing('cell_entered_at')
-                )
-            )
-            ->has('cellHighlightSamples.1', fn (Assert $sampleProp) => $sampleProp
-                ->where('cell_id', fn (int $cellId) => $cellId > 0)
-                ->where('row_letter', 'A')
-                ->where('cell_number', 1)
-                ->where('flat_number', 2)
-                ->where('state', 'empty')
-                ->where('is_active', true)
-                ->where('pallet', null)
-            )
-            ->has('cellHighlightSamples.2', fn (Assert $sampleProp) => $sampleProp
-                ->where('cell_id', fn (int $cellId) => $cellId > 0)
-                ->where('row_letter', 'A')
-                ->where('cell_number', 2)
-                ->where('flat_number', 1)
-                ->where('state', 'empty')
-                ->where('is_active', true)
-                ->where('pallet', null)
-            )
-            ->has('cellHighlightSamples.3', fn (Assert $sampleProp) => $sampleProp
-                ->where('cell_id', fn (int $cellId) => $cellId > 0)
-                ->where('row_letter', 'A')
-                ->where('cell_number', 2)
-                ->where('flat_number', 2)
-                ->where('state', 'empty')
-                ->where('is_active', true)
-                ->where('pallet', null)
-            )
-    );
-
-    Carbon::setTestNow();
-});
-
-test('the warehouse map hydrates only the selected product ids for the highlight filter, not every product', function () {
-    actingAsAdmin();
-    Row::factory()->create();
-    $selected = Product::factory()->create(['name' => 'Widgets']);
-    Product::factory()->create(['name' => 'Unselected Gadgets']);
-
-    $response = $this->get("/admin/cells?product_id[]={$selected->id}");
-
-    $response->assertOk()->assertInertia(
-        fn (Assert $page) => $page->has('filterOptions.products', 1)
-            ->where('filterOptions.products.0.id', $selected->id)
-            ->where('filterOptions.products.0.name', 'Widgets')
-    );
-});
-
-test('the per-flat highlight-match samples cover every flat, unlike the flat-scoped cells prop', function () {
-    actingAsAdmin();
-    Carbon::setTestNow('2026-08-01 10:00:00');
-
-    $row = Row::factory()->create(['cells_count' => 1, 'flats_count' => 2]);
-    $product = Product::factory()->create();
-    $otherFlatCell = $row->cells()->where('flat_number', 2)->first();
-    Pallet::factory()->create([
-        'product_id' => $product->id,
-        'cell_id' => $otherFlatCell->id,
-        'expiration_date' => '2026-08-01',
-    ]);
-
-    $response = $this->get('/admin/cells');
-
-    $response->assertOk()->assertInertia(
-        fn (Assert $page) => $page->has('cells', 1)
-            ->where('cells.0.flat_number', 1)
-            ->has('cellHighlightSamples', 2)
-            ->where('cellHighlightSamples.1.flat_number', 2)
-            ->where('cellHighlightSamples.1.state', 'full')
-            ->where('cellHighlightSamples.1.pallet.product_id', $product->id)
-    );
-
-    Carbon::setTestNow();
-});
-
-test('cellHighlightSamples skips product.published and the cellEnteredLog join, unlike the current flat\'s cells query', function () {
-    // cellHighlightSamples only ships CellPalletSummary (no product_active,
-    // no cell_entered_at), so it has no need for product.published or the
-    // cellEnteredLog "of many" join Cell::WITH_ROW_AND_CONTENTS pulls in for
-    // the current flat's `cells` prop — narrowing that away is the whole
-    // point, since this query runs once for every cell in the warehouse.
-    actingAsAdmin();
-    $row = Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
-    $product = Product::factory()->create();
-    Pallet::factory()->create(['product_id' => $product->id, 'cell_id' => $row->cells()->first()->id]);
-
-    DB::enableQueryLog();
-    $this->get('/admin/cells')->assertOk();
-    $queries = collect(DB::getQueryLog())->pluck('query');
-    DB::disableQueryLog();
-
-    // Only the current flat's `cells` query touches cell_status_logs
-    // (cellEnteredLog's "of many" join) and selects `published`.
-    expect($queries->filter(fn (string $sql) => str_contains($sql, 'cell_status_logs')))->toHaveCount(1);
-    expect($queries->filter(fn (string $sql) => str_contains($sql, 'published')))->toHaveCount(1);
-});
-
-test('a state and product_id passed from the dashboard seed the initial highlight filter', function () {
-    actingAsAdmin();
-    Row::factory()->create();
-    $product = Product::factory()->create();
-
-    $response = $this->get("/admin/cells?state=full&product_id[]={$product->id}");
-
-    $response->assertOk()->assertInertia(
-        fn (Assert $page) => $page->where('initialHighlight.state', 'full')
-            ->where('initialHighlight.productIds', [(int) $product->id])
-    );
-});
-
-test('an invalid state passed from the dashboard is rejected', function () {
-    actingAsAdmin();
-
-    $response = $this->get('/admin/cells?state=bogus');
-
-    $response->assertInvalid(['state']);
-});
-
-test('an expires_within_days passed from the dashboard seeds the initial highlight filter', function () {
-    actingAsAdmin();
-    Row::factory()->create();
-
-    $response = $this->get('/admin/cells?expires_within_days=7');
-
-    $response->assertOk()->assertInertia(
-        fn (Assert $page) => $page->where('initialHighlight.expiresWithinDays', 7)
-    );
-});
-
-test('an invalid expires_within_days passed from the dashboard is rejected', function () {
-    actingAsAdmin();
-
-    $response = $this->get('/admin/cells?expires_within_days=-1');
-
-    $response->assertInvalid(['expires_within_days']);
-});
-
-test('a stale_after_days passed from the dashboard seeds the initial highlight filter', function () {
-    actingAsAdmin();
-    Row::factory()->create();
-
-    $response = $this->get('/admin/cells?stale_after_days=30');
-
-    $response->assertOk()->assertInertia(
-        fn (Assert $page) => $page->where('initialHighlight.staleAfterDays', 30)
-    );
-});
-
-test('an invalid stale_after_days passed from the dashboard is rejected', function () {
-    actingAsAdmin();
-
-    $response = $this->get('/admin/cells?stale_after_days=-1');
-
-    $response->assertInvalid(['stale_after_days']);
-});
-
-test('expired passed from the dashboard seeds the initial highlight filter', function () {
-    actingAsAdmin();
-    Row::factory()->create();
-
-    $response = $this->get('/admin/cells?expired=1');
-
-    $response->assertOk()->assertInertia(
-        fn (Assert $page) => $page->where('initialHighlight.expired', true)
-    );
-});
-
-test('the literal "true" the dashboard link actually sends seeds the initial highlight filter', function () {
-    actingAsAdmin();
-    Row::factory()->create();
-
-    $response = $this->get('/admin/cells?expired=true');
-
-    $response->assertOk()->assertInertia(
-        fn (Assert $page) => $page->where('initialHighlight.expired', true)
-    );
-});
-
-test('an invalid expired value passed from the dashboard is rejected', function () {
-    actingAsAdmin();
-
-    $response = $this->get('/admin/cells?expired=bogus');
-
-    $response->assertInvalid(['expired']);
-});
-
-test('a highlight-filtered deep-link with no flat_number jumps to the first matching flat, in row/cell-number order', function () {
-    Carbon::setTestNow('2026-08-13 10:00:00');
-    actingAsAdmin();
-    $row = Row::factory()->create(['letter' => 'A', 'cells_count' => 2, 'flats_count' => 3]);
-
-    // Deliberately gives the lower cell_number the later flat, so the test
-    // proves cell_number outranks flat_number in the tie-break — matching
-    // the client's `orderedMatches` sort in Cells/Index.vue.
-    Pallet::factory()->create([
-        'cell_id' => $row->cells()->where('cell_number', 2)->where('flat_number', 2)->first()->id,
-        'expiration_date' => '2026-08-01',
-    ]);
-    Pallet::factory()->create([
-        'cell_id' => $row->cells()->where('cell_number', 1)->where('flat_number', 3)->first()->id,
-        'expiration_date' => '2026-08-05',
-    ]);
-
-    $response = $this->get('/admin/cells?expired=true');
-
-    $response->assertOk()->assertInertia(
-        fn (Assert $page) => $page->where('flatNumber', 3)
-            ->where('jumpToCell.row_letter', 'A')
-            ->where('jumpToCell.cell_number', 1)
-            ->where('jumpToCell.flat_number', 3)
-    );
-
-    Carbon::setTestNow();
-});
-
-test('an explicit flat_number is respected even when the highlight filter matches nothing on it', function () {
-    Carbon::setTestNow('2026-08-13 10:00:00');
-    actingAsAdmin();
-    $row = Row::factory()->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 2]);
-    Pallet::factory()->create([
-        'cell_id' => $row->cells()->where('flat_number', 2)->first()->id,
-        'expiration_date' => '2026-08-01',
-    ]);
-
-    $response = $this->get('/admin/cells?expired=true&flat_number=1');
-
-    $response->assertOk()->assertInertia(
-        fn (Assert $page) => $page->where('flatNumber', 1)->where('jumpToCell', null)
-    );
-
-    Carbon::setTestNow();
-});
-
-test('a highlight-filtered deep-link stays on flat 1 (still pulsing the match) when flat 1 already holds the first match', function () {
-    Carbon::setTestNow('2026-08-13 10:00:00');
-    actingAsAdmin();
-    $row = Row::factory()->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 2]);
-    Pallet::factory()->create([
-        'cell_id' => $row->cells()->where('flat_number', 1)->first()->id,
-        'expiration_date' => '2026-08-01',
-    ]);
-    // Noise: a later match on another flat that must not win the jump ahead
-    // of the one already on the default landing flat.
-    Pallet::factory()->create([
-        'cell_id' => $row->cells()->where('flat_number', 2)->first()->id,
-        'expiration_date' => '2026-08-01',
-    ]);
-
-    $response = $this->get('/admin/cells?expired=true');
-
-    // flatNumber doesn't change, but jumpToCell is still populated — the
-    // deep-link's match gets pulsed into focus even when it was already on
-    // the landing flat, same as it would be for any other resolved match.
-    $response->assertOk()->assertInertia(
-        fn (Assert $page) => $page->where('flatNumber', 1)
-            ->where('jumpToCell.row_letter', 'A')
-            ->where('jumpToCell.cell_number', 1)
-            ->where('jumpToCell.flat_number', 1)
-    );
-
-    Carbon::setTestNow();
-});
-
-test('a product-id deep-link jumps to the flat holding that product, excluding other products', function () {
-    actingAsAdmin();
-    $row = Row::factory()->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 2]);
-    $matching = Product::factory()->create();
-    $other = Product::factory()->create();
-    // Noise: a different product on flat 1, which must not win the jump.
-    Pallet::factory()->create([
-        'product_id' => $other->id,
-        'cell_id' => $row->cells()->where('flat_number', 1)->first()->id,
-    ]);
-    Pallet::factory()->create([
-        'product_id' => $matching->id,
-        'cell_id' => $row->cells()->where('flat_number', 2)->first()->id,
-    ]);
-
-    $response = $this->get("/admin/cells?product_id[]={$matching->id}");
-
-    $response->assertOk()->assertInertia(
-        fn (Assert $page) => $page->where('flatNumber', 2)->where('jumpToCell.flat_number', 2)
-    );
-});
-
-test('a state deep-link jumps to the flat holding a cell in that state, excluding other states', function () {
-    actingAsAdmin();
-    $row = Row::factory()->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 2]);
-    // Noise: flat 1 stays "empty" (the default), which must not match "opened".
-    $row->cells()->where('flat_number', 2)->first()->update(['state' => CellState::Opened]);
-
-    $response = $this->get('/admin/cells?state=opened');
-
-    $response->assertOk()->assertInertia(
-        fn (Assert $page) => $page->where('flatNumber', 2)->where('jumpToCell.flat_number', 2)
-    );
-});
-
-test('an inactive-only deep-link jumps to the flat holding the inactive cell, excluding active ones', function () {
-    actingAsAdmin();
-    $row = Row::factory()->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 2]);
-    // Noise: flat 1 stays active, which must not match "inactive only".
-    $row->cells()->where('flat_number', 2)->first()->update(['is_active' => false]);
-
-    $response = $this->get('/admin/cells?is_active=false');
-
-    $response->assertOk()->assertInertia(
-        fn (Assert $page) => $page->where('flatNumber', 2)->where('jumpToCell.flat_number', 2)
-    );
-});
-
-test('an expires_within_days deep-link jumps to the flat holding the soon-to-expire pallet, excluding one expiring later', function () {
-    Carbon::setTestNow('2026-08-13 10:00:00');
-    actingAsAdmin();
-    $row = Row::factory()->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 2]);
-    // Noise: expires well outside the 7-day window.
-    Pallet::factory()->create([
-        'cell_id' => $row->cells()->where('flat_number', 1)->first()->id,
-        'expiration_date' => '2026-09-01',
-    ]);
-    Pallet::factory()->create([
-        'cell_id' => $row->cells()->where('flat_number', 2)->first()->id,
-        'expiration_date' => '2026-08-15',
-    ]);
-
-    $response = $this->get('/admin/cells?expires_within_days=7');
-
-    $response->assertOk()->assertInertia(
-        fn (Assert $page) => $page->where('flatNumber', 2)->where('jumpToCell.flat_number', 2)
-    );
-
-    Carbon::setTestNow();
-});
-
-test('a stale_after_days deep-link jumps to the flat holding the stale pallet, excluding a fresh one', function () {
-    actingAsAdmin();
-    $row = Row::factory()->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 2]);
-    // Noise: a freshly-stored pallet, nowhere near the staleness threshold.
-    Pallet::factory()->create([
-        'cell_id' => $row->cells()->where('flat_number', 1)->first()->id,
-    ]);
-    Pallet::factory()->stale()->create([
-        'cell_id' => $row->cells()->where('flat_number', 2)->first()->id,
-    ]);
-
-    $response = $this->get('/admin/cells?stale_after_days=25');
-
-    $response->assertOk()->assertInertia(
-        fn (Assert $page) => $page->where('flatNumber', 2)->where('jumpToCell.flat_number', 2)
-    );
-});
-
-test('a location search with a flat number jumps to that exact cell', function () {
-    actingAsAdmin();
-    $row = Row::factory()->create(['letter' => 'A', 'cells_count' => 3, 'flats_count' => 3]);
-    $targetCell = $row->cells()->where('cell_number', 2)->where('flat_number', 3)->first();
-
-    $response = $this->get('/admin/cells?search='.urlencode('A2·3'));
-
-    $response->assertOk()->assertInertia(
-        fn (Assert $page) => $page->where('flatNumber', 3)
-            ->where('jumpToCell.row_letter', 'A')
-            ->where('jumpToCell.cell_number', 2)
-            ->where('jumpToCell.flat_number', 3)
-            ->where('searchError', false)
-    );
-
-    expect($targetCell)->not->toBeNull();
-});
-
-test('a location search without a flat number jumps to the lowest matching flat', function () {
-    actingAsAdmin();
-    Row::factory()->create(['letter' => 'B', 'cells_count' => 2, 'flats_count' => 3]);
-
-    $response = $this->get('/admin/cells?search=B1');
-
-    $response->assertOk()->assertInertia(
-        fn (Assert $page) => $page->where('flatNumber', 1)
-            ->where('jumpToCell.row_letter', 'B')
-            ->where('jumpToCell.cell_number', 1)
-            ->where('jumpToCell.flat_number', 1)
-    );
-});
-
-test('a location search with no separator auto-splits the last digit as the flat number', function () {
-    actingAsAdmin();
-    $row = Row::factory()->create(['letter' => 'A', 'cells_count' => 15, 'flats_count' => 5]);
-    $targetCell = $row->cells()->where('cell_number', 12)->where('flat_number', 3)->first();
-
-    $response = $this->get('/admin/cells?search=A123');
-
-    $response->assertOk()->assertInertia(
-        fn (Assert $page) => $page->where('flatNumber', 3)
-            ->where('jumpToCell.row_letter', 'A')
-            ->where('jumpToCell.cell_number', 12)
-            ->where('jumpToCell.flat_number', 3)
-            ->where('searchError', false)
-    );
-
-    expect($targetCell)->not->toBeNull();
-});
-
-test('a no-separator search that does not split falls back to the plain cell-number search', function () {
-    actingAsAdmin();
-    Row::factory()->create(['letter' => 'C', 'cells_count' => 99, 'flats_count' => 1]);
-
-    $response = $this->get('/admin/cells?search=C99');
-
-    $response->assertOk()->assertInertia(
-        fn (Assert $page) => $page->where('flatNumber', 1)
-            ->where('jumpToCell.row_letter', 'C')
-            ->where('jumpToCell.cell_number', 99)
-            ->where('jumpToCell.flat_number', 1)
-            ->where('searchError', false)
-    );
-});
-
-test('a search matching nothing reports a searchError without changing the flat', function () {
-    actingAsAdmin();
-    Row::factory()->create();
-
-    $response = $this->get('/admin/cells?search=NoSuchThing123');
-
-    $response->assertOk()->assertInertia(
-        fn (Assert $page) => $page->where('flatNumber', 1)
-            ->where('jumpToCell', null)
-            ->where('searchError', true)
-    );
-});
-
-test('the warehouse map excludes cells belonging to a different flat', function () {
-    actingAsAdmin();
-    $row = Row::factory()->create(['cells_count' => 1, 'flats_count' => 2]);
-
-    $response = $this->get('/admin/cells');
-
-    $response->assertOk()->assertInertia(
-        fn (Assert $page) => $page->has('cells', 1)
-            ->where('cells.0.flat_number', 1)
-    );
-});
-
-test('the warehouse map can show a different flat via flat_number', function () {
-    actingAsAdmin();
-    $row = Row::factory()->create(['cells_count' => 1, 'flats_count' => 2]);
-    $secondFlatCell = $row->cells()->where('flat_number', 2)->first();
-
-    $response = $this->get('/admin/cells?flat_number=2');
-
-    $response->assertOk()->assertInertia(
-        fn (Assert $page) => $page->where('flatNumber', 2)
-            ->has('cells', 1)
-            ->where('cells.0.id', $secondFlatCell->id)
-    );
-});
-
-test('the warehouse map clamps an out-of-range flat_number instead of erroring', function () {
-    actingAsAdmin();
-    Row::factory()->create(['cells_count' => 1, 'flats_count' => 2]);
-
-    $response = $this->get('/admin/cells?flat_number=99');
-
-    $response->assertOk()->assertInertia(
-        fn (Assert $page) => $page->where('flatNumber', 2)
-    );
-});
-
-test('the warehouse map maxFlatNumber reflects the tallest row', function () {
-    actingAsAdmin();
-    Row::factory()->create(['cells_count' => 1, 'flats_count' => 2]);
-    Row::factory()->create(['cells_count' => 1, 'flats_count' => 5]);
-
-    $response = $this->get('/admin/cells');
-
-    $response->assertOk()->assertInertia(
-        fn (Assert $page) => $page->where('maxFlatNumber', 5)
-    );
-});
-
-test('the warehouse map lists rows ordered by letter', function () {
-    actingAsAdmin();
-    Row::factory()->create(['letter' => 'C']);
-    Row::factory()->create(['letter' => 'A']);
-    Row::factory()->create(['letter' => 'B']);
-
-    $response = $this->get('/admin/cells');
-
-    $response->assertOk()->assertInertia(
-        fn (Assert $page) => $page->where('rows.0.letter', 'A')
-            ->where('rows.1.letter', 'B')
-            ->where('rows.2.letter', 'C')
-    );
-});
-
-test('a mobile app user cannot view the warehouse map', function () {
-    actingAsMobilePanelUser();
-
-    $response = $this->get('/admin/cells');
-
-    $response->assertForbidden();
-});
-
-test('an unauthenticated caller is redirected to login when viewing the warehouse map', function () {
-    $response = $this->get('/admin/cells');
-
-    $response->assertRedirect(route('login'));
-});
+use Illuminate\Support\Facades\Route;
 
 test('an authenticated user can export a QR code image for a single cell', function () {
     actingAsAdmin();
@@ -647,34 +21,15 @@ test('an authenticated user can export a QR code image for a single cell', funct
     $response->assertHeader('content-type', 'image/svg+xml');
 
     $svg = $response->getContent();
-    // A real QR is spliced in as inline SVG markup rather than a nested
-    // `<image>` reference, which dompdf silently skips (see
-    // BuildsQrLabels::qrSvgInnerMarkup()) — regression guard for the QR
-    // failing to render rather than just the surrounding text.
     expect($svg)->toContain('<g transform="translate(20,20)"><rect x="0" y="0"')
         ->and($svg)->toContain('<path fill-rule="evenodd"')
         ->and($svg)->not->toContain('<image');
     expect($svg)->toContain(Cell::slotLabel('Z', $cell->cell_number, $cell->flat_number));
 
-    // With no description line to share the label with, the slot label grows
-    // to fill the freed vertical space (BuildsQrLabels::qrLabelImage()'s
-    // expandPrimaryText) — well past the 18px used everywhere else (e.g. the
-    // product QR export's primary line). Neither this single-cell SVG export
-    // nor the row-wide PDF sheet (see RowControllerTest, which now embeds
-    // this exact same SVG verbatim on each cell's page — see
-    // BuildsCellQrLabels::cellQrLabels()) carries a spelled-out description
-    // line at all any more.
-    expect($svg)->toContain('font-size="64"');
+    expect($svg)->toContain('font-size="121" font-weight="bold"');
 });
 
-test('a single-cell QR export draws a same-height downward arrow beside the label for the lowest level of a multi-level row', function () {
-    // The row has no Setting, so Setting::current() defaults to
-    // qr_code_width=850 (Setting::DEFAULT_QR_CODE_WIDTH), and the label is
-    // short enough to stay on one line at the max 64px font — both pin the
-    // arrow's box to these exact points (see
-    // BuildsQrLabels::qrLabelImage()'s $primaryArrow reservation math).
-    // A downward arrow's shaft points away from its head, which sits at the
-    // bottom (708,906 is the tip; 587..830 the shaft/head span above it).
+test('a single-cell QR export draws a larger downward arrow below the label for the lowest level of a multi-level row', function () {
     actingAsAdmin();
     $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 1, 'flats_count' => 3]);
     $cell = $row->cells()->where('flat_number', 1)->first();
@@ -683,12 +38,10 @@ test('a single-cell QR export draws a same-height downward arrow beside the labe
 
     $response->assertOk();
     $svg = $response->getContent();
-    expect($svg)->toContain('<polygon points="708,906 587,874 659,874 659,842 757,842 757,874 830,874" fill="#111111"/>');
+    expect($svg)->toContain('<polygon points="648,400 551,303 609,303 609,206 687,206 687,303 745,303" fill="#111111"/>');
 });
 
-test('a single-cell QR export draws a same-height upward arrow beside the label for the highest level of a multi-level row', function () {
-    // Same geometry as the downward-arrow test above, mirrored vertically —
-    // the tip (708,842) sits at the top instead of the bottom.
+test('a single-cell QR export draws a larger upward arrow below the label for the highest level of a multi-level row', function () {
     actingAsAdmin();
     $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 1, 'flats_count' => 3]);
     $cell = $row->cells()->where('flat_number', 3)->first();
@@ -697,13 +50,10 @@ test('a single-cell QR export draws a same-height upward arrow beside the label 
 
     $response->assertOk();
     $svg = $response->getContent();
-    expect($svg)->toContain('<polygon points="708,842 587,874 659,874 659,906 757,906 757,874 830,874" fill="#111111"/>');
+    expect($svg)->toContain('<polygon points="648,206 551,303 609,303 609,400 687,400 687,303 745,303" fill="#111111"/>');
 });
 
-test('a single-cell QR export draws a horizontal arrow beside the label for a middle level', function () {
-    // A horizontal (rightward) arrow's tip is on the right (830,874) with
-    // the shaft/head extending left to x=587 — see verticalArrowPoints()'s
-    // sibling horizontalArrowPoints().
+test('a single-cell QR export draws a dash below the label for a middle level', function () {
     actingAsAdmin();
     $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 1, 'flats_count' => 3]);
     $cell = $row->cells()->where('flat_number', 2)->first();
@@ -712,14 +62,11 @@ test('a single-cell QR export draws a horizontal arrow beside the label for a mi
 
     $response->assertOk();
     $svg = $response->getContent();
-    expect($svg)->toContain('<polygon points="830,874 708,842 708,861 587,861 587,887 708,887 708,906" fill="#111111"/>');
+    expect($svg)->toContain('<polygon points="551,284 745,284 745,323 551,323" fill="#111111"/>')
+        ->and($svg)->not->toContain('points="745,303 648,206');
 });
 
-test('a single-cell QR export draws a horizontal arrow beside the label when the row has only one level', function () {
-    // A single-level row's one cell is simultaneously its own highest and
-    // lowest — there's no up/down direction to indicate, so it gets the same
-    // horizontal arrow a genuine mid-level cell does (see
-    // BuildsCellQrLabels::cellLevelArrowDirection()).
+test('a single-cell QR export draws a dash below the label when the row has only one level', function () {
     actingAsAdmin();
     $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 1, 'flats_count' => 1]);
     $cell = $row->cells()->first();
@@ -728,7 +75,8 @@ test('a single-cell QR export draws a horizontal arrow beside the label when the
 
     $response->assertOk();
     $svg = $response->getContent();
-    expect($svg)->toContain('<polygon points="830,874 708,842 708,861 587,861 587,887 708,887 708,906" fill="#111111"/>');
+    expect($svg)->toContain('<polygon points="551,284 745,284 745,323 551,323" fill="#111111"/>')
+        ->and($svg)->not->toContain('points="745,303 648,206');
 });
 
 test('a single-cell QR export uses the configured QR code size instead of the default', function () {
@@ -741,12 +89,8 @@ test('a single-cell QR export uses the configured QR code size instead of the de
 
     $response->assertOk();
     $svg = $response->getContent();
-    // The label canvas width is exactly the configured total-box width, and
-    // the embedded QR square is that width minus padding on both sides
-    // (padding=20 — see BuildsQrLabels::qrLabelImage()); qr_code_height is a
-    // ceiling on the whole label including text, not the QR's own size.
     expect($svg)->toContain('<svg xmlns="http://www.w3.org/2000/svg" width="400"')
-        ->and($svg)->toContain('<g transform="translate(20,20)"><rect x="0" y="0" width="360" height="360"');
+        ->and($svg)->toContain('<g transform="translate(20,20)"><rect x="0" y="0" width="187" height="187"');
 });
 
 test('a single-cell QR export keeps the full slot label visible for large cell/flat numbers', function () {
@@ -758,15 +102,11 @@ test('a single-cell QR export keeps the full slot label visible for large cell/f
 
     $response->assertOk();
     $svg = $response->getContent();
-    // BuildsQrLabels::pickExpandedPrimaryFontSize() must shrink the font
-    // rather than let clampLinesToHeight() truncate the label — a fixed
-    // large font size would cut the flat number off behind an ellipsis for
-    // a label this long, silently hiding real cell coordinates.
     expect($svg)->toContain('Z123·456')
         ->and($svg)->not->toContain('…');
 });
 
-test('a single-cell QR export shrinks the QR slightly to keep the label visible when width and height are equal', function () {
+test('a single-cell QR export keeps QR and label side by side when width and height are equal', function () {
     actingAsAdmin();
     Setting::factory()->create(['qr_code_width' => 280, 'qr_code_height' => 280]);
     $row = Row::factory()->create(['letter' => 'Z', 'cells_count' => 1, 'flats_count' => 1]);
@@ -776,17 +116,60 @@ test('a single-cell QR export shrinks the QR slightly to keep the label visible 
 
     $response->assertOk();
     $svg = $response->getContent();
-    // Equal width/height used to leave no room below the QR at all, so
-    // clampLinesToHeight() dropped the label entirely (see BuildsQrLabels'
-    // $minPrimaryZone guard). The QR now shrinks just enough to guarantee
-    // the label always has room, rather than disappearing.
-    // 280 - 16 (bottom margin) - 46 ($minPrimaryZone) = 218 is the lowest the
-    // QR's bottom edge may sit; the unshrunk 240px QR ends at 20+240=260, so
-    // it shrinks by 42px to 198px and re-centers at x=(280-198)/2=41.
     expect($svg)->toContain(Cell::slotLabel('Z', $cell->cell_number, $cell->flat_number))
-        ->and($svg)->toContain('<g transform="translate(41,20)"><rect x="0" y="0" width="198" height="198"')
-        ->and($svg)->not->toContain('width="240" height="240"');
+        ->and($svg)->toContain('<g transform="translate(14,14)"><rect x="0" y="0" width="131" height="131"')
+        ->and($svg)->toContain('height="159"')
+        ->and($svg)->toContain('font-weight="bold"');
 });
+
+test('a horizontal cell QR keeps the full bold slot and arrow inside the canvas', function (int $width, int $height, string $locale) {
+    actingAsAdmin();
+    app()->setLocale($locale);
+    Setting::factory()->create(['qr_code_width' => $width, 'qr_code_height' => $height]);
+    $row = Row::factory()->create(['letter' => 'ZZ', 'cells_count' => 1, 'flats_count' => 1]);
+    $cell = Cell::factory()->for($row)->create(['cell_number' => 123, 'flat_number' => 456]);
+
+    $response = $this->get("/admin/cells/{$cell->id}/export-qr-code")->assertOk();
+    $svg = simplexml_load_string($response->getContent());
+    $svg->registerXPathNamespace('s', 'http://www.w3.org/2000/svg');
+    $text = $svg->xpath('//s:text')[0];
+    $qr = $svg->xpath('//s:g/s:rect')[0];
+    $arrow = $svg->xpath('//s:polygon')[0];
+    preg_match('/translate\((\d+),(\d+)\)/', (string) $svg->xpath('//s:g')[0]['transform'], $translation);
+    $qrRight = (int) $translation[1] + (int) $qr['width'];
+    $centerY = (int) $translation[2] + (int) $qr['height'] / 2;
+    $fontSize = (int) $text['font-size'];
+
+    expect((string) $text)->toBe('ZZ123·456')
+        ->and((string) $text['font-weight'])->toBe('bold')
+        ->and((string) $text['direction'])->toBe('ltr')
+        ->and((int) $svg['width'])->toBe($width)
+        ->and((int) $svg['height'])->toBeLessThanOrEqual($height)
+        ->and((int) $text['x'] - mb_strlen((string) $text) * $fontSize * 0.75 / 2)->toBeGreaterThan($qrRight)
+        ->and((int) $text['y'] - $fontSize * 0.8)->toBeLessThan($centerY);
+
+    $arrowXs = [];
+    $arrowYs = [];
+
+    foreach (explode(' ', (string) $arrow['points']) as $point) {
+        [$x, $y] = array_map('intval', explode(',', $point));
+        $arrowXs[] = $x;
+        $arrowYs[] = $y;
+        expect($x)->toBeGreaterThan($qrRight)->toBeLessThan($width)
+            ->and($y)->toBeGreaterThanOrEqual(0)->toBeLessThan((int) $svg['height']);
+    }
+
+    expect(min($arrowYs))->toBeGreaterThan((int) $text['y'] + $fontSize * 0.2)
+        ->and(abs((min($arrowXs) + max($arrowXs)) / 2 - (int) $text['x']))->toBeLessThanOrEqual(1)
+        ->and(abs(((int) $text['y'] - round($fontSize * 0.8) + max($arrowYs)) / 2 - $centerY))->toBeLessThanOrEqual(1);
+})->with([
+    [850, 1000, 'en'],
+    [280, 280, 'en'],
+    [100, 100, 'en'],
+    [1000, 100, 'en'],
+    [100, 1000, 'en'],
+    [850, 1000, 'ar'],
+]);
 
 test('a mobile app user cannot export a single cells QR code', function () {
     actingAsMobilePanelUser();
@@ -813,25 +196,6 @@ test('exporting a QR code for a non-existent cell returns a 404', function () {
     $response = $this->get('/admin/cells/999999/export-qr-code');
 
     $response->assertNotFound();
-});
-
-test('is_active=0 passed from the dashboard seeds the initial highlight filter as inactive-only', function () {
-    actingAsAdmin();
-    Row::factory()->create();
-
-    $response = $this->get('/admin/cells?is_active=0');
-
-    $response->assertOk()->assertInertia(
-        fn (Assert $page) => $page->where('initialHighlight.inactive', true)
-    );
-});
-
-test('an invalid is_active value passed from the dashboard is rejected', function () {
-    actingAsAdmin();
-
-    $response = $this->get('/admin/cells?is_active=bogus');
-
-    $response->assertInvalid(['is_active']);
 });
 
 test('an authenticated admin can deactivate a cell regardless of its occupancy', function () {
@@ -921,32 +285,20 @@ test('toggling the active status of a non-existent cell returns a 404', function
     $response->assertNotFound();
 });
 
-test('toggling a cells active status redirects to the cell map by default', function () {
+test('toggling a cells active status redirects back to that cells row page', function () {
     actingAsAdmin();
-    $row = Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
+    Row::factory()->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 1]);
+    $row = Row::factory()->create(['letter' => 'B', 'cells_count' => 1, 'flats_count' => 1]);
     $cell = $row->cells()->first();
 
     $response = $this->post("/admin/cells/{$cell->id}/toggle-active");
 
-    $response->assertRedirect(route('admin.cells.index'));
+    $response->assertRedirect(route('admin.rows.show', 'B'));
 });
 
-test('toggling a cells active status preserves the current map query on redirect', function () {
+test('the retired cell map page is gone', function () {
     actingAsAdmin();
-    $row = Row::factory()->create(['cells_count' => 1, 'flats_count' => 2]);
-    $cell = $row->cells()->where('flat_number', 2)->first();
 
-    $response = $this->post("/admin/cells/{$cell->id}/toggle-active?flat_number=2");
-
-    $response->assertRedirect('/admin/cells?flat_number=2');
-});
-
-test('toggling a cells active status from a row page redirects back to that row page instead of the cell map', function () {
-    actingAsAdmin();
-    $row = Row::factory()->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 1]);
-    $cell = $row->cells()->first();
-
-    $response = $this->post("/admin/cells/{$cell->id}/toggle-active", ['return_to' => 'row']);
-
-    $response->assertRedirect("/admin/rows/{$row->letter}");
+    expect(Route::has('admin.cells.index'))->toBeFalse();
+    $this->get('/admin/cells')->assertNotFound();
 });

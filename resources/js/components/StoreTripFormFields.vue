@@ -7,6 +7,7 @@ import FieldError from '@/components/FieldError.vue';
 import FormField from '@/components/FormField.vue';
 import { fieldLabelClass, plainFieldInputClass } from '@/lib/filters';
 import { t } from '@/lib/i18n';
+import { tripCheckpointLabel } from '@/lib/storeTrip';
 import type {
     StoreReferenceOption,
     StoreTripCheckpointType,
@@ -153,16 +154,6 @@ function moveRow(index: number, offset: -1 | 1): void {
 }
 function removeRow(index: number): void {
     rows.value.splice(index, 1);
-}
-function storedLabel(row: CheckpointRow): string {
-    const customer = row.customer ?? t('store.trips.form.unknownCustomer');
-
-    return row.type === 'delivery'
-        ? t('store.trips.form.orderOption', {
-              code: row.orderCode ?? row.relatedId,
-              customer,
-          })
-        : customer;
 }
 function truckLabel(truck: StoreTripTruckOption): string {
     return truck.model ? `${truck.name} ${truck.model}` : truck.name;
@@ -346,7 +337,15 @@ function requireOneRow(event: Event): void {
                                 :name="`checkpoints_array[${index}][checkpoint_related_id]`"
                                 :value="row.relatedId"
                             />
-                            <p class="py-2 text-sm">{{ storedLabel(row) }}</p>
+                            <p class="py-2 text-sm">
+                                {{
+                                    tripCheckpointLabel(
+                                        row.type,
+                                        row.orderCode ?? row.relatedId,
+                                        row.customer,
+                                    )
+                                }}
+                            </p>
                         </div>
                         <div v-else>
                             <label

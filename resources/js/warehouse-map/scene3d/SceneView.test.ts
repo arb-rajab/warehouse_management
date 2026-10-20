@@ -424,6 +424,7 @@ describe('SceneView', () => {
                 terms: ['rice'],
                 state: 'all',
                 expiring: false,
+                productIds: [],
             }),
             2,
         );
@@ -455,6 +456,7 @@ describe('SceneView', () => {
                 terms: ['x'],
                 state: 'all',
                 expiring: false,
+                productIds: [],
             }),
             null,
         );

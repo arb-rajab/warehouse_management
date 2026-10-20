@@ -101,7 +101,7 @@ test('the app\'s receipt list carries signed links, and the QR endpoint needs it
     $this->get("/temp/api/v2/representatives/payments/generate-qr?id=$id")->assertForbidden();
 });
 
-test('a representative changes the note of their own visit only', function () {
+test('the mobile API changes the note of the representative own visit only', function () {
     $owner = repUser();
     $stranger = repUser();
     $customer = createStoreUser('customer');
@@ -114,11 +114,4 @@ test('a representative changes the note of their own visit only', function () {
     $this->withToken(storeApiToken($owner))->postJson('/temp/api/v2/representatives/visit-note', ['visit_id' => $visit->id, 'note' => 'mine'])->assertOk();
     expect($visit->fresh()->note)->toBe('mine');
 
-    actingAsStoreUser($stranger);
-    $this->post(route('visits.note'), ['visit_id' => $visit->id, 'note' => 'hijacked again']);
-    expect($visit->fresh()->note)->toBe('mine');
-
-    actingAsStoreUser($owner);
-    $this->post(route('visits.note'), ['visit_id' => $visit->id, 'note' => 'web note']);
-    expect($visit->fresh()->note)->toBe('web note');
 });

@@ -4,7 +4,7 @@ import { t } from '@/lib/i18n';
 
 /**
  * The heading style shared by every section inside a filter dialog (see
- * Cells/Index.vue and CellStatusLogs/Index.vue).
+ * CellHighlightFilters.vue and CellStatusLogs/Index.vue).
  */
 export const filterSectionHeadingClass =
     'mb-3 text-xs font-semibold tracking-wide text-gray-500 uppercase dark:text-neutral-400';
@@ -27,10 +27,8 @@ export const filterFooterClass =
 
 /**
  * The small rounded-pill count badge used by every filter-dialog trigger's
- * active-filter count and by the cell map's per-flat highlight-match count.
- * Blue rather than the page's usual gray-900/white pairing so it stays visible
- * on the flat tab's own dark selected-state background, matching the blue
- * highlight ring cells get.
+ * active-filter count. Blue rather than the page's usual gray-900/white pairing,
+ * matching the blue highlight ring cells get.
  */
 export const countBadgeClass =
     'inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-blue-600 px-1 text-xs font-medium text-white dark:bg-blue-500';
@@ -50,8 +48,7 @@ export const filterClearButtonClass =
     'inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 dark:text-neutral-400 dark:hover:bg-neutral-800 cursor-pointer';
 
 /**
- * The cell map's toolbar buttons (zoom out/in, rotate left/right, reset
- * view) shared by Cells/Index.vue.
+ * A square icon-only toolbar button (the rich-text editor's toolbar).
  */
 export const mapToolbarButtonClass =
     'cursor-pointer rounded-md border border-gray-300 p-2 text-gray-700 hover:bg-gray-50 dark:border-neutral-700 dark:text-neutral-200 dark:hover:bg-neutral-800';

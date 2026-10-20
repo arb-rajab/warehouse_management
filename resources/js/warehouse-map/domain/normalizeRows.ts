@@ -35,6 +35,7 @@ function normalizePallet(raw: ApiPallet): Pallet {
         expirationDate: raw.expiration_date ?? null,
         productName: raw.product_name ?? '',
         productArName: raw.product_ar_name ?? '',
+        productActive: raw.product_active !== false,
         productImageUrl: raw.product_image_url ?? null,
         remainingBoxes: raw.remaining_boxes ?? null,
         productBoxesCount: raw.product_boxes_count ?? null,

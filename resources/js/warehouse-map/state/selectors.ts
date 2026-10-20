@@ -1,5 +1,13 @@
 import { buildMatchIndex } from '../domain/MatchIndex';
-import type { MatchIndex, Slot, SlotFilter, Warehouse } from '../domain/types';
+import { listProductOptions } from '../domain/productOptions';
+import { NO_FILTER } from '../domain/SlotFilter';
+import type {
+    MatchIndex,
+    ProductOption,
+    Slot,
+    SlotFilter,
+    Warehouse,
+} from '../domain/types';
 import type { MapState, RackRef } from './state';
 
 /**
@@ -9,11 +17,7 @@ import type { MapState, RackRef } from './state';
 export function createMatchSelector(): (state: MapState) => MatchIndex {
     let lastWarehouse: Warehouse | null = null;
     let lastFilter: SlotFilter | null = null;
-    let lastIndex: MatchIndex = buildMatchIndex([], {
-        terms: [],
-        state: 'all',
-        expiring: false,
-    });
+    let lastIndex: MatchIndex = buildMatchIndex([], NO_FILTER);
 
     return (state) => {
         if (state.warehouse !== lastWarehouse || state.filter !== lastFilter) {
@@ -26,6 +30,23 @@ export function createMatchSelector(): (state: MapState) => MatchIndex {
         }
 
         return lastIndex;
+    };
+}
+
+/** The products the picker offers, listed again only when the warehouse changed. */
+export function createProductOptionsSelector(): (
+    state: MapState,
+) => readonly ProductOption[] {
+    let lastWarehouse: Warehouse | null = null;
+    let lastOptions: readonly ProductOption[] = [];
+
+    return (state) => {
+        if (state.warehouse !== lastWarehouse) {
+            lastWarehouse = state.warehouse;
+            lastOptions = listProductOptions(state.warehouse?.slots ?? []);
+        }
+
+        return lastOptions;
     };
 }
 

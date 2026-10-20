@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Trip extends Model
 {
@@ -48,7 +49,8 @@ class Trip extends Model
         return $this->belongsTo(Truck::class, 'truck_id');
     }
 
-    public function checkpoints()
+    /** @return HasMany<Checkpoint, $this> */
+    public function checkpoints(): HasMany
     {
         return $this->hasMany(Checkpoint::class, 'trip_id', 'id')->orderBy('sort_order_in_trip');
     }

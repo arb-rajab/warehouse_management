@@ -88,6 +88,62 @@ class PlanTest(unittest.TestCase):
         self.assertEqual(ci_plan.plan([]), NOTHING)
 
 
+TREE = 'a' * 40
+
+
+class AttestationTest(unittest.TestCase):
+    def test_round_trip(self):
+        line = ci_plan.format_attestation(TREE, ['e2e', 'php', 'js'])
+        self.assertEqual(line, f'CI-Verified: tree={TREE} groups=php,js,e2e')
+        self.assertEqual(ci_plan.attested_groups(f'Subject\n\nBody\n\n{line}\n', TREE), {'php', 'js', 'e2e'})
+
+    def test_a_different_tree_vouches_for_nothing(self):
+        line = ci_plan.format_attestation('b' * 40, ['php'])
+        self.assertEqual(ci_plan.attested_groups(line, TREE), frozenset())
+
+    def test_malformed_and_unknown_entries_are_ignored(self):
+        self.assertEqual(ci_plan.attested_groups('CI-Verified: tree=zz groups=php', TREE), frozenset())
+        self.assertEqual(ci_plan.attested_groups(f'CI-Verified: tree={TREE} groups=php,bogus', TREE), {'php'})
+
+    def test_the_last_matching_trailer_wins(self):
+        first = ci_plan.format_attestation(TREE, ['php', 'js'])
+        last = ci_plan.format_attestation(TREE, ['php'])
+        self.assertEqual(ci_plan.attested_groups(f'{first}\n{last}', TREE), {'php'})
+
+
+def _planned_with(message: str, tree: str, *paths: str) -> str:
+    import tempfile
+
+    with tempfile.NamedTemporaryFile('w', suffix='.txt') as handle:
+        handle.write(message)
+        handle.flush()
+        return _cli(['--attested-message-file', handle.name, '--tree', tree], '\n'.join(paths) + '\n')
+
+
+def _true_groups(output: str) -> set[str]:
+    return {line.split('=')[0] for line in output.splitlines() if line.endswith('=true')}
+
+
+class AttestedPlanTest(unittest.TestCase):
+    def test_attested_groups_are_skipped_and_others_still_run(self):
+        message = ci_plan.format_attestation(TREE, ['php', 'js'])
+        output = _planned_with(message, TREE, 'app/Models/Pallet.php')
+        self.assertEqual(_true_groups(output), {'e2e'})
+
+    def test_a_full_attestation_skips_everything(self):
+        message = ci_plan.format_attestation(TREE, ['php', 'js', 'e2e'])
+        self.assertEqual(_true_groups(_planned_with(message, TREE, 'app/Models/Pallet.php')), set())
+
+    def test_a_stale_attestation_changes_nothing(self):
+        message = ci_plan.format_attestation('b' * 40, ['php', 'js', 'e2e'])
+        self.assertEqual(_true_groups(_planned_with(message, TREE, 'app/Models/Pallet.php')), {'php', 'js', 'e2e'})
+
+    def test_a_workflow_change_ignores_the_attestation(self):
+        message = ci_plan.format_attestation(TREE, list(ci_plan.GROUPS))
+        output = _planned_with(message, TREE, '.github/workflows/tests.yml', 'app/Models/Pallet.php')
+        self.assertEqual(_true_groups(output), set(ci_plan.GROUPS))
+
+
 class CliTest(unittest.TestCase):
     def test_prints_github_output_lines(self):
         self.assertEqual(

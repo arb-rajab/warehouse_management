@@ -5,7 +5,7 @@ import {
     ClipboardCheck,
     LayoutDashboard,
     Boxes,
-    Map,
+    LayoutGrid,
     Package,
     Rows3,
     Settings,
@@ -20,7 +20,7 @@ import { t } from '@/lib/i18n';
 const topics: { key: string; topic: string; icon: Component }[] = [
     { key: 'dashboard', topic: 'dashboard', icon: LayoutDashboard },
     { key: 'rows', topic: 'rows', icon: Rows3 },
-    { key: 'cells', topic: 'cells', icon: Map },
+    { key: 'cells', topic: 'cells', icon: LayoutGrid },
     { key: 'warehouseMap', topic: 'warehouse-map', icon: Boxes },
     { key: 'cellLogs', topic: 'cell-logs', icon: ArrowLeftRight },
     {

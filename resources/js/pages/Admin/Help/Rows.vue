@@ -75,7 +75,6 @@ const previewRows = [
                     letter="A"
                     :cells-count="10"
                     :flats-count="3"
-                    :disable-dimensions="true"
                     :errors="{}"
                 />
             </HelpUiPreview>

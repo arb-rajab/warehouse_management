@@ -8,8 +8,7 @@ import { contrastRatio } from './support/contrast';
  * stored/opened/etc. state-change "→" glyph) sit directly on the page
  * background rather than their own card backdrop, so this walks up to the
  * nearest ancestor with an actual background instead of assuming the
- * element paints one itself — see admin-cells-map-3d-dark-mode.spec.ts for
- * the "own opaque backdrop" case this deliberately isn't.
+ * element paints one itself.
  */
 async function contrastAgainstEffectiveBackground(
     locator: Locator,

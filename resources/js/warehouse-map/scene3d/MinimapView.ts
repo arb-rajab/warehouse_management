@@ -76,7 +76,7 @@ export class MinimapView extends View {
         this.element.classList.toggle('is-hidden', hidden);
     }
 
-    /** x -> canvas x: a rigid half turn of the floor (entrance at the bottom, A on the left), never a mirror. */
+    /** x -> canvas x: a rigid half turn of the floor (entrance at the bottom, A on the right), never a mirror. */
     private project() {
         const geo = this.geometry;
         const b = geo.bounds;

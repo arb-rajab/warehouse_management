@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ChevronDown, LoaderCircle, Search } from '@lucide/vue';
 import { computed, nextTick, onBeforeUnmount, reactive, ref, watch } from 'vue';
+import ProductActiveBadge from '@/components/ProductActiveBadge.vue';
 import ProductOptionLabel from '@/components/ProductOptionLabel.vue';
 import { fieldLabelClass } from '@/lib/filters';
 import { t } from '@/lib/i18n';
@@ -151,6 +152,12 @@ function deselectAll(): void {
     model.value = [];
 }
 
+const singleSelectedProduct = computed(() =>
+    model.value.length === 1
+        ? knownProducts.get(Number(model.value[0]))
+        : undefined,
+);
+
 function buttonLabel(): string {
     if (model.value.length === 0) {
         return props.allLabel;
@@ -175,7 +182,11 @@ function buttonLabel(): string {
             :aria-expanded="open"
             @click="toggleOpen"
         >
-            <span class="truncate">{{ buttonLabel() }}</span>
+            <span class="min-w-0 flex-1 truncate">{{ buttonLabel() }}</span>
+            <ProductActiveBadge
+                v-if="singleSelectedProduct"
+                :active="singleSelectedProduct.active"
+            />
             <ChevronDown class="h-4 w-4 shrink-0 text-gray-400" />
         </button>
         <div

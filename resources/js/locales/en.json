@@ -3,7 +3,6 @@
         "brand": "Warehouse Admin",
         "dashboard": "Dashboard",
         "rows": "Rows",
-        "map": "Map",
         "warehouseMap": "Warehouse map",
         "cellLog": "Cell Log",
         "cellVerificationRounds": "Verification Rounds",
@@ -106,8 +105,7 @@
         "fields": {
             "letter": "Letter",
             "cellsPerFlat": "Cells per level",
-            "flats": "Levels",
-            "dimensionsLocked": "This row has pallets stored in it, so its dimensions can't be changed."
+            "flats": "Levels"
         }
     },
     "users": {
@@ -339,16 +337,9 @@
         "apply": "Apply"
     },
     "cells": {
-        "title": "Cells",
         "filters": {
-            "state": "State",
-            "matchCount": "{count} matching cells",
-            "previousMatch": "Previous match",
-            "nextMatch": "Next match",
-            "matchPosition": "{current} of {total}"
+            "state": "State"
         },
-        "empty": "No rows have been added yet.",
-        "flatNotAvailable": "This level doesn't exist for this row",
         "inactiveBadge": "Inactive",
         "toggleActive": {
             "deactivateLabel": "Deactivate cell",
@@ -416,63 +407,20 @@
             "noteLabel": "Note (optional)",
             "notePlaceholder": "Reason for this change…",
             "submitting": "Saving…"
-        },
-        "search": {
-            "placeholder": "Search cell position (A12·3)…",
-            "submit": "Search",
-            "notFound": "No matching cell found."
-        },
-        "map": {
-            "zoomIn": "Zoom in",
-            "zoomOut": "Zoom out",
-            "rotateLeft": "Rotate left",
-            "rotateRight": "Rotate right",
-            "resetView": "Reset view",
-            "fitToView": "Fit to view",
-            "fullscreen": "Full screen",
-            "exitFullscreen": "Exit full screen",
-            "view2d": "2D view",
-            "view3d": "3D view",
-            "overview": "Overview (orbit) camera",
-            "standingNear": "Standing near {location}",
-            "walkHint": "Click to focus, then use WASD or the arrow keys to walk, Space/Shift to fly up or down between levels, hold Ctrl to sprint, drag to look around (including behind you), press Enter to select the cell you're facing, and click a cell to inspect it.",
-            "walkHintTouch": "Drag to look around (including behind you), use the on-screen buttons to move and fly between levels, tap the sprint button to move faster, and tap a cell to inspect it.",
-            "orbitHint": "Drag to orbit around the warehouse, scroll or pinch to zoom, or use WASD/arrow keys and Space/Shift on the keyboard, and click a cell — or press Enter to select the cell centered in view — to inspect it.",
-            "controls": {
-                "moveLabel": "Move: WASD or arrow keys",
-                "flyLabel": "Fly between levels:",
-                "up": "up",
-                "down": "down",
-                "sprintLabel": "Sprint:",
-                "lookLabel": "Look: drag to look around, even behind you",
-                "selectLabel": "Click a cell to inspect it",
-                "cameraModeToggleLabel": "Toggle walk/overview:",
-                "touch": {
-                    "forward": "Move forward",
-                    "backward": "Move backward",
-                    "left": "Strafe left",
-                    "right": "Strafe right",
-                    "up": "Fly up",
-                    "down": "Fly down",
-                    "sprint": "Toggle sprint"
-                },
-                "orbit": {
-                    "rotateLabel": "Orbit: drag to rotate the view",
-                    "zoomLabel": "Zoom: scroll or pinch",
-                    "keyboardLabel": "Keyboard: WASD/arrows to rotate, Space/Shift to zoom",
-                    "selectLabel": "Click a cell, or press Enter to select the centered cell"
-                }
-            },
-            "announcements": {
-                "facing": "Facing {detail}",
-                "selected": "Selected {detail}"
-            }
         }
     },
     "warehouseMap": {
         "appTitle": "Warehouse Map",
         "appSub": "Live 2D / 3D",
         "searchPh": "Search products…",
+        "productsLabel": "Filter by product",
+        "productsAll": "All products",
+        "productsSearchPh": "Find a product…",
+        "productsSelected": "Selected",
+        "productsDeselectAll": "Deselect all",
+        "productsNone": "No products found",
+        "productActive": "Active",
+        "productInactive": "Inactive",
         "stAll": "All",
         "stFull": "Full",
         "stOpened": "Opened",
@@ -531,7 +479,7 @@
         "kRotate": "Rotate the plan",
         "plan_auto": "Plan: orientation chosen to fit your screen",
         "plan_v": "Plan: entrance at the bottom",
-        "plan_h": "Plan: entrance on the left",
+        "plan_h": "Plan: entrance on the right",
         "entrance": "Entrance",
         "navFree": "Free",
         "navGuided": "Guided",
@@ -697,6 +645,7 @@
             "lowStock": "Low stock"
         },
         "columns": {
+            "id": "ID",
             "product": "Product",
             "full": "Full",
             "opened": "Opened",
@@ -704,8 +653,7 @@
             "expiringSoon": "Expiring ≤{days}d",
             "boxesPerPallet": "Boxes / pallet",
             "minimumPallets": "Min. pallets",
-            "barcodes": "Barcodes",
-            "qr": "Barcode"
+            "barcodes": "Barcodes"
         },
         "boxesPerPalletLabel": "Boxes per pallet for {product}",
         "minimumPalletsLabel": "Minimum pallets for {product}",
@@ -714,12 +662,13 @@
         "addBarcode": "Add barcode",
         "newBarcodePlaceholder": "Scan or type a barcode…",
         "removeBarcode": "Remove barcode {barcode}",
-        "noBarcodes": "No barcodes added yet.",
+        "noBarcodes": "No custom barcodes added yet.",
         "viewBarcode": "View barcode {barcode}",
         "downloadBarcode": "Download barcode {barcode}",
         "downloadAllBarcodes": "Download all",
         "downloadFailed": "Download failed. Please try again.",
-        "exportQrLabel": "Export barcode for {product}",
+        "defaultBarcode": "Default",
+        "defaultBarcodeHint": "The product ID. It cannot be edited or removed.",
         "empty": "No products yet.",
         "saving": "Saving…"
     },
@@ -753,8 +702,8 @@
                     "description": "What a row is, how the cell grid works, and how to add, change, or remove a row."
                 },
                 "cells": {
-                    "title": "Warehouse map",
-                    "description": "How to read the cell map, what the colors mean, and how to manage pallets."
+                    "title": "Cells and pallets",
+                    "description": "What the cell colors mean, and how to manage pallets and deactivate cells from a row's page."
                 },
                 "warehouseMap": {
                     "title": "Warehouse map (2D / 3D)",
@@ -809,7 +758,7 @@
             },
             "editing": {
                 "heading": "Changing a row's size",
-                "body": "Open a row and choose Edit to change its letter or its cells/levels count. The size can only be changed while the row is completely empty — if any slot in it currently holds a pallet, resizing is blocked until that pallet is moved or removed."
+                "body": "Open a row and choose Edit to change its letter or its cells/levels count. Growing the row, or shrinking it where the removed columns or levels are empty, works even while the row holds pallets. Reducing the number of columns or levels is blocked only when a pallet sits in a column or level that would be removed — move or remove that pallet first."
             },
             "deleting": {
                 "heading": "Deleting a row",
@@ -817,11 +766,7 @@
             }
         },
         "cells": {
-            "title": "Help: Warehouse map",
-            "map": {
-                "heading": "Reading the map",
-                "body": "The Cells page shows every row as a grid of storage cells, colored by what's inside them. Switch between the flat 2D view and the walkable 3D view, and use the search box to jump straight to a cell by its position (for example A12·3)."
-            },
+            "title": "Help: Cells and pallets",
             "legend": {
                 "heading": "Cell colors",
                 "body": "These are the same colors and icons used throughout the app, including the activity log — so a cell's color always means the same thing wherever you see it."
@@ -852,6 +797,10 @@
         },
         "products": {
             "title": "Help: Products & box counts",
+            "findingProducts": {
+                "heading": "Finding and sorting products",
+                "body": "Product search results show an Active or Inactive badge beside each name. The badge stays visible when you select a product. On the Products page, click the ID (material ID) or Product column heading to sort; click again to reverse the order. Sorting includes every page of your filtered results."
+            },
             "defaultBoxes": {
                 "heading": "Why every product starts at 50 boxes",
                 "body": "Products themselves come from the main store system, not from this app, so this app doesn't know how many boxes actually fit on one pallet of a given product. Until someone sets the real number, every product is assumed to hold 50 boxes per full pallet so the rest of the system has something to work with."
@@ -862,7 +811,7 @@
             },
             "exportingQr": {
                 "heading": "Printing a product's barcode label",
-                "body": "Click the barcode icon at the end of a product's row to download a printable Code 128 barcode label for it. The label shows the product's id and its name in the language you are using, both in large type. One label represents the whole product, not a single pallet — print it once and stick a copy on every box/pallet of that product. Scanning the barcode in the mobile app looks up the product by its id and shows its current name and picture, so a label printed today still works correctly even if the product's name changes later."
+                "body": "Click the number in a product's Barcodes column to open its barcodes. The first one, marked Default, is the product's ID: it is always there and cannot be edited or removed. Use its eye and download buttons to preview or download a printable Code 128 barcode label for it. You can also add custom barcodes, but never one equal to a product ID. The label shows the product's id and its name in the language you are using, both in large type. One label represents the whole product, not a single pallet — print it once and stick a copy on every box/pallet of that product. Scanning the barcode in the mobile app looks up the product by its id and shows its current name and picture, so a label printed today still works correctly even if the product's name changes later."
             }
         },
         "cellLogs": {
@@ -884,7 +833,7 @@
             },
             "legend": {
                 "heading": "Cell colors",
-                "body": "These are the same colors and icons used on the Cells map, so what you see there matches what you see in the log."
+                "body": "These are the same colors and icons used on each row's cells, so what you see there matches what you see in the log."
             }
         },
         "cellVerificationRounds": {
@@ -925,7 +874,7 @@
             "title": "Help: Warehouse map (2D / 3D)",
             "views": {
                 "heading": "Two views of the same warehouse",
-                "body": "The 2D | 3D switch at the top changes the view; the search, the state chips, the floor strip and the selected location stay as they are. 2D is a top-down floor plan: the entrance is at the bottom, aisles run upward in pairs (A-B, C-D, …) with A on the left, and each strip of tiles is one rack row. A tile is one column of shelves; the small bars on it are its shelf levels. Click a tile to see its shelves, top level first. The plan turns itself to fit your screen; press R (or the rotate button on a touch screen) to cycle automatic, vertical and horizontal. 3D is a real model of the racks: drag to orbit, right-drag or W A S D to pan, scroll to zoom, and press 1-9 to jump into an aisle."
+                "body": "The 2D | 3D switch at the top changes the view; the search, the state chips, the floor strip and the selected location stay as they are. 2D is a top-down floor plan: the entrance is at the bottom, aisles run upward in pairs (A-B, C-D, …) starting from the right with A on the right, and each strip of tiles is one rack row. A tile is one column of shelves; the small bars on it are its shelf levels. Click a tile to see its shelves, top level first. The plan turns itself to fit your screen; press R (or the rotate button on a touch screen) to cycle automatic, vertical and horizontal. 3D is a real model of the racks: drag to orbit, right-drag or W A S D to pan, scroll to zoom, and press 1-9 to jump into an aisle."
             },
             "legend": {
                 "heading": "What the colours mean",
@@ -933,7 +882,7 @@
             },
             "search": {
                 "heading": "Searching and filtering",
-                "body": "Type in the search box: every word must match the product name, in English or Arabic. The state chips narrow the map to full, opened or empty slots, and “Expiring ≤ 30 d” shows pallets that expire within 30 days or already have. The floor strip limits the map to one shelf level. Matches are highlighted and the rest dimmed; the result button opens the list of matched products, grouped by product with the earliest expiry first, and “View on map” takes you to the slot."
+                "body": "Type in the search box: every word must match the product name, in English or Arabic. To look for several products at once, open “All products” and tick each one: a slot matches when it holds any of them, the ticked products stay at the top of the list, and “Deselect all” clears them. Products that are no longer sold are marked “Inactive”, here and in the list of matched products, and a slot that is out of service is marked there too. The state chips narrow the map to full, opened or empty slots, and “Expiring ≤ 30 d” shows pallets that expire within 30 days or already have. The floor strip limits the map to one shelf level. Matches are highlighted and the rest dimmed; the result button opens the list of matched products, grouped by product with the earliest expiry first, and “View on map” takes you to the slot."
             },
             "walking": {
                 "heading": "Walking through the warehouse",
@@ -2337,6 +2286,40 @@
                 "submit": "Save trip",
                 "submitting": "Saving…"
             },
+            "show": {
+                "title": "Trip {code}",
+                "edit": "Edit trip",
+                "print": "Print",
+                "checkpoints": "Checkpoints",
+                "position": "#",
+                "checkpoint": "Checkpoint",
+                "customer": "Customer",
+                "representative": "Representative",
+                "address": "Shipping address",
+                "status": "Status",
+                "arrivedAt": "Arrived at",
+                "eta": "Estimated time",
+                "notes": "Notes",
+                "phone": "Phone",
+                "products": "Products",
+                "company": "Company name",
+                "amount": "Amount",
+                "invoiceNumber": "Invoice number",
+                "photos": "Photos",
+                "cmr": "CMR",
+                "printCmr": "Print CMR",
+                "empty": "No checkpoints on this trip.",
+                "stop": "stop {position}",
+                "statusFor": "Status of {stop}",
+                "notesFor": "Notes for {stop}",
+                "notesSaved": "Notes saved.",
+                "photoOf": "Delivery photo of {stop}",
+                "statuses": {
+                    "pending": "Pending",
+                    "delivered": "Delivered",
+                    "has_issue": "Has an issue"
+                }
+            },
             "form": {
                 "dueDate": "Due date",
                 "driver": "Driver",
@@ -2368,6 +2351,88 @@
                 "remove": "Remove stop {position}",
                 "addOrder": "Add order checkpoint",
                 "addCustomer": "Add customer checkpoint"
+            },
+            "orders": {
+                "title": "Trip orders",
+                "createOrder": "Create order",
+                "invoiceHelp": "Saving an invoice number sends the order out for delivery.",
+                "search": "Search code, invoice, address or customer",
+                "statusFilter": "Delivery status",
+                "allStatuses": "All",
+                "from": "From",
+                "to": "To",
+                "apply": "Apply",
+                "applying": "Applying…",
+                "select": "Select",
+                "selectOrder": "Select order {code}",
+                "selectAll": "Select all on this page",
+                "selection": "{count} selected orders",
+                "markSelection": "Mark selection as {status}",
+                "updating": "Updating…",
+                "deleteSelection": "Delete selection",
+                "deleting": "Deleting…",
+                "confirmStatus": "Mark {label} as {status}?",
+                "code": "Order code",
+                "new": "New",
+                "products": "Products",
+                "otajerOrderId": "Otajer order ID",
+                "accountingId": "Otajer customer ID",
+                "companyName": "Company name",
+                "orderFrom": "Order from",
+                "wmsStatus": "WMS status",
+                "customer": "Customer",
+                "tripCode": "Trip code",
+                "driver": "Driver",
+                "truck": "Truck",
+                "representative": "Representative",
+                "address": "Shipping address",
+                "country": "Country",
+                "phone": "Phone",
+                "invoiceNumber": "Invoice number",
+                "invoiceFor": "Invoice number for order {code}",
+                "invoiceSaved": "Invoice number saved.",
+                "customerNotes": "Customer notes",
+                "managerNotes": "Manager notes",
+                "amount": "Amount",
+                "deliveryStatus": "Delivery status",
+                "deliveryDate": "Delivery date",
+                "photos": "Photos",
+                "photoOf": "Delivery photo of order {code}",
+                "actions": "Actions",
+                "empty": "No orders found.",
+                "deletedAccount": "Deleted account",
+                "noRepresentative": "No representative",
+                "printCmr": "Print CMR",
+                "markDelivered": "Mark as delivered",
+                "order": "order {code}",
+                "edit": "Edit"
+            },
+            "map": {
+                "title": "Create trip from the map",
+                "help": "Click the orders on the map to add them as stops, put the stops in order, then choose a truck. A free truck starts a new trip at the departure checkpoint; a busy truck adds the stops to its latest open trip.",
+                "mapLabel": "Map of the orders out for delivery",
+                "noOrders": "No order out for delivery has a location on the map.",
+                "stops": "Selected stops ({count})",
+                "noStops": "No stops selected. Click an order on the map to add it.",
+                "customerId": "Customer ID",
+                "postalCode": "Postal code",
+                "phone": "Phone",
+                "address": "Shipping address",
+                "accountingId": "Otajer ID",
+                "freeTrucks": "Free trucks",
+                "busyTrucks": "Trucks on a trip",
+                "selectFirst": "Select orders on the map to assign them to a truck.",
+                "noFreeTrucks": "No trucks are available.",
+                "allFree": "All trucks are available.",
+                "photoOf": "Photo of {name}",
+                "maxPallets": "Max pallets: {count}",
+                "assign": "Assign the stops to {name}",
+                "addToTrip": "Add the stops to {name}'s trip",
+                "assigning": "Assigning…",
+                "nextStop": "Next stop",
+                "checkpointsCount": "Trip {code}: {count} checkpoints",
+                "noTripInformation": "No current trip information.",
+                "deleteTrip": "Delete trip"
             }
         },
         "orders": {
@@ -2747,6 +2812,47 @@
             "dateHelp": "Leave the date range empty for a discount without a scheduled period.",
             "discount": "Discount",
             "discountType": "Discount type"
+        },
+        "representatives": {
+            "visits": {
+                "details": "Visit details",
+                "dayTitle": "{name}’s visits",
+                "back": "Back to visits",
+                "customer": "Customer name",
+                "company": "Company name",
+                "email": "Email",
+                "phone": "Phone",
+                "serial": "Customer serial",
+                "accountId": "Account ID",
+                "date": "Visit date",
+                "order": "Order #",
+                "status": "Order status",
+                "orderDate": "Order date",
+                "amount": "Total amount",
+                "paymentMethod": "Payment method",
+                "customerNotes": "Customer notes",
+                "customerOtajerId": "Customer Otajer ID",
+                "deliveryDate": "Delivery date",
+                "noOrder": "There is no specific order for this visit.",
+                "missingCustomer": "Unknown customer",
+                "note": "Visit note",
+                "saveNote": "Save note",
+                "saving": "Saving…",
+                "saved": "Note saved.",
+                "mapLabel": "Map of representative visits",
+                "filterDate": "Filter by date",
+                "emptyDay": "No visits found on this date",
+                "tryDate": "Please try selecting a different date."
+            }
+        },
+        "googleMap": {
+            "title": "Google map settings",
+            "enabled": "Enable the storefront’s Google map",
+            "location": "Default location",
+            "latitude": "Latitude",
+            "longitude": "Longitude",
+            "mapLabel": "Choose the default location",
+            "hint": "Click the map, drag the marker, or enter coordinates."
         }
     },
     "store.attributes.index.title": "Product attributes",

@@ -35,21 +35,6 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Extra Product Image Hosts
-    |--------------------------------------------------------------------------
-    |
-    | Hosts, besides the asset base URL's own, that Admin\ProductController::
-    | image() may download product images from (an upload's `external_link`
-    | CDN/S3 host). Comma-separated in STORE_IMAGE_HOSTS. Any other host is
-    | refused, so a crafted `external_link` can't make this app fetch an
-    | internal address.
-    |
-    */
-
-    'image_hosts' => array_values(array_filter(array_map('trim', explode(',', (string) env('STORE_IMAGE_HOSTS', ''))))),
-
-    /*
-    |--------------------------------------------------------------------------
     | Store App Product Sync URL
     |--------------------------------------------------------------------------
     |

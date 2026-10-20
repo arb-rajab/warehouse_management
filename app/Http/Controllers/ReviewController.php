@@ -7,40 +7,9 @@ use App\Models\Review;
 use Auth;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
-use Illuminate\Routing\Controllers\HasMiddleware;
-use Illuminate\Routing\Controllers\Middleware;
 
-class ReviewController extends Controller implements HasMiddleware
+class ReviewController extends Controller
 {
-    /**
-     * Get the middleware that should be assigned to the controller.
-     *
-     * See Auth\LoginController::middleware()'s docblock for why this
-     * replaces the constructor-based $this->middleware() call.
-     *
-     * @return array<int, \Illuminate\Routing\Controllers\Middleware>
-     */
-    public static function middleware(): array
-    {
-        return [
-            new Middleware('permission:view_product_reviews', only: ['index']),
-        ];
-    }
-    /**
-     * Display a listing of the resource.
-     *
-     * @return Response
-     */
-    public function index(Request $request)
-    {
-        $reviews = Review::with(['product', 'product.product_translations', 'user']);
-        if($request->rating){
-            $reviews->orderBy('rating', explode(",",$request->rating)[1]);
-        }
-        $reviews = $reviews->orderBy('created_at', 'desc')->paginate(15);
-        return view('shop.backend.product.reviews.index', compact('reviews'));
-    }
-
     /**
      * Show the form for creating a new resource.
      *

@@ -7,6 +7,7 @@ export const NO_FILTER: SlotFilter = {
     terms: [],
     state: 'all',
     expiring: false,
+    productIds: [],
 };
 
 /** Every word has to match, so the search box splits on whitespace. */
@@ -15,25 +16,41 @@ export function parseTerms(query: string): string[] {
 }
 
 export function isFiltering(filter: SlotFilter): boolean {
-    return filter.state !== 'all' || filter.terms.length > 0 || filter.expiring;
+    return (
+        filter.state !== 'all' ||
+        filter.terms.length > 0 ||
+        filter.expiring ||
+        filter.productIds.length > 0
+    );
 }
 
 /**
- * Decides whether one slot satisfies the state chips, the search words and the
- * expiring chip. An empty slot only matches when no pallet-level filter is on.
+ * Decides whether one slot satisfies the state chips, the search words, the
+ * checked products (any of them) and the expiring chip. An empty slot only
+ * matches when no pallet-level filter is on.
  */
 export function slotMatches(slot: Slot, filter: SlotFilter): boolean {
     if (filter.state !== 'all' && slot.state !== filter.state) {
         return false;
     }
 
-    const needsPallet = filter.terms.length > 0 || filter.expiring;
+    const needsPallet =
+        filter.terms.length > 0 ||
+        filter.expiring ||
+        filter.productIds.length > 0;
 
     if (slot.state === 'empty') {
         return !needsPallet;
     }
 
     if (needsPallet && !slot.pallet) {
+        return false;
+    }
+
+    if (
+        filter.productIds.length > 0 &&
+        !filter.productIds.includes(slot.pallet!.productId)
+    ) {
         return false;
     }
 
