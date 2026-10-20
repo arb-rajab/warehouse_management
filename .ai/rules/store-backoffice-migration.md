@@ -4617,7 +4617,8 @@ without CI, SAST or deploy (all skipped on purpose).
 Model: **claude-sonnet-5-5**, effort **medium**. Branch `claude/storefront-seo-bugs-dvyhna` from
 `develop` **508d883** (the PR #455 merge). Scope: the four defects §42 listed under "Found on the way, not
 fixed" as 500s. The storefront stays Blade; no visible content for a valid row, price rule (prices only for a
-signed-in, admin-verified customer), URL or route name changed. Each fix is its own commit, with its test
+signed-in, admin-verified customer), URL or route name changed. Shipped in
+[PR #456](https://github.com/arb-rajab/warehouse_management/pull/456). Each fix is its own commit, with its test
 written first and seen failing. Every commit, the PR title and the merge commit carry `[skip ci]`.
 
 | # | Bug | Fix | Proving test |
