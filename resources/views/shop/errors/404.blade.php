@@ -1,5 +1,7 @@
 @extends('shop.frontend.layouts.app')
 
+@section('robots', 'noindex, nofollow')
+
 @section('content')
 <section class="text-center py-6">
 	<div class="container">
