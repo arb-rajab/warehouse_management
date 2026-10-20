@@ -15,12 +15,15 @@ use App\Http\Controllers\Admin\WarehouseMapController;
 use App\Http\Controllers\LocaleController;
 use App\Http\Controllers\LoginController;
 use App\Http\Controllers\PasswordChangeController;
+use App\Http\Controllers\RobotsController;
 use App\Http\Controllers\WelcomeController;
 use App\Http\Middleware\RestrictToAllowedIps;
 use Illuminate\Support\Facades\Route;
 use Spatie\Health\Http\Controllers\HealthCheckResultsController;
 
 Route::get('/', WelcomeController::class)->name('welcome');
+
+Route::get('robots.txt', RobotsController::class)->name('robots');
 
 Route::post('locale/{locale}', [LocaleController::class, 'update'])->name('locale.update');
 
