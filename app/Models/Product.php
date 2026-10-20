@@ -212,6 +212,33 @@ class Product extends Model
     }
 
     /**
+     * The "Top Selling Products" widget of the storefront product page: the
+     * seller's best selling products the listings would show
+     * ({@see filter_products()}), at most `$limit`, best first. A product
+     * without a slug has no `product` route and is left out. Selects, and
+     * eager loads, only what the widget and the price helpers read, so a page
+     * with six products runs the same queries as one with a single product.
+     *
+     * @param  EloquentBuilder<self>  $query
+     */
+    #[Scope]
+    protected function topSellingOf(EloquentBuilder $query, ?int $sellerId, int $limit = 6): void
+    {
+        filter_products($query->where('user_id', $sellerId))
+            ->whereNotNull('slug')
+            ->where('slug', '!=', '')
+            ->select(['id', 'slug', 'name', 'thumbnail_img', 'unit_price', 'discount', 'discount_type', 'discount_start_date', 'discount_end_date', 'variant_product', 'num_of_sale'])
+            ->with([
+                'product_translations:id,product_id,lang,name',
+                'taxes:id,product_id,tax,tax_type',
+                'stocks:id,product_id,price',
+                'thumbnailUpload:id,file_name,external_link',
+            ])
+            ->orderBy('num_of_sale', 'desc')
+            ->limit($limit);
+    }
+
+    /**
      * The storefront's "price per piece": `unit_price` over `unit_equal`, or
      * `null` when `unit_equal` is not a positive number (the store's column is
      * nullable and holds 0 for some synced products), so a page can leave the
