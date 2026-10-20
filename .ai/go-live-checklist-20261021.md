@@ -4,6 +4,8 @@ Prepared 2026-10-20 against `develop` at `8cf1dd9` (the PR #452 merge) · shippe
 
 **Updated by the go-live hardening PR** (branch `claude/go-live-hardening-fdk4me`, [guide §41](rules/store-backoffice-migration.md#41-go-live-hardening-seeders-the-first-admin-the-production-env-template-event-cache-and-migrate---pretend-2026-10-20)). It changed code for five findings: **F1** (seeders refuse production, items 4.5 and 8.9), **F9** (the `store:create-admin` command, 4.4), **F3** (`.env.production.example`, §2), **F4** (`event:cache` in the deploy script, 5.4 and 5.9) and **F2** (the health migration, 3.4). Where an item below says "fixed in the hardening PR", read it as the state after that PR is merged; every other item, the owner decisions and the Appendix A to E text are unchanged. Nothing in it was applied to any production system.
 
+**Updated by the storefront SEO PR** ([guide §42](rules/store-backoffice-migration.md#42-storefront-seo-canonical-robots-sitemap-and-json-ld-2026-10-20)). The storefront now prints canonical, robots, Open Graph and JSON-LD tags, serves a generated `/robots.txt` and a cached sitemap, and sends `X-Robots-Tag` on the back offices and APIs. Items 11.4 to 11.9 and gate G14 are the search-engine steps only the owner can do, after launch and outside the repository. Nothing in that PR was applied to any production system.
+
 Work it top to bottom in one sitting; the appendices carry the longer explanations. Every item says **who** does it, cites the **evidence** that justifies it and says how to **verify** it.
 
 ## How to read this file
@@ -494,6 +496,23 @@ URLs after the first one in a cell are relative to `/temp/admin`. Run it twice: 
   | D14 | Blade rich-text (summernote) remains on 8 fields in 8 views; the mobile API has GET routes that change data | guide `store-backoffice-migration.md:621-626`, `.ai/rules/legacy-albaraka-holland.md:1734-1742` |
 
   - Verify: §12 (G13) lists each defect with accept / ticket.
+- [ ] **11.4** **[owner]** Search engines, once the real domain serves the storefront (the checks below mean nothing on a staging host): confirm the **canonical host**. Every canonical URL, `og:url`, sitemap URL and the `Sitemap:` line is built from `APP_URL` (`app/Support/Seo.php`), not from the host that was asked. `APP_URL` must be the one public address (scheme, host, www or not): `curl -s https://<HOST>/temp | grep -E 'rel="canonical"|og:url'` must print that address. Then make every other spelling (http, the other of www / non-www) redirect to it at the web server or CDN: the application does not.
+  - Evidence: `app/Support/Seo.php` (`origin()`), `.env.production.example` (`APP_URL`), guide §42.
+  - Verify: `curl -sI http://<HOST>/temp` and the non-canonical host both answer a 301 to the canonical address.
+- [ ] **11.5** **[owner]** Read the live **robots.txt** and the page tags: `curl -s https://<HOST>/robots.txt` lists `Disallow:` lines for `/admin`, the store back office, cart, checkout, the account pages, the seller area and the API, and a `Sitemap:` line with the public address. `curl -sI https://<HOST>/admin/login | grep -i x-robots-tag` and the same for `/temp/admin` and `/temp/api/v2/currencies` print `noindex, nofollow`. A product, a category, the home page and a policy page print `index, follow` (`curl -s <URL> | grep 'name="robots"'`); the login page, the cart and a search results page do not. A file at `public/robots.txt` would hide the generated one: there must be none.
+  - Evidence: `app/Http/Controllers/RobotsController.php`, `app/Http/Middleware/SendNoIndexHeader.php`, guide §42.
+  - Verify: the five commands above print what is described.
+- [ ] **11.6** **[owner]** **Submit the sitemap** in Google Search Console (and Bing Webmaster Tools): verify the property for the canonical host, then add `https://<HOST>/temp/sitemap.xml` (the index; `sitemap.xml` without `/temp` once the prefix is removed). Check that Search Console reads every child file, and that the URL count is close to the number of published, approved products plus categories, brands, posts and pages. The sitemap is cached for an hour and is built only from visible content; it lists no `lastmod` for products on purpose (guide §42).
+  - Evidence: `app/Services/Sitemap.php`, guide §42.
+  - Verify: Search Console, Indexing, Sitemaps, shows "Success" for the index and each child file; "Discovered URLs" matches expectation.
+- [ ] **11.7** **[owner]** Run a **rich-results test** (Google's Rich Results Test, or the Schema Markup Validator) on one real product URL, the home page and one blog post. Expect: a valid `Product` with name, image, description, sku, brand and a breadcrumb; no price, offer or availability, because the storefront shows prices only to signed-in, admin-verified accounts and the markup follows the page (a signed-in verified visitor sees `offers`; a crawler never does). Google lists a product without an offer as a "Product snippet", not as a merchant listing. **Owner decision:** publishing prices to everyone would change that rule in `app/Support/StructuredData.php` and in the product page; it is a business decision, not a SEO fix. `aggregateRating` appears only when the reviews section is on and the product has published reviews. The blog records no author, so `BlogPosting` carries none.
+  - Evidence: `app/Support/StructuredData.php`, `resources/views/shop/frontend/product_details/details.blade.php` (the `admin_verified` price rule), guide §42.
+  - Verify: the test reports no errors on the three URLs; warnings about a missing `offers` or `author` are expected.
+- [ ] **11.8** **[owner]** Plan the **removal of the `/temp` prefix** together with search engines: the storefront is mounted under `/temp` temporarily, and every canonical, sitemap, `robots.txt` and JSON-LD URL follows the routes. The day the prefix is removed, every indexed `/temp/...` URL must 301 to its new address (the application does not redirect them), `APP_URL`'s sitemap address changes to `/sitemap.xml`, and the new sitemap must be resubmitted (11.6) and the old one removed. Do it once, not twice: an address that changes twice loses its history twice. The code that still names the prefix is `app/Providers/RouteServiceProvider.php`, `bootstrap/app.php` (`redirectTo`) and the `app-url` meta in the layouts; `Seo`, `Sitemap`, `StructuredData` and `RobotsController` do not.
+  - Evidence: `app/Providers/RouteServiceProvider.php:53`, guide §42.
+  - Verify: a written plan with the redirect map and the date, before the prefix is touched.
+- [ ] **11.9** **[owner]** Not done, deliberately (guide §42), so do not expect it to be there: `hreflang` (the site serves Arabic and English from one URL by session language), AMP, an image sitemap, `twitter:site` / `twitter:creator` (no handle is stored in the settings), social profile links in `Organization`, and Search Console / Bing set-up itself. Decide whether any of them matters before spending time on it.
+  - Verify: each is accepted or ticketed in §12 (G14).
 
 ## 12. Sign-off
 
@@ -512,6 +531,7 @@ URLs after the first one in a cell are relative to `/temp/admin`. Run it twice: 
 | G11 Rollback owner and procedure named | 10.2, 10.4 | | | |
 | G12 First-week watch list owner assigned | 11.1 | | | |
 | G13 Known defects D1 to D14 accepted or ticketed | 11.3 | | | |
+| G14 Search-engine steps after launch: canonical host, robots, sitemap submitted, rich-results test, `/temp` removal plan, deliberate omissions accepted | 11.4 to 11.9 | | | |
 | **Go / no-go** | all of the above | | | |
 
 ---
