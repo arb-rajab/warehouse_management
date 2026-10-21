@@ -37,6 +37,12 @@ final class ReferenceData
 
     private string $path;
 
+    /** @var array<int, int> legacy country id => id in this database */
+    private array $countryIds = [];
+
+    /** @var array<int, int> legacy page id => id in this database */
+    private array $pageIds = [];
+
     public function __construct(?string $path = null)
     {
         $this->path = $path ?? database_path('data/reference');
@@ -50,16 +56,16 @@ final class ReferenceData
     public function load(): array
     {
         $inserted = [];
+        $this->countryIds = [];
+        $this->pageIds = [];
 
         DB::transaction(function () use (&$inserted): void {
-            $countryIds = [];
-            $inserted['countries'] = $this->countries($countryIds);
-            $inserted['states'] = $this->states($countryIds);
+            $inserted['countries'] = $this->countries();
+            $inserted['states'] = $this->states();
             $inserted['currencies'] = $this->currencies();
             $inserted['languages'] = $this->languages();
-            $pageIds = [];
-            $inserted['pages'] = $this->pages($pageIds);
-            $inserted['page_translations'] = $this->pageTranslations($pageIds);
+            $inserted['pages'] = $this->pages();
+            $inserted['page_translations'] = $this->pageTranslations();
             $inserted['business_settings'] = $this->defaultCurrencySetting();
         });
 
@@ -69,10 +75,7 @@ final class ReferenceData
         return $inserted;
     }
 
-    /**
-     * @param  array<int, int>  $countryIds  legacy country id => id in this database
-     */
-    private function countries(array &$countryIds): int
+    private function countries(): int
     {
         $existing = DB::table('countries')->pluck('id', 'code')->all();
         $taken = array_flip(DB::table('countries')->pluck('id')->all());
@@ -80,11 +83,11 @@ final class ReferenceData
 
         foreach ($this->read('countries') as $row) {
             if (isset($existing[$row['code']])) {
-                $countryIds[$row['id']] = (int) $existing[$row['code']];
+                $this->countryIds[$row['id']] = (int) $existing[$row['code']];
 
                 continue;
             }
-            $countryIds[$row['id']] = $row['id'];
+            $this->countryIds[$row['id']] = (int) $row['id'];
             if (isset($taken[$row['id']])) {
                 continue;
             }
@@ -94,10 +97,7 @@ final class ReferenceData
         return $this->insert('countries', $rows);
     }
 
-    /**
-     * @param  array<int, int>  $countryIds
-     */
-    private function states(array $countryIds): int
+    private function states(): int
     {
         $known = [];
         foreach (DB::table('states')->select(['country_id', 'name'])->cursor() as $state) {
@@ -107,7 +107,7 @@ final class ReferenceData
         $rows = [];
 
         foreach ($this->read('states') as $row) {
-            $countryId = $countryIds[$row['country_id']] ?? null;
+            $countryId = $this->countryIds[$row['country_id']] ?? null;
             $key = $countryId."\0".mb_strtolower($row['name']);
             if ($countryId === null || isset($known[$key]) || isset($taken[$row['id']])) {
                 continue;
@@ -155,10 +155,7 @@ final class ReferenceData
         return $this->insert('languages', $rows);
     }
 
-    /**
-     * @param  array<int, int>  $pageIds  legacy page id => id in this database
-     */
-    private function pages(array &$pageIds): int
+    private function pages(): int
     {
         $byType = DB::table('pages')->where('type', '!=', 'custom_page')->pluck('id', 'type')->all();
         $bySlug = DB::table('pages')->where('type', 'custom_page')->pluck('id', 'slug')->all();
@@ -168,11 +165,11 @@ final class ReferenceData
         foreach ($this->read('pages') as $row) {
             $existing = $row['type'] === 'custom_page' ? ($bySlug[$row['slug']] ?? null) : ($byType[$row['type']] ?? null);
             if ($existing !== null) {
-                $pageIds[$row['id']] = (int) $existing;
+                $this->pageIds[$row['id']] = (int) $existing;
 
                 continue;
             }
-            $pageIds[$row['id']] = $row['id'];
+            $this->pageIds[$row['id']] = (int) $row['id'];
             if (isset($taken[$row['id']])) {
                 continue;
             }
@@ -182,10 +179,7 @@ final class ReferenceData
         return $this->insert('pages', $rows);
     }
 
-    /**
-     * @param  array<int, int>  $pageIds
-     */
-    private function pageTranslations(array $pageIds): int
+    private function pageTranslations(): int
     {
         $known = [];
         foreach (DB::table('page_translations')->select(['page_id', 'lang'])->cursor() as $t) {
@@ -195,7 +189,7 @@ final class ReferenceData
         $rows = [];
 
         foreach ($this->read('page_translations') as $row) {
-            $pageId = $pageIds[$row['page_id']] ?? null;
+            $pageId = $this->pageIds[$row['page_id']] ?? null;
             $key = $pageId."\0".$row['lang'];
             if ($pageId === null || isset($known[$key]) || isset($taken[$row['id']])) {
                 continue;
