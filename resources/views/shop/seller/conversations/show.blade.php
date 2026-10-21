@@ -46,9 +46,17 @@
             </ul>
             <form class="pt-4" action="{{ route('seller.conversations.message_store') }}" method="POST">
                 @csrf
+                <x-required-legend />
                 <input type="hidden" name="conversation_id" value="{{ $conversation->id }}">
+                @error('conversation_id')
+                    <small class="form-text text-danger">{{ $message }}</small>
+                @enderror
                 <div class="form-group">
-                    <textarea class="form-control" rows="4" name="message" placeholder="{{ translate('Type your reply') }}" required></textarea>
+                    <label for="seller-conversation-message">{{ translate('Type your reply') }}<x-required-mark /></label>
+                    <textarea class="form-control" rows="4" name="message" id="seller-conversation-message" maxlength="65535" placeholder="{{ translate('Type your reply') }}" required>{{ is_string(old('message')) ? old('message') : '' }}</textarea>
+                    @error('message')
+                        <small class="form-text text-danger">{{ $message }}</small>
+                    @enderror
                 </div>
                 <div class="form-group mb-0 text-right">
                     <button type="submit" class="btn btn-primary">{{ translate('Send') }}</button>

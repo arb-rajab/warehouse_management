@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Seller;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Seller\ReplyProductQueryRequest;
 use App\Models\ProductQuery;
 use Auth;
 use Illuminate\Foundation\Validation\ValidatesRequests;
@@ -32,11 +33,8 @@ class ProductQueryController extends Controller
      * Store reply against the question from seller panel
      */
 
-    public function reply(Request $request, $id)
+    public function reply(ReplyProductQueryRequest $request, $id)
     {
-        $this->validate($request, [
-            'reply' => 'required',
-        ]);
         $query = ProductQuery::where('seller_id', Auth::id())->findOrFail($id);
         $query->reply = $request->reply;
         $query->save();
