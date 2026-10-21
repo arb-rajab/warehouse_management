@@ -85,21 +85,28 @@
                 @if (Auth::user()->shop->admin_to_pay > 5) 
                     <form class="" action="{{ route('seller.money_withdraw_request.store') }}" method="post">
                         @csrf
+                        <x-required-legend />
                         <div class="modal-body gry-bg px-3 pt-3">
                             <div class="row">
                                 <div class="col-md-3">
-                                    <label>{{ translate('Amount')}} <span class="text-danger">*</span></label>
+                                    <label for="withdraw-amount">{{ translate('Amount')}}<x-required-mark /></label>
                                 </div>
                                 <div class="col-md-9">
-                                    <input type="number" lang="en" class="form-control mb-3" name="amount" min="{{ get_setting('minimum_seller_amount_withdraw') }}" max="{{ Auth::user()->shop->admin_to_pay }}" placeholder="{{ translate('Amount') }}" required>
+                                    <input type="number" lang="en" class="form-control mb-3" name="amount" id="withdraw-amount" value="{{ (is_scalar(old('amount')) ? old('amount') : '') }}" step="any" min="{{ max(0.01, (float) get_setting('minimum_seller_amount_withdraw')) }}" max="{{ Auth::user()->shop->admin_to_pay }}" placeholder="{{ translate('Amount') }}" required>
+                                    @error('amount')
+                                        <small class="form-text text-danger">{{ $message }}</small>
+                                    @enderror
                                 </div>
                             </div>
                             <div class="row">
                                 <div class="col-md-3">
-                                    <label>{{ translate('Message')}}</label>
+                                    <label for="withdraw-message">{{ translate('Message')}}</label>
                                 </div>
                                 <div class="col-md-9">
-                                    <textarea name="message" rows="8" class="form-control mb-3"></textarea>
+                                    <textarea name="message" id="withdraw-message" rows="8" class="form-control mb-3" maxlength="2000">{{ (is_scalar(old('message')) ? old('message') : '') }}</textarea>
+                                    @error('message')
+                                        <small class="form-text text-danger">{{ $message }}</small>
+                                    @enderror
                                 </div>
                             </div>
                             <div class="form-group text-right">
@@ -121,6 +128,9 @@
 
 @section('script')
     <script type="text/javascript">
+        @if ($errors->any())
+            $(function () { $('#request_modal').modal('show'); });
+        @endif
         function show_request_modal(){
             $('#request_modal').modal('show');
         }

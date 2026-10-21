@@ -7,7 +7,7 @@ The convention, the classes and how to read this file: [.ai/rules/form-required-
 ## Summary
 
 Forms scanned: **158** Vue (resources/js/pages, resources/js/components) and **81** Blade (resources/views/shop).
-Server rules: **268** FormRequests (1 unparsed) and **26** controller actions with inline validation (5 unparsed).
+Server rules: **269** FormRequests (1 unparsed) and **25** controller actions with inline validation (5 unparsed).
 
 | Class | Meaning | Severity | Findings |
 | --- | --- | --- | ---: |

@@ -326,9 +326,9 @@
         }
     },
     "server": {
-        "form_requests": 268,
+        "form_requests": 269,
         "form_requests_unparsed": 1,
-        "inline_validators": 26,
+        "inline_validators": 25,
         "inline_unparsed": 5
     },
     "top": [
@@ -2903,7 +2903,7 @@
             "line": 86,
             "action": "{{ route('seller.money_withdraw_request.store') }}",
             "target": "route:seller.money_withdraw_request.store",
-            "source": "App\\Http\\Controllers\\Seller\\SellerWithdrawRequestController@store (inline)",
+            "source": "App\\Http\\Requests\\Seller\\StoreWithdrawRequest",
             "controls": 2,
             "unresolved_controls": 0,
             "findings": []
