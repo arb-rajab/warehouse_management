@@ -7,22 +7,22 @@
             "blade": 81
         },
         "by_class": {
-            "A": 52,
+            "A": 53,
             "B": 53,
             "C": 72,
             "D": 10,
-            "E": 215,
+            "E": 205,
             "F": 23
         },
         "by_severity": {
-            "high": 124,
+            "high": 125,
             "medium": 63,
-            "low": 215,
+            "low": 205,
             "info": 23
         },
         "by_priority": {
             "P1": 8,
-            "P2": 288,
+            "P2": 279,
             "P3": 129
         }
     },
@@ -246,10 +246,10 @@
         "seller panel": {
             "forms": 26,
             "A": 14,
-            "B": 14,
+            "B": 13,
             "C": 34,
             "D": 0,
-            "E": 117,
+            "E": 108,
             "F": 0
         },
         "server": {
@@ -299,11 +299,11 @@
         },
         "storefront/account": {
             "forms": 12,
-            "A": 0,
-            "B": 1,
+            "A": 1,
+            "B": 2,
             "C": 21,
             "D": 0,
-            "E": 42,
+            "E": 41,
             "F": 1
         },
         "storefront/auth": {
@@ -326,7 +326,7 @@
         }
     },
     "server": {
-        "form_requests": 267,
+        "form_requests": 268,
         "form_requests_unparsed": 1,
         "inline_validators": 26,
         "inline_unparsed": 5
@@ -537,6 +537,20 @@
             "rank": 15,
             "priority": "P2",
             "module": "storefront/account",
+            "form": "resources/views/shop/frontend/user/profile.blade.php:215",
+            "target": "route:user.change.email",
+            "high": 1,
+            "medium": 1,
+            "low": 0,
+            "findings": {
+                "A": 1,
+                "B": 1
+            }
+        },
+        {
+            "rank": 16,
+            "priority": "P2",
+            "module": "storefront/account",
             "form": "resources/views/shop/frontend/user/support_ticket/show.blade.php:20",
             "target": "route:support_ticket.seller_store",
             "high": 1,
@@ -548,7 +562,7 @@
             }
         },
         {
-            "rank": 16,
+            "rank": 17,
             "priority": "P2",
             "module": "seller panel",
             "form": "resources/views/shop/seller/support_ticket/show.blade.php:16",
@@ -562,7 +576,7 @@
             }
         },
         {
-            "rank": 17,
+            "rank": 18,
             "priority": "P2",
             "module": "storefront/account",
             "form": "resources/views/shop/frontend/user/conversations/show.blade.php:73",
@@ -576,7 +590,7 @@
             }
         },
         {
-            "rank": 18,
+            "rank": 19,
             "priority": "P2",
             "module": "seller panel",
             "form": "resources/views/shop/seller/conversations/show.blade.php:47",
@@ -590,23 +604,10 @@
             }
         },
         {
-            "rank": 19,
-            "priority": "P2",
-            "module": "storefront",
-            "form": "resources/views/shop/frontend/inc/footer.blade.php:88",
-            "target": "route:subscribers.store",
-            "high": 1,
-            "medium": 0,
-            "low": 0,
-            "findings": {
-                "C": 1
-            }
-        },
-        {
             "rank": 20,
             "priority": "P2",
             "module": "storefront",
-            "form": "resources/views/shop/frontend/layouts/app.blade.php:336",
+            "form": "resources/views/shop/frontend/inc/footer.blade.php:88",
             "target": "route:subscribers.store",
             "high": 1,
             "medium": 0,
@@ -3067,32 +3068,27 @@
             "source": "App\\Http\\Requests\\SellerProfileRequest",
             "controls": 12,
             "unresolved_controls": 0,
-            "findings": {
-                "B": 1,
-                "E": 8
-            }
+            "findings": []
         },
         {
             "kind": "blade",
             "module": "seller panel",
             "priority": "P2",
             "file": "resources/views/shop/seller/profile/index.blade.php",
-            "line": 213,
+            "line": 224,
             "action": "{{ route('user.change.email') }}",
             "target": "route:user.change.email",
-            "source": "App\\Http\\Controllers\\HomeController@update_email",
+            "source": "App\\Http\\Requests\\ChangeStoreEmailRequest",
             "controls": 1,
             "unresolved_controls": 0,
-            "findings": {
-                "E": 1
-            }
+            "findings": []
         },
         {
             "kind": "blade",
             "module": "seller panel",
             "priority": "P1",
             "file": "resources/views/shop/seller/profile/index.blade.php",
-            "line": 258,
+            "line": 273,
             "action": "{{ route('seller.addresses.store') }}",
             "target": "route:seller.addresses.store",
             "source": "App\\Http\\Requests\\Seller\\StoreAddressRequest",
@@ -3886,11 +3882,12 @@
             "line": 215,
             "action": "{{ route('user.change.email') }}",
             "target": "route:user.change.email",
-            "source": "App\\Http\\Controllers\\HomeController@update_email",
+            "source": "App\\Http\\Requests\\ChangeStoreEmailRequest",
             "controls": 1,
             "unresolved_controls": 0,
             "findings": {
-                "E": 1
+                "A": 1,
+                "B": 1
             }
         },
         {
@@ -4793,6 +4790,21 @@
             "server": "app/Http/Controllers/ProductQueryController.php:52"
         },
         {
+            "class": "A",
+            "severity": "high",
+            "priority": "P2",
+            "module": "storefront/account",
+            "kind": "blade",
+            "form": "resources/views/shop/frontend/user/profile.blade.php",
+            "target": "route:user.change.email",
+            "source": "App\\Http\\Requests\\ChangeStoreEmailRequest",
+            "field": "email",
+            "label": "Your Email",
+            "detail": "server: required|string|email|max|unique; the control has no required attribute",
+            "ui": "resources/views/shop/frontend/user/profile.blade.php:228",
+            "server": "app/Http/Requests/ChangeStoreEmailRequest.php:23"
+        },
+        {
             "class": "B",
             "severity": "medium",
             "priority": "P3",
@@ -5531,21 +5543,6 @@
             "class": "B",
             "severity": "medium",
             "priority": "P2",
-            "module": "seller panel",
-            "kind": "blade",
-            "form": "resources/views/shop/seller/profile/index.blade.php",
-            "target": "route:seller.profile.update",
-            "source": "App\\Http\\Requests\\SellerProfileRequest",
-            "field": "name",
-            "label": "Your Name",
-            "detail": "server: required|max; the label shows no required mark",
-            "ui": "resources/views/shop/seller/profile/index.blade.php:23",
-            "server": "app/Http/Requests/SellerProfileRequest.php:33"
-        },
-        {
-            "class": "B",
-            "severity": "medium",
-            "priority": "P2",
             "module": "storefront",
             "kind": "blade",
             "form": "resources/views/shop/frontend/digital_product_details.blade.php",
@@ -5586,6 +5583,21 @@
             "detail": "server: required|numeric|between; the label shows no required mark",
             "ui": "resources/views/shop/frontend/user/product_review_modal.blade.php:22",
             "server": "app/Http/Controllers/ReviewController.php:31"
+        },
+        {
+            "class": "B",
+            "severity": "medium",
+            "priority": "P2",
+            "module": "storefront/account",
+            "kind": "blade",
+            "form": "resources/views/shop/frontend/user/profile.blade.php",
+            "target": "route:user.change.email",
+            "source": "App\\Http\\Requests\\ChangeStoreEmailRequest",
+            "field": "email",
+            "label": "Your Email",
+            "detail": "server: required|string|email|max|unique; the label shows no required mark",
+            "ui": "resources/views/shop/frontend/user/profile.blade.php:228",
+            "server": "app/Http/Requests/ChangeStoreEmailRequest.php:23"
         },
         {
             "class": "C",
@@ -8473,141 +8485,6 @@
             "priority": "P2",
             "module": "seller panel",
             "kind": "blade",
-            "form": "resources/views/shop/seller/profile/index.blade.php",
-            "target": "route:seller.profile.update",
-            "source": "App\\Http\\Requests\\SellerProfileRequest",
-            "field": "bank_acc_name",
-            "label": "Bank Account Name",
-            "detail": "no server rule names this field",
-            "ui": "resources/views/shop/seller/profile/index.blade.php:111",
-            "server": null
-        },
-        {
-            "class": "E",
-            "severity": "low",
-            "priority": "P2",
-            "module": "seller panel",
-            "kind": "blade",
-            "form": "resources/views/shop/seller/profile/index.blade.php",
-            "target": "route:seller.profile.update",
-            "source": "App\\Http\\Requests\\SellerProfileRequest",
-            "field": "bank_acc_no",
-            "label": "Bank Account Number",
-            "detail": "no server rule names this field",
-            "ui": "resources/views/shop/seller/profile/index.blade.php:120",
-            "server": null
-        },
-        {
-            "class": "E",
-            "severity": "low",
-            "priority": "P2",
-            "module": "seller panel",
-            "kind": "blade",
-            "form": "resources/views/shop/seller/profile/index.blade.php",
-            "target": "route:seller.profile.update",
-            "source": "App\\Http\\Requests\\SellerProfileRequest",
-            "field": "bank_name",
-            "label": "Bank Name",
-            "detail": "no server rule names this field",
-            "ui": "resources/views/shop/seller/profile/index.blade.php:102",
-            "server": null
-        },
-        {
-            "class": "E",
-            "severity": "low",
-            "priority": "P2",
-            "module": "seller panel",
-            "kind": "blade",
-            "form": "resources/views/shop/seller/profile/index.blade.php",
-            "target": "route:seller.profile.update",
-            "source": "App\\Http\\Requests\\SellerProfileRequest",
-            "field": "bank_payment_status",
-            "label": "shop->bank_payment_status == 1) checked @endif>",
-            "detail": "no server rule names this field",
-            "ui": "resources/views/shop/seller/profile/index.blade.php:94",
-            "server": null
-        },
-        {
-            "class": "E",
-            "severity": "low",
-            "priority": "P2",
-            "module": "seller panel",
-            "kind": "blade",
-            "form": "resources/views/shop/seller/profile/index.blade.php",
-            "target": "route:seller.profile.update",
-            "source": "App\\Http\\Requests\\SellerProfileRequest",
-            "field": "bank_routing_no",
-            "label": "Bank Routing Number",
-            "detail": "no server rule names this field",
-            "ui": "resources/views/shop/seller/profile/index.blade.php:129",
-            "server": null
-        },
-        {
-            "class": "E",
-            "severity": "low",
-            "priority": "P2",
-            "module": "seller panel",
-            "kind": "blade",
-            "form": "resources/views/shop/seller/profile/index.blade.php",
-            "target": "route:seller.profile.update",
-            "source": "App\\Http\\Requests\\SellerProfileRequest",
-            "field": "cash_on_delivery_status",
-            "label": "shop->cash_on_delivery_status == 1) checked @endif>",
-            "detail": "no server rule names this field",
-            "ui": "resources/views/shop/seller/profile/index.blade.php:85",
-            "server": null
-        },
-        {
-            "class": "E",
-            "severity": "low",
-            "priority": "P2",
-            "module": "seller panel",
-            "kind": "blade",
-            "form": "resources/views/shop/seller/profile/index.blade.php",
-            "target": "route:seller.profile.update",
-            "source": "App\\Http\\Requests\\SellerProfileRequest",
-            "field": "phone",
-            "label": "Your Phone",
-            "detail": "no server rule names this field",
-            "ui": "resources/views/shop/seller/profile/index.blade.php:33",
-            "server": null
-        },
-        {
-            "class": "E",
-            "severity": "low",
-            "priority": "P2",
-            "module": "seller panel",
-            "kind": "blade",
-            "form": "resources/views/shop/seller/profile/index.blade.php",
-            "target": "route:seller.profile.update",
-            "source": "App\\Http\\Requests\\SellerProfileRequest",
-            "field": "photo",
-            "label": "Photo",
-            "detail": "no server rule names this field",
-            "ui": "resources/views/shop/seller/profile/index.blade.php:47",
-            "server": null
-        },
-        {
-            "class": "E",
-            "severity": "low",
-            "priority": "P2",
-            "module": "seller panel",
-            "kind": "blade",
-            "form": "resources/views/shop/seller/profile/index.blade.php",
-            "target": "route:user.change.email",
-            "source": "App\\Http\\Controllers\\HomeController@update_email",
-            "field": "email",
-            "label": "Your Email",
-            "detail": "the endpoint validates nothing",
-            "ui": "resources/views/shop/seller/profile/index.blade.php:226",
-            "server": null
-        },
-        {
-            "class": "E",
-            "severity": "low",
-            "priority": "P2",
-            "module": "seller panel",
-            "kind": "blade",
             "form": "resources/views/shop/seller/shop.blade.php",
             "target": "route:seller.shop.update",
             "source": "App\\Http\\Controllers\\Seller\\ShopController@update",
@@ -9605,21 +9482,6 @@
             "label": null,
             "detail": "no server rule names this field",
             "ui": "resources/views/shop/frontend/user/product_review_modal.blade.php:11",
-            "server": null
-        },
-        {
-            "class": "E",
-            "severity": "low",
-            "priority": "P2",
-            "module": "storefront/account",
-            "kind": "blade",
-            "form": "resources/views/shop/frontend/user/profile.blade.php",
-            "target": "route:user.change.email",
-            "source": "App\\Http\\Controllers\\HomeController@update_email",
-            "field": "email",
-            "label": "Your Email",
-            "detail": "the endpoint validates nothing",
-            "ui": "resources/views/shop/frontend/user/profile.blade.php:228",
             "server": null
         },
         {
