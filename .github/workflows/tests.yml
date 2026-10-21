@@ -370,6 +370,7 @@ jobs:
           tests/Feature/Database/SchemaIdentifierLengthTest.php
           tests/Feature/Database/AddFulltextIndexToProductsTableTest.php
           tests/Feature/Database/AddIndexesToStoreTablesTest.php
+          tests/Feature/Database/LoadLegacyReferenceDataTest.php
 
   # `composer audit` reads composer.lock and `npm audit` reads
   # package-lock.json, so neither needs the dependencies installed. Abandoned

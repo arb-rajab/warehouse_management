@@ -207,9 +207,16 @@
                                                             </div>
 
                                                             <div class="modal-body">
-                                                                <textarea class="form-control" rows="20" disabled>
-                                                                    {{ get_setting('terms') }}
-                                                                </textarea>
+                                                                @php
+                                                                    $termsPage = \App\Models\Page::query()->where('type', 'terms_conditions_page')->first();
+                                                                    $termsContent = $termsPage?->getTranslation('content');
+                                                                @endphp
+                                                                @if (filled($termsContent))
+                                                                    <div class="border p-3" id="terms_conditions_text" style="max-height: 60vh; overflow-y: auto;">{!! $termsContent !!}</div>
+                                                                    <a href="{{ route('terms') }}" target="_blank" rel="noopener" class="d-inline-block mt-2 fs-12">{{ translate('Open the terms in a new page') }}</a>
+                                                                @else
+                                                                    <p class="text-muted mb-0" id="terms_conditions_text">{{ translate('The terms and conditions are not available yet.') }}</p>
+                                                                @endif
                                                             </div>
 
                                                             <div class="modal-footer pb-4">

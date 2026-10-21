@@ -90,7 +90,19 @@
 
                                                 <div class="form-group">
                                                     <label for="country" class="fs-12 fw-700 text-soft-dark">{{  translate('Country') }}<x-required-mark /></label>
-                                                    <input type="text" class="form-control rounded-0{{ $errors->has('country') ? ' is-invalid' : '' }}" value="{{ old('country') }}" placeholder="{{  translate('country') }}" name="country" required>
+                                                    @php
+                                                        $registrationCountries = \App\Models\Country::query()->where('status', 1)->orderByDesc('priority')->orderBy('name')->pluck('name');
+                                                    @endphp
+                                                    @if ($registrationCountries->isNotEmpty())
+                                                        <select class="form-control rounded-0{{ $errors->has('country') ? ' is-invalid' : '' }}" id="country" name="country" required>
+                                                            <option value="">{{ translate('Select your country') }}</option>
+                                                            @foreach ($registrationCountries as $registrationCountry)
+                                                                <option value="{{ $registrationCountry }}" @selected(old('country') === $registrationCountry)>{{ $registrationCountry }}</option>
+                                                            @endforeach
+                                                        </select>
+                                                    @else
+                                                        <input type="text" class="form-control rounded-0{{ $errors->has('country') ? ' is-invalid' : '' }}" id="country" value="{{ old('country') }}" placeholder="{{  translate('country') }}" name="country" required>
+                                                    @endif
                                                     @if ($errors->has('country'))
                                                         <span class="invalid-feedback" role="alert">
                                                             <strong>{{ $errors->first('country') }}</strong>
@@ -181,9 +193,16 @@
                                                             </div>
 
                                                             <div class="modal-body">
-                                                                <textarea class="form-control" rows="20" disabled>
-                                                                    {{ get_setting('terms') }}
-                                                                </textarea>
+                                                                @php
+                                                                    $termsPage = \App\Models\Page::query()->where('type', 'terms_conditions_page')->first();
+                                                                    $termsContent = $termsPage?->getTranslation('content');
+                                                                @endphp
+                                                                @if (filled($termsContent))
+                                                                    <div class="border p-3" id="terms_conditions_text" style="max-height: 60vh; overflow-y: auto;">{!! $termsContent !!}</div>
+                                                                    <a href="{{ route('terms') }}" target="_blank" rel="noopener" class="d-inline-block mt-2 fs-12">{{ translate('Open the terms in a new page') }}</a>
+                                                                @else
+                                                                    <p class="text-muted mb-0" id="terms_conditions_text">{{ translate('The terms and conditions are not available yet.') }}</p>
+                                                                @endif
                                                             </div>
 
                                                             <div class="modal-footer">
