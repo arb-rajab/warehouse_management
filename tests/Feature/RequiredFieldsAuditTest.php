@@ -135,10 +135,11 @@ test('the server side reads an inline validator behind a helper method, with the
             'email' => 'required',
             'country' => 'required',
             'phone' => 'required',
+            'g-recaptcha-response' => 'optional',
             'password_confirmation' => 'required',
         ])
         ->and($form['fields']['password_confirmation']['derived'])->toBeTrue()
-        ->and($form['fields']['name']['file'].':'.$form['fields']['name']['line'])->toBe('app/Http/Controllers/Auth/RegisterController.php:103');
+        ->and($form['fields']['name']['file'].':'.$form['fields']['name']['line'])->toBe('app/Http/Controllers/Auth/RegisterController.php:104');
 });
 
 test('the server side calls a FormRequest\'s rules() with its route model and tells required from optional', function () {

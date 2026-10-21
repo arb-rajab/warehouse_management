@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import FieldError from '@/components/FieldError.vue';
+import RequiredMark from '@/components/RequiredMark.vue';
 import { fieldLabelClass, plainFieldInputClass } from '@/lib/filters';
 import { t } from '@/lib/i18n';
 import { productAmountMax } from '@/lib/storeProductForm';
@@ -26,9 +27,9 @@ const taxTypes = ref(props.taxes.map((tax) => tax.tax_type));
         >
             <input type="hidden" name="tax_id[]" :value="tax.id" />
             <div>
-                <label :for="`tax_${tax.id}`" :class="fieldLabelClass">{{
-                    tax.name
-                }}</label>
+                <label :for="`tax_${tax.id}`" :class="fieldLabelClass"
+                    >{{ tax.name }}<RequiredMark
+                /></label>
                 <input
                     :id="`tax_${tax.id}`"
                     name="tax[]"
@@ -43,9 +44,10 @@ const taxTypes = ref(props.taxes.map((tax) => tax.tax_type));
                 <FieldError :message="errors[`tax.${index}`]" />
             </div>
             <div>
-                <label :for="`tax_type_${tax.id}`" :class="fieldLabelClass">{{
-                    t('store.productForm.taxType', { tax: tax.name })
-                }}</label>
+                <label :for="`tax_type_${tax.id}`" :class="fieldLabelClass"
+                    >{{ t('store.productForm.taxType', { tax: tax.name })
+                    }}<RequiredMark
+                /></label>
                 <select
                     :id="`tax_type_${tax.id}`"
                     v-model="taxTypes[index]"

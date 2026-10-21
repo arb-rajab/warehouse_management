@@ -7,6 +7,7 @@ import {
     storeCampaignProduct,
     storeSharedProps,
 } from '@/testing/factories';
+import { expectRequiredFields } from '@/testing/requiredFields';
 import StoreFlashDealFormFields from './StoreFlashDealFormFields.vue';
 const { getMock } = vi.hoisted(() => ({ getMock: vi.fn() }));
 vi.mock('@inertiajs/vue3', () => ({
@@ -51,6 +52,16 @@ it('renders translated edit title and campaign styles with root product discount
         required: '',
     });
     expect(wrapper.get('#text_color').attributes('required')).toBeDefined();
+    expectRequiredFields(wrapper, [
+        'title',
+        'start_date',
+        'end_date',
+        'background_color',
+        'text_color',
+        'products',
+        'discount-12',
+        'discount-type-12',
+    ]);
     expect(wrapper.find('#quantity-12').exists()).toBe(false);
     expect(wrapper.text()).toContain('Rejected');
 });

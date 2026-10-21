@@ -7,23 +7,23 @@
             "blade": 81
         },
         "by_class": {
-            "A": 53,
-            "B": 79,
+            "A": 52,
+            "B": 53,
             "C": 72,
             "D": 10,
             "E": 215,
             "F": 23
         },
         "by_severity": {
-            "high": 125,
-            "medium": 89,
+            "high": 124,
+            "medium": 63,
             "low": 215,
             "info": 23
         },
         "by_priority": {
             "P1": 8,
             "P2": 288,
-            "P3": 156
+            "P3": 129
         }
     },
     "modules": {
@@ -120,7 +120,7 @@
         "Store/Admin/Marketing": {
             "forms": 19,
             "A": 4,
-            "B": 18,
+            "B": 0,
             "C": 0,
             "D": 0,
             "E": 8,
@@ -137,8 +137,8 @@
         },
         "Store/Admin/Product": {
             "forms": 24,
-            "A": 1,
-            "B": 13,
+            "A": 0,
+            "B": 5,
             "C": 3,
             "D": 0,
             "E": 0,
@@ -1162,7 +1162,6 @@
             "controls": 10,
             "unresolved_controls": 0,
             "findings": {
-                "B": 3,
                 "E": 1
             }
         },
@@ -1178,7 +1177,6 @@
             "controls": 10,
             "unresolved_controls": 0,
             "findings": {
-                "B": 3,
                 "E": 1
             }
         },
@@ -1193,9 +1191,7 @@
             "source": "App\\Http\\Requests\\Store\\Admin\\StoreDynamicPopupRequest",
             "controls": 7,
             "unresolved_controls": 0,
-            "findings": {
-                "B": 3
-            }
+            "findings": []
         },
         {
             "kind": "vue",
@@ -1208,9 +1204,7 @@
             "source": "App\\Http\\Requests\\Store\\Admin\\UpdateDynamicPopupRequest",
             "controls": 7,
             "unresolved_controls": 0,
-            "findings": {
-                "B": 3
-            }
+            "findings": []
         },
         {
             "kind": "vue",
@@ -1264,7 +1258,6 @@
             "unresolved_controls": 4,
             "findings": {
                 "A": 1,
-                "B": 1,
                 "E": 1
             }
         },
@@ -1281,7 +1274,6 @@
             "unresolved_controls": 4,
             "findings": {
                 "A": 1,
-                "B": 1,
                 "E": 1
             }
         },
@@ -1350,7 +1342,6 @@
             "unresolved_controls": 5,
             "findings": {
                 "A": 1,
-                "B": 2,
                 "E": 2
             }
         },
@@ -1367,7 +1358,6 @@
             "unresolved_controls": 5,
             "findings": {
                 "A": 1,
-                "B": 2,
                 "E": 2
             }
         },
@@ -1638,7 +1628,7 @@
             "controls": 18,
             "unresolved_controls": 0,
             "findings": {
-                "B": 4
+                "B": 2
             }
         },
         {
@@ -1653,7 +1643,7 @@
             "controls": 20,
             "unresolved_controls": 0,
             "findings": {
-                "B": 4
+                "B": 2
             }
         },
         {
@@ -1696,8 +1686,6 @@
             "controls": 45,
             "unresolved_controls": 8,
             "findings": {
-                "A": 1,
-                "B": 4,
                 "C": 3
             }
         },
@@ -4133,21 +4121,6 @@
             "class": "A",
             "severity": "high",
             "priority": "P3",
-            "module": "Store/Admin/Product",
-            "kind": "vue",
-            "form": "resources/js/pages/Store/Admin/Product/Products/Create.vue",
-            "target": "ProductController@store",
-            "source": "App\\Http\\Requests\\Store\\Admin\\StoreProductRequest",
-            "field": "stock_visibility_state",
-            "label": "Stock visibility",
-            "detail": "server: required|string|in; the control has no required attribute",
-            "ui": "resources/js/components/StoreProductFormFields.vue:585",
-            "server": "app/Http/Requests/Concerns/ValidatesStoreProduct.php:96"
-        },
-        {
-            "class": "A",
-            "severity": "high",
-            "priority": "P3",
             "module": "Store/Admin/Representatives",
             "kind": "vue",
             "form": "resources/js/pages/Store/Admin/Representatives/Visits/Show.vue",
@@ -4943,276 +4916,6 @@
             "class": "B",
             "severity": "medium",
             "priority": "P3",
-            "module": "Store/Admin/Marketing",
-            "kind": "vue",
-            "form": "resources/js/pages/Store/Admin/Marketing/Coupons/Create.vue",
-            "target": "CouponController@store",
-            "source": "App\\Http\\Requests\\Store\\Admin\\StoreCouponRequest",
-            "field": "discount_type",
-            "label": "Discount type",
-            "detail": "server: required|in; the label shows no required mark",
-            "ui": "resources/js/components/StoreCouponFormFields.vue:100",
-            "server": "app/Http/Requests/Concerns/ValidatesStoreCoupon.php:21"
-        },
-        {
-            "class": "B",
-            "severity": "medium",
-            "priority": "P3",
-            "module": "Store/Admin/Marketing",
-            "kind": "vue",
-            "form": "resources/js/pages/Store/Admin/Marketing/Coupons/Create.vue",
-            "target": "CouponController@store",
-            "source": "App\\Http\\Requests\\Store\\Admin\\StoreCouponRequest",
-            "field": "product_ids[]",
-            "label": "Products",
-            "detail": "server: exclude_unless|required|array|min|max; the label shows no required mark",
-            "ui": "resources/js/components/StoreCouponFormFields.vue:194",
-            "server": "app/Http/Requests/Concerns/ValidatesStoreCoupon.php:25"
-        },
-        {
-            "class": "B",
-            "severity": "medium",
-            "priority": "P3",
-            "module": "Store/Admin/Marketing",
-            "kind": "vue",
-            "form": "resources/js/pages/Store/Admin/Marketing/Coupons/Create.vue",
-            "target": "CouponController@store",
-            "source": "App\\Http\\Requests\\Store\\Admin\\StoreCouponRequest",
-            "field": "type",
-            "label": "Coupon type",
-            "detail": "server: required|in; the label shows no required mark",
-            "ui": "resources/js/components/StoreCouponFormFields.vue:72",
-            "server": "app/Http/Requests/Concerns/ValidatesStoreCoupon.php:19"
-        },
-        {
-            "class": "B",
-            "severity": "medium",
-            "priority": "P3",
-            "module": "Store/Admin/Marketing",
-            "kind": "vue",
-            "form": "resources/js/pages/Store/Admin/Marketing/Coupons/Edit.vue",
-            "target": "CouponController@update",
-            "source": "App\\Http\\Requests\\Store\\Admin\\UpdateCouponRequest",
-            "field": "discount_type",
-            "label": "Discount type",
-            "detail": "server: required|in; the label shows no required mark",
-            "ui": "resources/js/components/StoreCouponFormFields.vue:100",
-            "server": "app/Http/Requests/Concerns/ValidatesStoreCoupon.php:21"
-        },
-        {
-            "class": "B",
-            "severity": "medium",
-            "priority": "P3",
-            "module": "Store/Admin/Marketing",
-            "kind": "vue",
-            "form": "resources/js/pages/Store/Admin/Marketing/Coupons/Edit.vue",
-            "target": "CouponController@update",
-            "source": "App\\Http\\Requests\\Store\\Admin\\UpdateCouponRequest",
-            "field": "product_ids[]",
-            "label": "Products",
-            "detail": "server: exclude_unless|required|array|min|max; the label shows no required mark",
-            "ui": "resources/js/components/StoreCouponFormFields.vue:194",
-            "server": "app/Http/Requests/Concerns/ValidatesStoreCoupon.php:25"
-        },
-        {
-            "class": "B",
-            "severity": "medium",
-            "priority": "P3",
-            "module": "Store/Admin/Marketing",
-            "kind": "vue",
-            "form": "resources/js/pages/Store/Admin/Marketing/Coupons/Edit.vue",
-            "target": "CouponController@update",
-            "source": "App\\Http\\Requests\\Store\\Admin\\UpdateCouponRequest",
-            "field": "type",
-            "label": "Coupon type",
-            "detail": "server: required|in; the label shows no required mark",
-            "ui": "resources/js/components/StoreCouponFormFields.vue:72",
-            "server": "app/Http/Requests/Concerns/ValidatesStoreCoupon.php:19"
-        },
-        {
-            "class": "B",
-            "severity": "medium",
-            "priority": "P3",
-            "module": "Store/Admin/Marketing",
-            "kind": "vue",
-            "form": "resources/js/pages/Store/Admin/Marketing/DynamicPopups/Create.vue",
-            "target": "DynamicPopupController@store",
-            "source": "App\\Http\\Requests\\Store\\Admin\\StoreDynamicPopupRequest",
-            "field": "offer_id",
-            "label": "Offer",
-            "detail": "server: required|integer|exists; the label shows no required mark",
-            "ui": "resources/js/components/StoreDynamicPopupFormFields.vue:79",
-            "server": "app/Http/Requests/Concerns/ValidatesStoreDynamicPopup.php:23"
-        },
-        {
-            "class": "B",
-            "severity": "medium",
-            "priority": "P3",
-            "module": "Store/Admin/Marketing",
-            "kind": "vue",
-            "form": "resources/js/pages/Store/Admin/Marketing/DynamicPopups/Create.vue",
-            "target": "DynamicPopupController@store",
-            "source": "App\\Http\\Requests\\Store\\Admin\\StoreDynamicPopupRequest",
-            "field": "show_page",
-            "label": "Show on page",
-            "detail": "server: bail|required|integer|min|closure; the label shows no required mark",
-            "ui": "resources/js/components/StoreDynamicPopupFormFields.vue:103",
-            "server": "app/Http/Requests/Concerns/ValidatesStoreDynamicPopup.php:27"
-        },
-        {
-            "class": "B",
-            "severity": "medium",
-            "priority": "P3",
-            "module": "Store/Admin/Marketing",
-            "kind": "vue",
-            "form": "resources/js/pages/Store/Admin/Marketing/DynamicPopups/Create.vue",
-            "target": "DynamicPopupController@store",
-            "source": "App\\Http\\Requests\\Store\\Admin\\StoreDynamicPopupRequest",
-            "field": "summary",
-            "label": "Summary",
-            "detail": "server: required|string|max; the label shows no required mark",
-            "ui": "resources/js/components/StoreDynamicPopupFormFields.vue:36",
-            "server": "app/Http/Requests/Concerns/ValidatesStoreDynamicPopup.php:19"
-        },
-        {
-            "class": "B",
-            "severity": "medium",
-            "priority": "P3",
-            "module": "Store/Admin/Marketing",
-            "kind": "vue",
-            "form": "resources/js/pages/Store/Admin/Marketing/DynamicPopups/Edit.vue",
-            "target": "DynamicPopupController@update",
-            "source": "App\\Http\\Requests\\Store\\Admin\\UpdateDynamicPopupRequest",
-            "field": "offer_id",
-            "label": "Offer",
-            "detail": "server: required|integer|exists; the label shows no required mark",
-            "ui": "resources/js/components/StoreDynamicPopupFormFields.vue:79",
-            "server": "app/Http/Requests/Concerns/ValidatesStoreDynamicPopup.php:23"
-        },
-        {
-            "class": "B",
-            "severity": "medium",
-            "priority": "P3",
-            "module": "Store/Admin/Marketing",
-            "kind": "vue",
-            "form": "resources/js/pages/Store/Admin/Marketing/DynamicPopups/Edit.vue",
-            "target": "DynamicPopupController@update",
-            "source": "App\\Http\\Requests\\Store\\Admin\\UpdateDynamicPopupRequest",
-            "field": "show_page",
-            "label": "Show on page",
-            "detail": "server: bail|required|integer|min|closure; the label shows no required mark",
-            "ui": "resources/js/components/StoreDynamicPopupFormFields.vue:103",
-            "server": "app/Http/Requests/Concerns/ValidatesStoreDynamicPopup.php:27"
-        },
-        {
-            "class": "B",
-            "severity": "medium",
-            "priority": "P3",
-            "module": "Store/Admin/Marketing",
-            "kind": "vue",
-            "form": "resources/js/pages/Store/Admin/Marketing/DynamicPopups/Edit.vue",
-            "target": "DynamicPopupController@update",
-            "source": "App\\Http\\Requests\\Store\\Admin\\UpdateDynamicPopupRequest",
-            "field": "summary",
-            "label": "Summary",
-            "detail": "server: required|string|max; the label shows no required mark",
-            "ui": "resources/js/components/StoreDynamicPopupFormFields.vue:36",
-            "server": "app/Http/Requests/Concerns/ValidatesStoreDynamicPopup.php:19"
-        },
-        {
-            "class": "B",
-            "severity": "medium",
-            "priority": "P3",
-            "module": "Store/Admin/Marketing",
-            "kind": "vue",
-            "form": "resources/js/pages/Store/Admin/Marketing/FlashDeals/Create.vue",
-            "target": "FlashDealController@store",
-            "source": "App\\Http\\Requests\\Store\\Admin\\StoreFlashDealRequest",
-            "field": "text_color",
-            "label": "Text colour",
-            "detail": "server: required|in; the label shows no required mark",
-            "ui": "resources/js/components/StoreFlashDealFormFields.vue:46",
-            "server": "app/Http/Requests/Concerns/ValidatesStoreFlashDeal.php:18"
-        },
-        {
-            "class": "B",
-            "severity": "medium",
-            "priority": "P3",
-            "module": "Store/Admin/Marketing",
-            "kind": "vue",
-            "form": "resources/js/pages/Store/Admin/Marketing/FlashDeals/Edit.vue",
-            "target": "FlashDealController@update",
-            "source": "App\\Http\\Requests\\Store\\Admin\\UpdateFlashDealRequest",
-            "field": "text_color",
-            "label": "Text colour",
-            "detail": "server: required|in; the label shows no required mark",
-            "ui": "resources/js/components/StoreFlashDealFormFields.vue:46",
-            "server": "app/Http/Requests/Concerns/ValidatesStoreFlashDeal.php:18"
-        },
-        {
-            "class": "B",
-            "severity": "medium",
-            "priority": "P3",
-            "module": "Store/Admin/Marketing",
-            "kind": "vue",
-            "form": "resources/js/pages/Store/Admin/Marketing/Offers/Create.vue",
-            "target": "OfferController@store",
-            "source": "App\\Http\\Requests\\Store\\Admin\\StoreOfferRequest",
-            "field": "base_product_id",
-            "label": "Base product",
-            "detail": "server: exclude_unless|required|integer|exists; the label shows no required mark",
-            "ui": "resources/js/components/StoreOfferFormFields.vue:125",
-            "server": "app/Http/Requests/Concerns/ValidatesStoreOffer.php:22"
-        },
-        {
-            "class": "B",
-            "severity": "medium",
-            "priority": "P3",
-            "module": "Store/Admin/Marketing",
-            "kind": "vue",
-            "form": "resources/js/pages/Store/Admin/Marketing/Offers/Create.vue",
-            "target": "OfferController@store",
-            "source": "App\\Http\\Requests\\Store\\Admin\\StoreOfferRequest",
-            "field": "brand_id",
-            "label": "Brand",
-            "detail": "server: exclude_unless|required|integer|exists; the label shows no required mark",
-            "ui": "resources/js/components/StoreOfferFormFields.vue:102",
-            "server": "app/Http/Requests/Concerns/ValidatesStoreOffer.php:24"
-        },
-        {
-            "class": "B",
-            "severity": "medium",
-            "priority": "P3",
-            "module": "Store/Admin/Marketing",
-            "kind": "vue",
-            "form": "resources/js/pages/Store/Admin/Marketing/Offers/Edit.vue",
-            "target": "OfferController@update",
-            "source": "App\\Http\\Requests\\Store\\Admin\\UpdateOfferRequest",
-            "field": "base_product_id",
-            "label": "Base product",
-            "detail": "server: exclude_unless|required|integer|exists; the label shows no required mark",
-            "ui": "resources/js/components/StoreOfferFormFields.vue:125",
-            "server": "app/Http/Requests/Concerns/ValidatesStoreOffer.php:22"
-        },
-        {
-            "class": "B",
-            "severity": "medium",
-            "priority": "P3",
-            "module": "Store/Admin/Marketing",
-            "kind": "vue",
-            "form": "resources/js/pages/Store/Admin/Marketing/Offers/Edit.vue",
-            "target": "OfferController@update",
-            "source": "App\\Http\\Requests\\Store\\Admin\\UpdateOfferRequest",
-            "field": "brand_id",
-            "label": "Brand",
-            "detail": "server: exclude_unless|required|integer|exists; the label shows no required mark",
-            "ui": "resources/js/components/StoreOfferFormFields.vue:102",
-            "server": "app/Http/Requests/Concerns/ValidatesStoreOffer.php:24"
-        },
-        {
-            "class": "B",
-            "severity": "medium",
-            "priority": "P3",
             "module": "Store/Admin/Notifications",
             "kind": "vue",
             "form": "resources/js/pages/Store/Admin/Notifications/Customers/Create.vue",
@@ -5248,40 +4951,10 @@
             "form": "resources/js/pages/Store/Admin/Product/DigitalProducts/Create.vue",
             "target": "DigitalProductController@store",
             "source": "App\\Http\\Requests\\Store\\Admin\\StoreDigitalProductRequest",
-            "field": "category_id",
-            "label": "Category",
-            "detail": "server: required|integer|in; the label shows no required mark",
-            "ui": "resources/js/components/StoreDigitalProductFormFields.vue:60",
-            "server": "app/Http/Requests/Concerns/ValidatesStoreDigitalProduct.php:39"
-        },
-        {
-            "class": "B",
-            "severity": "medium",
-            "priority": "P3",
-            "module": "Store/Admin/Product",
-            "kind": "vue",
-            "form": "resources/js/pages/Store/Admin/Product/DigitalProducts/Create.vue",
-            "target": "DigitalProductController@store",
-            "source": "App\\Http\\Requests\\Store\\Admin\\StoreDigitalProductRequest",
-            "field": "discount_type",
-            "label": "Discount type",
-            "detail": "server: required|string|in; the label shows no required mark",
-            "ui": "resources/js/components/StoreProductDiscountFields.vue:58",
-            "server": "app/Http/Requests/Concerns/ValidatesStoreDigitalProduct.php:47"
-        },
-        {
-            "class": "B",
-            "severity": "medium",
-            "priority": "P3",
-            "module": "Store/Admin/Product",
-            "kind": "vue",
-            "form": "resources/js/pages/Store/Admin/Product/DigitalProducts/Create.vue",
-            "target": "DigitalProductController@store",
-            "source": "App\\Http\\Requests\\Store\\Admin\\StoreDigitalProductRequest",
             "field": "tax[]",
             "label": null,
             "detail": "server: required|numeric|min|max|decimal; the label shows no required mark",
-            "ui": "resources/js/components/StoreProductTaxFields.vue:32",
+            "ui": "resources/js/components/StoreProductTaxFields.vue:33",
             "server": "app/Http/Requests/Concerns/ValidatesStoreProductTaxes.php:29"
         },
         {
@@ -5296,38 +4969,8 @@
             "field": "tax_type[]",
             "label": null,
             "detail": "server: required|string|in; the label shows no required mark",
-            "ui": "resources/js/components/StoreProductTaxFields.vue:49",
+            "ui": "resources/js/components/StoreProductTaxFields.vue:51",
             "server": "app/Http/Requests/Concerns/ValidatesStoreProductTaxes.php:31"
-        },
-        {
-            "class": "B",
-            "severity": "medium",
-            "priority": "P3",
-            "module": "Store/Admin/Product",
-            "kind": "vue",
-            "form": "resources/js/pages/Store/Admin/Product/DigitalProducts/Edit.vue",
-            "target": "DigitalProductController@update",
-            "source": "App\\Http\\Requests\\Store\\Admin\\UpdateDigitalProductRequest",
-            "field": "category_id",
-            "label": "Category",
-            "detail": "server: required|integer|in; the label shows no required mark",
-            "ui": "resources/js/components/StoreDigitalProductFormFields.vue:60",
-            "server": "app/Http/Requests/Concerns/ValidatesStoreDigitalProduct.php:39"
-        },
-        {
-            "class": "B",
-            "severity": "medium",
-            "priority": "P3",
-            "module": "Store/Admin/Product",
-            "kind": "vue",
-            "form": "resources/js/pages/Store/Admin/Product/DigitalProducts/Edit.vue",
-            "target": "DigitalProductController@update",
-            "source": "App\\Http\\Requests\\Store\\Admin\\UpdateDigitalProductRequest",
-            "field": "discount_type",
-            "label": "Discount type",
-            "detail": "server: required|string|in; the label shows no required mark",
-            "ui": "resources/js/components/StoreProductDiscountFields.vue:58",
-            "server": "app/Http/Requests/Concerns/ValidatesStoreDigitalProduct.php:47"
         },
         {
             "class": "B",
@@ -5341,7 +4984,7 @@
             "field": "tax[]",
             "label": null,
             "detail": "server: required|numeric|min|max|decimal; the label shows no required mark",
-            "ui": "resources/js/components/StoreProductTaxFields.vue:32",
+            "ui": "resources/js/components/StoreProductTaxFields.vue:33",
             "server": "app/Http/Requests/Concerns/ValidatesStoreProductTaxes.php:29"
         },
         {
@@ -5356,68 +4999,8 @@
             "field": "tax_type[]",
             "label": null,
             "detail": "server: required|string|in; the label shows no required mark",
-            "ui": "resources/js/components/StoreProductTaxFields.vue:49",
+            "ui": "resources/js/components/StoreProductTaxFields.vue:51",
             "server": "app/Http/Requests/Concerns/ValidatesStoreProductTaxes.php:31"
-        },
-        {
-            "class": "B",
-            "severity": "medium",
-            "priority": "P3",
-            "module": "Store/Admin/Product",
-            "kind": "vue",
-            "form": "resources/js/pages/Store/Admin/Product/Products/Create.vue",
-            "target": "ProductController@store",
-            "source": "App\\Http\\Requests\\Store\\Admin\\StoreProductRequest",
-            "field": "category_id",
-            "label": "Category",
-            "detail": "server: required|integer|in; the label shows no required mark",
-            "ui": "resources/js/components/StoreProductFormFields.vue:107",
-            "server": "app/Http/Requests/Concerns/ValidatesStoreProduct.php:53"
-        },
-        {
-            "class": "B",
-            "severity": "medium",
-            "priority": "P3",
-            "module": "Store/Admin/Product",
-            "kind": "vue",
-            "form": "resources/js/pages/Store/Admin/Product/Products/Create.vue",
-            "target": "ProductController@store",
-            "source": "App\\Http\\Requests\\Store\\Admin\\StoreProductRequest",
-            "field": "discount_type",
-            "label": "Discount type",
-            "detail": "server: required|string|in; the label shows no required mark",
-            "ui": "resources/js/components/StoreProductDiscountFields.vue:58",
-            "server": "app/Http/Requests/Concerns/ValidatesStoreProduct.php:75"
-        },
-        {
-            "class": "B",
-            "severity": "medium",
-            "priority": "P3",
-            "module": "Store/Admin/Product",
-            "kind": "vue",
-            "form": "resources/js/pages/Store/Admin/Product/Products/Create.vue",
-            "target": "ProductController@store",
-            "source": "App\\Http\\Requests\\Store\\Admin\\StoreProductRequest",
-            "field": "stock_visibility_state",
-            "label": "Stock visibility",
-            "detail": "server: required|string|in; the label shows no required mark",
-            "ui": "resources/js/components/StoreProductFormFields.vue:585",
-            "server": "app/Http/Requests/Concerns/ValidatesStoreProduct.php:96"
-        },
-        {
-            "class": "B",
-            "severity": "medium",
-            "priority": "P3",
-            "module": "Store/Admin/Product",
-            "kind": "vue",
-            "form": "resources/js/pages/Store/Admin/Product/Products/Create.vue",
-            "target": "ProductController@store",
-            "source": "App\\Http\\Requests\\Store\\Admin\\StoreProductRequest",
-            "field": "unit_price",
-            "label": "Unit price",
-            "detail": "server: required|numeric|min|max|decimal; the label shows no required mark",
-            "ui": "resources/js/components/StoreProductFormFields.vue:340",
-            "server": "app/Http/Requests/Concerns/ValidatesStoreProduct.php:70"
         },
         {
             "class": "B",
@@ -6121,7 +5704,7 @@
             "field": "flat_shipping_cost",
             "label": "Shipping cost",
             "detail": "server: exclude (optional); the UI requires it",
-            "ui": "resources/js/components/StoreProductFormFields.vue:518",
+            "ui": "resources/js/components/StoreProductFormFields.vue:526",
             "server": "app/Http/Requests/Concerns/ValidatesStoreProduct.php:92"
         },
         {
@@ -6136,7 +5719,7 @@
             "field": "tax[]",
             "label": null,
             "detail": "server: exclude (optional); the UI requires it",
-            "ui": "resources/js/components/StoreProductTaxFields.vue:32",
+            "ui": "resources/js/components/StoreProductTaxFields.vue:33",
             "server": "app/Http/Requests/Concerns/ValidatesStoreProductTaxes.php:29"
         },
         {
@@ -6151,7 +5734,7 @@
             "field": "tax_type[]",
             "label": null,
             "detail": "server: exclude (optional); the UI requires it",
-            "ui": "resources/js/components/StoreProductTaxFields.vue:49",
+            "ui": "resources/js/components/StoreProductTaxFields.vue:51",
             "server": "app/Http/Requests/Concerns/ValidatesStoreProductTaxes.php:31"
         },
         {
@@ -7276,7 +6859,7 @@
             "field": "product_search",
             "label": "Search products",
             "detail": "no server rule names this field",
-            "ui": "resources/js/components/StoreCouponFormFields.vue:172",
+            "ui": "resources/js/components/StoreCouponFormFields.vue:173",
             "server": null
         },
         {
@@ -7291,7 +6874,7 @@
             "field": "product_search",
             "label": "Search products",
             "detail": "no server rule names this field",
-            "ui": "resources/js/components/StoreCouponFormFields.vue:172",
+            "ui": "resources/js/components/StoreCouponFormFields.vue:173",
             "server": null
         },
         {
@@ -7306,7 +6889,7 @@
             "field": "product_search",
             "label": "Search products (base and rewards)",
             "detail": "no server rule names this field",
-            "ui": "resources/js/components/StoreCampaignProductRows.vue:92",
+            "ui": "resources/js/components/StoreCampaignProductRows.vue:93",
             "server": null
         },
         {
@@ -7321,7 +6904,7 @@
             "field": "product_search",
             "label": "Search products (base and rewards)",
             "detail": "no server rule names this field",
-            "ui": "resources/js/components/StoreCampaignProductRows.vue:92",
+            "ui": "resources/js/components/StoreCampaignProductRows.vue:93",
             "server": null
         },
         {
@@ -7336,7 +6919,7 @@
             "field": "brand_search",
             "label": "Search brands",
             "detail": "no server rule names this field",
-            "ui": "resources/js/components/StoreOfferFormFields.vue:89",
+            "ui": "resources/js/components/StoreOfferFormFields.vue:90",
             "server": null
         },
         {
@@ -7351,7 +6934,7 @@
             "field": "product_search",
             "label": "Search products (base and rewards)",
             "detail": "no server rule names this field",
-            "ui": "resources/js/components/StoreCampaignProductRows.vue:92",
+            "ui": "resources/js/components/StoreCampaignProductRows.vue:93",
             "server": null
         },
         {
@@ -7366,7 +6949,7 @@
             "field": "brand_search",
             "label": "Search brands",
             "detail": "no server rule names this field",
-            "ui": "resources/js/components/StoreOfferFormFields.vue:89",
+            "ui": "resources/js/components/StoreOfferFormFields.vue:90",
             "server": null
         },
         {
@@ -7381,7 +6964,7 @@
             "field": "product_search",
             "label": "Search products (base and rewards)",
             "detail": "no server rule names this field",
-            "ui": "resources/js/components/StoreCampaignProductRows.vue:92",
+            "ui": "resources/js/components/StoreCampaignProductRows.vue:93",
             "server": null
         },
         {
@@ -10515,7 +10098,7 @@
             "source": "App\\Http\\Requests\\Store\\Admin\\UpdateProductRequest",
             "field": "-",
             "label": null,
-            "detail": "server rules unparsed: ArgumentCountError: Too few arguments to function App\\Models\\Product::digital(), 0 passed in /home/user/warehouse_management/vendor/laravel/framework/src/Illuminate/Database/Eloque...",
+            "detail": "server rules unparsed: ArgumentCountError: Too few arguments to function App\\Models\\Product::digital(), 0 passed in /workspace/warehouse_management/vendor/laravel/framework/src/Illuminate/Database/Eloque...",
             "ui": "resources/js/pages/Store/Admin/Product/Products/Edit.vue:53",
             "server": "app/Http/Requests/Store/Admin/UpdateProductRequest.php:30"
         },
@@ -10680,7 +10263,7 @@
             "source": "App\\Http\\Requests\\Store\\Admin\\UpdateProductRequest",
             "field": "-",
             "label": null,
-            "detail": "unparsed: ArgumentCountError: Too few arguments to function App\\Models\\Product::digital(), 0 passed in /home/user/warehouse_management/vendor/laravel/framework/src/Illuminate/Database/Eloque...",
+            "detail": "unparsed: ArgumentCountError: Too few arguments to function App\\Models\\Product::digital(), 0 passed in /workspace/warehouse_management/vendor/laravel/framework/src/Illuminate/Database/Eloque...",
             "ui": null,
             "server": "app/Http/Requests/Store/Admin/UpdateProductRequest.php:30"
         },

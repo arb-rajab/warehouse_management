@@ -143,9 +143,13 @@ test('a simple product is created from the in-house list with editor content, a 
         .locator('#date_range')
         .fill('01-11-2026 08:00:00 to 30-11-2026 20:30:00');
     await page.locator('#discount').fill('1.50');
-    const vat = page.locator('label', { hasText: /^Browser VAT$/ });
-    const vatId = await vat.getAttribute('for');
-    await page.locator(`#${vatId}`).fill('21');
+    const vat = page.getByRole('spinbutton', {
+        name: 'Browser VAT required',
+        exact: true,
+    });
+    await expect(vat).toHaveAttribute('required', '');
+    const vatId = await vat.getAttribute('id');
+    await vat.fill('21');
     await page
         .locator(`#${vatId!.replace('tax_', 'tax_type_')}`)
         .selectOption('percent');

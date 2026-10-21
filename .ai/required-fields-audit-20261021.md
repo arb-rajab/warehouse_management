@@ -11,16 +11,16 @@ Server rules: **267** FormRequests (1 unparsed) and **26** controller actions wi
 
 | Class | Meaning | Severity | Findings |
 | --- | --- | --- | ---: |
-| A | server-required, no `required` attribute (or no control at all) | high | 53 |
-| B | server-required, no visible mark | medium | 79 |
+| A | server-required, no `required` attribute (or no control at all) | high | 52 |
+| B | server-required, no visible mark | medium | 53 |
 | C | `required` or a mark, but the server rule is optional or absent | high | 72 |
 | D | conditional server rule, static `required` or mark | medium | 10 |
 | E | control with no matching server rule | low | 215 |
 | F | unparsed (server rules or form action) | info | 23 |
-| | **Total** | | **452** |
+| | **Total** | | **425** |
 
-By severity: high 125, medium 89, low 215, info 23.
-By priority: P1 8, P2 288, P3 156 (P1 public storefront forms: registration, address, checkout, contact, seller registration; P2 other storefront, account and seller-panel forms; P3 back office).
+By severity: high 124, medium 63, low 215, info 23.
+By priority: P1 8, P2 288, P3 129 (P1 public storefront forms: registration, address, checkout, contact, seller registration; P2 other storefront, account and seller-panel forms; P3 back office).
 
 ## Per module
 
@@ -36,9 +36,9 @@ By priority: P1 8, P2 288, P3 156 (P1 public storefront forms: registration, add
 | Store/Admin/Catalogue | 1 | 0 | 0 | 0 | 0 | 0 | 0 |
 | Store/Admin/Customers | 13 | 0 | 4 | 7 | 0 | 0 | 0 |
 | Store/Admin/Languages | 7 | 3 | 0 | 0 | 0 | 2 | 0 |
-| Store/Admin/Marketing | 19 | 4 | 18 | 0 | 0 | 8 | 0 |
+| Store/Admin/Marketing | 19 | 4 | 0 | 0 | 0 | 8 | 0 |
 | Store/Admin/Notifications | 1 | 0 | 1 | 0 | 0 | 0 | 0 |
-| Store/Admin/Product | 24 | 1 | 13 | 3 | 0 | 0 | 5 |
+| Store/Admin/Product | 24 | 0 | 5 | 3 | 0 | 0 | 5 |
 | Store/Admin/Profile | 1 | 0 | 0 | 0 | 0 | 1 | 0 |
 | Store/Admin/Representatives | 3 | 1 | 0 | 0 | 0 | 0 | 0 |
 | Store/Admin/Sales | 9 | 6 | 1 | 1 | 0 | 6 | 2 |
@@ -148,50 +148,28 @@ Each line: class, field (label), what differs, then the UI and server locations.
 ### Store/Admin/Marketing
 
 - `resources/js/pages/Store/Admin/Marketing/Coupons/Create.vue → CouponController@store` (App\Http\Requests\Store\Admin\StoreCouponRequest)
-  - **B** `discount_type` (Discount type): server: required|in; the label shows no required mark. UI resources/js/components/StoreCouponFormFields.vue:100, server app/Http/Requests/Concerns/ValidatesStoreCoupon.php:21
-  - **B** `product_ids[]` (Products): server: exclude_unless|required|array|min|max; the label shows no required mark. UI resources/js/components/StoreCouponFormFields.vue:194, server app/Http/Requests/Concerns/ValidatesStoreCoupon.php:25
-  - **B** `type` (Coupon type): server: required|in; the label shows no required mark. UI resources/js/components/StoreCouponFormFields.vue:72, server app/Http/Requests/Concerns/ValidatesStoreCoupon.php:19
-  - **E** `product_search` (Search products): no server rule names this field. UI resources/js/components/StoreCouponFormFields.vue:172
+  - **E** `product_search` (Search products): no server rule names this field. UI resources/js/components/StoreCouponFormFields.vue:173
 
 - `resources/js/pages/Store/Admin/Marketing/Coupons/Edit.vue → CouponController@update` (App\Http\Requests\Store\Admin\UpdateCouponRequest)
-  - **B** `discount_type` (Discount type): server: required|in; the label shows no required mark. UI resources/js/components/StoreCouponFormFields.vue:100, server app/Http/Requests/Concerns/ValidatesStoreCoupon.php:21
-  - **B** `product_ids[]` (Products): server: exclude_unless|required|array|min|max; the label shows no required mark. UI resources/js/components/StoreCouponFormFields.vue:194, server app/Http/Requests/Concerns/ValidatesStoreCoupon.php:25
-  - **B** `type` (Coupon type): server: required|in; the label shows no required mark. UI resources/js/components/StoreCouponFormFields.vue:72, server app/Http/Requests/Concerns/ValidatesStoreCoupon.php:19
-  - **E** `product_search` (Search products): no server rule names this field. UI resources/js/components/StoreCouponFormFields.vue:172
-
-- `resources/js/pages/Store/Admin/Marketing/DynamicPopups/Create.vue → DynamicPopupController@store` (App\Http\Requests\Store\Admin\StoreDynamicPopupRequest)
-  - **B** `offer_id` (Offer): server: required|integer|exists; the label shows no required mark. UI resources/js/components/StoreDynamicPopupFormFields.vue:79, server app/Http/Requests/Concerns/ValidatesStoreDynamicPopup.php:23
-  - **B** `show_page` (Show on page): server: bail|required|integer|min|closure; the label shows no required mark. UI resources/js/components/StoreDynamicPopupFormFields.vue:103, server app/Http/Requests/Concerns/ValidatesStoreDynamicPopup.php:27
-  - **B** `summary` (Summary): server: required|string|max; the label shows no required mark. UI resources/js/components/StoreDynamicPopupFormFields.vue:36, server app/Http/Requests/Concerns/ValidatesStoreDynamicPopup.php:19
-
-- `resources/js/pages/Store/Admin/Marketing/DynamicPopups/Edit.vue → DynamicPopupController@update` (App\Http\Requests\Store\Admin\UpdateDynamicPopupRequest)
-  - **B** `offer_id` (Offer): server: required|integer|exists; the label shows no required mark. UI resources/js/components/StoreDynamicPopupFormFields.vue:79, server app/Http/Requests/Concerns/ValidatesStoreDynamicPopup.php:23
-  - **B** `show_page` (Show on page): server: bail|required|integer|min|closure; the label shows no required mark. UI resources/js/components/StoreDynamicPopupFormFields.vue:103, server app/Http/Requests/Concerns/ValidatesStoreDynamicPopup.php:27
-  - **B** `summary` (Summary): server: required|string|max; the label shows no required mark. UI resources/js/components/StoreDynamicPopupFormFields.vue:36, server app/Http/Requests/Concerns/ValidatesStoreDynamicPopup.php:19
+  - **E** `product_search` (Search products): no server rule names this field. UI resources/js/components/StoreCouponFormFields.vue:173
 
 - `resources/js/pages/Store/Admin/Marketing/FlashDeals/Create.vue → FlashDealController@store` (App\Http\Requests\Store\Admin\StoreFlashDealRequest)
   - **A** `products`: server: required|array|min|max; the form has no control for it. UI resources/js/pages/Store/Admin/Marketing/FlashDeals/Create.vue:14, server app/Http/Requests/Concerns/ValidatesStoreCampaign.php:31
-  - **B** `text_color` (Text colour): server: required|in; the label shows no required mark. UI resources/js/components/StoreFlashDealFormFields.vue:46, server app/Http/Requests/Concerns/ValidatesStoreFlashDeal.php:18
-  - **E** `product_search` (Search products (base and rewards)): no server rule names this field. UI resources/js/components/StoreCampaignProductRows.vue:92
+  - **E** `product_search` (Search products (base and rewards)): no server rule names this field. UI resources/js/components/StoreCampaignProductRows.vue:93
 
 - `resources/js/pages/Store/Admin/Marketing/FlashDeals/Edit.vue → FlashDealController@update` (App\Http\Requests\Store\Admin\UpdateFlashDealRequest)
   - **A** `products`: server: required|array|min|max; the form has no control for it. UI resources/js/pages/Store/Admin/Marketing/FlashDeals/Edit.vue:29, server app/Http/Requests/Concerns/ValidatesStoreCampaign.php:31
-  - **B** `text_color` (Text colour): server: required|in; the label shows no required mark. UI resources/js/components/StoreFlashDealFormFields.vue:46, server app/Http/Requests/Concerns/ValidatesStoreFlashDeal.php:18
-  - **E** `product_search` (Search products (base and rewards)): no server rule names this field. UI resources/js/components/StoreCampaignProductRows.vue:92
+  - **E** `product_search` (Search products (base and rewards)): no server rule names this field. UI resources/js/components/StoreCampaignProductRows.vue:93
 
 - `resources/js/pages/Store/Admin/Marketing/Offers/Create.vue → OfferController@store` (App\Http\Requests\Store\Admin\StoreOfferRequest)
   - **A** `products`: server: required|array|min|max; the form has no control for it. UI resources/js/pages/Store/Admin/Marketing/Offers/Create.vue:18, server app/Http/Requests/Concerns/ValidatesStoreCampaign.php:31
-  - **B** `base_product_id` (Base product): server: exclude_unless|required|integer|exists; the label shows no required mark. UI resources/js/components/StoreOfferFormFields.vue:125, server app/Http/Requests/Concerns/ValidatesStoreOffer.php:22
-  - **B** `brand_id` (Brand): server: exclude_unless|required|integer|exists; the label shows no required mark. UI resources/js/components/StoreOfferFormFields.vue:102, server app/Http/Requests/Concerns/ValidatesStoreOffer.php:24
-  - **E** `brand_search` (Search brands): no server rule names this field. UI resources/js/components/StoreOfferFormFields.vue:89
-  - **E** `product_search` (Search products (base and rewards)): no server rule names this field. UI resources/js/components/StoreCampaignProductRows.vue:92
+  - **E** `brand_search` (Search brands): no server rule names this field. UI resources/js/components/StoreOfferFormFields.vue:90
+  - **E** `product_search` (Search products (base and rewards)): no server rule names this field. UI resources/js/components/StoreCampaignProductRows.vue:93
 
 - `resources/js/pages/Store/Admin/Marketing/Offers/Edit.vue → OfferController@update` (App\Http\Requests\Store\Admin\UpdateOfferRequest)
   - **A** `products`: server: required|array|min|max; the form has no control for it. UI resources/js/pages/Store/Admin/Marketing/Offers/Edit.vue:25, server app/Http/Requests/Concerns/ValidatesStoreCampaign.php:31
-  - **B** `base_product_id` (Base product): server: exclude_unless|required|integer|exists; the label shows no required mark. UI resources/js/components/StoreOfferFormFields.vue:125, server app/Http/Requests/Concerns/ValidatesStoreOffer.php:22
-  - **B** `brand_id` (Brand): server: exclude_unless|required|integer|exists; the label shows no required mark. UI resources/js/components/StoreOfferFormFields.vue:102, server app/Http/Requests/Concerns/ValidatesStoreOffer.php:24
-  - **E** `brand_search` (Search brands): no server rule names this field. UI resources/js/components/StoreOfferFormFields.vue:89
-  - **E** `product_search` (Search products (base and rewards)): no server rule names this field. UI resources/js/components/StoreCampaignProductRows.vue:92
+  - **E** `brand_search` (Search brands): no server rule names this field. UI resources/js/components/StoreOfferFormFields.vue:90
+  - **E** `product_search` (Search products (base and rewards)): no server rule names this field. UI resources/js/components/StoreCampaignProductRows.vue:93
 
 ### Store/Admin/Notifications
 
@@ -210,32 +188,23 @@ Each line: class, field (label), what differs, then the UI and server locations.
   - **F** `-`: server rules partly unparsed: rules are not a literal array at line 126. UI resources/js/pages/Store/Admin/Product/Categories/Edit.vue:29, server app/Http/Requests/Store/Admin/UpdateCategoryRequest.php:19
 
 - `resources/js/pages/Store/Admin/Product/DigitalProducts/Create.vue → DigitalProductController@store` (App\Http\Requests\Store\Admin\StoreDigitalProductRequest)
-  - **B** `category_id` (Category): server: required|integer|in; the label shows no required mark. UI resources/js/components/StoreDigitalProductFormFields.vue:60, server app/Http/Requests/Concerns/ValidatesStoreDigitalProduct.php:39
-  - **B** `discount_type` (Discount type): server: required|string|in; the label shows no required mark. UI resources/js/components/StoreProductDiscountFields.vue:58, server app/Http/Requests/Concerns/ValidatesStoreDigitalProduct.php:47
-  - **B** `tax[]`: server: required|numeric|min|max|decimal; the label shows no required mark. UI resources/js/components/StoreProductTaxFields.vue:32, server app/Http/Requests/Concerns/ValidatesStoreProductTaxes.php:29
-  - **B** `tax_type[]`: server: required|string|in; the label shows no required mark. UI resources/js/components/StoreProductTaxFields.vue:49, server app/Http/Requests/Concerns/ValidatesStoreProductTaxes.php:31
+  - **B** `tax[]`: server: required|numeric|min|max|decimal; the label shows no required mark. UI resources/js/components/StoreProductTaxFields.vue:33, server app/Http/Requests/Concerns/ValidatesStoreProductTaxes.php:29
+  - **B** `tax_type[]`: server: required|string|in; the label shows no required mark. UI resources/js/components/StoreProductTaxFields.vue:51, server app/Http/Requests/Concerns/ValidatesStoreProductTaxes.php:31
 
 - `resources/js/pages/Store/Admin/Product/DigitalProducts/Edit.vue → DigitalProductController@update` (App\Http\Requests\Store\Admin\UpdateDigitalProductRequest)
-  - **B** `category_id` (Category): server: required|integer|in; the label shows no required mark. UI resources/js/components/StoreDigitalProductFormFields.vue:60, server app/Http/Requests/Concerns/ValidatesStoreDigitalProduct.php:39
-  - **B** `discount_type` (Discount type): server: required|string|in; the label shows no required mark. UI resources/js/components/StoreProductDiscountFields.vue:58, server app/Http/Requests/Concerns/ValidatesStoreDigitalProduct.php:47
-  - **B** `tax[]`: server: required|numeric|min|max|decimal; the label shows no required mark. UI resources/js/components/StoreProductTaxFields.vue:32, server app/Http/Requests/Concerns/ValidatesStoreProductTaxes.php:29
-  - **B** `tax_type[]`: server: required|string|in; the label shows no required mark. UI resources/js/components/StoreProductTaxFields.vue:49, server app/Http/Requests/Concerns/ValidatesStoreProductTaxes.php:31
+  - **B** `tax[]`: server: required|numeric|min|max|decimal; the label shows no required mark. UI resources/js/components/StoreProductTaxFields.vue:33, server app/Http/Requests/Concerns/ValidatesStoreProductTaxes.php:29
+  - **B** `tax_type[]`: server: required|string|in; the label shows no required mark. UI resources/js/components/StoreProductTaxFields.vue:51, server app/Http/Requests/Concerns/ValidatesStoreProductTaxes.php:31
 
 - `resources/js/pages/Store/Admin/Product/DigitalProducts/Index.vue → (unresolved)`
   - **F** `-`: form action not resolved: item.action(product, { mergeQuery: {} }). UI resources/js/pages/Store/Admin/Product/DigitalProducts/Index.vue:131
 
 - `resources/js/pages/Store/Admin/Product/Products/Create.vue → ProductController@store` (App\Http\Requests\Store\Admin\StoreProductRequest)
-  - **A** `stock_visibility_state` (Stock visibility): server: required|string|in; the control has no required attribute. UI resources/js/components/StoreProductFormFields.vue:585, server app/Http/Requests/Concerns/ValidatesStoreProduct.php:96
-  - **B** `category_id` (Category): server: required|integer|in; the label shows no required mark. UI resources/js/components/StoreProductFormFields.vue:107, server app/Http/Requests/Concerns/ValidatesStoreProduct.php:53
-  - **B** `discount_type` (Discount type): server: required|string|in; the label shows no required mark. UI resources/js/components/StoreProductDiscountFields.vue:58, server app/Http/Requests/Concerns/ValidatesStoreProduct.php:75
-  - **B** `stock_visibility_state` (Stock visibility): server: required|string|in; the label shows no required mark. UI resources/js/components/StoreProductFormFields.vue:585, server app/Http/Requests/Concerns/ValidatesStoreProduct.php:96
-  - **B** `unit_price` (Unit price): server: required|numeric|min|max|decimal; the label shows no required mark. UI resources/js/components/StoreProductFormFields.vue:340, server app/Http/Requests/Concerns/ValidatesStoreProduct.php:70
-  - **C** `flat_shipping_cost` (Shipping cost): server: exclude (optional); the UI requires it. UI resources/js/components/StoreProductFormFields.vue:518, server app/Http/Requests/Concerns/ValidatesStoreProduct.php:92
-  - **C** `tax[]`: server: exclude (optional); the UI requires it. UI resources/js/components/StoreProductTaxFields.vue:32, server app/Http/Requests/Concerns/ValidatesStoreProductTaxes.php:29
-  - **C** `tax_type[]`: server: exclude (optional); the UI requires it. UI resources/js/components/StoreProductTaxFields.vue:49, server app/Http/Requests/Concerns/ValidatesStoreProductTaxes.php:31
+  - **C** `flat_shipping_cost` (Shipping cost): server: exclude (optional); the UI requires it. UI resources/js/components/StoreProductFormFields.vue:526, server app/Http/Requests/Concerns/ValidatesStoreProduct.php:92
+  - **C** `tax[]`: server: exclude (optional); the UI requires it. UI resources/js/components/StoreProductTaxFields.vue:33, server app/Http/Requests/Concerns/ValidatesStoreProductTaxes.php:29
+  - **C** `tax_type[]`: server: exclude (optional); the UI requires it. UI resources/js/components/StoreProductTaxFields.vue:51, server app/Http/Requests/Concerns/ValidatesStoreProductTaxes.php:31
 
 - `resources/js/pages/Store/Admin/Product/Products/Edit.vue → ProductController@update` (App\Http\Requests\Store\Admin\UpdateProductRequest)
-  - **F** `-`: server rules unparsed: ArgumentCountError: Too few arguments to function App\Models\Product::digital(), 0 passed in /home/user/warehouse_management/vendor/laravel/framework/src/Illuminate/Database/Eloque.... UI resources/js/pages/Store/Admin/Product/Products/Edit.vue:53, server app/Http/Requests/Store/Admin/UpdateProductRequest.php:30
+  - **F** `-`: server rules unparsed: ArgumentCountError: Too few arguments to function App\Models\Product::digital(), 0 passed in /workspace/warehouse_management/vendor/laravel/framework/src/Illuminate/Database/Eloque.... UI resources/js/pages/Store/Admin/Product/Products/Edit.vue:53, server app/Http/Requests/Store/Admin/UpdateProductRequest.php:30
 
 - `resources/js/pages/Store/Admin/Product/Products/Index.vue → (unresolved)`
   - **F** `-`: form action not resolved: listIndex(). UI resources/js/pages/Store/Admin/Product/Products/Index.vue:283
@@ -644,7 +613,7 @@ Each line: class, field (label), what differs, then the UI and server locations.
   - **F** `-`: unparsed: rules are not a literal array at line 126. UI -, server app/Http/Controllers/Store/Admin/CategoryController.php:126
 
 - `app/Http/Requests/Store/Admin/UpdateProductRequest.php → App\Http\Requests\Store\Admin\UpdateProductRequest` (App\Http\Requests\Store\Admin\UpdateProductRequest)
-  - **F** `-`: unparsed: ArgumentCountError: Too few arguments to function App\Models\Product::digital(), 0 passed in /home/user/warehouse_management/vendor/laravel/framework/src/Illuminate/Database/Eloque.... UI -, server app/Http/Requests/Store/Admin/UpdateProductRequest.php:30
+  - **F** `-`: unparsed: ArgumentCountError: Too few arguments to function App\Models\Product::digital(), 0 passed in /workspace/warehouse_management/vendor/laravel/framework/src/Illuminate/Database/Eloque.... UI -, server app/Http/Requests/Store/Admin/UpdateProductRequest.php:30
 
 ### storefront
 

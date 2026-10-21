@@ -13,8 +13,9 @@ use Illuminate\Testing\TestResponse;
 
 /**
  * reCAPTCHA on the server. With the `google_recaptcha` setting on, seller
- * registration (shops.store) and a representative's create customer
- * (store_customer) show Google's widget; the endpoints now verify its token
+ * registration (shops.store), a representative's create customer
+ * (store_customer), and both customer registration pages show Google's
+ * widget; their three POST endpoints verify its token
  * with Google (App\Rules\Recaptcha) using the secret in
  * services.recaptcha.secret_key (CAPTCHA_SECRET). They fail closed: a missing
  * secret, a provider error or an unreachable provider refuses the form like a
@@ -28,7 +29,7 @@ const RECAPTCHA_VERIFY_URL = 'https://www.google.com/recaptcha/api/siteverify';
  */
 function recaptchaForms(): array
 {
-    return [
+    $forms = [
         'seller registration' => [
             '/temp/shops/create',
             fn (array $extra) => test()->from('/temp/shops/create')->post('/temp/shops', [
@@ -55,6 +56,16 @@ function recaptchaForms(): array
             fn () => StoreUser::where('email', 'new-customer@example.com')->exists(),
         ],
     ];
+
+    foreach (['/temp/register', '/temp/users/registration'] as $page) {
+        $forms['customer registration '.$page] = [
+            $page,
+            fn (array $extra) => test()->from($page)->post('/temp/register', [...completeRegistration(), ...$extra]),
+            fn () => StoreUser::where('email', 'new-customer@example.com')->exists(),
+        ];
+    }
+
+    return $forms;
 }
 
 beforeEach(function () {

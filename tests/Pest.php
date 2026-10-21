@@ -144,6 +144,24 @@ function createStoreUser(string $userType = 'customer', ?string $email = null, s
 }
 
 /**
+ * @return array<string, string>
+ */
+function completeRegistration(array $overrides = []): array
+{
+    return [
+        'name' => 'New Customer',
+        'company_name' => 'Acme BV',
+        'email' => 'new-customer@example.com',
+        'phone' => '612345678',
+        'country_code' => '31',
+        'country' => 'Netherlands',
+        'password' => 'secret123',
+        'password_confirmation' => 'secret123',
+        ...$overrides,
+    ];
+}
+
+/**
  * Authenticate a legacy store user on the store's own `store` guard.
  *
  * actingAs() also makes its guard the default for the rest of the test, which

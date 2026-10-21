@@ -2,6 +2,7 @@
 import { ref } from 'vue';
 import FieldError from '@/components/FieldError.vue';
 import FormField from '@/components/FormField.vue';
+import RequiredMark from '@/components/RequiredMark.vue';
 import StoreUploadField from '@/components/StoreUploadField.vue';
 import { fieldLabelClass, plainFieldInputClass } from '@/lib/filters';
 import { t } from '@/lib/i18n';
@@ -30,9 +31,9 @@ const showPage = ref(props.popup?.show_page ?? '');
             maxlength="100"
         />
         <div>
-            <label for="summary" :class="fieldLabelClass">{{
-                t('store.dynamicPopups.fields.summary')
-            }}</label>
+            <label for="summary" :class="fieldLabelClass"
+                >{{ t('store.dynamicPopups.fields.summary') }}<RequiredMark
+            /></label>
             <textarea
                 id="summary"
                 name="summary"
@@ -73,9 +74,9 @@ const showPage = ref(props.popup?.show_page ?? '');
             step="1"
         />
         <div>
-            <label for="offer_id" :class="fieldLabelClass">{{
-                t('store.dynamicPopups.fields.offer')
-            }}</label>
+            <label for="offer_id" :class="fieldLabelClass"
+                >{{ t('store.dynamicPopups.fields.offer') }}<RequiredMark
+            /></label>
             <select
                 id="offer_id"
                 name="offer_id"
@@ -97,9 +98,9 @@ const showPage = ref(props.popup?.show_page ?? '');
             <FieldError :message="errors.offer_id" />
         </div>
         <div>
-            <label for="show_page" :class="fieldLabelClass">{{
-                t('store.dynamicPopups.fields.page')
-            }}</label>
+            <label for="show_page" :class="fieldLabelClass"
+                >{{ t('store.dynamicPopups.fields.page') }}<RequiredMark
+            /></label>
             <select
                 id="show_page"
                 name="show_page"

@@ -27,24 +27,6 @@ function registrationPages(): array
 }
 
 /**
- * @return array<string, string>
- */
-function completeRegistration(array $overrides = []): array
-{
-    return [
-        'name' => 'New Customer',
-        'company_name' => 'Acme BV',
-        'email' => 'new-customer@example.com',
-        'phone' => '612345678',
-        'country_code' => '31',
-        'country' => 'Netherlands',
-        'password' => 'secret123',
-        'password_confirmation' => 'secret123',
-        ...$overrides,
-    ];
-}
-
-/**
  * The visible controls of the registration form, by name.
  *
  * @return array<string, DOMElement>

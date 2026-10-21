@@ -2816,6 +2816,7 @@
                 "freeShipping": "شحن مجاني",
                 "flatRate": "سعر ثابت",
                 "shippingCost": "تكلفة الشحن",
+                "shippingCostHelp": "مطلوب عند اختيار الشحن بسعر ثابت.",
                 "quantityMultiplied": "ضرب تكلفة الشحن في الكمية",
                 "shippingConfiguredElsewhere": "تكلفة الشحن لكل منتج متوقفة. تُضبط تكلفة الشحن من هنا:",
                 "shippingDays": "أيام الشحن المتوقعة",
@@ -2833,6 +2834,7 @@
                 "addToFlash": "إضافة إلى عرض خاطف",
                 "chooseFlashDeal": "اختر عرضًا خاطفًا",
                 "flashDiscount": "خصم العرض الخاطف",
+                "flashDiscountHelp": "الخصم ونوعه مطلوبان عند اختيار عرض سريع.",
                 "flashDiscountType": "نوع خصم العرض الخاطف",
                 "chooseDiscountType": "اختر نوع الخصم"
             }

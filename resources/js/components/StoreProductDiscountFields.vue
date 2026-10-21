@@ -2,6 +2,7 @@
 import { ref } from 'vue';
 import FieldError from '@/components/FieldError.vue';
 import FormField from '@/components/FormField.vue';
+import RequiredMark from '@/components/RequiredMark.vue';
 import { fieldLabelClass, plainFieldInputClass } from '@/lib/filters';
 import { t } from '@/lib/i18n';
 import { discountRangePattern, productAmountMax } from '@/lib/storeProductForm';
@@ -52,9 +53,9 @@ const type = ref(props.discountType === 'percent' ? 'percent' : 'amount');
             required
         />
         <div>
-            <label for="discount_type" :class="fieldLabelClass">{{
-                t('store.productForm.discountType')
-            }}</label>
+            <label for="discount_type" :class="fieldLabelClass"
+                >{{ t('store.productForm.discountType') }}<RequiredMark
+            /></label>
             <select
                 id="discount_type"
                 v-model="type"

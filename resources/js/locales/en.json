@@ -2816,6 +2816,7 @@
                 "freeShipping": "Free shipping",
                 "flatRate": "Flat rate",
                 "shippingCost": "Shipping cost",
+                "shippingCostHelp": "Required when flat-rate shipping is selected.",
                 "quantityMultiplied": "Multiply the shipping cost by the quantity",
                 "shippingConfiguredElsewhere": "Product-wise shipping cost is off. Shipping cost is configured here:",
                 "shippingDays": "Estimated shipping days",
@@ -2833,6 +2834,7 @@
                 "addToFlash": "Add to flash deal",
                 "chooseFlashDeal": "Choose a flash deal",
                 "flashDiscount": "Flash discount",
+                "flashDiscountHelp": "The discount and its type are required when a flash deal is selected.",
                 "flashDiscountType": "Flash discount type",
                 "chooseDiscountType": "Choose a discount type"
             }
