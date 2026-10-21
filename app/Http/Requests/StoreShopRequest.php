@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Models\StoreUser;
+use App\Rules\Recaptcha;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Support\Facades\Auth;
@@ -19,6 +20,7 @@ use Illuminate\Validation\Rule;
  * Only a guest registers: ShopController::create shows the form to nobody
  * else, and a signed-in account posting here by hand is turned away the same
  * way, before its input is read, instead of being converted into a seller.
+ * With reCAPTCHA on, the widget's token is verified with Google (Recaptcha).
  */
 class StoreShopRequest extends FormRequest
 {
@@ -66,6 +68,15 @@ class StoreShopRequest extends FormRequest
             'password' => ['required', 'string', 'min:6', 'confirmed'],
             'shop_name' => ['required', 'string', 'max:200'],
             'address' => ['required', 'string', 'max:500'],
+            'g-recaptcha-response' => Recaptcha::rules(),
         ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return Recaptcha::messages();
     }
 }

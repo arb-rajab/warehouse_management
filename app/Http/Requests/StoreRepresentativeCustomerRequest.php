@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Models\StoreUser;
+use App\Rules\Recaptcha;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -15,6 +16,7 @@ use Illuminate\Validation\Rule;
  * varchar(255); the tax and bank numbers keep their 100. A longer value was a
  * MySQL error, and an array for most fields a 500. The trade license is one of
  * the kinds TradeLicenseStorage keeps (the old list's "bmb" matched nothing).
+ * With reCAPTCHA on, the widget's token is verified with Google (Recaptcha).
  */
 class StoreRepresentativeCustomerRequest extends FormRequest
 {
@@ -45,6 +47,15 @@ class StoreRepresentativeCustomerRequest extends FormRequest
             'phone' => ['required', 'string', 'max:20'],
             'company_address' => ['required', 'string', 'max:255'],
             'shipping_address' => ['required', 'string', 'max:255'],
+            'g-recaptcha-response' => Recaptcha::rules(),
         ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return Recaptcha::messages();
     }
 }
