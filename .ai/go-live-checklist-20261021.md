@@ -169,6 +169,13 @@ The production `.env` lives at `$DEPLOY_PATH/shared/.env` and is symlinked into 
   - Evidence: `.ai/rules/shared-database.md:45-50` vs `app/Services/Concerns/WritesUploads.php:41-48`.
   - Verify: after the first upload in §7, `SELECT id, file_name, user_id FROM uploads ORDER BY id DESC LIMIT 1;` shows the new row.
 
+- [ ] **3.10** **[developer]** The reference data loads with `php artisan migrate` (guide §46): 246 countries (21 enabled), 4,089 states, 26 currencies, 4 languages, 7 CMS pages and the default-currency setting. It only inserts what is missing, so it is safe on a database that already has the legacy rows. Check after the first deploy: `SELECT COUNT(*) FROM countries WHERE status = 1;` returns 21 (or your own count if it already had rows) and `SELECT value FROM business_settings WHERE type = 'system_default_currency';` returns the Euro's id.
+  - Evidence: `database/migrations/2026_10_21_100000_load_legacy_reference_data.php`, `app/Support/ReferenceData.php`, `tests/Feature/Database/LoadLegacyReferenceDataTest.php` (green on SQLite and on MySQL).
+  - Verify: `/temp/register` shows a country dropdown with Belgium, France, Germany and the Netherlands first, and the terms pop-up shows the terms text.
+- [ ] **3.11** **[owner]** Review the enabled countries on the admin Countries page. The legacy store sold to the 21 listed in guide §46; enable or disable others as needed (the phone field on the registration page offers exactly the enabled countries).
+- [ ] **3.12** **[owner]** Update the currency exchange rates on the admin Currencies page. They are the legacy store's 2023 values (USD = 1, Euro = 0.92) and are stale.
+- [ ] **3.13** **[owner]** Write the three empty policy pages (seller, return and support policy) and read the Terms and Privacy text once: it is the legacy text, cleaned of Word formatting. The privacy text names `info@albarakabv.com`. Zones and shipping set-up were empty in the legacy store and still are.
+
 ## 4. Permissions and the first admin
 
 The owner launches with the **Super Admin role only**; staff roles are created later in the app. `Gate::before()` passes a Super Admin through every permission gate.

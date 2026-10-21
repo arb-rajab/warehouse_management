@@ -20,6 +20,7 @@ paths:
 
 # Moving the store back office from Blade to Inertia
 
+Reference-data follow-up: [legacy countries, states, currencies, languages and CMS pages as a migration](#46-legacy-reference-data-as-a-migration-2026-10-21).
 Forms follow-up: [required and optional form fields](#44-required-and-optional-form-fields-2026-10-21), then [the public address forms and the checkout address pick](#45-public-forms-phase-2a-address-forms-and-the-checkout-address-pick-2026-10-21).
 Latest follow-up: [retire the unused admin shells](#39-retire-the-unused-admin-shells-2026-10-20).
 Catalogue follow-up: [admin seller product list](#38-admin-seller-product-list-2026-10-20).
@@ -5006,3 +5007,67 @@ C and 117 E, mostly endpoints that validate nothing, so FormRequests first), wit
 to `FIXED_STOREFRONT_FORMS`.
 
 **What was verified, and what was not.** See the PR's final report for the exact commands and results.
+
+
+## 46. Legacy reference data as a migration (2026-10-21)
+
+A fresh, greenfield database has none of the rows the legacy store carried in its
+own database. Found while testing registration on the dev site: the country list
+was empty, the terms and conditions were empty, and every price would have failed
+(`get_system_default_currency()` does `Currency::findOrFail(get_setting('system_default_currency'))`
+and that setting did not exist).
+
+**What is loaded.** Migration `2026_10_21_100000_load_legacy_reference_data`
+calls `App\Support\ReferenceData`, which reads `database/data/reference/*.json`
+(extracted by the owner from the legacy dump dated 2026-09-12; reference data
+only, scanned for secrets and personal data before it was committed):
+
+| Table | Rows | Notes |
+|---|---|---|
+| `countries` | 246 | **21 enabled** (Austria, Belgium, Bulgaria, Denmark, Finland, France, Germany, Hungary, Iceland, Italy, Luxembourg, Malta, Netherlands, Norway, Poland, Portugal, Romania, Slovakia, Spain, Sweden, Switzerland); Belgium, France, Germany and the Netherlands have `priority` 1. The rest are listed but off. The admin Countries page switches them. |
+| `states` | 4,089 | The legacy list has 4,091; two names occur twice in one country (Kyunggi-do in South Korea, Sussex in the United Kingdom) and are loaded once. |
+| `currencies` | 26 | Euro is the active one. **The exchange rates are the legacy store's 2023 values (USD = 1) and are stale.** |
+| `languages` | 4 | English, Arabic (code `sa`, app code `ar`, right to left), German, Dutch. |
+| `pages` | 7 | Home, the five policy pages and About Us. Only Terms, Privacy and About Us carry text; the seller, return and support policy pages are empty in the legacy data and stay empty. |
+| `page_translations` | 3 | English rows for Terms, Privacy and About Us. |
+| `business_settings` | 1 | `system_default_currency` = the Euro's id, only when the setting does not exist. |
+| `zones` | 0 | Empty in the legacy store; nothing is loaded. |
+
+**Safe to rerun, and on a database that already has the legacy rows.** A row is
+inserted only when neither its id nor its natural key exists (country, currency
+and language code; page type, or slug for custom pages; state name within a
+country; page translation language). An existing row is never updated, renamed,
+enabled, disabled or deleted. States follow their country by code, so they land
+on the right country even if its id differs. A second active currency is never
+created, and an existing default-currency setting is never replaced. `down()` is
+a no-op because addresses and settings come to reference these rows.
+
+**Page text was cleaned once, offline.** The legacy policy HTML was pasted from
+Microsoft Word (`<style>` blocks, `<head>`, `<meta>`, damaged attributes). It
+went through `HtmlSanitizer` and the visible words were compared before and after:
+identical in all six texts (the Privacy page shrinks from 32 KB to 18 KB). A stray
+right-to-left embedding mark at the end of the About Us title was removed.
+
+**Skipped under `APP_ENV=testing`.** The test suites and the browser fixtures start
+from empty reference tables and create what they need; loading 4,000 states into
+every test database would break tests that expect them empty. `LoadLegacyReferenceDataTest`
+calls the loader directly, runs on SQLite and on MySQL (it is in the CI MySQL job
+and in `pre_push_check.py`'s MySQL list), and runs the migration under a non-testing
+environment.
+
+**Registration pages.** Both pages now show the real Terms page in the agreement
+pop-up (they printed a business setting nothing writes, `get_setting('terms')`);
+without a terms page they say so instead of showing an empty box. `/temp/register`
+offers the enabled countries as a dropdown, priority countries first, and keeps the
+text box when no country is enabled. `/temp/users/registration` already had a
+dropdown over the `countries` table; it is no longer empty. The phone widget's
+country list is the 21 enabled countries.
+
+**Left alone.** The terms *email* (`shop/emails/terms.blade.php`) still prints
+`get_setting('terms')`; the `business_settings` rows of the legacy store were not
+extracted (they mix harmless settings with API keys and passwords), so settings
+other than the default currency still come from the admin screens.
+
+**Owner items** are in the go-live checklist, 3.10 to 3.13: review the enabled
+countries, update the exchange rates, write the three empty policy pages, and
+decide on the zones and the shipping set-up.
