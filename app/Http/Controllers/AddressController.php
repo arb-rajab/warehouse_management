@@ -45,7 +45,7 @@ class AddressController extends Controller
     {
         $address = new Address;
         $address->user_id = $request->ownerId();
-        $this->fillFromForm($address, $request->validated());
+        $address->fillFromForm($request->validated());
         $address->save();
 
         flash(translate('Address info Stored successfully'))->success();
@@ -91,24 +91,11 @@ class AddressController extends Controller
     public function update(UpdateAddressRequest $request, $id)
     {
         $address = $request->targetAddress();
-        $this->fillFromForm($address, $request->validated());
+        $address->fillFromForm($request->validated());
         $address->save();
 
         flash(translate('Address info updated successfully'))->success();
         return back();
-    }
-
-    /**
-     * Writes what the address forms send, as before: a field left out of the
-     * form (state and city, and the coordinates without the map) is cleared.
-     *
-     * @param  array<string, mixed>  $validated
-     */
-    private function fillFromForm(Address $address, array $validated): void
-    {
-        foreach (['address', 'country_id', 'state_id', 'city_id', 'longitude', 'latitude', 'postal_code', 'phone'] as $column) {
-            $address->{$column} = $validated[$column] ?? null;
-        }
     }
 
     /**
