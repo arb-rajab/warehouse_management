@@ -2,6 +2,7 @@ import { mount } from '@vue/test-utils';
 import { beforeEach, expect, it, vi } from 'vitest';
 import { t } from '@/lib/i18n';
 import { storeCampaignProduct } from '@/testing/factories';
+import { expectRequiredFields } from '@/testing/requiredFields';
 import StoreCampaignProductRows from './StoreCampaignProductRows.vue';
 const { getMock } = vi.hoisted(() => ({ getMock: vi.fn() }));
 vi.mock('@inertiajs/vue3', () => ({
@@ -31,6 +32,12 @@ it('preserves discounts and selected rows across searches, escapes names, ignore
                 wrapper.setProps({ modelValue: value }),
         },
     });
+    expectRequiredFields(wrapper, [
+        'products',
+        'discount-12',
+        'discount-type-12',
+        'quantity-12',
+    ]);
     expect(wrapper.text()).toContain('Rejected');
 
     for (const key of [

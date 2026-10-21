@@ -4,6 +4,7 @@ import { computed, onMounted, ref } from 'vue';
 import { brands } from '@/actions/App/Http/Controllers/Store/Admin/CampaignProductController';
 import FieldError from '@/components/FieldError.vue';
 import FormField from '@/components/FormField.vue';
+import RequiredMark from '@/components/RequiredMark.vue';
 import StoreCampaignFields from '@/components/StoreCampaignFields.vue';
 import StoreCampaignProductRows from '@/components/StoreCampaignProductRows.vue';
 import { fieldLabelClass, plainFieldInputClass } from '@/lib/filters';
@@ -96,9 +97,9 @@ onMounted(() => {
                             http.q = ($event.target as HTMLInputElement).value;
                             searchBrands();
                         "
-                    /><label for="brand_id" :class="fieldLabelClass">{{
-                        t('store.campaigns.fields.brand')
-                    }}</label
+                    /><label for="brand_id" :class="fieldLabelClass"
+                        >{{ t('store.campaigns.fields.brand')
+                        }}<RequiredMark /></label
                     ><select
                         id="brand_id"
                         v-model="brandId"
@@ -119,9 +120,9 @@ onMounted(() => {
                     ><FieldError :message="errors.brand_id" />
                 </div>
                 <div v-else>
-                    <label for="base_product_id" :class="fieldLabelClass">{{
-                        t('store.campaigns.fields.baseProduct')
-                    }}</label
+                    <label for="base_product_id" :class="fieldLabelClass"
+                        >{{ t('store.campaigns.fields.baseProduct')
+                        }}<RequiredMark /></label
                     ><select
                         id="base_product_id"
                         v-model="baseId"

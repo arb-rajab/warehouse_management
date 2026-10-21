@@ -2,6 +2,7 @@
 import { ref } from 'vue';
 import FieldError from '@/components/FieldError.vue';
 import FormField from '@/components/FormField.vue';
+import RequiredMark from '@/components/RequiredMark.vue';
 import StoreCampaignFields from '@/components/StoreCampaignFields.vue';
 import StoreCampaignProductRows from '@/components/StoreCampaignProductRows.vue';
 import { fieldLabelClass, plainFieldInputClass } from '@/lib/filters';
@@ -40,9 +41,9 @@ const rows = ref<StoreCampaignRow[]>(
             :error="errors.background_color"
         />
         <div>
-            <label for="text_color" :class="fieldLabelClass">{{
-                t('store.campaigns.fields.textColor')
-            }}</label
+            <label for="text_color" :class="fieldLabelClass"
+                >{{ t('store.campaigns.fields.textColor')
+                }}<RequiredMark /></label
             ><select
                 id="text_color"
                 name="text_color"
