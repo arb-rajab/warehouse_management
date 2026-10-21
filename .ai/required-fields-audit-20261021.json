@@ -9,20 +9,20 @@
         "by_class": {
             "A": 53,
             "B": 79,
-            "C": 78,
+            "C": 72,
             "D": 10,
-            "E": 218,
+            "E": 215,
             "F": 23
         },
         "by_severity": {
-            "high": 131,
+            "high": 125,
             "medium": 89,
-            "low": 218,
+            "low": 215,
             "info": 23
         },
         "by_priority": {
             "P1": 8,
-            "P2": 297,
+            "P2": 288,
             "P3": 156
         }
     },
@@ -292,18 +292,18 @@
             "forms": 38,
             "A": 2,
             "B": 2,
-            "C": 9,
+            "C": 5,
             "D": 0,
-            "E": 25,
+            "E": 23,
             "F": 6
         },
         "storefront/account": {
             "forms": 12,
             "A": 0,
             "B": 1,
-            "C": 23,
+            "C": 21,
             "D": 0,
-            "E": 43,
+            "E": 42,
             "F": 1
         },
         "storefront/auth": {
@@ -326,7 +326,7 @@
         }
     },
     "server": {
-        "form_requests": 264,
+        "form_requests": 266,
         "form_requests_unparsed": 1,
         "inline_validators": 27,
         "inline_unparsed": 5
@@ -464,48 +464,6 @@
         {
             "rank": 10,
             "priority": "P2",
-            "module": "storefront",
-            "form": "resources/views/shop/frontend/digital_product_details.blade.php:792",
-            "target": "route:conversations.store",
-            "high": 2,
-            "medium": 0,
-            "low": 1,
-            "findings": {
-                "C": 2,
-                "E": 1
-            }
-        },
-        {
-            "rank": 11,
-            "priority": "P2",
-            "module": "storefront",
-            "form": "resources/views/shop/frontend/product_details.blade.php:162",
-            "target": "route:conversations.store",
-            "high": 2,
-            "medium": 0,
-            "low": 1,
-            "findings": {
-                "C": 2,
-                "E": 1
-            }
-        },
-        {
-            "rank": 12,
-            "priority": "P2",
-            "module": "storefront/account",
-            "form": "resources/views/shop/frontend/user/support_ticket/index.blade.php:79",
-            "target": "route:support_ticket.store",
-            "high": 2,
-            "medium": 0,
-            "low": 1,
-            "findings": {
-                "C": 2,
-                "E": 1
-            }
-        },
-        {
-            "rank": 13,
-            "priority": "P2",
             "module": "seller panel",
             "form": "resources/views/shop/seller/support_ticket/index.blade.php:80",
             "target": "route:seller.support_ticket.store",
@@ -518,7 +476,7 @@
             }
         },
         {
-            "rank": 14,
+            "rank": 11,
             "priority": "P2",
             "module": "storefront",
             "form": "resources/views/shop/frontend/partials/wallet_modal.blade.php:9",
@@ -531,7 +489,7 @@
             }
         },
         {
-            "rank": 15,
+            "rank": 12,
             "priority": "P2",
             "module": "storefront/account",
             "form": "resources/views/shop/frontend/user/product_review_modal.blade.php:9",
@@ -546,7 +504,7 @@
             }
         },
         {
-            "rank": 16,
+            "rank": 13,
             "priority": "P2",
             "module": "storefront",
             "form": "resources/views/shop/frontend/digital_product_details.blade.php:695",
@@ -561,7 +519,7 @@
             }
         },
         {
-            "rank": 17,
+            "rank": 14,
             "priority": "P2",
             "module": "storefront",
             "form": "resources/views/shop/frontend/product_details/product_queries.blade.php:29",
@@ -576,7 +534,7 @@
             }
         },
         {
-            "rank": 18,
+            "rank": 15,
             "priority": "P2",
             "module": "storefront/account",
             "form": "resources/views/shop/frontend/user/support_ticket/show.blade.php:20",
@@ -590,7 +548,7 @@
             }
         },
         {
-            "rank": 19,
+            "rank": 16,
             "priority": "P2",
             "module": "seller panel",
             "form": "resources/views/shop/seller/support_ticket/show.blade.php:16",
@@ -604,7 +562,7 @@
             }
         },
         {
-            "rank": 20,
+            "rank": 17,
             "priority": "P2",
             "module": "storefront/account",
             "form": "resources/views/shop/frontend/user/conversations/show.blade.php:73",
@@ -615,6 +573,46 @@
             "findings": {
                 "C": 1,
                 "E": 1
+            }
+        },
+        {
+            "rank": 18,
+            "priority": "P2",
+            "module": "seller panel",
+            "form": "resources/views/shop/seller/conversations/show.blade.php:47",
+            "target": "route:seller.conversations.message_store",
+            "high": 1,
+            "medium": 0,
+            "low": 1,
+            "findings": {
+                "C": 1,
+                "E": 1
+            }
+        },
+        {
+            "rank": 19,
+            "priority": "P2",
+            "module": "storefront",
+            "form": "resources/views/shop/frontend/inc/footer.blade.php:88",
+            "target": "route:subscribers.store",
+            "high": 1,
+            "medium": 0,
+            "low": 0,
+            "findings": {
+                "C": 1
+            }
+        },
+        {
+            "rank": 20,
+            "priority": "P2",
+            "module": "storefront",
+            "form": "resources/views/shop/frontend/layouts/app.blade.php:336",
+            "target": "route:subscribers.store",
+            "high": 1,
+            "medium": 0,
+            "low": 0,
+            "findings": {
+                "C": 1
             }
         }
     ],
@@ -3325,20 +3323,17 @@
             "line": 792,
             "action": "{{ route('conversations.store') }}",
             "target": "route:conversations.store",
-            "source": "App\\Http\\Controllers\\ConversationController@store",
+            "source": "App\\Http\\Requests\\StoreConversationRequest",
             "controls": 3,
             "unresolved_controls": 0,
-            "findings": {
-                "C": 2,
-                "E": 1
-            }
+            "findings": []
         },
         {
             "kind": "blade",
             "module": "storefront",
             "priority": "P2",
             "file": "resources/views/shop/frontend/digital_product_details.blade.php",
-            "line": 824,
+            "line": 837,
             "action": "{{ route('cart.login.submit') }}",
             "target": "route:cart.login.submit",
             "source": "App\\Http\\Controllers\\HomeController@cart_login",
@@ -3597,20 +3592,17 @@
             "line": 162,
             "action": "{{ route('conversations.store') }}",
             "target": "route:conversations.store",
-            "source": "App\\Http\\Controllers\\ConversationController@store",
+            "source": "App\\Http\\Requests\\StoreConversationRequest",
             "controls": 3,
             "unresolved_controls": 0,
-            "findings": {
-                "C": 2,
-                "E": 1
-            }
+            "findings": []
         },
         {
             "kind": "blade",
             "module": "storefront",
             "priority": "P2",
             "file": "resources/views/shop/frontend/product_details.blade.php",
-            "line": 202,
+            "line": 215,
             "action": "{{ route('auction_product_bids.store') }}",
             "target": "route:auction_product_bids.store",
             "source": "",
@@ -3936,13 +3928,10 @@
             "line": 79,
             "action": "{{ route('support_ticket.store') }}",
             "target": "route:support_ticket.store",
-            "source": "App\\Http\\Controllers\\SupportTicketController@store",
+            "source": "App\\Http\\Requests\\StoreSupportTicketRequest",
             "controls": 3,
             "unresolved_controls": 0,
-            "findings": {
-                "C": 2,
-                "E": 1
-            }
+            "findings": []
         },
         {
             "kind": "blade",
@@ -6711,36 +6700,6 @@
             "priority": "P2",
             "module": "storefront",
             "kind": "blade",
-            "form": "resources/views/shop/frontend/digital_product_details.blade.php",
-            "target": "route:conversations.store",
-            "source": "App\\Http\\Controllers\\ConversationController@store",
-            "field": "message",
-            "label": null,
-            "detail": "required in the UI, the endpoint validates nothing",
-            "ui": "resources/views/shop/frontend/digital_product_details.blade.php:800",
-            "server": null
-        },
-        {
-            "class": "C",
-            "severity": "high",
-            "priority": "P2",
-            "module": "storefront",
-            "kind": "blade",
-            "form": "resources/views/shop/frontend/digital_product_details.blade.php",
-            "target": "route:conversations.store",
-            "source": "App\\Http\\Controllers\\ConversationController@store",
-            "field": "title",
-            "label": null,
-            "detail": "required in the UI, the endpoint validates nothing",
-            "ui": "resources/views/shop/frontend/digital_product_details.blade.php:797",
-            "server": null
-        },
-        {
-            "class": "C",
-            "severity": "high",
-            "priority": "P2",
-            "module": "storefront",
-            "kind": "blade",
             "form": "resources/views/shop/frontend/inc/footer.blade.php",
             "target": "route:subscribers.store",
             "source": "App\\Http\\Controllers\\SubscriberController@store",
@@ -6793,36 +6752,6 @@
             "label": "Payment Method *",
             "detail": "required in the UI, the endpoint validates nothing",
             "ui": "resources/views/shop/frontend/partials/wallet_modal.blade.php:17",
-            "server": null
-        },
-        {
-            "class": "C",
-            "severity": "high",
-            "priority": "P2",
-            "module": "storefront",
-            "kind": "blade",
-            "form": "resources/views/shop/frontend/product_details.blade.php",
-            "target": "route:conversations.store",
-            "source": "App\\Http\\Controllers\\ConversationController@store",
-            "field": "message",
-            "label": null,
-            "detail": "required in the UI, the endpoint validates nothing",
-            "ui": "resources/views/shop/frontend/product_details.blade.php:173",
-            "server": null
-        },
-        {
-            "class": "C",
-            "severity": "high",
-            "priority": "P2",
-            "module": "storefront",
-            "kind": "blade",
-            "form": "resources/views/shop/frontend/product_details.blade.php",
-            "target": "route:conversations.store",
-            "source": "App\\Http\\Controllers\\ConversationController@store",
-            "field": "title",
-            "label": null,
-            "detail": "required in the UI, the endpoint validates nothing",
-            "ui": "resources/views/shop/frontend/product_details.blade.php:168",
             "server": null
         },
         {
@@ -7138,36 +7067,6 @@
             "label": "Comment",
             "detail": "required in the UI, no server rule",
             "ui": "resources/views/shop/frontend/user/product_review_modal.blade.php:46",
-            "server": null
-        },
-        {
-            "class": "C",
-            "severity": "high",
-            "priority": "P2",
-            "module": "storefront/account",
-            "kind": "blade",
-            "form": "resources/views/shop/frontend/user/support_ticket/index.blade.php",
-            "target": "route:support_ticket.store",
-            "source": "App\\Http\\Controllers\\SupportTicketController@store",
-            "field": "details",
-            "label": "Provide a detailed description",
-            "detail": "required in the UI, the endpoint validates nothing",
-            "ui": "resources/views/shop/frontend/user/support_ticket/index.blade.php:95",
-            "server": null
-        },
-        {
-            "class": "C",
-            "severity": "high",
-            "priority": "P2",
-            "module": "storefront/account",
-            "kind": "blade",
-            "form": "resources/views/shop/frontend/user/support_ticket/index.blade.php",
-            "target": "route:support_ticket.store",
-            "source": "App\\Http\\Controllers\\SupportTicketController@store",
-            "field": "subject",
-            "label": "Subject",
-            "detail": "required in the UI, the endpoint validates nothing",
-            "ui": "resources/views/shop/frontend/user/support_ticket/index.blade.php:86",
             "server": null
         },
         {
@@ -9447,7 +9346,7 @@
             "field": "email",
             "label": null,
             "detail": "the endpoint validates nothing",
-            "ui": "resources/views/shop/frontend/digital_product_details.blade.php:828",
+            "ui": "resources/views/shop/frontend/digital_product_details.blade.php:841",
             "server": null
         },
         {
@@ -9462,7 +9361,7 @@
             "field": "password",
             "label": null,
             "detail": "the endpoint validates nothing",
-            "ui": "resources/views/shop/frontend/digital_product_details.blade.php:838",
+            "ui": "resources/views/shop/frontend/digital_product_details.blade.php:851",
             "server": null
         },
         {
@@ -9477,22 +9376,7 @@
             "field": "remember",
             "label": "Remember Me",
             "detail": "the endpoint validates nothing",
-            "ui": "resources/views/shop/frontend/digital_product_details.blade.php:844",
-            "server": null
-        },
-        {
-            "class": "E",
-            "severity": "low",
-            "priority": "P2",
-            "module": "storefront",
-            "kind": "blade",
-            "form": "resources/views/shop/frontend/digital_product_details.blade.php",
-            "target": "route:conversations.store",
-            "source": "App\\Http\\Controllers\\ConversationController@store",
-            "field": "product_id",
-            "label": null,
-            "detail": "the endpoint validates nothing",
-            "ui": "resources/views/shop/frontend/digital_product_details.blade.php:794",
+            "ui": "resources/views/shop/frontend/digital_product_details.blade.php:857",
             "server": null
         },
         {
@@ -9598,21 +9482,6 @@
             "label": "Remember Me",
             "detail": "the endpoint validates nothing",
             "ui": "resources/views/shop/frontend/partials/login_modal.blade.php:67",
-            "server": null
-        },
-        {
-            "class": "E",
-            "severity": "low",
-            "priority": "P2",
-            "module": "storefront",
-            "kind": "blade",
-            "form": "resources/views/shop/frontend/product_details.blade.php",
-            "target": "route:conversations.store",
-            "source": "App\\Http\\Controllers\\ConversationController@store",
-            "field": "product_id",
-            "label": null,
-            "detail": "the endpoint validates nothing",
-            "ui": "resources/views/shop/frontend/product_details.blade.php:165",
             "server": null
         },
         {
@@ -10356,21 +10225,6 @@
             "priority": "P2",
             "module": "storefront/account",
             "kind": "blade",
-            "form": "resources/views/shop/frontend/user/support_ticket/index.blade.php",
-            "target": "route:support_ticket.store",
-            "source": "App\\Http\\Controllers\\SupportTicketController@store",
-            "field": "attachments",
-            "label": "Photo",
-            "detail": "the endpoint validates nothing",
-            "ui": "resources/views/shop/frontend/user/support_ticket/index.blade.php:106",
-            "server": null
-        },
-        {
-            "class": "E",
-            "severity": "low",
-            "priority": "P2",
-            "module": "storefront/account",
-            "kind": "blade",
             "form": "resources/views/shop/frontend/user/support_ticket/show.blade.php",
             "target": "route:support_ticket.seller_store",
             "source": "App\\Http\\Controllers\\SupportTicketController@seller_store",
@@ -10917,7 +10771,7 @@
             "field": "-",
             "label": null,
             "detail": "form action not resolved: {{ route('auction_product_bids.store') }}",
-            "ui": "resources/views/shop/frontend/product_details.blade.php:202",
+            "ui": "resources/views/shop/frontend/product_details.blade.php:215",
             "server": null
         },
         {

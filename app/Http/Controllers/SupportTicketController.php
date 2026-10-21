@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreSupportTicketRequest;
 use App\Mail\SupportMailManager;
 use App\Models\StoreUser;
 use App\Models\Ticket;
@@ -37,18 +38,16 @@ class SupportTicketController extends Controller
     /**
      * Store a newly created resource in storage.
      *
-     * @param  Request  $request
      * @return Response
      */
-    public function store(Request $request)
+    public function store(StoreSupportTicketRequest $request)
     {
-        //dd();
         $ticket = new Ticket;
         $ticket->code = max(100000, (Ticket::latest()->first() != null ? Ticket::latest()->first()->code + 1 : 0)).date('s');
         $ticket->user_id = Auth::user()->id;
-        $ticket->subject = $request->subject;
-        $ticket->details = $request->details;
-        $ticket->files = $request->attachments;
+        $ticket->subject = $request->validated('subject');
+        $ticket->details = $request->validated('details');
+        $ticket->files = $request->validated('attachments');
 
         if($ticket->save()){
             $this->send_support_mail_to_admin($ticket);
