@@ -5224,4 +5224,12 @@ panel (26 forms, 34 C and 117 E, mostly endpoints that validate nothing, so Form
 the pick-up point coordinates of `Seller\ShopController@update`, which are still unvalidated), with each
 fixed Blade form added to `FIXED_STOREFRONT_FORMS`.
 
-**What was verified, and what was not.** VERIFICATION_PLACEHOLDER
+**What was verified, and what was not.** Run here, on the final code (commits 1 to 3; the docs commit
+after them changes no code): `python3 .claude/scripts/pre_push_check.py --full` (Wayfinder types, ESLint,
+Prettier, vue-tsc, Vitest **336 files, 2651 tests**, Pint, PHPStan **0 errors**, Pest **6800 tests, 6797
+passed, 3 skipped, 39305 assertions**); the six `MYSQL_TESTS` files on the local MySQL 8.0 (CI runs 8.4):
+**56 tests, 50 passed, 6 skipped** (the SQLite-only cases); the whole Playwright suite with the
+preinstalled Chromium: **134 passed**. Focused Pest files while developing, each seen failing first (the
+migration test also on MySQL). `forms:audit-required` before the work and after each form group. Not run
+here: the composer and npm audits and the deploy-script test (CI runs them); no `CI-Verified` trailer was
+made, so CI runs every group (the PR also changes `.github/workflows/tests.yml`, which runs everything).
