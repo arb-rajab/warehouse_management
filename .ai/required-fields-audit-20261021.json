@@ -9,20 +9,20 @@
         "by_class": {
             "A": 53,
             "B": 79,
-            "C": 82,
+            "C": 78,
             "D": 10,
             "E": 218,
             "F": 23
         },
         "by_severity": {
-            "high": 135,
+            "high": 131,
             "medium": 89,
             "low": 218,
             "info": 23
         },
         "by_priority": {
             "P1": 8,
-            "P2": 301,
+            "P2": 297,
             "P3": 156
         }
     },
@@ -310,7 +310,7 @@
             "forms": 4,
             "A": 0,
             "B": 0,
-            "C": 4,
+            "C": 0,
             "D": 0,
             "E": 13,
             "F": 0
@@ -326,7 +326,7 @@
         }
     },
     "server": {
-        "form_requests": 263,
+        "form_requests": 264,
         "form_requests_unparsed": 1,
         "inline_validators": 27,
         "inline_unparsed": 5
@@ -449,19 +449,6 @@
         {
             "rank": 9,
             "priority": "P2",
-            "module": "storefront/auth",
-            "form": "resources/views/shop/auth/passwords/reset.blade.php:11",
-            "target": "route:shop.password.update",
-            "high": 4,
-            "medium": 0,
-            "low": 0,
-            "findings": {
-                "C": 4
-            }
-        },
-        {
-            "rank": 10,
-            "priority": "P2",
             "module": "seller panel",
             "form": "resources/views/shop/seller/product/products/edit.blade.php:24",
             "target": "route:seller.products.update",
@@ -475,7 +462,7 @@
             }
         },
         {
-            "rank": 11,
+            "rank": 10,
             "priority": "P2",
             "module": "storefront",
             "form": "resources/views/shop/frontend/digital_product_details.blade.php:792",
@@ -489,7 +476,7 @@
             }
         },
         {
-            "rank": 12,
+            "rank": 11,
             "priority": "P2",
             "module": "storefront",
             "form": "resources/views/shop/frontend/product_details.blade.php:162",
@@ -503,7 +490,7 @@
             }
         },
         {
-            "rank": 13,
+            "rank": 12,
             "priority": "P2",
             "module": "storefront/account",
             "form": "resources/views/shop/frontend/user/support_ticket/index.blade.php:79",
@@ -517,7 +504,7 @@
             }
         },
         {
-            "rank": 14,
+            "rank": 13,
             "priority": "P2",
             "module": "seller panel",
             "form": "resources/views/shop/seller/support_ticket/index.blade.php:80",
@@ -531,7 +518,7 @@
             }
         },
         {
-            "rank": 15,
+            "rank": 14,
             "priority": "P2",
             "module": "storefront",
             "form": "resources/views/shop/frontend/partials/wallet_modal.blade.php:9",
@@ -544,7 +531,7 @@
             }
         },
         {
-            "rank": 16,
+            "rank": 15,
             "priority": "P2",
             "module": "storefront/account",
             "form": "resources/views/shop/frontend/user/product_review_modal.blade.php:9",
@@ -559,7 +546,7 @@
             }
         },
         {
-            "rank": 17,
+            "rank": 16,
             "priority": "P2",
             "module": "storefront",
             "form": "resources/views/shop/frontend/digital_product_details.blade.php:695",
@@ -574,7 +561,7 @@
             }
         },
         {
-            "rank": 18,
+            "rank": 17,
             "priority": "P2",
             "module": "storefront",
             "form": "resources/views/shop/frontend/product_details/product_queries.blade.php:29",
@@ -589,7 +576,7 @@
             }
         },
         {
-            "rank": 19,
+            "rank": 18,
             "priority": "P2",
             "module": "storefront/account",
             "form": "resources/views/shop/frontend/user/support_ticket/show.blade.php:20",
@@ -603,7 +590,7 @@
             }
         },
         {
-            "rank": 20,
+            "rank": 19,
             "priority": "P2",
             "module": "seller panel",
             "form": "resources/views/shop/seller/support_ticket/show.blade.php:16",
@@ -614,6 +601,20 @@
             "findings": {
                 "C": 1,
                 "E": 3
+            }
+        },
+        {
+            "rank": 20,
+            "priority": "P2",
+            "module": "storefront/account",
+            "form": "resources/views/shop/frontend/user/conversations/show.blade.php:73",
+            "target": "route:messages.store",
+            "high": 1,
+            "medium": 0,
+            "low": 1,
+            "findings": {
+                "C": 1,
+                "E": 1
             }
         }
     ],
@@ -3997,12 +3998,10 @@
             "line": 11,
             "action": "{{ route('shop.password.update') }}",
             "target": "route:shop.password.update",
-            "source": "App\\Http\\Controllers\\HomeController@reset_password_with_code",
+            "source": "App\\Http\\Requests\\ResetPasswordWithCodeRequest",
             "controls": 4,
             "unresolved_controls": 0,
-            "findings": {
-                "C": 4
-            }
+            "findings": []
         },
         {
             "kind": "blade",
@@ -7184,66 +7183,6 @@
             "label": null,
             "detail": "required in the UI, the endpoint validates nothing",
             "ui": "resources/views/shop/frontend/user/support_ticket/show.blade.php:25",
-            "server": null
-        },
-        {
-            "class": "C",
-            "severity": "high",
-            "priority": "P2",
-            "module": "storefront/auth",
-            "kind": "blade",
-            "form": "resources/views/shop/auth/passwords/reset.blade.php",
-            "target": "route:shop.password.update",
-            "source": "App\\Http\\Controllers\\HomeController@reset_password_with_code",
-            "field": "code",
-            "label": null,
-            "detail": "required in the UI, the endpoint validates nothing",
-            "ui": "resources/views/shop/auth/passwords/reset.blade.php:25",
-            "server": null
-        },
-        {
-            "class": "C",
-            "severity": "high",
-            "priority": "P2",
-            "module": "storefront/auth",
-            "kind": "blade",
-            "form": "resources/views/shop/auth/passwords/reset.blade.php",
-            "target": "route:shop.password.update",
-            "source": "App\\Http\\Controllers\\HomeController@reset_password_with_code",
-            "field": "email",
-            "label": null,
-            "detail": "required in the UI, the endpoint validates nothing",
-            "ui": "resources/views/shop/auth/passwords/reset.blade.php:15",
-            "server": null
-        },
-        {
-            "class": "C",
-            "severity": "high",
-            "priority": "P2",
-            "module": "storefront/auth",
-            "kind": "blade",
-            "form": "resources/views/shop/auth/passwords/reset.blade.php",
-            "target": "route:shop.password.update",
-            "source": "App\\Http\\Controllers\\HomeController@reset_password_with_code",
-            "field": "password",
-            "label": null,
-            "detail": "required in the UI, the endpoint validates nothing",
-            "ui": "resources/views/shop/auth/passwords/reset.blade.php:35",
-            "server": null
-        },
-        {
-            "class": "C",
-            "severity": "high",
-            "priority": "P2",
-            "module": "storefront/auth",
-            "kind": "blade",
-            "form": "resources/views/shop/auth/passwords/reset.blade.php",
-            "target": "route:shop.password.update",
-            "source": "App\\Http\\Controllers\\HomeController@reset_password_with_code",
-            "field": "password_confirmation",
-            "label": null,
-            "detail": "required in the UI, the endpoint validates nothing",
-            "ui": "resources/views/shop/auth/passwords/reset.blade.php:45",
             "server": null
         },
         {

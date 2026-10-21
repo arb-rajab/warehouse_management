@@ -10,39 +10,35 @@
                     <p class="mb-4 opacity-60">{{translate('Enter your email address and new password and confirm password.')}} </p>
                     <form method="POST" action="{{ route('shop.password.update') }}">
                         @csrf
+                        <x-required-legend />
 
                         <div class="form-group">
-                            <input id="email" type="email" class="form-control{{ $errors->has('email') ? ' is-invalid' : '' }}" name="email" value="{{ $email ?? old('email') }}" placeholder="{{ translate('Email') }}" required autofocus>
-
-                            @if ($errors->has('email'))
-                                <span class="invalid-feedback" role="alert">
-                                    <strong>{{ $errors->first('email') }}</strong>
-                                </span>
-                            @endif
+                            <label for="email">{{ translate('Email') }}<x-required-mark /></label>
+                            <input id="email" type="email" class="form-control @error('email') is-invalid @enderror" name="email" value="{{ $email ?? old('email') }}" placeholder="{{ translate('Email') }}" maxlength="191" autocomplete="email" required autofocus>
+                            @error('email')
+                                <span class="invalid-feedback" role="alert"><strong>{{ $message }}</strong></span>
+                            @enderror
                         </div>
 
                         <div class="form-group">
-                            <input id="code" type="text" class="form-control{{ $errors->has('code') ? ' is-invalid' : '' }}" name="code" value="{{ $email ?? old('code') }}" placeholder="{{translate('Code')}}" required autofocus>
-
-                            @if ($errors->has('code'))
-                                <span class="invalid-feedback" role="alert">
-                                    <strong>{{ $errors->first('code') }}</strong>
-                                </span>
-                            @endif
+                            <label for="code">{{ translate('Code') }}<x-required-mark /></label>
+                            <input id="code" type="text" class="form-control @error('code') is-invalid @enderror" name="code" value="{{ $code ?? old('code') }}" placeholder="{{ translate('Code') }}" minlength="6" maxlength="6" pattern="[0-9]{6}" inputmode="numeric" autocomplete="one-time-code" required>
+                            @error('code')
+                                <span class="invalid-feedback" role="alert"><strong>{{ $message }}</strong></span>
+                            @enderror
                         </div>
 
                         <div class="form-group">
-                            <input id="password" type="password" class="form-control{{ $errors->has('password') ? ' is-invalid' : '' }}" name="password" placeholder="{{ translate('New Password') }}" required>
-
-                            @if ($errors->has('password'))
-                                <span class="invalid-feedback" role="alert">
-                                    <strong>{{ $errors->first('password') }}</strong>
-                                </span>
-                            @endif
+                            <label for="password">{{ translate('New Password') }}<x-required-mark /></label>
+                            <input id="password" type="password" class="form-control @error('password') is-invalid @enderror" name="password" placeholder="{{ translate('New Password') }}" minlength="6" autocomplete="new-password" required>
+                            @error('password')
+                                <span class="invalid-feedback" role="alert"><strong>{{ $message }}</strong></span>
+                            @enderror
                         </div>
 
                         <div class="form-group">
-                            <input id="password-confirm" type="password" class="form-control" name="password_confirmation" placeholder="{{ translate('Confirm Password') }}" required>
+                            <label for="password-confirm">{{ translate('Confirm Password') }}<x-required-mark /></label>
+                            <input id="password-confirm" type="password" class="form-control" name="password_confirmation" placeholder="{{ translate('Confirm Password') }}" minlength="6" autocomplete="new-password" required>
                         </div>
 
                         <div class="form-group text-right">
