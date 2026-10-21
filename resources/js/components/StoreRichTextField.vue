@@ -46,6 +46,7 @@ import {
     watch,
 } from 'vue';
 import FieldError from '@/components/FieldError.vue';
+import RequiredMark from '@/components/RequiredMark.vue';
 import StoreFileManagerDialog from '@/components/StoreFileManagerDialog.vue';
 import {
     fieldLabelClass,
@@ -54,6 +55,7 @@ import {
     selectedToggleClass,
 } from '@/lib/filters';
 import { t } from '@/lib/i18n';
+import { useRequiredField } from '@/lib/requiredFields';
 import { useStoreAccess } from '@/lib/storeAccess';
 import type { StoreUpload } from '@/types/store';
 
@@ -75,6 +77,7 @@ const props = withDefaults(
     { required: false },
 );
 const html = defineModel<string>({ default: '' });
+useRequiredField(() => props.required);
 const access = useStoreAccess();
 const toolbar = useTemplateRef<HTMLElement>('toolbar');
 const linkButton = useTemplateRef<HTMLButtonElement>('linkButton');
@@ -649,8 +652,8 @@ onUpdated(syncTabStops);
             :for="id"
             :class="fieldLabelClass"
             @click="editor?.commands.focus()"
-            >{{ label }}</label
-        >
+            >{{ label }}<RequiredMark v-if="required"
+        /></label>
         <div
             ref="toolbar"
             role="toolbar"

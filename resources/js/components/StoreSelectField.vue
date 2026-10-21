@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import FieldError from '@/components/FieldError.vue';
+import RequiredMark from '@/components/RequiredMark.vue';
 import { fieldLabelClass, plainFieldInputClass } from '@/lib/filters';
 import { t } from '@/lib/i18n';
+import { useRequiredField } from '@/lib/requiredFields';
 import type { StoreReferenceOption } from '@/types/store';
-defineProps<{
+const props = defineProps<{
     id: string;
     label: string;
     options: StoreReferenceOption[];
@@ -11,11 +13,14 @@ defineProps<{
     error?: string;
     required?: boolean;
 }>();
+useRequiredField(() => props.required);
 </script>
 
 <template>
     <div>
-        <label :for="id" :class="fieldLabelClass">{{ label }}</label>
+        <label :for="id" :class="fieldLabelClass"
+            >{{ label }}<RequiredMark v-if="required"
+        /></label>
         <select
             :id="id"
             :name="id"

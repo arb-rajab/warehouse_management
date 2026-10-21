@@ -41,7 +41,9 @@ test('representative package deletion uses a native cancellable confirmation', a
 }) => {
     await loginAsStoreAdmin(page);
     await page.goto('/temp/admin/representatives/packages/create');
-    await page.getByLabel('Name', { exact: true }).fill('Browser package');
+    await page
+        .getByRole('textbox', { name: 'Name required', exact: true })
+        .fill('Browser package');
     await page.getByLabel('Discount percentage').fill('12.5');
     await page
         .getByRole('button', { name: 'Save package', exact: true })

@@ -105,8 +105,10 @@ describe('representative package fields and create/edit screens', () => {
             },
         });
         expect(wrapper.findAll('label').map((label) => label.text())).toEqual([
-            t('store.representativePackages.name'),
-            t('store.representativePackages.percentage'),
+            t('store.representativePackages.name') + '*' + t('common.required'),
+            t('store.representativePackages.percentage') +
+                '*' +
+                t('common.required'),
         ]);
         expect(wrapper.get('#name').attributes()).toMatchObject({
             name: 'name',

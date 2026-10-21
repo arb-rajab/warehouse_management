@@ -117,7 +117,7 @@ describe('Store support ticket Show', () => {
                 wrapper.getComponent(StoreTicketReplyForm).props('ticket'),
             ).toEqual(storeTicketDetail());
             expect(wrapper.get('#reply-label').text()).toBe(
-                t('store.support.reply'),
+                t('store.support.reply') + '*' + t('common.required'),
             );
             expect(wrapper.text()).toContain(
                 t('store.support.originalMessage'),

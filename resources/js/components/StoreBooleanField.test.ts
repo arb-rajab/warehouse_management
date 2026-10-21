@@ -15,7 +15,7 @@ describe('StoreBooleanField', () => {
                     error: 'Invalid',
                 },
             });
-            expect(wrapper.get('label').text()).toBe('Analytics');
+            expect(wrapper.get('label').text()).toBe('Analytics*required');
             expect(wrapper.get('label').attributes('for')).toBe(
                 'settings[google_analytics]',
             );

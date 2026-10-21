@@ -2,10 +2,14 @@ import type { FormDataConvertible } from '@inertiajs/core';
 import { Form } from '@inertiajs/vue3';
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { defineComponent, h } from 'vue';
+import { defineComponent, h, nextTick } from 'vue';
 import { index as rowsIndex } from '@/actions/App/Http/Controllers/Admin/RowController';
+import FormField from '@/components/FormField.vue';
 import PageHeader from '@/components/PageHeader.vue';
+import RequiredLegend from '@/components/RequiredLegend.vue';
+import RequiredMark from '@/components/RequiredMark.vue';
 import AdminLayout from '@/layouts/AdminLayout.vue';
+import { i18n } from '@/lib/i18n';
 import ResourceFormPage from './ResourceFormPage.vue';
 import SubmitButton from './SubmitButton.vue';
 
@@ -232,5 +236,91 @@ describe('ResourceFormPage', () => {
         const cancelLink = wrapper.get('form a');
         expect(cancelLink.attributes('href')).toBe(rowsIndex.url());
         expect(cancelLink.text()).toBe('Cancel');
+    });
+});
+
+describe('ResourceFormPage required-field legend', () => {
+    beforeEach(() => {
+        formSlotPropsMock.mockReset();
+        formSlotPropsMock.mockReturnValue({ errors: {}, processing: false });
+        usePageMock.mockReturnValue({
+            url: rowsIndex.url(),
+            props: {
+                locale: 'en',
+                auth: { user: { name: 'Jane Doe', id: 7 } },
+            },
+        });
+    });
+
+    function mountWithFields(
+        fields: { id: string; required: boolean }[],
+        extraProps: Record<string, unknown> = {},
+    ) {
+        return mount(ResourceFormPage, {
+            props: {
+                title: 'Add row',
+                action: rowsIndex.url(),
+                submitLabel: 'Create',
+                submittingLabel: 'Creating...',
+                ...extraProps,
+            },
+            slots: {
+                default: () =>
+                    fields.map((field) =>
+                        h(FormField, {
+                            id: field.id,
+                            label: field.id,
+                            required: field.required,
+                        }),
+                    ),
+            },
+        });
+    }
+
+    it('shows the legend at the top of the form when a field is required', async () => {
+        const wrapper = mountWithFields([
+            { id: 'name', required: true },
+            { id: 'notes', required: false },
+        ]);
+        await nextTick();
+
+        const legend = wrapper.getComponent(RequiredLegend);
+        expect(legend.text()).toBe('* Required fields');
+        expect(
+            wrapper
+                .get('form')
+                .element.firstElementChild?.hasAttribute(
+                    'data-required-legend',
+                ),
+        ).toBe(true);
+        expect(wrapper.findAllComponents(RequiredMark)).toHaveLength(1);
+    });
+
+    it('shows no legend when every field is optional', async () => {
+        const wrapper = mountWithFields([{ id: 'notes', required: false }]);
+        await nextTick();
+
+        expect(wrapper.findComponent(RequiredLegend).exists()).toBe(false);
+    });
+
+    it('lets a form opt out of the legend', async () => {
+        const wrapper = mountWithFields([{ id: 'name', required: true }], {
+            requiredLegend: false,
+        });
+        await nextTick();
+
+        expect(wrapper.findComponent(RequiredLegend).exists()).toBe(false);
+        expect(wrapper.findComponent(RequiredMark).exists()).toBe(true);
+    });
+
+    it('translates the legend in Arabic', async () => {
+        i18n.global.locale.value = 'ar';
+        const wrapper = mountWithFields([{ id: 'name', required: true }]);
+        await nextTick();
+
+        expect(wrapper.getComponent(RequiredLegend).text()).toBe(
+            '* حقول مطلوبة',
+        );
+        i18n.global.locale.value = 'en';
     });
 });

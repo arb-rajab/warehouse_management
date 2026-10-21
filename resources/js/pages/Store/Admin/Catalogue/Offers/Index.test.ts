@@ -202,7 +202,9 @@ describe('Store offers catalogue', () => {
         i18n.global.locale.value = 'ar';
         const wrapper = mountPage();
         expect(wrapper.get('h1').text()).toBe('كتالوج العروض');
-        expect(wrapper.get('label[for="catalog"]').text()).toBe('ملف PDF');
+        expect(wrapper.get('label[for="catalog"]').text()).toBe(
+            'ملف PDF*مطلوب',
+        );
         expect(wrapper.text()).toContain('رفع الكتالوج');
     });
 });

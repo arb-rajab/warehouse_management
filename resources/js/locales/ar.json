@@ -40,7 +40,10 @@
             "hour": "س",
             "minute": "د",
             "second": "ث"
-        }
+        },
+        "required": "مطلوب",
+        "requiredLegend": "حقول مطلوبة",
+        "optional": "(اختياري)"
     },
     "welcome": {
         "brand": "إدارة المستودع",

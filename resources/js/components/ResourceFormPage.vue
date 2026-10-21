@@ -3,9 +3,11 @@ import type { FormDataConvertible, UrlMethodPair } from '@inertiajs/core';
 import { Form, Head, Link } from '@inertiajs/vue3';
 import type { Component } from 'vue';
 import PageHeader from '@/components/PageHeader.vue';
+import RequiredLegend from '@/components/RequiredLegend.vue';
 import SubmitButton from '@/components/SubmitButton.vue';
 import AdminLayout from '@/layouts/AdminLayout.vue';
 import { t } from '@/lib/i18n';
+import { provideRequiredFields } from '@/lib/requiredFields';
 
 withDefaults(
     defineProps<{
@@ -32,13 +34,22 @@ withDefaults(
          * fields out in a grid (the store role form's permission checkboxes).
          */
         wide?: boolean;
+        /**
+         * Show the "* Required fields" legend once any field inside the form
+         * registers itself as required (lib/requiredFields.ts). Opt out for a
+         * form that prints its own legend.
+         */
+        requiredLegend?: boolean;
     }>(),
     {
         transform: (data: Record<string, FormDataConvertible>) => data,
         layout: () => AdminLayout,
         wide: false,
+        requiredLegend: true,
     },
 );
+
+const hasRequiredFields = provideRequiredFields();
 </script>
 
 <template>
@@ -56,6 +67,7 @@ withDefaults(
                 #default="{ errors, processing }"
                 class="space-y-4"
             >
+                <RequiredLegend v-if="requiredLegend && hasRequiredFields" />
                 <slot :errors="errors" />
 
                 <div class="flex gap-3">

@@ -35,7 +35,8 @@ describe('truck form fields', () => {
             ['license_plate', 'plate'],
         ]) {
             expect(wrapper.get(`label[for="${id}"]`).text()).toBe(
-                t(`store.trucks.fields.${key}`),
+                t(`store.trucks.fields.${key}`) +
+                    (id === 'name' ? '*' + t('common.required') : ''),
             );
             expect(wrapper.get(`#${id}`).attributes('maxlength')).toBe('50');
         }
