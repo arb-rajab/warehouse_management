@@ -304,25 +304,17 @@
     @if (addon_is_activated('delivery_boy') && get_setting('google_map') == 1)
             
     <script>
-        function initialize(id_format = '') {
-            let default_longtitude = '';
-            let default_latitude = '';
-            @if (get_setting('google_map_longtitude') != '' && get_setting('google_map_longtitude') != '')
-                default_longtitude = {{ get_setting('google_map_longtitude') }};
-                default_latitude = {{ get_setting('google_map_latitude') }};
-            @endif
+        {{-- Where the pin starts while the shop has no pick-up point: the admin's default location, else Amsterdam. --}}
+        var defaultMapLocation = @json(\App\Support\DefaultMapLocation::coordinates());
 
-            var lat = -33.8688;
-            var long = 151.2195;
+        function initialize(id_format = '') {
+            var lat = defaultMapLocation.latitude;
+            var long = defaultMapLocation.longitude;
 
             if (document.getElementById('latitude').value != '' &&
                 document.getElementById('longitude').value != '') {
                 lat = parseFloat(document.getElementById('latitude').value);
                 long = parseFloat(document.getElementById('longitude').value);
-            } else if (default_longtitude != '' &&
-                default_latitude != '') {
-                lat = default_latitude;
-                long = default_longtitude;
             }
 
 

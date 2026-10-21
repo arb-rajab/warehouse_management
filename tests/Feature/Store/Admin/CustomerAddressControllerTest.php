@@ -79,6 +79,28 @@ test('admin address updates validate related country state city and coordinates 
     expect((int) $address->fresh()->user_id)->toBe($customer->id)->and($address->fresh()->address)->toBe('Changed')->and((float) $address->fresh()->latitude)->toBe(52.1);
 });
 
+test('admin address updates take every longitude up to the antimeridian and none past it', function (float $longitude, bool $valid) {
+    actingAsStoreUser(createStoreStaff('edit_customer'));
+    $customer = createStoreUser();
+    $address = adminCustomerAddress($customer);
+
+    $response = $this->put(route('admin.customers.addresses.update', [$customer, $address]), [...adminCustomerAddressForm(), 'latitude' => -33.8688, 'longitude' => $longitude]);
+
+    if ($valid) {
+        $response->assertSessionHasNoErrors();
+        expect((float) $address->fresh()->longitude)->toBe((float) $longitude);
+    } else {
+        $response->assertSessionHasErrors('longitude');
+        expect($address->fresh()->longitude)->toBeNull();
+    }
+})->with([
+    'Sydney' => [151.2093, true],
+    'the antimeridian, east' => [180, true],
+    'the antimeridian, west' => [-180, true],
+    'past it, east' => [180.0001, false],
+    'past it, west' => [-180.0001, false],
+]);
+
 test('admin default changes affect only the bound customer and default addresses cannot be deleted', function () {
     actingAsStoreUser(createStoreStaff('edit_customer'));
     $customer = createStoreUser();
