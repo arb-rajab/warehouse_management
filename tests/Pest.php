@@ -551,6 +551,15 @@ function createShopFor(StoreUser $seller, float $balance): int
     return DB::table('shops')->insertGetId(['user_id' => $seller->id, 'name' => 'Shop of '.$seller->id, 'admin_to_pay' => $balance]);
 }
 
+/** A verified seller with a shop for the account and text-write form tests. */
+function sellerAccount(): StoreUser
+{
+    $seller = createStoreUser('seller');
+    createShopFor($seller, 100);
+
+    return actingAsStoreUser($seller->fresh());
+}
+
 /**
  * A withdraw request of `$amount` from `$seller` (status 0 pending, 1 paid).
  */

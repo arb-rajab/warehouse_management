@@ -62,11 +62,12 @@ trait ValidatesStoreUploadReference
      * Comma-separated image upload ids, as the legacy uploader stored them (at
      * most 50, no repeats). An id already in `$stored` round-trips whoever
      * owns it, without granting a preview; any other must pass the library
-     * rule of imageUploadRule().
+     * rule of imageUploadRule(). With ownOnly, new references always belong
+     * to the caller, even when their role grants library access.
      */
-    protected function retainableImageUploadIdsRule(?string $stored): Closure
+    protected function retainableImageUploadIdsRule(?string $stored, bool $ownOnly = false): Closure
     {
-        return function (string $attribute, mixed $value, Closure $fail) use ($stored): void {
+        return function (string $attribute, mixed $value, Closure $fail) use ($stored, $ownOnly): void {
             if (! is_string($value) || preg_match('/^\d+(?:,\d+)*$/', $value) !== 1) {
                 $fail(__('validation.regex', ['attribute' => $attribute]));
 
@@ -77,7 +78,7 @@ trait ValidatesStoreUploadReference
             $images = Upload::query()->where('type', 'image');
             $found = (clone $images)->whereIn('id', array_intersect($ids, $storedIds))->count()
                 + (clone $images)->whereIn('id', array_diff($ids, $storedIds))
-                    ->when($this->refusesLibraryUploads(), fn ($query) => $query->where('user_id', $this->user('store')->id))
+                    ->when($ownOnly || $this->refusesLibraryUploads(), fn ($query) => $query->where('user_id', $this->user('store')->id))
                     ->count();
             if (count($ids) > 50 || count(array_unique($ids)) !== count($ids) || $found !== count($ids)) {
                 $fail(__('validation.exists', ['attribute' => $attribute]));

@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 import { loginAsStoreAdmin } from './support/auth';
+import { seedStoreFixtures } from './support/storeFixtures';
 
 /**
  * The legacy uploader on a page that keeps it long-term: the seller panel's
@@ -21,6 +22,91 @@ async function loginAsSeller(page: Page): Promise<void> {
     await form.getByRole('button', { name: 'Login' }).click();
     await expect(page).not.toHaveURL(/\/temp\/login/);
 }
+
+test('seller account withdrawal and support forms show honest requirements and save successfully', async ({
+    page,
+}) => {
+    seedStoreFixtures(String.raw`
+        $seller = App\Models\StoreUser::where('email', 'browser-seller@example.com')->sole();
+        Illuminate\Support\Facades\DB::table('shops')->updateOrInsert(['user_id' => $seller->id], ['name' => 'Browser shop', 'slug' => 'browser-shop', 'admin_to_pay' => 100]);
+        Illuminate\Support\Facades\DB::table('business_settings')->updateOrInsert(['type' => 'minimum_seller_amount_withdraw'], ['value' => '10']);
+        App\Models\SellerWithdrawRequest::query()->where('user_id', $seller->id)->delete();
+    `);
+    await loginAsSeller(page);
+    await page.goto('/temp/seller/profile');
+    let profile = page.locator('form[action*="/seller/profile/update/"]');
+    await expect(profile.locator('[data-required-legend]')).toHaveCount(1);
+    await expect(profile.locator('#name')).toHaveAccessibleName(
+        'Your Name required',
+    );
+    await profile.locator('#name').fill('');
+    await profile.getByRole('button', { name: 'Update Profile' }).click();
+    expect(
+        await profile
+            .locator('#name')
+            .evaluate((input: HTMLInputElement) => input.validity.valueMissing),
+    ).toBe(true);
+    await profile.locator('#name').fill('Browser Seller Changed');
+    await profile.locator('#password').fill('123456');
+    await profile.locator('#confirm_password').fill('654321');
+    await profile.getByRole('button', { name: 'Update Profile' }).click();
+    profile = page.locator('form[action*="/seller/profile/update/"]');
+    await expect(profile.locator('#name')).toHaveValue(
+        'Browser Seller Changed',
+    );
+    await expect(profile.locator('.text-danger')).toContainText([
+        'confirmation',
+    ]);
+    await expect(profile.locator('#password')).toHaveValue('');
+    await profile.getByRole('button', { name: 'Update Profile' }).click();
+    await expect(
+        page.getByText('Your Profile has been updated successfully!', {
+            exact: true,
+        }),
+    ).toBeVisible();
+
+    await page.goto('/temp/seller/money-withdraw-requests');
+    await page.getByText('Send Withdraw Request', { exact: true }).click();
+    const withdrawal = page.locator('#request_modal');
+    await expect(withdrawal).toBeVisible();
+    await expect(withdrawal.locator('#withdraw-amount')).toHaveAccessibleName(
+        'Amount required',
+    );
+    await withdrawal.locator('#withdraw-amount').fill('25.50');
+    await withdrawal
+        .locator('#withdraw-message')
+        .fill('Browser withdrawal note');
+    await withdrawal.getByRole('button', { name: 'Send', exact: true }).click();
+    await expect(
+        page.getByText('Browser withdrawal note', { exact: true }),
+    ).toBeVisible();
+
+    await page.goto('/temp/seller/support_ticket');
+    await page.locator('[data-target="#ticket_modal"]').click();
+    const ticket = page.locator('#ticket_modal');
+    await expect(ticket.locator('[data-required-legend]')).toHaveCount(1);
+    await expect(ticket.locator('#seller-ticket-subject')).toHaveAccessibleName(
+        'Subject required',
+    );
+    await ticket
+        .locator('#seller-ticket-subject')
+        .fill('Browser seller support');
+    await ticket.getByRole('button', { name: 'Send Ticket' }).click();
+    expect(
+        await ticket
+            .locator('#seller-ticket-details')
+            .evaluate(
+                (input: HTMLTextAreaElement) => input.validity.valueMissing,
+            ),
+    ).toBe(true);
+    await ticket
+        .locator('#seller-ticket-details')
+        .fill('Please help with my order.');
+    await ticket.getByRole('button', { name: 'Send Ticket' }).click();
+    await expect(
+        page.getByText('Browser seller support', { exact: true }),
+    ).toBeVisible();
+});
 
 test('retained Blade uploader uploads, selects, removes and deletes an attachment over the temp URLs', async ({
     page,

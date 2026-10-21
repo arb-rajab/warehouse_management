@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\ChangeStoreEmailRequest;
 use App\Http\Requests\ResetPasswordWithCodeRequest;
 use App\Mail\SecondEmailVerifyMailManager;
 use App\Services\StoreVerificationCodes;
@@ -591,7 +592,7 @@ class HomeController extends Controller
 
 
     // Form request
-    public function update_email(Request $request)
+    public function update_email(ChangeStoreEmailRequest $request)
     {
         $email = $request->email;
         if (isUnique($email)) {

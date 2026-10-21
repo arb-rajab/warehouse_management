@@ -28,6 +28,13 @@ const REQUIRED_FIELDS_BASELINE = __DIR__.'/Support/required-fields-baseline.json
  * finding; there is no baseline for them. Add a form here once it is fixed.
  */
 const FIXED_STOREFRONT_FORMS = [
+    ['resources/views/shop/seller/support_ticket/index.blade.php', 'route:seller.support_ticket.store'],
+    ['resources/views/shop/seller/support_ticket/show.blade.php', 'route:seller.support_ticket.reply_store'],
+    ['resources/views/shop/seller/conversations/show.blade.php', 'route:seller.conversations.message_store'],
+    ['resources/views/shop/seller/product_query/show.blade.php', 'route:seller.product_query.reply'],
+    ['resources/views/shop/seller/money_withdraw_requests/index.blade.php', 'route:seller.money_withdraw_request.store'],
+    ['resources/views/shop/seller/profile/index.blade.php', 'route:seller.profile.update'],
+    ['resources/views/shop/seller/profile/index.blade.php', 'route:user.change.email'],
     ['resources/views/shop/auth/register.blade.php', 'route:register'],
     ['resources/views/shop/frontend/user_registration.blade.php', 'route:register'],
     ['resources/views/shop/frontend/partials/address_modal.blade.php', 'route:addresses.store'],
