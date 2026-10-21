@@ -5240,7 +5240,8 @@ made, so CI runs every group (the PR also changes `.github/workflows/tests.yml`,
 ## 48. Public forms, phase 2a finished: password reset by code, product questions, support tickets, the seller conversion, reCAPTCHA, create customer (2026-10-21)
 
 Model: **claude-opus-5-5**, effort **high**. Branch `claude/phase-2a-forms-recaptcha-8acgk4` from `develop`
-**343d9d8** (the PR #461 merge). Scope: §47's "Next" items 5 and 7 and the three owner decisions recorded on
+**343d9d8** (the PR #461 merge). Shipped in [PR #462](https://github.com/arb-rajab/warehouse_management/pull/462),
+merged into `develop` as **03f9ab44**; recorded by §49. Scope: §47's "Next" items 5 and 7 and the three owner decisions recorded on
 PR #461: close the seller conversion hole (§47 judgement 4), verify reCAPTCHA on the server (judgement 5),
 give create customer real limits (judgement 7). Each group's tests were written first and seen failing,
 then passing. Every redirect, flash message, route and URL is unchanged except where a row below says so.
@@ -5413,3 +5414,125 @@ used; this PR changes no JavaScript): **134 passed**. Focused Pest files while d
 failing first. `forms:audit-required` before the work and after each group. Not run here: the MySQL
 migration tests (no migration changed), the composer and npm audits and the deploy-script test (CI runs
 them); no `CI-Verified` trailer was made, so CI runs every group the plan picks.
+
+
+## 49. Back-office required fields, phase 2b batch 1: Marketing and Product; customer registration reCAPTCHA (2026-10-21)
+
+Runtime identity: **GPT-6 Codex**. The exact model variant and reasoning-effort setting are not exposed by
+this runtime, and there is no model picker here. The requested **GPT-6.1 Sol / High** could not be independently
+verified or selected; neither is claimed as the actual setting. Branch `codex/phase-2b-batch-1` starts at
+`origin/develop` **03f9ab44**, the merged PR #462. [PR #463](https://github.com/arb-rajab/warehouse_management/pull/463)
+is the single PR into `develop` for this batch. `AGENTS.md` portability rules were followed: no Claude
+hooks or Boost results were assumed. PHP is **8.5.11** in Docker (`wms-phase2b-php:8.5`, based on the existing
+`wms-cloud-php:8.5` image with WebP-enabled GD),
+Laravel **13.34.0** from installed source. The existing vendor tree, local environment and Vite manifest
+were checked; missing frontend packages were restored with **npm 11.9.0 `npm ci`**, without lockfile changes.
+Wayfinder actions/routes were generated, and Docker PHP's memory limit raised from 128 MB to 1 GB.
+
+**Scope and commits.** Marketing and Product are each one commit; the production CAPTCHA keys and customer
+registration verification are separate commits. With the mandatory follow-ups and this documentation the
+PR reaches about 39 files, so Setup and Website are deferred at the owner's approximate 30-file cutoff.
+Routes, permissions, existing label text and translation keys are unchanged. Two new English/Arabic help
+keys explain conditional product requirements. No server field-presence rule or column limit changed in
+these two modules; names were checked against the narrowest translated column (campaign titles 50,
+category/brand/attribute names 50, product names 200, units 20, colour names/code 30/10). No boundary test
+for a changed limit is needed because no limit changed.
+
+**Marketing.** Required marks now accompany coupon type, discount type and selected products; popup
+summary, offer and page; flash-deal text colour; offer brand/base product; and the campaign product picker
+and each row's discount type. The existing shared marks and automatic legend are reused. Full mounts pin
+the complete set of marks and native required controls for cart/product coupons, both offer kinds,
+flash deals, popup fields and campaign rows; a mounted flash-deal page checks exactly one legend.
+
+**Product.** Marks cover physical/digital categories, discount types, each tax amount/type and the physical
+unit price. Stock visibility radios have `required` and one mark on their legend. Product-wise shipping
+radios do likewise only while their server setting is enabled. The quantity-multiplied checkbox remains
+optional and sits outside that radio fieldset. Flat shipping cost is required only on flat-rate shipping;
+flash discount **and** type are required and marked only with a flash deal selected. English/Arabic help
+explains both conditions. Full mounts cover selection and clearing, disabled settings, multiple tax rows,
+optional controls and the already-correct brand-discount field.
+
+**The audit, before and after each module.** `php artisan forms:audit-required` was run on the untouched
+base, before/after Marketing, before/after Product, and after registration verification. Exact counts:
+
+| Module | Before A/B/C/D/E/F | After A/B/C/D/E/F |
+| --- | --- | --- |
+| Marketing | 4 / 18 / 0 / 0 / 8 / 0 | 4 / 0 / 0 / 0 / 8 / 0 |
+| Product | 1 / 13 / 3 / 0 / 0 / 5 | 0 / 5 / 3 / 0 / 0 / 5 |
+| Setup (deferred) | 10 / 7 / 0 / 8 / 0 / 0 | unchanged |
+| Website (deferred) | 9 / 6 / 1 / 0 / 2 / 0 | unchanged |
+| Whole application | 53 / 79 / 72 / 10 / 215 / 23 | 52 / 53 / 72 / 10 / 215 / 23 |
+
+Total **452 → 434 → 425**. Back-office baseline **109 → 91 → 82**: only the 18 Marketing B entries,
+then one Product A and eight Product B entries actually absent from the new audit were removed.
+
+**Judgement calls and audit limitations.** No new baseline entry was added and no audit implementation
+was changed to make these numbers fall. Marketing's four A findings are the script-populated `products`
+array: the required multi-select is deliberately unnamed and rows post dynamic nested names, which the
+scanner cannot resolve. Product's five B findings are four digital-tax labels plus the brand-discount
+label: dynamic `for`/`id` expressions prevent the scanner associating their existing rendered marks.
+Full-mount tests verify all of them. Product's three C findings are conditional sections scanned while
+the scratch server settings exclude their rules: taxes and flat shipping cost remain required only in
+the rendered state that needs them. Removing those requirements would disagree with the active server
+rules. Product's five F findings remain (category inline writers, computed actions and the edit request's
+unsaved-model `digital` scope/attribute collision); they are not claimed fixed. Client-only search fields
+still account for Marketing's eight E findings.
+
+**Production keys.** `.env.production.example` names empty `CAPTCHA_KEY` and `CAPTCHA_SECRET`, and says not
+to enable the reCAPTCHA setting until both are set because verification fails closed. The existing
+production-template test pins both empty values and that warning; seen failing first.
+
+**Customer registration.** Both `/temp/register` and `/temp/users/registration` post to
+`RegisterController::register`, whose validator now uses `Recaptcha::rules()` and `Recaptcha::messages()`
+from PR #462, with the error displayed below each widget. Only the existing `google_recaptcha` setting
+activates it. The shared Http fake dataset now exercises both pages as well as seller registration and
+representative create customer: valid, invalid, missing, wrong-type token; provider 503, connection
+failure, non-verdict response, missing secret, no secret/token logged; setting off with no token or a
+stray token. Refusals write no account. The audit parser test now expects the added CAPTCHA rule and its shifted source line. The shared registration payload moved to `tests/Pest.php` at its
+second test-file caller. Fail-closed operation now applies to all three POST endpoints: configure both
+keys before enabling the setting; a provider outage blocks submission while it is enabled.
+
+**Verification.** Baseline on `develop` code: required-fields audit **452**, ratchet plus registration tests
+**124 passed / 759 assertions**, and all four requested modules' Vitest files **58 files / 267 tests**.
+The complete backend baseline includes `LegacyStoreRegistrationTest` and was repeated in an isolated
+`03f9ab44` worktree. Initial attempts found missing Wayfinder output/packages and the 128 MB PHP limit; those were setup
+failures, corrected before the successful baseline. New marking assertions and CAPTCHA/template behavior
+tests were run failing before implementation. Focused Marketing **5 files / 12 tests**; focused Product
+**5 files / 27 tests**; registration/CAPTCHA **56 tests / 293 assertions**; final focused ratchet and
+registration group **142 tests / 819 assertions**; production template **6 tests / 406 assertions**.
+Whole Vitest and vue-tsc ran before module commits. PHPStan passed with no errors; Pint ran on dirty PHP
+files. The first full pre-push attempt found a stale audit expectation (updated for the new CAPTCHA rule),
+stale Composer class-map entries for removed controllers (regenerated with `dump-autoload --no-scripts`),
+and Docker GD without WebP (enabled by rebuilding GD in the local Docker image). No test was skipped or
+quarantined to address these failures. The final explicit `python3 .claude/scripts/pre_push_check.py --full` **passed** before the last commit:
+Wayfinder generation, whole-repo ESLint, Prettier, vue-tsc, Vitest **336 files / 2,651 tests**, Pint,
+PHPStan **0 errors**, config-cache clear, and parallel Pest **6,944 passed / 3 skipped / 40,022 assertions**
+(**137.30 s**). The three skips are the existing MySQL-only longitude precision cases, skipped on SQLite.
+The repaired-runtime focused checks also passed: audit/autoloader **98 tests / 669 assertions**, uploads
+**87 tests / 403 assertions**. Playwright, MySQL migration tests, composer/npm audits and the deploy
+script test were **not run by `--full`**; their CI jobs remain the gate when planned. No `CI-Verified`
+trailer was written or attested, and the script was never run bare on a clean committed tree. The full
+production `npm run build` also **passed**, including remote fonts: Node 24 needed `NODE_USE_ENV_PROXY=1`
+and the provided CA via `NODE_EXTRA_CA_CERTS` to use the managed proxy; the first attempt without those
+failed font-host DNS. The font-free fallback was not used. `git diff --check` passed.
+
+**Browser follow-up from real CI.** The first PR run passed every planned non-browser job but failed the
+two physical/digital product create cases: three exact `Browser VAT` label-text selectors missed the new
+mark. Both specs now use the exact accessible spinbutton name **`Browser VAT required`**, retaining the
+single-tax count assertion and additionally asserting native `required`. These changes are folded into
+the Product commit. The two affected specs were run locally: **7 passed (44.7 s)**, including create/edit,
+uploads, stored/pasted scripts, RTL, contrast and keyboard/editor behavior, with CSP enforced. Local PHP
+ran in Docker against the dedicated `database/e2e*.sqlite` files, with the backend exposed only on loopback;
+system Chromium/FFmpeg were used. Initial local launches found missing video-encoder setup and an ignored
+stale `public/hot` marker; the marker was backed up to use the production build, without weakening CSP.
+Playwright's generated transform cache was moved outside the repository before whole-repo lint. The final
+`--full` pass above was repeated after these browser-spec edits. No assertion was loosened and no test
+was quarantined. Real CI is run again for the revised PR head; results are available in PR #463's checks.
+
+
+**Remaining scope.** Carry forward **Setup** (10 A / 7 B / 8 D: conditional marks and help, especially
+currencies), then **Website** (9 A / 6 B / 1 C). **Batch 2** remains Trips, Sales, Customers, Languages,
+Support and Blog. The owner has chosen to drop screen requirements exceeding the server's, including
+customer create's seven C findings; `ValidatesStoreCustomer` name/email/phone must also be limited to
+191/191/20 with boundary tests. Separately, the registration fields never stored still need the owner's
+decision (store them or remove them), and seller-panel endpoints without validation remain phase 3.
