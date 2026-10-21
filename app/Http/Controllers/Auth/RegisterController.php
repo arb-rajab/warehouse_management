@@ -11,6 +11,7 @@ use App\Models\Country;
 use App\Models\Customer;
 use App\Models\StoreUser;
 use App\Notifications\EmailVerificationNotification;
+use App\Rules\Recaptcha;
 use App\Services\StoreVerificationCodes;
 use App\Services\UserService;
 use Carbon\Carbon;
@@ -106,7 +107,8 @@ class RegisterController extends Controller implements HasMiddleware
             'email' => 'required|email',
             'country' => 'required',
             'phone' => 'required',
-        ]);
+            'g-recaptcha-response' => Recaptcha::rules(),
+        ], Recaptcha::messages());
     }
 
     /**
