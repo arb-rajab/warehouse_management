@@ -5536,3 +5536,167 @@ Support and Blog. The owner has chosen to drop screen requirements exceeding the
 customer create's seven C findings; `ValidatesStoreCustomer` name/email/phone must also be limited to
 191/191/20 with boundary tests. Separately, the registration fields never stored still need the owner's
 decision (store them or remove them), and seller-panel endpoints without validation remain phase 3.
+## 50. Seller forms, phase 3 batch 1: account, money and text writes (2026-10-21)
+
+Runtime: **GPT-6 Codex**; the exact model variant and reasoning-effort setting are not exposed by this
+runtime. The requested **claude-opus-5-5 / high** cannot be selected here and is not claimed. Branch
+`codex/seller-validation` starts at `origin/develop` **637f7d15**, the merge of the previous
+[PR #463](https://github.com/arb-rajab/warehouse_management/pull/463). No newer `develop` change was present
+when work began. The owner authorized committing, opening one PR to `develop`, and merging after all CI
+is green. Account, money and text writes are separate commits. At approximately **32 files**, including
+the audit reports, browser coverage and this documentation, the requested size cutoff stops this batch
+before shop and commerce. No product or digital-product writer or view was changed.
+
+### Rules, per form: before and now
+
+| Form / route | Before | Now |
+| --- | --- | --- |
+| Profile (`seller.profile.update`, `seller/profile/index`) | `SellerProfileRequest`: name required/max 191 without a string check; minimum 6 only when both password controls were nonempty; a mismatch was silently ignored; phone, avatar and bank fields unvalidated | Name required/string/max **191**; optional phone string/max **20**; optional new password string/min **6**, confirmed against the existing `confirm_password`, at most **72 bytes**, no NUL; either populated password control requires the other. Optional avatar integer referencing **the caller's own image**. Payment switches boolean; bank name/account name/account number optional strings/max **255/200/50**, routing number optional signed 32-bit integer. Bag `sellerProfile`. |
+| Email (`user.change.email`, same view; shared with customers) | No validation; `isUnique()` then the existing emailed verification link, else the existing warning | `ChangeStoreEmailRequest`: email required/string/email/max **191**, unique in store `users`, ignoring the caller. Bag `changeEmail`. The controller still queues the same verification and leaves the current email unchanged until its callback. Resubmitting the caller's current email passes validation and retains **"Email already exists!"**; another account's duplicate is now a field validation error. |
+| Withdrawal (`seller.money_withdraw_request.store`, `money_withdraw_requests/index`) | Inline amount required/numeric/>0; message optional string/max 2000; `SellerWithdrawService` already did the locked balance and minimum checks | `Seller\StoreWithdrawRequest` keeps those rules and adds amount **< 10^18** (`decimal(20,2)` storage range, also rejecting numeric overflow/INF), plus the unknown-input refusal. The service and its transaction, first balance >5 check, then minimum / balance minus pending requests, are **unchanged**. |
+| New ticket (`seller.support_ticket.store`, `support_ticket/index`) | Nothing validated | Seller `StoreSupportTicketRequest` reuses the storefront rules: subject required/string/max **255** (`tickets.subject`), details required/string/max **10,000** (the back office's support-text cap; `longText` column), optional comma-separated image upload ids, **only the caller's**, at most **50**, unique and existing. Bag `storeTicket`. |
+| Ticket reply (`seller.support_ticket.reply_store`, `support_ticket/show`) | Nothing validated; controller already scoped `ticket_id` to the caller and authored the reply as the caller | `StoreTicketReplyRequest`: ticket id required/integer; reply required/string/max **10,000** (`longText`, back-office support cap); same optional own-image references. The existing scoped lookup now also runs before validation for a well-formed id; another account's id remains **404**, even with invalid text. |
+| Conversation reply (`seller.conversations.message_store`, `conversations/show`) | Nothing validated; `ConversationPolicy::participate` already checked membership | `StoreMessageRequest`: conversation id required/integer; message required/string/max **65,535 characters AND bytes** (`messages.message` is MySQL `TEXT`). Membership is checked through that same policy before validating a well-formed id, so another conversation stays **403**, an absent numeric id **404**. The controller's existing Gate check remains. |
+| Product-query reply (`seller.product_query.reply`, `product_query/show`) | Inline `reply => required`, nothing else | Seller `ReplyProductQueryRequest`: reply required/string/max **10,000**, using `ValidatesSupportReplies` as the back office does (`product_queries.reply` is `longText`). The seller-scoped query is resolved before validation; another seller's query is **404**. The controller keeps its scoped lookup and redirect. |
+
+Every endpoint refuses **unknown input, including empty unknown fields**, through
+`RejectsUnexpectedInput`; only `_token` and `_method` are exempt transport fields. It inspects submitted
+files and query input too. No seller-controlled owner/status field is added. All seven fixed Blade forms
+are added to `FIXED_STOREFRONT_FORMS`; the ratchet already reaches seller Blade forms reliably, so no
+scanner expansion or back-office baseline change was needed.
+
+**The forms.** Shared marks and one legend per required form, native requirements, associated labels,
+column-sized `maxlength` / numeric limits, retained old text and field errors. The profile and email read
+only their own error bags, preserving the address modal's bags. Ticket and withdrawal refusals reopen
+their modal. Password controls stay empty on a refusal; both legacy password names are now excluded
+from flashed old input in `bootstrap/app.php`. Scalar guards prevent rejected array values in `old()`
+from crashing the next GET. User HTML still stores as sent; escaped inputs, escaped conversation/history
+output and existing `clean_html()` ticket output are unchanged.
+
+**Dead and unshown input.** Removed the ticket-reply form's unused hidden `user_id` (the controller has
+always derived the author from auth) and the query-reply form's unused hidden `conversation_id` (the
+route id has always selected the query). Both now fail as unknown input. Profile `email`, withdrawal
+`user_id/status`, ticket `user_id/status/code`, conversation `user_id/sender_id/receiver_id/attachments`
+and any other unruled field are refused. None is needed by these controllers. All persisted profile
+and bank fields are actually shown in the profile form.
+
+### Judgement calls and existing defects
+
+1. **Unchecked profile payment switches previously blocked a normal submission**: the controller assigned
+   null to non-null integer columns when an unchecked checkbox sent nothing. They now save **0** through
+   `boolean()`; this is the one persistence repair needed for the form to succeed. The bank-name error
+   also incorrectly read the phone error; it now reads its own field.
+2. **Password rules follow the existing six-character policy**, with no new current-password challenge
+   (this controller never required one). The bcrypt input cap is 72 **bytes**, not Unicode characters;
+   NUL input errored in the hasher, and longer input is unsafe because bcrypt truncates it. Tests cover
+   a 72-byte multibyte password, 73 bytes, multibyte overflow and NUL. Browser maxlength is a character
+   approximation; the server byte check is authoritative. The existing default exceptions configuration
+   flashed `new_password` and `confirm_password` into the session; both are now redacted.
+3. **Own uploads means own even for a privileged seller.** The shared upload-reference helper gains an
+   opt-in `ownOnly` argument used by the two seller ticket requests; its other callers retain their
+   previous behavior. A seller's imported avatar uploaded by someone else must be cleared or replaced
+   before resaving the profile; it receives no grandfathered exception.
+4. **Email verification is retained, with an existing defect to follow up.** `HomeController::new_verify`
+   still has no input validation. More seriously, `email_change_callback` finds the account by the code
+   and takes the target email independently from the URL: the code is **not bound to the emailed address**,
+   and the callback does not recheck uniqueness. Fixing that recovery flow is outside this validation
+   batch. No new verification flow was added.
+5. **Text limits deliberately reuse the back office's 10,000-character cap** for details, ticket replies
+   and product-query replies although their columns are `longText`. Conversation messages additionally
+   enforce MySQL's 65,535-byte limit; the other existing `max:65535` validators elsewhere still count
+   characters only and are not changed here.
+6. **The withdrawal service and its money precision are retained.** Its float cast, locking, minimum,
+   balance and pending-request behavior are unchanged. This batch does not redesign currency arithmetic
+   or add a fractional-digit policy.
+7. The shared email request exposes the customer profile's already-unmarked/unrequired email control to
+   the audit (**one A and one B**). That customer form is not in this seller batch; it needs its own
+   error bag display and marking in the account-form follow-up.
+
+### Audit and verification
+
+`php artisan forms:audit-required` ran on untouched `develop`, then after account, money and text writes;
+`.ai/required-fields-audit-20261021.md` / `.json` are regenerated. **26 seller forms** throughout.
+
+| Scope / class | Before | After account | After money | After text |
+| --- | ---: | ---: | ---: | ---: |
+| Seller A / B / C / D / E / F | 14 / 14 / 34 / 0 / 117 / 0 | 14 / 13 / 34 / 0 / 108 / 0 | same | 14 / 12 / 30 / 0 / 102 / 0 |
+| Seller total | **179** | **169** | **169** | **158** |
+| Overall A / B / C / D / E / F | 52 / 53 / 72 / 10 / 215 / 23 | 53 / 53 / 72 / 10 / 205 / 23 | same | 53 / 52 / 68 / 10 / 199 / 23 |
+| Overall total | **425** | **416** | **416** | **405** |
+
+All seven fixed forms have **no finding in any class**. The untouched back-office baseline remains **82**.
+Tests were written and run before implementation: account **44 failures / 51 tests**, text **49 failures /
+71 tests**, and money failures on shared marks/old input, unknown fields and numeric overflow (the initial
+money render fixture also needed the existing `seedStoreCurrency()` helper). Array-old-input and password
+redaction/bcrypt tests were separately seen failing before those fixes. No test was removed or loosened.
+Focused Pest covers **198 tests** across the three seller files, storefront ticket regressions and
+the ratchet (the final full run below also includes them). Hostile cases include boundary and over-limit
+strings, arrays, HTML,
+unknown/forged owner fields, second-seller and customer ids, and foreign/non-image/repeated uploads.
+
+The cloud runtime uses PHP **8.5.11** and Laravel **13.34.0** from the installed source.
+`wait_for_setup.py` reported no active Claude setup; the existing cloud PHP activation script was used.
+PHPStan needed local socket access allowed by the execution environment; it passed with **0 errors**.
+The first full run exposed the same stale Composer classmap and missing GD WebP support recorded in §49:
+`composer dump-autoload --optimize --no-interaction` repaired the deleted-controller references (focused
+**82 tests / 625 assertions** passed), and GD was rebuilt with WebP in the local `wms-seller-php:8.5` Docker
+image and copied into the cloud PHP runtime (focused **87 upload tests / 403 assertions** passed). No
+repository dependency, model, image-processing rule or test was changed to address those runtime failures.
+The demo-mode early refusal is also pinned and remains ahead of the ownership lookup.
+The old provisioned `node_modules` lacked the newer chart/editor/map dependencies: restored with
+**npm 11.9.0 `npm ci`**, lockfile unchanged, then whole Vitest **336 files / 2,651 tests** and vue-tsc passed.
+`npm run build` passed, including remote fonts. The focused Playwright spec passed **3 tests**, including
+the new seller profile/withdrawal/ticket workflow and the existing uploader/login cases, with system
+Chromium/FFmpeg and enforced CSP on local HTTPS. The first new browser attempt failed in fixture setup
+because Shop is guarded; the fixture now uses DB writes, without changing model mass assignment.
+The stale ignored `public/hot` marker was backed up outside the repository for the production build.
+
+The final explicit `python3 .claude/scripts/pre_push_check.py --full` **passed before the last commit**:
+Wayfinder generation, whole-repo ESLint, Prettier, vue-tsc, Vitest **336 files / 2,651 tests**, Pint,
+PHPStan **0 errors**, config-cache clear, and parallel Pest **7,117 passed / 3 skipped / 40,684 assertions**
+(**80.036 s**). The three skips are the existing MySQL-only longitude cases on SQLite; none was added or
+quarantined. The full run itself does **not** execute Playwright, MySQL migrations or dependency audits.
+Playwright was run separately as above; MySQL migrations were not run locally (no schema changed).
+`bash .github/scripts/deploy-remote-test.sh` was also run separately: **all rollback checks passed**.
+`git diff --check` passed. No bare pre-push or attested run was used, and no `CI-Verified` trailer was
+written. Real PR CI and the subsequent staging deployment are checked before the final owner report.
+The PR plan selects PHP, JS and E2E; MySQL, dependency-audit and deploy-script CI jobs are not planned.
+
+Separately, `npm audit --omit=dev --audit-level=high` passed (**0 vulnerabilities**). Local
+`composer audit --locked --abandoned=report` could not complete: the managed proxy denied
+`packagist.org/api/security-advisories/` with CONNECT **403**. The PR planner skips dependency audit
+because no dependency file changed, so Composer advisories are **not verified by this batch**. No
+destination-policy workaround or advisory ignore was used.
+
+### Deferred at the file cutoff
+
+**Group 4, SHOP**: one request for the four `seller.shop.update` sections with a strict section-specific
+input allowlist, column-sized shop/address/meta fields, own images, optional social URLs <=255 and numeric
+coordinates within ±90/±180 (`shops.delivery_pickup_longitude` is already `decimal(18,15)`). Keep the current
+section dispatch, auth-derived shop, routes, redirects and flashes. `seller.shop.verify.store` needs rules
+from its configured dynamic fields and the real storage contract: `ShopVerificationStorage` stores private
+pdf/doc/docx/png/jpg, <=20 MB; a missing verification-form setting currently reaches `foreach(null)`.
+
+**Group 5, COMMERCE**: seller coupons already use `CouponRequest` (the brief's "validates nothing" does
+not apply to every endpoint). Keep `CouponPolicy`, code uniqueness and owner derivation; validate discount
+bounds, date order and seller-owned products before parsing dates. Its current `prepareForValidation()`
+explodes unvalidated `date_range` and builds `details` before validation, so arrays/malformed ranges can
+error. The bulk importer currently only checks `hasFile('bulk_file')`; match supported MIME/size and retain
+ownership constraints after inspecting `ProductsImport`, without silently enabling a second products writer.
+
+**Separate product/digital-product PR, owner decision pending**: do not widen `Product`'s
+`#[Fillable(['name', 'ar_name', 'thumbnail_img', 'published'])]` as a validation fix. Physical products
+already use `ProductRequest`: it requires name/category/unit/minimum quantity/unit price and conditionally
+discount; name max **255** exceeds `products.name` **200**, lacks a string check, and category/unit are
+only `required`. `ProductService::sellerAttributes()` is an input allowlist, **not** a replacement for
+rules or the model allowlist. Its store/update call `Product::create()` / `->update()` with many more
+columns, risking silently discarded attributes (or strict-mode exceptions). Stocks/tax/translation writes
+need their own shape, ranges and ownership validation and a transaction before the current destructive
+stock rebuild. Services assume `tags[0]` is JSON, choice arrays and variant keys have valid shapes, prices
+and quantities are usable, and dates parse; all require hostile tests. Digital create/update accept plain
+`Request`, assign many columns directly (so the mass-assignment limit does not protect them), assume
+`tags[0]` and JSON values exist, take unvalidated photos/downloads/prices/tax, and lowercase an unvalidated
+slug on update. Keep `ProductPolicy::updateAsSeller`, subscription checks, approved/published invariants,
+localization, sanitization and current URLs/flashes. Inspect every upload reference and nested tax/choice/
+stock product id against a second seller. Pin column boundaries, min/discount arithmetic, transaction
+rollback, and the known MySQL decimals/choice-order edit defects (D13) before changing these writers.
