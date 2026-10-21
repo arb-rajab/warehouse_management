@@ -4856,7 +4856,7 @@ the deploy-script test (CI runs them; no `CI-Verified` trailer was made), and no
 Model: **claude-opus-5-5**, effort **high**. Branch `ccr-6bf71ecb-5ab58g` from `develop` **9815092** (the
 PR #458 merge). Scope: phase 2(a) of §44's plan, the public storefront forms, server rule first. The
 reference-data PR (countries, policy pages) had not landed on `develop`, so the country fields build on
-`App\Models\Country`. With real CI (no `[skip ci]`). Every redirect, flash message, route, session key,
+`App\Models\Country`. Shipped in [PR #459](https://github.com/arb-rajab/warehouse_management/pull/459), with real CI (no `[skip ci]`). Every redirect, flash message, route, session key,
 OTP / captcha / throttle path and URL is unchanged; each form's tests were written first and seen failing.
 
 **Shipped, by commit** (the brief's batches 1 and 2; the PR reached about 30 files, the size the brief set as
