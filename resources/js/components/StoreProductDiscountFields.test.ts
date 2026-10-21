@@ -2,6 +2,7 @@ import { mount } from '@vue/test-utils';
 import { afterEach, describe, expect, it } from 'vitest';
 import FormField from '@/components/FormField.vue';
 import { i18n, t } from '@/lib/i18n';
+import { expectRequiredFields } from '@/testing/requiredFields';
 import StoreProductDiscountFields from './StoreProductDiscountFields.vue';
 
 afterEach(() => {
@@ -38,6 +39,7 @@ describe('StoreProductDiscountFields', () => {
         const wrapper = mount(StoreProductDiscountFields, {
             props: { errors: {} },
         });
+        expectRequiredFields(wrapper, ['discount', 'discount_type']);
         const [range, discount] = wrapper.findAllComponents(FormField);
 
         expect(range.props()).toMatchObject({ id: 'date_range', value: '' });

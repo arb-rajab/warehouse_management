@@ -2,6 +2,7 @@ import { mount } from '@vue/test-utils';
 import { afterEach, describe, expect, it } from 'vitest';
 import { i18n, t } from '@/lib/i18n';
 import { storeDigitalProductTax } from '@/testing/factories';
+import { expectRequiredFields } from '@/testing/requiredFields';
 import StoreProductTaxFields from './StoreProductTaxFields.vue';
 
 const taxes = [
@@ -27,9 +28,19 @@ describe('StoreProductTaxFields', () => {
                 props: { taxes, errors: {} },
             });
 
-            expect(wrapper.get('label[for="tax_2"]').text()).toBe('VAT');
+            expect(wrapper.get('label[for="tax_2"]').text()).toBe(
+                'VAT*' + t('common.required'),
+            );
+            expectRequiredFields(wrapper, [
+                'tax_2',
+                'tax_type_2',
+                'tax_3',
+                'tax_type_3',
+            ]);
             expect(wrapper.get('label[for="tax_type_3"]').text()).toBe(
-                t('store.productForm.taxType', { tax: 'Service' }),
+                t('store.productForm.taxType', { tax: 'Service' }) +
+                    '*' +
+                    t('common.required'),
             );
             expect(
                 wrapper
