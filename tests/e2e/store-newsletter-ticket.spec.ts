@@ -31,6 +31,7 @@ import {
  */
 
 const ar = JSON.parse(readFileSync('resources/js/locales/ar.json', 'utf8')) as {
+    common: Record<string, string>;
     store: Record<string, Record<string, string>>;
 };
 
@@ -348,7 +349,7 @@ test('both editors work in Arabic RTL with dark contrast and a keyboard-only too
 
     await openTicket(page, 'RTL ticket', ar.store.support.view);
     await expect(page.locator('#reply-label')).toHaveText(
-        ar.store.support.reply,
+        `${ar.store.support.reply}*${ar.common.required}`,
     );
     await expect(page.locator('label[for="status"]')).toHaveText(
         ar.store.support.replyStatus,
@@ -385,7 +386,7 @@ test('both editors work in Arabic RTL with dark contrast and a keyboard-only too
         page.getByRole('heading', { name: ar.store.newsletters.title }),
     ).toBeVisible();
     await expect(page.locator('#content-label')).toHaveText(
-        ar.store.newsletters.content,
+        `${ar.store.newsletters.content}*${ar.common.required}`,
     );
     await page.locator('#subject').focus();
     await page.keyboard.press('Tab');

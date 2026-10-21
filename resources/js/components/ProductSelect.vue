@@ -3,6 +3,7 @@ import { ChevronDown, LoaderCircle, Search } from '@lucide/vue';
 import { nextTick, ref, watch } from 'vue';
 import ProductActiveBadge from '@/components/ProductActiveBadge.vue';
 import ProductOptionLabel from '@/components/ProductOptionLabel.vue';
+import RequiredMark from '@/components/RequiredMark.vue';
 import { fieldLabelClass } from '@/lib/filters';
 import { t } from '@/lib/i18n';
 import { useDismissibleListbox } from '@/lib/useDismissibleListbox';
@@ -79,7 +80,9 @@ function buttonLabel(): string {
 
 <template>
     <div ref="containerRef" class="relative">
-        <label :for="id" :class="fieldLabelClass">{{ label }}</label>
+        <label :for="id" :class="fieldLabelClass"
+            >{{ label }}<RequiredMark v-if="required"
+        /></label>
         <input
             v-if="required"
             :id="`${id}-guard`"

@@ -32,7 +32,10 @@ test('the notification form rejects empty fields natively and keeps its Inertia 
 }) => {
     await loginAsStoreAdmin(page);
     await page.goto('/temp/admin/notifications/create');
-    const title = page.getByLabel('Title', { exact: true });
+    const title = page.getByRole('textbox', {
+        name: 'Title required',
+        exact: true,
+    });
     await page
         .getByRole('button', { name: 'Send notification', exact: true })
         .click();

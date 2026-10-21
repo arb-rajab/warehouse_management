@@ -77,7 +77,7 @@ describe('StoreTicketReplyForm', () => {
                 modelValue: '',
             });
             expect(wrapper.get('#reply-label').text()).toBe(
-                t('store.support.reply'),
+                t('store.support.reply') + '*' + t('common.required'),
             );
             expect(
                 wrapper.getComponent(StoreUploadField).props(),

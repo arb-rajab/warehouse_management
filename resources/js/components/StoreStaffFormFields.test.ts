@@ -2,6 +2,7 @@ import { mount } from '@vue/test-utils';
 import { describe, expect, it } from 'vitest';
 import FieldError from '@/components/FieldError.vue';
 import FormField from '@/components/FormField.vue';
+import RequiredMark from '@/components/RequiredMark.vue';
 import { t } from '@/lib/i18n';
 import { storeRole } from '@/testing/factories';
 import StoreStaffFormFields from './StoreStaffFormFields.vue';
@@ -161,4 +162,59 @@ describe('StoreStaffFormFields', () => {
 
         wrapper.unmount();
     });
+});
+
+describe('StoreStaffFormFields required marks', () => {
+    function markedIds(wrapper: ReturnType<typeof mountFields>): string[] {
+        return wrapper
+            .findAll('label')
+            .filter((label) => label.findComponent(RequiredMark).exists())
+            .map((label) => label.attributes('for') ?? '');
+    }
+
+    function requiredIds(wrapper: ReturnType<typeof mountFields>): string[] {
+        return wrapper
+            .findAll('input, select')
+            .filter((control) => control.attributes('required') !== undefined)
+            .map((control) => control.attributes('id') ?? '');
+    }
+
+    it('marks every field StoreStaffRequest requires, the role included', () => {
+        const wrapper = mountFields({ passwordRequired: true });
+
+        expect(markedIds(wrapper)).toEqual([
+            'name',
+            'email',
+            'mobile',
+            'role_id',
+            'password',
+            'password_confirmation',
+        ]);
+        expect(wrapper.get('label[for="role_id"]').text()).toBe(
+            t('store.staff.fields.role') + '*' + t('common.required'),
+        );
+    });
+
+    it('leaves the optional password of UpdateStaffRequest unmarked', () => {
+        const wrapper = mountFields();
+
+        expect(markedIds(wrapper)).toEqual([
+            'name',
+            'email',
+            'mobile',
+            'role_id',
+        ]);
+        expect(wrapper.get('label[for="password"]').text()).toBe(
+            t('store.staff.fields.newPassword'),
+        );
+    });
+
+    it.each([true, false])(
+        'marks exactly the controls it requires (password required: %s)',
+        (passwordRequired) => {
+            const wrapper = mountFields({ passwordRequired });
+
+            expect(markedIds(wrapper)).toEqual(requiredIds(wrapper));
+        },
+    );
 });

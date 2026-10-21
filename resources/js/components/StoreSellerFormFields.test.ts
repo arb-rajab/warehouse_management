@@ -18,7 +18,7 @@ describe('seller account fields', () => {
 
         for (const field of ['name', 'email', 'password']) {
             expect(wrapper.get(`label[for="${field}"]`).text()).toBe(
-                t(`store.sellers.${field}`),
+                t(`store.sellers.${field}`) + '*' + t('common.required'),
             );
             expect(wrapper.get(`#${field}`).attributes()).toMatchObject({
                 required: '',

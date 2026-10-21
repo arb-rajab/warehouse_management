@@ -40,7 +40,10 @@
             "hour": "h",
             "minute": "m",
             "second": "s"
-        }
+        },
+        "required": "required",
+        "requiredLegend": "Required fields",
+        "optional": "(optional)"
     },
     "welcome": {
         "brand": "Warehouse Admin",

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import FieldError from '@/components/FieldError.vue';
+import RequiredMark from '@/components/RequiredMark.vue';
 import { fieldLabelClass, plainFieldInputClass } from '@/lib/filters';
 import { t } from '@/lib/i18n';
 import type { StoreReferenceOption } from '@/types/store';
@@ -15,7 +16,9 @@ defineProps<{
 
 <template>
     <div>
-        <label :for="id" :class="fieldLabelClass">{{ label }}</label>
+        <label :for="id" :class="fieldLabelClass"
+            >{{ label }}<RequiredMark v-if="required"
+        /></label>
         <select
             :id="id"
             :name="id"

@@ -12,7 +12,9 @@ describe('Store AttributeValue form fields', () => {
         expect(wrapper.get('#value').attributes('required')).toBeDefined();
         expect(wrapper.get('#value').attributes('maxlength')).toBe('255');
         expect(wrapper.get('label[for="value"]').text()).toBe(
-            t('store.attributeValues.fields.value'),
+            t('store.attributeValues.fields.value') +
+                '*' +
+                t('common.required'),
         );
         expect(
             wrapper.get('input[name=attribute_id]').attributes('value'),

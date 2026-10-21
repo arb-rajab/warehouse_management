@@ -44,12 +44,18 @@ test('carrier tariff editing keeps zone prices and logo selection, and deletion 
     await page.getByLabel('Carrier browser zone', { exact: true }).check();
     await page.locator('#delimiter2-0').fill('10');
     await page
-        .getByLabel('Carrier browser zone — Price', { exact: true })
+        .getByRole('spinbutton', {
+            name: 'Carrier browser zone — Price required',
+            exact: true,
+        })
         .fill('5.25');
     await page.getByRole('button', { name: 'Add range', exact: true }).click();
     await page.locator('#delimiter2-1').fill('20');
     await page
-        .getByLabel('Carrier browser zone — Price', { exact: true })
+        .getByRole('spinbutton', {
+            name: 'Carrier browser zone — Price required',
+            exact: true,
+        })
         .last()
         .fill('8.75');
     await page.getByRole('button', { name: 'Save', exact: true }).click();
@@ -58,7 +64,8 @@ test('carrier tariff editing keeps zone prices and logo selection, and deletion 
     await row.getByRole('link', { name: 'Edit', exact: true }).click();
     await expect(page).toHaveURL(/\/carriers\/\d+\/edit$/);
     await expect(page.locator('input[name=logo]')).toHaveValue(logo);
-    const prices = page.getByLabel('Carrier browser zone — Price', {
+    const prices = page.getByRole('spinbutton', {
+        name: 'Carrier browser zone — Price required',
         exact: true,
     });
     await expect(prices.first()).toHaveValue('5.25');
@@ -75,10 +82,16 @@ test('carrier tariff editing keeps zone prices and logo selection, and deletion 
     await expect(page.locator('#billing_type')).toHaveValue('price_based');
     await expect(page.locator('input[name="delimiter2[0]"]')).toHaveValue('30');
     await expect(
-        page.getByLabel('Carrier browser zone — Price', { exact: true }),
+        page.getByRole('spinbutton', {
+            name: 'Carrier browser zone — Price required',
+            exact: true,
+        }),
     ).toHaveCount(1);
     await expect(
-        page.getByLabel('Carrier browser zone — Price', { exact: true }),
+        page.getByRole('spinbutton', {
+            name: 'Carrier browser zone — Price required',
+            exact: true,
+        }),
     ).toHaveValue('5.25');
     await page.goto('/temp/admin/carriers');
     page.once('dialog', (dialog) => dialog.dismiss());

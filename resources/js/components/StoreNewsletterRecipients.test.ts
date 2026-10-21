@@ -83,7 +83,9 @@ describe('StoreNewsletterRecipients', () => {
                 t(`store.newsletters.search.${kind}`),
             );
             expect(wrapper.get(`label[for="${field}"]`).text()).toBe(
-                t(`store.newsletters.recipients.${kind}`),
+                t(`store.newsletters.recipients.${kind}`) +
+                    '*' +
+                    t('common.required'),
             );
             const search = wrapper.get(`#${field}_search`);
             expect(search.attributes()).toMatchObject({

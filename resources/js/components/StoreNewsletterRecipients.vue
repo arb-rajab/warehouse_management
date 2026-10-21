@@ -4,6 +4,7 @@ import { LoaderCircle } from '@lucide/vue';
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { recipients } from '@/actions/App/Http/Controllers/Store/Admin/NewsletterController';
 import FieldError from '@/components/FieldError.vue';
+import RequiredMark from '@/components/RequiredMark.vue';
 import { debounce, fieldLabelClass, plainFieldInputClass } from '@/lib/filters';
 import { t } from '@/lib/i18n';
 
@@ -95,9 +96,10 @@ onBeforeUnmount(() => http.cancel());
             v-if="failed"
             :message="t('store.newsletters.searchFailed')"
         />
-        <label :for="field" :class="fieldLabelClass">{{
-            t(`store.newsletters.recipients.${kind}`)
-        }}</label>
+        <label :for="field" :class="fieldLabelClass"
+            >{{ t(`store.newsletters.recipients.${kind}`)
+            }}<RequiredMark v-if="required"
+        /></label>
         <select
             :id="field"
             v-model="selected"

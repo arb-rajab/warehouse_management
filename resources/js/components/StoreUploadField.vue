@@ -5,6 +5,7 @@ import { onBeforeUnmount, ref, watch } from 'vue';
 import { previews } from '@/actions/App/Http/Controllers/Store/Admin/UploadController';
 import ActionErrorBanner from '@/components/ActionErrorBanner.vue';
 import FieldError from '@/components/FieldError.vue';
+import RequiredMark from '@/components/RequiredMark.vue';
 import StoreFileManagerDialog from '@/components/StoreFileManagerDialog.vue';
 import { fieldLabelClass, filterTriggerButtonClass } from '@/lib/filters';
 import { t } from '@/lib/i18n';
@@ -86,7 +87,9 @@ onBeforeUnmount(() => {
 </script>
 <template>
     <div class="space-y-2">
-        <label :for="id ?? name" :class="fieldLabelClass">{{ label }}</label>
+        <label :for="id ?? name" :class="fieldLabelClass"
+            >{{ label }}<RequiredMark v-if="required"
+        /></label>
         <input
             :id="id ?? name"
             type="text"

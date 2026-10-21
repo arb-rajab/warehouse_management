@@ -1,11 +1,14 @@
 import { Form, Link } from '@inertiajs/vue3';
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { nextTick } from 'vue';
 import {
     edit as staffEdit,
     index as staffIndex,
     update as staffUpdate,
 } from '@/actions/App/Http/Controllers/Store/Admin/StaffController';
+import RequiredLegend from '@/components/RequiredLegend.vue';
+import RequiredMark from '@/components/RequiredMark.vue';
 import ResourceFormPage from '@/components/ResourceFormPage.vue';
 import StoreStaffFormFields from '@/components/StoreStaffFormFields.vue';
 import SubmitButton from '@/components/SubmitButton.vue';
@@ -111,5 +114,13 @@ describe('Store staff Edit', () => {
         expect(
             mountPage().getComponent(StoreStaffFormFields).props('errors'),
         ).toEqual({ role_id: 'The selected role id is invalid.' });
+    });
+
+    it('explains the required marks with the legend, the password unmarked', async () => {
+        const wrapper = mountPage();
+        await nextTick();
+
+        expect(wrapper.findComponent(RequiredLegend).exists()).toBe(true);
+        expect(wrapper.findAllComponents(RequiredMark)).toHaveLength(4);
     });
 });

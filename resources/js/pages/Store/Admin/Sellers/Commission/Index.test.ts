@@ -126,6 +126,7 @@ it.each(['en', 'ar'] as const)(
                 value: true,
                 error: undefined,
                 disabled: false,
+                required: true,
             },
             {
                 name: 'category_wise_commission',
@@ -133,6 +134,7 @@ it.each(['en', 'ar'] as const)(
                 value: false,
                 error: undefined,
                 disabled: false,
+                required: true,
             },
         ]);
 

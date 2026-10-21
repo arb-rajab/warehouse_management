@@ -30,30 +30,47 @@ test('verification builder adds reorders removes saves and reloads in RTL and da
         page.getByText('No verification fields. Save to keep an empty form.'),
     ).toBeVisible();
     await page.getByRole('button', { name: 'Add field', exact: true }).click();
-    await page.getByLabel('Field 1 label', { exact: true }).fill('Company');
+    await page
+        .getByRole('textbox', { name: 'Field 1 label required', exact: true })
+        .fill('Company');
     await page.getByRole('button', { name: 'Add field', exact: true }).click();
     await page
         .getByLabel('Field 2 type', { exact: true })
         .selectOption('multi_select');
-    await page.getByLabel('Field 2 label', { exact: true }).fill('Markets');
-    await page.getByLabel('Field 2, option 1', { exact: true }).fill('Retail');
+    await page
+        .getByRole('textbox', { name: 'Field 2 label required', exact: true })
+        .fill('Markets');
+    await page
+        .getByRole('textbox', {
+            name: 'Field 2, option 1 required',
+            exact: true,
+        })
+        .fill('Retail');
     await page
         .getByRole('button', { name: 'Add option to field 2', exact: true })
         .click();
     await page
-        .getByLabel('Field 2, option 2', { exact: true })
+        .getByRole('textbox', {
+            name: 'Field 2, option 2 required',
+            exact: true,
+        })
         .fill('Wholesale');
     await page.getByRole('button', { name: 'Add field', exact: true }).click();
-    await page.getByLabel('Field 3 label', { exact: true }).fill('Remove me');
+    await page
+        .getByRole('textbox', { name: 'Field 3 label required', exact: true })
+        .fill('Remove me');
     await page
         .getByRole('button', { name: 'Remove field 3', exact: true })
         .click();
     await page
         .getByRole('button', { name: 'Move field 2 up', exact: true })
         .click();
-    await expect(page.getByLabel('Field 1 label', { exact: true })).toHaveValue(
-        'Markets',
-    );
+    await expect(
+        page.getByRole('textbox', {
+            name: 'Field 1 label required',
+            exact: true,
+        }),
+    ).toHaveValue('Markets');
     await expect(
         page.getByRole('button', { name: 'Move field 1 up', exact: true }),
     ).toBeDisabled();
@@ -67,15 +84,24 @@ test('verification builder adds reorders removes saves and reloads in RTL and da
     expect((await save).status()).toBe(302);
     await page.waitForLoadState('networkidle');
     await page.reload();
-    await expect(page.getByLabel('Field 1 label', { exact: true })).toHaveValue(
-        'Markets',
-    );
     await expect(
-        page.getByLabel('Field 1, option 2', { exact: true }),
+        page.getByRole('textbox', {
+            name: 'Field 1 label required',
+            exact: true,
+        }),
+    ).toHaveValue('Markets');
+    await expect(
+        page.getByRole('textbox', {
+            name: 'Field 1, option 2 required',
+            exact: true,
+        }),
     ).toHaveValue('Wholesale');
-    await expect(page.getByLabel('Field 2 label', { exact: true })).toHaveValue(
-        'Company',
-    );
+    await expect(
+        page.getByRole('textbox', {
+            name: 'Field 2 label required',
+            exact: true,
+        }),
+    ).toHaveValue('Company');
     seedStoreFixtures(String.raw`
         $json = Illuminate\Support\Facades\DB::table('business_settings')->where('type', 'verification_form')->value('value');
         $expected = '[{"type":"multi_select","label":"Markets","options":"[\\"Retail\\",\\"Wholesale\\"]"},{"type":"text","label":"Company"}]';
@@ -140,7 +166,10 @@ test('commission settings retain numeric boundaries and the two compatibility sw
     const reports = await watchCsp(page);
     await expectStrictPolicy(page, '/temp/admin/vendor_commission');
     await page
-        .getByLabel('Seller commission (%)', { exact: true })
+        .getByRole('spinbutton', {
+            name: 'Seller commission (%) required',
+            exact: true,
+        })
         .fill('100.01');
     expect(
         await page

@@ -1,11 +1,14 @@
 import { Form, Link } from '@inertiajs/vue3';
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { nextTick } from 'vue';
 import {
     create as staffCreate,
     index as staffIndex,
     store as staffStore,
 } from '@/actions/App/Http/Controllers/Store/Admin/StaffController';
+import RequiredLegend from '@/components/RequiredLegend.vue';
+import RequiredMark from '@/components/RequiredMark.vue';
 import ResourceFormPage from '@/components/ResourceFormPage.vue';
 import StoreStaffFormFields from '@/components/StoreStaffFormFields.vue';
 import SubmitButton from '@/components/SubmitButton.vue';
@@ -99,5 +102,15 @@ describe('Store staff Create', () => {
         expect(
             mountPage().getComponent(StoreStaffFormFields).props('errors'),
         ).toEqual({ email: 'The email has already been taken.' });
+    });
+
+    it('explains the required marks with the legend', async () => {
+        const wrapper = mountPage();
+        await nextTick();
+
+        expect(wrapper.getComponent(RequiredLegend).text()).toBe(
+            '* ' + t('common.requiredLegend'),
+        );
+        expect(wrapper.findAllComponents(RequiredMark)).toHaveLength(6);
     });
 });
