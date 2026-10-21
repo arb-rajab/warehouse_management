@@ -326,9 +326,9 @@
         }
     },
     "server": {
-        "form_requests": 266,
+        "form_requests": 267,
         "form_requests_unparsed": 1,
-        "inline_validators": 27,
+        "inline_validators": 26,
         "inline_unparsed": 5
     },
     "top": [
@@ -3791,7 +3791,7 @@
             "line": 18,
             "action": "{{ route('store_customer') }}",
             "target": "route:store_customer",
-            "source": "App\\Http\\Controllers\\CustomerController@store_customer (inline)",
+            "source": "App\\Http\\Requests\\StoreRepresentativeCustomerRequest",
             "controls": 15,
             "unresolved_controls": 0,
             "findings": {
@@ -9657,7 +9657,7 @@
             "kind": "blade",
             "form": "resources/views/shop/frontend/user/create_user.blade.php",
             "target": "route:store_customer",
-            "source": "App\\Http\\Controllers\\CustomerController@store_customer (inline)",
+            "source": "App\\Http\\Requests\\StoreRepresentativeCustomerRequest",
             "field": "country_code",
             "label": null,
             "detail": "no server rule names this field",

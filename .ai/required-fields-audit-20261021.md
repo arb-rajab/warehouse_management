@@ -7,7 +7,7 @@ The convention, the classes and how to read this file: [.ai/rules/form-required-
 ## Summary
 
 Forms scanned: **158** Vue (resources/js/pages, resources/js/components) and **81** Blade (resources/views/shop).
-Server rules: **266** FormRequests (1 unparsed) and **27** controller actions with inline validation (5 unparsed).
+Server rules: **267** FormRequests (1 unparsed) and **26** controller actions with inline validation (5 unparsed).
 
 | Class | Meaning | Severity | Findings |
 | --- | --- | --- | ---: |
@@ -730,7 +730,7 @@ Each line: class, field (label), what differs, then the UI and server locations.
   - **C** `message`: required in the UI, the endpoint validates nothing. UI resources/views/shop/frontend/user/conversations/show.blade.php:77
   - **E** `conversation_id`: the endpoint validates nothing. UI resources/views/shop/frontend/user/conversations/show.blade.php:75
 
-- `resources/views/shop/frontend/user/create_user.blade.php → route:store_customer` (App\Http\Controllers\CustomerController@store_customer (inline))
+- `resources/views/shop/frontend/user/create_user.blade.php → route:store_customer` (App\Http\Requests\StoreRepresentativeCustomerRequest)
   - **E** `country_code`: no server rule names this field. UI resources/views/shop/frontend/user/create_user.blade.php:58
 
 - `resources/views/shop/frontend/user/customer/product_edit.blade.php → route:customer_products.update` (App\Http\Controllers\CustomerProductController@update)
