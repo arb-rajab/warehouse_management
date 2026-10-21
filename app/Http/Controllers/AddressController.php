@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreAddressRequest;
+use App\Http\Requests\UpdateAddressRequest;
 use App\Models\Address;
 use App\Models\Cart;
 use App\Models\City;
@@ -10,7 +12,6 @@ use Auth;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Gate;
-use Illuminate\Support\Facades\Validator;
 
 class AddressController extends Controller
 {
@@ -40,39 +41,11 @@ class AddressController extends Controller
      * @param  Request  $request
      * @return Response
      */
-    public function store(Request $request)
+    public function store(StoreAddressRequest $request)
     {
-        $validator = Validator::make($request->all(), [
-            'phone' => 'required'
-        ]);
-
-        if ($validator->fails()) {
-            flash(translate('Phone number is required'))->error();
-
-            return back()->withInput();
-        }
-
         $address = new Address;
-        if($request->has('customer_id')){
-            $address->user_id   = $request->customer_id;
-        }
-        else{
-            if(Auth::user()->is_rep){
-                $current_customer   = Auth::user()->current_customer;
-                $address->user_id   = $current_customer->id ?? Auth::user()->id;
-            }else {
-                $address->user_id   = Auth::user()->id;
-            }
-        }
-        Gate::authorize('manage', $address);
-        $address->address       = $request->address;
-        $address->country_id    = $request->country_id;
-        $address->state_id      = $request->state_id;
-        $address->city_id       = $request->city_id;
-        $address->longitude     = $request->longitude;
-        $address->latitude      = $request->latitude;
-        $address->postal_code   = $request->postal_code;
-        $address->phone         = $request->phone;
+        $address->user_id = $request->ownerId();
+        $this->fillFromForm($address, $request->validated());
         $address->save();
 
         flash(translate('Address info Stored successfully'))->success();
@@ -115,34 +88,27 @@ class AddressController extends Controller
      * @param  int  $id
      * @return Response
      */
-    public function update(Request $request, $id)
+    public function update(UpdateAddressRequest $request, $id)
     {
-        $validator = Validator::make($request->all(), [
-            'phone' => 'required'
-        ]);
-
-        if ($validator->fails()) {
-            flash(translate('Phone number is required'))->error();
-
-            return back()->withInput();
-        }
-
-        $address = Address::findOrFail($id);
-        Gate::authorize('manage', $address);
-
-        $address->address       = $request->address;
-        $address->country_id    = $request->country_id;
-        $address->state_id      = $request->state_id;
-        $address->city_id       = $request->city_id;
-        $address->longitude     = $request->longitude;
-        $address->latitude      = $request->latitude;
-        $address->postal_code   = $request->postal_code;
-        $address->phone         = $request->phone;
-
+        $address = $request->targetAddress();
+        $this->fillFromForm($address, $request->validated());
         $address->save();
 
         flash(translate('Address info updated successfully'))->success();
         return back();
+    }
+
+    /**
+     * Writes what the address forms send, as before: a field left out of the
+     * form (state and city, and the coordinates without the map) is cleared.
+     *
+     * @param  array<string, mixed>  $validated
+     */
+    private function fillFromForm(Address $address, array $validated): void
+    {
+        foreach (['address', 'country_id', 'state_id', 'city_id', 'longitude', 'latitude', 'postal_code', 'phone'] as $column) {
+            $address->{$column} = $validated[$column] ?? null;
+        }
     }
 
     /**

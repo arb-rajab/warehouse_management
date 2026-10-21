@@ -72,6 +72,31 @@ test('the Blade scanner reads a form\'s route, verb, controls, required attribut
         ]);
 });
 
+test('the Blade scanner takes a fieldset\'s legend as the label of its radio and checkbox group', function () {
+    $source = <<<'BLADE'
+        <form action="{{ route('checkout.store_shipping_infostore') }}" method="POST">
+            <fieldset>
+                <legend>{{ translate('Shipping address') }}<x-required-mark /></legend>
+                <label class="aiz-megabox"><input type="radio" name="address_id" value="1" required><span>Damrak 1</span></label>
+                <label for="note">Note</label>
+                <input id="note" name="note">
+            </fieldset>
+            <fieldset>
+                <legend>Extras</legend>
+                <label><input type="checkbox" name="gift"> Gift wrap</label>
+            </fieldset>
+        </form>
+        BLADE;
+
+    [$form] = (new BladeForms(base_path()))->scanSource($source, 'resources/views/shop/frontend/fixture.blade.php');
+
+    expect(array_map(fn (array $control) => [$control['name'], $control['mark'], $control['label']], $form['controls']))->toBe([
+        ['address_id', true, 'Shipping address*'],
+        ['note', false, 'Note'],
+        ['gift', false, 'Extras'],
+    ]);
+});
+
 test('the Vue scanner resolves forms by their Wayfinder action and follows the field components', function () {
     $forms = collect((new RequiredFieldsAudit(new ServerRules(base_path()), base_path()))->vueForms());
     $staff = $forms->firstWhere('file', 'resources/js/pages/Store/Admin/Staff/Staffs/Create.vue');

@@ -44,16 +44,6 @@ function completeRegistration(array $overrides = []): array
     ];
 }
 
-function registrationFormXPath(string $html): DOMXPath
-{
-    $document = new DOMDocument;
-    libxml_use_internal_errors(true);
-    $document->loadHTML('<?xml encoding="utf-8"?>'.$html);
-    libxml_clear_errors();
-
-    return new DOMXPath($document);
-}
-
 /**
  * The visible controls of the registration form, by name.
  *
@@ -81,7 +71,7 @@ function registrationLabel(DOMXPath $xpath, DOMElement $control): DOMElement
 }
 
 test('the registration form marks exactly the fields the validator requires', function (string $url, array $optional) {
-    $xpath = registrationFormXPath($this->get($url)->assertOk()->getContent());
+    $xpath = htmlXPath($this->get($url)->assertOk()->getContent());
     $controls = registrationControls($xpath);
 
     expect(array_keys($controls))->toEqualCanonicalizing([...REGISTRATION_REQUIRED_FIELDS, ...$optional]);
@@ -107,7 +97,7 @@ test('the registration form marks exactly the fields the validator requires', fu
 })->with(registrationPages());
 
 test('the registration form explains the asterisk before its first field', function (string $url) {
-    $xpath = registrationFormXPath($this->get($url)->assertOk()->getContent());
+    $xpath = htmlXPath($this->get($url)->assertOk()->getContent());
 
     $legend = $xpath->query('//form[@id="reg-form"]//*[@data-required-legend]');
     expect($legend->length)->toBe(1)

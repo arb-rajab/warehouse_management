@@ -213,6 +213,74 @@ function storeSetting(string $type, string|int|null $value): void
 }
 
 /**
+ * An XPath over a rendered page (a response or the HTML itself), parsed the
+ * way a browser would, tolerating the storefront's invalid markup.
+ */
+function htmlXPath(TestResponse|string $page): DOMXPath
+{
+    $document = new DOMDocument;
+    libxml_use_internal_errors(true);
+    $document->loadHTML('<?xml encoding="utf-8"?>'.(is_string($page) ? $page : $page->getContent()));
+    libxml_clear_errors();
+
+    return new DOMXPath($document);
+}
+
+/**
+ * How a rendered Blade form presents each named, visible control
+ * (.ai/rules/form-required-fields.md): whether it carries `required` and
+ * whether its label shows the required mark or "(optional)". The label is the
+ * one whose `for` names the control's id, else the one wrapping it, else the
+ * nearest one before it. Hidden inputs and buttons are left out; a name used
+ * twice (a radio group) keeps its first control.
+ *
+ * @return array<string, array{tag: string, required: bool, mark: bool, optional: bool}>
+ */
+function formFieldMarks(DOMXPath $xpath, DOMElement $form): array
+{
+    $fields = [];
+    foreach ($xpath->query('.//*[self::input or self::select or self::textarea][@name]', $form) as $control) {
+        if (in_array($control->getAttribute('type'), ['hidden', 'submit', 'button'], true) || isset($fields[$control->getAttribute('name')])) {
+            continue;
+        }
+        $id = $control->getAttribute('id');
+        $label = ($id !== '' ? $xpath->query('.//label[@for="'.$id.'"]', $form)->item(0) : null)
+            ?? $xpath->query('ancestor::label[1]', $control)->item(0)
+            ?? $xpath->query('preceding::label[1]', $control)->item(0);
+        $fields[$control->getAttribute('name')] = [
+            'tag' => $control->nodeName,
+            'required' => $control->hasAttribute('required'),
+            'mark' => $label !== null && $xpath->query('.//*[@data-required-mark]/span[@aria-hidden="true"][.="*"]', $label)->length === 1
+                && $xpath->query('.//*[@data-required-mark]/span[@class="sr-only"][.="required"]', $label)->length === 1,
+            'optional' => $label !== null && $xpath->query('.//*[@data-optional-mark]', $label)->length > 0,
+        ];
+    }
+
+    return $fields;
+}
+
+/**
+ * The one form on the page that posts to `$action` (a path, matched at the
+ * end of the action URL).
+ */
+function formPostingTo(DOMXPath $xpath, string $action): DOMElement
+{
+    $forms = $xpath->query('//form[substring(@action, string-length(@action) - '.(strlen($action) - 1).') = "'.$action.'"]');
+    expect($forms->length)->toBe(1, "expected one form posting to {$action}");
+
+    return $forms->item(0);
+}
+
+/**
+ * The text of the message flashed with laracasts/flash for the next request,
+ * read the way the storefront layout reads it (the session stores it as JSON).
+ */
+function flashedMessage(): ?string
+{
+    return collect(session('flash_notification', []))->toArray()[0]['message'] ?? null;
+}
+
+/**
  * The <head> a storefront response printed, as search engines read it: the
  * title, the robots / description / canonical values, every Open Graph and
  * Twitter tag by name, and each JSON-LD block decoded. Pass a response or the
@@ -222,12 +290,7 @@ function storeSetting(string $type, string|int|null $value): void
  */
 function storefrontHead(TestResponse|string $page): array
 {
-    $html = is_string($page) ? $page : $page->getContent();
-    $document = new DOMDocument;
-    libxml_use_internal_errors(true);
-    $document->loadHTML('<?xml encoding="utf-8"?>'.$html);
-    libxml_clear_errors();
-    $xpath = new DOMXPath($document);
+    $xpath = htmlXPath($page);
 
     $first = fn (string $query): ?string => ($node = $xpath->query($query)->item(0)) === null ? null : $node->nodeValue;
     $grouped = function (string $attribute, string $prefix) use ($xpath): array {
