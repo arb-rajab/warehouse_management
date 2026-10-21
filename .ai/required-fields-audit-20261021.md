@@ -11,16 +11,16 @@ Server rules: **263** FormRequests (1 unparsed) and **27** controller actions wi
 
 | Class | Meaning | Severity | Findings |
 | --- | --- | --- | ---: |
-| A | server-required, no `required` attribute (or no control at all) | high | 65 |
-| B | server-required, no visible mark | medium | 91 |
+| A | server-required, no `required` attribute (or no control at all) | high | 53 |
+| B | server-required, no visible mark | medium | 79 |
 | C | `required` or a mark, but the server rule is optional or absent | high | 82 |
 | D | conditional server rule, static `required` or mark | medium | 10 |
 | E | control with no matching server rule | low | 218 |
 | F | unparsed (server rules or form action) | info | 23 |
-| | **Total** | | **489** |
+| | **Total** | | **465** |
 
-By severity: high 147, medium 101, low 218, info 23.
-By priority: P1 8, P2 325, P3 156 (P1 public storefront forms: registration, address, checkout, contact, seller registration; P2 other storefront, account and seller-panel forms; P3 back office).
+By severity: high 135, medium 89, low 218, info 23.
+By priority: P1 8, P2 301, P3 156 (P1 public storefront forms: registration, address, checkout, contact, seller registration; P2 other storefront, account and seller-panel forms; P3 back office).
 
 ## Per module
 
@@ -56,7 +56,7 @@ By priority: P1 8, P2 325, P3 156 (P1 public storefront forms: registration, add
 | server: Api/V2/Seller | 0 | 0 | 0 | 0 | 0 | 0 | 1 |
 | server: Store/Admin | 0 | 0 | 0 | 0 | 0 | 0 | 3 |
 | storefront | 38 | 2 | 2 | 9 | 0 | 25 | 6 |
-| storefront/account | 12 | 12 | 13 | 23 | 0 | 43 | 1 |
+| storefront/account | 12 | 0 | 1 | 23 | 0 | 43 | 1 |
 | storefront/auth | 4 | 0 | 0 | 4 | 0 | 13 | 0 |
 | storefront/personal_info | 1 | 0 | 0 | 0 | 0 | 0 | 1 |
 
@@ -66,26 +66,26 @@ Public forms first, then by high (A + C) and medium (B + D) findings.
 
 | # | Priority | Form | Posts to | High | Medium | Low (E) |
 | ---: | --- | --- | --- | ---: | ---: | ---: |
-| 1 | P2 | `resources/views/shop/frontend/user/create_user.blade.php:18` | `route:store_customer` | 12 | 12 | 1 |
-| 2 | P2 | `resources/views/shop/seller/product/digitalproducts/edit.blade.php:11` | `route:seller.digitalproducts.update` | 9 | 0 | 12 |
-| 3 | P2 | `resources/views/shop/frontend/user/customer/product_edit.blade.php:24` | `route:customer_products.update` | 9 | 0 | 10 |
-| 4 | P2 | `resources/views/shop/frontend/user/customer/product_upload.blade.php:11` | `route:customer_products.store` | 9 | 0 | 10 |
-| 5 | P2 | `resources/views/shop/seller/coupons/edit.blade.php:18` | `route:seller.coupon.update` | 7 | 1 | 1 |
-| 6 | P2 | `resources/views/shop/seller/coupons/create.blade.php:20` | `route:seller.coupon.store` | 7 | 1 | 0 |
-| 7 | P2 | `resources/views/shop/seller/product/digitalproducts/create.blade.php:12` | `route:seller.digitalproducts.store` | 7 | 0 | 11 |
-| 8 | P2 | `resources/views/shop/seller/shop.blade.php:21` | `route:seller.shop.update` | 6 | 0 | 2 |
-| 9 | P2 | `resources/views/shop/seller/product/products/create.blade.php:23` | `route:seller.products.store` | 4 | 5 | 29 |
-| 10 | P2 | `resources/views/shop/auth/passwords/reset.blade.php:11` | `route:shop.password.update` | 4 | 0 | 0 |
-| 11 | P2 | `resources/views/shop/seller/product/products/edit.blade.php:24` | `route:seller.products.update` | 3 | 5 | 35 |
-| 12 | P2 | `resources/views/shop/frontend/digital_product_details.blade.php:792` | `route:conversations.store` | 2 | 0 | 1 |
-| 13 | P2 | `resources/views/shop/frontend/product_details.blade.php:162` | `route:conversations.store` | 2 | 0 | 1 |
-| 14 | P2 | `resources/views/shop/frontend/user/support_ticket/index.blade.php:79` | `route:support_ticket.store` | 2 | 0 | 1 |
-| 15 | P2 | `resources/views/shop/seller/support_ticket/index.blade.php:80` | `route:seller.support_ticket.store` | 2 | 0 | 1 |
-| 16 | P2 | `resources/views/shop/frontend/partials/wallet_modal.blade.php:9` | `route:wallet.recharge` | 2 | 0 | 0 |
-| 17 | P2 | `resources/views/shop/frontend/user/product_review_modal.blade.php:9` | `route:reviews.store` | 1 | 1 | 2 |
-| 18 | P2 | `resources/views/shop/frontend/digital_product_details.blade.php:695` | `route:product-queries.store` | 1 | 1 | 1 |
-| 19 | P2 | `resources/views/shop/frontend/product_details/product_queries.blade.php:29` | `route:product-queries.store` | 1 | 1 | 1 |
-| 20 | P2 | `resources/views/shop/frontend/user/support_ticket/show.blade.php:20` | `route:support_ticket.seller_store` | 1 | 0 | 3 |
+| 1 | P2 | `resources/views/shop/seller/product/digitalproducts/edit.blade.php:11` | `route:seller.digitalproducts.update` | 9 | 0 | 12 |
+| 2 | P2 | `resources/views/shop/frontend/user/customer/product_edit.blade.php:24` | `route:customer_products.update` | 9 | 0 | 10 |
+| 3 | P2 | `resources/views/shop/frontend/user/customer/product_upload.blade.php:11` | `route:customer_products.store` | 9 | 0 | 10 |
+| 4 | P2 | `resources/views/shop/seller/coupons/edit.blade.php:18` | `route:seller.coupon.update` | 7 | 1 | 1 |
+| 5 | P2 | `resources/views/shop/seller/coupons/create.blade.php:20` | `route:seller.coupon.store` | 7 | 1 | 0 |
+| 6 | P2 | `resources/views/shop/seller/product/digitalproducts/create.blade.php:12` | `route:seller.digitalproducts.store` | 7 | 0 | 11 |
+| 7 | P2 | `resources/views/shop/seller/shop.blade.php:21` | `route:seller.shop.update` | 6 | 0 | 2 |
+| 8 | P2 | `resources/views/shop/seller/product/products/create.blade.php:23` | `route:seller.products.store` | 4 | 5 | 29 |
+| 9 | P2 | `resources/views/shop/auth/passwords/reset.blade.php:11` | `route:shop.password.update` | 4 | 0 | 0 |
+| 10 | P2 | `resources/views/shop/seller/product/products/edit.blade.php:24` | `route:seller.products.update` | 3 | 5 | 35 |
+| 11 | P2 | `resources/views/shop/frontend/digital_product_details.blade.php:792` | `route:conversations.store` | 2 | 0 | 1 |
+| 12 | P2 | `resources/views/shop/frontend/product_details.blade.php:162` | `route:conversations.store` | 2 | 0 | 1 |
+| 13 | P2 | `resources/views/shop/frontend/user/support_ticket/index.blade.php:79` | `route:support_ticket.store` | 2 | 0 | 1 |
+| 14 | P2 | `resources/views/shop/seller/support_ticket/index.blade.php:80` | `route:seller.support_ticket.store` | 2 | 0 | 1 |
+| 15 | P2 | `resources/views/shop/frontend/partials/wallet_modal.blade.php:9` | `route:wallet.recharge` | 2 | 0 | 0 |
+| 16 | P2 | `resources/views/shop/frontend/user/product_review_modal.blade.php:9` | `route:reviews.store` | 1 | 1 | 2 |
+| 17 | P2 | `resources/views/shop/frontend/digital_product_details.blade.php:695` | `route:product-queries.store` | 1 | 1 | 1 |
+| 18 | P2 | `resources/views/shop/frontend/product_details/product_queries.blade.php:29` | `route:product-queries.store` | 1 | 1 | 1 |
+| 19 | P2 | `resources/views/shop/frontend/user/support_ticket/show.blade.php:20` | `route:support_ticket.seller_store` | 1 | 0 | 3 |
+| 20 | P2 | `resources/views/shop/seller/support_ticket/show.blade.php:16` | `route:seller.support_ticket.reply_store` | 1 | 0 | 3 |
 
 ## Findings by module and form
 
@@ -741,31 +741,7 @@ Each line: class, field (label), what differs, then the UI and server locations.
   - **E** `conversation_id`: the endpoint validates nothing. UI resources/views/shop/frontend/user/conversations/show.blade.php:75
 
 - `resources/views/shop/frontend/user/create_user.blade.php → route:store_customer` (App\Http\Controllers\CustomerController@store_customer (inline))
-  - **A** `bank_account_number` (Bank Account Number): server: required|max; the control has no required attribute. UI resources/views/shop/frontend/user/create_user.blade.php:137, server app/Http/Controllers/CustomerController.php:36
-  - **A** `company_address` (Company Address): server: required|string; the control has no required attribute. UI resources/views/shop/frontend/user/create_user.blade.php:152, server app/Http/Controllers/CustomerController.php:40
-  - **A** `company_name` (Company Name): server: required|string|max; the control has no required attribute. UI resources/views/shop/frontend/user/create_user.blade.php:37, server app/Http/Controllers/CustomerController.php:32
-  - **A** `country` (Country): server: required; the control has no required attribute. UI resources/views/shop/frontend/user/create_user.blade.php:105, server app/Http/Controllers/CustomerController.php:38
-  - **A** `email` (Email): server: required|email|unique; the control has no required attribute. UI resources/views/shop/frontend/user/create_user.blade.php:61, server app/Http/Controllers/CustomerController.php:34
-  - **A** `name` (Full Name): server: required|string|max; the control has no required attribute. UI resources/views/shop/frontend/user/create_user.blade.php:25, server app/Http/Controllers/CustomerController.php:31
-  - **A** `password` (Password): server: required|string|min|confirmed; the control has no required attribute. UI resources/views/shop/frontend/user/create_user.blade.php:202, server app/Http/Controllers/CustomerController.php:33
-  - **A** `password_confirmation` (Confirm Password): server: same as password (confirmed); the control has no required attribute. UI resources/views/shop/frontend/user/create_user.blade.php:220, server app/Http/Controllers/CustomerController.php:33
-  - **A** `phone` (Phone): server: required; the control has no required attribute. UI resources/views/shop/frontend/user/create_user.blade.php:52, server app/Http/Controllers/CustomerController.php:39
-  - **A** `shipping_address` (Shipping Address): server: required|string; the control has no required attribute. UI resources/views/shop/frontend/user/create_user.blade.php:168, server app/Http/Controllers/CustomerController.php:41
-  - **A** `tax_number` (Tax Number): server: required|max; the control has no required attribute. UI resources/views/shop/frontend/user/create_user.blade.php:123, server app/Http/Controllers/CustomerController.php:35
-  - **A** `trade_license` (Trade License): server: required|file|mimes|max; the control has no required attribute. UI resources/views/shop/frontend/user/create_user.blade.php:183, server app/Http/Controllers/CustomerController.php:37
-  - **B** `bank_account_number` (Bank Account Number): server: required|max; the label shows no required mark. UI resources/views/shop/frontend/user/create_user.blade.php:137, server app/Http/Controllers/CustomerController.php:36
-  - **B** `company_address` (Company Address): server: required|string; the label shows no required mark. UI resources/views/shop/frontend/user/create_user.blade.php:152, server app/Http/Controllers/CustomerController.php:40
-  - **B** `company_name` (Company Name): server: required|string|max; the label shows no required mark. UI resources/views/shop/frontend/user/create_user.blade.php:37, server app/Http/Controllers/CustomerController.php:32
-  - **B** `country` (Country): server: required; the label shows no required mark. UI resources/views/shop/frontend/user/create_user.blade.php:105, server app/Http/Controllers/CustomerController.php:38
-  - **B** `email` (Email): server: required|email|unique; the label shows no required mark. UI resources/views/shop/frontend/user/create_user.blade.php:61, server app/Http/Controllers/CustomerController.php:34
-  - **B** `name` (Full Name): server: required|string|max; the label shows no required mark. UI resources/views/shop/frontend/user/create_user.blade.php:25, server app/Http/Controllers/CustomerController.php:31
-  - **B** `password` (Password): server: required|string|min|confirmed; the label shows no required mark. UI resources/views/shop/frontend/user/create_user.blade.php:202, server app/Http/Controllers/CustomerController.php:33
-  - **B** `password_confirmation` (Confirm Password): server: same as password (confirmed); the label shows no required mark. UI resources/views/shop/frontend/user/create_user.blade.php:220, server app/Http/Controllers/CustomerController.php:33
-  - **B** `phone` (Phone): server: required; the label shows no required mark. UI resources/views/shop/frontend/user/create_user.blade.php:52, server app/Http/Controllers/CustomerController.php:39
-  - **B** `shipping_address` (Shipping Address): server: required|string; the label shows no required mark. UI resources/views/shop/frontend/user/create_user.blade.php:168, server app/Http/Controllers/CustomerController.php:41
-  - **B** `tax_number` (Tax Number): server: required|max; the label shows no required mark. UI resources/views/shop/frontend/user/create_user.blade.php:123, server app/Http/Controllers/CustomerController.php:35
-  - **B** `trade_license` (Trade License): server: required|file|mimes|max; the label shows no required mark. UI resources/views/shop/frontend/user/create_user.blade.php:183, server app/Http/Controllers/CustomerController.php:37
-  - **E** `country_code`: no server rule names this field. UI resources/views/shop/frontend/user/create_user.blade.php:57
+  - **E** `country_code`: no server rule names this field. UI resources/views/shop/frontend/user/create_user.blade.php:58
 
 - `resources/views/shop/frontend/user/customer/product_edit.blade.php → route:customer_products.update` (App\Http\Controllers\CustomerProductController@update)
   - **C** `brand_id` (Product Brand *): required in the UI, the endpoint validates nothing. UI resources/views/shop/frontend/user/customer/product_edit.blade.php:57
