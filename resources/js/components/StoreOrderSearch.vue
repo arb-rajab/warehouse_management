@@ -13,7 +13,6 @@ import {
     filterTriggerButtonClass,
 } from '@/lib/filters';
 import { t } from '@/lib/i18n';
-import { useRequiredField } from '@/lib/requiredFields';
 import type { Paginated } from '@/types/admin';
 import type { StoreOrderOption } from '@/types/store';
 const props = defineProps<{
@@ -26,7 +25,6 @@ const props = defineProps<{
     error?: string;
 }>();
 const emit = defineEmits<{ select: [option: StoreOrderOption] }>();
-useRequiredField(() => props.required);
 const query = ref('');
 const results = ref<StoreOrderOption[]>([]);
 const current = ref(1);

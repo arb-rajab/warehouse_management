@@ -55,7 +55,6 @@ import {
     selectedToggleClass,
 } from '@/lib/filters';
 import { t } from '@/lib/i18n';
-import { useRequiredField } from '@/lib/requiredFields';
 import { useStoreAccess } from '@/lib/storeAccess';
 import type { StoreUpload } from '@/types/store';
 
@@ -77,7 +76,6 @@ const props = withDefaults(
     { required: false },
 );
 const html = defineModel<string>({ default: '' });
-useRequiredField(() => props.required);
 const access = useStoreAccess();
 const toolbar = useTemplateRef<HTMLElement>('toolbar');
 const linkButton = useTemplateRef<HTMLButtonElement>('linkButton');

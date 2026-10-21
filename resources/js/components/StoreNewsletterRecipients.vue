@@ -7,7 +7,6 @@ import FieldError from '@/components/FieldError.vue';
 import RequiredMark from '@/components/RequiredMark.vue';
 import { debounce, fieldLabelClass, plainFieldInputClass } from '@/lib/filters';
 import { t } from '@/lib/i18n';
-import { useRequiredField } from '@/lib/requiredFields';
 
 /**
  * One recipient list of the newsletter form. Emails come from the bounded
@@ -20,7 +19,6 @@ const props = defineProps<{
     errors: Record<string, string>;
 }>();
 const selected = defineModel<string[]>({ default: () => [] });
-useRequiredField(() => props.required);
 const results = ref<string[]>([]);
 const failed = ref(false);
 const http = useHttp<{ q: string; kind: string }, string[]>({

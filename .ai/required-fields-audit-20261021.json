@@ -8,7 +8,7 @@
         },
         "by_class": {
             "A": 69,
-            "B": 95,
+            "B": 93,
             "C": 99,
             "D": 10,
             "E": 227,
@@ -16,14 +16,14 @@
         },
         "by_severity": {
             "high": 168,
-            "medium": 105,
+            "medium": 103,
             "low": 227,
             "info": 23
         },
         "by_priority": {
             "P1": 40,
             "P2": 325,
-            "P3": 158
+            "P3": 156
         }
     },
     "modules": {
@@ -201,7 +201,7 @@
         "Store/Admin/Staff": {
             "forms": 4,
             "A": 0,
-            "B": 2,
+            "B": 0,
             "C": 0,
             "D": 0,
             "E": 0,
@@ -2493,9 +2493,7 @@
             "source": "App\\Http\\Requests\\Store\\Admin\\StoreStaffRequest",
             "controls": 6,
             "unresolved_controls": 0,
-            "findings": {
-                "B": 1
-            }
+            "findings": []
         },
         {
             "kind": "vue",
@@ -2508,9 +2506,7 @@
             "source": "App\\Http\\Requests\\Store\\Admin\\UpdateStaffRequest",
             "controls": 6,
             "unresolved_controls": 0,
-            "findings": {
-                "B": 1
-            }
+            "findings": []
         },
         {
             "kind": "vue",
@@ -5820,36 +5816,6 @@
             "class": "B",
             "severity": "medium",
             "priority": "P3",
-            "module": "Store/Admin/Staff",
-            "kind": "vue",
-            "form": "resources/js/pages/Store/Admin/Staff/Staffs/Create.vue",
-            "target": "StaffController@store",
-            "source": "App\\Http\\Requests\\Store\\Admin\\StoreStaffRequest",
-            "field": "role_id",
-            "label": "Role",
-            "detail": "server: required|integer|exists; the label shows no required mark",
-            "ui": "resources/js/components/StoreStaffFormFields.vue:74",
-            "server": "app/Http/Requests/Concerns/ValidatesStoreStaff.php:28"
-        },
-        {
-            "class": "B",
-            "severity": "medium",
-            "priority": "P3",
-            "module": "Store/Admin/Staff",
-            "kind": "vue",
-            "form": "resources/js/pages/Store/Admin/Staff/Staffs/Edit.vue",
-            "target": "StaffController@update",
-            "source": "App\\Http\\Requests\\Store\\Admin\\UpdateStaffRequest",
-            "field": "role_id",
-            "label": "Role",
-            "detail": "server: required|integer|exists; the label shows no required mark",
-            "ui": "resources/js/components/StoreStaffFormFields.vue:74",
-            "server": "app/Http/Requests/Concerns/ValidatesStoreStaff.php:28"
-        },
-        {
-            "class": "B",
-            "severity": "medium",
-            "priority": "P3",
             "module": "Store/Admin/Support",
             "kind": "vue",
             "form": "resources/js/pages/Store/Admin/Support/Conversations/Show.vue",
@@ -8333,7 +8299,7 @@
             "field": "customer_id-search",
             "label": "Search {label}",
             "detail": "no server rule names this field",
-            "ui": "resources/js/components/StoreOrderSearch.vue:93",
+            "ui": "resources/js/components/StoreOrderSearch.vue:91",
             "server": null
         },
         {
@@ -8348,7 +8314,7 @@
             "field": "customer_id-search",
             "label": "Search {label}",
             "detail": "no server rule names this field",
-            "ui": "resources/js/components/StoreOrderSearch.vue:93",
+            "ui": "resources/js/components/StoreOrderSearch.vue:91",
             "server": null
         },
         {
@@ -8363,7 +8329,7 @@
             "field": "rep_id-search",
             "label": "Search {label}",
             "detail": "no server rule names this field",
-            "ui": "resources/js/components/StoreOrderSearch.vue:93",
+            "ui": "resources/js/components/StoreOrderSearch.vue:91",
             "server": null
         },
         {
@@ -8378,7 +8344,7 @@
             "field": "customer_id-search",
             "label": "Search {label}",
             "detail": "no server rule names this field",
-            "ui": "resources/js/components/StoreOrderSearch.vue:93",
+            "ui": "resources/js/components/StoreOrderSearch.vue:91",
             "server": null
         },
         {

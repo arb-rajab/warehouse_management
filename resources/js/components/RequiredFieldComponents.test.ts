@@ -239,7 +239,7 @@ describe('field component guard', () => {
     });
 
     it.each(requiredFieldComponents.map((entry) => entry.name))(
-        '%s renders RequiredMark and registers with the form legend',
+        '%s renders RequiredMark exactly when required',
         (name) => {
             const source = componentSources[`./${name}.vue`];
 
@@ -247,7 +247,6 @@ describe('field component guard', () => {
                 "import RequiredMark from '@/components/RequiredMark.vue';",
             );
             expect(source).toContain('<RequiredMark v-if="required"');
-            expect(source).toContain('useRequiredField(() => props.required)');
         },
     );
 });

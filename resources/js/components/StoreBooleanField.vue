@@ -3,12 +3,11 @@ import FieldError from '@/components/FieldError.vue';
 import RequiredMark from '@/components/RequiredMark.vue';
 import { fieldLabelClass, plainFieldInputClass } from '@/lib/filters';
 import { t } from '@/lib/i18n';
-import { useRequiredField } from '@/lib/requiredFields';
 /**
  * `required` defaults to true, as the select always carried it; pass
  * `:required="false"` where the server rule is not `required`.
  */
-const props = withDefaults(
+withDefaults(
     defineProps<{
         name: string;
         label: string;
@@ -19,7 +18,6 @@ const props = withDefaults(
     }>(),
     { required: true },
 );
-useRequiredField(() => props.required);
 </script>
 <template>
     <div>

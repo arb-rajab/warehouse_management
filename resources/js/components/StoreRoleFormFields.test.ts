@@ -2,6 +2,7 @@ import { mount } from '@vue/test-utils';
 import { describe, expect, it } from 'vitest';
 import FieldError from '@/components/FieldError.vue';
 import FormField from '@/components/FormField.vue';
+import RequiredMark from '@/components/RequiredMark.vue';
 import { t } from '@/lib/i18n';
 import { permissionGroup } from '@/testing/factories';
 import StoreRoleFormFields from './StoreRoleFormFields.vue';
@@ -102,5 +103,26 @@ describe('StoreRoleFormFields', () => {
         await wrapper.setProps({ errors: { name: 'Required.' } });
 
         expect((checkbox.element as HTMLInputElement).checked).toBe(true);
+    });
+});
+
+describe('StoreRoleFormFields required marks', () => {
+    it('marks the required name and none of the optional permissions', () => {
+        const wrapper = mount(StoreRoleFormFields, {
+            props: {
+                permissionGroups: groups,
+                errors: {},
+            },
+        });
+        const marked = wrapper
+            .findAll('label')
+            .filter((label) => label.findComponent(RequiredMark).exists());
+
+        expect(marked.map((label) => label.attributes('for'))).toEqual([
+            'name',
+        ]);
+        expect(
+            wrapper.get('input[name="permissions[]"]').attributes('required'),
+        ).toBeUndefined();
     });
 });

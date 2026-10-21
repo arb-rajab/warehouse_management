@@ -296,6 +296,24 @@ describe('ResourceFormPage required-field legend', () => {
         expect(wrapper.findAllComponents(RequiredMark)).toHaveLength(1);
     });
 
+    it('shows the legend for a hand-written label that renders RequiredMark', async () => {
+        const wrapper = mount(ResourceFormPage, {
+            props: {
+                title: 'Add row',
+                action: rowsIndex.url(),
+                submitLabel: 'Create',
+                submittingLabel: 'Creating...',
+            },
+            slots: {
+                default: () =>
+                    h('label', { for: 'role_id' }, ['Role', h(RequiredMark)]),
+            },
+        });
+        await nextTick();
+
+        expect(wrapper.findComponent(RequiredLegend).exists()).toBe(true);
+    });
+
     it('shows no legend when every field is optional', async () => {
         const wrapper = mountWithFields([{ id: 'notes', required: false }]);
         await nextTick();

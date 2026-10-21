@@ -77,14 +77,19 @@ test('the Vue scanner resolves forms by their Wayfinder action and follows the f
     $staff = $forms->firstWhere('file', 'resources/js/pages/Store/Admin/Staff/Staffs/Create.vue');
 
     expect($staff['target'])->toBe(['controller' => 'App\\Http\\Controllers\\Store\\Admin\\StaffController', 'method' => 'store'])
-        ->and(array_map(fn (array $control) => [$control['name'], $control['required'], $control['label'], $control['file'].':'.$control['line']], $staff['controls']))->toBe([
-            ['name', true, 'Name', 'resources/js/components/StoreStaffFormFields.vue:41'],
-            ['email', true, 'Email', 'resources/js/components/StoreStaffFormFields.vue:50'],
-            ['mobile', true, 'Phone', 'resources/js/components/StoreStaffFormFields.vue:60'],
-            ['role_id', true, 'Role', 'resources/js/components/StoreStaffFormFields.vue:74'],
-            ['password', true, 'Password', 'resources/js/components/StoreStaffFormFields.vue:95'],
-            ['password_confirmation', true, 'Confirm password', 'resources/js/components/StoreStaffFormFields.vue:115'],
+        ->and(array_map(fn (array $control) => [$control['name'], $control['required'], $control['label'], $control['file']], $staff['controls']))->toBe([
+            ['name', true, 'Name', 'resources/js/components/StoreStaffFormFields.vue'],
+            ['email', true, 'Email', 'resources/js/components/StoreStaffFormFields.vue'],
+            ['mobile', true, 'Phone', 'resources/js/components/StoreStaffFormFields.vue'],
+            ['role_id', true, 'Role', 'resources/js/components/StoreStaffFormFields.vue'],
+            ['password', true, 'Password', 'resources/js/components/StoreStaffFormFields.vue'],
+            ['password_confirmation', true, 'Confirm password', 'resources/js/components/StoreStaffFormFields.vue'],
         ]);
+
+    // Each control is reported where it is written: a FormField at its usage, a raw select at its tag.
+    $source = file(base_path('resources/js/components/StoreStaffFormFields.vue'));
+    expect(array_map(fn (array $control) => trim($source[$control['line'] - 1]), $staff['controls']))
+        ->toBe(['<FormField', '<FormField', '<FormField', '<select', '<FormField', '<FormField']);
 
     // A ternary action is one form per branch, each with its branch's fields;
     // forms in ResourceFormPage's #after-form slot are forms of their own.

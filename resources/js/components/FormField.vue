@@ -11,9 +11,8 @@ defineOptions({ inheritAttrs: false });
 import FieldError from '@/components/FieldError.vue';
 import RequiredMark from '@/components/RequiredMark.vue';
 import { fieldLabelClass } from '@/lib/filters';
-import { useRequiredField } from '@/lib/requiredFields';
 
-const props = withDefaults(
+withDefaults(
     defineProps<{
         id: string;
         label: string;
@@ -28,8 +27,6 @@ const props = withDefaults(
         required: false,
     },
 );
-
-useRequiredField(() => props.required);
 </script>
 
 <template>

@@ -12,15 +12,15 @@ Server rules: **257** FormRequests (1 unparsed) and **30** controller actions wi
 | Class | Meaning | Severity | Findings |
 | --- | --- | --- | ---: |
 | A | server-required, no `required` attribute (or no control at all) | high | 69 |
-| B | server-required, no visible mark | medium | 95 |
+| B | server-required, no visible mark | medium | 93 |
 | C | `required` or a mark, but the server rule is optional or absent | high | 99 |
 | D | conditional server rule, static `required` or mark | medium | 10 |
 | E | control with no matching server rule | low | 227 |
 | F | unparsed (server rules or form action) | info | 23 |
-| | **Total** | | **523** |
+| | **Total** | | **521** |
 
-By severity: high 168, medium 105, low 227, info 23.
-By priority: P1 40, P2 325, P3 158 (P1 public storefront forms: registration, address, checkout, contact, seller registration; P2 other storefront, account and seller-panel forms; P3 back office).
+By severity: high 168, medium 103, low 227, info 23.
+By priority: P1 40, P2 325, P3 156 (P1 public storefront forms: registration, address, checkout, contact, seller registration; P2 other storefront, account and seller-panel forms; P3 back office).
 
 ## Per module
 
@@ -45,7 +45,7 @@ By priority: P1 40, P2 325, P3 158 (P1 public storefront forms: registration, ad
 | Store/Admin/Sellers | 6 | 0 | 0 | 0 | 2 | 0 | 0 |
 | Store/Admin/Settings | 2 | 0 | 0 | 0 | 0 | 0 | 1 |
 | Store/Admin/Setup | 27 | 10 | 7 | 0 | 8 | 0 | 0 |
-| Store/Admin/Staff | 4 | 0 | 2 | 0 | 0 | 0 | 0 |
+| Store/Admin/Staff | 4 | 0 | 0 | 0 | 0 | 0 | 0 |
 | Store/Admin/Support | 2 | 0 | 2 | 0 | 0 | 0 | 0 |
 | Store/Admin/Trips | 11 | 3 | 4 | 0 | 0 | 1 | 1 |
 | Store/Admin/Website | 7 | 9 | 6 | 1 | 0 | 2 | 0 |
@@ -255,16 +255,16 @@ Each line: class, field (label), what differs, then the UI and server locations.
 - `resources/js/pages/Store/Admin/Sales/Orders/Create.vue → OrderEntryController@shippingStore` (App\Http\Requests\Store\Admin\StoreOrderRequest)
   - **A** `products`: server: required|array|min|max; the form has no control for it. UI resources/js/pages/Store/Admin/Sales/Orders/Create.vue:14, server app/Http/Requests/Concerns/ValidatesStoreOrder.php:17
   - **A** `rep_id`: server: required|integer|exists; the form has no control for it. UI resources/js/pages/Store/Admin/Sales/Orders/Create.vue:14, server app/Http/Requests/Store/Admin/StoreOrderRequest.php:21
-  - **E** `customer_id-search` (Search {label}): no server rule names this field. UI resources/js/components/StoreOrderSearch.vue:93
+  - **E** `customer_id-search` (Search {label}): no server rule names this field. UI resources/js/components/StoreOrderSearch.vue:91
 
 - `resources/js/pages/Store/Admin/Sales/Orders/Create.vue → OrderEntryController@store` (App\Http\Requests\Store\Admin\StoreOrderRequest)
   - **A** `products`: server: required|array|min|max; the form has no control for it. UI resources/js/pages/Store/Admin/Sales/Orders/Create.vue:14, server app/Http/Requests/Concerns/ValidatesStoreOrder.php:17
-  - **E** `customer_id-search` (Search {label}): no server rule names this field. UI resources/js/components/StoreOrderSearch.vue:93
-  - **E** `rep_id-search` (Search {label}): no server rule names this field. UI resources/js/components/StoreOrderSearch.vue:93
+  - **E** `customer_id-search` (Search {label}): no server rule names this field. UI resources/js/components/StoreOrderSearch.vue:91
+  - **E** `rep_id-search` (Search {label}): no server rule names this field. UI resources/js/components/StoreOrderSearch.vue:91
 
 - `resources/js/pages/Store/Admin/Sales/Orders/Edit.vue → OrderEntryController@update` (App\Http\Requests\Store\Admin\UpdateOrderRequest)
   - **A** `products`: server: required|array|min|max; the form has no control for it. UI resources/js/pages/Store/Admin/Sales/Orders/Edit.vue:16, server app/Http/Requests/Concerns/ValidatesStoreOrder.php:17
-  - **E** `customer_id-search` (Search {label}): no server rule names this field. UI resources/js/components/StoreOrderSearch.vue:93
+  - **E** `customer_id-search` (Search {label}): no server rule names this field. UI resources/js/components/StoreOrderSearch.vue:91
 
 - `resources/js/pages/Store/Admin/Sales/Orders/Index.vue → (unresolved)`
   - **F** `-`: form action not resolved: listAction.url(). UI resources/js/pages/Store/Admin/Sales/Orders/Index.vue:78
@@ -339,14 +339,6 @@ Each line: class, field (label), what differs, then the UI and server locations.
 
 - `resources/js/pages/Store/Admin/Setup/Zones/Edit.vue → ZoneController@update` (App\Http\Requests\Store\Admin\UpdateZoneRequest)
   - **B** `country_id[]` (Countries in this zone): server: required|array|min; the label shows no required mark. UI resources/js/components/StoreZoneFormFields.vue:29, server app/Http/Requests/Concerns/ValidatesStoreZone.php:18
-
-### Store/Admin/Staff
-
-- `resources/js/pages/Store/Admin/Staff/Staffs/Create.vue → StaffController@store` (App\Http\Requests\Store\Admin\StoreStaffRequest)
-  - **B** `role_id` (Role): server: required|integer|exists; the label shows no required mark. UI resources/js/components/StoreStaffFormFields.vue:74, server app/Http/Requests/Concerns/ValidatesStoreStaff.php:28
-
-- `resources/js/pages/Store/Admin/Staff/Staffs/Edit.vue → StaffController@update` (App\Http\Requests\Store\Admin\UpdateStaffRequest)
-  - **B** `role_id` (Role): server: required|integer|exists; the label shows no required mark. UI resources/js/components/StoreStaffFormFields.vue:74, server app/Http/Requests/Concerns/ValidatesStoreStaff.php:28
 
 ### Store/Admin/Support
 

@@ -13,8 +13,10 @@ import type { ComputedRef } from 'vue';
  * The required fields a form currently renders, one token per field
  * component instance. A form provides it (`provideRequiredFields()`, done by
  * ResourceFormPage) to show the "* Required fields" legend only when at least
- * one descendant field is required; fields register themselves through
- * `useRequiredField()`. Outside a providing form, registration is a no-op.
+ * one descendant field is required; RequiredMark registers itself through
+ * `useRequiredField()` while it is rendered, so every marked field counts,
+ * whether a field component or a hand-written label renders the mark.
+ * Outside a providing form, registration is a no-op.
  */
 const requiredFieldsKey: InjectionKey<Set<symbol>> = Symbol('requiredFields');
 

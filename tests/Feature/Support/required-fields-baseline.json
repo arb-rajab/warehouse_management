@@ -346,14 +346,6 @@
             "reason": "Known on 2026-10-21 when the convention was introduced (.ai/required-fields-audit-20261021.md); to fix in phase 2 or 3."
         },
         {
-            "fingerprint": "B|resources/js/pages/Store/Admin/Staff/Staffs/Create.vue|StaffController@store|role_id",
-            "reason": "Known on 2026-10-21 when the convention was introduced (.ai/required-fields-audit-20261021.md); to fix in phase 2 or 3."
-        },
-        {
-            "fingerprint": "B|resources/js/pages/Store/Admin/Staff/Staffs/Edit.vue|StaffController@update|role_id",
-            "reason": "Known on 2026-10-21 when the convention was introduced (.ai/required-fields-audit-20261021.md); to fix in phase 2 or 3."
-        },
-        {
             "fingerprint": "B|resources/js/pages/Store/Admin/Support/Conversations/Show.vue|ConversationController@reply|message",
             "reason": "Known on 2026-10-21 when the convention was introduced (.ai/required-fields-audit-20261021.md); to fix in phase 2 or 3."
         },

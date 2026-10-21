@@ -9,7 +9,6 @@ import RequiredMark from '@/components/RequiredMark.vue';
 import StoreFileManagerDialog from '@/components/StoreFileManagerDialog.vue';
 import { fieldLabelClass, filterTriggerButtonClass } from '@/lib/filters';
 import { t } from '@/lib/i18n';
-import { useRequiredField } from '@/lib/requiredFields';
 import { useStoreAccess } from '@/lib/storeAccess';
 import type { StoreUpload } from '@/types/store';
 
@@ -27,7 +26,6 @@ const props = withDefaults(
     { multiple: false, required: false, initialFiles: () => [] },
 );
 const value = defineModel<string>({ default: '' });
-useRequiredField(() => props.required);
 const access = useStoreAccess();
 const files = ref<StoreUpload[]>(props.initialFiles);
 const draft = ref<StoreUpload[]>([]);

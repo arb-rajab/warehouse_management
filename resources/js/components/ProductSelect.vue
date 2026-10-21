@@ -6,7 +6,6 @@ import ProductOptionLabel from '@/components/ProductOptionLabel.vue';
 import RequiredMark from '@/components/RequiredMark.vue';
 import { fieldLabelClass } from '@/lib/filters';
 import { t } from '@/lib/i18n';
-import { useRequiredField } from '@/lib/requiredFields';
 import { useDismissibleListbox } from '@/lib/useDismissibleListbox';
 import { useProductSearch } from '@/lib/useProductSearch';
 import type { ProductFilterOption } from '@/types/admin';
@@ -28,8 +27,6 @@ const props = defineProps<{
 }>();
 
 const model = defineModel<ProductFilterOption | null>({ required: true });
-
-useRequiredField(() => props.required);
 
 const searchInputRef = ref<HTMLInputElement | null>(null);
 const optionsListRef = ref<HTMLElement | null>(null);
