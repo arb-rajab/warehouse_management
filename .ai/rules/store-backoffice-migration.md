@@ -4681,7 +4681,7 @@ Model: **claude-opus-5-5**, effort **high**. Branch `ccr-df04b098-zzj7j8` from `
 PR #456 merge). Scope: how every form shows which fields are mandatory, a tool that measures the gap
 across the whole application, a ratchet that stops it growing in the store back office, and two pilots.
 The standing rule is [form-required-fields.md](form-required-fields.md); this section is its history and
-plan. Shipped in one PR with CI (no `[skip ci]`).
+plan. Shipped in [PR #458](https://github.com/arb-rajab/warehouse_management/pull/458), with CI (no `[skip ci]`).
 
 **The problem, as found.** Nothing in the rules said how a required field is shown, so no form showed it.
 The storefront registration form (`shop.auth.register`) required tax number, addresses and trade license
