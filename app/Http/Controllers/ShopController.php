@@ -2,13 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreShopRequest;
 use App\Models\BusinessSetting;
 use App\Models\Shop;
 use App\Models\StoreUser;
 use App\Notifications\EmailVerificationNotification;
 use Auth;
 use Hash;
-use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
@@ -65,19 +65,11 @@ class ShopController extends Controller implements HasMiddleware
     /**
      * Store a newly created resource in storage.
      *
-     * @param  Request  $request
+     * @param  StoreShopRequest  $request
      * @return Response
      */
-    public function store(Request $request)
+    public function store(StoreShopRequest $request)
     {
-        $request->validate([
-            'name'      => 'required|string|max:255',
-            'email'     => 'required|email|unique:users|max:255',
-            'password'  => 'required|string|min:6|confirmed',
-            'shop_name' => 'required|max:255',
-            'address'   => 'required',
-        ]);
-
         $user = null;
         if (!Auth::check()) {
             if (StoreUser::where('email', $request->email)->first() != null) {
