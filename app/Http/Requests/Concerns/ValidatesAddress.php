@@ -8,8 +8,9 @@ use Illuminate\Validation\Rule;
 /**
  * The address a storefront customer or a seller saves for themselves
  * (`addresses`, 2026_09_28_000001_create_addresses_table): every text column
- * is a varchar(255), the coordinates are decimal(17,15), which holds less
- * than 100 either way, and the ids name an active country, an active state
+ * is a varchar(255), the latitude is decimal(17,15) and the longitude
+ * decimal(18,15) (2026_10_21_110000_widen_map_longitude_columns), so every
+ * point on the map fits, and the ids name an active country, an active state
  * of that country and an active city of that state.
  *
  * Only the phone is always required, as it was before these rules existed.
@@ -31,7 +32,7 @@ trait ValidatesAddress
             'postal_code' => ['nullable', 'string', 'max:255'],
             'phone' => ['required', 'string', 'max:255'],
             'latitude' => ['nullable', 'numeric', 'between:-90,90'],
-            'longitude' => ['nullable', 'numeric', 'gt:-100', 'lt:100'],
+            'longitude' => ['nullable', 'numeric', 'between:-180,180'],
         ];
     }
 }

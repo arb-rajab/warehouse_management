@@ -7,22 +7,22 @@
             "blade": 81
         },
         "by_class": {
-            "A": 69,
-            "B": 91,
+            "A": 53,
+            "B": 79,
             "C": 82,
             "D": 10,
             "E": 218,
             "F": 23
         },
         "by_severity": {
-            "high": 151,
-            "medium": 101,
+            "high": 135,
+            "medium": 89,
             "low": 218,
             "info": 23
         },
         "by_priority": {
-            "P1": 12,
-            "P2": 325,
+            "P1": 8,
+            "P2": 301,
             "P3": 156
         }
     },
@@ -290,7 +290,7 @@
         },
         "storefront": {
             "forms": 38,
-            "A": 6,
+            "A": 2,
             "B": 2,
             "C": 9,
             "D": 0,
@@ -299,8 +299,8 @@
         },
         "storefront/account": {
             "forms": 12,
-            "A": 12,
-            "B": 13,
+            "A": 0,
+            "B": 1,
             "C": 23,
             "D": 0,
             "E": 43,
@@ -326,42 +326,14 @@
         }
     },
     "server": {
-        "form_requests": 262,
+        "form_requests": 263,
         "form_requests_unparsed": 1,
-        "inline_validators": 28,
+        "inline_validators": 27,
         "inline_unparsed": 5
     },
     "top": [
         {
             "rank": 1,
-            "priority": "P1",
-            "module": "storefront",
-            "form": "resources/views/shop/frontend/seller_form.blade.php:28",
-            "target": "route:shops.store",
-            "high": 4,
-            "medium": 0,
-            "low": 0,
-            "findings": {
-                "A": 4
-            }
-        },
-        {
-            "rank": 2,
-            "priority": "P2",
-            "module": "storefront/account",
-            "form": "resources/views/shop/frontend/user/create_user.blade.php:18",
-            "target": "route:store_customer",
-            "high": 12,
-            "medium": 12,
-            "low": 1,
-            "findings": {
-                "A": 12,
-                "B": 12,
-                "E": 1
-            }
-        },
-        {
-            "rank": 3,
             "priority": "P2",
             "module": "seller panel",
             "form": "resources/views/shop/seller/product/digitalproducts/edit.blade.php:11",
@@ -375,7 +347,7 @@
             }
         },
         {
-            "rank": 4,
+            "rank": 2,
             "priority": "P2",
             "module": "storefront/account",
             "form": "resources/views/shop/frontend/user/customer/product_edit.blade.php:24",
@@ -389,7 +361,7 @@
             }
         },
         {
-            "rank": 5,
+            "rank": 3,
             "priority": "P2",
             "module": "storefront/account",
             "form": "resources/views/shop/frontend/user/customer/product_upload.blade.php:11",
@@ -403,7 +375,7 @@
             }
         },
         {
-            "rank": 6,
+            "rank": 4,
             "priority": "P2",
             "module": "seller panel",
             "form": "resources/views/shop/seller/coupons/edit.blade.php:18",
@@ -418,7 +390,7 @@
             }
         },
         {
-            "rank": 7,
+            "rank": 5,
             "priority": "P2",
             "module": "seller panel",
             "form": "resources/views/shop/seller/coupons/create.blade.php:20",
@@ -432,7 +404,7 @@
             }
         },
         {
-            "rank": 8,
+            "rank": 6,
             "priority": "P2",
             "module": "seller panel",
             "form": "resources/views/shop/seller/product/digitalproducts/create.blade.php:12",
@@ -446,7 +418,7 @@
             }
         },
         {
-            "rank": 9,
+            "rank": 7,
             "priority": "P2",
             "module": "seller panel",
             "form": "resources/views/shop/seller/shop.blade.php:21",
@@ -460,7 +432,7 @@
             }
         },
         {
-            "rank": 10,
+            "rank": 8,
             "priority": "P2",
             "module": "seller panel",
             "form": "resources/views/shop/seller/product/products/create.blade.php:23",
@@ -475,7 +447,7 @@
             }
         },
         {
-            "rank": 11,
+            "rank": 9,
             "priority": "P2",
             "module": "storefront/auth",
             "form": "resources/views/shop/auth/passwords/reset.blade.php:11",
@@ -488,7 +460,7 @@
             }
         },
         {
-            "rank": 12,
+            "rank": 10,
             "priority": "P2",
             "module": "seller panel",
             "form": "resources/views/shop/seller/product/products/edit.blade.php:24",
@@ -503,7 +475,7 @@
             }
         },
         {
-            "rank": 13,
+            "rank": 11,
             "priority": "P2",
             "module": "storefront",
             "form": "resources/views/shop/frontend/digital_product_details.blade.php:792",
@@ -517,7 +489,7 @@
             }
         },
         {
-            "rank": 14,
+            "rank": 12,
             "priority": "P2",
             "module": "storefront",
             "form": "resources/views/shop/frontend/product_details.blade.php:162",
@@ -531,7 +503,7 @@
             }
         },
         {
-            "rank": 15,
+            "rank": 13,
             "priority": "P2",
             "module": "storefront/account",
             "form": "resources/views/shop/frontend/user/support_ticket/index.blade.php:79",
@@ -545,7 +517,7 @@
             }
         },
         {
-            "rank": 16,
+            "rank": 14,
             "priority": "P2",
             "module": "seller panel",
             "form": "resources/views/shop/seller/support_ticket/index.blade.php:80",
@@ -559,7 +531,7 @@
             }
         },
         {
-            "rank": 17,
+            "rank": 15,
             "priority": "P2",
             "module": "storefront",
             "form": "resources/views/shop/frontend/partials/wallet_modal.blade.php:9",
@@ -572,7 +544,7 @@
             }
         },
         {
-            "rank": 18,
+            "rank": 16,
             "priority": "P2",
             "module": "storefront/account",
             "form": "resources/views/shop/frontend/user/product_review_modal.blade.php:9",
@@ -587,7 +559,7 @@
             }
         },
         {
-            "rank": 19,
+            "rank": 17,
             "priority": "P2",
             "module": "storefront",
             "form": "resources/views/shop/frontend/digital_product_details.blade.php:695",
@@ -602,7 +574,7 @@
             }
         },
         {
-            "rank": 20,
+            "rank": 18,
             "priority": "P2",
             "module": "storefront",
             "form": "resources/views/shop/frontend/product_details/product_queries.blade.php:29",
@@ -614,6 +586,34 @@
                 "A": 1,
                 "B": 1,
                 "E": 1
+            }
+        },
+        {
+            "rank": 19,
+            "priority": "P2",
+            "module": "storefront/account",
+            "form": "resources/views/shop/frontend/user/support_ticket/show.blade.php:20",
+            "target": "route:support_ticket.seller_store",
+            "high": 1,
+            "medium": 0,
+            "low": 3,
+            "findings": {
+                "C": 1,
+                "E": 3
+            }
+        },
+        {
+            "rank": 20,
+            "priority": "P2",
+            "module": "seller panel",
+            "form": "resources/views/shop/seller/support_ticket/show.blade.php:16",
+            "target": "route:seller.support_ticket.reply_store",
+            "high": 1,
+            "medium": 0,
+            "low": 3,
+            "findings": {
+                "C": 1,
+                "E": 3
             }
         }
     ],
@@ -3670,12 +3670,10 @@
             "line": 28,
             "action": "{{ route('shops.store') }}",
             "target": "route:shops.store",
-            "source": "App\\Http\\Controllers\\ShopController@store (inline)",
+            "source": "App\\Http\\Requests\\StoreShopRequest",
             "controls": 6,
             "unresolved_controls": 0,
-            "findings": {
-                "A": 4
-            }
+            "findings": []
         },
         {
             "kind": "blade",
@@ -3758,7 +3756,7 @@
             "target": "route:register",
             "source": "App\\Http\\Controllers\\Auth\\RegisterController@register (inline)",
             "controls": 10,
-            "unresolved_controls": 1,
+            "unresolved_controls": 0,
             "findings": {
                 "E": 1
             }
@@ -3804,8 +3802,6 @@
             "controls": 15,
             "unresolved_controls": 0,
             "findings": {
-                "A": 12,
-                "B": 12,
                 "E": 1
             }
         },
@@ -4017,8 +4013,8 @@
             "action": "{{ route('register') }}",
             "target": "route:register",
             "source": "App\\Http\\Controllers\\Auth\\RegisterController@register (inline)",
-            "controls": 14,
-            "unresolved_controls": 1,
+            "controls": 15,
+            "unresolved_controls": 0,
             "findings": {
                 "E": 5
             }
@@ -4834,246 +4830,6 @@
             "detail": "server: required|string; the control has no required attribute",
             "ui": "resources/views/shop/frontend/product_details/product_queries.blade.php:33",
             "server": "app/Http/Controllers/ProductQueryController.php:52"
-        },
-        {
-            "class": "A",
-            "severity": "high",
-            "priority": "P1",
-            "module": "storefront",
-            "kind": "blade",
-            "form": "resources/views/shop/frontend/seller_form.blade.php",
-            "target": "route:shops.store",
-            "source": "App\\Http\\Controllers\\ShopController@store (inline)",
-            "field": "email",
-            "label": "Your Email *",
-            "detail": "server: required|email|unique|max; the control has no required attribute",
-            "ui": "resources/views/shop/frontend/seller_form.blade.php:47",
-            "server": "app/Http/Controllers/ShopController.php:75"
-        },
-        {
-            "class": "A",
-            "severity": "high",
-            "priority": "P1",
-            "module": "storefront",
-            "kind": "blade",
-            "form": "resources/views/shop/frontend/seller_form.blade.php",
-            "target": "route:shops.store",
-            "source": "App\\Http\\Controllers\\ShopController@store (inline)",
-            "field": "name",
-            "label": "Your Name *",
-            "detail": "server: required|string|max; the control has no required attribute",
-            "ui": "resources/views/shop/frontend/seller_form.blade.php:38",
-            "server": "app/Http/Controllers/ShopController.php:74"
-        },
-        {
-            "class": "A",
-            "severity": "high",
-            "priority": "P1",
-            "module": "storefront",
-            "kind": "blade",
-            "form": "resources/views/shop/frontend/seller_form.blade.php",
-            "target": "route:shops.store",
-            "source": "App\\Http\\Controllers\\ShopController@store (inline)",
-            "field": "password",
-            "label": "Your Password *",
-            "detail": "server: required|string|min|confirmed; the control has no required attribute",
-            "ui": "resources/views/shop/frontend/seller_form.blade.php:56",
-            "server": "app/Http/Controllers/ShopController.php:76"
-        },
-        {
-            "class": "A",
-            "severity": "high",
-            "priority": "P1",
-            "module": "storefront",
-            "kind": "blade",
-            "form": "resources/views/shop/frontend/seller_form.blade.php",
-            "target": "route:shops.store",
-            "source": "App\\Http\\Controllers\\ShopController@store (inline)",
-            "field": "password_confirmation",
-            "label": "Repeat Password *",
-            "detail": "server: same as password (confirmed); the control has no required attribute",
-            "ui": "resources/views/shop/frontend/seller_form.blade.php:65",
-            "server": "app/Http/Controllers/ShopController.php:76"
-        },
-        {
-            "class": "A",
-            "severity": "high",
-            "priority": "P2",
-            "module": "storefront/account",
-            "kind": "blade",
-            "form": "resources/views/shop/frontend/user/create_user.blade.php",
-            "target": "route:store_customer",
-            "source": "App\\Http\\Controllers\\CustomerController@store_customer (inline)",
-            "field": "bank_account_number",
-            "label": "Bank Account Number",
-            "detail": "server: required|max; the control has no required attribute",
-            "ui": "resources/views/shop/frontend/user/create_user.blade.php:137",
-            "server": "app/Http/Controllers/CustomerController.php:36"
-        },
-        {
-            "class": "A",
-            "severity": "high",
-            "priority": "P2",
-            "module": "storefront/account",
-            "kind": "blade",
-            "form": "resources/views/shop/frontend/user/create_user.blade.php",
-            "target": "route:store_customer",
-            "source": "App\\Http\\Controllers\\CustomerController@store_customer (inline)",
-            "field": "company_address",
-            "label": "Company Address",
-            "detail": "server: required|string; the control has no required attribute",
-            "ui": "resources/views/shop/frontend/user/create_user.blade.php:152",
-            "server": "app/Http/Controllers/CustomerController.php:40"
-        },
-        {
-            "class": "A",
-            "severity": "high",
-            "priority": "P2",
-            "module": "storefront/account",
-            "kind": "blade",
-            "form": "resources/views/shop/frontend/user/create_user.blade.php",
-            "target": "route:store_customer",
-            "source": "App\\Http\\Controllers\\CustomerController@store_customer (inline)",
-            "field": "company_name",
-            "label": "Company Name",
-            "detail": "server: required|string|max; the control has no required attribute",
-            "ui": "resources/views/shop/frontend/user/create_user.blade.php:37",
-            "server": "app/Http/Controllers/CustomerController.php:32"
-        },
-        {
-            "class": "A",
-            "severity": "high",
-            "priority": "P2",
-            "module": "storefront/account",
-            "kind": "blade",
-            "form": "resources/views/shop/frontend/user/create_user.blade.php",
-            "target": "route:store_customer",
-            "source": "App\\Http\\Controllers\\CustomerController@store_customer (inline)",
-            "field": "country",
-            "label": "Country",
-            "detail": "server: required; the control has no required attribute",
-            "ui": "resources/views/shop/frontend/user/create_user.blade.php:105",
-            "server": "app/Http/Controllers/CustomerController.php:38"
-        },
-        {
-            "class": "A",
-            "severity": "high",
-            "priority": "P2",
-            "module": "storefront/account",
-            "kind": "blade",
-            "form": "resources/views/shop/frontend/user/create_user.blade.php",
-            "target": "route:store_customer",
-            "source": "App\\Http\\Controllers\\CustomerController@store_customer (inline)",
-            "field": "email",
-            "label": "Email",
-            "detail": "server: required|email|unique; the control has no required attribute",
-            "ui": "resources/views/shop/frontend/user/create_user.blade.php:61",
-            "server": "app/Http/Controllers/CustomerController.php:34"
-        },
-        {
-            "class": "A",
-            "severity": "high",
-            "priority": "P2",
-            "module": "storefront/account",
-            "kind": "blade",
-            "form": "resources/views/shop/frontend/user/create_user.blade.php",
-            "target": "route:store_customer",
-            "source": "App\\Http\\Controllers\\CustomerController@store_customer (inline)",
-            "field": "name",
-            "label": "Full Name",
-            "detail": "server: required|string|max; the control has no required attribute",
-            "ui": "resources/views/shop/frontend/user/create_user.blade.php:25",
-            "server": "app/Http/Controllers/CustomerController.php:31"
-        },
-        {
-            "class": "A",
-            "severity": "high",
-            "priority": "P2",
-            "module": "storefront/account",
-            "kind": "blade",
-            "form": "resources/views/shop/frontend/user/create_user.blade.php",
-            "target": "route:store_customer",
-            "source": "App\\Http\\Controllers\\CustomerController@store_customer (inline)",
-            "field": "password",
-            "label": "Password",
-            "detail": "server: required|string|min|confirmed; the control has no required attribute",
-            "ui": "resources/views/shop/frontend/user/create_user.blade.php:202",
-            "server": "app/Http/Controllers/CustomerController.php:33"
-        },
-        {
-            "class": "A",
-            "severity": "high",
-            "priority": "P2",
-            "module": "storefront/account",
-            "kind": "blade",
-            "form": "resources/views/shop/frontend/user/create_user.blade.php",
-            "target": "route:store_customer",
-            "source": "App\\Http\\Controllers\\CustomerController@store_customer (inline)",
-            "field": "password_confirmation",
-            "label": "Confirm Password",
-            "detail": "server: same as password (confirmed); the control has no required attribute",
-            "ui": "resources/views/shop/frontend/user/create_user.blade.php:220",
-            "server": "app/Http/Controllers/CustomerController.php:33"
-        },
-        {
-            "class": "A",
-            "severity": "high",
-            "priority": "P2",
-            "module": "storefront/account",
-            "kind": "blade",
-            "form": "resources/views/shop/frontend/user/create_user.blade.php",
-            "target": "route:store_customer",
-            "source": "App\\Http\\Controllers\\CustomerController@store_customer (inline)",
-            "field": "phone",
-            "label": "Phone",
-            "detail": "server: required; the control has no required attribute",
-            "ui": "resources/views/shop/frontend/user/create_user.blade.php:52",
-            "server": "app/Http/Controllers/CustomerController.php:39"
-        },
-        {
-            "class": "A",
-            "severity": "high",
-            "priority": "P2",
-            "module": "storefront/account",
-            "kind": "blade",
-            "form": "resources/views/shop/frontend/user/create_user.blade.php",
-            "target": "route:store_customer",
-            "source": "App\\Http\\Controllers\\CustomerController@store_customer (inline)",
-            "field": "shipping_address",
-            "label": "Shipping Address",
-            "detail": "server: required|string; the control has no required attribute",
-            "ui": "resources/views/shop/frontend/user/create_user.blade.php:168",
-            "server": "app/Http/Controllers/CustomerController.php:41"
-        },
-        {
-            "class": "A",
-            "severity": "high",
-            "priority": "P2",
-            "module": "storefront/account",
-            "kind": "blade",
-            "form": "resources/views/shop/frontend/user/create_user.blade.php",
-            "target": "route:store_customer",
-            "source": "App\\Http\\Controllers\\CustomerController@store_customer (inline)",
-            "field": "tax_number",
-            "label": "Tax Number",
-            "detail": "server: required|max; the control has no required attribute",
-            "ui": "resources/views/shop/frontend/user/create_user.blade.php:123",
-            "server": "app/Http/Controllers/CustomerController.php:35"
-        },
-        {
-            "class": "A",
-            "severity": "high",
-            "priority": "P2",
-            "module": "storefront/account",
-            "kind": "blade",
-            "form": "resources/views/shop/frontend/user/create_user.blade.php",
-            "target": "route:store_customer",
-            "source": "App\\Http\\Controllers\\CustomerController@store_customer (inline)",
-            "field": "trade_license",
-            "label": "Trade License",
-            "detail": "server: required|file|mimes|max; the control has no required attribute",
-            "ui": "resources/views/shop/frontend/user/create_user.blade.php:183",
-            "server": "app/Http/Controllers/CustomerController.php:37"
         },
         {
             "class": "B",
@@ -6244,186 +6000,6 @@
             "detail": "server: required|string; the label shows no required mark",
             "ui": "resources/views/shop/frontend/product_details/product_queries.blade.php:33",
             "server": "app/Http/Controllers/ProductQueryController.php:52"
-        },
-        {
-            "class": "B",
-            "severity": "medium",
-            "priority": "P2",
-            "module": "storefront/account",
-            "kind": "blade",
-            "form": "resources/views/shop/frontend/user/create_user.blade.php",
-            "target": "route:store_customer",
-            "source": "App\\Http\\Controllers\\CustomerController@store_customer (inline)",
-            "field": "bank_account_number",
-            "label": "Bank Account Number",
-            "detail": "server: required|max; the label shows no required mark",
-            "ui": "resources/views/shop/frontend/user/create_user.blade.php:137",
-            "server": "app/Http/Controllers/CustomerController.php:36"
-        },
-        {
-            "class": "B",
-            "severity": "medium",
-            "priority": "P2",
-            "module": "storefront/account",
-            "kind": "blade",
-            "form": "resources/views/shop/frontend/user/create_user.blade.php",
-            "target": "route:store_customer",
-            "source": "App\\Http\\Controllers\\CustomerController@store_customer (inline)",
-            "field": "company_address",
-            "label": "Company Address",
-            "detail": "server: required|string; the label shows no required mark",
-            "ui": "resources/views/shop/frontend/user/create_user.blade.php:152",
-            "server": "app/Http/Controllers/CustomerController.php:40"
-        },
-        {
-            "class": "B",
-            "severity": "medium",
-            "priority": "P2",
-            "module": "storefront/account",
-            "kind": "blade",
-            "form": "resources/views/shop/frontend/user/create_user.blade.php",
-            "target": "route:store_customer",
-            "source": "App\\Http\\Controllers\\CustomerController@store_customer (inline)",
-            "field": "company_name",
-            "label": "Company Name",
-            "detail": "server: required|string|max; the label shows no required mark",
-            "ui": "resources/views/shop/frontend/user/create_user.blade.php:37",
-            "server": "app/Http/Controllers/CustomerController.php:32"
-        },
-        {
-            "class": "B",
-            "severity": "medium",
-            "priority": "P2",
-            "module": "storefront/account",
-            "kind": "blade",
-            "form": "resources/views/shop/frontend/user/create_user.blade.php",
-            "target": "route:store_customer",
-            "source": "App\\Http\\Controllers\\CustomerController@store_customer (inline)",
-            "field": "country",
-            "label": "Country",
-            "detail": "server: required; the label shows no required mark",
-            "ui": "resources/views/shop/frontend/user/create_user.blade.php:105",
-            "server": "app/Http/Controllers/CustomerController.php:38"
-        },
-        {
-            "class": "B",
-            "severity": "medium",
-            "priority": "P2",
-            "module": "storefront/account",
-            "kind": "blade",
-            "form": "resources/views/shop/frontend/user/create_user.blade.php",
-            "target": "route:store_customer",
-            "source": "App\\Http\\Controllers\\CustomerController@store_customer (inline)",
-            "field": "email",
-            "label": "Email",
-            "detail": "server: required|email|unique; the label shows no required mark",
-            "ui": "resources/views/shop/frontend/user/create_user.blade.php:61",
-            "server": "app/Http/Controllers/CustomerController.php:34"
-        },
-        {
-            "class": "B",
-            "severity": "medium",
-            "priority": "P2",
-            "module": "storefront/account",
-            "kind": "blade",
-            "form": "resources/views/shop/frontend/user/create_user.blade.php",
-            "target": "route:store_customer",
-            "source": "App\\Http\\Controllers\\CustomerController@store_customer (inline)",
-            "field": "name",
-            "label": "Full Name",
-            "detail": "server: required|string|max; the label shows no required mark",
-            "ui": "resources/views/shop/frontend/user/create_user.blade.php:25",
-            "server": "app/Http/Controllers/CustomerController.php:31"
-        },
-        {
-            "class": "B",
-            "severity": "medium",
-            "priority": "P2",
-            "module": "storefront/account",
-            "kind": "blade",
-            "form": "resources/views/shop/frontend/user/create_user.blade.php",
-            "target": "route:store_customer",
-            "source": "App\\Http\\Controllers\\CustomerController@store_customer (inline)",
-            "field": "password",
-            "label": "Password",
-            "detail": "server: required|string|min|confirmed; the label shows no required mark",
-            "ui": "resources/views/shop/frontend/user/create_user.blade.php:202",
-            "server": "app/Http/Controllers/CustomerController.php:33"
-        },
-        {
-            "class": "B",
-            "severity": "medium",
-            "priority": "P2",
-            "module": "storefront/account",
-            "kind": "blade",
-            "form": "resources/views/shop/frontend/user/create_user.blade.php",
-            "target": "route:store_customer",
-            "source": "App\\Http\\Controllers\\CustomerController@store_customer (inline)",
-            "field": "password_confirmation",
-            "label": "Confirm Password",
-            "detail": "server: same as password (confirmed); the label shows no required mark",
-            "ui": "resources/views/shop/frontend/user/create_user.blade.php:220",
-            "server": "app/Http/Controllers/CustomerController.php:33"
-        },
-        {
-            "class": "B",
-            "severity": "medium",
-            "priority": "P2",
-            "module": "storefront/account",
-            "kind": "blade",
-            "form": "resources/views/shop/frontend/user/create_user.blade.php",
-            "target": "route:store_customer",
-            "source": "App\\Http\\Controllers\\CustomerController@store_customer (inline)",
-            "field": "phone",
-            "label": "Phone",
-            "detail": "server: required; the label shows no required mark",
-            "ui": "resources/views/shop/frontend/user/create_user.blade.php:52",
-            "server": "app/Http/Controllers/CustomerController.php:39"
-        },
-        {
-            "class": "B",
-            "severity": "medium",
-            "priority": "P2",
-            "module": "storefront/account",
-            "kind": "blade",
-            "form": "resources/views/shop/frontend/user/create_user.blade.php",
-            "target": "route:store_customer",
-            "source": "App\\Http\\Controllers\\CustomerController@store_customer (inline)",
-            "field": "shipping_address",
-            "label": "Shipping Address",
-            "detail": "server: required|string; the label shows no required mark",
-            "ui": "resources/views/shop/frontend/user/create_user.blade.php:168",
-            "server": "app/Http/Controllers/CustomerController.php:41"
-        },
-        {
-            "class": "B",
-            "severity": "medium",
-            "priority": "P2",
-            "module": "storefront/account",
-            "kind": "blade",
-            "form": "resources/views/shop/frontend/user/create_user.blade.php",
-            "target": "route:store_customer",
-            "source": "App\\Http\\Controllers\\CustomerController@store_customer (inline)",
-            "field": "tax_number",
-            "label": "Tax Number",
-            "detail": "server: required|max; the label shows no required mark",
-            "ui": "resources/views/shop/frontend/user/create_user.blade.php:123",
-            "server": "app/Http/Controllers/CustomerController.php:35"
-        },
-        {
-            "class": "B",
-            "severity": "medium",
-            "priority": "P2",
-            "module": "storefront/account",
-            "kind": "blade",
-            "form": "resources/views/shop/frontend/user/create_user.blade.php",
-            "target": "route:store_customer",
-            "source": "App\\Http\\Controllers\\CustomerController@store_customer (inline)",
-            "field": "trade_license",
-            "label": "Trade License",
-            "detail": "server: required|file|mimes|max; the label shows no required mark",
-            "ui": "resources/views/shop/frontend/user/create_user.blade.php:183",
-            "server": "app/Http/Controllers/CustomerController.php:37"
         },
         {
             "class": "B",
@@ -10277,7 +9853,7 @@
             "field": "country_code",
             "label": null,
             "detail": "no server rule names this field",
-            "ui": "resources/views/shop/frontend/user/create_user.blade.php:57",
+            "ui": "resources/views/shop/frontend/user/create_user.blade.php:58",
             "server": null
         },
         {
@@ -11027,7 +10603,7 @@
             "field": "company_address",
             "label": "Company Address (optional)",
             "detail": "no server rule names this field",
-            "ui": "resources/views/shop/auth/register.blade.php:115",
+            "ui": "resources/views/shop/auth/register.blade.php:127",
             "server": null
         },
         {
@@ -11057,7 +10633,7 @@
             "field": "shipping_address",
             "label": "Shipping Address (optional)",
             "detail": "no server rule names this field",
-            "ui": "resources/views/shop/auth/register.blade.php:125",
+            "ui": "resources/views/shop/auth/register.blade.php:137",
             "server": null
         },
         {
@@ -11072,7 +10648,7 @@
             "field": "tax_number",
             "label": "Tax Number (optional)",
             "detail": "no server rule names this field",
-            "ui": "resources/views/shop/auth/register.blade.php:105",
+            "ui": "resources/views/shop/auth/register.blade.php:117",
             "server": null
         },
         {
@@ -11087,7 +10663,7 @@
             "field": "trade_license",
             "label": "Trade License (optional)",
             "detail": "no server rule names this field",
-            "ui": "resources/views/shop/auth/register.blade.php:135",
+            "ui": "resources/views/shop/auth/register.blade.php:147",
             "server": null
         },
         {

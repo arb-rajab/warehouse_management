@@ -35,6 +35,8 @@ const FIXED_STOREFRONT_FORMS = [
     ['resources/views/shop/frontend/shipping_info.blade.php', 'route:checkout.store_shipping_infostore'],
     ['resources/views/shop/seller/profile/index.blade.php', 'route:seller.addresses.store'],
     ['resources/views/shop/seller/profile/address_edit_modal.blade.php', 'route:seller.addresses.update'],
+    ['resources/views/shop/frontend/seller_form.blade.php', 'route:shops.store'],
+    ['resources/views/shop/frontend/user/create_user.blade.php', 'route:store_customer'],
 ];
 
 /**

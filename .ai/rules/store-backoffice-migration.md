@@ -21,7 +21,7 @@ paths:
 # Moving the store back office from Blade to Inertia
 
 Reference-data follow-up: [legacy countries, states, currencies, languages and CMS pages as a migration](#46-legacy-reference-data-as-a-migration-2026-10-21).
-Forms follow-up: [required and optional form fields](#44-required-and-optional-form-fields-2026-10-21), then [the public address forms and the checkout address pick](#45-public-forms-phase-2a-address-forms-and-the-checkout-address-pick-2026-10-21).
+Forms follow-up: [required and optional form fields](#44-required-and-optional-form-fields-2026-10-21), then [the public address forms and the checkout address pick](#45-public-forms-phase-2a-address-forms-and-the-checkout-address-pick-2026-10-21), then [the longitude columns, seller registration and create customer](#47-public-forms-phase-2a-continued-the-longitude-columns-seller-registration-create-customer-2026-10-21).
 Latest follow-up: [retire the unused admin shells](#39-retire-the-unused-admin-shells-2026-10-20).
 Catalogue follow-up: [admin seller product list](#38-admin-seller-product-list-2026-10-20).
 Classified-products follow-up: [admin classified products](#37-admin-classified-products-2026-10-19).
@@ -4923,6 +4923,8 @@ radio group, under the legend line; a missing choice shows its error above the c
    error. The map script's default pin (Sydney, 151.2195) hits it if a customer saves without moving the
    pin. Widening the column (e.g. `decimal(18,15)`) is a migration for the owner to decide; the back
    office's `StoreCustomerAddressRequest` still allows ±180 and would 500 on MySQL for those values.
+   **Superseded by §47**: the owner chose the migration; the columns are `decimal(18,15)` and every request
+   allows ±180 again.
 4. **The country rule follows the data.** While any country is active, every new or edited address must
    name one; deactivating every country turns the requirement off and the forms say so.
 5. **A non-numeric address id at checkout** is now a validation error with the usual flash instead of a
@@ -4988,6 +4990,8 @@ before the endpoint (403); another account's address (403 even with an empty pay
 `customer_id` / `user_id` of another account (403 on the storefront; ignored in the seller panel).
 
 ### Not done here: the next PR (phase 2a, continued)
+
+Items 3 and 4 shipped in §47; item 5 is still open (§47's "Next").
 
 3. **Seller registration** (`shop/frontend/seller_form` → `ShopController@store`, inline `validate()`):
    name, email, password and its confirmation lack `required` (4 A); the asterisks are literal
@@ -5071,3 +5075,161 @@ other than the default currency still come from the admin screens.
 **Owner items** are in the go-live checklist, 3.10 to 3.13: review the enabled
 countries, update the exchange rates, write the three empty policy pages, and
 decide on the zones and the shipping set-up.
+
+## 47. Public forms, phase 2a continued: the longitude columns, seller registration, create customer (2026-10-21)
+
+Model: **claude-opus-5-5**, effort **high**. Branch `claude/phase-2a-longitude-forms-xdumd2` from `develop`
+**1146d2e** (the PR #460 merge). Scope: §45 judgement 3 (the longitude columns), then §45's "Not done here"
+items 3 and 4. Each form's tests were written first and seen failing. Every redirect, flash message, route,
+session key and URL is unchanged. The PR reached about 26 files, close to the ~30-file limit the brief set,
+so item 5 (the endpoints that validate nothing) is the next PR, listed under "Next" below.
+
+**Shipped, by commit.**
+
+1. **Every valid longitude is stored, and the map pin starts at the default location.**
+2. **Seller registration** (`shops.store`).
+3. **The representative's create-customer form** (`store_customer`).
+
+### The longitude decision
+
+`addresses.longitude` and `shops.delivery_pickup_longitude` were `decimal(17,15)`: 15 digits after the
+point leave 2 before it, so a longitude of 100 or more (Sydney, 151.2, the map's old default pin; anything
+east of about 100°E or west of 100°W) failed on MySQL with error 1264, and since #459 the address forms
+refused it. The shop sells in Europe, but a valid point on the map must be storable.
+
+- **Migration `2026_10_21_110000_widen_map_longitude_columns`** widens both to `decimal(18,15)` with
+  `->nullable()->change()`. It reads the column's real type first (`Schema::getColumns()`) and changes it
+  only when it holds fewer than three digits before the point, so a rerun, a column already wider (the
+  test sets `decimal(20,15)` and checks it stays) and SQLite (whose `numeric` keeps no precision) are left
+  alone. `down()` is a no-op: narrowing again would fail on, or truncate, every longitude of 100 or more
+  saved since. The latitudes stay `decimal(17,15)`: ±90 fits.
+- **Columns checked and not changed:** `visits.map_lat` / `map_lng` are `varchar(20)` (fits
+  `-179.999999999999999`); `checkpoints.longitudes` / `latitudes` are `varchar(255)`. No other table has a
+  decimal coordinate.
+- **Validation**: `ValidatesAddress` (the storefront and seller-panel address requests) allows longitude
+  `between:-180,180` again (was `gt:-100|lt:100`); the back office's `StoreCustomerAddressRequest` already
+  did. Boundary tests on all three: ±180 and 151.2093 / -179.9999 accepted, ±180.0001 refused.
+- **Test**: `tests/Feature/Database/WidenMapLongitudeColumnsTest.php`, in CI's MySQL job and
+  `pre_push_check.py`'s `MYSQL_TESTS`. On MySQL 8.0 here: before the migration existed it failed with
+  `SQLSTATE[22003] ... 1264 Out of range value for column 'longitude'`; with it, 151.2093, -179.9999, 180 and
+  4.9041 insert and read back on both tables, the type is `decimal(18,15)` and still nullable, a narrowed
+  column is widened with its rows intact (`4.123456789012345`, `-99.5`, `null`), the latitudes stay
+  `decimal(17,15)`, and `down()` keeps a 151.2093 row. MySQL commits DDL at once, so the test restores the
+  columns after each case.
+- **The default pin.** `App\Support\DefaultMapLocation::coordinates()` reads `google_map_latitude` and
+  `google_map_longtitude` (set on the admin Google Map settings page, spelled as the legacy store stored
+  them) and returns Amsterdam (52.3676, 4.9041) when either is empty, not numeric (`INF`, markup) or off the
+  map. The shared map partial (`partials/google_map`, included by the storefront profile, dashboard and
+  address modal and by the seller profile) prints it once as `var defaultMapLocation`, and both address
+  modals' edit handlers and the seller's pick-up point map (`seller/shop`) start there instead of Sydney.
+  The settings are no longer printed raw into the script, and an address's own coordinates are no longer
+  replaced by the default when its edit modal opens (the old partial overrode them whenever a default was
+  set). The coordinate inputs stay empty until the customer moves the pin, as before, so a customer who
+  never moves it saves the address without coordinates (tested with no default and with a default east of
+  100°). `StorefrontMapDefaultLocationTest` renders the pages with and without the settings and asserts the
+  initial coordinates.
+
+### Rules chosen, per form
+
+| Form (view → endpoint) | Before | Now |
+| --- | --- | --- |
+| Seller registration, `shop/frontend/seller_form` (`/temp/shops/create`) → `ShopController@store` (`shops.store`) | inline: `name` required\|string\|max:255, `email` required\|email\|unique:users\|max:255, `password` required\|string\|min:6\|confirmed, `shop_name` required\|max:255, `address` required. HTML: `required` only on shop name and address; literal `<span class="text-primary">*</span>` on all six labels; no `for`/`id` | `StoreShopRequest`: **name** `required\|string\|max:191`, **email** `required\|string\|email\|max:191\|unique` (StoreUser), **password** `required\|string\|min:6\|confirmed`, **shop_name** `required\|string\|max:200`, **address** `required\|string\|max:500`. HTML: mark and `required` on all six, the legend, `for`/`id`, `maxlength` 191/191/200/500, `minlength="6"` on both passwords, errors with `@error`; the password field no longer prints `old('password')` (always empty anyway). |
+| Create customer (representative), `shop/frontend/user/create_user` (`/temp/create_customer`) → `CustomerController@store_customer` | inline rules require all twelve fields (unchanged); HTML marked and required none; labels' `for` named no control; the country's error was hidden under bootstrap-select | rules **unchanged** (the brief: marks only where the server already validates). HTML: mark and `required` on name, company name, email, phone, country, tax number, bank account number, company address, shipping address, trade license, password and its confirmation; the legend; `for`/`id`; the country error shown (`d-block`); `minlength="6"` on the passwords. |
+
+**Why `max` follows the columns.** `users.name` and `users.email` are `varchar(191)`, `shops.name`
+`varchar(200)`, `shops.address` `varchar(500)` (`2026_09_28_005008_create_users_table`,
+`2026_09_28_004011_create_shops_table`). The old `max:255` let 192 to 255 characters through to MySQL, whose
+strict mode refuses them ("data too long"; SQLite does not enforce lengths, so the tests check the rule),
+and an array for the shop name or address was an "Array to string conversion" 500 (seen in the tests
+before the change). The slug is built from the shop name, so 200 characters keep it
+inside `shops.slug` (`varchar(255)`).
+
+### Judgement calls for the owner
+
+1. **The longitude columns widened** (above): a schema change on two legacy-shaped tables. It runs on the
+   next `php artisan migrate`; on the production database it is an `ALTER TABLE ... MODIFY` on `addresses`
+   and `shops` (a table copy on MySQL 8 for a precision change: seconds at the current size).
+2. **New addresses keep empty coordinates when the pin is not moved**, rather than saving the default
+   location: saving Amsterdam's coordinates for every address whose customer ignored the map would give the
+   order's `lat_lang` (`OrderController`, `Api/V2/OrderController`) a false delivery point.
+3. **The default pin falls back to Amsterdam**, also when the admin's setting is off the map; the admin page
+   already refuses such a value, so only legacy rows can reach the fallback.
+4. **Seller registration still requires name, email and password for a signed-in visitor.** The form hides
+   them for a signed-in visitor, but `ShopController::create` never shows the form to one (it refuses
+   admins, customers and sellers and returns nothing for other account types), so only a hand-made POST
+   reaches that branch; it keeps the rules it had. The same hand-made POST still converts a signed-in
+   customer (or admin) into a seller, as before: `store()` does not repeat `create()`'s refusals. Not
+   changed here (it converts only the caller's own account; guests can register sellers anyway); worth a
+   decision before the seller registration link goes live.
+5. **reCAPTCHA is checked only in the browser** on seller registration (and on create customer): neither
+   endpoint verifies the token. Unchanged; a server-side check is a separate change.
+6. **Two dead checks left in `ShopController::store`**: the "Email already exists!" and "Sorry! Password did
+   not match." branches cannot run after `unique` and `confirmed`; and the failed-save branch compares
+   (`==`) instead of assigning `user_type`. Left as they were (no behaviour to preserve or test).
+7. **Create customer's rules disagree with the columns**, recorded, not changed (marks only): `name`
+   `max:255` against `users.name` `varchar(191)`, `email` has no `max`, `phone` has no limit against
+   `users.phone` `varchar(20)`, `country` (a country name) against `users.country` `varchar(30)` (the
+   21 enabled names fit, but three of the 246 are longer and the rule accepts any string), the `trade_license` mimes list says `bmb` (likely `bmp`). These are MySQL
+   errors for long input from a signed-in representative; a FormRequest for this endpoint is the fix.
+8. **The OTP-addon branch of create customer**: its hidden email stays unmarked and unrequired (the browser
+   would block the form on a hidden required field), as on the registration forms (§44); the visible
+   phone is marked and required. With the addon on, the form has two `phone` inputs; unchanged.
+
+### The audit and the ratchet
+
+`FIXED_STOREFRONT_FORMS` gains `seller_form` (`shops.store`) and `create_user` (`store_customer`): neither
+has a class A to D finding. The back-office baseline is unchanged (no back-office finding was touched).
+
+| Class | Before (`develop` 1146d2e) | After this PR |
+| --- | ---: | ---: |
+| A | 69 | 53 |
+| B | 91 | 79 |
+| C | 82 | 82 |
+| D | 10 | 10 |
+| E | 218 | 218 |
+| F | 23 | 23 |
+| **Total** | **493** | **465** |
+
+By priority: P1 12 → **8**, P2 325 → 301, P3 156 → 156. By module: storefront A 6 → 2 (the two left are
+the P2 product question forms), storefront/account A 12 → 0, B 13 → 1. The P1 findings left are six E (fields
+`RegisterController` never stores: `country_code` on both registration views; tax number, company address,
+shipping address and trade license on `/temp/register`, deliberately "(optional)" since §44) and two F (the
+PayHere form posts to an external URL; `CheckoutController@checkout` builds its rules at run time). Neither
+is a marking gap: the E fields need an owner decision (store them, or drop the inputs), the F forms have
+nothing to mark. `create_user` keeps one E (`country_code`, filled by the phone widget, read by nothing).
+
+### Tests
+
+New: `WidenMapLongitudeColumnsTest` (9 cases; SQLite and MySQL), `StorefrontMapDefaultLocationTest` (17),
+`SellerRegistrationFormTest` (25), `StorefrontCreateCustomerFormTest` (16); `validMapLongitudes()` in
+`tests/Pest.php`; boundary cases in `StorefrontAddressFormsTest`, `SellerAddressFormsTest` and
+`CustomerAddressControllerTest`. Changed: the two address tests' "a longitude the column cannot hold" case
+(151.2195, refused) became "past the antimeridian" (±180.0001, refused), since 151.2195 is now valid.
+No assertion was removed or loosened otherwise.
+
+### Next: the rest of phase 2a
+
+5. **Endpoints that validate nothing**, each with a FormRequest, hostile-input tests (over-long, wrong types,
+   HTML, another user's ids) and unchanged ownership checks: the conversation forms on the product and
+   digital product pages (`conversations.store`, `ConversationController@store`; `product_id` goes straight
+   to `findOrFail`), the support ticket form (`support_ticket.store`), and password reset by code
+   (`shop.password.update`).
+6. **The P1 leftovers above**: the owner's decision on the unstored registration fields.
+7. **Create customer's rules against its columns** (judgement 7): a FormRequest.
+
+**Phase 2b, proposed**: unchanged from §45: the back-office modules that only lack marks (Marketing 18 B,
+Product 13 B plus the per-tax rows, Setup 7 B / 10 A / 8 D, Website 9 A / 6 B, Trips 3 A / 4 B, Sales 6 A,
+Customers 4 B and the owner's decision on its 7 C, Languages 3 A, Support 2 B, Blog 2 B); then the seller
+panel (26 forms, 34 C and 117 E, mostly endpoints that validate nothing, so FormRequests first, including
+the pick-up point coordinates of `Seller\ShopController@update`, which are still unvalidated), with each
+fixed Blade form added to `FIXED_STOREFRONT_FORMS`.
+
+**What was verified, and what was not.** Run here, on the final code (commits 1 to 3; the docs commit
+after them changes no code): `python3 .claude/scripts/pre_push_check.py --full` (Wayfinder types, ESLint,
+Prettier, vue-tsc, Vitest **336 files, 2651 tests**, Pint, PHPStan **0 errors**, Pest **6800 tests, 6797
+passed, 3 skipped, 39305 assertions**); the six `MYSQL_TESTS` files on the local MySQL 8.0 (CI runs 8.4):
+**56 tests, 50 passed, 6 skipped** (the SQLite-only cases); the whole Playwright suite with the
+preinstalled Chromium: **134 passed**. Focused Pest files while developing, each seen failing first (the
+migration test also on MySQL). `forms:audit-required` before the work and after each form group. Not run
+here: the composer and npm audits and the deploy-script test (CI runs them); no `CI-Verified` trailer was
+made, so CI runs every group (the PR also changes `.github/workflows/tests.yml`, which runs everything).

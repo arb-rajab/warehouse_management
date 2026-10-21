@@ -55,7 +55,9 @@ function hostileStorefrontAddressInput(): array
         'a city of another state' => [['city_id' => 'foreign'], 'city_id'],
         'a latitude that is not a number' => [['latitude' => 'north'], 'latitude'],
         'a latitude past the pole' => [['latitude' => 90.5], 'latitude'],
-        'a longitude the column cannot hold' => [['longitude' => 151.2195], 'longitude'],
+        'a longitude past the antimeridian, eastwards' => [['longitude' => 180.0001], 'longitude'],
+        'a longitude past the antimeridian, westwards' => [['longitude' => -180.0001], 'longitude'],
+        'a longitude that is not a number' => [['longitude' => 'east'], 'longitude'],
     ];
 }
 
@@ -198,6 +200,14 @@ describe('saving a new address', function () {
         expect(Address::count())->toBe(0);
     })->with(hostileStorefrontAddressInput());
 
+    test('accepts every longitude up to the antimeridian', function (float $longitude) {
+        actingAsStoreUser(createStoreUser());
+
+        $this->post('/temp/addresses', storefrontAddressPayload(['latitude' => -33.8688, 'longitude' => $longitude]))->assertSessionHasNoErrors();
+
+        expect((float) Address::sole()->longitude)->toBe((float) $longitude);
+    })->with(validMapLongitudes());
+
     test('a script is refused before it reaches the endpoint (the WAF)', function () {
         actingAsStoreUser(createStoreUser());
 
@@ -317,6 +327,16 @@ describe('editing an address', function () {
         ...hostileStorefrontAddressInput(),
         'an address id that is not a number' => [['address_id' => 'x'], 'address_id'],
     ]);
+
+    test('accepts every longitude up to the antimeridian', function (float $longitude) {
+        $customer = actingAsStoreUser(createStoreUser());
+        $address = storefrontAddressOf($customer->id);
+
+        $this->post("/temp/addresses/update/{$address->id}", storefrontAddressPayload(['latitude' => 52.37, 'longitude' => $longitude]))
+            ->assertSessionHasNoErrors();
+
+        expect((float) $address->fresh()->longitude)->toBe((float) $longitude);
+    })->with(validMapLongitudes());
 
     test("cannot change another customer's address, whatever the payload", function (array $payload) {
         $theirs = storefrontAddressOf(createStoreUser()->id);

@@ -160,8 +160,8 @@
             AIZ.plugins.bootstrapSelect('refresh');
 
             @if (get_setting('google_map') == 1)
-                var lat     = -33.8688;
-                var long    = 151.2195;
+                var lat     = defaultMapLocation.latitude;
+                var long    = defaultMapLocation.longitude;
 
                 if(address_data.latitude && address_data.longitude) {
                     lat     = parseFloat(address_data.latitude);

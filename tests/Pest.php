@@ -260,6 +260,23 @@ function formFieldMarks(DOMXPath $xpath, DOMElement $form): array
 }
 
 /**
+ * Every longitude a map pin can give, up to the antimeridian: the column holds
+ * them since 2026_10_21_110000_widen_map_longitude_columns (it held less than
+ * 100 before, so these were refused).
+ *
+ * @return array<string, array{0: float}>
+ */
+function validMapLongitudes(): array
+{
+    return [
+        'Sydney' => [151.2093],
+        'just east of the antimeridian' => [-179.9999],
+        'the antimeridian, east' => [180.0],
+        'the antimeridian, west' => [-180.0],
+    ];
+}
+
+/**
  * The one form on the page that posts to `$action` (a path, matched at the
  * end of the action URL).
  */

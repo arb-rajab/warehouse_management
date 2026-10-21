@@ -76,7 +76,8 @@ function hostileSellerAddressInput(): array
         'a city of another state' => [fn (array $rows) => ['state_id' => $rows['state'], 'city_id' => $rows['foreignCity']], 'city_id'],
         'a city that is not a number' => [fn (array $rows) => ['city_id' => 'Amsterdam'], 'city_id'],
         'a latitude past the pole' => [fn (array $rows) => ['latitude' => -91], 'latitude'],
-        'a longitude the column cannot hold' => [fn (array $rows) => ['longitude' => 151.2195], 'longitude'],
+        'a longitude past the antimeridian, eastwards' => [fn (array $rows) => ['longitude' => 180.0001], 'longitude'],
+        'a longitude past the antimeridian, westwards' => [fn (array $rows) => ['longitude' => -180.0001], 'longitude'],
     ];
 }
 
@@ -161,6 +162,14 @@ describe('saving a new address', function () {
 
         expect(Address::count())->toBe(0);
     })->with(hostileSellerAddressInput());
+
+    test('accepts every longitude up to the antimeridian', function (float $longitude) {
+        actingAsShopSeller();
+
+        $this->post('/temp/seller/addresses', sellerAddressPayload(['latitude' => -33.8688, 'longitude' => $longitude]))->assertSessionHasNoErrors();
+
+        expect((float) Address::sole()->longitude)->toBe((float) $longitude);
+    })->with(validMapLongitudes());
 
     test('only ever saves the address for the seller signed in', function () {
         $other = createStoreUser('seller');
@@ -255,6 +264,16 @@ describe('editing an address', function () {
 
         expect($address->fresh()->address)->toBe('Kalverstraat 2');
     })->with(hostileSellerAddressInput());
+
+    test('accepts every longitude up to the antimeridian', function (float $longitude) {
+        $seller = actingAsShopSeller();
+        $address = sellerAddressOf($seller->id);
+
+        $this->post("/temp/seller/address/update/{$address->id}", sellerAddressPayload(['latitude' => 52.37, 'longitude' => $longitude]))
+            ->assertSessionHasNoErrors();
+
+        expect((float) $address->fresh()->longitude)->toBe((float) $longitude);
+    })->with(validMapLongitudes());
 
     test("cannot change another seller's address, whatever the payload", function (array $payload) {
         $theirs = sellerAddressOf(createStoreUser('seller')->id);
