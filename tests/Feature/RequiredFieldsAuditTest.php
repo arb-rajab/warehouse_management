@@ -2,6 +2,8 @@
 
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\Store\Admin\CurrencyController;
+use App\Http\Controllers\Store\Admin\DigitalProductController;
+use App\Http\Controllers\Store\Admin\ProductController;
 use App\Http\Controllers\Store\Admin\StaffController;
 use App\Support\RequiredFields\BladeForms;
 use App\Support\RequiredFields\RequiredFieldsAudit;
@@ -68,6 +70,27 @@ test('the Blade scanner reads a form\'s route, verb, controls, required attribut
             ['country_id', 'select', true, false, null, 11],
             ['shop_id', 'hidden', false, false, null, 12],
         ]);
+});
+
+test('the Vue scanner resolves forms by their Wayfinder action and follows the field components', function () {
+    $forms = collect((new RequiredFieldsAudit(new ServerRules(base_path()), base_path()))->vueForms());
+    $staff = $forms->firstWhere('file', 'resources/js/pages/Store/Admin/Staff/Staffs/Create.vue');
+
+    expect($staff['target'])->toBe(['controller' => 'App\\Http\\Controllers\\Store\\Admin\\StaffController', 'method' => 'store'])
+        ->and(array_map(fn (array $control) => [$control['name'], $control['required'], $control['label'], $control['file'].':'.$control['line']], $staff['controls']))->toBe([
+            ['name', true, 'Name', 'resources/js/components/StoreStaffFormFields.vue:41'],
+            ['email', true, 'Email', 'resources/js/components/StoreStaffFormFields.vue:50'],
+            ['mobile', true, 'Phone', 'resources/js/components/StoreStaffFormFields.vue:60'],
+            ['role_id', true, 'Role', 'resources/js/components/StoreStaffFormFields.vue:74'],
+            ['password', true, 'Password', 'resources/js/components/StoreStaffFormFields.vue:95'],
+            ['password_confirmation', true, 'Confirm password', 'resources/js/components/StoreStaffFormFields.vue:115'],
+        ]);
+
+    // A ternary action is one form per branch, each with its branch's fields;
+    // forms in ResourceFormPage's #after-form slot are forms of their own.
+    expect($forms->where('file', 'resources/js/pages/Store/Admin/Customers/Customers/Create.vue')->map(fn (array $form) => $form['target']['method'].':'.count($form['controls']))->values()->all())->toBe(['repStore:5', 'store:14'])
+        ->and($forms->where('file', 'resources/js/pages/Store/Admin/Customers/Customers/Edit.vue')->map(fn (array $form) => $form['target']['method'])->values()->all())
+        ->toBe(['update', 'updateNotes', 'changeActivityStatus', 'sendAgreement', 'update', 'store']);
 });
 
 test('the server side reads an inline validator behind a helper method, with the confirmation it implies', function () {
@@ -162,6 +185,29 @@ test('a conditional rule with a static mark is D, an optional rule with one is C
         'C password',
         'D decimal_separator',
     ]);
+});
+
+test('a required item rule binds each row input, but not a checkbox list or multi-select', function () {
+    $audit = new RequiredFieldsAudit(new ServerRules(base_path()), base_path());
+    $colors = [...auditControl('colors[]', false, false, 'select'), 'multiple' => true];
+
+    $result = $audit->run([
+        auditVueForm(['controller' => DigitalProductController::class, 'method' => 'store'], [
+            auditControl('tax[]', true, false, 'number'),
+            auditControl('tax_type[]', false, false, 'select'),
+        ]),
+        auditVueForm(['controller' => ProductController::class, 'method' => 'store'], [
+            auditControl('colors_active', false, false, 'checkbox'),
+            $colors,
+        ]),
+    ], [], withInventory: false);
+    $classes = collect($result['findings'])
+        ->filter(fn (array $finding) => in_array($finding['field'], ['tax[]', 'tax_type[]', 'colors[]', 'colors_active'], true))
+        ->map(fn (array $finding) => $finding['class'].' '.$finding['field'])
+        ->values()
+        ->all();
+
+    expect($classes)->toBe(['A tax_type[]', 'B tax[]', 'B tax_type[]']);
 });
 
 test('an unresolved action is F, and a Blade GET form with no action is a filter and raises nothing', function () {

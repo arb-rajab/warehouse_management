@@ -954,8 +954,42 @@ function location(ctx, node) {
     return ctx.site ?? { file: rel(ctx.info.file), line: node.loc.start.line };
 }
 
+/** A form element of its own (another `:action`), scanned as its own form. */
+function isSeparateForm(node, ctx) {
+    if (node === ctx.formRoot) {
+        return false;
+    }
+
+    const action = formAction(node, ctx.info);
+
+    return (
+        action !== null &&
+        !(ctx.info.declaresActionProp && action.expression.trim() === 'action')
+    );
+}
+
+/**
+ * A component form root's named slots other than `default` (ResourceFormPage's
+ * `#header-actions`, `#after-form`) render outside its `<form>`.
+ */
+function isOutsideSlot(node) {
+    if (node.type !== NODE_ELEMENT || node.tag !== 'template') {
+        return false;
+    }
+
+    const slot = node.props.find(
+        (prop) => prop.type === NODE_DIRECTIVE && prop.name === 'slot',
+    );
+
+    return slot !== undefined && (slot.arg?.content ?? 'default') !== 'default';
+}
+
 function walkElement(node, ctx, form) {
     const tag = node.tag;
+
+    if (isSeparateForm(node, ctx)) {
+        return;
+    }
 
     if (NATIVE_CONTROLS.has(tag)) {
         const attributes = elementAttributes(node, ctx);
@@ -969,7 +1003,9 @@ function walkElement(node, ctx, form) {
             ctx.scope,
         );
         const disabled = attributeValue(attributes, 'disabled', ctx.scope);
+        const multiple = attributeValue(attributes, 'multiple', ctx.scope);
         const control = {
+            multiple: multiple !== undefined && presence(multiple) === true,
             name:
                 typeof name === 'string'
                     ? name
@@ -1057,15 +1093,23 @@ function walkElement(node, ctx, form) {
         /^[A-Z]/.test(tag) || tag.includes('-')
             ? resolveComponentFile(ctx.info, tag)
             : null;
+    const isComponentRoot = node === ctx.formRoot && ctx.formRootComponent;
+    const inner = isComponentRoot ? { ...ctx, formRootComponent: false } : ctx;
     // Slot content belongs to the parent's scope.
-    walkChildren(node.children, ctx, form);
+    walkChildren(
+        isComponentRoot
+            ? node.children.filter((child) => !isOutsideSlot(child))
+            : node.children,
+        inner,
+        form,
+    );
 
     if (
         componentFile &&
         ctx.depth < MAX_DEPTH &&
         !ctx.stack.includes(componentFile)
     ) {
-        followComponent(node, componentFile, ctx, form);
+        followComponent(node, componentFile, inner, form);
     }
 }
 
@@ -1289,7 +1333,16 @@ function scanFile(file) {
                     instance: Symbol('page'),
                     conditional: false,
                 };
-                walkElement(node, ctx, null);
+                walkElement(
+                    node,
+                    {
+                        ...ctx,
+                        formRoot: node,
+                        formRootComponent:
+                            node.tag !== 'Form' && node.tag !== 'form',
+                    },
+                    null,
+                );
                 associate(ctx.controls, ctx.labels);
                 forms.push({
                     file: rel(file),
@@ -1309,6 +1362,7 @@ function scanFile(file) {
                             required: control.required,
                             mark: control.mark ?? false,
                             label: control.label ?? null,
+                            multiple: control.multiple ?? false,
                             disabled: control.disabled,
                             conditional: control.conditional,
                             file: control.file,
@@ -1321,10 +1375,9 @@ function scanFile(file) {
                         ),
                 });
             }
-
-            return;
         }
 
+        // Forms in a form root's other slots (`#after-form`) are forms of their own.
         node.children?.forEach(visit);
     };
     info.template.children.forEach(visit);

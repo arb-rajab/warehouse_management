@@ -28,7 +28,7 @@ use RuntimeException;
  *
  * @phpstan-import-type ServerForm from ServerRules
  *
- * @phpstan-type UiControl array{name: string|null, name_resolved: bool, type: string, required: bool|string, mark: bool|string, label: string|null, disabled: bool|string, conditional: bool, file: string, line: int}
+ * @phpstan-type UiControl array{name: string|null, name_resolved: bool, type: string, required: bool|string, mark: bool|string, label: string|null, disabled: bool|string, multiple?: bool, conditional: bool, file: string, line: int}
  * @phpstan-type UiForm array{file: string, line: int, module: string, tag: string, action: string, verb?: string, target: array{controller?: string, method?: string, route?: string, verb?: string}|null, controls: list<UiControl>}
  *
  * A Blade form's target is its route name and HTTP verb; a Vue form's is the
@@ -173,7 +173,7 @@ final class RequiredFieldsAudit
             return [$this->countFindings($audited, $findings), $findings];
         }
 
-        /** @var array<string, array{name: string, key: string, hidden: bool, posted: bool, required: bool|string, mark: bool|string, label: string|null, ui: string}> $fields */
+        /** @var array<string, array{name: string, key: string, type: string, hidden: bool, posted: bool, required: bool|string, mark: bool|string, label: string|null, ui: string}> $fields */
         $fields = [];
         foreach ($named as $control) {
             $name = (string) $control['name'];
@@ -182,6 +182,7 @@ final class RequiredFieldsAudit
             $fields[$name] = [
                 'name' => $name,
                 'key' => $this->normalize($name),
+                'type' => $existing['type'] ?? (($control['multiple'] ?? false) ? 'select-multiple' : $control['type']),
                 'hidden' => $existing === null ? $hidden : ($existing['hidden'] && $hidden),
                 // A hidden input beside a checkbox (`is_admin` 0/1) always posts the field.
                 'posted' => ($existing['posted'] ?? false) || $hidden,
@@ -211,6 +212,11 @@ final class RequiredFieldsAudit
                 continue;
             }
             $matchedServerKeys[$rule['name']] = true;
+            if (str_ends_with($field['key'], '.*') && str_ends_with($rule['name'], '.*') && in_array($field['type'], ['checkbox', 'select-multiple'], true)) {
+                // `colors.* => required` constrains each value a checkbox list or multi-select sends, not whether it sends any.
+                $rule['presence'] = 'optional';
+                $rule['rules'] .= ' (per item)';
+            }
             $serverAt = $rule['file'].':'.$rule['line'];
             if ($field['hidden']) {
                 continue;

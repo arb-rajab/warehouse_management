@@ -200,6 +200,7 @@ final class BladeForms
                 'mark' => false,
                 'label' => null,
                 'disabled' => $this->booleanAttribute($tag, 'disabled'),
+                'multiple' => $this->booleanAttribute($tag, 'multiple') === true,
                 'conditional' => false,
                 'file' => $file,
                 'line' => $this->lineAt($html, $bodyOffset + $position),

@@ -8,6 +8,8 @@ import FormField from '@/components/FormField.vue';
 import ProductSelect from '@/components/ProductSelect.vue';
 import RequiredMark from '@/components/RequiredMark.vue';
 import StoreBooleanField from '@/components/StoreBooleanField.vue';
+import StoreNewsletterRecipients from '@/components/StoreNewsletterRecipients.vue';
+import StoreOrderSearch from '@/components/StoreOrderSearch.vue';
 import StoreRichTextField from '@/components/StoreRichTextField.vue';
 import StoreSelectField from '@/components/StoreSelectField.vue';
 import StoreUploadField from '@/components/StoreUploadField.vue';
@@ -37,6 +39,8 @@ const requiredFieldComponents: {
     props: Record<string, unknown>;
     /** The element that carries `required` (or `aria-required`). */
     control: string;
+    /** The control's label, when the component renders more than one. */
+    label?: string;
     /** Whether the control is required when no `required` prop is passed. */
     requiredByDefault?: boolean;
 }[] = [
@@ -94,7 +98,48 @@ const requiredFieldComponents: {
         },
         control: '#product-guard',
     },
+    {
+        name: 'StoreNewsletterRecipients',
+        component: StoreNewsletterRecipients,
+        props: { kind: 'users', errors: {}, required: false },
+        control: 'select',
+        label: 'label[for="user_emails"]',
+    },
+    {
+        name: 'StoreOrderSearch',
+        component: StoreOrderSearch,
+        props: {
+            id: 'customer',
+            name: 'customer_id',
+            label: 'Customer',
+            kind: 'customers',
+        },
+        control: 'select',
+        label: 'label[for="customer"]',
+    },
 ];
+
+/**
+ * Source of every shared component, for the guard: a component that takes a
+ * `required` prop (or passes `$attrs` to an input) and renders a label is a
+ * field component and must be in the table above.
+ */
+const componentSources = import.meta.glob<string>('./*.vue', {
+    query: '?raw',
+    import: 'default',
+    eager: true,
+});
+
+function forwardsRequired(source: string): boolean {
+    const template = source.slice(source.indexOf('<template>'));
+
+    return (
+        /<label\b/.test(template) &&
+        (/\brequired\??:\s*boolean/.test(source) ||
+            (/v-bind="\$attrs"/.test(template) &&
+                /<(input|select|textarea)\b/.test(template)))
+    );
+}
 
 const wrappers: VueWrapper[] = [];
 
@@ -144,7 +189,7 @@ afterEach(() => {
 describe.each(requiredFieldComponents)('$name', (entry) => {
     it('marks the label and requires the control when required', async () => {
         const wrapper = await mountField(entry, true);
-        const label = wrapper.get('label');
+        const label = wrapper.get(entry.label ?? 'label');
         const mark = label.findComponent(RequiredMark);
 
         expect(mark.exists()).toBe(true);
@@ -161,7 +206,10 @@ describe.each(requiredFieldComponents)('$name', (entry) => {
     });
 
     it('defaults to the control it always rendered', async () => {
-        const wrapper = await mountField(entry);
+        const wrapper = await mountField(
+            entry,
+            'required' in entry.props ? false : undefined,
+        );
         const required = entry.requiredByDefault ?? false;
 
         expect(wrapper.findComponent(RequiredMark).exists()).toBe(required);
@@ -176,4 +224,30 @@ describe.each(requiredFieldComponents)('$name', (entry) => {
             'مطلوب',
         );
     });
+});
+
+describe('field component guard', () => {
+    it('lists every component that forwards required to a labelled control', () => {
+        const forwarders = Object.entries(componentSources)
+            .filter(([, source]) => forwardsRequired(source))
+            .map(([file]) => file.replace('./', '').replace('.vue', ''))
+            .sort();
+
+        expect(forwarders).toEqual(
+            requiredFieldComponents.map((entry) => entry.name).sort(),
+        );
+    });
+
+    it.each(requiredFieldComponents.map((entry) => entry.name))(
+        '%s renders RequiredMark and registers with the form legend',
+        (name) => {
+            const source = componentSources[`./${name}.vue`];
+
+            expect(source).toContain(
+                "import RequiredMark from '@/components/RequiredMark.vue';",
+            );
+            expect(source).toContain('<RequiredMark v-if="required"');
+            expect(source).toContain('useRequiredField(() => props.required)');
+        },
+    );
 });

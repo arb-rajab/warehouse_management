@@ -5,6 +5,7 @@ import { onBeforeUnmount, ref, watch } from 'vue';
 import { search } from '@/actions/App/Http/Controllers/Store/Admin/OrderEntryController';
 import FieldError from '@/components/FieldError.vue';
 import FormField from '@/components/FormField.vue';
+import RequiredMark from '@/components/RequiredMark.vue';
 import {
     debounce,
     fieldLabelClass,
@@ -12,6 +13,7 @@ import {
     filterTriggerButtonClass,
 } from '@/lib/filters';
 import { t } from '@/lib/i18n';
+import { useRequiredField } from '@/lib/requiredFields';
 import type { Paginated } from '@/types/admin';
 import type { StoreOrderOption } from '@/types/store';
 const props = defineProps<{
@@ -24,6 +26,7 @@ const props = defineProps<{
     error?: string;
 }>();
 const emit = defineEmits<{ select: [option: StoreOrderOption] }>();
+useRequiredField(() => props.required);
 const query = ref('');
 const results = ref<StoreOrderOption[]>([]);
 const current = ref(1);
@@ -96,8 +99,9 @@ function choose(event: Event): void {
             @focus="fetchPage()"
         />
         <label :for="id" :class="fieldLabelClass"
-            ><Search class="inline h-4 w-4" /> {{ label }}</label
-        >
+            ><Search class="inline h-4 w-4" /> {{ label
+            }}<RequiredMark v-if="required"
+        /></label>
         <select
             :id="id"
             :name="name"
