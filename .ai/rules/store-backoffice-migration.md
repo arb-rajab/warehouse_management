@@ -459,6 +459,10 @@ Do every step for each module, in one change per batch.
      - model objects as params;
      - `{ mergeQuery: {} }` on deletes.
    - Give every field the native HTML5 constraints that mirror its rules.
+   - Mark every field the request requires (`required` on the field component,
+     or `<RequiredMark />` in a hand-written label) and label optional ones
+     "(optional)" only where most fields are required; `ResourceFormPage`
+     shows the legend (.ai/rules/form-required-fields.md, §44).
 7. **Strings and menu**
    - Add `store.<module>.*` keys to both `en.json` and `ar.json`.
    - Flip the module's entries in `lib/storeAdminMenu.ts` to `inertia: true`,
@@ -490,7 +494,12 @@ Do every step for each module, in one change per batch.
         hrefs, `Pagination`);
       - every static label;
       - permission-gated buttons, both ways;
-      - the `confirmDelete` wiring.
+      - the `confirmDelete` wiring;
+      - the required marks match the FormRequest: marked labels equal the
+        `required` controls, which equal the request's required fields, and
+        the legend shows (`StoreStaffFormFields.test.ts`). Keep
+        `RequiredFieldsRatchetTest` green; never add to its baseline for a new
+        form.
     - Add fixtures to `testing/factories.ts`.
 11. **Playwright**
     - Write a `tests/e2e/store-*.spec.ts` for browser-only behaviour: native

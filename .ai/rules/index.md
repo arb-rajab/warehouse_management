@@ -28,6 +28,7 @@ Before planning or editing, find the row whose globs match the file's path and r
 | app/Exceptions/** | .ai/rules/exceptions.md |
 | composer.json,composer.lock,package.json,package-lock.json,.github/dependabot.yml | .ai/rules/dependencies.md |
 | database/factories/**, database/factories/PalletFactory.php | .ai/rules/factories.md |
+| resources/js/**, resources/views/**, app/Http/Requests/**, app/Http/Controllers/**, tests/** | .ai/rules/form-required-fields.md |
 | app/Models/Product.php,app/Http/Requests/Concerns/FiltersByProductIds.php,app/Http/Controllers/Admin/ProductController.php | .ai/rules/http-controllers-admin.md |
 | app/Http/Requests/Admin/StoreRowRequest.php,app/Http/Requests/Admin/UpdateRowRequest.php | .ai/rules/http-requests.md |
 | resources/js/components/CellSlot.vue, resources/js/components/ResourceFormPage.vue, resources/js/components/UserFormFields.vue, resources/js/components/DataTable.vue | .ai/rules/js-components.md |
