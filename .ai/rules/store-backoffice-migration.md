@@ -20,6 +20,7 @@ paths:
 
 # Moving the store back office from Blade to Inertia
 
+Forms follow-up: [required and optional form fields](#44-required-and-optional-form-fields-2026-10-21).
 Latest follow-up: [retire the unused admin shells](#39-retire-the-unused-admin-shells-2026-10-20).
 Catalogue follow-up: [admin seller product list](#38-admin-seller-product-list-2026-10-20).
 Classified-products follow-up: [admin classified products](#37-admin-classified-products-2026-10-19).
@@ -4673,3 +4674,179 @@ decision on what to show for a product without a slug, so it is not a one-line, 
 Playwright, the MySQL migration tests, the composer / npm audits and the deploy-script test (the attested run
 was not used, so no `CI-Verified` trailer exists); nothing ran on MySQL; no real browser or crawler.
 PR CI, SAST and deploy did not run (skipped on purpose).
+
+## 44. Required and optional form fields (2026-10-21)
+
+Model: **claude-opus-5-5**, effort **high**. Branch `ccr-df04b098-zzj7j8` from `develop` **1768298** (the
+PR #456 merge). Scope: how every form shows which fields are mandatory, a tool that measures the gap
+across the whole application, a ratchet that stops it growing in the store back office, and two pilots.
+The standing rule is [form-required-fields.md](form-required-fields.md); this section is its history and
+plan. Shipped in one PR with CI (no `[skip ci]`).
+
+**The problem, as found.** Nothing in the rules said how a required field is shown, so no form showed it.
+The storefront registration form (`shop.auth.register`) required tax number, addresses and trade license
+in HTML though `RegisterController::validator` never asks for them, did not require email or the password,
+and had **no company name input at all** although the validator requires `company_name`: that form could
+not succeed. `FormField.vue` forwarded `required` to the input but printed no mark, and 92 files use it.
+
+**The convention** (in full in the rule): the server rule is the source of truth; a field it requires
+shows a red asterisk (`aria-hidden`) plus visually hidden "required" text and carries `required`; optional
+fields are unmarked, or "(optional)" in a form where most fields are required (the request read "most
+fields are optional", which contradicts "the few optional ones"; the rule records the reading used);
+never both; a form with a required field shows the legend "* Required fields"; a conditional rule
+(`required_if`, ...) gets a mark only while its condition holds, and help text.
+
+**What changed, by commit.**
+
+1. **Vue foundation.** `RequiredMark.vue` (asterisk + sr-only `common.required`, `ms-0.5`, `text-red-700`
+   / `dark:text-red-400`) and `RequiredLegend.vue` (`common.requiredLegend`); strings in `en.json` and
+   `ar.json` (`common.required`, `common.requiredLegend`, `common.optional`). Every field component that
+   forwards `required` shows the mark exactly when it is set: `FormField` (`required` became a prop; the
+   input still carries the attribute), `StoreSelectField`, `StoreBooleanField` (required by default, as it
+   always rendered; new `:required="false"`), `StoreUploadField`, `StoreRichTextField`, `ProductSelect`,
+   `FilterNumberField`, `FilterDateField` (new optional `required`), and later `StoreNewsletterRecipients`
+   and `StoreOrderSearch` (found by the guard). `ResourceFormPage` renders the legend when a mark inside
+   its form is rendered (`lib/requiredFields.ts`, provide/inject; since commit 5 the mark registers itself)
+   with a `requiredLegend` opt-out. Existing tests changed only where they asserted a label's text (18
+   assertions in 13 files) or `StoreBooleanField`'s props (one).
+2. **Blade foundation and the registration pilot.** `<x-required-mark />`, `<x-optional-mark />` and
+   `<x-required-legend />` in `resources/views/components/`, through `translate()`. Both views that post to
+   `RegisterController::register` (`shop.auth.register` at `/temp/register` and
+   `shop.frontend.user_registration` at `/temp/users/registration`, the one the storefront links to) mark
+   and require exactly name, company name, email, phone, country, password and its confirmation, with the
+   legend first; `shop.auth.register` gains the missing company name input and says "(optional)" on tax
+   number, company address, shipping address and trade license instead of requiring them. The OTP-addon
+   branch is unchanged (with the addon on, the hidden email input stays unrequired although the validator
+   requires email: recorded, not fixed). `StorefrontRegistrationRequiredFieldsTest`: the marks, the
+   `required` attributes, the legend, and a 422-style error for each required field left out.
+3. **`php artisan forms:audit-required`** (`app/Console/Commands/AuditRequiredFieldsCommand.php`,
+   `app/Support/RequiredFields/`): described in the rule. It writes `.ai/required-fields-audit-20261021.md`
+   and `.json`, committed.
+4. **The ratchet** (`RequiredFieldsRatchetTest`, baseline `tests/Feature/Support/required-fields-baseline.json`,
+   111 entries at introduction, about 2.5 s) and the Vitest guard (`RequiredFieldComponents.test.ts`).
+5. **The back-office pilot: staff and roles.** The staff role select (`role_id`, required by
+   `StoreStaffRequest` / `UpdateStaffRequest`) gains its mark; staff create marks all six fields, staff edit
+   leaves the optional password unmarked, the role form marks only the name; the legend shows on all four
+   pages. Baseline down to **109**; `Store/Admin/Staff` has no finding in any class. The Blade mark moved to
+   a fixed `#b91c1c` when Playwright measured the theme's `.text-danger` at 3.6:1.
+6. **Rules**: the rule file, its index row, AGENTS.md item 5, agent-conventions "Forms: required and optional
+   fields", js.md, and §3 steps 6 and 10 above. The Boost-managed skills (`boost.json`) were not edited.
+
+**Audit results.** Same tool, same day, on `develop` before this branch and on this branch after both
+pilots (158 Vue forms, 81 Blade forms; 257 FormRequests, 1 unparsed; 30 inline validators, 5 unparsed):
+
+| Class | `develop` | This branch |
+| --- | ---: | ---: |
+| A server-required, no `required` (or no control) | 80 | 69 |
+| B server-required, no mark | 308 | 93 |
+| C `required`/mark, rule optional or absent | 103 | 99 |
+| D conditional rule, static mark | 10 | 10 |
+| E control with no server rule | 223 | 227 |
+| F unparsed | 23 | 23 |
+| **Total** | **747** | **521** |
+
+By priority on this branch: P1 (public storefront) 40, P2 (other storefront, account, seller panel) 325,
+P3 (back office) 156. The foundation alone removed 205 class B findings (every `FormField`-based label);
+the registration pilot removed 11 A and 4 C (E rose by 4: the "(optional)" registration fields are taken
+by no rule, because `RegisterController::create()` never stores them). Where the gap is now:
+
+| Module | Forms | A | B | C | D | E | F |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| seller panel (Blade) | 26 | 14 | 14 | 44 | 0 | 121 | 0 |
+| storefront/account (Blade) | 12 | 12 | 13 | 23 | 0 | 43 | 1 |
+| storefront (Blade) | 38 | 6 | 4 | 16 | 0 | 30 | 6 |
+| storefront/auth (Blade) | 4 | 0 | 0 | 4 | 0 | 13 | 0 |
+| Store/Admin/Marketing | 19 | 4 | 18 | 0 | 0 | 8 | 0 |
+| Store/Admin/Product | 24 | 1 | 13 | 3 | 0 | 0 | 5 |
+| Store/Admin/Setup | 27 | 10 | 7 | 0 | 8 | 0 | 0 |
+| Store/Admin/Website | 7 | 9 | 6 | 1 | 0 | 2 | 0 |
+| Store/Admin/Customers | 13 | 0 | 4 | 7 | 0 | 0 | 0 |
+| Store/Admin/Sales | 9 | 6 | 1 | 1 | 0 | 6 | 2 |
+| Store/Admin/Trips | 11 | 3 | 4 | 0 | 0 | 1 | 1 |
+| Store/Admin/Languages | 7 | 3 | 0 | 0 | 0 | 2 | 0 |
+| 17 other modules (WMS admin, auth, blog, sellers, staff, ...) | 42 | 1 | 9 | 0 | 2 | 1 | 2 |
+| server-only (unparsed rule sets) | 0 | 0 | 0 | 0 | 0 | 0 | 6 |
+
+Most Blade C and E findings are endpoints that validate nothing (`Request $request` with no rules: the
+conversations, password reset by code, seller products and coupons): the UI's `required` is the only check,
+and every field is taken unvalidated. That is a server gap first, a marking gap second.
+
+**Top 20 forms to fix first** (public first, then by high and medium findings; the full list with
+`file:line` on both sides is in the report):
+
+| # | Priority | Form | Posts to | High | Medium |
+| ---: | --- | --- | --- | ---: | ---: |
+| 1 | P1 | `shop/seller/profile/address_edit_modal.blade.php:1` | `seller.addresses.update` | 5 | 0 |
+| 2 | P1 | `shop/seller/profile/index.blade.php:258` | `seller.addresses.store` | 5 | 0 |
+| 3 | P1 | `shop/frontend/seller_form.blade.php:28` | `shops.store` (seller registration) | 4 | 0 |
+| 4 | P1 | `shop/frontend/partials/address_edit_modal.blade.php:1` | `addresses.update` | 3 | 1 |
+| 5 | P1 | `shop/frontend/partials/address_modal.blade.php:11` | `addresses.store` | 3 | 1 |
+| 6 | P1 | `shop/frontend/shipping_info.blade.php:55` | checkout shipping info | 1 | 0 |
+| 7 | P2 | `shop/frontend/user/create_user.blade.php:18` | `store_customer` | 12 | 12 |
+| 8 | P2 | `shop/seller/product/digitalproducts/edit.blade.php:11` | `seller.digitalproducts.update` | 9 | 0 |
+| 9 | P2 | `shop/frontend/user/customer/product_edit.blade.php:24` | `customer_products.update` | 9 | 0 |
+| 10 | P2 | `shop/frontend/user/customer/product_upload.blade.php:11` | `customer_products.store` | 9 | 0 |
+| 11 | P2 | `shop/seller/coupons/edit.blade.php:18` | `seller.coupon.update` | 7 | 1 |
+| 12 | P2 | `shop/seller/coupons/create.blade.php:20` | `seller.coupon.store` | 7 | 1 |
+| 13 | P2 | `shop/seller/product/digitalproducts/create.blade.php:12` | `seller.digitalproducts.store` | 7 | 0 |
+| 14 | P2 | `shop/seller/shop.blade.php:21` | `seller.shop.update` | 6 | 0 |
+| 15 | P2 | `shop/seller/product/products/create.blade.php:23` | `seller.products.store` | 4 | 5 |
+| 16 | P2 | `shop/auth/passwords/reset.blade.php:11` | `shop.password.update` | 4 | 0 |
+| 17 | P2 | `shop/seller/product/products/edit.blade.php:24` | `seller.products.update` | 3 | 5 |
+| 18 | P2 | `shop/frontend/digital_product_details.blade.php:792` | `conversations.store` | 2 | 0 |
+| 19 | P2 | `shop/frontend/product_details.blade.php:162` | `conversations.store` | 2 | 0 |
+| 20 | P2 | `shop/frontend/user/support_ticket/index.blade.php:79` | `support_ticket.store` | 2 | 0 |
+
+**The tool, checked by hand on 15 forms.** Each was read against its rules and template:
+staff create and edit; role edit; customer create (both ternary branches; the 7 C findings are real:
+`ValidatesStoreCustomer` makes company name, tax number, bank account, addresses, country and trade license
+`nullable`, the create form requires them); customer edit (six separate forms); WMS user create and edit;
+WMS settings; blog post create; currency settings (D: `required_with` / `required_without` with a static
+`required`); both registration views; seller registration (`shops.store`: asterisks present, no `required`:
+A); the storefront address modal (`AddressController@store` validates only `phone`: C on address, country,
+postal code, B on phone); password reset by code (validates nothing: C); the product conversation form
+(validates nothing: C); the digital product tax rows. The hand check found seven tool errors, all fixed and
+covered by `RequiredFieldsAuditTest`: the `register` route name is the GET (the POST on the same URI is
+unnamed); a bare `->validate()` on a validator was read as an unparsable rule set; a hidden `0` fallback
+beside a checkbox (`is_admin`) was reported as A and B; a checkbox group `x[]` did not answer a required
+`x`; an item rule `x.* => required` was applied to a checkbox list (and then, wrongly, not to per-row text
+inputs and single selects); forms in `ResourceFormPage`'s `#after-form` slot and nested `<Form>`s were
+merged into the outer form. Known limits are in the rule (script-submitted forms, 139 controls with runtime
+names in 47 forms, legends not checked, Blade outside `shop/`).
+
+**Plan.** Each batch is one PR: fix every A to D finding of its forms, test that the marks match the rules
+(Vitest for Vue, a rendered-page Pest test for Blade, as the two pilots do), shrink the baseline, and
+regenerate the report.
+
+- **Phase 2, public and high-traffic forms** (this order): (a) the six P1 Blade forms: storefront and seller
+  address forms, seller registration (`shops.store`), checkout shipping info; give `AddressController`
+  real rules where it validates only `phone`, as a deliberate, tested change; (b) password reset by code,
+  the conversation, product query and support ticket forms: endpoints with no validation get a FormRequest
+  first; (c) the back-office modules with mostly B findings, which are mechanical (a `RequiredMark` in a
+  hand-written label): Marketing (18 B), Product (13 B, plus the per-tax rows), Setup (7 B, 10 A, 8 D),
+  Website (9 A, 6 B), Trips, Sales, Customers (4 B). The 7 C findings on customer create need an owner
+  decision first: either the request starts requiring those fields on create, or the form stops (the rule
+  says the second, unless the owner wants the first).
+- **Phase 3, the rest**: the seller panel (26 forms, 44 C and 121 E: most of its endpoints validate
+  nothing, so it starts with FormRequests), the storefront account pages (12 forms), the remaining E
+  findings (dead fields to remove, or rules to add: unvalidated input is a mass-assignment question), the 23
+  F findings (convert the 5 non-literal inline rule sets, e.g. `CategoryController@store`, to FormRequests;
+  give the unresolved computed actions a resolvable form), legends for dialog forms
+  (`provideRequiredFields()`), and then extend the ratchet to the Blade P1 and P2 forms once they are clean.
+
+**Existing tests that changed.** Vitest: 18 label-text assertions in 13 files and one `StoreBooleanField`
+props list (commit 1), and `StoreNewsletterRecipients.test.ts` (commit 4). Playwright: six locators in five
+specs (`store-carriers`, `store-notifications`, `store-representatives`, `store-seller-settings`,
+`store-newsletter-ticket`) that found a required field by its exact label text: they now use the role and
+accessible name ("Name required") or the label text with its mark. No assertion was removed or loosened.
+
+**What was verified, and what was not.** Run here, on the final code:
+`python3 .claude/scripts/pre_push_check.py --full` (Wayfinder types, ESLint, Prettier, vue-tsc, Vitest
+**336 files, 2651 tests**, Pint, PHPStan **0 errors**, Pest **6582 tests, 38350 assertions**); an earlier
+`--full` run had stopped at vue-tsc on a type error in an edited Playwright spec, fixed before this one.
+Playwright, run separately with the preinstalled Chromium: the whole suite once (127 passed, 6 failed on the
+locators above), then the six fixed specs plus the new `store-required-mark.spec.ts` (all passed). Focused
+Pest files while developing (`StorefrontRegistrationRequiredFieldsTest`, `RequiredFieldsAuditTest`,
+`RequiredFieldsRatchetTest`, the staff and role controller tests). `forms:audit-required` was run on this
+branch and on a `develop` worktree. Not run here: the MySQL migration tests, the composer and npm audits and
+the deploy-script test (CI runs them; no `CI-Verified` trailer was made), and nothing on MySQL.
