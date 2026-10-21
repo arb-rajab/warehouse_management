@@ -22,6 +22,22 @@ use App\Support\RequiredFields\ServerRules;
 const REQUIRED_FIELDS_BASELINE = __DIR__.'/Support/required-fields-baseline.json';
 
 /**
+ * The storefront and seller-panel Blade forms whose server rules, `required`
+ * attributes and marks agree (store-backoffice-migration.md §44, §45), by
+ * view and the route it posts to. They may not regress to any class A-D
+ * finding; there is no baseline for them. Add a form here once it is fixed.
+ */
+const FIXED_STOREFRONT_FORMS = [
+    ['resources/views/shop/auth/register.blade.php', 'route:register'],
+    ['resources/views/shop/frontend/user_registration.blade.php', 'route:register'],
+    ['resources/views/shop/frontend/partials/address_modal.blade.php', 'route:addresses.store'],
+    ['resources/views/shop/frontend/partials/address_edit_modal.blade.php', 'route:addresses.update'],
+    ['resources/views/shop/frontend/shipping_info.blade.php', 'route:checkout.store_shipping_infostore'],
+    ['resources/views/shop/seller/profile/index.blade.php', 'route:seller.addresses.store'],
+    ['resources/views/shop/seller/profile/address_edit_modal.blade.php', 'route:seller.addresses.update'],
+];
+
+/**
  * @return array<string, array<string, mixed>> fingerprint => finding
  */
 function storeBackOfficeRequiredFieldFindings(): array
@@ -81,4 +97,19 @@ test('every baseline entry says why it may stay, and the file is sorted and uniq
     expect($fingerprints)->toBe($sorted)
         ->and(array_unique($fingerprints))->toBe($fingerprints)
         ->and(array_filter($entries, fn (array $entry) => trim($entry['reason'] ?? '') === '' || ! preg_match('/^[ABC]\|/', $entry['fingerprint'])))->toBe([]);
+});
+
+test('the fixed storefront forms keep their required fields honest (classes A to D)', function () {
+    $audit = new RequiredFieldsAudit(new ServerRules(base_path()), base_path());
+    $files = array_column(FIXED_STOREFRONT_FORMS, 0);
+    $result = $audit->run([], array_values(array_filter($audit->bladeForms(), fn (array $form) => in_array($form['file'], $files, true))), withInventory: false);
+
+    $audited = array_map(fn (array $form) => [$form['file'], $form['target']], $result['forms']);
+    $findings = array_filter(
+        $result['findings'],
+        fn (array $finding) => in_array([$finding['form'], $finding['target']], FIXED_STOREFRONT_FORMS, true) && in_array($finding['class'], ['A', 'B', 'C', 'D'], true),
+    );
+
+    expect(array_values(array_filter(FIXED_STOREFRONT_FORMS, fn (array $form) => ! in_array($form, $audited, true))))->toBe([], 'A listed form is no longer found: update FIXED_STOREFRONT_FORMS.')
+        ->and(array_map(fn (array $finding) => "{$finding['fingerprint']}: {$finding['detail']} (UI {$finding['ui']})", array_values($findings)))->toBe([]);
 });

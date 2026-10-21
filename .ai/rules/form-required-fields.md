@@ -122,7 +122,11 @@ read. About 4 s.
   high, B and D medium, E low, F info. Priority: P1 public storefront forms
   (registration, address, checkout, contact, seller registration), P2 other
   storefront, account and seller-panel forms, P3 back office.
-- **What it cannot see**: forms submitted from script (`useForm`,
+- A radio or checkbox inside a `<fieldset>` whose own label has no mark takes
+  the `<legend>` as its label: mark a radio group on its legend
+  (`shipping_info.blade.php`).
+- **What it cannot see**: controls inside a Blade component (the address
+  forms' `<x-address-country-field>`: pin those with a Pest test), forms submitted from script (`useForm`,
   `router.post`), names built from runtime data (counted as unresolved
   controls), a `:required` that depends on runtime data ("dynamic": neither
   a gap nor a mismatch), legends (not checked), and Blade forms under
@@ -143,6 +147,16 @@ held the 111 findings known on 2026-10-21 and can only shrink:
 - the fingerprint is `class|form file|Controller@method|field`: renaming a
   page or a field shows as one fixed and one new finding; move the entry and
   keep its reason.
+
+A fourth test covers the storefront and seller-panel Blade forms that have
+been fixed (`FIXED_STOREFRONT_FORMS` in the same file, store-backoffice-migration.md
+§45): any class A to D finding on one of them fails, with no baseline. Add a
+form to that list in the PR that fixes it.
+
+**Blade error display.** A storefront form that shares its page with another
+form (an address modal on the profile page) validates into a named error bag
+(`protected $errorBag = 'storeAddress'`) and reads `@error('field', 'storeAddress')`
+and `old()` only when that bag has errors.
 
 `components/RequiredFieldComponents.test.ts` is the Vitest side: every field
 component renders the mark exactly when `required`, and every component that

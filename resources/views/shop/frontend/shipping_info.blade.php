@@ -56,6 +56,12 @@
                         @csrf
                         @if(Auth::check())
                             <div class="border bg-white p-4 mb-4">
+                                <x-required-legend />
+                                <fieldset>
+                                <legend class="fs-16 fw-700 mb-3">{{ translate('Shipping address') }}<x-required-mark /></legend>
+                                @error('address_id')
+                                    <div class="invalid-feedback d-block mb-3" role="alert"><strong>{{ $message }}</strong></div>
+                                @enderror
                                 @foreach ($customer_addresses as $key => $address)
                                 <div class="border mb-4">
                                     <div class="row">
@@ -109,8 +115,8 @@
                                     </div>
                                 </div>
                                 @endforeach
+                                </fieldset>
 
-                                <input type="hidden" name="checkout_type" value="logged">
                                 <!-- Add New Address -->
                                 <div class="mb-5" >
                                     <div class="border p-3 c-pointer text-center bg-light has-transition hov-bg-soft-light h-100 d-flex flex-column justify-content-center" onclick="add_new_address()">

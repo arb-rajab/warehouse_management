@@ -20,7 +20,7 @@ paths:
 
 # Moving the store back office from Blade to Inertia
 
-Forms follow-up: [required and optional form fields](#44-required-and-optional-form-fields-2026-10-21).
+Forms follow-up: [required and optional form fields](#44-required-and-optional-form-fields-2026-10-21), then [the public address forms and the checkout address pick](#45-public-forms-phase-2a-address-forms-and-the-checkout-address-pick-2026-10-21).
 Latest follow-up: [retire the unused admin shells](#39-retire-the-unused-admin-shells-2026-10-20).
 Catalogue follow-up: [admin seller product list](#38-admin-seller-product-list-2026-10-20).
 Classified-products follow-up: [admin classified products](#37-admin-classified-products-2026-10-19).
@@ -4850,3 +4850,159 @@ Pest files while developing (`StorefrontRegistrationRequiredFieldsTest`, `Requir
 `RequiredFieldsRatchetTest`, the staff and role controller tests). `forms:audit-required` was run on this
 branch and on a `develop` worktree. Not run here: the MySQL migration tests, the composer and npm audits and
 the deploy-script test (CI runs them; no `CI-Verified` trailer was made), and nothing on MySQL.
+
+## 45. Public forms, phase 2a: address forms and the checkout address pick (2026-10-21)
+
+Model: **claude-opus-5-5**, effort **high**. Branch `ccr-6bf71ecb-5ab58g` from `develop` **9815092** (the
+PR #458 merge). Scope: phase 2(a) of §44's plan, the public storefront forms, server rule first. The
+reference-data PR (countries, policy pages) had not landed on `develop`, so the country fields build on
+`App\Models\Country`. Shipped in [PR #459](https://github.com/arb-rajab/warehouse_management/pull/459), with real CI (no `[skip ci]`). Every redirect, flash message, route, session key,
+OTP / captcha / throttle path and URL is unchanged; each form's tests were written first and seen failing.
+
+**Shipped, by commit** (the brief's batches 1 and 2; the PR reached about 30 files, the size the brief set as
+the limit, so batches 3 to 5 are the next PR, listed at the end):
+
+1. **Storefront address create and edit, and the checkout address pick.**
+2. **Seller panel address create and edit.**
+
+### Rules chosen, per form
+
+| Form (view → endpoint) | Before | Now (request) |
+| --- | --- | --- |
+| New address, `shop/frontend/partials/address_modal` → `AddressController@store` (`addresses.store`, on the profile, dashboard and checkout pages) | inline `phone => required`, flash "Phone number is required"; everything else written unvalidated; HTML required address, country, postal code, phone | `StoreAddressRequest`: **address** `required\|string\|max:255`, **postal code** `required\|string\|max:255`, **phone** `required\|string\|max:255`, **country_id** required while an active country exists, `integer`, exists in `countries` with `status = 1`; `state_id` / `city_id` nullable, exists and active and belonging to the chosen country / state; `latitude` nullable numeric -90..90; `longitude` nullable numeric, greater than -100 and less than 100; `customer_id` sometimes integer. Error bag `storeAddress`. |
+| Edit address, `shop/frontend/partials/address_edit_modal` → `AddressController@update` (`addresses.update`) | same as create | `UpdateAddressRequest`: the same rules without `customer_id`, plus the form's hidden `address_id` (sometimes integer, used only to reopen the form). Error bag `updateAddress`. |
+| Checkout address pick, `shop/frontend/shipping_info` → `CheckoutController@store_shipping_info` (`checkout.store_shipping_infostore`, `Route::any`) | `address_id == null` → flash "Please add shipping address"; a non-numeric id reached `findOrFail` (404) | `StoreShippingInfoRequest`: **address_id** `required\|integer`; the same flash when it is missing; ownership stays `AddressPolicy` in the controller, after the empty-cart check, as before. |
+| New address (seller), `shop/seller/profile/index` → `Seller\AddressController@store` (`seller.addresses.store`) | **nothing validated**; HTML required address, country, state, city, phone | `Seller\StoreAddressRequest`: **address** and **phone** `required\|string\|max:255`; country as on the storefront; state, city, **postal code** (`nullable\|string\|max:255`) and the coordinates optional, with the same checks. Always the signed-in seller's. Bag `storeAddress`. |
+| Edit address (seller), `shop/seller/profile/address_edit_modal` → `Seller\AddressController@update` (`seller.addresses.update`) | nothing validated | `Seller\UpdateAddressRequest`: the same plus `address_id`. Bag `updateAddress`. |
+
+The shared rules are `App\Http\Requests\Concerns\ValidatesAddress::addressRules()` (four requests). They
+mirror the back office's `StoreCustomerAddressRequest` except the longitude bound (below). The
+storefront and seller update requests (and the storefront create, which may name `customer_id`) check
+ownership in `authorize()` (`AddressPolicy::manage`), **before** the input: an invalid payload for another
+account's address is still a 403, and a missing id a 404. `Address::fillFromForm()` writes the eight
+columns as both controllers did (a column the form leaves out is cleared, as before).
+
+**Why these fields are required.** The order's shipping address (`OrderController::placeOrder`,
+`Helpers.php` 1617), the invoice and the delivery read address, postal code, phone and country. Address,
+postal code and phone were already required in the storefront HTML, so no customer using the form could
+leave them empty; the server now agrees. The country is required **only while an active country exists**
+(`Rule::requiredIf(Country::active()->exists())`): carrier-wise shipping (`getShippingCost`) and
+`seller_base_carrier_list()` read `$address->country->zone_id` and fail on an address without a country,
+but a fresh database has no countries and the form must still save.
+
+**The forms.** Each marks and requires exactly the fields its request requires (`<x-required-mark />`,
+`required`, `maxlength="255"` on the text fields), shows `<x-required-legend />` once at the top, labels
+every control with `for`/`id`, keeps the input with `old()` and shows each error under its field
+(`is-invalid` + `invalid-feedback`) from its own error bag, so the profile form on the same page never
+shows an address error. A failed create reopens the "New Address" modal; a failed update re-renders that
+address's edit form inside the edit modal (server-side, for an address `AddressPolicy` lets the user
+manage; another account's id in `address_id` renders nothing) and reopens it. The country row is a Blade
+component, `<x-address-country-field>` (`resources/views/components/address-country-field.blade.php`):
+the active countries, highest `priority` first, then by name, with the mark and `required`; with no active
+country it prints "No countries are set up yet. You can save the address without one." and no select.
+The checkout's address cards are a `<fieldset>` whose `<legend>` ("Shipping address", marked) names the
+radio group, under the legend line; a missing choice shows its error above the cards.
+
+### Judgement calls for the owner
+
+1. **Postal code required on the storefront, optional in the seller panel.** The storefront form always
+   required it; the seller form has it commented out, so sellers legitimately have none, and nothing
+   downstream breaks without it (it prints blank). The address created at registration
+   (`RegisterController`) has no street and no postal code, the one a representative's
+   `store_customer` creates no postal code; both still check out (the checkout pick needs only the id),
+   and only editing one asks for what it lacks.
+2. **State and city optional everywhere.** The storefront form does not ask for them (commented out
+   before this work); the seller form required them in HTML although an empty `states` / `cities` table
+   left nothing to pick, which blocked the form on a fresh database. Consequence to weigh: area-wise
+   shipping (`getShippingCost`, `area_wise_shipping`) charges 0 for an address without a city, and
+   `Seller\OrderController` matches delivery boys by city name. If area-wise shipping is ever enabled,
+   the city must become required (and the storefront field restored).
+3. **Longitude limited to the column.** `addresses.longitude` is `decimal(17,15)`: it holds less than 100
+   either way, so a longitude of 100 or more was a MySQL out-of-range error (a 500); it is now a validation
+   error. The map script's default pin (Sydney, 151.2195) hits it if a customer saves without moving the
+   pin. Widening the column (e.g. `decimal(18,15)`) is a migration for the owner to decide; the back
+   office's `StoreCustomerAddressRequest` still allows ±180 and would 500 on MySQL for those values.
+4. **The country rule follows the data.** While any country is active, every new or edited address must
+   name one; deactivating every country turns the requirement off and the forms say so.
+5. **A non-numeric address id at checkout** is now a validation error with the usual flash instead of a
+   404; a numeric id that does not exist is still a 404, another customer's still a 403.
+6. **`customer_id` on the storefront create** is kept (no form sends it; a representative's ordering
+   flow may): validated as an integer and authorized by `AddressPolicy` as before.
+
+### Dead fields and markup found
+
+- `checkout_type` (hidden, `shipping_info.blade.php`, always `logged`): no code reads it. **Removed.**
+- The storefront modals' commented-out state and city rows: **removed** (dead markup; the fields are
+  optional and absent, as before). The seller forms' commented-out postal code is **kept** as it was: see
+  judgement 1.
+- The seller edit modal closed its padding `<div>` early (a stray `</div>` after the commented postal
+  code): fixed with the rewrite.
+- Not dead, but new: the edit forms' hidden `address_id` (see above).
+
+### The audit tool and the ratchet
+
+- `BladeForms` now reads a `<fieldset>`'s `<legend>` as the label of the radios and checkboxes inside it
+  when their own label has no mark (a radio card's label names the option, not the group).
+  `RequiredFieldsAuditTest` covers it (seen failing first).
+- The audit cannot see inside a Blade component, so the country select is invisible to it (a conditional
+  rule raises nothing for a missing control); the Pest tests pin it on all four forms.
+- **The ratchet now covers the fixed storefront forms**: `RequiredFieldsRatchetTest` lists them in
+  `FIXED_STOREFRONT_FORMS` (both registration views, the four address forms, the checkout pick) and fails
+  on any class A to D finding there, with no baseline (about 1 s, deterministic). Checked by removing the
+  postal code's `required`: the test failed naming the finding. The back-office baseline
+  (`required-fields-baseline.json`) is unchanged: no back-office finding was touched.
+
+**Audit totals** (`php artisan forms:audit-required`, same day; the report in
+`.ai/required-fields-audit-20261021.md` / `.json` is regenerated):
+
+| Class | Before (`develop` 9815092) | After this PR |
+| --- | ---: | ---: |
+| A | 69 | 69 |
+| B | 93 | 91 |
+| C | 99 | 82 |
+| D | 10 | 10 |
+| E | 227 | 218 |
+| F | 23 | 23 |
+| **Total** | **521** | **493** |
+
+By priority: P1 40 → **12** (left: seller registration's 4 A, six E on the registration views' unstored
+fields, two F payment forms), P2 325 → 325, P3 156 → 156. By module: storefront B 4 → 2, C 16 → 9, E 30 → 25;
+seller panel C 44 → 34, E 121 → 117. The five forms fixed here have no finding in any class.
+
+**Existing tests that changed.** `LegacyStoreOwnershipTest` (the storefront and seller update payloads gain
+a postal code, which the storefront now requires; the assertions are unchanged). `storefrontHead()` and
+`StorefrontRegistrationRequiredFieldsTest` use the new shared `htmlXPath()` (no assertion changed). New:
+`StorefrontAddressFormsTest` (62 tests), `SellerAddressFormsTest` (41), one `RequiredFieldsAuditTest` case,
+one `RequiredFieldsRatchetTest` case, `formFieldMarks()`, `formPostingTo()`, `flashedMessage()` in
+`tests/Pest.php`, and the Playwright happy path `tests/e2e/store-storefront-address.spec.ts` (a customer signs
+in, opens "Add New Address" on the profile, sees the legend and the accessible names "Address required" /
+"Postal code required", is held back by the browser with the postal code empty, then saves and sees the
+address listed). The spec was written after the views changed, so it was not seen failing on the old code.
+
+**Hostile input covered**, on create and update for both areas: over-long strings (including multibyte),
+arrays for strings, a missing / non-numeric / inactive country, a state of another country, a city of
+another state, a latitude past the pole and a longitude the column cannot hold (each refused, nothing
+written); markup kept as text and printed escaped (`<b>`, `&`, `"`); a `<script>` is refused by the WAF
+before the endpoint (403); another account's address (403 even with an empty payload, unchanged);
+`customer_id` / `user_id` of another account (403 on the storefront; ignored in the seller panel).
+
+### Not done here: the next PR (phase 2a, continued)
+
+3. **Seller registration** (`shop/frontend/seller_form` → `ShopController@store`, inline `validate()`):
+   name, email, password and its confirmation lack `required` (4 A); the asterisks are literal
+   `<span class="text-primary">*</span>`; `shop_name` allows 255 characters against a `varchar(200)`
+   column and `address` has no `max` against `varchar(500)` (MySQL 500s); move to a FormRequest.
+4. **`store_customer`** (`shop/frontend/user/create_user` → `CustomerController@store_customer`, a
+   representative's form): 12 A + 12 B, marks and `required` only; the rules exist; `country_code` is
+   unvalidated (E).
+5. **Endpoints that validate nothing**: the conversation forms on the product and digital product pages
+   (`conversations.store`; `product_id` goes straight to `findOrFail`), the support ticket forms
+   (`support_ticket.store`, and the seller's), and password reset by code (`shop.password.update`).
+
+**Phase 2b, proposed**: the back-office modules that only lack marks (Marketing 18 B, Product 13 B plus the
+per-tax rows, Setup 7 B / 10 A / 8 D, Website 9 A / 6 B, Trips 3 A / 4 B, Sales 6 A, Customers 4 B and the
+owner's decision on its 7 C, Languages 3 A, Support 2 B, Blog 2 B); then the seller panel (26 forms, now 34
+C and 117 E, mostly endpoints that validate nothing, so FormRequests first), with each fixed Blade form added
+to `FIXED_STOREFRONT_FORMS`.
+
+**What was verified, and what was not.** See the PR's final report for the exact commands and results.

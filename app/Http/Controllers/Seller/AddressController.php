@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\Seller;
 
+use App\Http\Requests\Seller\StoreAddressRequest;
+use App\Http\Requests\Seller\UpdateAddressRequest;
 use App\Models\Address;
 use App\Models\City;
 use App\Models\State;
@@ -18,18 +20,11 @@ class AddressController extends Controller
      * @param  Request  $request
      * @return Response
      */
-    public function store(Request $request)
+    public function store(StoreAddressRequest $request)
     {
         $address = new Address;
-        $address->user_id       = Auth::user()->id;
-        $address->address       = $request->address;
-        $address->country_id    = $request->country_id;
-        $address->state_id      = $request->state_id;
-        $address->city_id       = $request->city_id;
-        $address->longitude     = $request->longitude;
-        $address->latitude      = $request->latitude;
-        $address->postal_code   = $request->postal_code;
-        $address->phone         = $request->phone;
+        $address->user_id = Auth::user()->id;
+        $address->fillFromForm($request->validated());
         $address->save();
 
         return back();
@@ -60,20 +55,10 @@ class AddressController extends Controller
      * @param  int  $id
      * @return Response
      */
-    public function update(Request $request, $id)
+    public function update(UpdateAddressRequest $request, $id)
     {
-        $address = Address::findOrFail($id);
-        Gate::authorize('manage', $address);
-
-        $address->address       = $request->address;
-        $address->country_id    = $request->country_id;
-        $address->state_id      = $request->state_id;
-        $address->city_id       = $request->city_id;
-        $address->longitude     = $request->longitude;
-        $address->latitude      = $request->latitude;
-        $address->postal_code   = $request->postal_code;
-        $address->phone         = $request->phone;
-
+        $address = $request->targetAddress();
+        $address->fillFromForm($request->validated());
         $address->save();
 
         flash(translate('Address info updated successfully'))->success();

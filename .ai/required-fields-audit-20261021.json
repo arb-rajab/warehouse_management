@@ -8,20 +8,20 @@
         },
         "by_class": {
             "A": 69,
-            "B": 93,
-            "C": 99,
+            "B": 91,
+            "C": 82,
             "D": 10,
-            "E": 227,
+            "E": 218,
             "F": 23
         },
         "by_severity": {
-            "high": 168,
-            "medium": 103,
-            "low": 227,
+            "high": 151,
+            "medium": 101,
+            "low": 218,
             "info": 23
         },
         "by_priority": {
-            "P1": 40,
+            "P1": 12,
             "P2": 325,
             "P3": 156
         }
@@ -247,9 +247,9 @@
             "forms": 26,
             "A": 14,
             "B": 14,
-            "C": 44,
+            "C": 34,
             "D": 0,
-            "E": 121,
+            "E": 117,
             "F": 0
         },
         "server": {
@@ -291,10 +291,10 @@
         "storefront": {
             "forms": 38,
             "A": 6,
-            "B": 4,
-            "C": 16,
+            "B": 2,
+            "C": 9,
             "D": 0,
-            "E": 30,
+            "E": 25,
             "F": 6
         },
         "storefront/account": {
@@ -326,42 +326,14 @@
         }
     },
     "server": {
-        "form_requests": 257,
+        "form_requests": 262,
         "form_requests_unparsed": 1,
-        "inline_validators": 30,
+        "inline_validators": 28,
         "inline_unparsed": 5
     },
     "top": [
         {
             "rank": 1,
-            "priority": "P1",
-            "module": "seller panel",
-            "form": "resources/views/shop/seller/profile/address_edit_modal.blade.php:1",
-            "target": "route:seller.addresses.update",
-            "high": 5,
-            "medium": 0,
-            "low": 2,
-            "findings": {
-                "C": 5,
-                "E": 2
-            }
-        },
-        {
-            "rank": 2,
-            "priority": "P1",
-            "module": "seller panel",
-            "form": "resources/views/shop/seller/profile/index.blade.php:258",
-            "target": "route:seller.addresses.store",
-            "high": 5,
-            "medium": 0,
-            "low": 2,
-            "findings": {
-                "C": 5,
-                "E": 2
-            }
-        },
-        {
-            "rank": 3,
             "priority": "P1",
             "module": "storefront",
             "form": "resources/views/shop/frontend/seller_form.blade.php:28",
@@ -374,51 +346,7 @@
             }
         },
         {
-            "rank": 4,
-            "priority": "P1",
-            "module": "storefront",
-            "form": "resources/views/shop/frontend/partials/address_edit_modal.blade.php:1",
-            "target": "route:addresses.update",
-            "high": 3,
-            "medium": 1,
-            "low": 2,
-            "findings": {
-                "B": 1,
-                "C": 3,
-                "E": 2
-            }
-        },
-        {
-            "rank": 5,
-            "priority": "P1",
-            "module": "storefront",
-            "form": "resources/views/shop/frontend/partials/address_modal.blade.php:11",
-            "target": "route:addresses.store",
-            "high": 3,
-            "medium": 1,
-            "low": 2,
-            "findings": {
-                "B": 1,
-                "C": 3,
-                "E": 2
-            }
-        },
-        {
-            "rank": 6,
-            "priority": "P1",
-            "module": "storefront",
-            "form": "resources/views/shop/frontend/shipping_info.blade.php:55",
-            "target": "route:checkout.store_shipping_infostore",
-            "high": 1,
-            "medium": 0,
-            "low": 1,
-            "findings": {
-                "C": 1,
-                "E": 1
-            }
-        },
-        {
-            "rank": 7,
+            "rank": 2,
             "priority": "P2",
             "module": "storefront/account",
             "form": "resources/views/shop/frontend/user/create_user.blade.php:18",
@@ -433,7 +361,7 @@
             }
         },
         {
-            "rank": 8,
+            "rank": 3,
             "priority": "P2",
             "module": "seller panel",
             "form": "resources/views/shop/seller/product/digitalproducts/edit.blade.php:11",
@@ -447,7 +375,7 @@
             }
         },
         {
-            "rank": 9,
+            "rank": 4,
             "priority": "P2",
             "module": "storefront/account",
             "form": "resources/views/shop/frontend/user/customer/product_edit.blade.php:24",
@@ -461,7 +389,7 @@
             }
         },
         {
-            "rank": 10,
+            "rank": 5,
             "priority": "P2",
             "module": "storefront/account",
             "form": "resources/views/shop/frontend/user/customer/product_upload.blade.php:11",
@@ -475,7 +403,7 @@
             }
         },
         {
-            "rank": 11,
+            "rank": 6,
             "priority": "P2",
             "module": "seller panel",
             "form": "resources/views/shop/seller/coupons/edit.blade.php:18",
@@ -490,7 +418,7 @@
             }
         },
         {
-            "rank": 12,
+            "rank": 7,
             "priority": "P2",
             "module": "seller panel",
             "form": "resources/views/shop/seller/coupons/create.blade.php:20",
@@ -504,7 +432,7 @@
             }
         },
         {
-            "rank": 13,
+            "rank": 8,
             "priority": "P2",
             "module": "seller panel",
             "form": "resources/views/shop/seller/product/digitalproducts/create.blade.php:12",
@@ -518,7 +446,7 @@
             }
         },
         {
-            "rank": 14,
+            "rank": 9,
             "priority": "P2",
             "module": "seller panel",
             "form": "resources/views/shop/seller/shop.blade.php:21",
@@ -532,7 +460,7 @@
             }
         },
         {
-            "rank": 15,
+            "rank": 10,
             "priority": "P2",
             "module": "seller panel",
             "form": "resources/views/shop/seller/product/products/create.blade.php:23",
@@ -547,7 +475,7 @@
             }
         },
         {
-            "rank": 16,
+            "rank": 11,
             "priority": "P2",
             "module": "storefront/auth",
             "form": "resources/views/shop/auth/passwords/reset.blade.php:11",
@@ -560,7 +488,7 @@
             }
         },
         {
-            "rank": 17,
+            "rank": 12,
             "priority": "P2",
             "module": "seller panel",
             "form": "resources/views/shop/seller/product/products/edit.blade.php:24",
@@ -575,7 +503,7 @@
             }
         },
         {
-            "rank": 18,
+            "rank": 13,
             "priority": "P2",
             "module": "storefront",
             "form": "resources/views/shop/frontend/digital_product_details.blade.php:792",
@@ -589,7 +517,7 @@
             }
         },
         {
-            "rank": 19,
+            "rank": 14,
             "priority": "P2",
             "module": "storefront",
             "form": "resources/views/shop/frontend/product_details.blade.php:162",
@@ -603,7 +531,7 @@
             }
         },
         {
-            "rank": 20,
+            "rank": 15,
             "priority": "P2",
             "module": "storefront/account",
             "form": "resources/views/shop/frontend/user/support_ticket/index.blade.php:79",
@@ -613,6 +541,78 @@
             "low": 1,
             "findings": {
                 "C": 2,
+                "E": 1
+            }
+        },
+        {
+            "rank": 16,
+            "priority": "P2",
+            "module": "seller panel",
+            "form": "resources/views/shop/seller/support_ticket/index.blade.php:80",
+            "target": "route:seller.support_ticket.store",
+            "high": 2,
+            "medium": 0,
+            "low": 1,
+            "findings": {
+                "C": 2,
+                "E": 1
+            }
+        },
+        {
+            "rank": 17,
+            "priority": "P2",
+            "module": "storefront",
+            "form": "resources/views/shop/frontend/partials/wallet_modal.blade.php:9",
+            "target": "route:wallet.recharge",
+            "high": 2,
+            "medium": 0,
+            "low": 0,
+            "findings": {
+                "C": 2
+            }
+        },
+        {
+            "rank": 18,
+            "priority": "P2",
+            "module": "storefront/account",
+            "form": "resources/views/shop/frontend/user/product_review_modal.blade.php:9",
+            "target": "route:reviews.store",
+            "high": 1,
+            "medium": 1,
+            "low": 2,
+            "findings": {
+                "B": 1,
+                "C": 1,
+                "E": 2
+            }
+        },
+        {
+            "rank": 19,
+            "priority": "P2",
+            "module": "storefront",
+            "form": "resources/views/shop/frontend/digital_product_details.blade.php:695",
+            "target": "route:product-queries.store",
+            "high": 1,
+            "medium": 1,
+            "low": 1,
+            "findings": {
+                "A": 1,
+                "B": 1,
+                "E": 1
+            }
+        },
+        {
+            "rank": 20,
+            "priority": "P2",
+            "module": "storefront",
+            "form": "resources/views/shop/frontend/product_details/product_queries.blade.php:29",
+            "target": "route:product-queries.store",
+            "high": 1,
+            "medium": 1,
+            "low": 1,
+            "findings": {
+                "A": 1,
+                "B": 1,
                 "E": 1
             }
         }
@@ -3064,13 +3064,10 @@
             "line": 1,
             "action": "{{ route('seller.addresses.update', $address_data->id) }}",
             "target": "route:seller.addresses.update",
-            "source": "App\\Http\\Controllers\\Seller\\AddressController@update",
+            "source": "App\\Http\\Requests\\Seller\\UpdateAddressRequest",
             "controls": 7,
             "unresolved_controls": 1,
-            "findings": {
-                "C": 5,
-                "E": 2
-            }
+            "findings": []
         },
         {
             "kind": "blade",
@@ -3111,13 +3108,10 @@
             "line": 258,
             "action": "{{ route('seller.addresses.store') }}",
             "target": "route:seller.addresses.store",
-            "source": "App\\Http\\Controllers\\Seller\\AddressController@store",
-            "controls": 7,
+            "source": "App\\Http\\Requests\\Seller\\StoreAddressRequest",
+            "controls": 6,
             "unresolved_controls": 1,
-            "findings": {
-                "C": 5,
-                "E": 2
-            }
+            "findings": []
         },
         {
             "kind": "blade",
@@ -3419,14 +3413,10 @@
             "line": 1,
             "action": "{{ route('addresses.update', $address_data->id) }}",
             "target": "route:addresses.update",
-            "source": "App\\Http\\Controllers\\AddressController@update (inline)",
+            "source": "App\\Http\\Requests\\UpdateAddressRequest",
             "controls": 6,
             "unresolved_controls": 1,
-            "findings": {
-                "B": 1,
-                "C": 3,
-                "E": 2
-            }
+            "findings": []
         },
         {
             "kind": "blade",
@@ -3436,14 +3426,10 @@
             "line": 11,
             "action": "{{ route('addresses.store') }}",
             "target": "route:addresses.store",
-            "source": "App\\Http\\Controllers\\AddressController@store (inline)",
-            "controls": 6,
+            "source": "App\\Http\\Requests\\StoreAddressRequest",
+            "controls": 5,
             "unresolved_controls": 1,
-            "findings": {
-                "B": 1,
-                "C": 3,
-                "E": 2
-            }
+            "findings": []
         },
         {
             "kind": "blade",
@@ -3727,13 +3713,10 @@
             "line": 55,
             "action": "{{ route('checkout.store_shipping_infostore') }}",
             "target": "route:checkout.store_shipping_infostore",
-            "source": "App\\Http\\Controllers\\CheckoutController@store_shipping_info",
-            "controls": 2,
+            "source": "App\\Http\\Requests\\StoreShippingInfoRequest",
+            "controls": 1,
             "unresolved_controls": 0,
-            "findings": {
-                "C": 1,
-                "E": 1
-            }
+            "findings": []
         },
         {
             "kind": "blade",
@@ -6250,36 +6233,6 @@
         {
             "class": "B",
             "severity": "medium",
-            "priority": "P1",
-            "module": "storefront",
-            "kind": "blade",
-            "form": "resources/views/shop/frontend/partials/address_edit_modal.blade.php",
-            "target": "route:addresses.update",
-            "source": "App\\Http\\Controllers\\AddressController@update (inline)",
-            "field": "phone",
-            "label": "Phone",
-            "detail": "server: required; the label shows no required mark",
-            "ui": "resources/views/shop/frontend/partials/address_edit_modal.blade.php:116",
-            "server": "app/Http/Controllers/AddressController.php:121"
-        },
-        {
-            "class": "B",
-            "severity": "medium",
-            "priority": "P1",
-            "module": "storefront",
-            "kind": "blade",
-            "form": "resources/views/shop/frontend/partials/address_modal.blade.php",
-            "target": "route:addresses.store",
-            "source": "App\\Http\\Controllers\\AddressController@store (inline)",
-            "field": "phone",
-            "label": "Phone",
-            "detail": "server: required; the label shows no required mark",
-            "ui": "resources/views/shop/frontend/partials/address_modal.blade.php:115",
-            "server": "app/Http/Controllers/AddressController.php:46"
-        },
-        {
-            "class": "B",
-            "severity": "medium",
             "priority": "P2",
             "module": "storefront",
             "kind": "blade",
@@ -7045,156 +6998,6 @@
         {
             "class": "C",
             "severity": "high",
-            "priority": "P1",
-            "module": "seller panel",
-            "kind": "blade",
-            "form": "resources/views/shop/seller/profile/address_edit_modal.blade.php",
-            "target": "route:seller.addresses.update",
-            "source": "App\\Http\\Controllers\\Seller\\AddressController@update",
-            "field": "address",
-            "label": "Address",
-            "detail": "required in the UI, the endpoint validates nothing",
-            "ui": "resources/views/shop/seller/profile/address_edit_modal.blade.php:9",
-            "server": null
-        },
-        {
-            "class": "C",
-            "severity": "high",
-            "priority": "P1",
-            "module": "seller panel",
-            "kind": "blade",
-            "form": "resources/views/shop/seller/profile/address_edit_modal.blade.php",
-            "target": "route:seller.addresses.update",
-            "source": "App\\Http\\Controllers\\Seller\\AddressController@update",
-            "field": "city_id",
-            "label": "City",
-            "detail": "required in the UI, the endpoint validates nothing",
-            "ui": "resources/views/shop/seller/profile/address_edit_modal.blade.php:50",
-            "server": null
-        },
-        {
-            "class": "C",
-            "severity": "high",
-            "priority": "P1",
-            "module": "seller panel",
-            "kind": "blade",
-            "form": "resources/views/shop/seller/profile/address_edit_modal.blade.php",
-            "target": "route:seller.addresses.update",
-            "source": "App\\Http\\Controllers\\Seller\\AddressController@update",
-            "field": "country_id",
-            "label": "Country",
-            "detail": "required in the UI, the endpoint validates nothing",
-            "ui": "resources/views/shop/seller/profile/address_edit_modal.blade.php:18",
-            "server": null
-        },
-        {
-            "class": "C",
-            "severity": "high",
-            "priority": "P1",
-            "module": "seller panel",
-            "kind": "blade",
-            "form": "resources/views/shop/seller/profile/address_edit_modal.blade.php",
-            "target": "route:seller.addresses.update",
-            "source": "App\\Http\\Controllers\\Seller\\AddressController@update",
-            "field": "phone",
-            "label": "Phone",
-            "detail": "required in the UI, the endpoint validates nothing",
-            "ui": "resources/views/shop/seller/profile/address_edit_modal.blade.php:104",
-            "server": null
-        },
-        {
-            "class": "C",
-            "severity": "high",
-            "priority": "P1",
-            "module": "seller panel",
-            "kind": "blade",
-            "form": "resources/views/shop/seller/profile/address_edit_modal.blade.php",
-            "target": "route:seller.addresses.update",
-            "source": "App\\Http\\Controllers\\Seller\\AddressController@update",
-            "field": "state_id",
-            "label": "State",
-            "detail": "required in the UI, the endpoint validates nothing",
-            "ui": "resources/views/shop/seller/profile/address_edit_modal.blade.php:35",
-            "server": null
-        },
-        {
-            "class": "C",
-            "severity": "high",
-            "priority": "P1",
-            "module": "seller panel",
-            "kind": "blade",
-            "form": "resources/views/shop/seller/profile/index.blade.php",
-            "target": "route:seller.addresses.store",
-            "source": "App\\Http\\Controllers\\Seller\\AddressController@store",
-            "field": "address",
-            "label": "Address",
-            "detail": "required in the UI, the endpoint validates nothing",
-            "ui": "resources/views/shop/seller/profile/index.blade.php:267",
-            "server": null
-        },
-        {
-            "class": "C",
-            "severity": "high",
-            "priority": "P1",
-            "module": "seller panel",
-            "kind": "blade",
-            "form": "resources/views/shop/seller/profile/index.blade.php",
-            "target": "route:seller.addresses.store",
-            "source": "App\\Http\\Controllers\\Seller\\AddressController@store",
-            "field": "city_id",
-            "label": "City",
-            "detail": "required in the UI, the endpoint validates nothing",
-            "ui": "resources/views/shop/seller/profile/index.blade.php:302",
-            "server": null
-        },
-        {
-            "class": "C",
-            "severity": "high",
-            "priority": "P1",
-            "module": "seller panel",
-            "kind": "blade",
-            "form": "resources/views/shop/seller/profile/index.blade.php",
-            "target": "route:seller.addresses.store",
-            "source": "App\\Http\\Controllers\\Seller\\AddressController@store",
-            "field": "country_id",
-            "label": "Country",
-            "detail": "required in the UI, the endpoint validates nothing",
-            "ui": "resources/views/shop/seller/profile/index.blade.php:276",
-            "server": null
-        },
-        {
-            "class": "C",
-            "severity": "high",
-            "priority": "P1",
-            "module": "seller panel",
-            "kind": "blade",
-            "form": "resources/views/shop/seller/profile/index.blade.php",
-            "target": "route:seller.addresses.store",
-            "source": "App\\Http\\Controllers\\Seller\\AddressController@store",
-            "field": "phone",
-            "label": "Phone",
-            "detail": "required in the UI, the endpoint validates nothing",
-            "ui": "resources/views/shop/seller/profile/index.blade.php:352",
-            "server": null
-        },
-        {
-            "class": "C",
-            "severity": "high",
-            "priority": "P1",
-            "module": "seller panel",
-            "kind": "blade",
-            "form": "resources/views/shop/seller/profile/index.blade.php",
-            "target": "route:seller.addresses.store",
-            "source": "App\\Http\\Controllers\\Seller\\AddressController@store",
-            "field": "state_id",
-            "label": "State",
-            "detail": "required in the UI, the endpoint validates nothing",
-            "ui": "resources/views/shop/seller/profile/index.blade.php:291",
-            "server": null
-        },
-        {
-            "class": "C",
-            "severity": "high",
             "priority": "P2",
             "module": "seller panel",
             "kind": "blade",
@@ -7390,96 +7193,6 @@
         {
             "class": "C",
             "severity": "high",
-            "priority": "P1",
-            "module": "storefront",
-            "kind": "blade",
-            "form": "resources/views/shop/frontend/partials/address_edit_modal.blade.php",
-            "target": "route:addresses.update",
-            "source": "App\\Http\\Controllers\\AddressController@update (inline)",
-            "field": "address",
-            "label": "Address",
-            "detail": "required in the UI, no server rule",
-            "ui": "resources/views/shop/frontend/partials/address_edit_modal.blade.php:10",
-            "server": null
-        },
-        {
-            "class": "C",
-            "severity": "high",
-            "priority": "P1",
-            "module": "storefront",
-            "kind": "blade",
-            "form": "resources/views/shop/frontend/partials/address_edit_modal.blade.php",
-            "target": "route:addresses.update",
-            "source": "App\\Http\\Controllers\\AddressController@update (inline)",
-            "field": "country_id",
-            "label": "Country",
-            "detail": "required in the UI, no server rule",
-            "ui": "resources/views/shop/frontend/partials/address_edit_modal.blade.php:21",
-            "server": null
-        },
-        {
-            "class": "C",
-            "severity": "high",
-            "priority": "P1",
-            "module": "storefront",
-            "kind": "blade",
-            "form": "resources/views/shop/frontend/partials/address_edit_modal.blade.php",
-            "target": "route:addresses.update",
-            "source": "App\\Http\\Controllers\\AddressController@update (inline)",
-            "field": "postal_code",
-            "label": "Postal code",
-            "detail": "required in the UI, no server rule",
-            "ui": "resources/views/shop/frontend/partials/address_edit_modal.blade.php:106",
-            "server": null
-        },
-        {
-            "class": "C",
-            "severity": "high",
-            "priority": "P1",
-            "module": "storefront",
-            "kind": "blade",
-            "form": "resources/views/shop/frontend/partials/address_modal.blade.php",
-            "target": "route:addresses.store",
-            "source": "App\\Http\\Controllers\\AddressController@store (inline)",
-            "field": "address",
-            "label": "Address",
-            "detail": "required in the UI, no server rule",
-            "ui": "resources/views/shop/frontend/partials/address_modal.blade.php:21",
-            "server": null
-        },
-        {
-            "class": "C",
-            "severity": "high",
-            "priority": "P1",
-            "module": "storefront",
-            "kind": "blade",
-            "form": "resources/views/shop/frontend/partials/address_modal.blade.php",
-            "target": "route:addresses.store",
-            "source": "App\\Http\\Controllers\\AddressController@store (inline)",
-            "field": "country_id",
-            "label": "Country",
-            "detail": "required in the UI, no server rule",
-            "ui": "resources/views/shop/frontend/partials/address_modal.blade.php:32",
-            "server": null
-        },
-        {
-            "class": "C",
-            "severity": "high",
-            "priority": "P1",
-            "module": "storefront",
-            "kind": "blade",
-            "form": "resources/views/shop/frontend/partials/address_modal.blade.php",
-            "target": "route:addresses.store",
-            "source": "App\\Http\\Controllers\\AddressController@store (inline)",
-            "field": "postal_code",
-            "label": "Postal code",
-            "detail": "required in the UI, no server rule",
-            "ui": "resources/views/shop/frontend/partials/address_modal.blade.php:105",
-            "server": null
-        },
-        {
-            "class": "C",
-            "severity": "high",
             "priority": "P2",
             "module": "storefront",
             "kind": "blade",
@@ -7535,21 +7248,6 @@
             "label": null,
             "detail": "required in the UI, the endpoint validates nothing",
             "ui": "resources/views/shop/frontend/product_details.blade.php:168",
-            "server": null
-        },
-        {
-            "class": "C",
-            "severity": "high",
-            "priority": "P1",
-            "module": "storefront",
-            "kind": "blade",
-            "form": "resources/views/shop/frontend/shipping_info.blade.php",
-            "target": "route:checkout.store_shipping_infostore",
-            "source": "App\\Http\\Controllers\\CheckoutController@store_shipping_info",
-            "field": "address_id",
-            "label": "set_default) checked @endif required> Address {{ $address->address }} Postal Code {{ $address->postal_code }} City {{ optional($address->city)->name }} State {{ optional($address->state)->name }} Country {{ optional($address->country)->name }} Phone {{ $address->phone }} Postal Code {{ $address->postal_code }}",
-            "detail": "required in the UI, the endpoint validates nothing",
-            "ui": "resources/views/shop/frontend/shipping_info.blade.php:64",
             "server": null
         },
         {
@@ -9775,66 +9473,6 @@
         {
             "class": "E",
             "severity": "low",
-            "priority": "P1",
-            "module": "seller panel",
-            "kind": "blade",
-            "form": "resources/views/shop/seller/profile/address_edit_modal.blade.php",
-            "target": "route:seller.addresses.update",
-            "source": "App\\Http\\Controllers\\Seller\\AddressController@update",
-            "field": "latitude",
-            "label": "Latitude",
-            "detail": "the endpoint validates nothing",
-            "ui": "resources/views/shop/seller/profile/address_edit_modal.blade.php:86",
-            "server": null
-        },
-        {
-            "class": "E",
-            "severity": "low",
-            "priority": "P1",
-            "module": "seller panel",
-            "kind": "blade",
-            "form": "resources/views/shop/seller/profile/address_edit_modal.blade.php",
-            "target": "route:seller.addresses.update",
-            "source": "App\\Http\\Controllers\\Seller\\AddressController@update",
-            "field": "longitude",
-            "label": "Longitude",
-            "detail": "the endpoint validates nothing",
-            "ui": "resources/views/shop/seller/profile/address_edit_modal.blade.php:78",
-            "server": null
-        },
-        {
-            "class": "E",
-            "severity": "low",
-            "priority": "P1",
-            "module": "seller panel",
-            "kind": "blade",
-            "form": "resources/views/shop/seller/profile/index.blade.php",
-            "target": "route:seller.addresses.store",
-            "source": "App\\Http\\Controllers\\Seller\\AddressController@store",
-            "field": "latitude",
-            "label": "Latitude",
-            "detail": "the endpoint validates nothing",
-            "ui": "resources/views/shop/seller/profile/index.blade.php:334",
-            "server": null
-        },
-        {
-            "class": "E",
-            "severity": "low",
-            "priority": "P1",
-            "module": "seller panel",
-            "kind": "blade",
-            "form": "resources/views/shop/seller/profile/index.blade.php",
-            "target": "route:seller.addresses.store",
-            "source": "App\\Http\\Controllers\\Seller\\AddressController@store",
-            "field": "longitude",
-            "label": "Longitude",
-            "detail": "the endpoint validates nothing",
-            "ui": "resources/views/shop/seller/profile/index.blade.php:326",
-            "server": null
-        },
-        {
-            "class": "E",
-            "severity": "low",
             "priority": "P2",
             "module": "seller panel",
             "kind": "blade",
@@ -10375,66 +10013,6 @@
         {
             "class": "E",
             "severity": "low",
-            "priority": "P1",
-            "module": "storefront",
-            "kind": "blade",
-            "form": "resources/views/shop/frontend/partials/address_edit_modal.blade.php",
-            "target": "route:addresses.update",
-            "source": "App\\Http\\Controllers\\AddressController@update (inline)",
-            "field": "latitude",
-            "label": "Latitude",
-            "detail": "no server rule names this field",
-            "ui": "resources/views/shop/frontend/partials/address_edit_modal.blade.php:95",
-            "server": null
-        },
-        {
-            "class": "E",
-            "severity": "low",
-            "priority": "P1",
-            "module": "storefront",
-            "kind": "blade",
-            "form": "resources/views/shop/frontend/partials/address_edit_modal.blade.php",
-            "target": "route:addresses.update",
-            "source": "App\\Http\\Controllers\\AddressController@update (inline)",
-            "field": "longitude",
-            "label": "Longitude",
-            "detail": "no server rule names this field",
-            "ui": "resources/views/shop/frontend/partials/address_edit_modal.blade.php:86",
-            "server": null
-        },
-        {
-            "class": "E",
-            "severity": "low",
-            "priority": "P1",
-            "module": "storefront",
-            "kind": "blade",
-            "form": "resources/views/shop/frontend/partials/address_modal.blade.php",
-            "target": "route:addresses.store",
-            "source": "App\\Http\\Controllers\\AddressController@store (inline)",
-            "field": "latitude",
-            "label": "Latitude",
-            "detail": "no server rule names this field",
-            "ui": "resources/views/shop/frontend/partials/address_modal.blade.php:94",
-            "server": null
-        },
-        {
-            "class": "E",
-            "severity": "low",
-            "priority": "P1",
-            "module": "storefront",
-            "kind": "blade",
-            "form": "resources/views/shop/frontend/partials/address_modal.blade.php",
-            "target": "route:addresses.store",
-            "source": "App\\Http\\Controllers\\AddressController@store (inline)",
-            "field": "longitude",
-            "label": "Longitude",
-            "detail": "no server rule names this field",
-            "ui": "resources/views/shop/frontend/partials/address_modal.blade.php:85",
-            "server": null
-        },
-        {
-            "class": "E",
-            "severity": "low",
             "priority": "P2",
             "module": "storefront",
             "kind": "blade",
@@ -10580,21 +10158,6 @@
             "label": "Remember Me",
             "detail": "the endpoint validates nothing",
             "ui": "resources/views/shop/frontend/seller_login.blade.php:43",
-            "server": null
-        },
-        {
-            "class": "E",
-            "severity": "low",
-            "priority": "P1",
-            "module": "storefront",
-            "kind": "blade",
-            "form": "resources/views/shop/frontend/shipping_info.blade.php",
-            "target": "route:checkout.store_shipping_infostore",
-            "source": "App\\Http\\Controllers\\CheckoutController@store_shipping_info",
-            "field": "checkout_type",
-            "label": null,
-            "detail": "the endpoint validates nothing",
-            "ui": "resources/views/shop/frontend/shipping_info.blade.php:113",
             "server": null
         },
         {
@@ -11673,9 +11236,9 @@
             "source": "App\\Http\\Controllers\\CheckoutController@checkout (inline)",
             "field": "-",
             "label": null,
-            "detail": "unparsed: rules are not a literal array at line 81",
+            "detail": "unparsed: rules are not a literal array at line 82",
             "ui": null,
-            "server": "app/Http/Controllers/CheckoutController.php:81"
+            "server": "app/Http/Controllers/CheckoutController.php:82"
         },
         {
             "class": "F",
@@ -11823,9 +11386,9 @@
             "source": "App\\Http\\Controllers\\CheckoutController@checkout (inline)",
             "field": "-",
             "label": null,
-            "detail": "server rules unparsed: rules are not a literal array at line 81",
+            "detail": "server rules unparsed: rules are not a literal array at line 82",
             "ui": "resources/views/shop/frontend/payment_select.blade.php:54",
-            "server": "app/Http/Controllers/CheckoutController.php:81"
+            "server": "app/Http/Controllers/CheckoutController.php:82"
         },
         {
             "class": "F",

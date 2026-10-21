@@ -16,7 +16,9 @@ use Symfony\Component\Finder\Finder;
  * Blade and HTML comments, `<script>` and `@php` blocks are blanked first
  * (line numbers are kept). A label belongs to a control by `for`/`id`, by
  * wrapping it, or by being the last label before it with no other control
- * in between. A `required` inside `@if`, or `@required(...)`, is "dynamic";
+ * in between; a radio or checkbox inside a `<fieldset>` whose own label
+ * shows no mark takes the fieldset's `<legend>` as its label (the group's
+ * name). A `required` inside `@if`, or `@required(...)`, is "dynamic";
  * a name printed with `{{ }}` is unresolved. Forms posted by JavaScript to a
  * URL that is not a `route()` call are reported with no target (class F).
  *
@@ -209,6 +211,7 @@ final class BladeForms
             ];
         }
 
+        $legends = $this->fieldsetLegends($body);
         $result = [];
         foreach ($controls as $index => $control) {
             $previousEnd = $index > 0 ? $controls[$index - 1]['position'] : -1;
@@ -231,6 +234,13 @@ final class BladeForms
                     }
                 }
             }
+            if (in_array($control['type'], ['radio', 'checkbox'], true) && ! ($label['mark'] ?? false)) {
+                foreach ($legends as $legend) {
+                    if ($legend['start'] < $control['position'] && $legend['end'] > $control['position']) {
+                        $label = ['mark' => $legend['mark'], 'text' => $legend['text']];
+                    }
+                }
+            }
             unset($control['id'], $control['position']);
             $control['mark'] = $label['mark'] ?? false;
             $control['label'] = $label['text'] ?? null;
@@ -238,6 +248,38 @@ final class BladeForms
         }
 
         return $result;
+    }
+
+    /**
+     * Each `<fieldset>` with a `<legend>`: a radio group's or checkbox
+     * group's label is its legend, since each option's own label names the
+     * option. Inner fieldsets come after outer ones, so the innermost wins.
+     *
+     * @return list<array{start: int, end: int, mark: bool, text: string}>
+     */
+    private function fieldsetLegends(string $body): array
+    {
+        $legends = [];
+        $open = [];
+        preg_match_all('/<fieldset\b|<\/fieldset>/i', $body, $matches, PREG_OFFSET_CAPTURE);
+        foreach ($matches[0] as [$text, $position]) {
+            if (strtolower($text) !== '</fieldset>') {
+                $open[] = $position;
+
+                continue;
+            }
+            $start = array_pop($open);
+            if ($start === null) {
+                continue;
+            }
+            $fieldset = substr($body, $start, $position - $start);
+            if (preg_match('/<legend\b[^>]*>(.*?)<\/legend>/is', $fieldset, $legend) === 1) {
+                $legends[] = ['start' => $start, 'end' => $position, 'mark' => $this->hasMark($legend[1]), 'text' => $this->labelText($legend[1])];
+            }
+        }
+        usort($legends, fn (array $a, array $b) => $a['start'] <=> $b['start']);
+
+        return $legends;
     }
 
     private function hasMark(string $inner): bool

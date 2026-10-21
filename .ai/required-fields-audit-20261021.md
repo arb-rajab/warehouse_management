@@ -7,20 +7,20 @@ The convention, the classes and how to read this file: [.ai/rules/form-required-
 ## Summary
 
 Forms scanned: **158** Vue (resources/js/pages, resources/js/components) and **81** Blade (resources/views/shop).
-Server rules: **257** FormRequests (1 unparsed) and **30** controller actions with inline validation (5 unparsed).
+Server rules: **262** FormRequests (1 unparsed) and **28** controller actions with inline validation (5 unparsed).
 
 | Class | Meaning | Severity | Findings |
 | --- | --- | --- | ---: |
 | A | server-required, no `required` attribute (or no control at all) | high | 69 |
-| B | server-required, no visible mark | medium | 93 |
-| C | `required` or a mark, but the server rule is optional or absent | high | 99 |
+| B | server-required, no visible mark | medium | 91 |
+| C | `required` or a mark, but the server rule is optional or absent | high | 82 |
 | D | conditional server rule, static `required` or mark | medium | 10 |
-| E | control with no matching server rule | low | 227 |
+| E | control with no matching server rule | low | 218 |
 | F | unparsed (server rules or form action) | info | 23 |
-| | **Total** | | **521** |
+| | **Total** | | **493** |
 
-By severity: high 168, medium 103, low 227, info 23.
-By priority: P1 40, P2 325, P3 156 (P1 public storefront forms: registration, address, checkout, contact, seller registration; P2 other storefront, account and seller-panel forms; P3 back office).
+By severity: high 151, medium 101, low 218, info 23.
+By priority: P1 12, P2 325, P3 156 (P1 public storefront forms: registration, address, checkout, contact, seller registration; P2 other storefront, account and seller-panel forms; P3 back office).
 
 ## Per module
 
@@ -50,12 +50,12 @@ By priority: P1 40, P2 325, P3 156 (P1 public storefront forms: registration, ad
 | Store/Admin/Trips | 11 | 3 | 4 | 0 | 0 | 1 | 1 |
 | Store/Admin/Website | 7 | 9 | 6 | 1 | 0 | 2 | 0 |
 | components | 3 | 0 | 2 | 0 | 0 | 0 | 0 |
-| seller panel | 26 | 14 | 14 | 44 | 0 | 121 | 0 |
+| seller panel | 26 | 14 | 14 | 34 | 0 | 117 | 0 |
 | server | 0 | 0 | 0 | 0 | 0 | 0 | 1 |
 | server: Api/V2 | 0 | 0 | 0 | 0 | 0 | 0 | 1 |
 | server: Api/V2/Seller | 0 | 0 | 0 | 0 | 0 | 0 | 1 |
 | server: Store/Admin | 0 | 0 | 0 | 0 | 0 | 0 | 3 |
-| storefront | 38 | 6 | 4 | 16 | 0 | 30 | 6 |
+| storefront | 38 | 6 | 2 | 9 | 0 | 25 | 6 |
 | storefront/account | 12 | 12 | 13 | 23 | 0 | 43 | 1 |
 | storefront/auth | 4 | 0 | 0 | 4 | 0 | 13 | 0 |
 | storefront/personal_info | 1 | 0 | 0 | 0 | 0 | 0 | 1 |
@@ -66,26 +66,26 @@ Public forms first, then by high (A + C) and medium (B + D) findings.
 
 | # | Priority | Form | Posts to | High | Medium | Low (E) |
 | ---: | --- | --- | --- | ---: | ---: | ---: |
-| 1 | P1 | `resources/views/shop/seller/profile/address_edit_modal.blade.php:1` | `route:seller.addresses.update` | 5 | 0 | 2 |
-| 2 | P1 | `resources/views/shop/seller/profile/index.blade.php:258` | `route:seller.addresses.store` | 5 | 0 | 2 |
-| 3 | P1 | `resources/views/shop/frontend/seller_form.blade.php:28` | `route:shops.store` | 4 | 0 | 0 |
-| 4 | P1 | `resources/views/shop/frontend/partials/address_edit_modal.blade.php:1` | `route:addresses.update` | 3 | 1 | 2 |
-| 5 | P1 | `resources/views/shop/frontend/partials/address_modal.blade.php:11` | `route:addresses.store` | 3 | 1 | 2 |
-| 6 | P1 | `resources/views/shop/frontend/shipping_info.blade.php:55` | `route:checkout.store_shipping_infostore` | 1 | 0 | 1 |
-| 7 | P2 | `resources/views/shop/frontend/user/create_user.blade.php:18` | `route:store_customer` | 12 | 12 | 1 |
-| 8 | P2 | `resources/views/shop/seller/product/digitalproducts/edit.blade.php:11` | `route:seller.digitalproducts.update` | 9 | 0 | 12 |
-| 9 | P2 | `resources/views/shop/frontend/user/customer/product_edit.blade.php:24` | `route:customer_products.update` | 9 | 0 | 10 |
-| 10 | P2 | `resources/views/shop/frontend/user/customer/product_upload.blade.php:11` | `route:customer_products.store` | 9 | 0 | 10 |
-| 11 | P2 | `resources/views/shop/seller/coupons/edit.blade.php:18` | `route:seller.coupon.update` | 7 | 1 | 1 |
-| 12 | P2 | `resources/views/shop/seller/coupons/create.blade.php:20` | `route:seller.coupon.store` | 7 | 1 | 0 |
-| 13 | P2 | `resources/views/shop/seller/product/digitalproducts/create.blade.php:12` | `route:seller.digitalproducts.store` | 7 | 0 | 11 |
-| 14 | P2 | `resources/views/shop/seller/shop.blade.php:21` | `route:seller.shop.update` | 6 | 0 | 2 |
-| 15 | P2 | `resources/views/shop/seller/product/products/create.blade.php:23` | `route:seller.products.store` | 4 | 5 | 29 |
-| 16 | P2 | `resources/views/shop/auth/passwords/reset.blade.php:11` | `route:shop.password.update` | 4 | 0 | 0 |
-| 17 | P2 | `resources/views/shop/seller/product/products/edit.blade.php:24` | `route:seller.products.update` | 3 | 5 | 35 |
-| 18 | P2 | `resources/views/shop/frontend/digital_product_details.blade.php:792` | `route:conversations.store` | 2 | 0 | 1 |
-| 19 | P2 | `resources/views/shop/frontend/product_details.blade.php:162` | `route:conversations.store` | 2 | 0 | 1 |
-| 20 | P2 | `resources/views/shop/frontend/user/support_ticket/index.blade.php:79` | `route:support_ticket.store` | 2 | 0 | 1 |
+| 1 | P1 | `resources/views/shop/frontend/seller_form.blade.php:28` | `route:shops.store` | 4 | 0 | 0 |
+| 2 | P2 | `resources/views/shop/frontend/user/create_user.blade.php:18` | `route:store_customer` | 12 | 12 | 1 |
+| 3 | P2 | `resources/views/shop/seller/product/digitalproducts/edit.blade.php:11` | `route:seller.digitalproducts.update` | 9 | 0 | 12 |
+| 4 | P2 | `resources/views/shop/frontend/user/customer/product_edit.blade.php:24` | `route:customer_products.update` | 9 | 0 | 10 |
+| 5 | P2 | `resources/views/shop/frontend/user/customer/product_upload.blade.php:11` | `route:customer_products.store` | 9 | 0 | 10 |
+| 6 | P2 | `resources/views/shop/seller/coupons/edit.blade.php:18` | `route:seller.coupon.update` | 7 | 1 | 1 |
+| 7 | P2 | `resources/views/shop/seller/coupons/create.blade.php:20` | `route:seller.coupon.store` | 7 | 1 | 0 |
+| 8 | P2 | `resources/views/shop/seller/product/digitalproducts/create.blade.php:12` | `route:seller.digitalproducts.store` | 7 | 0 | 11 |
+| 9 | P2 | `resources/views/shop/seller/shop.blade.php:21` | `route:seller.shop.update` | 6 | 0 | 2 |
+| 10 | P2 | `resources/views/shop/seller/product/products/create.blade.php:23` | `route:seller.products.store` | 4 | 5 | 29 |
+| 11 | P2 | `resources/views/shop/auth/passwords/reset.blade.php:11` | `route:shop.password.update` | 4 | 0 | 0 |
+| 12 | P2 | `resources/views/shop/seller/product/products/edit.blade.php:24` | `route:seller.products.update` | 3 | 5 | 35 |
+| 13 | P2 | `resources/views/shop/frontend/digital_product_details.blade.php:792` | `route:conversations.store` | 2 | 0 | 1 |
+| 14 | P2 | `resources/views/shop/frontend/product_details.blade.php:162` | `route:conversations.store` | 2 | 0 | 1 |
+| 15 | P2 | `resources/views/shop/frontend/user/support_ticket/index.blade.php:79` | `route:support_ticket.store` | 2 | 0 | 1 |
+| 16 | P2 | `resources/views/shop/seller/support_ticket/index.blade.php:80` | `route:seller.support_ticket.store` | 2 | 0 | 1 |
+| 17 | P2 | `resources/views/shop/frontend/partials/wallet_modal.blade.php:9` | `route:wallet.recharge` | 2 | 0 | 0 |
+| 18 | P2 | `resources/views/shop/frontend/user/product_review_modal.blade.php:9` | `route:reviews.store` | 1 | 1 | 2 |
+| 19 | P2 | `resources/views/shop/frontend/digital_product_details.blade.php:695` | `route:product-queries.store` | 1 | 1 | 1 |
+| 20 | P2 | `resources/views/shop/frontend/product_details/product_queries.blade.php:29` | `route:product-queries.store` | 1 | 1 | 1 |
 
 ## Findings by module and form
 
@@ -573,24 +573,6 @@ Each line: class, field (label), what differs, then the UI and server locations.
   - **B** `reply`: server: required; the label shows no required mark. UI resources/views/shop/seller/product_query/show.blade.php:40, server app/Http/Controllers/Seller/ProductQueryController.php:38
   - **E** `conversation_id`: no server rule names this field. UI resources/views/shop/seller/product_query/show.blade.php:37
 
-- `resources/views/shop/seller/profile/address_edit_modal.blade.php → route:seller.addresses.update` (App\Http\Controllers\Seller\AddressController@update)
-  - **C** `address` (Address): required in the UI, the endpoint validates nothing. UI resources/views/shop/seller/profile/address_edit_modal.blade.php:9
-  - **C** `city_id` (City): required in the UI, the endpoint validates nothing. UI resources/views/shop/seller/profile/address_edit_modal.blade.php:50
-  - **C** `country_id` (Country): required in the UI, the endpoint validates nothing. UI resources/views/shop/seller/profile/address_edit_modal.blade.php:18
-  - **C** `phone` (Phone): required in the UI, the endpoint validates nothing. UI resources/views/shop/seller/profile/address_edit_modal.blade.php:104
-  - **C** `state_id` (State): required in the UI, the endpoint validates nothing. UI resources/views/shop/seller/profile/address_edit_modal.blade.php:35
-  - **E** `latitude` (Latitude): the endpoint validates nothing. UI resources/views/shop/seller/profile/address_edit_modal.blade.php:86
-  - **E** `longitude` (Longitude): the endpoint validates nothing. UI resources/views/shop/seller/profile/address_edit_modal.blade.php:78
-
-- `resources/views/shop/seller/profile/index.blade.php → route:seller.addresses.store` (App\Http\Controllers\Seller\AddressController@store)
-  - **C** `address` (Address): required in the UI, the endpoint validates nothing. UI resources/views/shop/seller/profile/index.blade.php:267
-  - **C** `city_id` (City): required in the UI, the endpoint validates nothing. UI resources/views/shop/seller/profile/index.blade.php:302
-  - **C** `country_id` (Country): required in the UI, the endpoint validates nothing. UI resources/views/shop/seller/profile/index.blade.php:276
-  - **C** `phone` (Phone): required in the UI, the endpoint validates nothing. UI resources/views/shop/seller/profile/index.blade.php:352
-  - **C** `state_id` (State): required in the UI, the endpoint validates nothing. UI resources/views/shop/seller/profile/index.blade.php:291
-  - **E** `latitude` (Latitude): the endpoint validates nothing. UI resources/views/shop/seller/profile/index.blade.php:334
-  - **E** `longitude` (Longitude): the endpoint validates nothing. UI resources/views/shop/seller/profile/index.blade.php:326
-
 - `resources/views/shop/seller/profile/index.blade.php → route:seller.profile.update` (App\Http\Requests\SellerProfileRequest)
   - **B** `name` (Your Name): server: required|max; the label shows no required mark. UI resources/views/shop/seller/profile/index.blade.php:23, server app/Http/Requests/SellerProfileRequest.php:33
   - **E** `bank_acc_name` (Bank Account Name): no server rule names this field. UI resources/views/shop/seller/profile/index.blade.php:111
@@ -641,7 +623,7 @@ Each line: class, field (label), what differs, then the UI and server locations.
 ### server
 
 - `app/Http/Controllers/CheckoutController.php → App\Http\Controllers\CheckoutController@checkout (inline)` (App\Http\Controllers\CheckoutController@checkout (inline))
-  - **F** `-`: unparsed: rules are not a literal array at line 81. UI -, server app/Http/Controllers/CheckoutController.php:81
+  - **F** `-`: unparsed: rules are not a literal array at line 82. UI -, server app/Http/Controllers/CheckoutController.php:82
 
 ### server: Api/V2
 
@@ -695,22 +677,6 @@ Each line: class, field (label), what differs, then the UI and server locations.
 - `resources/views/shop/frontend/layouts/app.blade.php → route:subscribers.store` (App\Http\Controllers\SubscriberController@store)
   - **C** `email`: required in the UI, the endpoint validates nothing. UI resources/views/shop/frontend/layouts/app.blade.php:339
 
-- `resources/views/shop/frontend/partials/address_edit_modal.blade.php → route:addresses.update` (App\Http\Controllers\AddressController@update (inline))
-  - **B** `phone` (Phone): server: required; the label shows no required mark. UI resources/views/shop/frontend/partials/address_edit_modal.blade.php:116, server app/Http/Controllers/AddressController.php:121
-  - **C** `address` (Address): required in the UI, no server rule. UI resources/views/shop/frontend/partials/address_edit_modal.blade.php:10
-  - **C** `country_id` (Country): required in the UI, no server rule. UI resources/views/shop/frontend/partials/address_edit_modal.blade.php:21
-  - **C** `postal_code` (Postal code): required in the UI, no server rule. UI resources/views/shop/frontend/partials/address_edit_modal.blade.php:106
-  - **E** `latitude` (Latitude): no server rule names this field. UI resources/views/shop/frontend/partials/address_edit_modal.blade.php:95
-  - **E** `longitude` (Longitude): no server rule names this field. UI resources/views/shop/frontend/partials/address_edit_modal.blade.php:86
-
-- `resources/views/shop/frontend/partials/address_modal.blade.php → route:addresses.store` (App\Http\Controllers\AddressController@store (inline))
-  - **B** `phone` (Phone): server: required; the label shows no required mark. UI resources/views/shop/frontend/partials/address_modal.blade.php:115, server app/Http/Controllers/AddressController.php:46
-  - **C** `address` (Address): required in the UI, no server rule. UI resources/views/shop/frontend/partials/address_modal.blade.php:21
-  - **C** `country_id` (Country): required in the UI, no server rule. UI resources/views/shop/frontend/partials/address_modal.blade.php:32
-  - **C** `postal_code` (Postal code): required in the UI, no server rule. UI resources/views/shop/frontend/partials/address_modal.blade.php:105
-  - **E** `latitude` (Latitude): no server rule names this field. UI resources/views/shop/frontend/partials/address_modal.blade.php:94
-  - **E** `longitude` (Longitude): no server rule names this field. UI resources/views/shop/frontend/partials/address_modal.blade.php:85
-
 - `resources/views/shop/frontend/partials/login_modal.blade.php → route:cart.login.submit` (App\Http\Controllers\HomeController@cart_login)
   - **E** `country_code`: the endpoint validates nothing. UI resources/views/shop/frontend/partials/login_modal.blade.php:24
   - **E** `email`: the endpoint validates nothing. UI resources/views/shop/frontend/partials/login_modal.blade.php:27
@@ -735,7 +701,7 @@ Each line: class, field (label), what differs, then the UI and server locations.
   - **F** `-`: form action not resolved: {{ \App\Utility\PayhereUtility::get_action_url() }}. UI resources/views/shop/frontend/payhere/wallet_form.blade.php:3
 
 - `resources/views/shop/frontend/payment_select.blade.php → route:payment.checkout` (App\Http\Controllers\CheckoutController@checkout (inline))
-  - **F** `-`: server rules unparsed: rules are not a literal array at line 81. UI resources/views/shop/frontend/payment_select.blade.php:54, server app/Http/Controllers/CheckoutController.php:81
+  - **F** `-`: server rules unparsed: rules are not a literal array at line 82. UI resources/views/shop/frontend/payment_select.blade.php:54, server app/Http/Controllers/CheckoutController.php:82
 
 - `resources/views/shop/frontend/product_details.blade.php → route:auction_product_bids.store`
   - **F** `-`: form action not resolved: {{ route('auction_product_bids.store') }}. UI resources/views/shop/frontend/product_details.blade.php:202
@@ -760,10 +726,6 @@ Each line: class, field (label), what differs, then the UI and server locations.
   - **E** `email` (Email): the endpoint validates nothing. UI resources/views/shop/frontend/seller_login.blade.php:25
   - **E** `password` (Password): the endpoint validates nothing. UI resources/views/shop/frontend/seller_login.blade.php:36
   - **E** `remember` (Remember Me): the endpoint validates nothing. UI resources/views/shop/frontend/seller_login.blade.php:43
-
-- `resources/views/shop/frontend/shipping_info.blade.php → route:checkout.store_shipping_infostore` (App\Http\Controllers\CheckoutController@store_shipping_info)
-  - **C** `address_id` (set_default) checked @endif required> Address {{ $address->address }} Postal Code {{ $address->postal_code }} City {{ optional($address->city)->name }} State {{ optional($address->state)->name }} Country {{ optional($address->country)->name }} Phone {{ $address->phone }} Postal Code {{ $address->postal_code }}): required in the UI, the endpoint validates nothing. UI resources/views/shop/frontend/shipping_info.blade.php:64
-  - **E** `checkout_type`: the endpoint validates nothing. UI resources/views/shop/frontend/shipping_info.blade.php:113
 
 - `resources/views/shop/frontend/track_order.blade.php → route:orders.track` (App\Http\Controllers\HomeController@trackOrder)
   - **C** `order_code`: required in the UI, the endpoint validates nothing. UI resources/views/shop/frontend/track_order.blade.php:34
