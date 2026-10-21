@@ -150,13 +150,18 @@ held the 111 findings known on 2026-10-21 and can only shrink:
 
 A fourth test covers the storefront and seller-panel Blade forms that have
 been fixed (`FIXED_STOREFRONT_FORMS` in the same file, store-backoffice-migration.md
-§45, §47): any class A to D finding on one of them fails, with no baseline. Add a
+§45, §47, §48): any class A to D finding on one of them fails, with no baseline. Add a
 form to that list in the PR that fixes it.
 
 **Blade error display.** A storefront form that shares its page with another
 form (an address modal on the profile page) validates into a named error bag
 (`protected $errorBag = 'storeAddress'`) and reads `@error('field', 'storeAddress')`
 and `old()` only when that bag has errors.
+
+**Testing a refusal on the page.** Post, then render the form, and read the
+error off the page; do not call `assertSessionHasErrors` between the two:
+reading the session in the test starts it there, and the next request no
+longer sees the flashed errors (§48).
 
 `components/RequiredFieldComponents.test.ts` is the Vitest side: every field
 component renders the mark exactly when `required`, and every component that

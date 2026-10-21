@@ -24,7 +24,7 @@
                 <div class="form-group">
                     <label for="create_customer_name" class="fs-12 fw-700 text-soft-dark">{{ translate('Full Name') }}<x-required-mark /></label>
                     <input type="text" id="create_customer_name" class="form-control rounded-0{{ $errors->has('name') ? ' is-invalid' : '' }}"
-                        value="{{ old('name') }}" placeholder="{{ translate('Full Name') }}" name="name" required>
+                        value="{{ old('name') }}" placeholder="{{ translate('Full Name') }}" name="name" maxlength="191" required>
                     @if ($errors->has('name'))
                         <span class="invalid-feedback" role="alert">
                             <strong>{{ $errors->first('name') }}</strong>
@@ -38,7 +38,7 @@
                     <input type="text" id="create_customer_company_name"
                         class="form-control rounded-0{{ $errors->has('company_name') ? ' is-invalid' : '' }}"
                         value="{{ old('company_name') }}" placeholder="{{ translate('Company name') }}"
-                        name="company_name" required>
+                        name="company_name" maxlength="255" required>
                     @if ($errors->has('company_name'))
                         <span class="invalid-feedback" role="alert">
                             <strong>{{ $errors->first('company_name') }}</strong>
@@ -52,7 +52,7 @@
                         <label for="phone-code" class="fs-12 fw-700 text-soft-dark">{{ translate('Phone') }}<x-required-mark /></label>
                         <input type="tel" id="phone-code"
                             class="form-control rounded-0{{ $errors->has('phone') ? ' is-invalid' : '' }}"
-                            value="{{ old('phone') }}" placeholder="" name="phone" autocomplete="off" required>
+                            value="{{ old('phone') }}" placeholder="" name="phone" maxlength="20" autocomplete="off" required>
                     </div>
 
                     <input type="hidden" name="country_code" value="">
@@ -62,7 +62,7 @@
                         <label for="create_customer_otp_email" class="fs-12 fw-700 text-soft-dark">{{ translate('Email') }}</label>
                         <input type="email" id="create_customer_otp_email"
                             class="form-control rounded-0 {{ $errors->has('email') ? ' is-invalid' : '' }}"
-                            value="{{ old('email') }}" placeholder="{{ translate('Email') }}" name="email"
+                            value="{{ old('email') }}" placeholder="{{ translate('Email') }}" name="email" maxlength="191"
                             autocomplete="off">
                         @if ($errors->has('email'))
                             <span class="invalid-feedback" role="alert">
@@ -80,7 +80,7 @@
                         <label for="create_customer_email" class="fs-12 fw-700 text-soft-dark">{{ translate('Email') }}<x-required-mark /></label>
                         <input type="email" id="create_customer_email"
                             class="form-control rounded-0{{ $errors->has('email') ? ' is-invalid' : '' }}"
-                            value="{{ old('email') }}" placeholder="{{ translate('Email') }}" name="email" required>
+                            value="{{ old('email') }}" placeholder="{{ translate('Email') }}" name="email" maxlength="191" required>
                         @if ($errors->has('email'))
                             <span class="invalid-feedback" role="alert">
                                 <strong>{{ $errors->first('email') }}</strong>
@@ -93,7 +93,7 @@
                 <div class="form-group">
                     <label for="create_customer_phone" class="fs-12 fw-700 text-soft-dark">{{ translate('phone') }}<x-required-mark /></label>
                     <input type="tel" id="create_customer_phone" class="form-control rounded-0{{ $errors->has('phone') ? ' is-invalid' : '' }}"
-                        value="{{ old('phone') }}" placeholder="{{ translate('phone') }}" name="phone" required>
+                        value="{{ old('phone') }}" placeholder="{{ translate('phone') }}" name="phone" maxlength="20" required>
                     @if ($errors->has('phone'))
                         <span class="invalid-feedback" role="alert">
                             <strong>{{ $errors->first('phone') }}</strong>
@@ -124,7 +124,7 @@
                     <label for="create_customer_tax_number" class="fs-12 fw-700 text-soft-dark">{{ translate('Tax Number') }}<x-required-mark /></label>
                     <input type="text" id="create_customer_tax_number"
                         class="form-control rounded-0{{ $errors->has('tax_number') ? ' is-invalid' : '' }}"
-                        value="{{ old('tax_number') }}" placeholder="{{ translate('Tax Number') }}" name="tax_number" required>
+                        value="{{ old('tax_number') }}" placeholder="{{ translate('Tax Number') }}" name="tax_number" maxlength="100" required>
                     @if ($errors->has('tax_number'))
                         <span class="invalid-feedback" role="alert">
                             <strong>{{ $errors->first('tax_number') }}</strong>
@@ -139,7 +139,7 @@
                     <input type="text" id="create_customer_bank_account_number"
                         class="form-control rounded-0{{ $errors->has('bank_account_number') ? ' is-invalid' : '' }}"
                         value="{{ old('bank_account_number') }}" placeholder="{{ translate('Bank Account Number') }}"
-                        name="bank_account_number" required>
+                        name="bank_account_number" maxlength="100" required>
                     @if ($errors->has('bank_account_number'))
                         <span class="invalid-feedback" role="alert">
                             <strong>{{ $errors->first('bank_account_number') }}</strong>
@@ -154,7 +154,7 @@
                     <input type="text" id="create_customer_company_address"
                         class="form-control rounded-0{{ $errors->has('company_address') ? ' is-invalid' : '' }}"
                         value="{{ old('company_address') }}" placeholder="{{ translate('Company Address') }}"
-                        name="company_address" required>
+                        name="company_address" maxlength="255" required>
                     @if ($errors->has('company_address'))
                         <span class="invalid-feedback" role="alert">
                             <strong>{{ $errors->first('company_address') }}</strong>
@@ -170,7 +170,7 @@
                     <input type="text" id="create_customer_shipping_address"
                         class="form-control rounded-0{{ $errors->has('shipping_address') ? ' is-invalid' : '' }}"
                         value="{{ old('shipping_address') }}" placeholder="{{ translate('Shipping Address') }}"
-                        name="shipping_address" required>
+                        name="shipping_address" maxlength="255" required>
                     @if ($errors->has('shipping_address'))
                         <span class="invalid-feedback" role="alert">
                             <strong>{{ $errors->first('shipping_address') }}</strong>
@@ -185,7 +185,7 @@
                     <input type="file" id="create_customer_trade_license"
                         class="form-control rounded-0{{ $errors->has('trade_license') ? ' is-invalid' : '' }}"
                         value="{{ old('trade_license') }}" placeholder="{{ translate('Upload Trade License') }}"
-                        name="trade_license" required>
+                        name="trade_license" accept=".pdf,.doc,.docx,.png,.jpg,.jpeg" required>
                     @if ($errors->has('trade_license'))
                         <span class="invalid-feedback" role="alert">
                             <strong>{{ $errors->first('trade_license') }}</strong>
@@ -228,6 +228,9 @@
                     <div class="form-group">
                         <div class="g-recaptcha" data-sitekey="{{ config('services.recaptcha.site_key') }}">
                         </div>
+                        @error('g-recaptcha-response')
+                            <span class="invalid-feedback d-block" role="alert"><strong>{{ $message }}</strong></span>
+                        @enderror
                     </div>
                 @endif
 

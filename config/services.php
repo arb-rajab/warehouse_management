@@ -101,6 +101,9 @@ return [
     // are config because env() outside config/ returns null once config is cached.
     'recaptcha' => [
         'site_key' => env('CAPTCHA_KEY'),
+        // Verifies the widget's token on the server (App\Rules\Recaptcha);
+        // with reCAPTCHA on and this empty, the forms that show it refuse.
+        'secret_key' => env('CAPTCHA_SECRET'),
     ],
 
     'google_maps' => [

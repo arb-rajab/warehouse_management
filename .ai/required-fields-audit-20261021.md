@@ -7,20 +7,20 @@ The convention, the classes and how to read this file: [.ai/rules/form-required-
 ## Summary
 
 Forms scanned: **158** Vue (resources/js/pages, resources/js/components) and **81** Blade (resources/views/shop).
-Server rules: **263** FormRequests (1 unparsed) and **27** controller actions with inline validation (5 unparsed).
+Server rules: **267** FormRequests (1 unparsed) and **26** controller actions with inline validation (5 unparsed).
 
 | Class | Meaning | Severity | Findings |
 | --- | --- | --- | ---: |
 | A | server-required, no `required` attribute (or no control at all) | high | 53 |
 | B | server-required, no visible mark | medium | 79 |
-| C | `required` or a mark, but the server rule is optional or absent | high | 82 |
+| C | `required` or a mark, but the server rule is optional or absent | high | 72 |
 | D | conditional server rule, static `required` or mark | medium | 10 |
-| E | control with no matching server rule | low | 218 |
+| E | control with no matching server rule | low | 215 |
 | F | unparsed (server rules or form action) | info | 23 |
-| | **Total** | | **465** |
+| | **Total** | | **452** |
 
-By severity: high 135, medium 89, low 218, info 23.
-By priority: P1 8, P2 301, P3 156 (P1 public storefront forms: registration, address, checkout, contact, seller registration; P2 other storefront, account and seller-panel forms; P3 back office).
+By severity: high 125, medium 89, low 215, info 23.
+By priority: P1 8, P2 288, P3 156 (P1 public storefront forms: registration, address, checkout, contact, seller registration; P2 other storefront, account and seller-panel forms; P3 back office).
 
 ## Per module
 
@@ -55,9 +55,9 @@ By priority: P1 8, P2 301, P3 156 (P1 public storefront forms: registration, add
 | server: Api/V2 | 0 | 0 | 0 | 0 | 0 | 0 | 1 |
 | server: Api/V2/Seller | 0 | 0 | 0 | 0 | 0 | 0 | 1 |
 | server: Store/Admin | 0 | 0 | 0 | 0 | 0 | 0 | 3 |
-| storefront | 38 | 2 | 2 | 9 | 0 | 25 | 6 |
-| storefront/account | 12 | 0 | 1 | 23 | 0 | 43 | 1 |
-| storefront/auth | 4 | 0 | 0 | 4 | 0 | 13 | 0 |
+| storefront | 38 | 2 | 2 | 5 | 0 | 23 | 6 |
+| storefront/account | 12 | 0 | 1 | 21 | 0 | 42 | 1 |
+| storefront/auth | 4 | 0 | 0 | 0 | 0 | 13 | 0 |
 | storefront/personal_info | 1 | 0 | 0 | 0 | 0 | 0 | 1 |
 
 ## Top 20 forms to fix first
@@ -74,18 +74,18 @@ Public forms first, then by high (A + C) and medium (B + D) findings.
 | 6 | P2 | `resources/views/shop/seller/product/digitalproducts/create.blade.php:12` | `route:seller.digitalproducts.store` | 7 | 0 | 11 |
 | 7 | P2 | `resources/views/shop/seller/shop.blade.php:21` | `route:seller.shop.update` | 6 | 0 | 2 |
 | 8 | P2 | `resources/views/shop/seller/product/products/create.blade.php:23` | `route:seller.products.store` | 4 | 5 | 29 |
-| 9 | P2 | `resources/views/shop/auth/passwords/reset.blade.php:11` | `route:shop.password.update` | 4 | 0 | 0 |
-| 10 | P2 | `resources/views/shop/seller/product/products/edit.blade.php:24` | `route:seller.products.update` | 3 | 5 | 35 |
-| 11 | P2 | `resources/views/shop/frontend/digital_product_details.blade.php:792` | `route:conversations.store` | 2 | 0 | 1 |
-| 12 | P2 | `resources/views/shop/frontend/product_details.blade.php:162` | `route:conversations.store` | 2 | 0 | 1 |
-| 13 | P2 | `resources/views/shop/frontend/user/support_ticket/index.blade.php:79` | `route:support_ticket.store` | 2 | 0 | 1 |
-| 14 | P2 | `resources/views/shop/seller/support_ticket/index.blade.php:80` | `route:seller.support_ticket.store` | 2 | 0 | 1 |
-| 15 | P2 | `resources/views/shop/frontend/partials/wallet_modal.blade.php:9` | `route:wallet.recharge` | 2 | 0 | 0 |
-| 16 | P2 | `resources/views/shop/frontend/user/product_review_modal.blade.php:9` | `route:reviews.store` | 1 | 1 | 2 |
-| 17 | P2 | `resources/views/shop/frontend/digital_product_details.blade.php:695` | `route:product-queries.store` | 1 | 1 | 1 |
-| 18 | P2 | `resources/views/shop/frontend/product_details/product_queries.blade.php:29` | `route:product-queries.store` | 1 | 1 | 1 |
-| 19 | P2 | `resources/views/shop/frontend/user/support_ticket/show.blade.php:20` | `route:support_ticket.seller_store` | 1 | 0 | 3 |
-| 20 | P2 | `resources/views/shop/seller/support_ticket/show.blade.php:16` | `route:seller.support_ticket.reply_store` | 1 | 0 | 3 |
+| 9 | P2 | `resources/views/shop/seller/product/products/edit.blade.php:24` | `route:seller.products.update` | 3 | 5 | 35 |
+| 10 | P2 | `resources/views/shop/seller/support_ticket/index.blade.php:80` | `route:seller.support_ticket.store` | 2 | 0 | 1 |
+| 11 | P2 | `resources/views/shop/frontend/partials/wallet_modal.blade.php:9` | `route:wallet.recharge` | 2 | 0 | 0 |
+| 12 | P2 | `resources/views/shop/frontend/user/product_review_modal.blade.php:9` | `route:reviews.store` | 1 | 1 | 2 |
+| 13 | P2 | `resources/views/shop/frontend/digital_product_details.blade.php:695` | `route:product-queries.store` | 1 | 1 | 1 |
+| 14 | P2 | `resources/views/shop/frontend/product_details/product_queries.blade.php:29` | `route:product-queries.store` | 1 | 1 | 1 |
+| 15 | P2 | `resources/views/shop/frontend/user/support_ticket/show.blade.php:20` | `route:support_ticket.seller_store` | 1 | 0 | 3 |
+| 16 | P2 | `resources/views/shop/seller/support_ticket/show.blade.php:16` | `route:seller.support_ticket.reply_store` | 1 | 0 | 3 |
+| 17 | P2 | `resources/views/shop/frontend/user/conversations/show.blade.php:73` | `route:messages.store` | 1 | 0 | 1 |
+| 18 | P2 | `resources/views/shop/seller/conversations/show.blade.php:47` | `route:seller.conversations.message_store` | 1 | 0 | 1 |
+| 19 | P2 | `resources/views/shop/frontend/inc/footer.blade.php:88` | `route:subscribers.store` | 1 | 0 | 0 |
+| 20 | P2 | `resources/views/shop/frontend/layouts/app.blade.php:336` | `route:subscribers.store` | 1 | 0 | 0 |
 
 ## Findings by module and form
 
@@ -654,14 +654,9 @@ Each line: class, field (label), what differs, then the UI and server locations.
   - **E** `remember` (Remember Me): the endpoint validates nothing. UI resources/views/shop/frontend/deliveryboy_login.blade.php:43
 
 - `resources/views/shop/frontend/digital_product_details.blade.php → route:cart.login.submit` (App\Http\Controllers\HomeController@cart_login)
-  - **E** `email`: the endpoint validates nothing. UI resources/views/shop/frontend/digital_product_details.blade.php:828
-  - **E** `password`: the endpoint validates nothing. UI resources/views/shop/frontend/digital_product_details.blade.php:838
-  - **E** `remember` (Remember Me): the endpoint validates nothing. UI resources/views/shop/frontend/digital_product_details.blade.php:844
-
-- `resources/views/shop/frontend/digital_product_details.blade.php → route:conversations.store` (App\Http\Controllers\ConversationController@store)
-  - **C** `message`: required in the UI, the endpoint validates nothing. UI resources/views/shop/frontend/digital_product_details.blade.php:800
-  - **C** `title`: required in the UI, the endpoint validates nothing. UI resources/views/shop/frontend/digital_product_details.blade.php:797
-  - **E** `product_id`: the endpoint validates nothing. UI resources/views/shop/frontend/digital_product_details.blade.php:794
+  - **E** `email`: the endpoint validates nothing. UI resources/views/shop/frontend/digital_product_details.blade.php:841
+  - **E** `password`: the endpoint validates nothing. UI resources/views/shop/frontend/digital_product_details.blade.php:851
+  - **E** `remember` (Remember Me): the endpoint validates nothing. UI resources/views/shop/frontend/digital_product_details.blade.php:857
 
 - `resources/views/shop/frontend/digital_product_details.blade.php → route:product-queries.store` (App\Http\Controllers\ProductQueryController@store (inline))
   - **A** `question`: server: required|string; the control has no required attribute. UI resources/views/shop/frontend/digital_product_details.blade.php:699, server app/Http/Controllers/ProductQueryController.php:52
@@ -704,12 +699,7 @@ Each line: class, field (label), what differs, then the UI and server locations.
   - **F** `-`: server rules unparsed: rules are not a literal array at line 82. UI resources/views/shop/frontend/payment_select.blade.php:54, server app/Http/Controllers/CheckoutController.php:82
 
 - `resources/views/shop/frontend/product_details.blade.php → route:auction_product_bids.store`
-  - **F** `-`: form action not resolved: {{ route('auction_product_bids.store') }}. UI resources/views/shop/frontend/product_details.blade.php:202
-
-- `resources/views/shop/frontend/product_details.blade.php → route:conversations.store` (App\Http\Controllers\ConversationController@store)
-  - **C** `message`: required in the UI, the endpoint validates nothing. UI resources/views/shop/frontend/product_details.blade.php:173
-  - **C** `title`: required in the UI, the endpoint validates nothing. UI resources/views/shop/frontend/product_details.blade.php:168
-  - **E** `product_id`: the endpoint validates nothing. UI resources/views/shop/frontend/product_details.blade.php:165
+  - **F** `-`: form action not resolved: {{ route('auction_product_bids.store') }}. UI resources/views/shop/frontend/product_details.blade.php:215
 
 - `resources/views/shop/frontend/product_details/product_queries.blade.php → route:product-queries.store` (App\Http\Controllers\ProductQueryController@store (inline))
   - **A** `question`: server: required|string; the control has no required attribute. UI resources/views/shop/frontend/product_details/product_queries.blade.php:33, server app/Http/Controllers/ProductQueryController.php:52
@@ -740,7 +730,7 @@ Each line: class, field (label), what differs, then the UI and server locations.
   - **C** `message`: required in the UI, the endpoint validates nothing. UI resources/views/shop/frontend/user/conversations/show.blade.php:77
   - **E** `conversation_id`: the endpoint validates nothing. UI resources/views/shop/frontend/user/conversations/show.blade.php:75
 
-- `resources/views/shop/frontend/user/create_user.blade.php → route:store_customer` (App\Http\Controllers\CustomerController@store_customer (inline))
+- `resources/views/shop/frontend/user/create_user.blade.php → route:store_customer` (App\Http\Requests\StoreRepresentativeCustomerRequest)
   - **E** `country_code`: no server rule names this field. UI resources/views/shop/frontend/user/create_user.blade.php:58
 
 - `resources/views/shop/frontend/user/customer/product_edit.blade.php → route:customer_products.update` (App\Http\Controllers\CustomerProductController@update)
@@ -815,11 +805,6 @@ Each line: class, field (label), what differs, then the UI and server locations.
 - `resources/views/shop/frontend/user/rep-payments-create.blade.php → route:payments.update`
   - **F** `-`: form action not resolved: {{ isset($payment) ? route('payments.update', ['id' => $payment->id ]) : route('payments.store') }}. UI resources/views/shop/frontend/user/rep-payments-create.blade.php:18
 
-- `resources/views/shop/frontend/user/support_ticket/index.blade.php → route:support_ticket.store` (App\Http\Controllers\SupportTicketController@store)
-  - **C** `details` (Provide a detailed description): required in the UI, the endpoint validates nothing. UI resources/views/shop/frontend/user/support_ticket/index.blade.php:95
-  - **C** `subject` (Subject): required in the UI, the endpoint validates nothing. UI resources/views/shop/frontend/user/support_ticket/index.blade.php:86
-  - **E** `attachments` (Photo): the endpoint validates nothing. UI resources/views/shop/frontend/user/support_ticket/index.blade.php:106
-
 - `resources/views/shop/frontend/user/support_ticket/show.blade.php → route:support_ticket.seller_store` (App\Http\Controllers\SupportTicketController@seller_store)
   - **C** `reply`: required in the UI, the endpoint validates nothing. UI resources/views/shop/frontend/user/support_ticket/show.blade.php:25
   - **E** `attachments`: the endpoint validates nothing. UI resources/views/shop/frontend/user/support_ticket/show.blade.php:34
@@ -839,12 +824,6 @@ Each line: class, field (label), what differs, then the UI and server locations.
   - **E** `country_code`: the endpoint validates nothing. UI resources/views/shop/auth/passwords/email.blade.php:24
   - **E** `email`: the endpoint validates nothing. UI resources/views/shop/auth/passwords/email.blade.php:27
   - **E** `phone`: the endpoint validates nothing. UI resources/views/shop/auth/passwords/email.blade.php:19
-
-- `resources/views/shop/auth/passwords/reset.blade.php → route:shop.password.update` (App\Http\Controllers\HomeController@reset_password_with_code)
-  - **C** `code`: required in the UI, the endpoint validates nothing. UI resources/views/shop/auth/passwords/reset.blade.php:25
-  - **C** `email`: required in the UI, the endpoint validates nothing. UI resources/views/shop/auth/passwords/reset.blade.php:15
-  - **C** `password`: required in the UI, the endpoint validates nothing. UI resources/views/shop/auth/passwords/reset.blade.php:35
-  - **C** `password_confirmation`: required in the UI, the endpoint validates nothing. UI resources/views/shop/auth/passwords/reset.blade.php:45
 
 - `resources/views/shop/auth/register.blade.php → route:register` (App\Http\Controllers\Auth\RegisterController@register (inline))
   - **E** `company_address` (Company Address (optional)): no server rule names this field. UI resources/views/shop/auth/register.blade.php:127

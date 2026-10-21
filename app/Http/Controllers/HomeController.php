@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\ResetPasswordWithCodeRequest;
 use App\Mail\SecondEmailVerifyMailManager;
 use App\Services\StoreVerificationCodes;
 use App\Services\TradeLicenseStorage;
@@ -661,23 +662,22 @@ class HomeController extends Controller
         return redirect()->route('dashboard');
     }
 
-    public function reset_password_with_code(Request $request)
+    /**
+     * The request checks the input first (a mismatched confirmation is its
+     * `confirmed` error, where this flashed a warning); the code is then tried
+     * against the account the email names, exactly as before.
+     */
+    public function reset_password_with_code(ResetPasswordWithCodeRequest $request)
     {
-        if ($request->password != $request->password_confirmation) {
-            flash(translate("Password and confirm password didn't match"))->warning();
+        $user = StoreUser::where('email', $request->validated('email'))->first();
 
-            return view('shop.auth.passwords.reset');
-        }
-
-        $user = StoreUser::where('email', $request->email)->first();
-
-        if ($user === null || ! app(StoreVerificationCodes::class)->consume($user, (string) $request->code)) {
+        if ($user === null || ! app(StoreVerificationCodes::class)->consume($user, $request->validated('code'))) {
             flash(translate("Verification code mismatch"))->error();
 
-            return view('shop.auth.passwords.reset');
+            return view('shop.auth.passwords.reset', ['email' => $request->validated('email')]);
         }
 
-        $user->password = Hash::make($request->password);
+        $user->password = Hash::make($request->validated('password'));
         $user->email_verified_at = now();
         $user->save();
         event(new PasswordReset($user));

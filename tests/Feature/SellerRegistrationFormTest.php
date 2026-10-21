@@ -173,3 +173,68 @@ describe('registering a shop', function () {
             ->and((int) $shop->verification_status)->toBe(0);
     });
 });
+
+/**
+ * ShopController::create shows the form to guests only: it turns admins and
+ * customers away ("Admin or Customer can not be a seller"), sellers ("This
+ * user already a seller"), and shows nothing to any other signed-in account.
+ * store() used to skip all of it and convert the signed-in account into a
+ * seller; StoreShopRequest now refuses every signed-in caller before its
+ * input is read, with the page's notice.
+ */
+describe('a signed-in account', function () {
+    test('is turned away by a hand-made POST as the page turns it away, and nothing is written', function (string $userType, string $notice) {
+        $user = actingAsStoreUser(createStoreUser($userType));
+        $shops = Shop::count();
+
+        $this->from('/temp')->get('/temp/shops/create')->assertRedirect('/temp');
+        expect(flashedMessage())->toBe($notice);
+
+        $this->from('/temp')->post('/temp/shops', sellerRegistrationPayload())
+            ->assertRedirect('/temp')
+            ->assertSessionHasNoErrors();
+
+        expect(flashedMessage())->toBe($notice)
+            ->and($user->fresh()->user_type)->toBe($userType)
+            ->and(Shop::count())->toBe($shops)
+            ->and(StoreUser::count())->toBe(1);
+    })->with([
+        'a customer' => ['customer', 'Admin or Customer can not be a seller'],
+        'an admin' => ['admin', 'Admin or Customer can not be a seller'],
+        'a seller' => ['seller', 'This user already a seller'],
+    ]);
+
+    test('of another type, to whom the page shows nothing, is turned away too', function (string $userType) {
+        $user = actingAsStoreUser(createStoreUser($userType));
+
+        expect($this->get('/temp/shops/create')->assertOk()->getContent())->toBe('');
+
+        $this->from('/temp')->post('/temp/shops', sellerRegistrationPayload())->assertRedirect('/temp');
+
+        expect(flashedMessage())->toBe('Sorry! Something went wrong.')
+            ->and($user->fresh()->user_type)->toBe($userType)
+            ->and(Shop::count())->toBe(0);
+    })->with(['staff', 'delivery_boy']);
+
+    test('who already has a shop keeps it and its type', function () {
+        $user = actingAsStoreUser(createStoreUser('customer'));
+        $shop = Shop::forceCreate(['user_id' => $user->id, 'name' => 'Old Shop', 'address' => 'Old Street 1', 'slug' => 'Old-Shop']);
+
+        $this->from('/temp')->post('/temp/shops', sellerRegistrationPayload(['shop_name' => 'New Shop']))->assertRedirect('/temp');
+
+        expect(flashedMessage())->toBe('Admin or Customer can not be a seller')
+            ->and($user->fresh()->user_type)->toBe('customer')
+            ->and(Shop::sole()->only(['id', 'name']))->toBe(['id' => $shop->id, 'name' => 'Old Shop']);
+    });
+
+    test('is refused before its input is read: an invalid payload gets the same notice, not validation errors', function () {
+        $user = actingAsStoreUser(createStoreUser('customer'));
+
+        $this->from('/temp')->post('/temp/shops', ['shop_name' => ['x']])
+            ->assertRedirect('/temp')
+            ->assertSessionHasNoErrors();
+
+        expect(flashedMessage())->toBe('Admin or Customer can not be a seller')
+            ->and($user->fresh()->user_type)->toBe('customer');
+    });
+});

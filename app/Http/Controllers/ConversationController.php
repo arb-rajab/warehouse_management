@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreConversationRequest;
 use App\Mail\ConversationMailManager;
 use App\Models\BusinessSetting;
 use App\Models\Conversation;
@@ -59,23 +60,22 @@ class ConversationController extends Controller implements HasMiddleware
     /**
      * Store a newly created resource in storage.
      *
-     * @param  Request  $request
      * @return Response
      */
-    public function store(Request $request)
+    public function store(StoreConversationRequest $request)
     {
-        $user_type = Product::findOrFail($request->product_id)->user->user_type;
+        $user_type = Product::findOrFail($request->validated('product_id'))->user->user_type;
 
         $conversation = new Conversation;
         $conversation->sender_id = Auth::user()->id;
-        $conversation->receiver_id = Product::findOrFail($request->product_id)->user->id;
-        $conversation->title = $request->title;
+        $conversation->receiver_id = Product::findOrFail($request->validated('product_id'))->user->id;
+        $conversation->title = $request->validated('title');
 
         if ($conversation->save()) {
             $message = new Message;
             $message->conversation_id = $conversation->id;
             $message->user_id = Auth::user()->id;
-            $message->message = $request->message;
+            $message->message = $request->validated('message');
 
             if ($message->save()) {
                 $this->send_message_to_seller($conversation, $message, $user_type);

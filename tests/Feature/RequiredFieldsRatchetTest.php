@@ -37,6 +37,10 @@ const FIXED_STOREFRONT_FORMS = [
     ['resources/views/shop/seller/profile/address_edit_modal.blade.php', 'route:seller.addresses.update'],
     ['resources/views/shop/frontend/seller_form.blade.php', 'route:shops.store'],
     ['resources/views/shop/frontend/user/create_user.blade.php', 'route:store_customer'],
+    ['resources/views/shop/auth/passwords/reset.blade.php', 'route:shop.password.update'],
+    ['resources/views/shop/frontend/product_details.blade.php', 'route:conversations.store'],
+    ['resources/views/shop/frontend/digital_product_details.blade.php', 'route:conversations.store'],
+    ['resources/views/shop/frontend/user/support_ticket/index.blade.php', 'route:support_ticket.store'],
 ];
 
 /**

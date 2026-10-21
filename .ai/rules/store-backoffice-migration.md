@@ -5079,7 +5079,8 @@ decide on the zones and the shipping set-up.
 ## 47. Public forms, phase 2a continued: the longitude columns, seller registration, create customer (2026-10-21)
 
 Model: **claude-opus-5-5**, effort **high**. Branch `claude/phase-2a-longitude-forms-xdumd2` from `develop`
-**1146d2e** (the PR #460 merge). Scope: §45 judgement 3 (the longitude columns), then §45's "Not done here"
+**1146d2e** (the PR #460 merge). Shipped in [PR #461](https://github.com/arb-rajab/warehouse_management/pull/461),
+with real CI (no `[skip ci]`); recorded here by the next PR (§48). Scope: §45 judgement 3 (the longitude columns), then §45's "Not done here"
 items 3 and 4. Each form's tests were written first and seen failing. Every redirect, flash message, route,
 session key and URL is unchanged. The PR reached about 26 files, close to the ~30-file limit the brief set,
 so item 5 (the endpoints that validate nothing) is the next PR, listed under "Next" below.
@@ -5209,6 +5210,8 @@ No assertion was removed or loosened otherwise.
 
 ### Next: the rest of phase 2a
 
+Items 5 and 7 and judgements 4 and 5 shipped in §48; item 6 is still open.
+
 5. **Endpoints that validate nothing**, each with a FormRequest, hostile-input tests (over-long, wrong types,
    HTML, another user's ids) and unchanged ownership checks: the conversation forms on the product and
    digital product pages (`conversations.store`, `ConversationController@store`; `product_id` goes straight
@@ -5233,3 +5236,180 @@ preinstalled Chromium: **134 passed**. Focused Pest files while developing, each
 migration test also on MySQL). `forms:audit-required` before the work and after each form group. Not run
 here: the composer and npm audits and the deploy-script test (CI runs them); no `CI-Verified` trailer was
 made, so CI runs every group (the PR also changes `.github/workflows/tests.yml`, which runs everything).
+
+## 48. Public forms, phase 2a finished: password reset by code, product questions, support tickets, the seller conversion, reCAPTCHA, create customer (2026-10-21)
+
+Model: **claude-opus-5-5**, effort **high**. Branch `claude/phase-2a-forms-recaptcha-8acgk4` from `develop`
+**343d9d8** (the PR #461 merge). Scope: §47's "Next" items 5 and 7 and the three owner decisions recorded on
+PR #461: close the seller conversion hole (§47 judgement 4), verify reCAPTCHA on the server (judgement 5),
+give create customer real limits (judgement 7). Each group's tests were written first and seen failing,
+then passing. Every redirect, flash message, route and URL is unchanged except where a row below says so.
+The PR reached about 33 files, a little over the ~30 the brief set; the one item left (reCAPTCHA on the
+customer registration views) is under "Next".
+
+**Shipped, by commit.**
+
+1. **Password reset by code** (`shop.password.update`).
+2. **Product questions and support tickets** (`conversations.store`, `support_ticket.store`).
+3. **Seller registration turns a signed-in account away** (`shops.store`).
+4. **Create customer limited to its columns** (`store_customer`).
+5. **reCAPTCHA verified on the server** (`shops.store`, `store_customer`).
+
+### Rules, per form: before and now
+
+| Form (view → endpoint) | Before | Now (request) |
+| --- | --- | --- |
+| Password reset by code, `shop/auth/passwords/reset` → `HomeController@reset_password_with_code` | **nothing validated**; `password != password_confirmation` flashed a warning; a 3-character password reset the account; an array for any field was a 500 (the email's in the `store-auth` limiter) | `ResetPasswordWithCodeRequest`: **email** `required\|string\|email\|max:191`, **code** `required\|string\|digits:6`, **password** `required\|string\|min:6\|confirmed`. A refusal re-renders the form (422) with each error under its field and the email and code kept (the form is only ever rendered in answer to a POST, so "back" has no GET route). |
+| Product question, `shop/frontend/product_details` and `digital_product_details` (no route renders the latter) → `ConversationController@store` | **nothing validated**; `product_id` went to `findOrFail`, so an unpublished or unapproved product's seller got the question; arrays were 500s | `StoreConversationRequest` (bag `storeConversation`): **product_id** `required\|integer`, exists in `products` with `published = 1` and `approved = 1`; **title** `required\|string\|max:1000` (`conversations.title` varchar(1000)); **message** `required\|string\|max:65535` (`messages.message` text, as the other text columns' rules) |
+| Support ticket, `shop/frontend/user/support_ticket/index` → `SupportTicketController@store` | **nothing validated**; a ticket without a subject was a NOT NULL 500; `attachments` took any upload ids, another account's included | `StoreSupportTicketRequest` (bag `storeTicket`): **subject** `required\|string\|max:255` (`tickets.subject`); **details** `required\|string\|max:10000` (`ValidatesSupportReplies`, the back office's support-text limit; the column is longText); **attachments** optional, the uploader's comma-separated image ids, the caller's own, at most 50, no repeats (`ValidatesStoreUploadReference::retainableImageUploadIdsRule(null)`) |
+| Seller registration, `shop/frontend/seller_form` → `ShopController@store` | rules from §47; a signed-in account was **converted into a seller** (its customer row deleted) and given a shop | `StoreShopRequest::authorize()`: guests only; the refusal is the page's own (below), before the input is read. Rules as §47, plus reCAPTCHA. |
+| Create customer, `shop/frontend/user/create_user` → `CustomerController@store_customer` | inline: name `max:255` (column 191), email no `max` (191), phone, country no rule beyond `required` (20, 30), addresses `string` without `max` (255), tax and bank numbers no type; `trade_license` `mimes:doc,docx,pdf,png,jpeg,bmb`; `abort_unless(is_rep, 403)` after nothing | `StoreRepresentativeCustomerRequest`: all twelve still required; **name** `string\|max:191`, **email** `string\|email\|max:191\|unique`, **phone** `string\|max:20`, **country** `string\|max:30`, **company_name**, **company_address**, **shipping_address** `string\|max:255`, **tax_number**, **bank_account_number** `string\|max:100`, **password** `min:6\|confirmed`, **trade_license** `file\|mimes:doc,docx,pdf,png,jpg,jpeg\|max:20000`; `authorize()`: representatives only (403, now before the input). Plus reCAPTCHA. |
+
+**The forms.** Each marks and requires exactly what its request requires (`<x-required-mark />`, `required`,
+the legend once), ties every label to its control (`for`/`id`; the reset and question forms had no labels at
+all, only placeholders), limits each field in HTML as the rule does (`maxlength`, `minlength`, the code's
+`pattern="[0-9]{6}"` and `inputmode="numeric"`, the license's `accept`), keeps the input after a refusal
+(never a password) and shows each error under its field. The question and ticket modals read their own error
+bag and reopen after a refusal; the product page's other forms stay clean. The reset form no longer prints
+the email into the code field on the reset-link page (`value="{{ $email ?? old('code') }}"`).
+
+### The password reset, check by check
+
+Nothing was weakened or reordered: the input is checked first (where the mismatch check stood), then the
+email names the account and `StoreVerificationCodes::consume()` tries the code against it, unchanged: 15
+minutes, single use (the row is deleted), 5 attempts, keyed to the user, so a code never works for another
+account's email (tested: the attacker's own code is not even charged an attempt). Malformed input spends
+none of the code's attempts; the `store-auth` throttle counts it all the same (tested: five refused posts,
+then the right code is a 429). A wrong, expired or reused code, an unknown email and another account's email
+keep the "Verification code mismatch" notice with a 200. The identifier is the email only: the endpoint has
+never looked up by phone (the SMS reset page is not part of this app).
+
+**The `store-auth` limiter** cast `email` to a string; an array there was a 500 on every throttled route
+before the endpoint ran. A non-text value now names no account (the IP limit still applies) and the
+endpoint answers with its validation error (`app-providers.md`).
+
+### The seller conversion hole
+
+`ShopController::create` refuses admins and customers ("Admin or Customer can not be a seller") and sellers
+("This user already a seller"), and returns an empty page to any other signed-in account. `store()` now
+refuses every signed-in caller the same way, in `StoreShopRequest::authorize()` / `failedAuthorization()`:
+back, with the page's notice (`StoreShopRequest::refusalFor()`, which `create()` now calls too), or the
+store's generic "Sorry! Something went wrong." for the types the page shows nothing to (staff, delivery
+boys, ...). The conversion branch in `store()` is removed: nothing can reach it. Tests: a hand-made POST
+from a customer, an admin, a seller, a staff member, a delivery account, a customer who already has a shop,
+and an invalid payload; each writes no shop and leaves the account's type unchanged. (On the test database
+the old conversion failed on the legacy `customers` table, which only the production database has; there
+it converted the account.)
+
+### reCAPTCHA on the server
+
+The widget appears in four views (`rg -n g-recaptcha resources/views`): seller registration, create
+customer, and both customer registration views (`shop.auth.register`, `user_registration`, posting to
+`RegisterController::register`). This PR verifies it on the first two; the registration views are next.
+
+- `App\Rules\Recaptcha` posts the token, the secret and the visitor's IP to
+  `https://www.google.com/recaptcha/api/siteverify` (form-encoded, 5 s timeout) and accepts only
+  `"success": true`. `Recaptcha::rules()` applies `bail|required|string|<rule>` to `g-recaptcha-response`
+  only while `get_setting('google_recaptcha') == 1` (the existing setting; the forms show the widget exactly
+  then); with it off, the field is not validated and Google is never called.
+- **The secret**: `services.recaptcha.secret_key`, from `CAPTCHA_SECRET`, next to the existing site key
+  (`CAPTCHA_KEY`). Never hard-coded, never logged; the token is not logged either (tested with `Log::spy`).
+- **Fail closed** (the owner's decision to weigh, below): no secret configured, a non-2xx answer, an
+  answer that is not a JSON verdict, or no connection refuse the form with "The robot check could not be
+  completed. Please try again." and log a warning (the HTTP status only). A refused or missing token gets
+  "Please confirm that you are not a robot." The error shows under the widget.
+- Tests (`StorefrontRecaptchaTest`, both forms, `Http::fake`): valid, refused, missing, not text, 503,
+  connection failure, an HTML answer, no secret, nothing logged, setting off, a stray token with the setting
+  off. Each refusal writes nothing.
+
+### Judgement calls for the owner
+
+1. **reCAPTCHA fails closed.** While the setting is on, a Google outage, a timeout or a missing
+   `CAPTCHA_SECRET` blocks seller registration and create customer until it is fixed. The alternative,
+   failing open, would let any bot through whenever Google cannot be reached or the key is missing, which
+   is the hole this closes. Before turning the setting on, set `CAPTCHA_KEY` and `CAPTCHA_SECRET` (Appendix A
+   of the go-live checklist) and submit both forms once.
+2. **The reset form answers a refusal with 422 and the form** instead of a flashed warning and a 200 (the
+   mismatch case); the code checks keep their 200 and notice.
+3. **A non-numeric code is now a validation error**, not a counted attempt: it could never be right, and it
+   still counts toward the throttle.
+4. **Support ticket details are held to 10,000 characters**, the back office's limit for replies, although
+   the column is longText; a longer description was never useful in the modal.
+5. **Text columns get 65,535 characters**, as elsewhere in the app: on MySQL a message of that many
+   multibyte characters is still longer than a `text` column's 65,535 bytes.
+6. **The trade license's "bmb" is dropped, not made "bmp"**: `TradeLicenseStorage` keeps only pdf, doc,
+   docx, png and jpg, so a bitmap the rule let through would have failed after the account was created.
+7. **Create customer's country** is limited to its column (30) and is still any text: three of the 246
+   country names are longer and cannot be stored, and the form offers only active countries. Requiring
+   one of the active countries (`Rule::exists`) is a small follow-up if wanted.
+8. **The seller registration's dead checks** ("Email already exists!", "Sorry! Password did not match.",
+   §47 judgement 6) are left as they were.
+
+### The audit and the ratchet
+
+`FIXED_STOREFRONT_FORMS` gains the reset form, both product question forms and the support ticket form;
+none has a class A to D finding. The back-office baseline is unchanged: no back-office finding was touched.
+
+| Class | Before (`develop` 343d9d8) | After this PR |
+| --- | ---: | ---: |
+| A | 53 | 53 |
+| B | 79 | 79 |
+| C | 82 | 72 |
+| D | 10 | 10 |
+| E | 218 | 215 |
+| F | 23 | 23 |
+| **Total** | **465** | **452** |
+
+By priority: P1 8 → 8, P2 301 → **288**, P3 156 → 156. Per commit: the reset form C 82 → 78; the questions
+and tickets C 78 → 72, E 218 → 215; the seller conversion, create customer and reCAPTCHA leave the totals
+as they were (those forms had no finding left). **The six registration fields that are never stored**
+(owner decision pending, not touched): `country_code` on both registration views, and tax number, company
+address, shipping address and trade license on `/temp/register` (P1, class E).
+
+### Tests
+
+New: `StorefrontPasswordResetCodeFormTest` (27), `StorefrontProductConversationFormTest` (22),
+`StorefrontSupportTicketFormTest` (21), `StorefrontRecaptchaTest` (22); new cases in
+`SellerRegistrationFormTest` (7) and `StorefrontCreateCustomerFormTest` (26). Changed:
+`LegacyStorePasswordResetTest` (the wrong-code case sends a wrong six-digit code; a non-numeric one is now a
+validation error), `LegacyStoreAccountRecoveryTest` (the mismatched confirmation expects 422; the code is
+still usable after it). No assertion was removed or loosened.
+
+**Hostile input covered**: over-long values (multibyte too) one past each column, arrays for every text
+field and for ids, a product id that does not exist / is not a number / is unpublished / unapproved, another
+account's upload as a ticket photo, a non-image upload, a repeated photo, markup (stored as sent, printed
+escaped; ticket details through `clean_html()`), a sender, receiver, owner or status sent by the caller
+(ignored), a guest (sent to sign in, nothing written), a signed-in non-representative (403 before its input
+is read).
+
+**A testing trap found**: reading the session in a test (`assertSessionHasErrors`) before the next request
+starts the session in the test, and that next request no longer sees the flashed errors. Assert errors on
+the rendered page when the test renders it afterwards, as the form tests here do.
+
+### Next: phase 2a leftovers, then 2b
+
+- **reCAPTCHA on customer registration**: `RegisterController::register` (both registration views) shows
+  the widget and does not verify it; add `Recaptcha::rules()` to its validator and the error under the widget
+  in both views.
+- **The unstored registration fields** (above): store them, or drop the inputs (owner).
+- **The back office's customer rules** (`ValidatesStoreCustomer`) allow 255 for name, email and phone against
+  191 / 191 / 20: the same MySQL errors create customer had.
+
+**Phase 2b, proposed**: the back-office modules that only lack marks (Marketing 18 B, Product 13 B plus the
+per-tax rows, Setup 7 B / 10 A / 8 D, Website 9 A / 6 B, Trips 3 A / 4 B, Sales 6 A, Customers 4 B and the
+owner's decision on its 7 C, Languages 3 A, Support 2 B, Blog 2 B), with `ValidatesStoreCustomer`'s limits;
+then the seller panel (26 forms, 34 C and 117 E, mostly endpoints that validate nothing, so FormRequests
+first: the seller's support ticket and the ticket replies on both sides, products, digital products,
+coupons, the shop settings and its pick-up point coordinates), each fixed Blade form added to
+`FIXED_STOREFRONT_FORMS`.
+
+**What was verified, and what was not.** Run here, on the final code (commits 1 to 5; the docs commit
+after them changes no code): `python3 .claude/scripts/pre_push_check.py --full` (Wayfinder types, ESLint,
+Prettier, vue-tsc, Vitest **336 files, 2651 tests**, Pint, PHPStan **0 errors**, Pest **6925 tests, 6922
+passed, 3 skipped, 39926 assertions**); the whole Playwright suite with the preinstalled Chromium
+(`PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/opt/pw-browsers/chromium npx playwright test`; `npm run test:e2e`
+stops at its Vite build here, since `fonts.bunny.net` is unreachable, so the setup's font-less build was
+used; this PR changes no JavaScript): **134 passed**. Focused Pest files while developing, each group seen
+failing first. `forms:audit-required` before the work and after each group. Not run here: the MySQL
+migration tests (no migration changed), the composer and npm audits and the deploy-script test (CI runs
+them); no `CI-Verified` trailer was made, so CI runs every group the plan picks.

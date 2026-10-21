@@ -162,16 +162,29 @@
                 <form class="" action="{{ route('conversations.store') }}" method="POST"
                     enctype="multipart/form-data">
                     @csrf
+                    @php $keepInput = $errors->storeConversation->any(); @endphp
                     <input type="hidden" name="product_id" value="{{ $detailedProduct->id }}">
                     <div class="modal-body gry-bg px-3 pt-3">
+                        <x-required-legend />
+                        @error('product_id', 'storeConversation')
+                            <div class="alert alert-danger" role="alert">{{ $message }}</div>
+                        @enderror
                         <div class="form-group">
-                            <input type="text" class="form-control mb-3 rounded-0" name="title"
-                                value="{{ $detailedProduct->name }}" placeholder="{{ translate('Product Name') }}"
-                                required>
+                            <label for="conversation_title">{{ translate('Title') }}<x-required-mark /></label>
+                            <input type="text" id="conversation_title" class="form-control mb-3 rounded-0 @error('title', 'storeConversation') is-invalid @enderror" name="title"
+                                value="{{ $keepInput ? old('title') : $detailedProduct->name }}" placeholder="{{ translate('Product Name') }}"
+                                maxlength="1000" required>
+                            @error('title', 'storeConversation')
+                                <span class="invalid-feedback" role="alert"><strong>{{ $message }}</strong></span>
+                            @enderror
                         </div>
                         <div class="form-group">
-                            <textarea class="form-control rounded-0" rows="8" name="message" required
-                                placeholder="{{ translate('Your Question') }}">{{ route('product', $detailedProduct->slug) }}</textarea>
+                            <label for="conversation_message">{{ translate('Your Question') }}<x-required-mark /></label>
+                            <textarea id="conversation_message" class="form-control rounded-0 @error('message', 'storeConversation') is-invalid @enderror" rows="8" name="message" maxlength="65535" required
+                                placeholder="{{ translate('Your Question') }}">{{ $keepInput ? old('message') : route('product', $detailedProduct->slug) }}</textarea>
+                            @error('message', 'storeConversation')
+                                <span class="invalid-feedback" role="alert"><strong>{{ $message }}</strong></span>
+                            @enderror
                         </div>
                     </div>
                     <div class="modal-footer">
@@ -274,6 +287,10 @@
                 $('#login_modal').modal('show');
             @endif
         }
+
+        @if ($errors->storeConversation->any())
+            $(function () { $('#chat_modal').modal('show'); });
+        @endif
 
         // Pagination using ajax
         $(window).on('hashchange', function() {
