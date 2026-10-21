@@ -73,6 +73,8 @@ test('the production env template sets the safe values the go-live checklist ask
         'LOG_STACK' => 'daily',
         'LOG_LEVEL' => 'warning',
         'APP_KEY' => '',
+        'CAPTCHA_KEY' => '',
+        'CAPTCHA_SECRET' => '',
     ])
         ->and($env['APP_URL'])->toStartWith('https://')
         ->and($env['APP_URL'])->not->toContain('localhost')
@@ -160,7 +162,9 @@ PHP;
 test('the production env template documents that there is no CSP report endpoint, and the README and checklist point to it', function () {
     $template = file_get_contents(base_path('.env.production.example'));
 
-    expect($template)->toContain('no report endpoint')
+    expect($template)->toContain('Do not turn on the reCAPTCHA setting until both CAPTCHA_KEY and CAPTCHA_SECRET are set')
+        ->and($template)->toContain('fails closed')
+        ->and($template)->toContain('no report endpoint')
         ->and($template)->toContain('browser console')
         ->and(file_get_contents(base_path('README.md')))->toContain('.env.production.example')
         ->and(file_get_contents(base_path('.ai/go-live-checklist-20261021.md')))->toContain('.env.production.example');
