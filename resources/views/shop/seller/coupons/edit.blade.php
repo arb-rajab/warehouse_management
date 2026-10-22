@@ -18,6 +18,7 @@
                 <form action="{{ route('seller.coupon.update', $coupon->id) }}" method="POST">
                     <input name="_method" type="hidden" value="PATCH">
                     @csrf
+                        <x-required-legend />
                     @if ($errors->any())
                         <div class="alert alert-danger">
                             <ul class="mt-3">
@@ -28,22 +29,23 @@
                         </div>
                     @endif
                     <div class="card-body">
-                        <input type="hidden" name="id" value="{{ $coupon->id }}" id="id">
+                        <input type="hidden" value="{{ $coupon->id }}" id="id">
                         <div class="form-group row">
-                            <label class="col-lg-3 col-from-label" for="name">{{translate('Coupon Type')}}</label>
+                            <label class="col-lg-3 col-from-label" for="coupon_type">{{translate('Coupon Type')}}<x-required-mark /></label>
                             <div class="col-lg-9">
                                 <select name="type" id="coupon_type" class="form-control aiz-selectpicker" onchange="coupon_form()" required>
-                                    @if ($coupon->type == "product_base"))
+                                    @if ($coupon->type == "product_base")
                                         <option value="product_base" selected>{{translate('For Products')}}</option>
                                     @elseif ($coupon->type == "cart_base")
                                         <option value="cart_base">{{translate('For Total Orders')}}</option>
                                     @endif
                                 </select>
+                                @error('type')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                             </div>
                         </div>
 
                         <div id="coupon_form">
-
+                            @include('shop.seller.coupons.fields')
                         </div>
                         <div class="form-group mb-0 text-right">
                             <button type="submit" class="btn btn-primary">{{translate('Save')}}</button>
@@ -59,19 +61,24 @@
 @section('script')
 
 <script type="text/javascript">
+    function coupon_discount_limit() {
+        $('#coupon-discount').attr('max', $('#coupon-discount-type').val() === 'percent' ? '100' : '999999999999999999.99');
+    }
+    $(function () { $('.aiz-date-range').daterangepicker(); coupon_discount_limit(); });
 
     function coupon_form(){
         var coupon_type = $('#coupon_type').val();
         var id = $('#id').val();
 		$.post('{{ route('seller.coupon.get_coupon_form_edit') }}',{_token:'{{ csrf_token() }}', coupon_type:coupon_type, id:id}, function(data){
             $('#coupon_form').html(data);
+            AIZ.plugins.bootstrapSelect('refresh');
+            coupon_discount_limit();
+            $('.aiz-date-range').daterangepicker();
 
 		});
     }
 
-    $(document).ready(function(){
-        coupon_form();
-    });
+
 
 
 </script>

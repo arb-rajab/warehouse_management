@@ -3,9 +3,11 @@
 use App\Http\Controllers\BusinessSettingsController;
 use App\Http\Controllers\Store\Admin\SellerVerificationFormController;
 use App\Models\Shop;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Testing\AssertableInertia as Assert;
 
 function sellerVerificationFields(): array
@@ -61,18 +63,28 @@ test('an empty field list deliberately saves an empty form for new and existing 
 })->with([false, true]);
 
 test('seller verification screens still read nested options JSON and store answers in field order', function () {
+    Storage::fake('local');
     actingAsStoreUser(createStoreStaff('seller_verification_form_configuration'));
     $this->post(route('seller_verification_form.update'), ['fields' => sellerVerificationFields()])->assertRedirect();
     $seller = createStoreUser('seller');
     $shop = Shop::forceCreate(['user_id' => $seller->id, 'name' => 'Round trip shop', 'slug' => 'round-trip-shop']);
     actingAsStoreUser($seller);
     $this->get(route('seller.shop.verify'))->assertOk()->assertSee('Country')->assertSee('Company')->assertSee('Markets')->assertSee('Registered')->assertSee('Licence')->assertSee('سوريا');
-    $this->post(route('seller.shop.verify.store'), ['element_0' => 'NL', 'element_1' => 'Acme', 'element_2' => ['Retail', 'Wholesale'], 'element_3' => 'Yes'])->assertRedirectToRoute('seller.dashboard');
-    expect(json_decode($shop->fresh()->verification_info, true))->toBe([
-        ['type' => 'select', 'label' => 'Country', 'value' => 'NL'], ['type' => 'text', 'label' => 'Company', 'value' => 'Acme'],
-        ['type' => 'multi_select', 'label' => 'Markets', 'value' => '["Retail","Wholesale"]'], ['type' => 'select', 'label' => 'Registered', 'value' => 'Yes'],
-        ['type' => 'file', 'label' => 'Licence', 'value' => null],
-    ]);
+    $answers = ['element_0' => 'NL', 'element_1' => 'Acme', 'element_2' => ['Retail', 'Wholesale'], 'element_3' => 'Yes'];
+    $this->post(route('seller.shop.verify.store'), $answers)->assertSessionHasErrorsIn('sellerVerification', ['element_4']);
+    expect($shop->fresh()->verification_info)->toBeNull()->and(Storage::disk('local')->allFiles())->toBe([]);
+    $document = "%PDF-1.4\nLicence\n%%EOF";
+    $this->post(route('seller.shop.verify.store'), [...$answers, 'element_4' => UploadedFile::fake()->createWithContent('licence.pdf', $document)])
+        ->assertSessionHasNoErrors()->assertRedirectToRoute('seller.dashboard');
+    $stored = json_decode($shop->fresh()->verification_info, true);
+    $filename = $stored[4]['value'];
+    expect($filename)->toMatch('/^[a-zA-Z0-9]{40}\.pdf$/')
+        ->and(Storage::disk('local')->get('uploads/verification_form/'.$filename))->toBe($document)
+        ->and($stored)->toBe([
+            ['type' => 'select', 'label' => 'Country', 'value' => 'NL'], ['type' => 'text', 'label' => 'Company', 'value' => 'Acme'],
+            ['type' => 'multi_select', 'label' => 'Markets', 'value' => '["Retail","Wholesale"]'], ['type' => 'select', 'label' => 'Registered', 'value' => 'Yes'],
+            ['type' => 'file', 'label' => 'Licence', 'value' => $filename],
+        ]);
     $this->getJson('/temp/api/v2/business-settings')->assertOk()->assertJsonFragment(['type' => 'verification_form', 'value' => json_decode(sellerVerificationStoredJson(), true)]);
 });
 

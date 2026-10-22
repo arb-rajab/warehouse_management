@@ -218,3 +218,118 @@ test('the retained Blade login hands over to Inertia in a full load', async ({
         page.getByRole('heading', { name: 'Dashboard', exact: true }),
     ).toBeVisible();
 });
+
+test.describe('seller validated shop and commerce forms', () => {
+    test.beforeEach(async ({ page }) => {
+        seedStoreFixtures(String.raw`
+        $seller = App\Models\StoreUser::where('email', 'browser-seller@example.com')->sole();
+        Illuminate\Support\Facades\DB::table('shops')->updateOrInsert(['user_id' => $seller->id], ['name' => 'Browser shop', 'slug' => 'browser-shop', 'verification_status' => 1, 'verification_info' => null]);
+        Illuminate\Support\Facades\DB::table('business_settings')->updateOrInsert(['type' => 'verification_form'], ['value' => json_encode([['type' => 'text', 'label' => 'Company'], ['type' => 'file', 'label' => 'Document']])]);
+        App\Models\Coupon::query()->where('user_id', $seller->id)->whereIn('code', ['BrowserSellerCoupon', 'BrowserSellerCouponTaken'])->delete();
+        App\Models\Coupon::create(['user_id' => $seller->id, 'code' => 'BrowserSellerCouponTaken', 'type' => 'cart_base', 'details' => '{"min_buy":20,"max_discount":10}', 'discount' => 5, 'discount_type' => 'amount', 'start_date' => time(), 'end_date' => time() + 86400]);
+    `);
+        await loginAsSeller(page);
+    });
+
+    test('shop fields match the server and save successfully', async ({
+        page,
+    }) => {
+        await page.goto('/temp/seller/shop');
+        const basic = page.locator('form').filter({
+            has: page.locator('input[name="section"][value="basic"]'),
+        });
+        await expect(basic.locator('[data-required-legend]')).toHaveCount(1);
+        await expect(basic.locator('#shop-name')).toHaveAccessibleName(
+            'Shop Name required',
+        );
+        await expect(basic.locator('#shop-phone')).not.toHaveAttribute(
+            'required',
+        );
+        await basic.locator('#shop-name').fill('Browser validated shop');
+        await basic.locator('#shop-address').fill('Amsterdam');
+        await basic.getByRole('button', { name: 'Save', exact: true }).click();
+        await expect(
+            page.getByText('Your Shop has been updated successfully!', {
+                exact: true,
+            }),
+        ).toBeVisible();
+    });
+
+    test('verification requires a document and submits privately', async ({
+        page,
+    }) => {
+        await page.goto('/temp/seller/shop/apply_for_verification');
+        await page
+            .getByRole('textbox', { name: 'Company required', exact: true })
+            .fill('Browser Company');
+        await page.locator('#verification-1').setInputFiles({
+            name: 'document.pdf',
+            mimeType: 'application/pdf',
+            buffer: Buffer.from('%PDF-1.4\n%%EOF'),
+        });
+        await page.getByRole('button', { name: 'Apply', exact: true }).click();
+        await expect(page).toHaveURL(/\/temp\/seller\/dashboard/);
+    });
+
+    test('coupon refusal keeps its fields before a successful save', async ({
+        page,
+    }) => {
+        await page.goto('/temp/seller/coupon/create');
+        const coupon = page.locator('form[action$="/seller/coupon"]');
+        await expect(coupon.locator('[data-required-legend]')).toHaveCount(1);
+        await coupon
+            .getByRole('textbox', { name: 'Coupon code required', exact: true })
+            .fill('BrowserSellerCouponTaken');
+        await coupon
+            .getByRole('spinbutton', {
+                name: 'Minimum Shopping required',
+                exact: true,
+            })
+            .fill('20');
+        await coupon
+            .getByRole('spinbutton', {
+                name: 'Maximum Discount Amount required',
+                exact: true,
+            })
+            .fill('10');
+        await coupon
+            .getByRole('spinbutton', { name: 'Discount required', exact: true })
+            .fill('5');
+        await coupon.locator('#coupon-dates').fill('10/22/2026 - 10/23/2026');
+        await coupon.getByRole('button', { name: 'Save', exact: true }).click();
+        await expect(page.locator('#code')).toHaveValue(
+            'BrowserSellerCouponTaken',
+        );
+        await expect(page.locator('.invalid-feedback')).toContainText([
+            'Coupon already exist',
+        ]);
+        await page.locator('#code').fill('BrowserSellerCoupon');
+        await page
+            .locator('form[action$="/seller/coupon"]')
+            .getByRole('button', { name: 'Save', exact: true })
+            .click();
+        await expect(
+            page.getByText('Coupon has been saved successfully.', {
+                exact: true,
+            }),
+        ).toBeVisible();
+    });
+
+    test('bulk upload shows an invalid spreadsheet error', async ({ page }) => {
+        await page.goto('/temp/seller/product-bulk-upload/index');
+        await expect(page.locator('#bulk-file')).toHaveAccessibleName(
+            'CSV required',
+        );
+        await page.locator('#bulk-file').setInputFiles({
+            name: 'bad.xlsx',
+            mimeType: 'text/plain',
+            buffer: Buffer.from('<b>Not a spreadsheet</b>'),
+        });
+        await page
+            .getByRole('button', { name: 'Upload CSV', exact: true })
+            .click();
+        await expect(page.locator('.invalid-feedback')).toContainText([
+            'bulk file',
+        ]);
+    });
+});

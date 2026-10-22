@@ -1,6 +1,5 @@
 <?php
 
-use App\Models\Coupon;
 use App\Models\Product;
 use App\Models\StoreUser;
 use App\Services\ProductService;
@@ -36,14 +35,6 @@ function sellerProductForm(array $overrides = []): array
 function sellerProduct(StoreUser $seller): Product
 {
     return createStoreProduct(['user_id' => $seller->id, 'added_by' => 'seller', 'seller_featured' => 1, 'thumbnail_img' => null]);
-}
-
-function sellerCoupon(StoreUser $seller): Coupon
-{
-    return Coupon::create([
-        'user_id' => $seller->id, 'type' => 'cart_base', 'code' => 'SAVE5', 'details' => '{"min_buy":1,"max_discount":5}',
-        'discount' => 5, 'discount_type' => 'amount', 'start_date' => now()->timestamp, 'end_date' => now()->addDay()->timestamp,
-    ])->fresh();
 }
 
 test("a seller cannot update, publish or feature another seller's product in the seller area", function () {

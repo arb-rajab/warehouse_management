@@ -47,6 +47,17 @@ abstract class PrivateDocumentStorage
      */
     public function store(UploadedFile $file): string
     {
+        $extension = $this->validatedExtension($file);
+
+        $name = Str::random(40).'.'.$extension;
+        Storage::disk('local')->put(static::DIRECTORY.'/'.$name, (string) file_get_contents($file->getRealPath()));
+
+        return $name;
+    }
+
+    /** Validate content and size without writing a file; return the storage extension. */
+    public function validatedExtension(UploadedFile $file): string
+    {
         $path = $file->getRealPath();
         $extension = $path === false || $file->getSize() > static::MAX_BYTES ? null : $this->extensionOf($path, strtolower($file->getClientOriginalExtension()));
 
@@ -54,10 +65,7 @@ abstract class PrivateDocumentStorage
             throw ValidationException::withMessages([static::FIELD => translate(static::REFUSAL)]);
         }
 
-        $name = Str::random(40).'.'.$extension;
-        Storage::disk('local')->put(static::DIRECTORY.'/'.$name, (string) file_get_contents($path));
-
-        return $name;
+        return $extension;
     }
 
     /**

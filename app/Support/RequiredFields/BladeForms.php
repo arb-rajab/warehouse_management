@@ -72,12 +72,38 @@ final class BladeForms
                 'action' => trim($action) === '' ? '(none)' : trim($action),
                 'verb' => $verb,
                 'target' => $route === null ? null : ['route' => $route, 'verb' => $verb],
-                'controls' => $this->controls($html, $body, $start + strlen($tag), $file),
+                'controls' => $this->controlsWithPartials($html, $body, $start + strlen($tag), $file, [$file]),
             ];
             $offset = $end + 1;
         }
 
         return $forms;
+    }
+
+    /**
+     * Read literal field partials in their own source; nested forms remain separate.
+     *
+     * @param  list<string>  $included
+     * @return list<UiControl>
+     */
+    private function controlsWithPartials(string $html, string $body, int $offset, string $file, array $included): array
+    {
+        $controls = $this->controls($html, $body, $offset, $file);
+        preg_match_all('/@include\(\s*[\'"]([a-zA-Z0-9_.-]+)[\'"]/', $body, $matches);
+        foreach ($matches[1] as $view) {
+            $relative = 'resources/views/'.str_replace('.', '/', $view).'.blade.php';
+            $path = $this->basePath.'/'.$relative;
+            if (in_array($relative, $included, true) || count($included) >= 10 || ! is_file($path)) {
+                continue;
+            }
+            $partial = $this->blankNonMarkup((string) file_get_contents($path));
+            if (preg_match('/<form\b/i', $partial) === 1) {
+                continue;
+            }
+            array_push($controls, ...$this->controlsWithPartials($partial, $partial, 0, $relative, [...$included, $relative]));
+        }
+
+        return $controls;
     }
 
     /**
@@ -196,6 +222,7 @@ final class BladeForms
             $resolved = $name !== null && ! str_contains($name, '{{') && ! str_contains($name, '{!!');
             $controls[] = [
                 'name' => $resolved ? $name : null,
+                'value' => $type === 'hidden' ? $this->attribute($tag, 'value') : null,
                 'name_resolved' => $resolved,
                 'type' => $type,
                 'required' => $this->booleanAttribute($tag, 'required'),
@@ -255,7 +282,7 @@ final class BladeForms
      * group's label is its legend, since each option's own label names the
      * option. Inner fieldsets come after outer ones, so the innermost wins.
      *
-     * @return list<array{start: int, end: int, mark: bool, text: string}>
+     * @return list<array{start: int, end: int, mark: bool|string, text: string}>
      */
     private function fieldsetLegends(string $body): array
     {
@@ -282,8 +309,11 @@ final class BladeForms
         return $legends;
     }
 
-    private function hasMark(string $inner): bool
+    private function hasMark(string $inner): bool|string
     {
+        if (preg_match('/@if\b.*<x-required-mark\b.*@endif/s', $inner) === 1) {
+            return 'dynamic';
+        }
         if (str_contains($inner, '<x-required-mark') || str_contains($inner, 'data-required-mark')) {
             return true;
         }

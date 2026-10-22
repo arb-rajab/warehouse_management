@@ -5700,3 +5700,161 @@ slug on update. Keep `ProductPolicy::updateAsSeller`, subscription checks, appro
 localization, sanitization and current URLs/flashes. Inspect every upload reference and nested tax/choice/
 stock product id against a second seller. Pin column boundaries, min/discount arithmetic, transaction
 rollback, and the known MySQL decimals/choice-order edit defects (D13) before changing these writers.
+
+## 51. Seller forms, phase 3 batch 2: shop, verification, coupons and bulk upload (2026-10-22)
+
+Runtime: **GPT-6 Codex**. The requested `claude-opus-5-5 / high` is unavailable; the exact active
+variant and effort are not exposed, so neither is claimed. This continuation starts at `develop`
+**7524aa0a**, the merge of [PR #464](https://github.com/arb-rajab/warehouse_management/pull/464).
+The original brief's previous [PR #463](https://github.com/arb-rajab/warehouse_management/pull/463)
+is recorded in §50. `develop` was fetched before editing: account, money and text writes were already
+merged, so they were not implemented again. The owner authorized one PR to `develop`, separate SHOP and
+COMMERCE commits, and merging only after every CI check is green. Product/digital-product forms and
+writers are unchanged. At **37 files**, this batch stops after completing SHOP and COMMERCE; the separate product writers remain deferred.
+
+### Rules, per form: before and now
+
+| Form / route | Before | Now |
+| --- | --- | --- |
+| Shop basic information, `seller.shop.update` | No validation; name, phone, address and metadata required only in HTML | `Seller\UpdateShopRequest`: name required/string/max **200**, address required/string/max **500**; nullable phone and meta title string/max **255**; nullable meta description string/max **65,535 characters and bytes** (MySQL TEXT). Logo is an integer identifying the caller's own image. Shipping cost is required/numeric/at least zero/max **999999999999999999.99** only for `seller_wise_shipping`; otherwise its presence is refused, even empty. |
+| Pickup coordinates, same endpoint | No validation | Both keys present; both nullable, each required with the other; numeric latitude **-90..90**, longitude **-180..180**. The widened longitude column from #461 is unchanged. |
+| Banners, same endpoint | Any image references, no validation | Optional comma-separated own-image ids; no duplicates, at most **50**. Top banner takes one id; top/full-width/half-width banner strings max **191** (their columns). Sliders are longText and the same 50-image reference limit bounds their size. |
+| Social links, same endpoint | Arbitrary unvalidated values | Nullable strings, HTTP/HTTPS URLs, max **255**, for Facebook, Instagram, Google, Twitter and YouTube. |
+| `seller.shop.verify.store` | Configured fields required only in HTML; storage checked file content/20 MiB while writing, so a later refusal could leave earlier files behind; absent configuration crashed | `Seller\StoreShopVerificationRequest`: every configured field required; text string/max **10,000**; select/radio restricted to configured choices; multi-select a nonempty list of distinct configured choices (max 100). Files must pass the existing storage's content checks, PDF/Word/PNG/JPEG, at most **20 MiB**, before any file is stored. Errors use the actual `element_N` field, bag `sellerVerification`. |
+| `seller.coupon.store` / `.update` | Root `CouponRequest`; code required/global unique/max 255; discount numeric/min 1; date splitting and details construction happened before validation; products not scoped | Seller request: enums for type and discount type; code required/string/max **255**, same global uniqueness, ignoring only the updated coupon; discount numeric/min **1**/max **999999999999999999.99**, percent <= **100**. Cart minimum and maximum discount numeric/min **1**/max **999999999999999999.99**; product coupons require a nonempty list (max 1,000) of distinct integer ids owned by this seller. Fields for the other coupon type are refused even empty. Date range is a real `MM/DD/YYYY - MM/DD/YYYY` range, end >= start, fitting signed INT timestamp columns. Details and timestamps are derived only after validation, never accepted from the client. |
+| `seller.bulk_product_upload` | Only `hasFile`; invalid or missing input could silently do nothing or reach the spreadsheet reader | Seller request shares `ValidatesProductSpreadsheet` with the back office: required/file/xlsx,xls,csv,txt/**10 MiB** contract, adds strict input refusal and a reader/content check matching the extension. Spreadsheet row errors appear under `bulk_file`; the existing importer, sanitization, seller ownership, subscription/approval logic and notifications remain unchanged. |
+
+Every endpoint rejects unknown submitted keys (query input and uploaded files included), even empty ones.
+`_token` and `_method` retain their transport exemption. Shop forms replace the unused hidden `shop_id`
+with a validation-only `section`; original clients without it still infer a section from the original
+controls. Mixed sections are refused. The controller still selects the shop from auth and retains its
+existing dispatch. Shop bank/status/owner fields are not enabled here; the profile's bank controls remain
+their separate writer. Coupon `user_id`, `id`, `details`, `start_date`, `end_date` are refused: route/auth
+identify the row and owner, and the controller needs derived dates/details only. The edit page keeps its
+unnamed id for the unchanged AJAX helper. The import endpoint accepts only `bulk_file`.
+
+### Forms, judgement calls and existing defects
+
+- All eight fixed Blade forms use shared marks, required attributes and a legend where required;
+  errors appear under their controls, text is retained with guarded `old()` values, and passwords/files
+  are never repopulated. Shop and verification use named bags. User HTML still follows the existing
+  escaping/sanitization paths; no output escaping or persisted-text cleaning was changed.
+- **Nullable shop phone/metadata are optional.** Their old browser requirements exceeded the controller
+  and database. Name/address stay required because they select the basic-information write. Pickup
+  coordinates may both be cleared; a half-filled pair is refused rather than silently ignoring it.
+- **No foreign-upload grandfathering.** Even a currently stored image must belong to the seller. Legacy
+  images owned by another account must be replaced or cleared before that section can save.
+- **Verification configuration:** missing, malformed or unsupported configuration renders without a
+  crash and disables Apply; a forged POST is refused without recording an empty application. All fields
+  shown by a valid configuration remain required, as the old form intended. The 10,000-character text
+  limit is a deliberate support-style cap within the longText storage column.
+- **Coupons are bounded by signed INT dates:** the date picker can store whole days from 1901-12-14 to
+  2038-01-19. Supporting later dates requires a separate column migration. Global code uniqueness is
+  preserved, including across owners; changing to per-seller uniqueness is not part of this PR.
+- **Coupon old input was broken:** the page fetched its fields through a second AJAX request after
+  consuming the flashed values. Create/edit now render a shared seller field partial immediately;
+  switching type still uses the original helper routes. The unused posted edit `id` is removed, and the
+  edit template's stray parenthesis is fixed as part of making that form render and submit reliably.
+- **Bulk import defects:** renamed text could pass the MIME list as `txt` and then crash the XLSX reader;
+  the selected reader must now recognize its content. Row errors previously missed the file field;
+  both admin and seller call `ProductSpreadsheetImporter` for the admin's existing error mapping, with
+  unchanged import behavior. This does not enable a new products writer: the seller importer already
+  uses `Product::forceCreate` and derives ownership from auth.
+- **Reported, not fixed:** `ProductsImport::downloadThumbnail()` creates external-image upload rows
+  without `user_id`. The new own-image rules cannot reuse such unowned rows in shop/profile fields.
+  The seller import POST also does not repeat its GET page's verification-status check. Both predate
+  this validation work; no middleware/permission/ownership flow was added or changed. The root
+  `CouponRequest` remains on API routes and still parses dates before validation there; only the
+  requested seller-panel endpoints use the new seller request. The importer also allows unit length
+  50 against `products.unit` 20 and has no column-sized price ceiling; carry those row-rule defects
+  into the separate products writer review.
+
+### Audit and ratchet
+
+`FIXED_STOREFRONT_FORMS` gains shop update (all four sections), verification, both coupon forms and bulk
+upload. The scanner now evaluates rules with literal hidden values (cached separately per input), reads
+conditional Blade marks as dynamic, and follows literal field partials while preserving their source
+file/line. Nested forms and recursive cycles are not merged into an outer form. These are checked with
+focused scanner tests, including a deliberately missing required attribute after a correct section scan.
+The back-office baseline remains **82**: no listed finding disappeared.
+
+| Audit | Before A/B/C/D/E/F | After |
+| --- | --- | --- |
+| Seller panel, 26 forms | 14 / 12 / 30 / 0 / 102 / 0 (**158**) | 0 / 10 / 23 / 0 / 87 / 0 (**120**) |
+| Overall | 53 / 52 / 68 / 10 / 199 / 23 (**405**) | 39 / 50 / 61 / 10 / 184 / 23 (**367**) |
+
+After SHOP: seller **138** (14/12/24/0/88/0), overall **385** (53/52/62/10/185/23). The current-date audit is saved in
+`.ai/required-fields-audit-20261022.md` and `.json`. All **120** remaining seller findings are in
+the four explicitly excluded physical/digital product create/edit forms; every other named write form
+has no finding. The five other seller forms in the 26-form count are read-only search/filter forms.
+
+### Verification
+
+SHOP was tested before implementation: **75 failed / 5 passed**, exposing absent validation and array
+500s. The corrected SHOP tests reached **82 passed / 321 assertions** before the final extra ownership
+cases. COMMERCE's valid pre-implementation baseline was **54 failed / 14 passed**; the first corrected
+implementation reached **68 passed / 213 assertions**. The literal-partial scanner test and the bulk row
+error test were each observed failing before their fixes. The combined focused run passed **230 tests / 833 assertions** across
+`SellerShopFormsTest`, `SellerCommerceFormsTest`, `LegacyShopVerificationTest`,
+`LegacySellerScopingTest`, `RequiredFieldsAuditTest`, `RequiredFieldsRatchetTest`, and the admin
+`ProductBulkUploadControllerTest`. The later pickup-help case was separately seen failing and then
+passed (**1 test / 4 assertions**) and folded into the unpushed SHOP commit. Exact **20 MiB**
+verification and **10 MiB** bulk files are accepted; one byte more is refused with no new file/import
+write. A separate red/green check pins the metadata byte-limit message, so multibyte overflow is
+not misleadingly described as a character-count error. The bulk boundary case uses a recognizable CSV and asserts that the importer is called exactly
+once, for the accepted file. Exact decimal ceilings are also pinned: `999999999999999999.99`
+passes for shipping/discount, while a higher-precision value that would round past storage fails
+before a write (the three refusal cases were observed failing first).
+
+`npm ci` with npm **11.9.0** restored missing frontend packages without changing the lockfile.
+Wayfinder was regenerated, stale Composer class-map entries refreshed with `dump-autoload --no-scripts`,
+and `npm run build` passed with the managed proxy/CA, including fonts. PHP is **8.5.11** with a 1 GiB
+memory limit in a local Docker image; GD was rebuilt with WebP for the existing upload suite. The first
+GD build failed because apt's restricted user could not read the mounted CA; a readable secret mount
+and apt's explicit CA setting fixed it without disabling TLS verification.
+
+Whole Vitest passed **336 files / 2,651 tests** with `--maxWorkers=2`. Unrestricted, four-worker, and later one/two-worker attempts had local scheduling
+timeouts; both affected files passed **184 tests** with two workers before the full pass.
+The final explicit full run again passed **336 files / 2,651 tests**; Vitest logged a worker-shutdown
+timeout warning but returned success after completing every test. Repository test code, assertions and CI deadlines are unchanged. The final local pre-push run uses
+a temporary npm wrapper with **two workers** and **30-second test/hook deadlines** for this slower
+runtime. Every test still runs; real CI uses the repository defaults and must pass before merge.
+`npx prettier --check tests/e2e/store-legacy-uploader.spec.ts`, PHPStan and `git diff --check` were also run.
+
+Focused Playwright (`tests/e2e/store-legacy-uploader.spec.ts`) passed **7 tests** on local HTTPS with CSP
+enforced and system Chromium/FFmpeg. The first combined new workflow exceeded its 30-second limit;
+it was split into four independent cases, retaining coverage. A subsequent runtime attempt found an
+orphaned Docker-backed test server; stopping that task-owned server and restarting its PHP container
+released the port. The coupon date picker normalizes reversed ranges before POST, so browser error
+recovery now uses a real duplicate code; both coupon endpoints' reversed-date refusals remain pinned
+in Pest. No browser assertion was removed from the existing three cases.
+
+The explicit `python3 .claude/scripts/pre_push_check.py --full` is run before the final COMMERCE commit.
+Its first attempt stopped at ESLint on test-created private directories owned by the container user;
+workspace-user ownership was restored while retaining private permission modes. A later full attempt
+passed the frontend/static checks but found a global Pest helper-name collision with the existing admin
+verification tests; the new seller fixture was renamed. A backend-only retry was stopped before completion to consolidate verification into a fresh explicit
+`--full` run, with four CPUs available to the unchanged parallel Pest runner. The completed full run passed Wayfinder generation, whole-repo ESLint, Prettier, vue-tsc,
+Vitest (**336 files / 2,651 tests**), Pint (**1,360 files**), PHPStan (**890 files / 0 errors**) and config
+cache clear. Parallel Pest completed with **7,290 passed / 3 skipped / 1 failed / 41,319 assertions**
+(**797.14 s**): the existing admin verification round-trip omitted its configured, browser-required
+Licence file and expected null storage. That test now first asserts missing-file refusal with no writes,
+then posts a real PDF and checks private storage while retaining the ordered-answer and JSON assertions.
+Pint on that file and its complete focused suite passed (**34 tests / 254 assertions**). No application
+code changed after the full run; the final commits still require the complete real CI suite before merge. No bare pre-push or attested run was used, and no `CI-Verified` trailer
+was written. MySQL migrations and dependency audits are not part of `--full`; no schema or dependency
+file changed. Playwright ran separately as above. Real CI and the deploy result are checked before the
+final owner report.
+
+### Separate product/digital-product PR
+
+Carry forward §50's detailed writer inventory. The owner decision on a second writer remains pending.
+Do not widen `Product`'s `#[Fillable(['name', 'ar_name', 'thumbnail_img', 'published'])]` as a validation fix.
+Physical `ProductRequest` assumes name/category/unit/minimum quantity/unit price and conditional discount;
+its name max 255 exceeds the 200 column and category/unit lack types. `ProductService::sellerAttributes`
+is only an input allowlist; its create/update attributes exceed the model's fillable limit. Digital
+writers accept plain Request and assign columns directly. Both need column-sized rules, hostile shape,
+price/date/discount boundary tests, own upload/nested stock/tax/choice ids, transaction rollback before
+stock rebuild, and pinned policy/subscription/approval/localization/sanitization behavior. Inspect the
+`tags[0]` JSON assumptions, malformed variant/choice inputs, unvalidated digital slug/files/prices/tax,
+and D13's MySQL decimal/choice-order edit defects. Account email-callback defects remain recorded in §50.

@@ -54,15 +54,17 @@
         <div class="card-body">
             <form class="form-horizontal" action="{{ route('seller.bulk_product_upload') }}" method="POST" enctype="multipart/form-data">
                 @csrf
+                <x-required-legend />
                 <div class="form-group row">
-                    <label class="col-md-2 col-form-label">{{ translate('CSV') }}</label>
+                    <label class="col-md-2 col-form-label" for="bulk-file">{{ translate('CSV') }}<x-required-mark /></label>
                     <div class="col-sm-10">
                         <div class="custom-file">
-    						<label class="custom-file-label">
-    							<input type="file" name="bulk_file" class="custom-file-input" required>
-    							<span class="custom-file-name">{{ translate('Choose File')}}</span>
-    						</label>
-    					</div>
+                            <div class="custom-file-label">
+                                <input type="file" id="bulk-file" name="bulk_file" accept=".xlsx,.xls,.csv,.txt" class="custom-file-input" required>
+                                <span class="custom-file-name">{{ translate('Choose File')}}</span>
+                            </div>
+                        </div>
+                    @error('bulk_file')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                     </div>
                 </div>
                 <div class="form-group mb-0 text-right">

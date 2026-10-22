@@ -299,3 +299,43 @@ test('the command writes the markdown and json reports for the given date', func
 
     File::deleteDirectory(base_path($directory));
 });
+
+test('literal hidden section values select server rules without leaking between forms', function () {
+    $source = <<<'BLADE'
+    <form action="{{ route('seller.shop.update') }}" method="POST">
+        <input type="hidden" name="section" value="basic">
+        <label for="name">Name<x-required-mark /></label><input id="name" name="name" required>
+        <label for="address">Address<x-required-mark /></label><input id="address" name="address" required>
+    </form>
+    <form action="{{ route('seller.shop.update') }}" method="POST">
+        <input type="hidden" name="section" value="social">
+        <label for="facebook">Facebook</label><input id="facebook" name="facebook">
+    </form>
+    BLADE;
+    $blade = new BladeForms(base_path());
+    $forms = $blade->scanSource($source, 'resources/views/shop/seller/fixture.blade.php');
+    $audit = RequiredFieldsAudit::make();
+    expect($audit->run([], $forms, false)['findings'])->toBe([]);
+    $forms[0]['controls'][1]['required'] = false;
+    expect(auditClasses($audit->run([], $forms, false)))->toBe(['name' => 'A']);
+});
+
+test('the Blade scanner keeps conditional marks and requirements dynamic', function () {
+    [$form] = (new BladeForms(base_path()))->scanSource(<<<'BLADE'
+    <form><label for="cost">Cost@if($shipping)<x-required-mark />@endif</label>
+    <input id="cost" name="cost" @required($shipping)></form>
+    BLADE, 'resources/views/shop/seller/fixture.blade.php');
+    expect($form['controls'][0]['required'])->toBe('dynamic')->and($form['controls'][0]['mark'])->toBe('dynamic');
+});
+
+test('the Blade scanner follows literal field partials and keeps their source location', function () {
+    [$form] = (new BladeForms(base_path()))->scanSource(<<<'BLADE'
+    <form action="{{ route('seller.coupon.store') }}" method="POST">
+        <label for="type">Type<x-required-mark /></label><input id="type" name="type" required>
+        @include('shop.seller.coupons.fields')
+    </form>
+    BLADE, 'resources/views/shop/seller/fixture.blade.php');
+    $code = collect($form['controls'])->firstWhere('name', 'code');
+    expect($code)->not->toBeNull()->and($code['file'])->toBe('resources/views/shop/seller/coupons/fields.blade.php');
+    expect(RequiredFieldsAudit::make()->run([], [$form], false)['findings'])->toBe([]);
+});
