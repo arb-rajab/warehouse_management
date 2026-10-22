@@ -3,10 +3,12 @@
 namespace App\Models;
 
 use App\Enums\CellState;
+use App\Support\ProductColumnOwnership;
 use Database\Factories\ProductFactory;
 use Illuminate\Database\Connection;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Scope;
+use Illuminate\Database\Eloquent\Attributes\UseEloquentBuilder;
 use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -24,16 +26,15 @@ use Illuminate\Support\Facades\App;
 /**
  * A row in this app's `products` table.
  *
- * This app owns the table, but not the product data in it: `name`, `ar_name`
- * and `published` are written only by `products:sync`
- * (App\Console\Commands\SyncProductsCommand), periodically and in bulk, from
- * the Otajer store's feed — see the "Product sync" section of
- * .ai/rules/shared-database.md. That command is the single writer, so there is
- * no per-request create/update/delete of a `Product` anywhere in this codebase
- * and there should not be. The remaining columns are inherited from the store's
- * original schema and are never read here, except by the legacy store under
- * /temp: ProductPolicy reads `user_id`, the seller who owns the product, which
- * add_legacy_columns_to_store_tables adds in a form Larastan can't read.
+ * Option A: products:sync owns name, ar_name and published on feed-origin
+ * rows (synced_at is non-null). Store writers own the remaining columns and
+ * may change those three only on store-origin rows (synced_at is null).
+ * ProductColumnOwnership and ProductBuilder enforce this for assignments,
+ * model saves and bulk updates. Every model insert, including a duplicate,
+ * starts with a null marker; only the sync sets it. Pre-marker rows remain
+ * unclassified until the owner explicitly reviews them. See shared-database.md.
+ * ProductPolicy reads user_id, the seller who owns the product, which
+ * add_legacy_columns_to_store_tables adds in a form Larastan cannot read.
  *
  * `image_url` and `boxes_count` are not columns on it: the first resolves
  * through the store-owned `uploads` table, the second through this app's own
@@ -62,10 +63,36 @@ use Illuminate\Support\Facades\App;
  * @property-read Collection<int, ProductBarcode> $barcodes
  */
 #[Fillable(['name', 'ar_name', 'thumbnail_img', 'published'])]
+#[UseEloquentBuilder(ProductBuilder::class)]
 class Product extends Model
 {
     /** @use HasFactory<ProductFactory> */
     use HasFactory;
+
+    /**
+     * Refuse a feed-column assignment before a legacy caller changes stock or
+     * other related rows. The builder also guards the eventual database write.
+     */
+    public function setAttribute($key, $value): static
+    {
+        if ($this->exists && in_array($key, ProductColumnOwnership::SYNC_COLUMNS, true)
+            && (string) ($this->attributes[$key] ?? '') !== (string) $value) {
+            ProductColumnOwnership::assertStoreWrite($this, [$key]);
+        }
+        if ($key === 'synced_at' && $value !== null) {
+            ProductColumnOwnership::refuse(['synced_at']);
+        }
+
+        return parent::setAttribute($key, $value);
+    }
+
+    /** Every model-created row, including a replicated feed row, is store-origin. */
+    protected function performInsert(EloquentBuilder $query): bool
+    {
+        $this->attributes['synced_at'] = null;
+
+        return parent::performInsert($query);
+    }
 
     /**
      * The box count assumed for a product with no `wms_product_settings` row —
@@ -727,9 +754,9 @@ class Product extends Model
     // --- Merged from the legacy store's App\Models\Product (see
     // .ai/rules/legacy-albaraka-holland.md section 2). The store's own writers
     // (NewFetchProductsCommand, the legacy ProductController, the Excel
-    // imports) mass-assign far more columns than #[Fillable] above allows;
-    // reconciling that — "pick one writer" — is deferred to the DB-merge
-    // phase the audit already tracks, not decided here.
+    // imports) mass-assign more columns than #[Fillable] allows. Option A
+    // settles column ownership through the guards above (migration guide §52);
+    // the separately gated seller validation work repairs lost form fields.
 
     /**
      * The legacy callers pass `$request->lang` straight through, which is

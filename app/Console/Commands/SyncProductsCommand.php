@@ -3,9 +3,12 @@
 namespace App\Console\Commands;
 
 use App\Models\Product;
+use App\Support\ProductColumnOwnership;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
+use Illuminate\Database\Query\Expression;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Throwable;
@@ -14,17 +17,16 @@ use Throwable;
  * Pulls the Otajer store's product feed and upserts a bounded subset of
  * columns (`name`, `ar_name`, `published`) into this app's `products` table.
  *
- * This app owns that table and this command is its only writer, so the feed is
- * the single source of truth for those three columns: the upsert is
- * unconditional and simply replaces whatever is there. See the "Product sync"
- * section of .ai/rules/shared-database.md before adding a second write path.
+ * The feed owns those columns only on feed-origin rows. A null synced_at marks
+ * a store-created or unclassified row and is never overwritten, even when a
+ * store insert races this command. See .ai/rules/shared-database.md.
  */
 #[Signature('products:sync')]
 #[Description("Sync product name, Arabic name, and active status from the store's API into the products table")]
 class SyncProductsCommand extends Command
 {
     /**
-     * Row count per upsert statement, keeping bindings (4/row) well under
+     * Row count per upsert statement, keeping bindings (7/row) well under
      * SQLite's SQLITE_MAX_VARIABLE_NUMBER (32766).
      */
     private const UPSERT_CHUNK_SIZE = 500;
@@ -69,16 +71,52 @@ class SyncProductsCommand extends Command
             return self::SUCCESS;
         }
 
-        // upsert() compiles one statement with all bindings and never chunks on its
-        // own. At 4 bindings/row this stays comfortably under SQLite's 32766-variable
-        // limit (and MySQL/Postgres's much higher ones) even for a large feed.
+        $conflicts = 0;
         foreach (array_chunk($rows, self::UPSERT_CHUNK_SIZE) as $chunk) {
-            Product::query()->upsert($chunk, ['id'], ['name', 'ar_name', 'published']);
+            $conflicts += $this->syncChunk($chunk);
         }
 
-        $this->components->info(count($rows).' product(s) synced.');
+        $this->components->info((count($rows) - $conflicts).' product(s) synced.');
+        if ($conflicts > 0) {
+            $this->components->warn($conflicts.' product(s) skipped due to store-origin ID conflicts.');
+        }
 
         return self::SUCCESS;
+    }
+
+    /**
+     * Conditional assignments are essential: filtering before an unconditional
+     * upsert would still overwrite a store row inserted between those queries.
+     * The marker is assigned last because MySQL evaluates assignments in order.
+     *
+     * @param  list<array{id: int, name: string, ar_name: string, published: int}>  $chunk
+     */
+    private function syncChunk(array $chunk): int
+    {
+        $connection = DB::connection();
+        $table = (new Product)->getTable();
+        $mysql = in_array($connection->getDriverName(), ['mysql', 'mariadb'], true);
+        $updates = [];
+        foreach ([...ProductColumnOwnership::SYNC_COLUMNS, 'synced_at'] as $column) {
+            $incoming = $mysql && ! $connection->getConfig('use_upsert_alias')
+                ? 'values('.$column.')'
+                : ($mysql ? 'laravel_upsert_alias.' : 'excluded.').$column;
+            $updates[$column] = new Expression('CASE WHEN products.synced_at IS NOT NULL THEN '.$incoming.' ELSE products.'.$column.' END');
+        }
+        $now = now()->toDateTimeString();
+        $rows = array_map(fn (array $row): array => [...$row, 'synced_at' => $now, 'created_at' => $now, 'updated_at' => $now], $chunk);
+
+        $ids = $connection->transaction(function () use ($connection, $table, $chunk, $rows, $updates): array {
+            $connection->table($table)->upsert($rows, ['id'], $updates);
+
+            return $connection->table($table)->whereIn('id', array_column($chunk, 'id'))->whereNull('synced_at')->pluck('id')->all();
+        });
+        foreach ($ids as $id) {
+            Log::warning('Product sync skipped a store-origin ID conflict.', ['id' => $id]);
+            $this->components->warn('Product sync conflict: id '.$id.' is store-origin or unclassified.');
+        }
+
+        return count(array_filter($chunk, fn (array $row): bool => in_array($row['id'], $ids)));
     }
 
     /**

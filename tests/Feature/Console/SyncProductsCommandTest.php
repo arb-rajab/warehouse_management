@@ -4,6 +4,7 @@ use App\Models\Product;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
 beforeEach(function () {
     config(['store.products_sync_url' => 'https://stores.otajer.com/api/rest/listfullproducts/fake-key/2']);
@@ -32,10 +33,11 @@ test('the sync command creates a new product from the api response', function ()
     expect($product->name)->toBe('KOMKOMMER PICKLES DURRA 3000 G');
     expect($product->ar_name)->toBe('مخلل الدرة');
     expect($product->published)->toBeTrue();
+    expect($product->getAttribute('synced_at'))->not->toBeNull();
 });
 
 test('the sync command updates an existing product from the feed, with an untouched product as noise', function () {
-    $existing = Product::factory()->create(['id' => 100027, 'name' => 'Old Name', 'ar_name' => 'قديم', 'published' => false]);
+    $existing = Product::factory()->feedOrigin()->create(['id' => 100027, 'name' => 'Old Name', 'ar_name' => 'قديم', 'published' => false]);
     $untouched = Product::factory()->create(['name' => 'Untouched']);
 
     Http::fake([
@@ -65,7 +67,7 @@ test('the sync command updates an existing product from the feed, with an untouc
 });
 
 test('the sync command deactivates a product the feed marks inactive', function () {
-    $product = Product::factory()->create(['id' => 100027, 'published' => true]);
+    $product = Product::factory()->feedOrigin()->create(['id' => 100027, 'published' => true]);
 
     Http::fake([
         'stores.otajer.com/*' => Http::response([
@@ -138,7 +140,7 @@ test('the sync command chunks the upsert instead of building one oversized state
 
     $upsertStatements = [];
     DB::listen(function ($query) use (&$upsertStatements) {
-        if (str_contains($query->sql, 'insert into "products"')) {
+        if (str_contains($query->sql, 'insert into '.DB::connection()->getQueryGrammar()->wrap('products'))) {
             $upsertStatements[] = $query;
         }
     });
@@ -157,4 +159,43 @@ test('the sync command fails cleanly when no sync url is configured', function (
     $this->artisan('products:sync')->assertFailed();
 
     Http::assertNothingSent();
+});
+
+test('a feed id colliding with a store product is skipped counted and logged without changing any column', function () {
+    $store = Product::factory()->create(['name' => 'Seller name', 'ar_name' => 'اسم البائع', 'published' => false]);
+    $before = $store->fresh()->getRawOriginal();
+    Log::spy();
+    Http::fake(['stores.otajer.com/*' => Http::response(['Result' => 'OK', 'Products' => [
+        ['Mat_ID' => (string) $store->id, 'enName' => 'Feed name', 'arName' => 'تغذية', 'Active' => 1],
+        ['Mat_ID' => (string) ($store->id + 1), 'enName' => 'New feed product', 'Active' => 1],
+    ]])]);
+
+    $this->artisan('products:sync')->expectsOutputToContain('1 product(s) synced.')
+        ->expectsOutputToContain('Product sync conflict: id '.$store->id)
+        ->expectsOutputToContain('1 product(s) skipped')->assertSuccessful();
+
+    expect($store->fresh()->getRawOriginal())->toBe($before);
+    Log::shouldHaveReceived('warning')->once()->with('Product sync skipped a store-origin ID conflict.', ['id' => $store->id]);
+    expect(Product::findOrFail($store->id + 1)->getAttribute('synced_at'))->not->toBeNull();
+});
+
+test('sync refreshes the marker truncates both names and preserves every store-owned column', function () {
+    $this->travelTo(now()->startOfSecond());
+    $product = Product::factory()->feedOrigin()->create();
+    $product->forceFill(['unit_price' => 12.50, 'description' => 'Store text', 'approved' => 0])->save();
+    $before = $product->fresh()->getRawOriginal();
+    $this->travel(1)->hours();
+    Http::fake(['stores.otajer.com/*' => Http::response(['Result' => 'OK', 'Products' => [
+        ['Mat_ID' => (string) $product->id, 'enName' => str_repeat('é', 201), 'arName' => str_repeat('ع', 192), 'Active' => 0, 'Price' => 999],
+    ]])]);
+
+    $this->artisan('products:sync')->assertSuccessful();
+
+    $after = $product->fresh()->getRawOriginal();
+    expect($after['name'])->toBe(str_repeat('é', 200))
+        ->and($after['ar_name'])->toBe(str_repeat('ع', 191))
+        ->and($after['synced_at'])->toBe(now()->toDateTimeString());
+    foreach (array_diff(array_keys($before), ['name', 'ar_name', 'published', 'synced_at']) as $column) {
+        expect($after[$column])->toBe($before[$column], $column);
+    }
 });

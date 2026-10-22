@@ -47,6 +47,7 @@ return [
     'store_brand_discount_admin_required' => 'يلزم وجود حساب مسؤول قبل تعيين خصومات العلامات التجارية.',
     'store_product_import_admin_required' => 'يلزم وجود حساب مسؤول قبل استيراد المنتجات.',
     'store_product_package_limit' => 'باقة متجر البائع لا تسمح بنشر منتج آخر.',
+    'store_product_feed_owned' => 'تتم إدارة هذا الحقل عبر مصدر المنتجات ولا يمكن تغييره هنا.',
     'store_timezone_environment_managed' => 'المنطقة الزمنية محددة في إعدادات الخادم ولا يمكن تغييرها من هنا.',
     'upload_refused' => 'نوع هذا الملف غير مسموح به.',
     'custom_script_editing_unavailable' => 'تعديل البرامج النصية المخصصة غير متاح.',
