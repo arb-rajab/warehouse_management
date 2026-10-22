@@ -3,7 +3,9 @@
 namespace App\Services\Store;
 
 use App\Models\Color;
+use App\Models\Product;
 use App\Utility\ProductUtility;
+use Illuminate\Validation\ValidationException;
 
 /**
  * The variant rows a product's colours and attribute values generate, as the
@@ -19,6 +21,32 @@ use App\Utility\ProductUtility;
  */
 class ProductVariantCombinations
 {
+    /** @return list<string> Existing stock names the stored choices cannot generate. */
+    public function unmatchedStocks(Product $product): array
+    {
+        $colors = json_decode((string) $product->getAttribute('colors'), true);
+        $choices = json_decode((string) $product->getAttribute('choice_options'), true);
+        $colors = is_array($colors) ? array_values(array_filter($colors, 'is_string')) : [];
+        $values = array_map(fn ($choice) => is_array($choice) && is_array($choice['values'] ?? null) ? array_values(array_filter($choice['values'], 'is_string')) : [], is_array($choices) ? $choices : []);
+        // Malformed imported data must not generate an unbounded product.
+        $names = array_product(array_map('count', [$colors ?: [null], ...$values])) <= 500 ? $this->names($colors, array_values($values)) : [];
+        $names = $names === [] ? [''] : $names;
+
+        return array_values($product->stocks()->whereNotIn('variant', $names)->pluck('variant')->map(fn ($name) => (string) $name)->all());
+    }
+
+    /**
+     * Refuse implicit loss of already inconsistent legacy stock; reconciliation is explicit.
+     *
+     * @param  list<string>  $postedNames
+     */
+    public function assertLegacyStocksRetained(Product $product, array $postedNames): void
+    {
+        if (array_diff($this->unmatchedStocks($product), $postedNames ?: ['']) !== []) {
+            throw ValidationException::withMessages(['choice_options' => translate('Stored stock does not match the product choices. Reconcile the choices with the existing stock before saving.')]);
+        }
+    }
+
     /**
      * @param  list<string>  $colorCodes  the chosen colour codes, none when colours are off
      * @param  list<list<string>>  $choiceValues  each chosen attribute's values, in order

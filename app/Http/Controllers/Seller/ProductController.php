@@ -2,18 +2,15 @@
 
 namespace App\Http\Controllers\Seller;
 
-use App\Http\Requests\ProductRequest;
+use App\Http\Requests\Seller\PhysicalProductRequest;
+use App\Http\Requests\Seller\PhysicalProductVariantsRequest;
+use App\Services\Store\SellerProductWriter;
 use App\Models\AttributeValue;
 use App\Models\Cart;
 use App\Models\Category;
 use App\Models\Product;
-use App\Models\ProductTax;
-use App\Models\ProductTranslation;
-use App\Services\ProductFlashDealService;
-use App\Services\ProductService;
 use App\Services\ProductStockService;
 use App\Services\ProductTaxService;
-use App\Utility\ProductUtility;
 use Artisan;
 
 use Auth;
@@ -24,20 +21,14 @@ use Str;
 
 class ProductController extends Controller
 {
-    protected $productService;
     protected $productTaxService;
-    protected $productFlashDealService;
     protected $productStockService;
 
     public function __construct(
-        ProductService $productService,
         ProductTaxService $productTaxService,
-        ProductFlashDealService $productFlashDealService,
         ProductStockService $productStockService
     ) {
-        $this->productService = $productService;
         $this->productTaxService = $productTaxService;
-        $this->productFlashDealService = $productFlashDealService;
         $this->productStockService = $productStockService;
     }
 
@@ -49,33 +40,21 @@ class ProductController extends Controller
             $search = $request->search;
             $products = $products->where('name', 'like', '%' . $search . '%');
         }
-        $products = $products->paginate(10);
+        $products = $products->with(['product_translations', 'category.category_translations', 'stocks'])->paginate(10);
         return view('shop.seller.product.products.index', compact('products', 'search'));
     }
 
-    public function create(Request $request)
+    public function create()
     {
-
-        if (addon_is_activated('seller_subscription')) {
-            if (seller_package_validity_check()) {
-                $categories = Category::where('parent_id', 0)
-                    ->where('digital', 0)
-                    ->with('childrenCategories')
-                    ->get();
-                return view('shop.seller.product.products.create', compact('categories'));
-            } else {
-                flash(translate('Please upgrade your package.'))->warning();
-                return back();
-            }
+        if (addon_is_activated('seller_subscription') && ! seller_package_validity_check()) {
+            flash(translate('Please upgrade your package.'))->warning();
+            return back();
         }
-        $categories = Category::where('parent_id', 0)
-            ->where('digital', 0)
-            ->with('childrenCategories')
-            ->get();
-        return view('shop.seller.product.products.create', compact('categories'));
+
+        return view('shop.seller.product.products.create', $this->formOptions());
     }
 
-    public function store(ProductRequest $request)
+    public function store(PhysicalProductRequest $request, SellerProductWriter $writer)
     {
         if (addon_is_activated('seller_subscription')) {
             if (!seller_package_validity_check()) {
@@ -84,34 +63,9 @@ class ProductController extends Controller
             }
         }
 
-        $product = $this->productService->store([
-            ...$this->productService->sellerAttributes($request->all()),
-            'added_by' => 'seller',
-        ]);
-        $request->merge(['product_id' => $product->id]);
-
-        //VAT & Tax
-        if ($request->tax_id) {
-            $this->productTaxService->store($request->only([
-                'tax_id', 'tax', 'tax_type', 'product_id'
-            ]));
-        }
-
-        //Product Stock
-        $this->productStockService->store($request->only([
-            'colors_active', 'colors', 'choice_no', 'unit_price', 'sku', 'current_stock', 'product_id'
-        ]), $product);
-
-        // Product Translations
-        $request->merge(['lang' => config('app.default_language')]);
-        ProductTranslation::create($request->only([
-            'lang', 'name', 'unit', 'description', 'product_id'
-        ]));
+        $writer->create($request->user('store'), $request->productData(), $request->variantNames());
 
         flash(translate('Product has been inserted successfully'))->success();
-
-        Artisan::call('view:clear');
-        Artisan::call('cache:clear');
 
         return redirect()->route('seller.products');
     }
@@ -125,131 +79,65 @@ class ProductController extends Controller
             return back();
         }
 
-        $lang = $request->lang;
-        $tags = json_decode($product->tags);
-        $categories = Category::where('parent_id', 0)
-            ->where('digital', 0)
-            ->with('childrenCategories')
-            ->get();
-        return view('shop.seller.product.products.edit', compact('product', 'categories', 'tags', 'lang'));
+        $lang = is_string($request->lang) ? $request->lang : config('app.default_language');
+        return view('shop.seller.product.products.edit', [...$this->formOptions($product), 'product' => $product, 'lang' => $lang]);
     }
 
-    public function update(ProductRequest $request, Product $product)
+    public function update(PhysicalProductRequest $request, Product $product, SellerProductWriter $writer)
     {
         if (Gate::denies('updateAsSeller', $product)) {
             flash(translate('This product is not yours.'))->warning();
             return back();
         }
 
-        //Product
-        $product = $this->productService->update($this->productService->sellerAttributes($request->all()), $product);
-
-        //Product Stock
-        foreach ($product->stocks as $key => $stock) {
-            $stock->delete();
-        }
-        $request->merge(['product_id' => $product->id]);
-        $this->productStockService->store($request->only([
-            'colors_active', 'colors', 'choice_no', 'unit_price', 'sku', 'current_stock', 'product_id'
-        ]), $product);
-
-        //VAT & Tax
-        if ($request->tax_id) {
-            ProductTax::where('product_id', $product->id)->delete();
-            $request->merge(['product_id' => $product->id]);
-            $this->productTaxService->store($request->only([
-                'tax_id', 'tax', 'tax_type', 'product_id'
-            ]));
-        }
-
-        // Product Translations
-        ProductTranslation::updateOrCreate(
-            $request->only([
-                'lang', 'product_id'
-            ]),
-            $request->only([
-                'name', 'unit', 'description'
-            ])
-        );
-
+        $writer->update($request->user('store'), $product, $request->productData(), $request->variantNames());
 
         flash(translate('Product has been updated successfully'))->success();
-
-        Artisan::call('view:clear');
-        Artisan::call('cache:clear');
 
         return back();
     }
 
-    public function sku_combination(Request $request)
+    /** @return array<string, mixed> The same reference options for create and edit. */
+    private function formOptions(?Product $product = null): array
     {
-        $options = [];
-        if ($request->has('colors_active') && $request->has('colors') && count($request->colors) > 0) {
-            $colors_active = 1;
-            array_push($options, $request->colors);
-        } else {
-            $colors_active = 0;
-        }
+        $product?->load(['stocks', 'taxes', 'product_translations']);
+        $unmatched = $product ? app(\App\Services\Store\ProductVariantCombinations::class)->unmatchedStocks($product) : [];
 
-        $unit_price = $request->unit_price;
-        $product_name = $request->name;
-
-        if ($request->has('choice_no')) {
-            foreach ($request->choice_no as $key => $no) {
-                $name = 'choice_options_' . $no;
-                $data = [];
-                foreach ($request[$name] as $key => $item) {
-                    array_push($data, $item);
-                }
-                array_push($options, $data);
-            }
-        }
-
-        $combinations = ProductUtility::makeCombinations($options);
-        return view('shop.backend.product.products.sku_combinations', compact('combinations', 'unit_price', 'colors_active', 'product_name'));
+        return [
+            'categoryOptions' => Category::treeOptions(fn ($roots) => $roots->where('digital', 0)),
+            'brands' => \App\Models\Brand::query()->with('brand_translations')->get(),
+            'colors' => \App\Models\Color::query()->orderBy('name')->get(),
+            'attributes' => \App\Models\Attribute::query()->with(['attribute_values', 'attribute_translations'])->get(),
+            'languages' => \App\Models\Language::query()->get(),
+            'taxes' => \App\Models\Tax::query()->where('tax_status', 1)->get(),
+            'unmatchedStocks' => $product ? $product->stocks->whereIn('variant', $unmatched) : collect(),
+        ];
     }
 
-    public function sku_combination_edit(Request $request)
+    public function sku_combination(PhysicalProductVariantsRequest $request)
     {
-        $product = Product::findOrFail($request->id);
+        return view('shop.seller.product.products.variant_rows', ['names' => $request->variantNames(), 'postedVariants' => $request->validated(), 'unit_price' => $request->validated('unit_price')]);
+    }
 
-        $options = [];
-        if ($request->has('colors_active') && $request->has('colors') && count($request->colors) > 0) {
-            $colors_active = 1;
-            array_push($options, $request->colors);
-        } else {
-            $colors_active = 0;
-        }
+    public function sku_combination_edit(PhysicalProductVariantsRequest $request)
+    {
+        $product = Product::query()->where('user_id', $request->user('store')->id)->with('stocks')->findOrFail($request->validated('id'));
 
-        $product_name = $request->name;
-        $unit_price = $request->unit_price;
-
-        if ($request->has('choice_no')) {
-            foreach ($request->choice_no as $key => $no) {
-                $name = 'choice_options_' . $no;
-                $data = [];
-                foreach ($request[$name] as $key => $item) {
-                    array_push($data, $item);
-                }
-                array_push($options, $data);
-            }
-        }
-
-        $combinations = ProductUtility::makeCombinations($options);
-        return view('shop.backend.product.products.sku_combinations_edit', compact('combinations', 'unit_price', 'colors_active', 'product_name', 'product'));
+        return view('shop.seller.product.products.variant_rows', ['names' => $request->variantNames(), 'postedVariants' => $request->validated(), 'unit_price' => $request->validated('unit_price'), 'product' => $product]);
     }
 
     public function add_more_choice_option(Request $request)
     {
-        $all_attribute_values = AttributeValue::with('attribute')->where('attribute_id', $request->attribute_id)->get();
+        $data = $request->validate(['attribute_id' => ['required', 'integer', 'exists:attributes,id']]);
+        $all_attribute_values = AttributeValue::query()->where('attribute_id', $data['attribute_id'])->get();
 
         $html = '';
 
         foreach ($all_attribute_values as $row) {
-            $html .= '<option value="' . $row->value . '">' . $row->value . '</option>';
+            $html .= '<option value="' . e($row->value) . '">' . e($row->value) . '</option>';
         }
 
-        echo json_encode($html);
+        return response()->json($html);
     }
 
     public function updatePublished(Request $request)

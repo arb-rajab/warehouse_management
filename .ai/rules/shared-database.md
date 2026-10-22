@@ -390,6 +390,11 @@ Deletion and foreign-key rules are unchanged; this decision does not add a
 soft-delete or a new refusal policy for deletion.
 
 `App\Support\ProductColumnOwnership::SYNC_COLUMNS` is the one ownership list.
+The seller physical panel uses explicit `SellerProductWriter` assignments through
+`PhysicalProductWriter` (§53 of the migration guide); never widen Product Fillable
+to make a legacy service appear to save fields. Its transaction owns stock and
+translation changes too, with cache clearing after commit. The seller API still
+uses the legacy service and retains the model/builder ownership guard.
 `Product` refuses changed feed-column assignments before legacy related-row
 writes; `ProductBuilder` repeats the check against current database rows under
 locks for model saves (quiet saves included), bulk updates and counter writes.
