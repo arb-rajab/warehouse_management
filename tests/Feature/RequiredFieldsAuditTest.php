@@ -327,3 +327,15 @@ test('the Blade scanner keeps conditional marks and requirements dynamic', funct
     BLADE, 'resources/views/shop/seller/fixture.blade.php');
     expect($form['controls'][0]['required'])->toBe('dynamic')->and($form['controls'][0]['mark'])->toBe('dynamic');
 });
+
+test('the Blade scanner follows literal field partials and keeps their source location', function () {
+    [$form] = (new BladeForms(base_path()))->scanSource(<<<'BLADE'
+    <form action="{{ route('seller.coupon.store') }}" method="POST">
+        <label for="type">Type<x-required-mark /></label><input id="type" name="type" required>
+        @include('shop.seller.coupons.fields')
+    </form>
+    BLADE, 'resources/views/shop/seller/fixture.blade.php');
+    $code = collect($form['controls'])->firstWhere('name', 'code');
+    expect($code)->not->toBeNull()->and($code['file'])->toBe('resources/views/shop/seller/coupons/fields.blade.php');
+    expect(RequiredFieldsAudit::make()->run([], [$form], false)['findings'])->toBe([]);
+});

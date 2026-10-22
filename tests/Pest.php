@@ -6,6 +6,7 @@ use App\Http\Requests\Store\Admin\UpdateWebsiteAppearanceRequest;
 use App\Http\Requests\Store\Admin\UpdateWebsiteFooterRequest;
 use App\Models\Carrier;
 use App\Models\Cart;
+use App\Models\Category;
 use App\Models\Cell;
 use App\Models\CellStatusLog;
 use App\Models\Coupon;
@@ -952,4 +953,41 @@ function createStoreCarrierTariff(): array
         'billing_type' => 'weight_based', 'delimiter1' => ['0', '10'], 'delimiter2' => ['10', '20'],
         'zones' => [$zone, $otherZone], 'carrier_price' => [$zone => ['5', '8'], $otherZone => ['7', '9']],
     ]];
+}
+
+function sellerCoupon(StoreUser $seller): Coupon
+{
+    return Coupon::create([
+        'user_id' => $seller->id, 'type' => 'cart_base', 'code' => 'SAVE5', 'details' => '{"min_buy":1,"max_discount":5}',
+        'discount' => 5, 'discount_type' => 'amount', 'start_date' => now()->timestamp, 'end_date' => now()->addDay()->timestamp,
+    ])->fresh();
+}
+
+/** @return array<string, mixed> */
+function catalogueImportRow(array $overrides = []): array
+{
+    $category = Category::forceCreate(['name' => 'Food']);
+
+    return [
+        'name' => 'Imported dates', 'description' => '<p>Fresh dates</p><script>alert(1)</script>',
+        'category_id' => $category->id, 'brand_id' => '', 'video_provider' => '', 'video_link' => '',
+        'tags' => 'dates,fresh', 'unit_price' => 2.5, 'unit' => 'box', 'meta_title' => 'Date boxes',
+        'meta_description' => 'Fresh food', 'slug' => 'imported-dates',
+        'thumbnail_img' => 'https://example.com/date.jpg', 'photos' => 'https://example.com/gallery.jpg',
+        'current_stock' => 12, 'sku' => 'DATE-12', ...$overrides,
+    ];
+}
+
+function catalogueImportFile(array $rows): UploadedFile
+{
+    $stream = fopen('php://temp', 'w+');
+    fputcsv($stream, array_keys($rows[0]), escape: '');
+    foreach ($rows as $row) {
+        fputcsv($stream, array_values($row), escape: '');
+    }
+    rewind($stream);
+    $contents = stream_get_contents($stream);
+    fclose($stream);
+
+    return UploadedFile::fake()->createWithContent('products.csv', $contents);
 }

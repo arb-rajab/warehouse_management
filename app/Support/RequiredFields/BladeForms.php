@@ -72,12 +72,38 @@ final class BladeForms
                 'action' => trim($action) === '' ? '(none)' : trim($action),
                 'verb' => $verb,
                 'target' => $route === null ? null : ['route' => $route, 'verb' => $verb],
-                'controls' => $this->controls($html, $body, $start + strlen($tag), $file),
+                'controls' => $this->controlsWithPartials($html, $body, $start + strlen($tag), $file, [$file]),
             ];
             $offset = $end + 1;
         }
 
         return $forms;
+    }
+
+    /**
+     * Read literal field partials in their own source; nested forms remain separate.
+     *
+     * @param  list<string>  $included
+     * @return list<UiControl>
+     */
+    private function controlsWithPartials(string $html, string $body, int $offset, string $file, array $included): array
+    {
+        $controls = $this->controls($html, $body, $offset, $file);
+        preg_match_all('/@include\(\s*[\'"]([a-zA-Z0-9_.-]+)[\'"]/', $body, $matches);
+        foreach ($matches[1] as $view) {
+            $relative = 'resources/views/'.str_replace('.', '/', $view).'.blade.php';
+            $path = $this->basePath.'/'.$relative;
+            if (in_array($relative, $included, true) || count($included) >= 10 || ! is_file($path)) {
+                continue;
+            }
+            $partial = $this->blankNonMarkup((string) file_get_contents($path));
+            if (preg_match('/<form\b/i', $partial) === 1) {
+                continue;
+            }
+            array_push($controls, ...$this->controlsWithPartials($partial, $partial, 0, $relative, [...$included, $relative]));
+        }
+
+        return $controls;
     }
 
     /**
