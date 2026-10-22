@@ -74,23 +74,25 @@ final class ServerRules
     /**
      * What the controller action validates.
      *
+     * @param  array<string, string>  $input  Literal hidden form values, for section-specific rules.
      * @return ServerForm
      */
-    public function forAction(string $controller, string $method): array
+    public function forAction(string $controller, string $method, array $input = []): array
     {
-        $key = $controller.'@'.$method;
+        $source = $controller.'@'.$method;
+        $key = $source.json_encode($input);
         if (isset($this->actionCache[$key])) {
             return $this->actionCache[$key];
         }
 
         if (! class_exists($controller)) {
-            return $this->actionCache[$key] = $this->unparsedForm($key, "controller {$controller} does not exist");
+            return $this->actionCache[$key] = $this->unparsedForm($source, "controller {$controller} does not exist");
         }
         if (! method_exists($controller, $method) && str_ends_with($method, 'Method') && method_exists($controller, substr($method, 0, -6))) {
             $method = substr($method, 0, -6);
         }
         if (! method_exists($controller, $method)) {
-            return $this->actionCache[$key] = $this->unparsedForm($key, "{$controller}::{$method}() does not exist");
+            return $this->actionCache[$key] = $this->unparsedForm($source, "{$controller}::{$method}() does not exist");
         }
 
         $reflection = new ReflectionMethod($controller, $method);
@@ -98,7 +100,7 @@ final class ServerRules
         foreach ($reflection->getParameters() as $parameter) {
             $type = $parameter->getType();
             if ($type instanceof ReflectionNamedType && ! $type->isBuiltin() && is_subclass_of($type->getName(), FormRequest::class)) {
-                $forms[] = $this->forFormRequest($type->getName(), $controller.'@'.$method);
+                $forms[] = $this->forFormRequest($type->getName(), $controller.'@'.$method, $input);
             }
         }
         $inline = $this->inlineRules($controller, $method);
@@ -108,7 +110,7 @@ final class ServerRules
 
         if ($forms === []) {
             return $this->actionCache[$key] = [
-                'source' => $key,
+                'source' => $source,
                 'file' => $this->relative((string) $reflection->getFileName()),
                 'line' => (int) $reflection->getStartLine(),
                 'validated' => false,
@@ -206,12 +208,14 @@ final class ServerRules
 
     /**
      * @param  class-string<FormRequest>  $class
+     * @param  array<string, string>  $input
      * @return ServerForm
      */
-    private function forFormRequest(string $class, ?string $action): array
+    private function forFormRequest(string $class, ?string $action, array $input = []): array
     {
-        if (isset($this->formRequestCache[$class])) {
-            return $this->formRequestCache[$class];
+        $cacheKey = $class.json_encode($input);
+        if (isset($this->formRequestCache[$cacheKey])) {
+            return $this->formRequestCache[$cacheKey];
         }
 
         $reflection = new ReflectionClass($class);
@@ -220,12 +224,12 @@ final class ServerRules
         $form = ['source' => $class, 'file' => $file, 'line' => $line, 'validated' => true, 'unparsed' => null, 'fields' => []];
 
         if (! method_exists($class, 'rules')) {
-            return $this->formRequestCache[$class] = $form;
+            return $this->formRequestCache[$cacheKey] = $form;
         }
 
         DB::beginTransaction();
         try {
-            $request = $class::create('/', 'POST');
+            $request = $class::create('/', 'POST', $input);
             $request->setContainer(app())->setRedirector(app('redirect'));
             $route = $action !== null ? $this->boundRoute($action) : null;
             $request->setRouteResolver(fn () => $route);
@@ -237,7 +241,7 @@ final class ServerRules
         } catch (Throwable $exception) {
             $form['unparsed'] = class_basename($exception).': '.Str::limit($exception->getMessage(), 160);
 
-            return $this->formRequestCache[$class] = $form;
+            return $this->formRequestCache[$cacheKey] = $form;
         } finally {
             DB::rollBack();
         }
@@ -245,7 +249,7 @@ final class ServerRules
         if (! is_array($rules)) {
             $form['unparsed'] = 'rules() did not return an array';
 
-            return $this->formRequestCache[$class] = $form;
+            return $this->formRequestCache[$cacheKey] = $form;
         }
 
         $sources = $this->classSources($class);
@@ -256,7 +260,7 @@ final class ServerRules
         }
         $form['fields'] = $this->withConfirmations($form['fields']);
 
-        return $this->formRequestCache[$class] = $form;
+        return $this->formRequestCache[$cacheKey] = $form;
     }
 
     private function firstActionUsing(string $formRequest): ?string

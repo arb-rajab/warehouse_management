@@ -47,7 +47,7 @@ test('a verification document that is not a PDF, Word document or image is refus
     actingAsStoreUser($seller);
 
     $this->post(route('seller.shop.verify.store'), ['element_0' => 'Acme BV', 'element_1' => UploadedFile::fake()->createWithContent($filename, $contents)])
-        ->assertSessionHasErrors('verification_file');
+        ->assertSessionHasErrorsIn('sellerVerification', ['element_1']);
 
     expect(DB::table('shops')->where('id', $shopId)->value('verification_info'))->toBeNull()
         ->and(Storage::disk('local')->allFiles())->toBe([]);

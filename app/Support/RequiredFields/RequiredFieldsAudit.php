@@ -28,7 +28,7 @@ use RuntimeException;
  *
  * @phpstan-import-type ServerForm from ServerRules
  *
- * @phpstan-type UiControl array{name: string|null, name_resolved: bool, type: string, required: bool|string, mark: bool|string, label: string|null, disabled: bool|string, multiple?: bool, conditional: bool, file: string, line: int}
+ * @phpstan-type UiControl array{name: string|null, name_resolved: bool, type: string, required: bool|string, mark: bool|string, label: string|null, disabled: bool|string, multiple?: bool, value?: string|null, conditional: bool, file: string, line: int}
  * @phpstan-type UiForm array{file: string, line: int, module: string, tag: string, action: string, verb?: string, target: array{controller?: string, method?: string, route?: string, verb?: string}|null, controls: list<UiControl>}
  *
  * A Blade form's target is its route name and HTTP verb; a Vue form's is the
@@ -165,7 +165,14 @@ final class RequiredFieldsAudit
             return [$this->countFindings($audited, $findings), $findings];
         }
 
-        $server = $this->server->forAction($action['controller'], $action['method']);
+        $input = [];
+        foreach ($named as $control) {
+            $value = $control['value'] ?? null;
+            if ($control['type'] === 'hidden' && $value !== null && preg_match('/^[a-zA-Z0-9_-]+$/D', $value) === 1) {
+                $input[(string) $control['name']] = $value;
+            }
+        }
+        $server = $this->server->forAction($action['controller'], $action['method'], $input);
         $audited['source'] = $server['source'];
         if ($server['unparsed'] !== null && $server['fields'] === []) {
             $findings[] = $base('F', '-', null, 'server rules unparsed: '.$server['unparsed'], $form['file'].':'.$form['line'], $server['file'].':'.$server['line'], $server['source']);

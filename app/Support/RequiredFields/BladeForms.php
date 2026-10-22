@@ -196,6 +196,7 @@ final class BladeForms
             $resolved = $name !== null && ! str_contains($name, '{{') && ! str_contains($name, '{!!');
             $controls[] = [
                 'name' => $resolved ? $name : null,
+                'value' => $type === 'hidden' ? $this->attribute($tag, 'value') : null,
                 'name_resolved' => $resolved,
                 'type' => $type,
                 'required' => $this->booleanAttribute($tag, 'required'),
@@ -255,7 +256,7 @@ final class BladeForms
      * group's label is its legend, since each option's own label names the
      * option. Inner fieldsets come after outer ones, so the innermost wins.
      *
-     * @return list<array{start: int, end: int, mark: bool, text: string}>
+     * @return list<array{start: int, end: int, mark: bool|string, text: string}>
      */
     private function fieldsetLegends(string $body): array
     {
@@ -282,8 +283,11 @@ final class BladeForms
         return $legends;
     }
 
-    private function hasMark(string $inner): bool
+    private function hasMark(string $inner): bool|string
     {
+        if (preg_match('/@if\b.*<x-required-mark\b.*@endif/s', $inner) === 1) {
+            return 'dynamic';
+        }
         if (str_contains($inner, '<x-required-mark') || str_contains($inner, 'data-required-mark')) {
             return true;
         }
