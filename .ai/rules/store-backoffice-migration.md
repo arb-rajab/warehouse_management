@@ -667,13 +667,14 @@ dedicated allowlisted compatibility endpoint, not a general settings writer.
   only for that switch endpoint and the refusing `env_key_update` action.
   Payout/commission/withdrawal behavior, balances, seller-facing Blade and
   storefront behavior stay established; no permission or role grant is implied.
-- **`products` writers: owner decision pending, behaviour unchanged.** Brand
-  and digital/product deletion (§§14–16), product duplication (§16),
-  digital product create/update (§21) and physical product create and
-  update (§§22–23) still write WMS-owned `products` rows
-  beside `products:sync`, the table's single writer (shared-database.md).
-  Each now runs in one transaction and is pinned by tests; changing
-  who may write `products` needs the owner's decision.
+- **`products` writers: Option A, owner decision 2026-10-22 (§52).**
+  `products:sync` owns exactly `name`, `ar_name`, `published` on feed-origin
+  rows (non-null `synced_at`). The store owns every other column
+  and may write those three only on its own rows (null marker). All pre-marker
+  rows default to unclassified/null; only reviewed IDs may be reclassified.
+  Product's shared ownership guard covers store writers, including legacy
+  services and imports; duplicates start store-origin. Brand/product/digital
+  deletion and their foreign-key outcomes (§§14–16) remain unchanged.
 - Product list switches share one write path. The digital-product and
   in-house/all-products lists publish and feature through
   `Concerns\UpdatesStoreProductFlags`, scoped to the products each list shows.
@@ -1265,8 +1266,8 @@ Completed:
 
 **Retained deletion behavior (owner decision):** deleting a brand still deletes
 every `products` row carrying it, then its translations and the brand, now in
-one transaction. This conflicts with shared-database.md's single-writer rule for
-WMS-owned `products`. A product referenced by a pallet, store product barcode or
+one transaction. Option A (§52, shared-database.md) supersedes the old
+single-writer conflict; this deletion policy is retained. A product referenced by a pallet, store product barcode or
 variation makes the delete fail atomically (those foreign keys restrict) with a
 server error; otherwise it cascades WMS product settings/barcodes and nulls
 cell-log/verification product references.
@@ -1337,18 +1338,18 @@ only digital products (404 otherwise) and redirects preserving the query. The
 seller-subscription refusal is kept, but now refuses (422 on `status`) before
 any write instead of after the stock update.
 
-**Deletion: owner decision pending, behaviour unchanged.** Deleting still
+**Deletion retained under Option A (§52).** Deleting still
 removes the product's translations and stock rows and hard-deletes the
 `products` row, now in one transaction with the row locked, and only for a
-digital product. This is the same single-writer conflict as brand deletion
-(§14; `products` is WMS-owned, shared-database.md). A pallet referencing
+digital product. Option A (shared-database.md) retains the brand/product
+and digital deletion rules. A pallet referencing
 the product (`pallets.product_id` restrict) or a store barcode/variation
 (no-action FKs) makes the delete fail atomically with a server error; WMS
 settings/barcodes cascade and cell-log/verification references null. Tests pin
 both outcomes. Soft delete, a refusal with a validation error, or any other
-policy needs owner approval. The published switch likewise remains a second
-writer of `products.published`, which `products:sync` overwrites for feed
-products; that predates this change.
+policy needs owner approval. Under Option A (§52), the published switch
+refuses a change on a feed-origin product; it remains available for store-origin
+products. The feed owns publication only on its marked rows.
 
 **Download.** Gate `download_digital_product`; the encrypted-id contract is
 kept, since external bookmarks cannot be ruled out. Two narrow defect fixes:
@@ -1492,15 +1493,16 @@ Two narrow search defect fixes:
   showed it.
   - The endpoint stays ungated, as `LegacyAdminPermissionsTest` lists it.
   - It queues the `cron_jobs` row that `check:commands` turns into
-    `import:all-products-v2`. That command is a second writer of `products`
-    beside `products:sync`, an owner decision left unchanged.
-- **Duplicate (second writer of `products`, unchanged).** It still copies the
+    `import:all-products-v2`. Under Option A (§52) this store import also
+    passes Product's ownership guard and cannot rename or publish feed-origin
+    rows. It owns other columns, without sync privileges.
+- **Duplicate (store writer under Option A, §52).** It still copies the
   `products` row with a random slug suffix, plus its stock and tax rows, but
   not its translations, variations or barcodes. It now runs in a transaction,
-  only on a product the list shows. Creating `products` rows here conflicts with
-  shared-database.md's single-writer rule; changing it needs owner approval.
+  only on a product the list shows. The copied row starts with null `synced_at`,
+  including when its source was feed-origin; it is a store-created product.
 
-**Deletion: owner decision pending, behaviour unchanged.** Single and bulk
+**Deletion retained under Option A (§52).** Single and bulk
 deletion still remove a product's translations, stock, taxes, variations and
 store barcodes, hard-delete the `products` row and soft-delete its cart lines.
 They now run in one transaction with the rows locked. Bulk deletion checks every
@@ -2080,11 +2082,10 @@ update:
   product's tax rows, and with no tax posted (no active tax) they stay. The
   slug is lowercased. Returns to the edit form in the same language (the Blade
   `back()`).
-- **Second writer of `products`: owner decision pending.** Creating and
-  updating write WMS-owned `products` rows beside `products:sync`
-  (shared-database.md), the same conflict as deletion (§§14–16). Behaviour and
-  policy are unchanged; tests pin it, including rollback of product, stock,
-  translation and taxes together.
+- **Store writer under Option A (§52).** New rows have null `synced_at`.
+  Updates may change `name`, `ar_name`, `published` only on store-origin rows;
+  Product's shared guard refuses feed-owned changes. The store owns all other
+  columns. Existing transaction/rollback behavior remains.
 - No cache was cleared before and none is now.
 
 **Fields.** Name (≤200, the `products.name` and translation width), category,
@@ -2217,9 +2218,10 @@ together in one transaction; `view:clear` and `cache:clear` run after commit
 posted `digital`, `added_by`, `user_id`, auction, wholesale or counter field
 is ignored.
 
-**Second writer of `products`: owner decision pending.** Creating a product
-writes WMS-owned `products` beside `products:sync` (shared-database.md), the
-same decision as §§14–16 and §21; behaviour and policy are kept, tests pin it.
+**Store writer under Option A (§52).** Every newly created product has null
+`synced_at`; the store owns all its columns. Feed-origin products
+reserve exactly `name`, `ar_name`, `published` for `products:sync`. Product's
+shared guard enforces the boundary (shared-database.md).
 
 **Fields (`StoreProductRequest`).** Every field the Blade form posted, with the
 schema widths: name ≤200, unit ≤20 (both also `product_translations`), weight
@@ -2384,9 +2386,10 @@ seller panel and API.
   posted again, another product's may not. **Flash deal:** a chosen active
   deal applies through `ProductFlashDealService` (discount and period); none
   chosen leaves an existing entry, as the service always did.
-- **Second writer of `products`: owner decision pending.** Updating writes
-  WMS-owned `products` beside `products:sync` (shared-database.md), as §§14–16,
-  §21 and §22; policy unchanged, tests pin it.
+- **Store writer under Option A (§52).** The shared Product guard refuses
+  changes to `name`, `ar_name`, `published` on feed-origin rows; every other
+  business column remains store-owned. Null-origin rows remain fully editable.
+  Approval authority and deletion rules are unchanged.
 
 **Variant editor.** The page sends the stored choice set: colours in the list's
 order (on while any is chosen), attributes in their stored order (it names the
@@ -5684,7 +5687,7 @@ explodes unvalidated `date_range` and builds `details` before validation, so arr
 error. The bulk importer currently only checks `hasFile('bulk_file')`; match supported MIME/size and retain
 ownership constraints after inspecting `ProductsImport`, without silently enabling a second products writer.
 
-**Separate product/digital-product PR, owner decision pending**: do not widen `Product`'s
+**Separate product/digital-product PR (ownership settled by Option A, §52)**: do not widen `Product`'s
 `#[Fillable(['name', 'ar_name', 'thumbnail_img', 'published'])]` as a validation fix. Physical products
 already use `ProductRequest`: it requires name/category/unit/minimum quantity/unit price and conditionally
 discount; name max **255** exceeds `products.name` **200**, lacks a string check, and category/unit are
@@ -5848,7 +5851,8 @@ final owner report.
 
 ### Separate product/digital-product PR
 
-Carry forward §50's detailed writer inventory. The owner decision on a second writer remains pending.
+Carry forward §50's detailed writer inventory. Option A (§52) settles column ownership;
+validation and explicit seller persistence remain the next separately gated PRs.
 Do not widen `Product`'s `#[Fillable(['name', 'ar_name', 'thumbnail_img', 'published'])]` as a validation fix.
 Physical `ProductRequest` assumes name/category/unit/minimum quantity/unit price and conditional discount;
 its name max 255 exceeds the 200 column and category/unit lack types. `ProductService::sellerAttributes`
@@ -5858,3 +5862,146 @@ price/date/discount boundary tests, own upload/nested stock/tax/choice ids, tran
 stock rebuild, and pinned policy/subscription/approval/localization/sanitization behavior. Inspect the
 `tags[0]` JSON assumptions, malformed variant/choice inputs, unvalidated digital slug/files/prices/tax,
 and D13's MySQL decimal/choice-order edit defects. Account email-callback defects remain recorded in §50.
+
+## 52. Product column ownership: Option A and origin collisions (2026-10-22)
+
+Runtime: **GPT-6 Codex**. The requested `claude-opus-5-5 / high` cannot be selected here;
+the exact active variant/effort are not exposed and are not claimed. Branch
+`codex/product-column-ownership` starts at fetched `origin/develop` **8899d105**,
+the merge of [PR #465](https://github.com/arb-rajab/warehouse_management/pull/465).
+Previous seller validation PRs are [#464](https://github.com/arb-rajab/warehouse_management/pull/464)
+and [#463](https://github.com/arb-rajab/warehouse_management/pull/463).
+This is **PR A**. PR B (seller physical persistence/validation and D13) must wait for
+this PR's green merge and successful deploy; PR C (digital and remaining defects)
+must likewise wait for B's deployment. No skip-CI or hand-written attestation is used.
+
+### The owner's decision and existing rows
+
+**Option A replaces the pending decision in §§5, 14–16, 21–23 and the former
+“only writer” rule in shared-database.md.** The sync owns exactly `name`, `ar_name`,
+`published` of feed-origin rows. The store owns every other column and
+may write those three only on products it created itself. `synced_at` is sync
+metadata: non-null identifies feed-origin; null identifies store-created or
+unclassified. Approval authority, deletion rules, foreign-key outcomes, and
+publication/stock side effects for permitted store-origin changes are unchanged.
+The previous Eloquent upsert also implicitly changed `updated_at`: Option A now
+leaves that store-owned timestamp untouched on existing rows and records sync time
+in `synced_at`. New rows retain their creation timestamps.
+
+Migration `2026_10_22_101723_add_synced_at_to_products_table` is an ordinary
+nullable-column addition, without the old production/table-existence no-op guard.
+**All existing rows remain null.** No name, unchanged publication state, legacy
+`from_api`, `mat_id` or old timestamp proves origin. This deliberately protects
+unknown rows and temporarily stops feed updates to them. The owner must review
+an authoritative creation/feed inventory and reclassify exact verified IDs;
+shared-database.md provides the owner-run SQL procedure. It has not been run on
+production or staging by this work. The initial classification timestamp is not
+claimed to be the time of a historic sync. Rollback drops only the marker; taking
+this release back also takes back its ownership enforcement, so keep a reviewed
+classification inventory outside the database before rolling it back.
+
+### Implementation and enforcement
+
+- The sync keeps 500-row chunks, hourly scheduling/overlap protection, 200/191
+  character truncation, configured URL, error handling and no-pruning behavior.
+  It sets/refreshes the marker on every accepted row. The conditional SQL upsert
+  preserves **every** column of a conflicting null-origin row, including timestamps.
+  A race with a newly auto-incremented store row is protected at the write itself.
+  Conflicts are counted and every ID is named in a warning log and command output.
+  The marker assignment is last because MySQL evaluates SET assignments in order.
+- `ProductColumnOwnership::SYNC_COLUMNS` holds the one list. Product refuses
+  changed protected assignments early, before legacy related-row writes, and
+  ProductBuilder checks the current rows again under locks at the actual write.
+  It covers direct assignment, `fill`/`forceFill`, services, normal/quiet saves,
+  bulk Eloquent updates and counter updates. Mixed-origin bulk writes are refused
+  atomically; store upserts and marker changes are refused. Raw/base-builder
+  product writes outside the sync are prohibited by an architecture-style AST test.
+- Every model insert resets the marker to null, including duplication/quiet
+  replication of a feed row. InHouseProductWriter, the admin/seller digital
+  controllers, seller ProductService, switches, the seller API and legacy imports
+  use this model. The guard does not widen fillable or grant approval permissions.
+  A legacy import attempting protected feed changes now fails explicitly; it does
+  not gain sync privileges. Store-owned fields remain editable on feed rows.
+
+### Seller forms and outstanding work
+
+No seller validation/persistence repair has started in PR A. Characterization
+of the current physical/digital forms belongs to PR B's first step, after A is
+merged and deployed. The four-column fillable defect remains a defect; this PR
+makes no claim that the seller ProductService now persists its discarded fields.
+
+| Form | Old rules | Rules after PR A |
+| --- | --- | --- |
+| `seller.products.store` | ProductRequest: required name (max 255), category, unit, numeric minimum/unit price, conditional discount; other controls largely unvalidated | Unchanged; PR B must narrow the name to 200 and validate the full form before explicit persistence. |
+| `seller.products.update` | Same ProductRequest and legacy mass assignment | Unchanged; the shared ownership guard now refuses protected changes on feed-origin rows. |
+| `seller.digitalproducts.store` | Plain Request, direct unvalidated assignments | Unchanged; PR C replaces these with validation and an explicit transactional writer. New rows have null origin. |
+| `seller.digitalproducts.update` | Plain Request, direct unvalidated assignments | Unchanged; feed name changes are now refused before destructive stock replacement. |
+
+D13 is **open**: MySQL decimal representation and mismatched stored choice/stock
+names still require failing MySQL regression tests and their fix in PR B. D16's
+four seller forms remain open. Conversation/bulk row-rule defects recorded in
+§§50–51 remain for the subsequent batches; existing validated forms are retained.
+The current committed audit is **367** findings: A/B/C/D/E/F =
+**39/50/61/10/184/23**; seller **120** = **0/10/23/0/87/0**. Ownership work does
+not remove a form finding or a ratchet baseline entry (back-office baseline 82).
+
+### Verification
+
+`wait_for_setup.py` ran first and reported no active setup. The stale checkout
+was fetched to #465 before edits. PHP **8.5.11** / Laravel **13.34.0** run in a
+local Docker container; MySQL **8.4** uses the isolated `warehouse_test` database
+with the requested root/password credentials. Existing local vendor/assets were
+checked. Missing frontend packages were restored using npm **11.9.0 ci** without
+lockfile changes; npm's cache is under the task workspace. The stale Composer
+classmap was regenerated. GD was rebuilt with WebP, as existing upload tests need.
+
+Focused ownership/sync/migration tests passed on SQLite (24 tests/211 assertions)
+and MySQL (25 tests/212 assertions, including the architecture test added later).
+The complete focused admin physical/digital forms plus ownership tests passed
+**118 tests/867 assertions**, including seller physical/digital refusal before
+stock changes. Earlier failures were snapshotting an unrefreshed factory model
+and the stale local Composer classmap; corrected without loosening assertions.
+Pint passed, PHPStan reported **0 errors**, and the required script selftests
+passed. The final full run and complete MySQL-group results are recorded below
+when completed; a focused result is not represented as full verification.
+
+The complete local MySQL group (the nine files listed in the CI MySQL job and
+`pre_push_check.py`) passed **77 tests/389 assertions**, with **6 existing
+SQLite-specific skips** on MySQL. The fresh audit again measured **367 overall /
+120 seller** findings. `bash .github/scripts/deploy-remote-test.sh` passed all
+rollback checks; `npm audit --omit=dev --audit-level=high` reported **0 vulnerabilities**.
+`npm run build` passed, including fonts through the managed proxy/CA.
+Focused Playwright on `store-product-create`, `store-product-edit` and
+`store-digital-product-forms` passed **8 tests (53.3 s)** with enforced CSP,
+system Chromium/FFmpeg, and the production build. The first runtime attempts
+exposed Docker bridge proxy trust and separate `/tmp` directories; the runtime
+now trusts only the actual local bridge/loopback and uses a shared task temp
+directory. No browser assertion, timeout, CSP or repository test code changed.
+
+The first explicit `--full` run passed Wayfinder, ESLint, Prettier, vue-tsc,
+Vitest (**336 files/2,651 tests**), Pint and PHPStan (**893 files/0 errors**),
+then Pest failed before loading its suite because Artisan's child PHP inherited
+the container's 128 MB default. The local PHP ini now sets 1 GiB for children
+as well as the parent. A fresh explicit `--full` run follows this runtime fix.
+
+Final ownership review removed one implicit old Eloquent behavior: the sync no
+longer changes the store-owned `updated_at` on existing rows. The stronger
+preserve-every-other-column assertion passes on MySQL (**10 sync tests/104
+assertions**); the complete final MySQL group passed **77 tests/390 assertions**
+(**205.46 s**, the same 6 existing driver-specific skips). New feed rows still
+receive creation timestamps. `synced_at` carries last-sync time. After this code
+correction the explicit full gate is repeated on the final implementation.
+The previous full pass had **7,312 passed/3 existing skips/41,533 assertions**;
+it is not substituted for the final-tree pass.
+
+**Final explicit `python3 .claude/scripts/pre_push_check.py --full`: passed before
+PR A's last commit.** It ran setup readiness, Wayfinder generation, whole-repo
+ESLint, Prettier, vue-tsc, Vitest (**336 files/2,651 passed**), Pint, PHPStan
+(**893 files/0 errors**), config-cache clear, and parallel Pest (**4 processes,
+7,312 passed/3 existing MySQL-only skips on SQLite/41,534 assertions, 198.66 s**).
+The separate final MySQL, browser, npm audit, deploy rollback, CI-planner (**23
+passed**) and script-selftest results above are not claimed as part of `--full`.
+Composer audit was not run locally; the real CI Dependency audit remains required.
+No test was skipped or quarantined to repair a failure, no bare or attested run
+was used, and no CI-Verified trailer was added. `git diff --check` passed.
+The final source-comment clarification changes no executable code.

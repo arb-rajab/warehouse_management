@@ -9,7 +9,7 @@ The warehouse is laid out as a grid:
 - **Row** — a physical storage row, identified by a `letter` (e.g. `A`). Has a `cells_count` × `flats_count` grid size.
 - **Cell** — one slot in a row's grid, addressed by `(row, cell_number, flat_number)`. A cell is always `empty`, `full`, or `opened` (`App\Enums\CellState`).
 - **Pallet** — sits on exactly one cell and holds one `Product`, with an `expiration_date`. A pallet has no state of its own — its state is read through the cell it sits on.
-- **Product** — a catalog item a pallet can hold. In production this table belongs to a separate store app and is read-only here; see [Deployment](#deployment).
+- **Product** — a catalog item a pallet can hold. The integrated app owns its schema; the sync and store write separated columns under Option A; see [Deployment](#deployment).
 - **CellStatusLog** — an append-only audit trail. Every time a cell's state changes (stored, opened, emptied, or transferred between cells), a log row is written recording the action, the before/after state, and who did it.
 
 Creating a `Row` automatically generates its full grid of `Cell` rows (see `App\Observers\RowObserver`) — you don't create cells by hand.
@@ -76,7 +76,7 @@ composer run ci:check        # everything CI runs
 
 ## Deployment
 
-Production runs this app and an existing store/marketplace app against **one shared MySQL database**. The store owns `products` and `uploads`; this app reads them and never writes to them. Every table this app owns carries a `wms_` prefix so the two can't collide. [`.ai/rules/shared-database.md`](.ai/rules/shared-database.md) carries the full table inventory and the reasoning behind each decision.
+The integrated app owns the `products` schema. Under **Option A**, `products:sync` owns `name`, `ar_name` and `published` on feed-origin rows (non-null `synced_at`); the store owns the other columns and may change those three only on store-origin rows. Existing rows default to null/unclassified and require explicit owner review before feed reclassification. Sync skips and logs ID collisions with null-origin rows. [`.ai/rules/shared-database.md`](.ai/rules/shared-database.md) records enforcement, the reclassification procedure and the table-name history.
 
 **Production environment file.** Start the server's `.env` from [`.env.production.example`](.env.production.example), never from `.env.example`: that one is for local development and CI, and its `APP_DEBUG=true`, `SESSION_SECURE_COOKIE=false`, `CSP_REPORT_ONLY=true`, `TELESCOPE_ENABLED=true`, `MAIL_MAILER=log` and `DB_CONNECTION=sqlite` override the safe production defaults. The template holds only placeholders; the go-live checklist ([`.ai/go-live-checklist-20261021.md`](.ai/go-live-checklist-20261021.md), section 2) says what each value means. Create the first admin with `php artisan store:create-admin <email>`; never run `db:seed` in production.
 
@@ -114,7 +114,7 @@ Leave it unset and every product image resolves to `null` — deliberately, sinc
 
 A product with no `wms_product_settings` row falls back to `Product::DEFAULT_BOXES_COUNT` (50), so **every product reads as 50 boxes until configured**, and pallets are placed with a remaining count of 50.
 
-Box counts are set per product from the products screen at `/admin/products` — the **Boxes / pallet** column is an editable field, saved on change. That is the only write path: product CRUD itself belongs to the store app, and this app never writes to `products`.
+Box counts are set per product from the products screen at `/admin/products` — the **Boxes / pallet** column is an editable field, saved on change. That is the only write path for box counts; the integrated store's product CRUD and the sync follow Option A above.
 
 A freshly deployed catalog therefore needs someone to walk the list and set the real counts; there is nothing to import them from.
 

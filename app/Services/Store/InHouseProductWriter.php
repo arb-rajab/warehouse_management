@@ -22,16 +22,17 @@ use Illuminate\Support\Str;
  *
  * ProductService::store()/update() and ProductStockService::store() cannot
  * serve this path: they mass-assign the form's columns, and Product's
- * #[Fillable] allows only the four products:sync columns, so outside strict
+ * #[Fillable] allows only name, ar_name, thumbnail_img and published, so outside strict
  * mode every other column was silently dropped (no category, price, unit,
  * slug or owner) and in local/testing the write throws. This writer computes
  * the same values those services compute and sets the columns explicitly; the
  * services stay unchanged for the seller panel and the seller API. Taxes and
  * flash deals still go through their services.
  *
- * Creating or updating a product writes WMS-owned `products` beside
- * products:sync, the table's single writer (shared-database.md): an owner
- * decision kept as it was (.ai/rules/store-backoffice-migration.md §5, §§22–23).
+ * Option A (shared-database.md): the store owns all columns except name,
+ * ar_name and published on feed-origin rows. Product's assignment and builder
+ * guards enforce that boundary here too; model inserts always have null
+ * synced_at, including duplicates. The owner decision is recorded in §52.
  * The caller wraps each write in one transaction.
  */
 class InHouseProductWriter

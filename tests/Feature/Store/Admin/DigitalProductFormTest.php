@@ -45,6 +45,16 @@ function digitalProductFormSnapshot(): array
         ->mapWithKeys(fn ($table) => [$table => DB::table($table)->orderBy('id')->get()->toArray()])->all();
 }
 
+test('the admin digital writer refuses a feed name change before replacing stock', function () {
+    actingAsStoreUser(createStoreStaff('edit_digital_product'));
+    DB::table('products')->where('id', $this->product->id)->update(['synced_at' => now()]);
+    $before = digitalProductFormSnapshot();
+
+    $this->put(route('digitalproducts.update', $this->product), digitalProductForm(['lang' => 'en', 'slug' => 'recipe-book']))->assertSessionHasErrors('name');
+
+    expect(digitalProductFormSnapshot())->toEqual($before);
+});
+
 /** @return array<string, mixed> */
 function digitalProductForm(array $overrides = []): array
 {

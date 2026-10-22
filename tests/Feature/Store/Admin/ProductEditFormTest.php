@@ -84,6 +84,16 @@ function productEditSnapshot(): array
         ->mapWithKeys(fn (string $table) => [$table => DB::table($table)->orderBy('id')->get()->toArray()])->all();
 }
 
+test('the in-house writer refuses a feed name change before touching related rows', function () {
+    actingAsStoreUser(createStoreStaff('product_edit'));
+    DB::table('products')->where('id', $this->product->id)->update(['synced_at' => now()]);
+    $before = productEditSnapshot();
+
+    $this->post(route('products.update', $this->product), productEditForm(['name' => 'Store rename']))->assertSessionHasErrors('name');
+
+    expect(productEditSnapshot())->toEqual($before);
+});
+
 /**
  * The form as the edit page posts it for the stored product in English,
  * unchanged.
