@@ -580,10 +580,11 @@ test('the seller panel product form and the retained SKU helpers still render th
     Model::preventLazyLoading(false);
     $this->get(route('seller.products.create'))->assertOk()->assertViewIs('shop.seller.product.products.create');
     $html = $this->post(route('seller.products.sku_combination'), ['name' => 'Oil', 'unit_price' => '3', 'choice_no' => [(string) $this->size], 'choice_options_'.$this->size => ['S', 'M']])
-        ->assertOk()->assertViewIs('shop.backend.product.products.sku_combinations')->getContent();
-    expect(array_column(legacySkuRows($html), 'variant'))->toBe(['S', 'M']);
+        ->assertOk()->assertViewIs('shop.seller.product.products.variant_rows')->getContent();
+    expect($html)->toContain('name="price_S"', 'name="qty_M"');
+    $this->existing->forceFill(['user_id' => $seller->id, 'added_by' => 'seller'])->save();
     $this->post(route('seller.products.sku_combination_edit'), ['id' => $this->existing->id, 'name' => 'Oil', 'unit_price' => '3', 'choice_no' => [(string) $this->size], 'choice_options_'.$this->size => ['S']])
-        ->assertOk()->assertViewIs('shop.backend.product.products.sku_combinations_edit');
+        ->assertOk()->assertViewIs('shop.seller.product.products.variant_rows');
     // The admin's Blade SKU edit endpoint served only the deleted edit form.
     expect(Route::has('products.sku_combination_edit'))->toBeFalse();
 });

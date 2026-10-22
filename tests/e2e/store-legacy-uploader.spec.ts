@@ -333,3 +333,119 @@ test.describe('seller validated shop and commerce forms', () => {
         ]);
     });
 });
+
+test('seller physical forms preserve old input and persist owner approval price and stock', async ({
+    page,
+}) => {
+    seedStoreFixtures(String.raw`
+        App\Models\Category::firstOrCreate(['slug' => 'browser-physical'], ['name' => 'Browser physical', 'parent_id' => 0, 'level' => 0, 'digital' => 0]);
+        $seller = App\Models\StoreUser::where('email', 'browser-seller@example.com')->sole();
+        Illuminate\Support\Facades\DB::table('shops')->updateOrInsert(['user_id' => $seller->id], ['name' => 'Browser shop', 'slug' => 'browser-shop']);
+        Illuminate\Support\Facades\DB::table('business_settings')->updateOrInsert(['type' => 'product_approve_by_admin'], ['value' => '1']);
+    `);
+    await loginAsSeller(page);
+    await page.goto('/temp/seller/product/create');
+    const form = page.locator('#choice_form');
+    await expect(form.locator('[data-required-legend]')).toHaveCount(1);
+    await expect(form.locator('[name=name]')).toHaveAccessibleName(
+        'Product Name required',
+    );
+    await form.locator('[name=name]').fill('Browser validated physical');
+    await form
+        .locator('[name=category_id]')
+        .selectOption({ index: 1 }, { force: true });
+    await form.locator('[name=unit]').evaluate((node: HTMLInputElement) => {
+        node.maxLength = 21;
+    });
+    await form.locator('[name=unit]').fill('x'.repeat(21));
+    await form.locator('[name=unit_price]').fill('12.50');
+    await form.locator('[name=discount]').fill('1.50');
+    await form.locator('[name=current_stock]').fill('17');
+    // Exercise the server boundary, which must protect requests without native validation too.
+    await form.evaluate((node: HTMLFormElement) => {
+        node.noValidate = true;
+    });
+    await form
+        .getByRole('button', { name: 'Save product', exact: true })
+        .click();
+    await expect(page.locator('[role=alert]')).toContainText('unit');
+    await expect(page.locator('[name=name]')).toHaveValue(
+        'Browser validated physical',
+    );
+    await page.locator('[name=unit]').fill('bottle');
+    await page
+        .getByRole('button', { name: 'Save product', exact: true })
+        .click();
+    await expect(page).toHaveURL(/\/temp\/seller\/products$/);
+    seedStoreFixtures(String.raw`
+        $seller = App\Models\StoreUser::where('email', 'browser-seller@example.com')->sole();
+        $product = App\Models\Product::where('name', 'Browser validated physical')->sole();
+        if ($product->user_id !== $seller->id || $product->added_by !== 'seller' || $product->approved != 0 || $product->synced_at !== null || $product->unit_price != 12.5 || $product->stocks()->sole()->qty != 17) { throw new RuntimeException('Physical seller persistence failed'); }
+    `);
+    const edit = page
+        .locator('tr')
+        .filter({ hasText: 'Browser validated physical' })
+        .locator('a[href*="/edit"]');
+    await edit.click();
+    await expect(page.locator('[name=unit]')).toHaveValue('bottle');
+    await page.locator('[name=unit_price]').fill('13.75');
+    await page.locator('[name=current_stock]').fill('9');
+    await page
+        .getByRole('button', { name: 'Save product', exact: true })
+        .click();
+    await expect(page.locator('[name=unit_price]')).toHaveValue('13.75');
+    seedStoreFixtures(String.raw`
+        $product = App\Models\Product::where('name', 'Browser validated physical')->sole();
+        if ($product->unit_price != 13.75 || $product->stocks()->sole()->qty != 9 || $product->approved != 0) { throw new RuntimeException('Physical seller update failed'); }
+    `);
+});
+
+test('seller physical variant choices generate rows and retain their prices on edit', async ({
+    page,
+}) => {
+    seedStoreFixtures(String.raw`
+        App\Models\Category::firstOrCreate(['slug' => 'browser-physical'], ['name' => 'Browser physical', 'parent_id' => 0, 'level' => 0, 'digital' => 0]);
+        $attribute = App\Models\Attribute::firstOrCreate(['name' => 'Browser Size']);
+        foreach (['M', 'L'] as $value) { App\Models\AttributeValue::firstOrCreate(['attribute_id' => $attribute->id, 'value' => $value]); }
+    `);
+    await loginAsSeller(page);
+    await page.goto('/temp/seller/product/create');
+    const form = page.locator('#choice_form');
+    await form.locator('[name=name]').fill('Browser physical variants');
+    await form
+        .locator('[name=category_id]')
+        .selectOption({ index: 1 }, { force: true });
+    await form.locator('[name=unit]').fill('pc');
+    await form.locator('[name=unit_price]').fill('12.50');
+    await form.locator('[name=discount]').fill('1.50');
+    await form
+        .locator('#choice_attributes')
+        .selectOption({ label: 'Browser Size' }, { force: true });
+    const values = form.locator('select[name^=choice_options_]');
+    await expect(values).toHaveCount(1);
+    await values.selectOption(['M', 'L'], { force: true });
+    await expect(form.locator('[name=price_M]')).toBeVisible();
+    await form.locator('[name=price_M]').fill('17.50');
+    await form.locator('[name=qty_M]').fill('4');
+    await form.locator('[name=price_L]').fill('22.50');
+    await form.locator('[name=qty_L]').fill('8');
+    await form
+        .getByRole('button', { name: 'Save product', exact: true })
+        .click();
+    await expect(page).toHaveURL(/\/temp\/seller\/products$/);
+    await page
+        .locator('tr')
+        .filter({ hasText: 'Browser physical variants' })
+        .locator('a[href*="/edit"]')
+        .click();
+    await expect(page.locator('[name=price_M]')).toHaveValue('17.5');
+    await page.locator('[name=price_M]').fill('19.50');
+    await page
+        .getByRole('button', { name: 'Save product', exact: true })
+        .click();
+    await expect(page.locator('[name=price_M]')).toHaveValue('19.5');
+    seedStoreFixtures(String.raw`
+        $product = App\Models\Product::where('name', 'Browser physical variants')->sole();
+        if ($product->stocks()->where('variant', 'M')->sole()->price != 19.5 || $product->stocks()->where('variant', 'L')->sole()->qty != 8) { throw new RuntimeException('Variant replacement lost rows'); }
+    `);
+});

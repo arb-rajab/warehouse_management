@@ -1,5 +1,7 @@
 <?php
 
+use App\Models\Category;
+use App\Models\Language;
 use App\Models\Product;
 use App\Models\ProductBuilder;
 use App\Support\ProductColumnOwnership;
@@ -134,6 +136,13 @@ test('the existing seller physical and digital writers refuse feed names before 
         'button' => 'publish',
     ];
 
+    if (! $digital) {
+        Language::forceCreate(['code' => 'en', 'name' => 'English', 'rtl' => 0]);
+        $category = Category::forceCreate(['name' => 'Physical', 'slug' => 'physical', 'digital' => 0]);
+        unset($input['button']);
+        $input += ['discount' => 1, 'discount_type' => 'amount', 'current_stock' => 4, 'stock_visibility_state' => 'quantity'];
+        $input['category_id'] = $category->id;
+    }
     $route = $digital ? 'seller.digitalproducts.update' : 'seller.products.update';
     $this->post(route($route, $product->id), $input)->assertSessionHasErrors('name');
 

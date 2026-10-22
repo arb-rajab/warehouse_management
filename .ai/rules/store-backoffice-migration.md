@@ -6005,3 +6005,150 @@ Composer audit was not run locally; the real CI Dependency audit remains require
 No test was skipped or quarantined to repair a failure, no bare or attested run
 was used, and no CI-Verified trailer was added. `git diff --check` passed.
 The final source-comment clarification changes no executable code.
+
+## 53. Seller physical catalogue: explicit persistence and validation, PR B1 (2026-10-22)
+
+Previous PRs: [#465](https://github.com/arb-rajab/warehouse_management/pull/465)
+completed shop/commerce validation; [#466](https://github.com/arb-rajab/warehouse_management/pull/466)
+settled Option A (§52), merged as `40cb27eaa8703135321a9f44c92b34cc6bf6baac`.
+Its [develop deploy](https://github.com/arb-rajab/warehouse_management/actions/runs/39789726951)
+succeeded before this work started. The mandatory `artisan migrate --force`
+path succeeded; individual migration logs/database rows were not independently
+visible. The tested-tree lookup succeeded and the merged-suite repeat was
+correctly skipped. All twelve PR checks succeeded: scan lookup, Semgrep, CI
+planning, Prettier, PHPStan, dependency audit, deploy-script tests, JavaScript
+checks, Pint, Pest, MySQL migrations and Playwright. No subscription API was
+available, so checks were monitored through the GitHub API.
+
+The physical work is split at the owner's approximately 30-file limit: **B1**
+repairs persistence/validation and protects inconsistent stock; **B2** finishes
+D13's back-office decimal display and unmatched-stock presentation. Each must
+merge green and deploy successfully before the next starts. Digital forms and
+remaining conversation/bulk defects stay in **C**, after both physical deploys.
+
+### Characterization before implementation
+
+Two real seller endpoint tests passed against #466 before changing the writer
+(20 assertions). Only inside those tests, silent-discard protection was restored
+to production's setting and then reset in `finally`; this exposed the actual
+production defect rather than the local strict-mode exception. The final tests
+assert repaired persistence, and do not require the old defect to survive.
+
+`Product` still has four fillable columns: `name`, `ar_name`, `thumbnail_img`,
+`published`. Physical create retained the posted name/thumbnail and computed
+publication. Physical update retained name/thumbnail (the base name only in the
+default language). The tested update with an unchanged null thumbnail changed
+**only name** in `products`. These intended product fields were discarded:
+
+- Posted columns: `category_id`, `brand_id`, `unit`, `weight`, `min_qty`, `tags`,
+  `barcode`, `photos`, `video_provider`, `video_link`, `external_link`,
+  `external_link_btn`, `unit_price`, `discount`, `discount_type`, `current_stock`,
+  `description`, `shipping_type`, `est_shipping_days`, `low_stock_quantity`,
+  `stock_visibility_state`, `cash_on_delivery`, `is_quantity_multiplied`,
+  `meta_title`, `meta_description`, `meta_img`, `pdf`.
+- Derived/server columns: `slug`, `discount_start_date`, `discount_end_date`,
+  `shipping_cost`, `colors`, `choice_options`, `attributes`, and on create
+  `added_by`, `user_id`, `approved`. A discarded value could happen to equal the
+  column default; that did not mean the service saved it.
+
+The create row instead had `added_by=admin`, `user_id=null`, `approved=1`, no
+category/unit/slug and base price zero, despite the service computing seller
+ownership and pending approval. Stock SKU/price/quantity, translations
+(name/unit/description), taxes, and the separately assigned `variant_product`
+were separate writes and could survive. The stock price was 12.50 while the
+base price stayed zero. This was a persistence defect, never a product design.
+The retired refund addon's `refundable` control has no products column and is
+not offered; forged values are refused. The seller API retains the legacy
+service and is outside these four panel-form repairs; its ownership guards
+from #466 still apply.
+
+### Old and new physical form rules
+
+| Form | Before | Now |
+| --- | --- | --- |
+| `seller.products.store` | `ProductRequest`: name required/max255 without string; category/unit merely required; minimum/price numeric without lower/column bounds; conditional discount below unit price or 100; remaining controls unvalidated. Service silently discarded product columns. | `Seller\PhysicalProductRequest`: name required/string/max200; physical category and optional brand must exist; unit required/string/max20; weight decimal(8,2), nonnegative (blank saves its nonnullable zero default); minimum integer 1..2147483647; amounts nonnegative decimal(20,2), at most two fractional digits; discount below unit price or 100%; real ordered date range with signed-INT timestamps; tags in the existing one-element Tagify JSON list, each plain string value and joined max500; URLs/providers/stock visibility enumerated and column-bound; quantities integer and bounded; only the seller's correctly typed existing image/document uploads; strict unexpected keys, including null/query/file fields. Explicit owner, origin null and approval policy. |
+| `seller.products.update` | Same weak request; nontransactional stock deletion/replacement, product columns discarded, then translation/tax writes. | Same bounds plus an existing language and an optional free slug of max255; ownership checked before validation and rechecked under the row lock. Base name/unit/description change only in the default language; translations update independently. Owner, approval and publication are preserved. Stock and tax/translation changes share the product transaction. |
+
+Colours/attribute ids and each value must exist; choices are bounded lists,
+variant names must be unambiguous and fit varchar255, and the Cartesian product
+is capped at 500. Each generated legacy `price_*`, `qty_*`, `sku_*`, `img_*` key
+has its own rule; unrelated dynamic keys are refused. Dots and spaces use safe
+wire keys while stored variant names retain their original spelling. Arrays in
+scalar fields are refused. Gallery ids are distinct, existing owned images,
+at most 50. There is no grandfather exception for another account's upload.
+Shared field partials use the required mark/legend components, associated labels,
+ARIA and scalar-safe old input; the conditional shipping-cost requirement and
+mark follow the selected shipping type. The uploader and all existing controls
+remain available, with retired server-owned hidden fields removed.
+
+### Writer, ownership and D13 decisions
+
+`SellerProductWriter` explicitly assigns the validated columns; common physical
+computations and related-row writes live in `PhysicalProductWriter`, used by
+both it and `InHouseProductWriter`. Fillable was not widened. Create sets
+`added_by=seller`, the authenticated seller id, `approved=0` when
+`product_approve_by_admin=1` (otherwise 1), physical type and a null origin.
+This restores the service's intended pending policy; no seller approval ability
+was added. Update locks the owned row and preserves authority columns. Cache
+and compiled views clear through an after-commit callback. Failure replacing a
+stock row rolls back product and related rows.
+
+Option A remains exact: sync owns only `name`, `ar_name`, `published` on feed
+rows; store writers own every other column and may write those three only on
+store-origin rows. Existing pre-marker rows remain null/unclassified until the
+owner reviews exact ids (§52); no automatic reclassification occurs here.
+Every physical endpoint accepting a product id is tested with a second seller:
+edit, update, duplicate, delete, publish, feature and SKU-edit preview. The latter
+previously exposed other sellers' stock and now scopes to the caller. Preview
+requests validate shapes/references and generated rows; attribute option HTML
+is escaped. The attribute helper now returns a real JSON response, preventing
+Blade middleware from appending markup to its payload. Ordered option loading
+and stale-preview rejection keep asynchronous responses from changing the
+selected variant order. The list eagerly loads the translations, categories and
+stocks it renders; multiple products no longer trigger strict-loading errors.
+
+Both D13 regressions were demonstrated failing on local MySQL **before** the
+fix: `12.50` versus SQLite's `12.5`, and saving generated default variants
+silently deleting an unmatched stored row. B1 now refuses implicit loss of a
+preexisting choice/stock mismatch in both physical writers. The seller form
+lists the unmatched variant, price, quantity and SKU for review; the owner must
+explicitly reconcile choices to retain that stock before saving. Normal removal
+of variants from a consistent product keeps its existing behavior. B2 completes
+the back-office warning and exact decimal string normalization without a float
+conversion. No automatic permutation of imported choice meanings is guessed.
+
+Audit: **367 → 290** overall (A/B/C/D/E/F **39/40/54/10/124/23**), seller
+**120 → 43** (**0/0/16/0/27/0**), back-office baseline **82** unchanged. Both
+physical forms join the required-field ratchet. Dynamic variant controls are
+also checked on rendered forms and through real browser submissions; unresolved
+runtime names are not claimed to have become statically auditable.
+
+### Verification
+
+- Before-change endpoint characterization: **2 passed, 20 assertions**; both
+  D13 tests then failed on MySQL before their fixes (decimal representation and
+  destructive unmatched-stock save), with the output retained outside the repo.
+- Final focused physical Pest: **164 passed, 580 assertions**, including hostile
+  scalar/nested inputs, owned uploads, every product-id endpoint, rollback,
+  after-commit cache behavior, JSON content type and multi-product rendering.
+- Complete MySQL group (MySQL 8.4, `warehouse_test`, root/password): **240 passed,
+  6 existing driver-specific skips, 966 assertions**. After the final empty-weight
+  correction, its focused MySQL regression also passed (**1 test, 4 assertions**).
+  The first full-check attempt was superseded by that correction; a subsequent
+  local ESLint traversal failed on Docker-owned private test folders. Ownership
+  was corrected, without exclusions, before the final full run. The seller test file is now
+  in both CI's MySQL job and the pre-push MySQL file list.
+- Focused Vitest: physical variant fields/form helpers, **2 files, 14 passed**.
+- Playwright: the retained uploader/seller spec, **9 passed** (including both new
+  physical flows). It retains the existing legacy Blade CSP policy; this is not
+  claimed to have removed the legacy inline-script exception.
+- Required-field ratchet: **4 passed, 7 assertions**; fresh audit **290** overall,
+  **43** seller, baseline **82**. `ci_plan_test.py`: **23 passed**.
+- Final explicit `python3 .claude/scripts/pre_push_check.py --full` **passed**:
+  setup readiness, Wayfinder generation, whole-repo ESLint, Prettier, vue-tsc,
+  Vitest **336 files / 2,651 tests**, Pint, PHPStan **897 files / zero errors**,
+  config clear, Pest **7,476 passed / 3 existing MySQL-only skips on SQLite /
+  42,129 assertions**, four processes, 230.90 seconds. This explicit mode does
+  not run the MySQL/browser/audit lanes; the separate local runs are listed above.
+  Composer/npm security audit remains a real CI gate for B1. No bare/attested
+  run or manual trailer was used. `git diff --check` passed.

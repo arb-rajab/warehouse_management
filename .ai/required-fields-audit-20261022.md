@@ -7,20 +7,20 @@ The convention, the classes and how to read this file: [.ai/rules/form-required-
 ## Summary
 
 Forms scanned: **158** Vue (resources/js/pages, resources/js/components) and **81** Blade (resources/views/shop).
-Server rules: **277** FormRequests (1 unparsed) and **24** controller actions with inline validation (5 unparsed).
+Server rules: **279** FormRequests (1 unparsed) and **25** controller actions with inline validation (5 unparsed).
 
 | Class | Meaning | Severity | Findings |
 | --- | --- | --- | ---: |
 | A | server-required, no `required` attribute (or no control at all) | high | 39 |
-| B | server-required, no visible mark | medium | 50 |
-| C | `required` or a mark, but the server rule is optional or absent | high | 61 |
+| B | server-required, no visible mark | medium | 40 |
+| C | `required` or a mark, but the server rule is optional or absent | high | 54 |
 | D | conditional server rule, static `required` or mark | medium | 10 |
-| E | control with no matching server rule | low | 184 |
+| E | control with no matching server rule | low | 124 |
 | F | unparsed (server rules or form action) | info | 23 |
-| | **Total** | | **367** |
+| | **Total** | | **290** |
 
-By severity: high 100, medium 60, low 184, info 23.
-By priority: P1 8, P2 230, P3 129 (P1 public storefront forms: registration, address, checkout, contact, seller registration; P2 other storefront, account and seller-panel forms; P3 back office).
+By severity: high 93, medium 50, low 124, info 23.
+By priority: P1 8, P2 153, P3 129 (P1 public storefront forms: registration, address, checkout, contact, seller registration; P2 other storefront, account and seller-panel forms; P3 back office).
 
 ## Per module
 
@@ -50,7 +50,7 @@ By priority: P1 8, P2 230, P3 129 (P1 public storefront forms: registration, add
 | Store/Admin/Trips | 11 | 3 | 4 | 0 | 0 | 1 | 1 |
 | Store/Admin/Website | 7 | 9 | 6 | 1 | 0 | 2 | 0 |
 | components | 3 | 0 | 2 | 0 | 0 | 0 | 0 |
-| seller panel | 26 | 0 | 10 | 23 | 0 | 87 | 0 |
+| seller panel | 26 | 0 | 0 | 16 | 0 | 27 | 0 |
 | server | 0 | 0 | 0 | 0 | 0 | 0 | 1 |
 | server: Api/V2 | 0 | 0 | 0 | 0 | 0 | 0 | 1 |
 | server: Api/V2/Seller | 0 | 0 | 0 | 0 | 0 | 0 | 1 |
@@ -70,22 +70,22 @@ Public forms first, then by high (A + C) and medium (B + D) findings.
 | 2 | P2 | `resources/views/shop/frontend/user/customer/product_edit.blade.php:24` | `route:customer_products.update` | 9 | 0 | 10 |
 | 3 | P2 | `resources/views/shop/frontend/user/customer/product_upload.blade.php:11` | `route:customer_products.store` | 9 | 0 | 10 |
 | 4 | P2 | `resources/views/shop/seller/product/digitalproducts/create.blade.php:12` | `route:seller.digitalproducts.store` | 7 | 0 | 11 |
-| 5 | P2 | `resources/views/shop/seller/product/products/create.blade.php:23` | `route:seller.products.store` | 4 | 5 | 29 |
-| 6 | P2 | `resources/views/shop/seller/product/products/edit.blade.php:24` | `route:seller.products.update` | 3 | 5 | 35 |
-| 7 | P2 | `resources/views/shop/frontend/partials/wallet_modal.blade.php:9` | `route:wallet.recharge` | 2 | 0 | 0 |
-| 8 | P2 | `resources/views/shop/frontend/user/product_review_modal.blade.php:9` | `route:reviews.store` | 1 | 1 | 2 |
-| 9 | P2 | `resources/views/shop/frontend/digital_product_details.blade.php:695` | `route:product-queries.store` | 1 | 1 | 1 |
-| 10 | P2 | `resources/views/shop/frontend/product_details/product_queries.blade.php:29` | `route:product-queries.store` | 1 | 1 | 1 |
-| 11 | P2 | `resources/views/shop/frontend/user/profile.blade.php:215` | `route:user.change.email` | 1 | 1 | 0 |
-| 12 | P2 | `resources/views/shop/frontend/user/support_ticket/show.blade.php:20` | `route:support_ticket.seller_store` | 1 | 0 | 3 |
-| 13 | P2 | `resources/views/shop/frontend/user/conversations/show.blade.php:73` | `route:messages.store` | 1 | 0 | 1 |
-| 14 | P2 | `resources/views/shop/frontend/inc/footer.blade.php:88` | `route:subscribers.store` | 1 | 0 | 0 |
-| 15 | P2 | `resources/views/shop/frontend/layouts/app.blade.php:336` | `route:subscribers.store` | 1 | 0 | 0 |
-| 16 | P2 | `resources/views/shop/frontend/track_order.blade.php:27` | `route:orders.track` | 1 | 0 | 0 |
-| 17 | P3 | `resources/js/pages/Store/Admin/Customers/Customers/Create.vue:16` | `CustomerController@store` | 7 | 0 | 0 |
-| 18 | P3 | `resources/js/pages/Store/Admin/Website/Appearance.vue:39` | `WebsiteAppearanceController@update` | 4 | 3 | 0 |
-| 19 | P3 | `resources/js/pages/Store/Admin/Setup/Carriers/Create.vue:14` | `CarrierController@store` | 4 | 2 | 0 |
-| 20 | P3 | `resources/js/pages/Store/Admin/Setup/Carriers/Edit.vue:22` | `CarrierController@update` | 4 | 2 | 0 |
+| 5 | P2 | `resources/views/shop/frontend/partials/wallet_modal.blade.php:9` | `route:wallet.recharge` | 2 | 0 | 0 |
+| 6 | P2 | `resources/views/shop/frontend/user/product_review_modal.blade.php:9` | `route:reviews.store` | 1 | 1 | 2 |
+| 7 | P2 | `resources/views/shop/frontend/digital_product_details.blade.php:695` | `route:product-queries.store` | 1 | 1 | 1 |
+| 8 | P2 | `resources/views/shop/frontend/product_details/product_queries.blade.php:29` | `route:product-queries.store` | 1 | 1 | 1 |
+| 9 | P2 | `resources/views/shop/frontend/user/profile.blade.php:215` | `route:user.change.email` | 1 | 1 | 0 |
+| 10 | P2 | `resources/views/shop/frontend/user/support_ticket/show.blade.php:20` | `route:support_ticket.seller_store` | 1 | 0 | 3 |
+| 11 | P2 | `resources/views/shop/frontend/user/conversations/show.blade.php:73` | `route:messages.store` | 1 | 0 | 1 |
+| 12 | P2 | `resources/views/shop/frontend/inc/footer.blade.php:88` | `route:subscribers.store` | 1 | 0 | 0 |
+| 13 | P2 | `resources/views/shop/frontend/layouts/app.blade.php:336` | `route:subscribers.store` | 1 | 0 | 0 |
+| 14 | P2 | `resources/views/shop/frontend/track_order.blade.php:27` | `route:orders.track` | 1 | 0 | 0 |
+| 15 | P3 | `resources/js/pages/Store/Admin/Customers/Customers/Create.vue:16` | `CustomerController@store` | 7 | 0 | 0 |
+| 16 | P3 | `resources/js/pages/Store/Admin/Website/Appearance.vue:39` | `WebsiteAppearanceController@update` | 4 | 3 | 0 |
+| 17 | P3 | `resources/js/pages/Store/Admin/Setup/Carriers/Create.vue:14` | `CarrierController@store` | 4 | 2 | 0 |
+| 18 | P3 | `resources/js/pages/Store/Admin/Setup/Carriers/Edit.vue:22` | `CarrierController@update` | 4 | 2 | 0 |
+| 19 | P3 | `resources/js/pages/Store/Admin/Website/Footer.vue:38` | `WebsiteFooterController@update` | 3 | 2 | 2 |
+| 20 | P3 | `resources/js/pages/Store/Admin/Product/Products/Create.vue:28` | `ProductController@store` | 3 | 0 | 0 |
 
 ## Findings by module and form
 
@@ -425,90 +425,13 @@ Each line: class, field (label), what differs, then the UI and server locations.
   - **E** `tax_id[]` ({{$tax->name}}): the endpoint validates nothing. UI resources/views/shop/seller/product/digitalproducts/edit.blade.php:189
   - **E** `thumbnail_img` (Thumbnail Image (300x300)): the endpoint validates nothing. UI resources/views/shop/seller/product/digitalproducts/edit.blade.php:108
 
-- `resources/views/shop/seller/product/products/create.blade.php → route:seller.products.store` (App\Http\Requests\ProductRequest)
-  - **B** `category_id` (Category): server: required; the label shows no required mark. UI resources/views/shop/seller/product/products/create.blade.php:44, server app/Http/Requests/ProductRequest.php:27
-  - **B** `min_qty` (Minimum Purchase Qty): server: required|numeric; the label shows no required mark. UI resources/views/shop/seller/product/products/create.blade.php:87, server app/Http/Requests/ProductRequest.php:27
-  - **B** `name` (Product Name): server: required|max; the label shows no required mark. UI resources/views/shop/seller/product/products/create.blade.php:37, server app/Http/Requests/ProductRequest.php:27
-  - **B** `unit` (Unit): server: required; the label shows no required mark. UI resources/views/shop/seller/product/products/create.blade.php:72, server app/Http/Requests/ProductRequest.php:27
-  - **B** `unit_price` (Unit price): server: required|numeric; the label shows no required mark. UI resources/views/shop/seller/product/products/create.blade.php:247, server app/Http/Requests/ProductRequest.php:27
-  - **C** `current_stock` (Quantity): required in the UI, no server rule. UI resources/views/shop/seller/product/products/create.blade.php:282
-  - **C** `discount` (Discount): required in the UI, no server rule. UI resources/views/shop/seller/product/products/create.blade.php:266
-  - **C** `flat_shipping_cost` (Shipping cost): required in the UI, no server rule. UI resources/views/shop/seller/product/products/create.blade.php:434
-  - **C** `tax[]`: required in the UI, no server rule. UI resources/views/shop/seller/product/products/create.blade.php:567
-  - **E** `added_by`: no server rule names this field. UI resources/views/shop/seller/product/products/create.blade.php:28
-  - **E** `barcode` (Barcode): no server rule names this field. UI resources/views/shop/seller/product/products/create.blade.php:102
-  - **E** `brand_id` (Brand): no server rule names this field. UI resources/views/shop/seller/product/products/create.blade.php:60
-  - **E** `cash_on_delivery`: no server rule names this field. UI resources/views/shop/seller/product/products/create.blade.php:528
-  - **E** `choice_attributes[]`: no server rule names this field. UI resources/views/shop/seller/product/products/create.blade.php:217
-  - **E** `colors_active`: no server rule names this field. UI resources/views/shop/seller/product/products/create.blade.php:205
-  - **E** `date_range` (Discount Date Range): no server rule names this field. UI resources/views/shop/seller/product/products/create.blade.php:257
-  - **E** `description` (Description): no server rule names this field. UI resources/views/shop/seller/product/products/create.blade.php:333
-  - **E** `discount_type`: no server rule names this field. UI resources/views/shop/seller/product/products/create.blade.php:271
-  - **E** `est_shipping_days` (Shipping Days): no server rule names this field. UI resources/views/shop/seller/product/products/create.blade.php:542
-  - **E** `external_link` (External link): no server rule names this field. UI resources/views/shop/seller/product/products/create.blade.php:302
-  - **E** `external_link_btn` (External link button text): no server rule names this field. UI resources/views/shop/seller/product/products/create.blade.php:313
-  - **E** `low_stock_quantity` (Quantity): no server rule names this field. UI resources/views/shop/seller/product/products/create.blade.php:457
-  - **E** `meta_description` (Description): no server rule names this field. UI resources/views/shop/seller/product/products/create.blade.php:377
-  - **E** `meta_img` (Meta Image): no server rule names this field. UI resources/views/shop/seller/product/products/create.blade.php:390
-  - **E** `meta_title` (Meta Title): no server rule names this field. UI resources/views/shop/seller/product/products/create.blade.php:370
-  - **E** `pdf` (PDF Specification): no server rule names this field. UI resources/views/shop/seller/product/products/create.blade.php:354
-  - **E** `photos` (Gallery Images): no server rule names this field. UI resources/views/shop/seller/product/products/create.blade.php:136
-  - **E** `refundable`: no server rule names this field. UI resources/views/shop/seller/product/products/create.blade.php:112
-  - **E** `shipping_type`: no server rule names this field. UI resources/views/shop/seller/product/products/create.blade.php:414
-  - **E** `sku` (SKU): no server rule names this field. UI resources/views/shop/seller/product/products/create.blade.php:292
-  - **E** `stock_visibility_state`: no server rule names this field. UI resources/views/shop/seller/product/products/create.blade.php:476
-  - **E** `tags[]` (Tags): no server rule names this field. UI resources/views/shop/seller/product/products/create.blade.php:94
-  - **E** `tax_id[]` ({{ $tax->name }}): no server rule names this field. UI resources/views/shop/seller/product/products/create.blade.php:562
-  - **E** `tax_type[]`: no server rule names this field. UI resources/views/shop/seller/product/products/create.blade.php:572
-  - **E** `thumbnail_img` (Thumbnail Image (290x300)): no server rule names this field. UI resources/views/shop/seller/product/products/create.blade.php:152
-  - **E** `video_link` (Video Link): no server rule names this field. UI resources/views/shop/seller/product/products/create.blade.php:178
-  - **E** `video_provider` (Video Provider): no server rule names this field. UI resources/views/shop/seller/product/products/create.blade.php:168
-  - **E** `weight` (Weight (In Kg)): no server rule names this field. UI resources/views/shop/seller/product/products/create.blade.php:80
+- `resources/views/shop/seller/product/products/create.blade.php → route:seller.products.store` (App\Http\Requests\Seller\PhysicalProductRequest)
+  - **E** `lang`: no server rule names this field. UI resources/views/shop/seller/product/products/form_fields.blade.php:38
+  - **E** `slug` (Slug): no server rule names this field. UI resources/views/shop/seller/product/products/form_fields.blade.php:174
 
-- `resources/views/shop/seller/product/products/edit.blade.php → route:seller.products.update` (App\Http\Requests\ProductRequest)
-  - **B** `category_id` (Category): server: required; the label shows no required mark. UI resources/views/shop/seller/product/products/edit.blade.php:58, server app/Http/Requests/ProductRequest.php:27
-  - **B** `min_qty` (Minimum Purchase Qty): server: required|numeric; the label shows no required mark. UI resources/views/shop/seller/product/products/edit.blade.php:98, server app/Http/Requests/ProductRequest.php:27
-  - **B** `name` (Product Name): server: required|max; the label shows no required mark. UI resources/views/shop/seller/product/products/edit.blade.php:50, server app/Http/Requests/ProductRequest.php:27
-  - **B** `unit` (Unit): server: required; the label shows no required mark. UI resources/views/shop/seller/product/products/edit.blade.php:84, server app/Http/Requests/ProductRequest.php:27
-  - **B** `unit_price` (Unit price): server: required|numeric; the label shows no required mark. UI resources/views/shop/seller/product/products/edit.blade.php:327, server app/Http/Requests/ProductRequest.php:27
-  - **C** `discount` (Discount): required in the UI, no server rule. UI resources/views/shop/seller/product/products/edit.blade.php:351
-  - **C** `discount_type`: required in the UI, no server rule. UI resources/views/shop/seller/product/products/edit.blade.php:355
-  - **C** `tax[]`: required in the UI, no server rule. UI resources/views/shop/seller/product/products/edit.blade.php:670
-  - **E** `added_by`: no server rule names this field. UI resources/views/shop/seller/product/products/edit.blade.php:32
-  - **E** `barcode` (Barcode): no server rule names this field. UI resources/views/shop/seller/product/products/edit.blade.php:116
-  - **E** `brand_id` (Brand): no server rule names this field. UI resources/views/shop/seller/product/products/edit.blade.php:72
-  - **E** `cash_on_delivery` (cash_on_delivery == 1) checked @endif>): no server rule names this field. UI resources/views/shop/seller/product/products/edit.blade.php:610
-  - **E** `choice_attributes[]`: no server rule names this field. UI resources/views/shop/seller/product/products/edit.blade.php:278
-  - **E** `choice_no[]`: no server rule names this field. UI resources/views/shop/seller/product/products/edit.blade.php:299
-  - **E** `colors[]`: no server rule names this field. UI resources/views/shop/seller/product/products/edit.blade.php:255
-  - **E** `colors_active` (>): no server rule names this field. UI resources/views/shop/seller/product/products/edit.blade.php:266
-  - **E** `current_stock` (Quantity): no server rule names this field. UI resources/views/shop/seller/product/products/edit.blade.php:368
-  - **E** `date_range` (Discount Date Range): no server rule names this field. UI resources/views/shop/seller/product/products/edit.blade.php:344
-  - **E** `description` (Description): no server rule names this field. UI resources/views/shop/seller/product/products/edit.blade.php:413
-  - **E** `est_shipping_days` (Shipping Days): no server rule names this field. UI resources/views/shop/seller/product/products/edit.blade.php:636
-  - **E** `external_link` (External link): no server rule names this field. UI resources/views/shop/seller/product/products/edit.blade.php:386
-  - **E** `external_link_btn` (External link button text): no server rule names this field. UI resources/views/shop/seller/product/products/edit.blade.php:395
-  - **E** `flat_shipping_cost` (Shipping cost): no server rule names this field. UI resources/views/shop/seller/product/products/edit.blade.php:522
-  - **E** `id`: no server rule names this field. UI resources/views/shop/seller/product/products/edit.blade.php:30
-  - **E** `lang`: no server rule names this field. UI resources/views/shop/seller/product/products/edit.blade.php:29
-  - **E** `low_stock_quantity` (Quantity): no server rule names this field. UI resources/views/shop/seller/product/products/edit.blade.php:547
-  - **E** `meta_description` (Description): no server rule names this field. UI resources/views/shop/seller/product/products/edit.blade.php:457
-  - **E** `meta_img` (Meta Images): no server rule names this field. UI resources/views/shop/seller/product/products/edit.blade.php:470
-  - **E** `meta_title` (Meta Title): no server rule names this field. UI resources/views/shop/seller/product/products/edit.blade.php:450
-  - **E** `pdf` (PDF Specification): no server rule names this field. UI resources/views/shop/seller/product/products/edit.blade.php:434
-  - **E** `photos` (Gallery Images): no server rule names this field. UI resources/views/shop/seller/product/products/edit.blade.php:151
-  - **E** `refundable` (refundable == 1) checked @endif value="1">): no server rule names this field. UI resources/views/shop/seller/product/products/edit.blade.php:127
-  - **E** `shipping_type` (shipping_type == 'free') checked @endif>): no server rule names this field. UI resources/views/shop/seller/product/products/edit.blade.php:500
-  - **E** `sku` (SKU): no server rule names this field. UI resources/views/shop/seller/product/products/edit.blade.php:377
-  - **E** `slug` (Slug): no server rule names this field. UI resources/views/shop/seller/product/products/edit.blade.php:479
-  - **E** `stock_visibility_state` (stock_visibility_state == 'quantity') checked @endif>): no server rule names this field. UI resources/views/shop/seller/product/products/edit.blade.php:566
-  - **E** `tags[]` (Tags): no server rule names this field. UI resources/views/shop/seller/product/products/edit.blade.php:106
-  - **E** `tax_id[]` ({{$tax->name}}): no server rule names this field. UI resources/views/shop/seller/product/products/edit.blade.php:654
-  - **E** `tax_type[]`: no server rule names this field. UI resources/views/shop/seller/product/products/edit.blade.php:674
-  - **E** `thumbnail_img` (Thumbnail Image (290x300)): no server rule names this field. UI resources/views/shop/seller/product/products/edit.blade.php:168
-  - **E** `video_link` (Video Link): no server rule names this field. UI resources/views/shop/seller/product/products/edit.blade.php:239
-  - **E** `video_provider` (Video Provider): no server rule names this field. UI resources/views/shop/seller/product/products/edit.blade.php:225
-  - **E** `weight` (Weight (In Kg)): no server rule names this field. UI resources/views/shop/seller/product/products/edit.blade.php:92
+- `resources/views/shop/seller/product/products/edit.blade.php → route:seller.products.update` (App\Http\Requests\Seller\PhysicalProductRequest)
+  - **E** `lang`: no server rule names this field. UI resources/views/shop/seller/product/products/form_fields.blade.php:38
+  - **E** `slug` (Slug): no server rule names this field. UI resources/views/shop/seller/product/products/form_fields.blade.php:174
 
 ### server
 
