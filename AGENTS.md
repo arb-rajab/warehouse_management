@@ -14,6 +14,8 @@ Maintain shared instructions here and in the referenced `.ai/` files; keep
    paths being changed. Use targeted `rg` searches in `.ai/rules` to find
    related constraints the path mapping may miss.
 4. Check sibling files and the actual dependency versions before choosing APIs.
+5. Forms must follow [.ai/rules/form-required-fields.md](.ai/rules/form-required-fields.md):
+   mark required fields, and keep the mark, `required` and the server rule in agreement.
 
 Read the shared files fully once per session before editing; use multiple
 bounded reads if tool output is truncated. For narrow follow-up work, reuse

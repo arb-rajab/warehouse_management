@@ -1,6 +1,7 @@
 import { mount } from '@vue/test-utils';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { nextTick } from 'vue';
+import RequiredMark from '@/components/RequiredMark.vue';
 import StoreUploadField from '@/components/StoreUploadField.vue';
 import { i18n, t } from '@/lib/i18n';
 import { storeCarrier, storeUpload } from '@/testing/factories';
@@ -32,6 +33,69 @@ function mountFields(
     });
 }
 describe('carrier form fields', () => {
+    it('marks paid requirements and requires at least one zone without requiring every checkbox', async () => {
+        const wrapper = mountFields();
+        expect
+            .soft(
+                wrapper
+                    .get('label[for=billing_type]')
+                    .findComponent(RequiredMark)
+                    .exists(),
+            )
+            .toBe(true);
+        expect
+            .soft(
+                wrapper
+                    .get('fieldset legend')
+                    .findComponent(RequiredMark)
+                    .exists(),
+            )
+            .toBe(true);
+        expect
+            .soft(wrapper.findAll('input[name="zones[]"][required]'))
+            .toHaveLength(0);
+
+        for (const zone of ['11', '12']) {
+            await wrapper
+                .get(`input[data-zone][value="${zone}"]`)
+                .setValue(false);
+        }
+
+        expect
+            .soft(wrapper.findAll('input[name="zones[]"][required]'))
+            .toHaveLength(1);
+        await wrapper.get('input[data-zone][value="12"]').setValue(true);
+        expect
+            .soft(wrapper.findAll('input[name="zones[]"][required]'))
+            .toHaveLength(0);
+        expect
+            .soft(wrapper.get('#price-12-0').attributes('required'))
+            .toBeDefined();
+        expect
+            .soft(
+                wrapper
+                    .get('label[for=price-12-0]')
+                    .findComponent(RequiredMark)
+                    .exists(),
+            )
+            .toBe(true);
+        expect
+            .soft(wrapper.getComponent(StoreUploadField).attributes('required'))
+            .toBeUndefined();
+        await wrapper.get('#shipping_type').setValue('1');
+        expect.soft(wrapper.find('#billing_type').exists()).toBe(false);
+        expect.soft(wrapper.findAllComponents(RequiredMark)).toHaveLength(3);
+        await wrapper.get('#shipping_type').setValue('0');
+        expect
+            .soft(
+                wrapper
+                    .get('label[for=billing_type]')
+                    .findComponent(RequiredMark)
+                    .exists(),
+            )
+            .toBe(true);
+        wrapper.unmount();
+    });
     afterEach(() => {
         i18n.global.locale.value = 'en';
     });

@@ -2,9 +2,9 @@ import { Link } from '@inertiajs/vue3';
 import { CircleUser, Globe, Store } from '@lucide/vue';
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { admin_dashboard } from '@/actions/App/Http/Controllers/AdminController';
 import { logout } from '@/actions/App/Http/Controllers/Auth/LoginController';
 import { index as storefrontHome } from '@/actions/App/Http/Controllers/HomeController';
+import { index as admin_dashboard } from '@/actions/App/Http/Controllers/Store/Admin/DashboardController';
 import { index as profileIndex } from '@/actions/App/Http/Controllers/Store/Admin/ProfileController';
 import {
     edit as staffEdit,
@@ -155,7 +155,7 @@ describe('StoreAdminLayout', () => {
             navLink(wrapper, 'store.nav.dashboard')
                 ?.findComponent(Link)
                 .exists(),
-        ).toBe(false);
+        ).toBe(true);
         expect(wrapper.find('a[href="/temp"]').exists()).toBe(true);
     });
 

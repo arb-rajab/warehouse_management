@@ -1,8 +1,7 @@
 <?php
 
-use App\Http\Controllers\AdminController;
 use App\Http\Controllers\Api\V2\BrandController as ApiBrandController;
-use App\Http\Controllers\SellerController;
+use App\Http\Controllers\Store\Admin\DashboardController;
 use App\Providers\RouteServiceProvider;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Route as RoutingRoute;
@@ -54,12 +53,9 @@ test('duplicated store route names resolve to the route the legacy app gave them
 
 test('the routes that lost a duplicated name are still registered', function () {
     $apiBrands = Route::getRoutes()->match(Request::create('/temp/api/v2/brands'));
-    $resourceDestroy = Route::getRoutes()->match(Request::create('/temp/admin/sellers/5', 'DELETE'));
 
     expect($apiBrands->getActionName())->toBe(ApiBrandController::class.'@index')
-        ->and($apiBrands->getName())->toBeNull()
-        ->and($resourceDestroy->getActionName())->toBe(SellerController::class.'@destroy')
-        ->and($resourceDestroy->getName())->toBeNull();
+        ->and($apiBrands->getName())->toBeNull();
 });
 
 test('no route name is registered twice', function () {
@@ -95,7 +91,7 @@ test("this app's own auth route names point at its own routes, and the store's s
 test('the store admin dashboard is not swallowed by the storefront catch-all', function () {
     $route = Route::getRoutes()->match(Request::create('/temp/admin'));
 
-    expect($route->getActionName())->toBe(AdminController::class.'@admin_dashboard');
+    expect($route->getActionName())->toBe(DashboardController::class.'@index');
 });
 
 test("the store's route provider does not register this app's own routes a second time", function () {

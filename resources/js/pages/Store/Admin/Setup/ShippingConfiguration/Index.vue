@@ -6,10 +6,13 @@ import { update } from '@/actions/App/Http/Controllers/Store/Admin/ShippingConfi
 import FieldError from '@/components/FieldError.vue';
 import FormField from '@/components/FormField.vue';
 import PageHeader from '@/components/PageHeader.vue';
+import RequiredLegend from '@/components/RequiredLegend.vue';
+import RequiredMark from '@/components/RequiredMark.vue';
 import SubmitButton from '@/components/SubmitButton.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
 import { fieldLabelClass, plainFieldInputClass } from '@/lib/filters';
 import { t } from '@/lib/i18n';
+import { provideRequiredFields } from '@/lib/requiredFields';
 import { useStoreAccess } from '@/lib/storeAccess';
 defineProps<{
     settings: {
@@ -19,6 +22,7 @@ defineProps<{
     };
 }>();
 const access = useStoreAccess();
+const hasRequiredFields = provideRequiredFields();
 const methods = [
     'product_wise_shipping',
     'flat_rate',
@@ -42,11 +46,13 @@ const methods = [
                     class="space-y-4"
                     #default="{ errors, processing }"
                 >
+                    <RequiredLegend v-if="hasRequiredFields" />
                     <input type="hidden" name="type" value="shipping_type" />
                     <div>
-                        <label for="shipping_type" :class="fieldLabelClass">{{
-                            t('store.shippingConfiguration.method')
-                        }}</label>
+                        <label for="shipping_type" :class="fieldLabelClass"
+                            >{{ t('store.shippingConfiguration.method')
+                            }}<RequiredMark
+                        /></label>
                         <select
                             id="shipping_type"
                             name="shipping_type"
@@ -75,6 +81,7 @@ const methods = [
                     class="space-y-4"
                     #default="{ errors, processing }"
                 >
+                    <RequiredLegend v-if="hasRequiredFields" />
                     <input
                         type="hidden"
                         name="type"
@@ -101,6 +108,7 @@ const methods = [
                     class="space-y-4"
                     #default="{ errors, processing }"
                 >
+                    <RequiredLegend v-if="hasRequiredFields" />
                     <input
                         type="hidden"
                         name="type"

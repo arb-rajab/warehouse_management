@@ -31,6 +31,7 @@ import {
  */
 
 const ar = JSON.parse(readFileSync('resources/js/locales/ar.json', 'utf8')) as {
+    common: Record<string, string>;
     store: Record<string, Record<string, string>>;
 };
 
@@ -186,10 +187,8 @@ test('a newsletter is composed with formatting, keeps its draft after a refused 
     expect(posted).not.toContain('forged-recipient');
     expect(posted).toContain('<strong>Fresh dates</strong>');
     expect(posted).not.toContain('user_emails_search');
-    // The send keeps its established return to the retained Blade
-    // dashboard. That page is not asserted here: under the harness's strict
-    // mode it lazy-loads product translations and answers 500, which is
-    // unrelated to the newsletter.
+    // The send keeps its established dashboard destination. Its Inertia
+    // rendering and charts are covered by store-dashboard.spec.ts.
     expect(response.headers()['location']).toMatch(/\/temp\/admin$/);
     expect(reports.filter((report) => report.includes('/temp/admin/'))).toEqual(
         [],
@@ -350,7 +349,7 @@ test('both editors work in Arabic RTL with dark contrast and a keyboard-only too
 
     await openTicket(page, 'RTL ticket', ar.store.support.view);
     await expect(page.locator('#reply-label')).toHaveText(
-        ar.store.support.reply,
+        `${ar.store.support.reply}*${ar.common.required}`,
     );
     await expect(page.locator('label[for="status"]')).toHaveText(
         ar.store.support.replyStatus,
@@ -387,7 +386,7 @@ test('both editors work in Arabic RTL with dark contrast and a keyboard-only too
         page.getByRole('heading', { name: ar.store.newsletters.title }),
     ).toBeVisible();
     await expect(page.locator('#content-label')).toHaveText(
-        ar.store.newsletters.content,
+        `${ar.store.newsletters.content}*${ar.common.required}`,
     );
     await page.locator('#subject').focus();
     await page.keyboard.press('Tab');

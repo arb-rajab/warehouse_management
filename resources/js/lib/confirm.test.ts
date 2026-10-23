@@ -5,6 +5,7 @@ import {
     confirmDeleteUser,
     confirmDeliveryStatus,
     confirmLogout,
+    confirmSellerPayment,
 } from './confirm';
 
 afterEach(() => {
@@ -104,5 +105,16 @@ describe('confirmAcceptVerificationReport', () => {
 
         vi.stubGlobal('confirm', () => true);
         expect(confirmAcceptVerificationReport('A3·2')).toBe(true);
+    });
+});
+
+describe('confirmSellerPayment', () => {
+    it('asks before recording a payout and passes through the answer', () => {
+        const prompt = vi.fn(() => false);
+        vi.stubGlobal('confirm', prompt);
+        expect(confirmSellerPayment()).toBe(false);
+        expect(prompt).toHaveBeenCalledWith('Record this seller payment?');
+        prompt.mockReturnValue(true);
+        expect(confirmSellerPayment()).toBe(true);
     });
 });

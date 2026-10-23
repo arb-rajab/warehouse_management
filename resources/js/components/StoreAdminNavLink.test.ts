@@ -2,7 +2,7 @@ import { Link } from '@inertiajs/vue3';
 import { LayoutDashboard } from '@lucide/vue';
 import { mount } from '@vue/test-utils';
 import { describe, expect, it, vi } from 'vitest';
-import { admin_dashboard } from '@/actions/App/Http/Controllers/AdminController';
+import { index as admin_dashboard } from '@/actions/App/Http/Controllers/Store/Admin/DashboardController';
 import { index as staffIndex } from '@/actions/App/Http/Controllers/Store/Admin/StaffController';
 import { t } from '@/lib/i18n';
 import StoreAdminNavLink from './StoreAdminNavLink.vue';

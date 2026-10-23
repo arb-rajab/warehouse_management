@@ -78,9 +78,13 @@ class AppServiceProvider extends ServiceProvider
         // (the one that stops one address trying many). A request that names
         // no account, such as the token-authenticated `confirm_code`, falls
         // back to its user, then to the IP limit alone: sharing one empty key
-        // would let anonymous callers lock each other out.
+        // would let anonymous callers lock each other out. A value that is not
+        // text (an array, which the endpoint's own rules refuse) names no
+        // account; cast to a string it was a 500 before the endpoint ran.
         RateLimiter::for('store-auth', function (Request $request): array {
-            $account = Str::lower(trim((string) ($request->input('email') ?: $request->input('email_or_phone') ?: $request->input('phone'))));
+            $account = collect([$request->input('email'), $request->input('email_or_phone'), $request->input('phone')])
+                ->first(fn (mixed $value): bool => is_scalar($value) && (bool) $value);
+            $account = Str::lower(trim((string) $account));
             $account = $account !== '' ? $account : ($request->user('store_api') ? 'user:'.$request->user('store_api')->getKey() : '');
 
             $limits = [Limit::perMinute(30)->by('store-auth-ip|'.$request->ip())];

@@ -129,6 +129,14 @@ describe('storeAdminMenu', () => {
 
         expect(inertiaUrls.sort()).toEqual(
             [
+                '/temp/admin',
+                '/temp/admin/classified_products',
+                '/temp/admin/products/seller',
+                '/temp/admin/sellers',
+                '/temp/admin/vendor_commission',
+                '/temp/admin/verification/form',
+                '/temp/admin/seller/payments',
+                '/temp/admin/withdraw_requests_all',
                 '/temp/admin/order-configuration',
                 '/temp/admin/general-setting',
                 '/temp/admin/currency',
@@ -226,6 +234,36 @@ describe('storeAdminMenu', () => {
 });
 
 describe('visibleStoreMenu', () => {
+    it.each([true, false])(
+        'shows the visits link to visit-only staff exactly when permitted (%s)',
+        (allowed) => {
+            const links = storeMenuLinks(
+                visibleStoreMenu(
+                    storeAdminMenu,
+                    storeAccess(
+                        storeSharedProps({
+                            permissions: allowed
+                                ? ['view_representative_visits']
+                                : [],
+                        }),
+                    ),
+                ),
+            );
+
+            expect(links.map((link) => link.href.url)).toEqual(
+                allowed ? [visitsIndex.url()] : [],
+            );
+
+            if (allowed) {
+                expect(links[0]).toMatchObject({
+                    labelKey: 'store.nav.representativeVisits',
+                    permission: 'view_representative_visits',
+                    inertia: true,
+                });
+            }
+        },
+    );
+
     it('shows a link only to a user holding its permission', () => {
         const menu = visibleStoreMenu(
             storeAdminMenu,

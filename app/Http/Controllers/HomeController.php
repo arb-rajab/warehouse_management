@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\ChangeStoreEmailRequest;
+use App\Http\Requests\ResetPasswordWithCodeRequest;
 use App\Mail\SecondEmailVerifyMailManager;
 use App\Services\StoreVerificationCodes;
 use App\Services\TradeLicenseStorage;
@@ -260,7 +262,7 @@ class HomeController extends Controller
 
             $product_queries = ProductQuery::where('product_id', $detailedProduct->id)->where('customer_id', '!=', Auth::id())->latest('id')->paginate(3);
             $total_query = ProductQuery::where('product_id', $detailedProduct->id)->count();
-            $reviews = $detailedProduct->reviews()->paginate(3);
+            $reviews = $detailedProduct->reviews()->with('user')->paginate(3);
 
             // Pagination using Ajax
             if (request()->ajax()) {
@@ -519,31 +521,31 @@ class HomeController extends Controller
 
     public function sellerpolicy()
     {
-        $page =  Page::where('type', 'seller_policy_page')->first();
+        $page =  Page::where('type', 'seller_policy_page')->firstOrFail();
         return view("shop.frontend.policies.sellerpolicy", compact('page'));
     }
 
     public function returnpolicy()
     {
-        $page =  Page::where('type', 'return_policy_page')->first();
+        $page =  Page::where('type', 'return_policy_page')->firstOrFail();
         return view("shop.frontend.policies.returnpolicy", compact('page'));
     }
 
     public function supportpolicy()
     {
-        $page =  Page::where('type', 'support_policy_page')->first();
+        $page =  Page::where('type', 'support_policy_page')->firstOrFail();
         return view("shop.frontend.policies.supportpolicy", compact('page'));
     }
 
     public function terms()
     {
-        $page =  Page::where('type', 'terms_conditions_page')->first();
+        $page =  Page::where('type', 'terms_conditions_page')->firstOrFail();
         return view("shop.frontend.policies.terms", compact('page'));
     }
 
     public function privacypolicy()
     {
-        $page =  Page::where('type', 'privacy_policy_page')->first();
+        $page =  Page::where('type', 'privacy_policy_page')->firstOrFail();
         return view("shop.frontend.policies.privacypolicy", compact('page'));
     }
 
@@ -590,7 +592,7 @@ class HomeController extends Controller
 
 
     // Form request
-    public function update_email(Request $request)
+    public function update_email(ChangeStoreEmailRequest $request)
     {
         $email = $request->email;
         if (isUnique($email)) {
@@ -661,23 +663,22 @@ class HomeController extends Controller
         return redirect()->route('dashboard');
     }
 
-    public function reset_password_with_code(Request $request)
+    /**
+     * The request checks the input first (a mismatched confirmation is its
+     * `confirmed` error, where this flashed a warning); the code is then tried
+     * against the account the email names, exactly as before.
+     */
+    public function reset_password_with_code(ResetPasswordWithCodeRequest $request)
     {
-        if ($request->password != $request->password_confirmation) {
-            flash(translate("Password and confirm password didn't match"))->warning();
+        $user = StoreUser::where('email', $request->validated('email'))->first();
 
-            return view('shop.auth.passwords.reset');
-        }
-
-        $user = StoreUser::where('email', $request->email)->first();
-
-        if ($user === null || ! app(StoreVerificationCodes::class)->consume($user, (string) $request->code)) {
+        if ($user === null || ! app(StoreVerificationCodes::class)->consume($user, $request->validated('code'))) {
             flash(translate("Verification code mismatch"))->error();
 
-            return view('shop.auth.passwords.reset');
+            return view('shop.auth.passwords.reset', ['email' => $request->validated('email')]);
         }
 
-        $user->password = Hash::make($request->password);
+        $user->password = Hash::make($request->validated('password'));
         $user->email_verified_at = now();
         $user->save();
         event(new PasswordReset($user));

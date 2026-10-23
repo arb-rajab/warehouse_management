@@ -1,11 +1,14 @@
 import { Form, Link } from '@inertiajs/vue3';
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { nextTick } from 'vue';
 import {
     create as rolesCreate,
     index as rolesIndex,
     store as rolesStore,
 } from '@/actions/App/Http/Controllers/Store/Admin/RoleController';
+import RequiredLegend from '@/components/RequiredLegend.vue';
+import RequiredMark from '@/components/RequiredMark.vue';
 import ResourceFormPage from '@/components/ResourceFormPage.vue';
 import StoreRoleFormFields from '@/components/StoreRoleFormFields.vue';
 import SubmitButton from '@/components/SubmitButton.vue';
@@ -94,5 +97,13 @@ describe('Store roles Create', () => {
             checkedPermissionIds: [],
             errors: { name: 'The name has already been taken.' },
         });
+    });
+
+    it('explains the required name with the legend', async () => {
+        const wrapper = mountPage();
+        await nextTick();
+
+        expect(wrapper.findComponent(RequiredLegend).exists()).toBe(true);
+        expect(wrapper.findAllComponents(RequiredMark)).toHaveLength(1);
     });
 });

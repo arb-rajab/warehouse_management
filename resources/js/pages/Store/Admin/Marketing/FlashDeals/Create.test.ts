@@ -5,6 +5,7 @@ import {
     index as campaignIndex,
     store,
 } from '@/actions/App/Http/Controllers/Store/Admin/FlashDealController';
+import RequiredLegend from '@/components/RequiredLegend.vue';
 import ResourceFormPage from '@/components/ResourceFormPage.vue';
 import StoreFlashDealFormFields from '@/components/StoreFlashDealFormFields.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
@@ -41,7 +42,7 @@ beforeEach(() =>
         props: defaultAuthProps({ store: storeSharedProps() }),
     }),
 );
-it('fully mounts the store form with action, cancel route, labels and field props', () => {
+it('fully mounts the store form with action, cancel route, labels and field props', async () => {
     const selectedProducts = [storeCampaignProduct()];
     const wrapper = mount(Create, { props: { selectedProducts } });
     expect(wrapper.getComponent(Form).props('action')).toEqual(store());
@@ -57,5 +58,8 @@ it('fully mounts the store form with action, cancel route, labels and field prop
     expect(
         wrapper.getComponent(StoreFlashDealFormFields).props(),
     ).toMatchObject({ selectedProducts, errors: { title: 'Invalid' } });
+    await wrapper.vm.$nextTick();
+    expect(wrapper.text()).toContain(t('common.requiredLegend'));
+    expect(wrapper.findAllComponents(RequiredLegend)).toHaveLength(1);
     expect(wrapper.text()).toContain(t('store.flashDeals.create.title'));
 });

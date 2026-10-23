@@ -70,11 +70,15 @@ STUB
 
     # `migrate` appends a table before honouring FAIL_MIGRATE: the partial DDL
     # is the point, not an accident of the stub.
+    # Every artisan command is appended to $ARTISAN_LOG, so a case can assert
+    # which ran and in what order.
     cat > "$WORK/bin/php85" <<'STUB'
 #!/bin/bash
+echo "$2" >> "$ARTISAN_LOG"
 case "$2" in
   migrate) echo "orphan_table" >> "$DBSTATE"
            [ "${FAIL_MIGRATE:-0}" = 1 ] && { echo "SQLSTATE[42S01] simulated" >&2; exit 1; } ;;
+  event:cache) [ "${FAIL_EVENT_CACHE:-0}" = 1 ] && { echo "event cache error" >&2; exit 1; } ;;
   down) touch "$MAINT" ;;
   up)   rm -f "$MAINT" ;;
   queue:restart) [ "${FAIL_AFTER_PUBLISH:-0}" = 1 ] && { echo "simulated post-publish failure" >&2; exit 1; } ;;
@@ -118,7 +122,7 @@ commit_new_revision() {
 
 deploy() {
     env PATH="$WORK/bin:$PATH" \
-        DBSTATE="$WORK/dbstate" MAINT="$WORK/maint" \
+        DBSTATE="$WORK/dbstate" MAINT="$WORK/maint" ARTISAN_LOG="$WORK/artisan.log" \
         DEPLOY_PATH="$WORK/host" TARGET_BRANCH=develop TARGET_SHA="$1" \
         PHP_BINARY=php85 KEEP_RELEASES=2 \
         "${@:2}" \
@@ -142,6 +146,26 @@ check "site is live" "$(maintenance_state)" "off"
 # storage:link cannot run on the target host, so the link is made in bash.
 check "public/storage links into shared storage" \
     "$(readlink "$WORK/host/current/public/storage")" "$WORK/host/shared/storage/app/public"
+
+# Production health fails OptimizedAppCheck until config, routes and events are
+# all cached, so the deploy must run each of them, after migrate and before it
+# publishes the release (queue:restart is the first command after the flip).
+artisan_order() { grep -E '^(migrate|config:cache|event:cache|route:cache|view:cache|queue:restart)$' "$WORK/artisan.log" | tr '\n' ' '; }
+
+echo "a deploy caches config, events, routes and views after migrating, before publishing"
+check "caches run in order between migrate and queue:restart" \
+    "$(artisan_order)" "migrate config:cache event:cache route:cache view:cache queue:restart "
+
+echo "a failed event:cache rolls the deploy back like any other cache step"
+before_tables="$(tables)"
+before_release="$(published)"
+deploy "$(commit_new_revision)" FAIL_EVENT_CACHE=1 && rc=0 || rc=$?
+check "exits non-zero" "$rc" "1"
+check "live release is unchanged" "$(published)" "$before_release"
+check "database is back to its pre-deploy state" "$(tables)" "$before_tables"
+check "route:cache ran only for the first deploy, not after the failure" \
+    "$(grep -c '^route:cache$' "$WORK/artisan.log" | tr -d ' ')" "1"
+check "site is out of maintenance" "$(maintenance_state)" "off"
 
 echo "a failed migration rolls the database back and keeps the old release live"
 before_tables="$(tables)"

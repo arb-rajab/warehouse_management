@@ -31,6 +31,7 @@ const stocks =
  */
 function seedVariantProduct(): void {
     seedStoreFixtures(String.raw`
+        App\Models\Product::query()->update(['thumbnail_img' => null]);
         foreach (App\Models\Product::where('name', ${php(name)})->pluck('id') as $id) {
             foreach (['product_translations', 'product_stocks', 'product_taxes', 'product_variations', 'product_barcodes', 'flash_deal_products', 'wms_product_settings'] as $table) {
                 Illuminate\Support\Facades\DB::table($table)->where('product_id', $id)->delete();
@@ -127,4 +128,53 @@ test('the stored variant rows post back unchanged, and a language tab edits its 
     expect(reports.filter((report) => report.includes('/temp/admin/'))).toEqual(
         [],
     );
+});
+
+test('explicit attribute reordering reconciles imported stock without replacing its id or values', async ({
+    page,
+}) => {
+    seedVariantProduct();
+    seedStoreFixtures(String.raw`
+        $product = App\Models\Product::where('name', ${php(name)})->sole();
+        $size = Illuminate\Support\Facades\DB::table('attributes')->where('name', 'Browser edit size')->value('id');
+        $fabric = Illuminate\Support\Facades\DB::table('attributes')->insertGetId(['name' => 'Browser edit fabric']);
+        Illuminate\Support\Facades\DB::table('attribute_values')->insert(['attribute_id' => $fabric, 'value' => 'Cotton']);
+        $product->forceFill(['choice_options' => json_encode([['attribute_id' => $size, 'values' => ['Small']], ['attribute_id' => $fabric, 'values' => ['Cotton']]]), 'attributes' => json_encode([$size, $fabric])])->save();
+        $product->stocks()->delete();
+        $product->stocks()->create(['variant' => 'Cotton-Small', 'price' => '17.50', 'qty' => 47, 'sku' => 'KEEP']);
+    `);
+    const id = storedProduct(name, '$product->id') as number;
+    const before = storedProduct(name, stocks);
+    await loginAsStoreAdmin(page);
+    const reports = await watchCsp(page);
+    await expectStrictPolicy(page, `/temp/admin/products/admin/${id}/edit`);
+    await expect(page.getByRole('alert')).toContainText('Cotton-Small');
+    await page
+        .getByRole('button', {
+            name: 'Move Browser edit fabric up',
+            exact: true,
+        })
+        .click();
+    await expect(
+        page.locator('input[name="variants[0][variant]"]'),
+    ).toHaveValue('Cotton-Small');
+    await expect(page.locator('input[name="variants[0][price]"]')).toHaveValue(
+        '17.5',
+    );
+    await expect(page.locator('input[name="variants[0][qty]"]')).toHaveValue(
+        '47',
+    );
+    expect(storedProduct(name, stocks)).toEqual(before);
+    await page
+        .getByRole('button', { name: 'Update product', exact: true })
+        .click();
+    await expect(
+        page.locator('input[name="variants[0][variant]"]'),
+    ).toHaveValue('Cotton-Small');
+    await expect(
+        page.getByRole('alert').filter({ hasText: 'Stored stock' }),
+    ).toHaveCount(0);
+    expect(storedProduct(name, stocks)).toEqual(before);
+    expect(await documentViolations(page)).toEqual([]);
+    expect(reports).toEqual([]);
 });

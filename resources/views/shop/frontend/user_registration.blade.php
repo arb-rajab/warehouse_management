@@ -19,11 +19,12 @@
                                         <div class="">
                                             <form id="reg-form" class="form-default" role="form" action="{{ route('register') }}" method="POST" enctype="multipart/form-data">
                                                 @csrf
+                                                <x-required-legend />
 
                                                 <!-- Name -->
                                                 <div class="form-group">
-                                                    <label for="name" class="fs-12 fw-700 text-soft-dark">{{  translate('Full Name') }}</label>
-                                                    <input type="text" class="form-control rounded-0{{ $errors->has('name') ? ' is-invalid' : '' }}" value="{{ old('name') }}" placeholder="{{  translate('Full Name') }}" name="name">
+                                                    <label for="name" class="fs-12 fw-700 text-soft-dark">{{  translate('Full Name') }}<x-required-mark /></label>
+                                                    <input type="text" class="form-control rounded-0{{ $errors->has('name') ? ' is-invalid' : '' }}" value="{{ old('name') }}" placeholder="{{  translate('Full Name') }}" name="name" required>
                                                     @if ($errors->has('name'))
                                                         <span class="invalid-feedback" role="alert">
                                                             <strong>{{ $errors->first('name') }}</strong>
@@ -33,8 +34,8 @@
 
                                                 <!-- Company Name -->
                                                 <div class="form-group">
-                                                    <label for="company_name" class="fs-12 fw-700 text-soft-dark">{{  translate('Company Name') }}</label>
-                                                    <input type="text" class="form-control rounded-0{{ $errors->has('company_name') ? ' is-invalid' : '' }}" value="{{ old('company_name') }}" placeholder="{{  translate('Company name') }}" name="company_name">
+                                                    <label for="company_name" class="fs-12 fw-700 text-soft-dark">{{  translate('Company Name') }}<x-required-mark /></label>
+                                                    <input type="text" class="form-control rounded-0{{ $errors->has('company_name') ? ' is-invalid' : '' }}" value="{{ old('company_name') }}" placeholder="{{  translate('Company name') }}" name="company_name" required>
                                                     @if ($errors->has('company_name'))
                                                         <span class="invalid-feedback" role="alert">
                                                             <strong>{{ $errors->first('company_name') }}</strong>
@@ -66,8 +67,8 @@
                                                     </div>
                                                 @else
                                                     <div class="form-group">
-                                                        <label for="email" class="fs-12 fw-700 text-soft-dark">{{  translate('Email') }}</label>
-                                                        <input type="email" class="form-control rounded-0{{ $errors->has('email') ? ' is-invalid' : '' }}" value="{{ old('email') }}" placeholder="{{  translate('Email') }}" name="email">
+                                                        <label for="email" class="fs-12 fw-700 text-soft-dark">{{  translate('Email') }}<x-required-mark /></label>
+                                                        <input type="email" class="form-control rounded-0{{ $errors->has('email') ? ' is-invalid' : '' }}" value="{{ old('email') }}" placeholder="{{  translate('Email') }}" name="email" required>
                                                         @if ($errors->has('email'))
                                                             <span class="invalid-feedback" role="alert">
                                                                 <strong>{{ $errors->first('email') }}</strong>
@@ -78,8 +79,8 @@
 
 
                                                 <div class="form-group">
-                                                    <label for="phone" class="fs-12 fw-700 text-soft-dark">{{  translate('phone') }}</label>
-                                                    <input type="tel" class="form-control rounded-0{{ $errors->has('phone') ? ' is-invalid' : '' }}" value="{{ old('phone') }}" placeholder="{{  translate('phone') }}" name="phone">
+                                                    <label for="phone" class="fs-12 fw-700 text-soft-dark">{{  translate('phone') }}<x-required-mark /></label>
+                                                    <input type="tel" class="form-control rounded-0{{ $errors->has('phone') ? ' is-invalid' : '' }}" value="{{ old('phone') }}" placeholder="{{  translate('phone') }}" name="phone" required>
                                                     @if ($errors->has('phone'))
                                                         <span class="invalid-feedback" role="alert">
                                                             <strong>{{ $errors->first('phone') }}</strong>
@@ -89,8 +90,8 @@
 
 
                                                 <div class="form-group">
-                                                    <label for="country" class="fs-12 fw-700 text-soft-dark">{{ translate('Country') }}</label>
-                                                    <select class="form-control aiz-selectpicker" name="country" >
+                                                    <label for="country" class="fs-12 fw-700 text-soft-dark">{{ translate('Country') }}<x-required-mark /></label>
+                                                    <select class="form-control aiz-selectpicker" name="country" required>
                                                         @foreach ($countries as $country)
                                                             <option value="{{ $country->name }}" @if ($country->name == old('country')) selected @endif>{{ $country->name }}</option>
                                                         @endforeach
@@ -167,8 +168,8 @@
 
                                                 <!-- password -->
                                                 <div class="form-group">
-                                                    <label for="password" class="fs-12 fw-700 text-soft-dark">{{  translate('Password') }}</label>
-                                                    <input type="password" class="form-control rounded-0{{ $errors->has('password') ? ' is-invalid' : '' }}" placeholder="{{  translate('Password') }}" name="password">
+                                                    <label for="password" class="fs-12 fw-700 text-soft-dark">{{  translate('Password') }}<x-required-mark /></label>
+                                                    <input type="password" class="form-control rounded-0{{ $errors->has('password') ? ' is-invalid' : '' }}" placeholder="{{  translate('Password') }}" name="password" required>
                                                     <div class="text-right mt-1">
                                                         <span class="fs-12 fw-400 text-gray-dark">{{ translate('Password must contain at least 6 digits') }}</span>
                                                     </div>
@@ -181,14 +182,17 @@
 
                                                 <!-- password Confirm -->
                                                 <div class="form-group">
-                                                    <label for="password_confirmation" class="fs-12 fw-700 text-soft-dark">{{  translate('Confirm Password') }}</label>
-                                                    <input type="password" class="form-control rounded-0" placeholder="{{  translate('Confirm Password') }}" name="password_confirmation">
+                                                    <label for="password_confirmation" class="fs-12 fw-700 text-soft-dark">{{  translate('Confirm Password') }}<x-required-mark /></label>
+                                                    <input type="password" class="form-control rounded-0" placeholder="{{  translate('Confirm Password') }}" name="password_confirmation" required>
                                                 </div>
 
                                                 <!-- Recaptcha -->
                                                 @if(get_setting('google_recaptcha') == 1)
                                                     <div class="form-group">
                                                         <div class="g-recaptcha" data-sitekey="{{ config('services.recaptcha.site_key') }}"></div>
+                                                        @error('g-recaptcha-response')
+                                                            <span class="invalid-feedback d-block" role="alert"><strong>{{ $message }}</strong></span>
+                                                        @enderror
                                                     </div>
                                                 @endif
 
@@ -206,9 +210,16 @@
                                                             </div>
 
                                                             <div class="modal-body">
-                                                                <textarea class="form-control" rows="20" disabled>
-                                                                    {{ get_setting('terms') }}
-                                                                </textarea>
+                                                                @php
+                                                                    $termsPage = \App\Models\Page::query()->where('type', 'terms_conditions_page')->first();
+                                                                    $termsContent = $termsPage?->getTranslation('content');
+                                                                @endphp
+                                                                @if (filled($termsContent))
+                                                                    <div class="border p-3" id="terms_conditions_text" style="max-height: 60vh; overflow-y: auto;">{!! $termsContent !!}</div>
+                                                                    <a href="{{ route('terms') }}" target="_blank" rel="noopener" class="d-inline-block mt-2 fs-12">{{ translate('Open the terms in a new page') }}</a>
+                                                                @else
+                                                                    <p class="text-muted mb-0" id="terms_conditions_text">{{ translate('The terms and conditions are not available yet.') }}</p>
+                                                                @endif
                                                             </div>
 
                                                             <div class="modal-footer pb-4">

@@ -52,7 +52,7 @@ class BlogController extends Controller
     }
 
     public function blog_details($slug) {
-        $blog = Blog::with('category:id,category_name')->where('slug', $slug)->first();
+        $blog = Blog::with('category:id,category_name')->where('slug', $slug)->where('status', 1)->firstOrFail();
         $recent_blogs = Blog::with('category:id,category_name')->where('status', 1)->orderBy('created_at', 'desc')->limit(9)->get();
         return view("shop.frontend.blog.details", compact('blog', 'recent_blogs'));
     }

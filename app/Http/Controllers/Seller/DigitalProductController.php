@@ -2,13 +2,11 @@
 
 namespace App\Http\Controllers\Seller;
 
+use App\Http\Requests\Seller\DigitalProductRequest;
+use App\Services\Store\SellerDigitalProductWriter;
 use App\Models\Category;
 use App\Models\Product;
-use App\Models\ProductStock;
-use App\Models\ProductTax;
-use App\Models\ProductTranslation;
 use App\Models\Upload;
-use App\Services\ProductTaxService;
 use Auth;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -23,7 +21,7 @@ class DigitalProductController  extends Controller
      */
     public function index(Request $request)
     {
-        $products = Product::where('user_id', Auth::user()->id)->where('digital', 1)->orderBy('created_at', 'desc')->paginate(10);
+        $products = Product::query()->select(['id', 'name', 'slug', 'category_id', 'unit_price', 'published', 'featured'])->where('user_id', Auth::user()->id)->where('digital', 1)->with(['product_translations:id,product_id,lang,name', 'category:id,name', 'category.category_translations:id,category_id,lang,name'])->orderBy('created_at', 'desc')->paginate(10);
         return view('shop.seller.product.digitalproducts.index', compact('products'));
     }
 
@@ -36,16 +34,14 @@ class DigitalProductController  extends Controller
     {
         if(addon_is_activated('seller_subscription')){
             if(seller_package_validity_check()){
-                $categories = Category::where('digital', 1)->get();
-                return view('shop.seller.product.digitalproducts.create', compact('categories'));
+                return view('shop.seller.product.digitalproducts.create', $this->formOptions());
             }
             else {
                 flash(translate('Please upgrade your package.'))->warning();
                 return back();
             }
         }
-        $categories = Category::where('digital', 1)->get();
-        return view('shop.seller.product.digitalproducts.create', compact('categories'));
+        return view('shop.seller.product.digitalproducts.create', $this->formOptions());
     }
 
     /**
@@ -54,76 +50,15 @@ class DigitalProductController  extends Controller
      * @param  Request  $request
      * @return Response
      */
-    public function store(Request $request)
+    public function store(DigitalProductRequest $request, SellerDigitalProductWriter $writer)
     {
-        if(addon_is_activated('seller_subscription')){
-            if(!seller_package_validity_check()){
-                flash(translate('Please upgrade your package.'))->warning();
-                return redirect()->route('seller.digitalproducts');
-            }
-        }
-
-        $product                    = new Product;
-        $product->name              = $request->name;
-        $product->added_by          = 'seller';
-        $product->user_id           = Auth::user()->id;
-        $product->category_id       = $request->category_id;
-        $product->digital           = 1;
-        $product->photos            = $request->photos;
-        $product->thumbnail_img     = $request->thumbnail_img;
-
-        $tags = [];
-        if($request->tags[0] != null){
-            foreach (json_decode($request->tags[0]) as $key => $tag) {
-                array_push($tags, $tag->value);
-            }
-        }
-        $product->tags = implode(',', $tags);
-
-        $product->description       = $request->description;
-        $product->unit_price        = $request->unit_price;
-        $product->purchase_price    = $request->purchase_price;
-        $product->discount          = $request->discount;
-        $product->discount_type     = $request->discount_type;
-
-        $product->meta_title        = $request->meta_title;
-        $product->meta_description  = $request->meta_description;
-        $product->meta_img          = $request->meta_img;
-
-        $product->file_name = $request->file;
-
-        $product->slug = preg_replace('/[^A-Za-z0-9\-]/', '', str_replace(' ', '-', $request->name)).'-'.rand(10000,99999);
-
-        if($product->save()){
-            $request->merge(['product_id' => $product->id]);
-            //VAT & Tax
-            if ($request->tax_id) {
-                (new ProductTaxService)->store($request->only([
-                    'tax_id', 'tax', 'tax_type', 'product_id'
-                ]));
-            }
-
-            $product_stock              = new ProductStock;
-            $product_stock->product_id  = $product->id;
-            $product_stock->variant     = '';
-            $product_stock->price       = $request->unit_price;
-            $product_stock->sku         = '';
-            $product_stock->qty         = 0;
-            $product_stock->save();
-
-            // Product Translations
-            $product_translation                = ProductTranslation::firstOrNew(['lang' => config('app.default_language'), 'product_id' => $product->id]);
-            $product_translation->name          = $request->name;
-            $product_translation->description   = $request->description;
-            $product_translation->save();
-
-            flash(translate('Digital Product has been inserted successfully'))->success();
+        if (addon_is_activated('seller_subscription') && ! seller_package_validity_check()) {
+            flash(translate('Please upgrade your package.'))->warning();
             return redirect()->route('seller.digitalproducts');
         }
-        else{
-            flash(translate('Something went wrong'))->error();
-            return back();
-        }
+        $writer->create($request->user('store'), $request->productData());
+        flash(translate('Digital Product has been inserted successfully'))->success();
+        return redirect()->route('seller.digitalproducts');
     }
 
     /**
@@ -134,107 +69,37 @@ class DigitalProductController  extends Controller
      */
     public function edit(Request $request, $id)
     {
-        $categories = Category::where('digital', 1)->get();
-        $lang = $request->lang;
+        $lang = is_string($request->lang) ? $request->lang : config('app.default_language');
         $product = Product::findOrFail($id);
         if (Gate::denies('updateAsSeller', $product)) {
             flash(translate('This product is not yours.'))->warning();
             return back();
         }
 
-        return view('shop.seller.product.digitalproducts.edit', compact('categories', 'product', 'lang'));
+        $product->load(['product_translations', 'taxes']);
+        return view('shop.seller.product.digitalproducts.edit', [...$this->formOptions(), 'product' => $product, 'lang' => $lang]);
     }
 
-    /**
-     * Update the specified resource in storage.
-     *
-     * @param  Request  $request
-     * @param  int  $id
-     * @return Response
-     */
-    public function update(Request $request, $id)
+    /** @return array<string, mixed> */
+    private function formOptions(): array
     {
-        $product                    = Product::findOrFail($id);
-        if (Gate::denies('updateAsSeller', $product)) {
+        return [
+            'product' => null, 'lang' => config('app.default_language'),
+            'categoryOptions' => Category::treeOptions(fn ($roots) => $roots->where('digital', 1)),
+            'languages' => \App\Models\Language::query()->select(['id', 'code', 'name'])->get(),
+            'taxes' => \App\Models\Tax::query()->select(['id', 'name'])->where('tax_status', 1)->get(),
+        ];
+    }
+
+    public function update(DigitalProductRequest $request, Product $id, SellerDigitalProductWriter $writer)
+    {
+        if (Gate::denies('updateAsSeller', $id)) {
             flash(translate('This product is not yours.'))->warning();
             return back();
         }
-
-        if($request->lang == config("app.default_language")){
-            $product->name          = $request->name;
-            $product->description   = $request->description;
-        }
-
-        $product->category_id       = $request->category_id;
-        $product->photos            = $request->photos;
-        $product->thumbnail_img     = $request->thumbnail_img;
-
-        $tags = [];
-        if($request->tags[0] != null){
-            foreach (json_decode($request->tags[0]) as $key => $tag) {
-                array_push($tags, $tag->value);
-            }
-        }
-        $product->tags = implode(',', $tags);
-
-        $product->unit_price        = $request->unit_price;
-        $product->purchase_price    = $request->purchase_price;
-        $product->discount          = $request->discount;
-        $product->discount_type     = $request->discount_type;
-
-        $product->meta_title        = $request->meta_title;
-        $product->meta_description  = $request->meta_description;
-        $product->meta_img          = $request->meta_img;
-        $product->slug              = strtolower($request->slug);
-
-        // if($request->hasFile('file')){
-        //     $product->file_name = $request->file('file')->getClientOriginalName();
-        //     $product->file_path = $request->file('file')->store('uploads/products/digital');
-        // }
-
-        $product->file_name = $request->file;
-
-        // Delete From Product Stock
-        foreach ($product->stocks as $key => $stock) {
-            $stock->delete();
-        }
-
-        if($product->save()){
-            $request->merge(['product_id' => $product->id]);
-            //VAT & Tax
-            if ($request->tax_id) {
-                ProductTax::where('product_id', $product->id)->delete();
-                (new ProductTaxService)->store($request->only([
-                    'tax_id', 'tax', 'tax_type', 'product_id'
-                ]));
-            }
-            // Insert Into Product Stock
-            $product_stock              = new ProductStock;
-            $product_stock->product_id  = $product->id;
-            $product_stock->variant     = '';
-            $product_stock->price       = $request->unit_price;
-            $product_stock->sku         = '';
-            $product_stock->qty         = 0;
-            $product_stock->save();
-
-            // Product Translations
-            $product_translation                = ProductTranslation::firstOrNew(['lang' => $request->lang, 'product_id' => $product->id]);
-            $product_translation->name          = $request->name;
-            $product_translation->description   = $request->description;
-            $product_translation->save();
-
-            flash(translate('Digital Product has been updated successfully'))->success();
-            if(Auth::user()->user_type == 'admin' || Auth::user()->user_type == 'staff'){
-                return back();
-            }
-            else{
-                return back();
-            }
-        }
-        else{
-            flash(translate('Something went wrong'))->error();
-            return back();
-        }
+        $writer->update($request->user('store'), $id, $request->productData());
+        flash(translate('Digital Product has been updated successfully'))->success();
+        return back();
     }
 
     /**

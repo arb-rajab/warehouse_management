@@ -78,7 +78,7 @@ describe('StoreNewsletterFormFields', () => {
                 label: t('store.newsletters.subject'),
             });
             expect(wrapper.get('label[for="subject"]').text()).toBe(
-                t('store.newsletters.subject'),
+                t('store.newsletters.subject') + '*' + t('common.required'),
             );
             expect(wrapper.get('#subject').attributes()).toMatchObject({
                 name: 'subject',
@@ -95,7 +95,7 @@ describe('StoreNewsletterFormFields', () => {
                 modelValue: '',
             });
             expect(wrapper.get('#content-label').text()).toBe(
-                t('store.newsletters.content'),
+                t('store.newsletters.content') + '*' + t('common.required'),
             );
             expect(
                 wrapper.get('input[type="hidden"][name="content"]').element,

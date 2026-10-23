@@ -166,7 +166,7 @@ test('a mismatched confirmation on the web reset leaves the code usable', functi
 
     $this->post(route('shop.password.update'), [
         'email' => 'web@example.com', 'code' => $code, 'password' => 'new-password1', 'password_confirmation' => 'different-password1',
-    ])->assertOk();
+    ])->assertUnprocessable(); // ResetPasswordWithCodeRequest's `confirmed`, checked before the code is tried.
 
     expect(Hash::check('old-password', $user->fresh()->password))->toBeTrue();
 

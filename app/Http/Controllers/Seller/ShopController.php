@@ -3,10 +3,11 @@
 namespace App\Http\Controllers\Seller;
 
 use App\Services\ShopVerificationStorage;
-use App\Models\BusinessSetting;
+use App\Http\Requests\Seller\UpdateShopRequest;
+use App\Http\Requests\Seller\StoreShopVerificationRequest;
+use App\Support\ShopVerificationForm;
 use App\Models\Shop;
 use Auth;
-use Illuminate\Http\Request;
 
 class ShopController extends Controller
 {
@@ -16,7 +17,7 @@ class ShopController extends Controller
         return view('shop.seller.shop', compact('shop'));
     }
 
-    public function update(Request $request)
+    public function update(UpdateShopRequest $request)
     {
         $shop = Auth::user()->shop ?? abort(404);
 
@@ -84,11 +85,11 @@ class ShopController extends Controller
         }
     }
 
-    public function verify_form_store(Request $request)
+    public function verify_form_store(StoreShopVerificationRequest $request)
     {
         $data = [];
         $i = 0;
-        foreach (json_decode(BusinessSetting::where('type', 'verification_form')->first()?->value) as $key => $element) {
+        foreach (ShopVerificationForm::fields() as $key => $element) {
             $item = [];
             if ($element->type == 'text') {
                 $item['type'] = 'text';

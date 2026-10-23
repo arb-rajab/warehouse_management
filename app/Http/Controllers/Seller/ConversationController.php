@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Seller;
 
+use App\Http\Requests\Seller\StoreMessageRequest;
 use App\Models\BusinessSetting;
 use App\Models\Conversation;
 use App\Models\Message;
@@ -74,7 +75,7 @@ class ConversationController extends Controller
      * @param  Request  $request
      * @return Response
      */
-    public function message_store(Request $request)
+    public function message_store(StoreMessageRequest $request)
     {
         $conversation = Conversation::findOrFail($request->conversation_id);
         Gate::authorize('participate', $conversation);

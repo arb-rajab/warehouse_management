@@ -1,22 +1,33 @@
 <script setup lang="ts">
 import FieldError from '@/components/FieldError.vue';
+import RequiredMark from '@/components/RequiredMark.vue';
 import { fieldLabelClass, plainFieldInputClass } from '@/lib/filters';
 import { t } from '@/lib/i18n';
-defineProps<{
-    name: string;
-    label: string;
-    value?: boolean;
-    error?: string;
-    disabled?: boolean;
-}>();
+/**
+ * `required` defaults to true, as the select always carried it; pass
+ * `:required="false"` where the server rule is not `required`.
+ */
+withDefaults(
+    defineProps<{
+        name: string;
+        label: string;
+        value?: boolean;
+        error?: string;
+        disabled?: boolean;
+        required?: boolean;
+    }>(),
+    { required: true },
+);
 </script>
 <template>
     <div>
-        <label :for="name" :class="fieldLabelClass">{{ label }}</label>
+        <label :for="name" :class="fieldLabelClass"
+            >{{ label }}<RequiredMark v-if="required"
+        /></label>
         <select
             :id="name"
             :name="name"
-            required
+            :required="required"
             :disabled="disabled"
             :class="[
                 plainFieldInputClass,

@@ -1027,9 +1027,9 @@ if (!function_exists('app_timezone')) {
 
 //return file uploaded via uploader
 if (!function_exists('uploaded_asset')) {
-    function uploaded_asset($id)
+    function uploaded_asset($id, ?Upload $asset = null)
     {
-        if (($asset = Upload::find($id)) != null) {
+        if (($asset ??= Upload::find($id)) != null) {
             return $asset->external_link == null ? my_asset($asset->file_name) : ($asset->file_name == null ? $asset->external_link : $asset->file_name);
         }
         return static_asset('assets/img/placeholder.jpg');

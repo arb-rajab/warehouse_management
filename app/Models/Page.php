@@ -8,6 +8,19 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Page extends Model
 {
+    /**
+     * The storefront's own route for each policy page type. Such a page is
+     * also served at its slug by the custom-page catch-all, so its policy
+     * route is the one to index and to list in the sitemap.
+     */
+    public const array POLICY_ROUTES = [
+        'seller_policy_page' => 'sellerpolicy',
+        'return_policy_page' => 'returnpolicy',
+        'support_policy_page' => 'supportpolicy',
+        'terms_conditions_page' => 'terms',
+        'privacy_policy_page' => 'privacypolicy',
+    ];
+
     public function getTranslation(string $field = '', string|false|null $lang = false): mixed
     {
         $lang = $lang == false ? App::getLocale() : $lang;
@@ -20,6 +33,12 @@ class Page extends Model
     public function page_translations(): HasMany
     {
         return $this->hasMany(PageTranslation::class);
+    }
+
+    /** The name of the policy route this page is the content of, if it is a policy page. */
+    public function policyRouteName(): ?string
+    {
+        return self::POLICY_ROUTES[$this->type] ?? null;
     }
 
     /**

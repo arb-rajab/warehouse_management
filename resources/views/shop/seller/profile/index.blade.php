@@ -11,6 +11,7 @@
     <form action="{{ route('seller.profile.update', $user->id) }}" method="POST" enctype="multipart/form-data">
         <input name="_method" type="hidden" value="POST">
         @csrf
+        <x-required-legend />
         <!-- Basic Info-->
         <div class="card">
             <div class="card-header">
@@ -18,10 +19,10 @@
             </div>
             <div class="card-body">
                 <div class="form-group row">
-                    <label class="col-md-2 col-form-label" for="name">{{ translate('Your Name') }}</label>
+                    <label class="col-md-2 col-form-label" for="name">{{ translate('Your Name') }}<x-required-mark /></label>
                     <div class="col-md-10">
-                        <input type="text" name="name" value="{{ $user->name }}" id="name" class="form-control" placeholder="{{ translate('Your Name') }}" required>
-                        @error('name')
+                        <input type="text" name="name" value="{{ $errors->sellerProfile->any() ? (is_scalar(old('name')) ? old('name') : '') : $user->name }}" id="name" class="form-control" placeholder="{{ translate('Your Name') }}" maxlength="191" required>
+                        @error('name', 'sellerProfile')
                             <small class="form-text text-danger">{{ $message }}</small>
                         @enderror
                     </div>
@@ -30,31 +31,35 @@
                 <div class="form-group row">
                     <label class="col-md-2 col-form-label" for="phone">{{ translate('Your Phone') }}</label>
                     <div class="col-md-10">
-                        <input type="text" name="phone" value="{{ $user->phone }}" id="phone" class="form-control" placeholder="{{ translate('Your Phone')}}">
-                        @error('phone')
+                        <input type="text" name="phone" value="{{ $errors->sellerProfile->any() ? (is_scalar(old('phone')) ? old('phone') : '') : $user->phone }}" id="phone" class="form-control" placeholder="{{ translate('Your Phone')}}" maxlength="20">
+                        @error('phone', 'sellerProfile')
                             <small class="form-text text-danger">{{ $message }}</small>
                         @enderror
                     </div>
                 </div>
                 <div class="form-group row">
-                    <label class="col-md-2 col-form-label">{{ translate('Photo') }}</label>
+                    <label class="col-md-2 col-form-label" for="seller-photo">{{ translate('Photo') }}</label>
                     <div class="col-md-10">
                         <div class="input-group" data-toggle="aizuploader" data-type="image">
                             <div class="input-group-prepend">
                                 <div class="input-group-text bg-soft-secondary font-weight-medium">{{ translate('Browse')}}</div>
                             </div>
                             <div class="form-control file-amount">{{ translate('Choose File') }}</div>
-                            <input type="hidden" name="photo" value="{{ $user->avatar_original }}" class="selected-files">
+                            <input type="hidden" name="photo" id="seller-photo" value="{{ $errors->sellerProfile->any() ? (is_scalar(old('photo')) ? old('photo') : '') : $user->avatar_original }}" class="selected-files">
                         </div>
                         <div class="file-preview box sm">
                         </div>
+                        @error('photo', 'sellerProfile')
+                            <small class="form-text text-danger">{{ $message }}</small>
+                        @enderror
                     </div>
                 </div>
                 <div class="form-group row">
                     <label class="col-md-2 col-form-label" for="password">{{ translate('Your Password') }}</label>
                     <div class="col-md-10">
-                        <input type="password" name="new_password" id="password" class="form-control" placeholder="{{ translate('New Password') }}">
-                        @error('new_password')
+                        <input type="password" name="new_password" id="password" class="form-control" placeholder="{{ translate('New Password') }}" minlength="6" maxlength="72" autocomplete="new-password">
+                        <small class="form-text text-muted">{{ translate('To change your password, enter and confirm at least 6 characters, up to 72 bytes. Leave both fields empty to keep your password.') }}</small>
+                        @error('new_password', 'sellerProfile')
                             <small class="form-text text-danger">{{ $message }}</small>
                         @enderror
                     </div>
@@ -62,8 +67,8 @@
                 <div class="form-group row">
                     <label class="col-md-2 col-form-label" for="confirm_password">{{ translate('Confirm Password') }}</label>
                     <div class="col-md-10">
-                        <input type="password" name="confirm_password" id="confirm_password" class="form-control" placeholder="{{ translate('Confirm Password') }}" >
-                        @error('confirm_password')
+                        <input type="password" name="confirm_password" id="confirm_password" class="form-control" placeholder="{{ translate('Confirm Password') }}" minlength="6" maxlength="72" autocomplete="new-password">
+                        @error('confirm_password', 'sellerProfile')
                             <small class="form-text text-danger">{{ $message }}</small>
                         @enderror
                     </div>
@@ -82,25 +87,31 @@
                     <label class="col-md-3 col-form-label">{{ translate('Cash Payment') }}</label>
                     <div class="col-md-9">
                         <label class="aiz-switch aiz-switch-success mb-3">
-                            <input value="1" name="cash_on_delivery_status" type="checkbox" @if ($user->shop->cash_on_delivery_status == 1) checked @endif>
+                            <input value="1" name="cash_on_delivery_status" type="checkbox" @checked($errors->sellerProfile->any() ? (is_scalar(old('cash_on_delivery_status')) ? old('cash_on_delivery_status') : '') : $user->shop->cash_on_delivery_status)>
                             <span class="slider round"></span>
                         </label>
+                        @error('cash_on_delivery_status', 'sellerProfile')
+                            <small class="form-text text-danger">{{ $message }}</small>
+                        @enderror
                     </div>
                 </div>
                 <div class="row">
                     <label class="col-md-3 col-form-label">{{ translate('Bank Payment') }}</label>
                     <div class="col-md-9">
                         <label class="aiz-switch aiz-switch-success mb-3">
-                            <input value="1" name="bank_payment_status" type="checkbox" @if ($user->shop->bank_payment_status == 1) checked @endif>
+                            <input value="1" name="bank_payment_status" type="checkbox" @checked($errors->sellerProfile->any() ? (is_scalar(old('bank_payment_status')) ? old('bank_payment_status') : '') : $user->shop->bank_payment_status)>
                             <span class="slider round"></span>
                         </label>
+                        @error('bank_payment_status', 'sellerProfile')
+                            <small class="form-text text-danger">{{ $message }}</small>
+                        @enderror
                     </div>
                 </div>
                 <div class="row">
                     <label class="col-md-3 col-form-label" for="bank_name">{{ translate('Bank Name') }}</label>
                     <div class="col-md-9">
-                        <input type="text" name="bank_name" value="{{ $user->shop->bank_name }}" id="bank_name" class="form-control mb-3" placeholder="{{ translate('Bank Name')}}">
-                        @error('phone')
+                        <input type="text" name="bank_name" value="{{ $errors->sellerProfile->any() ? (is_scalar(old('bank_name')) ? old('bank_name') : '') : $user->shop->bank_name }}" id="bank_name" class="form-control mb-3" placeholder="{{ translate('Bank Name')}}" maxlength="255">
+                        @error('bank_name', 'sellerProfile')
                             <small class="form-text text-danger">{{ $message }}</small>
                         @enderror
                     </div>
@@ -108,8 +119,8 @@
                 <div class="row">
                     <label class="col-md-3 col-form-label" for="bank_acc_name">{{ translate('Bank Account Name') }}</label>
                     <div class="col-md-9">
-                        <input type="text" name="bank_acc_name" value="{{ $user->shop->bank_acc_name }}" id="bank_acc_name" class="form-control mb-3" placeholder="{{ translate('Bank Account Name')}}">
-                        @error('bank_acc_name')
+                        <input type="text" name="bank_acc_name" value="{{ $errors->sellerProfile->any() ? (is_scalar(old('bank_acc_name')) ? old('bank_acc_name') : '') : $user->shop->bank_acc_name }}" id="bank_acc_name" class="form-control mb-3" placeholder="{{ translate('Bank Account Name')}}" maxlength="200">
+                        @error('bank_acc_name', 'sellerProfile')
                             <small class="form-text text-danger">{{ $message }}</small>
                         @enderror
                     </div>
@@ -117,8 +128,8 @@
                 <div class="row">
                     <label class="col-md-3 col-form-label" for="bank_acc_no">{{ translate('Bank Account Number') }}</label>
                     <div class="col-md-9">
-                        <input type="text" name="bank_acc_no" value="{{ $user->shop->bank_acc_no }}" id="bank_acc_no" class="form-control mb-3" placeholder="{{ translate('Bank Account Number')}}">
-                        @error('bank_acc_no')
+                        <input type="text" name="bank_acc_no" value="{{ $errors->sellerProfile->any() ? (is_scalar(old('bank_acc_no')) ? old('bank_acc_no') : '') : $user->shop->bank_acc_no }}" id="bank_acc_no" class="form-control mb-3" placeholder="{{ translate('Bank Account Number')}}" maxlength="50">
+                        @error('bank_acc_no', 'sellerProfile')
                             <small class="form-text text-danger">{{ $message }}</small>
                         @enderror
                     </div>
@@ -126,8 +137,8 @@
                 <div class="row">
                     <label class="col-md-3 col-form-label" for="bank_routing_no">{{ translate('Bank Routing Number') }}</label>
                     <div class="col-md-9">
-                        <input type="number" name="bank_routing_no" value="{{ $user->shop->bank_routing_no }}" id="bank_routing_no" lang="en" class="form-control mb-3" placeholder="{{ translate('Bank Routing Number')}}">
-                        @error('bank_routing_no')
+                        <input type="number" name="bank_routing_no" value="{{ $errors->sellerProfile->any() ? (is_scalar(old('bank_routing_no')) ? old('bank_routing_no') : '') : $user->shop->bank_routing_no }}" id="bank_routing_no" lang="en" class="form-control mb-3" placeholder="{{ translate('Bank Routing Number')}}" min="-2147483648" max="2147483647" step="1">
+                        @error('bank_routing_no', 'sellerProfile')
                             <small class="form-text text-danger">{{ $message }}</small>
                         @enderror
                     </div>
@@ -212,6 +223,7 @@
     <!-- Change Email -->
     <form action="{{ route('user.change.email') }}" method="POST">
         @csrf
+        <x-required-legend />
         <div class="card">
           <div class="card-header">
               <h5 class="mb-0 h6">{{ translate('Change your email')}}</h5>
@@ -219,11 +231,11 @@
           <div class="card-body">
               <div class="row">
                   <div class="col-md-2">
-                      <label>{{ translate('Your Email') }}</label>
+                      <label for="seller-email">{{ translate('Your Email') }}<x-required-mark /></label>
                   </div>
                   <div class="col-md-10">
                       <div class="input-group mb-3">
-                        <input type="email" class="form-control" placeholder="{{ translate('Your Email')}}" name="email" value="{{ $user->email }}" />
+                        <input type="email" class="form-control" placeholder="{{ translate('Your Email')}}" name="email" id="seller-email" value="{{ $errors->changeEmail->any() ? (is_scalar(old('email')) ? old('email') : '') : $user->email }}" maxlength="191" required />
                         <div class="input-group-append">
                            <button type="button" class="btn btn-outline-secondary new-email-verification">
                                <span class="d-none loading">
@@ -233,6 +245,9 @@
                            </button>
                         </div>
                       </div>
+                      @error('email', 'changeEmail')
+                          <small class="form-text text-danger">{{ $message }}</small>
+                      @enderror
                       <div class="form-group mb-0 text-right">
                           <button type="submit" class="btn btn-primary">{{translate('Update Email')}}</button>
                       </div>
@@ -257,51 +272,50 @@
                 </div>
                 <form class="form-default" role="form" action="{{ route('seller.addresses.store') }}" method="POST">
                     @csrf
+                    @php
+                        $keepInput = $errors->storeAddress->any();
+                    @endphp
                     <div class="modal-body">
                         <div class="p-3">
+                            <x-required-legend />
                             <div class="row">
                                 <div class="col-md-2">
-                                    <label>{{ translate('Address')}}</label>
+                                    <label for="new_address_address">{{ translate('Address')}}<x-required-mark /></label>
                                 </div>
-                                <div class="col-md-10">
-                                    <textarea class="form-control mb-3" placeholder="{{ translate('Your Address')}}" rows="2" name="address" required></textarea>
-                                </div>
-                            </div>
-                            <div class="row">
-                                <div class="col-md-2">
-                                    <label>{{ translate('Country')}}</label>
-                                </div>
-                                <div class="col-md-10">
-                                    <div class="mb-3">
-                                        <select class="form-control aiz-selectpicker" data-live-search="true" data-placeholder="{{ translate('Select your country') }}" name="country_id" required>
-                                            <option value="">{{ translate('Select your country') }}</option>
-                                            @foreach (\App\Models\Country::where('status', 1)->get() as $key => $country)
-                                                <option value="{{ $country->id }}">{{ $country->name }}</option>
-                                            @endforeach
-                                        </select>
-                                    </div>
+                                <div class="col-md-10 mb-3">
+                                    <textarea id="new_address_address" class="form-control @error('address', 'storeAddress') is-invalid @enderror" placeholder="{{ translate('Your Address')}}" rows="2" name="address" maxlength="255" required>{{ $keepInput ? old('address') : '' }}</textarea>
+                                    @error('address', 'storeAddress')
+                                        <span class="invalid-feedback d-block" role="alert"><strong>{{ $message }}</strong></span>
+                                    @enderror
                                 </div>
                             </div>
+                            <x-address-country-field id="new_address_country" bag="storeAddress" />
 
                             <div class="row">
                                 <div class="col-md-2">
-                                    <label>{{ translate('State')}}</label>
+                                    <label for="new_address_state">{{ translate('State')}}</label>
                                 </div>
-                                <div class="col-md-10">
-                                    <select class="form-control mb-3 aiz-selectpicker" data-live-search="true" name="state_id" required>
+                                <div class="col-md-10 mb-3">
+                                    <select id="new_address_state" class="form-control aiz-selectpicker @error('state_id', 'storeAddress') is-invalid @enderror" data-live-search="true" name="state_id">
 
                                     </select>
+                                    @error('state_id', 'storeAddress')
+                                        <span class="invalid-feedback d-block" role="alert"><strong>{{ $message }}</strong></span>
+                                    @enderror
                                 </div>
                             </div>
 
                             <div class="row">
                                 <div class="col-md-2">
-                                    <label>{{ translate('City')}}</label>
+                                    <label for="new_address_city">{{ translate('City')}}</label>
                                 </div>
-                                <div class="col-md-10">
-                                    <select class="form-control mb-3 aiz-selectpicker" data-live-search="true" name="city_id" required>
+                                <div class="col-md-10 mb-3">
+                                    <select id="new_address_city" class="form-control aiz-selectpicker @error('city_id', 'storeAddress') is-invalid @enderror" data-live-search="true" name="city_id">
 
                                     </select>
+                                    @error('city_id', 'storeAddress')
+                                        <span class="invalid-feedback d-block" role="alert"><strong>{{ $message }}</strong></span>
+                                    @enderror
                                 </div>
                             </div>
 
@@ -319,19 +333,25 @@
                                 </div>
 
                                 <div class="row">
-                                    <div class="col-md-2" id="">
-                                        <label for="exampleInputuname">{{ translate('Longitude') }}</label>
+                                    <div class="col-md-2">
+                                        <label for="longitude">{{ translate('Longitude') }}</label>
                                     </div>
-                                    <div class="col-md-10" id="">
-                                        <input type="text" class="form-control mb-3" id="longitude" name="longitude" readonly="">
+                                    <div class="col-md-10 mb-3">
+                                        <input type="text" class="form-control @error('longitude', 'storeAddress') is-invalid @enderror" id="longitude" name="longitude" value="{{ $keepInput ? old('longitude') : '' }}" readonly="">
+                                        @error('longitude', 'storeAddress')
+                                        <span class="invalid-feedback d-block" role="alert"><strong>{{ $message }}</strong></span>
+                                    @enderror
                                     </div>
                                 </div>
                                 <div class="row">
-                                    <div class="col-md-2" id="">
-                                        <label for="exampleInputuname">{{ translate('Latitude') }}</label>
+                                    <div class="col-md-2">
+                                        <label for="latitude">{{ translate('Latitude') }}</label>
                                     </div>
-                                    <div class="col-md-10" id="">
-                                        <input type="text" class="form-control mb-3" id="latitude" name="latitude" readonly="">
+                                    <div class="col-md-10 mb-3">
+                                        <input type="text" class="form-control @error('latitude', 'storeAddress') is-invalid @enderror" id="latitude" name="latitude" value="{{ $keepInput ? old('latitude') : '' }}" readonly="">
+                                        @error('latitude', 'storeAddress')
+                                        <span class="invalid-feedback d-block" role="alert"><strong>{{ $message }}</strong></span>
+                                    @enderror
                                     </div>
                                 </div>
                             @endif
@@ -346,10 +366,13 @@
                             </div>
                             <div class="row">
                                 <div class="col-md-2">
-                                    <label>{{ translate('Phone')}}</label>
+                                    <label for="new_address_phone">{{ translate('Phone')}}<x-required-mark /></label>
                                 </div>
-                                <div class="col-md-10">
-                                    <input type="text" class="form-control mb-3" placeholder="{{ translate('+')}}" name="phone" value="" required>
+                                <div class="col-md-10 mb-3">
+                                    <input type="text" id="new_address_phone" class="form-control @error('phone', 'storeAddress') is-invalid @enderror" placeholder="{{ translate('+')}}" name="phone" value="{{ $keepInput ? (is_scalar(old('phone')) ? old('phone') : '') : '' }}" maxlength="255" required>
+                                    @error('phone', 'storeAddress')
+                                        <span class="invalid-feedback d-block" role="alert"><strong>{{ $message }}</strong></span>
+                                    @enderror
                                 </div>
                             </div>
                             <div class="form-group text-right">
@@ -374,7 +397,18 @@
                 </div>
 
                 <div class="modal-body" id="edit_modal_body">
-
+                    {{-- After a failed update, the address's form again, with the input and the errors. --}}
+                    @php
+                        $reopenedAddress = $errors->updateAddress->any() && is_numeric(old('address_id')) ? \App\Models\Address::find((int) old('address_id')) : null;
+                        $reopenedAddress = $reopenedAddress !== null && \Illuminate\Support\Facades\Gate::allows('manage', $reopenedAddress) ? $reopenedAddress : null;
+                    @endphp
+                    @if ($reopenedAddress !== null)
+                        @include('shop.seller.profile.address_edit_modal', [
+                            'address_data' => $reopenedAddress,
+                            'states' => \App\Models\State::where('status', 1)->where('country_id', $reopenedAddress->country_id)->get(),
+                            'cities' => \App\Models\City::where('status', 1)->where('state_id', $reopenedAddress->state_id)->get(),
+                        ])
+                    @endif
                 </div>
             </div>
         </div>
@@ -419,23 +453,34 @@
                 type: 'GET',
                 success: function (response) {
                     $('#edit_modal_body').html(response.html);
-                    $('#edit-address-modal').modal('show');
-                    AIZ.plugins.bootstrapSelect('refresh');
-
-                    @if (get_setting('google_map') == 1)
-                        var lat     = -33.8688;
-                        var long    = 151.2195;
-
-                        if(response.data.address_data.latitude && response.data.address_data.longitude) {
-                            lat     = parseFloat(response.data.address_data.latitude);
-                            long    = parseFloat(response.data.address_data.longitude);
-                        }
-
-                        initialize(lat, long, 'edit_');
-                    @endif
+                    open_edit_address_modal(response.data.address_data);
                 }
             });
         }
+
+        function open_edit_address_modal(address_data) {
+            $('#edit-address-modal').modal('show');
+            AIZ.plugins.bootstrapSelect('refresh');
+
+            @if (get_setting('google_map') == 1)
+                var lat     = defaultMapLocation.latitude;
+                var long    = defaultMapLocation.longitude;
+
+                if(address_data.latitude && address_data.longitude) {
+                    lat     = parseFloat(address_data.latitude);
+                    long    = parseFloat(address_data.longitude);
+                }
+
+                initialize(lat, long, 'edit_');
+            @endif
+        }
+
+        @if ($errors->storeAddress->any())
+            $(function () { $('#new-address-modal').modal('show'); });
+        @endif
+        @if ($reopenedAddress !== null)
+            $(function () { open_edit_address_modal(@json($reopenedAddress->only(['latitude', 'longitude']))); });
+        @endif
 
         $(document).on('change', '[name=country_id]', function() {
             var country_id = $(this).val();

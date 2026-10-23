@@ -3,6 +3,7 @@ import type { VueWrapper } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { reactive } from 'vue';
 import FieldError from '@/components/FieldError.vue';
+import RequiredMark from '@/components/RequiredMark.vue';
 import StoreRichTextField from '@/components/StoreRichTextField.vue';
 import StoreUploadField from '@/components/StoreUploadField.vue';
 import { i18n, t } from '@/lib/i18n';
@@ -70,6 +71,31 @@ afterEach(() => {
 });
 
 describe('StoreWebsiteFooterFormFields', () => {
+    it('marks each link row and leaves nullable settings and boolean switches unmarked', () => {
+        const { wrapper } = mountFields();
+
+        for (const id of ['footer-link-label-0', 'footer-link-url-0']) {
+            expect(wrapper.get(`#${id}`).attributes('required')).toBeDefined();
+            expect(
+                wrapper
+                    .get(`label[for=${id}]`)
+                    .findComponent(RequiredMark)
+                    .exists(),
+            ).toBe(true);
+        }
+
+        expect(wrapper.findAllComponents(RequiredMark)).toHaveLength(2);
+        expect(wrapper.findAll('input[type=checkbox][required]')).toHaveLength(
+            0,
+        );
+        expect(
+            wrapper.get('#contact_email').attributes('required'),
+        ).toBeUndefined();
+
+        for (const field of wrapper.findAllComponents(StoreRichTextField)) {
+            expect(field.props('required')).toBe(false);
+        }
+    });
     it.each(['en', 'ar'] as const)(
         'labels every section and field in %s',
         async (locale) => {

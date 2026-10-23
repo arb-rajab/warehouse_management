@@ -1,6 +1,7 @@
 import { mount } from '@vue/test-utils';
 import { describe, expect, it, vi } from 'vitest';
 import { reactive } from 'vue';
+import RequiredMark from '@/components/RequiredMark.vue';
 import StoreUploadField from '@/components/StoreUploadField.vue';
 import { i18n, t } from '@/lib/i18n';
 import {
@@ -33,6 +34,29 @@ function mountFields(
     });
 }
 describe('StoreWebsiteHomeFormFields', () => {
+    it('marks each category row while slider and coupon settings stay optional', () => {
+        const wrapper = mountFields();
+        expect(
+            wrapper.get('#home-category-0').attributes('required'),
+        ).toBeDefined();
+        expect(
+            wrapper
+                .get('label[for=home-category-0]')
+                .findComponent(RequiredMark)
+                .exists(),
+        ).toBe(true);
+        expect(wrapper.findAllComponents(RequiredMark)).toHaveLength(1);
+        expect(
+            wrapper.get('#slider-link-0').attributes('required'),
+        ).toBeUndefined();
+        expect(wrapper.getComponent(StoreUploadField).props('required')).toBe(
+            false,
+        );
+        expect(
+            wrapper.get('#cupon_title').attributes('required'),
+        ).toBeUndefined();
+        wrapper.unmount();
+    });
     it('uses the shared image picker and renders every live field and translated action', () => {
         const wrapper = mountFields();
         expect(wrapper.getComponent(StoreUploadField).props()).toMatchObject({

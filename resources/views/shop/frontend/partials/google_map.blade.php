@@ -1,18 +1,9 @@
 <script>
-    let default_longtitude = '';
-    let default_latitude = '';
-    @if (get_setting('google_map_longtitude') != '' && get_setting('google_map_longtitude') != '')
-        default_longtitude = {{ get_setting('google_map_longtitude') }};
-        default_latitude = {{ get_setting('google_map_latitude') }};
-    @endif
+    {{-- Where the pin starts for an address without coordinates: the admin's default location, else Amsterdam. --}}
+    var defaultMapLocation = @json(\App\Support\DefaultMapLocation::coordinates());
 
-    function initialize(lat = -33.8688, lang = 151.2195, id_format = '') {
+    function initialize(lat = defaultMapLocation.latitude, lang = defaultMapLocation.longitude, id_format = '') {
         var long = lang;
-        var lat = lat;
-        if (default_longtitude != '' && default_latitude != '') {
-            long = default_longtitude;
-            lat = default_latitude;
-        }
 
         var map = new google.maps.Map(document.getElementById(id_format + 'map'), {
             center: {

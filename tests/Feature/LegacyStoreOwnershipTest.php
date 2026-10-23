@@ -48,7 +48,7 @@ test("a store account cannot open, change, delete or default another account's a
     $mine = storeAddress(actingAsStoreUser(createStoreUser($userType)), isDefault: true);
 
     $this->get("{$prefix}/{$theirs->id}/edit")->assertForbidden();
-    $this->post("{$updateUri}/{$theirs->id}", ['address' => 'Changed 2', 'phone' => '1'])->assertForbidden();
+    $this->post("{$updateUri}/{$theirs->id}", ['address' => 'Changed 2', 'postal_code' => '1012 AB', 'phone' => '1'])->assertForbidden();
     $this->post("{$prefix}/set_default/{$theirs->id}")->assertForbidden();
     $this->post("{$prefix}/destroy/{$theirs->id}")->assertForbidden();
 
@@ -62,7 +62,7 @@ test('a store account can open, change, default and delete its own address', fun
     $other = storeAddress($owner);
 
     $this->get("{$prefix}/{$other->id}/edit")->assertOk()->assertJsonPath('data.address_data.id', $other->id);
-    $this->post("{$updateUri}/{$other->id}", ['address' => 'Changed 2', 'phone' => '1'])->assertRedirect();
+    $this->post("{$updateUri}/{$other->id}", ['address' => 'Changed 2', 'postal_code' => '1012 AB', 'phone' => '1'])->assertRedirect();
     // Re-defaulting the current default keeps it the default.
     $this->post("{$prefix}/set_default/{$default->id}")->assertRedirect();
 

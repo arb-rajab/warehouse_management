@@ -2,14 +2,18 @@ import { mount } from '@vue/test-utils';
 import { describe, expect, it, vi } from 'vitest';
 import StoreUploadField from '@/components/StoreUploadField.vue';
 import { t } from '@/lib/i18n';
+import { expectRequiredFields } from '@/testing/requiredFields';
 import StoreDynamicPopupFormFields from './StoreDynamicPopupFormFields.vue';
 
-vi.mock('@/components/StoreUploadField.vue', () => ({
-    default: {
-        props: ['id', 'name', 'label', 'modelValue', 'type', 'error'],
-        template: '<div>{{label}} {{error}}</div>',
-    },
-}));
+vi.mock('@inertiajs/vue3', async () => {
+    const { createUseHttpStub } = await import('@/testing/inertiaStubs');
+    const { storeSharedProps } = await import('@/testing/factories');
+
+    return {
+        usePage: () => ({ props: { store: storeSharedProps() } }),
+        useHttp: (data: Record<string, unknown>) => createUseHttpStub(data, []),
+    };
+});
 function mountFields() {
     return mount(StoreDynamicPopupFormFields, {
         props: {
@@ -60,6 +64,15 @@ describe('StoreDynamicPopupFormFields', () => {
             expect(wrapper.get(`#${id}`).attributes('required')).toBeDefined();
         }
 
+        expectRequiredFields(wrapper, [
+            'title',
+            'summary',
+            'banner',
+            'btn_text',
+            'delay_seconds',
+            'offer_id',
+            'show_page',
+        ]);
         expect(wrapper.get('#title').attributes('maxlength')).toBe('100');
         expect(wrapper.get('#summary').attributes('maxlength')).toBe('191');
         expect(wrapper.get('#btn_text').attributes('maxlength')).toBe('191');

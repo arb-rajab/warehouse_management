@@ -1,7 +1,6 @@
 <?php
 
 use App\Http\Controllers\BusinessSettingsController;
-use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ShopController;
 use App\Http\Controllers\Store\Admin\CountryController;
 use Illuminate\Routing\Controllers\Middleware;
@@ -42,26 +41,7 @@ test('a controller using the alternate $this->middleware($name, [\'only\' => [..
         ->and($middleware[0]->only)->toBe(['index']);
 });
 
-test('a controller with dependency-injected constructor arguments keeps them alongside the converted middleware', function () {
-    $middleware = ProductController::middleware();
-
-    // Seven until the in-house and all-products lists moved to
-    // Store\Admin\ProductController with their two list gates, five until
-    // the create form moved there with its add_new_product gate. The edit
-    // form's move took only its actions out of the product_edit entry, which
-    // still gates the seller list's jQuery switches.
-    expect($middleware)->toHaveCount(4)
-        ->and(collect($middleware)->firstWhere('middleware', 'permission:product_edit')->only)
-        ->toBe(['updateSaleStatus', 'updateTodaysDeal', 'updateFeatured', 'updatePublished', 'updateProductApproval']);
-
-    // The constructor itself still wires up its services -- resolving the
-    // controller out of the container is what would fail if that logic had
-    // been lost during the conversion instead of just the middleware calls.
-    $controller = app(ProductController::class);
-    expect($controller)->toBeInstanceOf(ProductController::class);
-});
-
-test('the root settings controller keeps the gates of its remaining Blade and compatibility actions', function () {
+test('the root settings controller keeps the gates of its remaining compatibility actions', function () {
     $middleware = collect(BusinessSettingsController::middleware())
         ->mapWithKeys(fn (Middleware $entry): array => [$entry->middleware => $entry->only]);
 
@@ -69,8 +49,6 @@ test('the root settings controller keeps the gates of its remaining Blade and co
     // gate; the generic `update` writer and its four-permission gate retired
     // with the footer and appearance forms (store-backoffice-migration.md §20).
     expect($middleware->all())->toBe([
-        'permission:seller_commission_configuration' => ['vendor_commission', 'vendor_commission_update'],
-        'permission:seller_verification_form_configuration' => ['seller_verification_form', 'seller_verification_form_update'],
         'permission:features_activation' => ['updateSellerCommissionActivation'],
     ])->and(method_exists(BusinessSettingsController::class, 'update'))->toBeFalse();
 });

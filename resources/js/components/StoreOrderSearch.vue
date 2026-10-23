@@ -5,6 +5,7 @@ import { onBeforeUnmount, ref, watch } from 'vue';
 import { search } from '@/actions/App/Http/Controllers/Store/Admin/OrderEntryController';
 import FieldError from '@/components/FieldError.vue';
 import FormField from '@/components/FormField.vue';
+import RequiredMark from '@/components/RequiredMark.vue';
 import {
     debounce,
     fieldLabelClass,
@@ -96,8 +97,9 @@ function choose(event: Event): void {
             @focus="fetchPage()"
         />
         <label :for="id" :class="fieldLabelClass"
-            ><Search class="inline h-4 w-4" /> {{ label }}</label
-        >
+            ><Search class="inline h-4 w-4" /> {{ label
+            }}<RequiredMark v-if="required"
+        /></label>
         <select
             :id="id"
             :name="name"

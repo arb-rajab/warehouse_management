@@ -100,15 +100,15 @@ test('visit map markers safely preserve zero and boundary coordinates and reject
     'infinite' => ['1e999', '5', false],
 ]);
 
-test('the Blade navigation exposes visits to visit-only staff and hides it without permission', function (bool $allowed) {
-    actingAsStoreUser($allowed ? createStoreStaff('view_representative_visits') : createStoreStaff());
-    $response = $this->get(route('shop.admin.dashboard'))->assertOk();
+test('the Inertia shell shares the visit navigation permission for visit-only staff', function (bool $allowed) {
+    actingAsStoreUser($allowed
+        ? createStoreStaff('view_representative_visits')
+        : createStoreStaff());
 
-    if ($allowed) {
-        $response->assertSee('href="'.route('admin.rep.visits.index').'"', false);
-    } else {
-        $response->assertDontSee('href="'.route('admin.rep.visits.index').'"', false);
-    }
+    $this->get(route('profile.index'))->assertOk()->assertInertia(fn (Assert $page) => $page
+        ->where('store.permissions', $allowed ? ['view_representative_visits'] : [])
+        ->where('store.isSuperAdmin', false)
+        ->where('store.isRaizerAdmin', false));
 })->with([true, false]);
 
 test('the representative day screen scopes visits by owner and date and keeps their rank order', function () {

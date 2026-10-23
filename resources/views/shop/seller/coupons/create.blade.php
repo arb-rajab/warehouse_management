@@ -19,6 +19,7 @@
                 <div class="card-body">
                     <form class="form-horizontal" action="{{ route('seller.coupon.store') }}" method="POST" enctype="multipart/form-data">
                         @csrf
+                        <x-required-legend />
                         @if ($errors->any())
                             <div class="alert alert-danger">
                                 <ul class="mt-3">
@@ -29,18 +30,19 @@
                             </div>
                         @endif
                         <div class="form-group row">
-                            <label class="col-lg-3 col-from-label" for="name">{{translate('Coupon Type')}}</label>
+                            <label class="col-lg-3 col-from-label" for="coupon_type">{{translate('Coupon Type')}}<x-required-mark /></label>
                             <div class="col-lg-9">
                                 <select name="type" id="coupon_type" class="form-control aiz-selectpicker" onchange="coupon_form()" required>
                                     <option value="">{{translate('Select One') }}</option>
                                     <option value="product_base" @if (old('type') == 'product_base') selected @endif>{{translate('For Products')}}</option>
-                                    <option value="cart_base" @if (old('type') == 'cart_base') selected @endif>{{translate('For Total Orders')}}</option>
+                                    <option value="cart_base" @if (old('type', 'cart_base') == 'cart_base') selected @endif>{{translate('For Total Orders')}}</option>
                                 </select>
+                                @error('type')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                             </div>
                         </div>
 
                         <div id="coupon_form">
-
+                            @include('shop.seller.coupons.fields')
                         </div>
                         <div class="form-group mb-0 text-right">
                             <button type="submit" class="btn btn-primary">{{translate('Save')}}</button>
@@ -56,16 +58,21 @@
 @section('script')
 
 <script type="text/javascript">
+    function coupon_discount_limit() {
+        $('#coupon-discount').attr('max', $('#coupon-discount-type').val() === 'percent' ? '100' : '999999999999999999.99');
+    }
+    $(function () { $('.aiz-date-range').daterangepicker(); coupon_discount_limit(); });
     function coupon_form(){
         var coupon_type = $('#coupon_type').val();
 		$.post('{{ route('seller.coupon.get_coupon_form') }}',{_token:'{{ csrf_token() }}', coupon_type:coupon_type}, function(data){
             $('#coupon_form').html(data);
+            AIZ.plugins.bootstrapSelect('refresh');
+            coupon_discount_limit();
+            $('.aiz-date-range').daterangepicker();
 		});
     }
 
-    @if($errors->any())
-        coupon_form();
-    @endif
+
 
 </script>
 @endsection

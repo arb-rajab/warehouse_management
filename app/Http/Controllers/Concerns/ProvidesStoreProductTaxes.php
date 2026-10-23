@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Concerns;
 use App\Models\Product;
 use App\Models\ProductTax;
 use App\Models\Tax;
+use App\Support\ProductFormNumber;
 
 trait ProvidesStoreProductTaxes
 {
@@ -26,7 +27,7 @@ trait ProvidesStoreProductTaxes
                 return [
                     'id' => (int) $tax->getKey(),
                     'name' => (string) $tax->getAttribute('name'),
-                    'tax' => $row ? (string) $row->getAttribute('tax') : '0',
+                    'tax' => $row ? ProductFormNumber::format($row->getAttribute('tax')) : '0',
                     'tax_type' => $row?->getAttribute('tax_type') === 'percent' ? 'percent' : 'amount',
                 ];
             })->all());

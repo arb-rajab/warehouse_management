@@ -64,24 +64,6 @@ test('each former generic writer permission saves only its own website page', fu
     $this->assertDatabaseMissing('business_settings', ['value' => 'Generic']);
 })->with(['general_settings', 'footer_setup', 'website_appearance', 'edit_website_page']);
 
-test('the retained seller activation form has an exact two-key contract', function () {
-    actingAsStoreUser(createStoreAdmin(raizerAdmin: true));
-    foreach (['vendor_commission_activation', 'category_wise_commission'] as $key) {
-        $this->post(route('business_settings.seller_commission.activation'), ['type' => $key, 'value' => 1])->assertOk()->assertContent('1');
-        $this->assertDatabaseHas('business_settings', ['type' => $key, 'value' => '1']);
-    }
-    $this->postJson(route('business_settings.seller_commission.activation'), ['type' => 'system_default_currency', 'value' => 1])->assertUnprocessable();
-    $this->postJson(route('business_settings.seller_commission.activation'), ['type' => 'category_wise_commission', 'value' => 0, 'settings' => ['site_name' => 'Injected']])->assertUnprocessable();
-    $this->assertDatabaseHas('business_settings', ['type' => 'category_wise_commission', 'value' => '1']);
-    expect(DB::table('business_settings')->count())->toBe(2);
-});
-
-test('seller activation compatibility does not grant staff access', function () {
-    actingAsStoreUser(createStoreStaff('seller_commission_configuration', 'features_activation'));
-    $this->post(route('business_settings.seller_commission.activation'), ['type' => 'category_wise_commission', 'value' => 1])->assertForbidden();
-    expect(DB::table('business_settings')->count())->toBe(0);
-});
-
 test('the retained script form writes only its two existing settings', function () {
     actingAsStoreUser(createStoreStaff('website_appearance'));
     $payload = ['types' => ['header_script', 'footer_script'], 'header_script' => 'Existing script content', 'footer_script' => null];

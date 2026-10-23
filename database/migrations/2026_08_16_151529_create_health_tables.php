@@ -7,10 +7,24 @@ use Spatie\Health\Models\HealthCheckResultHistoryItem;
 
 return new class extends Migration
 {
+    /**
+     * Get the migration connection name.
+     *
+     * The health table lives on its own SQLite connection. Without this, the
+     * migrator resolves the default connection for `migrate --pretend` and
+     * pretends only that one, so the Schema::connection() calls below really
+     * created the table and the real migrate that followed failed with
+     * "table already exists". Telescope's migration does the same.
+     */
+    public function getConnection(): string
+    {
+        return (new HealthCheckResultHistoryItem)->getConnectionName();
+    }
+
     public function up(): void
     {
         $historyItem = new HealthCheckResultHistoryItem;
-        $connection = $historyItem->getConnectionName();
+        $connection = $this->getConnection();
         $tableName = $historyItem->getTable();
 
         Schema::connection($connection)->create($tableName, function (Blueprint $table) {
@@ -44,8 +58,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        $historyItem = new HealthCheckResultHistoryItem;
-
-        Schema::connection($historyItem->getConnectionName())->dropIfExists($historyItem->getTable());
+        Schema::connection($this->getConnection())->dropIfExists((new HealthCheckResultHistoryItem)->getTable());
     }
 };

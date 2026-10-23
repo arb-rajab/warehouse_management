@@ -12,6 +12,7 @@
 	<!-- Required meta tags -->
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+	<meta name="robots" content="noindex, nofollow">
 
 	<!-- Favicon -->
 	<link rel="icon" href="{{ uploaded_asset(get_setting('site_icon')) }}">

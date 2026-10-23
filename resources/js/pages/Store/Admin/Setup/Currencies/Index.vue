@@ -14,6 +14,7 @@ import DataTable from '@/components/DataTable.vue';
 import FormField from '@/components/FormField.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import Pagination from '@/components/Pagination.vue';
+import RequiredLegend from '@/components/RequiredLegend.vue';
 import StoreCurrencyDialog from '@/components/StoreCurrencyDialog.vue';
 import StoreSelectField from '@/components/StoreSelectField.vue';
 import StoreStatusButton from '@/components/StoreStatusButton.vue';
@@ -21,6 +22,7 @@ import SubmitButton from '@/components/SubmitButton.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
 import { t } from '@/lib/i18n';
+import { provideRequiredFields } from '@/lib/requiredFields';
 import { useStoreAccess } from '@/lib/storeAccess';
 import type { Paginated } from '@/types/admin';
 import type { StoreCurrency, StoreReferenceOption } from '@/types/store';
@@ -38,6 +40,8 @@ const props = defineProps<{
     selectedCurrency: StoreCurrency | null;
 }>();
 const access = useStoreAccess();
+const hasRequiredFields = provideRequiredFields();
+const symbolFormat = ref(String(props.settings.symbol_format));
 const dialogOpen = ref(props.dialog !== null);
 const selected = ref(props.selectedCurrency);
 watch(
@@ -168,6 +172,7 @@ function filter(event: Event): void {
                 class="space-y-4"
                 #default="{ errors, processing }"
             >
+                <RequiredLegend v-if="hasRequiredFields" />
                 <h2 class="text-lg font-semibold">
                     {{ t('store.currencies.defaultCurrency') }}
                 </h2>
@@ -190,6 +195,7 @@ function filter(event: Event): void {
                 class="space-y-4"
                 #default="{ errors, processing }"
             >
+                <RequiredLegend v-if="hasRequiredFields" />
                 <h2 class="text-lg font-semibold">
                     {{ t('store.currencies.formats') }}
                 </h2>
@@ -205,7 +211,14 @@ function filter(event: Event): void {
                     :value="settings.symbol_format"
                     :error="errors.symbol_format"
                     required
+                    @change="
+                        symbolFormat = ($event.target as HTMLSelectElement)
+                            .value
+                    "
                 />
+                <p class="text-sm text-gray-600 dark:text-neutral-300">
+                    {{ t('store.currencies.formatsHint') }}
+                </p>
                 <StoreSelectField
                     id="decimal_separator"
                     :label="t('store.currencies.decimalSeparator')"
@@ -215,7 +228,7 @@ function filter(event: Event): void {
                     ]"
                     :value="settings.decimal_separator"
                     :error="errors.decimal_separator"
-                    required
+                    :required="symbolFormat !== ''"
                 />
                 <StoreSelectField
                     id="no_of_decimals"
@@ -225,7 +238,7 @@ function filter(event: Event): void {
                     "
                     :value="settings.no_of_decimals"
                     :error="errors.no_of_decimals"
-                    required
+                    :required="symbolFormat !== ''"
                 />
                 <SubmitButton
                     :label="t('store.reference.save')"

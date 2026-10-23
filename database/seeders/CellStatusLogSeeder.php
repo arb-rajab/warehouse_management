@@ -9,17 +9,25 @@ use App\Models\CellStatusLog;
 use App\Models\Pallet;
 use App\Models\Product;
 use App\Models\User;
+use Database\Seeders\Concerns\RefusesProduction;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Carbon;
 
 class CellStatusLogSeeder extends Seeder
 {
+    use RefusesProduction;
+
     /**
      * Run the database seeds.
+     *
+     * Refuses production: the scenarios create mobile users with the
+     * factory's known password.
      */
     public function run(): void
     {
+        $this->refuseInProduction();
+
         $cells = Cell::all();
         $products = Product::all();
         $users = User::all();

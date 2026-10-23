@@ -12,6 +12,15 @@ import type {
     User,
 } from '@/types/admin';
 import type {
+    StoreSeller,
+    StoreSellerCommissionSettings,
+    StoreSellerVerificationField,
+    StoreSellerPayment,
+    StoreSellerPayout,
+    StoreSellerWithdrawal,
+    StoreSellerProfile,
+    StoreSellerVerification,
+    StoreDashboardProps,
     StoreConversation,
     StoreMessage,
     StoreProductQuery,
@@ -43,6 +52,7 @@ import type {
     StoreCity,
     StoreZone,
     StoreCarrier,
+    StoreClassifiedProduct,
     StoreCustomerPackage,
     StoreCategory,
     StoreCategoryForm,
@@ -1276,6 +1286,21 @@ export function storeCarrier(
     };
 }
 
+export function storeClassifiedProduct(
+    overrides: Partial<StoreClassifiedProduct> = {},
+): StoreClassifiedProduct {
+    return {
+        id: 17,
+        name: 'Bicycle',
+        public_url: '/temp/customer-product/bicycle',
+        thumbnail_url: '/uploads/bicycle.png',
+        added_by: 'customer',
+        status: true,
+        published: false,
+        ...overrides,
+    };
+}
+
 export function storeCustomerPackage(
     overrides: Partial<StoreCustomerPackage> = {},
 ): StoreCustomerPackage {
@@ -1461,6 +1486,8 @@ export function storeProductListRow(
         for_sale: true,
         published: true,
         featured: false,
+        approved: true,
+        todays_deal: false,
         deleted_from_api: false,
         public_url: '/temp/product/olive-oil-1l',
         ...overrides,
@@ -1544,4 +1571,170 @@ export function representativeVisitMarker(
         label: 'Customer Noor',
         ...overrides,
     };
+}
+
+export function storeDashboardProps(): StoreDashboardProps {
+    return {
+        stats: { customers: 8, orders: 12, categories: 3, brands: 4 },
+        series: {
+            products: [10, 7],
+            sources: [6, 4],
+            sales: { labels: ['Oils'], values: [18] },
+            stock: { labels: ['Oils'], values: [45] },
+            visits: { labels: ['SY'], values: [25] },
+        },
+        showSmtpAlert: true,
+        topProducts: [
+            {
+                id: 1,
+                name: 'Olive oil',
+                public_url: '/temp/product/oil',
+                thumbnail_url: '/oil.png',
+                base_price: '€22.00',
+                discounted_price: '€19.80',
+                rating: 4.5,
+            },
+        ],
+    };
+}
+
+export function storeSeller(overrides: Partial<StoreSeller> = {}): StoreSeller {
+    return {
+        id: 17,
+        user_id: 27,
+        name: 'Acme shop',
+        account_name: 'Sam Seller',
+        email: 'sam@example.com',
+        phone: '123',
+        banned: false,
+        approved: false,
+        has_verification: true,
+        products_count: 3,
+        due: '125 €',
+        due_to_admin: false,
+        payment_history_url: '/temp/admin/seller/payments/show/encrypted',
+        ...overrides,
+    };
+}
+
+export function storeSellerProfile(
+    overrides: Partial<StoreSellerProfile> = {},
+): StoreSellerProfile {
+    return {
+        id: 17,
+        name: 'Sam Seller',
+        shop_name: 'Acme shop',
+        address: 'Shop street',
+        phone: '123',
+        avatar_url: '/avatar.png',
+        shop_url: '/temp/shop/acme',
+        social: {
+            facebook: 'https://example.com/facebook',
+            twitter: 'https://example.com/twitter',
+            google: 'https://example.com/google',
+        },
+        bank_name: 'Bank',
+        bank_acc_name: 'Sam',
+        bank_acc_no: '12345',
+        bank_routing_no: 'ABC',
+        products_count: 3,
+        orders_count: 5,
+        sold_amount: '50 €',
+        wallet_balance: '10 €',
+        ...overrides,
+    };
+}
+
+export function storeSellerVerification(
+    overrides: Partial<StoreSellerVerification> = {},
+): StoreSellerVerification {
+    return {
+        id: 17,
+        name: 'Acme shop',
+        address: 'Shop street',
+        approved: false,
+        has_verification: true,
+        user: {
+            name: 'Sam Seller',
+            email: 'sam@example.com',
+            address: 'User street',
+            phone: '123',
+        },
+        verification: [
+            { label: 'Company', value: 'Acme', file_url: null },
+            {
+                label: 'Certificate',
+                value: 'certificate.pdf',
+                file_url:
+                    '/temp/admin/sellers/verification-file/certificate.pdf',
+            },
+        ],
+        ...overrides,
+    };
+}
+
+export function storeSellerPayment(
+    overrides: Partial<StoreSellerPayment> = {},
+): StoreSellerPayment {
+    return {
+        id: 7,
+        seller: { id: 21, name: 'Sam Seller', shop_name: 'Acme shop' },
+        date: '2026-10-19 08:00:00',
+        amount: '€12.50',
+        payment_method: 'Bank payment',
+        txn_code: 'T-1',
+        ...overrides,
+    };
+}
+export function storeSellerWithdrawal(
+    overrides: Partial<StoreSellerWithdrawal> = {},
+): StoreSellerWithdrawal {
+    return {
+        id: 8,
+        seller: storeSellerPayment().seller,
+        date: '2026-10-19 08:00:00',
+        amount: '€40.00',
+        due: '€100.00',
+        message: 'Please pay',
+        paid: false,
+        ...overrides,
+    };
+}
+export function storeSellerPayout(
+    overrides: Partial<StoreSellerPayout> = {},
+): StoreSellerPayout {
+    return {
+        shop: {
+            id: 17,
+            admin_to_pay: 100,
+            due: '€100.00',
+            cash_enabled: true,
+            bank_enabled: true,
+            bank_name: 'Bank',
+            bank_acc_name: 'Sam',
+            bank_acc_no: '123',
+            bank_routing_no: '456',
+        },
+        withdrawal: null,
+        ...overrides,
+    };
+}
+
+export function storeSellerCommissionSettings(
+    overrides: Partial<StoreSellerCommissionSettings> = {},
+): StoreSellerCommissionSettings {
+    return {
+        vendor_commission: '12.50',
+        minimum_seller_amount_withdraw: '20',
+        vendor_commission_activation: true,
+        category_wise_commission: false,
+        ...overrides,
+    };
+}
+
+export function storeSellerVerificationFields(): StoreSellerVerificationField[] {
+    return [
+        { type: 'text', label: 'Company' },
+        { type: 'select', label: 'Country', options: ['NL', 'Syria'] },
+    ];
 }

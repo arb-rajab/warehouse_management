@@ -15,10 +15,17 @@
         <div class="card-body">
             <form action="{{route('seller.support_ticket.reply_store')}}" method="POST" enctype="multipart/form-data">
                 @csrf
+                <x-required-legend />
                 <input type="hidden" name="ticket_id" value="{{$ticket->id}}" required>
-                <input type="hidden" name="user_id" value="{{$ticket->user_id}}">
+                @error('ticket_id')
+                    <small class="form-text text-danger">{{ $message }}</small>
+                @enderror
                 <div class="form-group">
-                    <textarea class="aiz-text-editor" name="reply" data-buttons='[["font", ["bold", "underline", "italic"]],["para", ["ul", "ol"]],["view", ["undo","redo"]]]' required></textarea>
+                    <label for="seller-ticket-reply">{{ translate('Type your reply') }}<x-required-mark /></label>
+                    <textarea class="aiz-text-editor" name="reply" id="seller-ticket-reply" maxlength="10000" data-buttons='[["font", ["bold", "underline", "italic"]],["para", ["ul", "ol"]],["view", ["undo","redo"]]]' required>{{ is_string(old('reply')) ? old('reply') : '' }}</textarea>
+                    @error('reply')
+                        <small class="form-text text-danger">{{ $message }}</small>
+                    @enderror
                 </div>
                 <div class="form-group row">
                     <div class="col-md-12">
@@ -27,10 +34,13 @@
                                 <div class="input-group-text bg-soft-secondary font-weight-medium">{{ translate('Browse')}}</div>
                             </div>
                             <div class="form-control file-amount">{{ translate('Choose File') }}</div>
-                            <input type="hidden" name="attachments" class="selected-files">
+                            <input type="hidden" name="attachments" class="selected-files" value="{{ is_string(old('attachments')) ? old('attachments') : '' }}">
                         </div>
                         <div class="file-preview box sm">
                         </div>
+                        @error('attachments')
+                            <small class="form-text text-danger">{{ $message }}</small>
+                        @enderror
                     </div>
                 </div>
                 <div class="form-group mb-0 text-right">

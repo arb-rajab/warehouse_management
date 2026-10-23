@@ -5,6 +5,7 @@ import { activation } from '@/actions/App/Http/Controllers/Store/Admin/SettingsC
 import { index as shippingConfigurationIndex } from '@/actions/App/Http/Controllers/Store/Admin/ShippingConfigurationController';
 import FieldError from '@/components/FieldError.vue';
 import FormField from '@/components/FormField.vue';
+import RequiredMark from '@/components/RequiredMark.vue';
 import StoreProductDiscountFields from '@/components/StoreProductDiscountFields.vue';
 import StoreProductListField from '@/components/StoreProductListField.vue';
 import StoreProductTaxFields from '@/components/StoreProductTaxFields.vue';
@@ -101,9 +102,9 @@ const linkClass =
                 required
             />
             <div>
-                <label for="category_id" :class="fieldLabelClass">{{
-                    t('store.products.form.category')
-                }}</label>
+                <label for="category_id" :class="fieldLabelClass"
+                    >{{ t('store.products.form.category') }}<RequiredMark
+                /></label>
                 <select
                     id="category_id"
                     v-model="categoryId"
@@ -332,9 +333,9 @@ const linkClass =
                 {{ t('store.products.form.priceAndStock') }}
             </legend>
             <div>
-                <label for="unit_price" :class="fieldLabelClass">{{
-                    t('store.products.form.unitPrice')
-                }}</label>
+                <label for="unit_price" :class="fieldLabelClass"
+                    >{{ t('store.products.form.unitPrice') }}<RequiredMark
+                /></label>
                 <!-- Kept as typed: the variant rows echo it, as the Blade
                      table did, and v-model would cast it to a number. -->
                 <input
@@ -486,35 +487,42 @@ const linkClass =
                 {{ t('store.products.form.stockAndShipping') }}
             </legend>
             <div v-if="sections.shipping" class="lg:col-span-2">
-                <fieldset v-if="sections.productWiseShipping" class="space-y-2">
-                    <legend :class="fieldLabelClass">
-                        {{ t('store.products.form.shippingConfiguration') }}
-                    </legend>
-                    <label
-                        class="flex cursor-pointer items-center gap-2 text-sm"
-                    >
-                        <input
-                            v-model="shippingType"
-                            type="radio"
-                            name="shipping_type"
-                            value="free"
-                            :class="checkboxClass"
-                        />
-                        {{ t('store.products.form.freeShipping') }}
-                    </label>
-                    <label
-                        class="flex cursor-pointer items-center gap-2 text-sm"
-                    >
-                        <input
-                            v-model="shippingType"
-                            type="radio"
-                            name="shipping_type"
-                            value="flat_rate"
-                            :class="checkboxClass"
-                        />
-                        {{ t('store.products.form.flatRate') }}
-                    </label>
-                    <FieldError :message="errors.shipping_type" />
+                <div v-if="sections.productWiseShipping" class="space-y-2">
+                    <fieldset class="space-y-2">
+                        <legend :class="fieldLabelClass">
+                            {{ t('store.products.form.shippingConfiguration')
+                            }}<RequiredMark
+                                v-if="sections.productWiseShipping"
+                            />
+                        </legend>
+                        <label
+                            class="flex cursor-pointer items-center gap-2 text-sm"
+                        >
+                            <input
+                                v-model="shippingType"
+                                type="radio"
+                                name="shipping_type"
+                                :required="sections.productWiseShipping"
+                                value="free"
+                                :class="checkboxClass"
+                            />
+                            {{ t('store.products.form.freeShipping') }}
+                        </label>
+                        <label
+                            class="flex cursor-pointer items-center gap-2 text-sm"
+                        >
+                            <input
+                                v-model="shippingType"
+                                type="radio"
+                                name="shipping_type"
+                                :required="sections.productWiseShipping"
+                                value="flat_rate"
+                                :class="checkboxClass"
+                            />
+                            {{ t('store.products.form.flatRate') }}
+                        </label>
+                        <FieldError :message="errors.shipping_type" />
+                    </fieldset>
                     <FormField
                         v-if="shippingType === 'flat_rate'"
                         id="flat_shipping_cost"
@@ -522,11 +530,19 @@ const linkClass =
                         :label="t('store.products.form.shippingCost')"
                         :value="product?.flat_shipping_cost ?? '0'"
                         :error="errors.flat_shipping_cost"
+                        aria-describedby="flat_shipping_cost_help"
                         min="0"
                         :max="productAmountMax"
                         step="0.01"
                         required
                     />
+                    <p
+                        v-if="shippingType === 'flat_rate'"
+                        id="flat_shipping_cost_help"
+                        class="text-xs text-gray-600 dark:text-neutral-400"
+                    >
+                        {{ t('store.products.form.shippingCostHelp') }}
+                    </p>
                     <label
                         class="flex cursor-pointer items-center gap-2 text-sm"
                     >
@@ -539,7 +555,7 @@ const linkClass =
                         />
                         {{ t('store.products.form.quantityMultiplied') }}
                     </label>
-                </fieldset>
+                </div>
                 <p v-else class="text-sm">
                     {{ t('store.products.form.shippingConfiguredElsewhere') }}
                     <Link
@@ -575,7 +591,8 @@ const linkClass =
             />
             <fieldset class="space-y-2">
                 <legend :class="fieldLabelClass">
-                    {{ t('store.products.form.stockVisibility') }}
+                    {{ t('store.products.form.stockVisibility')
+                    }}<RequiredMark />
                 </legend>
                 <label
                     v-for="state in ['quantity', 'text', 'hide'] as const"
@@ -586,6 +603,7 @@ const linkClass =
                         v-model="stockVisibility"
                         type="radio"
                         name="stock_visibility_state"
+                        required
                         :value="state"
                         :class="checkboxClass"
                     />
@@ -669,14 +687,17 @@ const linkClass =
                 :label="t('store.products.form.flashDiscount')"
                 :value="product?.discount ?? '0'"
                 :error="errors.flash_discount"
+                :required="flashDealId !== ''"
+                aria-describedby="flash_discount_help"
                 min="0"
                 :max="productAmountMax"
                 step="0.01"
             />
             <div>
-                <label for="flash_discount_type" :class="fieldLabelClass">{{
-                    t('store.products.form.flashDiscountType')
-                }}</label>
+                <label for="flash_discount_type" :class="fieldLabelClass"
+                    >{{ t('store.products.form.flashDiscountType')
+                    }}<RequiredMark v-if="flashDealId !== ''"
+                /></label>
                 <select
                     id="flash_discount_type"
                     v-model="flashDiscountType"
@@ -695,6 +716,12 @@ const linkClass =
                     </option>
                 </select>
                 <FieldError :message="errors.flash_discount_type" />
+                <p
+                    id="flash_discount_help"
+                    class="text-xs text-gray-600 dark:text-neutral-400"
+                >
+                    {{ t('store.products.form.flashDiscountHelp') }}
+                </p>
             </div>
         </fieldset>
     </div>

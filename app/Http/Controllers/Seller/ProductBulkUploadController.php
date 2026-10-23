@@ -6,8 +6,8 @@ use App\Models\Brand;
 use App\Models\Category;
 use App\Models\ProductsImport;
 use Auth;
-use Excel;
-use Illuminate\Http\Request;
+use App\Services\ProductSpreadsheetImporter;
+use App\Http\Requests\Seller\ImportProductsRequest;
 use PDF;
 
 class ProductBulkUploadController extends Controller
@@ -41,11 +41,11 @@ class ProductBulkUploadController extends Controller
         ], [], [])->download('brands.pdf');
     }
 
-    public function bulk_upload(Request $request)
+    public function bulk_upload(ImportProductsRequest $request)
     {
         if($request->hasFile('bulk_file')){
             $import = new ProductsImport;
-            Excel::import($import, request()->file('bulk_file'));
+            app(ProductSpreadsheetImporter::class)->import($import, $request->file('bulk_file'));
         }
 
         return back();

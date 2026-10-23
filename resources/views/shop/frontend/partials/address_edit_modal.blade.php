@@ -1,68 +1,27 @@
 <form class="form-default" role="form" action="{{ route('addresses.update', $address_data->id) }}" method="POST">
     @csrf
+    @php
+        $keepInput = $errors->updateAddress->any();
+    @endphp
+    {{-- Sent back with the input, so a failed update can reopen this address's form. --}}
+    <input type="hidden" name="address_id" value="{{ $address_data->id }}">
     <div class="p-3">
+        <x-required-legend />
         <!-- Address -->
         <div class="row">
             <div class="col-md-2">
-                <label>{{ translate('Address')}}</label>
+                <label for="edit_address_address">{{ translate('Address')}}<x-required-mark /></label>
             </div>
-            <div class="col-md-10">
-                <textarea class="form-control mb-3 rounded-0" placeholder="{{ translate('Shipping Address')}}" rows="2" name="address" required>{{ $address_data->address }}</textarea>
+            <div class="col-md-10 mb-3">
+                <textarea id="edit_address_address" class="form-control rounded-0 @error('address', 'updateAddress') is-invalid @enderror" placeholder="{{ translate('Shipping Address')}}" rows="2" name="address" maxlength="255" required>{{ $keepInput ? old('address') : $address_data->address }}</textarea>
+                @error('address', 'updateAddress')
+                    <span class="invalid-feedback d-block" role="alert"><strong>{{ $message }}</strong></span>
+                @enderror
             </div>
         </div>
 
         <!-- Country -->
-        <div class="row">
-            <div class="col-md-2">
-                <label>{{ translate('Country')}}</label>
-            </div>
-            <div class="col-md-10">
-                <div class="mb-3">
-                    <select class="form-control aiz-selectpicker rounded-0" data-live-search="true" data-placeholder="{{ translate('Select your country')}}" name="country_id" id="edit_country" required>
-                        <option value="">{{ translate('Select your country') }}</option>
-                        @foreach (\App\Models\Country::where('status', 1)->orderBy('priority', 'desc')->get() as $key => $country)
-                        <option value="{{ $country->id }}" @if($address_data->country_id == $country->id) selected @endif>
-                            {{ $country->name }}
-                        </option>
-                        @endforeach
-                    </select>
-                </div>
-            </div>
-        </div>
-
-        <!-- State -->
-        {{-- <div class="row">
-            <div class="col-md-2">
-                <label>{{ translate('State')}}</label>
-            </div>
-            <div class="col-md-10">
-                <select class="form-control mb-3 aiz-selectpicker rounded-0" name="state_id" id="edit_state"  data-live-search="true" >
-                    <option>Select State</option>
-                    @foreach ($states as $key => $state)
-                        <option value="{{ $state->id }}" @if($address_data->state_id == $state->id) selected @endif>
-                            {{ $state->name }}
-                        </option>
-                    @endforeach
-                </select>
-            </div>
-        </div>
-
-        <!-- City -->
-        <div class="row">
-            <div class="col-md-2">
-                <label>{{ translate('City')}}</label>
-            </div>
-            <div class="col-md-10">
-                <select class="form-control mb-3 aiz-selectpicker rounded-0" data-live-search="true" name="city_id" >
-                    <option>Select City</option>
-                    @foreach ($cities as $key => $city)
-                        <option value="{{ $city->id }}" @if($address_data->city_id == $city->id) selected @endif>
-                            {{ $city->name }}
-                        </option>
-                    @endforeach
-                </select>
-            </div>
-        </div> --}}
+        <x-address-country-field id="edit_country" bag="updateAddress" :selected="$address_data->country_id" />
 
         @if (get_setting('google_map') == 1)
             <!-- Google Map -->
@@ -79,20 +38,26 @@
             </div>
             <!-- Longitude -->
             <div class="row">
-                <div class="col-md-2" id="">
-                    <label for="exampleInputuname">{{ translate('Longitude')}}</label>
+                <div class="col-md-2">
+                    <label for="edit_longitude">{{ translate('Longitude')}}</label>
                 </div>
-                <div class="col-md-10" id="">
-                    <input type="text" class="form-control mb-3 rounded-0" id="edit_longitude" name="longitude" value="{{ $address_data->longitude }}" readonly="">
+                <div class="col-md-10 mb-3">
+                    <input type="text" class="form-control rounded-0 @error('longitude', 'updateAddress') is-invalid @enderror" id="edit_longitude" name="longitude" value="{{ $keepInput ? old('longitude') : $address_data->longitude }}" readonly="">
+                    @error('longitude', 'updateAddress')
+                        <span class="invalid-feedback d-block" role="alert"><strong>{{ $message }}</strong></span>
+                    @enderror
                 </div>
             </div>
             <!-- Latitude -->
             <div class="row">
-                <div class="col-md-2" id="">
-                    <label for="exampleInputuname">{{ translate('Latitude')}}</label>
+                <div class="col-md-2">
+                    <label for="edit_latitude">{{ translate('Latitude')}}</label>
                 </div>
-                <div class="col-md-10" id="">
-                    <input type="text" class="form-control mb-3 rounded-0" id="edit_latitude" name="latitude" value="{{ $address_data->latitude }}" readonly="">
+                <div class="col-md-10 mb-3">
+                    <input type="text" class="form-control rounded-0 @error('latitude', 'updateAddress') is-invalid @enderror" id="edit_latitude" name="latitude" value="{{ $keepInput ? old('latitude') : $address_data->latitude }}" readonly="">
+                    @error('latitude', 'updateAddress')
+                        <span class="invalid-feedback d-block" role="alert"><strong>{{ $message }}</strong></span>
+                    @enderror
                 </div>
             </div>
         @endif
@@ -100,20 +65,26 @@
         <!-- Postal code -->
         <div class="row">
             <div class="col-md-2">
-                <label>{{ translate('Postal code')}}</label>
+                <label for="edit_address_postal_code">{{ translate('Postal code')}}<x-required-mark /></label>
             </div>
-            <div class="col-md-10">
-                <input type="text" class="form-control mb-3 rounded-0" placeholder="{{ translate('Your Postal Code')}}" value="{{ $address_data->postal_code }}" name="postal_code" value="" required>
+            <div class="col-md-10 mb-3">
+                <input type="text" id="edit_address_postal_code" class="form-control rounded-0 @error('postal_code', 'updateAddress') is-invalid @enderror" placeholder="{{ translate('Your Postal Code')}}" value="{{ $keepInput ? old('postal_code') : $address_data->postal_code }}" name="postal_code" maxlength="255" required>
+                @error('postal_code', 'updateAddress')
+                    <span class="invalid-feedback d-block" role="alert"><strong>{{ $message }}</strong></span>
+                @enderror
             </div>
         </div>
 
         <!-- Phone -->
         <div class="row">
             <div class="col-md-2">
-                <label>{{ translate('Phone')}}</label>
+                <label for="edit_address_phone">{{ translate('Phone')}}<x-required-mark /></label>
             </div>
-            <div class="col-md-10">
-                <input type="text" class="form-control mb-3 rounded-0" placeholder="{{ translate('+880')}}" value="{{ $address_data->phone }}" name="phone" value="" required>
+            <div class="col-md-10 mb-3">
+                <input type="text" id="edit_address_phone" class="form-control rounded-0 @error('phone', 'updateAddress') is-invalid @enderror" placeholder="{{ translate('+880')}}" value="{{ $keepInput ? old('phone') : $address_data->phone }}" name="phone" maxlength="255" required>
+                @error('phone', 'updateAddress')
+                    <span class="invalid-feedback d-block" role="alert"><strong>{{ $message }}</strong></span>
+                @enderror
             </div>
         </div>
 

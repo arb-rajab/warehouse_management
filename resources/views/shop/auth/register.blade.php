@@ -19,14 +19,26 @@
                                         <div class="">
                                             <form id="reg-form" class="form-default" role="form" action="{{ route('register') }}" method="POST">
                                                 @csrf
+                                                <x-required-legend />
 
                                                 <!-- Name -->
                                                 <div class="form-group">
-                                                    <label for="name" class="fs-12 fw-700 text-soft-dark">{{  translate('Full Name') }}</label>
+                                                    <label for="name" class="fs-12 fw-700 text-soft-dark">{{  translate('Full Name') }}<x-required-mark /></label>
                                                     <input type="text" class="form-control rounded-0{{ $errors->has('name') ? ' is-invalid' : '' }}" value="{{ old('name') }}" placeholder="{{  translate('Full Name') }}" name="name" required>
                                                     @if ($errors->has('name'))
                                                         <span class="invalid-feedback" role="alert">
                                                             <strong>{{ $errors->first('name') }}</strong>
+                                                        </span>
+                                                    @endif
+                                                </div>
+
+                                                <!-- Company Name -->
+                                                <div class="form-group">
+                                                    <label for="company_name" class="fs-12 fw-700 text-soft-dark">{{  translate('Company Name') }}<x-required-mark /></label>
+                                                    <input type="text" class="form-control rounded-0{{ $errors->has('company_name') ? ' is-invalid' : '' }}" value="{{ old('company_name') }}" placeholder="{{  translate('Company name') }}" name="company_name" required>
+                                                    @if ($errors->has('company_name'))
+                                                        <span class="invalid-feedback" role="alert">
+                                                            <strong>{{ $errors->first('company_name') }}</strong>
                                                         </span>
                                                     @endif
                                                 </div>
@@ -55,8 +67,8 @@
                                                     </div>
                                                 @else
                                                     <div class="form-group">
-                                                        <label for="email" class="fs-12 fw-700 text-soft-dark">{{  translate('Email') }}</label>
-                                                        <input type="email" class="form-control rounded-0{{ $errors->has('email') ? ' is-invalid' : '' }}" value="{{ old('email') }}" placeholder="{{  translate('Email') }}" name="email">
+                                                        <label for="email" class="fs-12 fw-700 text-soft-dark">{{  translate('Email') }}<x-required-mark /></label>
+                                                        <input type="email" class="form-control rounded-0{{ $errors->has('email') ? ' is-invalid' : '' }}" value="{{ old('email') }}" placeholder="{{  translate('Email') }}" name="email" required>
                                                         @if ($errors->has('email'))
                                                             <span class="invalid-feedback" role="alert">
                                                                 <strong>{{ $errors->first('email') }}</strong>
@@ -67,7 +79,7 @@
 
 
                                                 <div class="form-group">
-                                                    <label for="phone" class="fs-12 fw-700 text-soft-dark">{{  translate('phone') }}</label>
+                                                    <label for="phone" class="fs-12 fw-700 text-soft-dark">{{  translate('phone') }}<x-required-mark /></label>
                                                     <input type="tel" class="form-control rounded-0{{ $errors->has('phone') ? ' is-invalid' : '' }}" value="{{ old('phone') }}" placeholder="{{  translate('phone') }}" name="phone" required>
                                                     @if ($errors->has('phone'))
                                                         <span class="invalid-feedback" role="alert">
@@ -77,8 +89,20 @@
                                                 </div>
 
                                                 <div class="form-group">
-                                                    <label for="country" class="fs-12 fw-700 text-soft-dark">{{  translate('Country') }}</label>
-                                                    <input type="text" class="form-control rounded-0{{ $errors->has('country') ? ' is-invalid' : '' }}" value="{{ old('country') }}" placeholder="{{  translate('country') }}" name="country" required>
+                                                    <label for="country" class="fs-12 fw-700 text-soft-dark">{{  translate('Country') }}<x-required-mark /></label>
+                                                    @php
+                                                        $registrationCountries = \App\Models\Country::query()->where('status', 1)->orderByDesc('priority')->orderBy('name')->pluck('name');
+                                                    @endphp
+                                                    @if ($registrationCountries->isNotEmpty())
+                                                        <select class="form-control rounded-0{{ $errors->has('country') ? ' is-invalid' : '' }}" id="country" name="country" required>
+                                                            <option value="">{{ translate('Select your country') }}</option>
+                                                            @foreach ($registrationCountries as $registrationCountry)
+                                                                <option value="{{ $registrationCountry }}" @selected(old('country') === $registrationCountry)>{{ $registrationCountry }}</option>
+                                                            @endforeach
+                                                        </select>
+                                                    @else
+                                                        <input type="text" class="form-control rounded-0{{ $errors->has('country') ? ' is-invalid' : '' }}" id="country" value="{{ old('country') }}" placeholder="{{  translate('country') }}" name="country" required>
+                                                    @endif
                                                     @if ($errors->has('country'))
                                                         <span class="invalid-feedback" role="alert">
                                                             <strong>{{ $errors->first('country') }}</strong>
@@ -89,8 +113,8 @@
 
                                                 <!-- Tax Number -->
                                                 <div class="form-group">
-                                                    <label for="tax_number" class="fs-12 fw-700 text-soft-dark">{{  translate('Tax Number') }}</label>
-                                                    <input type="text" class="form-control rounded-0{{ $errors->has('tax_number') ? ' is-invalid' : '' }}" value="{{ old('tax_number') }}" placeholder="{{  translate('Tax Number') }}" name="tax_number" required>
+                                                    <label for="tax_number" class="fs-12 fw-700 text-soft-dark">{{  translate('Tax Number') }} <x-optional-mark /></label>
+                                                    <input type="text" class="form-control rounded-0{{ $errors->has('tax_number') ? ' is-invalid' : '' }}" value="{{ old('tax_number') }}" placeholder="{{  translate('Tax Number') }}" name="tax_number">
                                                     @if ($errors->has('tax_number'))
                                                         <span class="invalid-feedback" role="alert">
                                                             <strong>{{ $errors->first('tax_number') }}</strong>
@@ -99,8 +123,8 @@
                                                 </div>
                                                 <!-- Company Address -->
                                                 <div class="form-group">
-                                                    <label for="company_address" class="fs-12 fw-700 text-soft-dark">{{  translate('Company Address') }}</label>
-                                                    <input type="text" class="form-control rounded-0{{ $errors->has('company_address') ? ' is-invalid' : '' }}" value="{{ old('Company Address') }}" placeholder="{{  translate('Company Address') }}" name="company_address" required>
+                                                    <label for="company_address" class="fs-12 fw-700 text-soft-dark">{{  translate('Company Address') }} <x-optional-mark /></label>
+                                                    <input type="text" class="form-control rounded-0{{ $errors->has('company_address') ? ' is-invalid' : '' }}" value="{{ old('Company Address') }}" placeholder="{{  translate('Company Address') }}" name="company_address">
                                                     @if ($errors->has('company_address'))
                                                         <span class="invalid-feedback" role="alert">
                                                             <strong>{{ $errors->first('company_address') }}</strong>
@@ -109,8 +133,8 @@
                                                 </div>
                                                 <!-- Company Shipping Address -->
                                                 <div class="form-group">
-                                                    <label for="shipping_address" class="fs-12 fw-700 text-soft-dark">{{  translate('Shipping Address') }}</label>
-                                                    <input type="text" class="form-control rounded-0{{ $errors->has('shipping_address') ? ' is-invalid' : '' }}" value="{{ old('shipping_address') }}" placeholder="{{  translate('Shipping Address') }}" name="shipping_address" required>
+                                                    <label for="shipping_address" class="fs-12 fw-700 text-soft-dark">{{  translate('Shipping Address') }} <x-optional-mark /></label>
+                                                    <input type="text" class="form-control rounded-0{{ $errors->has('shipping_address') ? ' is-invalid' : '' }}" value="{{ old('shipping_address') }}" placeholder="{{  translate('Shipping Address') }}" name="shipping_address">
                                                     @if ($errors->has('shipping_address'))
                                                         <span class="invalid-feedback" role="alert">
                                                             <strong>{{ $errors->first('shipping_address') }}</strong>
@@ -119,8 +143,8 @@
                                                 </div>
 
                                                 <div class="form-group">
-                                                    <label for="trade_license" class="fs-14 fw-700 text-soft-dark">{{  translate('Trade License') }}</label>
-                                                    <input type="file" class="form-control rounded-0{{ $errors->has('trade_license') ? ' is-invalid' : '' }}" value="{{ old('trade_license') }}" placeholder="{{  translate('Upload Trade License') }}" name="trade_license" required>
+                                                    <label for="trade_license" class="fs-14 fw-700 text-soft-dark">{{  translate('Trade License') }} <x-optional-mark /></label>
+                                                    <input type="file" class="form-control rounded-0{{ $errors->has('trade_license') ? ' is-invalid' : '' }}" value="{{ old('trade_license') }}" placeholder="{{  translate('Upload Trade License') }}" name="trade_license">
                                                     @if ($errors->has('trade_license'))
                                                         <span class="invalid-feedback" role="alert">
                                                             <strong>{{ $errors->first('trade_license') }}</strong>
@@ -130,8 +154,8 @@
 
                                                 <!-- password -->
                                                 <div class="form-group">
-                                                    <label for="password" class="fs-12 fw-700 text-soft-dark">{{  translate('Password') }}</label>
-                                                    <input type="password" class="form-control rounded-0{{ $errors->has('password') ? ' is-invalid' : '' }}" placeholder="{{  translate('Password') }}" name="password">
+                                                    <label for="password" class="fs-12 fw-700 text-soft-dark">{{  translate('Password') }}<x-required-mark /></label>
+                                                    <input type="password" class="form-control rounded-0{{ $errors->has('password') ? ' is-invalid' : '' }}" placeholder="{{  translate('Password') }}" name="password" required>
                                                     <div class="text-right mt-1">
                                                         <span class="fs-12 fw-400 text-gray-dark">{{ translate('Password must contain at least 6 digits') }}</span>
                                                     </div>
@@ -144,14 +168,17 @@
 
                                                 <!-- password Confirm -->
                                                 <div class="form-group">
-                                                    <label for="password_confirmation" class="fs-12 fw-700 text-soft-dark">{{  translate('Confirm Password') }}</label>
-                                                    <input type="password" class="form-control rounded-0" placeholder="{{  translate('Confirm Password') }}" name="password_confirmation">
+                                                    <label for="password_confirmation" class="fs-12 fw-700 text-soft-dark">{{  translate('Confirm Password') }}<x-required-mark /></label>
+                                                    <input type="password" class="form-control rounded-0" placeholder="{{  translate('Confirm Password') }}" name="password_confirmation" required>
                                                 </div>
 
                                                 <!-- Recaptcha -->
                                                 @if(get_setting('google_recaptcha') == 1)
                                                     <div class="form-group">
                                                         <div class="g-recaptcha" data-sitekey="{{ config('services.recaptcha.site_key') }}"></div>
+                                                        @error('g-recaptcha-response')
+                                                            <span class="invalid-feedback d-block" role="alert"><strong>{{ $message }}</strong></span>
+                                                        @enderror
                                                     </div>
                                                 @endif
 
@@ -169,9 +196,16 @@
                                                             </div>
 
                                                             <div class="modal-body">
-                                                                <textarea class="form-control" rows="20" disabled>
-                                                                    {{ get_setting('terms') }}
-                                                                </textarea>
+                                                                @php
+                                                                    $termsPage = \App\Models\Page::query()->where('type', 'terms_conditions_page')->first();
+                                                                    $termsContent = $termsPage?->getTranslation('content');
+                                                                @endphp
+                                                                @if (filled($termsContent))
+                                                                    <div class="border p-3" id="terms_conditions_text" style="max-height: 60vh; overflow-y: auto;">{!! $termsContent !!}</div>
+                                                                    <a href="{{ route('terms') }}" target="_blank" rel="noopener" class="d-inline-block mt-2 fs-12">{{ translate('Open the terms in a new page') }}</a>
+                                                                @else
+                                                                    <p class="text-muted mb-0" id="terms_conditions_text">{{ translate('The terms and conditions are not available yet.') }}</p>
+                                                                @endif
                                                             </div>
 
                                                             <div class="modal-footer">

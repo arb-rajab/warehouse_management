@@ -10,12 +10,12 @@ describe('Store Color form fields', () => {
         expect(wrapper.get('#name').attributes('required')).toBeDefined();
         expect(wrapper.get('#name').attributes('maxlength')).toBe('30');
         expect(wrapper.get('label[for="name"]').text()).toBe(
-            t('store.colors.fields.name'),
+            t('store.colors.fields.name') + '*' + t('common.required'),
         );
         expect(wrapper.get('#code').attributes('required')).toBeDefined();
         expect(wrapper.get('#code').attributes('maxlength')).toBe('10');
         expect(wrapper.get('label[for="code"]').text()).toBe(
-            t('store.colors.fields.code'),
+            t('store.colors.fields.code') + '*' + t('common.required'),
         );
     });
     it('passes initial values and server errors to the shared fields', () => {

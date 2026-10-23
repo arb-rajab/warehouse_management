@@ -38,8 +38,9 @@ table name to its colliding default. The inventory and the reasoning are in
 
 This is the one thing that changed, and the two tables are no longer symmetric:
 
-- **`products` belongs to this app.** WMS owns its schema and is its only
-  writer. New migrations may alter it like any other WMS table — see "Migration
+- **`products` belongs to this app.** WMS owns its schema. The integrated
+  store and `products:sync` write separated columns under Option A below. New migrations may alter it like any other WMS table
+  — see "Migration
   conventions" below, which is where the old "never alter this table" rule used
   to live and no longer does.
 - **`uploads` is still the store's data, and this app is still fully read-only
@@ -57,14 +58,13 @@ This is the one thing that changed, and the two tables are no longer symmetric:
   `thumbnail_img` pointing at a row that does not exist, which surfaces as a
   null `image_url` rather than an error.
 
-There is still no per-request create/update/delete of a `Product` anywhere in
-the codebase, and there must not be: the one write path is the scheduled bulk
-sync (see "Product sync" below), not a controller or job reacting to a WMS
-action. That is now a design choice about where product data comes from rather
-than a constraint imposed by another app's ownership — but it is still the rule.
+The integrated store now creates, updates, duplicates and deletes products.
+Option A below replaces the former single-writer rule; deletion rules and
+foreign-key outcomes remain unchanged. Warehouse catalogue consumers still use
+narrow column lists.
 
-`products` carries 72 columns inherited from the store's schema and `uploads`
-eleven; only these are consumed here:
+`products` retains the inherited store columns plus its sync-origin metadata;
+`uploads` has eleven columns. The warehouse catalogue consumes these fields:
 
 | WMS attribute | Source | Notes |
 | --- | --- | --- |
@@ -379,50 +379,100 @@ In tests, `boxes_count` and `image_url` cannot be passed to
 `Product::factory()->create()` — they are not columns. Use the
 `boxesCount(int)`, `imageUrl(?string)` and `unconfigured()` factory states.
 
-### Product sync: the only writer of `products`
+### Product column ownership: Option A, two writers with separated columns
 
-`products:sync` (`app/Console/Commands/SyncProductsCommand.php`, scheduled
-hourly in `routes/console.php`) polls the Otajer store's REST product feed
-(URL in `config('store.products_sync_url')`, env `STORE_PRODUCTS_SYNC_URL` —
-the store's API key is embedded in that URL's path, so it is never
-hardcoded) and upserts exactly three columns — `name`, `ar_name`,
-`published` — keyed on `id`.
+**Owner decision, 2026-10-22 (guide §52; supersedes “only writer”).**
+`products:sync` owns exactly `name`, `ar_name` and `published` on feed-origin
+products. The integrated store (back office, seller panel/API and legacy import
+writers) owns every other column. It may write those three columns
+**only on products it created itself**. Existing approval authority is unchanged.
+Deletion and foreign-key rules are unchanged; this decision does not add a
+soft-delete or a new refusal policy for deletion.
 
-This app owns `products` and this command is its **only** writer. Nothing else
-in the codebase creates, updates or deletes a product row, and the store app no
-longer writes these columns either — so the feed is the single source of truth
-for a product's name, Arabic name and published state, and a WMS-side edit to
-any of the three would simply be overwritten on the next run. If product names
-ever need to be editable in the admin panel, that is a real design decision
-about which side wins, not a small feature: raise it rather than adding a second
-writer.
+`App\Support\ProductColumnOwnership::SYNC_COLUMNS` is the one ownership list.
+The seller physical panel uses explicit `SellerProductWriter` assignments through
+`PhysicalProductWriter` (§53 of the migration guide); never widen Product Fillable
+to make a legacy service appear to save fields. Its transaction owns stock and
+translation changes too, with cache clearing after commit. The seller API still
+uses the legacy service and retains the model/builder ownership guard.
+Physical panel edit reconciliation (§54, following #466/#467) preserves stock ids
+and values only after explicit choice ordering; no origin inference or automatic
+legacy-row reclassification is permitted. Exact decimal display and generated
+slug repairs do not change this ownership rule or approval/deletion authority.
+`Product` refuses changed feed-column assignments before legacy related-row
+writes; `ProductBuilder` repeats the check against current database rows under
+locks for model saves (quiet saves included), bulk updates and counter writes.
+A mixed-origin bulk update refuses the whole operation. Store upserts and origin
+marker updates are refused. Raw SQL/base-builder product writes are prohibited
+outside `SyncProductsCommand`; the architecture guard pins that boundary.
+`SellerDigitalProductWriter` now explicitly persists validated seller digital fields in
+one transaction, including stock/taxes/translations (§55). Its locked product save
+precedes every related-row mutation. Shared related-row operations live in
+`ProductWriter`; `PhysicalProductWriter` retains physical-only computations.
+`InHouseProductWriter`, admin digital writes, seller `ProductService`,
+publication switches and legacy imports all go through the guarded Product.
+Legacy imports attempting to rename or publish a feed-origin row now fail with
+an explicit validation error; they are not privileged sync writers. Store-owned
+columns remain writable. Every model insert, including replication and quiet
+replication, resets the marker to null.
 
-The integrated legacy store back office under `/temp` still carries second
-writers it inherited: brand and product/digital-product deletion, product
-duplication, the digital product create/edit forms, the physical product
-create form (each now one transaction, pinned by tests) and the queued
-`import:all-products-v2`. They are retained unchanged as an owner decision
-still pending (.ai/rules/store-backoffice-migration.md §5, §§14–16, §§21–22). Do not add
-another, and do not treat those as precedent.
+**Origin and the ID collision hazard.** Ordinary migration
+`2026_10_22_101723_add_synced_at_to_products_table` adds nullable `synced_at` with
+no environment/table-existence guard. Null means store-origin **or unclassified**;
+non-null means feed-origin. The sync sets/refreshes it on every accepted row.
+The timestamp is metadata, not an input to last-write-wins arbitration. The sync
+still maps `Mat_ID` to signed `products.id` and inserts unseen IDs. An existing
+null-origin row wins an ID collision: every product column, including timestamps,
+is preserved; the command counts the skipped feed rows and logs a warning naming
+each conflicting ID. Conditional upsert assignments protect the row at the SQL
+write itself, including a store insert racing the sync; pre-filtering alone
+would not. The marker assignment is last for MySQL's ordered SET evaluation.
 
-Three things worth knowing before touching this:
+**Existing rows: conservative default, no inferred provenance.** The column
+migration leaves all pre-marker rows null. A matching name/Arabic name/publication, `from_api`, `mat_id`
+or old `updated_at` cannot prove origin; that migration does not backfill origin. Consequently
+existing feed rows stop receiving those three updates until explicitly reviewed.
+The owner must compare an authoritative feed/creation inventory, approve exact IDs,
+back up those rows, and reclassify only that reviewed list, for example:
 
-- **`Mat_ID` is assumed to equal `products.id`.** The feed returns it as a
-  numeric string (e.g. `"100027"`); the command casts it to int and uses it
-  as the upsert key. If that assumption is ever wrong for some product
-  range, the symptom is silent — a sync either creates a phantom row at the
-  wrong id or overwrites an unrelated one, since nothing else cross-checks
-  the mapping.
-- **The feed always wins, and it creates rows as well as updating them.** The
-  upsert is unconditional: there is no last-write-wins timestamp comparison, so
-  whatever the feed currently says replaces what is in the table, and a product
-  id the feed reports that this app has never seen is inserted. A product
-  deleted from the feed is *not* deleted here — nothing prunes rows.
-- **Everything else in the feed is intentionally dropped.** Price tiers,
-  tax, barcodes, unit/class ids, and the image are not mapped to any
-  column — the same "narrow column list" discipline as the rest of this
-  file. A row with no usable `Mat_ID` or `enName` is skipped rather than
-  written with a guessed value.
+```sql
+START TRANSACTION;
+SELECT id, name, ar_name, published, synced_at
+FROM products WHERE id IN (/* reviewed feed IDs */) FOR UPDATE;
+UPDATE products SET synced_at = CURRENT_TIMESTAMP
+WHERE id IN (/* the same reviewed feed IDs */) AND synced_at IS NULL;
+COMMIT;
+```
+
+This is an owner-run operational note, **not executed by the migration or this
+PR**. Do not classify all rows, infer an ID range or use a matching name as proof.
+Until the next sync the initial timestamp records classification, not a proven
+previous sync time. An incorrectly classified row requires owner review before
+changing its marker back to null. Reclassification is deliberately unavailable
+through seller/back-office input.
+
+**Owner-approved existing catalog classification, 2026-10-23.** The owner confirmed
+that all current products originate from Otajer after product 100212 was found
+inactive with a null marker. Migration
+`2026_10_23_125430_classify_existing_products_as_otajer_managed` classifies all
+existing null-marker rows once, preserving every other column and existing sync
+markers. Back up the product rows before deployment, then run `products:sync`
+after migration to refresh statuses from the feed. The migration does not force
+products active or fetch the feed. Its `down()` deliberately preserves markers:
+a later sync makes a blanket reversal unsafe. Future store-created products
+still receive null markers and retain collision protection. This is explicit
+owner authorization for the existing catalog, not an origin inference rule.
+
+**Other sync behavior retained.** `products:sync` polls the configured Otajer
+feed (`store.products_sync_url` / `STORE_PRODUCTS_SYNC_URL`; never log the URL's
+embedded API key), remains hourly with the existing overlap lock, chunks by 500,
+truncates names to 200/191 characters, drops unmapped feed fields and skips
+unusable IDs/names. The feed wins the three business columns on feed-origin rows,
+without comparing timestamps, and never prunes missing products. Existing request
+failure handling remains. New feed rows keep their creation timestamps; an existing
+row's `updated_at` is store-owned and is no longer automatically changed by the sync.
+`synced_at` now records sync time instead. No prices, tax, stock,
+images, owner or approval values are imported by this command.
 
 ## Every other table is WMS-owned, under a `wms_` prefix
 

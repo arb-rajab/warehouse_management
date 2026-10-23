@@ -6,6 +6,7 @@ use App\Models\Product;
 use App\Models\ProductStock;
 use App\Models\ProductVariation;
 use App\Models\StoreProductBarcode;
+use App\Support\ProductFormNumber;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -82,7 +83,7 @@ class ProductFormResource extends JsonResource
             'added_by' => $this->added_by,
             'category_id' => $this->category_id,
             'brand_id' => $this->brand_id,
-            'weight' => $this->weight === null ? null : (string) $this->weight,
+            'weight' => $this->weight === null ? null : ProductFormNumber::format($this->weight),
             'max_qty' => $this->max_qty === null ? null : (string) $this->max_qty,
             'min_qty' => (string) max(1, (int) $this->min_qty),
             'tags' => $this->tags,
@@ -92,8 +93,8 @@ class ProductFormResource extends JsonResource
             'video_provider' => $this->video_provider,
             'video_link' => $this->video_link,
             'pdf' => $this->pdf,
-            'unit_price' => (string) $this->unit_price,
-            'discount' => $this->discount === null ? null : (string) $this->discount,
+            'unit_price' => ProductFormNumber::format($this->unit_price),
+            'discount' => $this->discount === null ? null : ProductFormNumber::format($this->discount),
             'discount_type' => $this->discount_type,
             'date_range' => $start && $end ? date('d-m-Y H:i:s', (int) $start).' to '.date('d-m-Y H:i:s', (int) $end) : null,
             'current_stock' => $stock === null ? '0' : (string) $stock->getAttribute('qty'),
@@ -105,7 +106,7 @@ class ProductFormResource extends JsonResource
             'meta_img' => $this->meta_img,
             'slug' => $this->slug,
             'shipping_type' => $this->shipping_type === 'flat_rate' ? 'flat_rate' : 'free',
-            'flat_shipping_cost' => (string) ($this->shipping_cost ?? 0),
+            'flat_shipping_cost' => ProductFormNumber::format($this->shipping_cost),
             'is_quantity_multiplied' => (bool) $this->is_quantity_multiplied,
             'est_shipping_days' => $this->est_shipping_days === null ? null : (string) $this->est_shipping_days,
             'low_stock_quantity' => $this->low_stock_quantity === null ? null : (string) $this->low_stock_quantity,

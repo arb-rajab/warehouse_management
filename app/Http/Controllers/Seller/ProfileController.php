@@ -53,8 +53,8 @@ class ProfileController extends Controller
         $shop = $user->shop;
 
         if($shop){
-            $shop->cash_on_delivery_status = $request->cash_on_delivery_status;
-            $shop->bank_payment_status = $request->bank_payment_status;
+            $shop->cash_on_delivery_status = (int) $request->boolean('cash_on_delivery_status');
+            $shop->bank_payment_status = (int) $request->boolean('bank_payment_status');
             $shop->bank_name = $request->bank_name;
             $shop->bank_acc_name = $request->bank_acc_name;
             $shop->bank_acc_no = $request->bank_acc_no;

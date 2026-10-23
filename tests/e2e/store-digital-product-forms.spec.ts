@@ -107,11 +107,12 @@ test('a digital product is created with editor content, canonical uploads, taxes
         'Browser e-books',
         '-- Browser recipes',
     ]);
-    await expect(
-        page.locator('label[for^="tax_"]:not([for^="tax_type_"])', {
-            hasText: /^Browser VAT$/,
-        }),
-    ).toHaveCount(1);
+    const vat = page.getByRole('spinbutton', {
+        name: 'Browser VAT required',
+        exact: true,
+    });
+    await expect(vat).toHaveCount(1);
+    await expect(vat).toHaveAttribute('required', '');
     await expect(page.getByText('Browser old levy')).toHaveCount(0);
 
     await page.locator('#name').fill('Browser bread guide');
@@ -130,9 +131,8 @@ test('a digital product is created with editor content, canonical uploads, taxes
     await page.locator('#meta_description').fill('How to bake bread');
     await page.locator('#unit_price').fill('19.99');
     await page.locator('#purchase_price').fill('10');
-    const vat = page.locator('label', { hasText: /^Browser VAT$/ });
-    const vatId = await vat.getAttribute('for');
-    await page.locator(`#${vatId}`).fill('21');
+    const vatId = await vat.getAttribute('id');
+    await vat.fill('21');
     await page
         .locator(`#${vatId!.replace('tax_', 'tax_type_')}`)
         .selectOption('percent');

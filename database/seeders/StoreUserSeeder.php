@@ -4,19 +4,27 @@ namespace Database\Seeders;
 
 use App\Models\Role;
 use App\Models\StoreUser;
+use Database\Seeders\Concerns\RefusesProduction;
 use Illuminate\Database\Seeder;
 
 class StoreUserSeeder extends Seeder
 {
+    use RefusesProduction;
+
     /**
      * Run the database seeds.
      *
      * A store admin (store-admin@example.com / password) holding Super Admin,
      * to sign in to the store back office under /temp/admin, the way
      * test@example.com signs in to the warehouse panel. Needs StoreRoleSeeder.
+     *
+     * Refuses production, where this known password would be a Super Admin
+     * login: the first real admin comes from `store:create-admin`.
      */
     public function run(): void
     {
+        $this->refuseInProduction();
+
         $superAdmin = Role::query()->where('name', Role::SUPER_ADMIN)->first();
 
         if ($superAdmin === null) {

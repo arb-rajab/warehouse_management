@@ -2,6 +2,7 @@ import { mount } from '@vue/test-utils';
 import { describe, expect, it } from 'vitest';
 import FormField from '@/components/FormField.vue';
 import { t } from '@/lib/i18n';
+import { expectRequiredFields } from '@/testing/requiredFields';
 import StoreBrandDiscountFormFields from './StoreBrandDiscountFormFields.vue';
 
 describe('Store brand discount form fields', () => {
@@ -41,6 +42,7 @@ describe('Store brand discount form fields', () => {
             expect(wrapper.text()).toContain(t(`store.brandDiscount.${key}`));
         }
 
+        expectRequiredFields(wrapper, ['discount_3']);
         expect(wrapper.findAllComponents(FormField)).toHaveLength(2);
     });
     it('renders backend errors without clearing entered values', async () => {

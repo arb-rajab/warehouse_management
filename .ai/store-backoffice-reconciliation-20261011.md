@@ -22,7 +22,7 @@ were activated. The table and deferred paths below define actual scope.
 | Source branch | Exact source commit | Disposition | Initial integration commit / rationale |
 | --- | --- | --- | --- |
 | `codex/store-backoffice-foundation-verification-20261011` | `67b621635e0cd290ddfa7aa3f43889f4cf17cf6f` | Included, documentation reconciled | `3ff704ff1b09d6699f5e36f2c505c6a3ae4bff83`; foundation constraints retained, historical progress replaced by actual integrated inventory |
-| `codex/seller-admin-prerequisite-review-20261011` | `1c005f6efdddee958ba8d739afd35eb0935007bd` | Included, documentation reconciled | `b234db6880b0153938d5b4c56e10f0716eb5bbcc`; seller feature-use prerequisite remains unresolved |
+| `codex/seller-admin-prerequisite-review-20261011` | `1c005f6efdddee958ba8d739afd35eb0935007bd` | Included, documentation reconciled | `b234db6880b0153938d5b4c56e10f0716eb5bbcc`; historical seller hold superseded by the owner’s convert decision; stage 34 below records the account migration |
 | `codex/store-backoffice-audit-2026-10-11` | `2062177776722e3dfb37ae968b8c9b0aeeba67f7` | Excluded as a separate integration source | Ancestor with no unique code contribution; no independent audit-code merge |
 | `codex/store-backoffice-reference-config-2026-10-11` | `35ae3133e0cf6f1d6f938eda5e01fdebe695d98e` | Included, canonical | `9645e25d541b6a219816697b5f95a5f3c8226a6b`; reference/shipping forms, controllers and routes selected |
 | `codex/store-backoffice-language-settings` | `465578796ff01c47276c24d5d8e504ce04198d36` | Included, adapted | `9b61a38915d4b62d50119bf8b95e7d8fed7e2fb0`; distinct language CRUD and translation-selector validation |
@@ -94,8 +94,8 @@ objects. These changes remain available in Git and have not been silently lost.
 
 | Source / paths or symbol | Established behavior retained | Proposed activation / prerequisite |
 | --- | --- | --- |
-| `218f05f1`: `app/Http/Controllers/Store/Admin/ClassifiedProductController.php`, classified requests/resources/pages/tests and routes | Root `CustomerProductController`, classified Blade and feature flag remain | Classified migration requires feature-use approval; no applicable evidence located |
-| `1c005f6e`: seller prerequisite review; existing seller controllers/views | Seller administration and seller-facing Blade area remain | Establish seller feature usage or explicitly authorize scoped removal; feature flags are not evidence |
+| `218f05f1`: `app/Http/Controllers/Store/Admin/ClassifiedProductController.php`, classified requests/resources/pages/tests and routes | Root `CustomerProductController`, classified Blade and feature flag remain | **Owner decided convert, not delete.** Historical activation hold superseded; classified conversion follows in a later step, with no role grants |
+| `1c005f6e`: seller prerequisite review; existing seller controllers/views | Seller administration and seller-facing Blade area remain | **Owner decided convert, not delete.** Seller list/accounts convert in step 34 below; stages 35/36 retain payout/commission/product Blade and the protected seller area |
 | `e3995898`: `resources/js/components/StoreRichTextField.vue`, its tests and Tiptap additions in `package.json` / `package-lock.json` | Existing Blade editors and their assets remain for their remaining consumers | **Owner-approved and active (2026-10-13).** Adapted as the shared editor with Tiptap 3.31.3 and `@floating-ui/dom` 1.8.0 (the recorded 3.31.4 failed the two-week rule); blog post forms, the newsletter and the ticket reply use it. Lifts the editor hold on the rows below (footer/appearance/custom pages, ticket detail/reply, newsletter, blog) and on the editor part of product/digital-product forms (the digital product forms use it since 2026-10-13, `[skip ci]`; see [the digital product forms section](#digital-product-create-and-edit-forms-migration-2026-10-13)); script policy, `manage_website_scripts` and rich-text WAF exceptions stay held. See [the editor section](#shared-rich-text-editor-and-blog-post-forms-2026-10-13) |
 | `e3995898`: `Store/Admin/WebsiteFooterController.php`, `WebsiteAppearanceController.php`, `WebsitePageController.php` and corresponding requests/resources/Vue forms/pages/tests | Stored formats, translations, image references, page slugs, gates and the storefront/mobile/email rendering of footer, appearance and pages; the scripts compatibility endpoint | **Activated (2026-10-13).** Inertia footer, appearance and custom pages on the shared editor and canonical uploader, with typed writers cleaning rich text; the Blade views, root `WebsiteController` and root page admin actions removed; the generic `business_settings.update` writer retired with its last consumers. This PR and its merge used `[skip ci]`. See [the website settings section](#website-footer-appearance-and-custom-pages-migration-2026-10-13) |
 | `e3995898`: `Store/Admin/SupportTicketController::show` Inertia implementation, `StoreTicketReplyForm.vue`, `Store/Admin/Support/Tickets/Show.vue` and editor-dependent frontend tests | Ticket list, typed reply, gates, sanitation, `viewed`/`client_viewed`/status effects, reply email and the customer/seller ticket pages | **Activated (2026-10-13).** Inertia detail/reply on the shared editor and the canonical `StoreUploadField`/`UploadResource`; Blade detail and root `admin_show` removed. This PR and its merge used `[skip ci]`. See [the newsletter and ticket section](#newsletter-and-support-ticket-detail-migration-2026-10-13) |
@@ -161,8 +161,9 @@ checks; native host binaries remain absent. No Claude hooks were assumed to run.
   remain unimplemented in the selected migration sources.
 - Website footer/appearance/custom pages, ticket detail/reply Vue editor, blog
   editor forms/newsletters and dashboard conversion remain held as above.
-- Trip/map conversion remains unimplemented; seller/classified scope remains
-  decision-blocked. Production role grants require explicit review.
+- Trip/map conversion was unimplemented at reconciliation; later sections record its migration.
+  The historical seller/classified decision block is superseded by the owner’s
+  convert decision; step 34 below records seller account conversion. Production role grants require explicit review.
 - Keep legacy admin shells/assets/includes/CSP exceptions while consumers remain;
   keep PDF layouts/downloads, `resources/views/app.blade.php`, storefront/seller/
   authentication `HandleStoreBladePages` and `store.blade_csp`.
@@ -3866,3 +3867,1421 @@ Inventory confirmed from files/searches: **26** backend Blade files, **13**
 literal app-shell consumers including StoreBackOfficeShellTest, **3**
 layout-shell extending views. No route was added or removed. No production
 data was changed.
+
+
+## Admin dashboard step 33 (2026-10-18)
+
+**Scope and runtime.** Work is on `codex/step-33-dashboard`, created after
+`git fetch origin develop` from `63e676f4` (PR #442). `AGENTS.md` was read first,
+including its Codex portability rules. Model: GPT-6 Codex; the exact variant and
+configured reasoning-effort value are not exposed by this session. No Claude
+hooks, simulated remote mode, subagents or Boost results were assumed. Installed
+package source and repository files supplied the framework references.
+
+The host has no PHP. The existing managed `wms-cloud-php:8.5` Docker image runs
+**PHP 8.5.11** with SQLite, MySQL, GD, intl, zip and pcntl extensions;
+its GD initially lacked WebP encoding (diagnosis and runtime fix below). `vendor/` and `node_modules/` were already present. Installed versions:
+Laravel 13.34.0, inertia-laravel 3.3.1, Wayfinder 0.1.21, Pest 5.0.4, Vitest
+4.1.11 and Vite 8.2.1. Composer's executable was copied from the local Composer
+image into temporary runtime storage; the local class map was refreshed after
+removing the root controller. No Composer manifest/lock change. Scratch wrappers,
+PHP INI, browser-runtime setup and logs are outside the repository in
+`/workspace/work/step33`. The temporary server is published on loopback only;
+the HTTPS harness and enforced CSP remain in use.
+
+**Owner decisions and implementation.** Chart.js is explicitly owner-approved,
+recorded in §5 and §33 of the migration guide: npm `chart.js` **4.5.1**, exact
+pin, plus resolved `@kurkle/color` 0.3.4. Only the used Chart.js pieces are
+registered; no CDN or CSP change. `Store\Admin\DashboardController::index`
+returns the Inertia dashboard with explicit selections and eager product
+translations, taxes and thumbnails. Separate category sales/stock SQL aggregates
+are proven equal to the old nested loop. A new 24-hour v2 numeric cache never
+reads old comma strings; visits labels and values share a snapshot. The SMTP
+condition, product filtering, price helpers and chart meanings are preserved.
+The requested route-level `admin_dashboard` gate removes one Legacy read-ratchet
+exception. Cache clear keeps its vendor-only route gate and scoped behavior.
+The root controller's last routed action moved; its unused operational cache
+method, file and both analysis exclusions are removed. The dashboard Blade view
+is removed with `git rm`; seller Blade still consumes AIZ charts, so shared
+assets remain. No storefront file or production data changes.
+
+**Baseline on unmodified develop.** The following Pest files ran through PHP
+8.5 before application edits, passing **47 tests / 172 assertions**:
+
+- `tests/Feature/LegacyAdminPanelTest.php`
+- `tests/Feature/Store/Admin/DashboardUtilitiesTest.php`
+- `tests/Feature/Store/StoreBackOfficeShellTest.php`
+- `tests/Feature/LegacyAdminPermissionsTest.php`
+- `tests/Feature/LegacyStoreStateChangingRoutesTest.php`
+- `tests/Feature/LegacyShopRouteAccessTest.php`
+- `tests/Feature/LegacyTempRoutesReachableTest.php`
+- `tests/Feature/RouteServiceProviderTest.php`
+
+**Focused checks and defects found.** The new dashboard Pest file passed
+**19 tests / 226 assertions**: full stats/series/product payload, empty shop,
+aggregate equality with nested categories/variants/stockless/noise products,
+24-hour expiry, top-12 filtering and translation query count, SMTP shown/hidden,
+refused callers with unchanged DB, strict CSP, routes and moved shell cases.
+The focused frontend run passed **37 tests in 5 files** (page/chart/menu/layout/
+nav); a later missing-slug page test is included in the final full run.
+The first backend fixture needed `product_taxes.tax_id` and an explicit null
+thumbnail instead of a Faker-generated upload. Both were corrected.
+Initial focused frontend mounts also exposed use of `useI18n()` without an
+installed test-app plugin; the implementation now follows the repository's
+shared `lib/i18n` convention. The existing layout test now expects an Inertia
+Dashboard link. Standalone vue-tsc attempts first reported missing generated
+actions after Wayfinder exhausted the default 128 MB limit, then a mocked
+Chart constructor's static-register type inference error. Fresh route generation
+with the runtime memory allowance and an explicit mock type resolved both;
+the later full vue-tsc runs pass.
+
+`store-dashboard.spec.ts` passed **1 real Chromium test** under enforced CSP:
+five painted canvases with labelled table fallbacks, real Inertia dashboard
+menu navigation, Arabic RTL with LTR geometry, translated category data, dark
+label/fill contrast, no page errors and no CSP console/event reports during the
+converted workflow. Dedicated SQLite browser fixtures replace unrelated Faker
+remote thumbnail URLs with local placeholders; no external image host or CSP
+exception is added. The initial login is protected Blade and precedes the
+converted-page error/CSP observers, as in the other store browser specs.
+
+Browser setup/verification exposed and resolved:
+
+- Missing Playwright FFmpeg: the installed system executable was supplied in
+  the temporary browser runtime, with `/usr/bin/chromium` selected explicitly.
+- Docker exec left an orphan PHP test server after the harness stopped; temporary
+  runtime cleanup now terminates only that session-owned port-8011 server.
+- A new category fixture lacked its slug, causing the retained login menu to
+  fail. Its fixture now supplies one; no storefront code changed.
+- Published WMS products may have no storefront slug. The new resource now
+  returns a null public URL, and the grid keeps the card readable without
+  inventing a link, matching the existing product-list contract. Pest and Vitest
+  cover this actual application fix.
+- An ignored, stale `public/hot` pointed to an absent development server and
+  prevented the production bundle from booting. It was moved to scratch.
+- The English page's locale button is named `Arabic`, not `العربية`; the spec
+  now selects its displayed label and uses the existing full-reload helper.
+
+**Build and dependency audit.** `npm run build` passed with fresh Wayfinder
+and the actual remote Instrument Sans font fetch; no font-less fallback. A
+second build passed after the missing-slug fix. Existing optional-fontaine and
+large-chunk notices remain warnings. The requested before/after `npm audit
+--json` ran: both report exactly **6 existing dev-tool findings (4 high,
+2 moderate)**, affecting `braces`, `micromatch`, `fast-glob`,
+`@vue/eslint-config-typescript`, `eslint-plugin-vue` and
+`postcss-selector-parser`. Chart.js and its new transitive add **zero new
+findings**. The first audit attempt was rejected by automatic approval review
+for metadata disclosure; the explicit user-requested audit scope was supplied
+and the subsequent before/after audits were approved and completed. These
+commands exit 1 for the existing findings; they are not described as clean.
+
+**Full pre-push verification.** Every attempt used explicit
+`python3 .claude/scripts/pre_push_check.py --full` on uncommitted changes;
+the bare attested mode was never invoked and no CI-Verified trailer was written.
+The first attempt stopped at a fixture type-import lint error; the second at
+formatting left by ESLint. Both were fixed. The third passed Wayfinder, ESLint,
+Prettier, vue-tsc, Vitest (**320 files / 2,508 tests**), Pint (**1,240 files**),
+PHPStan (**0 errors**) and config-cache clearing, then failed before Pest could
+run tests because a child PHP process retained its default **128 MB** memory
+limit. A temporary PHP INI now passes the 1 GB limit to child processes too.
+The fourth attempt passed all frontend/Pint/PHPStan stages, including
+**320 files / 2,509 Vitest tests**, then Pest completed with **7 failed, 6,054
+passed / 34,387 assertions**. Five upload failures came from GD without WebP,
+not changed upload code. Two were a prior visit-navigation test rendering the
+now-permission-gated dashboard; it now checks the same retained Blade sidebar
+on `sellers.index` with `view_all_seller`, preserving both allowed/refused
+visit cases. Its focused run passed **2 tests / 4 assertions**. The temporary
+`wms-step33-php:8.5` image now has GD WebP support, confirmed by `gd_info()`.
+The initial apt build needed its public proxy CA mounted readably for the
+`_apt` user; TLS verification stayed enabled. The two affected upload files
+then passed **87 tests / 403 assertions**. No application extension or Composer
+requirement changed. The fifth attempt stopped at ESLint because root-run upload tests had left a
+mode-0700 fixture directory owned by root under `storage/app/private/uploads`.
+Ownership of session-created runtime artifacts was restored to the workspace
+user, and the temporary PHP wrapper now runs as that user. The sixth run passed all frontend/Pint/PHPStan stages and reached **6,057
+passing Pest tests / 34,402 assertions**, with four failures from an existing
+`public/uploads/tests` directory owned by UID 65534: workspace-user PHP could
+not write the download fixtures. Ownership of only that isolated fixture
+directory was restored. The three affected download/API files then passed
+**111 tests / 957 assertions**. No production code or assertion was weakened
+for runtime failures. The seventh explicit `--full` run **exited 0**: Wayfinder generation, whole-repo
+ESLint, Prettier, vue-tsc, Vitest (**320 files / 2,509 tests**), Pint (**1,240
+files**), PHPStan (**814 files, 0 errors**), config-cache clearing and Pest
+(**6,061 tests / 34,431 assertions**, five processes) all passed. The existing
+jsdom navigation notices are non-fatal. The bare/attested mode was never run;
+no CI-Verified trailer was added. The final code is covered by this run; later
+PR-number recording changes only documentation.
+
+**Inventory.** **25** backend Blade files (26 minus the dashboard), **12**
+literal app-shell consumer files including the shell test (11 extending views),
+**3** layout-shell extending views. `route:list --path=temp --json` confirms
+**1,048** `/temp` and **436** `/temp/admin` registrations, unchanged. Retained
+Blade editor inventory stays **8 fields in 8 views**.
+
+**Not run:** the full Playwright suite (only the new dashboard spec ran), the
+separate MySQL migration job, Composer audit or deploy-script checks. None is
+part of explicit `--full`. No production mutation. PR CI, PR/merge SAST and
+develop deployment do not run under the owner's required `[skip ci]` messages.
+
+
+**Shipping record.** [PR #444](https://github.com/arb-rajab/warehouse_management/pull/444)
+is the single PR into `develop` from `codex/step-33-dashboard`. Implementation
+commit: `87f1d9cf` (`Migrate the store admin dashboard to Inertia [skip ci]`).
+The PR number is recorded in this documentation-only follow-up commit before
+merging, as requested. `pre_push_check.py --quick --base HEAD` on this follow-up
+selects no application checks; `git diff --check` verifies its whitespace.
+The final full code gate remains the seventh explicit `--full` run above.
+All new commit messages and the PR title contain `[skip ci]`; the authorized
+merge message does too. No CI-Verified trailer or Claude attribution line.
+
+
+## Seller list and account screens step 34 (2026-10-19)
+
+Branch: `codex/step-34-sellers`, from freshly fetched `origin/develop`
+**fc8e73de** (PR #444). Model: **GPT-6 Codex**; exact variant and configured
+reasoning effort are not exposed to this runtime. AGENTS.md portability rules
+were read first; no Claude hooks/tools/setup were assumed. Boost is unavailable;
+repository files and installed Laravel 13.34.0/Inertia 3/Wayfinder source supplied
+the contracts. Temporary runtime, logs and installers are outside the checkout
+under `/workspace/work/step34`.
+
+**Owner decision and boundaries.** Sellers and classified products are converted
+to Inertia, not deleted. This explicitly overrides the historical decision-blocked
+status in the prerequisite/source tables. It grants no roles. Stage 34 covers
+seller list/accounts/verification/profile and their existing actions. Commission,
+payment/withdrawal/balance behavior, storefront and the seller area remain as
+established. Payment histories, withdrawals, commission and verification config,
+and the seller product list remain Blade for stages 35/36. The single list-only
+payment modal stays Blade, now with its existing admin shell and native CSRF POST
+entry; its money writer is untouched. Root SellerController and both exclusions
+remain. The guide’s §34 records routes, consumers and implementation precisely.
+
+**Runtime and develop baseline.** `vendor/` and `node_modules/` existed but were
+not assumed current. Host PHP is absent. Sandbox network/socket restrictions
+initially refused fetch/Docker access; authorized network/socket execution then
+worked. `git fetch origin develop` succeeded and the branch was created at the
+required commit. Docker PHP **8.5.11** and Laravel **13.34.0** boot successfully.
+The preinstalled image needed WebP, Composer and a child-process 1 GB memory
+limit; the temporary `wms-step34-php:8.5` image provides them without changing
+Composer manifests/locks or ignoring platform requirements. It runs as workspace
+UID 1000. Wrappers pass the browser harness’s isolated DB settings and adapt the
+container bind address; only its session-owned server uses port 8011.
+
+On the unchanged develop tree, the requested baseline ran:
+
+- LegacySellerAreaTest, LegacySellerScopingTest,
+  LegacySellerProductAuthorizationTest, LegacySellerPackageTest,
+  LegacySellerWithdrawRequestTest, LegacyAdminPermissionsTest,
+  LegacyStoreStateChangingRoutesTest, LegacyTempRoutesReachableTest,
+  LegacyUploadSecurityTest, StoreIntegrationPermissionsTest:
+  **65 passed / 238 assertions**.
+- Additional traced document/route/middleware ratchets:
+  LegacyShopVerificationTest, RouteServiceProviderTest,
+  LegacyControllerMiddlewareConversionTest: **17 passed / 52 assertions**.
+
+**Implementation and verification findings.** The existing approved route
+requires `edit_seller`; only its old Blade switch incorrectly used
+`approve_seller`. The Vue gate matches the server without changing permissions.
+Admin document cases moved from LegacyShopVerificationTest into the new seller
+file; upload cases remain. LegacyAdminPermissionsTest lists are unchanged.
+The state-changing route ratchet keeps its route list and drops only the deleted
+Blade ban-modal scan. RouteServiceProviderTest drops the obsolete unnamed seller
+resource destroy duplicate, retaining its other duplicate-name cases. The Blade visit-nav test uses the retained payment-history screen and permission
+now that sellers.index is Inertia. A subsequent literal-URI trace also found
+HandleStoreBladePagesTest and three browser specs using the seller list as their
+Blade example. Their fallback, inline-policy, shell-logo and full-load assertions
+now use payment histories; the coexistence fixture enables its existing Payouts
+setting, and no gate changes. The full check is repeated after these test updates.
+
+Focused Pest initially exposed fixture deficiencies (missing currency, a
+strict-mode Shop value query that omitted user_id, and an event fake attached
+after the session guard had captured its dispatcher). Tests now seed the real
+currency helper, read the scalar through the DB builder and observe the actual
+Login event. Traversal tests account for the existing WAF’s 403 as well as the
+storage/route 404; no path escapes private storage. The new controller’s eager
+load callbacks use Relation, and the paid-line sum uses a scoped parent-order
+subquery, matching the legacy aggregate. PHPStan then passed **824 files,
+0 errors**. The focused seller/verification/visit run passed **114 tests /
+1,038 assertions** before the additional rollback cases.
+
+The initial frontend check found stale installed Leaflet/Chart.js/Tiptap packages.
+`npm ci` first failed because the default npm cache was outside writable roots;
+rerunning with a scratch cache installed the existing lockfile successfully
+(557 packages), with no dependency changes. Full page/component mounting then
+caught missing exports in the confirmation mock and selectors matching the
+layout’s search/storefront link instead of page controls; those tests now use
+shared stubs, a partial mock and scoped selectors. Generic DataTable props use
+the repository’s ComponentPublicInstance test type. Focused Vitest passed
+**31 tests in 7 files**, including all four pages, both components and the menu.
+Formatting/lint issues were fixed without weakening checks.
+
+`npm run build` initially failed resolving fonts.bunny.net because Node fetch
+was not using the configured proxy. With Node 24’s `NODE_USE_ENV_PROXY=1`, the
+normal build, fresh Wayfinder generation and real remote font fetch passed;
+no font-less fallback or Vite/CSP change. Existing large-chunk/plugin timing
+warnings remain warnings.
+
+Browser setup first lacked Playwright FFmpeg; its download failed, so the
+installed system FFmpeg was provided in the temporary browser directory beside
+system Chromium. A guarded BusinessSetting fixture was corrected to assign its
+type explicitly. Docker exec left a PHP server child on 8011 after harness
+shutdown; runtime cleanup now stops both session-owned PHP server processes
+before a fresh run. The stale ignored `public/hot` pointed at an absent Vite server; it was moved
+to scratch and the production bundle rebuilt. The RTL selector now follows the
+login link’s stable URI rather than its English label after switching to Arabic.
+Unrelated dashboard Faker thumbnails are set to null only in the dedicated
+browser fixture, avoiding delayed dashboard image CSP reports without changing
+policy. No application/CSP assertion was weakened.
+
+The final `store-sellers.spec.ts` run passed **1 real Chromium test** (18.1s
+including harness setup, 11.7s test): real profile HTTP request and escaped bank
+text, focus trap/Escape/focus return, dismissed and accepted ban confirms,
+dismissed delete confirm, LTR/Arabic RTL arrow rotation, dark input contrast
+at least 4.5:1, no page errors or CSP reports/violations. The final Vue bundle
+includes the restored select-all-on-this-page bulk control. The expanded affected
+Pest set passed **139 tests / 1,140 assertions** across seller, permission,
+route, shell, seller-upload and visit files. Frontend types and affected ESLint
+also passed before the full run.
+
+**Inventory.** 20 backend Blade files; 9 direct literal app-shell consumers
+including the shell test (8 actual extending views); 3 layout-shell extending
+views; route:list confirms 1,046 `/temp` and 434 `/temp/admin` registrations.
+Five replaced seller views were removed with git rm after tracing app/routes/
+resources/public/assets/js/tests. The payment view remains Blade. The editor
+inventory stays 8 fields in 8 views. No production data or schema was changed.
+
+**Final browser/repair verification.** The four affected Chromium cases passed
+**4 tests in 29.6s**: the seller workflow, the retained Blade-to-Inertia uploader
+navigation, saved general-settings logo/name in the retained shell, and sidebar
+Blade navigation plus logout. The seller spec also posts the list’s native CSRF
+payment form and verifies a 200 Blade page with the same shop ID; it makes no
+payment. The corrected seller/general-settings Pest run passed **111 tests /
+861 assertions**. The earlier broader repair run passed 209 cases and failed
+only because its already-loaded general-settings fixture still lacked the
+payment-history permission; the corrected fresh process passes.
+
+**First explicit full run.** `pre_push_check.py --full` ran Wayfinder, whole-repo
+ESLint, Prettier, vue-tsc, Vitest (**326 files / 2,529 tests**), Pint (**1,251
+files**), PHPStan (**824 files, 0 errors**), config-cache clearing and parallel
+Pest. The frontend/Pint/PHPStan stages passed. Pest finished with **4 failed,
+6,130 passed / 35,056 assertions**, five processes. Two failures were stale
+vendor Composer class-map entries for the already-deleted root DigitalProduct
+and Trip controllers; `composer dump-autoload --no-scripts` refreshed generated
+metadata without installing packages or changing locks. Its existing non-PSR-4
+StubProductImportCommand test-fixture warning is unchanged. Two more tests used
+the seller list to inspect retained Blade logos/uploader metadata; they now use
+payment histories and that screen’s existing permission. Their original
+assertions remain. No unrelated application fix or gate weakening was needed.
+The final explicit --full run on the finished code and tests is recorded below.
+
+**Final full verification — passed.** Before committing, the second explicit
+`python3 .claude/scripts/pre_push_check.py --full` **exited 0** on the finished
+code/tests. Exactly these stages ran and passed: Wayfinder generation, whole-repo
+ESLint, Prettier, vue-tsc, Vitest (**326 files / 2,529 tests**), Pint (**1,251
+files**), PHPStan (**824 files, 0 errors**), config-cache clearing, and Pest
+(**6,134 passed / 35,071 assertions**, five processes, 154.26s). The normal
+production build and four affected real Chromium tests passed separately as
+recorded above. The existing jsdom navigation notices and optional-fontaine /
+large-chunk notices are non-fatal. `git diff --check` passes. The final code is
+covered by this run; subsequent PR-number recording is documentation only.
+
+**Skipped/not run:** full Playwright suite (four affected tests ran), separate
+MySQL migration job, Composer/npm audits and deploy-script checks. Those are not
+part of explicit --full. No production mutation or deployment. PR CI, PR/merge
+SAST and deploy do not run under the owner’s required `[skip ci]` messages.
+The bare attested mode was never invoked and no CI-Verified trailer was added
+or edited by hand. Model/effort metadata variables were also checked explicitly;
+the exact variant and effort remain unexposed, so no setting is invented.
+
+**Shipping record.** [PR #445](https://github.com/arb-rajab/warehouse_management/pull/445)
+is the single PR into `develop`, from `codex/step-34-sellers`. Implementation
+commit **c98dff89** (`Migrate seller administration screens to Inertia [skip ci]`)
+was pushed after the final full gate passed. This documentation-only follow-up
+records the PR number before merging, as requested. `git diff --check` and an
+explicit `pre_push_check.py --quick --base HEAD` verify this follow-up; its two
+documentation files select no application checks, and the full code results
+above remain applicable. Every implementation/follow-up commit and the PR title
+contain `[skip ci]`; the authorized merge message does too. No Claude attribution
+or CI-Verified trailer is added. PR CI, PR/merge SAST and deploy do not run.
+
+
+## Seller payments and withdrawals step 35 (2026-10-19)
+
+Branch `codex/step-35-seller-payments`, from freshly fetched `origin/develop`
+**cbbb3c3c** (PR #445). Model: **GPT-6 Codex**; exact variant and configured
+reasoning effort are not exposed by this runtime, so neither is invented.
+AGENTS.md was read first, then shared conventions/framework/index, applicable
+rules, seller-stage constraints and the legacy guide. Boost is unavailable;
+installed package source/repository files supply APIs. No Claude hooks, forced
+remote-mode variables or assumed setup readiness. Work files/logs live outside
+the checkout in `/workspace/work/step35`.
+
+**Setup and baseline.** Fetch succeeded after granting the supported network
+capability. Host PATH initially had no PHP/Composer; vendor and node_modules
+existed. Docker socket access required supported escalation, and the existing
+`wms-cloud-php:8.5` image verified PHP **8.5.11**. The existing extracted runtime
+works via `/workspace/cloud-setup/activate.sh`. Installed lockfile packages
+include Laravel 13.34.0, Inertia Laravel 3.3.1, Wayfinder 0.1.21, Vue 3.5.43 and
+Inertia Vue 3.6.1. Stale JS dependencies were refreshed with `npm ci` against
+the unchanged lockfile (557 packages). No platform bypass/manifest/lock change.
+
+The unchanged develop baseline (before implementation) ran in PHP 8.5 Docker:
+Store/Admin/SellerControllerTest, LegacyCommissionPayoutTest,
+LegacySellerWithdrawRequestTest, LegacySellerAreaTest, LegacySellerScopingTest,
+LegacyAdminPermissionsTest, LegacyStoreStateChangingRoutesTest,
+LegacyTempRoutesReachableTest and StaticAnalysisExclusionsTest:
+**130 passed / 828 assertions**. Before refactoring, five additional money
+characterizations (methods, overdraft, wallet/no-mail/no-notification, partial
+withdrawal and empty approve/reject/delete routes) were added to the existing
+Legacy payout file. That entire file passed **17 tests / 102 assertions**, then
+moved into the converted controller tests. These are actual local baseline runs.
+
+**Implemented scope and retained defects.** Guide §35 records routes, exact
+money semantics and deliberate response/UI changes. Six admin Blade files and
+three obsolete root controllers are removed after consumer tracing. Root
+CommissionController stays for checkout commission calculation; its exclusions
+remain. The cleaned Payment model leaves both exclusions; its seller relation
+has a dedicated noise-data test. No seller-area/storefront/commission-config
+behavior or role grants change. Both former money transactions/locks remain;
+no new transaction is added. There is no existing functioning approval/rejection
+or admin message-write workflow: those retained resource routes still write
+nothing. Negative/zero-due Clear due still lacks the required method as in Blade;
+withdrawal UI still has no txn-code field. Missing/wrong-owner references are
+422, while already-paid state conflicts remain 404. Amounts still have no
+backend maximum; partial withdrawal payout still closes the whole request.
+
+Only one seller Blade file references these admin modal routes in this checkout:
+its unused message helper points to the already-refused admin route. Seller
+payment history uses its own seller controller/route. Protected seller files,
+route names and access boundaries are unchanged. No second seller view caller
+was found. Seven retained-Blade sample tests/specs move from now-Inertia payment
+histories to commission settings without changing those assertions or gates.
+Legacy permission/state-route ratchet lists stay unchanged.
+
+**Iteration and verification so far.** Focused backend tests passed
+**113 / 1,179 assertions**, then the broader affected set passed
+**240 / 1,982 assertions**, including account, payout, withdrawal, permission,
+route, model, shell/CSP, settings and representative-visit coverage. An initial
+run found a bank-routing fixture type, session-assertion API and ordering fixture
+mistakes; corrected tests now assert the real schema/API. PHPStan exposed missing
+legacy relation type documentation and validated mixed IDs; relation annotations
+and integer accessors fixed those without suppression. Final focused PHPStan
+passed with zero errors. The first full-mount Vue run caught a computed-ref
+access in the new dialog; it is fixed. The focused run passed **42 tests in
+7 files**. Formatting/lint errors were corrected using the configured tools.
+
+Runtime recovery: the supplied PHP GD lacked WebP. A temporary Docker image
+rebuild first failed because apt's sandbox user could not read its CA secret;
+a read-only public CA mount with mode 0444 fixed it. The verified WebP-enabled
+GD extension is loaded through a temporary scan directory, outside the repo.
+Playwright's FFmpeg download was denied by network policy; installed system
+FFmpeg is supplied through its temporary browser directory, with system
+Chromium. The stale ignored public/hot pointer was moved to work so tests use
+the real production build. Normal `npm run build` with the configured proxy
+passed, including fresh Wayfinder generation and font fetch. No fallback build,
+TLS bypass, CSP weakening or dependency change.
+
+The initial browser batch passed eight cases and caught a real missing initial
+`useHttp` field: Inertia serializes declared initial keys, so the withdrawal
+request ID was omitted. Adding that initial key fixed the request; the focused
+payment/withdrawal browser spec passed. The final affected batch then passed
+**9 Chromium tests in 42.0s**, covering the new payment/withdrawal workflow,
+existing seller profile/confirmation/RTL/dark behavior, retained uploader,
+settings, Blade sidebar coexistence and logout. CSP stayed enforced. Native
+payout confirmation was dismissed and accepted, amount zero was refused by the
+browser, bank txn submission and history navigation worked, messages/bank text
+were escaped, focus returned after Escape, and RTL/dark contrast passed.
+
+**Explicit full verification — passed before committing.**
+`python3 .claude/scripts/pre_push_check.py --full` exited **0**. Exactly these
+stages ran: setup-state inspection (none in progress), Wayfinder generation,
+whole-repo ESLint, Prettier, vue-tsc, full Vitest (**330 files / 2,545 tests**),
+Pint, PHPStan (**0 errors**), config-cache clearing, and parallel Pest
+(**6,165 passed / 35,583 assertions**, 101.718s). All application changes,
+including the final exact `== 1` shop-method flags and extra withdrawal-state
+cases, were present before the applicable verification stages. No check in this
+explicit sequence was skipped. `git diff --check`, local documentation links,
+and literal UI keys in both locales also pass. The full run is not an attested
+run and does not cover every CI-only group.
+
+The normal production build passed with real font retrieval and fresh Wayfinder.
+The nine affected real Chromium cases passed as above; a final production build
+and focused payment/withdrawal browser run verify the shipped dialog/status UI:
+**1 Chromium test passed in 9.3s** (4.0s test), with the same enforced-CSP,
+confirmation, typed request, escaped message, focus, RTL and dark assertions.
+
+**Skipped/not run:** the full Playwright suite (nine affected cases ran), the
+separate MySQL migration job, Composer/npm audits, deploy-script checks,
+production data/schema changes, and deployment. These groups are outside the
+explicit --full sequence and are not claimed as passing. The bare attested mode
+was never invoked; no CI-Verified trailer was added or edited by hand. PR CI,
+PR/merge SAST and deploy did not run under the required `[skip ci]` messages.
+
+**Shipping:** final build/browser verification passed. Shipping uses one implementation
+`[skip ci]` commit, one PR into develop, a PR-number documentation `[skip ci]`
+commit, and the explicitly authorized `[skip ci]` merge. No Claude attribution.
+The exact PR number and resulting commits are recorded below before merging.
+
+
+**Shipping record.** [PR #446](https://github.com/arb-rajab/warehouse_management/pull/446)
+is the single PR into `develop` from `codex/step-35-seller-payments`.
+Implementation **f4ca952d**, `Migrate seller payments and withdrawals to Inertia
+[skip ci]`, was pushed after the explicit full gate, final build and browser
+checks passed. This documentation-only follow-up records the number before
+merging. `git diff --check` and explicit
+`pre_push_check.py --quick --base HEAD` verify this follow-up; documentation
+selects no application checks. The complete code results above remain applicable.
+Every implementation/follow-up commit, PR title and authorized merge message
+contains `[skip ci]`. No Claude attribution or hand-written attestation trailer.
+PR CI, PR/merge SAST and deploy did not run.
+
+
+## Seller commission and verification form step 36 (2026-10-19)
+
+Branch `codex/step-36-seller-settings`, based on freshly fetched
+`origin/develop` **5ae9eba0** (PR #446). Model: **GPT-6 Codex**; the exact variant
+and configured reasoning effort are not exposed by this runtime. AGENTS.md was
+read first, then shared framework/conventions/index,
+applicable path rules, migration §§2.2/3/4.1/5/5.1/6/34/35, the reconciliation
+ledger and legacy-store constraints. Repository Inertia/Vue, Wayfinder, Pest
+and Tailwind skills were applied. Laravel Boost is unavailable; repository and
+installed package source supplied the APIs. No Claude hooks or forced Claude
+remote mode were used. Task scratch/logs are in `/workspace/work/step36`.
+
+**Setup and develop baseline.** Host PHP was absent, while vendor and
+node_modules existed. Git network and Docker socket access worked through the
+supported sandbox escalation; fetch reached the required PR #446 base.
+The existing Docker image and extracted runtime both report PHP **8.5.11**;
+Composer **2.10.3**, Node **24.19.0**, npm **11.9.0** are available. Package
+versions match Laravel 13.34.0, Inertia Laravel 3.3.1, Wayfinder 0.1.21,
+Vue 3.5.43, Inertia Vue 3.6.1, Pest 5.0.4, Vitest 4.1.11, Vite 8.2.1.
+Stale node_modules lacked `@fontsource/inter`; `npm ci` restored 557 packages
+against the unchanged lockfile. The stale ignored `public/hot` pointer was
+moved to scratch. Composer's generated autoload metadata was refreshed with
+`dump-autoload --no-scripts`, without installing/updating packages. Its existing
+non-PSR-4 StubProductImportCommand test-fixture notice remains.
+
+Initial serial baseline attempts were interrupted before completion; they
+establish no test result. An attempted ParaTest invocation with multiple paths
+was rejected by that runner and ran no tests. The supported filename-filter
+parallel baseline then ran **781 cases: 744 passed, 37 failed / 4,637 assertions**;
+the failures were stale/missing Vite entries. After the normal fresh production
+build, the unchanged-develop baseline passed **781 tests / 5,353 assertions**,
+five processes, **165.534s**, before repository implementation edits.
+The filter covered SellerControllerTest, SellerPaymentControllerTest,
+SellerWithdrawRequestControllerTest, SettingsControllerTest,
+SettingsReconciliationTest, ReferenceSettingsIsolationTest,
+GeneralSettingsControllerTest, CreateBusinessSettingsTableTest,
+LegacyControllerMiddlewareConversionTest, LegacyAdminPermissionsTest,
+LegacyStoreStateChangingRoutesTest, LegacyTempRoutesReachableTest,
+LegacySellerAreaTest, LegacySellerScopingTest, LegacyShopVerificationTest,
+and StaticAnalysisExclusionsTest.
+
+The initial GD lacked WebP. A scratch Docker image rebuilt GD with WebP,
+using the session proxy and a read-only CA build secret. The extension and
+required libraries were extracted into task scratch; the task activation script
+verifies PHP 8.5.11 with WebP support. System Chromium and FFmpeg are available;
+a temporary Playwright browser directory selects that FFmpeg. No TLS bypass,
+CSP weakening, platform bypass, dependency/lockfile change or production mutation.
+
+**Implementation and consumer trace.** Guide §36 records the contracts and
+remaining root controller consumers. Seller administration conversion is
+complete through all three stages; seller catalogue listing remains separate.
+Checkout commission calculation, seller registration/verification controllers,
+withdrawal service, storefront and role grants are unchanged. Searches covered
+app/routes/resources/public JS/tests, including the double-decoded stored
+verification options, answer writer and public/mobile settings response.
+No registration-page read of `verification_form` was found. The two admin Blade
+views are removed after tracing their sole renderers; existing Blade route links
+remain valid. Two deliberate fixes create a missing verification setting on save
+and persist an empty form as `[]`. Labels/options/types are validated and field
+order and legacy JSON bytes are preserved. Settings reuse the shared narrow
+writer; cache tests keep unrelated WMS/seller entries. The activation endpoint
+keeps its exact existing allowlists, permission/vendor gate and literal response.
+Root BusinessSettingsController retains only that endpoint and env_key_update,
+so its Pint/PHPStan exclusions remain.
+
+Existing middleware seller gate cases move to the migrated controller tests;
+activation compatibility cases move from SettingsReconciliationTest. Legacy
+permission/state/route ratchet lists remain unchanged: no gates, registered
+names, URIs or verbs changed. Seven retained-Blade sample tests/specs now use
+classified products and its permission, preserving their original assertions.
+
+**Iteration.** Initial focused PHPStan found two request-shape documentation/
+input-narrowing errors; corrected request types pass focused analysis (4 files,
+0 errors). Initial Vitest failures selected the layout's cache-clear form and
+sidebar input instead of the page form/fields; selectors are scoped to the
+actual controls. Initial focused Pest started while assets were rebuilding and
+failed on the temporarily missing manifest; subsequent payload assertions were
+corrected to use full-page Inertia responses, with X-Inertia requests checked
+separately. A focused Pest run then passed 165 cases and failed one WMS-guard
+fixture assertion; correcting that fixture passed its isolated rerun (11
+assertions). The first explicit full gate stopped at two browser-spec ESLint
+spacing errors. The second passed ESLint/Prettier and stopped at a test-only
+TypeScript wrapper assertion; `findComponent` fixes that assertion. No later
+step in either stopped gate is claimed as having run.
+
+Browser iterations corrected POST's expected redirect status (302), a unique
+contrast selector, the already-expanded seller menu, and the Arabic label of
+the final English locale cleanup. One interrupted affected-browser batch has
+no complete result. The subsequent affected batch passed eight cases and
+failed only the builder's final locale cleanup, after its add/reorder/remove,
+save/reload, RTL/dark contrast and empty-form workflows passed. The corrected
+seller spec is rerun below. These failed attempts are not claimed as passing.
+Final results and the explicit pre-commit full gate are recorded below when
+complete.
+
+The first full command to reach Pest passed Wayfinder, whole-repo ESLint,
+Prettier, vue-tsc, **332 Vitest files / 2,561 tests** (1,119.67s), Pint,
+PHPStan (**0 errors**) and config-cache clearing. Pest completed **6,234 cases:
+6,232 passed, 2 errors / 36,015 assertions** (664.385s). Both errors were in
+the new render tests: `scriptSrcOf` had been defined inside
+HandleStoreBladePagesTest and was unavailable to separate parallel workers.
+The existing CSP helpers move into `tests/Pest.php` without changing their
+assertions or duplicating them. Independent-file reruns passed **3 tests / 38
+assertions**, verifying helper loading and the WMS/activation guard;
+the complete explicit gate is repeated before committing. The WMS guard
+fixture now restores the web guard before using the shared `actingAsAdmin`
+helper. No application behavior changes result from these test-support fixes.
+
+The next explicit full attempt passed Wayfinder/ESLint/Prettier/vue-tsc, then
+reported an existing Products Arabic-label test failure during Vitest. That
+known-failing unit run was stopped (exit 130); its remaining unit files and
+PHP stages are not claimed as complete. An independent run of the unchanged
+Products file confirmed **107 passed / 2 failed**, both 5,000ms timeouts
+(78.23s). That file retained previous mounted pages, so a locale flip reran
+their watchers. `enableAutoUnmount(afterEach)` now tears down its wrappers,
+and also those of the new seller page tests; the commission HTTP cancellation
+mock resets per case. Assertions and timeouts remain unchanged. The supported
+`VITEST_MAX_WORKERS=2` environment setting is used for the new run; installed
+Vitest 4.1.11 explicitly reads it. Only test support/cleanup changes address
+these findings; WMS and store application behavior is unchanged.
+
+After teardown, the focused four-file run passed both Arabic cases but had one
+different Products quick-pick timeout (**135 passed, 1 failed**; that case took
+29.208s against the unchanged 5,000ms budget). An unchanged retry passed **all
+136 tests in 4 files** (**66.24s**), including all 109 Products cases and the
+seller/menu cases. The final complete attempt runs as
+`VITEST_MAX_WORKERS=2 python3 .claude/scripts/pre_push_check.py --full`.
+No test assertion, timeout, dependency, lockfile or application code was
+altered for that resource limit. Application/browser code remains as exercised
+by the nine passing affected Chromium cases.
+
+That two-worker full attempt passed Wayfinder/ESLint/Prettier/vue-tsc, but
+StoreProductFormFields' English-label full mount exceeded the unchanged
+5,000ms default (8.206s). The known-failing Vitest run was stopped (exit 130);
+its remaining unit files/PHP stages did not complete. The unchanged component
+file then passed **10/10 tests** independently (**16.48s**) with supported
+`--testTimeout=60000 --hookTimeout=60000` default-budget flags. Repeated
+timeouts in different existing full mounts demonstrate this runtime needs a
+larger execution budget; no behavioral assertion or explicit test-level
+performance budget is removed.
+
+The final full attempt uses `VITEST_MAX_WORKERS=2` and a temporary npm wrapper
+in `/workspace/work/step36/bin`, prepended to PATH only for this command. The
+wrapper forwards all npm calls unchanged except `npm run test:unit`, which
+executes `npm run test:unit -- --testTimeout=60000 --hookTimeout=60000`.
+Npm prints that exact Vitest command in the full log. All 332 unit files and
+all assertions run; repository/CI timeout configuration is unchanged. No
+wrapper, runtime file, dependency/lockfile change or generated asset is
+committed. The actual command remains explicit
+`python3 .claude/scripts/pre_push_check.py --full`, after task activation and
+the stated session environment configuration. Bare attested mode is not used.
+
+**Completed focused and browser checks.** Focused full-mount Vitest and menu
+coverage initially passed **27 tests in 3 files**; the final focused cleanup
+retry passed **136 tests in 4 files**, as detailed above. Focused PHPStan passed
+**4 files, 0 errors**. The normal production Vite build passed with bundled fonts and
+fresh Wayfinder actions (**1m 52s**). PHP formatting and `git diff --check`
+passed. English/Arabic seller key counts match (**122** each); the added
+step-36 documentation link resolves.
+
+The corrected seller-settings Chromium spec passed **2/2** (**3.1m**): builder
+add/reorder/remove/save/reload, nested JSON bytes, missing/empty forms, Arabic
+RTL/dark input/select contrast >= 4.5, numeric constraints, both exact
+compatibility switch requests/responses, persistence and Inertia navigation.
+The preceding affected batch passed all **7** retained-Blade uploader/CSP,
+settings/logo/RTL and staff/sidebar coexistence cases (plus the commission
+case), so all **9 distinct affected browser cases** now have passing results.
+No console/CSP assertion was loosened. Browser commands used the system
+Chromium and `--timeout=120000` for the constrained runtime. The entire
+unrelated browser suite was not run.
+
+**Explicit full verification — passed before committing.**
+`python3 .claude/scripts/pre_push_check.py --full` exited **0**, using the
+documented task activation, npm runtime wrapper and two-worker environment.
+Exactly these stages ran: setup-state inspection (none in progress),
+`php artisan wayfinder:generate --skip-routes --with-form`, whole-repo
+`npm run lint:check`, `npm run format:check`, `npm run types:check`,
+`npm run test:unit -- --testTimeout=60000 --hookTimeout=60000`,
+`composer lint:check`, `composer types:check`, `php artisan config:clear`,
+and `php artisan test --parallel --compact`. Vitest passed **332 files /
+2,561 tests** (**1,082.38s**), Pint passed, PHPStan passed with **0 errors**,
+and parallel Pest passed **6,234 tests / 36,018 assertions** (**849.754s**,
+five workers). No stage in this explicit sequence was skipped. All application
+and test-support changes were present before their applicable stages. The
+log is `/workspace/work/step36/pre-push-full-runtime-budget.log`.
+
+The normal production build, nine distinct affected Chromium cases, final
+focused Vitest and independent Pest checks passed as recorded above. Final
+`git diff --check`, local documentation links and locale-key parity pass.
+Seller administration conversion is complete.
+
+**Skipped/not run:** the unrelated full Playwright suite, separate MySQL
+migration job, Composer/npm audits, deploy-script checks, production data/schema
+changes and deployment. Those groups are outside the explicit --full sequence
+and are not claimed as passing. Bare attested mode was never invoked; no
+CI-Verified trailer was added or edited by hand. PR CI, PR/merge SAST and deploy
+do not run under the required `[skip ci]` messages. The single PR number and
+shipping commits are recorded in a documentation-only follow-up before merging.
+
+**Shipping record.** [PR #447](https://github.com/arb-rajab/warehouse_management/pull/447)
+is the single PR into `develop` from `codex/step-36-seller-settings`.
+Implementation **90a3e973**, `Migrate seller commission and verification form
+to Inertia [skip ci]`, was pushed after the explicit full gate, normal build
+and affected browser checks passed. This documentation-only follow-up records
+the number before merging. `git diff --check`, local-link verification and
+explicit `pre_push_check.py --quick --base HEAD` verify this follow-up;
+documentation selects no application checks. The complete application results
+above remain applicable. Every implementation/follow-up commit, PR title and
+authorized merge message contains `[skip ci]`. No Claude attribution or
+hand-written attestation trailer. PR CI, PR/merge SAST and deploy did not run.
+
+
+## Admin classified products step 37 (2026-10-19)
+
+Branch `codex/step-37-classified-products`, based on freshly fetched
+`origin/develop` **c6f8d0fd** (PR #447). Model: **GPT-6 Codex**; the runtime
+does not expose its exact variant or configured reasoning effort.
+The owner's request authorizes implementation and shipping only after all
+required verification can run, with `[skip ci]` in every shipping message.
+
+**Setup and baseline.** The initial sandbox fetch failed (unreachable proxy;
+direct DNS was also unavailable). An authorized network-enabled `git fetch
+origin develop` succeeded; the branch starts at the exact required base.
+`source /workspace/cloud-setup/activate.sh` exposes **PHP 8.5.11**. Both vendor
+and node_modules existed, but the latter was stale: initial vue-tsc/build
+attempts found missing Chart.js, Leaflet and Tiptap. Network-enabled `npm ci`
+restored the lockfile's dependencies without changing manifests/lockfiles.
+Laravel Boost is unavailable; repository files and installed framework/Inertia
+package source were used. No Claude hook or fabricated setup state was used.
+
+Before implementation, this command passed **102 tests / 563 assertions**:
+`php artisan test --compact tests/Feature/LegacyAdminPanelTest.php
+ tests/Feature/LegacyAdminPermissionsTest.php tests/Feature/LegacyPaginationTest.php
+ tests/Feature/LegacyStoreStateChangingRoutesTest.php
+ tests/Feature/LegacyShopRouteAccessTest.php
+ tests/Feature/LegacyTempRoutesReachableTest.php
+ tests/Feature/Store/Admin/CustomerPackageControllerTest.php`.
+There was no pre-existing classified-specific controller Pest file on develop.
+
+**Consumer trace and scope.** The three admin routes, Blade template/sidebar,
+Inertia menu, coexistence/logo/sidebar/uploader tests, storefront listing/detail,
+customer routes/forms and API consumers were traced across app, routes,
+resources, public/assets/js and tests. A significant shared consumer is
+`customer_products.published`, which calls the same root `updatePublished`.
+The root method and gate remain unchanged to preserve the explicitly protected
+customer route; its admin counterpart moves to the new controller. The root
+index/delete admin methods alone are removed. The root controller and exclusions
+remain, along with every customer-facing method/route/view and mobile API.
+No roles, feature settings, upload limits or customer notifications change.
+
+The new list preserves translated name, storefront links, thumbnail resolution,
+raw `added_by`, separate customer status/admin publication flags and newest-first
+ordering. It adds the standard validated 20-row pagination/selector, explicit
+columns, scoped translation/upload loads and a stable ID tie break. Bound PUT
+publishes only the admin flag; bound DELETE transactionally removes only its
+translations/product and retains images/files/other owners. Both preserve query
+state and existing per-action permissions. Vue uses the established components,
+Wayfinder, English/Arabic copy, escaped text, logical RTL/dark styles and native
+delete confirmation. The malformed old delete href's extra braces and stray
+JavaScript `s` are existing template defects removed with the replaced view.
+
+Exactly one Blade view is removed. The shared delete modal still has **10**
+view consumers and remains. Retained Blade test fixtures now use the seller
+product list and its permission; assertions stay. No Legacy classified action
+cases existed to relocate. The existing classified destroy ratchet stays, as do
+permission and route ratchet lists: DELETE was already accepted and no gate or
+route name was added/removed. Inventory is **11** backend Blade files, **2**
+literal app-shell consumers including its test (**1** actual extending view),
+**3** layout-shell extending views, **1,046** `/temp` and **434** `/temp/admin`
+registrations. Editor count is unchanged at 8 fields in 8 views.
+
+**Focused verification and initial attempts.** Focused PHPStan passed four new PHP files with
+**0 errors**. Affected Pest passed **121 tests / 909 assertions** across the new
+controller/model and four coexistence/logo/sidebar files. Initial focused tests
+caught and corrected a malformed test dataset and the customer route's existing
+IsUser restriction; no application authorization was relaxed. Focused full-mount
+Vitest/menu tests passed **18/18**. New-test TypeScript issues were corrected
+while restoring the missing locked dependencies. The ordinary sandbox build
+then reached the font plugin but was blocked by network permissions; the normal network-enabled production build passed (fonts included). Final gate/browser results and any
+skips will be recorded below before committing.
+
+
+**Runtime repairs and browser attempts.** Initial Chromium execution could not
+start any of the eight cases because Playwright's ffmpeg helper was absent.
+The helper download was refused by destination policy (403); the installed
+system ffmpeg 7.1.5 is used instead, through a symlink under
+`/workspace/work/playwright/ffmpeg-1011`, with the system Chromium path. No
+repository/browser configuration or assertion was weakened. A stale setup
+`public/hot` then caused strict-CSP pages to load an absent dev server; moving
+this untracked file aside restored production assets. The new fixture was
+corrected to force-fill a guarded legacy model, with no model fillable change.
+The classified workflow then passed independently (**1/1**).
+
+The next affected batch passed **6/8**. The new CSP watcher had caught pending
+unrelated dashboard placeholder-image violations; it now starts after arriving
+at the stable staff page, before entering classified products, and still asserts
+no violations through its full tested workflow. The logo round-trip exposed an
+incomplete supplied PHP runtime: GD had PNG/JPEG but no WebP, so the existing
+canonical uploader refused its raster normalization. A local Docker build from
+`wms-cloud-php:8.5` rebuilt GD with `--with-webp`; its extension was installed
+atomically into the workspace runtime, with the original backed up. PHP remains
+**8.5.11**, now reporting GD WebP support. No application dependencies, lockfiles,
+upload rules or test assertions changed for this runtime repair. The first GD
+build failed because apt's downloader could not read its mounted CA; making
+that public CA mount readable fixed it while preserving TLS verification.
+
+The first explicit `pre_push_check.py --full` attempt stopped at Prettier on
+the new page test while its type fixes were being finalized. Wayfinder and
+ESLint had run; that attempt did not run vue-tsc, Vitest or any PHP stage.
+The file now passes both formatting and type checking; the final full attempt
+uses the ordinary command, with no attestation or custom test-budget wrapper.
+
+**Completed production and browser checks.** The normal network-enabled
+`npm run build` passed in **10.38s**, including configured fonts and freshly
+generated Wayfinder actions. The final four-file affected Chromium run passed
+**8/8** (**1.3m**) using system Chromium, system ffmpeg and GD with WebP.
+It covers publishing both ways, dismissed/accepted native deletion with DB
+persistence, preserved `per_page`, plain storefront links, Inertia menu visits,
+Arabic RTL/dark mode, strict CSP, retained seller uploader and Blade/Inertia
+navigation, and general-settings logo persistence/constraints. The exact command
+was `PLAYWRIGHT_BROWSERS_PATH=/workspace/work/playwright
+PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium npx playwright test
+ tests/e2e/store-classified-products.spec.ts
+ tests/e2e/store-staff-coexistence.spec.ts
+ tests/e2e/store-legacy-uploader.spec.ts
+ tests/e2e/store-setup-settings.spec.ts --project=chromium --timeout=120000`.
+No behavior assertion, explicit performance budget or CSP directive was relaxed.
+The remaining seller-home SQLite `DATE_FORMAT` error encountered during the
+legacy seller login is pre-existing and outside this migration; that retained
+uploader case passes on its actual target form. No seller-area handler changes.
+Locale key parity is **20** classified-products keys in each language; the new
+documentation anchors and `git diff --check` pass.
+
+**Complete gate attempt and Composer autoload repair.** The next explicit
+`python3 .claude/scripts/pre_push_check.py --full` ran every stage: setup
+inspection, Wayfinder, whole-repo ESLint/Prettier/vue-tsc, all **333 Vitest files /
+2,568 tests** (**188.11s**), Pint, PHPStan (**0 errors**), config clearing and
+parallel Pest. Pest ran **6,264** tests: **6,262 passed**, **2 errors**
+(**36,225 assertions**, **153.042s**). Both errors were stale installed Composer
+classmap entries for root `Trip/TripController.php` and
+`DigitalProductController.php`, deleted by earlier migrations, causing
+`class_exists` checks to include absent files. No classified test failed.
+`composer dump-autoload --no-scripts --no-interaction` rebuilds generated
+metadata locally; no source, dependency, lockfile or assertion change is needed.
+The two affected controller files are checked independently before the final
+explicit full retry. No stage from this failed attempt is claimed as a successful
+full gate.
+
+The isolated post-autoload run passed **82/82 tests / 625 assertions** across
+`TripMapControllerTest.php` and `DigitalProductFormTest.php` (**7.123s**).
+The final full retry uses the same ordinary explicit `--full` command after that
+repair. Application/frontend sources are unchanged from their passing checks;
+only the new browser test's CSP capture start was scoped before its final 8/8
+run, with scoped ESLint and Prettier passing afterward.
+
+**Final explicit full gate — passed before committing.**
+`source /workspace/cloud-setup/activate.sh` followed by
+`python3 .claude/scripts/pre_push_check.py --full` exited **0**. No custom npm
+wrapper, test-budget override, attested mode or hand-written trailer was used.
+Exactly these stages ran, with none skipped:
+
+- Setup-state inspection (no setup in progress).
+- `php artisan wayfinder:generate --skip-routes --with-form`.
+- Whole-repository `npm run lint:check` and `npm run format:check`.
+- `npm run types:check` (vue-tsc).
+- `npm run test:unit`: **333 files / 2,568 tests passed**, **164.13s**.
+- `composer lint:check` (Pint): passed.
+- `composer types:check` (PHPStan): **0 errors**.
+- `php artisan config:clear`.
+- `php artisan test --parallel --compact`: **6,264 tests / 36,230 assertions
+  passed**, **157.022s**, five workers.
+
+The full successful log is `/tmp/step37-pre-push-verified.log`; normal build and
+browser logs are `/tmp/step37-build.log` and
+`/tmp/step37-playwright-verified.log`. The earlier baseline, focused runs,
+failed attempts and runtime repairs above are separately identified. All
+application changes were present before the applicable successful checks.
+Only documentation of completed results is added afterward; whitespace,
+anchors and locale-key parity are checked before the commit.
+
+**Skipped/not run:** the unrelated complete Playwright suite, separate MySQL
+migration job, Composer/npm audits, deploy-script check, production data/schema
+changes and deployment. These are outside the requested explicit `--full`
+sequence and are not claimed as passing. The eight affected Chromium cases
+ran separately and passed. PR CI, PR/merge SAST and deploy do not run under
+`[skip ci]`. No `CI-Verified` trailer is added or edited, and the bare pre-push
+mode is never invoked. Shipping uses one PR into develop; its number is recorded
+in a documentation-only `[skip ci]` follow-up before the authorized merge.
+
+
+**Shipping record.** [PR #448](https://github.com/arb-rajab/warehouse_management/pull/448)
+is the single PR into `develop` from `codex/step-37-classified-products`.
+Implementation **4b8e6249**, `Migrate admin classified products to Inertia
+[skip ci]`, was committed and pushed after the final explicit full gate, normal
+production build and all eight affected Chromium checks passed. The first push
+was rejected by automatic approval review for lacking source/history export
+authorization. The original attached request's explicit shipping instruction,
+the existing source-repository destination and the one-commit delta were checked;
+review then approved the same push with that evidence. No alternate transport
+was used to bypass the rejection.
+
+The CLI's GraphQL PR lookup returned 401; the configured REST API succeeded,
+confirmed no existing PR and created #448. This documentation-only follow-up
+records its number before merging, with `git diff --check`, anchor checks and
+explicit `pre_push_check.py --quick --base HEAD` (no application files changed).
+The successful full application results above remain applicable. Every commit,
+PR title and authorized merge message contains `[skip ci]`. No Claude attribution
+or hand-written attestation trailer. PR CI, PR/merge SAST and deploy do not run.
+
+
+## Admin seller product list step 38 (2026-10-20)
+
+Branch `codex/step-38-seller-product-list`, from freshly fetched `origin/develop`
+**47aec0d6** (PR #448). Model: **GPT-6 Codex**; the exact model variant and
+configured reasoning effort are not exposed by this runtime. AGENTS.md was
+read first, followed by framework/conventions/index, applicable rules, the
+requested migration sections and this ledger. Repository Inertia/Vue,
+Wayfinder, Pest and Tailwind skills were applied. Boost tools are unavailable;
+repository files and installed package source supplied the APIs. No Claude
+hooks, simulated setup state or remote-mode variables were used.
+
+**Runtime and baseline.** Native `php` was initially absent from PATH. The
+sandbox's first fetch/Docker checks could not reach the proxy/socket; supported
+sandbox escalation allowed `git fetch origin develop` and Docker inspection.
+Both the existing `wms-cloud-php:8.5` image and the extracted runtime exposed by
+`source /workspace/cloud-setup/activate.sh` report **PHP 8.5.11**. Vendor and
+node_modules were present, but JS dependencies/Wayfinder/assets were stale.
+Network-enabled `npm ci` restored the unchanged lockfile; the ignored stale
+`public/hot` pointer moved to scratch, and a normal `npm run build` passed.
+`composer dump-autoload --no-scripts --no-interaction` refreshed generated
+metadata for previously deleted controllers; no dependency/platform bypass.
+Installed versions: Laravel **13.34.0**, Inertia Laravel **3.3.1**, Wayfinder
+**0.1.21**, Pest **5.0.4**, Vite **8.2.1**, Vitest **4.1.11**, Node **24.19.0**,
+npm **11.9.0**. Scratch/logs: `/workspace/work/step38`.
+
+The initial develop run completed **326 tests: 325 passed, 1 error / 2,813
+assertions**. Its sole error was the stale Composer classmap trying to include
+the previously deleted root DigitalProductController. After the generated
+metadata/assets repair, the unchanged application baseline passed **326 Pest
+tests / 2,816 assertions**, **105.588s**, before application edits. The exact
+`php artisan test --compact` file set was:
+
+- `Store/Admin/ProductControllerTest.php`, `ProductCreateFormTest.php`,
+  `ProductEditFormTest.php`, `DigitalProductControllerTest.php`,
+  `DigitalProductFormTest.php`;
+- `LegacySellerProductAuthorizationTest.php`, `LegacySellerScopingTest.php`;
+- `LegacyAdminPermissionsTest.php`, `LegacyControllerMiddlewareConversionTest.php`,
+  `LegacyStoreStateChangingRoutesTest.php`, `StaticAnalysisExclusionsTest.php`.
+
+The page/menu frontend baseline passed **2 files / 20 Vitest tests**.
+Ten new pre-refactor action cases passed **108 assertions** against the legacy
+handlers before moving them: both availability directions, featuring/approval,
+package refusal both ways, today's-deal cache, copying, deletion and bulk delete.
+Their first attempt had two incorrect test expectations (the shared fixture's
+stock defaults to 50, not 40); correcting that expectation produced the passing
+run. The new seller Inertia-render case failed as expected against Blade
+(`Not a valid Inertia response`), establishing the migration's red test.
+
+**Trace, scope and established behavior.** The admin seller list was the last
+view extending `shop.backend.layouts.app`. It now uses the existing Inertia
+products list with type `seller`, the existing Resource/filter pattern and
+`show_seller_products`. Base scope excludes admin/customer-added, digital,
+auction and wholesale products; name-only phrase search and exact state
+matching stay. The requested seller/category/approval filters now work: the old
+seller select was commented out, category_id was ignored and approval filtering
+was absent. Today's-deal markup was also commented out; its existing capability
+is offered as requested. The old ineffective deleted filter is omitted.
+Pagination follows the validated 20-row pattern. The previously unordered seller
+query now orders newest first with an ID tie break; six offered sorts are
+allowlisted. These changes/defects are explicit in guide §38.
+
+All route names stay. Former root switches, approval, duplicate, single/bulk
+DELETE move to Store\Admin ProductController with typed requests and bound
+products. Seller adapters use fixed server route defaults so `list=all` cannot
+escape the seller scope. The action permissions are unchanged, independent of
+the read gate. Staff with product_delete may delete seller-owned products;
+seller accounts cannot use admin actions. The shared §16 writer/transactions
+preserve stocks, flags, copying boundaries, deletion dependants, warehouse FK
+outcomes and pending WMS second-writer policy. Approval writes only approved,
+checks subscription eligibility even for unapproval, clears views/cache and
+emits no notifications/audit records. Today's deal forgets only its dedicated
+cache. The legacy root publishing defect (stock changed before package refusal)
+is reported; the required existing shared writer refuses before any write.
+Bulk cache clearing is once per request under the existing §16 pattern.
+
+Seller-panel views/routes use their own Seller\ProductController actions.
+Both backend SKU partials stay because seller create/edit render them. The root
+admin SKU route stays as a compatibility/parity oracle. The JSON `products.fetch`
+cron trigger remains on root ProductController, still called by both existing
+lists, with its gate/response/30-minute command/status checks unchanged. Root
+search/detail routes remain; the missing get_products_by_subcategory method and
+non-returning search are recorded existing defects, with names retained. Only
+unregistered/unconsumed show and brand-selector methods were removed. The root
+controller and both analysis exclusions stay.
+
+Only `product/products/index.blade.php` is removed with `git rm`. Protected
+shells, plain layout, downloads, invoice and both SKU partials stay. Actual
+inventory: **10** backend Blade files, **0** app-shell extenders, **3** plain
+layout extenders; **1,046** `/temp`, **434** `/temp/admin` registrations. The
+unused app shell still includes admin_nav/admin_sidenav; all three have no
+remaining extender and are deliberately kept for the next step. The editor
+inventory is unchanged (8 fields in 8 views).
+
+**Tests and verification.** The old root middleware case moves out
+of LegacyControllerMiddlewareConversionTest into SellerProductListTest, where
+it proves the migrated action gates/container resolution. LegacyAdminPermissionsTest,
+state-changing route lists and route-name ratchets stay unchanged because gates
+and names stay. Existing product-list exhaustive row assertions gain approved
+and todays_deal. Coexistence now uses actual public/seller/auth Blade pages;
+unused-shell settings/sidebar readers are tested directly while retained.
+
+Focused results so far: **109 Pest tests / 772 assertions** for coexistence,
+logo/sidebar, reconstructed audit and Legacy permission/middleware/state tests;
+**31 Vitest tests / 3 files** for the extended page/status component/menu;
+normal production build; vue-tsc; scoped ESLint; Pint. The first expanded action
+run passed **150/151** with one new-test missing-import error, then the repaired
+bulk rollback case passed **1 test / 15 assertions**. A complete affected rerun
+is recorded below when complete. Restricted-sandbox PHPStan parallel attempts
+exited 1 without diagnostics; its serial debug run exited 0. The subsequent
+normal network/socket-enabled `PAO_DISABLE=1 composer types:check` passed
+**844 files / 0 errors**. PAO_DISABLE only exposes ordinary diagnostic output;
+no check, assertion, schema requirement or budget was relaxed.
+
+The explicit pre-commit `python3 .claude/scripts/pre_push_check.py --full`,
+affected Chromium results and shipping outcome are recorded below after they
+complete. No prior run substitutes for this task's required gate.
+
+
+The complete affected backend rerun passed **375 tests / 3,324 assertions**
+(**99.903s**), including all product forms/lists, seller-area authorization and
+scoping, static-analysis exclusions and route service provider tests. A later
+new filter-options case passed **1 test / 20 assertions**. After strengthening
+locale coverage, the page alone passed **15 Vitest tests**. Scoped browser-spec
+TypeScript compilation also passed.
+
+The first affected Chromium run completed **8 passed / 2 failed (4.1m)**.
+The new approval button exposed six labels inserted into the wrong JSON
+namespace (help topics instead of store.products); they were moved, and the
+unit test now rejects untranslated fallback keys. The existing logo-upload
+case exposed this environment's GD lacking WebP. A scratch Docker rebuild
+added libwebp-dev and GD --with-webp using the session proxy and a read-only CA
+secret. The first build failed because apt's unprivileged downloader could not
+read the CA mount; a public-CA mode=0444 mount fixed it. The extracted extension
+reports WebP support and successfully encodes WebP locally. No source dependency,
+lockfile, application assertion, CSP directive or test budget was changed to
+work around that missing runtime capability. A fresh normal production build
+passed after the locale correction. The entire affected browser set is rerun
+against the finished assets/runtime; the final outcome is recorded below.
+
+
+**Affected Chromium — passed.** All **10 cases in 5 files** passed (**2.2m**)
+using system Chromium/ffmpeg and the repaired PHP 8.5 GD runtime:
+`PLAYWRIGHT_BROWSERS_PATH=/workspace/work/step38/playwright
+PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium npx playwright test
+ tests/e2e/store-seller-products.spec.ts tests/e2e/store-products.spec.ts
+ tests/e2e/store-staff-coexistence.spec.ts tests/e2e/store-legacy-uploader.spec.ts
+ tests/e2e/store-setup-settings.spec.ts --project=chromium --timeout=120000`.
+This covers native single/bulk confirmation, seller approval, Inertia menu/edit
+visits, per-page query retention, Arabic RTL/dark contrast, enforced strict CSP,
+the retained seller uploader, Blade login/SPA/logout handoffs and logo settings.
+The final successful log is `/workspace/work/step38/playwright-final.log`.
+No browser assertion or production policy was relaxed. The earlier failed
+attempt is separately identified above.
+
+
+**First explicit full gate attempt.** `pre_push_check.py --full` exited 1 at
+ESLint: two missing blank lines in the added seller-page tests. Setup inspection
+and Wayfinder ran; Prettier/vue-tsc/Vitest/Pint/PHPStan/Pest did not run in that
+attempt. Scoped ESLint --fix plus Prettier corrected only those two style issues,
+and scoped ESLint passed before the full retry. No assertion or budget changed.
+
+
+The second explicit full attempt passed whole-repo ESLint/Prettier, then
+vue-tsc found a new-test type error: the mounted Link's generic optional
+onBefore signature was invoked without the type refinement used by the existing
+confirmation tests. The new test now uses that same zero-argument callback
+type, matching the actual handler. This preserves the false-return/native-confirm
+assertions. Vitest and all PHP stages did not run in that failed full attempt.
+Scoped lint and a separate full vue-tsc run precede the next full retry.
+
+
+**Final explicit full gate — passed before committing.** With the activated
+PHP 8.5.11 runtime and `PAO_DISABLE=1` for ordinary diagnostics,
+`python3 .claude/scripts/pre_push_check.py --full` exited **0**. This was the
+ordinary explicit full sequence, without a custom wrapper, budget override,
+attested mode or hand-written trailer. Exactly these stages ran; none skipped:
+
+- Setup-state inspection: no setup in progress.
+- `php artisan wayfinder:generate --skip-routes --with-form`.
+- Whole-repository `npm run lint:check` and `npm run format:check`.
+- `npm run types:check` (vue-tsc).
+- `npm run test:unit`: **333 files / 2,575 tests passed**, **299.54s**.
+- `composer lint:check` (Pint): passed.
+- `composer types:check` (PHPStan): **844 files / 0 errors**.
+- `php artisan config:clear`.
+- `php artisan test --parallel --compact`: **6,322 tests / 36,783 assertions
+  passed**, **348.82s**, five processes.
+
+The successful log is `/workspace/work/step38/pre-push-verified.log`; build and
+browser logs are `build-final.log` and `playwright-final.log` in the same scratch
+directory. All source/test changes were present before their successful checks.
+Only documentation of completed results is added afterward, with anchors,
+locale parity, retained-file inventory and `git diff --check` verified before
+committing. A separate full vue-tsc run passed after the new-test type correction
+before this final full retry. Earlier failed attempts are not counted as full
+verification. GET boolean normalization also follows §16: literal 0/false is off
+rather than the legacy seller handler's presence-only interpretation.
+
+**Skipped/not run:** the unrelated complete Playwright suite, separate MySQL
+migration job, Composer/npm audits, deploy-script check, production data/schema
+changes and deployment. Those are outside the requested explicit --full
+sequence and are not claimed as passing; all ten affected Chromium cases ran
+separately and passed. PR CI, PR/merge SAST and deploy do not run under [skip ci].
+No CI-Verified trailer is added/edited and the bare pre-push mode is never used.
+Shipping uses one PR into develop; its number is recorded in a documentation-only
+[skip ci] follow-up before the authorized merge.
+
+
+**Shipping record.** [PR #449](https://github.com/arb-rajab/warehouse_management/pull/449)
+is the single PR into `develop` from `codex/step-38-seller-product-list`.
+Implementation **c41f0a79**, `Migrate admin seller product list to Inertia
+[skip ci]`, was committed and pushed after the successful explicit full gate,
+normal production build and all ten affected Chromium checks. GitHub REST
+confirmed no existing PR before creating this one. This documentation-only
+follow-up records its number before merging, with anchor/whitespace checks and
+explicit `pre_push_check.py --quick --base HEAD`. No application or test content
+changed, so the completed full results remain applicable. The scoped check runs
+no application groups for these two docs. Every commit, PR title and authorized
+merge message contains [skip ci]; no Claude attribution or attestation trailer.
+PR CI, PR/merge SAST and deploy do not run.
+
+## Retire the unused admin shells step 39 (2026-10-20)
+
+Branch `codex/step-39-retire-shells` starts from freshly fetched
+`origin/develop` **ee668d6e** (PR #449). Model: **GPT-6 Codex**; the exact model
+variant and configured reasoning effort are not exposed by this runtime.
+AGENTS.md was read first; its Tool and runtime portability rules govern the
+framework/conventions/index, applicable area rules, migration guide and this
+ledger. The repository Pest skill was applied. Boost is unavailable, so API
+inspection used repository files and installed package source. No Claude hook,
+remote-mode variable or fabricated setup state was used. Scratch logs are in
+`/workspace/work/step39`.
+
+**Runtime and unchanged develop baseline.** Host PHP was absent from PATH.
+The first sandbox fetch/socket checks failed; supported sandbox escalation
+allowed the owner-requested fetch and managed Docker inspection. The existing
+`wms-cloud-php:8.5` image and extracted runtime activated with
+`source /workspace/cloud-setup/activate.sh` both report **PHP 8.5.11**.
+`vendor/` and `node_modules/` existed. The unchanged PHP baseline passed:
+**118 tests / 772 assertions**, **28.677s**, using `php artisan test --compact`
+on this exact set (paths under `tests/Feature/`):
+
+- `Store/StoreBackOfficeShellTest.php`;
+- `Store/Admin/GeneralSettingsControllerTest.php`;
+- `Store/Admin/VisitDetailControllerTest.php`;
+- `LegacyAdminPermissionsTest.php`;
+- `LegacyStoreStateChangingRoutesTest.php`;
+- `LegacyShopRouteAccessTest.php`;
+- `LegacyTempRoutesReachableTest.php`;
+- `RouteServiceProviderTest.php`;
+- `Store/HandleStoreBladePagesTest.php`.
+
+`php artisan route:list --path=temp --json` recorded **1,046** `/temp` and
+**434** `/temp/admin` registrations before edits (`routes-before.json`).
+The initial menu baseline failed to collect because ignored Wayfinder actions
+were missing. `php artisan wayfinder:generate --with-form` regenerated them;
+the unchanged menu baseline then passed **1 file / 11 tests**. No source fix
+was needed. The first incremental vue-tsc and production build found stale
+node_modules missing the already-locked Tiptap, Leaflet and Chart.js packages.
+The type-check failure stopped before PHPStan in that incremental command.
+`npm ci` restored the existing lockfile's dependencies (557 packages); no manifest or lockfile
+change or platform bypass is authorized or made.
+
+**Consumer proof and implementation.** Searches across app, routes, all views
+(including seller, frontend, auth, emails and PDFs), config, tests, public JS
+and `.ai` found no live application extender/include/renderer of the dead
+shells. Before deletion, the shell itself included the two nav partials and
+only the specified tests rendered them. Documentation references describe
+historical code. Exactly three files are removed with `git rm`: backend
+`layouts/app.blade.php`, `inc/admin_nav.blade.php`, `inc/admin_sidenav.blade.php`;
+the empty inc directory disappears. No protected view or public asset is deleted.
+Inventory is **10 → 7** backend Blade files, with **3** retained plain-layout
+extenders. The back-office Blade to Inertia conversion is complete; storefront,
+seller panel, auth pages, emails and PDFs remain outside it.
+
+`StoreBackOfficeShellTest` rejects shell resurrection and dot/slash references
+in executable sources, retains existing plain-layout/PDF consumer checks and
+adds explicit presence pins for both seller SKU fragments. The settings test
+actually pinned stored logo/site-name readers (not timezone/CSP/head): it now
+checks saved settings and both image preview URLs on the Inertia settings
+screen, preserving mobile API and login checks. Only the removed sidebar alt
+text and removed shell copyright markup assertions are dropped. Existing
+strict-CSP/timezone tests stay. The visit test now checks shared permissions
+for ordinary staff holding only the visit permission or none. Vitest checks
+the real filtered menu: exact visit URL, label, gate and Inertia flag when
+permitted, no links when refused. Menu data/gates are unchanged; only its
+obsolete source comment changes.
+
+**Asset audit.** Guide §39 lists the deleted layout's loads in order and each
+retained consumer. It loaded Google Poppins CSS, vendors.css, conditional
+bootstrap-rtl.min.css, aiz-core.css, then vendors.js and aiz-core.js, with a
+script-section outlet and inline localization/notifications/language/menu
+helpers. No public JS/CSS was exclusive to it: seller, frontend, auth and the
+plain login/error layout still need the bundles. Summernote (8 fields in
+8 seller/frontend views), AIZ chart on seller dashboard, uploader and phone
+widgets remain. Emails/PDFs have no direct bundle consumer. No @push/@stack
+was present; seller/frontend/auth script sections and seller menuSearch remain
+in their own layouts. `HandleStoreBladePages` and `store.blade_csp` stay.
+
+**Focused verification.** Rewritten shell/settings/visit tests plus
+StoreInertiaSharedPropsTest and HandleStoreBladePagesTest passed **93 tests /
+821 assertions**, **4.899s**. The updated menu passed **13 Vitest tests**.
+Pint formatted changed PHP tests. The first scoped ESLint run found one missing
+blank line in the new Vitest case; ESLint --fix/Prettier repaired it. No assertion,
+permission, runtime policy or test budget was relaxed. Full-gate, production
+build, browser and final route results are recorded below after completion.
+
+
+**Runtime repair and production assets.** The repaired normal `npm run build`
+passed after restoring dependencies; the ignored stale `public/hot` development
+pointer moved to scratch. The PHP image initially lacked GD WebP. A scratch
+Dockerfile based on the existing PHP 8.5 image installed libwebp-dev through
+the session proxy with a read-only, mode=0444 CA secret, then rebuilt GD with
+`--with-webp`. Its extension and exact libwebp/libsharpyuv dependencies were
+copied into the extracted runtime; real imagewebp encoding passed. No TLS
+verification or test assertion was disabled. Composer's generated classmap
+contained 44 entries for controllers deleted in earlier steps; normal
+`composer dump-autoload --no-scripts --no-interaction` reduced that to zero.
+It reported the existing non-PSR-4 test stub warning; no dependency changed.
+These runtime repairs completed during the full gate's frontend stages before
+PHP verification. Installed versions: Laravel 13.34.0, Inertia Laravel 3.3.1,
+Wayfinder 0.1.21 and Pest 5.0.4. The existing settings browser spec's two obsolete
+shell-retention comments were updated; its assertions remain unchanged, and
+scoped ESLint/Prettier passed.
+
+**Final route and inventory comparison.** A fresh
+`php artisan route:list --path=temp --json` exactly equals the pre-edit JSON,
+including every route definition: **1,046** `/temp`, **434** `/temp/admin`.
+A fresh filesystem inventory contains exactly **7** backend Blade files.
+No protected storefront/seller/auth/email/PDF file or bundle changed.
+
+**Explicit full pre-commit gate — passed.**
+`PAO_DISABLE=1 python3 .claude/scripts/pre_push_check.py --full` exited **0**
+on the uncommitted implementation. PAO_DISABLE exposes ordinary diagnostic
+output; it changes no assertion, budget or scope. Exactly these stages ran,
+with none skipped:
+
+- Setup-state inspection: no session setup in progress.
+- `php artisan wayfinder:generate --skip-routes --with-form`.
+- Whole-repository `npm run lint:check` and `npm run format:check`.
+- `npm run types:check` (vue-tsc).
+- `npm run test:unit`: **333 files / 2,577 tests passed**, **128.89s**.
+- `composer lint:check` (Pint): passed.
+- `composer types:check` (PHPStan): **844 files / 0 errors**.
+- `php artisan config:clear`.
+- `php artisan test --parallel --compact`: **6,323 tests / 36,823 assertions
+  passed**, **107.41s**, five processes.
+
+The normal production build, affected backend/menu checks, final route JSON
+comparison, scoped browser-comment lint/format, documentation section anchors
+and `git diff --check` also passed. No bare pre-push invocation, attested mode
+or CI-Verified trailer was used. The settings browser comments changed after
+the full gate's lint stage; scoped ESLint/Prettier passed on those exact final
+comments. No executable test logic changed after the gate started.
+
+**Not run / skipped:** the whole Playwright suite, MySQL-only migration group,
+Composer/npm vulnerability audits, deploy-script test, and attestation lanes
+are outside this explicit `--full` sequence and were not run. Affected browser
+cases are run separately below. PR CI, PR/merge SAST and deployment do not run
+because all shipping messages use `[skip ci]`; local checks do not imply those
+remote jobs ran. No migrations, dependencies or deploy scripts changed.
+
+**Affected Chromium — passed.** All **7 cases / 3 files** passed in **27.8s**:
+`store-staff-coexistence.spec.ts`, `store-setup-settings.spec.ts` and
+`store-legacy-uploader.spec.ts`. The exact run used the existing system Chromium
+and ffmpeg, without a timeout/budget override:
+
+```
+PLAYWRIGHT_BROWSERS_PATH=/workspace/work/step39/playwright \
+PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium \
+npx playwright test tests/e2e/store-staff-coexistence.spec.ts \
+ tests/e2e/store-setup-settings.spec.ts tests/e2e/store-legacy-uploader.spec.ts \
+ --project=chromium --output=/workspace/work/step39/browser-results
+```
+
+This verifies native confirmation, seller-products/settings Inertia navigation,
+logout/login full-load handoffs, logo persistence/preview, timezone refusal,
+Arabic RTL/dark contrast, enforced strict CSP and the retained Blade seller
+uploader. The harness reset only its dedicated e2e SQLite databases; no normal
+application database was reset. Final log: `/workspace/work/step39/playwright.log`.
+Every requested local check ran; no required `--full` stage was skipped.
+The separately listed CI-only/unscoped checks remain not run.
+
+
+**Shipping reference, recorded before merge.** Implementation commit
+**630b2a49** (`Retire the unused Blade admin shells [skip ci]`) was committed
+only after the successful full gate and affected Chromium run, then pushed to
+`origin/codex/step-39-retire-shells`. The single
+[PR #450](https://github.com/arb-rajab/warehouse_management/pull/450) targets
+`develop`, titled `Retire the unused Blade admin shells [skip ci]`.
+This documentation-only follow-up records the number before the explicitly
+authorized merge. It changes no executable source; prior verification remains
+applicable, and documentation links/consistency plus `git diff --check` are
+checked for this follow-up. All commits, the PR title and merge message include
+`[skip ci]`; no Claude attribution or CI-Verified trailer is added. PR CI,
+PR/merge SAST and deploy do not run. The whole-browser/MySQL/audit/deploy-script
+checks remain separately identified as not run above.
+
+## Permission sync, fetch gate and login landing step 40 (2026-10-20)
+
+Branch `ccr-a467622f-lvqqvo`, from `origin/develop` **b0384e6e** (PR #451, the
+role-grants audit). Model: **claude-sonnet-5-5**, effort **high**. AGENTS.md,
+the framework and convention guides, the index, the rules for the changed paths
+and the audit (`.md`, `.json`, `.sql`) were read first; `wait_for_setup.py`
+reported the tooling ready before any composer, artisan or Pest use. The Boost
+MCP tools were not used. The decision, the command, the section mapping and the
+guard are in [guide §40](rules/store-backoffice-migration.md#40-launch-with-super-admin-only-permission-sync-fetch-gate-and-login-landing-2026-10-20).
+
+**Launch decision.** Production launches with only the Super Admin role
+(`Gate::before()` passes it through every gate); staff roles are created later
+in the app's role screen. Nothing here creates or grants a role.
+
+**Three commits, each `[skip ci]`:**
+
+1. **Permission sync** (`6373c291`, audit risk 3). `App\Support\StorePermissions`
+   (182 names: the 181 enforced plus `delete_truck`; **38** already defined by
+   migrations, **144** new), `store:sync-permissions [--dry-run]`, migration
+   `2026_10_20_120000_sync_store_permissions.php`, and a call from
+   `StoreRoleSeeder` (its roles unchanged). Additive, idempotent, `store` guard
+   only, no grants, spatie cache forgotten after a write, `down()` preserves
+   data. Guard test `StorePermissionsTest`, command, migration and seeder tests.
+   Twelve sections reused, six new (`dashboard`, `seller`, `reports`,
+   `marketing`, `website_setup`, `staffs`). Fixture fallout: `RoleControllerTest`
+   created `view_all_orders`/`delete_order` itself and deleted the sections the
+   earlier migrations define; it now deletes every section but `uploads` and
+   `offers_catalog` and uses the defined rows, and gained a test that a migrated
+   database offers the whole list in the role form. A mutation check (removing
+   `add_coupon`, `edit_trip`, `view_pickup_point_orders` and
+   `file_system_&_cache_configuration` from the list) made the guard name all
+   four with their enforcing files.
+2. **`products.fetch` gate** (`d4470d00`, risk 4). `permission:add_new_product` on
+   the route: the Inertia products list and the legacy Blade list both showed the
+   button under it. `LegacyAdminPermissionsTest` dropped
+   `ProductController@fetch` from `ADMIN_WRITES_STILL_UNGATED` because the route
+   is gated now (the ratchet fails on a gated route still listed); the three
+   other listed helpers stay. New tests: guest, customer, staff without the
+   permission and staff with other product permissions are refused with no
+   `cron_jobs` row; a guest JSON request gets 401; a Super Admin queues the job.
+3. **Login landing** (`ba13a884`, risk 2). `Auth\LoginController::authenticated()`
+   sends admin and staff to `shop.admin.dashboard` when they can
+   `admin_dashboard`, else to `profile.index` (no permission middleware;
+   verified by test: a staff member with no permissions gets 200 there, 403 on the
+   dashboard). Tests: Super Admin and staff with `admin_dashboard` land on the
+   dashboard; staff without it land on the profile with a 200; seller and
+   customer redirects unchanged. The new staff test fails on the unfixed
+   controller (checked by stashing the change).
+
+**Scratch SQLite run (not production, not MySQL).** The 155 migrations other
+than the new one were applied to a scratch SQLite file in the session scratchpad
+(Telescope, Pulse and Health pointed at scratch files too): 38 `store` rows, 0
+role grants. `store:sync-permissions --dry-run`: "Dry run, nothing written: **144
+would be created**, 38 already exist (182 store permissions defined in code)";
+still 38 rows. `store:sync-permissions`: "**144 created**, 38 already existed";
+182 rows, 0 grants. Second run: "**0 created**, 182 already existed". Then
+`migrate --force` ran the new migration with no change (182 rows, 0 grants).
+
+**Verification (`pre_push_check.py --full`, run on the clean tree with the three
+commits, exit 0).** Wayfinder generation; ESLint (`eslint .`); Prettier
+(`prettier --check resources/`); vue-tsc; Vitest **333 files / 2,577 tests**
+passed; Pint passed; PHPStan **0 errors**; config cache cleared; Pest
+**6,345 tests / 36,937 assertions** passed. Before it, a full parallel Pest run
+(6,336 tests) passed after the fixture fix, and each change's affected files
+were run on their own.
+
+**Not run:** Playwright, the MySQL migration group, the composer/npm audits and
+the deploy-script test (CI or attested-run only; no attestation was run and no
+`CI-Verified` trailer exists). The command and migration were not run on MySQL
+or against any production data. PR CI, PR/merge SAST and deployment do not run:
+every commit, the PR title and the merge message carry `[skip ci]`. The ledger,
+guide and audit edits came after the gate and change no executable source.
+
+**Shipping reference, recorded before merge.** The single
+[PR #452](https://github.com/arb-rajab/warehouse_management/pull/452) targets
+`develop`, titled `Store permission sync, products.fetch gate and login landing
+[skip ci]`. This documentation-only follow-up records the number before the
+owner-authorized merge and changes no executable source. All commits, the PR
+title and the merge message include `[skip ci]`; PR CI, PR/merge SAST and deploy
+do not run.
+
+## Go-live hardening step 41 (2026-10-20)
+
+Branch `claude/go-live-hardening-fdk4me`, from `origin/develop` **2e1f097** (the
+PR #453 merge). Model: **claude-sonnet-5-5**, effort **high**. AGENTS.md, the
+framework and convention guides, the index, `ci.md`, the go-live checklist, the
+rules for the changed paths and guide §29 and §40 were read first;
+`wait_for_setup.py` reported the tooling ready (local MySQL included) before any
+composer, artisan or Pest use. The Boost MCP tools were not used. The decisions
+and behaviour changes are in
+[guide §41](rules/store-backoffice-migration.md#41-go-live-hardening-seeders-the-first-admin-the-production-env-template-event-cache-and-migrate---pretend-2026-10-20).
+This PR does **not** carry `[skip ci]`: it is the first to run the full `tests`
+workflow and SAST since about 40 PRs merged without them.
+
+**Commits (in order).**
+
+1. Account-writing seeders refuse production (`RefusesProduction`;
+   `StoreRoleSeeder` creates `Clerk` only in `local`/`testing`).
+   `SeedersRefuseProductionTest`: 13 cases, a dataset of five seeders run in
+   `production` against a filled database. Mutation check: removing the guard
+   from `StoreUserSeeder` and `CellStatusLogSeeder` made exactly those cases fail.
+2. `store:create-admin` and checklist 4.4/4.5. `CreateStoreAdminCommandTest`: 21
+   cases. The first run found a real defect: the success line wrapped the email
+   in `<...>`, which the console formatter drops as a style tag.
+3. `.env.production.example`, README and checklist §2. `ProductionEnvExampleTest`:
+   6 cases. Mutation check: a flipped `CSP_REPORT_ONLY`, a typo'd key and a filled
+   `DB_PASSWORD` each failed it. A first run flagged `TRUSTED_PROXIES` (read through
+   `Env::get()` in `bootstrap/app.php`); the scanner now covers that form.
+4. `event:cache` in `.github/scripts/deploy-remote.sh` (between `config:cache` and
+   `route:cache`), with two new cases in `deploy-remote-test.sh`. Mutation check:
+   deleting the line fails six checks. No workflow file was edited.
+5. The health migration names its connection, so `migrate --pretend` no longer
+   creates the health table (plus a follow-up commit narrowing the return type to
+   `string` after PHPStan `return.unusedType`). Three cases in
+   `CreateHealthTablesTest` (the existing `down()` test is kept); reverting the
+   migration fails the two new ones. `wms_migrations` is still created by Laravel's
+   own `prepareDatabase()`; documented, not fixable in app code.
+6. Documentation: checklist (F1, F2, F3, F4, F9, 2, 3.2, 3.4, 4.4, 4.5, 5.4, 5.9,
+   8.9, Appendix F), guide §41, this entry.
+
+One slip, caught before commit: a `cat >` overwrote the existing
+`CreateHealthTablesTest.php`; it was restored from git and the new cases appended.
+
+**Local verification.** `python3 .claude/scripts/pre_push_check.py --full`, run with
+the documentation edits uncommitted (so it did not attest and no `CI-Verified`
+trailer exists), exit 0: Wayfinder generation; ESLint (`eslint .`); Prettier;
+vue-tsc; Vitest **333 files / 2,577 tests**; Pint; PHPStan **0 errors**; config
+cache cleared; Pest **6,387 tests / 37,478 assertions** passed. Its first run
+stopped at PHPStan on the return type above and was repeated after the fix.
+Also run by hand: `bash .github/scripts/deploy-remote-test.sh` (passes); the four
+MySQL migration test files from `tests.yml` against the local MySQL
+(`warehouse_test`): 36 tests, 31 passed, 5 skipped (the sqlite-only cases).
+On scratch SQLite files: the Playwright seed command under `APP_ENV=testing`;
+`db:seed --class=StoreUserSeeder --force`, `store:create-admin --no-interaction`
+(new and existing email) and `migrate --pretend` then `migrate` under
+`APP_ENV=production`.
+
+**Not run locally:** Playwright, the composer/npm audits, a font-bearing
+`npm run build`, SAST, a real terminal for the hidden password prompt (the harness
+answers it), any migration or command against production data. Results of PR CI
+and SAST are in the pull request; they are not copied here because recording them
+would need another push.

@@ -1,5 +1,9 @@
 @extends('shop.frontend.layouts.app')
 
+@section('structured_data')
+    @include('shop.frontend.partials.json_ld', ['schemas' => \App\Support\StructuredData::home()])
+@endsection
+
 @section('content')
     <!-- Sliders & Today's deal -->
     <div class="home-banner-area mb-3" style="">

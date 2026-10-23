@@ -2,6 +2,7 @@
 
 use App\Models\Permission;
 use App\Models\Role;
+use App\Support\StorePermissions;
 use Illuminate\Support\Facades\DB;
 use Inertia\Testing\AssertableInertia as Assert;
 use Spatie\Permission\Models\Permission as SpatiePermission;
@@ -74,7 +75,7 @@ describe('index', function () {
 describe('create', function () {
     test('the add-role form can be rendered with the permissions grouped by section', function () {
         // This payload fixture owns its permission groups.
-        Permission::query()->whereIn('section', ['customer', 'representatives', 'trips', 'trucks', 'drivers', 'setup_configurations', 'sales', 'blog', 'support'])->delete();
+        Permission::query()->whereNotIn('section', ['uploads', 'offers_catalog'])->delete();
         $approve = Permission::create(['name' => 'approve_bulk_price_changes', 'section' => 'price_changes']);
         $unsorted = Permission::create(['name' => 'export_everything']);
         Permission::create(['name' => 'add_auction_product', 'section' => 'auction']);
@@ -125,6 +126,18 @@ describe('create', function () {
         );
     });
 
+    test('the add-role form offers every enforced store permission to a freshly migrated database, grouped by its listed section', function () {
+        actingAsStoreUser(createStoreStaff('add_staff_role'));
+        $names = Permission::query()->pluck('name', 'id');
+
+        $this->get('/temp/admin/roles/create')->assertOk()->assertInertia(
+            fn (Assert $page) => $page->component('Store/Admin/Staff/Roles/Create')
+                ->where('permissionGroups', fn ($groups) => collect($groups)
+                    ->mapWithKeys(fn (array $group) => [$group['section'] => collect($group['permissions'])->map(fn (array $permission) => $names[$permission['id']])->sort()->values()->all()])
+                    ->all() == collect(StorePermissions::all())->groupBy(fn (string $section) => $section, preserveKeys: true)->map(fn ($group) => $group->keys()->sort()->values()->all())->all())
+        );
+    });
+
     test('the add-role form refuses a caller without the permission', function (string $caller) {
         actingAsRefusedStoreCaller($caller);
 
@@ -134,7 +147,7 @@ describe('create', function () {
 
 describe('store', function () {
     test('a role is created on the store guard with its permissions and default-language translation', function () {
-        $permission = Permission::create(['name' => 'view_all_orders', 'section' => 'order']);
+        $permission = Permission::findByName('view_all_orders', 'store');
         actingAsStoreUser(createStoreStaff('add_staff_role'));
 
         $this->post('/temp/admin/roles', ['name' => 'Clerk', 'permissions' => [(string) $permission->id]])
@@ -238,8 +251,8 @@ describe('edit', function () {
 
 describe('update', function () {
     test('renaming a role in the default language renames the role and syncs its permissions', function () {
-        $kept = Permission::create(['name' => 'view_all_orders', 'section' => 'order']);
-        $dropped = Permission::create(['name' => 'delete_order', 'section' => 'order']);
+        $kept = Permission::findByName('view_all_orders', 'store');
+        $dropped = Permission::findByName('delete_order', 'store');
         $role = Role::findOrCreate('Clerk', 'store');
         $role->givePermissionTo([$kept, $dropped]);
         actingAsStoreUser(createStoreStaff('edit_staff_role'));

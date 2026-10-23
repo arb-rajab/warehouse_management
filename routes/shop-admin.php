@@ -1,13 +1,13 @@
 <?php
 
-use App\Http\Controllers\AdminController;
 use App\Http\Controllers\BusinessSettingsController;
-use App\Http\Controllers\CommissionController;
-use App\Http\Controllers\CustomerProductController;
-use App\Http\Controllers\PaymentController;
+use App\Http\Controllers\Store\Admin\ClassifiedProductController;
 use App\Http\Controllers\ProductController;
-use App\Http\Controllers\SellerController;
-use App\Http\Controllers\SellerWithdrawRequestController;
+use App\Http\Controllers\Store\Admin\SellerController;
+use App\Http\Controllers\Store\Admin\SellerCommissionController;
+use App\Http\Controllers\Store\Admin\SellerVerificationFormController;
+use App\Http\Controllers\Store\Admin\SellerPaymentController;
+use App\Http\Controllers\Store\Admin\SellerWithdrawRequestController;
 use App\Http\Controllers\Store\Admin\AddressController;
 use App\Http\Controllers\Store\Admin\AttributeController;
 use App\Http\Controllers\Store\Admin\AttributeValueController;
@@ -89,7 +89,7 @@ use Illuminate\Contracts\Encryption\DecryptException;
   |
  */
 // test majd
-Route::get('/admin', [AdminController::class, 'admin_dashboard'])->name('shop.admin.dashboard')->middleware(['auth', 'admin']);
+Route::get('/admin', [DashboardController::class, 'index'])->name('shop.admin.dashboard')->middleware(['auth', 'admin']);
 Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function () {
 
     // category
@@ -112,9 +112,7 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
     Route::get('/brands-wise-product-discount', [BrandDiscountController::class, 'index'])->name('brands_wise_product_discount');
     Route::post('/set-product-discount', [BrandDiscountController::class, 'update'])->name('set_product_discount');
 
-    // Products: the in-house and all-products lists, their row actions and
-    // the create and edit forms are Inertia. The seller list and the jQuery
-    // endpoints it posts to stay on the root ProductController's Blade.
+    // Product lists and forms share Inertia; seller action aliases fix their scope.
     Route::get('/products/admin', [StoreProductController::class, 'inHouse'])->name('products.admin');
     Route::get('/products/all', [StoreProductController::class, 'all'])->name('products.all');
     Route::post('/products/{product}/published', [StoreProductController::class, 'updatePublished'])->name('products.list.published');
@@ -130,21 +128,20 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
     Route::get('/products/seller/{product}/edit', [StoreProductController::class, 'sellerEdit'])->name('products.seller.edit');
     Route::post('/products/update/{product}', [StoreProductController::class, 'update'])->name('products.update');
     Route::post('/products/{product}/variant-combinations', [StoreProductController::class, 'editVariantCombinations'])->name('products.edit_variant_combinations');
+    Route::get('/products/seller', [StoreProductController::class, 'seller'])->name('products.seller');
+    Route::post('/products/seller/{product}/todays-deal', [StoreProductController::class, 'updateTodaysDeal'])->defaults('productList', 'seller')->name('products.todays_deal');
+    Route::post('/products/seller/{product}/for-sale', [StoreProductController::class, 'updateSaleStatus'])->defaults('productList', 'seller')->name('products.update_sale');
+    Route::post('/products/seller/{product}/featured', [StoreProductController::class, 'sellerFeatured'])->defaults('productList', 'seller')->name('products.featured');
+    Route::post('/products/seller/{product}/published', [StoreProductController::class, 'sellerPublished'])->defaults('productList', 'seller')->name('products.published');
+    Route::post('/products/seller/{product}/approved', [StoreProductController::class, 'updateProductApproval'])->name('products.approved');
+    Route::post('/products/duplicate/{product}', [StoreProductController::class, 'sellerDuplicate'])->defaults('productList', 'seller')->name('products.duplicate');
+    Route::delete('/products/destroy/{product}', [StoreProductController::class, 'sellerDestroy'])->defaults('productList', 'seller')->name('products.destroy');
+    Route::delete('/bulk-product-delete', [StoreProductController::class, 'sellerBulkDestroy'])->defaults('productList', 'seller')->name('bulk-product-delete');
     Route::controller(ProductController::class)->group(function () {
-        Route::get('/products/seller', 'seller_products')->name('products.seller');
-        Route::post('/products/todays_deal', 'updateTodaysDeal')->name('products.todays_deal');
-        Route::post('/products/sale_status', 'updateSaleStatus')->name('products.update_sale');
-        Route::post('/products/featured', 'updateFeatured')->name('products.featured');
-        Route::post('/products/published', 'updatePublished')->name('products.published');
-        Route::post('/products/approved', 'updateProductApproval')->name('products.approved');
         Route::post('/products/get_products_by_subcategory', 'get_products_by_subcategory')->name('products.get_products_by_subcategory');
-        Route::post('/products/duplicate/{id}', 'duplicate')->name('products.duplicate');
-        Route::post('/products/destroy/{id}', 'destroy')->name('products.destroy');
-        Route::post('/bulk-product-delete', 'bulk_product_delete')->name('bulk-product-delete');
-        Route::post('/products/fetch', 'fetch')->name('products.fetch');
+        Route::post('/products/fetch', 'fetch')->name('products.fetch')->middleware('permission:add_new_product');
         Route::post('/products/search', 'search')->name('products.search');
         Route::get('products/get-details/{id}', 'getDetails')->name('products.get-details');
-
         Route::post('/products/sku_combination', 'sku_combination')->name('products.sku_combination');
     });
 
@@ -175,35 +172,34 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
     Route::get('/bulk-upload/download/brand', [ProductBulkUploadController::class, 'pdfDownloadBrand'])->name('pdf.download_brand');
     Route::get('/bulk-upload/download/seller', [ProductBulkUploadController::class, 'pdfDownloadSeller'])->name('pdf.download_seller');
 
-    // Seller
-    Route::resource('sellers', SellerController::class);
-    Route::controller(SellerController::class)->group(function () {
-        Route::post('sellers_ban/{id}', 'ban')->name('sellers.ban');
-        Route::post('/sellers/destroy/{id}', 'destroy')->name('sellers.destroy');
-        Route::post('/bulk-seller-delete', 'bulk_seller_delete')->name('bulk-seller-delete');
-        Route::get('/sellers/view/{id}/verification', 'show_verification_request')->name('sellers.show_verification_request');
-        Route::get('/sellers/verification-file/{name}', 'download_verification_file')->name('sellers.verification_file');
-        Route::post('/sellers/approve/{id}', 'approve_seller')->name('sellers.approve');
-        Route::post('/sellers/reject/{id}', 'reject_seller')->name('sellers.reject');
-        Route::get('/sellers/login/{id}', 'login')->name('sellers.login');
-        Route::post('/sellers/payment_modal', 'payment_modal')->name('sellers.payment_modal');
-        Route::post('/sellers/profile_modal', 'profile_modal')->name('sellers.profile_modal');
-        Route::post('/sellers/approved', 'updateApproved')->name('sellers.approved');
-    });
-
-    // Seller Payment
-    Route::controller(PaymentController::class)->group(function () {
-        Route::get('/seller/payments', 'payment_histories')->name('sellers.payment_histories');
-        Route::get('/seller/payments/show/{id}', 'show')->name('sellers.payment_history');
-    });
-
-    // Seller Withdraw Request
-    Route::resource('/withdraw_requests', SellerWithdrawRequestController::class)->except(['store']);
-    Route::controller(SellerWithdrawRequestController::class)->group(function () {
-        Route::get('/withdraw_requests_all', 'index')->name('withdraw_requests_all');
-        Route::post('/withdraw_request/payment_modal', 'payment_modal')->name('withdraw_request.payment_modal');
-        Route::post('/withdraw_request/message_modal', 'message_modal')->name('withdraw_request.message_modal');
-    });
+    // Seller account and payout administration.
+    Route::get('/sellers', [SellerController::class, 'index'])->name('sellers.index');
+    Route::get('/sellers/create', [SellerController::class, 'create'])->name('sellers.create');
+    Route::post('/sellers', [SellerController::class, 'store'])->name('sellers.store');
+    Route::get('/sellers/{seller}/edit', [SellerController::class, 'edit'])->name('sellers.edit');
+    Route::match(['PUT', 'PATCH'], '/sellers/{seller}', [SellerController::class, 'update'])->name('sellers.update');
+    Route::post('/sellers_ban/{seller}', [SellerController::class, 'ban'])->name('sellers.ban');
+    Route::delete('/sellers/destroy/{seller}', [SellerController::class, 'destroy'])->name('sellers.destroy');
+    Route::delete('/bulk-seller-delete', [SellerController::class, 'bulkDestroy'])->name('bulk-seller-delete');
+    Route::get('/sellers/view/{seller}/verification', [SellerController::class, 'verification'])->name('sellers.show_verification_request');
+    Route::get('/sellers/verification-file/{name}', [SellerController::class, 'verificationFile'])->name('sellers.verification_file');
+    Route::post('/sellers/approve/{seller}', [SellerController::class, 'approve'])->name('sellers.approve');
+    Route::post('/sellers/reject/{seller}', [SellerController::class, 'reject'])->name('sellers.reject');
+    Route::get('/sellers/login/{seller}', [SellerController::class, 'login'])->name('sellers.login');
+    Route::post('/sellers/profile_modal', [SellerController::class, 'profile'])->name('sellers.profile_modal');
+    Route::post('/sellers/approved', [SellerController::class, 'approved'])->name('sellers.approved');
+    Route::post('/sellers/payment_modal', [SellerPaymentController::class, 'modal'])->name('sellers.payment_modal');
+    Route::get('/seller/payments', [SellerPaymentController::class, 'index'])->name('sellers.payment_histories');
+    Route::get('/seller/payments/show/{seller}', [SellerPaymentController::class, 'show'])->name('sellers.payment_history');
+    Route::get('/withdraw_requests', [SellerWithdrawRequestController::class, 'index'])->name('withdraw_requests.index');
+    Route::get('/withdraw_requests_all', [SellerWithdrawRequestController::class, 'index'])->name('withdraw_requests_all');
+    Route::get('/withdraw_requests/create', [SellerWithdrawRequestController::class, 'create'])->name('withdraw_requests.create');
+    Route::get('/withdraw_requests/{withdrawRequest}', [SellerWithdrawRequestController::class, 'show'])->name('withdraw_requests.show');
+    Route::get('/withdraw_requests/{withdrawRequest}/edit', [SellerWithdrawRequestController::class, 'edit'])->name('withdraw_requests.edit');
+    Route::match(['PUT', 'PATCH'], '/withdraw_requests/{withdrawRequest}', [SellerWithdrawRequestController::class, 'update'])->name('withdraw_requests.update');
+    Route::delete('/withdraw_requests/{withdrawRequest}', [SellerWithdrawRequestController::class, 'destroy'])->name('withdraw_requests.destroy');
+    Route::post('/withdraw_request/payment_modal', [SellerWithdrawRequestController::class, 'paymentModal'])->name('withdraw_request.payment_modal');
+    Route::post('/withdraw_request/message_modal', [SellerWithdrawRequestController::class, 'messageModal'])->name('withdraw_request.message_modal');
 
     // Customers and representatives share customer records, with explicit write gates.
     Route::controller(CustomerController::class)->group(function () {
@@ -357,10 +353,10 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
         Route::post('/env_key_update', 'env_key_update')->name('env_key_update.update');
         Route::post('/google-map', [GoogleMapController::class, 'update'])->name('google-map.update');
 
-        Route::get('/verification/form', 'seller_verification_form')->name('seller_verification_form.index');
-        Route::post('/verification/form', 'seller_verification_form_update')->name('seller_verification_form.update');
-        Route::get('/vendor_commission', 'vendor_commission')->name('business_settings.vendor_commission');
-        Route::post('/vendor_commission_update', 'vendor_commission_update')->name('business_settings.vendor_commission.update');
+        Route::get('/verification/form', [SellerVerificationFormController::class, 'index'])->name('seller_verification_form.index');
+        Route::post('/verification/form', [SellerVerificationFormController::class, 'update'])->name('seller_verification_form.update');
+        Route::get('/vendor_commission', [SellerCommissionController::class, 'index'])->name('business_settings.vendor_commission');
+        Route::post('/vendor_commission_update', [SellerCommissionController::class, 'update'])->name('business_settings.vendor_commission.update');
 
         // Shipping Configuration
 
@@ -531,7 +527,7 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
     Route::post('/orders/update_manager_notes', [OrderController::class, 'update_manager_notes'])->name('orders.update_manager_notes');
     Route::post('/orders/item/edit_price', [OrderController::class, 'edit_item_price'])->name('order.item.edit_price');
 
-    Route::post('/pay_to_seller', [CommissionController::class, 'pay_to_seller'])->name('commissions.pay_to_seller')->middleware('permission:pay_to_seller');
+    Route::post('/pay_to_seller', [SellerPaymentController::class, 'store'])->name('commissions.pay_to_seller');
 
     // Reports
     Route::get('/in_house_sale_report', [ReportController::class, 'in_house_sale_report'])->name('in_house_sale_report.index');
@@ -634,11 +630,9 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
     Route::delete('/customer_packages/destroy/{customerPackage}', [CustomerPackageController::class, 'destroy'])->name('customer_packages.destroy');
 
     // Classified Products
-    Route::controller(CustomerProductController::class)->group(function () {
-        Route::get('/classified_products', 'customer_product_index')->name('classified_products');
-        Route::post('/classified_products/published', 'updatePublished')->name('classified_products.published');
-        Route::post('/classified_products/destroy/{id}', 'destroy_by_admin')->name('classified_products.destroy');
-    });
+    Route::get('/classified_products', [ClassifiedProductController::class, 'customer_product_index'])->name('classified_products');
+    Route::put('/classified_products/{classifiedProduct}/published', [ClassifiedProductController::class, 'updatePublished'])->name('classified_products.published');
+    Route::delete('/classified_products/{classifiedProduct}', [ClassifiedProductController::class, 'destroy_by_admin'])->name('classified_products.destroy');
 
     // Countries
     Route::get('/countries', [CountryController::class, 'index'])->name('countries.index');

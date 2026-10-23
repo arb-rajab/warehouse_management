@@ -2,6 +2,7 @@
 import { Plus, X } from '@lucide/vue';
 import FieldError from '@/components/FieldError.vue';
 import FormField from '@/components/FormField.vue';
+import RequiredMark from '@/components/RequiredMark.vue';
 import StoreRichTextField from '@/components/StoreRichTextField.vue';
 import StoreUploadField from '@/components/StoreUploadField.vue';
 import {
@@ -153,8 +154,8 @@ function removeLink(index: number): void {
                 <label
                     :for="`footer-link-label-${index}`"
                     :class="fieldLabelClass"
-                    >{{ t('store.website.footer.linkLabel') }}</label
-                >
+                    >{{ t('store.website.footer.linkLabel') }}<RequiredMark
+                /></label>
                 <input
                     :id="`footer-link-label-${index}`"
                     v-model="settings.widget_one_labels[index]"
@@ -171,8 +172,8 @@ function removeLink(index: number): void {
                 <label
                     :for="`footer-link-url-${index}`"
                     :class="fieldLabelClass"
-                    >{{ t('store.website.footer.linkUrl') }}</label
-                >
+                    >{{ t('store.website.footer.linkUrl') }}<RequiredMark
+                /></label>
                 <input
                     :id="`footer-link-url-${index}`"
                     v-model="settings.widget_one_links[index]"

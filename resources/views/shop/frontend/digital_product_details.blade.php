@@ -6,29 +6,13 @@
 
 @section('meta_keywords'){{ $detailedProduct->tags }}@stop
 
-@section('meta')
-    <!-- Schema.org markup for Google+ -->
-    <meta itemprop="name" content="{{ $detailedProduct->meta_title }}">
-    <meta itemprop="description" content="{{ $detailedProduct->meta_description }}">
-    <meta itemprop="image" content="{{ uploaded_asset($detailedProduct->meta_img) }}">
+@section('meta_image'){{ $detailedProduct->meta_img ? uploaded_asset($detailedProduct->meta_img) : '' }}@stop
 
-    <!-- Twitter Card data -->
-    <meta name="twitter:card" content="product">
-    <meta name="twitter:site" content="@publisher_handle">
-    <meta name="twitter:title" content="{{ $detailedProduct->meta_title }}">
-    <meta name="twitter:description" content="{{ $detailedProduct->meta_description }}">
-    <meta name="twitter:creator" content="@author_handle">
-    <meta name="twitter:image" content="{{ uploaded_asset($detailedProduct->meta_img) }}">
+@section('og_type', 'product')
+
+@section('meta')
     <meta name="twitter:data1" content="{{ single_price($detailedProduct->unit_price) }}">
     <meta name="twitter:label1" content="Price">
-
-    <!-- Open Graph data -->
-    <meta property="og:title" content="{{ $detailedProduct->meta_title }}" />
-    <meta property="og:type" content="product" />
-    <meta property="og:url" content="{{ route('product', $detailedProduct->slug) }}" />
-    <meta property="og:image" content="{{ uploaded_asset($detailedProduct->meta_img) }}" />
-    <meta property="og:description" content="{{ $detailedProduct->meta_description }}" />
-    <meta property="og:site_name" content="{{ get_setting('meta_title') }}" />
     <meta property="og:price:amount" content="{{ single_price($detailedProduct->unit_price) }}" />
 @endsection
 
@@ -807,13 +791,26 @@
                 </div>
                 <form class="" action="{{ route('conversations.store') }}" method="POST" enctype="multipart/form-data">
                     @csrf
+                    @php $keepInput = $errors->storeConversation->any(); @endphp
                     <input type="hidden" name="product_id" value="{{ $detailedProduct->id }}">
                     <div class="modal-body gry-bg px-3 pt-3">
+                        <x-required-legend />
+                        @error('product_id', 'storeConversation')
+                            <div class="alert alert-danger" role="alert">{{ $message }}</div>
+                        @enderror
                         <div class="form-group">
-                            <input type="text" class="form-control mb-3" name="title" value="{{ $detailedProduct->getTranslation('name') }}" placeholder="{{ translate('Product Name') }}" required>
+                            <label for="conversation_title">{{ translate('Title') }}<x-required-mark /></label>
+                            <input type="text" id="conversation_title" class="form-control mb-3 @error('title', 'storeConversation') is-invalid @enderror" name="title" value="{{ $keepInput ? old('title') : $detailedProduct->getTranslation('name') }}" placeholder="{{ translate('Product Name') }}" maxlength="1000" required>
+                            @error('title', 'storeConversation')
+                                <span class="invalid-feedback" role="alert"><strong>{{ $message }}</strong></span>
+                            @enderror
                         </div>
                         <div class="form-group">
-                            <textarea class="form-control" rows="8" name="message" required placeholder="{{ translate('Your Question') }}">{{ route('product', $detailedProduct->slug) }}</textarea>
+                            <label for="conversation_message">{{ translate('Your Question') }}<x-required-mark /></label>
+                            <textarea id="conversation_message" class="form-control @error('message', 'storeConversation') is-invalid @enderror" rows="8" name="message" maxlength="65535" required placeholder="{{ translate('Your Question') }}">{{ $keepInput ? old('message') : route('product', $detailedProduct->slug) }}</textarea>
+                            @error('message', 'storeConversation')
+                                <span class="invalid-feedback" role="alert"><strong>{{ $message }}</strong></span>
+                            @enderror
                         </div>
                     </div>
                     <div class="modal-footer">
@@ -957,5 +954,9 @@
                 $('#login_modal').modal('show');
             @endif
         }
+
+        @if ($errors->storeConversation->any())
+            $(function () { $('#chat_modal').modal('show'); });
+        @endif
     </script>
 @endsection
