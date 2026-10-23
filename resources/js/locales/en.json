@@ -1148,6 +1148,7 @@
             "rate": "Exchange rate (1 USD =)",
             "defaultCurrency": "System default currency",
             "formats": "Currency formats",
+            "formatsHint": "Choose a symbol format to require the decimal separator and number of decimals. Save the default currency separately.",
             "symbolFormat": "Symbol format",
             "decimalSeparator": "Decimal separator",
             "decimals": "Number of decimals",
@@ -2886,6 +2887,7 @@
         },
         "googleMap": {
             "title": "Google map settings",
+            "requirementsHint": "Choose whether to enable the map when no coordinates are sent. Enter both coordinates together, or leave both empty.",
             "enabled": "Enable the storefront’s Google map",
             "location": "Default location",
             "latitude": "Latitude",

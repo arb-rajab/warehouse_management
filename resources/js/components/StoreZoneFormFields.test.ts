@@ -1,5 +1,6 @@
 import { mount } from '@vue/test-utils';
 import { describe, expect, it } from 'vitest';
+import RequiredMark from '@/components/RequiredMark.vue';
 import { t } from '@/lib/i18n';
 import { storeZone } from '@/testing/factories';
 import StoreZoneFormFields from './StoreZoneFormFields.vue';
@@ -23,7 +24,12 @@ describe('StoreZoneFormFields', () => {
 
         for (const id of ['name', 'country_id']) {
             expect(wrapper.get(`#${id}`).attributes('required')).toBeDefined();
-            expect(wrapper.get(`label[for=${id}]`).text()).not.toBe('');
+            expect(
+                wrapper
+                    .get(`label[for=${id}]`)
+                    .findComponent(RequiredMark)
+                    .exists(),
+            ).toBe(true);
         }
 
         for (const key of ['reference.name', 'zones.countries']) {

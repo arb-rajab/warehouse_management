@@ -1,6 +1,7 @@
 import { mount } from '@vue/test-utils';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import FormField from '@/components/FormField.vue';
+import RequiredMark from '@/components/RequiredMark.vue';
 import StoreBooleanField from '@/components/StoreBooleanField.vue';
 import StoreLeafletMap from '@/components/StoreLeafletMap.vue';
 import { i18n, t } from '@/lib/i18n';
@@ -87,6 +88,7 @@ it.each(['en', 'ar'] as const)(
             'latitude',
             'longitude',
             'hint',
+            'requirementsHint',
         ]) {
             expect(wrapper.text()).toContain(t(`store.googleMap.${key}`));
             expect(t(`store.googleMap.${key}`)).not.toBe(
@@ -184,4 +186,34 @@ it('shows server errors', () => {
     for (const error of ['Toggle error', 'Latitude error', 'Longitude error']) {
         expect(wrapper.text()).toContain(error);
     }
+});
+it('matches required_without_all and both required_with conditions as coordinates are entered and cleared', async () => {
+    const wrapper = page(true, '', '');
+    const check = (id: string, required: boolean) => {
+        expect(wrapper.get(`#${id}`).attributes('required') !== undefined).toBe(
+            required,
+        );
+        expect(
+            wrapper
+                .get(`label[for=${id}]`)
+                .findComponent(RequiredMark)
+                .exists(),
+        ).toBe(required);
+    };
+    check('google_map', true);
+    check('google_map_latitude', false);
+    check('google_map_longtitude', false);
+    await wrapper.get('#google_map_latitude').setValue('0');
+    check('google_map', false);
+    check('google_map_longtitude', true);
+    await wrapper.get('#google_map_longtitude').setValue('0');
+    check('google_map_latitude', true);
+    await wrapper.get('#google_map_latitude').setValue('');
+    check('google_map_latitude', true);
+    check('google_map_longtitude', false);
+    await wrapper.get('#google_map').setValue('0');
+    check('google_map', true);
+    expect(wrapper.find('#google_map_longtitude').exists()).toBe(false);
+    await wrapper.get('#google_map').setValue('1');
+    check('google_map', false);
 });
