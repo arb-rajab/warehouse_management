@@ -35,6 +35,8 @@ use App\Services\ProductStockService;
 use App\Services\ProductTaxService;
 use App\Services\Store\InHouseProductWriter;
 use App\Services\Store\ProductVariantCombinations;
+use App\Support\ProductFormNumber;
+use App\Support\ProductSlug;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -43,7 +45,6 @@ use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -306,7 +307,7 @@ class ProductController extends Controller implements HasMiddleware
         DB::transaction(function () use ($request, $product, $stocks, $taxes): void {
             $source = $this->lockedProduct($this->listQuery($request->productList()), $product);
             $copy = $source->replicate();
-            $copy->setAttribute('slug', $source->slug.'-'.Str::random(5));
+            $copy->setAttribute('slug', ProductSlug::duplicate($source->slug));
             $copy->save();
             $stocks->product_duplicate_store($source->stocks()->orderBy('id')->get(), $copy);
             $taxes->product_duplicate_store($source->taxes()->orderBy('id')->get(), $copy);
@@ -564,7 +565,7 @@ class ProductController extends Controller implements HasMiddleware
             'lang' => $lang,
             'languages' => $this->languageOptions(),
             'listType' => $listType,
-            'variants' => [...$variants, 'rows' => $this->editVariantRows($request, $product, $names, (string) $product->getAttribute('unit_price'))],
+            'variants' => [...$variants, 'unmatched' => $product->stocks()->whereIn('variant', app(ProductVariantCombinations::class)->unmatchedStocks($product))->get(['variant', 'price', 'qty', 'sku'])->toArray(), 'rows' => $this->editVariantRows($request, $product, $names, ProductFormNumber::format($product->getAttribute('unit_price')))],
             'initialFiles' => $this->uploadIdPreviews($request, [
                 'photos' => $product->getAttribute('photos'),
                 'thumbnail_img' => $product->thumbnail_img,
@@ -606,7 +607,7 @@ class ProductController extends Controller implements HasMiddleware
         $attributeValues = [];
         $choiceOptions = [];
         foreach ($choices as $id => $storedValues) {
-            $attributeValues[$id] = array_values(($values->get($id) ?? collect())->unique(fn (AttributeValue $value): string => (string) $value->getAttribute('value'))
+            $attributeValues[$id] = array_values(($values->get($id) ?? collect())->uniqueStrict(fn (AttributeValue $value): string => (string) $value->getAttribute('value'))
                 ->map(fn (AttributeValue $value): array => ['id' => (int) $value->getKey(), 'value' => (string) $value->getAttribute('value')])->all());
             $choiceOptions[] = [
                 'attribute_id' => $id,
@@ -638,7 +639,7 @@ class ProductController extends Controller implements HasMiddleware
         }
         $stocks = ProductStock::query()->select(['id', 'variant', 'price', 'sku', 'qty', 'image'])
             ->where('product_id', $product->id)->whereIn('variant', $names)->orderBy('id')->get()
-            ->unique(fn (ProductStock $stock): string => (string) $stock->getAttribute('variant'))
+            ->uniqueStrict(fn (ProductStock $stock): string => (string) $stock->getAttribute('variant'))
             ->keyBy(fn (ProductStock $stock): string => 'variant:'.$stock->getAttribute('variant'));
         $previews = $this->uploadIdPreviews($request, $stocks->map(fn (ProductStock $stock) => $stock->getAttribute('image'))->all());
 
@@ -649,7 +650,7 @@ class ProductController extends Controller implements HasMiddleware
                 ? ['variant' => $name, 'price' => $unitPrice, 'sku' => '', 'qty' => '10', 'image' => null, 'files' => []]
                 : [
                     'variant' => $name,
-                    'price' => (string) $stock->getAttribute('price'),
+                    'price' => ProductFormNumber::format($stock->getAttribute('price')),
                     'sku' => (string) $stock->getAttribute('sku'),
                     'qty' => (string) $stock->getAttribute('qty'),
                     'image' => $stock->getAttribute('image') === null ? null : (string) $stock->getAttribute('image'),

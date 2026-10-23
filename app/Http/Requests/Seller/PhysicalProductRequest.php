@@ -93,10 +93,10 @@ class PhysicalProductRequest extends FormRequest
         foreach ($this->choiceIds() as $id) {
             $key = 'choice_options_'.$id;
             $rules[$key] = ['required', 'array', 'list', 'min:1', 'max:100'];
-            $rules[$key.'.*'] = ['required', 'string', 'distinct', 'max:255', Rule::exists('attribute_values', 'value')->where('attribute_id', $id)];
+            $rules[$key.'.*'] = ['required', 'string', 'distinct:strict', 'max:255', Rule::exists('attribute_values', 'value')->where('attribute_id', $id)];
         }
         foreach ($this->variantNames() as $name) {
-            $key = str_replace(['.', ' '], '_', $name);
+            $key = ProductVariantCombinations::inputKey($name);
             $rules['price_'.$key] = ['required', ...self::AMOUNT_RULES];
             $rules['sku_'.$key] = ['nullable', 'string', 'max:255'];
             $rules['qty_'.$key] = ['required', ...$int];
@@ -104,6 +104,20 @@ class PhysicalProductRequest extends FormRequest
         }
 
         return $rules;
+    }
+
+    /** @return array<string, string> Human labels keep encoded wire keys out of form errors. */
+    public function attributes(): array
+    {
+        $labels = [];
+        foreach ($this->variantNames() as $name) {
+            $key = ProductVariantCombinations::inputKey($name);
+            foreach (['price' => 'Variant Price', 'qty' => 'Quantity', 'sku' => 'SKU', 'img' => 'Photo'] as $prefix => $label) {
+                $labels[$prefix.'_'.$key] = translate($label).': '.$name;
+            }
+        }
+
+        return $labels;
     }
 
     /** @return array<int, callable> */
@@ -114,8 +128,8 @@ class PhysicalProductRequest extends FormRequest
             if ($names === [] && ($this->choiceIds() !== [] || ($this->boolean('colors_active') && $this->input('colors')))) {
                 $validator->errors()->add('choice_no', __('validation.max.array', ['attribute' => 'variants', 'max' => 500]));
             }
-            if (count(array_unique(array_map(fn ($name) => str_replace(['.', ' '], '_', $name), $names))) !== count($names)
-                || collect($names)->contains(fn ($name) => mb_strlen($name) > 255 || preg_match('/[\[\]]/', $name))) {
+            if (count(array_unique(array_map(fn ($name) => ProductVariantCombinations::inputKey($name), $names))) !== count($names)
+                || collect($names)->contains(fn ($name) => mb_strlen($name) > 255)) {
                 $validator->errors()->add('choice_no', __('validation.distinct', ['attribute' => 'variants']));
             }
             $dates = $this->input('date_range');
@@ -164,7 +178,7 @@ class PhysicalProductRequest extends FormRequest
         $data['tags'] = implode(',', array_column(json_decode($data['tags'][0] ?? '[]', true) ?? [], 'value'));
         $data['choice_options'] = array_map(fn ($id) => ['attribute_id' => $id, 'values' => $data['choice_options_'.$id]], $this->choiceIds());
         $data['variants'] = array_map(function ($name) use ($data) {
-            $key = str_replace(['.', ' '], '_', $name);
+            $key = ProductVariantCombinations::inputKey($name);
 
             return ['variant' => $name, 'price' => $data['price_'.$key], 'sku' => $data['sku_'.$key] ?? null, 'qty' => $data['qty_'.$key], 'image' => $data['img_'.$key] ?? null];
         }, $this->variantNames());

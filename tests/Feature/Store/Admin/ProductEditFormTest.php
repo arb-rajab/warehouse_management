@@ -205,6 +205,7 @@ test('the edit form renders Inertia with the full payload in the requested langu
         ])
         ->where('sections', ['shipping' => true, 'productWiseShipping' => true, 'flashDeals' => true, 'vat' => true, 'cashOnDelivery' => true])
         ->where('variants', [
+            'unmatched' => [],
             'colors_active' => false,
             'colors' => [],
             'choice_options' => [['attribute_id' => $this->size, 'values' => ['S', 'Extra Large']]],

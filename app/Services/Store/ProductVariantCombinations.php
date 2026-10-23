@@ -21,6 +21,16 @@ use Illuminate\Validation\ValidationException;
  */
 class ProductVariantCombinations
 {
+    /** A safe legacy wire key; the stored variant name remains unchanged. */
+    public static function inputKey(string $variant): string
+    {
+        if (preg_match('/[\[\]*]/', $variant) || str_contains($variant, '\\')) {
+            return 'variant_'.hash('sha256', $variant);
+        }
+
+        return str_replace(['.', ' '], '_', $variant);
+    }
+
     /** @return list<string> Existing stock names the stored choices cannot generate. */
     public function unmatchedStocks(Product $product): array
     {

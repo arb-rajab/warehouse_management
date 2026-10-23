@@ -395,6 +395,10 @@ The seller physical panel uses explicit `SellerProductWriter` assignments throug
 to make a legacy service appear to save fields. Its transaction owns stock and
 translation changes too, with cache clearing after commit. The seller API still
 uses the legacy service and retains the model/builder ownership guard.
+Physical panel edit reconciliation (§54, following #466/#467) preserves stock ids
+and values only after explicit choice ordering; no origin inference or automatic
+legacy-row reclassification is permitted. Exact decimal display and generated
+slug repairs do not change this ownership rule or approval/deletion authority.
 `Product` refuses changed feed-column assignments before legacy related-row
 writes; `ProductBuilder` repeats the check against current database rows under
 locks for model saves (quiet saves included), bulk updates and counter writes.

@@ -7,6 +7,7 @@ use App\Models\ProductStock;
 use App\Models\ProductTax;
 use App\Models\ProductTranslation;
 use App\Services\ProductTaxService;
+use App\Support\ProductSlug;
 
 /** Shared column computations and related-row writes for both physical catalogue writers. */
 abstract class PhysicalProductWriter
@@ -86,16 +87,10 @@ abstract class PhysicalProductWriter
         ];
     }
 
-    /**
-     * The slug, numbered after the other products whose slug begins with it,
-     * as ProductService::store() numbered it.
-     */
+    /** Keep the shared writer API while generated slugs obey the edit field's limit. */
     protected function numberedSlug(string $slug, ?int $ignore): string
     {
-        $sameSlugCount = Product::query()->where('slug', 'like', $slug.'%')
-            ->when($ignore !== null, fn ($query) => $query->whereKeyNot($ignore))->count();
-
-        return $slug.($sameSlugCount ? '-'.($sameSlugCount + 1) : '');
+        return ProductSlug::numbered($slug, $ignore);
     }
 
     /**

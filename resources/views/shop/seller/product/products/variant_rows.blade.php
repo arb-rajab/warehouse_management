@@ -2,8 +2,8 @@
 <table class="table table-bordered"><thead><tr><th>{{ translate('Variant') }}</th><th>{{ translate('Variant Price') }}</th><th>{{ translate('SKU') }}</th><th>{{ translate('Quantity') }}</th><th>{{ translate('Photo') }}</th></tr></thead><tbody>
 @foreach ($names as $name)
     @php
-        $stock = isset($product) ? $product->stocks->firstWhere('variant', $name) : null;
-        $key = str_replace(['.', ' '], '_', $name);
+        $stock = isset($product) ? $product->stocks->first(fn ($stock) => (string) $stock->variant === $name) : null;
+        $key = \App\Services\Store\ProductVariantCombinations::inputKey($name);
         $postedVariants = $postedVariants ?? [];
         $rowValue = function ($prefix, $fallback) use ($key, $postedVariants) {
             $field = $prefix.'_'.$key;
@@ -13,7 +13,7 @@
     @endphp
     <tr class="variant"><td>{{ $name }}</td><td>
         <label for="variant-price-{{ $loop->index }}">{{ translate('Variant Price') }}<x-required-mark /></label>
-        <input type="number" id="variant-price-{{ $loop->index }}" name="price_{{ $key }}" value="{{ $rowValue('price', $stock?->price ?? $unit_price) }}" min="0" max="999999999999999999.99" step="0.01" required>
+        <input type="number" id="variant-price-{{ $loop->index }}" name="price_{{ $key }}" value="{{ $rowValue('price', \App\Support\ProductFormNumber::format($stock?->price ?? $unit_price)) }}" min="0" max="999999999999999999.99" step="0.01" required>
     </td><td><label for="variant-sku-{{ $loop->index }}">{{ translate('SKU') }}</label><input type="text" id="variant-sku-{{ $loop->index }}" name="sku_{{ $key }}" value="{{ $rowValue('sku', $stock?->sku ?? '') }}" maxlength="255"></td><td>
         <label for="variant-qty-{{ $loop->index }}">{{ translate('Quantity') }}<x-required-mark /></label>
         <input type="number" id="variant-qty-{{ $loop->index }}" name="qty_{{ $key }}" value="{{ $rowValue('qty', $stock?->qty ?? 10) }}" min="0" max="2147483647" step="1" required>

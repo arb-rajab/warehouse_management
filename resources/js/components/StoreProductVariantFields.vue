@@ -40,6 +40,7 @@ const props = defineProps<{
 const hasVariants = defineModel<boolean>('hasVariants', { default: false });
 const storedOrder =
     props.initial?.choice_options.map((choice) => choice.attribute_id) ?? [];
+const attributeOrder = ref<number[]>([...storedOrder]);
 const colorsActive = ref(props.initial?.colors_active ?? false);
 const chosenColors = ref<string[]>([...(props.initial?.colors ?? [])]);
 const chosenAttributes = ref<number[]>([...storedOrder]);
@@ -78,9 +79,23 @@ const orderedColors = computed(() =>
         .map((color) => color.code),
 );
 function rank(id: number, listIndex: number): number {
-    const stored = storedOrder.indexOf(id);
+    const stored = attributeOrder.value.indexOf(id);
 
-    return stored === -1 ? storedOrder.length + listIndex : stored;
+    return stored === -1 ? attributeOrder.value.length + listIndex : stored;
+}
+function moveAttribute(id: number, direction: number): void {
+    const ids = choices.value.map((choice) => choice.attribute.id);
+    const index = ids.indexOf(id);
+    const target = index + direction;
+    const moving = ids[index];
+
+    if (moving === undefined || target < 0 || target >= ids.length) {
+        return;
+    }
+
+    ids.splice(index, 1);
+    ids.splice(target, 0, moving);
+    attributeOrder.value = ids;
 }
 function uniqueOptions(
     options: StoreProductAttributeValue[],
@@ -113,6 +128,11 @@ const choices = computed(() =>
 
             return { attribute, options, values };
         }),
+);
+const unmatchedStocks = computed(() =>
+    (props.initial?.unmatched ?? []).filter(
+        (stock) => !rows.value.some((row) => row.variant === stock.variant),
+    ),
 );
 
 async function loadValues(attributeId: number): Promise<void> {
@@ -199,6 +219,19 @@ onBeforeUnmount(() => clearTimeout(timer));
 
 <template>
     <div class="space-y-4 lg:col-span-2">
+        <div
+            v-if="unmatchedStocks.length"
+            role="alert"
+            class="rounded border border-amber-500 p-3"
+        >
+            <p>{{ t('store.products.form.unmatchedStocks') }}</p>
+            <ul>
+                <li v-for="(stock, index) in unmatchedStocks" :key="index">
+                    {{ stock.variant }} — {{ stock.price }} — {{ stock.qty }} —
+                    {{ stock.sku }}
+                </li>
+            </ul>
+        </div>
         <div>
             <label class="inline-flex cursor-pointer items-center gap-2">
                 <input
@@ -280,6 +313,34 @@ onBeforeUnmount(() => clearTimeout(timer));
                     })
                 }}
             </legend>
+            <div class="mb-2 flex gap-2">
+                <button
+                    type="button"
+                    :disabled="index === 0"
+                    :aria-label="
+                        t('store.products.form.moveAttributeUp', {
+                            attribute: choice.attribute.name,
+                        })
+                    "
+                    class="rounded border px-2 py-1 text-sm disabled:opacity-50"
+                    @click="moveAttribute(choice.attribute.id, -1)"
+                >
+                    ↑
+                </button>
+                <button
+                    type="button"
+                    :disabled="index === choices.length - 1"
+                    :aria-label="
+                        t('store.products.form.moveAttributeDown', {
+                            attribute: choice.attribute.name,
+                        })
+                    "
+                    class="rounded border px-2 py-1 text-sm disabled:opacity-50"
+                    @click="moveAttribute(choice.attribute.id, 1)"
+                >
+                    ↓
+                </button>
+            </div>
             <input
                 type="hidden"
                 :name="`choice_options[${index}][attribute_id]`"

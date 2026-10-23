@@ -18,6 +18,19 @@ class PhysicalProductVariantsRequest extends PhysicalProductRequest
             }
         }
         unset($fieldRules);
+        // A choice change posts the previous table too. Validate those old
+        // row values, but do not treat them as rows to persist or generate.
+        foreach (array_slice(array_keys($this->all()), 0, 2000) as $key) {
+            if (preg_match('/^(price|sku|qty|img)_[^.*\[\]\\\\]{1,255}$/uD', $key, $match) !== 1) {
+                continue;
+            }
+            $rules[$key] = match ($match[1]) {
+                'price' => ['nullable', ...array_slice($rules['unit_price'], 1)],
+                'qty' => ['nullable', 'integer', 'min:0', 'max:2147483647'],
+                'sku' => ['nullable', 'string', 'max:255'],
+                'img' => ['nullable', 'integer', Rule::exists('uploads', 'id')->where('user_id', $this->user('store')?->id)->where('type', 'image')],
+            };
+        }
         $rules['name'] = ['nullable', 'string', 'max:200'];
         $rules['id'] = ['nullable', 'integer', Rule::exists('products', 'id')->where('user_id', $this->user('store')?->id)];
 

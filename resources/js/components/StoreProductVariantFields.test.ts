@@ -509,3 +509,70 @@ describe('StoreProductVariantFields', () => {
         ).toEqual(['S', 'Extra Large']);
     });
 });
+
+it.each(['en', 'ar'] as const)(
+    'explicitly reorders legacy choices and restores the matching stock in %s',
+    async (locale) => {
+        i18n.global.locale.value = locale;
+        const wrapper = mountFields({
+            rowsUrl,
+            initial: storeProductVariantState({
+                choice_options: [
+                    { attribute_id: 1, values: ['S'] },
+                    { attribute_id: 2, values: ['1.5 L'] },
+                ],
+                attribute_values: values,
+                rows: [
+                    {
+                        variant: 'S-1.5L',
+                        price: '12.5',
+                        sku: '',
+                        qty: '10',
+                        image: null,
+                        files: [],
+                    },
+                ],
+                unmatched: [
+                    { variant: '1.5L-S', price: '17.50', sku: 'KEEP', qty: 47 },
+                ],
+            }),
+        });
+        expect(wrapper.get('[role="alert"]').text()).toContain('KEEP');
+        postMock.mockResolvedValue([
+            {
+                variant: '1.5L-S',
+                price: '17.5',
+                sku: 'KEEP',
+                qty: '47',
+                image: null,
+                files: [],
+            },
+        ]);
+        const moveUp = wrapper.findAll('button').find(
+            (button) =>
+                button.attributes('aria-label') ===
+                t('store.products.form.moveAttributeUp', {
+                    attribute: 'Bottle',
+                }),
+        );
+        expect(moveUp).toBeDefined();
+        await moveUp!.trigger('click');
+        await settle();
+        expect(editRowPosts().at(-1).choice_options).toEqual([
+            { attribute_id: 2, values: ['1.5 L'] },
+            { attribute_id: 1, values: ['S'] },
+        ]);
+        expect(
+            wrapper
+                .get('input[name="choice_options[0][attribute_id]"]')
+                .attributes('value'),
+        ).toBe('2');
+        expect(wrapper.find('[role="alert"]').exists()).toBe(false);
+        expect(
+            wrapper.get('input[name="variants[0][price]"]').element,
+        ).toHaveProperty('value', '17.5');
+        expect(
+            wrapper.get('input[name="variants[0][qty]"]').element,
+        ).toHaveProperty('value', '47');
+    },
+);

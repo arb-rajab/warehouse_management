@@ -13,6 +13,24 @@
         $('[name=shipping_type]').on('change', shippingRequirement);
         shippingRequirement();
 
+        function refreshChoiceButtons() {
+            const rows = $('#customer_choice_options [data-choice-row]');
+            rows.each(function(index) {
+                $(this).find('[data-choice-move=-1]').prop('disabled', index === 0);
+                $(this).find('[data-choice-move=1]').prop('disabled', index === rows.length - 1);
+            });
+        }
+        refreshChoiceButtons();
+        $(document).on('click', '[data-choice-move]', function() {
+            const row = $(this).closest('[data-choice-row]');
+            const up = Number($(this).attr('data-choice-move')) < 0;
+            const target = up ? row.prev('[data-choice-row]') : row.next('[data-choice-row]');
+            if (!target.length) return;
+            if (up) row.insertBefore(target); else row.insertAfter(target);
+            refreshChoiceButtons();
+            update_sku();
+        });
+
         let choiceRevision = 0;
         function add_more_customer_choice_option(i, name, revision) {
             return $.ajax({
@@ -22,11 +40,14 @@
                 data: { attribute_id: i },
                 success: function(options) {
                     if (revision !== choiceRevision) return;
-                    const row = $('<div class="form-group row"><div class="col-md-3"><input type="hidden" name="choice_no[]"><label></label></div><div class="col-md-8"><select class="form-control aiz-selectpicker attribute_choice" multiple required aria-required="true"></select></div></div>');
+                    const row = $('<div class="form-group row" data-choice-row><div class="col-md-3"><input type="hidden" name="choice_no[]"><label></label><div><button type="button" data-choice-move="-1">↑</button><button type="button" data-choice-move="1">↓</button></div></div><div class="col-md-8"><select class="form-control aiz-selectpicker attribute_choice" multiple required aria-required="true"></select></div></div>');
                     row.find('input').val(i);
+                    row.find('[data-choice-move=-1]').attr('aria-label', @json(translate('Move attribute up')) + ': ' + name);
+                    row.find('[data-choice-move=1]').attr('aria-label', @json(translate('Move attribute down')) + ': ' + name);
                     row.find('label').attr('for', 'choice-options-' + i).text(name).append(document.getElementById('choice-required-mark').content.cloneNode(true));
                     row.find('select').attr('id', 'choice-options-' + i).attr('name', 'choice_options_' + i + '[]').html(options);
                     $('#customer_choice_options').append(row);
+                    refreshChoiceButtons();
                     AIZ.plugins.bootstrapSelect('refresh');
                 }
             });
