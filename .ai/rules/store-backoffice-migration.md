@@ -560,14 +560,14 @@ The back-office Blade to Inertia conversion is complete; §39 retires its dead s
 | Module/subset | State | Actual behavior / remaining work |
 | --- | --- | --- |
 | Staff and roles | Complete pilot | Existing six Inertia pages retained; action gates unchanged |
-| Reference/shipping/tax/currency | Complete | Canonical `35ae3133` controllers/forms/routes; duplicate `e5523338` implementation superseded |
-| Carrier administration | Complete | List/create/edit and CRUD/status use Inertia; existing `manage_carriers` gate, tariff contract and public/API consumers preserved (§11) |
+| Reference/shipping/tax/currency | Complete | Canonical `35ae3133` controllers/forms/routes; duplicate `e5523338` implementation superseded; Setup required-field follow-up complete (§56), with conditional marks and retained scanner limitations |
+| Carrier administration | Complete | List/create/edit and CRUD/status use Inertia; existing `manage_carriers` gate, tariff contract and public/API consumers preserved (§11); required tariff/group marks follow free shipping (§56) |
 | Language/settings | Complete | Language CRUD and translation-selector validation separated; dedicated settings endpoints with reserved-key protection; general settings use Inertia with a typed writer and a config-managed timezone (§17); the generic `business_settings.update` writer is retired (§20); the Google Map settings GET uses Inertia and the approved Leaflet picker (§32) |
 | Reports/notifications | Complete | Inertia report/admin notification routes; public/customer/seller notification consumers remain |
 | Uploads/profile | Complete | Canonical `944e2e1e` backend/picker; per-action authorization and authenticated-user profile |
 | Customers/representatives | Complete | Customers, addresses, representatives/packages/payments, customer package administration (§12), visit list/detail/day maps (§31) and the admin classified-products list/publish/delete (§37) use Inertia; customer-facing classified pages and the mobile API remain separate |
 | Catalogue | Complete | Attributes/values, colors, brand discount, reviews (the legacy Blade list retired, §28), bulk import/export and offers catalogue implemented; category (§13) and brand (§14) administration complete; digital product list, deletion, download and switches converted (§15); digital product create/edit converted on the shared editor and canonical uploader (§21); in-house and all-products lists with their switches, duplicate, delete and bulk delete converted (§16); physical product create converted with its typed variant/SKU endpoint (§22); physical product edit converted with translation tabs and stored variant rows (§23); the admin seller product list, its approval and remaining row actions use the same Inertia list and shared writer (§38) |
-| Website/support | Complete | Header/home, footer, appearance, custom pages (§20), conversations, product queries, the ticket list and the ticket detail with its typed reply use Inertia; footer, appearance and page rich text use the shared editor, cleaned on write (§20); the header/footer scripts stay on their compatibility endpoint as plain code fields; script policy, `manage_website_scripts` and rich-text WAF exceptions stay held |
+| Website/support | Complete | Header/home, footer, appearance, custom pages (§20), conversations, product queries, the ticket list and the ticket detail with its typed reply use Inertia; footer, appearance and page rich text use the shared editor, cleaned on write (§20); the header/footer scripts stay on their compatibility endpoint as plain code fields; script policy, `manage_website_scripts` and rich-text WAF exceptions stay held; Website required-field follow-up complete (§56), with scanner limitations retained |
 | Marketing/blog | Complete | Coupons, flash/offer deals, campaign products, popups, subscribers and blog categories/list/actions integrated; blog post create/edit (§18) and the newsletter form (§19) use Inertia with the shared Tiptap editor; the typed newsletter send and bounded recipient search are unchanged |
 | Logistics | Complete | Drivers/trucks converted; the all-trips and today's-trips lists with their status dialog, notes, delete and bulk delete converted (§24); the trip create and edit forms converted without their map (§25); the trip orders list with its bulk status, invoice number and delivered actions converted (§26); the trip detail with its checkpoint notes, status and CMR download converted without its map (§27); the trip map picker converted on Leaflet from npm (§30); visit list/detail/day maps use Inertia and bundled Leaflet (§31) |
 | Orders/dashboard | Complete | Orders and entry forms converted; stored tax metadata and line-price-only grand total preserved; shell utilities integrated; dashboard converted to Inertia with bundled Chart.js (§33) |
@@ -6443,3 +6443,167 @@ SQLite /42,897 assertions (149.521 seconds)**. No application or test code chang
 after this pass; only verification documentation was finalized. The complete
 MySQL and browser results above were run separately. No new test was skipped,
 loosened or quarantined. The change fits **25 files**, covering C1 and C2 together.
+
+
+## 56. Back-office required fields, phase 2b batch 2a: Setup and Website (2026-10-23)
+
+Branch `codex/marks-setup-website`, from current `origin/develop`
+`d74a3425f072736cf533cf743572caf62eb0b009` (PR #470, already merged).
+Both requested modules fit in **29 files**; Website is included in batch 2a.
+The server remains authoritative. No endpoint, validation rule, storage limit,
+permission, submitted value or behavior for valid input changes. No PHP source,
+MySQL test list or CI-Verified trailer is edited. No boundary test is needed
+because no server limit changes.
+
+**Rendered fixes.** Carrier billing and the shipping-zone group gain marks;
+the first zone checkbox is natively required only while none is selected,
+so selecting any zone satisfies the group without requiring every zone.
+Paid ranges/prices remain marked and required only while rendered; free shipping
+omits them. Zone countries and the general-settings timezone gain marks.
+The Google Map switch follows `required_without_all` using only the coordinates
+actually submitted: disabling the map omits the coordinate controls, so the switch
+is then required even when a stored coordinate draft remains. Coordinates retain
+their paired requirements. Currency decimal controls follow whether the format
+select has a value. Both conditions have English/Arabic help. Each of the two
+currency and three shipping settings forms gains its own legend.
+
+Website custom-page slugs gain a mark only on editable slugs (new/custom pages);
+policy URLs remain read-only, unnamed and unmarked. Header menu label/link rows,
+footer label/link rows and each home category gain marks, activating the existing
+ResourceFormPage legend. Optional images, text, slider links, coupon settings and
+boolean switches stay unmarked. Removing the final home category removes its
+mark and legend. These runtime row labels were unresolved controls in the audit,
+so their rendered fixes do not reduce its totals.
+
+### Audit and ratchet status
+
+`php artisan forms:audit-required` on the untouched base reproduced **255**.
+The first scratch-output attempt failed because its output directory did not yet
+exist; after creating it the audit ran successfully before any UI edit.
+The committed current-date report/JSON are
+[required-fields-audit-20261023.md](../required-fields-audit-20261023.md) and
+[required-fields-audit-20261023.json](../required-fields-audit-20261023.json).
+The 20261022 snapshot remains historical. The scanner implementation is unchanged.
+
+| Module | Forms | Before A/B/C/D/E/F | After A/B/C/D/E/F | Status |
+| --- | ---: | --- | --- | --- |
+| Store/Admin/Setup | 27 | 10 / 7 / 0 / 8 / 0 / 0 | 8 / 0 / 0 / 5 / 0 / 0 | Real gaps fixed; remaining findings are limitations below |
+| Store/Admin/Website | 7 | 9 / 6 / 1 / 0 / 2 / 0 | 9 / 5 / 1 / 0 / 2 / 0 | Real gaps fixed; remaining findings are limitations below |
+| Whole application | 239 | 39 / 40 / 38 / 10 / 105 / 23 | 37 / 32 / 38 / 7 / 105 / 23 | **255 → 242** |
+| Back-office baseline | — | 82 entries | 72 entries | Only the ten absent A/B fingerprints removed |
+
+### Every finding: disposition and audit limitations
+
+Each row identifies one original finding. Paths are relative to
+`resources/js/pages/Store/Admin/`. “Limitation” means no UI change was made to
+satisfy the scanner. Mounted tests and focused endpoint tests preserve the actual
+contract. The five retained D findings are conditions that are always true in
+these separate forms, as permitted by the convention's normal-state rule; they
+are not runtime-dependent requirements made static.
+
+| Form | Class | Field | Disposition |
+| --- | --- | --- | --- |
+| Setup/Carriers/Create | A | carrier_price | Limitation: dynamic zone/range inputs post the required array |
+| Setup/Carriers/Create | A | delimiter1 | Limitation: dynamic required row controls post the array |
+| Setup/Carriers/Create | A | delimiter2 | Limitation: dynamic required row controls post the array |
+| Setup/Carriers/Create | A | zones[] | Fix: native group requirement when no zone is checked |
+| Setup/Carriers/Edit | A | carrier_price | Limitation: dynamic zone/range inputs post the required array |
+| Setup/Carriers/Edit | A | delimiter1 | Limitation: dynamic required row controls post the array |
+| Setup/Carriers/Edit | A | delimiter2 | Limitation: dynamic required row controls post the array |
+| Setup/Carriers/Edit | A | zones[] | Fix: native group requirement when no zone is checked |
+| Setup/Carriers/Index | A | id | Limitation: the Wayfinder action supplies id via mergeQuery; the scanner does not read action query parameters |
+| Setup/GeneralSettings/Index | A | settings | Limitation: nested named controls post the parent array |
+| Setup/Carriers/Create | B | billing_type | Fix: RequiredMark inside the paid-only label |
+| Setup/Carriers/Create | B | zones[] | Fix: RequiredMark on the paid-only group legend |
+| Setup/Carriers/Edit | B | billing_type | Fix: RequiredMark inside the paid-only label |
+| Setup/Carriers/Edit | B | zones[] | Fix: RequiredMark on the paid-only group legend |
+| Setup/GeneralSettings/Index | B | settings[timezone] | Fix: RequiredMark; existing native required retained |
+| Setup/Zones/Create | B | country_id[] | Fix: RequiredMark; existing native required retained |
+| Setup/Zones/Edit | B | country_id[] | Fix: RequiredMark; existing native required retained |
+| Setup/Currencies/Index | D | decimal_separator | Fix: mark and required only with nonempty symbol_format |
+| Setup/Currencies/Index | D | no_of_decimals | Fix: mark and required only with nonempty symbol_format |
+| Setup/Currencies/Index | D | symbol_format | Limitation: the formats form never submits system_default_currency, so required_without always applies |
+| Setup/Currencies/Index | D | system_default_currency | Limitation: the default form never submits symbol_format, so required_without always applies |
+| Setup/GoogleMap/Index | D | google_map | Fix: mark and required only while both submitted coordinates are empty/absent |
+| Setup/ShippingConfiguration/Index | D | flat_rate_shipping_cost | Limitation: its own form always submits type=flat_rate_shipping_cost; retain required and add legend |
+| Setup/ShippingConfiguration/Index | D | shipping_cost_admin | Limitation: its own form always submits type=shipping_cost_admin; retain required and add legend |
+| Setup/ShippingConfiguration/Index | D | shipping_type | Limitation: its own form always submits type=shipping_type; retain required and add missing mark/legend |
+| Website/Appearance | A | settings | Limitation: Form transform explicitly posts the settings object |
+| Website/Appearance | A | settings[show_cookies_agreement] | Limitation: transform posts true or false, both valid; required checkbox would wrongly forbid false |
+| Website/Appearance | A | settings[show_subscribe_form] | Limitation: transform posts true or false, both valid |
+| Website/Appearance | A | settings[show_website_popup] | Limitation: transform posts true or false, both valid |
+| Website/Footer | A | settings | Limitation: Form transform explicitly posts the settings object |
+| Website/Footer | A | settings[registration_tutorial_button] | Limitation: transform posts true or false, both valid |
+| Website/Footer | A | settings[show_social_links] | Limitation: transform posts true or false, both valid |
+| Website/Header | A | settings | Limitation: Form transform explicitly posts the settings object |
+| Website/Home | A | settings | Limitation: Form transform explicitly posts the settings object |
+| Website/Appearance | B | settings[show_cookies_agreement] | Limitation: a boolean value is always supplied; the checkbox is not an acceptance requirement |
+| Website/Appearance | B | settings[show_subscribe_form] | Limitation: a boolean value is always supplied |
+| Website/Appearance | B | settings[show_website_popup] | Limitation: a boolean value is always supplied |
+| Website/Footer | B | settings[registration_tutorial_button] | Limitation: a boolean value is always supplied |
+| Website/Footer | B | settings[show_social_links] | Limitation: a boolean value is always supplied |
+| Website/Pages/Create | B | slug | Fix: RequiredMark only for editableSlug, agreeing with the existing control |
+| Website/Pages/Edit | C | slug | Limitation: the audit binds an unsaved policy Page; custom edits require slug, policies omit it; both rendered branches tested |
+| Website/Footer | E | settings[delivery_boy_app_link] | Limitation: rule and control exist only with the delivery addon; scratch rule evaluation has it disabled |
+| Website/Footer | E | settings[seller_app_link] | Limitation: rule and control exist only with vendor_system_activation; scratch rule evaluation has it disabled |
+
+**UI versus server.** Three actual static-requirement disagreements are corrected:
+Google Map's switch and the two currency decimal controls. Their marks and native
+attributes now follow the server condition in both directions. No server rule is
+added to justify an old mark. The Website edit-slug C is a scanner model-state
+limitation, so the valid custom-page requirement is preserved; no real optional
+field in these modules needed a UI requirement removed. The Website switches
+remain unchecked-capable because `required|boolean` permits false.
+
+### Verification and remaining scope
+
+Before implementation, after restoring missing Wayfinder output and locked
+frontend dependencies with `npm ci`, new assertions failed in **11 files**:
+**12 failed / 62 passed**. They cover billing/zone/country/timezone marks,
+Google Map and currency conditions, per-form legends, editable slugs and dynamic
+Website rows. The initial missing-module failures were setup errors, not claimed
+as reproduced UI defects. The legend assertions wait for Vue's next flush.
+
+Focused changed tests: **12 files / 82 passed**. The complete Setup/Website page
+and affected field-component run: **36 files / 194 passed**. Focused Pest (audit,
+ratchet and eleven module controller suites): **467 passed / 3,080 assertions**.
+The first post-fix ratchet correctly failed naming the ten stale baseline entries;
+it passes after their removal. `npm run types:check` passed. Changed-file ESLint
+found import ordering/blank-line errors in new tests; autofix and Prettier resolved
+them, and both checks passed. No PHP file changes, so dirty Pint is not applicable.
+
+The first full pre-push run passed all frontend checks (**336 files / 2,664
+Vitest tests**), Pint and PHPStan (**0 errors**), then found local runtime defects:
+GD lacked WebP in the already-started workers and the Composer class map still
+named two deleted legacy controllers. Its Pest result was **7,631 passed / 1 failed /
+6 errors / 3 existing MySQL-only skips / 42,853 assertions**. The missing WebP
+failure was separately reproduced by the existing upload suite (**50 passed /
+1 failed**). The task-built GD extension enables WebP (native PHP **8.5.11**),
+and `composer dump-autoload --no-scripts` refreshes only vendor metadata.
+After repair, the upload suite passed **51 tests / 235 assertions**; the four
+affected upload/multipart/digital-route/trip-map suites passed **170 tests /
+1,031 assertions**. No dependency, lockfile or test assertion changed to repair
+these failures. A final review also removed unnecessary ARIA from the native
+zone fieldset; its checkbox's native conditional required remains.
+
+**Final explicit `python3 .claude/scripts/pre_push_check.py --full`: passed.**
+It ran setup readiness, Wayfinder generation, whole-repository ESLint, Prettier,
+vue-tsc, **336 Vitest files / 2,664 passing tests**, Pint, PHPStan (**0 errors**),
+config clear and parallel Pest: **7,638 passed / 3 existing MySQL-only skips on
+SQLite / 42,897 assertions (190.085 seconds)**. Application and test code did not
+change after this pass; only verification documentation was finalized.
+`git diff --check` passed, and the finding table was checked against all 43
+original scoped findings with no omission or duplicate.
+
+Not run locally: Playwright, the MySQL job, composer/npm advisory audits,
+deploy rollback tests or a new production asset build. The supplied Vite manifest
+was available for the existing Inertia tests. `/opt/pw-browsers/chromium` is absent;
+system Chromium is available, but no Playwright run is claimed. These separate CI
+lanes remain required when planned. No new test was skipped, loosened or
+quarantined, and no CI-Verified trailer was written or edited.
+
+Setup and Website leave D16's Left list. Trips, Sales, Customers, Languages,
+Support and Blog remain the later batch, including the owner's existing decision
+to drop customer UI-only requirements and separately prove any column-limit fix.
+Seller panel, storefront and every other module remain outside this change.
+There are **no new owner decisions** and no pending limit alignment in this batch.

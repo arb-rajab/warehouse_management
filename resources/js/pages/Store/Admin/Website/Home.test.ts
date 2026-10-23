@@ -78,6 +78,16 @@ describe('Website home', () => {
         });
         expect(wrapper.findComponent(StoreAdminLayout).exists()).toBe(true);
     });
+    it('shows exactly one legend while category rows exist and none after the last is removed', async () => {
+        const wrapper = mountPage();
+        await wrapper.vm.$nextTick();
+        expect(wrapper.findAll('[data-required-legend]')).toHaveLength(1);
+        await wrapper
+            .get('button[aria-label="Remove category row 1"]')
+            .trigger('click');
+        expect(wrapper.find('[data-required-legend]').exists()).toBe(false);
+        wrapper.unmount();
+    });
     it('submits edited ordered arrays and forwards errors without losing entered text', async () => {
         const wrapper = mountPage();
         await wrapper.get('#cupon_title').setValue('Edited coupon');

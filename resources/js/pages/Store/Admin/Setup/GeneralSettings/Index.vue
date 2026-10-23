@@ -3,6 +3,7 @@ import { ref } from 'vue';
 import { update } from '@/actions/App/Http/Controllers/Store/Admin/GeneralSettingsController';
 import FieldError from '@/components/FieldError.vue';
 import FormField from '@/components/FormField.vue';
+import RequiredMark from '@/components/RequiredMark.vue';
 import ResourceFormPage from '@/components/ResourceFormPage.vue';
 import StoreUploadField from '@/components/StoreUploadField.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
@@ -71,9 +72,9 @@ const uploads = ref<Record<StoreGeneralSettingsImage, string>>({
             </p>
         </div>
         <div>
-            <label for="timezone" :class="fieldLabelClass">{{
-                t('store.generalSettings.timezone')
-            }}</label>
+            <label for="timezone" :class="fieldLabelClass"
+                >{{ t('store.generalSettings.timezone') }}<RequiredMark
+            /></label>
             <select
                 id="timezone"
                 name="settings[timezone]"

@@ -3,6 +3,7 @@ import { Plus, X, Info } from '@lucide/vue';
 import { ref } from 'vue';
 import FieldError from '@/components/FieldError.vue';
 import FormField from '@/components/FormField.vue';
+import RequiredMark from '@/components/RequiredMark.vue';
 import StoreUploadField from '@/components/StoreUploadField.vue';
 import {
     fieldLabelClass,
@@ -143,11 +144,9 @@ function updateText(
             class="flex items-start gap-2"
         >
             <div class="flex-1">
-                <label
-                    :for="`home-category-${index}`"
-                    :class="fieldLabelClass"
-                    >{{ t('store.website.home.category') }}</label
-                >
+                <label :for="`home-category-${index}`" :class="fieldLabelClass"
+                    >{{ t('store.website.home.category') }}<RequiredMark
+                /></label>
                 <select
                     :id="`home-category-${index}`"
                     :name="`settings[home_categories][${index}]`"

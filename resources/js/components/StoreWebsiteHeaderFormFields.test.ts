@@ -2,6 +2,7 @@ import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { reactive } from 'vue';
 import FieldError from '@/components/FieldError.vue';
+import RequiredMark from '@/components/RequiredMark.vue';
 import StoreUploadField from '@/components/StoreUploadField.vue';
 import StoreWebsiteHeaderFormFields from '@/components/StoreWebsiteHeaderFormFields.vue';
 import { i18n, t } from '@/lib/i18n';
@@ -28,6 +29,28 @@ function mountFields(errors: Record<string, string> = {}) {
 }
 
 describe('StoreWebsiteHeaderFormFields', () => {
+    it('marks each menu row while allowing explicit false switches and empty optional fields', () => {
+        const wrapper = mountFields();
+
+        for (const id of ['menu-label-0', 'menu-link-0']) {
+            expect(wrapper.get(`#${id}`).attributes('required')).toBeDefined();
+            expect(
+                wrapper
+                    .get(`label[for=${id}]`)
+                    .findComponent(RequiredMark)
+                    .exists(),
+            ).toBe(true);
+        }
+
+        expect(wrapper.findAllComponents(RequiredMark)).toHaveLength(2);
+        expect(wrapper.findAll('input[type=checkbox][required]')).toHaveLength(
+            0,
+        );
+        expect(
+            wrapper.get('#helpline_number').attributes('required'),
+        ).toBeUndefined();
+        wrapper.unmount();
+    });
     beforeEach(() => vi.clearAllMocks());
 
     it('uses the existing image-only upload picker for each exact setting name', () => {

@@ -7,6 +7,7 @@ import {
     index,
     update,
 } from '@/actions/App/Http/Controllers/Store/Admin/ShippingConfigurationController';
+import RequiredMark from '@/components/RequiredMark.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
 import { t } from '@/lib/i18n';
 import { storeSharedProps } from '@/testing/factories';
@@ -79,8 +80,9 @@ describe('Shipping configuration', () => {
             );
         }
     });
-    it('posts three separate setting scopes and offers all existing methods', () => {
+    it('posts three separate setting scopes and offers all existing methods', async () => {
         const wrapper = mountPage();
+        await wrapper.vm.$nextTick();
         expect(
             wrapper.findAllComponents(Form).map((form) => form.props('action')),
         ).toEqual([update(), update(), update()]);
@@ -119,6 +121,19 @@ describe('Shipping configuration', () => {
                 min: '0',
                 step: 'any',
             });
+        }
+
+        for (const form of wrapper.findAllComponents(Form)) {
+            const scope = form.get('input[name=type]').attributes('value');
+            expect(form.get(`#${scope}`).attributes('required')).toBeDefined();
+            expect(
+                form
+                    .get(`label[for=${scope}]`)
+                    .findComponent(RequiredMark)
+                    .exists(),
+            ).toBe(true);
+            expect(form.findAllComponents(RequiredMark)).toHaveLength(1);
+            expect(form.findAll('[data-required-legend]')).toHaveLength(1);
         }
     });
     it('uses Inertia for both cities and carriers', () => {

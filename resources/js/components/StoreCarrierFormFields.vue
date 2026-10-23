@@ -3,6 +3,7 @@ import { Plus, Trash2 } from '@lucide/vue';
 import { nextTick, onMounted, ref, watch } from 'vue';
 import FieldError from '@/components/FieldError.vue';
 import FormField from '@/components/FormField.vue';
+import RequiredMark from '@/components/RequiredMark.vue';
 import StoreBooleanField from '@/components/StoreBooleanField.vue';
 import StoreUploadField from '@/components/StoreUploadField.vue';
 import {
@@ -147,9 +148,9 @@ onMounted(validateRanges);
         />
         <template v-if="!freeShipping">
             <div>
-                <label for="billing_type" :class="fieldLabelClass">{{
-                    t('store.carriers.billingType')
-                }}</label>
+                <label for="billing_type" :class="fieldLabelClass"
+                    >{{ t('store.carriers.billingType') }}<RequiredMark
+                /></label>
                 <select
                     id="billing_type"
                     v-model="billing"
@@ -168,7 +169,7 @@ onMounted(validateRanges);
             </div>
             <fieldset>
                 <legend :class="fieldLabelClass">
-                    {{ t('store.carriers.zones') }}
+                    {{ t('store.carriers.zones') }}<RequiredMark />
                 </legend>
                 <label
                     v-for="zone in zones"
@@ -180,6 +181,10 @@ onMounted(validateRanges);
                         type="checkbox"
                         name="zones[]"
                         :value="zone.id"
+                        :required="
+                            selectedZones.length === 0 &&
+                            zone.id === zones[0]?.id
+                        "
                         data-zone
                     />{{ zone.name }}
                 </label>
