@@ -42,13 +42,27 @@ class ProductController extends Controller
      * A deactivated product (`published = 0`) is returned normally rather than
      * 404ing — a QR label printed while it was active still needs to resolve
      * to "this product isn't sold anymore" (active: false) instead of looking
-     * like an unknown/broken label. Only a genuinely nonexistent id 404s. That
-     * holds even when the warehouse no longer holds any of it: lookups by id
-     * are exempt from the listing's Product::activeOrInWarehouse() rule.
+     * like an unknown/broken label. Both the default id barcode and additional
+     * WMS barcodes resolve here, with canonical product ids taking priority.
+     * Unknown ids and barcodes return 404. Direct lookups remain exempt from
+     * the listing's Product::activeOrInWarehouse() rule even when the warehouse
+     * no longer holds any of the product.
      */
-    public function show(Product $product): ProductResource
+    public function show(string $product): ProductResource
     {
-        return new ProductResource($product->load(Product::WITH_DERIVED_ATTRIBUTES));
+        $query = Product::query()
+            ->select('id', 'name', 'ar_name', 'thumbnail_img', 'published')
+            ->with(Product::WITH_DERIVED_ATTRIBUTES);
+
+        $resolvedProduct = preg_match('/^[1-9][0-9]{0,17}$/', $product)
+            ? (clone $query)->find($product)
+            : null;
+
+        $resolvedProduct ??= $query
+            ->whereHas('barcodes', fn (Builder $query) => $query->where('barcode', $product))
+            ->firstOrFail();
+
+        return new ProductResource($resolvedProduct);
     }
 
     /**

@@ -2,6 +2,7 @@
 
 use App\Models\Pallet;
 use App\Models\Product;
+use App\Models\ProductBarcode;
 use App\Models\Row;
 
 test('an authenticated worker can list products with every property the app reads', function () {
@@ -287,6 +288,81 @@ test('an authenticated worker can fetch a single product by id', function () {
         'boxes_count' => 12,
         'active' => true,
     ]);
+});
+
+test('a worker can fetch a product using any of its additional barcodes', function (string $barcode) {
+    actingAsMobileUser();
+
+    $product = Product::factory()->imageUrl('https://cdn.example.com/widget.png')->boxesCount(12)->create([
+        'name' => 'Widget',
+        'ar_name' => 'ودجة',
+    ]);
+    ProductBarcode::factory()->create(['product_id' => $product->id, 'barcode' => 'OTHER-WIDGET-CODE']);
+    ProductBarcode::factory()->create(['product_id' => $product->id, 'barcode' => $barcode]);
+    ProductBarcode::factory()->create(['barcode' => 'UNRELATED-CODE']);
+
+    $response = $this->getJson('/api/v1/products/'.rawurlencode($barcode));
+
+    $response->assertOk();
+    expect($response->json())->toEqual([
+        'id' => $product->id,
+        'name' => 'Widget',
+        'ar_name' => 'ودجة',
+        'image_url' => 'https://cdn.example.com/widget.png',
+        'boxes_count' => 12,
+        'active' => true,
+    ]);
+})->with(['8712345678901', 'BOX-ABC-123', '000123', '9999999999999999999999999999999999999999']);
+
+test('a barcode with leading zeroes resolves exactly instead of matching a product id', function () {
+    actingAsMobileUser();
+
+    $otherProduct = Product::factory()->create();
+    $barcode = '000'.$otherProduct->id;
+    $product = Product::factory()->create();
+    ProductBarcode::factory()->create(['product_id' => $product->id, 'barcode' => $barcode]);
+
+    $this->getJson('/api/v1/products/'.$barcode)
+        ->assertOk()
+        ->assertJsonPath('id', $product->id);
+});
+
+test('the default product id takes priority over a conflicting legacy barcode', function () {
+    actingAsMobileUser();
+
+    $product = Product::factory()->create();
+    ProductBarcode::factory()->create(['barcode' => (string) $product->id]);
+
+    $this->getJson("/api/v1/products/{$product->id}")
+        ->assertOk()
+        ->assertJsonPath('id', $product->id);
+});
+
+test('an inactive product without pallets still resolves by its additional barcode', function () {
+    actingAsMobileUser();
+
+    $product = Product::factory()->inactive()->create();
+    ProductBarcode::factory()->create(['product_id' => $product->id, 'barcode' => 'INACTIVE-BOX']);
+    ProductBarcode::factory()->create(['barcode' => 'UNRELATED-CODE']);
+
+    $this->getJson('/api/v1/products/INACTIVE-BOX')
+        ->assertOk()
+        ->assertJsonPath('id', $product->id)
+        ->assertJsonPath('active', false);
+});
+
+test('a barcode lookup requires an exact match', function (string $barcode) {
+    actingAsMobileUser();
+
+    ProductBarcode::factory()->create(['barcode' => 'BOX-12345']);
+
+    $this->getJson('/api/v1/products/'.rawurlencode($barcode))->assertNotFound();
+})->with(['BOX-123', 'UNKNOWN-CODE']);
+
+test('an unauthenticated caller cannot fetch a product by its additional barcode', function () {
+    ProductBarcode::factory()->create(['barcode' => 'BOX-12345']);
+
+    $this->getJson('/api/v1/products/BOX-12345')->assertUnauthorized();
 });
 
 test('fetching a deactivated product by id returns it normally with active false, not a 404', function () {
