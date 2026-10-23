@@ -428,9 +428,9 @@ each conflicting ID. Conditional upsert assignments protect the row at the SQL
 write itself, including a store insert racing the sync; pre-filtering alone
 would not. The marker assignment is last for MySQL's ordered SET evaluation.
 
-**Existing rows: conservative default, no inferred provenance.** All pre-marker
-rows remain null. A matching name/Arabic name/publication, `from_api`, `mat_id`
-or old `updated_at` cannot prove origin; no automatic backfill runs. Consequently
+**Existing rows: conservative default, no inferred provenance.** The column
+migration leaves all pre-marker rows null. A matching name/Arabic name/publication, `from_api`, `mat_id`
+or old `updated_at` cannot prove origin; that migration does not backfill origin. Consequently
 existing feed rows stop receiving those three updates until explicitly reviewed.
 The owner must compare an authoritative feed/creation inventory, approve exact IDs,
 back up those rows, and reclassify only that reviewed list, for example:
@@ -450,6 +450,18 @@ Until the next sync the initial timestamp records classification, not a proven
 previous sync time. An incorrectly classified row requires owner review before
 changing its marker back to null. Reclassification is deliberately unavailable
 through seller/back-office input.
+
+**Owner-approved existing catalog classification, 2026-10-23.** The owner confirmed
+that all current products originate from Otajer after product 100212 was found
+inactive with a null marker. Migration
+`2026_10_23_125430_classify_existing_products_as_otajer_managed` classifies all
+existing null-marker rows once, preserving every other column and existing sync
+markers. Back up the product rows before deployment, then run `products:sync`
+after migration to refresh statuses from the feed. The migration does not force
+products active or fetch the feed. Its `down()` deliberately preserves markers:
+a later sync makes a blanket reversal unsafe. Future store-created products
+still receive null markers and retain collision protection. This is explicit
+owner authorization for the existing catalog, not an origin inference rule.
 
 **Other sync behavior retained.** `products:sync` polls the configured Otajer
 feed (`store.products_sync_url` / `STORE_PRODUCTS_SYNC_URL`; never log the URL's
