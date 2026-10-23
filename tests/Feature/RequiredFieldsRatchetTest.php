@@ -28,6 +28,8 @@ const REQUIRED_FIELDS_BASELINE = __DIR__.'/Support/required-fields-baseline.json
  * finding; there is no baseline for them. Add a form here once it is fixed.
  */
 const FIXED_STOREFRONT_FORMS = [
+    ['resources/views/shop/seller/product/digitalproducts/create.blade.php', 'route:seller.digitalproducts.store'],
+    ['resources/views/shop/seller/product/digitalproducts/edit.blade.php', 'route:seller.digitalproducts.update'],
     ['resources/views/shop/seller/product/products/create.blade.php', 'route:seller.products.store'],
     ['resources/views/shop/seller/product/products/edit.blade.php', 'route:seller.products.update'],
     ['resources/views/shop/seller/coupons/create.blade.php', 'route:seller.coupon.store'],

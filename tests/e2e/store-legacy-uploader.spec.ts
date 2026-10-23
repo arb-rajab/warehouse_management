@@ -488,3 +488,86 @@ test('seller explicitly reorders legacy attribute choices and preserves the stoc
     ).toHaveCount(0);
     expect(storedProduct(productName, expression)).toEqual(before);
 });
+
+test('seller digital create and edit round trip retains owned file pending approval translations and stock', async ({
+    page,
+}) => {
+    seedStoreFixtures(String.raw`
+        $seller = App\Models\StoreUser::where('email', 'browser-seller@example.com')->sole();
+        Illuminate\Support\Facades\DB::table('shops')->updateOrInsert(['user_id' => $seller->id], ['name' => 'Browser shop', 'slug' => 'browser-shop']);
+        App\Models\Category::firstOrCreate(['slug' => 'browser-digital'], ['name' => 'Browser digital', 'parent_id' => 0, 'digital' => 1]);
+        Illuminate\Support\Facades\DB::table('business_settings')->updateOrInsert(['type' => 'product_approve_by_admin'], ['value' => '1']);
+    `);
+    await loginAsSeller(page);
+    await page.goto('/temp/seller/digitalproducts/create');
+    let form = page.locator('#digital-product-form');
+    await expect(form.locator('[data-required-legend]')).toHaveCount(1);
+    await expect(form.locator('[name=name]')).toHaveAccessibleName(
+        'Product Name required',
+    );
+    await form.locator('[name=name]').fill('Browser validated digital');
+    await form
+        .locator('[name=category_id]')
+        .selectOption({ label: 'Browser digital' }, { force: true });
+    await form.locator('[name=unit_price]').fill('12.50');
+    await form.locator('[name=purchase_price]').fill('3.50');
+    await form.locator('[name=discount]').fill('1.50');
+    await form
+        .getByRole('button', { name: 'Save product', exact: true })
+        .click();
+    await expect(page.locator('[role=alert]')).toContainText('file');
+    await expect(form.locator('[name=name]')).toHaveValue(
+        'Browser validated digital',
+    );
+    await form
+        .locator('[data-toggle="aizuploader"]')
+        .filter({ has: page.locator('input[name=file]') })
+        .click();
+    const modal = page.locator('#aizUploaderModal');
+    await modal.getByRole('link', { name: 'Upload New' }).click();
+    const upload = page.waitForResponse(
+        (r) =>
+            new URL(r.url()).pathname === '/temp/aiz-uploader/upload' &&
+            r.request().method() === 'POST',
+    );
+    await modal.locator('input[type=file]').setInputFiles({
+        name: 'seller-digital-guide.txt',
+        mimeType: 'text/plain',
+        buffer: Buffer.from('A useful digital guide'),
+    });
+    expect((await upload).status()).toBe(200);
+    await modal.getByRole('link', { name: 'Select File', exact: true }).click();
+    await modal
+        .locator('.aiz-uploader-select[title="seller-digital-guide.txt"]')
+        .click();
+    await modal.getByRole('button', { name: 'Add Files', exact: true }).click();
+    const fileId = await form.locator('[name=file]').inputValue();
+    await form
+        .getByRole('button', { name: 'Save product', exact: true })
+        .click();
+    await expect(page).toHaveURL(/\/temp\/seller\/digitalproducts$/);
+    const id = storedProduct(
+        'Browser validated digital',
+        '$product->id',
+    ) as number;
+    const saved = storedProduct(
+        'Browser validated digital',
+        '[$product->added_by, (int) $product->approved, $product->synced_at, (int) $product->file_name, (float) $product->unit_price, (int) $product->stocks()->sole()->qty]',
+    );
+    expect(saved).toEqual(['seller', 0, null, Number(fileId), 12.5, 0]);
+    await page.goto(`/temp/seller/digitalproducts/${id}/edit?lang=en`);
+    form = page.locator('#digital-product-form');
+    await expect(form.locator('[name=file]')).toHaveValue(fileId);
+    await expect(form.locator('[name=unit_price]')).toHaveValue('12.5');
+    await form.locator('[name=unit_price]').fill('13.75');
+    await form
+        .getByRole('button', { name: 'Update Product', exact: true })
+        .click();
+    await expect(form.locator('[name=unit_price]')).toHaveValue('13.75');
+    expect(
+        storedProduct(
+            'Browser validated digital',
+            '[(float) $product->unit_price, (float) $product->stocks()->sole()->price, (int) $product->approved, (int) $product->file_name]',
+        ),
+    ).toEqual([13.75, 13.75, 0, Number(fileId)]);
+});

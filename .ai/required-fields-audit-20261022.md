@@ -7,20 +7,20 @@ The convention, the classes and how to read this file: [.ai/rules/form-required-
 ## Summary
 
 Forms scanned: **158** Vue (resources/js/pages, resources/js/components) and **81** Blade (resources/views/shop).
-Server rules: **279** FormRequests (1 unparsed) and **25** controller actions with inline validation (5 unparsed).
+Server rules: **280** FormRequests (1 unparsed) and **25** controller actions with inline validation (5 unparsed).
 
 | Class | Meaning | Severity | Findings |
 | --- | --- | --- | ---: |
 | A | server-required, no `required` attribute (or no control at all) | high | 39 |
 | B | server-required, no visible mark | medium | 40 |
-| C | `required` or a mark, but the server rule is optional or absent | high | 54 |
+| C | `required` or a mark, but the server rule is optional or absent | high | 38 |
 | D | conditional server rule, static `required` or mark | medium | 10 |
-| E | control with no matching server rule | low | 124 |
+| E | control with no matching server rule | low | 105 |
 | F | unparsed (server rules or form action) | info | 23 |
-| | **Total** | | **290** |
+| | **Total** | | **255** |
 
-By severity: high 93, medium 50, low 124, info 23.
-By priority: P1 8, P2 153, P3 129 (P1 public storefront forms: registration, address, checkout, contact, seller registration; P2 other storefront, account and seller-panel forms; P3 back office).
+By severity: high 77, medium 50, low 105, info 23.
+By priority: P1 8, P2 118, P3 129 (P1 public storefront forms: registration, address, checkout, contact, seller registration; P2 other storefront, account and seller-panel forms; P3 back office).
 
 ## Per module
 
@@ -50,7 +50,7 @@ By priority: P1 8, P2 153, P3 129 (P1 public storefront forms: registration, add
 | Store/Admin/Trips | 11 | 3 | 4 | 0 | 0 | 1 | 1 |
 | Store/Admin/Website | 7 | 9 | 6 | 1 | 0 | 2 | 0 |
 | components | 3 | 0 | 2 | 0 | 0 | 0 | 0 |
-| seller panel | 26 | 0 | 0 | 16 | 0 | 27 | 0 |
+| seller panel | 26 | 0 | 0 | 0 | 0 | 8 | 0 |
 | server | 0 | 0 | 0 | 0 | 0 | 0 | 1 |
 | server: Api/V2 | 0 | 0 | 0 | 0 | 0 | 0 | 1 |
 | server: Api/V2/Seller | 0 | 0 | 0 | 0 | 0 | 0 | 1 |
@@ -66,26 +66,26 @@ Public forms first, then by high (A + C) and medium (B + D) findings.
 
 | # | Priority | Form | Posts to | High | Medium | Low (E) |
 | ---: | --- | --- | --- | ---: | ---: | ---: |
-| 1 | P2 | `resources/views/shop/seller/product/digitalproducts/edit.blade.php:11` | `route:seller.digitalproducts.update` | 9 | 0 | 12 |
-| 2 | P2 | `resources/views/shop/frontend/user/customer/product_edit.blade.php:24` | `route:customer_products.update` | 9 | 0 | 10 |
-| 3 | P2 | `resources/views/shop/frontend/user/customer/product_upload.blade.php:11` | `route:customer_products.store` | 9 | 0 | 10 |
-| 4 | P2 | `resources/views/shop/seller/product/digitalproducts/create.blade.php:12` | `route:seller.digitalproducts.store` | 7 | 0 | 11 |
-| 5 | P2 | `resources/views/shop/frontend/partials/wallet_modal.blade.php:9` | `route:wallet.recharge` | 2 | 0 | 0 |
-| 6 | P2 | `resources/views/shop/frontend/user/product_review_modal.blade.php:9` | `route:reviews.store` | 1 | 1 | 2 |
-| 7 | P2 | `resources/views/shop/frontend/digital_product_details.blade.php:695` | `route:product-queries.store` | 1 | 1 | 1 |
-| 8 | P2 | `resources/views/shop/frontend/product_details/product_queries.blade.php:29` | `route:product-queries.store` | 1 | 1 | 1 |
-| 9 | P2 | `resources/views/shop/frontend/user/profile.blade.php:215` | `route:user.change.email` | 1 | 1 | 0 |
-| 10 | P2 | `resources/views/shop/frontend/user/support_ticket/show.blade.php:20` | `route:support_ticket.seller_store` | 1 | 0 | 3 |
-| 11 | P2 | `resources/views/shop/frontend/user/conversations/show.blade.php:73` | `route:messages.store` | 1 | 0 | 1 |
-| 12 | P2 | `resources/views/shop/frontend/inc/footer.blade.php:88` | `route:subscribers.store` | 1 | 0 | 0 |
-| 13 | P2 | `resources/views/shop/frontend/layouts/app.blade.php:336` | `route:subscribers.store` | 1 | 0 | 0 |
-| 14 | P2 | `resources/views/shop/frontend/track_order.blade.php:27` | `route:orders.track` | 1 | 0 | 0 |
-| 15 | P3 | `resources/js/pages/Store/Admin/Customers/Customers/Create.vue:16` | `CustomerController@store` | 7 | 0 | 0 |
-| 16 | P3 | `resources/js/pages/Store/Admin/Website/Appearance.vue:39` | `WebsiteAppearanceController@update` | 4 | 3 | 0 |
-| 17 | P3 | `resources/js/pages/Store/Admin/Setup/Carriers/Create.vue:14` | `CarrierController@store` | 4 | 2 | 0 |
-| 18 | P3 | `resources/js/pages/Store/Admin/Setup/Carriers/Edit.vue:22` | `CarrierController@update` | 4 | 2 | 0 |
-| 19 | P3 | `resources/js/pages/Store/Admin/Website/Footer.vue:38` | `WebsiteFooterController@update` | 3 | 2 | 2 |
-| 20 | P3 | `resources/js/pages/Store/Admin/Product/Products/Create.vue:28` | `ProductController@store` | 3 | 0 | 0 |
+| 1 | P2 | `resources/views/shop/frontend/user/customer/product_edit.blade.php:24` | `route:customer_products.update` | 9 | 0 | 10 |
+| 2 | P2 | `resources/views/shop/frontend/user/customer/product_upload.blade.php:11` | `route:customer_products.store` | 9 | 0 | 10 |
+| 3 | P2 | `resources/views/shop/frontend/partials/wallet_modal.blade.php:9` | `route:wallet.recharge` | 2 | 0 | 0 |
+| 4 | P2 | `resources/views/shop/frontend/user/product_review_modal.blade.php:9` | `route:reviews.store` | 1 | 1 | 2 |
+| 5 | P2 | `resources/views/shop/frontend/digital_product_details.blade.php:695` | `route:product-queries.store` | 1 | 1 | 1 |
+| 6 | P2 | `resources/views/shop/frontend/product_details/product_queries.blade.php:29` | `route:product-queries.store` | 1 | 1 | 1 |
+| 7 | P2 | `resources/views/shop/frontend/user/profile.blade.php:215` | `route:user.change.email` | 1 | 1 | 0 |
+| 8 | P2 | `resources/views/shop/frontend/user/support_ticket/show.blade.php:20` | `route:support_ticket.seller_store` | 1 | 0 | 3 |
+| 9 | P2 | `resources/views/shop/frontend/user/conversations/show.blade.php:73` | `route:messages.store` | 1 | 0 | 1 |
+| 10 | P2 | `resources/views/shop/frontend/inc/footer.blade.php:88` | `route:subscribers.store` | 1 | 0 | 0 |
+| 11 | P2 | `resources/views/shop/frontend/layouts/app.blade.php:336` | `route:subscribers.store` | 1 | 0 | 0 |
+| 12 | P2 | `resources/views/shop/frontend/track_order.blade.php:27` | `route:orders.track` | 1 | 0 | 0 |
+| 13 | P3 | `resources/js/pages/Store/Admin/Customers/Customers/Create.vue:16` | `CustomerController@store` | 7 | 0 | 0 |
+| 14 | P3 | `resources/js/pages/Store/Admin/Website/Appearance.vue:39` | `WebsiteAppearanceController@update` | 4 | 3 | 0 |
+| 15 | P3 | `resources/js/pages/Store/Admin/Setup/Carriers/Create.vue:14` | `CarrierController@store` | 4 | 2 | 0 |
+| 16 | P3 | `resources/js/pages/Store/Admin/Setup/Carriers/Edit.vue:22` | `CarrierController@update` | 4 | 2 | 0 |
+| 17 | P3 | `resources/js/pages/Store/Admin/Website/Footer.vue:38` | `WebsiteFooterController@update` | 3 | 2 | 2 |
+| 18 | P3 | `resources/js/pages/Store/Admin/Product/Products/Create.vue:28` | `ProductController@store` | 3 | 0 | 0 |
+| 19 | P3 | `resources/js/pages/Store/Admin/Sales/Orders/Create.vue:14` | `OrderEntryController@shippingStore` | 2 | 0 | 1 |
+| 20 | P3 | `resources/js/pages/Store/Admin/Sales/Orders/Show.vue:218` | `OrderController@edit_item_price` | 2 | 0 | 1 |
 
 ## Findings by module and form
 
@@ -382,48 +382,13 @@ Each line: class, field (label), what differs, then the UI and server locations.
 
 ### seller panel
 
-- `resources/views/shop/seller/product/digitalproducts/create.blade.php → route:seller.digitalproducts.store` (App\Http\Controllers\Seller\DigitalProductController@store)
-  - **C** `category_id` (Category *): required in the UI, the endpoint validates nothing. UI resources/views/shop/seller/product/digitalproducts/create.blade.php:31
-  - **C** `discount` (Discount *): required in the UI, the endpoint validates nothing. UI resources/views/shop/seller/product/digitalproducts/create.blade.php:174
-  - **C** `name` (Product Name *): required in the UI, the endpoint validates nothing. UI resources/views/shop/seller/product/digitalproducts/create.blade.php:25
-  - **C** `purchase_price` (Purchase price *): required in the UI, the endpoint validates nothing. UI resources/views/shop/seller/product/digitalproducts/create.blade.php:150
-  - **C** `tags[]` (Tags *): required in the UI, the endpoint validates nothing. UI resources/views/shop/seller/product/digitalproducts/create.blade.php:58
-  - **C** `tax[]`: required in the UI, the endpoint validates nothing. UI resources/views/shop/seller/product/digitalproducts/create.blade.php:161
-  - **C** `unit_price` (Unit price *): required in the UI, the endpoint validates nothing. UI resources/views/shop/seller/product/digitalproducts/create.blade.php:144
-  - **E** `added_by`: the endpoint validates nothing. UI resources/views/shop/seller/product/digitalproducts/create.blade.php:14
-  - **E** `description` (Description): the endpoint validates nothing. UI resources/views/shop/seller/product/digitalproducts/create.blade.php:193
-  - **E** `discount_type`: the endpoint validates nothing. UI resources/views/shop/seller/product/digitalproducts/create.blade.php:177
-  - **E** `file` (Product File *): the endpoint validates nothing. UI resources/views/shop/seller/product/digitalproducts/create.blade.php:49
-  - **E** `meta_description` (Description): the endpoint validates nothing. UI resources/views/shop/seller/product/digitalproducts/create.blade.php:116
-  - **E** `meta_img` (Meta Image): the endpoint validates nothing. UI resources/views/shop/seller/product/digitalproducts/create.blade.php:127
-  - **E** `meta_title` (Meta Title): the endpoint validates nothing. UI resources/views/shop/seller/product/digitalproducts/create.blade.php:110
-  - **E** `photos` (Gallery Images (600x600)): the endpoint validates nothing. UI resources/views/shop/seller/product/digitalproducts/create.blade.php:77
-  - **E** `tax_id[]` ({{ $tax->name }} *): the endpoint validates nothing. UI resources/views/shop/seller/product/digitalproducts/create.blade.php:160
-  - **E** `tax_type[]`: the endpoint validates nothing. UI resources/views/shop/seller/product/digitalproducts/create.blade.php:164
-  - **E** `thumbnail_img` (Thumbnail Image (300x300)): the endpoint validates nothing. UI resources/views/shop/seller/product/digitalproducts/create.blade.php:93
+- `resources/views/shop/seller/product/digitalproducts/create.blade.php → route:seller.digitalproducts.store` (App\Http\Requests\Seller\DigitalProductRequest)
+  - **E** `lang`: no server rule names this field. UI resources/views/shop/seller/product/digitalproducts/form_fields.blade.php:27
+  - **E** `slug` (Slug): no server rule names this field. UI resources/views/shop/seller/product/digitalproducts/form_fields.blade.php:83
 
-- `resources/views/shop/seller/product/digitalproducts/edit.blade.php → route:seller.digitalproducts.update` (App\Http\Controllers\Seller\DigitalProductController@update)
-  - **C** `category_id` (Category *): required in the UI, the endpoint validates nothing. UI resources/views/shop/seller/product/digitalproducts/edit.blade.php:46
-  - **C** `discount` (Discount): required in the UI, the endpoint validates nothing. UI resources/views/shop/seller/product/digitalproducts/edit.blade.php:203
-  - **C** `discount_type`: required in the UI, the endpoint validates nothing. UI resources/views/shop/seller/product/digitalproducts/edit.blade.php:206
-  - **C** `name` (Product Name *): required in the UI, the endpoint validates nothing. UI resources/views/shop/seller/product/digitalproducts/edit.blade.php:40
-  - **C** `purchase_price` (Purchase price): required in the UI, the endpoint validates nothing. UI resources/views/shop/seller/product/digitalproducts/edit.blade.php:170
-  - **C** `tags[]` (Tags *): required in the UI, the endpoint validates nothing. UI resources/views/shop/seller/product/digitalproducts/edit.blade.php:73
-  - **C** `tax[]`: required in the UI, the endpoint validates nothing. UI resources/views/shop/seller/product/digitalproducts/edit.blade.php:190
-  - **C** `tax_type[]`: required in the UI, the endpoint validates nothing. UI resources/views/shop/seller/product/digitalproducts/edit.blade.php:193
-  - **C** `unit_price` (Unit price): required in the UI, the endpoint validates nothing. UI resources/views/shop/seller/product/digitalproducts/edit.blade.php:164
-  - **E** `added_by`: the endpoint validates nothing. UI resources/views/shop/seller/product/digitalproducts/edit.blade.php:15
-  - **E** `description` (Description): the endpoint validates nothing. UI resources/views/shop/seller/product/digitalproducts/edit.blade.php:222
-  - **E** `file` (Product File *): the endpoint validates nothing. UI resources/views/shop/seller/product/digitalproducts/edit.blade.php:64
-  - **E** `id`: the endpoint validates nothing. UI resources/views/shop/seller/product/digitalproducts/edit.blade.php:13
-  - **E** `lang`: the endpoint validates nothing. UI resources/views/shop/seller/product/digitalproducts/edit.blade.php:14
-  - **E** `meta_description` (Description): the endpoint validates nothing. UI resources/views/shop/seller/product/digitalproducts/edit.blade.php:131
-  - **E** `meta_img` (Meta Image): the endpoint validates nothing. UI resources/views/shop/seller/product/digitalproducts/edit.blade.php:142
-  - **E** `meta_title` (Meta Title): the endpoint validates nothing. UI resources/views/shop/seller/product/digitalproducts/edit.blade.php:125
-  - **E** `photos` (Gallery Images (600x600)): the endpoint validates nothing. UI resources/views/shop/seller/product/digitalproducts/edit.blade.php:92
-  - **E** `slug` (Slug): the endpoint validates nothing. UI resources/views/shop/seller/product/digitalproducts/edit.blade.php:151
-  - **E** `tax_id[]` ({{$tax->name}}): the endpoint validates nothing. UI resources/views/shop/seller/product/digitalproducts/edit.blade.php:189
-  - **E** `thumbnail_img` (Thumbnail Image (300x300)): the endpoint validates nothing. UI resources/views/shop/seller/product/digitalproducts/edit.blade.php:108
+- `resources/views/shop/seller/product/digitalproducts/edit.blade.php → route:seller.digitalproducts.update` (App\Http\Requests\Seller\DigitalProductRequest)
+  - **E** `lang`: no server rule names this field. UI resources/views/shop/seller/product/digitalproducts/form_fields.blade.php:27
+  - **E** `slug` (Slug): no server rule names this field. UI resources/views/shop/seller/product/digitalproducts/form_fields.blade.php:83
 
 - `resources/views/shop/seller/product/products/create.blade.php → route:seller.products.store` (App\Http\Requests\Seller\PhysicalProductRequest)
   - **E** `lang`: no server rule names this field. UI resources/views/shop/seller/product/products/form_fields.blade.php:41
