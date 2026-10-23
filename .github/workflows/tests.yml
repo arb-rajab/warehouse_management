@@ -376,6 +376,7 @@ jobs:
           tests/Feature/Console/SyncProductsCommandTest.php
           tests/Feature/ProductColumnOwnershipTest.php
           tests/Feature/SellerProductPersistenceTest.php
+          tests/Feature/Store/Admin/ProductMySqlEditTest.php
 
   # `composer audit` reads composer.lock and `npm audit` reads
   # package-lock.json, so neither needs the dependencies installed. Abandoned

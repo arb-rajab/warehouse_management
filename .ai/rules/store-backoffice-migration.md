@@ -6078,8 +6078,9 @@ scalar fields are refused. Gallery ids are distinct, existing owned images,
 at most 50. There is no grandfather exception for another account's upload.
 Shared field partials use the required mark/legend components, associated labels,
 ARIA and scalar-safe old input; the conditional shipping-cost requirement and
-mark follow the selected shipping type. The uploader and all existing controls
-remain available, with retired server-owned hidden fields removed.
+mark follow the selected shipping type. The uploader and product controls remain available, with retired server-owned
+hidden fields removed. The edit-only cash switch and shipping/tax visibility
+were accidentally flattened into create behavior here; §54 restores that parity.
 
 ### Writer, ownership and D13 decisions
 
@@ -6152,3 +6153,95 @@ runtime names are not claimed to have become statically auditable.
   not run the MySQL/browser/audit lanes; the separate local runs are listed above.
   Composer/npm security audit remains a real CI gate for B1. No bare/attested
   run or manual trailer was used. `git diff --check` passed.
+
+
+## 54. Physical edit reconciliation and MySQL boundaries, PR B2 (2026-10-22)
+
+Previous PRs: #465 (shop/commerce), #466 (Option A, §52), and
+[#467](https://github.com/arb-rajab/warehouse_management/pull/467) (physical B1,
+§53). #467 merged as `675aaa6b30e31c1390205e26a041abbe2efe5bd6`; its
+[develop deploy](https://github.com/arb-rajab/warehouse_management/actions/runs/39801133946)
+succeeded before B2 started. All twelve PR jobs succeeded: existing-scan lookup,
+Semgrep, CI planning, Prettier, PHPStan, dependency audit, deploy-script tests,
+JavaScript checks, Pint, Pest, MySQL migrations and Playwright. The deploy's
+mandatory `migrate --force` path succeeded; B1 added no migration. Individual
+migration logs are not visible. No subscription API is available; GitHub API
+polling supplies the check conclusions. Digital work remains gated until B2 is
+merged green and deployed.
+
+D13 is repaired in both physical panels. Stored decimal values now use exact
+string normalization: MySQL `12.50` and SQLite `12.5` both display `12.5`, without
+rounding large decimal(20,2) amounts through floats. Product, default-variant,
+variant and tax defaults use it; user-entered old input is retained as entered.
+The back office now lists unmatched stored stock, as the seller panel already
+did. Both panels expose explicit attribute ordering so an owner can reconcile
+legacy choices to the actual stored stock name, preserve its id, price, quantity
+and SKU, and then save. Neither guesses the meaning of imported permutations.
+The B1 refusal of destructive mismatch saves remains in both writers.
+
+Real MySQL failures were demonstrated before the fixes: endpoint default price
+`12.50` versus `12.5`, loose comparison collapsing distinct `01` and `1` values,
+and valid Unicode names producing an empty or over-255 generated slug. Exact
+comparisons now preserve numeric-looking values. `ProductSlug` supplies a bounded,
+nonempty generated slug and bounded unique panel-copy slugs; an explicit custom
+slug still follows its existing max255 rule. Names that cannot transliterate
+use a random `product-` fallback. Collision suffixes fit within 255 characters.
+Seller API duplication is outside these panel repairs.
+
+Seller preview can retain typed row metadata from the previous attribute order
+while computing a new order; those obsolete keys are validated and ignored only
+by this read-only preview. Actual store/update requests still refuse unknown
+keys. Brackets, asterisks and backslashes in existing attribute values use safe
+hashed input keys while the stored variant name remains unchanged. The preview
+never writes a product. Existing physical store/update rules from §53 remain,
+with strict distinct choice strings so `01` and `1` are different values.
+
+A parity review found a B1 shared-partial regression: edit inherited create's
+hidden cash-on-delivery value and section settings. Edit again offers its original
+cash checkbox when cash payment is enabled, preserves an unchecked old value,
+and shows shipping/estimate and active taxes independently of the create-only
+section settings. Create retains its original behavior. A real-endpoint test
+checks those differences and saving cash off. Approval and deletion authority
+are unchanged.
+
+**Ownership remains Option A:** sync owns exactly name/ar_name/published on
+feed-origin rows; store owns all other columns and those three only on its own
+rows. Existing pre-marker rows remain null/unclassified pending owner-reviewed
+exact-id reclassification (§52). No new migration or reclassification is included.
+The characterization losses and physical old/new rules remain recorded in §53;
+digital characterization and remaining conversation/bulk defects belong to C.
+
+Audit remains **290 overall**, A/B/C/D/E/F **39/40/54/10/124/23**; seller **43**,
+**0/0/16/0/27/0**; back-office baseline **82**. This finishes D13, not the other
+open checklist defects.
+
+### Verification
+
+- Before-fix failures reproduced locally on MySQL 8.4 for decimal endpoint output,
+  numeric-looking choices and generated slug boundaries; additional focused
+  preview and metacharacter failures reproduced before their fixes.
+- Focused Pest: **393 passed, 2,586 assertions**, followed by the edit parity
+  regression **1 passed, 14 assertions**. Complete local MySQL group:
+  **256 passed, 6 existing driver-specific skips, 1,151 assertions**; final parity
+  regression then passed on MySQL too (**1 passed, 14 assertions**).
+- Focused Vitest: **2 files, 24 passed**. Production build passed. Focused browser
+  specs: **12 passed**, including real seller and back-office reconciliation.
+  Local permission failures in generated assets/uploads were corrected without
+  test exclusions; stale local browser servers were cleaned up before the final
+  passing run. The strict back-office CSP report assertion remains intact; the
+  fixture clears unrelated remote product thumbnails before login.
+- The first explicit full gate stopped on three ESLint style errors in the new
+  reorder handler. They were corrected, without relaxing rules. The second
+  explicit `python3 .claude/scripts/pre_push_check.py --full` passed setup
+  readiness, Wayfinder, ESLint, Prettier, vue-tsc, Vitest (**336 files / 2,653
+  tests**), Pint (**1,373 files**) and PHPStan (**899 files / zero errors**),
+  then cleared config and ran four-worker Pest. Pest exited 1 while writing
+  `/tmp/__laravel_test_cache_directory/test-results`: the old Docker-root-owned
+  cache was not writable by the current non-root test user. It produced no final
+  test totals, so this is **not a passing full gate**. No test was skipped or
+  quarantined. The attempted cache ownership repair was not executed because
+  automatic approval review failed (workspace credits exhausted). On resumption,
+  renewed Docker socket permission was requested but not granted. The cache must
+  be repaired and the explicit full gate repeated before B2's last commit.
+  B2 is uncommitted and unshipped; C has not started. No bare/attested run or
+  manual CI-Verified trailer was used. `git diff --check` passed.

@@ -11,6 +11,9 @@
         'date_range' => !empty($stored['discount_start_date']) && !empty($stored['discount_end_date']) ? date('d-m-Y H:i:s', $stored['discount_start_date']).' to '.date('d-m-Y H:i:s', $stored['discount_end_date']) : '',
         'tags.0' => $stored['tags'] ?? '',
     ]);
+    foreach (['weight', 'unit_price', 'discount', 'flat_shipping_cost'] as $decimalField) {
+        if (isset($defaults[$decimalField])) $defaults[$decimalField] = \App\Support\ProductFormNumber::format($defaults[$decimalField]);
+    }
     $value = function ($key, $fallback = '') use ($defaults) {
         $candidate = session()->hasOldInput() ? old($key, '') : ($defaults[$key] ?? $fallback);
         return is_scalar($candidate) ? $candidate : '';
@@ -91,7 +94,7 @@
 <div id="customer_choice_options">@foreach ($choiceIds as $choiceId)
     @php($attribute = $attributes->firstWhere('id', $choiceId))
     @if ($attribute)
-    <div class="form-group row"><div class="col-md-3"><input type="hidden" name="choice_no[]" value="{{ $choiceId }}"><label for="choice-options-{{ $choiceId }}">{{ $attribute->getTranslation('name') }}<x-required-mark /></label></div>
+    <div class="form-group row" data-choice-row><div class="col-md-3"><input type="hidden" name="choice_no[]" value="{{ $choiceId }}"><label for="choice-options-{{ $choiceId }}">{{ $attribute->getTranslation('name') }}<x-required-mark /></label><div><button type="button" data-choice-move="-1" aria-label="{{ translate('Move attribute up') }}: {{ $attribute->getTranslation('name') }}">↑</button><button type="button" data-choice-move="1" aria-label="{{ translate('Move attribute down') }}: {{ $attribute->getTranslation('name') }}">↓</button></div></div>
     <div class="col-md-8"><select name="choice_options_{{ $choiceId }}[]" id="choice-options-{{ $choiceId }}" class="form-control aiz-selectpicker attribute_choice" multiple required aria-required="true">@foreach ($attribute->attribute_values as $option)<option value="{{ $option->value }}" @selected(in_array($option->value, $choiceValues[$choiceId], true))>{{ $option->value }}</option>@endforeach</select></div></div>
     @endif
 @endforeach</div>
@@ -144,7 +147,7 @@
     <textarea name="meta_description" id="seller-product-meta_description" class="form-control" >{{ $value('meta_description') }}</textarea>
     @error('meta_description')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
 </div>
-@if (get_setting('Setup_Shipping_section') == 1)
+@if ($editing || get_setting('Setup_Shipping_section') == 1)
 @if (get_setting('shipping_type') === 'product_wise_shipping')
 <div class="form-group"><label for="seller-product-shipping_type">{{ translate('Shipping type') }}</label>
 <select name="shipping_type" id="seller-product-shipping_type" class="form-control aiz-selectpicker">
@@ -170,15 +173,21 @@
 <option value="quantity" @selected($value('stock_visibility_state', 'quantity') === 'quantity')>{{ translate('Show Stock Quantity') }}</option><option value="text" @selected($value('stock_visibility_state', 'quantity') === 'text')>{{ translate('Show Stock With Text Only') }}</option><option value="hide" @selected($value('stock_visibility_state', 'quantity') === 'hide')>{{ translate('Hide Stock') }}</option>
 </select>
 @error('stock_visibility_state')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror</div>
+@if (!$editing)
 <input type="hidden" name="cash_on_delivery" value="1">
+@elseif (get_setting('cash_payment') == '1')
+<div class="form-group"><input type="hidden" name="cash_on_delivery" value="0"><label for="seller-product-cash_on_delivery">{{ translate('Cash On Delivery') }}</label><input type="checkbox" name="cash_on_delivery" id="seller-product-cash_on_delivery" value="1" @checked((string) $value('cash_on_delivery') === '1')></div>
+@else
+<p>{{ translate('Cash On Delivery activation is maintained by Admin.') }}</p>
+@endif
 @if ($editing)<div class="form-group"><label for="seller-product-slug">{{ translate('Slug') }}</label><input type="text" name="slug" id="seller-product-slug" value="{{ $value('slug') }}" maxlength="255" class="form-control"></div>@endif
-@if (get_setting('VAT_TAX_section') == 1)
+@if ($editing || get_setting('VAT_TAX_section') == 1)
 <fieldset><legend>{{ translate('VAT & Tax') }}</legend>
 @foreach ($taxes as $index => $tax)
     @php($storedTax = $editing ? $product->taxes->firstWhere('tax_id', $tax->id) : null)
     <input type="hidden" name="tax_id[]" value="{{ $tax->id }}">
     <label for="seller-tax-{{ $tax->id }}">{{ $tax->name }}<x-required-mark /></label>
-    <input type="number" id="seller-tax-{{ $tax->id }}" name="tax[]" value="{{ $value('tax.'.$index, $storedTax?->tax ?? 0) }}" min="0" max="999999999999999999.99" step="0.01" required>
+    <input type="number" id="seller-tax-{{ $tax->id }}" name="tax[]" value="{{ $value('tax.'.$index, \App\Support\ProductFormNumber::format($storedTax?->tax ?? 0)) }}" min="0" max="999999999999999999.99" step="0.01" required>
     <label for="seller-tax-type-{{ $tax->id }}">{{ translate('Tax type') }}<x-required-mark /></label>
     <select id="seller-tax-type-{{ $tax->id }}" name="tax_type[]" required><option value="amount" @selected($value('tax_type.'.$index, $storedTax?->tax_type ?? 'amount') === 'amount')>{{ translate('Flat') }}</option><option value="percent" @selected($value('tax_type.'.$index, $storedTax?->tax_type ?? 'amount') === 'percent')>{{ translate('Percent') }}</option></select>
 @endforeach</fieldset>

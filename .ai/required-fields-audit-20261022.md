@@ -426,12 +426,12 @@ Each line: class, field (label), what differs, then the UI and server locations.
   - **E** `thumbnail_img` (Thumbnail Image (300x300)): the endpoint validates nothing. UI resources/views/shop/seller/product/digitalproducts/edit.blade.php:108
 
 - `resources/views/shop/seller/product/products/create.blade.php → route:seller.products.store` (App\Http\Requests\Seller\PhysicalProductRequest)
-  - **E** `lang`: no server rule names this field. UI resources/views/shop/seller/product/products/form_fields.blade.php:38
-  - **E** `slug` (Slug): no server rule names this field. UI resources/views/shop/seller/product/products/form_fields.blade.php:174
+  - **E** `lang`: no server rule names this field. UI resources/views/shop/seller/product/products/form_fields.blade.php:41
+  - **E** `slug` (Slug): no server rule names this field. UI resources/views/shop/seller/product/products/form_fields.blade.php:183
 
 - `resources/views/shop/seller/product/products/edit.blade.php → route:seller.products.update` (App\Http\Requests\Seller\PhysicalProductRequest)
-  - **E** `lang`: no server rule names this field. UI resources/views/shop/seller/product/products/form_fields.blade.php:38
-  - **E** `slug` (Slug): no server rule names this field. UI resources/views/shop/seller/product/products/form_fields.blade.php:174
+  - **E** `lang`: no server rule names this field. UI resources/views/shop/seller/product/products/form_fields.blade.php:41
+  - **E** `slug` (Slug): no server rule names this field. UI resources/views/shop/seller/product/products/form_fields.blade.php:183
 
 ### server
 

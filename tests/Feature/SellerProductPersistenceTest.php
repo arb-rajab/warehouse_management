@@ -6,6 +6,7 @@ use App\Models\Product;
 use App\Models\ProductStock;
 use App\Models\Upload;
 use App\Services\Store\InHouseProductWriter;
+use App\Services\Store\ProductVariantCombinations;
 use App\Services\Store\SellerProductWriter;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Artisan;
@@ -290,4 +291,116 @@ test('the physical product list renders multiple owned products with strict load
 test('an empty optional weight saves its nonnullable zero default on both drivers', function () {
     $this->post(route('seller.products.store'), sellerPhysicalInput(['weight' => null]))->assertRedirect(route('seller.products'))->assertSessionHasNoErrors();
     expect((float) Product::query()->sole()->getAttribute('weight'))->toBe(0.0);
+});
+
+test('valid Unicode titles generate distinct nonempty slugs that round trip through edit', function (string $title) {
+    createShopFor($this->seller, 0);
+    $slugs = [];
+    for ($number = 0; $number < 3; $number++) {
+        $this->post(route('seller.products.store'), sellerPhysicalInput(['name' => $title]))->assertRedirect(route('seller.products'))->assertSessionHasNoErrors();
+        $product = Product::query()->latest('id')->firstOrFail();
+        $slugs[] = $product->slug;
+        expect($product->slug)->not->toBeEmpty()->and(mb_strlen($product->slug))->toBeLessThanOrEqual(255);
+        $this->get(route('seller.products'))->assertOk();
+        $this->post(route('seller.products.update', $product), sellerPhysicalInput(['name' => $title, 'lang' => 'en', 'slug' => $product->slug]))->assertRedirect()->assertSessionHasNoErrors();
+    }
+    expect(array_unique($slugs))->toBe($slugs);
+})->with(['Chinese' => '茶', 'punctuation' => '!!!', 'expanded transliteration' => str_repeat('œ', 200)]);
+
+test('a seller explicitly reorders legacy choices and retains the unmatched stock id and values', function () {
+    $size = DB::table('attributes')->insertGetId(['name' => 'Size']);
+    $fabric = DB::table('attributes')->insertGetId(['name' => 'Fabric']);
+    DB::table('attribute_values')->insert([['attribute_id' => $size, 'value' => 'M'], ['attribute_id' => $fabric, 'value' => 'Cotton']]);
+    $product = createStoreProduct(['user_id' => $this->seller->id, 'added_by' => 'seller', 'colors' => '[]', 'choice_options' => json_encode([['attribute_id' => $size, 'values' => ['M']], ['attribute_id' => $fabric, 'values' => ['Cotton']]])]);
+    $product->stocks()->delete();
+    $stock = $product->stocks()->create(['variant' => 'Cotton-M', 'price' => '17.50', 'sku' => 'KEEP', 'qty' => 47]);
+    $this->post(route('seller.products.update', $product), sellerPhysicalInput([
+        'lang' => 'en', 'choice_no' => [$fabric, $size], 'choice_attributes' => [$size, $fabric],
+        'choice_options_'.$fabric => ['Cotton'], 'choice_options_'.$size => ['M'],
+        'price_Cotton-M' => '17.50', 'qty_Cotton-M' => 47, 'sku_Cotton-M' => 'KEEP',
+    ]))->assertRedirect()->assertSessionHasNoErrors();
+    $saved = $product->stocks()->sole();
+    expect($saved->id)->toBe($stock->id)->and((float) $saved->price)->toBe(17.5)
+        ->and((int) $saved->qty)->toBe(47)->and($saved->sku)->toBe('KEEP')
+        ->and(app(ProductVariantCombinations::class)->unmatchedStocks($product->fresh()))->toBe([]);
+});
+
+test('SKU edit preview tolerates obsolete validated variant fields while choices are explicitly reordered', function () {
+    $size = DB::table('attributes')->insertGetId(['name' => 'Size']);
+    $fabric = DB::table('attributes')->insertGetId(['name' => 'Fabric']);
+    DB::table('attribute_values')->insert([['attribute_id' => $size, 'value' => 'M'], ['attribute_id' => $fabric, 'value' => 'Cotton']]);
+    $product = createStoreProduct(['user_id' => $this->seller->id, 'added_by' => 'seller']);
+    $product->stocks()->delete();
+    $product->stocks()->create(['variant' => 'Cotton-M', 'price' => '17.50', 'qty' => 47, 'sku' => 'KEEP']);
+    $before = sellerPhysicalSnapshot();
+    $this->post(route('seller.products.sku_combination_edit'), [
+        'id' => $product->id, 'name' => $product->name, 'unit_price' => '12.50',
+        'choice_no' => [$fabric, $size], 'choice_options_'.$fabric => ['Cotton'], 'choice_options_'.$size => ['M'],
+        'price_M-Cotton' => '12.50', 'qty_M-Cotton' => 10, 'sku_M-Cotton' => 'OLD',
+    ])->assertOk()->assertSee('Cotton-M')->assertSee('value="17.5"', false)->assertSee('value="47"', false);
+    expect(sellerPhysicalSnapshot())->toBe($before);
+});
+
+test('panel copies of boundary-length slugs remain editable and store-origin', function (string $panel) {
+    $product = createStoreProduct(['user_id' => $this->seller->id, 'added_by' => 'seller', 'slug' => str_repeat('a', 255)]);
+    if ($panel === 'seller') {
+        $this->post(route('seller.products.duplicate', $product))->assertRedirect();
+    } else {
+        actingAsStoreUser(createStoreStaff('product_duplicate'));
+        $this->post(route('products.duplicate', $product))->assertRedirect();
+    }
+    $copy = Product::query()->latest('id')->firstOrFail();
+    expect($copy->id)->not->toBe($product->id)->and(mb_strlen($copy->slug))->toBeLessThanOrEqual(255)
+        ->and($copy->getAttribute('synced_at'))->toBeNull()->and($copy->user_id)->toBe($this->seller->id);
+    actingAsStoreUser($this->seller);
+    $this->post(route('seller.products.update', $copy), sellerPhysicalInput(['lang' => 'en', 'slug' => $copy->slug]))->assertRedirect()->assertSessionHasNoErrors();
+})->with(['seller', 'admin']);
+
+test('existing attribute values containing field metacharacters have safe editable variant keys', function (string $value) {
+    $id = DB::table('attributes')->insertGetId(['name' => 'Pattern']);
+    DB::table('attribute_values')->insert(['attribute_id' => $id, 'value' => $value]);
+    $choices = ['choice_no' => [$id], 'choice_attributes' => [$id], 'choice_options_'.$id => [$value]];
+    $response = $this->post(route('seller.products.sku_combination'), ['unit_price' => '12.50', 'choice_no' => [$id], 'choice_options_'.$id => [$value]])->assertOk();
+    $xpath = htmlXPath($response);
+    $price = $xpath->query('//input[starts-with(@name,"price_")]')->item(0)->getAttribute('name');
+    $qty = $xpath->query('//input[starts-with(@name,"qty_")]')->item(0)->getAttribute('name');
+    $this->post(route('seller.products.store'), sellerPhysicalInput([...$choices, $price => '17.50', $qty => 7]))->assertRedirect()->assertSessionHasNoErrors();
+    expect(Product::query()->sole()->stocks()->sole()->variant)->toBe(str_replace(' ', '', $value));
+})->with(['asterisk' => 'M*', 'brackets' => '[M]', 'backslash' => 'M\\Q']);
+
+test('the seller retains distinct numeric-looking choice values and their exact stock rows', function () {
+    createShopFor($this->seller, 0);
+    $id = DB::table('attributes')->insertGetId(['name' => 'Size']);
+    DB::table('attribute_values')->insert([['attribute_id' => $id, 'value' => '01'], ['attribute_id' => $id, 'value' => '1']]);
+    $product = createStoreProduct(['user_id' => $this->seller->id, 'added_by' => 'seller', 'colors' => '[]', 'choice_options' => json_encode([['attribute_id' => $id, 'values' => ['01', '1']]])]);
+    $product->stocks()->delete();
+    $first = $product->stocks()->create(['variant' => '01', 'price' => '7.50', 'qty' => 1]);
+    $second = $product->stocks()->create(['variant' => '1', 'price' => '9.50', 'qty' => 2]);
+    $choices = ['choice_no' => [$id], 'choice_options_'.$id => ['01', '1']];
+    $this->post(route('seller.products.sku_combination_edit'), ['id' => $product->id, 'unit_price' => '12.50', ...$choices])->assertOk()
+        ->assertSee('name="price_01" value="7.5"', false)->assertSee('name="price_1" value="9.5"', false);
+    $this->post(route('seller.products.update', $product), sellerPhysicalInput(['lang' => 'en', ...$choices, 'price_01' => '7.50', 'qty_01' => 1, 'price_1' => '9.50', 'qty_1' => 2]))->assertRedirect()->assertSessionHasNoErrors();
+    expect($product->stocks()->orderBy('id')->pluck('id')->all())->toBe([$first->id, $second->id]);
+});
+
+test('edit preserves its original cash switch and shipping and tax visibility independently of create', function () {
+    createShopFor($this->seller, 0);
+    foreach (['Setup_Shipping_section' => '0', 'shipping_type' => 'product_wise_shipping', 'VAT_TAX_section' => '0', 'cash_payment' => '1'] as $key => $value) {
+        DB::table('business_settings')->insert(['type' => $key, 'value' => $value]);
+    }
+    $tax = DB::table('taxes')->insertGetId(['name' => 'VAT', 'tax_status' => 1]);
+    $product = createStoreProduct(['user_id' => $this->seller->id, 'added_by' => 'seller', 'cash_on_delivery' => 1]);
+    $create = htmlXPath($this->get(route('seller.products.create'))->assertOk());
+    expect($create->query('//input[@name="flat_shipping_cost"]')->length)->toBe(0)
+        ->and($create->query('//input[@name="tax[]"]')->length)->toBe(0);
+    $edit = htmlXPath($this->get(route('seller.products.edit', $product))->assertOk());
+    expect($edit->query('//input[@name="flat_shipping_cost"]')->length)->toBe(1)
+        ->and($edit->query('//input[@name="tax[]"]')->length)->toBe(1)
+        ->and($edit->query('//input[@name="cash_on_delivery" and @type="checkbox" and @checked]')->length)->toBe(1);
+    $input = sellerPhysicalInput(['lang' => 'en', 'cash_on_delivery' => 0, 'tax_id' => [$tax], 'tax' => ['21'], 'tax_type' => ['percent']]);
+    $this->post(route('seller.products.update', $product), $input)->assertRedirect()->assertSessionHasNoErrors();
+    expect((int) $product->fresh()->getAttribute('cash_on_delivery'))->toBe(0);
+    $this->from(route('seller.products.edit', $product))->post(route('seller.products.update', $product), [...$input, 'unit' => []])->assertSessionHasErrors('unit');
+    $edit = htmlXPath($this->get(route('seller.products.edit', $product))->assertOk());
+    expect($edit->query('//input[@name="cash_on_delivery" and @type="checkbox" and @checked]')->length)->toBe(0);
 });

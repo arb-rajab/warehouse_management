@@ -864,6 +864,12 @@ export interface StoreProductVariantRow {
 }
 /** A product's stored colours and choices, with the rows they generate. */
 export interface StoreProductVariantState {
+    unmatched?: {
+        variant: string;
+        price: string | number;
+        qty: string | number;
+        sku: string | null;
+    }[];
     colors_active: boolean;
     colors: string[];
     choice_options: { attribute_id: number; values: string[] }[];

@@ -9,6 +9,7 @@ use App\Models\AttributeValue;
 use App\Models\Cart;
 use App\Models\Category;
 use App\Models\Product;
+use App\Support\ProductSlug;
 use App\Services\ProductStockService;
 use App\Services\ProductTaxService;
 use Artisan;
@@ -192,7 +193,7 @@ class ProductController extends Controller
 
         if (Auth::user()->id == $product->user_id) {
             $product_new = $product->replicate();
-            $product_new->slug = $product_new->slug . '-' . Str::random(5);
+            $product_new->slug = ProductSlug::duplicate($product_new->slug);
             $product_new->save();
 
             //Product Stock

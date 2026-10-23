@@ -2972,7 +2972,7 @@
             "action": "{{ route('seller.products.store') }}",
             "target": "route:seller.products.store",
             "source": "App\\Http\\Requests\\Seller\\PhysicalProductRequest",
-            "controls": 40,
+            "controls": 42,
             "unresolved_controls": 5,
             "findings": {
                 "E": 2
@@ -2987,7 +2987,7 @@
             "action": "{{ route('seller.products.update', $product->id) }}",
             "target": "route:seller.products.update",
             "source": "App\\Http\\Requests\\Seller\\PhysicalProductRequest",
-            "controls": 40,
+            "controls": 42,
             "unresolved_controls": 5,
             "findings": {
                 "E": 2
@@ -6771,7 +6771,7 @@
             "field": "lang",
             "label": null,
             "detail": "no server rule names this field",
-            "ui": "resources/views/shop/seller/product/products/form_fields.blade.php:38",
+            "ui": "resources/views/shop/seller/product/products/form_fields.blade.php:41",
             "server": null
         },
         {
@@ -6786,7 +6786,7 @@
             "field": "slug",
             "label": "Slug",
             "detail": "no server rule names this field",
-            "ui": "resources/views/shop/seller/product/products/form_fields.blade.php:174",
+            "ui": "resources/views/shop/seller/product/products/form_fields.blade.php:183",
             "server": null
         },
         {
@@ -6801,7 +6801,7 @@
             "field": "lang",
             "label": null,
             "detail": "no server rule names this field",
-            "ui": "resources/views/shop/seller/product/products/form_fields.blade.php:38",
+            "ui": "resources/views/shop/seller/product/products/form_fields.blade.php:41",
             "server": null
         },
         {
@@ -6816,7 +6816,7 @@
             "field": "slug",
             "label": "Slug",
             "detail": "no server rule names this field",
-            "ui": "resources/views/shop/seller/product/products/form_fields.blade.php:174",
+            "ui": "resources/views/shop/seller/product/products/form_fields.blade.php:183",
             "server": null
         },
         {

@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 import { loginAsStoreAdmin } from './support/auth';
-import { seedStoreFixtures } from './support/storeFixtures';
+import { seedStoreFixtures, storedProduct } from './support/storeFixtures';
 
 /**
  * The legacy uploader on a page that keeps it long-term: the seller panel's
@@ -448,4 +448,43 @@ test('seller physical variant choices generate rows and retain their prices on e
         $product = App\Models\Product::where('name', 'Browser physical variants')->sole();
         if ($product->stocks()->where('variant', 'M')->sole()->price != 19.5 || $product->stocks()->where('variant', 'L')->sole()->qty != 8) { throw new RuntimeException('Variant replacement lost rows'); }
     `);
+});
+
+test('seller explicitly reorders legacy attribute choices and preserves the stock record', async ({
+    page,
+}) => {
+    seedStoreFixtures(String.raw`
+        $seller = App\Models\StoreUser::where('email', 'browser-seller@example.com')->sole();
+        Illuminate\Support\Facades\DB::table('shops')->updateOrInsert(['user_id' => $seller->id], ['name' => 'Browser shop', 'slug' => 'browser-shop']);
+        $category = App\Models\Category::firstOrCreate(['slug' => 'browser-repair'], ['name' => 'Browser repair', 'parent_id' => 0, 'digital' => 0]);
+        $size = Illuminate\Support\Facades\DB::table('attributes')->insertGetId(['name' => 'Browser repair size']);
+        $fabric = Illuminate\Support\Facades\DB::table('attributes')->insertGetId(['name' => 'Browser repair fabric']);
+        Illuminate\Support\Facades\DB::table('attribute_values')->insert([['attribute_id' => $size, 'value' => 'M'], ['attribute_id' => $fabric, 'value' => 'Cotton']]);
+        $product = App\Models\Product::forceCreate(['name' => 'Browser legacy choice repair', 'slug' => 'browser-legacy-choice-repair', 'category_id' => $category->id, 'user_id' => $seller->id, 'added_by' => 'seller', 'digital' => 0, 'unit' => 'pc', 'unit_price' => '12.50', 'min_qty' => 1, 'discount' => 0, 'discount_type' => 'amount', 'current_stock' => 47, 'stock_visibility_state' => 'quantity', 'colors' => '[]', 'attributes' => json_encode([$size, $fabric]), 'choice_options' => json_encode([['attribute_id' => $size, 'values' => ['M']], ['attribute_id' => $fabric, 'values' => ['Cotton']]])]);
+        $product->stocks()->create(['variant' => 'Cotton-M', 'price' => '17.50', 'qty' => 47, 'sku' => 'KEEP']);
+    `);
+    const productName = 'Browser legacy choice repair';
+    const id = storedProduct(productName, '$product->id') as number;
+    const expression =
+        '$product->stocks()->orderBy("id")->get()->map(fn ($s) => [$s->id, $s->variant, (float) $s->price, (int) $s->qty, $s->sku])->all()';
+    const before = storedProduct(productName, expression);
+    await loginAsSeller(page);
+    await page.goto(`/temp/seller/product/${id}/edit?lang=en`);
+    await expect(page.getByRole('alert')).toContainText('Cotton-M');
+    await page
+        .getByRole('button', {
+            name: 'Move attribute up: Browser repair fabric',
+            exact: true,
+        })
+        .click();
+    await expect(page.locator('[name="price_Cotton-M"]')).toHaveValue('17.5');
+    await expect(page.locator('[name="qty_Cotton-M"]')).toHaveValue('47');
+    expect(storedProduct(productName, expression)).toEqual(before);
+    await page
+        .getByRole('button', { name: 'Save product', exact: true })
+        .click();
+    await expect(
+        page.getByRole('alert').filter({ hasText: 'Stored stock' }),
+    ).toHaveCount(0);
+    expect(storedProduct(productName, expression)).toEqual(before);
 });
