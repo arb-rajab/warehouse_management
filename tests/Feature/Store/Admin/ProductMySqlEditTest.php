@@ -37,6 +37,8 @@ test('an existing mismatch between stock names and stored choices cannot silentl
 });
 
 test('the real edit endpoint normalizes stored prices default variant prices and tax decimals', function () {
+    // The MySQL job builds no assets, so render the page without the Vite manifest.
+    $this->withoutVite();
     seedStoreCurrency();
     config(['app.default_language' => 'en']);
     Language::forceCreate(['code' => 'en', 'name' => 'English', 'rtl' => 0]);
@@ -56,6 +58,8 @@ test('the real edit endpoint normalizes stored prices default variant prices and
 });
 
 test('numeric-looking variant values and their stock rows remain distinct in the real edit form', function () {
+    // The MySQL job builds no assets, so render the page without the Vite manifest.
+    $this->withoutVite();
     seedStoreCurrency();
     config(['app.default_language' => 'en']);
     Language::forceCreate(['code' => 'en', 'name' => 'English', 'rtl' => 0]);
