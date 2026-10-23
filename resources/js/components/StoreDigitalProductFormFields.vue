@@ -2,6 +2,7 @@
 import { ref } from 'vue';
 import FieldError from '@/components/FieldError.vue';
 import FormField from '@/components/FormField.vue';
+import RequiredMark from '@/components/RequiredMark.vue';
 import StoreProductDiscountFields from '@/components/StoreProductDiscountFields.vue';
 import StoreProductTaxFields from '@/components/StoreProductTaxFields.vue';
 import StoreRichTextField from '@/components/StoreRichTextField.vue';
@@ -54,9 +55,10 @@ const legendClass = 'px-1 text-sm font-semibold';
                 required
             />
             <div>
-                <label for="category_id" :class="fieldLabelClass">{{
-                    t('store.digitalProducts.form.category')
-                }}</label>
+                <label for="category_id" :class="fieldLabelClass"
+                    >{{ t('store.digitalProducts.form.category')
+                    }}<RequiredMark
+                /></label>
                 <select
                     id="category_id"
                     v-model="categoryId"

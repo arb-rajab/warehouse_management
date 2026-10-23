@@ -6,6 +6,7 @@ import { index as productIndex } from '@/actions/App/Http/Controllers/Store/Admi
 import DataTable from '@/components/DataTable.vue';
 import FieldError from '@/components/FieldError.vue';
 import FormField from '@/components/FormField.vue';
+import RequiredMark from '@/components/RequiredMark.vue';
 import {
     fieldLabelClass,
     plainFieldInputClass,
@@ -107,9 +108,9 @@ onMounted(search);
         </p>
         <slot name="targeting" :options="options" />
         <div>
-            <label for="products" :class="fieldLabelClass">{{
-                t('store.campaigns.fields.products')
-            }}</label
+            <label for="products" :class="fieldLabelClass"
+                >{{ t('store.campaigns.fields.products')
+                }}<RequiredMark /></label
             ><select
                 id="products"
                 multiple
@@ -199,7 +200,8 @@ onMounted(search);
                     <label
                         :for="`discount-type-${row.id}`"
                         :class="fieldLabelClass"
-                        >{{ t('store.campaigns.fields.discountType') }}</label
+                        >{{ t('store.campaigns.fields.discountType')
+                        }}<RequiredMark /></label
                     ><select
                         :id="`discount-type-${row.id}`"
                         v-model="row.discount_type"

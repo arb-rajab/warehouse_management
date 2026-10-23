@@ -13,11 +13,15 @@ use Illuminate\Support\Str;
 use Maatwebsite\Excel\Concerns\ToCollection;
 use Maatwebsite\Excel\Concerns\ToModel;
 use Maatwebsite\Excel\Concerns\WithHeadingRow;
+use Maatwebsite\Excel\Concerns\WithCustomValueBinder;
+use PhpOffice\PhpSpreadsheet\Cell\Cell;
+use PhpOffice\PhpSpreadsheet\Cell\DataType;
+use PhpOffice\PhpSpreadsheet\Cell\DefaultValueBinder;
 use Maatwebsite\Excel\Concerns\WithValidation;
 use Storage;
 
 //class ProductsImport implements ToModel, WithHeadingRow, WithValidation
-class ProductsImport implements ToCollection, WithHeadingRow, WithValidation, ToModel
+class ProductsImport implements ToCollection, WithHeadingRow, WithValidation, ToModel, WithCustomValueBinder
 {
     private $rows = 0;
 
@@ -95,21 +99,35 @@ class ProductsImport implements ToCollection, WithHeadingRow, WithValidation, To
         return $this->rows;
     }
 
+    /** Keep seller CSV decimal strings exact before the spreadsheet reader casts them. */
+    public function bindValue(Cell $cell, mixed $value): bool
+    {
+        if (Auth::user()?->user_type === 'seller' && is_string($value)) {
+            $cell->setValueExplicit($value, DataType::TYPE_STRING);
+
+            return true;
+        }
+
+        return (new DefaultValueBinder)->bindValue($cell, $value);
+    }
+
     public function rules(): array
     {
+        $seller = Auth::user()?->user_type === 'seller';
+
         return [
             'name' => ['required', 'string', 'max:200'],
             'description' => ['nullable', 'string'],
             'category_id' => ['required', 'integer', 'exists:categories,id'],
             'brand_id' => ['nullable', 'integer', 'exists:brands,id'],
-            'unit_price' => ['required', 'numeric', 'min:0'],
-            'current_stock' => ['required', 'integer', 'min:0'],
-            'unit' => ['required', 'string', 'max:50'],
+            'unit_price' => ['required', 'numeric', 'min:0', ...($seller ? ['max:999999999999999999.99', 'decimal:0,2'] : [])],
+            'current_stock' => ['required', 'integer', 'min:0', ...($seller ? ['max:2147483647'] : [])],
+            'unit' => ['required', 'string', $seller ? 'max:20' : 'max:50'],
             'slug' => ['required', 'string', 'max:200'],
             'sku' => ['nullable', 'string', 'max:255'],
-            'tags' => ['nullable', 'string'],
+            'tags' => ['nullable', 'string', ...($seller ? ['max:500'] : [])],
             'video_provider' => ['nullable', 'string', 'in:youtube,vimeo,dailymotion'],
-            'video_link' => ['nullable', 'url:http,https'],
+            'video_link' => ['nullable', 'url:http,https', ...($seller ? ['max:100'] : [])],
             'meta_title' => ['nullable', 'string', 'max:200'],
             'meta_description' => ['nullable', 'string'],
             'thumbnail_img' => ['nullable', 'url:http,https'],

@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\Seller;
 
+use App\Http\Requests\Seller\StoreSupportTicketRequest;
+use App\Http\Requests\Seller\StoreTicketReplyRequest;
 use App\Mail\SupportMailManager;
 use App\Models\StoreUser;
 use App\Models\Ticket;
@@ -30,7 +32,7 @@ class SupportTicketController extends Controller
      * @param  Request  $request
      * @return Response
      */
-    public function store(Request $request)
+    public function store(StoreSupportTicketRequest $request)
     {
         $ticket = new Ticket;
         $ticket->code = max(100000, (Ticket::latest()->first() != null ? Ticket::latest()->first()->code + 1 : 0)).date('s');
@@ -80,7 +82,7 @@ class SupportTicketController extends Controller
         return view('shop.seller.support_ticket.show', compact('ticket','ticket_replies'));
     }
 
-    public function ticket_reply_store(Request $request)
+    public function ticket_reply_store(StoreTicketReplyRequest $request)
     {
         // The caller's own ticket, replied to as the caller: both used to come from the request.
         $ticket = Ticket::where('user_id', Auth::user()->id)->findOrFail($request->ticket_id);

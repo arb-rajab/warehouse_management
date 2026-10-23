@@ -34,11 +34,15 @@
                     <form action="{{ route('seller.product_query.reply',$query->id) }}" method="POST">
                         @method('put')
                         @csrf
-                        <input type="hidden" name="conversation_id" value="{{ $query->id }}">
+                        <x-required-legend />
                         <div class="row">
                             <div class="col-md-12">
-                                <textarea class="form-control" rows="4" name="reply" placeholder="{{ translate('Type your reply') }}"
-                                    required></textarea>
+                                <label for="seller-query-reply">{{ translate('Type your reply') }}<x-required-mark /></label>
+                                <textarea class="form-control" rows="4" name="reply" id="seller-query-reply" maxlength="10000" placeholder="{{ translate('Type your reply') }}"
+                                    required>{{ is_string(old('reply')) ? old('reply') : '' }}</textarea>
+                                @error('reply')
+                                    <small class="form-text text-danger">{{ $message }}</small>
+                                @enderror
                             </div>
                         </div>
                         <br>

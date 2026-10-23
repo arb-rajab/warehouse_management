@@ -2,6 +2,7 @@
 import { Plus, X } from '@lucide/vue';
 import FieldError from '@/components/FieldError.vue';
 import FormField from '@/components/FormField.vue';
+import RequiredMark from '@/components/RequiredMark.vue';
 import StoreUploadField from '@/components/StoreUploadField.vue';
 import {
     fieldLabelClass,
@@ -93,9 +94,9 @@ function removeRow(index: number): void {
             class="grid gap-3 rounded-md border border-gray-200 p-3 sm:grid-cols-2 dark:border-neutral-700"
         >
             <div>
-                <label :for="`menu-label-${index}`" :class="fieldLabelClass">{{
-                    t('store.website.header.menuLabel')
-                }}</label>
+                <label :for="`menu-label-${index}`" :class="fieldLabelClass"
+                    >{{ t('store.website.header.menuLabel') }}<RequiredMark
+                /></label>
                 <input
                     :id="`menu-label-${index}`"
                     :name="`settings[header_menu_labels][${index}]`"
@@ -109,9 +110,9 @@ function removeRow(index: number): void {
                 />
             </div>
             <div>
-                <label :for="`menu-link-${index}`" :class="fieldLabelClass">{{
-                    t('store.website.header.menuLink')
-                }}</label>
+                <label :for="`menu-link-${index}`" :class="fieldLabelClass"
+                    >{{ t('store.website.header.menuLink') }}<RequiredMark
+                /></label>
                 <input
                     :id="`menu-link-${index}`"
                     :name="`settings[header_menu_links][${index}]`"

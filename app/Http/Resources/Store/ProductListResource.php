@@ -8,7 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
- * A row of the in-house or all-products list: what the legacy Blade list
+ * A row of the in-house, all-products or seller list: what the legacy Blade list
  * showed, formatted as it formatted it. Names are the synced `name` and
  * `ar_name` columns, prices go through `single_price()`, the thumbnail
  * through `uploaded_asset()` (placeholder included) and the category name
@@ -29,6 +29,8 @@ use Illuminate\Http\Resources\Json\JsonResource;
  * @property-read int|bool $for_sale
  * @property-read bool $published
  * @property-read int $featured
+ * @property-read int|bool $approved
+ * @property-read int|bool $todays_deal
  * @property-read int|bool $deleted_from_api
  * @property-read string|null $slug
  *
@@ -63,6 +65,8 @@ class ProductListResource extends JsonResource
             'for_sale' => (bool) $this->for_sale,
             'published' => (bool) $this->published,
             'featured' => (bool) $this->featured,
+            'approved' => (bool) $this->approved,
+            'todays_deal' => (bool) $this->todays_deal,
             'deleted_from_api' => (bool) $this->deleted_from_api,
             'public_url' => $this->slug === null || $this->slug === '' ? null : route('product', $this->slug),
         ];

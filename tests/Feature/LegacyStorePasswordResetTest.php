@@ -57,7 +57,7 @@ test('a wrong reset code leaves the password alone', function () {
 
     $this->post(route('shop.password.update'), [
         'email' => 'forgot@example.com',
-        'code' => 'not-the-code',
+        'code' => wrongCode(emailedResetCode()),
         'password' => 'new-password1',
         'password_confirmation' => 'new-password1',
     ])->assertOk();

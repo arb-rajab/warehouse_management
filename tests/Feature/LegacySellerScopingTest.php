@@ -107,10 +107,12 @@ test('a seller edits their own shop, not the one named in the request', function
     $theirShop = DB::table('shops')->insertGetId(['user_id' => $theirs->id, 'name' => 'Theirs', 'slug' => 'theirs-1']);
 
     actingAsStoreUser($mine);
-    $this->post(route('seller.shop.update'), ['shop_id' => $theirShop, 'name' => 'Hijacked', 'address' => 'x', 'phone' => '1']);
+    $this->post(route('seller.shop.update'), ['shop_id' => $theirShop, 'name' => 'Hijacked', 'address' => 'x', 'phone' => '1'])->assertSessionHasErrorsIn('sellerShop', ['shop_id']);
+    expect(DB::table('shops')->where('id', $myShop)->value('name'))->toBe('Mine');
+    $this->post(route('seller.shop.update'), ['name' => 'Updated', 'address' => 'x', 'phone' => '1'])->assertSessionHasNoErrors();
 
     expect(DB::table('shops')->where('id', $theirShop)->value('name'))->toBe('Theirs')
-        ->and(DB::table('shops')->where('id', $myShop)->value('name'))->toBe('Hijacked');
+        ->and(DB::table('shops')->where('id', $myShop)->value('name'))->toBe('Updated');
 });
 
 test('a ticket is replied to by the account that owns it, as that account', function () {

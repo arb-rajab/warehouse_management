@@ -10,7 +10,7 @@ describe('Store Attribute form fields', () => {
         expect(wrapper.get('#name').attributes('required')).toBeDefined();
         expect(wrapper.get('#name').attributes('maxlength')).toBe('50');
         expect(wrapper.get('label[for="name"]').text()).toBe(
-            t('store.attributes.fields.name'),
+            t('store.attributes.fields.name') + '*' + t('common.required'),
         );
     });
     it('passes initial values and server errors to the shared fields', () => {

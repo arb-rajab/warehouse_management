@@ -9,11 +9,12 @@ import {
 } from '@/actions/App/Http/Controllers/Store/Admin/CurrencyController';
 import AddResourceLink from '@/components/AddResourceLink.vue';
 import Pagination from '@/components/Pagination.vue';
+import RequiredMark from '@/components/RequiredMark.vue';
 import StoreCurrencyDialog from '@/components/StoreCurrencyDialog.vue';
 import StoreStatusButton from '@/components/StoreStatusButton.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
-import { t } from '@/lib/i18n';
+import { i18n, t } from '@/lib/i18n';
 import {
     paginated,
     storeCurrency,
@@ -212,6 +213,52 @@ describe('Store Currencies Index', () => {
         expect(wrapper.getComponent(StoreStatusButton).props('locked')).toBe(
             false,
         );
+    });
+    it('keeps each settings form legend local and follows symbol_format for decimal requirements', async () => {
+        const wrapper = mountPage();
+        await wrapper.vm.$nextTick();
+        const forms = wrapper.findAllComponents(Form);
+        expect(wrapper.text()).toContain(t('store.currencies.formatsHint'));
+        expect(i18n.global.te('store.currencies.formatsHint', 'ar')).toBe(true);
+
+        for (const form of forms) {
+            expect.soft(form.findAll('[data-required-legend]')).toHaveLength(1);
+        }
+
+        const check = (id: string, required: boolean) => {
+            expect
+                .soft(
+                    wrapper.get(`#${id}`).attributes('required') !== undefined,
+                )
+                .toBe(required);
+            expect
+                .soft(
+                    wrapper
+                        .get(`label[for=${id}]`)
+                        .findComponent(RequiredMark)
+                        .exists(),
+                )
+                .toBe(required);
+        };
+        check('system_default_currency', true);
+        check('symbol_format', true);
+        check('decimal_separator', true);
+        check('no_of_decimals', true);
+        await wrapper.get('#symbol_format').setValue('');
+        check('symbol_format', true);
+        check('decimal_separator', false);
+        check('no_of_decimals', false);
+        expect.soft(forms[1].findAll('[data-required-legend]')).toHaveLength(1);
+        await wrapper.get('#symbol_format').setValue('2');
+        check('decimal_separator', true);
+        check('no_of_decimals', true);
+        expect
+            .soft(wrapper.get('#search').attributes('required'))
+            .toBeUndefined();
+        expect
+            .soft(wrapper.get('form').find('[data-required-legend]').exists())
+            .toBe(false);
+        wrapper.unmount();
     });
 
     it('renders bookmarked create and edit routes as dialogs', async () => {

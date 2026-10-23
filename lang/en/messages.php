@@ -47,6 +47,7 @@ return [
     'store_brand_discount_admin_required' => 'An administrator account is required before setting brand discounts.',
     'store_product_import_admin_required' => 'An administrator account is required before importing products.',
     'store_product_package_limit' => "The seller's shop package does not allow publishing another product.",
+    'store_product_feed_owned' => 'This field is managed by the product feed and cannot be changed here.',
     'store_timezone_environment_managed' => 'The timezone is set in the server configuration and cannot be changed here.',
     'upload_refused' => 'This file type is not allowed.',
     'custom_script_editing_unavailable' => 'Custom script editing is unavailable.',

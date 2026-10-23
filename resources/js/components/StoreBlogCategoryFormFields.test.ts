@@ -8,7 +8,7 @@ describe('StoreBlogCategoryFormFields', () => {
     it('renders the translated name label and mirrors authoritative string constraints', () => {
         const wrapper = mount(Fields, { props: { errors: {} } });
         expect(wrapper.get('label').text()).toBe(
-            t('store.blogCategories.fields.name'),
+            t('store.blogCategories.fields.name') + '*' + t('common.required'),
         );
         expect(wrapper.get('input').attributes()).toMatchObject({
             id: 'category_name',

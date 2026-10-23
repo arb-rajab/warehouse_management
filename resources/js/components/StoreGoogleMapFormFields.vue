@@ -104,8 +104,12 @@ watch([latitude, longitude], movePin);
             :value="enabled"
             :label="t('store.googleMap.enabled')"
             :error="errors.google_map"
+            :required="!enabled || (latitude === '' && longitude === '')"
             @change="toggle"
         />
+        <p class="text-sm text-gray-600 dark:text-neutral-300">
+            {{ t('store.googleMap.requirementsHint') }}
+        </p>
         <template v-if="enabled">
             <h2 class="text-lg font-semibold">
                 {{ t('store.googleMap.location') }}

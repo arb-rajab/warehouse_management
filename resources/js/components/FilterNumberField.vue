@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import RequiredMark from '@/components/RequiredMark.vue';
 import { fieldLabelClass } from '@/lib/filters';
 
 withDefaults(
@@ -12,6 +13,7 @@ withDefaults(
     }>(),
     {
         disabled: false,
+        required: false,
     },
 );
 
@@ -20,7 +22,9 @@ const model = defineModel<string>({ required: true });
 
 <template>
     <div>
-        <label :for="id" :class="fieldLabelClass">{{ label }}</label>
+        <label :for="id" :class="fieldLabelClass"
+            >{{ label }}<RequiredMark v-if="required"
+        /></label>
         <input
             :id="id"
             v-model="model"

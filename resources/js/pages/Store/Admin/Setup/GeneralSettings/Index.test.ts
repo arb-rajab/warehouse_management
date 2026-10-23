@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { update } from '@/actions/App/Http/Controllers/Store/Admin/GeneralSettingsController';
 import FieldError from '@/components/FieldError.vue';
 import FormField from '@/components/FormField.vue';
+import RequiredMark from '@/components/RequiredMark.vue';
 import ResourceFormPage from '@/components/ResourceFormPage.vue';
 import StoreUploadField from '@/components/StoreUploadField.vue';
 import SubmitButton from '@/components/SubmitButton.vue';
@@ -189,8 +190,9 @@ describe('general settings page', () => {
         ).toBe('9');
     });
 
-    it('offers every timezone with the configured one selected and required', () => {
+    it('offers every timezone with the configured one selected and required', async () => {
         const wrapper = page();
+        await wrapper.vm.$nextTick();
         const select = wrapper.get('select#timezone');
 
         expect(select.attributes('name')).toBe('settings[timezone]');
@@ -200,8 +202,19 @@ describe('general settings page', () => {
         );
         expect((select.element as HTMLSelectElement).value).toBe('UTC');
         expect(wrapper.get('label[for=timezone]').text()).toBe(
-            t('store.generalSettings.timezone'),
+            `${t('store.generalSettings.timezone')}*${t('common.required')}`,
         );
+        expect(
+            wrapper
+                .get('label[for=timezone]')
+                .findComponent(RequiredMark)
+                .exists(),
+        ).toBe(true);
+        expect(wrapper.findAllComponents(RequiredMark)).toHaveLength(1);
+        expect(wrapper.findAll('[data-required-legend]')).toHaveLength(1);
+        expect(
+            wrapper.get('#site_name').attributes('required'),
+        ).toBeUndefined();
     });
 
     it('shows each backend error under its field', () => {

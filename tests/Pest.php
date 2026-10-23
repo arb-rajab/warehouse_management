@@ -6,6 +6,7 @@ use App\Http\Requests\Store\Admin\UpdateWebsiteAppearanceRequest;
 use App\Http\Requests\Store\Admin\UpdateWebsiteFooterRequest;
 use App\Models\Carrier;
 use App\Models\Cart;
+use App\Models\Category;
 use App\Models\Cell;
 use App\Models\CellStatusLog;
 use App\Models\Coupon;
@@ -144,6 +145,24 @@ function createStoreUser(string $userType = 'customer', ?string $email = null, s
 }
 
 /**
+ * @return array<string, string>
+ */
+function completeRegistration(array $overrides = []): array
+{
+    return [
+        'name' => 'New Customer',
+        'company_name' => 'Acme BV',
+        'email' => 'new-customer@example.com',
+        'phone' => '612345678',
+        'country_code' => '31',
+        'country' => 'Netherlands',
+        'password' => 'secret123',
+        'password_confirmation' => 'secret123',
+        ...$overrides,
+    ];
+}
+
+/**
  * Authenticate a legacy store user on the store's own `store` guard.
  *
  * actingAs() also makes its guard the default for the rest of the test, which
@@ -202,6 +221,137 @@ function createStoreProduct(array $attributes = []): Product
     ]);
 
     return $product;
+}
+
+/**
+ * Set a storefront setting (a `business_settings` row, read by get_setting()).
+ */
+function storeSetting(string $type, string|int|null $value): void
+{
+    DB::table('business_settings')->updateOrInsert(['type' => $type], ['value' => $value]);
+}
+
+/**
+ * An XPath over a rendered page (a response or the HTML itself), parsed the
+ * way a browser would, tolerating the storefront's invalid markup.
+ */
+function htmlXPath(TestResponse|string $page): DOMXPath
+{
+    $document = new DOMDocument;
+    libxml_use_internal_errors(true);
+    $document->loadHTML('<?xml encoding="utf-8"?>'.(is_string($page) ? $page : $page->getContent()));
+    libxml_clear_errors();
+
+    return new DOMXPath($document);
+}
+
+/**
+ * How a rendered Blade form presents each named, visible control
+ * (.ai/rules/form-required-fields.md): whether it carries `required` and
+ * whether its label shows the required mark or "(optional)". The label is the
+ * one whose `for` names the control's id, else the one wrapping it, else the
+ * nearest one before it. Hidden inputs and buttons are left out; a name used
+ * twice (a radio group) keeps its first control.
+ *
+ * @return array<string, array{tag: string, required: bool, mark: bool, optional: bool}>
+ */
+function formFieldMarks(DOMXPath $xpath, DOMElement $form): array
+{
+    $fields = [];
+    foreach ($xpath->query('.//*[self::input or self::select or self::textarea][@name]', $form) as $control) {
+        if (in_array($control->getAttribute('type'), ['hidden', 'submit', 'button'], true) || isset($fields[$control->getAttribute('name')])) {
+            continue;
+        }
+        $id = $control->getAttribute('id');
+        $label = ($id !== '' ? $xpath->query('.//label[@for="'.$id.'"]', $form)->item(0) : null)
+            ?? $xpath->query('ancestor::label[1]', $control)->item(0)
+            ?? $xpath->query('preceding::label[1]', $control)->item(0);
+        $fields[$control->getAttribute('name')] = [
+            'tag' => $control->nodeName,
+            'required' => $control->hasAttribute('required'),
+            'mark' => $label !== null && $xpath->query('.//*[@data-required-mark]/span[@aria-hidden="true"][.="*"]', $label)->length === 1
+                && $xpath->query('.//*[@data-required-mark]/span[@class="sr-only"][.="required"]', $label)->length === 1,
+            'optional' => $label !== null && $xpath->query('.//*[@data-optional-mark]', $label)->length > 0,
+        ];
+    }
+
+    return $fields;
+}
+
+/**
+ * Every longitude a map pin can give, up to the antimeridian: the column holds
+ * them since 2026_10_21_110000_widen_map_longitude_columns (it held less than
+ * 100 before, so these were refused).
+ *
+ * @return array<string, array{0: float}>
+ */
+function validMapLongitudes(): array
+{
+    return [
+        'Sydney' => [151.2093],
+        'just east of the antimeridian' => [-179.9999],
+        'the antimeridian, east' => [180.0],
+        'the antimeridian, west' => [-180.0],
+    ];
+}
+
+/**
+ * The one form on the page that posts to `$action` (a path, matched at the
+ * end of the action URL).
+ */
+function formPostingTo(DOMXPath $xpath, string $action): DOMElement
+{
+    $forms = $xpath->query('//form[substring(@action, string-length(@action) - '.(strlen($action) - 1).') = "'.$action.'"]');
+    expect($forms->length)->toBe(1, "expected one form posting to {$action}");
+
+    return $forms->item(0);
+}
+
+/**
+ * The text of the message flashed with laracasts/flash for the next request,
+ * read the way the storefront layout reads it (the session stores it as JSON).
+ */
+function flashedMessage(): ?string
+{
+    return collect(session('flash_notification', []))->toArray()[0]['message'] ?? null;
+}
+
+/**
+ * The <head> a storefront response printed, as search engines read it: the
+ * title, the robots / description / canonical values, every Open Graph and
+ * Twitter tag by name, and each JSON-LD block decoded. Pass a response or the
+ * HTML itself.
+ *
+ * @return array{title: string|null, robots: string|null, description: string|null, canonical: list<string>, og: array<string, list<string>>, twitter: array<string, list<string>>, jsonLd: list<array<string, mixed>>, jsonLdRaw: list<string>}
+ */
+function storefrontHead(TestResponse|string $page): array
+{
+    $xpath = htmlXPath($page);
+
+    $first = fn (string $query): ?string => ($node = $xpath->query($query)->item(0)) === null ? null : $node->nodeValue;
+    $grouped = function (string $attribute, string $prefix) use ($xpath): array {
+        $values = [];
+        foreach ($xpath->query("//head/meta[starts-with(@{$attribute}, '{$prefix}')]") as $node) {
+            $values[$node->getAttribute($attribute)][] = $node->getAttribute('content');
+        }
+
+        return $values;
+    };
+    $raw = [];
+    foreach ($xpath->query('//script[@type="application/ld+json"]') as $node) {
+        $raw[] = $node->textContent;
+    }
+
+    return [
+        'title' => $first('//head/title'),
+        'robots' => $first('//head/meta[@name="robots"]/@content'),
+        'description' => $first('//head/meta[@name="description"]/@content'),
+        'canonical' => array_map(fn (DOMNode $node) => $node->nodeValue, iterator_to_array($xpath->query('//head/link[@rel="canonical"]/@href'))),
+        'og' => $grouped('property', 'og:'),
+        'twitter' => $grouped('name', 'twitter:'),
+        'jsonLd' => array_map(fn (string $json) => json_decode($json, true, flags: JSON_THROW_ON_ERROR), $raw),
+        'jsonLdRaw' => $raw,
+    ];
 }
 
 /**
@@ -402,6 +552,15 @@ function createShopFor(StoreUser $seller, float $balance): int
     return DB::table('shops')->insertGetId(['user_id' => $seller->id, 'name' => 'Shop of '.$seller->id, 'admin_to_pay' => $balance]);
 }
 
+/** A verified seller with a shop for the account and text-write form tests. */
+function sellerAccount(): StoreUser
+{
+    $seller = createStoreUser('seller');
+    createShopFor($seller, 100);
+
+    return actingAsStoreUser($seller->fresh());
+}
+
 /**
  * A withdraw request of `$amount` from `$seller` (status 0 pending, 1 paid).
  */
@@ -535,6 +694,23 @@ function inertiaHeaders(): array
         // manifest, so this works with or without a build present.
         'X-Inertia-Version' => (string) (new HandleInertiaRequests)->version(request()),
     ];
+}
+
+/** The response's `$name` CSP directive (report-only outside production). */
+function cspDirectiveOf(TestResponse $response, string $name): string
+{
+    $policy = $response->headers->get('Content-Security-Policy-Report-Only')
+        ?? $response->headers->get('Content-Security-Policy');
+
+    return collect(explode(';', (string) $policy))
+        ->map(fn (string $directive) => trim($directive))
+        ->first(fn (string $directive) => str_starts_with($directive, $name.' ')) ?? '';
+}
+
+/** The response's script-src directive, shared across independent Pest workers. */
+function scriptSrcOf(TestResponse $response): string
+{
+    return cspDirectiveOf($response, 'script-src');
 }
 
 /**
@@ -777,4 +953,41 @@ function createStoreCarrierTariff(): array
         'billing_type' => 'weight_based', 'delimiter1' => ['0', '10'], 'delimiter2' => ['10', '20'],
         'zones' => [$zone, $otherZone], 'carrier_price' => [$zone => ['5', '8'], $otherZone => ['7', '9']],
     ]];
+}
+
+function sellerCoupon(StoreUser $seller): Coupon
+{
+    return Coupon::create([
+        'user_id' => $seller->id, 'type' => 'cart_base', 'code' => 'SAVE5', 'details' => '{"min_buy":1,"max_discount":5}',
+        'discount' => 5, 'discount_type' => 'amount', 'start_date' => now()->timestamp, 'end_date' => now()->addDay()->timestamp,
+    ])->fresh();
+}
+
+/** @return array<string, mixed> */
+function catalogueImportRow(array $overrides = []): array
+{
+    $category = Category::forceCreate(['name' => 'Food']);
+
+    return [
+        'name' => 'Imported dates', 'description' => '<p>Fresh dates</p><script>alert(1)</script>',
+        'category_id' => $category->id, 'brand_id' => '', 'video_provider' => '', 'video_link' => '',
+        'tags' => 'dates,fresh', 'unit_price' => 2.5, 'unit' => 'box', 'meta_title' => 'Date boxes',
+        'meta_description' => 'Fresh food', 'slug' => 'imported-dates',
+        'thumbnail_img' => 'https://example.com/date.jpg', 'photos' => 'https://example.com/gallery.jpg',
+        'current_stock' => 12, 'sku' => 'DATE-12', ...$overrides,
+    ];
+}
+
+function catalogueImportFile(array $rows): UploadedFile
+{
+    $stream = fopen('php://temp', 'w+');
+    fputcsv($stream, array_keys($rows[0]), escape: '');
+    foreach ($rows as $row) {
+        fputcsv($stream, array_values($row), escape: '');
+    }
+    rewind($stream);
+    $contents = stream_get_contents($stream);
+    fclose($stream);
+
+    return UploadedFile::fake()->createWithContent('products.csv', $contents);
 }

@@ -6,6 +6,7 @@ use App\Services\PaymentOptions;
 use App\Services\CouponService;
 use App\Services\GatewayPaymentService;
 use App\Services\VerifiedPayment;
+use App\Http\Requests\StoreShippingInfoRequest;
 use App\Models\Address;
 use App\Models\Carrier;
 use App\Models\Cart;
@@ -171,23 +172,18 @@ class CheckoutController extends Controller
         return back();
     }
 
-    public function store_shipping_info(Request $request)
+    public function store_shipping_info(StoreShippingInfoRequest $request)
     {
-        if ($request->address_id == null) {
-            flash(translate("Please add shipping address"))->warning();
-            return back();
-        }
-
         $carts = Cart::where('user_id', Auth::user()->id)->get();
         if ($carts->isEmpty()) {
             flash(translate('Your cart is empty'))->warning();
             return redirect()->route('home');
         }
 
-        Gate::authorize('manage', Address::findOrFail($request->address_id));
+        Gate::authorize('manage', Address::findOrFail($request->integer('address_id')));
 
         foreach ($carts as $key => $cartItem) {
-            $cartItem->address_id = $request->address_id;
+            $cartItem->address_id = $request->integer('address_id');
             $cartItem->save();
         }
 

@@ -10,58 +10,27 @@
             </div>
             <form class="form-default" role="form" action="{{ route('addresses.store') }}" method="POST">
                 @csrf
+                @php
+                    $keepInput = $errors->storeAddress->any();
+                @endphp
                 <div class="modal-body c-scrollbar-light">
                     <div class="p-3">
+                        <x-required-legend />
                         <!-- Address -->
                         <div class="row">
                             <div class="col-md-2">
-                                <label>{{ translate('Address')}}</label>
+                                <label for="new_address_address">{{ translate('Address')}}<x-required-mark /></label>
                             </div>
-                            <div class="col-md-10">
-                                <textarea class="form-control mb-3 rounded-0" placeholder="{{ translate('Your Address')}}" rows="2" name="address" required></textarea>
+                            <div class="col-md-10 mb-3">
+                                <textarea id="new_address_address" class="form-control rounded-0 @error('address', 'storeAddress') is-invalid @enderror" placeholder="{{ translate('Your Address')}}" rows="2" name="address" maxlength="255" required>{{ $keepInput ? old('address') : '' }}</textarea>
+                                @error('address', 'storeAddress')
+                                    <span class="invalid-feedback d-block" role="alert"><strong>{{ $message }}</strong></span>
+                                @enderror
                             </div>
                         </div>
 
                         <!-- Country -->
-                        <div class="row">
-                            <div class="col-md-2">
-                                <label>{{ translate('Country')}}</label>
-                            </div>
-                            <div class="col-md-10">
-                                <div class="mb-3">
-                                    <select class="form-control aiz-selectpicker rounded-0" data-live-search="true" data-placeholder="{{ translate('Select your country') }}" name="country_id" required>
-                                        <option value="">{{ translate('Select your country') }}</option>
-                                        @foreach (\App\Models\Country::where('status', 1)->orderBy('priority', 'desc')->get() as $key => $country)
-                                            <option value="{{ $country->id }}">{{ $country->name }}</option>
-                                        @endforeach
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- State -->
-                        {{-- <div class="row">
-                            <div class="col-md-2">
-                                <label>{{ translate('State')}}</label>
-                            </div>
-                            <div class="col-md-10">
-                                <select class="form-control mb-3 aiz-selectpicker rounded-0" data-live-search="true" name="state_id" >
-
-                                </select>
-                            </div>
-                        </div> --}}
-
-                        <!-- City -->
-                        {{-- <div class="row">
-                            <div class="col-md-2">
-                                <label>{{ translate('City')}}</label>
-                            </div>
-                            <div class="col-md-10">
-                                <select class="form-control mb-3 aiz-selectpicker rounded-0" data-live-search="true" name="city_id" >
-
-                                </select>
-                            </div>
-                        </div> --}}
+                        <x-address-country-field id="new_address_country" bag="storeAddress" />
 
                         @if (get_setting('google_map') == 1)
                             <!-- Google Map -->
@@ -78,41 +47,53 @@
                             </div>
                             <!-- Longitude -->
                             <div class="row">
-                                <div class="col-md-2" id="">
-                                    <label for="exampleInputuname">{{ translate('Longitude')}}</label>
+                                <div class="col-md-2">
+                                    <label for="longitude">{{ translate('Longitude')}}</label>
                                 </div>
-                                <div class="col-md-10" id="">
-                                    <input type="text" class="form-control mb-3 rounded-0" id="longitude" name="longitude" readonly="">
+                                <div class="col-md-10 mb-3">
+                                    <input type="text" class="form-control rounded-0 @error('longitude', 'storeAddress') is-invalid @enderror" id="longitude" name="longitude" value="{{ $keepInput ? old('longitude') : '' }}" readonly="">
+                                    @error('longitude', 'storeAddress')
+                                        <span class="invalid-feedback d-block" role="alert"><strong>{{ $message }}</strong></span>
+                                    @enderror
                                 </div>
                             </div>
                             <!-- Latitude -->
                             <div class="row">
-                                <div class="col-md-2" id="">
-                                    <label for="exampleInputuname">{{ translate('Latitude')}}</label>
+                                <div class="col-md-2">
+                                    <label for="latitude">{{ translate('Latitude')}}</label>
                                 </div>
-                                <div class="col-md-10" id="">
-                                    <input type="text" class="form-control mb-3 rounded-0" id="latitude" name="latitude" readonly="">
+                                <div class="col-md-10 mb-3">
+                                    <input type="text" class="form-control rounded-0 @error('latitude', 'storeAddress') is-invalid @enderror" id="latitude" name="latitude" value="{{ $keepInput ? old('latitude') : '' }}" readonly="">
+                                    @error('latitude', 'storeAddress')
+                                        <span class="invalid-feedback d-block" role="alert"><strong>{{ $message }}</strong></span>
+                                    @enderror
                                 </div>
                             </div>
                         @endif
 
                         <!-- Postal code -->
-                         <div class="row">
+                        <div class="row">
                             <div class="col-md-2">
-                                <label>{{ translate('Postal code')}}</label>
+                                <label for="new_address_postal_code">{{ translate('Postal code')}}<x-required-mark /></label>
                             </div>
-                            <div class="col-md-10">
-                                <input type="text" class="form-control mb-3 rounded-0" placeholder="{{ translate('Your Postal Code')}}" name="postal_code" value="" required>
+                            <div class="col-md-10 mb-3">
+                                <input type="text" id="new_address_postal_code" class="form-control rounded-0 @error('postal_code', 'storeAddress') is-invalid @enderror" placeholder="{{ translate('Your Postal Code')}}" name="postal_code" value="{{ $keepInput ? old('postal_code') : '' }}" maxlength="255" required>
+                                @error('postal_code', 'storeAddress')
+                                    <span class="invalid-feedback d-block" role="alert"><strong>{{ $message }}</strong></span>
+                                @enderror
                             </div>
                         </div>
 
                         <!-- Phone -->
                         <div class="row">
                             <div class="col-md-2">
-                                <label>{{ translate('Phone')}}</label>
+                                <label for="new_address_phone">{{ translate('Phone')}}<x-required-mark /></label>
                             </div>
-                            <div class="col-md-10">
-                                <input type="text" class="form-control mb-3 rounded-0" placeholder="{{ translate('+')}}" name="phone" value="" required>
+                            <div class="col-md-10 mb-3">
+                                <input type="text" id="new_address_phone" class="form-control rounded-0 @error('phone', 'storeAddress') is-invalid @enderror" placeholder="{{ translate('+')}}" name="phone" value="{{ $keepInput ? old('phone') : '' }}" maxlength="255" required>
+                                @error('phone', 'storeAddress')
+                                    <span class="invalid-feedback d-block" role="alert"><strong>{{ $message }}</strong></span>
+                                @enderror
                             </div>
                         </div>
                         <!-- Save button -->
@@ -138,7 +119,14 @@
             </div>
 
             <div class="modal-body c-scrollbar-light" id="edit_modal_body">
-
+                {{-- After a failed update, the address's form again, with the input and the errors. --}}
+                @php
+                    $reopenedAddress = $errors->updateAddress->any() && is_numeric(old('address_id')) ? \App\Models\Address::find((int) old('address_id')) : null;
+                    $reopenedAddress = $reopenedAddress !== null && \Illuminate\Support\Facades\Gate::allows('manage', $reopenedAddress) ? $reopenedAddress : null;
+                @endphp
+                @if ($reopenedAddress !== null)
+                    @include('shop.frontend.partials.address_edit_modal', ['address_data' => $reopenedAddress])
+                @endif
             </div>
         </div>
     </div>
@@ -162,23 +150,34 @@
                 type: 'GET',
                 success: function (response) {
                     $('#edit_modal_body').html(response.html);
-                    $('#edit-address-modal').modal('show');
-                    AIZ.plugins.bootstrapSelect('refresh');
-
-                    @if (get_setting('google_map') == 1)
-                        var lat     = -33.8688;
-                        var long    = 151.2195;
-
-                        if(response.data.address_data.latitude && response.data.address_data.longitude) {
-                            lat     = parseFloat(response.data.address_data.latitude);
-                            long    = parseFloat(response.data.address_data.longitude);
-                        }
-
-                        initialize(lat, long, 'edit_');
-                    @endif
+                    open_edit_address_modal(response.data.address_data);
                 }
             });
         }
+
+        function open_edit_address_modal(address_data) {
+            $('#edit-address-modal').modal('show');
+            AIZ.plugins.bootstrapSelect('refresh');
+
+            @if (get_setting('google_map') == 1)
+                var lat     = defaultMapLocation.latitude;
+                var long    = defaultMapLocation.longitude;
+
+                if(address_data.latitude && address_data.longitude) {
+                    lat     = parseFloat(address_data.latitude);
+                    long    = parseFloat(address_data.longitude);
+                }
+
+                initialize(lat, long, 'edit_');
+            @endif
+        }
+
+        @if ($errors->storeAddress->any())
+            $(function () { $('#new-address-modal').modal('show'); });
+        @endif
+        @if ($reopenedAddress !== null)
+            $(function () { open_edit_address_modal(@json($reopenedAddress->only(['latitude', 'longitude']))); });
+        @endif
 
         $(document).on('change', '[name=country_id]', function() {
             var country_id = $(this).val();

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import FieldError from '@/components/FieldError.vue';
 import FormField from '@/components/FormField.vue';
+import RequiredMark from '@/components/RequiredMark.vue';
 import { fieldLabelClass, plainFieldInputClass } from '@/lib/filters';
 import { t } from '@/lib/i18n';
 import type { StoreZone, StoreReferenceOption } from '@/types/store';
@@ -23,9 +24,9 @@ defineProps<{
             maxlength="255"
         />
         <div>
-            <label for="country_id" :class="fieldLabelClass">{{
-                t('store.zones.countries')
-            }}</label>
+            <label for="country_id" :class="fieldLabelClass"
+                >{{ t('store.zones.countries') }}<RequiredMark
+            /></label>
             <select
                 id="country_id"
                 name="country_id[]"

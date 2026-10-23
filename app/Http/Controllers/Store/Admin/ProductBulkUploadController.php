@@ -9,6 +9,7 @@ use App\Models\Category;
 use App\Models\ProductsExport;
 use App\Models\ProductsImport;
 use App\Models\StoreUser;
+use App\Services\ProductSpreadsheetImporter;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
@@ -16,7 +17,6 @@ use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 use Maatwebsite\Excel\Facades\Excel;
-use Maatwebsite\Excel\Validators\ValidationException as ExcelValidationException;
 use PDF;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\Response as HttpResponse;
@@ -45,11 +45,7 @@ class ProductBulkUploadController extends Controller implements HasMiddleware
             throw ValidationException::withMessages(['bulk_file' => __('messages.store_product_import_admin_required')]);
         }
 
-        try {
-            Excel::import(new ProductsImport(notify: false), $request->file('bulk_file'));
-        } catch (ExcelValidationException $exception) {
-            throw ValidationException::withMessages(['bulk_file' => collect($exception->failures())->flatMap(fn ($failure) => $failure->errors())->all()]);
-        }
+        app(ProductSpreadsheetImporter::class)->import(new ProductsImport(notify: false), $request->file('bulk_file'));
 
         return redirect()->route('product_bulk_upload.index');
     }

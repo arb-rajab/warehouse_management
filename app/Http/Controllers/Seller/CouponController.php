@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Seller;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\CouponRequest;
+use App\Http\Requests\Seller\CouponRequest;
 use App\Models\Coupon;
 use App\Models\Product;
 use Auth;
@@ -31,7 +31,8 @@ class CouponController extends Controller
      */
     public function create()
     {
-        return view('shop.seller.coupons.create');
+        $products = $this->couponProducts();
+        return view('shop.seller.coupons.create', compact('products'));
     }
 
 
@@ -44,7 +45,7 @@ class CouponController extends Controller
     public function store(CouponRequest $request)
     {
         $user_id = Auth::user()->id;
-        Coupon::create($request->validated() + [
+        Coupon::create($request->couponAttributes() + [
             'user_id' => $user_id,
         ]);
 
@@ -73,7 +74,8 @@ class CouponController extends Controller
     {
         $coupon = Coupon::findOrFail(decrypt($id));
         Gate::authorize('update', $coupon);
-        return view('shop.seller.coupons.edit', compact('coupon'));
+        $products = $this->couponProducts();
+        return view('shop.seller.coupons.edit', compact('coupon', 'products'));
     }
 
     /**
@@ -86,7 +88,7 @@ class CouponController extends Controller
     public function update(CouponRequest $request, Coupon $coupon)
     {
         Gate::authorize('update', $coupon);
-        $coupon->update($request->validated());
+        $coupon->update($request->couponAttributes());
 
         flash(translate('Coupon has been updated successfully'))->success();
         return redirect()->route('seller.coupon.index');
@@ -110,11 +112,11 @@ class CouponController extends Controller
     public function get_coupon_form(Request $request)
     {
         if($request->coupon_type == "product_base") {
-            $products = filter_products(Product::where('user_id', Auth::user()->id))->get();
-            return view('shop.partials.coupons.product_base_coupon', compact('products'));
+            $products = $this->couponProducts();
+            return view('shop.seller.coupons.fields', ['products' => $products, 'type' => 'product_base']);
         }
         elseif($request->coupon_type == "cart_base"){
-            return view('shop.partials.coupons.cart_base_coupon');
+            return view('shop.seller.coupons.fields', ['type' => 'cart_base']);
         }
     }
 
@@ -123,13 +125,22 @@ class CouponController extends Controller
         if($request->coupon_type == "product_base") {
             $coupon = Coupon::findOrFail($request->id);
             Gate::authorize('update', $coupon);
-            $products = filter_products(Product::where('user_id', Auth::user()->id))->get();
-            return view('shop.partials.coupons.product_base_coupon_edit',compact('coupon', 'products'));
+            $products = $this->couponProducts();
+            return view('shop.seller.coupons.fields', ['coupon' => $coupon, 'products' => $products, 'type' => 'product_base']);
         }
         elseif($request->coupon_type == "cart_base"){
             $coupon = Coupon::findOrFail($request->id);
             Gate::authorize('update', $coupon);
-            return view('shop.partials.coupons.cart_base_coupon_edit',compact('coupon'));
+            return view('shop.seller.coupons.fields', ['coupon' => $coupon, 'type' => 'cart_base']);
         }
     }
+    /** @return \Illuminate\Database\Eloquent\Collection<int, Product> */
+    private function couponProducts(): \Illuminate\Database\Eloquent\Collection
+    {
+        return filter_products(Product::where('user_id', Auth::user()->id))
+            ->select(['id', 'name'])
+            ->with('product_translations:id,product_id,lang,name')
+            ->get();
+    }
+
 }

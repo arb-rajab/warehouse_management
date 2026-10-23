@@ -12,9 +12,11 @@ use App\Http\Requests\Store\Admin\BulkDeleteProductsRequest;
 use App\Http\Requests\Store\Admin\EditReferenceTranslationRequest;
 use App\Http\Requests\Store\Admin\FilterAllProductsRequest;
 use App\Http\Requests\Store\Admin\FilterInHouseProductsRequest;
+use App\Http\Requests\Store\Admin\FilterSellerProductsRequest;
 use App\Http\Requests\Store\Admin\ProductListActionRequest;
 use App\Http\Requests\Store\Admin\ProductVariantCombinationsRequest;
 use App\Http\Requests\Store\Admin\StoreProductRequest;
+use App\Http\Requests\Store\Admin\UpdateProductApprovalRequest;
 use App\Http\Requests\Store\Admin\UpdateProductListFlagRequest;
 use App\Http\Requests\Store\Admin\UpdateProductRequest;
 use App\Http\Resources\Store\ProductFormResource;
@@ -28,10 +30,13 @@ use App\Models\Color;
 use App\Models\FlashDeal;
 use App\Models\Product;
 use App\Models\ProductStock;
+use App\Models\StoreUser;
 use App\Services\ProductStockService;
 use App\Services\ProductTaxService;
 use App\Services\Store\InHouseProductWriter;
 use App\Services\Store\ProductVariantCombinations;
+use App\Support\ProductFormNumber;
+use App\Support\ProductSlug;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -40,16 +45,13 @@ use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
 /**
- * The in-house and all-products lists and their row actions, one Inertia
- * page for both, and the physical product create and edit forms. The seller
- * list and the jQuery endpoints it posts to stay on the root
- * ProductController's Blade.
+ * The in-house, all-products and seller product lists share one Inertia
+ * page and write path, alongside the physical product create/edit forms.
  *
  * Every row action names its list (`list`), touches only a product that
  * list shows (404 otherwise) and returns to it with the list's filters.
@@ -70,10 +72,11 @@ class ProductController extends Controller implements HasMiddleware
             new Middleware('permission:product_edit', only: ['edit', 'sellerEdit', 'update', 'editVariantCombinations']),
             new Middleware('permission:show_in_house_products', only: ['inHouse']),
             new Middleware('permission:show_all_products', only: ['all']),
+            new Middleware('permission:show_seller_products', only: ['seller']),
             // The root ProductController's own gates for the same writes.
-            new Middleware('permission:product_edit', only: ['updatePublished', 'updateFeatured', 'updateForSale']),
-            new Middleware('permission:product_duplicate', only: ['duplicate']),
-            new Middleware('permission:product_delete', only: ['destroy', 'bulkDestroy']),
+            new Middleware('permission:product_edit', only: ['updatePublished', 'updateFeatured', 'updateForSale', 'sellerPublished', 'sellerFeatured', 'updateSaleStatus', 'updateTodaysDeal', 'updateProductApproval']),
+            new Middleware('permission:product_duplicate', only: ['duplicate', 'sellerDuplicate']),
+            new Middleware('permission:product_delete', only: ['destroy', 'bulkDestroy', 'sellerDestroy', 'sellerBulkDestroy']),
         ];
     }
 
@@ -144,6 +147,30 @@ class ProductController extends Controller implements HasMiddleware
     }
 
     /**
+     * The seller list keeps its name-only phrase search and exact state
+     * switches, plus the requested seller/category/approval filters.
+     */
+    public function seller(FilterSellerProductsRequest $request): Response
+    {
+        $query = $this->listQuery(StoreProductList::Seller)
+            ->when($request->filled('search'), fn (Builder $query) => $query->where('name', 'like', '%'.$request->validated('search').'%'))
+            ->when($request->filled('user_id'), fn (Builder $query) => $query->where('user_id', $request->integer('user_id')))
+            ->when($request->filled('approved'), fn (Builder $query) => $query->where('approved', $request->boolean('approved')))
+            ->where('published', $request->boolean('active'))
+            ->where('for_sale', $request->boolean('for_sale'))
+            ->where('featured', $request->boolean('featured'));
+        $this->applyCategoryAndSort($query, $request);
+
+        return $this->renderList(StoreProductList::Seller, $request, $query->orderByDesc('created_at')->orderByDesc('id'), [
+            'active' => $request->boolean('active'),
+            'for_sale' => $request->boolean('for_sale'),
+            'featured' => $request->boolean('featured'),
+            'user_id' => $request->filled('user_id') ? $request->integer('user_id') : null,
+            'approved' => $request->filled('approved') ? $request->boolean('approved') : null,
+        ]);
+    }
+
+    /**
      * The physical product create form, with the options the Blade form
      * listed.
      */
@@ -194,7 +221,7 @@ class ProductController extends Controller implements HasMiddleware
     }
 
     /**
-     * The same edit form, opened from the Blade seller product list, whose
+     * The same edit form, opened from the seller product list, whose
      * language tabs stay on this route.
      */
     public function sellerEdit(EditReferenceTranslationRequest $request, Product $product): Response|RedirectResponse
@@ -280,7 +307,7 @@ class ProductController extends Controller implements HasMiddleware
         DB::transaction(function () use ($request, $product, $stocks, $taxes): void {
             $source = $this->lockedProduct($this->listQuery($request->productList()), $product);
             $copy = $source->replicate();
-            $copy->setAttribute('slug', $source->slug.'-'.Str::random(5));
+            $copy->setAttribute('slug', ProductSlug::duplicate($source->slug));
             $copy->save();
             $stocks->product_duplicate_store($source->stocks()->orderBy('id')->get(), $copy);
             $taxes->product_duplicate_store($source->taxes()->orderBy('id')->get(), $copy);
@@ -327,6 +354,55 @@ class ProductController extends Controller implements HasMiddleware
     }
 
     /**
+     * Adapters retain the former seller-list route names and fix their
+     * scope through the route's productList default, even if list=all is
+     * submitted. The existing actions own validation, writes and redirects.
+     */
+    public function sellerPublished(UpdateProductListFlagRequest $request, Product $product): RedirectResponse
+    {
+        return $this->updatePublished($request, $product);
+    }
+
+    public function sellerFeatured(UpdateProductListFlagRequest $request, Product $product): RedirectResponse
+    {
+        return $this->updateFeatured($request, $product);
+    }
+
+    public function updateSaleStatus(UpdateProductListFlagRequest $request, Product $product): RedirectResponse
+    {
+        return $this->updateForSale($request, $product);
+    }
+
+    public function updateTodaysDeal(UpdateProductListFlagRequest $request, Product $product): RedirectResponse
+    {
+        $this->updateProductTodaysDeal($this->listQuery(StoreProductList::Seller), $product, $request->boolean('status'));
+
+        return $this->redirectToList(StoreProductList::Seller, $request);
+    }
+
+    public function updateProductApproval(UpdateProductApprovalRequest $request, Product $product): RedirectResponse
+    {
+        $this->writeProductApproval($this->listQuery(StoreProductList::Seller), $product, $request->boolean('approved'));
+
+        return $this->redirectToList(StoreProductList::Seller, $request);
+    }
+
+    public function sellerDuplicate(ProductListActionRequest $request, Product $product, ProductStockService $stocks, ProductTaxService $taxes): RedirectResponse
+    {
+        return $this->duplicate($request, $product, $stocks, $taxes);
+    }
+
+    public function sellerDestroy(ProductListActionRequest $request, Product $product): RedirectResponse
+    {
+        return $this->destroy($request, $product);
+    }
+
+    public function sellerBulkDestroy(BulkDeleteProductsRequest $request): RedirectResponse
+    {
+        return $this->bulkDestroy($request);
+    }
+
+    /**
      * The products a list shows before any filter: never an auction or
      * wholesale product, and for the in-house list only the admin's own
      * physical products.
@@ -337,7 +413,11 @@ class ProductController extends Controller implements HasMiddleware
     {
         $query = Product::query()->where('auction_product', 0)->where('wholesale_product', 0);
 
-        return $list === StoreProductList::InHouse ? $query->where('added_by', 'admin')->where('digital', 0) : $query;
+        return match ($list) {
+            StoreProductList::InHouse => $query->where('added_by', 'admin')->where('digital', 0),
+            StoreProductList::Seller => $query->where('added_by', 'seller')->where('digital', 0),
+            StoreProductList::All => $query,
+        };
     }
 
     /**
@@ -360,7 +440,7 @@ class ProductController extends Controller implements HasMiddleware
     /**
      * @param  Builder<Product>  $query
      */
-    private function applyCategoryAndSort(Builder $query, FilterInHouseProductsRequest|FilterAllProductsRequest $request): void
+    private function applyCategoryAndSort(Builder $query, FilterInHouseProductsRequest|FilterAllProductsRequest|FilterSellerProductsRequest $request): void
     {
         $categoryId = $request->validated('category_id');
         $query->when($categoryId !== null, fn (Builder $query) => $query->where('category_id', $categoryId));
@@ -374,11 +454,11 @@ class ProductController extends Controller implements HasMiddleware
      * @param  Builder<Product>  $query
      * @param  array<string, mixed>  $listFilters
      */
-    private function renderList(StoreProductList $list, FilterInHouseProductsRequest|FilterAllProductsRequest $request, Builder $query, array $listFilters): Response
+    private function renderList(StoreProductList $list, FilterInHouseProductsRequest|FilterAllProductsRequest|FilterSellerProductsRequest $request, Builder $query, array $listFilters): Response
     {
         $perPage = $this->resolvePerPage($request, 20);
         $products = $query
-            ->select(['id', 'name', 'ar_name', 'thumbnail_img', 'mat_id', 'api_unit_name', 'unit_equal', 'num_of_sale', 'unit_price', 'collection_id', 'variant_product', 'low_stock_quantity', 'category_id', 'for_sale', 'published', 'featured', 'deleted_from_api', 'slug'])
+            ->select(['id', 'name', 'ar_name', 'thumbnail_img', 'mat_id', 'api_unit_name', 'unit_equal', 'num_of_sale', 'unit_price', 'collection_id', 'variant_product', 'low_stock_quantity', 'category_id', 'for_sale', 'published', 'featured', 'approved', 'todays_deal', 'deleted_from_api', 'slug'])
             ->with([
                 'stocks' => fn ($stocks) => $stocks->select(['id', 'product_id', 'variant', 'qty'])->orderBy('id'),
                 'category:id,name',
@@ -400,6 +480,10 @@ class ProductController extends Controller implements HasMiddleware
             // The legacy category filter listed every category by its base name.
             'categories' => Category::query()->without('category_translations')->select(['id', 'name'])->orderBy('id')->get()->map(fn (Category $category) => ['id' => $category->id, 'name' => $category->name])->all(),
             'defaultLanguage' => config('app.default_language'),
+            'approvalEnabled' => $list === StoreProductList::Seller && (int) get_setting('product_approve_by_admin') === 1,
+            'sellers' => $list === StoreProductList::Seller
+                ? StoreUser::query()->select(['id', 'name'])->where('user_type', 'seller')->orderBy('name')->orderBy('id')->get()->map(fn (StoreUser $seller): array => ['id' => $seller->id, 'name' => $seller->name])->all()
+                : [],
         ]);
     }
 
@@ -481,7 +565,7 @@ class ProductController extends Controller implements HasMiddleware
             'lang' => $lang,
             'languages' => $this->languageOptions(),
             'listType' => $listType,
-            'variants' => [...$variants, 'rows' => $this->editVariantRows($request, $product, $names, (string) $product->getAttribute('unit_price'))],
+            'variants' => [...$variants, 'unmatched' => $product->stocks()->whereIn('variant', app(ProductVariantCombinations::class)->unmatchedStocks($product))->get(['variant', 'price', 'qty', 'sku'])->toArray(), 'rows' => $this->editVariantRows($request, $product, $names, ProductFormNumber::format($product->getAttribute('unit_price')))],
             'initialFiles' => $this->uploadIdPreviews($request, [
                 'photos' => $product->getAttribute('photos'),
                 'thumbnail_img' => $product->thumbnail_img,
@@ -523,7 +607,7 @@ class ProductController extends Controller implements HasMiddleware
         $attributeValues = [];
         $choiceOptions = [];
         foreach ($choices as $id => $storedValues) {
-            $attributeValues[$id] = array_values(($values->get($id) ?? collect())->unique(fn (AttributeValue $value): string => (string) $value->getAttribute('value'))
+            $attributeValues[$id] = array_values(($values->get($id) ?? collect())->uniqueStrict(fn (AttributeValue $value): string => (string) $value->getAttribute('value'))
                 ->map(fn (AttributeValue $value): array => ['id' => (int) $value->getKey(), 'value' => (string) $value->getAttribute('value')])->all());
             $choiceOptions[] = [
                 'attribute_id' => $id,
@@ -555,7 +639,7 @@ class ProductController extends Controller implements HasMiddleware
         }
         $stocks = ProductStock::query()->select(['id', 'variant', 'price', 'sku', 'qty', 'image'])
             ->where('product_id', $product->id)->whereIn('variant', $names)->orderBy('id')->get()
-            ->unique(fn (ProductStock $stock): string => (string) $stock->getAttribute('variant'))
+            ->uniqueStrict(fn (ProductStock $stock): string => (string) $stock->getAttribute('variant'))
             ->keyBy(fn (ProductStock $stock): string => 'variant:'.$stock->getAttribute('variant'));
         $previews = $this->uploadIdPreviews($request, $stocks->map(fn (ProductStock $stock) => $stock->getAttribute('image'))->all());
 
@@ -566,7 +650,7 @@ class ProductController extends Controller implements HasMiddleware
                 ? ['variant' => $name, 'price' => $unitPrice, 'sku' => '', 'qty' => '10', 'image' => null, 'files' => []]
                 : [
                     'variant' => $name,
-                    'price' => (string) $stock->getAttribute('price'),
+                    'price' => ProductFormNumber::format($stock->getAttribute('price')),
                     'sku' => (string) $stock->getAttribute('sku'),
                     'qty' => (string) $stock->getAttribute('qty'),
                     'image' => $stock->getAttribute('image') === null ? null : (string) $stock->getAttribute('image'),
@@ -592,6 +676,6 @@ class ProductController extends Controller implements HasMiddleware
      */
     private function redirectToList(StoreProductList $list, Request $request): RedirectResponse
     {
-        return redirect()->route($list === StoreProductList::InHouse ? 'products.admin' : 'products.all', Arr::except($request->query(), ['list']));
+        return redirect()->route('products.'.$list->value, Arr::except($request->query(), ['list']));
     }
 }

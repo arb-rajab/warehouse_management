@@ -3,11 +3,13 @@
 namespace Database\Seeders;
 
 use App\Models\User;
+use Database\Seeders\Concerns\RefusesProduction;
 use Illuminate\Database\Seeder;
-use RuntimeException;
 
 class DatabaseSeeder extends Seeder
 {
+    use RefusesProduction;
+
     /**
      * Seed the application's database.
      *
@@ -18,9 +20,7 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        if (app()->isProduction()) {
-            throw new RuntimeException('Refusing to run database seeders in production.');
-        }
+        $this->refuseInProduction();
 
         User::factory()->create([
             'name' => 'Test User',

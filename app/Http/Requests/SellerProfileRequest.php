@@ -2,18 +2,29 @@
 
 namespace App\Http\Requests;
 
+use App\Http\Requests\Concerns\RejectsUnexpectedInput;
+use App\Models\StoreUser;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class SellerProfileRequest extends FormRequest
 {
+    use RejectsUnexpectedInput;
+
+    protected $errorBag = 'sellerProfile';
+
     /**
      * Determine if the user is authorized to make this request.
      *
      * @return bool
      */
-    public function authorize()
+    public function authorize(): bool
     {
-        return true;
+        if (env('DEMO_MODE') === 'On') {
+            return true;
+        }
+
+        return StoreUser::query()->findOrFail($this->route('id'))->is($this->user('store'));
     }
 
     /**
@@ -21,18 +32,20 @@ class SellerProfileRequest extends FormRequest
      *
      * @return array
      */
-    public function rules()
+    public function rules(): array
     {
-        $newPasswordRule        = 'sometimes';
-        $confirmPasswordRule    = 'sometimes';
-        if ($this->request->get('new_password') != null && $this->request->get('confirm_password') != null) {
-            $newPasswordRule       = ['min:6'];
-            $newPasswordRule       = ['min:6'];
-        }
         return [
-            'name'              => ['required', 'max:191'],
-            'new_password'      => $newPasswordRule,
-            'confirm_password'  => $confirmPasswordRule,
+            'name' => ['required', 'string', 'max:191'],
+            'phone' => ['nullable', 'string', 'max:20'],
+            'new_password' => ['bail', 'nullable', 'required_with:confirm_password', 'string', 'min:6', 'max:72', 'regex:/\A[^\x00]{1,72}\z/', 'confirmed:confirm_password'],
+            'confirm_password' => ['nullable', 'required_with:new_password', 'string'],
+            'photo' => ['nullable', 'integer', Rule::exists('uploads', 'id')->where('user_id', $this->user('store')?->id)->where('type', 'image')],
+            'cash_on_delivery_status' => ['sometimes', 'boolean'],
+            'bank_payment_status' => ['sometimes', 'boolean'],
+            'bank_name' => ['nullable', 'string', 'max:255'],
+            'bank_acc_name' => ['nullable', 'string', 'max:200'],
+            'bank_acc_no' => ['nullable', 'string', 'max:50'],
+            'bank_routing_no' => ['nullable', 'integer', 'between:-2147483648,2147483647'],
         ];
     }
 

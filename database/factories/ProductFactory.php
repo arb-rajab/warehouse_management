@@ -104,4 +104,13 @@ class ProductFactory extends Factory
     {
         return $this->state(['published' => false]);
     }
+
+    /** A row previously written by products:sync; model writes cannot set its marker. */
+    public function feedOrigin(): static
+    {
+        return $this->afterCreating(function (Product $product): void {
+            $product->getConnection()->table($product->getTable())->where('id', $product->id)->update(['synced_at' => now()]);
+            $product->refresh();
+        });
+    }
 }

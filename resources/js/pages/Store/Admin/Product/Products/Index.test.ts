@@ -10,6 +10,16 @@ import {
     duplicate,
     edit,
     inHouse as inHouseProducts,
+    seller as sellerProducts,
+    sellerEdit,
+    sellerDuplicate,
+    sellerDestroy,
+    sellerBulkDestroy,
+    sellerPublished,
+    sellerFeatured,
+    updateSaleStatus,
+    updateTodaysDeal,
+    updateProductApproval,
     updateFeatured,
     updateForSale,
     updatePublished,
@@ -65,6 +75,7 @@ vi.mock('@inertiajs/vue3', async () => {
 const allPermissions = [
     'show_in_house_products',
     'show_all_products',
+    'show_seller_products',
     'add_new_product',
     'product_edit',
     'product_duplicate',
@@ -81,14 +92,22 @@ function mountPage({
     products = [storeProductListRow()],
     filters = storeProductListFilters(),
     permissions = allPermissions,
+    approvalEnabled = false,
+    sellers = [],
 }: {
     listType?: StoreProductListType;
     products?: StoreProductListRow[];
     filters?: StoreProductListFilters;
     permissions?: string[];
+    approvalEnabled?: boolean;
+    sellers?: { id: number; name: string }[];
 } = {}) {
     usePageMock.mockReturnValue({
-        url: (listType === 'all' ? allProducts : inHouseProducts).url(),
+        url: {
+            admin: inHouseProducts,
+            all: allProducts,
+            seller: sellerProducts,
+        }[listType].url(),
         props: defaultAuthProps({ store: storeSharedProps({ permissions }) }),
     });
     const wrapper = mount(Index, {
@@ -98,6 +117,8 @@ function mountPage({
             filters,
             categories,
             defaultLanguage: 'en',
+            approvalEnabled,
+            sellers,
         },
     });
     wrappers.push(wrapper);
@@ -666,6 +687,162 @@ describe('Store product lists Index', () => {
         ).toBeDefined();
         expect(busy.get('h1 + div button').text()).toBe(
             t('store.products.fetching'),
+        );
+    });
+});
+
+describe('seller product list', () => {
+    it.each(['en', 'ar'] as const)(
+        'renders the seller filters and labels in %s',
+        (locale) => {
+            i18n.global.locale.value = locale;
+            const wrapper = mountPage({
+                listType: 'seller',
+                approvalEnabled: true,
+                sellers: [{ id: 9, name: '<b>Seller</b>' }],
+                filters: storeProductListFilters({
+                    user_id: 9,
+                    approved: false,
+                }),
+            });
+            expect(wrapper.getComponent(Head).props('title')).toBe(
+                t('store.nav.sellerProducts'),
+            );
+            expect(wrapper.get('h1').text()).toBe(
+                t('store.nav.sellerProducts'),
+            );
+            expect(forms(wrapper)[0].props('action')).toEqual(sellerProducts());
+            expect(wrapper.findComponent(AddResourceLink).exists()).toBe(false);
+            expect(wrapper.text()).not.toContain(t('store.products.fetch'));
+
+            for (const key of [
+                'seller',
+                'allSellers',
+                'approvalStatus',
+                'allApprovals',
+                'approved',
+                'unapproved',
+            ]) {
+                expect(t(`store.products.${key}`)).not.toBe(
+                    `store.products.${key}`,
+                );
+                expect(wrapper.text()).toContain(t(`store.products.${key}`));
+            }
+
+            expect(wrapper.text()).toContain(
+                t('store.products.form.todaysDeal'),
+            );
+            expect(wrapper.get('#user_id').element).toHaveProperty(
+                'value',
+                '9',
+            );
+            expect(wrapper.get('#approved').element).toHaveProperty(
+                'value',
+                '0',
+            );
+            expect(wrapper.find('#user_id b').exists()).toBe(false);
+            expect(wrapper.get('#user_id').text()).toContain('<b>Seller</b>');
+            expect(wrapper.find('input[name=deleted]').exists()).toBe(false);
+        },
+    );
+    it('uses the seller edit, switches, duplicate, DELETE and bulk routes with current query', () => {
+        const product = storeProductListRow();
+        const wrapper = mountPage({
+            listType: 'seller',
+            approvalEnabled: true,
+        });
+        const query = { mergeQuery: { list: 'seller' } };
+        expect(
+            wrapper
+                .findAllComponents(StoreStatusButton)
+                .map((button) => button.props()),
+        ).toMatchObject([
+            {
+                action: updateSaleStatus(product, query),
+                active: true,
+                inputName: 'status',
+            },
+            { action: sellerPublished(product, query), active: true },
+            {
+                action: updateProductApproval(product, query),
+                active: true,
+                inputName: 'approved',
+            },
+            { action: sellerFeatured(product, query), active: false },
+            { action: updateTodaysDeal(product, query), active: false },
+        ]);
+        const actions = wrapper.findAllComponents(TableActionLink);
+        expect(
+            actions
+                .find((action) =>
+                    action.text().includes(t('store.products.edit')),
+                )
+                ?.props('href'),
+        ).toEqual(sellerEdit(product, { query: { lang: 'en' } }));
+        expect(
+            actions
+                .find((action) =>
+                    action.text().includes(t('store.products.duplicate')),
+                )
+                ?.props('href'),
+        ).toEqual(sellerDuplicate(product, query));
+        const remove = actions.find((action) =>
+            action.text().includes(t('store.products.delete')),
+        )!;
+        expect(remove.props('href')).toEqual(sellerDestroy(product, query));
+        expect(remove.attributes('method')).toBe('delete');
+        const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false);
+        const onBefore = remove
+            .getComponent(Link)
+            .props('onBefore') as () => boolean;
+        expect(onBefore()).toBe(false);
+        expect(confirm).toHaveBeenCalledWith(
+            t('common.confirmDelete', { label: product.name }),
+        );
+        expect(forms(wrapper)[1].props('action')).toEqual(
+            sellerBulkDestroy(query),
+        );
+        confirm.mockRestore();
+    });
+    it('hides approval when its setting is off and all writes without their permissions', () => {
+        const wrapper = mountPage({
+            listType: 'seller',
+            permissions: ['show_seller_products'],
+        });
+        expect(wrapper.find('#approved').exists()).toBe(false);
+        expect(wrapper.findAllComponents(StoreStatusButton)).toHaveLength(0);
+        expect(wrapper.findAllComponents(TableActionLink)).toHaveLength(1);
+        expect(forms(wrapper)).toHaveLength(1);
+    });
+    it('offers the other four seller switches when approval is disabled', () => {
+        const wrapper = mountPage({ listType: 'seller' });
+        expect(wrapper.find('#approved').exists()).toBe(false);
+        expect(
+            wrapper
+                .findAllComponents(StoreStatusButton)
+                .map((button) => button.props('label')),
+        ).toEqual([
+            t('store.products.forSale'),
+            t('store.products.active'),
+            t('store.products.featured'),
+            t('store.products.form.todaysDeal'),
+        ]);
+    });
+    it('preserves an explicitly unapproved filter and seller on per-page changes', async () => {
+        const wrapper = mountPage({
+            listType: 'seller',
+            filters: storeProductListFilters({
+                approved: false,
+                user_id: 9,
+                active: true,
+            }),
+        });
+        wrapper.getComponent(Pagination).vm.$emit('update:perPage', 10);
+        await flushPromises();
+        expect(getMock).toHaveBeenCalledWith(
+            sellerProducts.url(),
+            { per_page: 10, approved: 0, user_id: 9, active: 1 },
+            { preserveState: true, replace: true },
         );
     });
 });

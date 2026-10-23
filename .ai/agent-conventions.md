@@ -435,3 +435,12 @@ of `.ai/rules/app-providers.md`.
 - Every submit form validates client-side in addition to its backend
   validation; the backend stays authoritative for anything requiring a round
   trip (uniqueness, existence, auth).
+
+## Forms: required and optional fields
+
+- Follow [rules/form-required-fields.md](rules/form-required-fields.md): a field
+  the server rule requires shows `RequiredMark` (Vue) or `<x-required-mark />`
+  (Blade) and carries `required`; optional fields are unmarked (or "(optional)"
+  where most fields are required); a form with a required field shows the legend.
+- The server rule is the source of truth. Test that the marks match it, and keep
+  `RequiredFieldsRatchetTest` green; check other forms with `php artisan forms:audit-required`.

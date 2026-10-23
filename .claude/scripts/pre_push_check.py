@@ -109,6 +109,15 @@ MYSQL_TESTS = [
     'tests/Feature/Database/SchemaIdentifierLengthTest.php',
     'tests/Feature/Database/AddFulltextIndexToProductsTableTest.php',
     'tests/Feature/Database/AddIndexesToStoreTablesTest.php',
+    'tests/Feature/Database/LoadLegacyReferenceDataTest.php',
+    'tests/Feature/Database/WidenMapLongitudeColumnsTest.php',
+    'tests/Feature/Database/AddSyncedAtToProductsTableTest.php',
+    'tests/Feature/Console/SyncProductsCommandTest.php',
+    'tests/Feature/ProductColumnOwnershipTest.php',
+    'tests/Feature/SellerProductPersistenceTest.php',
+    'tests/Feature/SellerDigitalProductPersistenceTest.php',
+    'tests/Feature/SellerCatalogueRowRulesTest.php',
+    'tests/Feature/Store/Admin/ProductMySqlEditTest.php',
 ]
 
 # The sandbox ships Chromium at a fixed path that playwright.config.ts reads.

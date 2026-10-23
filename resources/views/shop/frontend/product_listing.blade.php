@@ -20,19 +20,10 @@
 @section('meta_title'){{ $meta_title }}@stop
 @section('meta_description'){{ $meta_description }}@stop
 
-@section('meta')
-    <!-- Schema.org markup for Google+ -->
-    <meta itemprop="name" content="{{ $meta_title }}">
-    <meta itemprop="description" content="{{ $meta_description }}">
-
-    <!-- Twitter Card data -->
-    <meta name="twitter:title" content="{{ $meta_title }}">
-    <meta name="twitter:description" content="{{ $meta_description }}">
-
-    <!-- Open Graph data -->
-    <meta property="og:title" content="{{ $meta_title }}" />
-    <meta property="og:description" content="{{ $meta_description }}" />
+@section('structured_data')
+    @include('shop.frontend.partials.json_ld', ['schemas' => \App\Support\StructuredData::listing($category_id ?? null, $brand_id ?? null)])
 @endsection
+
 
 @section('content')
 

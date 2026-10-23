@@ -9,7 +9,8 @@ paths:
   - 'resources/js/components/StoreNewsletterFormFields.vue,resources/js/components/StoreNewsletterRecipients.vue,resources/js/components/StoreTicketReplyForm.vue,resources/js/lib/storeSupportTicket.ts,app/Services/Store/**'
   - 'resources/js/components/StoreWebsite*'
   - 'resources/js/components/StoreProduct*,resources/js/lib/storeProductForm.ts'
-  - 'resources/js/components/StoreGoogleMapFormFields.vue'
+  - 'resources/js/components/StoreGoogleMapFormFields.vue,resources/js/components/StoreDashboardChart.vue'
+  - 'resources/js/components/StoreSeller*'
   - 'resources/js/components/StoreTripStatusDialog.vue,resources/js/components/StoreTripFormFields.vue,resources/js/components/StoreTripMap.vue,resources/js/components/StoreLeafletMap.vue,resources/js/components/StoreVisitMap.vue,resources/js/lib/storeTrip.ts'
   - 'app/Http/Controllers/Store/**,app/Http/Requests/Store/**,app/Http/Resources/Store/**'
   - 'app/Http/Middleware/HandleInertiaRequests.php,app/Http/Middleware/HandleStoreBladePages.php,app/Http/Middleware/SendSecureHeaders.php'
@@ -19,7 +20,18 @@ paths:
 
 # Moving the store back office from Blade to Inertia
 
-Latest follow-up: [Google Map settings](#32-google-map-settings-2026-10-18).
+Seller catalogue follow-up: [digital validation and transactional persistence, plus seller row limits](#55-seller-digital-catalogue-and-remaining-seller-row-rules-pr-c-2026-10-23).
+
+Reference-data follow-up: [legacy countries, states, currencies, languages and CMS pages as a migration](#46-legacy-reference-data-as-a-migration-2026-10-21).
+Forms follow-up: [required and optional form fields](#44-required-and-optional-form-fields-2026-10-21), then [the public address forms and the checkout address pick](#45-public-forms-phase-2a-address-forms-and-the-checkout-address-pick-2026-10-21), then [the longitude columns, seller registration and create customer](#47-public-forms-phase-2a-continued-the-longitude-columns-seller-registration-create-customer-2026-10-21).
+Latest follow-up: [retire the unused admin shells](#39-retire-the-unused-admin-shells-2026-10-20).
+Catalogue follow-up: [admin seller product list](#38-admin-seller-product-list-2026-10-20).
+Classified-products follow-up: [admin classified products](#37-admin-classified-products-2026-10-19).
+Seller-settings follow-up: [seller commission and verification form](#36-seller-commission-and-verification-form-2026-10-19).
+Payment follow-up: [seller payments and withdrawals](#35-seller-payments-and-withdrawals-2026-10-19).
+Seller-account follow-up: [seller list and accounts](#34-seller-list-and-accounts-2026-10-19).
+Dashboard follow-up: [admin dashboard](#33-admin-dashboard-2026-10-18).
+Map-settings follow-up: [Google Map settings](#32-google-map-settings-2026-10-18).
 Visit follow-up: [representative visit details and day maps](#31-representative-visit-details-and-day-maps-2026-10-18).
 Trip-map follow-up: [the trip map picker on Leaflet from npm](#30-trip-map-picker-2026-10-17).
 Server-status follow-up: [the server status page's deletion](#29-server-status-page-deletion-2026-10-17).
@@ -43,7 +55,7 @@ Customer-package follow-up: [customer package migration verification](#12-custom
 Carrier follow-up: [carrier migration verification](#11-carrier-administration-follow-up-2026-10-12).
 PR #377 verification: [final all-store browser results](../store-backoffice-reconciliation-20261011.md#final-all-store-browser-verification-2026-10-12)
 close the pending browser gate. Earlier dated verification sections remain
-historical evidence; §10 records reconciliation results and §§11–32 record
+historical evidence; §10 records reconciliation results and §§11–39 record
 subsequent module verification and limits.
 
 ## 1. Decision and scope
@@ -57,8 +69,9 @@ new dependencies, feature usage, removal or changes in business behavior.
 - **Not in scope:** the storefront, the seller area, the store's auth pages,
   its emails and its PDFs. They stay Blade.
 
-The back office moves one module at a time. While it does, converted and
-unconverted pages share `/temp` (§2.6).
+The back-office Blade to Inertia conversion is complete (§39). The storefront,
+seller panel, auth pages, emails and PDFs remain outside it. They share `/temp`
+with the Inertia back office through the coexistence mechanism (§2.6).
 
 - The original audit baseline predates the staff/roles pilot. Do not add
   independently developed branch counts or treat their progress snapshots as
@@ -112,8 +125,8 @@ keeps WMS's `locale === 'ar'`.
   and `LogoutLink` posting to the store's `shop.logout`;
 - below `lg`, a menu button.
 
-**Gates.** The menu data is `lib/storeAdminMenu.ts`. It is the Blade sidebar
-(`inc/admin_sidenav`), with every entry gated as Blade gated it:
+**Gates.** The menu data is `lib/storeAdminMenu.ts`, now the only back-office
+sidebar. It preserves the established gates of the retired Blade sidebar (§39):
 
 - `permission`, which may be any-of;
 - `setting`: a business setting that switches the section on. The vendor's
@@ -152,8 +165,8 @@ edit (§23) forms are Inertia pages.
 - **Integrated shell:** permission-filtered badge counts, menu search, the
   current account’s notifications dropdown and narrowly scoped Clear Cache.
   Profile and notification links use the selected migrated controllers. The
-  dashboard itself remains Blade; Chart.js is now owner-approved (§5) and its
-  conversion is a later step.
+  dashboard uses Inertia with bundled Chart.js since §33; its menu entry is
+  an Inertia visit.
 
 **Shared with WMS.** Both layouts genuinely need these:
 
@@ -393,8 +406,13 @@ Do every step for each module, in one change per batch.
 2. **Controller**
    - Create `App\Http\Controllers\Store\Admin\<Name>Controller` with
      `HasMiddleware`, keeping the existing `permission:` names per action.
-   - Delete the root-namespace legacy controller.
-   - Remove it from both `pint.json` and `phpstan.neon` in the same change
+   - Delete the root-namespace legacy controller once its last consumer moves.
+     Through seller stage 34, root `SellerController::payment_modal` retained
+     its exclusions while payout administration remained Blade; §35 removes it.
+   - Since §35 the three root seller/payment/withdrawal controllers are removed.
+     Root `CommissionController` remains only for `calculateCommission`, called
+     by `Helpers.php` checkout; its exclusion pair stays.
+   - When deleted, remove it from both `pint.json` and `phpstan.neon` in the same change
      (`StaticAnalysisExclusionsTest`). A legacy model you clean up comes out
      of both lists too (`Staff`).
 3. **Pages and resources**
@@ -445,6 +463,10 @@ Do every step for each module, in one change per batch.
      - model objects as params;
      - `{ mergeQuery: {} }` on deletes.
    - Give every field the native HTML5 constraints that mirror its rules.
+   - Mark every field the request requires (`required` on the field component,
+     or `<RequiredMark />` in a hand-written label) and label optional ones
+     "(optional)" only where most fields are required; `ResourceFormPage`
+     shows the legend (.ai/rules/form-required-fields.md, §44).
 7. **Strings and menu**
    - Add `store.<module>.*` keys to both `en.json` and `ar.json`.
    - Flip the module's entries in `lib/storeAdminMenu.ts` to `inertia: true`,
@@ -476,13 +498,19 @@ Do every step for each module, in one change per batch.
         hrefs, `Pagination`);
       - every static label;
       - permission-gated buttons, both ways;
-      - the `confirmDelete` wiring.
+      - the `confirmDelete` wiring;
+      - the required marks match the FormRequest: marked labels equal the
+        `required` controls, which equal the request's required fields, and
+        the legend shows (`StoreStaffFormFields.test.ts`). Keep
+        `RequiredFieldsRatchetTest` green; never add to its baseline for a new
+        form.
     - Add fixtures to `testing/factories.ts`.
 11. **Playwright**
     - Write a `tests/e2e/store-*.spec.ts` for browser-only behaviour: native
       confirms, RTL arrows, dark-mode contrast.
     - `loginAsStoreAdmin()` signs in as the seeded
-      `store-admin@example.com` / `password` (`StoreUserSeeder`).
+      `store-admin@example.com` / `password` (`StoreUserSeeder`, which refuses
+      production since §41; Playwright seeds with `APP_ENV=testing`).
 12. **Verify:** run `python3 .claude/scripts/pre_push_check.py`.
 
 **What the staff pilot changed in behaviour.** Keep these deliberate in later
@@ -514,35 +542,39 @@ modules too:
     (`RoleController::REMOVED_ADDON_SECTIONS`).
 
 
-## 4. Integrated status (2026-10-18)
+## 4. Integrated status (2026-10-20)
 
 This reflects integrated code and the carrier, customer-package, category,
 brand, digital-product, in-house/all-products list, general-settings,
 blog-editor, newsletter/ticket-detail, website-settings, digital-product
 form, physical product create and edit form, trip list, trip form, trip
 orders, trip detail, legacy reviews retirement, server status deletion and trip map
-picker and representative visit detail follow-ups in §§11–31. The original
+picker, representative visit detail, Google Map settings and dashboard
+follow-ups in §§11–39, including all three seller administration stages, admin classified products and the admin seller product list. The original
 reconciliation was based on `8e3f82b60b2b4dc951b97ccfed985a75e9e6be69` and
 merged through PR #377. Carrier administration was then implemented separately
 from latest `origin/develop` at `018dd1802c0b2fc99ffbf0e097594fe0f0f3dfef`.
-Verification below distinguishes the original reconciliation from this follow-up.
+Verification below distinguishes the original reconciliation from each follow-up.
+The back-office Blade to Inertia conversion is complete; §39 retires its dead shells.
 
 | Module/subset | State | Actual behavior / remaining work |
 | --- | --- | --- |
 | Staff and roles | Complete pilot | Existing six Inertia pages retained; action gates unchanged |
-| Reference/shipping/tax/currency | Complete selected subset | Canonical `35ae3133` controllers/forms/routes; duplicate `e5523338` implementation superseded |
-| Carrier administration | Complete | List/create/edit and CRUD/status use Inertia; existing `manage_carriers` gate, tariff contract and public/API consumers preserved (§11) |
-| Language/settings | Complete selected subset | Language CRUD and translation-selector validation separated; dedicated settings endpoints with reserved-key protection; general settings use Inertia with a typed writer and a config-managed timezone (§17); the generic `business_settings.update` writer is retired (§20); the Google Map settings GET uses Inertia and the approved Leaflet picker (§32; verification pending) |
-| Reports/notifications | Complete selected subset | Inertia report/admin notification routes; public/customer/seller notification consumers remain |
-| Uploads/profile | Complete selected subset | Canonical `944e2e1e` backend/picker; per-action authorization and authenticated-user profile |
-| Customers/representatives | Partial | Customers, addresses, representatives/packages/payments, customer package administration (§12) and visit list/detail/day maps (§31) implemented; classified products are to be converted (owner decision, §5), a later step |
-| Catalogue | Partial | Attributes/values, colors, brand discount, reviews (the legacy Blade list retired, §28), bulk import/export and offers catalogue implemented; category (§13) and brand (§14) administration complete; digital product list, deletion, download and switches converted (§15); digital product create/edit converted on the shared editor and canonical uploader (§21); in-house and all-products lists with their switches, duplicate, delete and bulk delete converted (§16); physical product create converted with its typed variant/SKU endpoint (§22); physical product edit converted with translation tabs and stored variant rows (§23); the seller product list stays Blade with seller administration |
-| Website/support | Complete selected subset | Header/home, footer, appearance, custom pages (§20), conversations, product queries, the ticket list and the ticket detail with its typed reply use Inertia; footer, appearance and page rich text use the shared editor, cleaned on write (§20); the header/footer scripts stay on their compatibility endpoint as plain code fields; script policy, `manage_website_scripts` and rich-text WAF exceptions stay held |
-| Marketing/blog | Complete selected subset | Coupons, flash/offer deals, campaign products, popups, subscribers and blog categories/list/actions integrated; blog post create/edit (§18) and the newsletter form (§19) use Inertia with the shared Tiptap editor; the typed newsletter send and bounded recipient search are unchanged |
-| Logistics | Partial | Drivers/trucks converted; the all-trips and today's-trips lists with their status dialog, notes, delete and bulk delete converted (§24); the trip create and edit forms converted without their map (§25); the trip orders list with its bulk status, invoice number and delivered actions converted (§26); the trip detail with its checkpoint notes, status and CMR download converted without its map (§27); the trip map picker converted on Leaflet from npm (§30); visit list/detail/day maps use Inertia and bundled Leaflet (§31) |
-| Orders/dashboard | Partial | Orders and entry forms converted; stored tax metadata and line-price-only grand total preserved; shell utilities integrated; dashboard conversion is a later step (Chart.js owner-approved, §5) |
-| Seller administration | To convert | Existing seller Blade screens remain, including the seller product list (`products.seller`, §16); the owner decided they are converted, not deleted (§5), in later steps |
-| Public/seller/auth/PDF consumers | Retained | Blade coexistence, PDF layouts, Inertia root and CSP middleware remain |
+| Reference/shipping/tax/currency | Complete | Canonical `35ae3133` controllers/forms/routes; duplicate `e5523338` implementation superseded; Setup required-field follow-up complete (§56), with conditional marks and retained scanner limitations |
+| Carrier administration | Complete | List/create/edit and CRUD/status use Inertia; existing `manage_carriers` gate, tariff contract and public/API consumers preserved (§11); required tariff/group marks follow free shipping (§56) |
+| Language/settings | Complete | Language CRUD and translation-selector validation separated; dedicated settings endpoints with reserved-key protection; general settings use Inertia with a typed writer and a config-managed timezone (§17); the generic `business_settings.update` writer is retired (§20); the Google Map settings GET uses Inertia and the approved Leaflet picker (§32) |
+| Reports/notifications | Complete | Inertia report/admin notification routes; public/customer/seller notification consumers remain |
+| Uploads/profile | Complete | Canonical `944e2e1e` backend/picker; per-action authorization and authenticated-user profile |
+| Customers/representatives | Complete | Customers, addresses, representatives/packages/payments, customer package administration (§12), visit list/detail/day maps (§31) and the admin classified-products list/publish/delete (§37) use Inertia; customer-facing classified pages and the mobile API remain separate |
+| Catalogue | Complete | Attributes/values, colors, brand discount, reviews (the legacy Blade list retired, §28), bulk import/export and offers catalogue implemented; category (§13) and brand (§14) administration complete; digital product list, deletion, download and switches converted (§15); digital product create/edit converted on the shared editor and canonical uploader (§21); in-house and all-products lists with their switches, duplicate, delete and bulk delete converted (§16); physical product create converted with its typed variant/SKU endpoint (§22); physical product edit converted with translation tabs and stored variant rows (§23); the admin seller product list, its approval and remaining row actions use the same Inertia list and shared writer (§38) |
+| Website/support | Complete | Header/home, footer, appearance, custom pages (§20), conversations, product queries, the ticket list and the ticket detail with its typed reply use Inertia; footer, appearance and page rich text use the shared editor, cleaned on write (§20); the header/footer scripts stay on their compatibility endpoint as plain code fields; script policy, `manage_website_scripts` and rich-text WAF exceptions stay held; Website required-field follow-up complete (§56), with scanner limitations retained |
+| Marketing/blog | Complete | Coupons, flash/offer deals, campaign products, popups, subscribers and blog categories/list/actions integrated; blog post create/edit (§18) and the newsletter form (§19) use Inertia with the shared Tiptap editor; the typed newsletter send and bounded recipient search are unchanged |
+| Logistics | Complete | Drivers/trucks converted; the all-trips and today's-trips lists with their status dialog, notes, delete and bulk delete converted (§24); the trip create and edit forms converted without their map (§25); the trip orders list with its bulk status, invoice number and delivered actions converted (§26); the trip detail with its checkpoint notes, status and CMR download converted without its map (§27); the trip map picker converted on Leaflet from npm (§30); visit list/detail/day maps use Inertia and bundled Leaflet (§31) |
+| Orders/dashboard | Complete | Orders and entry forms converted; stored tax metadata and line-price-only grand total preserved; shell utilities integrated; dashboard converted to Inertia with bundled Chart.js (§33) |
+| Seller administration | Complete: stages 34–36 | Seller accounts/verification/profile (§34), payments/withdrawals (§35), commission and verification form configuration (§36) use Inertia. Seller administration conversion is complete. The admin seller product list is converted with the catalogue in §38; no checkout, seller-area, storefront or role-grant policy changes |
+| Back-office shells | Retired | No application consumer remains; three dead files removed, seven protected backend templates retained (§39) |
+| Seller catalogue validation | Implemented; verification in §55 | Physical panel (§§53–54), digital panel and seller import row limits (§55); seller UI stays Blade |
+| Public/seller/auth/email/PDF consumers | Retained | Blade coexistence, PDF layouts, Inertia root and CSP middleware remain |
 
 ### 4.1 Seller prerequisite and role grants
 
@@ -550,14 +582,22 @@ Verification below distinguishes the original reconciliation from this follow-up
 Feature flags and checked-in owner-approval claims did not establish seller or
 classified feature-use approval; the owner has since decided (2026-10-17, §5)
 that the seller administration and the customer classified products are
-converted, not deleted, in later steps. Until each converts, keep the existing
-seller area and customer classified-product controllers/routes/views. Customer package administration is converted in §12; its purchase, payment and mobile API consumers remain separate.
+converted, not deleted. The owner reaffirmed this for step 34 (2026-10-19),
+overriding the earlier decision-blocked status. Seller list/account screens
+are converted in §34, payments/withdrawals in §35, and commission/verification
+configuration in §36. Seller administration conversion is complete; admin
+classified products use Inertia in §37. The admin seller catalogue list uses Inertia since §38. This decision
+grants no roles and changes no business policy. The seller area
+remains outside this conversion, with its controllers/routes/views retained.
+Customer-facing classified-product handlers stay; only the admin list and writes use the §37 controller.
+Customer package administration is converted in §12; its purchase, payment and
+mobile API consumers remain separate.
 
 Union permission definitions while retaining per-action gates. Idempotent
 definition migrations do not assign permissions to existing roles and do not
 delete pre-existing grants on rollback. Production role assignments must be
 reviewed explicitly; creating a permission does not authorize staff. The seller
-commission activation Blade form retains its `{type,value}` contract through a
+commission activation controls retain their `{type,value}` contract through a
 dedicated allowlisted compatibility endpoint, not a general settings writer.
 
 ## 5. Conflict decisions and retained work
@@ -587,7 +627,7 @@ dedicated allowlisted compatibility endpoint, not a general settings writer.
   forms use its existing route name. Preserve upload URL safety and download/PDF
   behavior. No Composer manifest or lock changes; the frontend manifests
   changed only for the owner-approved Tiptap packages (§18) and Leaflet with
-  its types (§30).
+  its types (§30), and Chart.js (§33).
 - **Tiptap: owner-approved and active (2026-10-13, §18).** The owner approved
   Tiptap as the shared back-office editor. `StoreRichTextField` is the one
   rich-text field for converted screens; blog post create/edit (§18), the
@@ -606,26 +646,45 @@ dedicated allowlisted compatibility endpoint, not a general settings writer.
   resolves them (it adds `@types/geojson` 7946.0.16 for the types); the trip
   map picker is its first consumer, with OpenStreetMap tiles (the provider
   the Blade maps already used) allowed in the strict `img-src` (§2.5).
-  Chart.js is approved but not yet installed: the dashboard conversion adds it.
-  The visit detail/day maps use its shared base since §31; Google Map settings reuse it in §32, replacing only the admin picker with OpenStreetMap tiles, without widening CSP or changing the storefront Google Maps partial. Their unpkg
-  Leaflet 1.7.1 imports are removed. The Blade dashboard's chart assets stay
-  while that screen remains Blade.
+  Chart.js is active since §33: `chart.js` **4.5.1**, pinned exactly, with
+  `@kurkle/color` 0.3.4 resolved by npm. Only bar/doughnut controllers, arc/bar
+  elements, category/linear scales and legend/tooltip plugins are registered.
+  Canvas rendering needs no CSP change.
+  The visit detail/day maps use the shared Leaflet base since §31; Google Map settings reuse it in §32, replacing only the admin picker with OpenStreetMap tiles, without widening CSP or changing the storefront Google Maps partial. Their unpkg
+  Leaflet 1.7.1 imports are removed. The shared AIZ chart helper and vendor assets stay: the seller dashboard
+  still calls `AIZ.plugins.chart`.
 - **Sellers and classified products: convert, not delete (owner decision,
   2026-10-17).** The seller administration screens (§5.1 `sellers/`, the
   seller product list) and the customer classified products are converted in
-  later steps, keeping their routes and gates; none is deleted.
-- **`products` writers: owner decision pending, behaviour unchanged.** Brand
-  and digital/product deletion (§§14–16), product duplication (§16),
-  digital product create/update (§21) and physical product create and
-  update (§§22–23) still write WMS-owned `products` rows
-  beside `products:sync`, the table's single writer (shared-database.md).
-  Each now runs in one transaction and is pinned by tests; changing
-  who may write `products` needs the owner's decision.
+  steps, keeping their routes and gates; none is deleted as a feature. Step 34
+  converts the seller list and accounts, replacing five Blade views with Vue.
+  Step 35 converts payments and withdrawals, replacing six more views.
+  Step 36 completes seller administration with commission and verification form
+  configuration, replacing two views. Its numeric writer accepts only the two
+  existing commission/withdrawal keys; verification stores the legacy ordered
+  JSON with separately JSON-encoded options. The RaizerSuperAdmin/features_activation
+  compatibility switch endpoint remains restricted and returns literal `1`.
+  Both settings writers forget only `business_settings` through the shared writer;
+  consumers read these values directly or through `get_setting`, with no derived
+  cache depending on a full cache clear. Root `BusinessSettingsController` stays
+  only for that switch endpoint and the refusing `env_key_update` action.
+  Payout/commission/withdrawal behavior, balances, seller-facing Blade and
+  storefront behavior stay established; no permission or role grant is implied.
+- **`products` writers: Option A, owner decision 2026-10-22 (§52).**
+  `products:sync` owns exactly `name`, `ar_name`, `published` on feed-origin
+  rows (non-null `synced_at`). The store owns every other column
+  and may write those three only on its own rows (null marker). All pre-marker
+  rows default to unclassified/null; only reviewed IDs may be reclassified.
+  Product's shared ownership guard covers store writers, including legacy
+  services and imports; duplicates start store-origin. Brand/product/digital
+  deletion and their foreign-key outcomes (§§14–16) remain unchanged.
 - Product list switches share one write path. The digital-product and
   in-house/all-products lists publish and feature through
   `Concerns\UpdatesStoreProductFlags`, scoped to the products each list shows.
-  The root `ProductController` jQuery endpoints stay unchanged for the Blade
-  seller list (§16).
+  The admin seller product list joins that shared path in §38, including
+  approval and today's deal. Root `ProductController` remains for the JSON
+  cron trigger and legacy read/SKU compatibility endpoints, with both analysis
+  exclusions retained.
 - Order tax changes are held: the established entry handlers stored raw product
   tax metadata and summed line prices for grand total. Percentage conversion and
   tax/shipping/coupon adjustments need a business decision.
@@ -640,33 +699,16 @@ dedicated allowlisted compatibility endpoint, not a general settings writer.
 
 ### 5.1 Actual retained backend Blade files
 
-The current backend inventory contains **26 Blade files**, down from 73 after
-removing three screens each for carriers, customer packages and categories, the
-two brand screens, the digital product list (§15), general settings (§17), the
-two blog post forms (§18), the newsletter and ticket detail (§19), the
-footer, appearance and three custom-page screens (§20), the two digital
-product forms (§21), the physical product create form (§22), and the
-physical product edit form, its choice script and the unconsumed blank shell
-(§23), the trip list with its status modal (§24), the two trip forms
-with their two checkpoint row partials (§25), the trip orders list
-(§26), the trip checkpoints page with its status modal (§27), the legacy product
-reviews list (§28), the server status page (§29), and the trip map picker with
-its three `trips/inc` partials (§30), and the two representative visit
-detail screens with their map partial (§31), and Google Map settings (§32).
-The in-house and all-products lists (§16) removed none:
-`product/products/index.blade.php` is shared with the retained seller product
-list. Google Map settings are converted in §32.
-These files remain physically present. Hardening a Blade handler does not count
-as conversion. Protected shells/downloads/invoices are not conversion targets.
+The current backend inventory contains **7 Blade files**, down from 10 in §38
+and 73 at reconciliation. Step 39 removes the unused `layouts/app`,
+`inc/admin_nav` and `inc/admin_sidenav`, including the now-empty `inc/` directory.
+There are **0** admin app-shell extenders and **3** plain-layout extenders.
+Every retained file has a protected consumer; none is an unconverted back-office screen.
 
-- **customer:** `customer/classified_products/index.blade.php`.
-- **(root):** `dashboard.blade.php`.
-- **downloads:** `downloads/brand.blade.php`, `downloads/category.blade.php`, `downloads/user.blade.php`.
-- **inc:** `inc/admin_nav.blade.php`, `inc/admin_sidenav.blade.php`.
-- **invoices:** `invoices/invoice.blade.php`.
-- **layouts:** `layouts/app.blade.php`, `layouts/layout.blade.php`.
-- **product:** `product/products/index.blade.php`, `product/products/sku_combinations.blade.php`, `product/products/sku_combinations_edit.blade.php`.
-- **sellers:** `sellers/create.blade.php`, `sellers/edit.blade.php`, `sellers/index.blade.php`, `sellers/payment.blade.php`, `sellers/payment_histories/index.blade.php`, `sellers/payment_modal.blade.php`, `sellers/profile_modal.blade.php`, `sellers/seller_commission/index.blade.php`, `sellers/seller_verification_form/index.blade.php`, `sellers/seller_withdraw_requests/index.blade.php`, `sellers/seller_withdraw_requests/payment_modal.blade.php`, `sellers/seller_withdraw_requests/withdraw_message_modal.blade.php`, `sellers/verification.blade.php`.
+- **downloads:** `downloads/brand.blade.php`, `downloads/category.blade.php`, `downloads/user.blade.php` (PDF bulk-upload reference downloads).
+- **invoices:** `invoices/invoice.blade.php` (admin/seller invoice PDF rendering).
+- **layouts:** `layouts/layout.blade.php` (seller login, delivery-boy login and 503).
+- **product:** `product/products/sku_combinations.blade.php`, `product/products/sku_combinations_edit.blade.php` (seller create/edit AJAX fragments and retained compatibility tests).
 
 ## 6. Registered migrated controllers and consumers
 
@@ -688,6 +730,7 @@ line numbers or count sibling snapshots.
 | `CampaignProductController` | `admin.campaign-products.brands`, `admin.campaign-products.index` | JSON / redirects / PDF as applicable |
 | `CarrierController` | `carriers.index`, `carriers.create`, `carriers.store`, `carriers.edit`, `carriers.update`, `carriers.destroy`, `carriers.update_status` | `Store/Admin/Setup/Carriers/Index.vue`, `Create.vue`, `Edit.vue`; public/API carrier controller remains separate |
 | `CategoryController` | `categories.index`, `categories.create`, `categories.store`, `categories.edit`, `categories.update`, `categories.destroy`, `categories.featured` | `Store/Admin/Product/Categories/Index.vue`, `Create.vue`, `Edit.vue`; public/seller/mobile category consumers and shared hierarchy utility retained |
+| `ClassifiedProductController` | `classified_products`, `classified_products.published`, `classified_products.destroy` | `Store/Admin/Customers/ClassifiedProducts/Index.vue`; bound PUT publish and DELETE delete, existing per-action gates; customer-facing root handler retained (§37) |
 | `CityController` | `cities.index`, `cities.store`, `cities.update`, `cities.destroy`, `cities.edit`, `cities.status` | `Store/Admin/Setup/Cities/Index.vue`, `Store/Admin/Setup/Cities/Edit.vue` |
 | `ColorController` | `colors`, `colors.destroy`, `colors.edit`, `colors.store`, `colors.update` | `Store/Admin/Product/Colors/Index.vue`, `Store/Admin/Product/Colors/Edit.vue` |
 | `ConversationController` | `conversations.admin_index`, `conversations.admin_destroy`, `conversations.admin_reply`, `conversations.admin_show` | `Store/Admin/Support/Conversations/Index.vue`, `Store/Admin/Support/Conversations/Show.vue` |
@@ -697,7 +740,7 @@ line numbers or count sibling snapshots.
 | `CustomerController` | `bulk-customer-delete`, `change_password`, `customers.important`, `customers.not_important`, `customers.store`, `customers.whatsapp_contact`, `customers.page-views`, `customers.index`, `customers.archive`, `customers.create`, `download.trade_license`, `customers.login`, `customers.restore`, `customers.sendAgreement`, `customers.verify`, `customers.update`, `customers.destroy`, `customers.change_activity_status`, `customers.edit`, `customers.update_customer_notes`, `update_password`, `customers.ban`, `representatives.index`, `representatives.create`, `representatives.store` | `Store/Admin/Customers/Customers/Index.vue`, `Store/Admin/Customers/Customers/Create.vue`, `Store/Admin/Customers/Customers/Edit.vue`, `Store/Admin/Customers/Customers/Views.vue` |
 | `CustomerPackageController` (Store/Admin) | `customer_packages.index`, `customer_packages.create`, `customer_packages.store`, `customer_packages.edit`, `customer_packages.update`, `customer_packages.destroy` | `Store/Admin/Customers/Packages/Index.vue`, `Create.vue`, `Edit.vue`; root purchase/payment controller and mobile API retained |
 | `CustomerNotificationController` | `admin.notifications.all`, `admin.notifications.create`, `admin.notifications.send`, `admin.notifications.delete` | `Store/Admin/Notifications/Customers/Index.vue`, `Store/Admin/Notifications/Customers/Create.vue` |
-| `DashboardController` | `cache.clear` | Scoped cache clear only; dashboard route → root `AdminController` / retained Blade |
+| `DashboardController` | `shop.admin.dashboard`, `cache.clear` | `Store/Admin/Dashboard/Index.vue` (§33); scoped cache clear retained |
 | `DigitalProductController` (Store/Admin) | `digitalproducts.index`, `digitalproducts.create`, `digitalproducts.store`, `digitalproducts.edit`, `digitalproducts.update`, `digitalproducts.destroy`, `digitalproducts.download`, `digitalproducts.published`, `digitalproducts.featured`, `digitalproducts.todays_deal` | `Store/Admin/Product/DigitalProducts/Index.vue`, `Create.vue`, `Edit.vue` (§21); store → list, update → edit form in the same language; download → file response; root `DigitalProductController` removed; seller, mobile and storefront digital product and download consumers separate |
 | `DriverController` | `drivers.create`, `drivers.index`, `drivers.store`, `drivers.update`, `drivers.destroy`, `drivers.edit` | `Store/Admin/Trips/Drivers/Index.vue`, `Store/Admin/Trips/Drivers/Create.vue`, `Store/Admin/Trips/Drivers/Edit.vue` |
 | `DynamicPopupController` | `bulk-dynamic-popup-delete`, `dynamic-popups.index`, `dynamic-popups.store`, `dynamic-popups.update-status`, `dynamic-popups.create`, `dynamic-popups.update`, `dynamic-popups.destroy`, `dynamic-popups.edit` | `Store/Admin/Marketing/DynamicPopups/Index.vue`, `Store/Admin/Marketing/DynamicPopups/Create.vue`, `Store/Admin/Marketing/DynamicPopups/Edit.vue` |
@@ -706,7 +749,7 @@ line numbers or count sibling snapshots.
 | `GoogleMapController` | `google-map.index`, `google-map.update` | `Store/Admin/Setup/GoogleMap/Index.vue` with `StoreGoogleMapFormFields` and the shared npm Leaflet base (§32); writer redirects to the same index |
 | `LanguageController` | `languages.index`, `languages.store`, `app-translations.export`, `app-translations.import`, `app-translations.store`, `app-translations.show`, `languages.create`, `languages.key_value_store`, `languages.update-status`, `languages.update_rtl_status`, `languages.destroy`, `languages.show`, `languages.edit`, `languages.update` | `Store/Admin/Languages/Index.vue`, `Store/Admin/Languages/Create.vue`, `Store/Admin/Languages/Edit.vue`, `Store/Admin/Languages/Translations.vue` |
 | `LegacyWebsiteScriptsController` | `website.scripts.compatibility.update` | Redirect to `website.appearance`; posted by the plain-code scripts form of `Store/Admin/Website/Appearance.vue` (§20) |
-| `NewsletterController` | `newsletters.index`, `newsletters.recipients`, `newsletters.send` | `Store/Admin/Marketing/Newsletters/Index.vue` (§19); typed send redirecting to the retained Blade dashboard; bounded JSON recipient search |
+| `NewsletterController` | `newsletters.index`, `newsletters.recipients`, `newsletters.send` | `Store/Admin/Marketing/Newsletters/Index.vue` (§19); typed send redirecting to the Inertia dashboard; bounded JSON recipient search |
 | `NotificationController` | `admin.all-notification` | `Store/Admin/Notifications/Index.vue` |
 | `OfferController` | `offer_deals.brands.create`, `offer_deals.create`, `offer_deals.index`, `offer_deals.store`, `offer_deals.update`, `offer_deals.destroy`, `offer_deals.edit`, `offer_deals.update_multiple_usage`, `offer_deals.update_repeatable`, `offer_deals.update_status` | `Store/Admin/Marketing/Offers/Index.vue`, `Store/Admin/Marketing/Offers/Create.vue`, `Store/Admin/Marketing/Offers/Edit.vue` |
 | `OffersCatalogController` | `offers.destroy`, `(unnamed compatibility)`, `offers.index`, `offers.store` | `Store/Admin/Catalogue/Offers/Index.vue` |
@@ -714,7 +757,7 @@ line numbers or count sibling snapshots.
 | `OrderController` | `all_orders.index`, `bulk-order-delete`, `inhouse_orders.index`, `inhouse_orders.show`, `orders.details`, `order.item.edit_price`, `orders.update_delivery_status`, `orders.update_manager_notes`, `orders.update_payment_status`, `orders.update_tracking_code`, `orders.show`, `orders.destroy`, `all_orders.show`, `pick_up_point.index`, `pick_up_point.order_show`, `seller_orders.index`, `seller_orders.show` | `Store/Admin/Sales/Orders/Index.vue`, `Store/Admin/Sales/Orders/Show.vue`; `bulk-order-delete` returns to the trip orders list for `return_to=trip_orders` (§26) |
 | `OrderEntryController` | `new.feat-order.trip.create`, `new.feat-order.trip.edit`, `new.feat-order.trip.store`, `new.feat-order.trip.update`, `feat-order.create`, `feat-order.store`, `orders.search-options` | `Store/Admin/Sales/Orders/Create.vue`, `Store/Admin/Sales/Orders/Edit.vue` |
 | `PickupPointController` | `pick_up_points.index`, `pick_up_points.store`, `pick_up_points.create`, `pick_up_points.update`, `pick_up_points.destroy`, `pick_up_points.edit` | `Store/Admin/Setup/PickupPoints/Index.vue`, `Store/Admin/Setup/PickupPoints/Edit.vue`, `Store/Admin/Setup/PickupPoints/Create.vue` |
-| `ProductController` (Store/Admin) | `products.admin`, `products.all`, `products.list.published`, `products.list.featured`, `products.list.for_sale`, `products.list.duplicate`, `products.list.destroy`, `products.list.bulk_destroy`, `products.create`, `products.store`, `products.variant_combinations`, `products.admin.edit`, `products.seller.edit`, `products.update`, `products.edit_variant_combinations` | `Store/Admin/Product/Products/Index.vue` (both lists, `listType`), `Create.vue` (§22; store → in-house list, `products.variant_combinations` → JSON variant rows), `Edit.vue` (§23; both edit routes, `listType` `admin`/`seller`; update → the edit form in the same language; `products.edit_variant_combinations` → JSON rows keeping stored stock values); `products.admin.edit`/`seller.edit` send a digital product to `digitalproducts.edit` (§21); `products.seller`, the jQuery switches, approval, duplicate, destroy, bulk delete, `products.fetch` (JSON) and the Blade SKU helper `products.sku_combination` stay on root `ProductController` for the Blade seller list |
+| `ProductController` (Store/Admin) | `products.admin`, `products.all`, `products.seller`, `products.list.published`, `products.list.featured`, `products.list.for_sale`, `products.list.duplicate`, `products.list.destroy`, `products.list.bulk_destroy`, `products.create`, `products.store`, `products.variant_combinations`, `products.admin.edit`, `products.seller.edit`, `products.update`, `products.edit_variant_combinations` | `Store/Admin/Product/Products/Index.vue` (all three lists, `listType` `admin`/`all`/`seller`), `Create.vue` (§22; store → in-house list, `products.variant_combinations` → JSON variant rows), `Edit.vue` (§23; both edit routes, `listType` `admin`/`seller`; update → the edit form in the same language; `products.edit_variant_combinations` → JSON rows keeping stored stock values); `products.admin.edit`/`seller.edit` send a digital product to `digitalproducts.edit` (§21); `products.published`, `products.featured`, `products.update_sale`, `products.todays_deal`, `products.approved`, `products.duplicate`, `products.destroy` and `bulk-product-delete` now use scoped seller action adapters (§38); only `products.fetch` (JSON), the legacy SKU helper `products.sku_combination` and other read compatibility routes stay on root `ProductController` |
 | `ProductBulkUploadController` | `bulk_product_upload`, `pdf.download_brand`, `pdf.download_category`, `pdf.download_seller`, `product_bulk_export.index`, `product_bulk_upload.index` | `Store/Admin/Product/BulkUpload/Index.vue` |
 | `ProductQueryController` | `product_query.index`, `product_query.show`, `product_query.reply` | `Store/Admin/Support/ProductQueries/Index.vue`, `Store/Admin/Support/ProductQueries/Show.vue` |
 | `ProductSearchController` | `order_configuration.product-search`, `products.add-more-choice-option` | JSON / redirects / PDF as applicable |
@@ -724,6 +767,11 @@ line numbers or count sibling snapshots.
 | `RepresentativePaymentController` | `admin.rep.payments.accept`, `admin.rep.payments.export`, `admin.rep.payments.index`, `admin.rep.payments.reject` | `Store/Admin/Representatives/Payments/Index.vue` |
 | `ReviewController` | `admin.reviews.index`, `reviews.published`, `reviews.index` | `Store/Admin/Product/Reviews/Index.vue`; `reviews.index` (GET `/temp/reviews`, `view_product_reviews`) redirects to `admin.reviews.index` keeping the query (§28); root `ReviewController` keeps the customer `store` and `product_review_modal` |
 | `RoleController` | `roles.index`, `roles.store`, `roles.create`, `roles.update`, `roles.destroy`, `roles.edit` | `Store/Admin/Staff/Roles/Index.vue`, `Store/Admin/Staff/Roles/Create.vue`, `Store/Admin/Staff/Roles/Edit.vue` |
+| `SellerController` (Store/Admin) | `sellers.index`, `sellers.create`, `sellers.store`, `sellers.edit`, `sellers.update`, `sellers.ban`, `sellers.destroy`, `bulk-seller-delete`, `sellers.show_verification_request`, `sellers.verification_file`, `sellers.approve`, `sellers.reject`, `sellers.login`, `sellers.profile_modal`, `sellers.approved` | `Store/Admin/Sellers/Sellers/Index.vue`, `Create.vue`, `Edit.vue`, `Verification.vue`; profile JSON feeds `StoreSellerProfileDialog`; private verification downloads keep storage rules; login switches only the store session. Payout dialogs use `SellerPaymentController` since §35; root `SellerController` is removed |
+| `SellerCommissionController` | `business_settings.vendor_commission`, `business_settings.vendor_commission.update` | `Store/Admin/Sellers/Commission/Index.vue`; typed numeric settings writer, existing permissions/URIs; switches retain the root compatibility endpoint (§36) |
+| `SellerVerificationFormController` | `seller_verification_form.index`, `seller_verification_form.update` | `Store/Admin/Sellers/VerificationForm/Index.vue`; ordered builder, legacy stored JSON, deliberate missing-row/empty-list fixes (§36) |
+| `SellerPaymentController` | `sellers.payment_modal`, `sellers.payment_histories`, `sellers.payment_history`, `commissions.pay_to_seller` | `Store/Admin/Sellers/Payments/Index.vue` (global/scoped history); modal JSON feeds `StoreSellerPaymentDialog` on seller/withdrawal lists; store retains the locked money transaction (§35) |
+| `SellerWithdrawRequestController` | `withdraw_requests.index`, `withdraw_requests.create`, `withdraw_requests.show`, `withdraw_requests.edit`, `withdraw_requests.update`, `withdraw_requests.destroy`, `withdraw_requests_all`, `withdraw_request.payment_modal`, `withdraw_request.message_modal` | `Store/Admin/Sellers/Withdrawals/Index.vue`; typed payment/message JSON, shared payment dialog and readonly `StoreSellerWithdrawMessageDialog`; former empty resource actions redirect without writes (§35) |
 | `SettingsController` | `activation.index`, `business_settings.update.activation`, `facebook_chat.index`, `facebook_chat.update`, `facebook-comment`, `facebook-comment.update`, `file_system.index`, `google_analytics.index`, `google_analytics.update`, `facebook_pixel.update`, `google-firebase.index`, `google-firebase.update`, `google_recaptcha.index`, `google_recaptcha.update`, `payment_method.index`, `payment_method.update`, `smtp_settings.index`, `test.smtp`, `social_login.index` | `Store/Admin/Settings/Index.vue` |
 | `ShippingConfigurationController` | `shipping_configuration.index`, `shipping_configuration.update` | `Store/Admin/Setup/ShippingConfiguration/Index.vue` |
 | `StaffController` | `staffs.index`, `staffs.store`, `staffs.create`, `staffs.update`, `staffs.destroy`, `staffs.edit` | `Store/Admin/Staff/Staffs/Index.vue`, `Store/Admin/Staff/Staffs/Create.vue`, `Store/Admin/Staff/Staffs/Edit.vue` |
@@ -748,12 +796,20 @@ line numbers or count sibling snapshots.
 Visit details/day maps use `Store\Admin\VisitController` since §31.
 Google Map settings use `Store\Admin\GoogleMapController` since §32.
 The trip map picker is Inertia since §30. Root
-`BusinessSettingsController` keeps the seller commission/verification screens and `env_key_update` (the generic settings
+`BusinessSettingsController` keeps only the seller activation compatibility endpoint and refusing `env_key_update` action; commission/verification screens use their Store/Admin controllers since §36 (the generic settings
 writer and its refusing `.env` stub are gone, §20), so it stays in both
-analysis exclusion lists. Seller/classified screens use retained root handlers. The newsletter and
+analysis exclusion lists. Seller list/account handlers use `Store\Admin\SellerController` since §34; payments/withdrawals use their admin controllers since §35; root `SellerController`, `PaymentController` and `SellerWithdrawRequestController` and both exclusions are removed. Admin classified products use `ClassifiedProductController` since §37. Root `CustomerProductController` and both exclusions remain for the customer area, including its shared `updatePublished` compatibility action. The newsletter and
 the ticket detail use their typed admin controllers and Inertia pages (§19). Explicit approval and implementation gaps are tracked
 by source/path in the reconciliation ledger. The unavailable audit commit
 `aed3feab5b6edd95fb941ee92a455e058403def5` is excluded and was not recovered or included.
+
+
+**Completion (§39).** All back-office screens use Inertia. The seven backend
+Blade templates in §5.1 serve downloads/PDFs, protected login/error pages and
+seller SKU fragments. `StoreAdminLayout` and `storeAdminMenu.ts` are the only
+admin shell/sidebar. No route or controller changes in step 39: **1,046**
+`/temp` and **434** `/temp/admin` registrations remain. `HandleStoreBladePages`
+and `store.blade_csp` stay for the storefront, seller panel, auth and 503 pages.
 
 
 ## 7. Independent reconstructed audit (2026-10-11, prompt 3)
@@ -807,8 +863,8 @@ JSON-LD or itemscope structured data; do not describe absent features as migrate
 
 Retained-module issues are separate from integration regressions: populated
 brand admin pages referenced absent `brands.order_level` (resolved by §14 without
-schema change); the populated retained
-dashboard lacks product-translation eager loading; legacy API/seller resource
+schema change); the populated dashboard
+product-translation eager load was fixed in §33; legacy API/seller resource
 routes still include nonexistent handlers, and legacy uploader deletion
 failure handling remains weaker than the selected admin controller. These need
 separate scoped work; do not activate core catalogue/seller migrations or change
@@ -1213,8 +1269,8 @@ Completed:
 
 **Retained deletion behavior (owner decision):** deleting a brand still deletes
 every `products` row carrying it, then its translations and the brand, now in
-one transaction. This conflicts with shared-database.md's single-writer rule for
-WMS-owned `products`. A product referenced by a pallet, store product barcode or
+one transaction. Option A (§52, shared-database.md) supersedes the old
+single-writer conflict; this deletion policy is retained. A product referenced by a pallet, store product barcode or
 variation makes the delete fail atomically (those foreign keys restrict) with a
 server error; otherwise it cascades WMS product settings/barcodes and nulls
 cell-log/verification product references.
@@ -1285,18 +1341,18 @@ only digital products (404 otherwise) and redirects preserving the query. The
 seller-subscription refusal is kept, but now refuses (422 on `status`) before
 any write instead of after the stock update.
 
-**Deletion: owner decision pending, behaviour unchanged.** Deleting still
+**Deletion retained under Option A (§52).** Deleting still
 removes the product's translations and stock rows and hard-deletes the
 `products` row, now in one transaction with the row locked, and only for a
-digital product. This is the same single-writer conflict as brand deletion
-(§14; `products` is WMS-owned, shared-database.md). A pallet referencing
+digital product. Option A (shared-database.md) retains the brand/product
+and digital deletion rules. A pallet referencing
 the product (`pallets.product_id` restrict) or a store barcode/variation
 (no-action FKs) makes the delete fail atomically with a server error; WMS
 settings/barcodes cascade and cell-log/verification references null. Tests pin
 both outcomes. Soft delete, a refusal with a validation error, or any other
-policy needs owner approval. The published switch likewise remains a second
-writer of `products.published`, which `products:sync` overwrites for feed
-products; that predates this change.
+policy needs owner approval. Under Option A (§52), the published switch
+refuses a change on a feed-origin product; it remains available for store-origin
+products. The feed owns publication only on its marked rows.
 
 **Download.** Gate `download_digital_product`; the encrypted-id contract is
 kept, since external bookmarks cannot be ruled out. Two narrow defect fixes:
@@ -1346,7 +1402,7 @@ this session's PR, its merge into `develop` and `[skip ci]` on both. The PR and
 its merge commit carry `[skip ci]`, so no PR CI, no PR or merge SAST and no
 `develop` deploy ran for them.
 
-**Still Blade.** The seller list (`products.seller`) stays Blade with seller
+**Historical at step 16 (superseded by §§21–23 and §38).** The seller list (`products.seller`) stays Blade with seller
 administration (§4.1), so the shared `product/products/index.blade.php` stays
 and its seller branch is unchanged. Product create/edit stays Blade because it
 needs the rich-text editor (Tiptap approval pending, §5). The Vue page links to
@@ -1440,15 +1496,16 @@ Two narrow search defect fixes:
   showed it.
   - The endpoint stays ungated, as `LegacyAdminPermissionsTest` lists it.
   - It queues the `cron_jobs` row that `check:commands` turns into
-    `import:all-products-v2`. That command is a second writer of `products`
-    beside `products:sync`, an owner decision left unchanged.
-- **Duplicate (second writer of `products`, unchanged).** It still copies the
+    `import:all-products-v2`. Under Option A (§52) this store import also
+    passes Product's ownership guard and cannot rename or publish feed-origin
+    rows. It owns other columns, without sync privileges.
+- **Duplicate (store writer under Option A, §52).** It still copies the
   `products` row with a random slug suffix, plus its stock and tax rows, but
   not its translations, variations or barcodes. It now runs in a transaction,
-  only on a product the list shows. Creating `products` rows here conflicts with
-  shared-database.md's single-writer rule; changing it needs owner approval.
+  only on a product the list shows. The copied row starts with null `synced_at`,
+  including when its source was feed-origin; it is a store-created product.
 
-**Deletion: owner decision pending, behaviour unchanged.** Single and bulk
+**Deletion retained under Option A (§52).** Single and bulk
 deletion still remove a product's translations, stock, taxes, variations and
 store barcodes, hard-delete the `products` row and soft-delete its cart lines.
 They now run in one transaction with the rows locked. Bulk deletion checks every
@@ -2028,11 +2085,10 @@ update:
   product's tax rows, and with no tax posted (no active tax) they stay. The
   slug is lowercased. Returns to the edit form in the same language (the Blade
   `back()`).
-- **Second writer of `products`: owner decision pending.** Creating and
-  updating write WMS-owned `products` rows beside `products:sync`
-  (shared-database.md), the same conflict as deletion (§§14–16). Behaviour and
-  policy are unchanged; tests pin it, including rollback of product, stock,
-  translation and taxes together.
+- **Store writer under Option A (§52).** New rows have null `synced_at`.
+  Updates may change `name`, `ar_name`, `published` only on store-origin rows;
+  Product's shared guard refuses feed-owned changes. The store owns all other
+  columns. Existing transaction/rollback behavior remains.
 - No cache was cleared before and none is now.
 
 **Fields.** Name (≤200, the `products.name` and translation width), category,
@@ -2165,9 +2221,10 @@ together in one transaction; `view:clear` and `cache:clear` run after commit
 posted `digital`, `added_by`, `user_id`, auction, wholesale or counter field
 is ignored.
 
-**Second writer of `products`: owner decision pending.** Creating a product
-writes WMS-owned `products` beside `products:sync` (shared-database.md), the
-same decision as §§14–16 and §21; behaviour and policy are kept, tests pin it.
+**Store writer under Option A (§52).** Every newly created product has null
+`synced_at`; the store owns all its columns. Feed-origin products
+reserve exactly `name`, `ar_name`, `published` for `products:sync`. Product's
+shared guard enforces the boundary (shared-database.md).
 
 **Fields (`StoreProductRequest`).** Every field the Blade form posted, with the
 schema widths: name ≤200, unit ≤20 (both also `product_translations`), weight
@@ -2332,9 +2389,10 @@ seller panel and API.
   posted again, another product's may not. **Flash deal:** a chosen active
   deal applies through `ProductFlashDealService` (discount and period); none
   chosen leaves an existing entry, as the service always did.
-- **Second writer of `products`: owner decision pending.** Updating writes
-  WMS-owned `products` beside `products:sync` (shared-database.md), as §§14–16,
-  §21 and §22; policy unchanged, tests pin it.
+- **Store writer under Option A (§52).** The shared Product guard refuses
+  changes to `name`, `ar_name`, `published` on feed-origin rows; every other
+  business column remains store-owned. Null-origin rows remain fully editable.
+  Approval authority and deletion rules are unchanged.
 
 **Variant editor.** The page sends the stored choice set: colours in the list's
 order (on while any is chosen), attributes in their stored order (it names the
@@ -3392,3 +3450,3160 @@ layout-shell extending views. Routes replace one GET with one GET; no route
 is added or removed (`route:list` still shows 1,048 under `/temp` and 436
 under `/temp/admin`).
 No production data, CI, SAST or deployment was run.
+
+
+## 33. Admin dashboard (2026-10-18)
+
+Implemented on `codex/step-33-dashboard`, from fetched `origin/develop` at
+`63e676f4` (PR #442). Model: GPT-6 Codex; the exact model variant and configured
+reasoning-effort value are not exposed to this session. The owner authorized
+Chart.js and one PR into develop and its merge only after the requested checks
+could run, with `[skip ci]` in every commit, PR title and merge message.
+Verification and shipping are recorded in the reconciliation ledger.
+[PR #444](https://github.com/arb-rajab/warehouse_management/pull/444) is the single PR into `develop`;
+its number is recorded in a follow-up `[skip ci]` commit before merging.
+
+**Backend and gate.** `Store\Admin\DashboardController::index` replaces root
+`AdminController::admin_dashboard`, keeping `shop.admin.dashboard`, GET
+`/temp/admin` and `auth` + `admin`. `HasMiddleware` adds the explicit
+`permission:admin_dashboard` gate requested for the whole response. The Legacy
+read ratchet drops only this formerly ungated action. Scoped `cache.clear`
+keeps its separate `RaizerSuperAdmin` route gate; its index-only permission
+does not restrict cache clear. The root controller has no remaining consumer:
+its obsolete, unrouted `clearCache` method is removed with the file and both
+Pint/PHPStan exclusions. No storefront file changes.
+
+The response contains typed stats, real numeric chart arrays, and
+`DashboardProductResource` rows. Pie 1 preserves the legacy **all products vs
+published products** series, not active vs inactive; pie 2 preserves
+`from_api = 1` vs `from_api = 0`. Category sales sum every descendant product's
+`num_of_sale`, and stock sums all its variant quantities, including unpublished
+and seller products as before. Separate SQL aggregates avoid multiplying sales
+by the stock-row count; category traversal is in memory with a cycle guard.
+Equality is tested against the former `CategoryUtility`/product/stock loop with
+multiple roots, nested children, variants, stockless and unrelated products.
+
+Only category totals and visits are cached for 86,400 seconds, under the new
+`store.admin.dashboard.graphs.v2` key. Old comma-string `cached_graph_data` is
+never read. Category totals are keyed by root id, so current translated labels
+cannot shift onto another root's totals; visits labels and values share a
+snapshot. Missing `total_visits` yields empty arrays. Stats and Top 12 stay
+fresh. Cache clear forgets the new key and the legacy key. The SMTP flag retains
+`can('smtp_settings') && username == null && password == null`, including the
+legacy loose comparison for empty strings.
+
+Top products keep `filter_products`, published ordering by sales, existing
+tax/discount/currency helpers and storefront URLs. Explicit selections and
+scoped eager loads cover product translations (the §7 defect), taxes and
+thumbnails, with no per-product image lookup. The grid uses escaped names,
+prices and numeric ratings with plain storefront anchors. Products without
+a storefront slug remain readable without an invented link (the same null-URL
+contract as the product lists); browser verification found this in seeded WMS
+products.
+
+**Frontend and dependency.** `Store/Admin/Dashboard/Index.vue` uses
+`StoreAdminLayout`, English/Arabic `store.dashboard.*` and an Inertia sidebar
+entry. `StoreDashboardChart` bundles exactly pinned npm Chart.js 4.5.1 (§5),
+registers only its used pieces, destroys charts/listeners on unmount and
+rebuilds for data, locale and system dark-mode changes. Five labelled canvases
+have visually hidden data-table fallbacks. Chart geometry stays LTR; Arabic
+legend and tooltip text use RTL. Light/dark palettes have contrasting labels
+and fills. No CSP directive or Composer dependency changes. The audit adds
+zero findings; the same six pre-existing dev-tool findings remain (ledger).
+
+**Consumers and inventory.** `git rm` removes `dashboard.blade.php` after
+tracing its sole renderer and all action/menu/test imports. AIZ's chart helper
+in `public/assets/js/aiz-core.js` remains because
+`shop/seller/dashboard.blade.php` still calls it; shared vendor assets and
+protected Blade shells remain. Current counts: **25** backend Blade files,
+**12** literal app-shell consumer files including the shell test (11 actual
+extending views), **3** layout-shell extending views, **1,048** `/temp` and
+**436** `/temp/admin` registrations. One GET replaces one GET.
+
+Pest covers render/full payload, unchanged refused-callers DB, SMTP branches,
+24-hour cache expiry, aggregate equality, top-12 filtering/translations, route
+and shell contracts. Vitest full-mounts the page/chart with Chart.js mocked;
+Playwright exercises real bundled charts under enforced CSP, Inertia menu
+visits, Arabic RTL/LTR geometry and dark label/fill contrast. Exact results,
+failed attempts and skipped checks are in the
+[step 33 ledger](../store-backoffice-reconciliation-20261011.md#admin-dashboard-step-33-2026-10-18),
+not inferred from earlier steps. PR CI, PR/merge SAST and deploy do not run under `[skip ci]`.
+
+
+## 34. Seller list and accounts (2026-10-19)
+
+[PR #445](https://github.com/arb-rajab/warehouse_management/pull/445) is the single
+PR into `develop`. Its number is recorded in a documentation-only `[skip ci]`
+follow-up commit before the authorized merge. Implementation commit: `c98dff89`.
+
+Stage 1 of 3, implemented on `codex/step-34-sellers` from freshly fetched
+`origin/develop` **fc8e73de** (PR #444). Model: **GPT-6 Codex**; the exact
+variant and configured effort are not exposed by this runtime. The owner
+explicitly authorizes conversion of sellers and classified products, overriding
+the historical decision-blocked status. This grants no roles and changes no
+commission, payment, withdrawal, balance, seller-area or storefront policy.
+See [the step 34 ledger](../store-backoffice-reconciliation-20261011.md#seller-list-and-account-screens-step-34-2026-10-19)
+for actual checks and shipping; no historical result substitutes for this run.
+
+**Controller and permission boundaries.** `Store\Admin\SellerController`
+implements `HasMiddleware`. `view_all_seller` gates index, verification and
+private file download; `view_seller_profile` gates the profile JSON;
+`login_as_seller` gates impersonation; `edit_seller` gates create/store/edit/
+update, accept/reject and the approved switch; `ban_seller` gates ban/unban;
+`delete_seller` gates single/bulk deletion. These are the root controller's
+existing gates. The old approval UI checked `approve_seller`, but the route
+always required `edit_seller`; the new switch follows the route. No permission
+definition or grant changes; `LegacyAdminPermissionsTest` lists stay unchanged.
+
+Routes retain names and bind `{seller}` to **Shop**, because the legacy list
+and account actions address shop IDs, not the separate `sellers` table. Edit
+and impersonation now accept the bound numeric ID in place of ciphertext.
+Deletes become DELETE; the empty `sellers.show` and unnamed duplicate resource
+destroy route are removed. `RouteServiceProviderTest` drops only that obsolete
+seller duplicate example; its real duplicate-name cases remain. The state-write
+ratchet's route list stays; its removed Blade ban-modal scan is replaced by
+seller Vue/Chromium confirmation tests. Missing bound records are 404. Invalid
+body references (`id`, bulk members) are 422 before any write.
+
+`FilterSellerRequest` composes `FiltersPerPage`; the list selects only its
+columns, scopes the account eager load, counts products in SQL, preserves search
+and approval behavior, and paginates **20** with query strings and an allowed
+per-page selector. `SellerResource` provides the narrow list payload. Create/
+update share typed validation for required name/email, store-wide unique email,
+required create/optional edit password and schema-length limits. No new password
+strength or confirmation policy is introduced. Creating the account, seller
+row and demo shop is transactional; verification email/auto-verification follow
+the existing `email_verification` setting. Account updates do not change shop
+or wallet fields and send no verification email.
+
+**Established action behavior.** Ban toggles the account flag. Accept sets
+verification status to 1, retaining info; reject sets 0 and clears info; the
+approved switch sets the boolean without clearing info. These three forget
+`verified_sellers_id`; none sends email or notification. Deletion removes the
+shop, store account, products owned by that account, orders whose **buyer**
+`user_id` is that account, and those orders' lines. It retains the separate
+seller row, payments, withdrawals, and other buyers' orders/lines even when
+those lines belong to the deleted seller. No additional product-related cleanup
+is introduced. Single/bulk deletes are transactional; all bulk members validate
+before deletion. Impersonation keeps the store session's remembered login,
+session regeneration and standard Login event, leaving the WMS guard alone.
+No new custom audit behavior is invented. Private files stay on
+`ShopVerificationStorage` and the existing private disk; traversal cannot escape
+its directory (the WAF also refuses malformed paths).
+
+**Vue and coexistence.** Four pages under `Store/Admin/Sellers/Sellers` use
+`StoreAdminLayout`, shared forms/table/pagination/page header, Wayfinder,
+permission-gated actions, native constraints, `lib/confirm.ts`, English/Arabic
+`store.sellers.*`, RTL and dark styling. `StoreSellerFormFields` serves both
+account forms. `StoreSellerProfileDialog` uses the shared accessible dialog and
+Inertia 3 `useHttp`; it loads only on opening, cancels stale requests and handles
+failure. All seller text is escaped, including verification labels and bank
+fields; social and managed avatar URLs are restricted to HTTP(S). Profile
+statistics retain all product/line counts and sum **price only** for lines whose
+parent order is paid, with no quantity/tax/money recalculation.
+
+Only the all-sellers sidebar entry becomes an Inertia visit. Payment/history
+links stay full loads. Consumer searches across app/routes/resources/public JS/
+tests found only the old list called `sellers/payment_modal`. It remains Blade
+on the root `pay_to_seller` POST and gains the existing admin shell; the list
+uses a native CSRF POST to open it as a full page. Its payment form, fields,
+commission writer and money behavior stay unchanged for stage 35. The list
+supplies a session CSRF token only to permitted payment callers. The root
+controller and both Pint/PHPStan exclusions remain. Payment histories,
+withdrawals, commission, verification configuration, seller products and all
+`resources/views/shop/seller` and storefront files remain for later stages.
+
+**Consumers, tests and inventory.** `git rm` removes exactly
+`sellers/index.blade.php`, `create.blade.php`, `edit.blade.php`,
+`profile_modal.blade.php`, `verification.blade.php`. Their only renderer was the
+moved root controller. Existing Blade links keep their route names. Admin file
+access cases move out of `LegacyShopVerificationTest`; its seller-upload cases
+remain. Compatibility tests that used the seller list as a Blade example now use
+the retained payment-history screen: CSP/fallback, staff coexistence, general
+settings shell logo and legacy uploader navigation. The visit sidebar test uses
+that screen’s existing permission. These preserve their original assertions
+while the seller list becomes Inertia.
+Pest covers every action, exhaustive payloads, validation, pagination, refused
+callers with unchanged DB/session, missing records, notifications/cache,
+transaction rollback and the precise deletion boundary. Vitest fully mounts all
+four pages and both new components; Chromium covers dialog focus, native
+confirms, RTL and dark contrast under enforced CSP.
+
+Current inventory: **20** backend Blade files, **9** direct literal app-shell
+consumer files including the shell test (**8** actual extending views), **3**
+layout-shell extending views; **1,046** `/temp` and **434** `/temp/admin` route
+registrations (two removed dead/duplicate registrations). Retained Blade editor
+inventory remains 8 fields in 8 views. Verification results, failed setup
+attempts, skipped checks and PR state are recorded in the ledger. Every shipping
+commit, PR title and merge message must contain `[skip ci]`; PR CI, PR/merge
+SAST and deploy do not run. No attestation trailer is written by hand or invoked
+through the bare pre-push mode.
+
+
+## 35. Seller payments and withdrawals (2026-10-19)
+
+[PR #446](https://github.com/arb-rajab/warehouse_management/pull/446) is the
+single PR into `develop`. Implementation commit **f4ca952d** passed the explicit
+full gate before pushing. This documentation-only `[skip ci]` follow-up records
+the PR number before the authorized merge.
+
+Stage 2 of 3 on `codex/step-35-seller-payments`, branched from freshly fetched
+`origin/develop` **cbbb3c3c** (PR #445). Model: **GPT-6 Codex**; the exact
+variant and configured reasoning effort are not exposed by this runtime.
+The owner authorizes conversion, not feature deletion. No role grants,
+commission calculation, wallet, storefront or seller-area policy changes.
+[The step 35 ledger](../store-backoffice-reconciliation-20261011.md#seller-payments-and-withdrawals-step-35-2026-10-19)
+records actual checks, failures, skips and shipping; earlier results are historical.
+
+**Routes and controllers.** `Store\Admin\SellerPaymentController` uses
+`HasMiddleware`: `pay_to_seller` for modal/store and `seller_payment_history`
+for both histories. `Store\Admin\SellerWithdrawRequestController` keeps
+`view_seller_payout_requests` for every action, including both JSON modals.
+Names and HTTP verbs remain, including `commissions.pay_to_seller` and every
+resource name except the already-absent store. History binds `{seller}` to
+StoreUser (numeric account ID replaces ciphertext); withdrawal resource routes
+bind `{withdrawRequest}`. POST body references validate as 422, including a
+withdrawal belonging to another seller. Already-paid/nonpending requests remain
+404 state conflicts inside the existing locked transaction.
+
+The three moved root controllers have no remaining renderer/caller and are
+removed with both Pint/PHPStan exclusions. Root `CommissionController` retains
+only `calculateCommission`, still called by `Helpers.php` during checkout;
+its exclusions remain. `Payment::seller` is a typed relation, with its own
+noise-data test, and this cleaned model leaves both exclusion lists.
+StoreUser's existing shop and SellerWithdrawRequest's existing user relation gain
+types/documentation only; other legacy model behavior/exclusions remain.
+
+**Money pinned before refactoring.** Both payout branches already used a
+transaction and shop row lock; withdrawal payouts also locked their pending
+request. The migration preserves those boundaries, adding no transaction.
+Amounts remain numeric and greater than zero, with **no backend maximum** based
+on balance or requested amount. `cash` and `bank_payment` debit only
+`shops.admin_to_pay`; every other nonempty method (up to 100 characters) credits
+it and records `Seller paid to admin`. The seller account wallet never changes.
+The payment row retains the account ID, amount, method, nullable 191-character
+transaction code and null details. Temporary payment session keys are cleared
+in `finally`. No email/notification was sent by either payout branch; none is
+added. Seller withdrawal creation/API notifications are untouched.
+
+A cash/bank withdrawal payout changes pending status (0/null) to 1 and viewed
+to 1, then debits the submitted amount and inserts the payment once. A partial
+payment still closes the **whole** request; its amount and seller message stay
+unchanged. Repeated/nonpending payment and record-save failure leave all money
+and request data unchanged. Arbitrary-method crediting does not close a request.
+These established semantics are deliberately retained, not new approval policy.
+
+**Existing defects recorded, not silently fixed.** The root resource's
+create/show/edit/update/destroy methods were empty. There is no functioning
+approve, reject, admin-message-write or delete workflow to migrate. Those route
+names/gates remain; now they redirect to the list with no mutation, rather than
+returning an empty 200. Tests submit approval/rejection statuses and messages and
+prove no data or notifications change. The legacy negative/zero-due form omitted
+`payment_option` even though the writer required it; its Clear due submission
+still receives that validation error. The withdrawal form still has no txn-code
+field. No new method choice or withdrawal policy is invented to fix either.
+
+**Lists, dialogs and deliberate presentation changes.** Histories and both
+withdrawal-list aliases use `FilterSellerPayoutRequest`, `FiltersPerPage`,
+`resolvePerPage(..., 20)`, explicit selections, scoped eager loads, stable newest
+ordering, `paginate()->withQueryString()` and narrow Resources. Global lists
+retain Blade's orphan handling: hide rows without a live account/shop **after**
+pagination, preserving the original raw total/window. Seller history now also
+paginates, and an empty history renders an empty state instead of redirecting
+with a flash. No new monetary total or recalculation is introduced. Existing
+amount/date/method/txn contents are retained; the number column shows record IDs.
+
+The seller list's native Blade POST is replaced by `StoreSellerPaymentDialog`;
+it and the withdrawal list load typed JSON with Inertia 3 `useHttp`, cancel stale
+requests, and use the shared accessible dialog. The payment form uses Inertia
+Form, native amount min/step, conditional shop-enabled payment methods, escaped
+bank text, and `lib/confirm.ts` before recording money. Default withdrawal amount
+remains min(requested, balance); that is not a new server maximum. Messages are
+readonly escaped text. The old message action omitted an accountant response
+despite the admin group's permission; the new read uses that same permission
+and the message already exposed by the list. Vue action gates now match actual routes: message viewing
+uses `view_seller_payout_requests`; submitting money requires `pay_to_seller`.
+Both sidebar entries and history links use Inertia. Both locales add
+`store.sellers.*`; logical styling, dark mode and RTL are retained. Success
+flashes are removed as in the per-module pattern.
+
+**Consumers and inventory.** Searches covered app, routes, resources,
+public/assets/js and tests before deleting all six replaced Blade files.
+In this checkout only `shop/seller/money_withdraw_requests/index.blade.php`
+references the admin `withdraw_request.message_modal`; its JS helper has no
+trigger, and the seller caller is already refused by the admin group. That
+route name and refusal stay. The seller's payment history is its own
+`seller.payments.index`/`Seller\PaymentController`, not the admin history/modal.
+No seller Blade or seller-route file changes. No second seller-area view calling
+these admin modals was found. Shared assets, the frontend message partial,
+Blade shells/CSP and stage-36 commission/verification views remain.
+
+Existing Legacy commission-payout cases move to the new payment controller test;
+the admin no-store case moves out of LegacySellerWithdrawRequestTest while all
+seller/API cases remain. LegacyAdminPermissionsTest and state/route ratchet lists
+are unchanged: no gate or registration is added/removed. Former payment-history
+Blade samples in shell/CSP/logo/uploader/sidebar tests now use retained commission
+settings and its existing permission. Current inventory: **14** backend Blade
+files; **5** literal app-shell consumer files including the shell test (**4**
+actual extending views); **3** layout-shell extending views; **1,046** `/temp`
+and **434** `/temp/admin` registrations. The retained rich-editor inventory stays
+8 fields in 8 views. Exact final verification and shipping are in the ledger.
+PR CI, PR/merge SAST and deploy do not run under `[skip ci]`.
+
+
+## 36. Seller commission and verification form (2026-10-19)
+
+Stage 3 of 3 on `codex/step-36-seller-settings`, from freshly fetched
+`origin/develop` **5ae9eba0** (PR #446). Model: **GPT-6 Codex**; the exact variant
+and configured reasoning effort are not exposed by this runtime.
+Seller administration conversion is complete. The owner authorizes
+conversion, not feature deletion, role grants or business-policy changes.
+Checkout's root `CommissionController`, seller-area controllers/views, seller
+registration, storefront, commission calculation and withdrawal service are
+unchanged. The remaining Blade seller product listing is catalogue work.
+See [the step 36 ledger](../store-backoffice-reconciliation-20261011.md#seller-commission-and-verification-form-step-36-2026-10-19)
+for exact checks, setup failures, skips and shipping.
+
+**Routes and writers.** `Store\Admin\SellerCommissionController` and
+`SellerVerificationFormController` implement `HasMiddleware` with the existing
+`seller_commission_configuration` and `seller_verification_form_configuration`
+gates. Their GET/POST names and URIs stay unchanged. Typed requests replace
+inline request reads. Commission retains legacy `types[]` subform support and
+403 rejection of foreign/localized types; foreign top-level keys are validation
+errors. Only `vendor_commission` (numeric 0–100, at most two decimals) and
+`minimum_seller_amount_withdraw` (numeric >= 0) can be written.
+
+The two activation controls still send exactly `{type,value}` to
+`business_settings.seller_commission.activation` and receive literal `1`. Its
+two-key type allowlist, foreign-input rejection, `features_activation` permission
+and `RaizerSuperAdmin` middleware remain unchanged. Vue gates them using those
+permissions and the vendor flag, handles failures, restores a refused selection
+and cancels pending HTTP on unmount. Root `BusinessSettingsController` remains
+for this endpoint and refusing `env_key_update`; both analysis exclusions stay.
+
+Both new settings writers reuse `UpdatesStoreSettings` and its transaction and
+`Cache::forget('business_settings')`. The removed full `cache:clear` had no
+derived-cache consumer: checkout and withdrawal read `get_setting`, verification
+reads the row/`get_setting`, and the public settings API queries rows directly.
+Tests prove fresh reads and preservation of unrelated WMS and seller caches.
+The activation endpoint already used this narrow invalidation.
+
+**Stored verification contract and deliberate fixes.** Supported types remain
+`text`, `file`, `select`, `multi_select`, `radio`. Fields retain order and store
+exactly `{type,label,options?}`; select/multi-select/radio options are themselves
+a JSON-encoded string, with PHP's legacy escaping and key order. Other fields
+have no stale options from a previous row. The editable Inertia payload decodes
+options to lists, and the writer re-encodes them. Labels/options are required
+strings bounded at 255 characters; select types require 1–100 options; at most
+100 fields are accepted. Native constraints and add limits mirror these bounds.
+A missing setting row is deliberately created on save; an empty field list
+deliberately saves `[]`. These fix the former missing-row/count-null crashes.
+The seller verification Blade and its submission handler retain their double
+decoding/answer shape; tests exercise the real reader and answer writer plus
+the public/mobile settings response. No registration-page reader of this
+setting exists in this checkout; registration behavior is unchanged.
+
+**UI, consumers and inventory.** Both Vue pages use `StoreAdminLayout`,
+`ResourceFormPage`, Wayfinder, `useStoreAccess`, English/Arabic `store.sellers.*`,
+logical styling and dark variants. Commission reuses `StoreBooleanField`.
+The builder adds/removes fields/options, changes each type, and reorders by
+accessible up/down buttons with stable row/option identities; no drag library.
+Both sidebar entries become Inertia visits. Existing Blade sidebar links retain
+their route names and need no URL change.
+
+Consumer searches covered app/routes/resources/public JS/tests before `git rm`
+removed the two replaced Blade views. The moved legacy middleware gate cases
+now accompany their controllers; existing activation cases move from settings
+reconciliation into commission coverage. The root middleware test retains its
+remaining compatibility gate. `LegacyAdminPermissionsTest` and route/state
+ratchet lists stay unchanged because no gate, route name, URI or verb changed.
+Retained-Blade CSP/uploader/logo/sidebar samples now use classified products
+and that page's existing permission, preserving the original assertions.
+CSP helpers move into `tests/Pest.php` for independent workers. Full mounts
+auto-unmount after each test; the full gate also required that cleanup in the
+existing Products index test file to prevent locale-change timeouts. Test
+assertions are unchanged. The ledger records the session's bounded execution
+budgets and exact verification commands.
+
+Current inventory: **12** backend Blade files; **3** literal app-shell consumer
+files including the shell test (**2** actual extending views); **3** layout-shell
+extending views. Route registrations stay **1,046** `/temp`, **434** `/temp/admin`.
+The rich-editor inventory remains 8 fields in 8 views. No shared asset, shell,
+CSP or protected Blade file is removed. Pest covers both actions, full payloads,
+validation/boundaries, unchanged refused-caller DB, legacy JSON round trips and
+cache behavior. These singleton pages have no bound record IDs, so record-ID
+404 cases do not apply. Full-mount Vitest and real Chromium cover the builder,
+permissions, switch contract, reload persistence, RTL and dark contrast.
+Exact results remain in the ledger; no historical check is claimed for this run.
+The explicit full pre-commit gate passed: **332 Vitest files / 2,561 tests**,
+Pint, PHPStan (**0 errors**) and **6,234 Pest tests / 36,018 assertions**, plus
+Wayfinder/lint/format/types/config clearing. The normal production build and
+all **9 distinct affected Chromium cases** passed. The ledger records the
+bounded session budgets and skipped CI-only groups. No attestation was used.
+Shipping is through [PR #447](https://github.com/arb-rajab/warehouse_management/pull/447)
+into `develop`; this documentation-only follow-up records its number before
+merging. Implementation commit: **90a3e973**. Both commits, the PR title and
+the authorized merge message carry `[skip ci]`.
+PR CI, PR/merge SAST and deploy do not run under `[skip ci]`.
+
+
+## 37. Admin classified products (2026-10-19)
+
+[PR #448](https://github.com/arb-rajab/warehouse_management/pull/448) is the single
+PR into `develop`. Implementation commit **4b8e6249** passed the explicit full
+gate before pushing. This documentation-only `[skip ci]` follow-up records the
+PR number before the authorized merge.
+
+Implemented on `codex/step-37-classified-products` from freshly fetched
+`origin/develop` **c6f8d0fd** (PR #447). Model: **GPT-6 Codex**; this runtime
+does not expose the exact model variant or configured reasoning effort.
+The owner authorizes conversion, not deletion of the feature or a business
+policy change. [The step 37 ledger](../store-backoffice-reconciliation-20261011.md#admin-classified-products-step-37-2026-10-19)
+records this run's checks, failures, skips and shipping state.
+
+`Store\Admin\ClassifiedProductController` implements `HasMiddleware` and owns
+`customer_product_index`, `updatePublished` and `destroy_by_admin` for the three
+existing admin route names. The existing `view_classified_products`,
+`publish_classified_product` and `delete_classified_product` gates remain.
+Publishing is now PUT `/classified_products/{classifiedProduct}/published`,
+validated by `UpdateClassifiedProductPublishedRequest` (`status` is a required
+boolean); delete is DELETE `/classified_products/{classifiedProduct}`. Both bind
+`CustomerProduct`, return 404 for a missing ID, and redirect to the named index
+with its query. Publishing changes only `published`; customer `status`, upload
+limits and notifications are unchanged. Delete transactionally removes the
+product's translations and product, retaining upload rows/files and other
+owners' products, exactly as the previous handler did.
+
+**Shared customer action found during tracing.** `routes/shop-web.php` also
+registers `customer_products.published` on root
+`CustomerProductController::updatePublished`. To obey the explicit requirement
+that customer routes and behavior stay unchanged, this root method and its
+`publish_classified_product` gate remain byte-for-byte; only the admin route
+uses the new method. The root admin index/delete methods and their middleware
+entries are removed. The root controller and both Pint/PHPStan exclusions stay.
+No customer-facing route/view, upload/edit form, search, activation setting or
+mobile API is changed. The customer compatibility route retains its response
+and authorization, pinned in the new controller test.
+
+`FilterClassifiedProductRequest` uses `FiltersPerPage`; the list defaults to
+20 rows with the selector. An explicit selection and scoped translation/thumbnail
+eager loads avoid per-row queries; the displayed uploader is the stored
+`added_by` string, so no account lookup is needed. Legacy `created_at desc` is
+preserved with an `id desc` tie break. Pagination keeps query strings.
+`ClassifiedProductResource` documents its narrow row with `@property-read`;
+thumbnail URL resolution preserves `uploaded_asset` precedence and placeholder
+behavior using the eager-loaded upload. `CustomerProduct` gains only the typed
+thumbnail relation and a return type on its existing translation relation.
+
+The Vue page uses `StoreAdminLayout`, `DataTable`, `PageHeader`, `Pagination`,
+`TableActionLink`, Wayfinder, `useStoreAccess` and `lib/confirm.ts`. Rows retain
+page-relative numbers, escaped translated names/uploader text, thumbnail,
+customer PUBLISHED/UNPUBLISHED badge, independently gated publishing switch and
+delete. Both storefront links are plain anchors with `target="_blank"` and
+`rel="noopener"`. Delete passes `{ mergeQuery: {} }`. English/Arabic
+`store.classifiedProducts.*`, logical switch positioning and dark styling are
+included. The sidebar entry becomes an Inertia visit; its setting and permission
+gates stay. The replacement removes the old Blade view's malformed delete
+`data-href` (extra braces) and stray JavaScript `s`; these existing template
+defects are recorded rather than reproduced in Vue.
+
+Consumer searches covered app/routes/resources/public JS/tests before `git rm`
+removed exactly `customer/classified_products/index.blade.php`. Ten remaining
+views still include the shared delete modal, so it stays. Retained-Blade
+CSP/uploader/logo/sidebar test samples move to `products.seller` and its existing
+`show_seller_products` permission, retaining their assertions. No Legacy*
+classified action cases existed to move; the only classified-specific Legacy*
+entry is the existing destroy route ratchet. `LegacyAdminPermissionsTest` and
+route/state ratchet lists stay unchanged because names and permission gates
+stay, and the state-write ratchet already accepts DELETE. New Pest tests cover
+render/whole-row closures, both flags, translation fallback, bounded queries,
+pagination/validation, both publish directions, missing IDs, every refused
+caller and exact deletion boundaries. Vitest fully mounts the page; Chromium
+covers the native confirm and real publish/menu/RTL/dark/CSP behavior.
+
+Current inventory: **11** backend Blade files; **2** literal app-shell consumer
+files including the shell test (**1** actual extending view); **3** layout-shell
+extending views; **1,046** `/temp` and **434** `/temp/admin` registrations.
+The editor inventory stays 8 fields in 8 views. Shared shells, assets, CSP
+coexistence and protected downloads/invoices stay. Actual verification and the
+shipping record are in the ledger. PR CI, PR/merge SAST and deploy do not run
+under the required `[skip ci]` messages. No attestation is claimed.
+
+The explicit full pre-commit gate passed: **333 Vitest files / 2,568 tests**,
+Pint, PHPStan (**0 errors**) and **6,264 Pest tests / 36,230 assertions**, plus
+Wayfinder, whole-repo lint/format/types and config clearing. The normal production
+build and all **8 affected Chromium cases** passed. Baseline: **102 Pest tests /
+563 assertions**. The ledger distinguishes initial failures, runtime repairs and
+skipped CI-only groups. The root customer publishing compatibility action stays.
+
+
+## 38. Admin seller product list (2026-10-20)
+
+The inventory below records the step 38 checkpoint; §39 supersedes its shell-retention notes.
+
+[PR #449](https://github.com/arb-rajab/warehouse_management/pull/449) is the single
+PR into `develop`. Implementation commit **c41f0a79** passed the explicit full
+gate and all ten affected Chromium cases before pushing. This documentation-only
+[skip ci] follow-up records the PR number before the authorized merge.
+
+Implemented on `codex/step-38-seller-product-list`, based on freshly fetched
+`origin/develop` **47aec0d6** (PR #448). Model: **GPT-6 Codex**; the exact
+variant and configured reasoning effort are not exposed by this runtime.
+The owner authorizes this migration and shipping only after the required
+checks can run. No permission grants or WMS product-write policy changes.
+[The step 38 ledger](../store-backoffice-reconciliation-20261011.md#admin-seller-product-list-step-38-2026-10-20)
+records actual checks, failures, skips and shipping.
+
+**List and gates.** `products.seller` keeps its URI and `show_seller_products`
+gate on `Store\Admin\ProductController::seller`. It uses the existing
+`Store/Admin/Product/Products/Index`, `StoreProductList::Seller`, shared
+`ProductListResource`, filter concern and pagination pattern. Its base scope
+is seller-added, physical, non-auction and non-wholesale products. Name-only
+phrase search, owner filtering and the exact published/for-sale/featured
+matches (including all-off defaults) are preserved. GET booleans follow §16:
+literal `0`/`false` means off, replacing the old presence-only interpretation. The old seller handler had no default order; it now orders newest first
+with an ID tie break. Six allowlisted sorts, narrow selections/eager loads and validated 20-row
+pagination with a per-page selector follow the existing list pattern.
+
+**Legacy filter defects and requested presentation changes.** The old category
+select posted a value the handler ignored; the seller select was commented out;
+there was no approval-status filter. Step 38 explicitly requests these filters,
+so seller/category/approval filtering now works and approval `0` is retained on
+pagination. Today's-deal markup was commented out; its existing action is now
+offered on the seller list as requested. The old deleted checkbox had no effect
+and is omitted, as in-house §16 did. Search still matches only `name`, not Arabic
+name/barcodes. These changes are recorded rather than presented as working
+legacy behavior. The approval control/filter appears under the existing
+`product_approve_by_admin` setting; the endpoint keeps its existing edit gate.
+
+**Actions and established effects.** All existing route names remain.
+`products.published`, `.featured`, `.update_sale`, `.todays_deal`, `.approved`,
+`.duplicate`, `.destroy` and `bulk-product-delete` now bind `{product}` where
+applicable and run on the store admin controller. The seller adapters fix the
+scope in route defaults, so forged `list=all` cannot widen it. Shared
+`products.list.*` actions also accept the seller list type. Publication,
+featuring, sale, today's deal and approval require `product_edit`; duplication
+requires `product_duplicate`; single/bulk deletion requires `product_delete`.
+A permitted staff member may delete another account's seller product; a seller
+account cannot call these admin routes. Deletes are DELETE and writes redirect
+to the named list with its query. Typed requests reject invalid states/IDs.
+
+`UpdatesStoreProductFlags` is the single writer for product flags. Unpublishing
+or taking off sale unfeatures and sets every stock quantity to 0; switching on
+restocks to 1,000. Featured writes only its flag. Approval writes only `approved`,
+with the legacy package check in **both** directions, including unapproval.
+These actions clear views/cache after commit; today's deal changes only its
+flag and forgets `todays_deal_products`. None sends notifications or adds audit
+records. Subscription eligibility and published-product counting stay unchanged.
+The removed root publishing implementation restocked before checking a package
+and could refuse after changing stock; the existing §16 shared writer refuses
+before any write, and the seller list now follows that required shared path.
+The old orphaned owner/shop dereference could also fail; the shared helper
+refuses a missing package/shop before writing. No new package policy is introduced.
+
+Duplicate still copies the product row (owner/flags included), random slug
+suffix, stocks and taxes, without translations/variations/barcodes. Single/bulk
+delete removes translations, stocks, taxes, variations and store barcodes,
+hard-deletes products and soft-deletes cart lines. Shared §16 transactions,
+locks, all-members-before-delete validation, warehouse-FK rollback/cascade/null
+outcomes and once-per-request cache clearing apply. These remain second writers
+of WMS-owned `products` beside `products:sync`; the owner's policy decision
+remains pending (§5), with no new policy inferred.
+
+**Consumers and root controller.** Trace searches covered app/routes/resources,
+public JS and tests, including `routes/shop-seller.php` and all seller views.
+Seller product/digital-product pages use their own `Seller\ProductController`
+actions, not these admin routes. Seller create/edit render backend
+`sku_combinations.blade.php` and `sku_combinations_edit.blade.php`; both stay.
+The admin SKU compatibility route also stays, used by variant-parity tests.
+`products.fetch` remains the JSON cron trigger called by the in-house/all lists;
+its ungated admin-group contract, 30-minute command/status checks and queued
+import are unchanged. Root `ProductController` retains fetch/SKU/search/detail
+compatibility methods and both Pint/PHPStan exclusions. The unconsumed `show`
+and brand-selector methods are removed. The existing missing
+`get_products_by_subcategory` method and non-returning search route are reported
+defects; their registered names are kept, without inventing new behavior.
+
+**Vue, tests and inventory.** The shared page uses seller Wayfinder actions,
+seller edit links, permission-gated controls, escaped labels/stock text,
+English/Arabic strings, RTL and dark styles. The sidebar entry is an Inertia
+visit. `StoreStatusButton` adds a typed `approved` field-name option; existing
+callers retain `status`. No dependency or lockfile change. Ten pre-refactor
+legacy behavior cases pin flags/cache/notifications, copying and deletion.
+New Pest covers render/full row, noise/scopes, filters, pagination/validation,
+every refused caller and action, missing models, forged lists and rollback.
+The middleware case moves from `LegacyControllerMiddlewareConversionTest`
+to the migrated controller coverage: the root no longer has gated writes or
+injected stock/tax services. `LegacyAdminPermissionsTest` and state/route
+ratchet lists are unchanged because no permission or route name changed.
+
+Only `product/products/index.blade.php` is removed with `git rm`. The backend
+inventory is **10** files; there are **0** app-shell extending views and **3**
+plain-layout extending views. `layouts/app`, `inc/admin_nav` and
+`inc/admin_sidenav` have no remaining extender; the unused shell still includes
+both partials and all three remain for the next step. Downloads, invoice and
+`layouts/layout` stay. Route registrations remain **1,046** `/temp`, **434**
+`/temp/admin`; the retained editor inventory remains 8 fields in 8 views.
+Coexistence tests now use actual retained public/seller/auth Blade pages;
+unused-shell logo/sidebar readers remain tested directly until shell deletion.
+The explicit full gate and affected Chromium results are recorded in the ledger.
+Every shipping commit, PR title and merge message uses `[skip ci]`; PR CI,
+PR/merge SAST and deploy do not run. No attestation trailer is written by hand.
+
+
+The explicit full pre-commit gate passed: **333 Vitest files / 2,575 tests**
+(**299.54s**), Pint, PHPStan (**0 errors**) and **6,322 Pest tests / 36,783
+assertions** (**348.82s**, five processes), plus Wayfinder, whole-repo
+lint/format/types and config clearing. The normal production build and all
+**10 affected Chromium cases** passed. Develop baseline: **326 Pest tests /
+2,816 assertions**. The ledger separately records failed attempts, runtime
+repairs and skipped CI-only groups. No attestation was used.
+
+## 39. Retire the unused admin shells (2026-10-20)
+
+[PR #450](https://github.com/arb-rajab/warehouse_management/pull/450) is the single
+PR into `develop`. Implementation commit **630b2a49** passed the explicit full
+pre-commit gate and all seven affected Chromium cases. This documentation-only
+`[skip ci]` follow-up records the PR number before the owner-authorized merge.
+
+Implemented on `codex/step-39-retire-shells` from freshly fetched `origin/develop`
+**ee668d6e** (PR #449). Model: **GPT-6 Codex**; the exact model variant and
+configured reasoning effort are not exposed by this runtime. The
+[step 39 ledger](../store-backoffice-reconciliation-20261011.md#retire-the-unused-admin-shells-step-39-2026-10-20)
+records actual verification and shipping, including skipped checks.
+
+**Completion and deletion proof.** The back-office Blade to Inertia conversion
+is complete. Searches covered `app`, `routes`, all `resources/views` (including
+seller, frontend, auth, emails and PDFs), `config`, `tests`, `public/assets/js`
+and `.ai`. No application extends, includes or renders the three dead shells.
+Before deletion, only the dead layout itself included its two navigation
+partials; the two explicitly identified tests rendered them directly. Other
+matches in `.ai` are historical evidence, preserved as such. Those test pins
+are rewritten against live surfaces. `git rm` removes exactly:
+
+- `resources/views/shop/backend/layouts/app.blade.php`;
+- `resources/views/shop/backend/inc/admin_nav.blade.php`;
+- `resources/views/shop/backend/inc/admin_sidenav.blade.php`.
+
+The empty `inc/` directory disappears. Inventory is **10 → 7** backend Blade
+files, **0** removed-shell consumers and **3** plain-layout extenders. No menu
+data, gates, routes, business behavior, dependency or lockfile changes.
+
+**Test contracts.** `StoreBackOfficeShellTest` now rejects resurrected shells
+and dot/slash references anywhere in executable app/route/resource/config/test
+sources or public JS, and retains the plain-layout/PDF consumer assertions.
+It also explicitly protects both seller SKU fragments. The settings test was
+actually pinning saved logo/site-name readers, not timezone/CSP/head behavior:
+it now reads the saved settings and both preview URLs from the Inertia settings
+screen. Mobile API and protected login readers remain checked. Only the removed
+sidebar's `alt="Holland Store"` and shell's `&copy; Holland Store` markup
+assertions are dropped; Inertia uses the established translated brand and
+configured application title. Existing timezone and strict-CSP cases remain.
+The visit test now pins `HandleInertiaRequests` permissions for ordinary staff
+with/without only `view_representative_visits`. Vitest checks the actual
+`visibleStoreMenu` result in both cases, including the visit URL, label,
+permission and Inertia-link flag. No unrelated product permission is required.
+
+**Asset audit: what the deleted layout loaded first.** Its head loaded external
+Poppins CSS from Google Fonts, then `assets/css/vendors.css`, conditional
+`bootstrap-rtl.min.css`, and `aiz-core.css`. Its body loaded
+`assets/js/vendors.js`, then `aiz-core.js`, followed by `@yield('script')`.
+It defined inline body font sizing, `AIZ.local` uploader translations, flash
+notifications, a language-change POST handler and `menuSearch()`, and yielded
+`content`/`modal`. Its navigation partials loaded no additional JS/CSS files.
+It had no `@push`/`@stack`; no retained backend view defines a script section.
+
+Each asset name was searched across seller, frontend, auth, emails and PDF
+views, then all views/public JS for indirect users. **No public asset is proven
+admin-shell-only, so no asset file is deleted.** Remaining consumers:
+
+| Asset | Retained consumers / reason it stays |
+| --- | --- |
+| `js/vendors.js`, `js/aiz-core.js` | Seller layout; frontend layout; plain backend layout used by seller login, delivery-boy login and 503. The standalone bKash app also loads vendors.js. jQuery/Bootstrap, uploader, widgets and notification behavior remain needed. |
+| `css/vendors.css`, `css/bootstrap-rtl.min.css` | Seller, frontend and plain backend layouts (RTL CSS conditional); standalone bKash/mobile custom-page views also use vendors.css. |
+| `css/aiz-core.css` | Frontend and plain backend layouts, standalone bKash app and mobile custom pages. Seller uses its own aiz-seller.css. |
+| `js/intlTelutils.js` (not loaded by the removed shell) | Auth login/register/password email, frontend login/registration/create-user and frontend layout telephone widgets. |
+| `css/aiz-seller.css` (not loaded by the removed shell) | Seller layout. |
+| `css/custom-style.css` (not loaded by the removed shell) | Frontend layout, bKash app and mobile custom page. |
+| Summernote in `js/vendors.js`, initialized by `aiz-core.js` `textEditor()`; CSS/fonts in `css/vendors.css` and `css/font/summernote.*` | Eight editor fields in eight seller/frontend views: seller physical/digital product create/edit, seller ticket reply, frontend customer product create/edit and customer ticket reply. Bundled Chart.js/AIZ chart helper also stays for `shop/seller/dashboard.blade.php`. |
+
+Emails and PDF views have no direct consumers of those bundles; invoice and
+reference-download PDF styling remains self-contained. Auth views inherit the
+frontend layout; seller/delivery-boy login and 503 inherit the plain layout.
+The shared font/image references inside retained CSS stay with it.
+
+**Blade helpers.** Deleting the shell removes its own inline helpers and script
+outlet. Seller `menuSearch()` and its sidenav caller remain; seller/frontend
+`AIZ.local`, flash notifications and language handlers remain. Script sections
+in seller, frontend and auth views are consumed by their retained layouts;
+login script sections are consumed by `layouts/layout`. None is removed.
+`HandleStoreBladePages` and `store.blade_csp` are still required for their
+inline scripts and full-load Inertia handoffs (§§2.5–2.6).
+
+**What stays Blade on purpose and why:**
+
+- Storefront and customer area: public commerce/customer UI, outside this migration.
+- Seller panel: independent seller workflows, including both backend SKU fragments.
+- Auth pages and 503: login/recovery/registration and error flows; retain the plain backend layout and Blade CSP/coexistence handling.
+- Emails: server-rendered mail templates.
+- PDFs: invoices and bulk-upload reference downloads; retain all four backend PDF templates.
+- `resources/views/app.blade.php`: the Inertia root document, required to boot Vue.
+
+Verification and the final PR reference are recorded in the ledger. Every
+shipping commit, PR title and merge message uses `[skip ci]`. PR CI/SAST/deploy
+do not run. No attestation trailer is written by hand.
+
+The explicit full pre-commit gate passed with no skipped stages: **333 Vitest
+files / 2,577 tests**, **6,323 Pest tests / 36,823 assertions**, whole-repo
+lint/format/types, Pint, PHPStan (0 errors), Wayfinder and config clearing.
+The unchanged develop baseline passed **118 Pest tests / 772 assertions**.
+The normal production build passed; route listings are identical as
+parsed JSON (**1,046** `/temp`, **434** `/temp/admin`). CI-only groups outside
+`--full` and the affected browser results are identified separately in the ledger.
+All **7 affected Chromium cases / 3 files** passed (**27.8s**), covering the
+Inertia menu/settings, strict CSP, logo/timezone behavior, Arabic RTL/dark,
+Blade login/logout handoffs and retained seller uploader. No timeout or test
+budget was changed.
+
+## 40. Launch with Super Admin only: permission sync, fetch gate and login landing (2026-10-20)
+
+Model: **claude-sonnet-5-5**, effort **high**. Shipped in
+[PR #452](https://github.com/arb-rajab/warehouse_management/pull/452) into
+`develop`. Starts from `origin/develop` **b0384e6e** (PR #451, the
+[role-grants audit](../role-grants-audit-20261020.md)). Three separately
+committed changes close audit risks 3, 4 and 2. The
+[step 40 ledger](../store-backoffice-reconciliation-20261011.md#permission-sync-fetch-gate-and-login-landing-step-40-2026-10-20)
+records the verification and the shipping, including what was not run.
+
+**Launch decision.** Nobody uses production yet, so the owner launches with
+**only the Super Admin role**: `Gate::before()` in `AuthServiceProvider` passes a
+Super Admin through every gate. Staff roles are created later in the app's own
+role screen (`/temp/admin/roles`), from the permissions the sync below defines.
+No migration, seeder or command in this step creates a staff role, assigns a
+permission to a role or grants one to a user; `StoreRoleSeeder` still creates
+exactly `Super Admin` and `Clerk` (since [§41](#41-go-live-hardening-seeders-the-first-admin-the-production-env-template-event-cache-and-migrate---pretend-2026-10-20) `Clerk` only in `local` and `testing`).
+
+**Permission sync.** `App\Support\StorePermissions` is the one versioned list
+(`name => section`). `php artisan store:sync-permissions` inserts the rows it
+lacks, the migration `2026_10_20_120000_sync_store_permissions.php` calls the
+same method, and so does `StoreRoleSeeder` (fresh local and e2e databases). It
+only inserts missing `store`-guard rows (`guard_name`, `section`,
+`created_at`/`updated_at`); it never updates, renames or deletes a row, never
+reads or writes the `web` guard, grants nothing to any role or user, and
+forgets spatie's permission cache after a write. Running it again creates
+nothing. The migration's `down()` preserves data, like the other definition
+migrations. Production, in this order:
+
+1. `php artisan store:sync-permissions --dry-run` lists what it would create
+   and writes nothing (and leaves the cache alone);
+2. `php artisan store:sync-permissions` creates them and prints
+   `N created, M already existed`.
+
+The deploy script runs `artisan migrate --force`
+(`.github/scripts/deploy-remote.sh:326`), so the migration defines the rows on
+deploy without step 2; the command is for a later list change and for checking
+first. Existing rows keep their section, so a production database that already
+holds some of these names under another section name is not regrouped.
+
+**The list: 182 names = 38 + 144.** Every name in the audit JSON whose status is
+`enforced` (181) plus `delete_truck` (defined by the logistics migration,
+enforced nowhere, kept). 38 were already defined by migrations and keep the
+section those migrations assigned; **144** existed only in production data, if at
+all. `RoleController::REMOVED_ADDON_SECTIONS` stay out, and no addon permission
+was invented. A section is the sidebar module (`storeAdminMenu.ts`, the same
+groups the legacy sidebar had) of the route or controller that enforces the
+name, using an existing section name wherever one fits:
+
+| Section | Names | Source of the name | Covers |
+| --- | --- | --- | --- |
+| `dashboard` | 1 | new | the admin dashboard |
+| `product` | 33 | only named in the section migration's docblock | Products menu: product lists, digital products, bulk import/export, categories, brands, attributes, colours, reviews |
+| `sales` | 14 | order-entry migration (5) | orders and their status writes, order configuration |
+| `customer` | 13 | customer migration (1) | customers, notifications, classified products and packages (the Customers menu) |
+| `representatives` | 10 | migrations | packages, payments, visits |
+| `seller` | 11 | new | seller list and accounts, payouts, commission, verification form |
+| `trips`, `trucks`, `drivers` | 4 each | migrations | logistics |
+| `uploads` | 4 | migration | uploaded files |
+| `offers_catalog` | 3 | migration | offers catalogue |
+| `blog` | 9 | blog migration (1) | posts and categories |
+| `support` | 7 | support migration (1) | tickets, conversations, product queries |
+| `reports` | 7 | new | the seven report pages |
+| `marketing` | 21 | new | flash deals, offer deals, pop-ups, newsletters, subscribers, coupons |
+| `website_setup` | 7 | new | header, footer, pages, appearance |
+| `setup_configurations` | 22 | migration (1: `google_map_setting`) | settings pages and the shipping pages nested under Setup & Configurations |
+| `staffs` | 8 | new | staff and staff roles |
+
+Six section names are new (`dashboard`, `seller`, `reports`, `marketing`,
+`website_setup`, `staffs`); the other twelve already existed. The legacy
+section vocabulary lives in the production database and is not in the
+repository (a legacy `Permission` row took a free-text `parent`), so these
+names are the sidebar's module names, not a copy of production's. **Least
+certain:** the order permissions under `sales` (the order-entry migration's
+section) while older test fixtures show `order` for `view_all_orders`; and the
+size of `product` (33), which follows the Products menu rather than splitting
+brands, categories or attributes out.
+
+**Guard test.** `StorePermissionsTest` scans `routes/shop-admin.php`, the
+`permission:` middleware, settings map, inline `can()`/`Gate::authorize()` and
+`$permission = match` selectors of `app/Http/Controllers/Store`, and
+`storeAdminMenu.ts` for permission names, and fails naming any that
+`StorePermissions` lacks, so a new module cannot add an undefined gate. It also
+requires all three sources to contribute and over 150 names, so a regex that
+stops matching cannot pass. A new gate means adding its name to the list in the
+module's section, in the same change. The same file, the command, migration and
+seeder tests pin: a second run creates nothing, an existing row's section is
+never changed, no role grant is created, the `web` guard is untouched, and
+`--dry-run` writes nothing. `RoleControllerTest` also asserts that a migrated
+database offers the whole list in the role form, grouped by these sections.
+
+**`products.fetch`.** `POST /products/fetch` (root `ProductController::fetch`,
+queues the catalogue import) now carries `permission:add_new_product` on its
+route, keeping its name. That is the permission the Inertia products list shows
+the button under (`Products/Index.vue`) and the legacy Blade list showed it
+under. `LegacyAdminPermissionsTest` listed `ProductController@fetch` as an
+ungated "read-only AJAX helper"; it is gated now, so that entry came off the
+ratchet (the test fails on a gated route that is still listed).
+`ProductControllerTest` pins refusal (guest, customer, staff without it, staff
+with other product permissions) with no `cron_jobs` row created, and success for
+`add_new_product` and for a Super Admin.
+
+**Login landing.** `Auth\LoginController::authenticated()` sends admin and staff
+accounts to `shop.admin.dashboard` when they can `admin_dashboard` (Super Admin
+through `Gate::before()`), and to `profile.index` otherwise. The profile page is
+the signed-in account's own page; `ProfileController::middleware()` is empty and
+the route sits only behind `auth` and `admin`, so any admin or staff account can
+open it (pinned: a staff member with no permissions gets a 200 there and a 403 on
+the dashboard). Seller and customer redirects are unchanged and pinned.
+Accountants, whom `IsAdmin` admits but this redirect never matched, are not
+changed.
+
+Not verified: production data (which of these rows exist, under which
+sections), and the MySQL migration group, which runs in CI or an attested run
+only. The command and migration ran on scratch SQLite, not MySQL.
+
+## 41. Go-live hardening: seeders, the first admin, the production env template, event:cache and migrate --pretend (2026-10-20)
+
+Model: **claude-sonnet-5-5**, effort **high**. Branch `claude/go-live-hardening-fdk4me`
+from `origin/develop` **2e1f097** (the PR #453 merge, which added the
+[go-live checklist](../go-live-checklist-20261021.md)). The back-office
+migration is complete and nobody uses production yet; the checklist found five
+problems that code can fix, and this PR fixes them as five separate commits plus
+a documentation commit. It deliberately does **not** carry `[skip ci]`: about 40
+earlier PRs merged without CI, so this is the first PR to run the full `tests`
+workflow and SAST. The [ledger entry](../store-backoffice-reconciliation-20261011.md#go-live-hardening-step-41-2026-10-20)
+lists the checks that ran.
+
+**1. Seeders refuse production (checklist F1, 4.5, 8.9).** Only `DatabaseSeeder`
+refused production, so `db:seed --class=StoreUserSeeder --force` created
+`store-admin@example.com` / `password` as a Super Admin there.
+`Database\Seeders\Concerns\RefusesProduction::refuseInProduction()` is the one
+guard (`app()->isProduction()`, a `RuntimeException`, called first in `run()`), now
+used by `DatabaseSeeder`, `StagingRealisticDataSeeder` (both had the same inline
+check), `StoreUserSeeder`, and the two seeders that create mobile users with the
+factory's known password, `CellStatusLogSeeder` and `CellVerificationRoundSeeder`.
+`StoreRoleSeeder` keeps creating `Super Admin` and the permission rows in every
+environment (the first-admin command and local setup need them) and creates the
+`Clerk` demo role only when the environment is `local` or `testing`; nothing in
+`app/`, `routes/`, `config/`, `database/migrations` or the Blade views refers to
+`Clerk` (only tests and e2e fixtures do, under `testing`). Playwright seeds with
+`APP_ENV=testing` (`playwright.config.ts`), so `loginAsStoreAdmin()` and the e2e
+fixtures are unchanged; the Playwright seed path was run by hand under
+`APP_ENV=testing` on scratch SQLite. **Not guarded, on purpose:** `ProductSeeder`,
+`RowSeeder`, `PalletSeeder`, `CellVerificationReportSeeder` and `PageSeeder` write
+demo data but no accounts. Calling one by name in production still works and is
+still wrong (checklist 8.9); guarding them is a follow-up if the owner wants it.
+`SeedersRefuseProductionTest` runs each guarded seeder in `production` against a
+filled database and asserts no account, role, grant or log row changed.
+
+**2. `store:create-admin {email} {--name=} {--promote}` (F9, 4.4).** After
+`migrate` there is no `Super Admin` role and seeders must not run, so the checklist
+carried a tinker recipe. The command, in one transaction: creates the `Super
+Admin` role (guard `store`) if missing; creates the store user (`user_type`
+`admin`, `email_verified_at` set, email lower-cased, name from `--name` or the part
+before the `@`); assigns the role. Decisions:
+
+- The password is read only from `secret()` prompts (enter, then confirm), so it is
+  in no argument, option, environment variable, shell history, process list, log
+  or output. Minimum 12 characters; the production `Password::defaults()` rule
+  (mixed case, digit, symbol, breach list) is **not** applied, because the breach
+  check calls an external service. A mismatch, a short or an empty password
+  (which is what `--no-interaction` yields) writes nothing and exits 1.
+- An email that already belongs to a store user (compared case-insensitively) is
+  refused with nothing written, before any prompt. `--promote` then only assigns
+  the role: no prompt, no change to the password or other fields, and it is a
+  no-op if the user already holds `Super Admin`. This command adds one limit the
+  brief did not ask for: `--promote` refuses an account that is banned or whose
+  `user_type` is not `admin`, `staff` or `accountant`, because `IsAdmin` would
+  answer it 404 and a customer or seller account holding Super Admin would pass
+  every `Gate::before()` check elsewhere.
+- Permissions: if `wms_permissions` has no `store` row at all it runs the same
+  `StorePermissions::sync()` (inside the transaction); if only some are missing it
+  prints the exact `store:sync-permissions` command and writes nothing; if none
+  are missing it says nothing. It never gives any permission to any role or user;
+  the only grant it can write is the one `Super Admin` assignment.
+- Output lists what was created or already existed. It avoids `<...>` around the
+  email: the console formatter reads that as a style tag and silently drops it
+  (found by the test).
+
+`CreateStoreAdminCommandTest` covers a new user, an existing email refused,
+`--promote` (and its refusals), a confirmation mismatch, a short and an empty
+password, an invalid email, no password argument or option, `APP_ENV=production`
+while `StoreUserSeeder` refuses, a synced and an unsynced permission table, a
+rollback when the user cannot be saved, and the grant tables.
+
+**3. `.env.production.example` (F3, checklist §2).** `.env.example` is unchanged
+(local development and CI depend on it). The new file holds production values and
+a comment on every key checklist §2 flags: `APP_ENV=production`, `APP_DEBUG=false`,
+a placeholder `APP_URL`, `SESSION_SECURE_COOKIE=true`, `CSP_REPORT_ONLY=false`
+(the comment says there is no report endpoint, so the browser console is the only
+signal), `TELESCOPE_ENABLED=false`, SMTP mail, MySQL, database drivers for
+session, cache and queue, daily logs, the backup and health settings. It holds
+only placeholders: secrets are empty or `CHANGE_ME`. Optional keys whose empty
+value would override a safer default (`HEALTH_TO_ADDRESS`,
+`BACKUP_NOTIFICATION_EMAIL`, `TRUSTED_PROXIES`) are commented out, because `KEY=`
+sets an empty string, not "unset". `PULSE_ENABLED` is left `true` and marked as the
+owner's decision (checklist 2.12). `BROADCAST_CONNECTION`, in `.env.example`, is
+omitted: nothing reads it. `ProductionEnvExampleTest` pins the safe values, the
+absence of anything secret-looking, that every key (active or commented as a bare
+`# KEY=value`) is read by `env()`/`Env::get()`/`import.meta.env` somewhere, and
+that, loaded as the process environment, the template yields production,
+`debug=false`, secure cookies, an enforced CSP, Telescope off and SMTP mail in the
+real config. README Deployment and checklist §2 point to it.
+
+**4. `event:cache` in the deploy (F4, 5.4, 5.9).** The caches are in the
+repo-owned `.github/scripts/deploy-remote.sh`, not only in a workflow, and the
+existing `deploy-remote-test.sh` covers that script. It now runs `config:cache`,
+`event:cache`, `route:cache`, `view:cache` (the order `artisan optimize` uses)
+after `migrate` and before the release is published, inside the live window, so a
+failure rolls back like any other step. The test stub logs every artisan call; two
+new cases pin the order (before `queue:restart`, the first command after the
+flip) and the rollback on `FAIL_EVENT_CACHE`. No workflow file was edited.
+Production health's `OptimizedAppCheck` therefore passes from the first deploy
+made by the updated script. The change under `.github/` makes CI run every group.
+
+**5. `migrate --pretend` (F2, 3.4).** Cause: `Migrator::pretendToRun()` pretends on
+the connection returned by the migration's `getConnection()`. The health
+migration wrote to the `health` connection with `Schema::connection()` but did not
+name it (Telescope's migration does), so the migrator pretended on the default
+connection only and the health table was created for real; the real `migrate`
+afterwards then failed with "table already exists". Fix: the migration now
+overrides `getConnection()` (small and safe: the same pattern as Telescope's; a
+real run behaves as before, now inside a transaction on the health connection).
+`CreateHealthTablesTest` runs `migrate --pretend` and then `migrate` against
+scratch SQLite files and asserts the pretend run printed the health SQL and
+created nothing but `wms_migrations`. **Not fixed, because app code cannot:**
+`migrate --pretend` still installs the empty migration table (Laravel's own
+`prepareDatabase()`), so it remains unsafe before the one-time `migrations` →
+`wms_migrations` rename on an existing database. The checklist records the safe
+alternative, `migrate:status --pending`, which writes nothing.
+
+**Behaviour changes, for the next person:** `db:seed --class=<account seeder>`
+now throws in production; `StoreRoleSeeder` no longer creates `Clerk` outside
+`local`/`testing` (staging included); `store:create-admin` is new; the deploy runs
+one more artisan command and fails the deploy (with rollback) if it fails; the
+health migration names its connection. No route, permission, schema or data
+change. Still open for the owner (checklist §12) and not touched here: everything
+that depends on systems the repository cannot show, the accepted-risk register,
+the payment-gateway and fetch-button decisions, and the unguarded demo seeders
+above.
+
+## 42. Storefront SEO: canonical, robots, sitemap and JSON-LD (2026-10-20)
+
+Model: **claude-sonnet-5-5**, effort **high**. Branch `claude/storefront-seo-bwo5h0`
+from `develop` **74830af** (the PR #454 merge). Scope: the public storefront, which
+stays Blade (search engines need server-rendered HTML). No visible content, URL,
+route name, panel behaviour or sanitization changed. Five commits, one per item,
+plus this documentation, shipped in [PR #455](https://github.com/arb-rajab/warehouse_management/pull/455);
+the owner runs CI separately, so every commit, the PR title and the merge commit carry `[skip ci]`. §7 recorded the gaps; each was re-read in the code before changing it
+and was right: the layout printed `robots=index, follow`, `og:url=route('home')`,
+`twitter:card=product` and the `@publisher_handle` / `@author_handle` placeholders on
+every generic page; there was no canonical, JSON-LD or hreflang; and `/sitemap.xml`
+returned `base_path('sitemap.xml')`, which is the *string* of a path that nothing
+writes (no command or job generates it), so the route never worked.
+
+**Corrections to the brief.** (1) The storefront is under `/temp`, so the sitemap
+is `/temp/sitemap.xml`; only `robots.txt` must sit at the domain root. (2)
+`digital_product_details` is one of the 14 views but no route renders it
+(`HomeController::product()` always renders `product_details`), so its test serves
+it from a route the test registers. (3) Every price on the storefront is shown only
+to a signed-in, admin-verified account (`Auth::check() && Auth::user()->admin_verified`
+in `product_details/details.blade.php`, `product_box_1`, listings, cart), which
+changed what the JSON-LD may say (below). (4) Several `og:url`s were not only
+generic: the classified product page pointed at the *ordinary product* route, and
+CMS / policy pages used `URL($slug)`, which lacks the prefix.
+
+**1. Meta foundation (`App\Support\Seo`, `partials/seo_meta.blade.php`).** The
+layout asks `Seo::head()` for everything in `<head>`; views keep the `meta_title`,
+`meta_description`, `meta_keywords` and `meta` sections and may add `meta_image`,
+`og_type`, `robots` and `canonical`. The 14 views no longer print `og:url`, twitter,
+`itemprop` or placeholder tags themselves: the layout owns them (and still prints the
+`itemprop` name / description / image once, as before, because tests assert them; they are
+Google+ leftovers outside any `itemscope`), so none can name another page. They keep only
+price extras (`product:price:currency`, `og:price:amount`, `twitter:data1`).
+
+- **Canonical** = the origin of `APP_URL` + the request path (no trailing slash) +
+  the content-changing query keys in a fixed order (`Seo::CONTENT_QUERY_KEYS`: `page`,
+  `keyword`, `sort_by`, `min_price`, `max_price`, `brand`, `category`, `color`,
+  `condition`, `rating`, `search`, `selected_attribute_values`, `selected_categories`,
+  `seller_id`); `page=1` and empty values are dropped; `utm_*`, `fbclid`, `gclid`,
+  referral codes and every other key are dropped. `og:url` is the same string. A
+  filtered or sorted URL is its own canonical (it *is* different content) and is kept
+  out of the index by robots, not by a canonical pointing elsewhere: a `noindex` page
+  that canonicalizes to an indexable one tells Google to index neither. The one
+  deliberate exception is a policy `Page` also served at its slug by the
+  `/{slug}` catch-all: its canonical is the policy route (`Page::POLICY_ROUTES`).
+- **APP_URL, not the asked host,** is the origin, so every alias of the site names
+  one address (the go-live checklist, 11.4, makes the redirects). With no host in
+  `APP_URL` it falls back to the request.
+- **Fallbacks.** A blank section value falls back to the settings (`meta_title`,
+  `meta_description`, `meta_keywords`, `meta_image`), and `<title>` to
+  `website_name | site_motto`; before, a product without a `meta_title` printed an
+  empty `<title>` and empty `og:title`. `og:image` is the page's own upload, else the
+  settings image; the placeholder image never counts as an image. Product pages use
+  `meta_img`, then the thumbnail.
+- **Twitter.** `summary_large_image` when an image exists, else `summary`. **No
+  `twitter:site` / `twitter:creator`**: no setting holds a handle (`twitter_link` is a
+  profile URL), and none was invented. `og:type` is `website`, `product` (the product
+  pages; the old `og:product` was invalid) or `article` (blog).
+- All values are decoded once from the section and escaped once by the template.
+
+**2. Robots.** `Seo::robots()`; a view's own `robots` section wins.
+
+| Page | Directive |
+| --- | --- |
+| Home, product, category / brand, `?page=N` of a plain listing, brands / categories index, blog index and published posts, custom and policy pages, shops, classifieds | `index, follow` |
+| **Listings rule:** internal search (`search`, with or without a keyword) and any listing carrying one of the content keys other than `page` (a sort, a price range, a brand / attribute / category / rating / condition filter, a blog search) | `noindex, follow` |
+| Login, register, password reset, email verification, `users/login`, `users/registration`, seller and delivery-boy login, cart, compare, order tracking, `checkout.*`, order confirmation; every route behind `auth`, `user`, `customer`, `seller`, `admin`, `rep_or_admin`, `verified`, `unbanned` or `signed` (dashboard, profile, purchase history, wallet, ...); the 403 / 404 / 500 views; an unpublished blog post | `noindex, nofollow` |
+
+The rule for listings: the plain listing and its pages are what we want indexed;
+every filtered or sorted variant duplicates it, but its links to products are still
+worth following, hence `noindex, follow`. Tracking-only or empty parameters do not
+make a variant. Search results and filtered listings are **not** in `robots.txt`: a
+crawler that may not fetch a page cannot see its `noindex`.
+
+`SendNoIndexHeader` sends `X-Robots-Tag: noindex, nofollow`: always on the store
+back office (`routes/shop-admin.php`), the seller area, the four store API files and the
+`api` group (so also on a guest's redirect and on a 401), and on every Inertia response
+(root view `app`, or an Inertia visit) through the `web` group, which is the WMS back
+office and the Inertia store admin. It sits in the middleware priority list ahead of
+`auth`, otherwise the 401 / redirect `auth` throws is produced outside it. The
+backend and seller Blade layouts (seller login, the 503 page) print a robots meta. A
+guest's redirect from a WMS page to its login carries no header (only Inertia pages do);
+the login page does.
+
+`robots.txt` is a route (`RobotsController`, name `robots`), not a file: a file in
+`public/` is served by the web server before Laravel, so `public/robots.txt` was
+deleted and a test fails if it returns. The Disallow lines come from `route(..., false)`
+(the storefront prefix follows the routes) and the `Sitemap:` line from `APP_URL`. The
+storefront stays open; disallowed: `/admin`, the store back office, `/password/change`,
+`/health`, cart, checkout, the account pages, `<storefront>/seller/` (with the slash:
+`/seller-policy` is public), `<storefront>/api/` and `/api/`. Account paths are prefix
+matches, so a CMS page whose slug *starts with* one of them (e.g. `dashboard-info`)
+would be blocked.
+
+**3. Sitemap (`App\Services\Sitemap`, `SitemapController`).** `GET <storefront>/sitemap.xml`
+is always a `<sitemapindex>`; its files are `sitemap-{source}-{n}.xml` for `static`
+(home, brands / categories / blog index, the policy pages that exist), `pages`,
+`categories`, `brands`, `products`, `blog` and `classifieds`, each file at most 50,000
+URLs (`MAX_URLS_PER_FILE`; about 150 bytes a URL, so the count binds, not the 50 MB).
+Content type `application/xml`. Visible content only:
+
+- **Products:** `filter_products()` (the listing's own rules: published, `auction_product = 0`,
+  in-house, or from a *verified* seller while the vendor system is on) **and `approved = 1`**
+  (the product page 404s otherwise, though `filter_products()` does not check it when the
+  vendor system is off), with a non-empty slug. Digital products are ordinary products on
+  this storefront and follow the same rules. Classifieds: only while `classified_product = 1`,
+  `published = 1` and `status = 1`.
+- **Posts** `status = 1` and not soft-deleted; **categories** except `Uncategorized`
+  (as `all_categories` hides it for non-admins), **brands** and **pages** with a slug; a
+  policy page is listed at its policy route, never at its slug; the `home_page` row is not.
+  Not listed: shops, flash deals, coupons, compare, anything private.
+- **`lastmod`** from `updated_at` for posts, pages, categories and brands; **never for
+  products**: `products:sync` upserts every product in the feed each hour and Eloquent
+  bumps `updated_at` with it, so the date would claim everything changed at the last sync.
+- Explicit column selects on the base query builder (no hydration, no `$with` translations),
+  `forPage()` + `cursor()` per file, so the queries per file do not grow with the rows (a test
+  pins this). Every URL is `APP_URL`'s origin + `route(..., false)`.
+- **Cache** (the default store, `Sitemap::TTL` = 3600 s, nothing evicts by hand; a change
+  shows within the hour): `sitemap.counts` (URLs per source) and `sitemap.{source}.{page}`
+  (the rendered file). The index is rebuilt from `sitemap.counts`. A page outside
+  `1..ceil(count / 50,000)` or an unknown source is a 404 *before* any cache key is written.
+- Not in the sitemap on purpose: images, news, hreflang alternates.
+
+**4. JSON-LD (`App\Support\StructuredData`, `partials/json_ld.blade.php`).** Printed only as
+`json_encode(... JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS |
+JSON_HEX_QUOT | JSON_INVALID_UTF8_SUBSTITUTE | JSON_THROW_ON_ERROR)` inside
+`<script type="application/ld+json">`. Types: **Product** (name, url, up to 5 images, plain-text
+description (sanitized, stripped, 500 characters), sku (first stock sku, else `mat_id`), brand,
+`offers`, `aggregateRating`) + **BreadcrumbList** (Home, the category chain, the product) on
+product pages; **WebSite** with a `SearchAction` (`<storefront>/search?keyword={search_term_string}`,
+a real GET route) + **Organization** (name, url, `header_logo` when set) on the home page;
+**BreadcrumbList** on category and brand listings (none for search or the plain listing);
+**BlogPosting** (headline, description, `datePublished`, `dateModified`, image, publisher,
+`mainEntityOfPage`) on posts.
+
+- **Offers follow the page.** `offers` (price in the default currency with tax and discount,
+  `priceCurrency`, `InStock` / `OutOfStock` from the stock rows, digital products always in
+  stock) is printed only to a visitor the page shows prices to, and never for variant products
+  (the page prints a range). **A crawler is a guest, so production markup carries no price.**
+  Publishing prices in markup while the page hides them breaks Google's rule that markup must
+  match the page and defeats the gate; making prices public is a business decision for the owner
+  (checklist 11.7), not done here.
+- **`aggregateRating`** only when the reviews section is on and published reviews exist: the mean
+  of those reviews and their count.
+- **No author** on `BlogPosting`: `blogs` has no author column.
+- Tests: the exact JSON of a product without and with reviews (and with tax, discount and zero
+  stock), the home page and a blog post; `</script><script>alert(1)</script>`, quotes, `&` and `<b>`
+  in a product, brand and category name cannot leave the script or the JSON.
+
+**The `/temp` prefix.** No new code names it. `Seo`, `Sitemap`, `StructuredData` and
+`RobotsController` take paths from the request and `route(..., false)`, so they follow the prefix
+when it is removed. It is still named by `RouteServiceProvider`, `bootstrap/app.php` (`redirectTo`)
+and the `app-url` meta in the layouts (all established, untouched). Removing it changes every
+indexed URL: see checklist 11.8.
+
+**Not done.** `hreflang` (Arabic and English share one URL by session language), AMP, an image
+sitemap, Search Console / Bing set-up, real `twitter:site` / `twitter:creator` handles (no setting
+exists), `sameAs` social links in `Organization`, prices in markup, redirects from non-canonical
+hosts, automatic sitemap invalidation (it expires), per-page `<meta name="keywords">` cleanup (still
+printed, as before).
+
+**Found on the way, not fixed (outside this scope; the first three were fixed afterwards, see §43).** The product page divides by `unit_equal` for a
+discounted product when it is `0` / `null` (`details.blade.php`, "Price Per Piece": a 500 for a verified
+customer); `top_selling_products.blade.php` lazy-loads `product_translations` and builds `route('product')`
+for products without a slug (a 500 in `local` / `testing`, where strict mode is on, or with a slugless
+product); the policy and blog views read `$page` / `$blog` without a null check (a missing row is a 500
+rather than a 404); the two seller-shop views printed `$shop->meta_img` in `twitter:image`, a column
+`shops` does not have (that tag is gone). **Fixed because a test
+needed it:** the product page's review list lazy-loaded each review's `user` (a 500 under strict mode with
+two or more reviews); it now eager loads it.
+
+**Evidence: the rendered `<head>`, from a real server.** `php artisan serve` on a scratch SQLite
+database (`migrate:fresh --seed`, then one category pair, a brand, a blog post, a custom page, the
+settings and slugs added by hand; `APP_ENV=staging`, because `local` turns strict mode on and the
+seeded products have no slug, see "Found on the way"), `APP_URL=http://127.0.0.1:8123`. Lines are
+as printed, `curl -s`; `og:image` and JSON-LD are omitted where a page had none.
+
+| URL | status | `robots` | `canonical` = `og:url` | `og:type` | `twitter:card` |
+| --- | --- | --- | --- | --- | --- |
+| `/temp` | 200 | `index, follow` | `http://127.0.0.1:8123/temp` | website | summary |
+| `/temp/product/salty-crisps` | 200 | `index, follow` | `http://127.0.0.1:8123/temp/product/salty-crisps` | product | summary_large_image (`og:image` = the thumbnail) |
+| `/temp/category/snacks` | 200 | `index, follow` | `http://127.0.0.1:8123/temp/category/snacks` | website | summary |
+| `/temp/category/snacks?page=2` | 200 | `index, follow` | `.../temp/category/snacks?page=2` | website | summary |
+| `/temp/category/snacks?sort_by=newest&utm_source=x` | 200 | `noindex, follow` | `.../temp/category/snacks?sort_by=newest` | website | summary |
+| `/temp/search?keyword=crisps` | 200 | `noindex, follow` | `.../temp/search?keyword=crisps` | website | summary |
+| `/temp/blog/opening-hours` | 200 | `index, follow` | `.../temp/blog/opening-hours` | article | summary |
+| `/temp/about-us` (custom page) | 200 | `index, follow` | `.../temp/about-us` | website | summary |
+| `/temp/terms` (policy) | 200 | `index, follow` | `.../temp/terms` | website | summary |
+| `/temp/terms-conditions` (the same policy at its slug) | 200 | `index, follow` | `.../temp/terms` | website | summary |
+| `/temp/login` | 200 | `noindex, nofollow` | `.../temp/login` | website | summary |
+| `/temp/cart` | 200 | `noindex, nofollow` | `.../temp/cart` | website | summary |
+
+`<title>`s were the page's own (`Salty Crisps | Albaraka`, `Snacks wholesale`, `Opening hours`, `About us`,
+`Terms & Conditions`) or the settings' `Albaraka Holland wholesale` (home, search, login, cart). Headers:
+`/admin/login`, `/temp/admin` (a 302 to the login) and `/temp/api/v2/currencies` each answered
+`X-Robots-Tag: noindex, nofollow`. `/robots.txt` (`text/plain`) printed `User-agent: *`, the 24
+`Disallow:` lines (`/admin` ... `/api/`) and
+`Sitemap: http://127.0.0.1:8123/temp/sitemap.xml`. `/temp/sitemap.xml` (`application/xml`) listed six
+files. Product JSON-LD on that page, as printed (guest, so no `offers`):
+`{"@context":"https://schema.org","@type":"Product","name":"Cumque Ut","url":"http://127.0.0.1:8123/temp/product/salty-crisps","image":["https://via.placeholder.com/640x480.png/006633?text=in"],"description":"Crunchy crisps","sku":"SKU-1","brand":{"@type":"Brand","name":"Acme"}}`
+plus a four-item BreadcrumbList (Home, Food, Snacks, the product).
+
+**Sitemap URL counts on the seeded data** (same database, cache cleared first): `static` 9 (home, brands,
+categories, blog, 5 policy pages), `pages` 1, `categories` 2, `brands` 1, `products` 34, `blog` 1 = **48 URLs in
+6 files**. The seeder's 33 products have no slug and are not listed (the sitemap, and the product page, need
+one); the count above is after giving every scratch product a slug. Before that, `products` was 1 and the total
+**15**. A request made before the slugs were added kept answering 15 until the cache was cleared, which is the
+one-hour cache working as designed.
+
+**What was verified, and what was not.** Run here: the focused Pest files while developing
+(`StorefrontSeoMetaTest`, `StorefrontMetaViewsTest`, `StorefrontRobotsTest`, `StorefrontSitemapTest`,
+`StorefrontStructuredDataTest`: 16 + 18 + 71 + 18 + 12 tests, all real routes rendered); the server run above;
+and `python3 .claude/scripts/pre_push_check.py --full`, which passed on the final code: ESLint, Prettier,
+vue-tsc, Vitest (333 files, 2577 tests), Pint, PHPStan (0 errors) and Pest (**6522 tests, 38091 assertions**).
+The first `--full` run failed on two existing tests that assert the blog page's `itemprop` tags
+(`MarketingPublicRenderingTest`, `BlogControllerTest`); the tags are printed again and **no existing test was
+edited**. Not run: Playwright, the MySQL migration tests, the composer / npm audits and the deploy-script test
+(the attested run was not used, so no `CI-Verified` trailer exists); nothing ran on MySQL (the sitemap's
+`forPage()` / `cursor()` queries were only exercised on SQLite); no rich-results test, no Search Console, no real
+crawler; the headers were read from `php artisan serve`, not from the production proxy. The PR was merged
+without CI, SAST or deploy (all skipped on purpose).
+
+## 43. Storefront 500s fixed: unit_equal, top sellers, missing rows (2026-10-20)
+
+Model: **claude-sonnet-5-5**, effort **medium**. Branch `claude/storefront-seo-bugs-dvyhna` from
+`develop` **508d883** (the PR #455 merge). Scope: the four defects §42 listed under "Found on the way, not
+fixed" as 500s. The storefront stays Blade; no visible content for a valid row, price rule (prices only for a
+signed-in, admin-verified customer), URL or route name changed. Shipped in
+[PR #456](https://github.com/arb-rajab/warehouse_management/pull/456). Each fix is its own commit, with its test
+written first and seen failing. Every commit, the PR title and the merge commit carry `[skip ci]`.
+
+| # | Bug | Fix | Proving test |
+| --- | --- | --- | --- |
+| 1 | `unit_price / unit_equal` threw `DivisionByZeroError` for a verified customer when `unit_equal` is `0` or `null` (the discounted branch of `product_details/details.blade.php`, and `partials/product_box_1.blade.php`, which every listing card uses). The undiscounted branch was already guarded by `@if (unit_equal > 0)`. | `Product::$price_per_piece` (`pricePerPiece()` accessor): `unit_price / unit_equal`, or `null` unless `unit_equal > 0`. The three views print the per-piece line only when it is not `null`. The value and the `€` formatting for a valid `unit_equal` are the same expression as before. | `StorefrontUnitEqualTest` (0 and null on the product page, discounted and not, and the listing, for a verified customer and a guest; a valid `unit_equal` prints the same `€0.625`), `ProductTest` (accessor: 4, 1, 0, null, negative). Before the fix 4 of 9 failed with `DivisionByZeroError`. |
+| 2 | The top-selling widget built `route('product', $slug)` for up to six products, so a product with a null or empty slug threw `UrlGenerationException` (a 500), and it lazy-loaded translations, taxes, stocks and the thumbnail per product. | `Product::topSellingOf($sellerId, $limit = 6)` scope: same seller, `filter_products()` rules, `num_of_sale desc` and limit of six, plus `slug` not null and not empty, a column list of what the view and price helpers read, and eager loads (`product_translations`, `taxes`, `stocks`, `thumbnailUpload`, each column-limited). `uploaded_asset()` takes an optional preloaded `Upload` (the old call is unchanged). | `StorefrontTopSellingProductsTest` (slugless and blank-slug products not listed and the page is 200; order, six-item limit, seller scoping, unpublished and auction products excluded; translated names and tax-inclusive prices under strict mode; same query count for 1 and 6 products), `ProductTest` (scope). Before the fix all 4 failed (a 500, and lazy-loading violations). |
+| 3 | `BlogController::blog_details` and the five policy actions (`HomeController`) read a row with `first()` and passed `null` to the view: a 500 instead of a 404. `blog_details` also ignored `status`, so an unpublished post could be opened by its slug while the sitemap excludes it. | `firstOrFail()` on all six; `blog_details` also requires `status = 1`. | `StorefrontMissingRowsTest` (11 tests: missing, unpublished and soft-deleted post; the published post still renders its content; each policy page with and without its row; custom page and mobile page missing). Before the fix 9 of 11 failed. |
+
+**Deliberate behaviour change.** An unpublished blog post (`status = 0`) now answers **404** at
+`/temp/blog/{slug}`; before, it rendered with `noindex, nofollow`. The sitemap already left it out. A post
+that is published, and every existing policy or custom page, is unchanged. `pages` has **no** status or
+visibility column (`id, type, title, slug, content, meta_*, keywords, timestamps`), so no published rule
+applies to policy or custom pages; `PageController::show_custom_page` (and `mobile_custom_page`) already
+answered 404 for a missing row and only gained tests. The two existing tests that opened an unpublished post
+(`StorefrontRobotsTest` "a view can set its own robots directive and it wins", `StorefrontSeoMetaTest` "a blog
+post is an article and an unpublished one is not indexable") had that one request replaced by rendering
+`shop.frontend.blog.details` directly with the unpublished `Blog`, so they still pin the view's own robots rule;
+no other assertion changed.
+
+**Found on the way, not fixed (for the owner; checklist D15).** Each is a 500 (in `local` / `testing`, and with a
+slugless row in production) only for a row that lacks the column:
+
+- `route('product', $x->slug)` with a possibly empty slug, unguarded: `product_details/related_products.blade.php:16,27`
+  (same defect as the top sellers, same category, plus lazy loading under strict mode),
+  `product_details/offered_products.blade.php:21,32`, `partials/product_box_1.blade.php:20,22` (every listing card),
+  `index.blade.php:105,107,173`, `flash_deal_details.blade.php:36,38`, `partials/search_content.blade.php:33`,
+  `partials/cart.blade.php:58`, `partials/addedToCart.blade.php:56,66`, `partials/coupon_box.blade.php:74`,
+  `view_compare.blade.php:26` (also two `Product::find()` per row), `order_confirmed.blade.php:169`,
+  `user/order_details_customer.blade.php:159,162`, `user/view_wishlist.blade.php:19,38`,
+  `user/customer/dashboard.blade.php:263,279`, `user/digital_purchase_history.blade.php:23`, and
+  `digital_product_details.blade.php:477,489,637,648` (no route renders that view).
+- `route('products.category' / 'products.brand', $x->slug)` with no guard: `product_details/details.blade.php:88`,
+  `all_brand.blade.php:31`, `all_category.blade.php:34`, `product_listing.blade.php:59-85,273`, `index.blade.php:303`.
+- Division by a column that can be zero, outside the storefront views: `app/Console/Commands/NewFetchProductsCommand.php:272,491`
+  and `AllProductsCommand.php:388,408` divide by the feed's `Unit_Equal` (a console sync, not a page).
+  `get_price_per_piece()` (`app/Http/Helpers.php:1391`, used by two API resources) treats 0 and null as 1
+  and prints a per-piece price; it was left alone because the API contract is not in scope.
+
+None was fixed: each would hide or replace a product link (visible content) or needs a query change and a
+decision on what to show for a product without a slug, so it is not a one-line, risk-free change.
+
+**What was verified, and what was not.** See the final report of the PR for the exact commands. Not run:
+Playwright, the MySQL migration tests, the composer / npm audits and the deploy-script test (the attested run
+was not used, so no `CI-Verified` trailer exists); nothing ran on MySQL; no real browser or crawler.
+PR CI, SAST and deploy did not run (skipped on purpose).
+
+## 44. Required and optional form fields (2026-10-21)
+
+Model: **claude-opus-5-5**, effort **high**. Branch `ccr-df04b098-zzj7j8` from `develop` **1768298** (the
+PR #456 merge). Scope: how every form shows which fields are mandatory, a tool that measures the gap
+across the whole application, a ratchet that stops it growing in the store back office, and two pilots.
+The standing rule is [form-required-fields.md](form-required-fields.md); this section is its history and
+plan. Shipped in [PR #458](https://github.com/arb-rajab/warehouse_management/pull/458), with CI (no `[skip ci]`).
+
+**The problem, as found.** Nothing in the rules said how a required field is shown, so no form showed it.
+The storefront registration form (`shop.auth.register`) required tax number, addresses and trade license
+in HTML though `RegisterController::validator` never asks for them, did not require email or the password,
+and had **no company name input at all** although the validator requires `company_name`: that form could
+not succeed. `FormField.vue` forwarded `required` to the input but printed no mark, and 92 files use it.
+
+**The convention** (in full in the rule): the server rule is the source of truth; a field it requires
+shows a red asterisk (`aria-hidden`) plus visually hidden "required" text and carries `required`; optional
+fields are unmarked, or "(optional)" in a form where most fields are required (the request read "most
+fields are optional", which contradicts "the few optional ones"; the rule records the reading used);
+never both; a form with a required field shows the legend "* Required fields"; a conditional rule
+(`required_if`, ...) gets a mark only while its condition holds, and help text.
+
+**What changed, by commit.**
+
+1. **Vue foundation.** `RequiredMark.vue` (asterisk + sr-only `common.required`, `ms-0.5`, `text-red-700`
+   / `dark:text-red-400`) and `RequiredLegend.vue` (`common.requiredLegend`); strings in `en.json` and
+   `ar.json` (`common.required`, `common.requiredLegend`, `common.optional`). Every field component that
+   forwards `required` shows the mark exactly when it is set: `FormField` (`required` became a prop; the
+   input still carries the attribute), `StoreSelectField`, `StoreBooleanField` (required by default, as it
+   always rendered; new `:required="false"`), `StoreUploadField`, `StoreRichTextField`, `ProductSelect`,
+   `FilterNumberField`, `FilterDateField` (new optional `required`), and later `StoreNewsletterRecipients`
+   and `StoreOrderSearch` (found by the guard). `ResourceFormPage` renders the legend when a mark inside
+   its form is rendered (`lib/requiredFields.ts`, provide/inject; since commit 5 the mark registers itself)
+   with a `requiredLegend` opt-out. Existing tests changed only where they asserted a label's text (18
+   assertions in 13 files) or `StoreBooleanField`'s props (one).
+2. **Blade foundation and the registration pilot.** `<x-required-mark />`, `<x-optional-mark />` and
+   `<x-required-legend />` in `resources/views/components/`, through `translate()`. Both views that post to
+   `RegisterController::register` (`shop.auth.register` at `/temp/register` and
+   `shop.frontend.user_registration` at `/temp/users/registration`, the one the storefront links to) mark
+   and require exactly name, company name, email, phone, country, password and its confirmation, with the
+   legend first; `shop.auth.register` gains the missing company name input and says "(optional)" on tax
+   number, company address, shipping address and trade license instead of requiring them. The OTP-addon
+   branch is unchanged (with the addon on, the hidden email input stays unrequired although the validator
+   requires email: recorded, not fixed). `StorefrontRegistrationRequiredFieldsTest`: the marks, the
+   `required` attributes, the legend, and a 422-style error for each required field left out.
+3. **`php artisan forms:audit-required`** (`app/Console/Commands/AuditRequiredFieldsCommand.php`,
+   `app/Support/RequiredFields/`): described in the rule. It writes `.ai/required-fields-audit-20261021.md`
+   and `.json`, committed.
+4. **The ratchet** (`RequiredFieldsRatchetTest`, baseline `tests/Feature/Support/required-fields-baseline.json`,
+   111 entries at introduction, about 2.5 s) and the Vitest guard (`RequiredFieldComponents.test.ts`).
+5. **The back-office pilot: staff and roles.** The staff role select (`role_id`, required by
+   `StoreStaffRequest` / `UpdateStaffRequest`) gains its mark; staff create marks all six fields, staff edit
+   leaves the optional password unmarked, the role form marks only the name; the legend shows on all four
+   pages. Baseline down to **109**; `Store/Admin/Staff` has no finding in any class. The Blade mark moved to
+   a fixed `#b91c1c` when Playwright measured the theme's `.text-danger` at 3.6:1.
+6. **Rules**: the rule file, its index row, AGENTS.md item 5, agent-conventions "Forms: required and optional
+   fields", js.md, and §3 steps 6 and 10 above. The Boost-managed skills (`boost.json`) were not edited.
+
+**Audit results.** Same tool, same day, on `develop` before this branch and on this branch after both
+pilots (158 Vue forms, 81 Blade forms; 257 FormRequests, 1 unparsed; 30 inline validators, 5 unparsed):
+
+| Class | `develop` | This branch |
+| --- | ---: | ---: |
+| A server-required, no `required` (or no control) | 80 | 69 |
+| B server-required, no mark | 308 | 93 |
+| C `required`/mark, rule optional or absent | 103 | 99 |
+| D conditional rule, static mark | 10 | 10 |
+| E control with no server rule | 223 | 227 |
+| F unparsed | 23 | 23 |
+| **Total** | **747** | **521** |
+
+By priority on this branch: P1 (public storefront) 40, P2 (other storefront, account, seller panel) 325,
+P3 (back office) 156. The foundation alone removed 205 class B findings (every `FormField`-based label);
+the registration pilot removed 11 A and 4 C (E rose by 4: the "(optional)" registration fields are taken
+by no rule, because `RegisterController::create()` never stores them). Where the gap is now:
+
+| Module | Forms | A | B | C | D | E | F |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| seller panel (Blade) | 26 | 14 | 14 | 44 | 0 | 121 | 0 |
+| storefront/account (Blade) | 12 | 12 | 13 | 23 | 0 | 43 | 1 |
+| storefront (Blade) | 38 | 6 | 4 | 16 | 0 | 30 | 6 |
+| storefront/auth (Blade) | 4 | 0 | 0 | 4 | 0 | 13 | 0 |
+| Store/Admin/Marketing | 19 | 4 | 18 | 0 | 0 | 8 | 0 |
+| Store/Admin/Product | 24 | 1 | 13 | 3 | 0 | 0 | 5 |
+| Store/Admin/Setup | 27 | 10 | 7 | 0 | 8 | 0 | 0 |
+| Store/Admin/Website | 7 | 9 | 6 | 1 | 0 | 2 | 0 |
+| Store/Admin/Customers | 13 | 0 | 4 | 7 | 0 | 0 | 0 |
+| Store/Admin/Sales | 9 | 6 | 1 | 1 | 0 | 6 | 2 |
+| Store/Admin/Trips | 11 | 3 | 4 | 0 | 0 | 1 | 1 |
+| Store/Admin/Languages | 7 | 3 | 0 | 0 | 0 | 2 | 0 |
+| 17 other modules (WMS admin, auth, blog, sellers, staff, ...) | 42 | 1 | 9 | 0 | 2 | 1 | 2 |
+| server-only (unparsed rule sets) | 0 | 0 | 0 | 0 | 0 | 0 | 6 |
+
+Most Blade C and E findings are endpoints that validate nothing (`Request $request` with no rules: the
+conversations, password reset by code, seller products and coupons): the UI's `required` is the only check,
+and every field is taken unvalidated. That is a server gap first, a marking gap second.
+
+**Top 20 forms to fix first** (public first, then by high and medium findings; the full list with
+`file:line` on both sides is in the report):
+
+| # | Priority | Form | Posts to | High | Medium |
+| ---: | --- | --- | --- | ---: | ---: |
+| 1 | P1 | `shop/seller/profile/address_edit_modal.blade.php:1` | `seller.addresses.update` | 5 | 0 |
+| 2 | P1 | `shop/seller/profile/index.blade.php:258` | `seller.addresses.store` | 5 | 0 |
+| 3 | P1 | `shop/frontend/seller_form.blade.php:28` | `shops.store` (seller registration) | 4 | 0 |
+| 4 | P1 | `shop/frontend/partials/address_edit_modal.blade.php:1` | `addresses.update` | 3 | 1 |
+| 5 | P1 | `shop/frontend/partials/address_modal.blade.php:11` | `addresses.store` | 3 | 1 |
+| 6 | P1 | `shop/frontend/shipping_info.blade.php:55` | checkout shipping info | 1 | 0 |
+| 7 | P2 | `shop/frontend/user/create_user.blade.php:18` | `store_customer` | 12 | 12 |
+| 8 | P2 | `shop/seller/product/digitalproducts/edit.blade.php:11` | `seller.digitalproducts.update` | 9 | 0 |
+| 9 | P2 | `shop/frontend/user/customer/product_edit.blade.php:24` | `customer_products.update` | 9 | 0 |
+| 10 | P2 | `shop/frontend/user/customer/product_upload.blade.php:11` | `customer_products.store` | 9 | 0 |
+| 11 | P2 | `shop/seller/coupons/edit.blade.php:18` | `seller.coupon.update` | 7 | 1 |
+| 12 | P2 | `shop/seller/coupons/create.blade.php:20` | `seller.coupon.store` | 7 | 1 |
+| 13 | P2 | `shop/seller/product/digitalproducts/create.blade.php:12` | `seller.digitalproducts.store` | 7 | 0 |
+| 14 | P2 | `shop/seller/shop.blade.php:21` | `seller.shop.update` | 6 | 0 |
+| 15 | P2 | `shop/seller/product/products/create.blade.php:23` | `seller.products.store` | 4 | 5 |
+| 16 | P2 | `shop/auth/passwords/reset.blade.php:11` | `shop.password.update` | 4 | 0 |
+| 17 | P2 | `shop/seller/product/products/edit.blade.php:24` | `seller.products.update` | 3 | 5 |
+| 18 | P2 | `shop/frontend/digital_product_details.blade.php:792` | `conversations.store` | 2 | 0 |
+| 19 | P2 | `shop/frontend/product_details.blade.php:162` | `conversations.store` | 2 | 0 |
+| 20 | P2 | `shop/frontend/user/support_ticket/index.blade.php:79` | `support_ticket.store` | 2 | 0 |
+
+**The tool, checked by hand on 15 forms.** Each was read against its rules and template:
+staff create and edit; role edit; customer create (both ternary branches; the 7 C findings are real:
+`ValidatesStoreCustomer` makes company name, tax number, bank account, addresses, country and trade license
+`nullable`, the create form requires them); customer edit (six separate forms); WMS user create and edit;
+WMS settings; blog post create; currency settings (D: `required_with` / `required_without` with a static
+`required`); both registration views; seller registration (`shops.store`: asterisks present, no `required`:
+A); the storefront address modal (`AddressController@store` validates only `phone`: C on address, country,
+postal code, B on phone); password reset by code (validates nothing: C); the product conversation form
+(validates nothing: C); the digital product tax rows. The hand check found seven tool errors, all fixed and
+covered by `RequiredFieldsAuditTest`: the `register` route name is the GET (the POST on the same URI is
+unnamed); a bare `->validate()` on a validator was read as an unparsable rule set; a hidden `0` fallback
+beside a checkbox (`is_admin`) was reported as A and B; a checkbox group `x[]` did not answer a required
+`x`; an item rule `x.* => required` was applied to a checkbox list (and then, wrongly, not to per-row text
+inputs and single selects); forms in `ResourceFormPage`'s `#after-form` slot and nested `<Form>`s were
+merged into the outer form. Known limits are in the rule (script-submitted forms, 139 controls with runtime
+names in 47 forms, legends not checked, Blade outside `shop/`).
+
+**Plan.** Each batch is one PR: fix every A to D finding of its forms, test that the marks match the rules
+(Vitest for Vue, a rendered-page Pest test for Blade, as the two pilots do), shrink the baseline, and
+regenerate the report.
+
+- **Phase 2, public and high-traffic forms** (this order): (a) the six P1 Blade forms: storefront and seller
+  address forms, seller registration (`shops.store`), checkout shipping info; give `AddressController`
+  real rules where it validates only `phone`, as a deliberate, tested change; (b) password reset by code,
+  the conversation, product query and support ticket forms: endpoints with no validation get a FormRequest
+  first; (c) the back-office modules with mostly B findings, which are mechanical (a `RequiredMark` in a
+  hand-written label): Marketing (18 B), Product (13 B, plus the per-tax rows), Setup (7 B, 10 A, 8 D),
+  Website (9 A, 6 B), Trips, Sales, Customers (4 B). The 7 C findings on customer create need an owner
+  decision first: either the request starts requiring those fields on create, or the form stops (the rule
+  says the second, unless the owner wants the first).
+- **Phase 3, the rest**: the seller panel (26 forms, 44 C and 121 E: most of its endpoints validate
+  nothing, so it starts with FormRequests), the storefront account pages (12 forms), the remaining E
+  findings (dead fields to remove, or rules to add: unvalidated input is a mass-assignment question), the 23
+  F findings (convert the 5 non-literal inline rule sets, e.g. `CategoryController@store`, to FormRequests;
+  give the unresolved computed actions a resolvable form), legends for dialog forms
+  (`provideRequiredFields()`), and then extend the ratchet to the Blade P1 and P2 forms once they are clean.
+
+**Existing tests that changed.** Vitest: 18 label-text assertions in 13 files and one `StoreBooleanField`
+props list (commit 1), and `StoreNewsletterRecipients.test.ts` (commit 4). Playwright: six locators in five
+specs (`store-carriers`, `store-notifications`, `store-representatives`, `store-seller-settings`,
+`store-newsletter-ticket`) that found a required field by its exact label text: they now use the role and
+accessible name ("Name required") or the label text with its mark. No assertion was removed or loosened.
+
+**What was verified, and what was not.** Run here, on the final code:
+`python3 .claude/scripts/pre_push_check.py --full` (Wayfinder types, ESLint, Prettier, vue-tsc, Vitest
+**336 files, 2651 tests**, Pint, PHPStan **0 errors**, Pest **6582 tests, 38350 assertions**); an earlier
+`--full` run had stopped at vue-tsc on a type error in an edited Playwright spec, fixed before this one.
+Playwright, run separately with the preinstalled Chromium: the whole suite once (127 passed, 6 failed on the
+locators above), then the six fixed specs plus the new `store-required-mark.spec.ts` (all passed). Focused
+Pest files while developing (`StorefrontRegistrationRequiredFieldsTest`, `RequiredFieldsAuditTest`,
+`RequiredFieldsRatchetTest`, the staff and role controller tests). `forms:audit-required` was run on this
+branch and on a `develop` worktree. Not run here: the MySQL migration tests, the composer and npm audits and
+the deploy-script test (CI runs them; no `CI-Verified` trailer was made), and nothing on MySQL.
+
+## 45. Public forms, phase 2a: address forms and the checkout address pick (2026-10-21)
+
+Model: **claude-opus-5-5**, effort **high**. Branch `ccr-6bf71ecb-5ab58g` from `develop` **9815092** (the
+PR #458 merge). Scope: phase 2(a) of §44's plan, the public storefront forms, server rule first. The
+reference-data PR (countries, policy pages) had not landed on `develop`, so the country fields build on
+`App\Models\Country`. Shipped in [PR #459](https://github.com/arb-rajab/warehouse_management/pull/459), with real CI (no `[skip ci]`). Every redirect, flash message, route, session key,
+OTP / captcha / throttle path and URL is unchanged; each form's tests were written first and seen failing.
+
+**Shipped, by commit** (the brief's batches 1 and 2; the PR reached about 30 files, the size the brief set as
+the limit, so batches 3 to 5 are the next PR, listed at the end):
+
+1. **Storefront address create and edit, and the checkout address pick.**
+2. **Seller panel address create and edit.**
+
+### Rules chosen, per form
+
+| Form (view → endpoint) | Before | Now (request) |
+| --- | --- | --- |
+| New address, `shop/frontend/partials/address_modal` → `AddressController@store` (`addresses.store`, on the profile, dashboard and checkout pages) | inline `phone => required`, flash "Phone number is required"; everything else written unvalidated; HTML required address, country, postal code, phone | `StoreAddressRequest`: **address** `required\|string\|max:255`, **postal code** `required\|string\|max:255`, **phone** `required\|string\|max:255`, **country_id** required while an active country exists, `integer`, exists in `countries` with `status = 1`; `state_id` / `city_id` nullable, exists and active and belonging to the chosen country / state; `latitude` nullable numeric -90..90; `longitude` nullable numeric, greater than -100 and less than 100; `customer_id` sometimes integer. Error bag `storeAddress`. |
+| Edit address, `shop/frontend/partials/address_edit_modal` → `AddressController@update` (`addresses.update`) | same as create | `UpdateAddressRequest`: the same rules without `customer_id`, plus the form's hidden `address_id` (sometimes integer, used only to reopen the form). Error bag `updateAddress`. |
+| Checkout address pick, `shop/frontend/shipping_info` → `CheckoutController@store_shipping_info` (`checkout.store_shipping_infostore`, `Route::any`) | `address_id == null` → flash "Please add shipping address"; a non-numeric id reached `findOrFail` (404) | `StoreShippingInfoRequest`: **address_id** `required\|integer`; the same flash when it is missing; ownership stays `AddressPolicy` in the controller, after the empty-cart check, as before. |
+| New address (seller), `shop/seller/profile/index` → `Seller\AddressController@store` (`seller.addresses.store`) | **nothing validated**; HTML required address, country, state, city, phone | `Seller\StoreAddressRequest`: **address** and **phone** `required\|string\|max:255`; country as on the storefront; state, city, **postal code** (`nullable\|string\|max:255`) and the coordinates optional, with the same checks. Always the signed-in seller's. Bag `storeAddress`. |
+| Edit address (seller), `shop/seller/profile/address_edit_modal` → `Seller\AddressController@update` (`seller.addresses.update`) | nothing validated | `Seller\UpdateAddressRequest`: the same plus `address_id`. Bag `updateAddress`. |
+
+The shared rules are `App\Http\Requests\Concerns\ValidatesAddress::addressRules()` (four requests). They
+mirror the back office's `StoreCustomerAddressRequest` except the longitude bound (below). The
+storefront and seller update requests (and the storefront create, which may name `customer_id`) check
+ownership in `authorize()` (`AddressPolicy::manage`), **before** the input: an invalid payload for another
+account's address is still a 403, and a missing id a 404. `Address::fillFromForm()` writes the eight
+columns as both controllers did (a column the form leaves out is cleared, as before).
+
+**Why these fields are required.** The order's shipping address (`OrderController::placeOrder`,
+`Helpers.php` 1617), the invoice and the delivery read address, postal code, phone and country. Address,
+postal code and phone were already required in the storefront HTML, so no customer using the form could
+leave them empty; the server now agrees. The country is required **only while an active country exists**
+(`Rule::requiredIf(Country::active()->exists())`): carrier-wise shipping (`getShippingCost`) and
+`seller_base_carrier_list()` read `$address->country->zone_id` and fail on an address without a country,
+but a fresh database has no countries and the form must still save.
+
+**The forms.** Each marks and requires exactly the fields its request requires (`<x-required-mark />`,
+`required`, `maxlength="255"` on the text fields), shows `<x-required-legend />` once at the top, labels
+every control with `for`/`id`, keeps the input with `old()` and shows each error under its field
+(`is-invalid` + `invalid-feedback`) from its own error bag, so the profile form on the same page never
+shows an address error. A failed create reopens the "New Address" modal; a failed update re-renders that
+address's edit form inside the edit modal (server-side, for an address `AddressPolicy` lets the user
+manage; another account's id in `address_id` renders nothing) and reopens it. The country row is a Blade
+component, `<x-address-country-field>` (`resources/views/components/address-country-field.blade.php`):
+the active countries, highest `priority` first, then by name, with the mark and `required`; with no active
+country it prints "No countries are set up yet. You can save the address without one." and no select.
+The checkout's address cards are a `<fieldset>` whose `<legend>` ("Shipping address", marked) names the
+radio group, under the legend line; a missing choice shows its error above the cards.
+
+### Judgement calls for the owner
+
+1. **Postal code required on the storefront, optional in the seller panel.** The storefront form always
+   required it; the seller form has it commented out, so sellers legitimately have none, and nothing
+   downstream breaks without it (it prints blank). The address created at registration
+   (`RegisterController`) has no street and no postal code, the one a representative's
+   `store_customer` creates no postal code; both still check out (the checkout pick needs only the id),
+   and only editing one asks for what it lacks.
+2. **State and city optional everywhere.** The storefront form does not ask for them (commented out
+   before this work); the seller form required them in HTML although an empty `states` / `cities` table
+   left nothing to pick, which blocked the form on a fresh database. Consequence to weigh: area-wise
+   shipping (`getShippingCost`, `area_wise_shipping`) charges 0 for an address without a city, and
+   `Seller\OrderController` matches delivery boys by city name. If area-wise shipping is ever enabled,
+   the city must become required (and the storefront field restored).
+3. **Longitude limited to the column.** `addresses.longitude` is `decimal(17,15)`: it holds less than 100
+   either way, so a longitude of 100 or more was a MySQL out-of-range error (a 500); it is now a validation
+   error. The map script's default pin (Sydney, 151.2195) hits it if a customer saves without moving the
+   pin. Widening the column (e.g. `decimal(18,15)`) is a migration for the owner to decide; the back
+   office's `StoreCustomerAddressRequest` still allows ±180 and would 500 on MySQL for those values.
+   **Superseded by §47**: the owner chose the migration; the columns are `decimal(18,15)` and every request
+   allows ±180 again.
+4. **The country rule follows the data.** While any country is active, every new or edited address must
+   name one; deactivating every country turns the requirement off and the forms say so.
+5. **A non-numeric address id at checkout** is now a validation error with the usual flash instead of a
+   404; a numeric id that does not exist is still a 404, another customer's still a 403.
+6. **`customer_id` on the storefront create** is kept (no form sends it; a representative's ordering
+   flow may): validated as an integer and authorized by `AddressPolicy` as before.
+
+### Dead fields and markup found
+
+- `checkout_type` (hidden, `shipping_info.blade.php`, always `logged`): no code reads it. **Removed.**
+- The storefront modals' commented-out state and city rows: **removed** (dead markup; the fields are
+  optional and absent, as before). The seller forms' commented-out postal code is **kept** as it was: see
+  judgement 1.
+- The seller edit modal closed its padding `<div>` early (a stray `</div>` after the commented postal
+  code): fixed with the rewrite.
+- Not dead, but new: the edit forms' hidden `address_id` (see above).
+
+### The audit tool and the ratchet
+
+- `BladeForms` now reads a `<fieldset>`'s `<legend>` as the label of the radios and checkboxes inside it
+  when their own label has no mark (a radio card's label names the option, not the group).
+  `RequiredFieldsAuditTest` covers it (seen failing first).
+- The audit cannot see inside a Blade component, so the country select is invisible to it (a conditional
+  rule raises nothing for a missing control); the Pest tests pin it on all four forms.
+- **The ratchet now covers the fixed storefront forms**: `RequiredFieldsRatchetTest` lists them in
+  `FIXED_STOREFRONT_FORMS` (both registration views, the four address forms, the checkout pick) and fails
+  on any class A to D finding there, with no baseline (about 1 s, deterministic). Checked by removing the
+  postal code's `required`: the test failed naming the finding. The back-office baseline
+  (`required-fields-baseline.json`) is unchanged: no back-office finding was touched.
+
+**Audit totals** (`php artisan forms:audit-required`, same day; the report in
+`.ai/required-fields-audit-20261021.md` / `.json` is regenerated):
+
+| Class | Before (`develop` 9815092) | After this PR |
+| --- | ---: | ---: |
+| A | 69 | 69 |
+| B | 93 | 91 |
+| C | 99 | 82 |
+| D | 10 | 10 |
+| E | 227 | 218 |
+| F | 23 | 23 |
+| **Total** | **521** | **493** |
+
+By priority: P1 40 → **12** (left: seller registration's 4 A, six E on the registration views' unstored
+fields, two F payment forms), P2 325 → 325, P3 156 → 156. By module: storefront B 4 → 2, C 16 → 9, E 30 → 25;
+seller panel C 44 → 34, E 121 → 117. The five forms fixed here have no finding in any class.
+
+**Existing tests that changed.** `LegacyStoreOwnershipTest` (the storefront and seller update payloads gain
+a postal code, which the storefront now requires; the assertions are unchanged). `storefrontHead()` and
+`StorefrontRegistrationRequiredFieldsTest` use the new shared `htmlXPath()` (no assertion changed). New:
+`StorefrontAddressFormsTest` (62 tests), `SellerAddressFormsTest` (41), one `RequiredFieldsAuditTest` case,
+one `RequiredFieldsRatchetTest` case, `formFieldMarks()`, `formPostingTo()`, `flashedMessage()` in
+`tests/Pest.php`, and the Playwright happy path `tests/e2e/store-storefront-address.spec.ts` (a customer signs
+in, opens "Add New Address" on the profile, sees the legend and the accessible names "Address required" /
+"Postal code required", is held back by the browser with the postal code empty, then saves and sees the
+address listed). The spec was written after the views changed, so it was not seen failing on the old code.
+
+**Hostile input covered**, on create and update for both areas: over-long strings (including multibyte),
+arrays for strings, a missing / non-numeric / inactive country, a state of another country, a city of
+another state, a latitude past the pole and a longitude the column cannot hold (each refused, nothing
+written); markup kept as text and printed escaped (`<b>`, `&`, `"`); a `<script>` is refused by the WAF
+before the endpoint (403); another account's address (403 even with an empty payload, unchanged);
+`customer_id` / `user_id` of another account (403 on the storefront; ignored in the seller panel).
+
+### Not done here: the next PR (phase 2a, continued)
+
+Items 3 and 4 shipped in §47; item 5 is still open (§47's "Next").
+
+3. **Seller registration** (`shop/frontend/seller_form` → `ShopController@store`, inline `validate()`):
+   name, email, password and its confirmation lack `required` (4 A); the asterisks are literal
+   `<span class="text-primary">*</span>`; `shop_name` allows 255 characters against a `varchar(200)`
+   column and `address` has no `max` against `varchar(500)` (MySQL 500s); move to a FormRequest.
+4. **`store_customer`** (`shop/frontend/user/create_user` → `CustomerController@store_customer`, a
+   representative's form): 12 A + 12 B, marks and `required` only; the rules exist; `country_code` is
+   unvalidated (E).
+5. **Endpoints that validate nothing**: the conversation forms on the product and digital product pages
+   (`conversations.store`; `product_id` goes straight to `findOrFail`), the support ticket forms
+   (`support_ticket.store`, and the seller's), and password reset by code (`shop.password.update`).
+
+**Phase 2b, proposed**: the back-office modules that only lack marks (Marketing 18 B, Product 13 B plus the
+per-tax rows, Setup 7 B / 10 A / 8 D, Website 9 A / 6 B, Trips 3 A / 4 B, Sales 6 A, Customers 4 B and the
+owner's decision on its 7 C, Languages 3 A, Support 2 B, Blog 2 B); then the seller panel (26 forms, now 34
+C and 117 E, mostly endpoints that validate nothing, so FormRequests first), with each fixed Blade form added
+to `FIXED_STOREFRONT_FORMS`.
+
+**What was verified, and what was not.** See the PR's final report for the exact commands and results.
+
+
+## 46. Legacy reference data as a migration (2026-10-21)
+
+A fresh, greenfield database has none of the rows the legacy store carried in its
+own database. Found while testing registration on the dev site: the country list
+was empty, the terms and conditions were empty, and every price would have failed
+(`get_system_default_currency()` does `Currency::findOrFail(get_setting('system_default_currency'))`
+and that setting did not exist).
+
+**What is loaded.** Migration `2026_10_21_100000_load_legacy_reference_data`
+calls `App\Support\ReferenceData`, which reads `database/data/reference/*.json`
+(extracted by the owner from the legacy dump dated 2026-09-12; reference data
+only, scanned for secrets and personal data before it was committed):
+
+| Table | Rows | Notes |
+|---|---|---|
+| `countries` | 246 | **21 enabled** (Austria, Belgium, Bulgaria, Denmark, Finland, France, Germany, Hungary, Iceland, Italy, Luxembourg, Malta, Netherlands, Norway, Poland, Portugal, Romania, Slovakia, Spain, Sweden, Switzerland); Belgium, France, Germany and the Netherlands have `priority` 1. The rest are listed but off. The admin Countries page switches them. |
+| `states` | 4,089 | The legacy list has 4,091; two names occur twice in one country (Kyunggi-do in South Korea, Sussex in the United Kingdom) and are loaded once. |
+| `currencies` | 26 | Euro is the active one. **The exchange rates are the legacy store's 2023 values (USD = 1) and are stale.** |
+| `languages` | 4 | English, Arabic (code `sa`, app code `ar`, right to left), German, Dutch. |
+| `pages` | 7 | Home, the five policy pages and About Us. Only Terms, Privacy and About Us carry text; the seller, return and support policy pages are empty in the legacy data and stay empty. |
+| `page_translations` | 3 | English rows for Terms, Privacy and About Us. |
+| `business_settings` | 1 | `system_default_currency` = the Euro's id, only when the setting does not exist. |
+| `zones` | 0 | Empty in the legacy store; nothing is loaded. |
+
+**Safe to rerun, and on a database that already has the legacy rows.** A row is
+inserted only when neither its id nor its natural key exists (country, currency
+and language code; page type, or slug for custom pages; state name within a
+country; page translation language). An existing row is never updated, renamed,
+enabled, disabled or deleted. States follow their country by code, so they land
+on the right country even if its id differs. A second active currency is never
+created, and an existing default-currency setting is never replaced. `down()` is
+a no-op because addresses and settings come to reference these rows.
+
+**Page text was cleaned once, offline.** The legacy policy HTML was pasted from
+Microsoft Word (`<style>` blocks, `<head>`, `<meta>`, damaged attributes). It
+went through `HtmlSanitizer` and the visible words were compared before and after:
+identical in all six texts (the Privacy page shrinks from 32 KB to 18 KB). A stray
+right-to-left embedding mark at the end of the About Us title was removed.
+
+**Skipped under `APP_ENV=testing`.** The test suites and the browser fixtures start
+from empty reference tables and create what they need; loading 4,000 states into
+every test database would break tests that expect them empty. `LoadLegacyReferenceDataTest`
+calls the loader directly, runs on SQLite and on MySQL (it is in the CI MySQL job
+and in `pre_push_check.py`'s MySQL list), and runs the migration under a non-testing
+environment.
+
+**Registration pages.** Both pages now show the real Terms page in the agreement
+pop-up (they printed a business setting nothing writes, `get_setting('terms')`);
+without a terms page they say so instead of showing an empty box. `/temp/register`
+offers the enabled countries as a dropdown, priority countries first, and keeps the
+text box when no country is enabled. `/temp/users/registration` already had a
+dropdown over the `countries` table; it is no longer empty. The phone widget's
+country list is the 21 enabled countries.
+
+**Left alone.** The terms *email* (`shop/emails/terms.blade.php`) still prints
+`get_setting('terms')`; the `business_settings` rows of the legacy store were not
+extracted (they mix harmless settings with API keys and passwords), so settings
+other than the default currency still come from the admin screens.
+
+**Owner items** are in the go-live checklist, 3.10 to 3.13: review the enabled
+countries, update the exchange rates, write the three empty policy pages, and
+decide on the zones and the shipping set-up.
+
+## 47. Public forms, phase 2a continued: the longitude columns, seller registration, create customer (2026-10-21)
+
+Model: **claude-opus-5-5**, effort **high**. Branch `claude/phase-2a-longitude-forms-xdumd2` from `develop`
+**1146d2e** (the PR #460 merge). Shipped in [PR #461](https://github.com/arb-rajab/warehouse_management/pull/461),
+with real CI (no `[skip ci]`); recorded here by the next PR (§48). Scope: §45 judgement 3 (the longitude columns), then §45's "Not done here"
+items 3 and 4. Each form's tests were written first and seen failing. Every redirect, flash message, route,
+session key and URL is unchanged. The PR reached about 26 files, close to the ~30-file limit the brief set,
+so item 5 (the endpoints that validate nothing) is the next PR, listed under "Next" below.
+
+**Shipped, by commit.**
+
+1. **Every valid longitude is stored, and the map pin starts at the default location.**
+2. **Seller registration** (`shops.store`).
+3. **The representative's create-customer form** (`store_customer`).
+
+### The longitude decision
+
+`addresses.longitude` and `shops.delivery_pickup_longitude` were `decimal(17,15)`: 15 digits after the
+point leave 2 before it, so a longitude of 100 or more (Sydney, 151.2, the map's old default pin; anything
+east of about 100°E or west of 100°W) failed on MySQL with error 1264, and since #459 the address forms
+refused it. The shop sells in Europe, but a valid point on the map must be storable.
+
+- **Migration `2026_10_21_110000_widen_map_longitude_columns`** widens both to `decimal(18,15)` with
+  `->nullable()->change()`. It reads the column's real type first (`Schema::getColumns()`) and changes it
+  only when it holds fewer than three digits before the point, so a rerun, a column already wider (the
+  test sets `decimal(20,15)` and checks it stays) and SQLite (whose `numeric` keeps no precision) are left
+  alone. `down()` is a no-op: narrowing again would fail on, or truncate, every longitude of 100 or more
+  saved since. The latitudes stay `decimal(17,15)`: ±90 fits.
+- **Columns checked and not changed:** `visits.map_lat` / `map_lng` are `varchar(20)` (fits
+  `-179.999999999999999`); `checkpoints.longitudes` / `latitudes` are `varchar(255)`. No other table has a
+  decimal coordinate.
+- **Validation**: `ValidatesAddress` (the storefront and seller-panel address requests) allows longitude
+  `between:-180,180` again (was `gt:-100|lt:100`); the back office's `StoreCustomerAddressRequest` already
+  did. Boundary tests on all three: ±180 and 151.2093 / -179.9999 accepted, ±180.0001 refused.
+- **Test**: `tests/Feature/Database/WidenMapLongitudeColumnsTest.php`, in CI's MySQL job and
+  `pre_push_check.py`'s `MYSQL_TESTS`. On MySQL 8.0 here: before the migration existed it failed with
+  `SQLSTATE[22003] ... 1264 Out of range value for column 'longitude'`; with it, 151.2093, -179.9999, 180 and
+  4.9041 insert and read back on both tables, the type is `decimal(18,15)` and still nullable, a narrowed
+  column is widened with its rows intact (`4.123456789012345`, `-99.5`, `null`), the latitudes stay
+  `decimal(17,15)`, and `down()` keeps a 151.2093 row. MySQL commits DDL at once, so the test restores the
+  columns after each case.
+- **The default pin.** `App\Support\DefaultMapLocation::coordinates()` reads `google_map_latitude` and
+  `google_map_longtitude` (set on the admin Google Map settings page, spelled as the legacy store stored
+  them) and returns Amsterdam (52.3676, 4.9041) when either is empty, not numeric (`INF`, markup) or off the
+  map. The shared map partial (`partials/google_map`, included by the storefront profile, dashboard and
+  address modal and by the seller profile) prints it once as `var defaultMapLocation`, and both address
+  modals' edit handlers and the seller's pick-up point map (`seller/shop`) start there instead of Sydney.
+  The settings are no longer printed raw into the script, and an address's own coordinates are no longer
+  replaced by the default when its edit modal opens (the old partial overrode them whenever a default was
+  set). The coordinate inputs stay empty until the customer moves the pin, as before, so a customer who
+  never moves it saves the address without coordinates (tested with no default and with a default east of
+  100°). `StorefrontMapDefaultLocationTest` renders the pages with and without the settings and asserts the
+  initial coordinates.
+
+### Rules chosen, per form
+
+| Form (view → endpoint) | Before | Now |
+| --- | --- | --- |
+| Seller registration, `shop/frontend/seller_form` (`/temp/shops/create`) → `ShopController@store` (`shops.store`) | inline: `name` required\|string\|max:255, `email` required\|email\|unique:users\|max:255, `password` required\|string\|min:6\|confirmed, `shop_name` required\|max:255, `address` required. HTML: `required` only on shop name and address; literal `<span class="text-primary">*</span>` on all six labels; no `for`/`id` | `StoreShopRequest`: **name** `required\|string\|max:191`, **email** `required\|string\|email\|max:191\|unique` (StoreUser), **password** `required\|string\|min:6\|confirmed`, **shop_name** `required\|string\|max:200`, **address** `required\|string\|max:500`. HTML: mark and `required` on all six, the legend, `for`/`id`, `maxlength` 191/191/200/500, `minlength="6"` on both passwords, errors with `@error`; the password field no longer prints `old('password')` (always empty anyway). |
+| Create customer (representative), `shop/frontend/user/create_user` (`/temp/create_customer`) → `CustomerController@store_customer` | inline rules require all twelve fields (unchanged); HTML marked and required none; labels' `for` named no control; the country's error was hidden under bootstrap-select | rules **unchanged** (the brief: marks only where the server already validates). HTML: mark and `required` on name, company name, email, phone, country, tax number, bank account number, company address, shipping address, trade license, password and its confirmation; the legend; `for`/`id`; the country error shown (`d-block`); `minlength="6"` on the passwords. |
+
+**Why `max` follows the columns.** `users.name` and `users.email` are `varchar(191)`, `shops.name`
+`varchar(200)`, `shops.address` `varchar(500)` (`2026_09_28_005008_create_users_table`,
+`2026_09_28_004011_create_shops_table`). The old `max:255` let 192 to 255 characters through to MySQL, whose
+strict mode refuses them ("data too long"; SQLite does not enforce lengths, so the tests check the rule),
+and an array for the shop name or address was an "Array to string conversion" 500 (seen in the tests
+before the change). The slug is built from the shop name, so 200 characters keep it
+inside `shops.slug` (`varchar(255)`).
+
+### Judgement calls for the owner
+
+1. **The longitude columns widened** (above): a schema change on two legacy-shaped tables. It runs on the
+   next `php artisan migrate`; on the production database it is an `ALTER TABLE ... MODIFY` on `addresses`
+   and `shops` (a table copy on MySQL 8 for a precision change: seconds at the current size).
+2. **New addresses keep empty coordinates when the pin is not moved**, rather than saving the default
+   location: saving Amsterdam's coordinates for every address whose customer ignored the map would give the
+   order's `lat_lang` (`OrderController`, `Api/V2/OrderController`) a false delivery point.
+3. **The default pin falls back to Amsterdam**, also when the admin's setting is off the map; the admin page
+   already refuses such a value, so only legacy rows can reach the fallback.
+4. **Seller registration still requires name, email and password for a signed-in visitor.** The form hides
+   them for a signed-in visitor, but `ShopController::create` never shows the form to one (it refuses
+   admins, customers and sellers and returns nothing for other account types), so only a hand-made POST
+   reaches that branch; it keeps the rules it had. The same hand-made POST still converts a signed-in
+   customer (or admin) into a seller, as before: `store()` does not repeat `create()`'s refusals. Not
+   changed here (it converts only the caller's own account; guests can register sellers anyway); worth a
+   decision before the seller registration link goes live.
+5. **reCAPTCHA is checked only in the browser** on seller registration (and on create customer): neither
+   endpoint verifies the token. Unchanged; a server-side check is a separate change.
+6. **Two dead checks left in `ShopController::store`**: the "Email already exists!" and "Sorry! Password did
+   not match." branches cannot run after `unique` and `confirmed`; and the failed-save branch compares
+   (`==`) instead of assigning `user_type`. Left as they were (no behaviour to preserve or test).
+7. **Create customer's rules disagree with the columns**, recorded, not changed (marks only): `name`
+   `max:255` against `users.name` `varchar(191)`, `email` has no `max`, `phone` has no limit against
+   `users.phone` `varchar(20)`, `country` (a country name) against `users.country` `varchar(30)` (the
+   21 enabled names fit, but three of the 246 are longer and the rule accepts any string), the `trade_license` mimes list says `bmb` (likely `bmp`). These are MySQL
+   errors for long input from a signed-in representative; a FormRequest for this endpoint is the fix.
+8. **The OTP-addon branch of create customer**: its hidden email stays unmarked and unrequired (the browser
+   would block the form on a hidden required field), as on the registration forms (§44); the visible
+   phone is marked and required. With the addon on, the form has two `phone` inputs; unchanged.
+
+### The audit and the ratchet
+
+`FIXED_STOREFRONT_FORMS` gains `seller_form` (`shops.store`) and `create_user` (`store_customer`): neither
+has a class A to D finding. The back-office baseline is unchanged (no back-office finding was touched).
+
+| Class | Before (`develop` 1146d2e) | After this PR |
+| --- | ---: | ---: |
+| A | 69 | 53 |
+| B | 91 | 79 |
+| C | 82 | 82 |
+| D | 10 | 10 |
+| E | 218 | 218 |
+| F | 23 | 23 |
+| **Total** | **493** | **465** |
+
+By priority: P1 12 → **8**, P2 325 → 301, P3 156 → 156. By module: storefront A 6 → 2 (the two left are
+the P2 product question forms), storefront/account A 12 → 0, B 13 → 1. The P1 findings left are six E (fields
+`RegisterController` never stores: `country_code` on both registration views; tax number, company address,
+shipping address and trade license on `/temp/register`, deliberately "(optional)" since §44) and two F (the
+PayHere form posts to an external URL; `CheckoutController@checkout` builds its rules at run time). Neither
+is a marking gap: the E fields need an owner decision (store them, or drop the inputs), the F forms have
+nothing to mark. `create_user` keeps one E (`country_code`, filled by the phone widget, read by nothing).
+
+### Tests
+
+New: `WidenMapLongitudeColumnsTest` (9 cases; SQLite and MySQL), `StorefrontMapDefaultLocationTest` (17),
+`SellerRegistrationFormTest` (25), `StorefrontCreateCustomerFormTest` (16); `validMapLongitudes()` in
+`tests/Pest.php`; boundary cases in `StorefrontAddressFormsTest`, `SellerAddressFormsTest` and
+`CustomerAddressControllerTest`. Changed: the two address tests' "a longitude the column cannot hold" case
+(151.2195, refused) became "past the antimeridian" (±180.0001, refused), since 151.2195 is now valid.
+No assertion was removed or loosened otherwise.
+
+### Next: the rest of phase 2a
+
+Items 5 and 7 and judgements 4 and 5 shipped in §48; item 6 is still open.
+
+5. **Endpoints that validate nothing**, each with a FormRequest, hostile-input tests (over-long, wrong types,
+   HTML, another user's ids) and unchanged ownership checks: the conversation forms on the product and
+   digital product pages (`conversations.store`, `ConversationController@store`; `product_id` goes straight
+   to `findOrFail`), the support ticket form (`support_ticket.store`), and password reset by code
+   (`shop.password.update`).
+6. **The P1 leftovers above**: the owner's decision on the unstored registration fields.
+7. **Create customer's rules against its columns** (judgement 7): a FormRequest.
+
+**Phase 2b, proposed**: unchanged from §45: the back-office modules that only lack marks (Marketing 18 B,
+Product 13 B plus the per-tax rows, Setup 7 B / 10 A / 8 D, Website 9 A / 6 B, Trips 3 A / 4 B, Sales 6 A,
+Customers 4 B and the owner's decision on its 7 C, Languages 3 A, Support 2 B, Blog 2 B); then the seller
+panel (26 forms, 34 C and 117 E, mostly endpoints that validate nothing, so FormRequests first, including
+the pick-up point coordinates of `Seller\ShopController@update`, which are still unvalidated), with each
+fixed Blade form added to `FIXED_STOREFRONT_FORMS`.
+
+**What was verified, and what was not.** Run here, on the final code (commits 1 to 3; the docs commit
+after them changes no code): `python3 .claude/scripts/pre_push_check.py --full` (Wayfinder types, ESLint,
+Prettier, vue-tsc, Vitest **336 files, 2651 tests**, Pint, PHPStan **0 errors**, Pest **6800 tests, 6797
+passed, 3 skipped, 39305 assertions**); the six `MYSQL_TESTS` files on the local MySQL 8.0 (CI runs 8.4):
+**56 tests, 50 passed, 6 skipped** (the SQLite-only cases); the whole Playwright suite with the
+preinstalled Chromium: **134 passed**. Focused Pest files while developing, each seen failing first (the
+migration test also on MySQL). `forms:audit-required` before the work and after each form group. Not run
+here: the composer and npm audits and the deploy-script test (CI runs them); no `CI-Verified` trailer was
+made, so CI runs every group (the PR also changes `.github/workflows/tests.yml`, which runs everything).
+
+## 48. Public forms, phase 2a finished: password reset by code, product questions, support tickets, the seller conversion, reCAPTCHA, create customer (2026-10-21)
+
+Model: **claude-opus-5-5**, effort **high**. Branch `claude/phase-2a-forms-recaptcha-8acgk4` from `develop`
+**343d9d8** (the PR #461 merge). Shipped in [PR #462](https://github.com/arb-rajab/warehouse_management/pull/462),
+merged into `develop` as **03f9ab44**; recorded by §49. Scope: §47's "Next" items 5 and 7 and the three owner decisions recorded on
+PR #461: close the seller conversion hole (§47 judgement 4), verify reCAPTCHA on the server (judgement 5),
+give create customer real limits (judgement 7). Each group's tests were written first and seen failing,
+then passing. Every redirect, flash message, route and URL is unchanged except where a row below says so.
+The PR reached about 33 files, a little over the ~30 the brief set; the one item left (reCAPTCHA on the
+customer registration views) is under "Next".
+
+**Shipped, by commit.**
+
+1. **Password reset by code** (`shop.password.update`).
+2. **Product questions and support tickets** (`conversations.store`, `support_ticket.store`).
+3. **Seller registration turns a signed-in account away** (`shops.store`).
+4. **Create customer limited to its columns** (`store_customer`).
+5. **reCAPTCHA verified on the server** (`shops.store`, `store_customer`).
+
+### Rules, per form: before and now
+
+| Form (view → endpoint) | Before | Now (request) |
+| --- | --- | --- |
+| Password reset by code, `shop/auth/passwords/reset` → `HomeController@reset_password_with_code` | **nothing validated**; `password != password_confirmation` flashed a warning; a 3-character password reset the account; an array for any field was a 500 (the email's in the `store-auth` limiter) | `ResetPasswordWithCodeRequest`: **email** `required\|string\|email\|max:191`, **code** `required\|string\|digits:6`, **password** `required\|string\|min:6\|confirmed`. A refusal re-renders the form (422) with each error under its field and the email and code kept (the form is only ever rendered in answer to a POST, so "back" has no GET route). |
+| Product question, `shop/frontend/product_details` and `digital_product_details` (no route renders the latter) → `ConversationController@store` | **nothing validated**; `product_id` went to `findOrFail`, so an unpublished or unapproved product's seller got the question; arrays were 500s | `StoreConversationRequest` (bag `storeConversation`): **product_id** `required\|integer`, exists in `products` with `published = 1` and `approved = 1`; **title** `required\|string\|max:1000` (`conversations.title` varchar(1000)); **message** `required\|string\|max:65535` (`messages.message` text, as the other text columns' rules) |
+| Support ticket, `shop/frontend/user/support_ticket/index` → `SupportTicketController@store` | **nothing validated**; a ticket without a subject was a NOT NULL 500; `attachments` took any upload ids, another account's included | `StoreSupportTicketRequest` (bag `storeTicket`): **subject** `required\|string\|max:255` (`tickets.subject`); **details** `required\|string\|max:10000` (`ValidatesSupportReplies`, the back office's support-text limit; the column is longText); **attachments** optional, the uploader's comma-separated image ids, the caller's own, at most 50, no repeats (`ValidatesStoreUploadReference::retainableImageUploadIdsRule(null)`) |
+| Seller registration, `shop/frontend/seller_form` → `ShopController@store` | rules from §47; a signed-in account was **converted into a seller** (its customer row deleted) and given a shop | `StoreShopRequest::authorize()`: guests only; the refusal is the page's own (below), before the input is read. Rules as §47, plus reCAPTCHA. |
+| Create customer, `shop/frontend/user/create_user` → `CustomerController@store_customer` | inline: name `max:255` (column 191), email no `max` (191), phone, country no rule beyond `required` (20, 30), addresses `string` without `max` (255), tax and bank numbers no type; `trade_license` `mimes:doc,docx,pdf,png,jpeg,bmb`; `abort_unless(is_rep, 403)` after nothing | `StoreRepresentativeCustomerRequest`: all twelve still required; **name** `string\|max:191`, **email** `string\|email\|max:191\|unique`, **phone** `string\|max:20`, **country** `string\|max:30`, **company_name**, **company_address**, **shipping_address** `string\|max:255`, **tax_number**, **bank_account_number** `string\|max:100`, **password** `min:6\|confirmed`, **trade_license** `file\|mimes:doc,docx,pdf,png,jpg,jpeg\|max:20000`; `authorize()`: representatives only (403, now before the input). Plus reCAPTCHA. |
+
+**The forms.** Each marks and requires exactly what its request requires (`<x-required-mark />`, `required`,
+the legend once), ties every label to its control (`for`/`id`; the reset and question forms had no labels at
+all, only placeholders), limits each field in HTML as the rule does (`maxlength`, `minlength`, the code's
+`pattern="[0-9]{6}"` and `inputmode="numeric"`, the license's `accept`), keeps the input after a refusal
+(never a password) and shows each error under its field. The question and ticket modals read their own error
+bag and reopen after a refusal; the product page's other forms stay clean. The reset form no longer prints
+the email into the code field on the reset-link page (`value="{{ $email ?? old('code') }}"`).
+
+### The password reset, check by check
+
+Nothing was weakened or reordered: the input is checked first (where the mismatch check stood), then the
+email names the account and `StoreVerificationCodes::consume()` tries the code against it, unchanged: 15
+minutes, single use (the row is deleted), 5 attempts, keyed to the user, so a code never works for another
+account's email (tested: the attacker's own code is not even charged an attempt). Malformed input spends
+none of the code's attempts; the `store-auth` throttle counts it all the same (tested: five refused posts,
+then the right code is a 429). A wrong, expired or reused code, an unknown email and another account's email
+keep the "Verification code mismatch" notice with a 200. The identifier is the email only: the endpoint has
+never looked up by phone (the SMS reset page is not part of this app).
+
+**The `store-auth` limiter** cast `email` to a string; an array there was a 500 on every throttled route
+before the endpoint ran. A non-text value now names no account (the IP limit still applies) and the
+endpoint answers with its validation error (`app-providers.md`).
+
+### The seller conversion hole
+
+`ShopController::create` refuses admins and customers ("Admin or Customer can not be a seller") and sellers
+("This user already a seller"), and returns an empty page to any other signed-in account. `store()` now
+refuses every signed-in caller the same way, in `StoreShopRequest::authorize()` / `failedAuthorization()`:
+back, with the page's notice (`StoreShopRequest::refusalFor()`, which `create()` now calls too), or the
+store's generic "Sorry! Something went wrong." for the types the page shows nothing to (staff, delivery
+boys, ...). The conversion branch in `store()` is removed: nothing can reach it. Tests: a hand-made POST
+from a customer, an admin, a seller, a staff member, a delivery account, a customer who already has a shop,
+and an invalid payload; each writes no shop and leaves the account's type unchanged. (On the test database
+the old conversion failed on the legacy `customers` table, which only the production database has; there
+it converted the account.)
+
+### reCAPTCHA on the server
+
+The widget appears in four views (`rg -n g-recaptcha resources/views`): seller registration, create
+customer, and both customer registration views (`shop.auth.register`, `user_registration`, posting to
+`RegisterController::register`). This PR verifies it on the first two; the registration views are next.
+
+- `App\Rules\Recaptcha` posts the token, the secret and the visitor's IP to
+  `https://www.google.com/recaptcha/api/siteverify` (form-encoded, 5 s timeout) and accepts only
+  `"success": true`. `Recaptcha::rules()` applies `bail|required|string|<rule>` to `g-recaptcha-response`
+  only while `get_setting('google_recaptcha') == 1` (the existing setting; the forms show the widget exactly
+  then); with it off, the field is not validated and Google is never called.
+- **The secret**: `services.recaptcha.secret_key`, from `CAPTCHA_SECRET`, next to the existing site key
+  (`CAPTCHA_KEY`). Never hard-coded, never logged; the token is not logged either (tested with `Log::spy`).
+- **Fail closed** (the owner's decision to weigh, below): no secret configured, a non-2xx answer, an
+  answer that is not a JSON verdict, or no connection refuse the form with "The robot check could not be
+  completed. Please try again." and log a warning (the HTTP status only). A refused or missing token gets
+  "Please confirm that you are not a robot." The error shows under the widget.
+- Tests (`StorefrontRecaptchaTest`, both forms, `Http::fake`): valid, refused, missing, not text, 503,
+  connection failure, an HTML answer, no secret, nothing logged, setting off, a stray token with the setting
+  off. Each refusal writes nothing.
+
+### Judgement calls for the owner
+
+1. **reCAPTCHA fails closed.** While the setting is on, a Google outage, a timeout or a missing
+   `CAPTCHA_SECRET` blocks seller registration and create customer until it is fixed. The alternative,
+   failing open, would let any bot through whenever Google cannot be reached or the key is missing, which
+   is the hole this closes. Before turning the setting on, set `CAPTCHA_KEY` and `CAPTCHA_SECRET` (Appendix A
+   of the go-live checklist) and submit both forms once.
+2. **The reset form answers a refusal with 422 and the form** instead of a flashed warning and a 200 (the
+   mismatch case); the code checks keep their 200 and notice.
+3. **A non-numeric code is now a validation error**, not a counted attempt: it could never be right, and it
+   still counts toward the throttle.
+4. **Support ticket details are held to 10,000 characters**, the back office's limit for replies, although
+   the column is longText; a longer description was never useful in the modal.
+5. **Text columns get 65,535 characters**, as elsewhere in the app: on MySQL a message of that many
+   multibyte characters is still longer than a `text` column's 65,535 bytes.
+6. **The trade license's "bmb" is dropped, not made "bmp"**: `TradeLicenseStorage` keeps only pdf, doc,
+   docx, png and jpg, so a bitmap the rule let through would have failed after the account was created.
+7. **Create customer's country** is limited to its column (30) and is still any text: three of the 246
+   country names are longer and cannot be stored, and the form offers only active countries. Requiring
+   one of the active countries (`Rule::exists`) is a small follow-up if wanted.
+8. **The seller registration's dead checks** ("Email already exists!", "Sorry! Password did not match.",
+   §47 judgement 6) are left as they were.
+
+### The audit and the ratchet
+
+`FIXED_STOREFRONT_FORMS` gains the reset form, both product question forms and the support ticket form;
+none has a class A to D finding. The back-office baseline is unchanged: no back-office finding was touched.
+
+| Class | Before (`develop` 343d9d8) | After this PR |
+| --- | ---: | ---: |
+| A | 53 | 53 |
+| B | 79 | 79 |
+| C | 82 | 72 |
+| D | 10 | 10 |
+| E | 218 | 215 |
+| F | 23 | 23 |
+| **Total** | **465** | **452** |
+
+By priority: P1 8 → 8, P2 301 → **288**, P3 156 → 156. Per commit: the reset form C 82 → 78; the questions
+and tickets C 78 → 72, E 218 → 215; the seller conversion, create customer and reCAPTCHA leave the totals
+as they were (those forms had no finding left). **The six registration fields that are never stored**
+(owner decision pending, not touched): `country_code` on both registration views, and tax number, company
+address, shipping address and trade license on `/temp/register` (P1, class E).
+
+### Tests
+
+New: `StorefrontPasswordResetCodeFormTest` (27), `StorefrontProductConversationFormTest` (22),
+`StorefrontSupportTicketFormTest` (21), `StorefrontRecaptchaTest` (22); new cases in
+`SellerRegistrationFormTest` (7) and `StorefrontCreateCustomerFormTest` (26). Changed:
+`LegacyStorePasswordResetTest` (the wrong-code case sends a wrong six-digit code; a non-numeric one is now a
+validation error), `LegacyStoreAccountRecoveryTest` (the mismatched confirmation expects 422; the code is
+still usable after it). No assertion was removed or loosened.
+
+**Hostile input covered**: over-long values (multibyte too) one past each column, arrays for every text
+field and for ids, a product id that does not exist / is not a number / is unpublished / unapproved, another
+account's upload as a ticket photo, a non-image upload, a repeated photo, markup (stored as sent, printed
+escaped; ticket details through `clean_html()`), a sender, receiver, owner or status sent by the caller
+(ignored), a guest (sent to sign in, nothing written), a signed-in non-representative (403 before its input
+is read).
+
+**A testing trap found**: reading the session in a test (`assertSessionHasErrors`) before the next request
+starts the session in the test, and that next request no longer sees the flashed errors. Assert errors on
+the rendered page when the test renders it afterwards, as the form tests here do.
+
+### Next: phase 2a leftovers, then 2b
+
+- **reCAPTCHA on customer registration**: `RegisterController::register` (both registration views) shows
+  the widget and does not verify it; add `Recaptcha::rules()` to its validator and the error under the widget
+  in both views.
+- **The unstored registration fields** (above): store them, or drop the inputs (owner).
+- **The back office's customer rules** (`ValidatesStoreCustomer`) allow 255 for name, email and phone against
+  191 / 191 / 20: the same MySQL errors create customer had.
+
+**Phase 2b, proposed**: the back-office modules that only lack marks (Marketing 18 B, Product 13 B plus the
+per-tax rows, Setup 7 B / 10 A / 8 D, Website 9 A / 6 B, Trips 3 A / 4 B, Sales 6 A, Customers 4 B and the
+owner's decision on its 7 C, Languages 3 A, Support 2 B, Blog 2 B), with `ValidatesStoreCustomer`'s limits;
+then the seller panel (26 forms, 34 C and 117 E, mostly endpoints that validate nothing, so FormRequests
+first: the seller's support ticket and the ticket replies on both sides, products, digital products,
+coupons, the shop settings and its pick-up point coordinates), each fixed Blade form added to
+`FIXED_STOREFRONT_FORMS`.
+
+**What was verified, and what was not.** Run here, on the final code (commits 1 to 5; the docs commit
+after them changes no code): `python3 .claude/scripts/pre_push_check.py --full` (Wayfinder types, ESLint,
+Prettier, vue-tsc, Vitest **336 files, 2651 tests**, Pint, PHPStan **0 errors**, Pest **6925 tests, 6922
+passed, 3 skipped, 39926 assertions**); the whole Playwright suite with the preinstalled Chromium
+(`PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/opt/pw-browsers/chromium npx playwright test`; `npm run test:e2e`
+stops at its Vite build here, since `fonts.bunny.net` is unreachable, so the setup's font-less build was
+used; this PR changes no JavaScript): **134 passed**. Focused Pest files while developing, each group seen
+failing first. `forms:audit-required` before the work and after each group. Not run here: the MySQL
+migration tests (no migration changed), the composer and npm audits and the deploy-script test (CI runs
+them); no `CI-Verified` trailer was made, so CI runs every group the plan picks.
+
+
+## 49. Back-office required fields, phase 2b batch 1: Marketing and Product; customer registration reCAPTCHA (2026-10-21)
+
+Runtime identity: **GPT-6 Codex**. The exact model variant and reasoning-effort setting are not exposed by
+this runtime, and there is no model picker here. The requested **GPT-6.1 Sol / High** could not be independently
+verified or selected; neither is claimed as the actual setting. Branch `codex/phase-2b-batch-1` starts at
+`origin/develop` **03f9ab44**, the merged PR #462. [PR #463](https://github.com/arb-rajab/warehouse_management/pull/463)
+is the single PR into `develop` for this batch. `AGENTS.md` portability rules were followed: no Claude
+hooks or Boost results were assumed. PHP is **8.5.11** in Docker (`wms-phase2b-php:8.5`, based on the existing
+`wms-cloud-php:8.5` image with WebP-enabled GD),
+Laravel **13.34.0** from installed source. The existing vendor tree, local environment and Vite manifest
+were checked; missing frontend packages were restored with **npm 11.9.0 `npm ci`**, without lockfile changes.
+Wayfinder actions/routes were generated, and Docker PHP's memory limit raised from 128 MB to 1 GB.
+
+**Scope and commits.** Marketing and Product are each one commit; the production CAPTCHA keys and customer
+registration verification are separate commits. With the mandatory follow-ups and this documentation the
+PR reaches about 39 files, so Setup and Website are deferred at the owner's approximate 30-file cutoff.
+Routes, permissions, existing label text and translation keys are unchanged. Two new English/Arabic help
+keys explain conditional product requirements. No server field-presence rule or column limit changed in
+these two modules; names were checked against the narrowest translated column (campaign titles 50,
+category/brand/attribute names 50, product names 200, units 20, colour names/code 30/10). No boundary test
+for a changed limit is needed because no limit changed.
+
+**Marketing.** Required marks now accompany coupon type, discount type and selected products; popup
+summary, offer and page; flash-deal text colour; offer brand/base product; and the campaign product picker
+and each row's discount type. The existing shared marks and automatic legend are reused. Full mounts pin
+the complete set of marks and native required controls for cart/product coupons, both offer kinds,
+flash deals, popup fields and campaign rows; a mounted flash-deal page checks exactly one legend.
+
+**Product.** Marks cover physical/digital categories, discount types, each tax amount/type and the physical
+unit price. Stock visibility radios have `required` and one mark on their legend. Product-wise shipping
+radios do likewise only while their server setting is enabled. The quantity-multiplied checkbox remains
+optional and sits outside that radio fieldset. Flat shipping cost is required only on flat-rate shipping;
+flash discount **and** type are required and marked only with a flash deal selected. English/Arabic help
+explains both conditions. Full mounts cover selection and clearing, disabled settings, multiple tax rows,
+optional controls and the already-correct brand-discount field.
+
+**The audit, before and after each module.** `php artisan forms:audit-required` was run on the untouched
+base, before/after Marketing, before/after Product, and after registration verification. Exact counts:
+
+| Module | Before A/B/C/D/E/F | After A/B/C/D/E/F |
+| --- | --- | --- |
+| Marketing | 4 / 18 / 0 / 0 / 8 / 0 | 4 / 0 / 0 / 0 / 8 / 0 |
+| Product | 1 / 13 / 3 / 0 / 0 / 5 | 0 / 5 / 3 / 0 / 0 / 5 |
+| Setup (deferred) | 10 / 7 / 0 / 8 / 0 / 0 | unchanged |
+| Website (deferred) | 9 / 6 / 1 / 0 / 2 / 0 | unchanged |
+| Whole application | 53 / 79 / 72 / 10 / 215 / 23 | 52 / 53 / 72 / 10 / 215 / 23 |
+
+Total **452 → 434 → 425**. Back-office baseline **109 → 91 → 82**: only the 18 Marketing B entries,
+then one Product A and eight Product B entries actually absent from the new audit were removed.
+
+**Judgement calls and audit limitations.** No new baseline entry was added and no audit implementation
+was changed to make these numbers fall. Marketing's four A findings are the script-populated `products`
+array: the required multi-select is deliberately unnamed and rows post dynamic nested names, which the
+scanner cannot resolve. Product's five B findings are four digital-tax labels plus the brand-discount
+label: dynamic `for`/`id` expressions prevent the scanner associating their existing rendered marks.
+Full-mount tests verify all of them. Product's three C findings are conditional sections scanned while
+the scratch server settings exclude their rules: taxes and flat shipping cost remain required only in
+the rendered state that needs them. Removing those requirements would disagree with the active server
+rules. Product's five F findings remain (category inline writers, computed actions and the edit request's
+unsaved-model `digital` scope/attribute collision); they are not claimed fixed. Client-only search fields
+still account for Marketing's eight E findings.
+
+**Production keys.** `.env.production.example` names empty `CAPTCHA_KEY` and `CAPTCHA_SECRET`, and says not
+to enable the reCAPTCHA setting until both are set because verification fails closed. The existing
+production-template test pins both empty values and that warning; seen failing first.
+
+**Customer registration.** Both `/temp/register` and `/temp/users/registration` post to
+`RegisterController::register`, whose validator now uses `Recaptcha::rules()` and `Recaptcha::messages()`
+from PR #462, with the error displayed below each widget. Only the existing `google_recaptcha` setting
+activates it. The shared Http fake dataset now exercises both pages as well as seller registration and
+representative create customer: valid, invalid, missing, wrong-type token; provider 503, connection
+failure, non-verdict response, missing secret, no secret/token logged; setting off with no token or a
+stray token. Refusals write no account. The audit parser test now expects the added CAPTCHA rule and its shifted source line. The shared registration payload moved to `tests/Pest.php` at its
+second test-file caller. Fail-closed operation now applies to all three POST endpoints: configure both
+keys before enabling the setting; a provider outage blocks submission while it is enabled.
+
+**Verification.** Baseline on `develop` code: required-fields audit **452**, ratchet plus registration tests
+**124 passed / 759 assertions**, and all four requested modules' Vitest files **58 files / 267 tests**.
+The complete backend baseline includes `LegacyStoreRegistrationTest` and was repeated in an isolated
+`03f9ab44` worktree. Initial attempts found missing Wayfinder output/packages and the 128 MB PHP limit; those were setup
+failures, corrected before the successful baseline. New marking assertions and CAPTCHA/template behavior
+tests were run failing before implementation. Focused Marketing **5 files / 12 tests**; focused Product
+**5 files / 27 tests**; registration/CAPTCHA **56 tests / 293 assertions**; final focused ratchet and
+registration group **142 tests / 819 assertions**; production template **6 tests / 406 assertions**.
+Whole Vitest and vue-tsc ran before module commits. PHPStan passed with no errors; Pint ran on dirty PHP
+files. The first full pre-push attempt found a stale audit expectation (updated for the new CAPTCHA rule),
+stale Composer class-map entries for removed controllers (regenerated with `dump-autoload --no-scripts`),
+and Docker GD without WebP (enabled by rebuilding GD in the local Docker image). No test was skipped or
+quarantined to address these failures. The final explicit `python3 .claude/scripts/pre_push_check.py --full` **passed** before the last commit:
+Wayfinder generation, whole-repo ESLint, Prettier, vue-tsc, Vitest **336 files / 2,651 tests**, Pint,
+PHPStan **0 errors**, config-cache clear, and parallel Pest **6,944 passed / 3 skipped / 40,022 assertions**
+(**137.30 s**). The three skips are the existing MySQL-only longitude precision cases, skipped on SQLite.
+The repaired-runtime focused checks also passed: audit/autoloader **98 tests / 669 assertions**, uploads
+**87 tests / 403 assertions**. Playwright, MySQL migration tests, composer/npm audits and the deploy
+script test were **not run by `--full`**; their CI jobs remain the gate when planned. No `CI-Verified`
+trailer was written or attested, and the script was never run bare on a clean committed tree. The full
+production `npm run build` also **passed**, including remote fonts: Node 24 needed `NODE_USE_ENV_PROXY=1`
+and the provided CA via `NODE_EXTRA_CA_CERTS` to use the managed proxy; the first attempt without those
+failed font-host DNS. The font-free fallback was not used. `git diff --check` passed.
+
+**Browser follow-up from real CI.** The first PR run passed every planned non-browser job but failed the
+two physical/digital product create cases: three exact `Browser VAT` label-text selectors missed the new
+mark. Both specs now use the exact accessible spinbutton name **`Browser VAT required`**, retaining the
+single-tax count assertion and additionally asserting native `required`. These changes are folded into
+the Product commit. The two affected specs were run locally: **7 passed (44.7 s)**, including create/edit,
+uploads, stored/pasted scripts, RTL, contrast and keyboard/editor behavior, with CSP enforced. Local PHP
+ran in Docker against the dedicated `database/e2e*.sqlite` files, with the backend exposed only on loopback;
+system Chromium/FFmpeg were used. Initial local launches found missing video-encoder setup and an ignored
+stale `public/hot` marker; the marker was backed up to use the production build, without weakening CSP.
+Playwright's generated transform cache was moved outside the repository before whole-repo lint. The final
+`--full` pass above was repeated after these browser-spec edits. No assertion was loosened and no test
+was quarantined. Real CI is run again for the revised PR head; results are available in PR #463's checks.
+
+
+**Remaining scope.** Carry forward **Setup** (10 A / 7 B / 8 D: conditional marks and help, especially
+currencies), then **Website** (9 A / 6 B / 1 C). **Batch 2** remains Trips, Sales, Customers, Languages,
+Support and Blog. The owner has chosen to drop screen requirements exceeding the server's, including
+customer create's seven C findings; `ValidatesStoreCustomer` name/email/phone must also be limited to
+191/191/20 with boundary tests. Separately, the registration fields never stored still need the owner's
+decision (store them or remove them), and seller-panel endpoints without validation remain phase 3.
+## 50. Seller forms, phase 3 batch 1: account, money and text writes (2026-10-21)
+
+Runtime: **GPT-6 Codex**; the exact model variant and reasoning-effort setting are not exposed by this
+runtime. The requested **claude-opus-5-5 / high** cannot be selected here and is not claimed. Branch
+`codex/seller-validation` starts at `origin/develop` **637f7d15**, the merge of the previous
+[PR #463](https://github.com/arb-rajab/warehouse_management/pull/463). No newer `develop` change was present
+when work began. The owner authorized committing, opening one PR to `develop`, and merging after all CI
+is green. Account, money and text writes are separate commits. At approximately **32 files**, including
+the audit reports, browser coverage and this documentation, the requested size cutoff stops this batch
+before shop and commerce. No product or digital-product writer or view was changed.
+
+### Rules, per form: before and now
+
+| Form / route | Before | Now |
+| --- | --- | --- |
+| Profile (`seller.profile.update`, `seller/profile/index`) | `SellerProfileRequest`: name required/max 191 without a string check; minimum 6 only when both password controls were nonempty; a mismatch was silently ignored; phone, avatar and bank fields unvalidated | Name required/string/max **191**; optional phone string/max **20**; optional new password string/min **6**, confirmed against the existing `confirm_password`, at most **72 bytes**, no NUL; either populated password control requires the other. Optional avatar integer referencing **the caller's own image**. Payment switches boolean; bank name/account name/account number optional strings/max **255/200/50**, routing number optional signed 32-bit integer. Bag `sellerProfile`. |
+| Email (`user.change.email`, same view; shared with customers) | No validation; `isUnique()` then the existing emailed verification link, else the existing warning | `ChangeStoreEmailRequest`: email required/string/email/max **191**, unique in store `users`, ignoring the caller. Bag `changeEmail`. The controller still queues the same verification and leaves the current email unchanged until its callback. Resubmitting the caller's current email passes validation and retains **"Email already exists!"**; another account's duplicate is now a field validation error. |
+| Withdrawal (`seller.money_withdraw_request.store`, `money_withdraw_requests/index`) | Inline amount required/numeric/>0; message optional string/max 2000; `SellerWithdrawService` already did the locked balance and minimum checks | `Seller\StoreWithdrawRequest` keeps those rules and adds amount **< 10^18** (`decimal(20,2)` storage range, also rejecting numeric overflow/INF), plus the unknown-input refusal. The service and its transaction, first balance >5 check, then minimum / balance minus pending requests, are **unchanged**. |
+| New ticket (`seller.support_ticket.store`, `support_ticket/index`) | Nothing validated | Seller `StoreSupportTicketRequest` reuses the storefront rules: subject required/string/max **255** (`tickets.subject`), details required/string/max **10,000** (the back office's support-text cap; `longText` column), optional comma-separated image upload ids, **only the caller's**, at most **50**, unique and existing. Bag `storeTicket`. |
+| Ticket reply (`seller.support_ticket.reply_store`, `support_ticket/show`) | Nothing validated; controller already scoped `ticket_id` to the caller and authored the reply as the caller | `StoreTicketReplyRequest`: ticket id required/integer; reply required/string/max **10,000** (`longText`, back-office support cap); same optional own-image references. The existing scoped lookup now also runs before validation for a well-formed id; another account's id remains **404**, even with invalid text. |
+| Conversation reply (`seller.conversations.message_store`, `conversations/show`) | Nothing validated; `ConversationPolicy::participate` already checked membership | `StoreMessageRequest`: conversation id required/integer; message required/string/max **65,535 characters AND bytes** (`messages.message` is MySQL `TEXT`). Membership is checked through that same policy before validating a well-formed id, so another conversation stays **403**, an absent numeric id **404**. The controller's existing Gate check remains. |
+| Product-query reply (`seller.product_query.reply`, `product_query/show`) | Inline `reply => required`, nothing else | Seller `ReplyProductQueryRequest`: reply required/string/max **10,000**, using `ValidatesSupportReplies` as the back office does (`product_queries.reply` is `longText`). The seller-scoped query is resolved before validation; another seller's query is **404**. The controller keeps its scoped lookup and redirect. |
+
+Every endpoint refuses **unknown input, including empty unknown fields**, through
+`RejectsUnexpectedInput`; only `_token` and `_method` are exempt transport fields. It inspects submitted
+files and query input too. No seller-controlled owner/status field is added. All seven fixed Blade forms
+are added to `FIXED_STOREFRONT_FORMS`; the ratchet already reaches seller Blade forms reliably, so no
+scanner expansion or back-office baseline change was needed.
+
+**The forms.** Shared marks and one legend per required form, native requirements, associated labels,
+column-sized `maxlength` / numeric limits, retained old text and field errors. The profile and email read
+only their own error bags, preserving the address modal's bags. Ticket and withdrawal refusals reopen
+their modal. Password controls stay empty on a refusal; both legacy password names are now excluded
+from flashed old input in `bootstrap/app.php`. Scalar guards prevent rejected array values in `old()`
+from crashing the next GET. User HTML still stores as sent; escaped inputs, escaped conversation/history
+output and existing `clean_html()` ticket output are unchanged.
+
+**Dead and unshown input.** Removed the ticket-reply form's unused hidden `user_id` (the controller has
+always derived the author from auth) and the query-reply form's unused hidden `conversation_id` (the
+route id has always selected the query). Both now fail as unknown input. Profile `email`, withdrawal
+`user_id/status`, ticket `user_id/status/code`, conversation `user_id/sender_id/receiver_id/attachments`
+and any other unruled field are refused. None is needed by these controllers. All persisted profile
+and bank fields are actually shown in the profile form.
+
+### Judgement calls and existing defects
+
+1. **Unchecked profile payment switches previously blocked a normal submission**: the controller assigned
+   null to non-null integer columns when an unchecked checkbox sent nothing. They now save **0** through
+   `boolean()`; this is the one persistence repair needed for the form to succeed. The bank-name error
+   also incorrectly read the phone error; it now reads its own field.
+2. **Password rules follow the existing six-character policy**, with no new current-password challenge
+   (this controller never required one). The bcrypt input cap is 72 **bytes**, not Unicode characters;
+   NUL input errored in the hasher, and longer input is unsafe because bcrypt truncates it. Tests cover
+   a 72-byte multibyte password, 73 bytes, multibyte overflow and NUL. Browser maxlength is a character
+   approximation; the server byte check is authoritative. The existing default exceptions configuration
+   flashed `new_password` and `confirm_password` into the session; both are now redacted.
+3. **Own uploads means own even for a privileged seller.** The shared upload-reference helper gains an
+   opt-in `ownOnly` argument used by the two seller ticket requests; its other callers retain their
+   previous behavior. A seller's imported avatar uploaded by someone else must be cleared or replaced
+   before resaving the profile; it receives no grandfathered exception.
+4. **Email verification is retained, with an existing defect to follow up.** `HomeController::new_verify`
+   still has no input validation. More seriously, `email_change_callback` finds the account by the code
+   and takes the target email independently from the URL: the code is **not bound to the emailed address**,
+   and the callback does not recheck uniqueness. Fixing that recovery flow is outside this validation
+   batch. No new verification flow was added.
+5. **Text limits deliberately reuse the back office's 10,000-character cap** for details, ticket replies
+   and product-query replies although their columns are `longText`. Conversation messages additionally
+   enforce MySQL's 65,535-byte limit; the other existing `max:65535` validators elsewhere still count
+   characters only and are not changed here.
+6. **The withdrawal service and its money precision are retained.** Its float cast, locking, minimum,
+   balance and pending-request behavior are unchanged. This batch does not redesign currency arithmetic
+   or add a fractional-digit policy.
+7. The shared email request exposes the customer profile's already-unmarked/unrequired email control to
+   the audit (**one A and one B**). That customer form is not in this seller batch; it needs its own
+   error bag display and marking in the account-form follow-up.
+
+### Audit and verification
+
+`php artisan forms:audit-required` ran on untouched `develop`, then after account, money and text writes;
+`.ai/required-fields-audit-20261021.md` / `.json` are regenerated. **26 seller forms** throughout.
+
+| Scope / class | Before | After account | After money | After text |
+| --- | ---: | ---: | ---: | ---: |
+| Seller A / B / C / D / E / F | 14 / 14 / 34 / 0 / 117 / 0 | 14 / 13 / 34 / 0 / 108 / 0 | same | 14 / 12 / 30 / 0 / 102 / 0 |
+| Seller total | **179** | **169** | **169** | **158** |
+| Overall A / B / C / D / E / F | 52 / 53 / 72 / 10 / 215 / 23 | 53 / 53 / 72 / 10 / 205 / 23 | same | 53 / 52 / 68 / 10 / 199 / 23 |
+| Overall total | **425** | **416** | **416** | **405** |
+
+All seven fixed forms have **no finding in any class**. The untouched back-office baseline remains **82**.
+Tests were written and run before implementation: account **44 failures / 51 tests**, text **49 failures /
+71 tests**, and money failures on shared marks/old input, unknown fields and numeric overflow (the initial
+money render fixture also needed the existing `seedStoreCurrency()` helper). Array-old-input and password
+redaction/bcrypt tests were separately seen failing before those fixes. No test was removed or loosened.
+Focused Pest covers **198 tests** across the three seller files, storefront ticket regressions and
+the ratchet (the final full run below also includes them). Hostile cases include boundary and over-limit
+strings, arrays, HTML,
+unknown/forged owner fields, second-seller and customer ids, and foreign/non-image/repeated uploads.
+
+The cloud runtime uses PHP **8.5.11** and Laravel **13.34.0** from the installed source.
+`wait_for_setup.py` reported no active Claude setup; the existing cloud PHP activation script was used.
+PHPStan needed local socket access allowed by the execution environment; it passed with **0 errors**.
+The first full run exposed the same stale Composer classmap and missing GD WebP support recorded in §49:
+`composer dump-autoload --optimize --no-interaction` repaired the deleted-controller references (focused
+**82 tests / 625 assertions** passed), and GD was rebuilt with WebP in the local `wms-seller-php:8.5` Docker
+image and copied into the cloud PHP runtime (focused **87 upload tests / 403 assertions** passed). No
+repository dependency, model, image-processing rule or test was changed to address those runtime failures.
+The demo-mode early refusal is also pinned and remains ahead of the ownership lookup.
+The old provisioned `node_modules` lacked the newer chart/editor/map dependencies: restored with
+**npm 11.9.0 `npm ci`**, lockfile unchanged, then whole Vitest **336 files / 2,651 tests** and vue-tsc passed.
+`npm run build` passed, including remote fonts. The focused Playwright spec passed **3 tests**, including
+the new seller profile/withdrawal/ticket workflow and the existing uploader/login cases, with system
+Chromium/FFmpeg and enforced CSP on local HTTPS. The first new browser attempt failed in fixture setup
+because Shop is guarded; the fixture now uses DB writes, without changing model mass assignment.
+The stale ignored `public/hot` marker was backed up outside the repository for the production build.
+
+The final explicit `python3 .claude/scripts/pre_push_check.py --full` **passed before the last commit**:
+Wayfinder generation, whole-repo ESLint, Prettier, vue-tsc, Vitest **336 files / 2,651 tests**, Pint,
+PHPStan **0 errors**, config-cache clear, and parallel Pest **7,117 passed / 3 skipped / 40,684 assertions**
+(**80.036 s**). The three skips are the existing MySQL-only longitude cases on SQLite; none was added or
+quarantined. The full run itself does **not** execute Playwright, MySQL migrations or dependency audits.
+Playwright was run separately as above; MySQL migrations were not run locally (no schema changed).
+`bash .github/scripts/deploy-remote-test.sh` was also run separately: **all rollback checks passed**.
+`git diff --check` passed. No bare pre-push or attested run was used, and no `CI-Verified` trailer was
+written. Real PR CI and the subsequent staging deployment are checked before the final owner report.
+The PR plan selects PHP, JS and E2E; MySQL, dependency-audit and deploy-script CI jobs are not planned.
+
+Separately, `npm audit --omit=dev --audit-level=high` passed (**0 vulnerabilities**). Local
+`composer audit --locked --abandoned=report` could not complete: the managed proxy denied
+`packagist.org/api/security-advisories/` with CONNECT **403**. The PR planner skips dependency audit
+because no dependency file changed, so Composer advisories are **not verified by this batch**. No
+destination-policy workaround or advisory ignore was used.
+
+### Deferred at the file cutoff
+
+**Group 4, SHOP**: one request for the four `seller.shop.update` sections with a strict section-specific
+input allowlist, column-sized shop/address/meta fields, own images, optional social URLs <=255 and numeric
+coordinates within ±90/±180 (`shops.delivery_pickup_longitude` is already `decimal(18,15)`). Keep the current
+section dispatch, auth-derived shop, routes, redirects and flashes. `seller.shop.verify.store` needs rules
+from its configured dynamic fields and the real storage contract: `ShopVerificationStorage` stores private
+pdf/doc/docx/png/jpg, <=20 MB; a missing verification-form setting currently reaches `foreach(null)`.
+
+**Group 5, COMMERCE**: seller coupons already use `CouponRequest` (the brief's "validates nothing" does
+not apply to every endpoint). Keep `CouponPolicy`, code uniqueness and owner derivation; validate discount
+bounds, date order and seller-owned products before parsing dates. Its current `prepareForValidation()`
+explodes unvalidated `date_range` and builds `details` before validation, so arrays/malformed ranges can
+error. The bulk importer currently only checks `hasFile('bulk_file')`; match supported MIME/size and retain
+ownership constraints after inspecting `ProductsImport`, without silently enabling a second products writer.
+
+**Separate product/digital-product PR (ownership settled by Option A, §52)**: do not widen `Product`'s
+`#[Fillable(['name', 'ar_name', 'thumbnail_img', 'published'])]` as a validation fix. Physical products
+already use `ProductRequest`: it requires name/category/unit/minimum quantity/unit price and conditionally
+discount; name max **255** exceeds `products.name` **200**, lacks a string check, and category/unit are
+only `required`. `ProductService::sellerAttributes()` is an input allowlist, **not** a replacement for
+rules or the model allowlist. Its store/update call `Product::create()` / `->update()` with many more
+columns, risking silently discarded attributes (or strict-mode exceptions). Stocks/tax/translation writes
+need their own shape, ranges and ownership validation and a transaction before the current destructive
+stock rebuild. Services assume `tags[0]` is JSON, choice arrays and variant keys have valid shapes, prices
+and quantities are usable, and dates parse; all require hostile tests. Digital create/update accept plain
+`Request`, assign many columns directly (so the mass-assignment limit does not protect them), assume
+`tags[0]` and JSON values exist, take unvalidated photos/downloads/prices/tax, and lowercase an unvalidated
+slug on update. Keep `ProductPolicy::updateAsSeller`, subscription checks, approved/published invariants,
+localization, sanitization and current URLs/flashes. Inspect every upload reference and nested tax/choice/
+stock product id against a second seller. Pin column boundaries, min/discount arithmetic, transaction
+rollback, and the known MySQL decimals/choice-order edit defects (D13) before changing these writers.
+
+## 51. Seller forms, phase 3 batch 2: shop, verification, coupons and bulk upload (2026-10-22)
+
+Runtime: **GPT-6 Codex**. The requested `claude-opus-5-5 / high` is unavailable; the exact active
+variant and effort are not exposed, so neither is claimed. This continuation starts at `develop`
+**7524aa0a**, the merge of [PR #464](https://github.com/arb-rajab/warehouse_management/pull/464).
+The original brief's previous [PR #463](https://github.com/arb-rajab/warehouse_management/pull/463)
+is recorded in §50. `develop` was fetched before editing: account, money and text writes were already
+merged, so they were not implemented again. The owner authorized one PR to `develop`, separate SHOP and
+COMMERCE commits, and merging only after every CI check is green. Product/digital-product forms and
+writers are unchanged. At **37 files**, this batch stops after completing SHOP and COMMERCE; the separate product writers remain deferred.
+
+### Rules, per form: before and now
+
+| Form / route | Before | Now |
+| --- | --- | --- |
+| Shop basic information, `seller.shop.update` | No validation; name, phone, address and metadata required only in HTML | `Seller\UpdateShopRequest`: name required/string/max **200**, address required/string/max **500**; nullable phone and meta title string/max **255**; nullable meta description string/max **65,535 characters and bytes** (MySQL TEXT). Logo is an integer identifying the caller's own image. Shipping cost is required/numeric/at least zero/max **999999999999999999.99** only for `seller_wise_shipping`; otherwise its presence is refused, even empty. |
+| Pickup coordinates, same endpoint | No validation | Both keys present; both nullable, each required with the other; numeric latitude **-90..90**, longitude **-180..180**. The widened longitude column from #461 is unchanged. |
+| Banners, same endpoint | Any image references, no validation | Optional comma-separated own-image ids; no duplicates, at most **50**. Top banner takes one id; top/full-width/half-width banner strings max **191** (their columns). Sliders are longText and the same 50-image reference limit bounds their size. |
+| Social links, same endpoint | Arbitrary unvalidated values | Nullable strings, HTTP/HTTPS URLs, max **255**, for Facebook, Instagram, Google, Twitter and YouTube. |
+| `seller.shop.verify.store` | Configured fields required only in HTML; storage checked file content/20 MiB while writing, so a later refusal could leave earlier files behind; absent configuration crashed | `Seller\StoreShopVerificationRequest`: every configured field required; text string/max **10,000**; select/radio restricted to configured choices; multi-select a nonempty list of distinct configured choices (max 100). Files must pass the existing storage's content checks, PDF/Word/PNG/JPEG, at most **20 MiB**, before any file is stored. Errors use the actual `element_N` field, bag `sellerVerification`. |
+| `seller.coupon.store` / `.update` | Root `CouponRequest`; code required/global unique/max 255; discount numeric/min 1; date splitting and details construction happened before validation; products not scoped | Seller request: enums for type and discount type; code required/string/max **255**, same global uniqueness, ignoring only the updated coupon; discount numeric/min **1**/max **999999999999999999.99**, percent <= **100**. Cart minimum and maximum discount numeric/min **1**/max **999999999999999999.99**; product coupons require a nonempty list (max 1,000) of distinct integer ids owned by this seller. Fields for the other coupon type are refused even empty. Date range is a real `MM/DD/YYYY - MM/DD/YYYY` range, end >= start, fitting signed INT timestamp columns. Details and timestamps are derived only after validation, never accepted from the client. |
+| `seller.bulk_product_upload` | Only `hasFile`; invalid or missing input could silently do nothing or reach the spreadsheet reader | Seller request shares `ValidatesProductSpreadsheet` with the back office: required/file/xlsx,xls,csv,txt/**10 MiB** contract, adds strict input refusal and a reader/content check matching the extension. Spreadsheet row errors appear under `bulk_file`; the existing importer, sanitization, seller ownership, subscription/approval logic and notifications remain unchanged. |
+
+Every endpoint rejects unknown submitted keys (query input and uploaded files included), even empty ones.
+`_token` and `_method` retain their transport exemption. Shop forms replace the unused hidden `shop_id`
+with a validation-only `section`; original clients without it still infer a section from the original
+controls. Mixed sections are refused. The controller still selects the shop from auth and retains its
+existing dispatch. Shop bank/status/owner fields are not enabled here; the profile's bank controls remain
+their separate writer. Coupon `user_id`, `id`, `details`, `start_date`, `end_date` are refused: route/auth
+identify the row and owner, and the controller needs derived dates/details only. The edit page keeps its
+unnamed id for the unchanged AJAX helper. The import endpoint accepts only `bulk_file`.
+
+### Forms, judgement calls and existing defects
+
+- All eight fixed Blade forms use shared marks, required attributes and a legend where required;
+  errors appear under their controls, text is retained with guarded `old()` values, and passwords/files
+  are never repopulated. Shop and verification use named bags. User HTML still follows the existing
+  escaping/sanitization paths; no output escaping or persisted-text cleaning was changed.
+- **Nullable shop phone/metadata are optional.** Their old browser requirements exceeded the controller
+  and database. Name/address stay required because they select the basic-information write. Pickup
+  coordinates may both be cleared; a half-filled pair is refused rather than silently ignoring it.
+- **No foreign-upload grandfathering.** Even a currently stored image must belong to the seller. Legacy
+  images owned by another account must be replaced or cleared before that section can save.
+- **Verification configuration:** missing, malformed or unsupported configuration renders without a
+  crash and disables Apply; a forged POST is refused without recording an empty application. All fields
+  shown by a valid configuration remain required, as the old form intended. The 10,000-character text
+  limit is a deliberate support-style cap within the longText storage column.
+- **Coupons are bounded by signed INT dates:** the date picker can store whole days from 1901-12-14 to
+  2038-01-19. Supporting later dates requires a separate column migration. Global code uniqueness is
+  preserved, including across owners; changing to per-seller uniqueness is not part of this PR.
+- **Coupon old input was broken:** the page fetched its fields through a second AJAX request after
+  consuming the flashed values. Create/edit now render a shared seller field partial immediately;
+  switching type still uses the original helper routes. The unused posted edit `id` is removed, and the
+  edit template's stray parenthesis is fixed as part of making that form render and submit reliably.
+- **Bulk import defects:** renamed text could pass the MIME list as `txt` and then crash the XLSX reader;
+  the selected reader must now recognize its content. Row errors previously missed the file field;
+  both admin and seller call `ProductSpreadsheetImporter` for the admin's existing error mapping, with
+  unchanged import behavior. This does not enable a new products writer: the seller importer already
+  uses `Product::forceCreate` and derives ownership from auth.
+- **Reported, not fixed:** `ProductsImport::downloadThumbnail()` creates external-image upload rows
+  without `user_id`. The new own-image rules cannot reuse such unowned rows in shop/profile fields.
+  The seller import POST also does not repeat its GET page's verification-status check. Both predate
+  this validation work; no middleware/permission/ownership flow was added or changed. The root
+  `CouponRequest` remains on API routes and still parses dates before validation there; only the
+  requested seller-panel endpoints use the new seller request. The importer also allows unit length
+  50 against `products.unit` 20 and has no column-sized price ceiling; carry those row-rule defects
+  into the separate products writer review.
+
+### Audit and ratchet
+
+`FIXED_STOREFRONT_FORMS` gains shop update (all four sections), verification, both coupon forms and bulk
+upload. The scanner now evaluates rules with literal hidden values (cached separately per input), reads
+conditional Blade marks as dynamic, and follows literal field partials while preserving their source
+file/line. Nested forms and recursive cycles are not merged into an outer form. These are checked with
+focused scanner tests, including a deliberately missing required attribute after a correct section scan.
+The back-office baseline remains **82**: no listed finding disappeared.
+
+| Audit | Before A/B/C/D/E/F | After |
+| --- | --- | --- |
+| Seller panel, 26 forms | 14 / 12 / 30 / 0 / 102 / 0 (**158**) | 0 / 10 / 23 / 0 / 87 / 0 (**120**) |
+| Overall | 53 / 52 / 68 / 10 / 199 / 23 (**405**) | 39 / 50 / 61 / 10 / 184 / 23 (**367**) |
+
+After SHOP: seller **138** (14/12/24/0/88/0), overall **385** (53/52/62/10/185/23). The current-date audit is saved in
+`.ai/required-fields-audit-20261022.md` and `.json`. All **120** remaining seller findings are in
+the four explicitly excluded physical/digital product create/edit forms; every other named write form
+has no finding. The five other seller forms in the 26-form count are read-only search/filter forms.
+
+### Verification
+
+SHOP was tested before implementation: **75 failed / 5 passed**, exposing absent validation and array
+500s. The corrected SHOP tests reached **82 passed / 321 assertions** before the final extra ownership
+cases. COMMERCE's valid pre-implementation baseline was **54 failed / 14 passed**; the first corrected
+implementation reached **68 passed / 213 assertions**. The literal-partial scanner test and the bulk row
+error test were each observed failing before their fixes. The combined focused run passed **230 tests / 833 assertions** across
+`SellerShopFormsTest`, `SellerCommerceFormsTest`, `LegacyShopVerificationTest`,
+`LegacySellerScopingTest`, `RequiredFieldsAuditTest`, `RequiredFieldsRatchetTest`, and the admin
+`ProductBulkUploadControllerTest`. The later pickup-help case was separately seen failing and then
+passed (**1 test / 4 assertions**) and folded into the unpushed SHOP commit. Exact **20 MiB**
+verification and **10 MiB** bulk files are accepted; one byte more is refused with no new file/import
+write. A separate red/green check pins the metadata byte-limit message, so multibyte overflow is
+not misleadingly described as a character-count error. The bulk boundary case uses a recognizable CSV and asserts that the importer is called exactly
+once, for the accepted file. Exact decimal ceilings are also pinned: `999999999999999999.99`
+passes for shipping/discount, while a higher-precision value that would round past storage fails
+before a write (the three refusal cases were observed failing first).
+
+`npm ci` with npm **11.9.0** restored missing frontend packages without changing the lockfile.
+Wayfinder was regenerated, stale Composer class-map entries refreshed with `dump-autoload --no-scripts`,
+and `npm run build` passed with the managed proxy/CA, including fonts. PHP is **8.5.11** with a 1 GiB
+memory limit in a local Docker image; GD was rebuilt with WebP for the existing upload suite. The first
+GD build failed because apt's restricted user could not read the mounted CA; a readable secret mount
+and apt's explicit CA setting fixed it without disabling TLS verification.
+
+Whole Vitest passed **336 files / 2,651 tests** with `--maxWorkers=2`. Unrestricted, four-worker, and later one/two-worker attempts had local scheduling
+timeouts; both affected files passed **184 tests** with two workers before the full pass.
+The final explicit full run again passed **336 files / 2,651 tests**; Vitest logged a worker-shutdown
+timeout warning but returned success after completing every test. Repository test code, assertions and CI deadlines are unchanged. The final local pre-push run uses
+a temporary npm wrapper with **two workers** and **30-second test/hook deadlines** for this slower
+runtime. Every test still runs; real CI uses the repository defaults and must pass before merge.
+`npx prettier --check tests/e2e/store-legacy-uploader.spec.ts`, PHPStan and `git diff --check` were also run.
+
+Focused Playwright (`tests/e2e/store-legacy-uploader.spec.ts`) passed **7 tests** on local HTTPS with CSP
+enforced and system Chromium/FFmpeg. The first combined new workflow exceeded its 30-second limit;
+it was split into four independent cases, retaining coverage. A subsequent runtime attempt found an
+orphaned Docker-backed test server; stopping that task-owned server and restarting its PHP container
+released the port. The coupon date picker normalizes reversed ranges before POST, so browser error
+recovery now uses a real duplicate code; both coupon endpoints' reversed-date refusals remain pinned
+in Pest. No browser assertion was removed from the existing three cases.
+
+The explicit `python3 .claude/scripts/pre_push_check.py --full` is run before the final COMMERCE commit.
+Its first attempt stopped at ESLint on test-created private directories owned by the container user;
+workspace-user ownership was restored while retaining private permission modes. A later full attempt
+passed the frontend/static checks but found a global Pest helper-name collision with the existing admin
+verification tests; the new seller fixture was renamed. A backend-only retry was stopped before completion to consolidate verification into a fresh explicit
+`--full` run, with four CPUs available to the unchanged parallel Pest runner. The completed full run passed Wayfinder generation, whole-repo ESLint, Prettier, vue-tsc,
+Vitest (**336 files / 2,651 tests**), Pint (**1,360 files**), PHPStan (**890 files / 0 errors**) and config
+cache clear. Parallel Pest completed with **7,290 passed / 3 skipped / 1 failed / 41,319 assertions**
+(**797.14 s**): the existing admin verification round-trip omitted its configured, browser-required
+Licence file and expected null storage. That test now first asserts missing-file refusal with no writes,
+then posts a real PDF and checks private storage while retaining the ordered-answer and JSON assertions.
+Pint on that file and its complete focused suite passed (**34 tests / 254 assertions**). No application
+code changed after the full run; the final commits still require the complete real CI suite before merge. No bare pre-push or attested run was used, and no `CI-Verified` trailer
+was written. MySQL migrations and dependency audits are not part of `--full`; no schema or dependency
+file changed. Playwright ran separately as above. Real CI and the deploy result are checked before the
+final owner report.
+
+### Separate product/digital-product PR
+
+Carry forward §50's detailed writer inventory. Option A (§52) settles column ownership;
+validation and explicit seller persistence remain the next separately gated PRs.
+Do not widen `Product`'s `#[Fillable(['name', 'ar_name', 'thumbnail_img', 'published'])]` as a validation fix.
+Physical `ProductRequest` assumes name/category/unit/minimum quantity/unit price and conditional discount;
+its name max 255 exceeds the 200 column and category/unit lack types. `ProductService::sellerAttributes`
+is only an input allowlist; its create/update attributes exceed the model's fillable limit. Digital
+writers accept plain Request and assign columns directly. Both need column-sized rules, hostile shape,
+price/date/discount boundary tests, own upload/nested stock/tax/choice ids, transaction rollback before
+stock rebuild, and pinned policy/subscription/approval/localization/sanitization behavior. Inspect the
+`tags[0]` JSON assumptions, malformed variant/choice inputs, unvalidated digital slug/files/prices/tax,
+and D13's MySQL decimal/choice-order edit defects. Account email-callback defects remain recorded in §50.
+
+## 52. Product column ownership: Option A and origin collisions (2026-10-22)
+
+Runtime: **GPT-6 Codex**. The requested `claude-opus-5-5 / high` cannot be selected here;
+the exact active variant/effort are not exposed and are not claimed. Branch
+`codex/product-column-ownership` starts at fetched `origin/develop` **8899d105**,
+the merge of [PR #465](https://github.com/arb-rajab/warehouse_management/pull/465).
+Previous seller validation PRs are [#464](https://github.com/arb-rajab/warehouse_management/pull/464)
+and [#463](https://github.com/arb-rajab/warehouse_management/pull/463).
+This is **PR A**. PR B (seller physical persistence/validation and D13) must wait for
+this PR's green merge and successful deploy; PR C (digital and remaining defects)
+must likewise wait for B's deployment. No skip-CI or hand-written attestation is used.
+
+### The owner's decision and existing rows
+
+**Option A replaces the pending decision in §§5, 14–16, 21–23 and the former
+“only writer” rule in shared-database.md.** The sync owns exactly `name`, `ar_name`,
+`published` of feed-origin rows. The store owns every other column and
+may write those three only on products it created itself. `synced_at` is sync
+metadata: non-null identifies feed-origin; null identifies store-created or
+unclassified. Approval authority, deletion rules, foreign-key outcomes, and
+publication/stock side effects for permitted store-origin changes are unchanged.
+The previous Eloquent upsert also implicitly changed `updated_at`: Option A now
+leaves that store-owned timestamp untouched on existing rows and records sync time
+in `synced_at`. New rows retain their creation timestamps.
+
+Migration `2026_10_22_101723_add_synced_at_to_products_table` is an ordinary
+nullable-column addition, without the old production/table-existence no-op guard.
+**All existing rows remain null.** No name, unchanged publication state, legacy
+`from_api`, `mat_id` or old timestamp proves origin. This deliberately protects
+unknown rows and temporarily stops feed updates to them. The owner must review
+an authoritative creation/feed inventory and reclassify exact verified IDs;
+shared-database.md provides the owner-run SQL procedure. It has not been run on
+production or staging by this work. The initial classification timestamp is not
+claimed to be the time of a historic sync. Rollback drops only the marker; taking
+this release back also takes back its ownership enforcement, so keep a reviewed
+classification inventory outside the database before rolling it back.
+
+### Implementation and enforcement
+
+- The sync keeps 500-row chunks, hourly scheduling/overlap protection, 200/191
+  character truncation, configured URL, error handling and no-pruning behavior.
+  It sets/refreshes the marker on every accepted row. The conditional SQL upsert
+  preserves **every** column of a conflicting null-origin row, including timestamps.
+  A race with a newly auto-incremented store row is protected at the write itself.
+  Conflicts are counted and every ID is named in a warning log and command output.
+  The marker assignment is last because MySQL evaluates SET assignments in order.
+- `ProductColumnOwnership::SYNC_COLUMNS` holds the one list. Product refuses
+  changed protected assignments early, before legacy related-row writes, and
+  ProductBuilder checks the current rows again under locks at the actual write.
+  It covers direct assignment, `fill`/`forceFill`, services, normal/quiet saves,
+  bulk Eloquent updates and counter updates. Mixed-origin bulk writes are refused
+  atomically; store upserts and marker changes are refused. Raw/base-builder
+  product writes outside the sync are prohibited by an architecture-style AST test.
+- Every model insert resets the marker to null, including duplication/quiet
+  replication of a feed row. InHouseProductWriter, the admin/seller digital
+  controllers, seller ProductService, switches, the seller API and legacy imports
+  use this model. The guard does not widen fillable or grant approval permissions.
+  A legacy import attempting protected feed changes now fails explicitly; it does
+  not gain sync privileges. Store-owned fields remain editable on feed rows.
+
+### Seller forms and outstanding work
+
+No seller validation/persistence repair has started in PR A. Characterization
+of the current physical/digital forms belongs to PR B's first step, after A is
+merged and deployed. The four-column fillable defect remains a defect; this PR
+makes no claim that the seller ProductService now persists its discarded fields.
+
+| Form | Old rules | Rules after PR A |
+| --- | --- | --- |
+| `seller.products.store` | ProductRequest: required name (max 255), category, unit, numeric minimum/unit price, conditional discount; other controls largely unvalidated | Unchanged; PR B must narrow the name to 200 and validate the full form before explicit persistence. |
+| `seller.products.update` | Same ProductRequest and legacy mass assignment | Unchanged; the shared ownership guard now refuses protected changes on feed-origin rows. |
+| `seller.digitalproducts.store` | Plain Request, direct unvalidated assignments | Unchanged; PR C replaces these with validation and an explicit transactional writer. New rows have null origin. |
+| `seller.digitalproducts.update` | Plain Request, direct unvalidated assignments | Unchanged; feed name changes are now refused before destructive stock replacement. |
+
+D13 is **open**: MySQL decimal representation and mismatched stored choice/stock
+names still require failing MySQL regression tests and their fix in PR B. D16's
+four seller forms remain open. Conversation/bulk row-rule defects recorded in
+§§50–51 remain for the subsequent batches; existing validated forms are retained.
+The current committed audit is **367** findings: A/B/C/D/E/F =
+**39/50/61/10/184/23**; seller **120** = **0/10/23/0/87/0**. Ownership work does
+not remove a form finding or a ratchet baseline entry (back-office baseline 82).
+
+### Verification
+
+`wait_for_setup.py` ran first and reported no active setup. The stale checkout
+was fetched to #465 before edits. PHP **8.5.11** / Laravel **13.34.0** run in a
+local Docker container; MySQL **8.4** uses the isolated `warehouse_test` database
+with the requested root/password credentials. Existing local vendor/assets were
+checked. Missing frontend packages were restored using npm **11.9.0 ci** without
+lockfile changes; npm's cache is under the task workspace. The stale Composer
+classmap was regenerated. GD was rebuilt with WebP, as existing upload tests need.
+
+Focused ownership/sync/migration tests passed on SQLite (24 tests/211 assertions)
+and MySQL (25 tests/212 assertions, including the architecture test added later).
+The complete focused admin physical/digital forms plus ownership tests passed
+**118 tests/867 assertions**, including seller physical/digital refusal before
+stock changes. Earlier failures were snapshotting an unrefreshed factory model
+and the stale local Composer classmap; corrected without loosening assertions.
+Pint passed, PHPStan reported **0 errors**, and the required script selftests
+passed. The final full run and complete MySQL-group results are recorded below
+when completed; a focused result is not represented as full verification.
+
+The complete local MySQL group (the nine files listed in the CI MySQL job and
+`pre_push_check.py`) passed **77 tests/389 assertions**, with **6 existing
+SQLite-specific skips** on MySQL. The fresh audit again measured **367 overall /
+120 seller** findings. `bash .github/scripts/deploy-remote-test.sh` passed all
+rollback checks; `npm audit --omit=dev --audit-level=high` reported **0 vulnerabilities**.
+`npm run build` passed, including fonts through the managed proxy/CA.
+Focused Playwright on `store-product-create`, `store-product-edit` and
+`store-digital-product-forms` passed **8 tests (53.3 s)** with enforced CSP,
+system Chromium/FFmpeg, and the production build. The first runtime attempts
+exposed Docker bridge proxy trust and separate `/tmp` directories; the runtime
+now trusts only the actual local bridge/loopback and uses a shared task temp
+directory. No browser assertion, timeout, CSP or repository test code changed.
+
+The first explicit `--full` run passed Wayfinder, ESLint, Prettier, vue-tsc,
+Vitest (**336 files/2,651 tests**), Pint and PHPStan (**893 files/0 errors**),
+then Pest failed before loading its suite because Artisan's child PHP inherited
+the container's 128 MB default. The local PHP ini now sets 1 GiB for children
+as well as the parent. A fresh explicit `--full` run follows this runtime fix.
+
+Final ownership review removed one implicit old Eloquent behavior: the sync no
+longer changes the store-owned `updated_at` on existing rows. The stronger
+preserve-every-other-column assertion passes on MySQL (**10 sync tests/104
+assertions**); the complete final MySQL group passed **77 tests/390 assertions**
+(**205.46 s**, the same 6 existing driver-specific skips). New feed rows still
+receive creation timestamps. `synced_at` carries last-sync time. After this code
+correction the explicit full gate is repeated on the final implementation.
+The previous full pass had **7,312 passed/3 existing skips/41,533 assertions**;
+it is not substituted for the final-tree pass.
+
+**Final explicit `python3 .claude/scripts/pre_push_check.py --full`: passed before
+PR A's last commit.** It ran setup readiness, Wayfinder generation, whole-repo
+ESLint, Prettier, vue-tsc, Vitest (**336 files/2,651 passed**), Pint, PHPStan
+(**893 files/0 errors**), config-cache clear, and parallel Pest (**4 processes,
+7,312 passed/3 existing MySQL-only skips on SQLite/41,534 assertions, 198.66 s**).
+The separate final MySQL, browser, npm audit, deploy rollback, CI-planner (**23
+passed**) and script-selftest results above are not claimed as part of `--full`.
+Composer audit was not run locally; the real CI Dependency audit remains required.
+No test was skipped or quarantined to repair a failure, no bare or attested run
+was used, and no CI-Verified trailer was added. `git diff --check` passed.
+The final source-comment clarification changes no executable code.
+
+## 53. Seller physical catalogue: explicit persistence and validation, PR B1 (2026-10-22)
+
+Previous PRs: [#465](https://github.com/arb-rajab/warehouse_management/pull/465)
+completed shop/commerce validation; [#466](https://github.com/arb-rajab/warehouse_management/pull/466)
+settled Option A (§52), merged as `40cb27eaa8703135321a9f44c92b34cc6bf6baac`.
+Its [develop deploy](https://github.com/arb-rajab/warehouse_management/actions/runs/39789726951)
+succeeded before this work started. The mandatory `artisan migrate --force`
+path succeeded; individual migration logs/database rows were not independently
+visible. The tested-tree lookup succeeded and the merged-suite repeat was
+correctly skipped. All twelve PR checks succeeded: scan lookup, Semgrep, CI
+planning, Prettier, PHPStan, dependency audit, deploy-script tests, JavaScript
+checks, Pint, Pest, MySQL migrations and Playwright. No subscription API was
+available, so checks were monitored through the GitHub API.
+
+The physical work is split at the owner's approximately 30-file limit: **B1**
+repairs persistence/validation and protects inconsistent stock; **B2** finishes
+D13's back-office decimal display and unmatched-stock presentation. Each must
+merge green and deploy successfully before the next starts. Digital forms and
+remaining conversation/bulk defects stay in **C**, after both physical deploys.
+
+### Characterization before implementation
+
+Two real seller endpoint tests passed against #466 before changing the writer
+(20 assertions). Only inside those tests, silent-discard protection was restored
+to production's setting and then reset in `finally`; this exposed the actual
+production defect rather than the local strict-mode exception. The final tests
+assert repaired persistence, and do not require the old defect to survive.
+
+`Product` still has four fillable columns: `name`, `ar_name`, `thumbnail_img`,
+`published`. Physical create retained the posted name/thumbnail and computed
+publication. Physical update retained name/thumbnail (the base name only in the
+default language). The tested update with an unchanged null thumbnail changed
+**only name** in `products`. These intended product fields were discarded:
+
+- Posted columns: `category_id`, `brand_id`, `unit`, `weight`, `min_qty`, `tags`,
+  `barcode`, `photos`, `video_provider`, `video_link`, `external_link`,
+  `external_link_btn`, `unit_price`, `discount`, `discount_type`, `current_stock`,
+  `description`, `shipping_type`, `est_shipping_days`, `low_stock_quantity`,
+  `stock_visibility_state`, `cash_on_delivery`, `is_quantity_multiplied`,
+  `meta_title`, `meta_description`, `meta_img`, `pdf`.
+- Derived/server columns: `slug`, `discount_start_date`, `discount_end_date`,
+  `shipping_cost`, `colors`, `choice_options`, `attributes`, and on create
+  `added_by`, `user_id`, `approved`. A discarded value could happen to equal the
+  column default; that did not mean the service saved it.
+
+The create row instead had `added_by=admin`, `user_id=null`, `approved=1`, no
+category/unit/slug and base price zero, despite the service computing seller
+ownership and pending approval. Stock SKU/price/quantity, translations
+(name/unit/description), taxes, and the separately assigned `variant_product`
+were separate writes and could survive. The stock price was 12.50 while the
+base price stayed zero. This was a persistence defect, never a product design.
+The retired refund addon's `refundable` control has no products column and is
+not offered; forged values are refused. The seller API retains the legacy
+service and is outside these four panel-form repairs; its ownership guards
+from #466 still apply.
+
+### Old and new physical form rules
+
+| Form | Before | Now |
+| --- | --- | --- |
+| `seller.products.store` | `ProductRequest`: name required/max255 without string; category/unit merely required; minimum/price numeric without lower/column bounds; conditional discount below unit price or 100; remaining controls unvalidated. Service silently discarded product columns. | `Seller\PhysicalProductRequest`: name required/string/max200; physical category and optional brand must exist; unit required/string/max20; weight decimal(8,2), nonnegative (blank saves its nonnullable zero default); minimum integer 1..2147483647; amounts nonnegative decimal(20,2), at most two fractional digits; discount below unit price or 100%; real ordered date range with signed-INT timestamps; tags in the existing one-element Tagify JSON list, each plain string value and joined max500; URLs/providers/stock visibility enumerated and column-bound; quantities integer and bounded; only the seller's correctly typed existing image/document uploads; strict unexpected keys, including null/query/file fields. Explicit owner, origin null and approval policy. |
+| `seller.products.update` | Same weak request; nontransactional stock deletion/replacement, product columns discarded, then translation/tax writes. | Same bounds plus an existing language and an optional free slug of max255; ownership checked before validation and rechecked under the row lock. Base name/unit/description change only in the default language; translations update independently. Owner, approval and publication are preserved. Stock and tax/translation changes share the product transaction. |
+
+Colours/attribute ids and each value must exist; choices are bounded lists,
+variant names must be unambiguous and fit varchar255, and the Cartesian product
+is capped at 500. Each generated legacy `price_*`, `qty_*`, `sku_*`, `img_*` key
+has its own rule; unrelated dynamic keys are refused. Dots and spaces use safe
+wire keys while stored variant names retain their original spelling. Arrays in
+scalar fields are refused. Gallery ids are distinct, existing owned images,
+at most 50. There is no grandfather exception for another account's upload.
+Shared field partials use the required mark/legend components, associated labels,
+ARIA and scalar-safe old input; the conditional shipping-cost requirement and
+mark follow the selected shipping type. The uploader and product controls remain available, with retired server-owned
+hidden fields removed. The edit-only cash switch and shipping/tax visibility
+were accidentally flattened into create behavior here; §54 restores that parity.
+
+### Writer, ownership and D13 decisions
+
+`SellerProductWriter` explicitly assigns the validated columns; common physical
+computations and related-row writes live in `PhysicalProductWriter`, used by
+both it and `InHouseProductWriter`. Fillable was not widened. Create sets
+`added_by=seller`, the authenticated seller id, `approved=0` when
+`product_approve_by_admin=1` (otherwise 1), physical type and a null origin.
+This restores the service's intended pending policy; no seller approval ability
+was added. Update locks the owned row and preserves authority columns. Cache
+and compiled views clear through an after-commit callback. Failure replacing a
+stock row rolls back product and related rows.
+
+Option A remains exact: sync owns only `name`, `ar_name`, `published` on feed
+rows; store writers own every other column and may write those three only on
+store-origin rows. Existing pre-marker rows remain null/unclassified until the
+owner reviews exact ids (§52); no automatic reclassification occurs here.
+Every physical endpoint accepting a product id is tested with a second seller:
+edit, update, duplicate, delete, publish, feature and SKU-edit preview. The latter
+previously exposed other sellers' stock and now scopes to the caller. Preview
+requests validate shapes/references and generated rows; attribute option HTML
+is escaped. The attribute helper now returns a real JSON response, preventing
+Blade middleware from appending markup to its payload. Ordered option loading
+and stale-preview rejection keep asynchronous responses from changing the
+selected variant order. The list eagerly loads the translations, categories and
+stocks it renders; multiple products no longer trigger strict-loading errors.
+
+Both D13 regressions were demonstrated failing on local MySQL **before** the
+fix: `12.50` versus SQLite's `12.5`, and saving generated default variants
+silently deleting an unmatched stored row. B1 now refuses implicit loss of a
+preexisting choice/stock mismatch in both physical writers. The seller form
+lists the unmatched variant, price, quantity and SKU for review; the owner must
+explicitly reconcile choices to retain that stock before saving. Normal removal
+of variants from a consistent product keeps its existing behavior. B2 completes
+the back-office warning and exact decimal string normalization without a float
+conversion. No automatic permutation of imported choice meanings is guessed.
+
+Audit: **367 → 290** overall (A/B/C/D/E/F **39/40/54/10/124/23**), seller
+**120 → 43** (**0/0/16/0/27/0**), back-office baseline **82** unchanged. Both
+physical forms join the required-field ratchet. Dynamic variant controls are
+also checked on rendered forms and through real browser submissions; unresolved
+runtime names are not claimed to have become statically auditable.
+
+### Verification
+
+- Before-change endpoint characterization: **2 passed, 20 assertions**; both
+  D13 tests then failed on MySQL before their fixes (decimal representation and
+  destructive unmatched-stock save), with the output retained outside the repo.
+- Final focused physical Pest: **164 passed, 580 assertions**, including hostile
+  scalar/nested inputs, owned uploads, every product-id endpoint, rollback,
+  after-commit cache behavior, JSON content type and multi-product rendering.
+- Complete MySQL group (MySQL 8.4, `warehouse_test`, root/password): **240 passed,
+  6 existing driver-specific skips, 966 assertions**. After the final empty-weight
+  correction, its focused MySQL regression also passed (**1 test, 4 assertions**).
+  The first full-check attempt was superseded by that correction; a subsequent
+  local ESLint traversal failed on Docker-owned private test folders. Ownership
+  was corrected, without exclusions, before the final full run. The seller test file is now
+  in both CI's MySQL job and the pre-push MySQL file list.
+- Focused Vitest: physical variant fields/form helpers, **2 files, 14 passed**.
+- Playwright: the retained uploader/seller spec, **9 passed** (including both new
+  physical flows). It retains the existing legacy Blade CSP policy; this is not
+  claimed to have removed the legacy inline-script exception.
+- Required-field ratchet: **4 passed, 7 assertions**; fresh audit **290** overall,
+  **43** seller, baseline **82**. `ci_plan_test.py`: **23 passed**.
+- Final explicit `python3 .claude/scripts/pre_push_check.py --full` **passed**:
+  setup readiness, Wayfinder generation, whole-repo ESLint, Prettier, vue-tsc,
+  Vitest **336 files / 2,651 tests**, Pint, PHPStan **897 files / zero errors**,
+  config clear, Pest **7,476 passed / 3 existing MySQL-only skips on SQLite /
+  42,129 assertions**, four processes, 230.90 seconds. This explicit mode does
+  not run the MySQL/browser/audit lanes; the separate local runs are listed above.
+  Composer/npm security audit remains a real CI gate for B1. No bare/attested
+  run or manual trailer was used. `git diff --check` passed.
+
+
+## 54. Physical edit reconciliation and MySQL boundaries, PR B2 (2026-10-22)
+
+Previous PRs: #465 (shop/commerce), #466 (Option A, §52), and
+[#467](https://github.com/arb-rajab/warehouse_management/pull/467) (physical B1,
+§53). #467 merged as `675aaa6b30e31c1390205e26a041abbe2efe5bd6`; its
+[develop deploy](https://github.com/arb-rajab/warehouse_management/actions/runs/39801133946)
+succeeded before B2 started. All twelve PR jobs succeeded: existing-scan lookup,
+Semgrep, CI planning, Prettier, PHPStan, dependency audit, deploy-script tests,
+JavaScript checks, Pint, Pest, MySQL migrations and Playwright. The deploy's
+mandatory `migrate --force` path succeeded; B1 added no migration. Individual
+migration logs are not visible. No subscription API is available; GitHub API
+polling supplies the check conclusions. Digital work remains gated until B2 is
+merged green and deployed.
+
+D13 is repaired in both physical panels. Stored decimal values now use exact
+string normalization: MySQL `12.50` and SQLite `12.5` both display `12.5`, without
+rounding large decimal(20,2) amounts through floats. Product, default-variant,
+variant and tax defaults use it; user-entered old input is retained as entered.
+The back office now lists unmatched stored stock, as the seller panel already
+did. Both panels expose explicit attribute ordering so an owner can reconcile
+legacy choices to the actual stored stock name, preserve its id, price, quantity
+and SKU, and then save. Neither guesses the meaning of imported permutations.
+The B1 refusal of destructive mismatch saves remains in both writers.
+
+Real MySQL failures were demonstrated before the fixes: endpoint default price
+`12.50` versus `12.5`, loose comparison collapsing distinct `01` and `1` values,
+and valid Unicode names producing an empty or over-255 generated slug. Exact
+comparisons now preserve numeric-looking values. `ProductSlug` supplies a bounded,
+nonempty generated slug and bounded unique panel-copy slugs; an explicit custom
+slug still follows its existing max255 rule. Names that cannot transliterate
+use a random `product-` fallback. Collision suffixes fit within 255 characters.
+Seller API duplication is outside these panel repairs.
+
+Seller preview can retain typed row metadata from the previous attribute order
+while computing a new order; those obsolete keys are validated and ignored only
+by this read-only preview. Actual store/update requests still refuse unknown
+keys. Brackets, asterisks and backslashes in existing attribute values use safe
+hashed input keys while the stored variant name remains unchanged. The preview
+never writes a product. Existing physical store/update rules from §53 remain,
+with strict distinct choice strings so `01` and `1` are different values.
+
+A parity review found a B1 shared-partial regression: edit inherited create's
+hidden cash-on-delivery value and section settings. Edit again offers its original
+cash checkbox when cash payment is enabled, preserves an unchecked old value,
+and shows shipping/estimate and active taxes independently of the create-only
+section settings. Create retains its original behavior. A real-endpoint test
+checks those differences and saving cash off. Approval and deletion authority
+are unchanged.
+
+**Ownership remains Option A:** sync owns exactly name/ar_name/published on
+feed-origin rows; store owns all other columns and those three only on its own
+rows. Existing pre-marker rows remain null/unclassified pending owner-reviewed
+exact-id reclassification (§52). No new migration or reclassification is included.
+The characterization losses and physical old/new rules remain recorded in §53;
+digital characterization and remaining conversation/bulk defects belong to C.
+
+Audit remains **290 overall**, A/B/C/D/E/F **39/40/54/10/124/23**; seller **43**,
+**0/0/16/0/27/0**; back-office baseline **82**. This finishes D13, not the other
+open checklist defects.
+
+### Verification
+
+- Before-fix failures reproduced locally on MySQL 8.4 for decimal endpoint output,
+  numeric-looking choices and generated slug boundaries; additional focused
+  preview and metacharacter failures reproduced before their fixes.
+- Focused Pest: **393 passed, 2,586 assertions**, followed by the edit parity
+  regression **1 passed, 14 assertions**. Complete local MySQL group:
+  **256 passed, 6 existing driver-specific skips, 1,151 assertions**; final parity
+  regression then passed on MySQL too (**1 passed, 14 assertions**).
+- Focused Vitest: **2 files, 24 passed**. Production build passed. Focused browser
+  specs: **12 passed**, including real seller and back-office reconciliation.
+  Local permission failures in generated assets/uploads were corrected without
+  test exclusions; stale local browser servers were cleaned up before the final
+  passing run. The strict back-office CSP report assertion remains intact; the
+  fixture clears unrelated remote product thumbnails before login.
+- The first explicit full gate stopped on three ESLint style errors in the new
+  reorder handler. They were corrected, without relaxing rules. The second
+  explicit `python3 .claude/scripts/pre_push_check.py --full` passed setup
+  readiness, Wayfinder, ESLint, Prettier, vue-tsc, Vitest (**336 files / 2,653
+  tests**), Pint (**1,373 files**) and PHPStan (**899 files / zero errors**),
+  then cleared config and ran four-worker Pest. Pest exited 1 while writing
+  `/tmp/__laravel_test_cache_directory/test-results`: the old Docker-root-owned
+  cache was not writable by the current non-root test user. It produced no final
+  test totals, so this is **not a passing full gate**. No test was skipped or
+  quarantined. The attempted cache ownership repair was not executed because
+  automatic approval review failed (workspace credits exhausted). On resumption,
+  renewed Docker socket permission was requested but not granted. The cache must
+  be repaired and the explicit full gate repeated before B2's last commit.
+  B2 is uncommitted and unshipped; C has not started. No bare/attested run or
+  manual CI-Verified trailer was used. `git diff --check` passed.
+
+## 55. Seller digital catalogue and remaining seller row rules, PR C (2026-10-23)
+
+Branch `codex/seller-digital-c` starts at fetched `origin/develop`
+`25f49b61c57f0964c11b61ef8d5ace552a9b3962`, containing #468 and
+#469. Both C1 (digital) and C2 (conversation/bulk row rules) fit in this change;
+no split was necessary. This is seller-panel work. Back-office digital
+controllers, mobile API, storefront downloads and `products:sync` are unchanged.
+
+### Characterization, before replacing the controller
+
+`SellerDigitalProductPersistenceTest` ran against the original controller:
+**7 passed, 84 failed, 134 assertions**. The passing characterization cases were:
+
+- `digital create characterizes assigned fields and server authority`: all
+  displayed digital fields persist through direct assignments: name/category,
+  tags/description, prices/discount/type, gallery/thumbnail, meta texts/image and
+  downloadable file id. The translation, tax and zero-quantity stock are also
+  written. This is **not** the physical flow's mass-assignment field-loss defect.
+  The row has seller owner, added_by=seller, digital=1, published=1, origin=null,
+  but **approved=1 even when admin approval is enabled**.
+- `digital update characterizes assigned fields without changing authority`:
+  posted digital fields save, slug is lowercased, translation follows lang;
+  owner/added_by/approval/publication stay as stored. An unchanged null image is
+  explicitly cleared, as before. Non-default language keeps base name/description.
+- The four cases now named `digital refuses characterized foreign upload
+  overlong name missing file and unknown field` originally accepted a foreign
+  upload, 201-character name (SQLite), missing file, and unknown key. Unknown
+  fields are silently dropped; the create form's hidden added_by and edit's
+  hidden id/added_by have never selected authority. They are removed and refused.
+- `digital refuses another sellers id before validating input` originally
+  redirected without writes. The same ProductPolicy now authorizes the request
+  before validation, retaining the original warning/redirect, and is checked
+  again by the writer under lock.
+
+The 84 validation failures reproduced both store/update accepting bad input or
+crashing instead of returning field errors. Separate approval and stock-failure
+rollback regressions then failed **3/3** before implementation. Both form
+mark/old-input tests failed before replacing the templates. A two-product list
+render reproduced a lazy-loading 500; its endpoint now eager-loads narrow
+translation/category columns. A new picker parity test caught this PR initially
+refusing descendants with digital=0; the rules now accept exactly the displayed
+digital-root tree, including those descendants.
+
+### Field rules: original plain Request → validated seller contract
+
+| Field | Before | Now (store and update unless stated) |
+| --- | --- | --- |
+| name | Any assigned value; create HTML required, no limit | Required string, max **200** characters; HTML limit/mark/required agree. |
+| category_id | Any id; browser required | Required integer in the offered digital-root category tree. |
+| unit_price, purchase_price | Unvalidated; browser required | Required numeric, nonnegative **decimal(20,2)**, max **999999999999999999.99**, at most two fractional digits; zero accepted. |
+| discount / discount_type | Unvalidated; inconsistent marks | Both required; nonnegative decimal amount, type amount/percent; amount <= unit price, percent <=100. Full discounts and a free product with zero discount remain possible. |
+| tags | Assumed tags[0] JSON; malformed shapes crash | Optional one-element list containing Tagify JSON, <=100 objects with only a nonblank string value, no commas, joined length <=500; input JSON <=10,000 characters. |
+| photos | Arbitrary comma-separated references; edit HTML required | Optional string max2000, at most50 distinct existing **seller-owned image** ids. |
+| thumbnail_img, meta_img | Arbitrary references; thumbnail HTML required on edit | Optional integer referencing an existing **seller-owned image**. No retained foreign-reference exception. |
+| file | Arbitrary or missing reference despite visible star | Required integer referencing an existing **seller-owned** upload of one of the uploader's supported kinds: image/audio/video/document/archive. Unknown/null upload kinds refused; the picker continues to offer all those kinds. Upload content validation remains the existing uploader's responsibility. |
+| description | Arbitrary assigned HTML | Optional string, sanitized before validation/persistence; MEDIUMTEXT has no artificial text cap. |
+| meta_title, meta_description | Any assigned value | Optional strings; existing MEDIUMTEXT/LONGTEXT storage, no invented varchar cap. |
+| tax_id[], tax[], tax_type[] | Unchecked parallel arrays | Shared active-tax references, distinct ids, bounded lists, matching lengths, required per-row numeric decimal amount/type; percent <=100. Existing taxes stay when no tax rows are posted, as before. |
+| lang (update) | Unvalidated; controls default-language base text | Required existing language; non-default translation does not change base name/description. |
+| slug (update) | Unvalidated lowercase string | Optional max255 alphanumeric/hyphen, lowercased before uniqueness validation, excluding only this product; omitted/blank preserves current slug. Create generates a bounded unique ProductSlug with a nonempty fallback. |
+| ownership/status/origin and unknown keys | Unused keys silently discarded | Strict refusal, including empty values, query keys and uploaded unknown fields. Only _token/_method are exempt transport keys. |
+
+Both Blade wrappers use shared fields, marks and one legend, field errors and
+scalar-safe old input. The optional image/tag fields lose their false stars or
+requirements. Tax rows have separate amount/type labels and requirements.
+Client-side numeric constraints and file-selection feedback supplement server
+validation. The old hidden added_by/id values are gone; edit retains lang.
+Stored decimal defaults use exact ProductFormNumber formatting; old input keeps
+its entered representation. The retained AIZ uploader and Blade CSP policy stay.
+
+### Explicit transactional persistence and ownership
+
+`SellerDigitalProductWriter` assigns an explicit allowlist, creates seller-owned
+rows with digital=1, published=1 and null origin, and applies the physical
+seller approval setting (pending=0 when enabled, approved=1 otherwise).
+Update locks the seller-owned Product, rechecks ProductPolicy and preserves all
+ownership/approval/publication/origin columns. Product's existing feed-column
+guard runs at assignment/save **before** stock/tax/translation mutation. A feed
+rename refusal therefore preserves all related rows; non-default translation and
+store-owned fields remain editable. Stock and tax failures roll back the entire
+transaction. Slugs use ProductSlug; no unguard/all-input fill or widened model
+fillable is introduced. Shared related-row operations move from
+PhysicalProductWriter to ProductWriter; physical computations remain separate.
+The seller Tagify/gallery rules are shared with PhysicalProductRequest.
+
+Option A is unchanged: sync owns only name/ar_name/published on feed-origin rows;
+store owns all other columns and those three on its own rows. No data is
+reclassified. The owner-reviewed exact-id procedure in §52 remains operational
+work, not a new decision for this PR.
+
+### Conversation and bulk row rules
+
+`SellerCatalogueRowRulesTest` exercises actual seller endpoints. The seller
+conversation request already had the 65,535-byte guard from §50: exact
+multibyte boundary succeeds, one byte more fails, and a foreign conversation
+still fails membership before malformed-message validation. No conversation
+behavior is changed. The character-only **storefront** conversation validator
+recorded in §48 is outside this seller-only task and remains a follow-up.
+
+Six seller bulk regressions failed before repair: unit >20 characters, price
+above decimal(20,2), excess fractional precision, stock >2147483647, tags >500,
+and video URL >100. Seller ProductsImport now enforces these storage bounds;
+admin import rules retain their previous behavior. An exact-boundary CSV exposed
+the spreadsheet reader rounding a decimal string to a float before validation;
+a seller-only value binder preserves CSV strings. Existing sanitization,
+subscription/approval/ownership and whole-import rollback remain. Tests pair a
+valid and invalid row and assert no product/stock/upload write, then accept exact
+boundaries and prove another seller's product is unchanged.
+
+The previously reported import-created unowned external upload rows and missing
+POST verification-status repeat are unchanged; this task addresses row bounds,
+not a new import permission or historical upload-ownership policy. No owner
+choice blocks these repairs, and no automatic cleanup/backfill is performed.
+
+### Audit and verification
+
+The committed 20261022 audit is regenerated with `forms:audit-required
+--date=20261022`: **290 →255 overall**, A/B/C/D/E/F **39/40/38/10/105/23**;
+seller **43 →8**, **0/0/0/0/8/0**. Remaining seller findings are scanner E
+false positives for the conditional lang/slug controls in physical and digital
+shared partials; runtime language/slug rules are covered at the endpoints.
+Both digital wrappers join FIXED_STOREFRONT_FORMS. The back-office baseline
+stays **82**, with no new or removed baseline entry; its findings did not change.
+
+- Initial digital characterization: **7 passed /84 failed /134 assertions**;
+  approval/rollback **3/3 failed** before repair; both form render cases failed.
+  Six bulk bounds failed before repair. Seller conversation byte/membership
+  characterization passed. The invalid exact-boundary import fixture also
+  exposed CSV float conversion; its unrelated video/noise fixture mistakes were
+  corrected without weakening the intended boundary/no-write assertions.
+- Broad focused seller Pest: **493 passed /1,894 assertions**. The final
+  integration pass after preserving the original authorization response and
+  updating the feed test's digital payload passed **307 tests /1,538 assertions**.
+  The feed regression retains its name-error and unchanged product/stock checks.
+- Final focused MySQL 8.4: **162 passed /625 assertions**, covering both new
+  files plus ProductColumnOwnershipTest. Both new files are listed in **both**
+  tests.yml and pre_push_check.py MYSQL_TESTS. Their routes render Blade or
+  redirect; no new Inertia render test needs withoutVite().
+- Playwright, full retained uploader/seller spec: **11 passed (1.2 minutes)**,
+  including digital missing-file feedback, actual owned file upload/selection,
+  create/edit, pending approval and matching base/stock prices. System Chromium
+  and FFmpeg were used; /opt/pw-browsers/chromium is absent. The first launch
+  lacked Playwright's FFmpeg cache path; a task-local link uses the installed
+  FFmpeg. Broader attempts exposed the stale ignored public/hot marker and a
+  translation key whose displayed Save product casing depends on the first
+  caller. The marker was backed up and the new template/test use the existing
+  canonical label. Existing browser assertions/CSP/deadlines remain unchanged.
+- Production build, targeted Prettier/ESLint, node syntax check, form audit,
+  ratchet, script selftests, CI planner (**23 tests**) and diff checks passed.
+  Baseline entries remain unchanged.
+- The first explicit --full stopped at TypeScript because provisioned packages
+  were stale; npm ci restored the locked dependencies. The second passed
+  Wayfinder, ESLint, Prettier, vue-tsc, **336 Vitest files /2,653 tests**, Pint
+  and PHPStan (**zero errors**) but Pest found **3 failures /6 errors /3 existing
+  SQLite driver skips** across 7,641 tests. Two integration fixtures/response
+  differences are repaired as above. Missing WebP and stale Composer classmap
+  caused the other failures; optimized autoload was regenerated, lock unchanged.
+  GD was built locally with WebP. Automatic approval review refused replacing
+  the shared provisioned extension because of its broader runtime impact; the
+  shared extension was left untouched. A task-local php.ini/extension directory
+  loads the new GD only for this task. Its multipart suite passed **36 tests /
+  168 assertions**. A fresh explicit full gate runs with that isolated config.
+
+The final full-gate and complete MySQL-group results follow below. No bare or
+attested pre-push run, skipped/quarantined test or manual CI-Verified trailer is
+used. No Vue source changed; whole Vitest still runs in the full gate.
+
+The complete MySQL CI list passed **403 tests /1,749 assertions**, with **6 existing
+driver-specific skips** (409 total, MySQL 8.4). It includes the existing physical
+persistence and admin MySQL edit tests as well as both new files and the corrected
+feed-ownership fixture.
+
+The next isolated-config full run passed its frontend/static checks again, then
+Pest reported **7,637 passed /1 failed /3 existing SQLite driver skips /42,891
+assertions**. The one failure was Blade's atomic compiled-view rename: the
+concurrently running MySQL group's existing physical writer cleared the root
+view cache while parallel Pest was compiling a view under test_2. This was a
+local verification scheduling error. No application/test assertion or timeout
+was changed for it; a fresh explicit --full runs alone, after MySQL and browser
+checks finish. Its final result is recorded below.
+
+The full pre-push mode does not include the separate browser/MySQL lanes.
+Composer/npm advisory audits, deploy rollback tests, a full-repository browser
+run and deployment were not run locally for C. Real PR CI remains required.
+
+**Final explicit `python3 .claude/scripts/pre_push_check.py --full`: passed**
+with task-local PHPRC, after the other test groups finished. It ran setup
+readiness, Wayfinder generation, whole-repo ESLint, Prettier, vue-tsc,
+**336 Vitest files /2,653 passing tests**, Pint, PHPStan (**zero errors**),
+config clear and parallel Pest: **7,638 passed /3 existing MySQL-only skips on
+SQLite /42,897 assertions (149.521 seconds)**. No application or test code changed
+after this pass; only verification documentation was finalized. The complete
+MySQL and browser results above were run separately. No new test was skipped,
+loosened or quarantined. The change fits **25 files**, covering C1 and C2 together.
+
+
+## 56. Back-office required fields, phase 2b batch 2a: Setup and Website (2026-10-23)
+
+Branch `codex/marks-setup-website`, from current `origin/develop`
+`d74a3425f072736cf533cf743572caf62eb0b009` (PR #470, already merged).
+Both requested modules fit in **29 files**; Website is included in batch 2a.
+The server remains authoritative. No endpoint, validation rule, storage limit,
+permission, submitted value or behavior for valid input changes. No PHP source,
+MySQL test list or CI-Verified trailer is edited. No boundary test is needed
+because no server limit changes.
+
+**Rendered fixes.** Carrier billing and the shipping-zone group gain marks;
+the first zone checkbox is natively required only while none is selected,
+so selecting any zone satisfies the group without requiring every zone.
+Paid ranges/prices remain marked and required only while rendered; free shipping
+omits them. Zone countries and the general-settings timezone gain marks.
+The Google Map switch follows `required_without_all` using only the coordinates
+actually submitted: disabling the map omits the coordinate controls, so the switch
+is then required even when a stored coordinate draft remains. Coordinates retain
+their paired requirements. Currency decimal controls follow whether the format
+select has a value. Both conditions have English/Arabic help. Each of the two
+currency and three shipping settings forms gains its own legend.
+
+Website custom-page slugs gain a mark only on editable slugs (new/custom pages);
+policy URLs remain read-only, unnamed and unmarked. Header menu label/link rows,
+footer label/link rows and each home category gain marks, activating the existing
+ResourceFormPage legend. Optional images, text, slider links, coupon settings and
+boolean switches stay unmarked. Removing the final home category removes its
+mark and legend. These runtime row labels were unresolved controls in the audit,
+so their rendered fixes do not reduce its totals.
+
+### Audit and ratchet status
+
+`php artisan forms:audit-required` on the untouched base reproduced **255**.
+The first scratch-output attempt failed because its output directory did not yet
+exist; after creating it the audit ran successfully before any UI edit.
+The committed current-date report/JSON are
+[required-fields-audit-20261023.md](../required-fields-audit-20261023.md) and
+[required-fields-audit-20261023.json](../required-fields-audit-20261023.json).
+The 20261022 snapshot remains historical. The scanner implementation is unchanged.
+
+| Module | Forms | Before A/B/C/D/E/F | After A/B/C/D/E/F | Status |
+| --- | ---: | --- | --- | --- |
+| Store/Admin/Setup | 27 | 10 / 7 / 0 / 8 / 0 / 0 | 8 / 0 / 0 / 5 / 0 / 0 | Real gaps fixed; remaining findings are limitations below |
+| Store/Admin/Website | 7 | 9 / 6 / 1 / 0 / 2 / 0 | 9 / 5 / 1 / 0 / 2 / 0 | Real gaps fixed; remaining findings are limitations below |
+| Whole application | 239 | 39 / 40 / 38 / 10 / 105 / 23 | 37 / 32 / 38 / 7 / 105 / 23 | **255 → 242** |
+| Back-office baseline | — | 82 entries | 72 entries | Only the ten absent A/B fingerprints removed |
+
+### Every finding: disposition and audit limitations
+
+Each row identifies one original finding. Paths are relative to
+`resources/js/pages/Store/Admin/`. “Limitation” means no UI change was made to
+satisfy the scanner. Mounted tests and focused endpoint tests preserve the actual
+contract. The five retained D findings are conditions that are always true in
+these separate forms, as permitted by the convention's normal-state rule; they
+are not runtime-dependent requirements made static.
+
+| Form | Class | Field | Disposition |
+| --- | --- | --- | --- |
+| Setup/Carriers/Create | A | carrier_price | Limitation: dynamic zone/range inputs post the required array |
+| Setup/Carriers/Create | A | delimiter1 | Limitation: dynamic required row controls post the array |
+| Setup/Carriers/Create | A | delimiter2 | Limitation: dynamic required row controls post the array |
+| Setup/Carriers/Create | A | zones[] | Fix: native group requirement when no zone is checked |
+| Setup/Carriers/Edit | A | carrier_price | Limitation: dynamic zone/range inputs post the required array |
+| Setup/Carriers/Edit | A | delimiter1 | Limitation: dynamic required row controls post the array |
+| Setup/Carriers/Edit | A | delimiter2 | Limitation: dynamic required row controls post the array |
+| Setup/Carriers/Edit | A | zones[] | Fix: native group requirement when no zone is checked |
+| Setup/Carriers/Index | A | id | Limitation: the Wayfinder action supplies id via mergeQuery; the scanner does not read action query parameters |
+| Setup/GeneralSettings/Index | A | settings | Limitation: nested named controls post the parent array |
+| Setup/Carriers/Create | B | billing_type | Fix: RequiredMark inside the paid-only label |
+| Setup/Carriers/Create | B | zones[] | Fix: RequiredMark on the paid-only group legend |
+| Setup/Carriers/Edit | B | billing_type | Fix: RequiredMark inside the paid-only label |
+| Setup/Carriers/Edit | B | zones[] | Fix: RequiredMark on the paid-only group legend |
+| Setup/GeneralSettings/Index | B | settings[timezone] | Fix: RequiredMark; existing native required retained |
+| Setup/Zones/Create | B | country_id[] | Fix: RequiredMark; existing native required retained |
+| Setup/Zones/Edit | B | country_id[] | Fix: RequiredMark; existing native required retained |
+| Setup/Currencies/Index | D | decimal_separator | Fix: mark and required only with nonempty symbol_format |
+| Setup/Currencies/Index | D | no_of_decimals | Fix: mark and required only with nonempty symbol_format |
+| Setup/Currencies/Index | D | symbol_format | Limitation: the formats form never submits system_default_currency, so required_without always applies |
+| Setup/Currencies/Index | D | system_default_currency | Limitation: the default form never submits symbol_format, so required_without always applies |
+| Setup/GoogleMap/Index | D | google_map | Fix: mark and required only while both submitted coordinates are empty/absent |
+| Setup/ShippingConfiguration/Index | D | flat_rate_shipping_cost | Limitation: its own form always submits type=flat_rate_shipping_cost; retain required and add legend |
+| Setup/ShippingConfiguration/Index | D | shipping_cost_admin | Limitation: its own form always submits type=shipping_cost_admin; retain required and add legend |
+| Setup/ShippingConfiguration/Index | D | shipping_type | Limitation: its own form always submits type=shipping_type; retain required and add missing mark/legend |
+| Website/Appearance | A | settings | Limitation: Form transform explicitly posts the settings object |
+| Website/Appearance | A | settings[show_cookies_agreement] | Limitation: transform posts true or false, both valid; required checkbox would wrongly forbid false |
+| Website/Appearance | A | settings[show_subscribe_form] | Limitation: transform posts true or false, both valid |
+| Website/Appearance | A | settings[show_website_popup] | Limitation: transform posts true or false, both valid |
+| Website/Footer | A | settings | Limitation: Form transform explicitly posts the settings object |
+| Website/Footer | A | settings[registration_tutorial_button] | Limitation: transform posts true or false, both valid |
+| Website/Footer | A | settings[show_social_links] | Limitation: transform posts true or false, both valid |
+| Website/Header | A | settings | Limitation: Form transform explicitly posts the settings object |
+| Website/Home | A | settings | Limitation: Form transform explicitly posts the settings object |
+| Website/Appearance | B | settings[show_cookies_agreement] | Limitation: a boolean value is always supplied; the checkbox is not an acceptance requirement |
+| Website/Appearance | B | settings[show_subscribe_form] | Limitation: a boolean value is always supplied |
+| Website/Appearance | B | settings[show_website_popup] | Limitation: a boolean value is always supplied |
+| Website/Footer | B | settings[registration_tutorial_button] | Limitation: a boolean value is always supplied |
+| Website/Footer | B | settings[show_social_links] | Limitation: a boolean value is always supplied |
+| Website/Pages/Create | B | slug | Fix: RequiredMark only for editableSlug, agreeing with the existing control |
+| Website/Pages/Edit | C | slug | Limitation: the audit binds an unsaved policy Page; custom edits require slug, policies omit it; both rendered branches tested |
+| Website/Footer | E | settings[delivery_boy_app_link] | Limitation: rule and control exist only with the delivery addon; scratch rule evaluation has it disabled |
+| Website/Footer | E | settings[seller_app_link] | Limitation: rule and control exist only with vendor_system_activation; scratch rule evaluation has it disabled |
+
+**UI versus server.** Three actual static-requirement disagreements are corrected:
+Google Map's switch and the two currency decimal controls. Their marks and native
+attributes now follow the server condition in both directions. No server rule is
+added to justify an old mark. The Website edit-slug C is a scanner model-state
+limitation, so the valid custom-page requirement is preserved; no real optional
+field in these modules needed a UI requirement removed. The Website switches
+remain unchecked-capable because `required|boolean` permits false.
+
+### Verification and remaining scope
+
+Before implementation, after restoring missing Wayfinder output and locked
+frontend dependencies with `npm ci`, new assertions failed in **11 files**:
+**12 failed / 62 passed**. They cover billing/zone/country/timezone marks,
+Google Map and currency conditions, per-form legends, editable slugs and dynamic
+Website rows. The initial missing-module failures were setup errors, not claimed
+as reproduced UI defects. The legend assertions wait for Vue's next flush.
+
+Focused changed tests: **12 files / 82 passed**. The complete Setup/Website page
+and affected field-component run: **36 files / 194 passed**. Focused Pest (audit,
+ratchet and eleven module controller suites): **467 passed / 3,080 assertions**.
+The first post-fix ratchet correctly failed naming the ten stale baseline entries;
+it passes after their removal. `npm run types:check` passed. Changed-file ESLint
+found import ordering/blank-line errors in new tests; autofix and Prettier resolved
+them, and both checks passed. No PHP file changes, so dirty Pint is not applicable.
+
+The first full pre-push run passed all frontend checks (**336 files / 2,664
+Vitest tests**), Pint and PHPStan (**0 errors**), then found local runtime defects:
+GD lacked WebP in the already-started workers and the Composer class map still
+named two deleted legacy controllers. Its Pest result was **7,631 passed / 1 failed /
+6 errors / 3 existing MySQL-only skips / 42,853 assertions**. The missing WebP
+failure was separately reproduced by the existing upload suite (**50 passed /
+1 failed**). The task-built GD extension enables WebP (native PHP **8.5.11**),
+and `composer dump-autoload --no-scripts` refreshes only vendor metadata.
+After repair, the upload suite passed **51 tests / 235 assertions**; the four
+affected upload/multipart/digital-route/trip-map suites passed **170 tests /
+1,031 assertions**. No dependency, lockfile or test assertion changed to repair
+these failures. A final review also removed unnecessary ARIA from the native
+zone fieldset; its checkbox's native conditional required remains.
+
+**Final explicit `python3 .claude/scripts/pre_push_check.py --full`: passed.**
+It ran setup readiness, Wayfinder generation, whole-repository ESLint, Prettier,
+vue-tsc, **336 Vitest files / 2,664 passing tests**, Pint, PHPStan (**0 errors**),
+config clear and parallel Pest: **7,638 passed / 3 existing MySQL-only skips on
+SQLite / 42,897 assertions (190.085 seconds)**. Application and test code did not
+change after this pass; only verification documentation was finalized.
+`git diff --check` passed, and the finding table was checked against all 43
+original scoped findings with no omission or duplicate.
+
+Not run locally: Playwright, the MySQL job, composer/npm advisory audits,
+deploy rollback tests or a new production asset build. The supplied Vite manifest
+was available for the existing Inertia tests. `/opt/pw-browsers/chromium` is absent;
+system Chromium is available, but no Playwright run is claimed. These separate CI
+lanes remain required when planned. No new test was skipped, loosened or
+quarantined, and no CI-Verified trailer was written or edited.
+
+Setup and Website leave D16's Left list. Trips, Sales, Customers, Languages,
+Support and Blog remain the later batch, including the owner's existing decision
+to drop customer UI-only requirements and separately prove any column-limit fix.
+Seller panel, storefront and every other module remain outside this change.
+There are **no new owner decisions** and no pending limit alignment in this batch.

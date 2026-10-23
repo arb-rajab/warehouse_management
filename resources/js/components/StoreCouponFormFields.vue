@@ -5,6 +5,7 @@ import { computed, onMounted, ref } from 'vue';
 import { productOptions } from '@/actions/App/Http/Controllers/Store/Admin/CouponController';
 import FieldError from '@/components/FieldError.vue';
 import FormField from '@/components/FormField.vue';
+import RequiredMark from '@/components/RequiredMark.vue';
 import { fieldLabelClass, plainFieldInputClass } from '@/lib/filters';
 import { t } from '@/lib/i18n';
 import type { StoreCoupon, StoreCouponProductOption } from '@/types/store';
@@ -66,9 +67,9 @@ onMounted(search);
 <template>
     <div class="space-y-4">
         <div>
-            <label for="type" :class="fieldLabelClass">{{
-                t('store.coupons.fields.type')
-            }}</label>
+            <label for="type" :class="fieldLabelClass"
+                >{{ t('store.coupons.fields.type') }}<RequiredMark
+            /></label>
             <select
                 id="type"
                 v-model="type"
@@ -94,9 +95,9 @@ onMounted(search);
             required
         />
         <div>
-            <label for="discount_type" :class="fieldLabelClass">{{
-                t('store.coupons.fields.discountType')
-            }}</label>
+            <label for="discount_type" :class="fieldLabelClass"
+                >{{ t('store.coupons.fields.discountType') }}<RequiredMark
+            /></label>
             <select
                 id="discount_type"
                 v-model="discountType"
@@ -188,9 +189,9 @@ onMounted(search);
                 <LoaderCircle class="size-4 animate-spin" aria-hidden="true" />
                 {{ t('store.coupons.fields.searching') }}
             </p>
-            <label for="product_ids" :class="fieldLabelClass">{{
-                t('store.coupons.fields.products')
-            }}</label>
+            <label for="product_ids" :class="fieldLabelClass"
+                >{{ t('store.coupons.fields.products') }}<RequiredMark
+            /></label>
             <select
                 id="product_ids"
                 v-model="selectedIds"

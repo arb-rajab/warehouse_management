@@ -764,6 +764,16 @@ export interface StoreOrder {
     details?: StoreOrderLine[];
 }
 
+export interface StoreClassifiedProduct {
+    id: number;
+    name: string | null;
+    public_url: string;
+    thumbnail_url: string;
+    added_by: string | null;
+    status: boolean;
+    published: boolean;
+}
+
 export interface StoreCustomerPackage {
     id: number;
     name: string | null;
@@ -854,6 +864,12 @@ export interface StoreProductVariantRow {
 }
 /** A product's stored colours and choices, with the rows they generate. */
 export interface StoreProductVariantState {
+    unmatched?: {
+        variant: string;
+        price: string | number;
+        qty: string | number;
+        sku: string | null;
+    }[];
     colors_active: boolean;
     colors: string[];
     choice_options: { attribute_id: number; values: string[] }[];
@@ -919,7 +935,7 @@ export interface StoreProductFormSections {
     cashOnDelivery: boolean;
 }
 /** The list a product row action names (`list`): its URI segment. */
-export type StoreProductListType = 'admin' | 'all';
+export type StoreProductListType = 'admin' | 'all' | 'seller';
 /** The all-products list's legacy one-flag presets. */
 export type StoreProductListPreset =
     'allProducts' | 'allDeleted' | 'allActive' | 'allForSale' | 'allFeatured';
@@ -941,6 +957,8 @@ export interface StoreProductListRow {
     for_sale: boolean;
     published: boolean;
     featured: boolean;
+    approved: boolean;
+    todays_deal: boolean;
     deleted_from_api: boolean;
     public_url: string | null;
 }
@@ -954,6 +972,7 @@ export interface StoreProductListFilters {
     /** The all-products list only. */
     deleted?: boolean;
     user_id?: number | null;
+    approved?: boolean | null;
     preset?: StoreProductListPreset | null;
     per_page: number;
 }
@@ -976,4 +995,130 @@ export interface StoreCategoryOptions {
     parents: StoreReferenceOption[];
     attributes: StoreReferenceOption[];
     commissionEnabled: boolean;
+}
+
+export interface StoreDashboardSeries {
+    labels: string[];
+    values: number[];
+}
+export interface StoreDashboardProduct {
+    id: number;
+    name: string;
+    public_url: string | null;
+    thumbnail_url: string;
+    base_price: string;
+    discounted_price: string;
+    rating: number;
+}
+export interface StoreDashboardProps {
+    stats: {
+        customers: number;
+        orders: number;
+        categories: number;
+        brands: number;
+    };
+    series: {
+        products: number[];
+        sources: number[];
+        sales: StoreDashboardSeries;
+        stock: StoreDashboardSeries;
+        visits: StoreDashboardSeries;
+    };
+    topProducts: StoreDashboardProduct[];
+    showSmtpAlert: boolean;
+}
+
+export interface StoreSeller {
+    id: number;
+    user_id: number;
+    name: string | null;
+    account_name: string;
+    email: string;
+    phone: string | null;
+    banned: boolean;
+    approved: boolean;
+    has_verification: boolean;
+    products_count: number;
+    due: string | null;
+    due_to_admin: boolean;
+    payment_history_url: string | null;
+}
+
+export interface StoreSellerProfile {
+    id: number;
+    name: string;
+    shop_name: string | null;
+    address: string | null;
+    phone: string | null;
+    avatar_url: string | null;
+    shop_url: string | null;
+    social: Record<'facebook' | 'twitter' | 'google', string | null>;
+    bank_name: string | null;
+    bank_acc_name: string | null;
+    bank_acc_no: string | null;
+    bank_routing_no: string | null;
+    products_count: number;
+    orders_count: number;
+    sold_amount: string;
+    wallet_balance: string;
+}
+
+export interface StoreSellerVerification {
+    id: number;
+    name: string | null;
+    address: string | null;
+    approved: boolean;
+    has_verification: boolean;
+    user: {
+        name: string;
+        email: string;
+        address: string | null;
+        phone: string | null;
+    };
+    verification: { label: string; value: string; file_url: string | null }[];
+}
+
+export interface StoreSellerPayment {
+    id: number;
+    seller: { id: number; name: string; shop_name: string | null };
+    date: string | null;
+    amount: string;
+    payment_method: string;
+    txn_code: string | null;
+}
+export interface StoreSellerWithdrawal {
+    id: number;
+    seller: StoreSellerPayment['seller'];
+    date: string | null;
+    due: string;
+    amount: string;
+    message: string | null;
+    paid: boolean;
+}
+export interface StoreSellerPayout {
+    shop: {
+        id: number;
+        due: string;
+        admin_to_pay: number;
+        cash_enabled: boolean;
+        bank_enabled: boolean;
+        bank_name: string | null;
+        bank_acc_name: string | null;
+        bank_acc_no: string | null;
+        bank_routing_no: string | null;
+    };
+    withdrawal: { id: number; amount: number } | null;
+}
+
+export interface StoreSellerCommissionSettings {
+    vendor_commission: string;
+    minimum_seller_amount_withdraw: string;
+    vendor_commission_activation: boolean;
+    category_wise_commission: boolean;
+}
+
+export interface StoreSellerVerificationField {
+    type: 'text' | 'file' | 'select' | 'multi_select' | 'radio';
+    label: string;
+    options?: string[];
 }

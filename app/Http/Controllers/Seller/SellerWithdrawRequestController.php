@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Seller;
 
+use App\Http\Requests\Seller\StoreWithdrawRequest;
 use App\Models\SellerWithdrawRequest;
 use App\Services\SellerWithdrawService;
 use Auth;
@@ -29,12 +30,9 @@ class SellerWithdrawRequestController extends Controller
      * @param  Request  $request
      * @return Response
      */
-    public function store(Request $request, SellerWithdrawService $withdrawals)
+    public function store(StoreWithdrawRequest $request, SellerWithdrawService $withdrawals)
     {
-        $validated = $request->validate([
-            'amount' => ['required', 'numeric', 'gt:0'],
-            'message' => ['nullable', 'string', 'max:2000'],
-        ]);
+        $validated = $request->validated();
 
         try {
             $withdrawals->request(Auth::user(), (float) $validated['amount'], $validated['message'] ?? null);

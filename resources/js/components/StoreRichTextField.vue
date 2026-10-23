@@ -46,6 +46,7 @@ import {
     watch,
 } from 'vue';
 import FieldError from '@/components/FieldError.vue';
+import RequiredMark from '@/components/RequiredMark.vue';
 import StoreFileManagerDialog from '@/components/StoreFileManagerDialog.vue';
 import {
     fieldLabelClass,
@@ -649,8 +650,8 @@ onUpdated(syncTabStops);
             :for="id"
             :class="fieldLabelClass"
             @click="editor?.commands.focus()"
-            >{{ label }}</label
-        >
+            >{{ label }}<RequiredMark v-if="required"
+        /></label>
         <div
             ref="toolbar"
             role="toolbar"

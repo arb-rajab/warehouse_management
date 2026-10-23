@@ -2,13 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreShopRequest;
 use App\Models\BusinessSetting;
 use App\Models\Shop;
 use App\Models\StoreUser;
 use App\Notifications\EmailVerificationNotification;
 use Auth;
 use Hash;
-use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
@@ -49,13 +49,11 @@ class ShopController extends Controller implements HasMiddleware
     public function create()
     {
         if (Auth::check()) {
-			if((Auth::user()->user_type == 'admin' || Auth::user()->user_type == 'customer')) {
-				flash(translate('Admin or Customer can not be a seller'))->error();
-				return back();
-			} if(Auth::user()->user_type == 'seller'){
-				flash(translate('This user already a seller'))->error();
-				return back();
-			}
+            $refusal = StoreShopRequest::refusalFor(Auth::user());
+            if ($refusal !== null) {
+                flash($refusal)->error();
+                return back();
+            }
 
         } else {
             return view('shop.frontend.seller_form');
@@ -65,43 +63,28 @@ class ShopController extends Controller implements HasMiddleware
     /**
      * Store a newly created resource in storage.
      *
-     * @param  Request  $request
+     * Guests only (StoreShopRequest::authorize()): the branch that turned the
+     * signed-in account into a seller is gone with the callers who reached it.
+     *
+     * @param  StoreShopRequest  $request
      * @return Response
      */
-    public function store(Request $request)
+    public function store(StoreShopRequest $request)
     {
-        $request->validate([
-            'name'      => 'required|string|max:255',
-            'email'     => 'required|email|unique:users|max:255',
-            'password'  => 'required|string|min:6|confirmed',
-            'shop_name' => 'required|max:255',
-            'address'   => 'required',
-        ]);
-
-        $user = null;
-        if (!Auth::check()) {
-            if (StoreUser::where('email', $request->email)->first() != null) {
-                flash(translate('Email already exists!'))->error();
-                return back();
-            }
-            if ($request->password == $request->password_confirmation) {
-                $user = new StoreUser;
-                $user->name = $request->name;
-                $user->email = $request->email;
-                $user->user_type = "seller";
-                $user->password = Hash::make($request->password);
-                $user->save();
-            } else {
-                flash(translate('Sorry! Password did not match.'))->error();
-                return back();
-            }
-        } else {
-            $user = Auth::user();
-            if ($user->customer != null) {
-                $user->customer->delete();
-            }
+        if (StoreUser::where('email', $request->email)->first() != null) {
+            flash(translate('Email already exists!'))->error();
+            return back();
+        }
+        if ($request->password == $request->password_confirmation) {
+            $user = new StoreUser;
+            $user->name = $request->name;
+            $user->email = $request->email;
             $user->user_type = "seller";
+            $user->password = Hash::make($request->password);
             $user->save();
+        } else {
+            flash(translate('Sorry! Password did not match.'))->error();
+            return back();
         }
 
         if (Shop::where('user_id', $user->id)->first() == null) {

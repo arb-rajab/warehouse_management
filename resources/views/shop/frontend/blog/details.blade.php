@@ -6,28 +6,16 @@
 
 @section('meta_keywords'){{ $blog->meta_keywords }}@stop
 
-@section('meta')
-    <!-- Schema.org markup for Google+ -->
-    <meta itemprop="name" content="{{ $blog->meta_title }}">
-    <meta itemprop="description" content="{{ $blog->meta_description }}">
-    <meta itemprop="image" content="{{ uploaded_asset($blog->meta_img) }}">
+@section('meta_image'){{ ($blog->meta_img ?: $blog->banner) ? uploaded_asset($blog->meta_img ?: $blog->banner) : '' }}@stop
 
-    <!-- Twitter Card data -->
-    <meta name="twitter:card" content="summary">
-    <meta name="twitter:site" content="@publisher_handle">
-    <meta name="twitter:title" content="{{ $blog->meta_title }}">
-    <meta name="twitter:description" content="{{ $blog->meta_description }}">
-    <meta name="twitter:creator" content="@author_handle">
-    <meta name="twitter:image" content="{{ uploaded_asset($blog->meta_img) }}">
+@section('og_type', 'article')
 
-    <!-- Open Graph data -->
-    <meta property="og:title" content="{{ $blog->meta_title }}" />
-    <meta property="og:type" content="website" />
-    <meta property="og:url" content="{{ route('blog.details', $blog->slug) }}" />
-    <meta property="og:image" content="{{ uploaded_asset($blog->meta_img) }}" />
-    <meta property="og:description" content="{{ $blog->meta_description }}" />
-    <meta property="og:site_name" content="{{ config('app.name') }}" />
+@section('structured_data')
+    @include('shop.frontend.partials.json_ld', ['schemas' => [\App\Support\StructuredData::blogPost($blog)]])
 @endsection
+
+{{-- An unpublished post is reachable by its link; it is not for the index. --}}
+@section('robots'){{ $blog->status == 1 ? 'index, follow' : 'noindex, nofollow' }}@stop
 
 @section('content')
 

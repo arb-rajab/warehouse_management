@@ -2,6 +2,7 @@ import { flushPromises, mount } from '@vue/test-utils';
 import type { VueWrapper } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import FieldError from '@/components/FieldError.vue';
+import RequiredMark from '@/components/RequiredMark.vue';
 import StoreRichTextField from '@/components/StoreRichTextField.vue';
 import StoreUploadField from '@/components/StoreUploadField.vue';
 import { i18n, t } from '@/lib/i18n';
@@ -202,4 +203,49 @@ describe('StoreWebsitePageFormFields', () => {
                 .filter(Boolean),
         ).toEqual(Object.values(errors));
     });
+    it.each([undefined, 'custom_page', 'return_policy_page'])(
+        'marks the slug only for editable pages (%s)',
+        (type) => {
+            const wrapper = mountFields(
+                type === undefined
+                    ? {}
+                    : { page: storeWebsitePageForm({ type }) },
+            );
+            const editable = type === undefined || type === 'custom_page';
+            expect(
+                wrapper.get('#slug').attributes('required') !== undefined,
+            ).toBe(editable);
+            expect(
+                wrapper
+                    .get('label[for=slug]')
+                    .findComponent(RequiredMark)
+                    .exists(),
+            ).toBe(editable);
+            expect(
+                wrapper
+                    .get('label[for=title]')
+                    .findComponent(RequiredMark)
+                    .exists(),
+            ).toBe(true);
+            expect(
+                wrapper.getComponent(StoreRichTextField).props('required'),
+            ).toBe(true);
+
+            for (const id of ['meta_title', 'meta_description', 'keywords']) {
+                expect(
+                    wrapper.get(`#${id}`).attributes('required'),
+                ).toBeUndefined();
+                expect(
+                    wrapper
+                        .get(`label[for=${id}]`)
+                        .findComponent(RequiredMark)
+                        .exists(),
+                ).toBe(false);
+            }
+
+            expect(
+                wrapper.getComponent(StoreUploadField).props('required'),
+            ).toBe(false);
+        },
+    );
 });

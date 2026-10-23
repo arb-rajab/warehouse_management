@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import FieldError from '@/components/FieldError.vue';
 import FormField from '@/components/FormField.vue';
+import RequiredMark from '@/components/RequiredMark.vue';
 import { fieldLabelClass, plainFieldInputClass } from '@/lib/filters';
 import { t } from '@/lib/i18n';
 import { usePasswordConfirmationMismatch } from '@/lib/passwordConfirmation';
@@ -68,9 +69,9 @@ const { confirmationMismatchError, syncConfirmationValidity } =
         />
 
         <div>
-            <label for="role_id" :class="fieldLabelClass">
-                {{ t('store.staff.fields.role') }}
-            </label>
+            <label for="role_id" :class="fieldLabelClass"
+                >{{ t('store.staff.fields.role') }}<RequiredMark
+            /></label>
             <select
                 id="role_id"
                 name="role_id"

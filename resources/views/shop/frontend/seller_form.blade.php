@@ -27,6 +27,7 @@
                 <h1 class="fw-700 fs-20 fs-md-24 text-dark text-center mb-3">{{ translate('Register Your Shop')}}</h1>
                 <form id="shop" class="" action="{{ route('shops.store') }}" method="POST" enctype="multipart/form-data">
                     @csrf
+                    <x-required-legend />
                     @if (!Auth::check())
                         <div class="bg-white border mb-4">
                             <div class="fs-15 fw-600 p-3">
@@ -34,35 +35,29 @@
                             </div>
                             <div class="p-3">
                                 <div class="form-group">
-                                    <label>{{ translate('Your Name')}} <span class="text-primary">*</span></label>
-                                    <input type="text" class="form-control rounded-0{{ $errors->has('name') ? ' is-invalid' : '' }}" value="{{ old('name') }}" placeholder="{{  translate('Name') }}" name="name">
-                                    @if ($errors->has('name'))
-                                        <span class="invalid-feedback" role="alert">
-                                            <strong>{{ $errors->first('name') }}</strong>
-                                        </span>
-                                    @endif
+                                    <label for="seller_name">{{ translate('Your Name')}}<x-required-mark /></label>
+                                    <input type="text" id="seller_name" class="form-control rounded-0 @error('name') is-invalid @enderror" value="{{ old('name') }}" placeholder="{{  translate('Name') }}" name="name" maxlength="191" required>
+                                    @error('name')
+                                        <span class="invalid-feedback" role="alert"><strong>{{ $message }}</strong></span>
+                                    @enderror
                                 </div>
                                 <div class="form-group">
-                                    <label>{{ translate('Your Email')}} <span class="text-primary">*</span></label>
-                                    <input type="email" class="form-control rounded-0{{ $errors->has('email') ? ' is-invalid' : '' }}" value="{{ old('email') }}" placeholder="{{  translate('Email') }}" name="email">
-                                    @if ($errors->has('email'))
-                                        <span class="invalid-feedback" role="alert">
-                                            <strong>{{ $errors->first('email') }}</strong>
-                                        </span>
-                                    @endif
+                                    <label for="seller_email">{{ translate('Your Email')}}<x-required-mark /></label>
+                                    <input type="email" id="seller_email" class="form-control rounded-0 @error('email') is-invalid @enderror" value="{{ old('email') }}" placeholder="{{  translate('Email') }}" name="email" maxlength="191" required>
+                                    @error('email')
+                                        <span class="invalid-feedback" role="alert"><strong>{{ $message }}</strong></span>
+                                    @enderror
                                 </div>
                                 <div class="form-group">
-                                    <label>{{ translate('Your Password')}} <span class="text-primary">*</span></label>
-                                    <input type="password" class="form-control rounded-0{{ $errors->has('password') ? ' is-invalid' : '' }}" value="{{ old('password') }}" placeholder="{{  translate('Password') }}" name="password">
-                                    @if ($errors->has('password'))
-                                        <span class="invalid-feedback" role="alert">
-                                            <strong>{{ $errors->first('password') }}</strong>
-                                        </span>
-                                    @endif
+                                    <label for="seller_password">{{ translate('Your Password')}}<x-required-mark /></label>
+                                    <input type="password" id="seller_password" class="form-control rounded-0 @error('password') is-invalid @enderror" placeholder="{{  translate('Password') }}" name="password" minlength="6" autocomplete="new-password" required>
+                                    @error('password')
+                                        <span class="invalid-feedback" role="alert"><strong>{{ $message }}</strong></span>
+                                    @enderror
                                 </div>
                                 <div class="form-group">
-                                    <label>{{ translate('Repeat Password')}} <span class="text-primary">*</span></label>
-                                    <input type="password" class="form-control rounded-0" placeholder="{{  translate('Confirm Password') }}" name="password_confirmation">
+                                    <label for="seller_password_confirmation">{{ translate('Repeat Password')}}<x-required-mark /></label>
+                                    <input type="password" id="seller_password_confirmation" class="form-control rounded-0" placeholder="{{  translate('Confirm Password') }}" name="password_confirmation" minlength="6" autocomplete="new-password" required>
                                 </div>
                             </div>
                         </div>
@@ -73,22 +68,18 @@
                         </div>
                         <div class="p-3">
                             <div class="form-group">
-                                <label>{{ translate('Shop Name')}} <span class="text-primary">*</span></label>
-                                <input type="text" class="form-control rounded-0{{ $errors->has('shop_name') ? ' is-invalid' : '' }}" value="{{ old('shop_name') }}" placeholder="{{ translate('Shop Name')}}" name="shop_name" required>
-                                @if ($errors->has('shop_name'))
-                                    <span class="invalid-feedback" role="alert">
-                                        <strong>{{ $errors->first('shop_name') }}</strong>
-                                    </span>
-                                @endif
+                                <label for="seller_shop_name">{{ translate('Shop Name')}}<x-required-mark /></label>
+                                <input type="text" id="seller_shop_name" class="form-control rounded-0 @error('shop_name') is-invalid @enderror" value="{{ old('shop_name') }}" placeholder="{{ translate('Shop Name')}}" name="shop_name" maxlength="200" required>
+                                @error('shop_name')
+                                    <span class="invalid-feedback" role="alert"><strong>{{ $message }}</strong></span>
+                                @enderror
                             </div>
                             <div class="form-group">
-                                <label>{{ translate('Address')}} <span class="text-primary">*</span></label>
-                                <input type="text" class="form-control mb-3 rounded-0{{ $errors->has('address') ? ' is-invalid' : '' }}" value="{{ old('address') }}" placeholder="{{ translate('Address')}}" name="address" required>
-                                @if ($errors->has('address'))
-                                    <span class="invalid-feedback" role="alert">
-                                        <strong>{{ $errors->first('address') }}</strong>
-                                    </span>
-                                @endif
+                                <label for="seller_shop_address">{{ translate('Address')}}<x-required-mark /></label>
+                                <input type="text" id="seller_shop_address" class="form-control mb-3 rounded-0 @error('address') is-invalid @enderror" value="{{ old('address') }}" placeholder="{{ translate('Address')}}" name="address" maxlength="500" required>
+                                @error('address')
+                                    <span class="invalid-feedback" role="alert"><strong>{{ $message }}</strong></span>
+                                @enderror
                             </div>
                         </div>
                     </div>
@@ -96,6 +87,9 @@
                     @if(get_setting('google_recaptcha') == 1)
                         <div class="form-group mt-2 mx-auto row">
                             <div class="g-recaptcha" data-sitekey="{{ config('services.recaptcha.site_key') }}"></div>
+                            @error('g-recaptcha-response')
+                                <span class="invalid-feedback d-block" role="alert"><strong>{{ $message }}</strong></span>
+                            @enderror
                         </div>
                     @endif
 

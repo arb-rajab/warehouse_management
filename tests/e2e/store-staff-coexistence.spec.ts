@@ -35,7 +35,7 @@ test('dismissing the delete confirmation keeps the staff member, accepting it de
     ).toHaveCount(0);
 });
 
-test('the sidebar loads a Blade page in full, and an Inertia redirect to one does too', async ({
+test('the sidebar visits seller products with Inertia and logout still loads Blade', async ({
     page,
 }) => {
     seedStoreFixtures(String.raw`
@@ -48,22 +48,22 @@ test('the sidebar loads a Blade page in full, and an Inertia redirect to one doe
     const navigation = page.getByRole('navigation', {
         name: 'Store admin menu',
     });
-    // The seller list stays Blade with seller administration, an owner
-    // decision (.ai/rules/store-backoffice-migration.md §4.1).
+    // Seller products now share the Inertia shell.
     await navigation
-        .getByRole('button', { name: 'Sellers', exact: true })
+        .getByRole('button', { name: 'Products', exact: true })
         .click();
     const response = page.waitForResponse(
         (response) =>
-            new URL(response.url()).pathname === '/temp/admin/sellers' &&
-            response.request().isNavigationRequest(),
+            new URL(response.url()).pathname ===
+                '/temp/admin/products/seller' &&
+            response.request().headers()['x-inertia'] === 'true',
     );
     await navigation
-        .getByRole('link', { name: 'All sellers', exact: true })
+        .getByRole('link', { name: 'Seller products', exact: true })
         .click();
     expect((await response).status()).toBe(200);
-    await expect(page).toHaveURL(/\/temp\/admin\/sellers$/);
-    await expect(page.locator('#app')).toHaveCount(0);
+    await expect(page).toHaveURL(/\/temp\/admin\/products\/seller$/);
+    await expect(page.locator('#app')).toHaveCount(1);
 
     await page.goto('/temp/admin/staffs');
     page.once('dialog', (dialog) => dialog.accept());

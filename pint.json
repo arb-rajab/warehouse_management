@@ -134,7 +134,6 @@
         "app/Http/Controllers/Payment/SslcommerzController.php",
         "app/Http/Controllers/Payment/VoguepayController.php",
         "app/Http/Controllers/Payment/WalletController.php",
-        "app/Http/Controllers/PaymentController.php",
         "app/Http/Controllers/ProductController.php",
         "app/Http/Controllers/ProductQueryController.php",
         "app/Http/Controllers/PurchaseHistoryController.php",
@@ -161,8 +160,6 @@
         "app/Http/Controllers/Seller/SellerWithdrawRequestController.php",
         "app/Http/Controllers/Seller/ShopController.php",
         "app/Http/Controllers/Seller/SupportTicketController.php",
-        "app/Http/Controllers/SellerController.php",
-        "app/Http/Controllers/SellerWithdrawRequestController.php",
         "app/Http/Controllers/ShopController.php",
         "app/Http/Controllers/SubscriberController.php",
         "app/Http/Controllers/SupportTicketController.php",
@@ -333,7 +330,6 @@
         "app/Models/Order.php",
         "app/Models/OrderDetail.php",
         "app/Models/PasswordReset.php",
-        "app/Models/Payment.php",
         "app/Models/Permission.php",
         "app/Models/PickupPoint.php",
         "app/Models/PickupPointTranslation.php",
@@ -425,7 +421,6 @@
         "routes/shop-seller.php",
         "routes/shop-web.php",
         "app/Models/CustomerProduct.php",
-        "app/Http/Controllers/PageController.php",
-        "app/Http/Controllers/AdminController.php"
+        "app/Http/Controllers/PageController.php"
     ]
 }

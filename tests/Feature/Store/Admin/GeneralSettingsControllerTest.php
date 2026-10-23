@@ -221,8 +221,8 @@ test('WMS authentication grants no general settings action and no store writes',
     expect(generalSettingsSnapshot())->toEqual($before);
 });
 
-test('saved logos and site name still reach the Blade shells, the login pages and the mobile settings API', function () {
-    $staff = actingAsStoreUser(createStoreStaff('general_settings', 'view_all_seller'));
+test('saved logos and site name reach the Inertia settings screen, the login pages and the mobile settings API', function () {
+    $staff = actingAsStoreUser(createStoreStaff('general_settings', 'show_seller_products'));
     $white = Upload::factory()->create(['user_id' => $staff->id, 'type' => 'image', 'external_link' => 'https://example.com/system-white.png']);
     $black = Upload::factory()->create(['user_id' => $staff->id, 'type' => 'image', 'external_link' => 'https://example.com/system-black.png']);
     DB::table('business_settings')->insert(['type' => 'vendor_system_activation', 'value' => '1']);
@@ -233,10 +233,13 @@ test('saved logos and site name still reach the Blade shells, the login pages an
         'system_logo_black' => (string) $black->id,
     ])])->assertRedirect(route('general_setting.index'));
 
-    $this->get(route('sellers.index'))->assertOk()
-        ->assertSee('https://example.com/system-white.png', false)
-        ->assertSee('alt="Holland Store"', false)
-        ->assertSee('&copy; Holland Store', false);
+    $this->get(route('general_setting.index'))->assertOk()->assertInertia(fn (Assert $page) => $page
+        ->component('Store/Admin/Setup/GeneralSettings/Index')
+        ->where('settings.site_name', 'Holland Store')
+        ->where('settings.system_logo_white', (string) $white->id)
+        ->where('settings.system_logo_black', (string) $black->id)
+        ->where('initialFiles.system_logo_white.0.url', 'https://example.com/system-white.png')
+        ->where('initialFiles.system_logo_black.0.url', 'https://example.com/system-black.png'));
     $this->getJson('/temp/api/v2/business-settings')->assertOk()
         ->assertJsonFragment(['type' => 'site_name', 'value' => 'Holland Store']);
 

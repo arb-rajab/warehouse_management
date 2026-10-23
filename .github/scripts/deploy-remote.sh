@@ -326,7 +326,11 @@ migrations_attempted=1
 (cd "$RELEASE_DIR" && "$PHP_BINARY" artisan migrate --force)
 
 log "Refreshing application caches"
+# The order `artisan optimize` uses. event:cache is not optional: production
+# health runs OptimizedAppCheck with no sub-checks, which also demands cached
+# events, so without it /health fails until someone runs the command by hand.
 (cd "$RELEASE_DIR" && "$PHP_BINARY" artisan config:cache)
+(cd "$RELEASE_DIR" && "$PHP_BINARY" artisan event:cache)
 (cd "$RELEASE_DIR" && "$PHP_BINARY" artisan route:cache)
 (cd "$RELEASE_DIR" && "$PHP_BINARY" artisan view:cache)
 # Not `artisan storage:link`: Filesystem::link() calls symlink(), and falls

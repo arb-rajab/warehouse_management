@@ -13,6 +13,7 @@ import {
     storeUpload,
 } from '@/testing/factories';
 import { createUseHttpStub } from '@/testing/inertiaStubs';
+import { expectRequiredFields } from '@/testing/requiredFields';
 import Fields from './StoreDigitalProductFormFields.vue';
 
 const { usePageMock, useHttpMock } = vi.hoisted(() => ({
@@ -137,9 +138,25 @@ describe('StoreDigitalProductFormFields', () => {
                 t('store.digitalProducts.form.selectCategory'),
             );
             expect(wrapper.get('label[for="tax_type_2"]').text()).toBe(
-                t('store.productForm.taxType', { tax: 'VAT' }),
+                t('store.productForm.taxType', { tax: 'VAT' }) +
+                    '*' +
+                    t('common.required'),
             );
-            expect(wrapper.get('label[for="tax_2"]').text()).toBe('VAT');
+            expect(wrapper.get('label[for="tax_2"]').text()).toBe(
+                'VAT*' + t('common.required'),
+            );
+            expectRequiredFields(wrapper, [
+                'name',
+                'category_id',
+                'unit_price',
+                'purchase_price',
+                'discount',
+                'discount_type',
+                'tax_2',
+                'tax_type_2',
+                'tax_3',
+                'tax_type_3',
+            ]);
             expect(wrapper.get('#date_range').attributes('placeholder')).toBe(
                 t('store.productForm.dateFormat'),
             );

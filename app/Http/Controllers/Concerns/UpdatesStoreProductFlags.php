@@ -7,6 +7,7 @@ use App\Models\Shop;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -15,7 +16,7 @@ use Illuminate\Validation\ValidationException;
  * share, writing what ProductController::updatePublished()/updateFeatured()
  * write for the jQuery lists. Each list passes the products it shows as
  * `$scope`, so a product outside it is a 404, and the row is locked for the
- * write. The root endpoints stay for the retained Blade seller list.
+ * write. Seller approval and today's deal use this writer too.
  */
 trait UpdatesStoreProductFlags
 {
@@ -50,6 +51,36 @@ trait UpdatesStoreProductFlags
             $product->save();
         });
         $this->clearStorefrontCaches();
+    }
+
+    /**
+     * Approval keeps the legacy package refusal in both directions. It
+     * changes only approved, sends no notification and records no audit row.
+     *
+     * @param  Builder<Product>  $scope
+     */
+    private function writeProductApproval(Builder $scope, Product $product, bool $approved): void
+    {
+        DB::transaction(function () use ($scope, $product, $approved): void {
+            $product = $this->lockedProduct($scope, $product);
+            if ($this->sellerPackageRefusesPublishing($product)) {
+                throw ValidationException::withMessages(['approved' => __('messages.store_product_package_limit')]);
+            }
+            $product->setAttribute('approved', (int) $approved);
+            $product->save();
+        });
+        $this->clearStorefrontCaches();
+    }
+
+    /** @param Builder<Product> $scope */
+    private function updateProductTodaysDeal(Builder $scope, Product $product, bool $todaysDeal): void
+    {
+        DB::transaction(function () use ($scope, $product, $todaysDeal): void {
+            $product = $this->lockedProduct($scope, $product);
+            $product->setAttribute('todays_deal', (int) $todaysDeal);
+            $product->save();
+        });
+        Cache::forget('todays_deal_products');
     }
 
     /**

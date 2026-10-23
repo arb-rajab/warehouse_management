@@ -11,7 +11,7 @@ import {
 /**
  * General settings moved to Inertia with a typed writer
  * (.ai/rules/store-backoffice-migration.md §17). The timezone stays
- * config-managed, and the Blade admin shell keeps reading the saved logo.
+ * config-managed; saved logos are previewed through the canonical uploader.
  */
 function resetGeneralSettings(): void {
     seedStoreFixtures(String.raw`
@@ -94,17 +94,12 @@ test('general settings round-trip the system name and a canonical logo pick thro
         if (Illuminate\Support\Facades\DB::table('business_settings')->where('type', 'timezone')->exists()) { throw new RuntimeException('Timezone was stored'); }
     `);
 
-    // The seller list is a retained Blade page in the admin shell.
-    await page.goto('/temp/admin/sellers');
-    await expect(page.locator('#app')).toHaveCount(0);
-    const shellLogo = page.locator('.aiz-side-nav-logo-wrap img').first();
-    await expect(shellLogo).toHaveAttribute('alt', 'Browser store renamed');
-    await expect(shellLogo).toHaveAttribute('src', /\/uploads\/all\//);
-    await expect
-        .poll(() =>
-            shellLogo.evaluate((img: HTMLImageElement) => img.naturalWidth),
-        )
-        .toBeGreaterThan(0);
+    // Seller products use the Inertia shell and retain its strict policy.
+    const sellerList = await page.goto('/temp/admin/products/seller');
+    await expect(page.locator('#app')).toHaveCount(1);
+    expect(sellerList?.headers()['content-security-policy']).toContain(
+        "script-src 'self';",
+    );
 });
 
 test('a refused timezone keeps the draft, in Arabic RTL with dark contrast', async ({

@@ -3,10 +3,12 @@
 namespace App\Models;
 
 use App\Enums\CellState;
+use App\Support\ProductColumnOwnership;
 use Database\Factories\ProductFactory;
 use Illuminate\Database\Connection;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Scope;
+use Illuminate\Database\Eloquent\Attributes\UseEloquentBuilder;
 use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -24,16 +26,15 @@ use Illuminate\Support\Facades\App;
 /**
  * A row in this app's `products` table.
  *
- * This app owns the table, but not the product data in it: `name`, `ar_name`
- * and `published` are written only by `products:sync`
- * (App\Console\Commands\SyncProductsCommand), periodically and in bulk, from
- * the Otajer store's feed — see the "Product sync" section of
- * .ai/rules/shared-database.md. That command is the single writer, so there is
- * no per-request create/update/delete of a `Product` anywhere in this codebase
- * and there should not be. The remaining columns are inherited from the store's
- * original schema and are never read here, except by the legacy store under
- * /temp: ProductPolicy reads `user_id`, the seller who owns the product, which
- * add_legacy_columns_to_store_tables adds in a form Larastan can't read.
+ * Option A: products:sync owns name, ar_name and published on feed-origin
+ * rows (synced_at is non-null). Store writers own the remaining columns and
+ * may change those three only on store-origin rows (synced_at is null).
+ * ProductColumnOwnership and ProductBuilder enforce this for assignments,
+ * model saves and bulk updates. Every model insert, including a duplicate,
+ * starts with a null marker; only the sync sets it. Pre-marker rows remain
+ * unclassified until the owner explicitly reviews them. See shared-database.md.
+ * ProductPolicy reads user_id, the seller who owns the product, which
+ * add_legacy_columns_to_store_tables adds in a form Larastan cannot read.
  *
  * `image_url` and `boxes_count` are not columns on it: the first resolves
  * through the store-owned `uploads` table, the second through this app's own
@@ -47,6 +48,13 @@ use Illuminate\Support\Facades\App;
  * @property int|null $thumbnail_img
  * @property bool $published
  * @property int|null $user_id
+ * @property string|null $description
+ * @property string|null $meta_description
+ * @property string|null $meta_img
+ * @property string|null $photos
+ * @property string|null $mat_id
+ * @property int $digital
+ * @property int $variant_product
  * @property-read string|null $image_url
  * @property-read int $boxes_count
  * @property-read int|null $minimum_pallets
@@ -55,10 +63,36 @@ use Illuminate\Support\Facades\App;
  * @property-read Collection<int, ProductBarcode> $barcodes
  */
 #[Fillable(['name', 'ar_name', 'thumbnail_img', 'published'])]
+#[UseEloquentBuilder(ProductBuilder::class)]
 class Product extends Model
 {
     /** @use HasFactory<ProductFactory> */
     use HasFactory;
+
+    /**
+     * Refuse a feed-column assignment before a legacy caller changes stock or
+     * other related rows. The builder also guards the eventual database write.
+     */
+    public function setAttribute($key, $value): static
+    {
+        if ($this->exists && in_array($key, ProductColumnOwnership::SYNC_COLUMNS, true)
+            && (string) ($this->attributes[$key] ?? '') !== (string) $value) {
+            ProductColumnOwnership::assertStoreWrite($this, [$key]);
+        }
+        if ($key === 'synced_at' && $value !== null) {
+            ProductColumnOwnership::refuse(['synced_at']);
+        }
+
+        return parent::setAttribute($key, $value);
+    }
+
+    /** Every model-created row, including a replicated feed row, is store-origin. */
+    protected function performInsert(EloquentBuilder $query): bool
+    {
+        $this->attributes['synced_at'] = null;
+
+        return parent::performInsert($query);
+    }
 
     /**
      * The box count assumed for a product with no `wms_product_settings` row —
@@ -202,6 +236,48 @@ class Product extends Model
     protected function minimumPallets(): Attribute
     {
         return Attribute::make(get: fn (): ?int => $this->setting->minimum_pallets ?? null);
+    }
+
+    /**
+     * The "Top Selling Products" widget of the storefront product page: the
+     * seller's best selling products the listings would show
+     * ({@see filter_products()}), at most `$limit`, best first. A product
+     * without a slug has no `product` route and is left out. Selects, and
+     * eager loads, only what the widget and the price helpers read, so a page
+     * with six products runs the same queries as one with a single product.
+     *
+     * @param  EloquentBuilder<self>  $query
+     */
+    #[Scope]
+    protected function topSellingOf(EloquentBuilder $query, ?int $sellerId, int $limit = 6): void
+    {
+        filter_products($query->where('user_id', $sellerId))
+            ->whereNotNull('slug')
+            ->where('slug', '!=', '')
+            ->select(['id', 'slug', 'name', 'thumbnail_img', 'unit_price', 'discount', 'discount_type', 'discount_start_date', 'discount_end_date', 'variant_product', 'num_of_sale'])
+            ->with([
+                'product_translations:id,product_id,lang,name',
+                'taxes:id,product_id,tax,tax_type',
+                'stocks:id,product_id,price',
+                'thumbnailUpload:id,file_name,external_link',
+            ])
+            ->orderBy('num_of_sale', 'desc')
+            ->limit($limit);
+    }
+
+    /**
+     * The storefront's "price per piece": `unit_price` over `unit_equal`, or
+     * `null` when `unit_equal` is not a positive number (the store's column is
+     * nullable and holds 0 for some synced products), so a page can leave the
+     * line out instead of dividing by zero.
+     *
+     * @return Attribute<int|float|null, never>
+     */
+    protected function pricePerPiece(): Attribute
+    {
+        return Attribute::make(
+            get: fn (): int|float|null => $this->unit_equal > 0 ? $this->unit_price / $this->unit_equal : null,
+        );
     }
 
     /**
@@ -678,9 +754,9 @@ class Product extends Model
     // --- Merged from the legacy store's App\Models\Product (see
     // .ai/rules/legacy-albaraka-holland.md section 2). The store's own writers
     // (NewFetchProductsCommand, the legacy ProductController, the Excel
-    // imports) mass-assign far more columns than #[Fillable] above allows;
-    // reconciling that — "pick one writer" — is deferred to the DB-merge
-    // phase the audit already tracks, not decided here.
+    // imports) mass-assign more columns than #[Fillable] allows. Option A
+    // settles column ownership through the guards above (migration guide §52);
+    // the separately gated seller validation work repairs lost form fields.
 
     /**
      * The legacy callers pass `$request->lang` straight through, which is

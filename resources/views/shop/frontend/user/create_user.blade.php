@@ -18,12 +18,13 @@
             <form class="form-default" role="form" action="{{ route('store_customer') }}" method="POST"
                 enctype="multipart/form-data">
                 @csrf
+                <x-required-legend />
 
                 <!-- Name -->
                 <div class="form-group">
-                    <label for="name" class="fs-12 fw-700 text-soft-dark">{{ translate('Full Name') }}</label>
-                    <input type="text" class="form-control rounded-0{{ $errors->has('name') ? ' is-invalid' : '' }}"
-                        value="{{ old('name') }}" placeholder="{{ translate('Full Name') }}" name="name">
+                    <label for="create_customer_name" class="fs-12 fw-700 text-soft-dark">{{ translate('Full Name') }}<x-required-mark /></label>
+                    <input type="text" id="create_customer_name" class="form-control rounded-0{{ $errors->has('name') ? ' is-invalid' : '' }}"
+                        value="{{ old('name') }}" placeholder="{{ translate('Full Name') }}" name="name" maxlength="191" required>
                     @if ($errors->has('name'))
                         <span class="invalid-feedback" role="alert">
                             <strong>{{ $errors->first('name') }}</strong>
@@ -33,11 +34,11 @@
 
                 <!-- Company Name -->
                 <div class="form-group">
-                    <label for="company_name" class="fs-12 fw-700 text-soft-dark">{{ translate('Company Name') }}</label>
-                    <input type="text"
+                    <label for="create_customer_company_name" class="fs-12 fw-700 text-soft-dark">{{ translate('Company Name') }}<x-required-mark /></label>
+                    <input type="text" id="create_customer_company_name"
                         class="form-control rounded-0{{ $errors->has('company_name') ? ' is-invalid' : '' }}"
                         value="{{ old('company_name') }}" placeholder="{{ translate('Company name') }}"
-                        name="company_name">
+                        name="company_name" maxlength="255" required>
                     @if ($errors->has('company_name'))
                         <span class="invalid-feedback" role="alert">
                             <strong>{{ $errors->first('company_name') }}</strong>
@@ -48,19 +49,20 @@
                 <!-- Email or Phone -->
                 @if (addon_is_activated('otp_system'))
                     <div class="form-group phone-form-group mb-1">
-                        <label for="phone" class="fs-12 fw-700 text-soft-dark">{{ translate('Phone') }}</label>
+                        <label for="phone-code" class="fs-12 fw-700 text-soft-dark">{{ translate('Phone') }}<x-required-mark /></label>
                         <input type="tel" id="phone-code"
                             class="form-control rounded-0{{ $errors->has('phone') ? ' is-invalid' : '' }}"
-                            value="{{ old('phone') }}" placeholder="" name="phone" autocomplete="off">
+                            value="{{ old('phone') }}" placeholder="" name="phone" maxlength="20" autocomplete="off" required>
                     </div>
 
                     <input type="hidden" name="country_code" value="">
 
+                    {{-- Hidden until "Use Email Instead", so neither marked nor `required`, as on the registration forms (guide §44). --}}
                     <div class="form-group email-form-group mb-1 d-none">
-                        <label for="email" class="fs-12 fw-700 text-soft-dark">{{ translate('Email') }}</label>
-                        <input type="email"
+                        <label for="create_customer_otp_email" class="fs-12 fw-700 text-soft-dark">{{ translate('Email') }}</label>
+                        <input type="email" id="create_customer_otp_email"
                             class="form-control rounded-0 {{ $errors->has('email') ? ' is-invalid' : '' }}"
-                            value="{{ old('email') }}" placeholder="{{ translate('Email') }}" name="email"
+                            value="{{ old('email') }}" placeholder="{{ translate('Email') }}" name="email" maxlength="191"
                             autocomplete="off">
                         @if ($errors->has('email'))
                             <span class="invalid-feedback" role="alert">
@@ -75,10 +77,10 @@
                     </div>
                 @else
                     <div class="form-group">
-                        <label for="email" class="fs-12 fw-700 text-soft-dark">{{ translate('Email') }}</label>
-                        <input type="email"
+                        <label for="create_customer_email" class="fs-12 fw-700 text-soft-dark">{{ translate('Email') }}<x-required-mark /></label>
+                        <input type="email" id="create_customer_email"
                             class="form-control rounded-0{{ $errors->has('email') ? ' is-invalid' : '' }}"
-                            value="{{ old('email') }}" placeholder="{{ translate('Email') }}" name="email">
+                            value="{{ old('email') }}" placeholder="{{ translate('Email') }}" name="email" maxlength="191" required>
                         @if ($errors->has('email'))
                             <span class="invalid-feedback" role="alert">
                                 <strong>{{ $errors->first('email') }}</strong>
@@ -89,9 +91,9 @@
 
 
                 <div class="form-group">
-                    <label for="phone" class="fs-12 fw-700 text-soft-dark">{{ translate('phone') }}</label>
-                    <input type="tel" class="form-control rounded-0{{ $errors->has('phone') ? ' is-invalid' : '' }}"
-                        value="{{ old('phone') }}" placeholder="{{ translate('phone') }}" name="phone">
+                    <label for="create_customer_phone" class="fs-12 fw-700 text-soft-dark">{{ translate('phone') }}<x-required-mark /></label>
+                    <input type="tel" id="create_customer_phone" class="form-control rounded-0{{ $errors->has('phone') ? ' is-invalid' : '' }}"
+                        value="{{ old('phone') }}" placeholder="{{ translate('phone') }}" name="phone" maxlength="20" required>
                     @if ($errors->has('phone'))
                         <span class="invalid-feedback" role="alert">
                             <strong>{{ $errors->first('phone') }}</strong>
@@ -101,8 +103,8 @@
 
 
                 <div class="form-group">
-                    <label for="country" class="fs-12 fw-700 text-soft-dark">{{ translate('Country') }}</label>
-                    <select class="form-control aiz-selectpicker" name="country">
+                    <label for="create_customer_country" class="fs-12 fw-700 text-soft-dark">{{ translate('Country') }}<x-required-mark /></label>
+                    <select id="create_customer_country" class="form-control aiz-selectpicker" name="country" required>
                         @foreach ($countries as $country)
                             <option value="{{ $country->name }}" @if ($country->name == old('country')) selected @endif>
                                 {{ $country->name }}</option>
@@ -110,7 +112,7 @@
                     </select>
 
                     @if ($errors->has('country'))
-                        <span class="invalid-feedback" role="alert">
+                        <span class="invalid-feedback d-block" role="alert">
                             <strong>{{ $errors->first('country') }}</strong>
                         </span>
                     @endif
@@ -119,10 +121,10 @@
 
                 <!-- Tax Number -->
                 <div class="form-group">
-                    <label for="tax_number" class="fs-12 fw-700 text-soft-dark">{{ translate('Tax Number') }}</label>
-                    <input type="text"
+                    <label for="create_customer_tax_number" class="fs-12 fw-700 text-soft-dark">{{ translate('Tax Number') }}<x-required-mark /></label>
+                    <input type="text" id="create_customer_tax_number"
                         class="form-control rounded-0{{ $errors->has('tax_number') ? ' is-invalid' : '' }}"
-                        value="{{ old('tax_number') }}" placeholder="{{ translate('Tax Number') }}" name="tax_number">
+                        value="{{ old('tax_number') }}" placeholder="{{ translate('Tax Number') }}" name="tax_number" maxlength="100" required>
                     @if ($errors->has('tax_number'))
                         <span class="invalid-feedback" role="alert">
                             <strong>{{ $errors->first('tax_number') }}</strong>
@@ -132,12 +134,12 @@
 
                 <!-- Bank Account Number -->
                 <div class="form-group">
-                    <label for="bank_account_number"
-                        class="fs-12 fw-700 text-soft-dark">{{ translate('Bank Account Number') }}</label>
-                    <input type="text"
+                    <label for="create_customer_bank_account_number"
+                        class="fs-12 fw-700 text-soft-dark">{{ translate('Bank Account Number') }}<x-required-mark /></label>
+                    <input type="text" id="create_customer_bank_account_number"
                         class="form-control rounded-0{{ $errors->has('bank_account_number') ? ' is-invalid' : '' }}"
                         value="{{ old('bank_account_number') }}" placeholder="{{ translate('Bank Account Number') }}"
-                        name="bank_account_number">
+                        name="bank_account_number" maxlength="100" required>
                     @if ($errors->has('bank_account_number'))
                         <span class="invalid-feedback" role="alert">
                             <strong>{{ $errors->first('bank_account_number') }}</strong>
@@ -147,12 +149,12 @@
 
                 <!-- Company Address -->
                 <div class="form-group">
-                    <label for="company_address"
-                        class="fs-12 fw-700 text-soft-dark">{{ translate('Company Address') }}</label>
-                    <input type="text"
+                    <label for="create_customer_company_address"
+                        class="fs-12 fw-700 text-soft-dark">{{ translate('Company Address') }}<x-required-mark /></label>
+                    <input type="text" id="create_customer_company_address"
                         class="form-control rounded-0{{ $errors->has('company_address') ? ' is-invalid' : '' }}"
                         value="{{ old('company_address') }}" placeholder="{{ translate('Company Address') }}"
-                        name="company_address">
+                        name="company_address" maxlength="255" required>
                     @if ($errors->has('company_address'))
                         <span class="invalid-feedback" role="alert">
                             <strong>{{ $errors->first('company_address') }}</strong>
@@ -163,12 +165,12 @@
 
                 <!-- Company Shipping Address -->
                 <div class="form-group">
-                    <label for="shipping_address"
-                        class="fs-12 fw-700 text-soft-dark">{{ translate('Shipping Address') }}</label>
-                    <input type="text"
+                    <label for="create_customer_shipping_address"
+                        class="fs-12 fw-700 text-soft-dark">{{ translate('Shipping Address') }}<x-required-mark /></label>
+                    <input type="text" id="create_customer_shipping_address"
                         class="form-control rounded-0{{ $errors->has('shipping_address') ? ' is-invalid' : '' }}"
                         value="{{ old('shipping_address') }}" placeholder="{{ translate('Shipping Address') }}"
-                        name="shipping_address">
+                        name="shipping_address" maxlength="255" required>
                     @if ($errors->has('shipping_address'))
                         <span class="invalid-feedback" role="alert">
                             <strong>{{ $errors->first('shipping_address') }}</strong>
@@ -178,12 +180,12 @@
 
 
                 <div class="form-group">
-                    <label for="trade_license"
-                        class="fs-14 fw-700 text-soft-dark">{{ translate('Trade License') }}</label>
-                    <input type="file"
+                    <label for="create_customer_trade_license"
+                        class="fs-14 fw-700 text-soft-dark">{{ translate('Trade License') }}<x-required-mark /></label>
+                    <input type="file" id="create_customer_trade_license"
                         class="form-control rounded-0{{ $errors->has('trade_license') ? ' is-invalid' : '' }}"
                         value="{{ old('trade_license') }}" placeholder="{{ translate('Upload Trade License') }}"
-                        name="trade_license">
+                        name="trade_license" accept=".pdf,.doc,.docx,.png,.jpg,.jpeg" required>
                     @if ($errors->has('trade_license'))
                         <span class="invalid-feedback" role="alert">
                             <strong>{{ $errors->first('trade_license') }}</strong>
@@ -198,10 +200,10 @@
 
                 <!-- password -->
                 <div class="form-group">
-                    <label for="password" class="fs-12 fw-700 text-soft-dark">{{ translate('Password') }}</label>
-                    <input type="password"
+                    <label for="create_customer_password" class="fs-12 fw-700 text-soft-dark">{{ translate('Password') }}<x-required-mark /></label>
+                    <input type="password" id="create_customer_password"
                         class="form-control rounded-0{{ $errors->has('password') ? ' is-invalid' : '' }}"
-                        placeholder="{{ translate('Password') }}" name="password">
+                        placeholder="{{ translate('Password') }}" name="password" minlength="6" autocomplete="new-password" required>
                     <div class="text-right mt-1">
                         <span
                             class="fs-12 fw-400 text-gray-dark">{{ translate('Password must contain at least 6 digits') }}</span>
@@ -215,10 +217,10 @@
 
                 <!-- password Confirm -->
                 <div class="form-group">
-                    <label for="password_confirmation"
-                        class="fs-12 fw-700 text-soft-dark">{{ translate('Confirm Password') }}</label>
-                    <input type="password" class="form-control rounded-0"
-                        placeholder="{{ translate('Confirm Password') }}" name="password_confirmation">
+                    <label for="create_customer_password_confirmation"
+                        class="fs-12 fw-700 text-soft-dark">{{ translate('Confirm Password') }}<x-required-mark /></label>
+                    <input type="password" id="create_customer_password_confirmation" class="form-control rounded-0"
+                        placeholder="{{ translate('Confirm Password') }}" name="password_confirmation" minlength="6" autocomplete="new-password" required>
                 </div>
 
                 <!-- Recaptcha -->
@@ -226,6 +228,9 @@
                     <div class="form-group">
                         <div class="g-recaptcha" data-sitekey="{{ config('services.recaptcha.site_key') }}">
                         </div>
+                        @error('g-recaptcha-response')
+                            <span class="invalid-feedback d-block" role="alert"><strong>{{ $message }}</strong></span>
+                        @enderror
                     </div>
                 @endif
 

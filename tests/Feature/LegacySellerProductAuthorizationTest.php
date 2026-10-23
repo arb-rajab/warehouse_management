@@ -1,6 +1,5 @@
 <?php
 
-use App\Models\Coupon;
 use App\Models\Product;
 use App\Models\StoreUser;
 use App\Services\ProductService;
@@ -14,7 +13,8 @@ use App\Services\ProductService;
  *
  * A seller's own product update is not driven end to end here: the store's
  * ProductService mass-assigns columns Product's #[Fillable] (this app's)
- * doesn't allow, a merge still to be decided per that model's docblock.
+ * doesn't allow, now repaired by the explicit panel writer (SellerProductPersistenceTest);
+ * the seller API retains the legacy service.
  *
  * @param  array<string, mixed>  $overrides
  * @return array<string, mixed>
@@ -38,19 +38,11 @@ function sellerProduct(StoreUser $seller): Product
     return createStoreProduct(['user_id' => $seller->id, 'added_by' => 'seller', 'seller_featured' => 1, 'thumbnail_img' => null]);
 }
 
-function sellerCoupon(StoreUser $seller): Coupon
-{
-    return Coupon::create([
-        'user_id' => $seller->id, 'type' => 'cart_base', 'code' => 'SAVE5', 'details' => '{"min_buy":1,"max_discount":5}',
-        'discount' => 5, 'discount_type' => 'amount', 'start_date' => now()->timestamp, 'end_date' => now()->addDay()->timestamp,
-    ])->fresh();
-}
-
 test("a seller cannot update, publish or feature another seller's product in the seller area", function () {
     $product = sellerProduct(createStoreUser('seller'));
     actingAsStoreUser(createStoreUser('seller'));
 
-    $this->post("/temp/seller/products/update/{$product->id}", sellerProductForm())->assertRedirect();
+    $this->post("/temp/seller/products/update/{$product->id}", sellerProductForm())->assertForbidden();
     $this->post('/temp/seller/products/published', ['id' => $product->id, 'status' => 0])->assertOk()->assertSee('0');
     $this->post('/temp/seller/products/seller/featured', ['id' => $product->id, 'status' => 0])->assertOk()->assertSee('0');
 
@@ -192,24 +184,12 @@ test('the service cuts a seller\'s input down to the fields a seller may set', f
     ])->and($allowed['name'])->toBe('Renamed');
 });
 
-test('a seller\'s product form reaches the service without the forged fields', function (string $method) {
-    $captured = null;
-    $this->partialMock(ProductService::class, function ($mock) use ($method, &$captured) {
-        $mock->shouldReceive($method)->once()->andReturnUsing(function (array $data) use (&$captured) {
-            $captured = $data;
-
-            throw new RuntimeException('captured');
-        });
-    });
+test('a seller product form refuses forged server-owned fields without touching products', function (string $method) {
     $seller = createStoreUser('seller');
     $product = sellerProduct($seller);
     actingAsStoreUser($seller);
-
+    $before = Product::query()->get()->toJson();
     $url = $method === 'store' ? '/temp/seller/products/store' : "/temp/seller/products/update/{$product->id}";
-    $this->post($url, sellerProductForm(forgedProductFields()));
-
-    expect($captured)->not->toBeNull()
-        ->and(array_keys($captured))->not->toContain('user_id', 'approved', 'published', 'featured', 'todays_deal', 'seller_featured', 'num_of_sale', 'rating', 'digital')
-        ->and($captured['name'])->toBe('Renamed')
-        ->and($captured['added_by'] ?? 'seller')->toBe('seller');
+    $this->post($url, sellerProductForm(forgedProductFields()))->assertSessionHasErrors(array_keys(forgedProductFields()));
+    expect(Product::query()->get()->toJson())->toBe($before);
 })->with(['store', 'update']);

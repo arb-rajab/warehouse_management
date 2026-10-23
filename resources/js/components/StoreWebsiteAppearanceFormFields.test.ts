@@ -3,6 +3,7 @@ import type { VueWrapper } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { reactive } from 'vue';
 import FieldError from '@/components/FieldError.vue';
+import RequiredMark from '@/components/RequiredMark.vue';
 import StoreRichTextField from '@/components/StoreRichTextField.vue';
 import StoreUploadField from '@/components/StoreUploadField.vue';
 import { i18n, t } from '@/lib/i18n';
@@ -73,6 +74,12 @@ afterEach(() => {
 });
 
 describe('StoreWebsiteAppearanceFormFields', () => {
+    it('keeps nullable settings and explicit boolean switches free of browser requirements', () => {
+        const { wrapper } = mountFields();
+        expect(wrapper.findAllComponents(RequiredMark)).toHaveLength(0);
+        expect(wrapper.findAll('[required]')).toHaveLength(0);
+        expect(wrapper.findAll('input[type=checkbox]')).toHaveLength(3);
+    });
     it.each(['en', 'ar'] as const)(
         'labels every section and field in %s',
         async (locale) => {

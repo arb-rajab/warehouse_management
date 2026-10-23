@@ -20,16 +20,6 @@ import {
     Users,
 } from '@lucide/vue';
 import type { Component } from 'vue';
-import { admin_dashboard } from '@/actions/App/Http/Controllers/AdminController';
-import {
-    seller_verification_form,
-    vendor_commission,
-} from '@/actions/App/Http/Controllers/BusinessSettingsController';
-import { customer_product_index as classifiedProductsIndex } from '@/actions/App/Http/Controllers/CustomerProductController';
-import { payment_histories } from '@/actions/App/Http/Controllers/PaymentController';
-import { seller_products } from '@/actions/App/Http/Controllers/ProductController';
-import { index as sellersIndex } from '@/actions/App/Http/Controllers/SellerController';
-import { index as withdrawRequestsIndex } from '@/actions/App/Http/Controllers/SellerWithdrawRequestController';
 import { index as attributesIndex } from '@/actions/App/Http/Controllers/Store/Admin/AttributeController';
 import { index as blogCategoriesIndex } from '@/actions/App/Http/Controllers/Store/Admin/BlogCategoryController';
 import { index as blogIndex } from '@/actions/App/Http/Controllers/Store/Admin/BlogController';
@@ -38,6 +28,7 @@ import { index as brandsWiseProductDiscount } from '@/actions/App/Http/Controlle
 import { index as carriersIndex } from '@/actions/App/Http/Controllers/Store/Admin/CarrierController';
 import { index as categoriesIndex } from '@/actions/App/Http/Controllers/Store/Admin/CategoryController';
 import { index as citiesIndex } from '@/actions/App/Http/Controllers/Store/Admin/CityController';
+import { customer_product_index as classifiedProductsIndex } from '@/actions/App/Http/Controllers/Store/Admin/ClassifiedProductController';
 import { index as colors } from '@/actions/App/Http/Controllers/Store/Admin/ColorController';
 import { index as conversationsIndex } from '@/actions/App/Http/Controllers/Store/Admin/ConversationController';
 import { index as countriesIndex } from '@/actions/App/Http/Controllers/Store/Admin/CountryController';
@@ -51,6 +42,7 @@ import {
 } from '@/actions/App/Http/Controllers/Store/Admin/CustomerController';
 import { index as customerNotificationsIndex } from '@/actions/App/Http/Controllers/Store/Admin/CustomerNotificationController';
 import { index as customerPackagesIndex } from '@/actions/App/Http/Controllers/Store/Admin/CustomerPackageController';
+import { index as admin_dashboard } from '@/actions/App/Http/Controllers/Store/Admin/DashboardController';
 import { index as digitalProductsIndex } from '@/actions/App/Http/Controllers/Store/Admin/DigitalProductController';
 import {
     create as driversCreate,
@@ -76,6 +68,7 @@ import {
     all as allProducts,
     create as productsCreate,
     inHouse as inHouseProducts,
+    seller as sellerProducts,
 } from '@/actions/App/Http/Controllers/Store/Admin/ProductController';
 import { index as productQueriesIndex } from '@/actions/App/Http/Controllers/Store/Admin/ProductQueryController';
 import {
@@ -91,6 +84,11 @@ import { index as representativePackagesIndex } from '@/actions/App/Http/Control
 import { index as representativePaymentsIndex } from '@/actions/App/Http/Controllers/Store/Admin/RepresentativePaymentController';
 import { index as reviewsIndex } from '@/actions/App/Http/Controllers/Store/Admin/ReviewController';
 import { index as rolesIndex } from '@/actions/App/Http/Controllers/Store/Admin/RoleController';
+import { index as sellerCommissionIndex } from '@/actions/App/Http/Controllers/Store/Admin/SellerCommissionController';
+import { index as sellersIndex } from '@/actions/App/Http/Controllers/Store/Admin/SellerController';
+import { index as sellerPaymentsIndex } from '@/actions/App/Http/Controllers/Store/Admin/SellerPaymentController';
+import { index as sellerVerificationFormIndex } from '@/actions/App/Http/Controllers/Store/Admin/SellerVerificationFormController';
+import { index as withdrawRequestsIndex } from '@/actions/App/Http/Controllers/Store/Admin/SellerWithdrawRequestController';
 import {
     activation,
     smtp,
@@ -171,9 +169,9 @@ export function isStoreMenuGroup(item: StoreMenuItem): item is StoreMenuGroup {
 }
 
 /**
- * The back office's sidebar, from resources/views/shop/backend/inc/admin_sidenav.blade.php
- * less the removed addons' blocks and the stray duplicate Shipping group. The
- * System → Server status page was deleted from both sidebars (guide §29).
+ * The back office's only sidebar. It preserves the established permission and
+ * setting gates, excluding removed addons, the duplicate Shipping group and
+ * System → Server status (guide §§29, 39).
  * Where the Blade gate disagreed with the route's own permission, the
  * route's wins, so a link never leads to a 403.
  */
@@ -181,6 +179,7 @@ export const storeAdminMenu: StoreMenuItem[] = [
     {
         labelKey: 'store.nav.dashboard',
         href: admin_dashboard(),
+        inertia: true,
         icon: LayoutDashboard,
         permission: 'admin_dashboard',
     },
@@ -209,7 +208,8 @@ export const storeAdminMenu: StoreMenuItem[] = [
             },
             {
                 labelKey: 'store.nav.sellerProducts',
-                href: seller_products(),
+                inertia: true,
+                href: sellerProducts(),
                 permission: 'show_seller_products',
                 setting: 'vendor_system_activation',
             },
@@ -333,6 +333,7 @@ export const storeAdminMenu: StoreMenuItem[] = [
             {
                 labelKey: 'store.nav.classifiedProducts',
                 href: classifiedProductsIndex(),
+                inertia: true,
                 permission: 'view_classified_products',
                 setting: 'classified_product',
             },
@@ -390,11 +391,13 @@ export const storeAdminMenu: StoreMenuItem[] = [
                 labelKey: 'store.nav.allSellers',
                 badgeKey: 'sellers',
                 href: sellersIndex(),
+                inertia: true,
                 permission: 'view_all_seller',
             },
             {
                 labelKey: 'store.nav.payouts',
-                href: payment_histories(),
+                href: sellerPaymentsIndex(),
+                inertia: true,
                 permission: 'seller_payment_history',
                 setting: 'Payouts_Section',
             },
@@ -403,18 +406,21 @@ export const storeAdminMenu: StoreMenuItem[] = [
                 href: withdrawRequestsIndex[
                     '/temp/admin/withdraw_requests_all'
                 ](),
+                inertia: true,
                 permission: 'view_seller_payout_requests',
                 setting: 'Payout_request_Section',
             },
             {
                 labelKey: 'store.nav.sellerCommission',
-                href: vendor_commission(),
+                href: sellerCommissionIndex(),
+                inertia: true,
                 permission: 'seller_commission_configuration',
                 setting: 'Seller_Commission_Section',
             },
             {
                 labelKey: 'store.nav.sellerVerificationForm',
-                href: seller_verification_form(),
+                href: sellerVerificationFormIndex(),
+                inertia: true,
                 permission: 'seller_verification_form_configuration',
                 setting: 'Seller_Verify_Form_Section',
             },

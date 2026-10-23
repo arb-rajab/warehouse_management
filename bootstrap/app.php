@@ -18,6 +18,7 @@ use App\Http\Middleware\IsUnbanned;
 use App\Http\Middleware\IsUser;
 use App\Http\Middleware\LogRequestTime;
 use App\Http\Middleware\RaizerSuperAdmin;
+use App\Http\Middleware\SendNoIndexHeader;
 use App\Http\Middleware\SendSecureHeaders;
 use App\Http\Middleware\SetLocale;
 use App\Http\Middleware\SetLocaleFromHeader;
@@ -71,9 +72,10 @@ return Application::configure(basePath: dirname(__DIR__))
             StoreInertiaPreviousUrl::class,
             AddLinkHeadersForPreloadedAssets::class,
             EnsurePasswordHasBeenChanged::class,
+            SendNoIndexHeader::class,
         ]);
 
-        $middleware->api(append: [SetLocaleFromHeader::class, EnsureMinimumAppVersion::class]);
+        $middleware->api(append: [SendNoIndexHeader::class.':always', SetLocaleFromHeader::class, EnsureMinimumAppVersion::class]);
         $middleware->throttleApi();
 
         // `auth` (Authenticate) is in the framework's middleware priority list,
@@ -82,6 +84,10 @@ return Application::configure(basePath: dirname(__DIR__))
         // 'web' guard on every /temp route, and no store user could get past
         // it. Listing UseStoreAuthGuard just before it keeps the order.
         $middleware->prependToPriorityList(AuthenticatesRequests::class, UseStoreAuthGuard::class);
+
+        // SendNoIndexHeader has to wrap `auth` too, or the 401 an API caller
+        // gets and the redirect a guest gets would carry no X-Robots-Tag.
+        $middleware->prependToPriorityList(UseStoreAuthGuard::class, SendNoIndexHeader::class);
 
         // The legacy store under /temp has its own login page and home page:
         // a guest there, or a signed-in store user on a guest-only page,
@@ -121,7 +127,7 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        $exceptions->dontFlash(['current_password', 'password', 'password_confirmation']);
+        $exceptions->dontFlash(['current_password', 'password', 'password_confirmation', 'new_password', 'confirm_password']);
 
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*') || $request->expectsJson(),

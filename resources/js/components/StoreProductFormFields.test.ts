@@ -17,6 +17,7 @@ import {
     storeSharedProps,
 } from '@/testing/factories';
 import { createUseHttpStub } from '@/testing/inertiaStubs';
+import { expectRequiredFields } from '@/testing/requiredFields';
 import type { StoreProductFormSections } from '@/types/store';
 import Fields from './StoreProductFormFields.vue';
 
@@ -391,6 +392,22 @@ describe('StoreProductFormFields', () => {
 
     it('asks for a flat shipping cost and a flash discount type only when they apply', async () => {
         const wrapper = mountFields();
+        const required = [
+            'name',
+            'category_id',
+            'unit',
+            'max_qty',
+            'min_qty',
+            'unit_price',
+            'discount',
+            'discount_type',
+            'current_stock',
+            'tax_2',
+            'tax_type_2',
+            'shipping_type',
+            'stock_visibility_state',
+        ];
+        expectRequiredFields(wrapper, required);
 
         expect(wrapper.find('#flat_shipping_cost').exists()).toBe(false);
         expect(
@@ -401,6 +418,12 @@ describe('StoreProductFormFields', () => {
             .setValue(true);
         await wrapper.get('#flash_deal_id').setValue('9');
 
+        expectRequiredFields(wrapper, [
+            ...required,
+            'flat_shipping_cost',
+            'flash_discount',
+            'flash_discount_type',
+        ]);
         expect(wrapper.get('#flat_shipping_cost').attributes()).toMatchObject({
             required: '',
             min: '0',
@@ -409,6 +432,17 @@ describe('StoreProductFormFields', () => {
         expect(
             wrapper.get('#flash_discount_type').attributes('required'),
         ).toBeDefined();
+        expect(wrapper.text()).toContain(
+            t('store.products.form.shippingCostHelp'),
+        );
+        expect(wrapper.text()).toContain(
+            t('store.products.form.flashDiscountHelp'),
+        );
+        await wrapper
+            .get('input[name="shipping_type"][value="free"]')
+            .setValue(true);
+        await wrapper.get('#flash_deal_id').setValue('');
+        expectRequiredFields(wrapper, required);
     });
 
     it('hands the variant rows the unit price exactly as typed', async () => {
@@ -452,6 +486,18 @@ describe('StoreProductFormFields', () => {
             },
         });
 
+        expectRequiredFields(wrapper, [
+            'name',
+            'category_id',
+            'unit',
+            'max_qty',
+            'min_qty',
+            'unit_price',
+            'discount',
+            'discount_type',
+            'current_stock',
+            'stock_visibility_state',
+        ]);
         expect(wrapper.find('input[name="shipping_type"]').exists()).toBe(
             false,
         );

@@ -2,11 +2,14 @@ import { Form, Link } from '@inertiajs/vue3';
 import { Languages } from '@lucide/vue';
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { nextTick } from 'vue';
 import {
     edit as rolesEdit,
     index as rolesIndex,
     update as rolesUpdate,
 } from '@/actions/App/Http/Controllers/Store/Admin/RoleController';
+import RequiredLegend from '@/components/RequiredLegend.vue';
+import RequiredMark from '@/components/RequiredMark.vue';
 import ResourceFormPage from '@/components/ResourceFormPage.vue';
 import StoreRoleFormFields from '@/components/StoreRoleFormFields.vue';
 import SubmitButton from '@/components/SubmitButton.vue';
@@ -173,5 +176,13 @@ describe('Store roles Edit', () => {
         expect(
             mountPage().getComponent(StoreRoleFormFields).props('errors'),
         ).toEqual({ name: 'The name field is required.' });
+    });
+
+    it('explains the required name with the legend', async () => {
+        const wrapper = mountPage();
+        await nextTick();
+
+        expect(wrapper.findComponent(RequiredLegend).exists()).toBe(true);
+        expect(wrapper.findAllComponents(RequiredMark)).toHaveLength(1);
     });
 });

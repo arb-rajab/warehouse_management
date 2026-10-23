@@ -7,9 +7,9 @@ use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Validation\Rule;
 
 /**
- * The `list` parameter every row action of the in-house and all-products
- * lists sends: the list it was fired from, which bounds the products the
- * action may touch and is where it returns.
+ * The `list` parameter the shared product-list row actions send: the list it was fired from, which bounds the products the
+ * action may touch and is where it returns. Seller aliases fix the list
+ * through a server-side route default, independently of query input.
  */
 trait ValidatesStoreProductList
 {
@@ -18,11 +18,11 @@ trait ValidatesStoreProductList
      */
     protected function productListRules(): array
     {
-        return ['list' => ['required', 'string', Rule::enum(StoreProductList::class)]];
+        return ['list' => [$this->route('productList') === 'seller' ? 'nullable' : 'required', 'string', Rule::enum(StoreProductList::class)]];
     }
 
     public function productList(): StoreProductList
     {
-        return StoreProductList::from($this->string('list')->toString());
+        return StoreProductList::from($this->route('productList') ?? $this->string('list')->toString());
     }
 }

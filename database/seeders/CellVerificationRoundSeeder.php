@@ -5,15 +5,23 @@ namespace Database\Seeders;
 use App\Models\CellVerificationRound;
 use App\Models\Row;
 use App\Models\User;
+use Database\Seeders\Concerns\RefusesProduction;
 use Illuminate\Database\Seeder;
 
 class CellVerificationRoundSeeder extends Seeder
 {
+    use RefusesProduction;
+
     /**
      * Run the database seeds.
+     *
+     * Refuses production: it creates mobile users with the factory's known
+     * password when fewer than four role-less users exist.
      */
     public function run(): void
     {
+        $this->refuseInProduction();
+
         if (Row::query()->doesntExist()) {
             return;
         }

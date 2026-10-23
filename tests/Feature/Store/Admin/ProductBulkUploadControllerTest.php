@@ -8,35 +8,6 @@ use Illuminate\Support\Facades\DB;
 use Inertia\Testing\AssertableInertia as Assert;
 use Maatwebsite\Excel\Facades\Excel;
 
-/** @return array<string, mixed> */
-function catalogueImportRow(array $overrides = []): array
-{
-    $category = Category::forceCreate(['name' => 'Food']);
-
-    return [
-        'name' => 'Imported dates', 'description' => '<p>Fresh dates</p><script>alert(1)</script>',
-        'category_id' => $category->id, 'brand_id' => '', 'video_provider' => '', 'video_link' => '',
-        'tags' => 'dates,fresh', 'unit_price' => 2.5, 'unit' => 'box', 'meta_title' => 'Date boxes',
-        'meta_description' => 'Fresh food', 'slug' => 'imported-dates',
-        'thumbnail_img' => 'https://example.com/date.jpg', 'photos' => 'https://example.com/gallery.jpg',
-        'current_stock' => 12, 'sku' => 'DATE-12', ...$overrides,
-    ];
-}
-
-function catalogueImportFile(array $rows): UploadedFile
-{
-    $stream = fopen('php://temp', 'w+');
-    fputcsv($stream, array_keys($rows[0]), escape: '');
-    foreach ($rows as $row) {
-        fputcsv($stream, array_values($row), escape: '');
-    }
-    rewind($stream);
-    $contents = stream_get_contents($stream);
-    fclose($stream);
-
-    return UploadedFile::fake()->createWithContent('products.csv', $contents);
-}
-
 test('the bulk import page can be rendered with a narrow download prop', function () {
     actingAsStoreUser(createStoreStaff('product_bulk_import'));
     $this->get('/temp/admin/product-bulk-upload/index')->assertOk()->assertInertia(fn (Assert $page) => $page

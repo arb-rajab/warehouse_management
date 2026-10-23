@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { productOptions } from '@/actions/App/Http/Controllers/Store/Admin/CouponController';
 import { t } from '@/lib/i18n';
 import { storeCoupon } from '@/testing/factories';
+import { expectRequiredFields } from '@/testing/requiredFields';
 import StoreCouponFormFields from './StoreCouponFormFields.vue';
 
 const { getMock } = vi.hoisted(() => ({ getMock: vi.fn() }));
@@ -54,6 +55,17 @@ describe('StoreCouponFormFields', () => {
             expect(wrapper.get(`#${id}`).attributes('required')).toBeDefined();
         }
 
+        expectRequiredFields(wrapper, [
+            'type',
+            'code',
+            'discount_type',
+            'discount',
+            'start_date',
+            'end_date',
+            'min_buy',
+            'max_discount',
+        ]);
+
         expect(wrapper.get('#code').attributes('maxlength')).toBe('255');
 
         for (const id of ['discount', 'min_buy', 'max_discount']) {
@@ -83,6 +95,15 @@ describe('StoreCouponFormFields', () => {
             coupon: storeCoupon({ type: 'product_base', product_ids: [12] }),
             selectedProducts: [{ id: 12, name: 'Selected product' }],
         });
+        expectRequiredFields(wrapper, [
+            'type',
+            'code',
+            'discount_type',
+            'discount',
+            'start_date',
+            'end_date',
+            'product_ids',
+        ]);
         expect(wrapper.find('#min_buy').exists()).toBe(false);
         expect(wrapper.get('#product_ids').attributes()).toMatchObject({
             name: 'product_ids[]',

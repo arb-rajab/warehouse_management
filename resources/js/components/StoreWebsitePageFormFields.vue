@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue';
 import FieldError from '@/components/FieldError.vue';
 import FormField from '@/components/FormField.vue';
+import RequiredMark from '@/components/RequiredMark.vue';
 import StoreRichTextField from '@/components/StoreRichTextField.vue';
 import StoreUploadField from '@/components/StoreUploadField.vue';
 import { fieldLabelClass, plainFieldInputClass } from '@/lib/filters';
@@ -52,9 +53,10 @@ function slugChanged(event: Event): void {
             required
         />
         <div>
-            <label for="slug" :class="fieldLabelClass">{{
-                t('store.website.fields.slug')
-            }}</label>
+            <label for="slug" :class="fieldLabelClass"
+                >{{ t('store.website.fields.slug')
+                }}<RequiredMark v-if="editableSlug"
+            /></label>
             <div v-if="editableSlug" class="flex items-stretch" dir="ltr">
                 <span
                     class="flex items-center rounded-s-md border border-e-0 border-gray-300 bg-gray-100 px-3 text-sm text-gray-700 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-300"

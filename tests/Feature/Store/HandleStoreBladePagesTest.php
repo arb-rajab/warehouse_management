@@ -1,7 +1,7 @@
 <?php
 
 use App\Models\Visit;
-use Illuminate\Testing\TestResponse;
+use Database\Seeders\PageSeeder;
 use Inertia\Testing\AssertableInertia as Assert;
 
 /**
@@ -10,40 +10,20 @@ use Inertia\Testing\AssertableInertia as Assert;
  * lands on a Blade page becomes a full page load, and only Blade pages get
  * the inline-script Content-Security-Policy.
  */
-
-/**
- * The response's `$name` directive (report-only outside production).
- */
-function cspDirectiveOf(TestResponse $response, string $name): string
-{
-    $policy = $response->headers->get('Content-Security-Policy-Report-Only')
-        ?? $response->headers->get('Content-Security-Policy');
-
-    return collect(explode(';', (string) $policy))
-        ->map(fn (string $directive) => trim($directive))
-        ->first(fn (string $directive) => str_starts_with($directive, $name.' ')) ?? '';
-}
-
-/**
- * The response's script-src directive.
- */
-function scriptSrcOf(TestResponse $response): string
-{
-    return cspDirectiveOf($response, 'script-src');
-}
-
 test('an Inertia visit that lands on a Blade page is sent to load it in full', function () {
     actingAsStoreUser(createStoreAdmin());
+    $this->seed(PageSeeder::class);
 
-    $this->get('/temp/admin/sellers', inertiaHeaders())
+    $this->get('/temp/terms', inertiaHeaders())
         ->assertConflict()
-        ->assertHeader('X-Inertia-Location', url('/temp/admin/sellers'));
+        ->assertHeader('X-Inertia-Location', url('/temp/terms'));
 });
 
 test('a plain visit to a Blade page renders it, under the inline-script policy', function () {
-    $admin = actingAsStoreUser(createStoreAdmin());
+    actingAsStoreUser(createStoreAdmin());
+    $this->seed(PageSeeder::class);
 
-    $response = $this->get('/temp/admin/sellers')->assertOk()->assertSee($admin->name);
+    $response = $this->get('/temp/terms')->assertOk()->assertSee('Terms &amp; Conditions', false);
 
     expect(scriptSrcOf($response))
         ->toContain("'self'")
@@ -65,8 +45,9 @@ test('an Inertia store page keeps the strict policy, on a full load and on an In
 
 test("a Blade page's policy ends with its request", function () {
     actingAsStoreUser(createStoreAdmin());
+    $this->seed(PageSeeder::class);
 
-    $this->get('/temp/admin/sellers')->assertOk();
+    $this->get('/temp/terms')->assertOk();
 
     expect(scriptSrcOf($this->get('/temp/admin/staffs')->assertOk()))->toBe("script-src 'self'");
 });

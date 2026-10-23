@@ -43,7 +43,6 @@ const ADMIN_WRITES_STILL_UNGATED = [
     'ProfileController@update',
 
     // Read-only AJAX helpers the product forms post to.
-    'ProductController@fetch',
     'ProductController@get_products_by_subcategory',
     'ProductController@search',
     'ProductController@sku_combination',
@@ -63,8 +62,7 @@ const ADMIN_READS_STILL_UNGATED = [
     // No permission for the module yet.
     'NotificationController@index',
 
-    // Self-service: the signed-in user's own dashboard, profile and uploads.
-    'AdminController@admin_dashboard',
+    // Self-service: the signed-in user's own profile and uploads.
     'ProfileController@index',
 
     // Read-only AJAX helpers the product forms use.
