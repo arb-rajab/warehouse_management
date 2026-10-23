@@ -9,20 +9,20 @@
         "by_class": {
             "A": 39,
             "B": 40,
-            "C": 54,
+            "C": 38,
             "D": 10,
-            "E": 124,
+            "E": 105,
             "F": 23
         },
         "by_severity": {
-            "high": 93,
+            "high": 77,
             "medium": 50,
-            "low": 124,
+            "low": 105,
             "info": 23
         },
         "by_priority": {
             "P1": 8,
-            "P2": 153,
+            "P2": 118,
             "P3": 129
         }
     },
@@ -247,9 +247,9 @@
             "forms": 26,
             "A": 0,
             "B": 0,
-            "C": 16,
+            "C": 0,
             "D": 0,
-            "E": 27,
+            "E": 8,
             "F": 0
         },
         "server": {
@@ -326,7 +326,7 @@
         }
     },
     "server": {
-        "form_requests": 279,
+        "form_requests": 280,
         "form_requests_unparsed": 1,
         "inline_validators": 25,
         "inline_unparsed": 5
@@ -334,20 +334,6 @@
     "top": [
         {
             "rank": 1,
-            "priority": "P2",
-            "module": "seller panel",
-            "form": "resources/views/shop/seller/product/digitalproducts/edit.blade.php:11",
-            "target": "route:seller.digitalproducts.update",
-            "high": 9,
-            "medium": 0,
-            "low": 12,
-            "findings": {
-                "C": 9,
-                "E": 12
-            }
-        },
-        {
-            "rank": 2,
             "priority": "P2",
             "module": "storefront/account",
             "form": "resources/views/shop/frontend/user/customer/product_edit.blade.php:24",
@@ -361,7 +347,7 @@
             }
         },
         {
-            "rank": 3,
+            "rank": 2,
             "priority": "P2",
             "module": "storefront/account",
             "form": "resources/views/shop/frontend/user/customer/product_upload.blade.php:11",
@@ -375,21 +361,7 @@
             }
         },
         {
-            "rank": 4,
-            "priority": "P2",
-            "module": "seller panel",
-            "form": "resources/views/shop/seller/product/digitalproducts/create.blade.php:12",
-            "target": "route:seller.digitalproducts.store",
-            "high": 7,
-            "medium": 0,
-            "low": 11,
-            "findings": {
-                "C": 7,
-                "E": 11
-            }
-        },
-        {
-            "rank": 5,
+            "rank": 3,
             "priority": "P2",
             "module": "storefront",
             "form": "resources/views/shop/frontend/partials/wallet_modal.blade.php:9",
@@ -402,7 +374,7 @@
             }
         },
         {
-            "rank": 6,
+            "rank": 4,
             "priority": "P2",
             "module": "storefront/account",
             "form": "resources/views/shop/frontend/user/product_review_modal.blade.php:9",
@@ -417,7 +389,7 @@
             }
         },
         {
-            "rank": 7,
+            "rank": 5,
             "priority": "P2",
             "module": "storefront",
             "form": "resources/views/shop/frontend/digital_product_details.blade.php:695",
@@ -432,7 +404,7 @@
             }
         },
         {
-            "rank": 8,
+            "rank": 6,
             "priority": "P2",
             "module": "storefront",
             "form": "resources/views/shop/frontend/product_details/product_queries.blade.php:29",
@@ -447,7 +419,7 @@
             }
         },
         {
-            "rank": 9,
+            "rank": 7,
             "priority": "P2",
             "module": "storefront/account",
             "form": "resources/views/shop/frontend/user/profile.blade.php:215",
@@ -461,7 +433,7 @@
             }
         },
         {
-            "rank": 10,
+            "rank": 8,
             "priority": "P2",
             "module": "storefront/account",
             "form": "resources/views/shop/frontend/user/support_ticket/show.blade.php:20",
@@ -475,7 +447,7 @@
             }
         },
         {
-            "rank": 11,
+            "rank": 9,
             "priority": "P2",
             "module": "storefront/account",
             "form": "resources/views/shop/frontend/user/conversations/show.blade.php:73",
@@ -489,7 +461,7 @@
             }
         },
         {
-            "rank": 12,
+            "rank": 10,
             "priority": "P2",
             "module": "storefront",
             "form": "resources/views/shop/frontend/inc/footer.blade.php:88",
@@ -502,7 +474,7 @@
             }
         },
         {
-            "rank": 13,
+            "rank": 11,
             "priority": "P2",
             "module": "storefront",
             "form": "resources/views/shop/frontend/layouts/app.blade.php:336",
@@ -515,7 +487,7 @@
             }
         },
         {
-            "rank": 14,
+            "rank": 12,
             "priority": "P2",
             "module": "storefront",
             "form": "resources/views/shop/frontend/track_order.blade.php:27",
@@ -528,7 +500,7 @@
             }
         },
         {
-            "rank": 15,
+            "rank": 13,
             "priority": "P3",
             "module": "Store/Admin/Customers",
             "form": "resources/js/pages/Store/Admin/Customers/Customers/Create.vue:16",
@@ -541,7 +513,7 @@
             }
         },
         {
-            "rank": 16,
+            "rank": 14,
             "priority": "P3",
             "module": "Store/Admin/Website",
             "form": "resources/js/pages/Store/Admin/Website/Appearance.vue:39",
@@ -555,7 +527,7 @@
             }
         },
         {
-            "rank": 17,
+            "rank": 15,
             "priority": "P3",
             "module": "Store/Admin/Setup",
             "form": "resources/js/pages/Store/Admin/Setup/Carriers/Create.vue:14",
@@ -569,7 +541,7 @@
             }
         },
         {
-            "rank": 18,
+            "rank": 16,
             "priority": "P3",
             "module": "Store/Admin/Setup",
             "form": "resources/js/pages/Store/Admin/Setup/Carriers/Edit.vue:22",
@@ -583,7 +555,7 @@
             }
         },
         {
-            "rank": 19,
+            "rank": 17,
             "priority": "P3",
             "module": "Store/Admin/Website",
             "form": "resources/js/pages/Store/Admin/Website/Footer.vue:38",
@@ -598,7 +570,7 @@
             }
         },
         {
-            "rank": 20,
+            "rank": 18,
             "priority": "P3",
             "module": "Store/Admin/Product",
             "form": "resources/js/pages/Store/Admin/Product/Products/Create.vue:28",
@@ -608,6 +580,35 @@
             "low": 0,
             "findings": {
                 "C": 3
+            }
+        },
+        {
+            "rank": 19,
+            "priority": "P3",
+            "module": "Store/Admin/Sales",
+            "form": "resources/js/pages/Store/Admin/Sales/Orders/Create.vue:14",
+            "target": "OrderEntryController@shippingStore",
+            "high": 2,
+            "medium": 0,
+            "low": 1,
+            "findings": {
+                "A": 2,
+                "E": 1
+            }
+        },
+        {
+            "rank": 20,
+            "priority": "P3",
+            "module": "Store/Admin/Sales",
+            "form": "resources/js/pages/Store/Admin/Sales/Orders/Show.vue:218",
+            "target": "OrderController@edit_item_price",
+            "high": 2,
+            "medium": 0,
+            "low": 1,
+            "findings": {
+                "A": 1,
+                "C": 1,
+                "E": 1
             }
         }
     ],
@@ -2923,15 +2924,14 @@
             "module": "seller panel",
             "priority": "P2",
             "file": "resources/views/shop/seller/product/digitalproducts/create.blade.php",
-            "line": 12,
-            "action": "{{route('seller.digitalproducts.store')}}",
+            "line": 5,
+            "action": "{{ route('seller.digitalproducts.store') }}",
             "target": "route:seller.digitalproducts.store",
-            "source": "App\\Http\\Controllers\\Seller\\DigitalProductController@store",
-            "controls": 18,
+            "source": "App\\Http\\Requests\\Seller\\DigitalProductRequest",
+            "controls": 19,
             "unresolved_controls": 0,
             "findings": {
-                "C": 7,
-                "E": 11
+                "E": 2
             }
         },
         {
@@ -2939,15 +2939,14 @@
             "module": "seller panel",
             "priority": "P2",
             "file": "resources/views/shop/seller/product/digitalproducts/edit.blade.php",
-            "line": 11,
-            "action": "{{route('seller.digitalproducts.update', $product->id)}}",
+            "line": 5,
+            "action": "{{ route('seller.digitalproducts.update', $product->id) }}",
             "target": "route:seller.digitalproducts.update",
-            "source": "App\\Http\\Controllers\\Seller\\DigitalProductController@update",
-            "controls": 22,
+            "source": "App\\Http\\Requests\\Seller\\DigitalProductRequest",
+            "controls": 19,
             "unresolved_controls": 0,
             "findings": {
-                "C": 9,
-                "E": 12
+                "E": 2
             }
         },
         {
@@ -5338,246 +5337,6 @@
             "class": "C",
             "severity": "high",
             "priority": "P2",
-            "module": "seller panel",
-            "kind": "blade",
-            "form": "resources/views/shop/seller/product/digitalproducts/create.blade.php",
-            "target": "route:seller.digitalproducts.store",
-            "source": "App\\Http\\Controllers\\Seller\\DigitalProductController@store",
-            "field": "category_id",
-            "label": "Category *",
-            "detail": "required in the UI, the endpoint validates nothing",
-            "ui": "resources/views/shop/seller/product/digitalproducts/create.blade.php:31",
-            "server": null
-        },
-        {
-            "class": "C",
-            "severity": "high",
-            "priority": "P2",
-            "module": "seller panel",
-            "kind": "blade",
-            "form": "resources/views/shop/seller/product/digitalproducts/create.blade.php",
-            "target": "route:seller.digitalproducts.store",
-            "source": "App\\Http\\Controllers\\Seller\\DigitalProductController@store",
-            "field": "discount",
-            "label": "Discount *",
-            "detail": "required in the UI, the endpoint validates nothing",
-            "ui": "resources/views/shop/seller/product/digitalproducts/create.blade.php:174",
-            "server": null
-        },
-        {
-            "class": "C",
-            "severity": "high",
-            "priority": "P2",
-            "module": "seller panel",
-            "kind": "blade",
-            "form": "resources/views/shop/seller/product/digitalproducts/create.blade.php",
-            "target": "route:seller.digitalproducts.store",
-            "source": "App\\Http\\Controllers\\Seller\\DigitalProductController@store",
-            "field": "name",
-            "label": "Product Name *",
-            "detail": "required in the UI, the endpoint validates nothing",
-            "ui": "resources/views/shop/seller/product/digitalproducts/create.blade.php:25",
-            "server": null
-        },
-        {
-            "class": "C",
-            "severity": "high",
-            "priority": "P2",
-            "module": "seller panel",
-            "kind": "blade",
-            "form": "resources/views/shop/seller/product/digitalproducts/create.blade.php",
-            "target": "route:seller.digitalproducts.store",
-            "source": "App\\Http\\Controllers\\Seller\\DigitalProductController@store",
-            "field": "purchase_price",
-            "label": "Purchase price *",
-            "detail": "required in the UI, the endpoint validates nothing",
-            "ui": "resources/views/shop/seller/product/digitalproducts/create.blade.php:150",
-            "server": null
-        },
-        {
-            "class": "C",
-            "severity": "high",
-            "priority": "P2",
-            "module": "seller panel",
-            "kind": "blade",
-            "form": "resources/views/shop/seller/product/digitalproducts/create.blade.php",
-            "target": "route:seller.digitalproducts.store",
-            "source": "App\\Http\\Controllers\\Seller\\DigitalProductController@store",
-            "field": "tags[]",
-            "label": "Tags *",
-            "detail": "required in the UI, the endpoint validates nothing",
-            "ui": "resources/views/shop/seller/product/digitalproducts/create.blade.php:58",
-            "server": null
-        },
-        {
-            "class": "C",
-            "severity": "high",
-            "priority": "P2",
-            "module": "seller panel",
-            "kind": "blade",
-            "form": "resources/views/shop/seller/product/digitalproducts/create.blade.php",
-            "target": "route:seller.digitalproducts.store",
-            "source": "App\\Http\\Controllers\\Seller\\DigitalProductController@store",
-            "field": "tax[]",
-            "label": null,
-            "detail": "required in the UI, the endpoint validates nothing",
-            "ui": "resources/views/shop/seller/product/digitalproducts/create.blade.php:161",
-            "server": null
-        },
-        {
-            "class": "C",
-            "severity": "high",
-            "priority": "P2",
-            "module": "seller panel",
-            "kind": "blade",
-            "form": "resources/views/shop/seller/product/digitalproducts/create.blade.php",
-            "target": "route:seller.digitalproducts.store",
-            "source": "App\\Http\\Controllers\\Seller\\DigitalProductController@store",
-            "field": "unit_price",
-            "label": "Unit price *",
-            "detail": "required in the UI, the endpoint validates nothing",
-            "ui": "resources/views/shop/seller/product/digitalproducts/create.blade.php:144",
-            "server": null
-        },
-        {
-            "class": "C",
-            "severity": "high",
-            "priority": "P2",
-            "module": "seller panel",
-            "kind": "blade",
-            "form": "resources/views/shop/seller/product/digitalproducts/edit.blade.php",
-            "target": "route:seller.digitalproducts.update",
-            "source": "App\\Http\\Controllers\\Seller\\DigitalProductController@update",
-            "field": "category_id",
-            "label": "Category *",
-            "detail": "required in the UI, the endpoint validates nothing",
-            "ui": "resources/views/shop/seller/product/digitalproducts/edit.blade.php:46",
-            "server": null
-        },
-        {
-            "class": "C",
-            "severity": "high",
-            "priority": "P2",
-            "module": "seller panel",
-            "kind": "blade",
-            "form": "resources/views/shop/seller/product/digitalproducts/edit.blade.php",
-            "target": "route:seller.digitalproducts.update",
-            "source": "App\\Http\\Controllers\\Seller\\DigitalProductController@update",
-            "field": "discount",
-            "label": "Discount",
-            "detail": "required in the UI, the endpoint validates nothing",
-            "ui": "resources/views/shop/seller/product/digitalproducts/edit.blade.php:203",
-            "server": null
-        },
-        {
-            "class": "C",
-            "severity": "high",
-            "priority": "P2",
-            "module": "seller panel",
-            "kind": "blade",
-            "form": "resources/views/shop/seller/product/digitalproducts/edit.blade.php",
-            "target": "route:seller.digitalproducts.update",
-            "source": "App\\Http\\Controllers\\Seller\\DigitalProductController@update",
-            "field": "discount_type",
-            "label": null,
-            "detail": "required in the UI, the endpoint validates nothing",
-            "ui": "resources/views/shop/seller/product/digitalproducts/edit.blade.php:206",
-            "server": null
-        },
-        {
-            "class": "C",
-            "severity": "high",
-            "priority": "P2",
-            "module": "seller panel",
-            "kind": "blade",
-            "form": "resources/views/shop/seller/product/digitalproducts/edit.blade.php",
-            "target": "route:seller.digitalproducts.update",
-            "source": "App\\Http\\Controllers\\Seller\\DigitalProductController@update",
-            "field": "name",
-            "label": "Product Name *",
-            "detail": "required in the UI, the endpoint validates nothing",
-            "ui": "resources/views/shop/seller/product/digitalproducts/edit.blade.php:40",
-            "server": null
-        },
-        {
-            "class": "C",
-            "severity": "high",
-            "priority": "P2",
-            "module": "seller panel",
-            "kind": "blade",
-            "form": "resources/views/shop/seller/product/digitalproducts/edit.blade.php",
-            "target": "route:seller.digitalproducts.update",
-            "source": "App\\Http\\Controllers\\Seller\\DigitalProductController@update",
-            "field": "purchase_price",
-            "label": "Purchase price",
-            "detail": "required in the UI, the endpoint validates nothing",
-            "ui": "resources/views/shop/seller/product/digitalproducts/edit.blade.php:170",
-            "server": null
-        },
-        {
-            "class": "C",
-            "severity": "high",
-            "priority": "P2",
-            "module": "seller panel",
-            "kind": "blade",
-            "form": "resources/views/shop/seller/product/digitalproducts/edit.blade.php",
-            "target": "route:seller.digitalproducts.update",
-            "source": "App\\Http\\Controllers\\Seller\\DigitalProductController@update",
-            "field": "tags[]",
-            "label": "Tags *",
-            "detail": "required in the UI, the endpoint validates nothing",
-            "ui": "resources/views/shop/seller/product/digitalproducts/edit.blade.php:73",
-            "server": null
-        },
-        {
-            "class": "C",
-            "severity": "high",
-            "priority": "P2",
-            "module": "seller panel",
-            "kind": "blade",
-            "form": "resources/views/shop/seller/product/digitalproducts/edit.blade.php",
-            "target": "route:seller.digitalproducts.update",
-            "source": "App\\Http\\Controllers\\Seller\\DigitalProductController@update",
-            "field": "tax[]",
-            "label": null,
-            "detail": "required in the UI, the endpoint validates nothing",
-            "ui": "resources/views/shop/seller/product/digitalproducts/edit.blade.php:190",
-            "server": null
-        },
-        {
-            "class": "C",
-            "severity": "high",
-            "priority": "P2",
-            "module": "seller panel",
-            "kind": "blade",
-            "form": "resources/views/shop/seller/product/digitalproducts/edit.blade.php",
-            "target": "route:seller.digitalproducts.update",
-            "source": "App\\Http\\Controllers\\Seller\\DigitalProductController@update",
-            "field": "tax_type[]",
-            "label": null,
-            "detail": "required in the UI, the endpoint validates nothing",
-            "ui": "resources/views/shop/seller/product/digitalproducts/edit.blade.php:193",
-            "server": null
-        },
-        {
-            "class": "C",
-            "severity": "high",
-            "priority": "P2",
-            "module": "seller panel",
-            "kind": "blade",
-            "form": "resources/views/shop/seller/product/digitalproducts/edit.blade.php",
-            "target": "route:seller.digitalproducts.update",
-            "source": "App\\Http\\Controllers\\Seller\\DigitalProductController@update",
-            "field": "unit_price",
-            "label": "Unit price",
-            "detail": "required in the UI, the endpoint validates nothing",
-            "ui": "resources/views/shop/seller/product/digitalproducts/edit.blade.php:164",
-            "server": null
-        },
-        {
-            "class": "C",
-            "severity": "high",
-            "priority": "P2",
             "module": "storefront",
             "kind": "blade",
             "form": "resources/views/shop/frontend/inc/footer.blade.php",
@@ -6422,236 +6181,11 @@
             "kind": "blade",
             "form": "resources/views/shop/seller/product/digitalproducts/create.blade.php",
             "target": "route:seller.digitalproducts.store",
-            "source": "App\\Http\\Controllers\\Seller\\DigitalProductController@store",
-            "field": "added_by",
-            "label": null,
-            "detail": "the endpoint validates nothing",
-            "ui": "resources/views/shop/seller/product/digitalproducts/create.blade.php:14",
-            "server": null
-        },
-        {
-            "class": "E",
-            "severity": "low",
-            "priority": "P2",
-            "module": "seller panel",
-            "kind": "blade",
-            "form": "resources/views/shop/seller/product/digitalproducts/create.blade.php",
-            "target": "route:seller.digitalproducts.store",
-            "source": "App\\Http\\Controllers\\Seller\\DigitalProductController@store",
-            "field": "description",
-            "label": "Description",
-            "detail": "the endpoint validates nothing",
-            "ui": "resources/views/shop/seller/product/digitalproducts/create.blade.php:193",
-            "server": null
-        },
-        {
-            "class": "E",
-            "severity": "low",
-            "priority": "P2",
-            "module": "seller panel",
-            "kind": "blade",
-            "form": "resources/views/shop/seller/product/digitalproducts/create.blade.php",
-            "target": "route:seller.digitalproducts.store",
-            "source": "App\\Http\\Controllers\\Seller\\DigitalProductController@store",
-            "field": "discount_type",
-            "label": null,
-            "detail": "the endpoint validates nothing",
-            "ui": "resources/views/shop/seller/product/digitalproducts/create.blade.php:177",
-            "server": null
-        },
-        {
-            "class": "E",
-            "severity": "low",
-            "priority": "P2",
-            "module": "seller panel",
-            "kind": "blade",
-            "form": "resources/views/shop/seller/product/digitalproducts/create.blade.php",
-            "target": "route:seller.digitalproducts.store",
-            "source": "App\\Http\\Controllers\\Seller\\DigitalProductController@store",
-            "field": "file",
-            "label": "Product File *",
-            "detail": "the endpoint validates nothing",
-            "ui": "resources/views/shop/seller/product/digitalproducts/create.blade.php:49",
-            "server": null
-        },
-        {
-            "class": "E",
-            "severity": "low",
-            "priority": "P2",
-            "module": "seller panel",
-            "kind": "blade",
-            "form": "resources/views/shop/seller/product/digitalproducts/create.blade.php",
-            "target": "route:seller.digitalproducts.store",
-            "source": "App\\Http\\Controllers\\Seller\\DigitalProductController@store",
-            "field": "meta_description",
-            "label": "Description",
-            "detail": "the endpoint validates nothing",
-            "ui": "resources/views/shop/seller/product/digitalproducts/create.blade.php:116",
-            "server": null
-        },
-        {
-            "class": "E",
-            "severity": "low",
-            "priority": "P2",
-            "module": "seller panel",
-            "kind": "blade",
-            "form": "resources/views/shop/seller/product/digitalproducts/create.blade.php",
-            "target": "route:seller.digitalproducts.store",
-            "source": "App\\Http\\Controllers\\Seller\\DigitalProductController@store",
-            "field": "meta_img",
-            "label": "Meta Image",
-            "detail": "the endpoint validates nothing",
-            "ui": "resources/views/shop/seller/product/digitalproducts/create.blade.php:127",
-            "server": null
-        },
-        {
-            "class": "E",
-            "severity": "low",
-            "priority": "P2",
-            "module": "seller panel",
-            "kind": "blade",
-            "form": "resources/views/shop/seller/product/digitalproducts/create.blade.php",
-            "target": "route:seller.digitalproducts.store",
-            "source": "App\\Http\\Controllers\\Seller\\DigitalProductController@store",
-            "field": "meta_title",
-            "label": "Meta Title",
-            "detail": "the endpoint validates nothing",
-            "ui": "resources/views/shop/seller/product/digitalproducts/create.blade.php:110",
-            "server": null
-        },
-        {
-            "class": "E",
-            "severity": "low",
-            "priority": "P2",
-            "module": "seller panel",
-            "kind": "blade",
-            "form": "resources/views/shop/seller/product/digitalproducts/create.blade.php",
-            "target": "route:seller.digitalproducts.store",
-            "source": "App\\Http\\Controllers\\Seller\\DigitalProductController@store",
-            "field": "photos",
-            "label": "Gallery Images (600x600)",
-            "detail": "the endpoint validates nothing",
-            "ui": "resources/views/shop/seller/product/digitalproducts/create.blade.php:77",
-            "server": null
-        },
-        {
-            "class": "E",
-            "severity": "low",
-            "priority": "P2",
-            "module": "seller panel",
-            "kind": "blade",
-            "form": "resources/views/shop/seller/product/digitalproducts/create.blade.php",
-            "target": "route:seller.digitalproducts.store",
-            "source": "App\\Http\\Controllers\\Seller\\DigitalProductController@store",
-            "field": "tax_id[]",
-            "label": "{{ $tax->name }} *",
-            "detail": "the endpoint validates nothing",
-            "ui": "resources/views/shop/seller/product/digitalproducts/create.blade.php:160",
-            "server": null
-        },
-        {
-            "class": "E",
-            "severity": "low",
-            "priority": "P2",
-            "module": "seller panel",
-            "kind": "blade",
-            "form": "resources/views/shop/seller/product/digitalproducts/create.blade.php",
-            "target": "route:seller.digitalproducts.store",
-            "source": "App\\Http\\Controllers\\Seller\\DigitalProductController@store",
-            "field": "tax_type[]",
-            "label": null,
-            "detail": "the endpoint validates nothing",
-            "ui": "resources/views/shop/seller/product/digitalproducts/create.blade.php:164",
-            "server": null
-        },
-        {
-            "class": "E",
-            "severity": "low",
-            "priority": "P2",
-            "module": "seller panel",
-            "kind": "blade",
-            "form": "resources/views/shop/seller/product/digitalproducts/create.blade.php",
-            "target": "route:seller.digitalproducts.store",
-            "source": "App\\Http\\Controllers\\Seller\\DigitalProductController@store",
-            "field": "thumbnail_img",
-            "label": "Thumbnail Image (300x300)",
-            "detail": "the endpoint validates nothing",
-            "ui": "resources/views/shop/seller/product/digitalproducts/create.blade.php:93",
-            "server": null
-        },
-        {
-            "class": "E",
-            "severity": "low",
-            "priority": "P2",
-            "module": "seller panel",
-            "kind": "blade",
-            "form": "resources/views/shop/seller/product/digitalproducts/edit.blade.php",
-            "target": "route:seller.digitalproducts.update",
-            "source": "App\\Http\\Controllers\\Seller\\DigitalProductController@update",
-            "field": "added_by",
-            "label": null,
-            "detail": "the endpoint validates nothing",
-            "ui": "resources/views/shop/seller/product/digitalproducts/edit.blade.php:15",
-            "server": null
-        },
-        {
-            "class": "E",
-            "severity": "low",
-            "priority": "P2",
-            "module": "seller panel",
-            "kind": "blade",
-            "form": "resources/views/shop/seller/product/digitalproducts/edit.blade.php",
-            "target": "route:seller.digitalproducts.update",
-            "source": "App\\Http\\Controllers\\Seller\\DigitalProductController@update",
-            "field": "description",
-            "label": "Description",
-            "detail": "the endpoint validates nothing",
-            "ui": "resources/views/shop/seller/product/digitalproducts/edit.blade.php:222",
-            "server": null
-        },
-        {
-            "class": "E",
-            "severity": "low",
-            "priority": "P2",
-            "module": "seller panel",
-            "kind": "blade",
-            "form": "resources/views/shop/seller/product/digitalproducts/edit.blade.php",
-            "target": "route:seller.digitalproducts.update",
-            "source": "App\\Http\\Controllers\\Seller\\DigitalProductController@update",
-            "field": "file",
-            "label": "Product File *",
-            "detail": "the endpoint validates nothing",
-            "ui": "resources/views/shop/seller/product/digitalproducts/edit.blade.php:64",
-            "server": null
-        },
-        {
-            "class": "E",
-            "severity": "low",
-            "priority": "P2",
-            "module": "seller panel",
-            "kind": "blade",
-            "form": "resources/views/shop/seller/product/digitalproducts/edit.blade.php",
-            "target": "route:seller.digitalproducts.update",
-            "source": "App\\Http\\Controllers\\Seller\\DigitalProductController@update",
-            "field": "id",
-            "label": null,
-            "detail": "the endpoint validates nothing",
-            "ui": "resources/views/shop/seller/product/digitalproducts/edit.blade.php:13",
-            "server": null
-        },
-        {
-            "class": "E",
-            "severity": "low",
-            "priority": "P2",
-            "module": "seller panel",
-            "kind": "blade",
-            "form": "resources/views/shop/seller/product/digitalproducts/edit.blade.php",
-            "target": "route:seller.digitalproducts.update",
-            "source": "App\\Http\\Controllers\\Seller\\DigitalProductController@update",
+            "source": "App\\Http\\Requests\\Seller\\DigitalProductRequest",
             "field": "lang",
             "label": null,
-            "detail": "the endpoint validates nothing",
-            "ui": "resources/views/shop/seller/product/digitalproducts/edit.blade.php:14",
+            "detail": "no server rule names this field",
+            "ui": "resources/views/shop/seller/product/digitalproducts/form_fields.blade.php:27",
             "server": null
         },
         {
@@ -6660,73 +6194,13 @@
             "priority": "P2",
             "module": "seller panel",
             "kind": "blade",
-            "form": "resources/views/shop/seller/product/digitalproducts/edit.blade.php",
-            "target": "route:seller.digitalproducts.update",
-            "source": "App\\Http\\Controllers\\Seller\\DigitalProductController@update",
-            "field": "meta_description",
-            "label": "Description",
-            "detail": "the endpoint validates nothing",
-            "ui": "resources/views/shop/seller/product/digitalproducts/edit.blade.php:131",
-            "server": null
-        },
-        {
-            "class": "E",
-            "severity": "low",
-            "priority": "P2",
-            "module": "seller panel",
-            "kind": "blade",
-            "form": "resources/views/shop/seller/product/digitalproducts/edit.blade.php",
-            "target": "route:seller.digitalproducts.update",
-            "source": "App\\Http\\Controllers\\Seller\\DigitalProductController@update",
-            "field": "meta_img",
-            "label": "Meta Image",
-            "detail": "the endpoint validates nothing",
-            "ui": "resources/views/shop/seller/product/digitalproducts/edit.blade.php:142",
-            "server": null
-        },
-        {
-            "class": "E",
-            "severity": "low",
-            "priority": "P2",
-            "module": "seller panel",
-            "kind": "blade",
-            "form": "resources/views/shop/seller/product/digitalproducts/edit.blade.php",
-            "target": "route:seller.digitalproducts.update",
-            "source": "App\\Http\\Controllers\\Seller\\DigitalProductController@update",
-            "field": "meta_title",
-            "label": "Meta Title",
-            "detail": "the endpoint validates nothing",
-            "ui": "resources/views/shop/seller/product/digitalproducts/edit.blade.php:125",
-            "server": null
-        },
-        {
-            "class": "E",
-            "severity": "low",
-            "priority": "P2",
-            "module": "seller panel",
-            "kind": "blade",
-            "form": "resources/views/shop/seller/product/digitalproducts/edit.blade.php",
-            "target": "route:seller.digitalproducts.update",
-            "source": "App\\Http\\Controllers\\Seller\\DigitalProductController@update",
-            "field": "photos",
-            "label": "Gallery Images (600x600)",
-            "detail": "the endpoint validates nothing",
-            "ui": "resources/views/shop/seller/product/digitalproducts/edit.blade.php:92",
-            "server": null
-        },
-        {
-            "class": "E",
-            "severity": "low",
-            "priority": "P2",
-            "module": "seller panel",
-            "kind": "blade",
-            "form": "resources/views/shop/seller/product/digitalproducts/edit.blade.php",
-            "target": "route:seller.digitalproducts.update",
-            "source": "App\\Http\\Controllers\\Seller\\DigitalProductController@update",
+            "form": "resources/views/shop/seller/product/digitalproducts/create.blade.php",
+            "target": "route:seller.digitalproducts.store",
+            "source": "App\\Http\\Requests\\Seller\\DigitalProductRequest",
             "field": "slug",
             "label": "Slug",
-            "detail": "the endpoint validates nothing",
-            "ui": "resources/views/shop/seller/product/digitalproducts/edit.blade.php:151",
+            "detail": "no server rule names this field",
+            "ui": "resources/views/shop/seller/product/digitalproducts/form_fields.blade.php:83",
             "server": null
         },
         {
@@ -6737,11 +6211,11 @@
             "kind": "blade",
             "form": "resources/views/shop/seller/product/digitalproducts/edit.blade.php",
             "target": "route:seller.digitalproducts.update",
-            "source": "App\\Http\\Controllers\\Seller\\DigitalProductController@update",
-            "field": "tax_id[]",
-            "label": "{{$tax->name}}",
-            "detail": "the endpoint validates nothing",
-            "ui": "resources/views/shop/seller/product/digitalproducts/edit.blade.php:189",
+            "source": "App\\Http\\Requests\\Seller\\DigitalProductRequest",
+            "field": "lang",
+            "label": null,
+            "detail": "no server rule names this field",
+            "ui": "resources/views/shop/seller/product/digitalproducts/form_fields.blade.php:27",
             "server": null
         },
         {
@@ -6752,11 +6226,11 @@
             "kind": "blade",
             "form": "resources/views/shop/seller/product/digitalproducts/edit.blade.php",
             "target": "route:seller.digitalproducts.update",
-            "source": "App\\Http\\Controllers\\Seller\\DigitalProductController@update",
-            "field": "thumbnail_img",
-            "label": "Thumbnail Image (300x300)",
-            "detail": "the endpoint validates nothing",
-            "ui": "resources/views/shop/seller/product/digitalproducts/edit.blade.php:108",
+            "source": "App\\Http\\Requests\\Seller\\DigitalProductRequest",
+            "field": "slug",
+            "label": "Slug",
+            "detail": "no server rule names this field",
+            "ui": "resources/views/shop/seller/product/digitalproducts/form_fields.blade.php:83",
             "server": null
         },
         {

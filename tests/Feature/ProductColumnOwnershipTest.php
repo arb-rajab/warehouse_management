@@ -4,6 +4,7 @@ use App\Models\Category;
 use App\Models\Language;
 use App\Models\Product;
 use App\Models\ProductBuilder;
+use App\Models\Upload;
 use App\Support\ProductColumnOwnership;
 use Illuminate\Support\Facades\File;
 use Illuminate\Validation\ValidationException;
@@ -136,12 +137,18 @@ test('the existing seller physical and digital writers refuse feed names before 
         'button' => 'publish',
     ];
 
+    Language::forceCreate(['code' => 'en', 'name' => 'English', 'rtl' => 0]);
     if (! $digital) {
-        Language::forceCreate(['code' => 'en', 'name' => 'English', 'rtl' => 0]);
         $category = Category::forceCreate(['name' => 'Physical', 'slug' => 'physical', 'digital' => 0]);
         unset($input['button']);
         $input += ['discount' => 1, 'discount_type' => 'amount', 'current_stock' => 4, 'stock_visibility_state' => 'quantity'];
         $input['category_id'] = $category->id;
+    }
+    if ($digital) {
+        $category = Category::forceCreate(['name' => 'Digital', 'slug' => 'digital', 'digital' => 1, 'parent_id' => 0]);
+        $file = Upload::factory()->create(['user_id' => $seller->id, 'type' => 'document']);
+        unset($input['unit'], $input['min_qty'], $input['date_range'], $input['button']);
+        $input = [...$input, 'category_id' => $category->id, 'purchase_price' => 0, 'discount' => 0, 'discount_type' => 'amount', 'file' => $file->id];
     }
     $route = $digital ? 'seller.digitalproducts.update' : 'seller.products.update';
     $this->post(route($route, $product->id), $input)->assertSessionHasErrors('name');

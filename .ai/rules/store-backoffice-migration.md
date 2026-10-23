@@ -20,6 +20,8 @@ paths:
 
 # Moving the store back office from Blade to Inertia
 
+Seller catalogue follow-up: [digital validation and transactional persistence, plus seller row limits](#55-seller-digital-catalogue-and-remaining-seller-row-rules-pr-c-2026-10-23).
+
 Reference-data follow-up: [legacy countries, states, currencies, languages and CMS pages as a migration](#46-legacy-reference-data-as-a-migration-2026-10-21).
 Forms follow-up: [required and optional form fields](#44-required-and-optional-form-fields-2026-10-21), then [the public address forms and the checkout address pick](#45-public-forms-phase-2a-address-forms-and-the-checkout-address-pick-2026-10-21), then [the longitude columns, seller registration and create customer](#47-public-forms-phase-2a-continued-the-longitude-columns-seller-registration-create-customer-2026-10-21).
 Latest follow-up: [retire the unused admin shells](#39-retire-the-unused-admin-shells-2026-10-20).
@@ -571,6 +573,7 @@ The back-office Blade to Inertia conversion is complete; §39 retires its dead s
 | Orders/dashboard | Complete | Orders and entry forms converted; stored tax metadata and line-price-only grand total preserved; shell utilities integrated; dashboard converted to Inertia with bundled Chart.js (§33) |
 | Seller administration | Complete: stages 34–36 | Seller accounts/verification/profile (§34), payments/withdrawals (§35), commission and verification form configuration (§36) use Inertia. Seller administration conversion is complete. The admin seller product list is converted with the catalogue in §38; no checkout, seller-area, storefront or role-grant policy changes |
 | Back-office shells | Retired | No application consumer remains; three dead files removed, seven protected backend templates retained (§39) |
+| Seller catalogue validation | Implemented; verification in §55 | Physical panel (§§53–54), digital panel and seller import row limits (§55); seller UI stays Blade |
 | Public/seller/auth/email/PDF consumers | Retained | Blade coexistence, PDF layouts, Inertia root and CSP middleware remain |
 
 ### 4.1 Seller prerequisite and role grants
@@ -6245,3 +6248,198 @@ open checklist defects.
   be repaired and the explicit full gate repeated before B2's last commit.
   B2 is uncommitted and unshipped; C has not started. No bare/attested run or
   manual CI-Verified trailer was used. `git diff --check` passed.
+
+## 55. Seller digital catalogue and remaining seller row rules, PR C (2026-10-23)
+
+Branch `codex/seller-digital-c` starts at fetched `origin/develop`
+`25f49b61c57f0964c11b61ef8d5ace552a9b3962`, containing #468 and
+#469. Both C1 (digital) and C2 (conversation/bulk row rules) fit in this change;
+no split was necessary. This is seller-panel work. Back-office digital
+controllers, mobile API, storefront downloads and `products:sync` are unchanged.
+
+### Characterization, before replacing the controller
+
+`SellerDigitalProductPersistenceTest` ran against the original controller:
+**7 passed, 84 failed, 134 assertions**. The passing characterization cases were:
+
+- `digital create characterizes assigned fields and server authority`: all
+  displayed digital fields persist through direct assignments: name/category,
+  tags/description, prices/discount/type, gallery/thumbnail, meta texts/image and
+  downloadable file id. The translation, tax and zero-quantity stock are also
+  written. This is **not** the physical flow's mass-assignment field-loss defect.
+  The row has seller owner, added_by=seller, digital=1, published=1, origin=null,
+  but **approved=1 even when admin approval is enabled**.
+- `digital update characterizes assigned fields without changing authority`:
+  posted digital fields save, slug is lowercased, translation follows lang;
+  owner/added_by/approval/publication stay as stored. An unchanged null image is
+  explicitly cleared, as before. Non-default language keeps base name/description.
+- The four cases now named `digital refuses characterized foreign upload
+  overlong name missing file and unknown field` originally accepted a foreign
+  upload, 201-character name (SQLite), missing file, and unknown key. Unknown
+  fields are silently dropped; the create form's hidden added_by and edit's
+  hidden id/added_by have never selected authority. They are removed and refused.
+- `digital refuses another sellers id before validating input` originally
+  redirected without writes. The same ProductPolicy now authorizes the request
+  before validation, retaining the original warning/redirect, and is checked
+  again by the writer under lock.
+
+The 84 validation failures reproduced both store/update accepting bad input or
+crashing instead of returning field errors. Separate approval and stock-failure
+rollback regressions then failed **3/3** before implementation. Both form
+mark/old-input tests failed before replacing the templates. A two-product list
+render reproduced a lazy-loading 500; its endpoint now eager-loads narrow
+translation/category columns. A new picker parity test caught this PR initially
+refusing descendants with digital=0; the rules now accept exactly the displayed
+digital-root tree, including those descendants.
+
+### Field rules: original plain Request → validated seller contract
+
+| Field | Before | Now (store and update unless stated) |
+| --- | --- | --- |
+| name | Any assigned value; create HTML required, no limit | Required string, max **200** characters; HTML limit/mark/required agree. |
+| category_id | Any id; browser required | Required integer in the offered digital-root category tree. |
+| unit_price, purchase_price | Unvalidated; browser required | Required numeric, nonnegative **decimal(20,2)**, max **999999999999999999.99**, at most two fractional digits; zero accepted. |
+| discount / discount_type | Unvalidated; inconsistent marks | Both required; nonnegative decimal amount, type amount/percent; amount <= unit price, percent <=100. Full discounts and a free product with zero discount remain possible. |
+| tags | Assumed tags[0] JSON; malformed shapes crash | Optional one-element list containing Tagify JSON, <=100 objects with only a nonblank string value, no commas, joined length <=500; input JSON <=10,000 characters. |
+| photos | Arbitrary comma-separated references; edit HTML required | Optional string max2000, at most50 distinct existing **seller-owned image** ids. |
+| thumbnail_img, meta_img | Arbitrary references; thumbnail HTML required on edit | Optional integer referencing an existing **seller-owned image**. No retained foreign-reference exception. |
+| file | Arbitrary or missing reference despite visible star | Required integer referencing an existing **seller-owned** upload of one of the uploader's supported kinds: image/audio/video/document/archive. Unknown/null upload kinds refused; the picker continues to offer all those kinds. Upload content validation remains the existing uploader's responsibility. |
+| description | Arbitrary assigned HTML | Optional string, sanitized before validation/persistence; MEDIUMTEXT has no artificial text cap. |
+| meta_title, meta_description | Any assigned value | Optional strings; existing MEDIUMTEXT/LONGTEXT storage, no invented varchar cap. |
+| tax_id[], tax[], tax_type[] | Unchecked parallel arrays | Shared active-tax references, distinct ids, bounded lists, matching lengths, required per-row numeric decimal amount/type; percent <=100. Existing taxes stay when no tax rows are posted, as before. |
+| lang (update) | Unvalidated; controls default-language base text | Required existing language; non-default translation does not change base name/description. |
+| slug (update) | Unvalidated lowercase string | Optional max255 alphanumeric/hyphen, lowercased before uniqueness validation, excluding only this product; omitted/blank preserves current slug. Create generates a bounded unique ProductSlug with a nonempty fallback. |
+| ownership/status/origin and unknown keys | Unused keys silently discarded | Strict refusal, including empty values, query keys and uploaded unknown fields. Only _token/_method are exempt transport keys. |
+
+Both Blade wrappers use shared fields, marks and one legend, field errors and
+scalar-safe old input. The optional image/tag fields lose their false stars or
+requirements. Tax rows have separate amount/type labels and requirements.
+Client-side numeric constraints and file-selection feedback supplement server
+validation. The old hidden added_by/id values are gone; edit retains lang.
+Stored decimal defaults use exact ProductFormNumber formatting; old input keeps
+its entered representation. The retained AIZ uploader and Blade CSP policy stay.
+
+### Explicit transactional persistence and ownership
+
+`SellerDigitalProductWriter` assigns an explicit allowlist, creates seller-owned
+rows with digital=1, published=1 and null origin, and applies the physical
+seller approval setting (pending=0 when enabled, approved=1 otherwise).
+Update locks the seller-owned Product, rechecks ProductPolicy and preserves all
+ownership/approval/publication/origin columns. Product's existing feed-column
+guard runs at assignment/save **before** stock/tax/translation mutation. A feed
+rename refusal therefore preserves all related rows; non-default translation and
+store-owned fields remain editable. Stock and tax failures roll back the entire
+transaction. Slugs use ProductSlug; no unguard/all-input fill or widened model
+fillable is introduced. Shared related-row operations move from
+PhysicalProductWriter to ProductWriter; physical computations remain separate.
+The seller Tagify/gallery rules are shared with PhysicalProductRequest.
+
+Option A is unchanged: sync owns only name/ar_name/published on feed-origin rows;
+store owns all other columns and those three on its own rows. No data is
+reclassified. The owner-reviewed exact-id procedure in §52 remains operational
+work, not a new decision for this PR.
+
+### Conversation and bulk row rules
+
+`SellerCatalogueRowRulesTest` exercises actual seller endpoints. The seller
+conversation request already had the 65,535-byte guard from §50: exact
+multibyte boundary succeeds, one byte more fails, and a foreign conversation
+still fails membership before malformed-message validation. No conversation
+behavior is changed. The character-only **storefront** conversation validator
+recorded in §48 is outside this seller-only task and remains a follow-up.
+
+Six seller bulk regressions failed before repair: unit >20 characters, price
+above decimal(20,2), excess fractional precision, stock >2147483647, tags >500,
+and video URL >100. Seller ProductsImport now enforces these storage bounds;
+admin import rules retain their previous behavior. An exact-boundary CSV exposed
+the spreadsheet reader rounding a decimal string to a float before validation;
+a seller-only value binder preserves CSV strings. Existing sanitization,
+subscription/approval/ownership and whole-import rollback remain. Tests pair a
+valid and invalid row and assert no product/stock/upload write, then accept exact
+boundaries and prove another seller's product is unchanged.
+
+The previously reported import-created unowned external upload rows and missing
+POST verification-status repeat are unchanged; this task addresses row bounds,
+not a new import permission or historical upload-ownership policy. No owner
+choice blocks these repairs, and no automatic cleanup/backfill is performed.
+
+### Audit and verification
+
+The committed 20261022 audit is regenerated with `forms:audit-required
+--date=20261022`: **290 →255 overall**, A/B/C/D/E/F **39/40/38/10/105/23**;
+seller **43 →8**, **0/0/0/0/8/0**. Remaining seller findings are scanner E
+false positives for the conditional lang/slug controls in physical and digital
+shared partials; runtime language/slug rules are covered at the endpoints.
+Both digital wrappers join FIXED_STOREFRONT_FORMS. The back-office baseline
+stays **82**, with no new or removed baseline entry; its findings did not change.
+
+- Initial digital characterization: **7 passed /84 failed /134 assertions**;
+  approval/rollback **3/3 failed** before repair; both form render cases failed.
+  Six bulk bounds failed before repair. Seller conversation byte/membership
+  characterization passed. The invalid exact-boundary import fixture also
+  exposed CSV float conversion; its unrelated video/noise fixture mistakes were
+  corrected without weakening the intended boundary/no-write assertions.
+- Broad focused seller Pest: **493 passed /1,894 assertions**. The final
+  integration pass after preserving the original authorization response and
+  updating the feed test's digital payload passed **307 tests /1,538 assertions**.
+  The feed regression retains its name-error and unchanged product/stock checks.
+- Final focused MySQL 8.4: **162 passed /625 assertions**, covering both new
+  files plus ProductColumnOwnershipTest. Both new files are listed in **both**
+  tests.yml and pre_push_check.py MYSQL_TESTS. Their routes render Blade or
+  redirect; no new Inertia render test needs withoutVite().
+- Playwright, full retained uploader/seller spec: **11 passed (1.2 minutes)**,
+  including digital missing-file feedback, actual owned file upload/selection,
+  create/edit, pending approval and matching base/stock prices. System Chromium
+  and FFmpeg were used; /opt/pw-browsers/chromium is absent. The first launch
+  lacked Playwright's FFmpeg cache path; a task-local link uses the installed
+  FFmpeg. Broader attempts exposed the stale ignored public/hot marker and a
+  translation key whose displayed Save product casing depends on the first
+  caller. The marker was backed up and the new template/test use the existing
+  canonical label. Existing browser assertions/CSP/deadlines remain unchanged.
+- Production build, targeted Prettier/ESLint, node syntax check, form audit,
+  ratchet, script selftests, CI planner (**23 tests**) and diff checks passed.
+  Baseline entries remain unchanged.
+- The first explicit --full stopped at TypeScript because provisioned packages
+  were stale; npm ci restored the locked dependencies. The second passed
+  Wayfinder, ESLint, Prettier, vue-tsc, **336 Vitest files /2,653 tests**, Pint
+  and PHPStan (**zero errors**) but Pest found **3 failures /6 errors /3 existing
+  SQLite driver skips** across 7,641 tests. Two integration fixtures/response
+  differences are repaired as above. Missing WebP and stale Composer classmap
+  caused the other failures; optimized autoload was regenerated, lock unchanged.
+  GD was built locally with WebP. Automatic approval review refused replacing
+  the shared provisioned extension because of its broader runtime impact; the
+  shared extension was left untouched. A task-local php.ini/extension directory
+  loads the new GD only for this task. Its multipart suite passed **36 tests /
+  168 assertions**. A fresh explicit full gate runs with that isolated config.
+
+The final full-gate and complete MySQL-group results follow below. No bare or
+attested pre-push run, skipped/quarantined test or manual CI-Verified trailer is
+used. No Vue source changed; whole Vitest still runs in the full gate.
+
+The complete MySQL CI list passed **403 tests /1,749 assertions**, with **6 existing
+driver-specific skips** (409 total, MySQL 8.4). It includes the existing physical
+persistence and admin MySQL edit tests as well as both new files and the corrected
+feed-ownership fixture.
+
+The next isolated-config full run passed its frontend/static checks again, then
+Pest reported **7,637 passed /1 failed /3 existing SQLite driver skips /42,891
+assertions**. The one failure was Blade's atomic compiled-view rename: the
+concurrently running MySQL group's existing physical writer cleared the root
+view cache while parallel Pest was compiling a view under test_2. This was a
+local verification scheduling error. No application/test assertion or timeout
+was changed for it; a fresh explicit --full runs alone, after MySQL and browser
+checks finish. Its final result is recorded below.
+
+The full pre-push mode does not include the separate browser/MySQL lanes.
+Composer/npm advisory audits, deploy rollback tests, a full-repository browser
+run and deployment were not run locally for C. Real PR CI remains required.
+
+**Final explicit `python3 .claude/scripts/pre_push_check.py --full`: passed**
+with task-local PHPRC, after the other test groups finished. It ran setup
+readiness, Wayfinder generation, whole-repo ESLint, Prettier, vue-tsc,
+**336 Vitest files /2,653 passing tests**, Pint, PHPStan (**zero errors**),
+config clear and parallel Pest: **7,638 passed /3 existing MySQL-only skips on
+SQLite /42,897 assertions (149.521 seconds)**. No application or test code changed
+after this pass; only verification documentation was finalized. The complete
+MySQL and browser results above were run separately. No new test was skipped,
+loosened or quarantined. The change fits **25 files**, covering C1 and C2 together.

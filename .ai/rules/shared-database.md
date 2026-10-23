@@ -405,7 +405,11 @@ locks for model saves (quiet saves included), bulk updates and counter writes.
 A mixed-origin bulk update refuses the whole operation. Store upserts and origin
 marker updates are refused. Raw SQL/base-builder product writes are prohibited
 outside `SyncProductsCommand`; the architecture guard pins that boundary.
-`InHouseProductWriter`, admin/seller digital writes, seller `ProductService`,
+`SellerDigitalProductWriter` now explicitly persists validated seller digital fields in
+one transaction, including stock/taxes/translations (§55). Its locked product save
+precedes every related-row mutation. Shared related-row operations live in
+`ProductWriter`; `PhysicalProductWriter` retains physical-only computations.
+`InHouseProductWriter`, admin digital writes, seller `ProductService`,
 publication switches and legacy imports all go through the guarded Product.
 Legacy imports attempting to rename or publish a feed-origin row now fail with
 an explicit validation error; they are not privileged sync writers. Store-owned

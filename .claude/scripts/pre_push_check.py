@@ -115,6 +115,8 @@ MYSQL_TESTS = [
     'tests/Feature/Console/SyncProductsCommandTest.php',
     'tests/Feature/ProductColumnOwnershipTest.php',
     'tests/Feature/SellerProductPersistenceTest.php',
+    'tests/Feature/SellerDigitalProductPersistenceTest.php',
+    'tests/Feature/SellerCatalogueRowRulesTest.php',
     'tests/Feature/Store/Admin/ProductMySqlEditTest.php',
 ]
 
