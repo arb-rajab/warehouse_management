@@ -141,10 +141,8 @@ const hasRequiredFields = provideRequiredFields();
                     id="seller-payment-amount"
                     name="amount"
                     type="number"
-                    min="0.01"
-                    step="0.01"
-                    required
-                    :value="
+                    :min="details.withdrawal ? details.withdrawal.amount : 0.01"
+                    :max="
                         details.withdrawal
                             ? Math.min(
                                   details.withdrawal.amount,
@@ -152,12 +150,17 @@ const hasRequiredFields = provideRequiredFields();
                               )
                             : Math.abs(details.shop.admin_to_pay)
                     "
+                    step="0.01"
+                    required
+                    :value="
+                        details.withdrawal
+                            ? details.withdrawal.amount
+                            : Math.abs(details.shop.admin_to_pay)
+                    "
                     :label="t('store.sellers.amount')"
                     :error="errors.amount"
                 />
-                <label
-                    v-if="details.shop.admin_to_pay > 0"
-                    :class="fieldLabelClass"
+                <label :class="fieldLabelClass"
                     >{{ t('store.sellers.paymentMethod')
                     }}<RequiredMark /><select
                         v-model="method"
@@ -168,19 +171,34 @@ const hasRequiredFields = provideRequiredFields();
                         <option value="">
                             {{ t('store.sellers.selectPaymentMethod') }}
                         </option>
-                        <option v-if="details.shop.cash_enabled" value="cash">
+                        <option
+                            v-if="
+                                details.shop.admin_to_pay > 0 &&
+                                details.shop.cash_enabled
+                            "
+                            value="cash"
+                        >
                             {{ t('store.sellers.cash') }}
                         </option>
                         <option
-                            v-if="details.shop.bank_enabled"
+                            v-if="
+                                details.shop.admin_to_pay > 0 &&
+                                details.shop.bank_enabled
+                            "
                             value="bank_payment"
                         >
                             {{ t('store.sellers.bankPayment') }}
+                        </option>
+                        <option
+                            v-if="details.shop.admin_to_pay <= 0"
+                            value="seller_paid_to_admin"
+                        >
+                            {{ t('store.sellers.sellerPaidToAdmin') }}
                         </option></select
                     ><FieldError :message="errors.payment_option"
                 /></label>
                 <FormField
-                    v-if="!details.withdrawal && method === 'bank_payment'"
+                    v-if="details.withdrawal || method === 'bank_payment'"
                     id="seller-payment-txn"
                     name="txn_code"
                     maxlength="191"

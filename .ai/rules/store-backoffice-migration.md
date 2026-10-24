@@ -29,6 +29,7 @@ Latest follow-up: [retire the unused admin shells](#39-retire-the-unused-admin-s
 Catalogue follow-up: [admin seller product list](#38-admin-seller-product-list-2026-10-20).
 Classified-products follow-up: [admin classified products](#37-admin-classified-products-2026-10-19).
 Seller-settings follow-up: [seller commission and verification form](#36-seller-commission-and-verification-form-2026-10-19).
+Payout safety follow-up: [D1, D2, D3 and D5](#60-seller-payout-defects-d1-d2-d3-and-d5-2026-10-24).
 Payment follow-up: [seller payments and withdrawals](#35-seller-payments-and-withdrawals-2026-10-19).
 Seller-account follow-up: [seller list and accounts](#34-seller-list-and-accounts-2026-10-19).
 Dashboard follow-up: [admin dashboard](#33-admin-dashboard-2026-10-18).
@@ -3643,6 +3644,8 @@ through the bare pre-push mode.
 
 ## 35. Seller payments and withdrawals (2026-10-19)
 
+Historical conversion record. [§60](#60-seller-payout-defects-d1-d2-d3-and-d5-2026-10-24) supersedes the retained D1/D2/D3/D5 defects and limits below; the money directions and transaction boundaries stay unchanged.
+
 [PR #446](https://github.com/arb-rajab/warehouse_management/pull/446) is the
 single PR into `develop`. Implementation commit **f4ca952d** passed the explicit
 full gate before pushing. This documentation-only `[skip ci]` follow-up records
@@ -7027,3 +7030,142 @@ Not covered, still owner decisions: who gets `edit_staff_role` or `edit_staff` a
 all; a role editor can still remove permissions they hold from a role they
 belong to (a lockout, not an escalation).
 
+
+## 60. Seller payout defects D1, D2, D3 and D5 (2026-10-24)
+
+Branch `codex/seller-payout-defects` starts at current `origin/develop`
+`7cbfe0374bf81a6bfb63f102f93944473efae630` (PR #490, including the staff
+privilege fix and Chromium setup helper). Scope is checklist 11.3 D1/D2/D3/D5.
+D4's empty resource actions, D6's seller dashboard, routes, permission names,
+gates, commission calculations, wallets, notifications and history screens
+are unchanged. Checklist 4.10 still requires the owner's finance-gate sign-off.
+
+### Contract and money directions
+
+`StoreSellerPaymentRequest` already requires `payment_option` (string, max 100),
+`amount` (numeric, greater than zero), and the shop reference. Its existing
+`txn_code` rule remains nullable/string/max 191 and the writer already stores it.
+
+- **D2:** the Clear due form now offers a required, marked Payment Method
+  select, with the form legend. Its `seller_paid_to_admin` choice uses the
+  existing non-cash/bank credit branch and records `Seller paid to admin`.
+  A negative balance can be cleared; zero balance cannot accept a positive
+  amount under the unchanged greater-than-zero rule and the new zero limit.
+- **D3:** withdrawal forms show TRX ID for cash and bank, with maxlength 191,
+  no required attribute and no required mark. Balance payments retain their
+  existing bank-only transaction-code control. The schema actually created
+  `payments.txn_code` as VARCHAR(100), despite the existing 191-character
+  request contract. The owner explicitly authorized a narrow widening
+  migration to nullable VARCHAR(191). It preserves references/nulls, leaves
+  already-wider columns alone and never narrows on down(). No withdrawal
+  schema, new columns or partial-payment state is introduced.
+- **D5:** under the existing shop row lock, the limit for cash/bank is
+  `max(admin_to_pay, 0)`; for every other method it is
+  `max(-admin_to_pay, 0)`. The former debits, the latter credits and records
+  `Seller paid to admin`. Thus a payment moves only the existing due toward
+  zero, never past it or farther away. An arbitrary nonempty method remains
+  a credit method, not a new cash/bank alias. The server refuses an excess
+  with `messages.seller_payout_balance_limit` in English and Arabic:
+  “The amount cannot exceed the available balance for this payment method
+  (:amount).” Native min/max constraints mirror the limits.
+- **D1, owner-approved conservative decision:** a cash/bank withdrawal payout
+  must equal the entire requested amount, as well as fit the positive balance.
+  Both lower and higher amounts receive `messages.seller_payout_full_request`
+  in English/Arabic: “Pay the full requested amount (:amount), or ask the
+  seller to submit a new request. Partial payments are not supported.”
+  The dialog defaults to the full request and sets its minimum to that amount;
+  its maximum is the lesser of the request and balance. An underfunded request
+  therefore cannot submit a partial amount. The server remains authoritative.
+
+Exact decimal comparisons use the installed Brick Math package, avoiding float
+rounding at the request/limit boundary. The same existing transaction locks the
+shop, then the pending withdrawal. Checks precede every status/balance/payment
+write; a validation exception rolls the transaction back and the existing finally
+block clears the temporary session keys. A paid/nonpending request is still 404,
+even when its first payment exhausted the balance. Accepted cash/bank payouts
+close status 0/null to 1, set viewed to 1, debit the shop and insert one payment.
+Non-cash/bank credits never close a request, even if a request reference is sent.
+The seller account ID, amount, normalized method, optional code and null details
+stay in the payment row. The request amount and seller message are preserved.
+
+True partial withdrawals remain unsupported. Supporting them would require an
+owner-approved durable allocation of payments to requests, remaining/paid amount
+tracking and status rules, plus concurrency/idempotency and history tests. That
+future accounting/schema work is outside this conservative repair.
+
+### Characterization and proof
+
+Before fixes, real endpoint tests on **both SQLite and MySQL** passed four
+characterizations and failed two desired refusal tests (422 expected, 302
+returned). The dialog regression tests failed for D1, D2 and D3 before its edit.
+
+| Case | Before | After |
+| --- | --- | --- |
+| D1: balance 100, request 80, pay 12.50 | balance 87.50, request paid, one payment | 422; balance 100, request pending/unviewed, no payment |
+| D2: balance -40, clear 40 | missing method: 422, no writes | selected credit method: balance 0, request unchanged, exactly one `Seller paid to admin` payment |
+| D3: full request with 191-character code | four MySQL cases returned 500 on VARCHAR(100); nullable-code cases passed | after approved widening: cash/bank and status 0/null retain the 191-character code; 192 characters refused before writes |
+| D5: balance 100, pay 101 | balance -1, one payment | 422; balance 100, no payment |
+| D5: balance 100, request 40, pay 41 | balance 59, request paid, one payment | 422; balance 100, request pending, no payment |
+
+`SellerPayoutDefectsTest` covers full-limit payouts, limit+1, both money
+directions, wrong-direction methods, zero/negative amounts, missing/invalid
+methods, nullable and 191/192-character codes, ownership, repeated submissions,
+wallet/noise-row preservation and English/Arabic messages. Refusals compare
+snapshots of all shop/request/payment rows and wallet balances. Existing payout
+characterizations are updated for the deliberate limits while retaining valid
+method/direction, rollback, permission and no-notification coverage. Existing
+Inertia-rendering tests in the changed controller test call `withoutVite()`.
+
+Both new Pest files are listed in `.github/workflows/tests.yml` and
+`MYSQL_TESTS` in `.claude/scripts/pre_push_check.py`. Migration tests cover old
+100-character upgrades, existing rows/nulls, idempotence and already-wider
+columns. Vitest checks the submitted Clear due method, required marks/legend,
+zero/full-request native bounds and optional code. The existing payout browser
+spec is updated for the code, full-amount constraint and an actual Clear due
+round trip. Grepping e2e for Payment Method, TRX ID and Clear due found no bare
+accessible-label selectors requiring a suffix correction; the updated flow
+uses the required accessible names explicitly.
+
+The required-fields audit was regenerated because the Clear due method is now
+visible/marked. It remains **223 findings**; the baseline remains **55** with
+no additions or exceptions. The scanner already saw the existing positive-due
+method and does not distinguish this runtime branch.
+
+### Verification and limits
+
+- Final `python3 .claude/scripts/pre_push_check.py --full`: **exit 0**.
+  Wayfinder generation, whole-repo ESLint/Prettier, frontend types, **338 Vitest
+  files / 2,703 tests**, Pint, PHPStan (**zero errors**), config-cache clearing
+  and Pest (**7,759 passed / 43,570 assertions**) completed. Three unchanged
+  MySQL-only longitude tests skip on SQLite; no test was added to a skip list,
+  loosened or quarantined. No hand-written CI-Verified trailer.
+- Focused SQLite: **87 passed / 692 assertions** (new payout/migration tests
+  and existing payment controller tests). Focused MySQL 8.4 with
+  `DB_CONNECTION=mysql DB_DATABASE=warehouse_test DB_USERNAME=root
+  DB_PASSWORD=password` and localhost: **52 passed / 367 assertions**, no skips.
+- Dialog Vitest: **10 passed**. The existing payout Playwright spec passed
+  **1 Chromium test in 11.9 s**, including a real Clear due submission,
+  withdrawal transaction code, native full-amount constraint, confirmation,
+  focus, RTL, dark contrast and strict CSP. No retained Blade payout modal
+  remains to run. The required browser helper reused Chromium and FFmpeg.
+- `npm run types:check`, `composer run types:check`, changed-file ESLint and
+  Prettier (including the workflow), `vendor/bin/pint --dirty --format agent`
+  and `git diff --check` pass. Required-fields ratchet: **4 passed / 7
+  assertions**. Script selftests: all cases passed; CI planner: **23 passed**.
+  The normal production build passed with the configured proxy and trust.
+
+Initial verification exposed environment defects: stale frontend dependencies
+and Vite assets, Composer's old class map naming removed controllers, and GD
+without WebP. Dependencies were restored from the unchanged lockfile, assets and
+Composer's autoloader regenerated, and WebP-enabled GD rebuilt outside the repo.
+The first full Pest run had 7,752 passes, one failure and six errors from those
+runtime defects; the final entire full gate above was rerun after their repair
+and passed. Earlier characterization failures were intentional pre-fix evidence.
+
+Not run: the full Playwright suite, the rest of the MySQL migration list,
+Composer/npm security audits, deploy-script tests, production data/schema
+operations or deployment. The requested focused MySQL and browser tests ran
+separately because explicit `--full` does not include those CI-only groups.
+The finance-owner grants/sign-off in checklist 4.10 remain an operational owner
+responsibility; this change grants no permissions. True partial-payment support
+remains future owner-approved work, not an unresolved decision in this repair.

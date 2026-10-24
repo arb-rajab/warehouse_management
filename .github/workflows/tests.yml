@@ -366,6 +366,8 @@ jobs:
         timeout-minutes: 10
         run: >-
           php artisan test
+          tests/Feature/Database/WidenPaymentTransactionCodeTest.php
+          tests/Feature/Store/Admin/SellerPayoutDefectsTest.php
           tests/Feature/Database/DropRedundantForeignKeyIndexesTest.php
           tests/Feature/Database/SchemaIdentifierLengthTest.php
           tests/Feature/Database/AddFulltextIndexToProductsTableTest.php

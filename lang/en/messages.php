@@ -70,4 +70,6 @@ return [
     'order_updated_body' => 'Order :code was updated. Please review it in the app.',
     'role_permission_not_held' => 'You can only give a role permissions that you hold yourself.',
     'staff_role_not_assignable' => 'You can only give a role that grants nothing beyond your own permissions, and you cannot change your own role.',
+    'seller_payout_full_request' => 'Pay the full requested amount (:amount), or ask the seller to submit a new request. Partial payments are not supported.',
+    'seller_payout_balance_limit' => 'The amount cannot exceed the available balance for this payment method (:amount).',
 ];

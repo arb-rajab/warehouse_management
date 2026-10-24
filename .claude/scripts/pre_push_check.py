@@ -106,6 +106,8 @@ MYSQL_ENV = {
 
 # The files the `Pest (MySQL migrations)` job runs (.github/workflows/tests.yml).
 MYSQL_TESTS = [
+    'tests/Feature/Database/WidenPaymentTransactionCodeTest.php',
+    'tests/Feature/Store/Admin/SellerPayoutDefectsTest.php',
     'tests/Feature/Database/DropRedundantForeignKeyIndexesTest.php',
     'tests/Feature/Database/SchemaIdentifierLengthTest.php',
     'tests/Feature/Database/AddFulltextIndexToProductsTableTest.php',
