@@ -87,9 +87,23 @@ def main() -> int:
         print('build_without_fonts.py')
         import build_without_fonts
 
-        stripped = build_without_fonts.fontless_config(build_without_fonts.CONFIG.read_text())
+        source = build_without_fonts.CONFIG.read_text()
+        check('bundled local fonts are preserved', build_without_fonts.fontless_config(source) == source)
+        for weight in (400, 500, 600):
+            font = SCRIPTS.parents[1] / f'resources/fonts/instrument-sans/instrument-sans-{weight}-normal.woff2'
+            check(f'Instrument Sans {weight} is bundled as WOFF2', font.read_bytes()[:4] == b'wOF2')
+
+        legacy = """import { bunny } from 'laravel-vite-plugin/fonts';
+export default laravel({
+    input: ['resources/js/app.ts'],
+    fonts: [
+        bunny('Instrument Sans', { weights: [400, 500, 600] }),
+    ],
+});
+"""
+        stripped = build_without_fonts.fontless_config(legacy)
         check(
-            'the real vite.config.ts loses the font plugin and keeps the rest',
+            'legacy Bunny config loses the remote font provider and keeps the rest',
             'bunny' not in stripped and 'fonts' not in stripped and 'laravel({' in stripped and 'input:' in stripped,
             stripped,
         )
