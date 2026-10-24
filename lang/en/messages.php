@@ -68,4 +68,6 @@ return [
     'order_terminal' => 'This completed transition cannot be reversed.',
     'order_updated_title' => 'Order updated',
     'order_updated_body' => 'Order :code was updated. Please review it in the app.',
+    'role_permission_not_held' => 'You can only give a role permissions that you hold yourself.',
+    'staff_role_not_assignable' => 'You can only give a role that grants nothing beyond your own permissions, and you cannot change your own role.',
 ];
