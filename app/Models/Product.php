@@ -22,6 +22,7 @@ use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\App;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * A row in this app's `products` table.
@@ -37,7 +38,7 @@ use Illuminate\Support\Facades\App;
  * add_legacy_columns_to_store_tables adds in a form Larastan cannot read.
  *
  * `image_url` and `boxes_count` are not columns on it: the first resolves
- * through the store-owned `uploads` table, the second through this app's own
+ * from a warehouse reference image or the store-owned `uploads` table, the second through this app's own
  * `wms_product_settings`. Both are exposed as attributes so the API and
  * admin payloads keep the shape their clients already consume.
  *
@@ -45,6 +46,7 @@ use Illuminate\Support\Facades\App;
  * @property string|null $slug
  * @property string $name
  * @property string $ar_name
+ * @property string|null $warehouse_image_path
  * @property int|null $thumbnail_img
  * @property bool $published
  * @property int|null $user_id
@@ -209,7 +211,14 @@ class Product extends Model
      */
     protected function imageUrl(): Attribute
     {
-        return Attribute::make(get: fn (): ?string => $this->thumbnailUpload?->url);
+        return Attribute::make(get: fn (): ?string => $this->getRawOriginal('warehouse_image_path')
+            ? Storage::disk('public')->url($this->getRawOriginal('warehouse_image_path'))
+            : $this->thumbnailUpload?->url);
+    }
+
+    public function imageReviewSource(): string
+    {
+        return (string) ($this->getRawOriginal('warehouse_image_path') ?? $this->thumbnail_img ?? '');
     }
 
     /**

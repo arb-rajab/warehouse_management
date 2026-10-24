@@ -22,7 +22,7 @@ class PalletController extends Controller
     use ChecksIfMatch;
 
     private const array EAGER_LOAD = [
-        'product:id,name,ar_name,thumbnail_img,published',
+        'product:id,name,ar_name,thumbnail_img,warehouse_image_path,published',
         'product.thumbnailUpload:id,file_name,external_link',
         'product.setting:product_id,boxes_count',
         'cell.row:id,letter',
@@ -46,6 +46,7 @@ class PalletController extends Controller
             $request->input('expiration_date'),
             $user->id,
             $request->input('note'),
+            $request->imageReviewData(),
         );
 
         return (new PalletResource($pallet->load(self::EAGER_LOAD)))

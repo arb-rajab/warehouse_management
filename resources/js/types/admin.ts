@@ -246,6 +246,8 @@ export interface ProductBarcode {
 }
 
 export interface ProductSummary {
+    image_verification:
+        'needs_review' | 'matches' | 'doesnt_match' | 'image_missing';
     id: number;
     /** The store's raw base name — see `CellPallet.product_name`. */
     name: string;
@@ -283,7 +285,29 @@ export type ProductSortBy =
     | 'expired_cells_count'
     | 'expiring_soon_count';
 
+export interface ProductImageReviewDetails {
+    id: number;
+    name: string;
+    ar_name: string;
+    image_url: string | null;
+    image_source: string;
+    barcodes: string[];
+    reviews: {
+        data: {
+            id: number;
+            status: string;
+            note: string | null;
+            image_url: string | null;
+            user: { id: number; name: string };
+            created_at: string;
+        }[];
+        current_page: number;
+        last_page: number;
+    };
+}
+
 export interface ProductFilters {
+    image_verification?: string;
     state?: Cell['state'];
     expired?: boolean;
     expires_within_days?: number;

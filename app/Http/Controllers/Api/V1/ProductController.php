@@ -27,7 +27,7 @@ class ProductController extends Controller
 
         return ProductResource::collection(
             Product::query()
-                ->select('id', 'name', 'ar_name', 'thumbnail_img', 'published')
+                ->select('id', 'name', 'ar_name', 'thumbnail_img', 'warehouse_image_path', 'published')
                 ->with(Product::WITH_DERIVED_ATTRIBUTES)
                 ->searchByName($request->string('q')->value())
                 ->activeOrInWarehouse()
@@ -51,7 +51,7 @@ class ProductController extends Controller
     public function show(string $product): ProductResource
     {
         $query = Product::query()
-            ->select('id', 'name', 'ar_name', 'thumbnail_img', 'published')
+            ->select('id', 'name', 'ar_name', 'thumbnail_img', 'warehouse_image_path', 'published')
             ->with(Product::WITH_DERIVED_ATTRIBUTES);
 
         $resolvedProduct = preg_match('/^[1-9][0-9]{0,17}$/', $product)

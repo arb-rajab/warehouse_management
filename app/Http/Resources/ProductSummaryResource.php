@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
+ * @property-read string|null $image_verification
  * @property-read int $id
  * @property-read string $name
  * @property-read string $ar_name
@@ -32,6 +33,7 @@ class ProductSummaryResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
+            'image_verification' => $this->image_verification ?? 'needs_review',
             'id' => $this->id,
             'name' => $this->name,
             'ar_name' => $this->ar_name,

@@ -46,7 +46,7 @@ class Cell extends Model
      */
     public const array WITH_CONTENTS = [
         'pallet:id,cell_id,product_id,expiration_date,remaining_boxes,created_at',
-        'pallet.product:id,name,ar_name,thumbnail_img,published',
+        'pallet.product:id,name,ar_name,thumbnail_img,warehouse_image_path,published',
         'pallet.product.thumbnailUpload:id,file_name,external_link',
         'pallet.cellEnteredLog:cell_status_logs.id,cell_status_logs.pallet_id,cell_status_logs.action,cell_status_logs.created_at',
     ];

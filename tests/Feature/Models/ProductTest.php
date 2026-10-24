@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 test('a product can be created with its fillable attributes', function () {
     $product = Product::factory()->imageUrl('https://example.com/widgets.png')->boxesCount(24)->create([
@@ -751,4 +752,14 @@ test('topSellingOf lists the seller\'s best selling visible products with a slug
 
     expect(Product::topSellingOf($seller)->pluck('slug')->all())->toBe(['high', 'middle', 'low'])
         ->and(Product::topSellingOf($seller, 2)->pluck('slug')->all())->toBe(['high', 'middle']);
+});
+
+test('warehouse reference images override imported thumbnails and produce versioned review sources', function () {
+    $product = Product::factory()->imageUrl('https://cdn.example.com/catalog.jpg')->create();
+    expect($product->imageReviewSource())->toBe((string) $product->thumbnail_img);
+    $product->forceFill(['warehouse_image_path' => 'product-reference-images/new.jpg'])->save();
+    expect($product->image_url)->toBe(Storage::disk('public')->url('product-reference-images/new.jpg'))
+        ->and($product->imageReviewSource())->toBe('product-reference-images/new.jpg');
+    $missing = Product::factory()->imageUrl(null)->create();
+    expect($missing->imageReviewSource())->toBe('')->and($missing->image_url)->toBeNull();
 });
