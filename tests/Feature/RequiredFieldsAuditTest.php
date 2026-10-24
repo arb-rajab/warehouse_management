@@ -153,7 +153,7 @@ test('the server side calls a FormRequest\'s rules() with its route model and te
         ->and($update['source'])->toBe('App\Http\Requests\Store\Admin\UpdateStaffRequest')
         ->and($update['fields']['password']['presence'])->toBe('optional')
         ->and($update['fields']['password_confirmation']['presence'])->toBe('conditional')
-        ->and($update['fields']['role_id']['file'].':'.$update['fields']['role_id']['line'])->toBe('app/Http/Requests/Concerns/ValidatesStoreStaff.php:28');
+        ->and($update['fields']['role_id']['file'].':'.$update['fields']['role_id']['line'])->toBe('app/Http/Requests/Concerns/ValidatesStoreStaff.php:31');
 });
 
 test('required_with and required_without rules are conditional', function () {
@@ -188,7 +188,7 @@ test('each finding class is raised by exactly the mismatch it names', function (
     ]);
     $missing = collect($result['findings'])->firstWhere('field', 'password_confirmation');
     expect($missing['detail'])->toContain('the form has no control for it')
-        ->and($missing['server'])->toBe('app/Http/Requests/Concerns/ValidatesStoreStaff.php:33')
+        ->and($missing['server'])->toBe('app/Http/Requests/Concerns/ValidatesStoreStaff.php:37')
         ->and($missing['severity'])->toBe('high')
         ->and($missing['priority'])->toBe('P3')
         ->and($missing['fingerprint'])->toBe('A|resources/js/pages/Fixture.vue|StaffController@store|password_confirmation');
