@@ -1,7 +1,7 @@
 """Run the Vite production build with the remote font plugin switched off.
 
-`vite.config.ts` fetches Instrument Sans from fonts.bunny.net at build time. A
-sandbox whose egress proxy blocks that host (403) cannot finish `npm run build`,
+Older `vite.config.ts` versions fetch Instrument Sans from fonts.bunny.net at
+build time. A sandbox whose egress proxy blocks that host cannot finish `npm run build`,
 so `public/build/manifest.json` is never written and ~200 Pest feature tests
 fail with ViteManifestNotFoundException. The SessionStart hook falls back to
 this script when the normal build fails:
@@ -11,9 +11,8 @@ this script when the normal build fails:
 It writes a temporary copy of vite.config.ts without the `bunny` import and the
 `fonts: [...]` option, builds with `vite build --config <copy>`, and always
 deletes the copy. `vite.config.ts` itself is never modified, so real builds keep
-the font. Exits with the build's exit code, or 1 when the config no longer has
-the shape this script strips (fix `fontless_config` rather than building with
-the font still in).
+the font. Configurations using only bundled local fonts are built unchanged.
+Exits with the build's exit code, or 1 for an unrecognized configuration.
 """
 
 import re
@@ -27,10 +26,14 @@ TEMP_CONFIG = ROOT / 'vite.nofonts.config.ts'
 
 BUNNY_IMPORT = re.compile(r"^import \{[^}]*\bbunny\b[^}]*\} from 'laravel-vite-plugin/fonts';\n", re.M)
 FONTS_OPTION = re.compile(r'^[ \t]*fonts: \[.*?^[ \t]*\],\n', re.M | re.S)
+LOCAL_IMPORT = re.compile(r"^import \{ local \} from 'laravel-vite-plugin/fonts';\n", re.M)
 
 
 def fontless_config(source: str) -> str:
-    """Return the Vite config source with the remote font plugin removed."""
+    """Remove the legacy Bunny provider, preserving bundled local fonts."""
+    if LOCAL_IMPORT.search(source) and not BUNNY_IMPORT.search(source):
+        return source
+
     without_import, imports = BUNNY_IMPORT.subn('', source)
     without_fonts, options = FONTS_OPTION.subn('', without_import)
 
