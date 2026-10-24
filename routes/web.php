@@ -8,6 +8,7 @@ use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\HelpController;
 use App\Http\Controllers\Admin\PalletController;
 use App\Http\Controllers\Admin\ProductController;
+use App\Http\Controllers\Admin\ProductImageReviewController;
 use App\Http\Controllers\Admin\RowController;
 use App\Http\Controllers\Admin\SettingController;
 use App\Http\Controllers\Admin\UserController;
@@ -81,6 +82,9 @@ Route::middleware('auth')->group(function () {
 
         Route::get('products', [ProductController::class, 'index'])->name('products.index');
         Route::get('products/search', [ProductController::class, 'search'])->middleware('cache.headers:private;etag')->name('products.search');
+        Route::get('products/{product}/image-reviews', [ProductImageReviewController::class, 'show'])->name('products.image-reviews.show');
+        Route::post('products/{product}/image-reviews', [ProductImageReviewController::class, 'store'])->name('products.image-reviews.store');
+        Route::post('products/{product}/reference-image', [ProductImageReviewController::class, 'updateImage'])->name('products.reference-image.update');
         Route::get('products/{product}/export-qr', [ProductController::class, 'exportQr'])->name('products.export-qr');
         Route::get('products/{product}/export-qr/preview', [ProductController::class, 'previewDefaultBarcode'])->name('products.export-qr.preview');
         Route::put('products/{product}/box-count', [ProductController::class, 'updateBoxCount'])->name('products.box-count.update');

@@ -2,6 +2,7 @@
 import type { FormDataConvertible } from '@inertiajs/core';
 import { Form, Head, Link, router } from '@inertiajs/vue3';
 import { Download, Eye, Plus, SlidersHorizontal, X } from '@lucide/vue';
+import { Check, TriangleAlert } from '@lucide/vue';
 import { computed, reactive, ref, watch } from 'vue';
 import { show as showHelp } from '@/actions/App/Http/Controllers/Admin/HelpController';
 import { index as palletsIndex } from '@/actions/App/Http/Controllers/Admin/PalletController';
@@ -30,6 +31,7 @@ import HelpLink from '@/components/HelpLink.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import Pagination from '@/components/Pagination.vue';
 import ProductActiveBadge from '@/components/ProductActiveBadge.vue';
+import ProductImageReviewDialog from '@/components/ProductImageReviewDialog.vue';
 import ProductOccupancyFilterFields from '@/components/ProductOccupancyFilterFields.vue';
 import ProductSelect from '@/components/ProductSelect.vue';
 import SubmitButton from '@/components/SubmitButton.vue';
@@ -77,6 +79,7 @@ const filters = reactive({
     inactive: props.filters.inactive ?? false,
     hide_inactive: props.filters.hide_inactive ?? false,
     low_stock: props.filters.low_stock ?? false,
+    image_verification: props.filters.image_verification ?? '',
     product_id: (props.filters.product_id ?? []).map(String),
     user_id: (props.filters.user_id ?? []).map(String),
     action: [...(props.filters.action ?? [])],
@@ -92,6 +95,8 @@ const { dateRangeDisabled, createdWithinDaysDisabled } =
     createdDateRangeExclusivity(filters);
 
 const filtersOpen = ref(false);
+const imageReviewProductId = ref<number | null>(null);
+const imageReviewOpen = ref(false);
 
 const activeFilterCount = computed(() =>
     countActive([
@@ -101,6 +106,7 @@ const activeFilterCount = computed(() =>
         filters.inactive,
         filters.hide_inactive,
         filters.low_stock,
+        filters.image_verification !== '',
         filters.product_id.length > 0,
         filters.user_id.length > 0,
         filters.action.length > 0,
@@ -120,7 +126,8 @@ const productColumnFiltered = computed(
         filters.product_id.length > 0 ||
         filters.inactive ||
         filters.hide_inactive ||
-        filters.low_stock,
+        filters.low_stock ||
+        filters.image_verification !== '',
 );
 
 /**
@@ -194,6 +201,7 @@ function clearFilters(): void {
     filters.inactive = false;
     filters.hide_inactive = false;
     filters.low_stock = false;
+    filters.image_verification = '';
     filters.product_id = [];
     filters.user_id = [];
     filters.action = [];
@@ -410,6 +418,11 @@ function refreshBarcodesDialogProduct(): void {
             </div>
         </PageHeader>
 
+        <ProductImageReviewDialog
+            v-if="imageReviewOpen && imageReviewProductId"
+            v-model:open="imageReviewOpen"
+            :product-id="imageReviewProductId"
+        />
         <FilterDialog
             v-model:open="filtersOpen"
             :title="t('common.filters.title')"
@@ -425,6 +438,29 @@ function refreshBarcodesDialogProduct(): void {
                         {{ t('products.filters.sections.occupancy') }}
                     </h3>
                     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                        <label
+                            for="image-verification-filter"
+                            :class="fieldLabelClass"
+                            >{{ t('imageReview.title') }}</label
+                        >
+                        <select
+                            id="image-verification-filter"
+                            v-model="filters.image_verification"
+                            :class="plainFieldInputClass"
+                        >
+                            <option value="">{{ t('imageReview.all') }}</option>
+                            <option
+                                v-for="status in [
+                                    'matches',
+                                    'doesnt_match',
+                                    'image_missing',
+                                ]"
+                                :key="status"
+                                :value="status"
+                            >
+                                {{ t(`imageReview.${status}`) }}
+                            </option>
+                        </select>
                         <ProductOccupancyFilterFields
                             id-prefix="filter"
                             v-model:state="filters.state"
@@ -889,6 +925,31 @@ function refreshBarcodesDialogProduct(): void {
                         />
                         {{ productName(product.name, product.ar_name) }}
                         <ProductActiveBadge :active="product.active" />
+                    </div>
+                    <div class="mt-2">
+                        <button
+                            type="button"
+                            :class="filterTriggerButtonClass"
+                            @click="
+                                imageReviewProductId = product.id;
+                                imageReviewOpen = true;
+                            "
+                        >
+                            <Check
+                                v-if="product.image_verification === 'matches'"
+                                class="h-4 w-4"
+                            /><Eye
+                                v-else-if="!product.image_verification"
+                                class="h-4 w-4"
+                            /><TriangleAlert v-else class="h-4 w-4" />
+                            {{
+                                t(
+                                    product.image_verification
+                                        ? `imageReview.${product.image_verification}`
+                                        : 'imageReview.review',
+                                )
+                            }}
+                        </button>
                     </div>
                 </td>
                 <td class="px-4 py-2">

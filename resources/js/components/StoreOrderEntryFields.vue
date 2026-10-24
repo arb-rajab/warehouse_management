@@ -5,6 +5,7 @@ import ActionErrorBanner from '@/components/ActionErrorBanner.vue';
 import DataTable from '@/components/DataTable.vue';
 import FieldError from '@/components/FieldError.vue';
 import FormField from '@/components/FormField.vue';
+import RequiredMark from '@/components/RequiredMark.vue';
 import StoreOrderSearch from '@/components/StoreOrderSearch.vue';
 import {
     fieldLabelClass,
@@ -251,9 +252,8 @@ function unitChanged(line: EntryLine): void {
                     />
                 </td>
                 <td class="px-3 py-3">
-                    <label :for="`unit-${row.id}`" :class="fieldLabelClass">{{
-                        t('store.orders.unit')
-                    }}</label
+                    <label :for="`unit-${row.id}`" :class="fieldLabelClass"
+                        >{{ t('store.orders.unit') }}<RequiredMark /></label
                     ><select
                         :id="`unit-${row.id}`"
                         v-model="row.unit"

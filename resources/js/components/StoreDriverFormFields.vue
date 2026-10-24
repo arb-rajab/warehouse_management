@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import FieldError from '@/components/FieldError.vue';
 import FormField from '@/components/FormField.vue';
+import RequiredMark from '@/components/RequiredMark.vue';
 import { fieldLabelClass, plainFieldInputClass } from '@/lib/filters';
 import { t } from '@/lib/i18n';
 import { usePasswordConfirmationMismatch } from '@/lib/passwordConfirmation';
@@ -55,9 +56,9 @@ const { confirmationMismatchError, syncConfirmationValidity } =
             required
         />
         <div>
-            <label for="country" :class="fieldLabelClass">{{
-                t('store.drivers.fields.country')
-            }}</label>
+            <label for="country" :class="fieldLabelClass"
+                >{{ t('store.drivers.fields.country') }}<RequiredMark
+            /></label>
             <select
                 id="country"
                 name="country"

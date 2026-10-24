@@ -24,6 +24,8 @@ test('an authenticated worker can add a pallet to an empty slot', function () {
     $expirationDate = now()->addMonth()->toDateString();
 
     $response = $this->postJson('/api/v1/pallets', [
+        'image_review_status' => $product->image_url ? 'matches' : 'image_missing',
+        'image_source' => $product->image_url,
         'row_letter' => $row->letter,
         'cell_number' => 1,
         'flat_number' => 2,
@@ -74,6 +76,8 @@ test('an authenticated worker can add a pallet to an empty slot with no expirati
     $cell = $row->cells()->where('flat_number', 2)->first();
 
     $response = $this->postJson('/api/v1/pallets', [
+        'image_review_status' => $product->image_url ? 'matches' : 'image_missing',
+        'image_source' => $product->image_url,
         'row_letter' => $row->letter,
         'cell_number' => 1,
         'flat_number' => 2,
@@ -119,6 +123,8 @@ test('a submitted expiration_date carrying a time component is normalized to a b
     $product = Product::factory()->create();
 
     $this->postJson('/api/v1/pallets', [
+        'image_review_status' => $product->image_url ? 'matches' : 'image_missing',
+        'image_source' => $product->image_url,
         'row_letter' => $row->letter,
         'cell_number' => 1,
         'flat_number' => 1,
@@ -140,6 +146,8 @@ test('adding a pallet logs the status change, with an optional note', function (
     $product = Product::factory()->boxesCount(8)->create();
 
     $this->postJson('/api/v1/pallets', [
+        'image_review_status' => $product->image_url ? 'matches' : 'image_missing',
+        'image_source' => $product->image_url,
         'row_letter' => $row->letter,
         'cell_number' => 1,
         'flat_number' => 2,
@@ -171,6 +179,8 @@ test('adding a pallet without a note logs a null note', function () {
     $product = Product::factory()->create();
 
     $this->postJson('/api/v1/pallets', [
+        'image_review_status' => $product->image_url ? 'matches' : 'image_missing',
+        'image_source' => $product->image_url,
         'row_letter' => $row->letter,
         'cell_number' => 1,
         'flat_number' => 1,
@@ -190,6 +200,8 @@ test('adding a pallet to a non-empty slot is rejected and nothing changes', func
     $product = Product::factory()->create();
 
     $response = $this->postJson('/api/v1/pallets', [
+        'image_review_status' => $product->image_url ? 'matches' : 'image_missing',
+        'image_source' => $product->image_url,
         'row_letter' => $row->letter,
         'cell_number' => 1,
         'flat_number' => 1,
@@ -210,6 +222,8 @@ test('adding a pallet with an unknown row letter is rejected and nothing changes
     $product = Product::factory()->create();
 
     $response = $this->postJson('/api/v1/pallets', [
+        'image_review_status' => $product->image_url ? 'matches' : 'image_missing',
+        'image_source' => $product->image_url,
         'row_letter' => 'ZZ',
         'cell_number' => 1,
         'flat_number' => 1,
@@ -227,6 +241,8 @@ test('adding a pallet with an overly long row letter is rejected and nothing cha
     $product = Product::factory()->create();
 
     $response = $this->postJson('/api/v1/pallets', [
+        'image_review_status' => $product->image_url ? 'matches' : 'image_missing',
+        'image_source' => $product->image_url,
         'row_letter' => str_repeat('Z', 5),
         'cell_number' => 1,
         'flat_number' => 1,
@@ -245,6 +261,8 @@ test('adding a pallet with out-of-range coordinates is rejected and nothing chan
     $product = Product::factory()->create();
 
     $response = $this->postJson('/api/v1/pallets', [
+        'image_review_status' => $product->image_url ? 'matches' : 'image_missing',
+        'image_source' => $product->image_url,
         'row_letter' => $row->letter,
         'cell_number' => 99,
         'flat_number' => 1,
@@ -280,6 +298,8 @@ test('adding a pallet with a past expiration date is rejected and nothing change
     $product = Product::factory()->create();
 
     $response = $this->postJson('/api/v1/pallets', [
+        'image_review_status' => $product->image_url ? 'matches' : 'image_missing',
+        'image_source' => $product->image_url,
         'row_letter' => $row->letter,
         'cell_number' => 1,
         'flat_number' => 1,
@@ -296,6 +316,8 @@ test('an unauthenticated caller cannot add a pallet and nothing changes', functi
     $product = Product::factory()->create();
 
     $response = $this->postJson('/api/v1/pallets', [
+        'image_review_status' => $product->image_url ? 'matches' : 'image_missing',
+        'image_source' => $product->image_url,
         'row_letter' => $row->letter,
         'cell_number' => 1,
         'flat_number' => 1,
@@ -315,6 +337,8 @@ test('adding a pallet to a first-level cell opens it automatically', function ()
     $product = Product::factory()->boxesCount(10)->create();
 
     $response = $this->postJson('/api/v1/pallets', [
+        'image_review_status' => $product->image_url ? 'matches' : 'image_missing',
+        'image_source' => $product->image_url,
         'row_letter' => $row->letter,
         'cell_number' => 1,
         'flat_number' => 1,
@@ -1170,6 +1194,8 @@ test('storing and then quickly emptying a pallet in the same cell flags the empt
     $product = Product::factory()->create();
 
     $storeResponse = $this->postJson('/api/v1/pallets', [
+        'image_review_status' => $product->image_url ? 'matches' : 'image_missing',
+        'image_source' => $product->image_url,
         'row_letter' => $row->letter,
         'cell_number' => 1,
         'flat_number' => 1,
@@ -1193,6 +1219,8 @@ test('performing a pallet action outside working hours flags it as off-hours', f
     $product = Product::factory()->create();
 
     $this->postJson('/api/v1/pallets', [
+        'image_review_status' => $product->image_url ? 'matches' : 'image_missing',
+        'image_source' => $product->image_url,
         'row_letter' => $row->letter,
         'cell_number' => 1,
         'flat_number' => 1,
@@ -1215,6 +1243,8 @@ test('performing many pallet actions quickly as the same user flags rapid action
     for ($i = 0; $i < 6; $i++) {
         Carbon::setTestNow(now()->addSeconds(10));
         $storeResponse = $this->postJson('/api/v1/pallets', [
+            'image_review_status' => $product->image_url ? 'matches' : 'image_missing',
+            'image_source' => $product->image_url,
             'row_letter' => $row->letter,
             'cell_number' => 1,
             'flat_number' => 1,
@@ -1247,6 +1277,8 @@ test('adding a pallet to an inactive slot is rejected and nothing changes', func
         'cell_number' => 1,
         'flat_number' => 1,
         'product_id' => $product->id,
+        'image_review_status' => $product->image_url ? 'matches' : 'image_missing',
+        'image_source' => $product->image_url,
         'expiration_date' => now()->addMonth()->toDateString(),
     ]);
 
@@ -1354,6 +1386,8 @@ test('adding a pallet to a row under an unfinished verification round is rejecte
     CellVerificationRound::factory()->covering($row)->create();
 
     $response = $this->postJson('/api/v1/pallets', [
+        'image_review_status' => $product->image_url ? 'matches' : 'image_missing',
+        'image_source' => $product->image_url,
         'row_letter' => $row->letter,
         'cell_number' => 1,
         'flat_number' => 1,
@@ -1520,6 +1554,8 @@ test('a pallet stored on the first level is left full, not opened automatically,
     $product = Product::factory()->boxesCount(10)->create();
 
     $response = $this->postJson('/api/v1/pallets', [
+        'image_review_status' => $product->image_url ? 'matches' : 'image_missing',
+        'image_source' => $product->image_url,
         'row_letter' => $row->letter,
         'cell_number' => 1,
         'flat_number' => 1,

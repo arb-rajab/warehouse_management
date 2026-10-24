@@ -54,10 +54,6 @@
             "reason": "Known on 2026-10-21 when the convention was introduced (.ai/required-fields-audit-20261021.md); to fix in phase 2 or 3."
         },
         {
-            "fingerprint": "A|resources/js/pages/Store/Admin/Sales/Orders/Index.vue|OrderController@bulk_order_delete|id[]",
-            "reason": "Known on 2026-10-21 when the convention was introduced (.ai/required-fields-audit-20261021.md); to fix in phase 2 or 3."
-        },
-        {
             "fingerprint": "A|resources/js/pages/Store/Admin/Sales/Orders/Show.vue|OrderController@edit_item_price|order_id",
             "reason": "Known on 2026-10-21 when the convention was introduced (.ai/required-fields-audit-20261021.md); to fix in phase 2 or 3."
         },
@@ -198,31 +194,11 @@
             "reason": "Known on 2026-10-21 when the convention was introduced (.ai/required-fields-audit-20261021.md); to fix in phase 2 or 3."
         },
         {
-            "fingerprint": "B|resources/js/pages/Store/Admin/Sales/Orders/Index.vue|OrderController@bulk_order_delete|id[]",
-            "reason": "Known on 2026-10-21 when the convention was introduced (.ai/required-fields-audit-20261021.md); to fix in phase 2 or 3."
-        },
-        {
             "fingerprint": "B|resources/js/pages/Store/Admin/Support/Conversations/Show.vue|ConversationController@reply|message",
             "reason": "Known on 2026-10-21 when the convention was introduced (.ai/required-fields-audit-20261021.md); to fix in phase 2 or 3."
         },
         {
             "fingerprint": "B|resources/js/pages/Store/Admin/Support/ProductQueries/Show.vue|ProductQueryController@reply|reply",
-            "reason": "Known on 2026-10-21 when the convention was introduced (.ai/required-fields-audit-20261021.md); to fix in phase 2 or 3."
-        },
-        {
-            "fingerprint": "B|resources/js/pages/Store/Admin/Trips/Drivers/Create.vue|DriverController@store|country",
-            "reason": "Known on 2026-10-21 when the convention was introduced (.ai/required-fields-audit-20261021.md); to fix in phase 2 or 3."
-        },
-        {
-            "fingerprint": "B|resources/js/pages/Store/Admin/Trips/Drivers/Edit.vue|DriverController@update|country",
-            "reason": "Known on 2026-10-21 when the convention was introduced (.ai/required-fields-audit-20261021.md); to fix in phase 2 or 3."
-        },
-        {
-            "fingerprint": "B|resources/js/pages/Store/Admin/Trips/Trips/Create.vue|TripController@store|truck_id",
-            "reason": "Known on 2026-10-21 when the convention was introduced (.ai/required-fields-audit-20261021.md); to fix in phase 2 or 3."
-        },
-        {
-            "fingerprint": "B|resources/js/pages/Store/Admin/Trips/Trips/Edit.vue|TripController@update|truck_id",
             "reason": "Known on 2026-10-21 when the convention was introduced (.ai/required-fields-audit-20261021.md); to fix in phase 2 or 3."
         },
         {

@@ -1,9 +1,29 @@
 ---
 paths:
-  - '.github/**,.claude/scripts/pre_push_check.py'
+  - '.github/**,.claude/scripts/pre_push_check.py,.claude/scripts/install_playwright.py,.claude/hooks/session-start.sh'
 ---
 
 # CI
+
+## Sandbox browser setup is idempotent and shared across agents
+
+After frontend dependencies are ready, the existing SessionStart hook calls
+`python3 .claude/scripts/install_playwright.py`. On Linux it checks an explicit
+browser path, `/opt/pw-browsers/chromium`, system browsers, and Playwright's cache;
+it downloads Chromium only if none is installed. Cached FFmpeg is reused, a system
+encoder is linked into the matching cache, and only a missing encoder is downloaded.
+The default cache and shell exports (`node_modules/.playwright-runtime.env`) stay
+under ignored node_modules. Explicit browser/cache settings and inherited proxy/CA
+settings are preserved. A failed or blocked download is reported as unavailable
+in the startup summary and log; it must never be reported as ready.
+
+The pre-push E2E runner uses the helper's read-only discovery instead of assuming
+the `/opt` path exists. For direct runs, source the generated environment file
+before `npm run test:e2e`. Codex does not execute Claude hooks automatically:
+AGENTS.md requires invoking this standalone helper before browser tests after
+dependencies are ready. Do not force `CLAUDE_CODE_REMOTE` or run the full hook to
+prepare a Codex session. The idempotent checks/install paths and hook wiring are
+covered by `.claude/scripts/selftest.py`.
 
 ## Where each check runs
 

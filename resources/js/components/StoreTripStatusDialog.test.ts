@@ -58,7 +58,7 @@ describe('StoreTripStatusDialog', () => {
                 closeLabel: t('common.close'),
             });
             expect(wrapper.get('label[for="trip-status"]').text()).toBe(
-                t('store.trips.status.label'),
+                `${t('store.trips.status.label')}*${t('common.required')}`,
             );
             expect(
                 wrapper
@@ -135,6 +135,20 @@ describe('StoreTripStatusDialog', () => {
         const wrapper = mountDialog(null);
         await wrapper.get('form').trigger('submit');
         expect(submitMock).not.toHaveBeenCalled();
+        wrapper.unmount();
+    });
+    it('marks the required status and explains the mark inside its form', async () => {
+        const wrapper = mountDialog();
+        await wrapper.vm.$nextTick();
+        expect(
+            wrapper.get('#trip-status').attributes('required'),
+        ).toBeDefined();
+        expect(
+            wrapper
+                .find('label[for="trip-status"] [data-required-mark]')
+                .exists(),
+        ).toBe(true);
+        expect(wrapper.findAll('form [data-required-legend]')).toHaveLength(1);
         wrapper.unmount();
     });
 });

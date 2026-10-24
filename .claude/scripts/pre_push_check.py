@@ -86,6 +86,7 @@ import time
 from pathlib import Path
 
 import wait_for_setup
+import install_playwright
 
 ROOT = Path(__file__).resolve().parent.parent.parent
 
@@ -119,9 +120,6 @@ MYSQL_TESTS = [
     'tests/Feature/SellerCatalogueRowRulesTest.php',
     'tests/Feature/Store/Admin/ProductMySqlEditTest.php',
 ]
-
-# The sandbox ships Chromium at a fixed path that playwright.config.ts reads.
-CHROMIUM = Path('/opt/pw-browsers/chromium')
 
 # Order the groups run in under --attest; `build` is inserted before the first
 # group that needs the Vite manifest.
@@ -276,7 +274,7 @@ def e2e_steps() -> list[Step]:
         "foreach (['database', 'telescope', 'pulse', 'health'] as $name) "
         "{ file_exists(\"database/$name.sqlite\") || touch(\"database/$name.sqlite\"); }"
     )
-    env = {**os.environ, 'PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH': str(CHROMIUM)} if CHROMIUM.exists() else None
+    env = install_playwright.browser_environment(ROOT)
 
     return [
         ('SQLite database files', ['php', '-r', ensure_databases], None),

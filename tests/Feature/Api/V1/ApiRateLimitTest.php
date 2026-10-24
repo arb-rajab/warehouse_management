@@ -73,6 +73,8 @@ test('a throttled mobile client cannot store a pallet and nothing is written', f
         'cell_number' => 1,
         'flat_number' => 1,
         'product_id' => $product->id,
+        'image_review_status' => $product->image_url ? 'matches' : 'image_missing',
+        'image_source' => $product->image_url,
         'expiration_date' => now()->addMonth()->toDateString(),
     ]);
 

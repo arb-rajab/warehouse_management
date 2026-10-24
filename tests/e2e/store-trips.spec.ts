@@ -112,9 +112,12 @@ test('the trip form loads free vehicles for its date, needs a checkpoint nativel
     await page
         .getByRole('button', { name: 'Add customer checkpoint', exact: true })
         .click();
-    await page
-        .getByLabel('Customer', { exact: true })
-        .selectOption({ label: customer });
+    const checkpointCustomer = page.getByRole('combobox', {
+        name: 'Customer required',
+        exact: true,
+    });
+    await expect(checkpointCustomer).toHaveAttribute('required', '');
+    await checkpointCustomer.selectOption({ label: customer });
     await page
         .getByLabel('Checkpoint notes', { exact: true })
         .fill('Ring twice');

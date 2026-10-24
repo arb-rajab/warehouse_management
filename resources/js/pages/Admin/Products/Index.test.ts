@@ -17,6 +17,7 @@ import {
     previewDefaultBarcode,
 } from '@/actions/App/Http/Controllers/Admin/ProductController';
 import ActionErrorBanner from '@/components/ActionErrorBanner.vue';
+import ProductImageReviewDialog from '@/components/ProductImageReviewDialog.vue';
 import SubmitButton from '@/components/SubmitButton.vue';
 import { i18n, t } from '@/lib/i18n';
 import { rowCells } from '@/testing/dom';
@@ -61,6 +62,7 @@ vi.mock('@inertiajs/vue3', async () => {
 
 function product(overrides: Partial<ProductSummary> = {}): ProductSummary {
     return {
+        image_verification: null,
         id: 10,
         name: 'Widgets',
         ar_name: 'ودجات',
@@ -108,6 +110,7 @@ function mountPage(
     });
 
     return mount(Index, {
+        global: { stubs: { ProductImageReviewDialog: true } },
         props: {
             products: paginated(products),
             expiringSoonDays: overrides.expiringSoonDays ?? 45,
@@ -134,6 +137,45 @@ describe('Products Index', () => {
 
     afterEach(() => {
         i18n.global.locale.value = 'en';
+    });
+
+    it('offers a neutral review action when there is no current result', async () => {
+        const wrapper = mountPage([product()]);
+        const trigger = wrapper
+            .findAll('button')
+            .find((button) => button.text() === t('imageReview.review'));
+        expect(trigger).toBeDefined();
+        await trigger?.trigger('click');
+        expect(
+            wrapper.getComponent(ProductImageReviewDialog).props('productId'),
+        ).toBe(10);
+    });
+
+    it('filters by image verification and opens the selected product review', async () => {
+        const wrapper = mountPage([
+            product({ image_verification: 'doesnt_match' }),
+        ]);
+        const trigger = wrapper
+            .findAll('button')
+            .find((button) =>
+                button.text().includes(t('imageReview.doesnt_match')),
+            );
+        await trigger?.trigger('click');
+        expect(
+            wrapper.getComponent(ProductImageReviewDialog).props('productId'),
+        ).toBe(10);
+        await openFilters(wrapper);
+        const filter = wrapper.get('#image-verification-filter');
+        expect(filter.findAll('option').map((option) => option.text())).toEqual(
+            ['all', 'matches', 'doesnt_match', 'image_missing'].map((status) =>
+                t(`imageReview.${status}`),
+            ),
+        );
+        await filter.setValue('doesnt_match');
+        await wrapper.get('#products-filter-form').trigger('submit');
+        expect(routerGetMock.mock.calls.at(-1)?.[1]).toMatchObject({
+            image_verification: 'doesnt_match',
+        });
     });
 
     it('renders the page title in the Head and the PageHeader', () => {

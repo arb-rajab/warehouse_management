@@ -204,4 +204,74 @@ describe('Store order pages', () => {
         expect(wrapper.find('input[name=admin_price]').exists()).toBe(false);
         expect(wrapper.find('select#delivery_status').exists()).toBe(false);
     });
+    it('requires any one order selection and marks the group without requiring every checkbox', async () => {
+        const wrapper = mount(Index, {
+            props: {
+                orders: paginated([
+                    order,
+                    storeOrder({ id: 8, code: 'ORD-8' }),
+                ]),
+                filters: { per_page: 20 },
+                listRoute: 'all_orders.index',
+            },
+        });
+        await wrapper.vm.$nextTick();
+        const form = wrapper.findAll('form')[1];
+        expect(form.findAll('[data-required-legend]')).toHaveLength(1);
+        expect(form.find('legend [data-required-mark]').exists()).toBe(true);
+        expect(form.findAll('input[required]')).toHaveLength(1);
+        expect((form.element as HTMLFormElement).checkValidity()).toBe(false);
+        await form.findAll('input[type="checkbox"]')[1].setValue(true);
+        expect(form.findAll('input[required]')).toHaveLength(0);
+        expect((form.element as HTMLFormElement).checkValidity()).toBe(true);
+        await form.findAll('input[type="checkbox"]')[1].setValue(false);
+        expect(form.findAll('input[required]')).toHaveLength(1);
+        expect(
+            wrapper.findAll('form')[0].find('[data-required-legend]').exists(),
+        ).toBe(false);
+    });
+    it('marks required order actions with one legend per form and leaves notes and tracking optional', async () => {
+        const wrapper = mount(Show, {
+            props: {
+                order,
+                additionalInfo: '',
+                trackingCode: '',
+                shippingAddress: {},
+                couponDiscount: 0,
+            },
+        });
+        await wrapper.vm.$nextTick();
+        const forms = wrapper.findAll('form');
+
+        for (const form of forms) {
+            const required = form.find('[required]').exists();
+            expect(form.findAll('[data-required-legend]')).toHaveLength(
+                required ? 1 : 0,
+            );
+            expect(form.findAll('[data-required-mark]')).toHaveLength(
+                required ? 1 : 0,
+            );
+        }
+
+        for (const id of ['delivery', 'payment', 'price-1']) {
+            expect(wrapper.get(`#${id}`).attributes('required')).toBeDefined();
+            expect(
+                wrapper
+                    .find(`label[for="${id}"] [data-required-mark]`)
+                    .exists(),
+            ).toBe(true);
+        }
+
+        for (const id of ['tracking_code', 'notes']) {
+            expect(
+                wrapper.get(`#${id}`).attributes('required'),
+            ).toBeUndefined();
+            expect(
+                wrapper
+                    .get(`label[for="${id}"]`)
+                    .find('[data-required-mark]')
+                    .exists(),
+            ).toBe(false);
+        }
+    });
 });
