@@ -425,4 +425,79 @@ describe('StoreTripFormFields', () => {
             wrapper.findAll('[data-testid="trip-checkpoint"]')[1].text(),
         ).toContain('Order unknown');
     });
+    it.each([undefined, storeTripForm()])(
+        'marks editable checkpoint rows and keeps optional trip controls unmarked',
+        async (trip) => {
+            const wrapper = mountFields(trip);
+            await flushPromises();
+
+            for (const id of ['due_date', 'truck_id']) {
+                expect(
+                    wrapper.get(`#${id}`).attributes('required'),
+                ).toBeDefined();
+                expect(
+                    wrapper
+                        .find(`label[for="${id}"] [data-required-mark]`)
+                        .exists(),
+                ).toBe(true);
+            }
+
+            for (const id of ['driver_id', 'notes']) {
+                expect(
+                    wrapper.get(`#${id}`).attributes('required'),
+                ).toBeUndefined();
+                expect(
+                    wrapper
+                        .get(`label[for="${id}"]`)
+                        .find('[data-required-mark]')
+                        .exists(),
+                ).toBe(false);
+            }
+
+            expect(wrapper.find('legend [data-required-mark]').exists()).toBe(
+                true,
+            );
+            await wrapper
+                .findAll('button')
+                .find(
+                    (button) =>
+                        button.text() === t('store.trips.form.addOrder'),
+                )!
+                .trigger('click');
+            await wrapper
+                .findAll('button')
+                .find(
+                    (button) =>
+                        button.text() === t('store.trips.form.addCustomer'),
+                )!
+                .trigger('click');
+
+            for (const select of wrapper.findAll(
+                'select[name$="[checkpoint_related_id]"]',
+            )) {
+                expect(select.attributes('required')).toBeDefined();
+                expect(
+                    wrapper
+                        .find(
+                            `label[for="${select.attributes('id')}"] [data-required-mark]`,
+                        )
+                        .exists(),
+                ).toBe(true);
+            }
+
+            for (const textarea of wrapper.findAll(
+                'textarea[name$="[checkpoint_notes]"]',
+            )) {
+                expect(textarea.attributes('required')).toBeUndefined();
+                expect(
+                    wrapper
+                        .get(`label[for="${textarea.attributes('id')}"]`)
+                        .find('[data-required-mark]')
+                        .exists(),
+                ).toBe(false);
+            }
+
+            wrapper.unmount();
+        },
+    );
 });

@@ -16,15 +16,18 @@ import ActionErrorBanner from '@/components/ActionErrorBanner.vue';
 import DataTable from '@/components/DataTable.vue';
 import FieldError from '@/components/FieldError.vue';
 import PageHeader from '@/components/PageHeader.vue';
+import RequiredLegend from '@/components/RequiredLegend.vue';
+import RequiredMark from '@/components/RequiredMark.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
 import TableLink from '@/components/TableLink.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
 import { pillLinkClass, primaryPillVariantClass } from '@/lib/actionLink';
 import { confirmDeliveryStatus } from '@/lib/confirm';
 import { currentLocaleTag, formatDateTime, formatDuration } from '@/lib/date';
-import { plainFieldInputClass } from '@/lib/filters';
+import { fieldLabelClass, plainFieldInputClass } from '@/lib/filters';
 import { t } from '@/lib/i18n';
 import { firstError, usePageError } from '@/lib/pageErrors';
+import { provideRequiredFields } from '@/lib/requiredFields';
 import { useStoreAccess } from '@/lib/storeAccess';
 import { tripCheckpointLabel } from '@/lib/storeTrip';
 import type {
@@ -122,6 +125,7 @@ function truckLabel(truck: { id: number; name: string }): string {
 function print(): void {
     window.print();
 }
+const hasRequiredFields = provideRequiredFields();
 </script>
 
 <template>
@@ -254,6 +258,7 @@ function print(): void {
         <h2 class="mb-3 text-lg font-semibold">
             {{ t('store.trips.show.checkpoints') }}
         </h2>
+        <RequiredLegend v-if="hasRequiredFields && access.can('edit_trip')" />
         <DataTable
             :columns="[
                 t('store.trips.show.position'),
@@ -329,14 +334,18 @@ function print(): void {
                 </td>
                 <td class="px-4 py-2 whitespace-nowrap">
                     <template v-if="access.can('edit_trip')">
-                        <select
-                            :id="`checkpoint-status-${checkpoint.id}`"
-                            :value="checkpoint.status"
-                            :aria-label="
+                        <label
+                            :for="`checkpoint-status-${checkpoint.id}`"
+                            :class="fieldLabelClass"
+                            >{{
                                 t('store.trips.show.statusFor', {
                                     stop: stop(checkpoint),
                                 })
-                            "
+                            }}<RequiredMark
+                        /></label>
+                        <select
+                            :id="`checkpoint-status-${checkpoint.id}`"
+                            :value="checkpoint.status"
                             required
                             :class="plainFieldInputClass"
                             @change="saveStatus(checkpoint, $event)"

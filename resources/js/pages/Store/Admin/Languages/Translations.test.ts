@@ -190,4 +190,18 @@ describe('Language Translations', () => {
                 .exists(),
         ).toBe(false);
     });
+    it.each([false, true])(
+        'keeps nullable translation values and UI search unmarked app=%s',
+        (app) => {
+            const wrapper = mountPage(app);
+            expect(wrapper.findAll('[required]')).toHaveLength(0);
+            expect(wrapper.findAll('[data-required-mark]')).toHaveLength(0);
+            expect(wrapper.find('[data-required-legend]').exists()).toBe(false);
+            expect(
+                wrapper
+                    .get('[name="translations[0][key]"]')
+                    .attributes('value'),
+            ).toBe(translation.key);
+        },
+    );
 });
