@@ -177,6 +177,9 @@ class CustomerController extends Controller implements HasMiddleware
     {
         $this->assertCustomer($customer);
         $customer->fill($request->safe()->except(['trade_license', 'password_confirmation', 'password', 'is_rep']));
+        if (array_key_exists('company_name', $request->validated()) && $request->validated('company_name') === null) {
+            $customer->company_name = '';
+        }
         if (array_key_exists('is_rep', $request->validated())) {
             $customer->forceFill(['is_rep' => $request->boolean('is_rep')]);
         }

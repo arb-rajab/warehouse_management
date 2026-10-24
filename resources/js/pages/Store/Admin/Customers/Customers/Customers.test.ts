@@ -14,6 +14,7 @@ import {
 import { assign } from '@/actions/App/Http/Controllers/Store/Admin/RepresentativePackageController';
 import AddResourceLink from '@/components/AddResourceLink.vue';
 import Pagination from '@/components/Pagination.vue';
+import RequiredMark from '@/components/RequiredMark.vue';
 import ResourceFormPage from '@/components/ResourceFormPage.vue';
 import StoreCustomerFormFields from '@/components/StoreCustomerFormFields.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
@@ -208,6 +209,15 @@ it('representative index shows package dialog and its assignment contract', asyn
         .find((item) => item.text() === t('store.customers.assignPackage'));
     await button?.trigger('click');
     expect(wrapper.get('[role="dialog"]').text()).toContain('Gold (10%)');
+    expect(
+        wrapper
+            .get('label[for="package_id"]')
+            .findComponent(RequiredMark)
+            .exists(),
+    ).toBe(true);
+    expect(
+        wrapper.get('#package_id').element.closest('form')?.textContent,
+    ).toContain(t('common.requiredLegend'));
     const form = wrapper.getComponent(Form);
     expect(form.props('action')).toEqual(assign());
     expect(wrapper.get('input[name="user_id"]').attributes('value')).toBe('17');
@@ -253,4 +263,36 @@ it('views page renders count labels and paginator contract', () => {
     expect(wrapper.find('td img').exists()).toBe(false);
     expect(wrapper.text()).toContain('<img onerror=alert()>');
     expect(wrapper.getComponent(Pagination).props('perPage')).toBe(20);
+});
+
+it('activity and new/edit address forms each show marks and their own legend; notes stay optional', async () => {
+    const wrapper = mount(Edit, {
+        props: { customer, countries, addresses: [] },
+    });
+    await wrapper.vm.$nextTick();
+    const activity = wrapper.get('#new_status');
+    expect(activity.attributes('required')).toBeDefined();
+    expect(
+        wrapper
+            .get('label[for="new_status"]')
+            .findComponent(RequiredMark)
+            .exists(),
+    ).toBe(true);
+    expect(activity.element.closest('form')?.textContent).toContain(
+        t('common.requiredLegend'),
+    );
+    const notes = wrapper.get('#admin_notes');
+    expect(notes.attributes('required')).toBeUndefined();
+    expect(notes.element.closest('form')?.textContent).not.toContain(
+        t('common.requiredLegend'),
+    );
+    await wrapper
+        .findAll('button')
+        .find((button) => button.text() === t('store.customers.addAddress'))!
+        .trigger('click');
+    await wrapper.vm.$nextTick();
+    expect(
+        wrapper.get('#country_id').element.closest('form')?.textContent,
+    ).toContain(t('common.requiredLegend'));
+    wrapper.unmount();
 });

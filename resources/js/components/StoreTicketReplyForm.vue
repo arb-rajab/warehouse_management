@@ -3,11 +3,14 @@ import { Form } from '@inertiajs/vue3';
 import { ref } from 'vue';
 import { reply } from '@/actions/App/Http/Controllers/Store/Admin/SupportTicketController';
 import FieldError from '@/components/FieldError.vue';
+import RequiredLegend from '@/components/RequiredLegend.vue';
+import RequiredMark from '@/components/RequiredMark.vue';
 import StoreRichTextField from '@/components/StoreRichTextField.vue';
 import StoreUploadField from '@/components/StoreUploadField.vue';
 import SubmitButton from '@/components/SubmitButton.vue';
 import { fieldLabelClass, plainFieldInputClass } from '@/lib/filters';
 import { t } from '@/lib/i18n';
+import { provideRequiredFields } from '@/lib/requiredFields';
 import {
     isTicketStatus,
     ticketStatusLabel,
@@ -31,6 +34,7 @@ function reset(): void {
     message.value = '';
     attachments.value = '';
 }
+const hasRequiredFields = provideRequiredFields();
 </script>
 
 <template>
@@ -41,6 +45,7 @@ function reset(): void {
         @success="reset"
         #default="{ errors, processing }"
     >
+        <RequiredLegend v-if="hasRequiredFields" />
         <input type="hidden" name="ticket_id" :value="ticket.id" />
         <StoreRichTextField
             id="reply"
@@ -60,9 +65,9 @@ function reset(): void {
             :error="errors.attachments"
         />
         <div class="max-w-xs">
-            <label for="status" :class="fieldLabelClass">{{
-                t('store.support.replyStatus')
-            }}</label>
+            <label for="status" :class="fieldLabelClass"
+                >{{ t('store.support.replyStatus') }}<RequiredMark
+            /></label>
             <select
                 id="status"
                 v-model="status"

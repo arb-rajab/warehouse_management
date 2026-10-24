@@ -138,42 +138,6 @@
             "reason": "Known on 2026-10-21 when the convention was introduced (.ai/required-fields-audit-20261021.md); to fix in phase 2 or 3."
         },
         {
-            "fingerprint": "B|resources/js/components/StoreSellerPaymentDialog.vue|SellerPaymentController@store|payment_option",
-            "reason": "Known on 2026-10-21 when the convention was introduced (.ai/required-fields-audit-20261021.md); to fix in phase 2 or 3."
-        },
-        {
-            "fingerprint": "B|resources/js/components/StoreTicketReplyForm.vue|SupportTicketController@reply|status",
-            "reason": "Known on 2026-10-21 when the convention was introduced (.ai/required-fields-audit-20261021.md); to fix in phase 2 or 3."
-        },
-        {
-            "fingerprint": "B|resources/js/pages/Store/Admin/Blog/Posts/Create.vue|BlogController@store|category_id",
-            "reason": "Known on 2026-10-21 when the convention was introduced (.ai/required-fields-audit-20261021.md); to fix in phase 2 or 3."
-        },
-        {
-            "fingerprint": "B|resources/js/pages/Store/Admin/Blog/Posts/Edit.vue|BlogController@update|category_id",
-            "reason": "Known on 2026-10-21 when the convention was introduced (.ai/required-fields-audit-20261021.md); to fix in phase 2 or 3."
-        },
-        {
-            "fingerprint": "B|resources/js/pages/Store/Admin/Customers/Customers/Edit.vue|AddressController@store|country_id",
-            "reason": "Known on 2026-10-21 when the convention was introduced (.ai/required-fields-audit-20261021.md); to fix in phase 2 or 3."
-        },
-        {
-            "fingerprint": "B|resources/js/pages/Store/Admin/Customers/Customers/Edit.vue|AddressController@update|country_id",
-            "reason": "Known on 2026-10-21 when the convention was introduced (.ai/required-fields-audit-20261021.md); to fix in phase 2 or 3."
-        },
-        {
-            "fingerprint": "B|resources/js/pages/Store/Admin/Customers/Customers/Edit.vue|CustomerController@changeActivityStatus|new_status",
-            "reason": "Known on 2026-10-21 when the convention was introduced (.ai/required-fields-audit-20261021.md); to fix in phase 2 or 3."
-        },
-        {
-            "fingerprint": "B|resources/js/pages/Store/Admin/Customers/Customers/Index.vue|RepresentativePackageController@assign|package_id",
-            "reason": "Known on 2026-10-21 when the convention was introduced (.ai/required-fields-audit-20261021.md); to fix in phase 2 or 3."
-        },
-        {
-            "fingerprint": "B|resources/js/pages/Store/Admin/Notifications/Customers/Create.vue|CustomerNotificationController@store|user_id",
-            "reason": "Known on 2026-10-21 when the convention was introduced (.ai/required-fields-audit-20261021.md); to fix in phase 2 or 3."
-        },
-        {
             "fingerprint": "B|resources/js/pages/Store/Admin/Product/BrandDiscounts/Index.vue|BrandDiscountController@update|discount",
             "reason": "Known on 2026-10-21 when the convention was introduced (.ai/required-fields-audit-20261021.md); to fix in phase 2 or 3."
         },
@@ -191,14 +155,6 @@
         },
         {
             "fingerprint": "B|resources/js/pages/Store/Admin/Product/DigitalProducts/Edit.vue|DigitalProductController@update|tax_type[]",
-            "reason": "Known on 2026-10-21 when the convention was introduced (.ai/required-fields-audit-20261021.md); to fix in phase 2 or 3."
-        },
-        {
-            "fingerprint": "B|resources/js/pages/Store/Admin/Support/Conversations/Show.vue|ConversationController@reply|message",
-            "reason": "Known on 2026-10-21 when the convention was introduced (.ai/required-fields-audit-20261021.md); to fix in phase 2 or 3."
-        },
-        {
-            "fingerprint": "B|resources/js/pages/Store/Admin/Support/ProductQueries/Show.vue|ProductQueryController@reply|reply",
             "reason": "Known on 2026-10-21 when the convention was introduced (.ai/required-fields-audit-20261021.md); to fix in phase 2 or 3."
         },
         {

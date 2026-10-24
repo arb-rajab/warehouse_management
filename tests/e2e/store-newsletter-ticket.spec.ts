@@ -351,8 +351,14 @@ test('both editors work in Arabic RTL with dark contrast and a keyboard-only too
     await expect(page.locator('#reply-label')).toHaveText(
         `${ar.store.support.reply}*${ar.common.required}`,
     );
+    await expect(
+        page.getByRole('combobox', {
+            name: `${ar.store.support.replyStatus} ${ar.common.required}`,
+            exact: true,
+        }),
+    ).toHaveAttribute('required', '');
     await expect(page.locator('label[for="status"]')).toHaveText(
-        ar.store.support.replyStatus,
+        `${ar.store.support.replyStatus}*${ar.common.required}`,
     );
     await expect(
         page.getByText(ar.store.support.originalMessage, { exact: true }),

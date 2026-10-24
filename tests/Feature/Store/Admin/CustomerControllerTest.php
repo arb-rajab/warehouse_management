@@ -12,6 +12,10 @@ use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Testing\AssertableInertia as Assert;
 
+beforeEach(function () {
+    $this->withoutVite();
+});
+
 /** @return array<string,mixed> */
 function storeCustomerForm(array $overrides = []): array
 {
@@ -321,4 +325,35 @@ test('authorized customer edits preserve representative conversion and its exist
     expect($customer->fresh()->is_rep)->toBeTrue()->and($customer->fresh()->rep_package_id)->toBe(42)->and((float) $customer->fresh()->rep_discount_percentage)->toBe(10.0);
     $this->post(route('customers.update', $customer), storeCustomerForm(['is_rep' => 0]))->assertRedirect(route('customers.index'));
     expect($customer->fresh()->is_rep)->toBeFalse()->and($customer->fresh()->rep_package_id)->toBe(42);
+});
+
+test('customer create requires the seven route-dependent business fields', function (string $field) {
+    actingAsStoreUser(createStoreStaff('edit_customer'));
+    $before = StoreUser::count();
+    $this->post(route('customers.store'), storeCustomerForm([$field => null]))->assertSessionHasErrors($field);
+    expect(StoreUser::count())->toBe($before);
+})->with(['company_name', 'country', 'tax_number', 'bank_account_number', 'company_address', 'shipping_address', 'trade_license']);
+
+test('customer edit permits empty business fields and persists the allowed profile update without a license', function () {
+    actingAsStoreUser(createStoreStaff('edit_customer'));
+    $customer = createStoreUser();
+    $optional = array_fill_keys(['company_name', 'country', 'tax_number', 'bank_account_number', 'company_address', 'shipping_address'], null);
+    $customer->forceFill(array_fill_keys(array_keys($optional), 'Previous value'))->save();
+    $payload = storeCustomerForm([...$optional, 'trade_license' => null]);
+    $this->post(route('customers.update', $customer), $payload)->assertSessionHasNoErrors()->assertRedirect(route('customers.index'));
+    $customer->refresh();
+    foreach ($optional as $field => $value) {
+        expect($customer->getAttribute($field))->toBe($field === 'company_name' ? '' : null);
+    }
+    expect($customer->name)->toBe($payload['name'])->and($customer->trade_license)->toBeNull();
+});
+
+test('customer edit retains a company name when it is not submitted', function () {
+    actingAsStoreUser(createStoreStaff('edit_customer'));
+    $customer = createStoreUser();
+    $customer->forceFill(['company_name' => 'Retained Company'])->save();
+    $payload = storeCustomerForm(['trade_license' => null]);
+    unset($payload['company_name']);
+    $this->post(route('customers.update', $customer), $payload)->assertSessionHasNoErrors()->assertRedirect(route('customers.index'));
+    expect($customer->fresh()->company_name)->toBe('Retained Company');
 });

@@ -564,12 +564,12 @@ The back-office Blade to Inertia conversion is complete; §39 retires its dead s
 | Reference/shipping/tax/currency | Complete | Canonical `35ae3133` controllers/forms/routes; duplicate `e5523338` implementation superseded; Setup required-field follow-up complete (§56), with conditional marks and retained scanner limitations |
 | Carrier administration | Complete | List/create/edit and CRUD/status use Inertia; existing `manage_carriers` gate, tariff contract and public/API consumers preserved (§11); required tariff/group marks follow free shipping (§56) |
 | Language/settings | Complete | Language CRUD and translation-selector validation separated; dedicated settings endpoints with reserved-key protection; general settings use Inertia with a typed writer and a config-managed timezone (§17); the generic `business_settings.update` writer is retired (§20); the Google Map settings GET uses Inertia and the approved Leaflet picker (§32); language required-field legends verified (§57), nullable translation values remain unmarked |
-| Reports/notifications | Complete | Inertia report/admin notification routes; public/customer/seller notification consumers remain |
+| Reports/notifications | Complete | Inertia report/admin notification routes; public/customer/seller notification consumers remain; required customer selector mark verified (§58) |
 | Uploads/profile | Complete | Canonical `944e2e1e` backend/picker; per-action authorization and authenticated-user profile |
-| Customers/representatives | Complete | Customers, addresses, representatives/packages/payments, customer package administration (§12), visit list/detail/day maps (§31) and the admin classified-products list/publish/delete (§37) use Inertia; customer-facing classified pages and the mobile API remain separate |
+| Customers/representatives | Complete | Customers, addresses, representatives/packages/payments, customer package administration (§12), visit list/detail/day maps (§31) and the admin classified-products list/publish/delete (§37) use Inertia; customer-facing classified pages and the mobile API remain separate; required fields/legends verified (§58), with route-dependent customer and visit scanner limitations retained |
 | Catalogue | Complete | Attributes/values, colors, brand discount, reviews (the legacy Blade list retired, §28), bulk import/export and offers catalogue implemented; category (§13) and brand (§14) administration complete; digital product list, deletion, download and switches converted (§15); digital product create/edit converted on the shared editor and canonical uploader (§21); in-house and all-products lists with their switches, duplicate, delete and bulk delete converted (§16); physical product create converted with its typed variant/SKU endpoint (§22); physical product edit converted with translation tabs and stored variant rows (§23); the admin seller product list, its approval and remaining row actions use the same Inertia list and shared writer (§38) |
-| Website/support | Complete | Header/home, footer, appearance, custom pages (§20), conversations, product queries, the ticket list and the ticket detail with its typed reply use Inertia; footer, appearance and page rich text use the shared editor, cleaned on write (§20); the header/footer scripts stay on their compatibility endpoint as plain code fields; script policy, `manage_website_scripts` and rich-text WAF exceptions stay held; Website required-field follow-up complete (§56), with scanner limitations retained |
-| Marketing/blog | Complete | Coupons, flash/offer deals, campaign products, popups, subscribers and blog categories/list/actions integrated; blog post create/edit (§18) and the newsletter form (§19) use Inertia with the shared Tiptap editor; the typed newsletter send and bounded recipient search are unchanged |
+| Website/support | Complete | Header/home, footer, appearance, custom pages (§20), conversations, product queries, the ticket list and the ticket detail with its typed reply use Inertia; footer, appearance and page rich text use the shared editor, cleaned on write (§20); the header/footer scripts stay on their compatibility endpoint as plain code fields; script policy, `manage_website_scripts` and rich-text WAF exceptions stay held; Website required-field follow-up complete (§56), with scanner limitations retained; support reply/status marks and per-form legends verified (§58) |
+| Marketing/blog | Complete | Coupons, flash/offer deals, campaign products, popups, subscribers and blog categories/list/actions integrated; blog post create/edit (§18) and the newsletter form (§19) use Inertia with the shared Tiptap editor; the typed newsletter send and bounded recipient search are unchanged; blog category required marks verified (§58) |
 | Logistics | Complete | Drivers/trucks converted; the all-trips and today's-trips lists with their status dialog, notes, delete and bulk delete converted (§24); the trip create and edit forms converted without their map (§25); the trip orders list with its bulk status, invoice number and delivered actions converted (§26); the trip detail with its checkpoint notes, status and CMR download converted without its map (§27); the trip map picker converted on Leaflet from npm (§30); visit list/detail/day maps use Inertia and bundled Leaflet (§31); Trips required-field marks and legends verified, with scanner limitations retained (§57) |
 | Orders/dashboard | Complete | Orders and entry forms converted; stored tax metadata and line-price-only grand total preserved; shell utilities integrated; dashboard converted to Inertia with bundled Chart.js (§33); Sales required-field marks, bulk selection and per-action legends verified (§57) |
 | Seller administration | Complete: stages 34–36 | Seller accounts/verification/profile (§34), payments/withdrawals (§35), commission and verification form configuration (§36) use Inertia. Seller administration conversion is complete. The admin seller product list is converted with the catalogue in §38; no checkout, seller-area, storefront or role-grant policy changes |
@@ -6794,3 +6794,193 @@ browser uses that build. This adds one browser-spec file to the PR, for **26 fil
 Pint; PHPStan zero errors; Pest 7,650 passed / 3 existing MySQL-only skips /
 42,925 assertions). Changed-spec ESLint/Prettier and `git diff --check` pass.
 No CI-Verified trailer is written; GitHub Actions reruns against the new head.
+
+## 58. Back-office required fields, phase 2b batch 2c: Customers, Support, Blog and small modules (2026-10-24)
+
+Branch `codex/marks-customers-support-blog` starts from current `origin/develop`
+`b070b78a6a9b5dedb50b9155c1d94a19ea54b2f3` (includes #484/#485 and #487).
+The final batch fits in **30 files**. No server validation rule, limit, route,
+permission or seller-panel/storefront file changes. No CI-Verified trailer is
+written or edited. The scanner is unchanged. The source of truth remains the
+server on the actual named route, including route-dependent request rules.
+
+### Customer route correction: the seven C findings are limitations
+
+The task and older guide sections call customer create's seven C findings UI-only
+requirements. That premise does not match current code: `StoreCustomerRequest::rules()`
+changes company name, country, tax number, bank account number, company address,
+shipping address and trade license from nullable to **required** when
+`routeIs('customers.store')`. The real create action uses precisely that named
+route. The audit evaluates the request without that route name, reading the
+nullable fallback from `ValidatesStoreCustomer`. Seven real endpoint tests now
+omit each field and verify its own validation error and no account written.
+Therefore no customer-create requirement is dropped and no server rule is added.
+The missing country mark is added only on customer create; edit keeps all seven
+unrequired/unmarked. Representative create hides these fields and keeps only
+its required identity/password controls. This supersedes §44's classification
+and the assumptions about dropping these seven requirements in §§49, 56 and 57.
+
+The optional-edit persistence test exposed a real existing 500: a cleared company
+name validates as null, but `users.company_name` is NOT NULL with default `''`.
+The customer update writer now stores `''` for an explicitly submitted null
+company name. An omitted company name retains its stored value. Other nullable
+profile values still save null; an absent license stays absent. The regression
+was reproduced before the three-line writer change. Validation and limits are
+unchanged; existing valid nonempty input behaves as before. Tests prove the
+allowed clear, its stored values, and the omitted-field behavior. This is the
+only backend behavior repair in this batch.
+
+### Audit and ratchet
+
+The untouched-base audit reproduced **236** findings over 158 Vue and 81 Blade
+forms. Regenerated current-date Markdown/JSON:
+[required-fields-audit-20261024.md](../required-fields-audit-20261024.md) and
+[required-fields-audit-20261024.json](../required-fields-audit-20261024.json).
+There were **21 original scoped findings**, all listed below. Thirteen B findings
+are fixed. Only eleven absent Store-controller fingerprints leave the baseline;
+the two WMS fixes were never in it. No entry is added, raised or reworded.
+
+| Module | Forms | Before A/B/C/D/E/F | After A/B/C/D/E/F | Total before → after |
+| --- | ---: | --- | --- | --- |
+| Store/Admin/Customers | 13 | 0 / 4 / 7 / 0 / 0 / 0 | 0 / 0 / 7 / 0 / 0 / 0 | 11 → 7 |
+| Store/Admin/Support | 2 | 0 / 2 / 0 / 0 / 0 / 0 | 0 / 0 / 0 / 0 / 0 / 0 | 2 → 0 |
+| Store/Admin/Blog | 7 | 0 / 2 / 0 / 0 / 0 / 0 | 0 / 0 / 0 / 0 / 0 / 0 | 2 → 0 |
+| Store/Admin/Representatives | 3 | 1 / 0 / 0 / 0 / 0 / 0 | 1 / 0 / 0 / 0 / 0 / 0 | 1 → 1 |
+| Store/Admin/Notifications | 1 | 0 / 1 / 0 / 0 / 0 / 0 | 0 / 0 / 0 / 0 / 0 / 0 | 1 → 0 |
+| Admin/Settings | 1 | 0 / 1 / 0 / 0 / 0 / 0 | 0 / 0 / 0 / 0 / 0 / 0 | 1 → 0 |
+| Admin/Products | 3 | 0 / 1 / 0 / 0 / 0 / 0 | 0 / 0 / 0 / 0 / 0 / 0 | 1 → 0 |
+| components | 3 | 0 / 2 / 0 / 0 / 0 / 0 | 0 / 0 / 0 / 0 / 0 / 0 | 2 → 0 |
+| Whole application | 239 | 36 / 27 / 38 / 7 / 105 / 23 | 36 / 14 / 38 / 7 / 105 / 23 | **236 → 223** |
+| Back-office baseline | — | 66 entries | 55 entries | **66 → 55** |
+
+### Every original finding and disposition
+
+Store page paths below are relative to `resources/js/pages/Store/Admin/`.
+Each row is one original finding, including both create/edit consumers.
+
+| Form → endpoint | Class | Field | Disposition |
+| --- | --- | --- | --- |
+| Customers/Customers/Create → CustomerController@store | C | bank_account_number | Limitation: actual customers.store route requires it; preserve required/mark. |
+| Customers/Customers/Create → CustomerController@store | C | company_address | Limitation: actual customers.store route requires it; preserve required/mark. |
+| Customers/Customers/Create → CustomerController@store | C | company_name | Limitation: actual customers.store route requires it; preserve required/mark. |
+| Customers/Customers/Create → CustomerController@store | C | country | Limitation: actual customers.store route requires it; preserve required and add conditional mark. |
+| Customers/Customers/Create → CustomerController@store | C | shipping_address | Limitation: actual customers.store route requires it; preserve required/mark. |
+| Customers/Customers/Create → CustomerController@store | C | tax_number | Limitation: actual customers.store route requires it; preserve required/mark. |
+| Customers/Customers/Create → CustomerController@store | C | trade_license | Limitation: actual customers.store route requires it; preserve required/mark. |
+| Customers/Customers/Edit → AddressController@store | B | country_id | Fix: mark existing required country; address form gets its own legend. |
+| Customers/Customers/Edit → AddressController@update | B | country_id | Fix: same shared field and dialog, tested with an existing address too. |
+| Customers/Customers/Edit → CustomerController@changeActivityStatus | B | new_status | Fix: mark and separate form legend; notes form stays optional without a legend. |
+| Customers/Customers/Index → RepresentativePackageController@assign | B | package_id | Fix: mark and package-dialog form legend. |
+| Support/Conversations/Show → ConversationController@reply | B | message | Fix: shared reply mark and form-local legend. |
+| Support/ProductQueries/Show → ProductQueryController@reply | B | reply | Fix: same component, different named field, both mounted/tested. |
+| Blog/Posts/Create → BlogController@store | B | category_id | Fix: shared category mark; existing native required and automatic legend retained. |
+| Blog/Posts/Edit → BlogController@update | B | category_id | Fix: same component; optional metadata/editor/uploads stay unmarked. |
+| Representatives/Visits/Show → VisitController@update_note | A | visit_id | Limitation: route-bound visit is merged to visit_id by prepareForValidation; note is nullable. No fake control or requirement added. |
+| Notifications/Customers/Create → CustomerNotificationController@store | B | user_id | Fix: required customer select gains mark; automatic ResourceFormPage legend retained. |
+| Admin/Settings/Edit → SettingController@update | B | allowed_open_levels[] | Fix: group legend mark; native empty-group condition still allows any selected level. |
+| Admin/Products/Index → ProductController@storeBarcode | B | barcode | Fix: mark and barcode-form legend; add the missing box-count form legend too. Optional minimum-pallets stays unmarked without a legend. |
+| components/StoreSellerPaymentDialog → SellerPaymentController@store | B | payment_option | Fix: mark on rendered required method selector and form-local legend. |
+| components/StoreTicketReplyForm → SupportTicketController@reply | B | status | Fix: mark and form-local legend; reply stays required, attachments optional. |
+
+Shared consumers checked: both blog pages use `ValidatesStoreBlog`; both support
+reply pages use `ValidatesSupportReplies`; ticket detail uses
+`ReplySupportTicketRequest`; both seller-list/withdrawal dialog consumers post to
+`StoreSellerPaymentRequest`; Settings/Edit uses `UpdateSettingRequest` (the other
+consumer is an inert Help preview). Customer create/edit and both address actions
+were checked against their real request/route branches. No scoped E/F findings
+exist, and no editable field is removed or silently ignored.
+
+**Possible business-rule gaps:** no UI-only requirement was dropped, so none is
+newly raised by that safeguard. Create's business fields really are required.
+Existing documented customer string/column-limit concerns (§48) are not aligned
+or reclassified here; no limit is changed and no new limit-boundary claim is made.
+
+**Separate existing owner decision:** §35's negative/zero seller balance form
+omits payment_option and Clear due still fails server validation. The method is
+not an editable value silently discarded; it is a missing control in an existing
+money workflow. Its established tests/behavior are retained; choosing the payment
+method/credit policy is separate from adding a mark to the working payout form.
+The unstored storefront registration fields remain an owner decision. No new
+silently ignored editable-field defect was found in the requested modules.
+
+### Verification
+
+The new mounted assertions reproduced 14 UI failures after missing locked frontend
+packages and generated Wayfinder output were restored. One additional seller
+assertion was initially outside its fixture setup; after correcting that test,
+it separately failed on the missing payment-method mark (1 failed / 7 passed).
+The first complete reproduction was 15 failed / 159 passed, including that
+fixture-setup error; it is not counted as a UI defect. A later missing box-count
+legend was separately reproduced (1 failed / 110 passed), then fixed.
+Focused Vue checks pass **10 files / 174 tests**; after the last box-count legend
+addition the Products suite passes **111 tests**. A new address test fixture first
+failed vue-tsc for an incomplete address shape; the full fixture now types and
+passes (4 address tests). No production type or dependency changed.
+
+Focused endpoint/audit/ratchet Pest suites pass **310 tests / 2,049 assertions**.
+Customer endpoints pass **141 tests / 634 assertions**, including seven actual
+route-required create refusals, nullable edit persistence and omitted company
+retention. The first nullable-edit test reproduced the company-name SQL 500
+(139 passed / 1 failed) before the writer repair. Changed Inertia-rendering
+customer tests call withoutVite(). A final ratchet rerun passes **4 / 7 assertions**.
+Dirty Pint, changed-file ESLint/Prettier, npm run types:check and git diff --check
+pass. No server limit changes, so limit/limit+1 tests are not applicable. No new
+MySQL-specific test file is introduced, so neither MySQL list needs an entry.
+
+A fresh production npm run build passes. AGENTS.md's portable Playwright helper
+reuses system Chromium and FFmpeg, and exports PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH.
+A stale ignored public/hot marker was backed up under work/ so the browser uses
+that build. Browser runs use the existing HTTPS harness and enforced CSP.
+Initial browser verification was **11 passed / 3 failed**, all on uploaded images:
+the provisioned GD lacked WebP support. The existing upload suite reproduced it
+(**50 passed / 1 failed / 216 assertions**). GD alone was rebuilt from the existing
+PHP 8.5 image with WebP support using the platform proxy/CA; no dependency,
+lockfile, fixture, upload rule or repository runtime configuration changed.
+The upload suite then passes **51 tests / 235 assertions**. A first Docker build
+failed to read the CA as apt's unprivileged user; a read-only 0444 secret mount
+fixed that without disabling TLS verification.
+
+The six affected browser specs (customers, support, blog editor, newsletter/ticket,
+seller payments and notifications) next had **13 passed / 1 failed**: an exact
+Arabic ticket-status label assertion expected the old unmarked text. It now
+expects the exact marked label and additionally checks the marked accessible
+combobox name and native required. Its whole newsletter/ticket spec rerun passes
+**4 tests (43.9 seconds)**. Thus every test in the six specs passes across the
+completed run and focused rerun; no assertion, retry, timeout or test was weakened.
+The support reply locator also uses the exact role/name Type your reply required.
+A label/key sweep found no other affected browser locator. There is no existing
+browser spec for the WMS box-count/barcode/settings controls or representative
+package assignment; those controls are covered by mounted tests.
+
+The first explicit full gate stopped at the new address-fixture type error.
+A later run was superseded while finalizing the box-count legend and rerun with
+bounded Vitest concurrency. The next complete frontend pass had **338 files /
+2,701 Vitest tests**, Pint passing and PHPStan **0 errors**, then Pest reported
+**7,686 passed / 2 failed / 2 errors / 3 existing SQLite skips / 43,098 assertions**.
+Two errors came from vendor's stale class map for removed Trip/DigitalProduct
+controllers; composer dump-autoload --no-scripts repairs vendor metadata only.
+Two Inertia render failures came from font CSS while the final asset build
+replaced the manifest during Pest; that avoidable overlap was stopped, and the
+build completed before further testing. The four affected suites then pass
+**235 tests / 1,740 assertions** without application/test changes. The full gate
+is repeated with stable assets and refreshed autoload metadata.
+
+**Final explicit python3 .claude/scripts/pre_push_check.py --full: passed.**
+It runs Wayfinder generation, whole-repository ESLint/Prettier, vue-tsc,
+**338 Vitest files / 2,701 tests**, Pint, PHPStan (**0 errors**), config clear and
+parallel Pest: **7,690 passed / 3 existing MySQL-only skips on SQLite /
+43,136 assertions (182.835 seconds)**. Vitest worker concurrency was bounded
+(the final run used VITEST_MAX_WORKERS=4); no checker, assertion or test is
+changed to achieve that result. Only verification documentation is finalized
+after this pass. git diff --check passes. All 21 original findings have exactly
+one disposition row, and the baseline is a strict subset of the original.
+
+Not run locally: MySQL tests, advisory audits, deploy rollback tests or the whole
+application Playwright suite. Those separate CI lanes remain required when
+planned. The six affected browser specs were run as recorded above. No new
+skip, loosened assertion, quarantine or hand-edited CI-Verified trailer is used.
+No new test file requires a MySQL-list addition. The final production build also
+passes after the box-count legend addition, before the stable full gate.
+The unstored registration fields and §35's existing Clear due method/policy issue
+remain separate owner decisions; no newly dropped UI requirement or silently
+ignored editable field remains in this batch.

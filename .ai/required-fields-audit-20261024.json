@@ -8,7 +8,7 @@
         },
         "by_class": {
             "A": 36,
-            "B": 27,
+            "B": 14,
             "C": 38,
             "D": 7,
             "E": 105,
@@ -16,14 +16,14 @@
         },
         "by_severity": {
             "high": 74,
-            "medium": 34,
+            "medium": 21,
             "low": 105,
             "info": 23
         },
         "by_priority": {
             "P1": 8,
             "P2": 118,
-            "P3": 110
+            "P3": 97
         }
     },
     "modules": {
@@ -39,7 +39,7 @@
         "Admin/Products": {
             "forms": 3,
             "A": 0,
-            "B": 1,
+            "B": 0,
             "C": 0,
             "D": 0,
             "E": 0,
@@ -57,7 +57,7 @@
         "Admin/Settings": {
             "forms": 1,
             "A": 0,
-            "B": 1,
+            "B": 0,
             "C": 0,
             "D": 0,
             "E": 0,
@@ -84,7 +84,7 @@
         "Store/Admin/Blog": {
             "forms": 7,
             "A": 0,
-            "B": 2,
+            "B": 0,
             "C": 0,
             "D": 0,
             "E": 0,
@@ -102,7 +102,7 @@
         "Store/Admin/Customers": {
             "forms": 13,
             "A": 0,
-            "B": 4,
+            "B": 0,
             "C": 7,
             "D": 0,
             "E": 0,
@@ -129,7 +129,7 @@
         "Store/Admin/Notifications": {
             "forms": 1,
             "A": 0,
-            "B": 1,
+            "B": 0,
             "C": 0,
             "D": 0,
             "E": 0,
@@ -210,7 +210,7 @@
         "Store/Admin/Support": {
             "forms": 2,
             "A": 0,
-            "B": 2,
+            "B": 0,
             "C": 0,
             "D": 0,
             "E": 0,
@@ -237,7 +237,7 @@
         "components": {
             "forms": 3,
             "A": 0,
-            "B": 2,
+            "B": 0,
             "C": 0,
             "D": 0,
             "E": 0,
@@ -326,7 +326,7 @@
         }
     },
     "server": {
-        "form_requests": 280,
+        "form_requests": 283,
         "form_requests_unparsed": 1,
         "inline_validators": 25,
         "inline_unparsed": 5
@@ -629,7 +629,7 @@
             "module": "Admin/Products",
             "priority": "P3",
             "file": "resources/js/pages/Admin/Products/Index.vue",
-            "line": 496,
+            "line": 534,
             "action": "updateBoxCount(boxCountDialogProduct, { mergeQuery: {} })",
             "target": "ProductController@updateBoxCount",
             "source": "App\\Http\\Requests\\Admin\\UpdateProductBoxCountRequest",
@@ -642,7 +642,7 @@
             "module": "Admin/Products",
             "priority": "P3",
             "file": "resources/js/pages/Admin/Products/Index.vue",
-            "line": 534,
+            "line": 573,
             "action": "updateMinimumPallets(minimumPalletsDialogProduct, { mergeQuery: {}, })",
             "target": "ProductController@updateMinimumPallets",
             "source": "App\\Http\\Requests\\Admin\\UpdateProductMinimumPalletsRequest",
@@ -655,15 +655,13 @@
             "module": "Admin/Products",
             "priority": "P3",
             "file": "resources/js/pages/Admin/Products/Index.vue",
-            "line": 575,
+            "line": 614,
             "action": "storeBarcode(barcodesDialogProduct, { mergeQuery: {} })",
             "target": "ProductController@storeBarcode",
             "source": "App\\Http\\Requests\\Admin\\StoreProductBarcodeRequest",
             "controls": 1,
             "unresolved_controls": 0,
-            "findings": {
-                "B": 1
-            }
+            "findings": []
         },
         {
             "kind": "vue",
@@ -702,9 +700,7 @@
             "source": "App\\Http\\Requests\\Admin\\UpdateSettingRequest",
             "controls": 3,
             "unresolved_controls": 0,
-            "findings": {
-                "B": 1
-            }
+            "findings": []
         },
         {
             "kind": "vue",
@@ -808,9 +804,7 @@
             "source": "App\\Http\\Requests\\Store\\Admin\\StoreBlogRequest",
             "controls": 10,
             "unresolved_controls": 0,
-            "findings": {
-                "B": 1
-            }
+            "findings": []
         },
         {
             "kind": "vue",
@@ -823,9 +817,7 @@
             "source": "App\\Http\\Requests\\Store\\Admin\\UpdateBlogRequest",
             "controls": 10,
             "unresolved_controls": 0,
-            "findings": {
-                "B": 1
-            }
+            "findings": []
         },
         {
             "kind": "vue",
@@ -912,7 +904,7 @@
             "module": "Store/Admin/Customers",
             "priority": "P3",
             "file": "resources/js/pages/Store/Admin/Customers/Customers/Edit.vue",
-            "line": 49,
+            "line": 51,
             "action": "update(customer)",
             "target": "CustomerController@update",
             "source": "App\\Http\\Requests\\Store\\Admin\\UpdateCustomerRequest",
@@ -925,7 +917,7 @@
             "module": "Store/Admin/Customers",
             "priority": "P3",
             "file": "resources/js/pages/Store/Admin/Customers/Customers/Edit.vue",
-            "line": 75,
+            "line": 77,
             "action": "updateNotes(customer)",
             "target": "CustomerController@updateNotes",
             "source": "App\\Http\\Requests\\Store\\Admin\\UpdateCustomerNotesRequest",
@@ -938,22 +930,20 @@
             "module": "Store/Admin/Customers",
             "priority": "P3",
             "file": "resources/js/pages/Store/Admin/Customers/Customers/Edit.vue",
-            "line": 89,
+            "line": 91,
             "action": "changeActivityStatus(customer)",
             "target": "CustomerController@changeActivityStatus",
             "source": "App\\Http\\Requests\\Store\\Admin\\UpdateCustomerActivityRequest",
             "controls": 1,
             "unresolved_controls": 0,
-            "findings": {
-                "B": 1
-            }
+            "findings": []
         },
         {
             "kind": "vue",
             "module": "Store/Admin/Customers",
             "priority": "P3",
             "file": "resources/js/pages/Store/Admin/Customers/Customers/Edit.vue",
-            "line": 122,
+            "line": 126,
             "action": "sendAgreement(customer)",
             "target": "CustomerController@sendAgreement",
             "source": "App\\Http\\Controllers\\Store\\Admin\\CustomerController@sendAgreement",
@@ -966,37 +956,33 @@
             "module": "Store/Admin/Customers",
             "priority": "P3",
             "file": "resources/js/pages/Store/Admin/Customers/Customers/Edit.vue",
-            "line": 186,
+            "line": 190,
             "action": "editingAddress ? updateAddress({ customer, address: editingAddress, }) : storeAddress(customer)",
             "target": "AddressController@store",
             "source": "App\\Http\\Requests\\Store\\Admin\\StoreCustomerAddressRequest",
             "controls": 8,
             "unresolved_controls": 0,
-            "findings": {
-                "B": 1
-            }
+            "findings": []
         },
         {
             "kind": "vue",
             "module": "Store/Admin/Customers",
             "priority": "P3",
             "file": "resources/js/pages/Store/Admin/Customers/Customers/Edit.vue",
-            "line": 186,
+            "line": 190,
             "action": "editingAddress ? updateAddress({ customer, address: editingAddress, }) : storeAddress(customer)",
             "target": "AddressController@update",
             "source": "App\\Http\\Requests\\Store\\Admin\\StoreCustomerAddressRequest",
             "controls": 8,
             "unresolved_controls": 0,
-            "findings": {
-                "B": 1
-            }
+            "findings": []
         },
         {
             "kind": "vue",
             "module": "Store/Admin/Customers",
             "priority": "P3",
             "file": "resources/js/pages/Store/Admin/Customers/Customers/Index.vue",
-            "line": 178,
+            "line": 180,
             "action": "bulkDestroy()",
             "target": "CustomerController@bulkDestroy",
             "source": "App\\Http\\Requests\\Store\\Admin\\BulkCustomersRequest",
@@ -1009,15 +995,13 @@
             "module": "Store/Admin/Customers",
             "priority": "P3",
             "file": "resources/js/pages/Store/Admin/Customers/Customers/Index.vue",
-            "line": 347,
+            "line": 349,
             "action": "assignPackage()",
             "target": "RepresentativePackageController@assign",
             "source": "App\\Http\\Requests\\Store\\Admin\\AssignRepresentativePackageRequest",
             "controls": 2,
             "unresolved_controls": 0,
-            "findings": {
-                "B": 1
-            }
+            "findings": []
         },
         {
             "kind": "vue",
@@ -1418,9 +1402,7 @@
             "source": "App\\Http\\Requests\\Store\\Admin\\StoreCustomerNotificationRequest",
             "controls": 3,
             "unresolved_controls": 0,
-            "findings": {
-                "B": 1
-            }
+            "findings": []
         },
         {
             "kind": "vue",
@@ -2488,9 +2470,7 @@
             "source": "App\\Http\\Requests\\Store\\Admin\\ReplyConversationRequest",
             "controls": 1,
             "unresolved_controls": 0,
-            "findings": {
-                "B": 1
-            }
+            "findings": []
         },
         {
             "kind": "vue",
@@ -2503,9 +2483,7 @@
             "source": "App\\Http\\Requests\\Store\\Admin\\ReplyProductQueryRequest",
             "controls": 1,
             "unresolved_controls": 0,
-            "findings": {
-                "B": 1
-            }
+            "findings": []
         },
         {
             "kind": "vue",
@@ -2769,30 +2747,26 @@
             "module": "components",
             "priority": "P3",
             "file": "resources/js/components/StoreSellerPaymentDialog.vue",
-            "line": 92,
+            "line": 96,
             "action": "store({ mergeQuery: {} })",
             "target": "SellerPaymentController@store",
             "source": "App\\Http\\Requests\\Store\\Admin\\StoreSellerPaymentRequest",
             "controls": 6,
             "unresolved_controls": 0,
-            "findings": {
-                "B": 1
-            }
+            "findings": []
         },
         {
             "kind": "vue",
             "module": "components",
             "priority": "P3",
             "file": "resources/js/components/StoreTicketReplyForm.vue",
-            "line": 37,
+            "line": 41,
             "action": "reply()",
             "target": "SupportTicketController@reply",
             "source": "App\\Http\\Requests\\Store\\Admin\\ReplySupportTicketRequest",
             "controls": 4,
             "unresolved_controls": 0,
-            "findings": {
-                "B": 1
-            }
+            "findings": []
         },
         {
             "kind": "vue",
@@ -4491,141 +4465,6 @@
             "class": "B",
             "severity": "medium",
             "priority": "P3",
-            "module": "Admin/Products",
-            "kind": "vue",
-            "form": "resources/js/pages/Admin/Products/Index.vue",
-            "target": "ProductController@storeBarcode",
-            "source": "App\\Http\\Requests\\Admin\\StoreProductBarcodeRequest",
-            "field": "barcode",
-            "label": "Barcodes for {product}",
-            "detail": "server: required|string|max|regex|unique|closure; the label shows no required mark",
-            "ui": "resources/js/pages/Admin/Products/Index.vue:600",
-            "server": "app/Http/Requests/Admin/StoreProductBarcodeRequest.php:19"
-        },
-        {
-            "class": "B",
-            "severity": "medium",
-            "priority": "P3",
-            "module": "Admin/Settings",
-            "kind": "vue",
-            "form": "resources/js/pages/Admin/Settings/Edit.vue",
-            "target": "SettingController@update",
-            "source": "App\\Http\\Requests\\Admin\\UpdateSettingRequest",
-            "field": "allowed_open_levels[]",
-            "label": "Levels where opening pallets is allowed",
-            "detail": "server: required|array|min; the label shows no required mark",
-            "ui": "resources/js/components/SettingFormFields.vue:109",
-            "server": "app/Http/Requests/Admin/UpdateSettingRequest.php:22"
-        },
-        {
-            "class": "B",
-            "severity": "medium",
-            "priority": "P3",
-            "module": "Store/Admin/Blog",
-            "kind": "vue",
-            "form": "resources/js/pages/Store/Admin/Blog/Posts/Create.vue",
-            "target": "BlogController@store",
-            "source": "App\\Http\\Requests\\Store\\Admin\\StoreBlogRequest",
-            "field": "category_id",
-            "label": "Category",
-            "detail": "server: required|integer|exists; the label shows no required mark",
-            "ui": "resources/js/components/StoreBlogFormFields.vue:60",
-            "server": "app/Http/Requests/Concerns/ValidatesStoreBlog.php:28"
-        },
-        {
-            "class": "B",
-            "severity": "medium",
-            "priority": "P3",
-            "module": "Store/Admin/Blog",
-            "kind": "vue",
-            "form": "resources/js/pages/Store/Admin/Blog/Posts/Edit.vue",
-            "target": "BlogController@update",
-            "source": "App\\Http\\Requests\\Store\\Admin\\UpdateBlogRequest",
-            "field": "category_id",
-            "label": "Category",
-            "detail": "server: required|integer|exists; the label shows no required mark",
-            "ui": "resources/js/components/StoreBlogFormFields.vue:60",
-            "server": "app/Http/Requests/Concerns/ValidatesStoreBlog.php:28"
-        },
-        {
-            "class": "B",
-            "severity": "medium",
-            "priority": "P3",
-            "module": "Store/Admin/Customers",
-            "kind": "vue",
-            "form": "resources/js/pages/Store/Admin/Customers/Customers/Edit.vue",
-            "target": "AddressController@store",
-            "source": "App\\Http\\Requests\\Store\\Admin\\StoreCustomerAddressRequest",
-            "field": "country_id",
-            "label": "Country",
-            "detail": "server: required|integer|exists; the label shows no required mark",
-            "ui": "resources/js/components/StoreCustomerAddressForm.vue:88",
-            "server": "app/Http/Requests/Store/Admin/StoreCustomerAddressRequest.php:19"
-        },
-        {
-            "class": "B",
-            "severity": "medium",
-            "priority": "P3",
-            "module": "Store/Admin/Customers",
-            "kind": "vue",
-            "form": "resources/js/pages/Store/Admin/Customers/Customers/Edit.vue",
-            "target": "AddressController@update",
-            "source": "App\\Http\\Requests\\Store\\Admin\\StoreCustomerAddressRequest",
-            "field": "country_id",
-            "label": "Country",
-            "detail": "server: required|integer|exists; the label shows no required mark",
-            "ui": "resources/js/components/StoreCustomerAddressForm.vue:88",
-            "server": "app/Http/Requests/Store/Admin/StoreCustomerAddressRequest.php:19"
-        },
-        {
-            "class": "B",
-            "severity": "medium",
-            "priority": "P3",
-            "module": "Store/Admin/Customers",
-            "kind": "vue",
-            "form": "resources/js/pages/Store/Admin/Customers/Customers/Edit.vue",
-            "target": "CustomerController@changeActivityStatus",
-            "source": "App\\Http\\Requests\\Store\\Admin\\UpdateCustomerActivityRequest",
-            "field": "new_status",
-            "label": "Activity status",
-            "detail": "server: required|in; the label shows no required mark",
-            "ui": "resources/js/pages/Store/Admin/Customers/Customers/Edit.vue:96",
-            "server": "app/Http/Requests/Store/Admin/UpdateCustomerActivityRequest.php:16"
-        },
-        {
-            "class": "B",
-            "severity": "medium",
-            "priority": "P3",
-            "module": "Store/Admin/Customers",
-            "kind": "vue",
-            "form": "resources/js/pages/Store/Admin/Customers/Customers/Index.vue",
-            "target": "RepresentativePackageController@assign",
-            "source": "App\\Http\\Requests\\Store\\Admin\\AssignRepresentativePackageRequest",
-            "field": "package_id",
-            "label": "Package",
-            "detail": "server: required|integer|exists; the label shows no required mark",
-            "ui": "resources/js/pages/Store/Admin/Customers/Customers/Index.vue:359",
-            "server": "app/Http/Requests/Store/Admin/AssignRepresentativePackageRequest.php:20"
-        },
-        {
-            "class": "B",
-            "severity": "medium",
-            "priority": "P3",
-            "module": "Store/Admin/Notifications",
-            "kind": "vue",
-            "form": "resources/js/pages/Store/Admin/Notifications/Customers/Create.vue",
-            "target": "CustomerNotificationController@store",
-            "source": "App\\Http\\Requests\\Store\\Admin\\StoreCustomerNotificationRequest",
-            "field": "user_id",
-            "label": "Customer",
-            "detail": "server: required|integer|exists; the label shows no required mark",
-            "ui": "resources/js/components/StoreCustomerNotificationFormFields.vue:33",
-            "server": "app/Http/Requests/Store/Admin/StoreCustomerNotificationRequest.php:19"
-        },
-        {
-            "class": "B",
-            "severity": "medium",
-            "priority": "P3",
             "module": "Store/Admin/Product",
             "kind": "vue",
             "form": "resources/js/pages/Store/Admin/Product/BrandDiscounts/Index.vue",
@@ -4696,36 +4535,6 @@
             "detail": "server: required|string|in; the label shows no required mark",
             "ui": "resources/js/components/StoreProductTaxFields.vue:51",
             "server": "app/Http/Requests/Concerns/ValidatesStoreProductTaxes.php:31"
-        },
-        {
-            "class": "B",
-            "severity": "medium",
-            "priority": "P3",
-            "module": "Store/Admin/Support",
-            "kind": "vue",
-            "form": "resources/js/pages/Store/Admin/Support/Conversations/Show.vue",
-            "target": "ConversationController@reply",
-            "source": "App\\Http\\Requests\\Store\\Admin\\ReplyConversationRequest",
-            "field": "message",
-            "label": "Type your reply",
-            "detail": "server: required|string|max; the label shows no required mark",
-            "ui": "resources/js/components/StoreSupportReplyForm.vue:23",
-            "server": "app/Http/Requests/Store/Admin/ReplyConversationRequest.php:19"
-        },
-        {
-            "class": "B",
-            "severity": "medium",
-            "priority": "P3",
-            "module": "Store/Admin/Support",
-            "kind": "vue",
-            "form": "resources/js/pages/Store/Admin/Support/ProductQueries/Show.vue",
-            "target": "ProductQueryController@reply",
-            "source": "App\\Http\\Requests\\Store\\Admin\\ReplyProductQueryRequest",
-            "field": "reply",
-            "label": "Type your reply",
-            "detail": "server: required|string|max; the label shows no required mark",
-            "ui": "resources/js/components/StoreSupportReplyForm.vue:23",
-            "server": "app/Http/Requests/Store/Admin/ReplyProductQueryRequest.php:19"
         },
         {
             "class": "B",
@@ -4805,36 +4614,6 @@
         {
             "class": "B",
             "severity": "medium",
-            "priority": "P3",
-            "module": "components",
-            "kind": "vue",
-            "form": "resources/js/components/StoreSellerPaymentDialog.vue",
-            "target": "SellerPaymentController@store",
-            "source": "App\\Http\\Requests\\Store\\Admin\\StoreSellerPaymentRequest",
-            "field": "payment_option",
-            "label": "{{ t('store.sellers.paymentMethod') }}{{ t('store.sellers.selectPaymentMethod') }}{{ t('store.sellers.cash') }}{{ t('store.sellers.bankPayment') }}",
-            "detail": "server: required|string|max; the label shows no required mark",
-            "ui": "resources/js/components/StoreSellerPaymentDialog.vue:157",
-            "server": "app/Http/Requests/Store/Admin/StoreSellerPaymentRequest.php:27"
-        },
-        {
-            "class": "B",
-            "severity": "medium",
-            "priority": "P3",
-            "module": "components",
-            "kind": "vue",
-            "form": "resources/js/components/StoreTicketReplyForm.vue",
-            "target": "SupportTicketController@reply",
-            "source": "App\\Http\\Requests\\Store\\Admin\\ReplySupportTicketRequest",
-            "field": "status",
-            "label": "Status after reply",
-            "detail": "server: required|in; the label shows no required mark",
-            "ui": "resources/js/components/StoreTicketReplyForm.vue:66",
-            "server": "app/Http/Requests/Store/Admin/ReplySupportTicketRequest.php:23"
-        },
-        {
-            "class": "B",
-            "severity": "medium",
             "priority": "P2",
             "module": "storefront",
             "kind": "blade",
@@ -4904,7 +4683,7 @@
             "field": "bank_account_number",
             "label": "Bank account number",
             "detail": "server: nullable|string|max (optional); the UI requires it",
-            "ui": "resources/js/components/StoreCustomerFormFields.vue:75",
+            "ui": "resources/js/components/StoreCustomerFormFields.vue:76",
             "server": "app/Http/Requests/Concerns/ValidatesStoreCustomer.php:20"
         },
         {
@@ -4919,7 +4698,7 @@
             "field": "company_address",
             "label": "Company address",
             "detail": "server: nullable|string|max (optional); the UI requires it",
-            "ui": "resources/js/components/StoreCustomerFormFields.vue:75",
+            "ui": "resources/js/components/StoreCustomerFormFields.vue:76",
             "server": "app/Http/Requests/Concerns/ValidatesStoreCustomer.php:21"
         },
         {
@@ -4934,7 +4713,7 @@
             "field": "company_name",
             "label": "Company name",
             "detail": "server: nullable|string|max (optional); the UI requires it",
-            "ui": "resources/js/components/StoreCustomerFormFields.vue:75",
+            "ui": "resources/js/components/StoreCustomerFormFields.vue:76",
             "server": "app/Http/Requests/Concerns/ValidatesStoreCustomer.php:17"
         },
         {
@@ -4949,7 +4728,7 @@
             "field": "country",
             "label": "Country",
             "detail": "server: nullable|string|exists (optional); the UI requires it",
-            "ui": "resources/js/components/StoreCustomerFormFields.vue:95",
+            "ui": "resources/js/components/StoreCustomerFormFields.vue:97",
             "server": "app/Http/Requests/Concerns/ValidatesStoreCustomer.php:18"
         },
         {
@@ -4964,7 +4743,7 @@
             "field": "shipping_address",
             "label": "Shipping address",
             "detail": "server: nullable|string|max (optional); the UI requires it",
-            "ui": "resources/js/components/StoreCustomerFormFields.vue:75",
+            "ui": "resources/js/components/StoreCustomerFormFields.vue:76",
             "server": "app/Http/Requests/Concerns/ValidatesStoreCustomer.php:22"
         },
         {
@@ -4979,7 +4758,7 @@
             "field": "tax_number",
             "label": "Tax number",
             "detail": "server: nullable|string|max (optional); the UI requires it",
-            "ui": "resources/js/components/StoreCustomerFormFields.vue:75",
+            "ui": "resources/js/components/StoreCustomerFormFields.vue:76",
             "server": "app/Http/Requests/Concerns/ValidatesStoreCustomer.php:19"
         },
         {
@@ -4994,7 +4773,7 @@
             "field": "trade_license",
             "label": "Trade license (maximum 20 MB)",
             "detail": "server: nullable|file|mimes|max (optional); the UI requires it",
-            "ui": "resources/js/components/StoreCustomerFormFields.vue:123",
+            "ui": "resources/js/components/StoreCustomerFormFields.vue:125",
             "server": "app/Http/Requests/Concerns/ValidatesStoreCustomer.php:25"
         },
         {

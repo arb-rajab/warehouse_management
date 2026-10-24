@@ -34,6 +34,8 @@ import ProductActiveBadge from '@/components/ProductActiveBadge.vue';
 import ProductImageReviewDialog from '@/components/ProductImageReviewDialog.vue';
 import ProductOccupancyFilterFields from '@/components/ProductOccupancyFilterFields.vue';
 import ProductSelect from '@/components/ProductSelect.vue';
+import RequiredLegend from '@/components/RequiredLegend.vue';
+import RequiredMark from '@/components/RequiredMark.vue';
 import SubmitButton from '@/components/SubmitButton.vue';
 import TableLink from '@/components/TableLink.vue';
 import AdminLayout from '@/layouts/AdminLayout.vue';
@@ -539,6 +541,7 @@ function refreshBarcodesDialogProduct(): void {
                 #default="{ errors, processing }"
                 @success="boxCountDialogProduct = null"
             >
+                <RequiredLegend />
                 <ActionErrorBanner :message="firstError(errors)" />
                 <FilterNumberField
                     id="products-box-count"
@@ -617,6 +620,7 @@ function refreshBarcodesDialogProduct(): void {
                     #default="{ errors, processing }"
                     @success="refreshBarcodesDialogProduct()"
                 >
+                    <RequiredLegend />
                     <ActionErrorBanner :message="firstError(errors)" />
                     <div class="flex items-end gap-2">
                         <div class="flex-1">
@@ -631,7 +635,7 @@ function refreshBarcodesDialogProduct(): void {
                                             barcodesDialogProduct.ar_name,
                                         ),
                                     })
-                                }}
+                                }}<RequiredMark />
                             </label>
                             <input
                                 id="products-new-barcode"
