@@ -6614,7 +6614,7 @@ There are **no new owner decisions** and no pending limit alignment in this batc
 
 Branch `codex/marks-trips-sales-languages` starts from current `origin/develop`
 `21a522f9d201079b9c4358fbc0a6d9459126a9d8`, containing PR #471. All three modules
-fit in **25 changed files**. Customers, Support, Blog, Notifications,
+fit in **26 changed files**. Customers, Support, Blog, Notifications,
 Representatives, other modules, seller panel and storefront are unchanged.
 The server remains authoritative: no endpoint, server rule, storage limit,
 permission, submitted value or behavior for valid input changes. No PHP source
@@ -6759,12 +6759,38 @@ config clear, and parallel Pest: **7,650 passed / 3 existing MySQL-only skips on
 SQLite / 42,925 assertions (84.211 seconds)**. `git diff --check` passes. All 30
 original findings appear exactly once in the table, and the audit/baseline lose
 exactly the same six fingerprints with none added. Only documentation was
-finalized after this pass; application and test code did not change.
+finalized before the initial push; the browser-spec follow-up below received
+its own verification.
 
-Not run locally: Playwright (the `/opt/pw-browsers/chromium` path is absent),
-the MySQL job, composer/npm advisory audits, deploy rollback tests or a new
-production asset build. These separate CI lanes remain required when planned.
+Not run locally before the browser follow-up: the full application Playwright
+suite, the MySQL job,
+composer/npm advisory audits or deploy rollback tests. Focused browser verification
+and a new production asset build are recorded in the follow-up below. These separate CI lanes remain required when planned.
 The supplied Vite manifest was available for existing Inertia tests; no new
 Inertia-rendering Pest test was added. No new test is skipped, loosened or
 quarantined, and no CI-Verified trailer is written or edited.
 There are no new owner decisions and no pending limit alignment in this batch.
+
+
+### Browser follow-up from PR #484 CI
+
+The first CI run passed all planned non-browser checks and **143 Playwright tests**,
+but the trip create/edit flow timed out at the exact bare `Customer` label. Adding
+the checkpoint RequiredMark changed its accessible name to `Customer required`;
+the browser spec had not been updated. The same timeout was reproduced locally
+against freshly built production assets before changing the test.
+
+The spec now locates the exact `combobox` named `Customer required` and additionally
+asserts the native `required` attribute. Existing empty-checkpoint validation,
+create/edit persistence, status/notes and confirmation assertions are retained;
+no timeout, retry, skip or application behavior changed. A sweep of the browser
+specs found no other affected exact-label locator.
+
+The focused trip browser spec passes **2 tests (9.1 seconds)** with enforced CSP,
+local HTTPS, system Chromium and video recording. A fresh production build passes;
+a stale ignored `public/hot` file was backed up outside the repository so the
+browser uses that build. This adds one browser-spec file to the PR, for **26 files**.
+**Follow-up explicit full pre-push gate: passed** (336 Vitest files / 2,681 tests;
+Pint; PHPStan zero errors; Pest 7,650 passed / 3 existing MySQL-only skips /
+42,925 assertions). Changed-spec ESLint/Prettier and `git diff --check` pass.
+No CI-Verified trailer is written; GitHub Actions reruns against the new head.
