@@ -451,7 +451,6 @@ function refreshBarcodesDialogProduct(): void {
                             <option value="">{{ t('imageReview.all') }}</option>
                             <option
                                 v-for="status in [
-                                    'needs_review',
                                     'matches',
                                     'doesnt_match',
                                     'image_missing',
@@ -939,10 +938,15 @@ function refreshBarcodesDialogProduct(): void {
                             <Check
                                 v-if="product.image_verification === 'matches'"
                                 class="h-4 w-4"
+                            /><Eye
+                                v-else-if="!product.image_verification"
+                                class="h-4 w-4"
                             /><TriangleAlert v-else class="h-4 w-4" />
                             {{
                                 t(
-                                    `imageReview.${product.image_verification ?? 'needs_review'}`,
+                                    product.image_verification
+                                        ? `imageReview.${product.image_verification}`
+                                        : 'imageReview.review',
                                 )
                             }}
                         </button>

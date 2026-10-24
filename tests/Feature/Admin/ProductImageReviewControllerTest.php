@@ -61,8 +61,8 @@ test('new images invalidate reviews and preserve their notes and old reference i
     $product->refresh();
     Storage::disk('public')->assertExists($product->warehouse_image_path);
     expect($product->image_url)->toBe(Storage::disk('public')->url($product->warehouse_image_path));
-    $this->get('/admin/products?image_verification=needs_review')->assertInertia(
-        fn (Assert $page) => $page->where('products.data.0.id', $product->id)->where('products.data.0.image_verification', 'needs_review')
+    $this->get('/admin/products')->assertInertia(
+        fn (Assert $page) => $page->where('products.data.0.id', $product->id)->where('products.data.0.image_verification', null)
     );
     $this->get("/admin/products/{$product->id}/image-reviews")->assertOk()
         ->assertJsonPath('reviews.data.0.note', 'Wrong variant')
@@ -88,7 +88,15 @@ test('a changed catalog thumbnail requires another review and no longer matches 
     $other = Product::factory()->imageUrl('https://cdn.example.com/new.jpg')->create();
     $product->update(['thumbnail_img' => $other->thumbnail_img]);
     $this->get('/admin/products?image_verification=matches')->assertInertia(fn (Assert $page) => $page->has('products.data', 0));
-    $this->get('/admin/products?image_verification=needs_review')->assertInertia(fn (Assert $page) => $page->has('products.data', 2));
+    $this->get('/admin/products')->assertInertia(fn (Assert $page) => $page->has('products.data', 2)
+        ->where('products.data.0.image_verification', null)
+        ->where('products.data.1.image_verification', null));
+});
+
+test('the removed needs review filter is rejected', function () {
+    actingAsAdmin();
+    $this->get('/admin/products?image_verification=needs_review')
+        ->assertSessionHasErrors('image_verification');
 });
 
 test('review history is paginated and excludes other products', function () {

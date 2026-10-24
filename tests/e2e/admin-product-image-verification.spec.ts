@@ -15,7 +15,7 @@ test('image review retains notes after validation, replaces images, and keeps li
     await loginAsAdmin(page);
     await page.goto(`/admin/products?product_id[]=${id}`);
     await page
-        .getByRole('button', { name: 'Needs review', exact: true })
+        .getByRole('button', { name: 'Review image', exact: true })
         .click();
     const dialog = page.getByRole('dialog');
     await expect(
@@ -72,7 +72,7 @@ test('image review retains notes after validation, replaces images, and keeps li
         .click();
     await expect(dialog).not.toBeVisible();
     await page
-        .getByRole('button', { name: 'Needs review', exact: true })
+        .getByRole('button', { name: 'Review image', exact: true })
         .click();
     await expect(
         dialog.getByText('The packaging needs a reference photo'),
