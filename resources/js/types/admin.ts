@@ -246,8 +246,7 @@ export interface ProductBarcode {
 }
 
 export interface ProductSummary {
-    image_verification:
-        'needs_review' | 'matches' | 'doesnt_match' | 'image_missing';
+    image_verification: 'matches' | 'doesnt_match' | 'image_missing' | null;
     id: number;
     /** The store's raw base name — see `CellPallet.product_name`. */
     name: string;

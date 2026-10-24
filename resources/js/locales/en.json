@@ -3128,7 +3128,7 @@
         "matches": "Matches",
         "doesnt_match": "Doesn’t match",
         "image_missing": "Image missing",
-        "needs_review": "Needs review",
+        "review": "Review image",
         "note": "Image issue note (optional)",
         "history": "Review history",
         "noHistory": "No reviews yet.",
@@ -3141,6 +3141,6 @@
         "uploadHint": "JPEG, PNG or WebP, up to 5 MB and 6000 × 6000 pixels. Uploading an image requires a new review; earlier notes are kept.",
         "upload": "Upload image",
         "all": "All",
-        "help": "Before storing each received pallet, compare its product with the reference image and choose a result. You can add an optional note. On the products page, click the image review status to see earlier notes or replace the image. Use the Image verification filter to find mismatches, missing images or products needing review."
+        "help": "Before storing each received pallet, compare its product with the reference image and choose a result. You can add an optional note. On the products page, open image verification to see earlier notes or replace the image. Use the Image verification filter to find mismatches or missing images."
     }
 }

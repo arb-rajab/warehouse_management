@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Barcode, TriangleAlert } from '@lucide/vue';
+import { Barcode, Eye } from '@lucide/vue';
 import { ref } from 'vue';
 import { index as productsIndex } from '@/actions/App/Http/Controllers/Admin/ProductController';
 import DataTable from '@/components/DataTable.vue';
@@ -55,9 +55,7 @@ const previewProducts = [
             </p>
             <HelpUiPreview inert class="mt-2 block"
                 ><button type="button" :class="filterTriggerButtonClass">
-                    <TriangleAlert class="h-4 w-4" />{{
-                        t('imageReview.needs_review')
-                    }}
+                    <Eye class="h-4 w-4" />{{ t('imageReview.review') }}
                 </button></HelpUiPreview
             >
         </section>

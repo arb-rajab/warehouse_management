@@ -56,13 +56,9 @@ class ProductController extends Controller
         $products = Product::query()
             ->select(['id', 'name', 'ar_name', 'thumbnail_img', 'warehouse_image_path', 'published'])
             ->addSelect(['image_verification' => ProductImageReview::currentStatusQuery()])
-            ->when($request->filled('image_verification'), function (Builder $query) use ($request) {
-                if ($request->string('image_verification')->value() === 'needs_review') {
-                    $query->whereNotExists(ProductImageReview::currentStatusQuery());
-                } else {
-                    $query->whereExists(ProductImageReview::currentStatusQuery()->where('status', $request->string('image_verification')->value()));
-                }
-            })
+            ->when($request->filled('image_verification'), fn (Builder $query) => $query->whereExists(
+                ProductImageReview::currentStatusQuery()->where('status', $request->string('image_verification')->value()),
+            ))
             ->with(Product::WITH_DERIVED_ATTRIBUTES)
             ->with('barcodes:id,product_id,barcode')
             ->withOccupancyCounts($request, $expiringSoonDays)

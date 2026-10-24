@@ -33,7 +33,7 @@ class ProductSummaryResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'image_verification' => $this->image_verification ?? 'needs_review',
+            'image_verification' => $this->image_verification,
             'id' => $this->id,
             'name' => $this->name,
             'ar_name' => $this->ar_name,

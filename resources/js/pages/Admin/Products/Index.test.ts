@@ -62,7 +62,7 @@ vi.mock('@inertiajs/vue3', async () => {
 
 function product(overrides: Partial<ProductSummary> = {}): ProductSummary {
     return {
-        image_verification: 'needs_review',
+        image_verification: null,
         id: 10,
         name: 'Widgets',
         ar_name: 'ودجات',
@@ -139,6 +139,18 @@ describe('Products Index', () => {
         i18n.global.locale.value = 'en';
     });
 
+    it('offers a neutral review action when there is no current result', async () => {
+        const wrapper = mountPage([product()]);
+        const trigger = wrapper
+            .findAll('button')
+            .find((button) => button.text() === t('imageReview.review'));
+        expect(trigger).toBeDefined();
+        await trigger?.trigger('click');
+        expect(
+            wrapper.getComponent(ProductImageReviewDialog).props('productId'),
+        ).toBe(10);
+    });
+
     it('filters by image verification and opens the selected product review', async () => {
         const wrapper = mountPage([
             product({ image_verification: 'doesnt_match' }),
@@ -155,13 +167,9 @@ describe('Products Index', () => {
         await openFilters(wrapper);
         const filter = wrapper.get('#image-verification-filter');
         expect(filter.findAll('option').map((option) => option.text())).toEqual(
-            [
-                'all',
-                'needs_review',
-                'matches',
-                'doesnt_match',
-                'image_missing',
-            ].map((status) => t(`imageReview.${status}`)),
+            ['all', 'matches', 'doesnt_match', 'image_missing'].map((status) =>
+                t(`imageReview.${status}`),
+            ),
         );
         await filter.setValue('doesnt_match');
         await wrapper.get('#products-filter-form').trigger('submit');
