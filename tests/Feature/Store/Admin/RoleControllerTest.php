@@ -80,8 +80,8 @@ describe('create', function () {
         $unsorted = Permission::create(['name' => 'export_everything']);
         Permission::create(['name' => 'add_auction_product', 'section' => 'auction']);
         SpatiePermission::create(['name' => 'warehouse_only', 'guard_name' => 'web', 'section' => 'price_changes']);
-        actingAsStoreUser(createStoreStaff('add_staff_role'));
-        $ownPermission = Permission::findByName('add_staff_role', 'store');
+        actingAsStoreUser(createStoreAdmin());
+        $ownPermission = Permission::findOrCreate('add_staff_role', 'store');
 
         $this->get('/temp/admin/roles/create')->assertOk()->assertInertia(
             fn (Assert $page) => $page->component('Store/Admin/Staff/Roles/Create')
@@ -127,7 +127,7 @@ describe('create', function () {
     });
 
     test('the add-role form offers every enforced store permission to a freshly migrated database, grouped by its listed section', function () {
-        actingAsStoreUser(createStoreStaff('add_staff_role'));
+        actingAsStoreUser(createStoreAdmin());
         $names = Permission::query()->pluck('name', 'id');
 
         $this->get('/temp/admin/roles/create')->assertOk()->assertInertia(
@@ -148,7 +148,7 @@ describe('create', function () {
 describe('store', function () {
     test('a role is created on the store guard with its permissions and default-language translation', function () {
         $permission = Permission::findByName('view_all_orders', 'store');
-        actingAsStoreUser(createStoreStaff('add_staff_role'));
+        actingAsStoreUser(createStoreAdmin());
 
         $this->post('/temp/admin/roles', ['name' => 'Clerk', 'permissions' => [(string) $permission->id]])
             ->assertRedirect(route('roles.index'));
@@ -203,7 +203,7 @@ describe('edit', function () {
         $role->givePermissionTo($permission);
         addStoreLanguage('en', 'English');
         addStoreLanguage('ar', 'Arabic', rtl: true);
-        actingAsStoreUser(createStoreStaff('edit_staff_role'));
+        actingAsStoreUser(createStoreAdmin());
 
         $this->get("/temp/admin/roles/{$role->id}/edit")->assertOk()->assertInertia(
             fn (Assert $page) => $page->component('Store/Admin/Staff/Roles/Edit')
@@ -255,7 +255,7 @@ describe('update', function () {
         $dropped = Permission::findByName('delete_order', 'store');
         $role = Role::findOrCreate('Clerk', 'store');
         $role->givePermissionTo([$kept, $dropped]);
-        actingAsStoreUser(createStoreStaff('edit_staff_role'));
+        actingAsStoreUser(createStoreAdmin());
 
         $this->put("/temp/admin/roles/{$role->id}", ['name' => 'Senior Clerk', 'lang' => 'en', 'permissions' => [$kept->id]])
             ->assertRedirect(route('roles.index'));

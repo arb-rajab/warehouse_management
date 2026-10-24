@@ -6984,3 +6984,46 @@ passes after the box-count legend addition, before the stable full gate.
 The unstored registration fields and §35's existing Clear due method/policy issue
 remain separate owner decisions; no newly dropped UI requirement or silently
 ignored editable field remains in this batch.
+
+## 59. Staff and role editors can no longer escalate (2026-10-24)
+
+Closes role-grants audit finding G-3 and checklist risk R1. Before, `edit_staff_role`
+could tick any store permission onto any non-Super-Admin role (the editor's own
+included) and `edit_staff` could give any role to any account, the editor's own
+included, and set that account's email and password. Either one was equivalent
+to every permission but Super Admin, and an account takeover of anything
+below Super Admin.
+
+**Rule** (`App\Support\StaffPrivileges`): no one grants a permission they do not
+hold, and no one manages an account that holds more than they do. A staff member
+holds the permissions given to them directly and through their roles. The Super
+Admin holds everything and is never limited. The money and impersonation gates
+(R2, R3) therefore stay with whoever holds them: a role editor cannot hand them
+on.
+
+| Action | Before | Now |
+| --- | --- | --- |
+| Role form (`roles.create`, `roles.edit`) | every permission offered | only permissions the editor holds are offered |
+| Create role (`roles.store`) | any permissions | refused (error on `permissions`, nothing created) if any is not held |
+| Update role (`roles.update`) | any permissions synced | the editor adds or removes only permissions they hold; a permission the role has and they lack stays untouched; ticking one the role lacks and they lack is refused |
+| Staff form (`staffs.create`, `staffs.edit`) | every role but Super Admin | only roles that grant nothing beyond the editor's permissions |
+| Create or update staff (`staffs.store`, `staffs.update`) | any role but Super Admin | `role_id` must be one of those roles (`messages.staff_role_not_assignable`); on an account's own edit it must be unchanged, so nobody changes their own role |
+| Open, update or delete an account (`staffs.edit`, `.update`, `.destroy`) | any non-Super-Admin account | 403 if the account holds anything the editor does not; peers and lower accounts, and the editor's own, are allowed |
+
+No route, permission name or Vue file changed. The role form simply lists fewer
+checkboxes for a non-Super-Admin editor, and the staff form fewer roles. The
+staff list still shows an edit link on an account the editor cannot open; it
+answers 403. Existing data is untouched. The launch plan (Super Admin only) is
+unaffected: the Super Admin sees and can do everything as before.
+
+Tests: `tests/Feature/Store/Admin/StaffPrivilegeEscalationTest.php` (17 tests;
+9 fail without the change, the other 8 pin the allowed paths, including that the
+Super Admin is unrestricted). Six cases in `RoleControllerTest` that used a
+one-permission staff account to exercise the full permission list now use the
+Super Admin, since a limited editor sees only what they hold. R1 in the go-live
+checklist is closed in code.
+
+Not covered, still owner decisions: who gets `edit_staff_role` or `edit_staff` at
+all; a role editor can still remove permissions they hold from a role they
+belong to (a lockout, not an escalation).
+

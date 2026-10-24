@@ -12,6 +12,8 @@ use App\Models\Language;
 use App\Models\Permission;
 use App\Models\Role;
 use App\Models\RoleTranslation;
+use App\Models\StoreUser;
+use App\Support\StaffPrivileges;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -83,18 +85,20 @@ class RoleController extends Controller implements HasMiddleware
         ]);
     }
 
-    public function create(): Response
+    public function create(Request $request): Response
     {
         return Inertia::render('Store/Admin/Staff/Roles/Create', [
-            'permissionGroups' => $this->permissionGroups(),
+            'permissionGroups' => $this->permissionGroups($this->privileges($request)),
         ]);
     }
 
     public function store(StoreRoleRequest $request): RedirectResponse
     {
-        DB::transaction(function () use ($request) {
+        $permissionIds = $this->privileges($request)->permissionsForNewRole($this->checkedPermissionIds($request));
+
+        DB::transaction(function () use ($request, $permissionIds) {
             $role = Role::create(['name' => $request->validated('name')]);
-            $role->givePermissionTo($this->checkedPermissionIds($request));
+            $role->givePermissionTo($permissionIds);
 
             RoleTranslation::create([
                 'role_id' => $role->id,
@@ -116,7 +120,7 @@ class RoleController extends Controller implements HasMiddleware
             'lang' => $lang,
             'name' => $role->getTranslation('name', $lang),
             'languages' => Language::query()->select(['code', 'name'])->orderBy('id')->get(),
-            'permissionGroups' => $this->permissionGroups(),
+            'permissionGroups' => $this->permissionGroups($this->privileges($request)),
             'permissionIds' => $role->permissions()->pluck($role->permissions()->getRelated()->qualifyColumn('id'))->all(),
         ]);
     }
@@ -125,14 +129,16 @@ class RoleController extends Controller implements HasMiddleware
     {
         abort_if($role->name === Role::SUPER_ADMIN, 403);
         $lang = $request->validated('lang');
+        $current = $role->permissions()->pluck($role->permissions()->getRelated()->qualifyColumn('id'))->map(fn ($id) => (int) $id)->all();
+        $permissionIds = $this->privileges($request)->permissionsAfterRoleEdit($this->checkedPermissionIds($request), $current);
 
-        DB::transaction(function () use ($request, $role, $lang) {
+        DB::transaction(function () use ($request, $role, $lang, $permissionIds) {
             if ($lang === config('app.default_language')) {
                 $role->name = $request->validated('name');
                 $role->save();
             }
 
-            $role->syncPermissions($this->checkedPermissionIds($request));
+            $role->syncPermissions($permissionIds);
 
             RoleTranslation::query()->updateOrCreate(
                 ['role_id' => $role->id, 'lang' => $lang],
@@ -160,12 +166,16 @@ class RoleController extends Controller implements HasMiddleware
      * each label run through the store's translations the way the Blade form
      * did, since the permission vocabulary lives in the database.
      *
+     * Only the permissions the signed-in staff member holds are offered: no one
+     * can grant what they lack (App\Support\StaffPrivileges).
+     *
      * @return array<int, array<string, mixed>>
      */
-    private function permissionGroups(): array
+    private function permissionGroups(StaffPrivileges $privileges): array
     {
         return Permission::query()
             ->select(['id', 'name', 'section'])
+            ->when(! $privileges->isSuperAdmin(), fn ($query) => $query->whereIn('id', $privileges->heldPermissionIds()))
             ->where(fn ($query) => $query->whereNull('section')->orWhereNotIn('section', self::REMOVED_ADDON_SECTIONS))
             ->orderBy('id')
             ->get()
@@ -180,6 +190,14 @@ class RoleController extends Controller implements HasMiddleware
             ])
             ->values()
             ->all();
+    }
+
+    private function privileges(Request $request): StaffPrivileges
+    {
+        /** @var StoreUser $actor */
+        $actor = $request->user('store');
+
+        return new StaffPrivileges($actor);
     }
 
     /**
