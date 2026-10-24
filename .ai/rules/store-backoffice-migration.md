@@ -23,6 +23,7 @@ paths:
 Seller catalogue follow-up: [digital validation and transactional persistence, plus seller row limits](#55-seller-digital-catalogue-and-remaining-seller-row-rules-pr-c-2026-10-23).
 
 Reference-data follow-up: [legacy countries, states, currencies, languages and CMS pages as a migration](#46-legacy-reference-data-as-a-migration-2026-10-21).
+Required-field follow-up: [Trips, Sales and Languages complete](#57-back-office-required-fields-phase-2b-batch-2b-trips-sales-and-languages-2026-10-24).
 Forms follow-up: [required and optional form fields](#44-required-and-optional-form-fields-2026-10-21), then [the public address forms and the checkout address pick](#45-public-forms-phase-2a-address-forms-and-the-checkout-address-pick-2026-10-21), then [the longitude columns, seller registration and create customer](#47-public-forms-phase-2a-continued-the-longitude-columns-seller-registration-create-customer-2026-10-21).
 Latest follow-up: [retire the unused admin shells](#39-retire-the-unused-admin-shells-2026-10-20).
 Catalogue follow-up: [admin seller product list](#38-admin-seller-product-list-2026-10-20).
@@ -562,15 +563,15 @@ The back-office Blade to Inertia conversion is complete; §39 retires its dead s
 | Staff and roles | Complete pilot | Existing six Inertia pages retained; action gates unchanged |
 | Reference/shipping/tax/currency | Complete | Canonical `35ae3133` controllers/forms/routes; duplicate `e5523338` implementation superseded; Setup required-field follow-up complete (§56), with conditional marks and retained scanner limitations |
 | Carrier administration | Complete | List/create/edit and CRUD/status use Inertia; existing `manage_carriers` gate, tariff contract and public/API consumers preserved (§11); required tariff/group marks follow free shipping (§56) |
-| Language/settings | Complete | Language CRUD and translation-selector validation separated; dedicated settings endpoints with reserved-key protection; general settings use Inertia with a typed writer and a config-managed timezone (§17); the generic `business_settings.update` writer is retired (§20); the Google Map settings GET uses Inertia and the approved Leaflet picker (§32) |
+| Language/settings | Complete | Language CRUD and translation-selector validation separated; dedicated settings endpoints with reserved-key protection; general settings use Inertia with a typed writer and a config-managed timezone (§17); the generic `business_settings.update` writer is retired (§20); the Google Map settings GET uses Inertia and the approved Leaflet picker (§32); language required-field legends verified (§57), nullable translation values remain unmarked |
 | Reports/notifications | Complete | Inertia report/admin notification routes; public/customer/seller notification consumers remain |
 | Uploads/profile | Complete | Canonical `944e2e1e` backend/picker; per-action authorization and authenticated-user profile |
 | Customers/representatives | Complete | Customers, addresses, representatives/packages/payments, customer package administration (§12), visit list/detail/day maps (§31) and the admin classified-products list/publish/delete (§37) use Inertia; customer-facing classified pages and the mobile API remain separate |
 | Catalogue | Complete | Attributes/values, colors, brand discount, reviews (the legacy Blade list retired, §28), bulk import/export and offers catalogue implemented; category (§13) and brand (§14) administration complete; digital product list, deletion, download and switches converted (§15); digital product create/edit converted on the shared editor and canonical uploader (§21); in-house and all-products lists with their switches, duplicate, delete and bulk delete converted (§16); physical product create converted with its typed variant/SKU endpoint (§22); physical product edit converted with translation tabs and stored variant rows (§23); the admin seller product list, its approval and remaining row actions use the same Inertia list and shared writer (§38) |
 | Website/support | Complete | Header/home, footer, appearance, custom pages (§20), conversations, product queries, the ticket list and the ticket detail with its typed reply use Inertia; footer, appearance and page rich text use the shared editor, cleaned on write (§20); the header/footer scripts stay on their compatibility endpoint as plain code fields; script policy, `manage_website_scripts` and rich-text WAF exceptions stay held; Website required-field follow-up complete (§56), with scanner limitations retained |
 | Marketing/blog | Complete | Coupons, flash/offer deals, campaign products, popups, subscribers and blog categories/list/actions integrated; blog post create/edit (§18) and the newsletter form (§19) use Inertia with the shared Tiptap editor; the typed newsletter send and bounded recipient search are unchanged |
-| Logistics | Complete | Drivers/trucks converted; the all-trips and today's-trips lists with their status dialog, notes, delete and bulk delete converted (§24); the trip create and edit forms converted without their map (§25); the trip orders list with its bulk status, invoice number and delivered actions converted (§26); the trip detail with its checkpoint notes, status and CMR download converted without its map (§27); the trip map picker converted on Leaflet from npm (§30); visit list/detail/day maps use Inertia and bundled Leaflet (§31) |
-| Orders/dashboard | Complete | Orders and entry forms converted; stored tax metadata and line-price-only grand total preserved; shell utilities integrated; dashboard converted to Inertia with bundled Chart.js (§33) |
+| Logistics | Complete | Drivers/trucks converted; the all-trips and today's-trips lists with their status dialog, notes, delete and bulk delete converted (§24); the trip create and edit forms converted without their map (§25); the trip orders list with its bulk status, invoice number and delivered actions converted (§26); the trip detail with its checkpoint notes, status and CMR download converted without its map (§27); the trip map picker converted on Leaflet from npm (§30); visit list/detail/day maps use Inertia and bundled Leaflet (§31); Trips required-field marks and legends verified, with scanner limitations retained (§57) |
+| Orders/dashboard | Complete | Orders and entry forms converted; stored tax metadata and line-price-only grand total preserved; shell utilities integrated; dashboard converted to Inertia with bundled Chart.js (§33); Sales required-field marks, bulk selection and per-action legends verified (§57) |
 | Seller administration | Complete: stages 34–36 | Seller accounts/verification/profile (§34), payments/withdrawals (§35), commission and verification form configuration (§36) use Inertia. Seller administration conversion is complete. The admin seller product list is converted with the catalogue in §38; no checkout, seller-area, storefront or role-grant policy changes |
 | Back-office shells | Retired | No application consumer remains; three dead files removed, seven protected backend templates retained (§39) |
 | Seller catalogue validation | Implemented; verification in §55 | Physical panel (§§53–54), digital panel and seller import row limits (§55); seller UI stays Blade |
@@ -6607,3 +6608,189 @@ Support and Blog remain the later batch, including the owner's existing decision
 to drop customer UI-only requirements and separately prove any column-limit fix.
 Seller panel, storefront and every other module remain outside this change.
 There are **no new owner decisions** and no pending limit alignment in this batch.
+
+
+## 57. Back-office required fields, phase 2b batch 2b: Trips, Sales and Languages (2026-10-24)
+
+Branch `codex/marks-trips-sales-languages` starts from current `origin/develop`
+`21a522f9d201079b9c4358fbc0a6d9459126a9d8`, containing PR #471. All three modules
+fit in **26 changed files**. Customers, Support, Blog, Notifications,
+Representatives, other modules, seller panel and storefront are unchanged.
+The server remains authoritative: no endpoint, server rule, storage limit,
+permission, submitted value or behavior for valid input changes. No PHP source
+or test changes, MySQL list changes or CI-Verified trailer edits are needed.
+No server limit is aligned or changed, so a new endpoint boundary test is not
+applicable; existing endpoint validation suites are run below.
+
+### Rendered changes and current status
+
+Driver countries and trip trucks gain marks. The checkpoint group and every
+editable order/customer row gain marks too; native row requirements and the
+empty-array guard remain. Stored checkpoint references stay hidden and optional
+driver/notes controls stay unmarked. Trip status dialogs gain a mark and their
+own legend. Inline checkpoint status controls gain associated marked labels
+and a legend; notes remain optional. These script-submitted controls are outside
+the scanner's form inventory.
+
+Sales product units gain a mark on each row. Bulk delete marks its selection
+group and natively requires any one order, without requiring every checkbox;
+the requirement clears on selection, returns on clearing, and selection resets
+after success. Delivery/payment actions gain marks and separate legends;
+item-price forms gain legends. Tracking and manager notes remain optional.
+
+Language RTL/status and JSON import forms gain separate legends. Their boolean
+selects still accept 0 and 1. The disabled default-language status is supplied
+by the existing hidden control/transform and is display-only: remove its mark
+and native requirement. Editable booleans remain required. Translation values
+remain present but nullable, so they have neither marks nor native requirements;
+there is no required-field legend on those text-only translation forms.
+
+Fresh generated report/JSON:
+[required-fields-audit-20261024.md](../required-fields-audit-20261024.md) and
+[required-fields-audit-20261024.json](../required-fields-audit-20261024.json).
+The 20261023 and 20261022 snapshots remain historical. Scanner implementation
+and baseline reasons are unchanged. Only six absent fingerprints are removed;
+no entry is added or raised.
+
+| Module | Forms | Before A/B/C/D/E/F | After A/B/C/D/E/F | Total before → after | Status |
+| --- | ---: | --- | --- | --- | --- |
+| Store/Admin/Trips | 11 | 3 / 4 / 0 / 0 / 1 / 1 | 3 / 0 / 0 / 0 / 1 / 1 | 9 → 5 | Real gaps fixed; remaining limitations/UI-only fields below |
+| Store/Admin/Sales | 9 | 6 / 1 / 1 / 0 / 6 / 2 | 5 / 0 / 1 / 0 / 6 / 2 | 16 → 14 | Real gaps fixed; route/array limitations retained |
+| Store/Admin/Languages | 7 | 3 / 0 / 0 / 0 / 2 / 0 | 3 / 0 / 0 / 0 / 2 / 0 | 5 → 5 | Legends fixed; array/transform limitations retained |
+| Whole application | 239 | 37 / 32 / 38 / 7 / 105 / 23 | 36 / 27 / 38 / 7 / 105 / 23 | **242 → 236** | P3 116 → 110; P1/P2 unchanged |
+| Back-office baseline | — | 72 entries | 66 entries | **72 → 66** | Only the six fixed A/B fingerprints removed |
+
+### Every original finding and its disposition
+
+One row per original scoped finding (30 total). Retained scanner findings are
+not UI defects and are not worked around by adding bogus hidden or required
+controls. Manual F checks include the controller, route and real FormRequest.
+
+| Form and endpoint | Class | Field | Disposition |
+| --- | --- | --- | --- |
+| Languages/Index → LanguageController@updateRtlStatus | A | `status` | Limitation: Form transform renames rtl-<id> to status. The required boolean select accepts both 0 and 1; add its missing form legend. |
+| Languages/Translations → LanguageController@storeAppTranslations | A | `translations` | Limitation: dynamic nested key/value names supply the array; keys are hidden, values are present&#124;nullable. Values must stay unrequired and unmarked. |
+| Languages/Translations → LanguageController@storeTranslations | A | `translations` | Limitation: dynamic nested key/value names supply the array; keys are hidden, values are present&#124;nullable. Values must stay unrequired and unmarked. |
+| Sales/Orders/Create → OrderEntryController@shippingStore | A | `products` | Limitation: dynamic nested product row names supply the array. Required product, quantity, price and unit controls exist; unit marks added. |
+| Sales/Orders/Create → OrderEntryController@shippingStore | A | `rep_id` | Limitation: scratch route binding evaluates the representative route; shippingStore is nullable and correctly omits this control. Representative create renders it required and marked. |
+| Sales/Orders/Create → OrderEntryController@store | A | `products` | Limitation: dynamic nested product row names supply the array. Required product, quantity, price and unit controls exist; unit marks added. |
+| Sales/Orders/Edit → OrderEntryController@update | A | `products` | Limitation: dynamic nested product row names supply the array. Required product, quantity, price and unit controls exist; unit marks added. |
+| Sales/Orders/Index → OrderController@bulk_order_delete | A | `id[]` | Fix: mark the selection group; only the first checkbox is required while none is selected. Selecting any order satisfies the group. |
+| Sales/Orders/Show → OrderController@edit_item_price | A | `order_id` | Limitation: rules() uses the route name; item-price route requires id and admin_price, not order_id. Preserve the real route contract. |
+| Trips/Trips/Create → TripController@store | A | `checkpoints_array` | Limitation: dynamic nested checkpoint names supply the array; empty-row native validation already exists. Group and editable row marks added; stored references stay hidden. |
+| Trips/Trips/Edit → TripController@update | A | `checkpoints_array` | Limitation: dynamic nested checkpoint names supply the array; empty-row native validation already exists. Group and editable row marks added; stored references stay hidden. |
+| Trips/Trips/Index → TripController@bulkDestroy | A | `list` | Limitation: bulkDestroy(listQuery) supplies the required list in the action query. |
+| Sales/Orders/Index → OrderController@bulk_order_delete | B | `id[]` | Fix: mark the selection group; only the first checkbox is required while none is selected. Selecting any order satisfies the group. |
+| Trips/Drivers/Create → DriverController@store | B | `country` | Fix: RequiredMark on the existing required country select. |
+| Trips/Drivers/Edit → DriverController@update | B | `country` | Fix: RequiredMark on the existing required country select. |
+| Trips/Trips/Create → TripController@store | B | `truck_id` | Fix: RequiredMark on the existing required truck select. |
+| Trips/Trips/Edit → TripController@update | B | `truck_id` | Fix: RequiredMark on the existing required truck select. |
+| Sales/Orders/Show → OrderController@edit_item_price | C | `admin_price` | Limitation: route-dependent rules. order.item.edit_price requires numeric admin_price; retain its mark and native required, add the missing legend. |
+| Languages/Translations → LanguageController@storeAppTranslations | E | `search` | UI-only: filters the key list through the GET endpoint; save writes only translations. Retain unmarked. |
+| Languages/Translations → LanguageController@storeTranslations | E | `search` | UI-only: filters the key list through the GET endpoint; save writes only translations. Retain unmarked. |
+| Sales/Orders/Create → OrderEntryController@shippingStore | E | `customer_id-search` | UI-only: async option search, not a persisted field. The named selected id is validated and saved; retain search unmarked. |
+| Sales/Orders/Create → OrderEntryController@store | E | `customer_id-search` | UI-only: async option search, not a persisted field. The named selected id is validated and saved; retain search unmarked. |
+| Sales/Orders/Create → OrderEntryController@store | E | `rep_id-search` | UI-only: async option search, not a persisted field. The named selected id is validated and saved; retain search unmarked. |
+| Sales/Orders/Edit → OrderEntryController@update | E | `customer_id-search` | UI-only: async option search, not a persisted field. The named selected id is validated and saved; retain search unmarked. |
+| Sales/Orders/Show → OrderController@edit_item_price | E | `id` | Limitation: order.item.edit_price explicitly requires this hidden line id; scanner evaluated another route branch. |
+| Sales/Orders/Show → OrderController@update_manager_notes | E | `notes` | Limitation: orders.update_manager_notes validates nullable notes (max:2000), and controller saves manager_notes. Keep unmarked. |
+| Trips/Drivers/Edit → DriverController@update | E | `email` | UI-only: edit email is readonly account information; UpdateDriverRequest and controller intentionally do not update it. Retain unmarked. |
+| Sales/Orders/Index → (unresolved) | F | `-` | Manual verification: listAction selects OrderController@all_orders list routes (FilterOrdersRequest). Search, dates, statuses and per_page are optional; retain unmarked. |
+| Sales/Orders/Show → (unresolved) | F | `-` | Manual verification: action.action selects delivery/payment status routes. Both require order_id plus status; add status marks and one legend to each form. |
+| Trips/Trips/Index → (unresolved) | F | `-` | Manual verification: listIndex selects TripController@index or today (FilterTripsRequest). All filters optional, including the status checkbox list; no marks or legend needed. |
+
+### UI/server disagreements, ignored fields and owner decisions
+
+The Sales `admin_price` C is a route-binding limitation, not an optional field:
+the real `order.item.edit_price` route requires it. The shipping create `rep_id`
+A likewise comes from evaluating the other create route; the shipping route is
+nullable and continues to omit the representative input. Notes and line-id E
+findings are also resolved by reading the actual named route, not by changing
+server rules. Native default-language status requirements are dropped from the
+disabled display control because its value is already supplied automatically.
+There are no other real UI-only presence requirements to remove in this scope.
+
+No silently ignored editable business field was found. Driver edit email is
+readonly information, option searches are UI state, and translation search is
+GET filter state. Manager notes, line price, selected ids, checkpoints, translation
+values and boolean status are validated and persisted by their actual endpoints.
+No field the user expects to save was removed. Existing registration-field and
+Customer decisions remain open and outside this batch; no new owner decision.
+D16 removes Trips, Sales and Languages from Left; Customers, Support and Blog remain.
+
+### Verification
+
+Before any UI edit, `php artisan forms:audit-required --output=work/required-marks-before`
+reproduced **242**, including all 30 scoped findings. New mounted assertions
+then reproduced **11 failed / 54 passed** across eight files (seven failing).
+Initial test-authoring syntax errors were corrected before this reproduction;
+they are not counted as UI failures. After implementation, the focused run
+passed **8 files / 65 tests**. The complete scoped page/component run passed
+**21 files / 146 tests**, including all four changed shared create/edit forms,
+optional values, group selection/clearing, dynamic rows and per-form legends.
+
+The first type check found missing locked frontend packages and overly broad
+DOM-wrapper typings in new assertions. `npm ci` restored the lockfile dependency
+set; no dependency or lockfile changed. Assertions were corrected and types pass.
+The first focused Pest run had **388 passed / 1 error / 2,772 assertions**: a stale
+Composer class map referenced the deleted root TripController. Vendor-only
+`composer dump-autoload --no-scripts` repairs it; no application/test workaround.
+The first post-fix ratchet correctly failed naming exactly the six stale entries.
+
+Final focused endpoint/audit/ratchet suites pass **389 tests / 2,774 assertions**.
+Changed-file ESLint and Prettier checks pass. `git diff --check` passes.
+No PHP files changed, so dirty Pint and new MySQL test-list entries are not
+applicable; the full gate still runs repository-wide PHP checks.
+
+The first full gate passed whole-repository ESLint, Prettier, vue-tsc and
+**336 Vitest files / 2,681 tests**, then stopped at Pint because the command
+sandbox blocked its local worker socket (`127.0.0.1:0`). The rerun uses network
+enabled execution so the existing workers can listen; no test or checker changed.
+The existing upload suite separately reproduced the bundled GD's missing WebP
+support (**50 passed / 1 failed / 216 assertions**). A WebP-enabled GD was built
+from the existing PHP 8.5 image with the platform proxy/CA, then installed only
+in the workspace runtime. The upload suite now passes **51 / 235 assertions**.
+No image fixture, rule, lockfile or assertion changed to repair the environment.
+
+**Final explicit `python3 .claude/scripts/pre_push_check.py --full`: passed.**
+It ran setup readiness, Wayfinder generation, whole-repository ESLint, Prettier,
+vue-tsc, **336 Vitest files / 2,681 passing tests**, Pint, PHPStan (**0 errors**),
+config clear, and parallel Pest: **7,650 passed / 3 existing MySQL-only skips on
+SQLite / 42,925 assertions (84.211 seconds)**. `git diff --check` passes. All 30
+original findings appear exactly once in the table, and the audit/baseline lose
+exactly the same six fingerprints with none added. Only documentation was
+finalized before the initial push; the browser-spec follow-up below received
+its own verification.
+
+Not run locally before the browser follow-up: the full application Playwright
+suite, the MySQL job,
+composer/npm advisory audits or deploy rollback tests. Focused browser verification
+and a new production asset build are recorded in the follow-up below. These separate CI lanes remain required when planned.
+The supplied Vite manifest was available for existing Inertia tests; no new
+Inertia-rendering Pest test was added. No new test is skipped, loosened or
+quarantined, and no CI-Verified trailer is written or edited.
+There are no new owner decisions and no pending limit alignment in this batch.
+
+
+### Browser follow-up from PR #484 CI
+
+The first CI run passed all planned non-browser checks and **143 Playwright tests**,
+but the trip create/edit flow timed out at the exact bare `Customer` label. Adding
+the checkpoint RequiredMark changed its accessible name to `Customer required`;
+the browser spec had not been updated. The same timeout was reproduced locally
+against freshly built production assets before changing the test.
+
+The spec now locates the exact `combobox` named `Customer required` and additionally
+asserts the native `required` attribute. Existing empty-checkpoint validation,
+create/edit persistence, status/notes and confirmation assertions are retained;
+no timeout, retry, skip or application behavior changed. A sweep of the browser
+specs found no other affected exact-label locator.
+
+The focused trip browser spec passes **2 tests (9.1 seconds)** with enforced CSP,
+local HTTPS, system Chromium and video recording. A fresh production build passes;
+a stale ignored `public/hot` file was backed up outside the repository so the
+browser uses that build. This adds one browser-spec file to the PR, for **26 files**.
+**Follow-up explicit full pre-push gate: passed** (336 Vitest files / 2,681 tests;
+Pint; PHPStan zero errors; Pest 7,650 passed / 3 existing MySQL-only skips /
+42,925 assertions). Changed-spec ESLint/Prettier and `git diff --check` pass.
+No CI-Verified trailer is written; GitHub Actions reruns against the new head.

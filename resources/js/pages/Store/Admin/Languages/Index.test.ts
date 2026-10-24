@@ -189,4 +189,33 @@ describe('Language Index', () => {
             { preserveState: true, replace: true },
         );
     });
+    it('gives each editable status and import form its own required legend, allowing false', async () => {
+        const wrapper = mountPage();
+        await wrapper.vm.$nextTick();
+        const forms = wrapper.findAll('form');
+        expect(forms).toHaveLength(3);
+
+        for (const form of forms) {
+            expect(form.findAll('[data-required-legend]')).toHaveLength(1);
+            expect(form.findAll('[data-required-mark]')).toHaveLength(1);
+            expect(form.findAll('[required]')).toHaveLength(1);
+        }
+
+        await wrapper.get('[name="rtl-3"]').setValue('0');
+        expect(
+            wrapper
+                .get<HTMLSelectElement>('[name="rtl-3"]')
+                .element.checkValidity(),
+        ).toBe(true);
+        await wrapper.setProps({
+            languages: paginated([adminLanguage({ is_default: true })]),
+        });
+        await wrapper.vm.$nextTick();
+        expect(
+            wrapper.findAll('form')[1].find('[data-required-legend]').exists(),
+        ).toBe(false);
+        expect(
+            wrapper.findAll('form')[1].find('[data-required-mark]').exists(),
+        ).toBe(false);
+    });
 });

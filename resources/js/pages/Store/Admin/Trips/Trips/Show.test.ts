@@ -367,10 +367,10 @@ describe('Store trip detail', () => {
         const wrapper = mountPage([storeTripCheckpointRow(), visit]);
         const select = wrapper.get<HTMLSelectElement>('#checkpoint-status-502');
         expect(select.element.value).toBe('pending');
-        expect(select.attributes('aria-label')).toBe(
-            t('store.trips.show.statusFor', {
+        expect(wrapper.get('label[for="checkpoint-status-502"]').text()).toBe(
+            `${t('store.trips.show.statusFor', {
                 stop: t('store.trips.show.stop', { position: 2 }),
-            }),
+            })}*${t('common.required')}`,
         );
         expect(
             select
@@ -452,5 +452,32 @@ describe('Store trip detail', () => {
         expect(wrapper.find('tbody img[src="x"]').exists()).toBe(false);
         expect(wrapper.find('tbody b').exists()).toBe(false);
         expect(wrapper.text()).toContain('<b>bold</b>');
+    });
+    it('marks every editable checkpoint status and leaves notes optional', async () => {
+        const wrapper = mountPage([storeTripCheckpointRow(), visit]);
+        await wrapper.vm.$nextTick();
+        expect(wrapper.findAll('[data-required-legend]')).toHaveLength(1);
+
+        for (const select of wrapper.findAll('select[required]')) {
+            expect(
+                wrapper
+                    .find(
+                        `label[for="${select.attributes('id')}"] [data-required-mark]`,
+                    )
+                    .exists(),
+            ).toBe(true);
+        }
+
+        expect(wrapper.findAll('[data-required-mark]')).toHaveLength(2);
+
+        for (const notes of wrapper.findAll('textarea')) {
+            expect(notes.attributes('required')).toBeUndefined();
+        }
+
+        wrapper.unmount();
+        const viewer = mountPage([visit], ['view_all_trips']);
+        expect(viewer.find('[data-required-mark]').exists()).toBe(false);
+        expect(viewer.find('[data-required-legend]').exists()).toBe(false);
+        viewer.unmount();
     });
 });

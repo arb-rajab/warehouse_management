@@ -5,6 +5,7 @@ import { onMounted, ref } from 'vue';
 import { getAvailableVehicles } from '@/actions/App/Http/Controllers/Api/V2/Trip/DriverController';
 import FieldError from '@/components/FieldError.vue';
 import FormField from '@/components/FormField.vue';
+import RequiredMark from '@/components/RequiredMark.vue';
 import { fieldLabelClass, plainFieldInputClass } from '@/lib/filters';
 import { t } from '@/lib/i18n';
 import { tripCheckpointLabel } from '@/lib/storeTrip';
@@ -228,9 +229,9 @@ function requireOneRow(event: Event): void {
                 <FieldError :message="errors.driver_id" />
             </div>
             <div>
-                <label for="truck_id" :class="fieldLabelClass">{{
-                    t('store.trips.form.truck')
-                }}</label>
+                <label for="truck_id" :class="fieldLabelClass"
+                    >{{ t('store.trips.form.truck') }}<RequiredMark
+                /></label>
                 <select
                     id="truck_id"
                     v-model="truckId"
@@ -274,7 +275,7 @@ function requireOneRow(event: Event): void {
         </div>
         <fieldset class="space-y-3">
             <legend class="text-base font-semibold">
-                {{ t('store.trips.form.checkpoints') }}
+                {{ t('store.trips.form.checkpoints') }}<RequiredMark />
             </legend>
             <p class="text-sm text-gray-600 dark:text-neutral-400">
                 {{ t('store.trips.form.checkpointsHelp') }}
@@ -357,8 +358,8 @@ function requireOneRow(event: Event): void {
                                             ? 'store.trips.form.order'
                                             : 'store.trips.form.customer',
                                     )
-                                }}</label
-                            >
+                                }}<RequiredMark
+                            /></label>
                             <select
                                 :id="`checkpoint-${row.key}-related`"
                                 v-model="row.relatedId"

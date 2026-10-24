@@ -99,4 +99,14 @@ describe('Store trip Create', () => {
         });
         expect(getMock).not.toHaveBeenCalled();
     });
+    it('shows one legend with the rendered required fields and no marks on optional controls', async () => {
+        const wrapper = mountPage();
+        await wrapper.vm.$nextTick();
+        expect(wrapper.findAll('form [data-required-legend]')).toHaveLength(1);
+        expect(
+            wrapper.find('label[for="truck_id"] [data-required-mark]').exists(),
+        ).toBe(true);
+        expect(wrapper.findAll('[data-required-mark]')).toHaveLength(3);
+        wrapper.unmount();
+    });
 });
