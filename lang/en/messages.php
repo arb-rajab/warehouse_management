@@ -1,6 +1,9 @@
 <?php
 
 return [
+    'product_image_changed' => 'The reference image changed. Reload the product and review it again.',
+    'product_image_review_invalid' => 'Choose Image missing when there is no reference image, or Matches / Doesn’t match when an image exists.',
+
     'upload_rejected' => 'This file is unsupported, invalid, or exceeds the upload limits.',
     'admin_cannot_remove_own_access' => 'You cannot remove your own admin access.',
     'row_cannot_reduce_columns_has_pallets' => 'Cannot reduce the columns: some of the columns being removed hold pallets.',

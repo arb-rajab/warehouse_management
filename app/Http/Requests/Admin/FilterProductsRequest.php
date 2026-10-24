@@ -46,6 +46,7 @@ class FilterProductsRequest extends FormRequest
             // never holds a product, so filtering a per-product listing to
             // it would always zero out every column.
             'state' => ['nullable', 'string', Rule::enum(CellState::class)->only([CellState::Full, CellState::Opened])],
+            'image_verification' => ['nullable', 'in:needs_review,matches,doesnt_match,image_missing'],
             'expired' => ['nullable', 'boolean'],
             'expires_within_days' => ['nullable', 'integer', 'min:1'],
             'inactive' => ['nullable', 'boolean'],

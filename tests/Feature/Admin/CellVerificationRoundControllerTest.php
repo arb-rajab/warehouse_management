@@ -55,7 +55,7 @@ test('an admin can finish an unchecked round and its rows become available for p
     $cell = $row->cells()->sole();
     $product = Product::factory()->boxesCount(10)->create();
     $round = CellVerificationRound::factory()->for($worker)->covering($row)->create();
-    $payload = ['product_id' => $product->id, 'expiration_date' => '2027-01-01'];
+    $payload = ['product_id' => $product->id, 'expiration_date' => '2027-01-01', 'image_review_status' => $product->image_url ? 'matches' : 'image_missing', 'image_source' => $product->image_url];
 
     $this->post("/admin/cells/{$cell->id}/pallet", $payload)
         ->assertSessionHasErrors('action');

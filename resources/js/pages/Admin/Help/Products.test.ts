@@ -51,7 +51,9 @@ describe('Help Products', () => {
         const wrapper = mountPage();
 
         const headings = wrapper.findAll('h2').map((h2) => h2.text());
+        expect(wrapper.text()).toContain(t('imageReview.help'));
         expect(headings).toEqual([
+            t('imageReview.title'),
             t('help.products.findingProducts.heading'),
             t('help.products.defaultBoxes.heading'),
             t('help.products.settingBoxes.heading'),

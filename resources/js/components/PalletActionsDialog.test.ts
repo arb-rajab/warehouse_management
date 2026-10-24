@@ -1,4 +1,4 @@
-import { mount } from '@vue/test-utils';
+import { flushPromises, mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
     empty as emptyPallet,
@@ -9,6 +9,8 @@ import {
     update as updatePallet,
 } from '@/actions/App/Http/Controllers/Admin/PalletController';
 import FilterDialog from '@/components/FilterDialog.vue';
+import ProductImageReviewFields from '@/components/ProductImageReviewFields.vue';
+import ProductSelect from '@/components/ProductSelect.vue';
 import { formatDate, formatDateTime } from '@/lib/date';
 import { t } from '@/lib/i18n';
 import { cellPallet, cellWithLocation } from '@/testing/factories';
@@ -33,9 +35,26 @@ vi.mock('@inertiajs/vue3', async () => {
         useForm: createUseFormStub(submitMock, () => formState),
         useHttp: () => ({
             get: (
-                _url: string,
+                url: string,
                 options?: { onSuccess?: (response: unknown) => void },
-            ) => options?.onSuccess?.(paginated([])),
+            ) =>
+                options?.onSuccess?.(
+                    url.includes('image-reviews')
+                        ? {
+                              id: 1,
+                              name: 'Widgets',
+                              ar_name: '',
+                              image_url: 'https://example.com/image.jpg',
+                              image_source: 'https://example.com/image.jpg',
+                              barcodes: ['123'],
+                              reviews: {
+                                  data: [],
+                                  current_page: 1,
+                                  last_page: 1,
+                              },
+                          }
+                        : paginated([]),
+                ),
         }),
     };
 });
@@ -87,6 +106,19 @@ async function mountDialog(cell: CellWithLocation | null) {
     await wrapper.setProps({ open: true });
 
     return wrapper;
+}
+
+async function selectReviewedProduct(
+    wrapper: Awaited<ReturnType<typeof mountDialog>>,
+): Promise<void> {
+    wrapper.getComponent(ProductSelect).vm.$emit('update:modelValue', {
+        id: 1,
+        name: 'Widgets',
+        ar_name: '',
+        active: true,
+    });
+    await flushPromises();
+    await wrapper.get('#receiving-image-review-status').setValue('matches');
 }
 
 describe('PalletActionsDialog', () => {
@@ -213,13 +245,16 @@ describe('PalletActionsDialog', () => {
             'Store pallet',
         );
 
+        await selectReviewedProduct(wrapper);
         await wrapper.get('#pallet-action-expiration').setValue('2026-12-25');
         await wrapper.get('#pallet-action-note').setValue('Fragile');
         await wrapper.get('form').trigger('submit');
 
         expect(submitMock).toHaveBeenCalledTimes(1);
         expect(submitMock.mock.calls[0][1]).toMatchObject({
-            product_id: null,
+            product_id: 1,
+            image_review_status: 'matches',
+            image_source: 'https://example.com/image.jpg',
             expiration_date: '2026-12-25',
             note: 'Fragile',
         });
@@ -232,15 +267,49 @@ describe('PalletActionsDialog', () => {
             wrapper.get('#pallet-action-expiration').attributes('required'),
         ).toBeUndefined();
 
+        await selectReviewedProduct(wrapper);
         await wrapper.get('#pallet-action-note').setValue('No label on box');
         await wrapper.get('form').trigger('submit');
 
         expect(submitMock).toHaveBeenCalledTimes(1);
         expect(submitMock.mock.calls[0][1]).toMatchObject({
-            product_id: null,
+            product_id: 1,
+            image_review_status: 'matches',
+            image_source: 'https://example.com/image.jpg',
             expiration_date: '',
             note: 'No label on box',
         });
+    });
+
+    it('blocks storage until an image result is chosen and sends the optional issue note', async () => {
+        const wrapper = await mountDialog(emptyCell());
+        await wrapper.get('form').trigger('submit');
+        expect(submitMock).not.toHaveBeenCalled();
+        await selectReviewedProduct(wrapper);
+        await wrapper.get('#receiving-image-review-status').setValue('');
+        await wrapper.get('form').trigger('submit');
+        expect(submitMock).not.toHaveBeenCalled();
+        await wrapper
+            .get('#receiving-image-review-status')
+            .setValue('doesnt_match');
+        await wrapper
+            .get('#receiving-image-review-note')
+            .setValue('Wrong packaging');
+        await wrapper.get('form').trigger('submit');
+        expect(submitMock.mock.calls[0][1]).toMatchObject({
+            image_review_status: 'doesnt_match',
+            image_review_note: 'Wrong packaging',
+        });
+        wrapper.getComponent(ProductSelect).vm.$emit('update:modelValue', {
+            id: 2,
+            name: 'Other product',
+            ar_name: '',
+            active: true,
+        });
+        await flushPromises();
+        expect(
+            wrapper.getComponent(ProductImageReviewFields).props('status'),
+        ).toBe('');
     });
 
     it('requires a product to be selected to store a pallet', async () => {
@@ -555,6 +624,7 @@ describe('PalletActionsDialog', () => {
 
         submitMock.mockReset();
         const storeWrapper = await mountDialog(emptyCell());
+        await selectReviewedProduct(storeWrapper);
         await storeWrapper.get('form').trigger('submit');
         expect(submitMock.mock.calls[0][0]).toEqual(
             store(8, { mergeQuery: {} }),

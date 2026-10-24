@@ -16,6 +16,7 @@ use App\Http\Resources\ProductSummaryResource;
 use App\Models\Pallet;
 use App\Models\Product;
 use App\Models\ProductBarcode;
+use App\Models\ProductImageReview;
 use App\Models\ProductSetting;
 use App\Models\Setting;
 use Illuminate\Database\Eloquent\Builder;
@@ -53,7 +54,15 @@ class ProductController extends Controller
         $perPage = $this->resolvePerPage($request, 20);
 
         $products = Product::query()
-            ->select(['id', 'name', 'ar_name', 'thumbnail_img', 'published'])
+            ->select(['id', 'name', 'ar_name', 'thumbnail_img', 'warehouse_image_path', 'published'])
+            ->addSelect(['image_verification' => ProductImageReview::currentStatusQuery()])
+            ->when($request->filled('image_verification'), function (Builder $query) use ($request) {
+                if ($request->string('image_verification')->value() === 'needs_review') {
+                    $query->whereNotExists(ProductImageReview::currentStatusQuery());
+                } else {
+                    $query->whereExists(ProductImageReview::currentStatusQuery()->where('status', $request->string('image_verification')->value()));
+                }
+            })
             ->with(Product::WITH_DERIVED_ATTRIBUTES)
             ->with('barcodes:id,product_id,barcode')
             ->withOccupancyCounts($request, $expiringSoonDays)
@@ -80,7 +89,7 @@ class ProductController extends Controller
             'expiringSoonDays' => $expiringSoonDays,
             'filters' => [
                 ...$request->only([
-                    'state', 'expired', 'expires_within_days', 'inactive', 'hide_inactive', 'low_stock', 'product_id',
+                    'image_verification', 'state', 'expired', 'expires_within_days', 'inactive', 'hide_inactive', 'low_stock', 'product_id',
                     'user_id', 'action', 'date_from', 'date_to', 'created_within_days',
                     'sort_by', 'sort_direction',
                 ]),

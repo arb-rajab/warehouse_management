@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Barcode } from '@lucide/vue';
+import { Barcode, TriangleAlert } from '@lucide/vue';
 import { ref } from 'vue';
 import { index as productsIndex } from '@/actions/App/Http/Controllers/Admin/ProductController';
 import DataTable from '@/components/DataTable.vue';
@@ -48,6 +48,19 @@ const previewProducts = [
         :feature-href="productsIndex()"
         :feature-label="t('products.title')"
     >
+        <section>
+            <h2 :class="sectionHeadingClass">{{ t('imageReview.title') }}</h2>
+            <p class="text-sm text-gray-700 dark:text-neutral-300">
+                {{ t('imageReview.help') }}
+            </p>
+            <HelpUiPreview inert class="mt-2 block"
+                ><button type="button" :class="filterTriggerButtonClass">
+                    <TriangleAlert class="h-4 w-4" />{{
+                        t('imageReview.needs_review')
+                    }}
+                </button></HelpUiPreview
+            >
+        </section>
         <section v-for="section in sections" :key="section">
             <h2 :class="sectionHeadingClass">
                 {{ t(`help.products.${section}.heading`) }}
