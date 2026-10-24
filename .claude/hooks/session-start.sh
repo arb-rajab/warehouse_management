@@ -11,6 +11,9 @@
 #                                    either the dependency install fails its
 #                                    platform check and vendor/ never appears.
 #   npm ci                    ~15s   vitest, vue-tsc, prettier, eslint
+#   Chromium + FFmpeg         cached .claude/scripts/install_playwright.py reuses
+#                                    installed binaries; downloads only missing
+#                                    ones after npm ci completes.
 #   composer dists            never  every locked package's dist URL
 #                                    (api.github.com zipball) returns 403 through
 #                                    the egress proxy, and so do codeload and
@@ -122,6 +125,7 @@ frontend='unavailable'
 backend='unavailable'
 phpTools='cannot be installed in this sandbox (dev dists are 403 via the egress proxy) — read those from CI'
 build='not built'
+browser='unavailable'
 
 # `npm ci` rather than `npm install`: install rewrites package-lock.json here
 # (this container's npm strips `libc` fields from optional deps), which would
@@ -154,6 +158,14 @@ fi
 
 if [ -n "$npmJob" ] && wait "$npmJob"; then
     frontend='ready'
+fi
+
+if [ "$frontend" = 'ready' ]; then
+    if timed playwright python3 .claude/scripts/install_playwright.py >"$stateDir/playwright.log" 2>&1; then
+        browser='ready (direct runs: source node_modules/.playwright-runtime.env)'
+    else
+        browser="unavailable (see ${stateDir}/playwright.log)"
+    fi
 fi
 
 if [ "$backend" = 'ready' ]; then
@@ -192,6 +204,7 @@ printf '%-16s %4ss\n' total "$SECONDS" >> "$stateDir/timings.txt"
 summary="Local tooling — frontend (vitest, vue-tsc, prettier, eslint): ${frontend}. App (artisan, migrations): ${backend}. Vite build (needed by Pest feature tests): ${build}.
 Pint, Pest, PHPStan and Larastan ${phpTools}.
 MySQL (migration tests, root/password, database warehouse_test): ${mysqlState}.
+Playwright (Chromium and FFmpeg): ${browser}.
 Setup took ${SECONDS}s (per phase: ${stateDir}/timings.txt)."
 
 printf '%s\n' "$summary" > "$stateDir/summary.txt"

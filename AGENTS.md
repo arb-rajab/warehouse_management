@@ -54,6 +54,12 @@ rules below take precedence over environment-specific wording in those files.
 - Keep the existing `.claude/scripts/` utilities available to both agents. Read
   their usage and limitations before invoking them. Avoid concurrent installers,
   never bypass platform requirements, and preserve lockfiles during setup.
+- Before browser tests in a Linux sandbox, after frontend dependencies are ready,
+  run `python3 .claude/scripts/install_playwright.py`. It reuses installed Chromium
+  and FFmpeg and installs only missing binaries. For a direct Playwright run,
+  source `node_modules/.playwright-runtime.env`; the pre-push runner discovers
+  the paths itself. This helper is portable across agents and does not require
+  launching the Claude SessionStart hook.
 - Prefer Laravel Boost tools when they are available. If `search-docs` or other
   Boost tools are unavailable, use installed package source, repository files,
   existing commands, and official documentation matching the installed version.

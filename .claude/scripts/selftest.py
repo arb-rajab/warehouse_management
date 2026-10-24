@@ -12,11 +12,13 @@ Exits non-zero if any case failed.
 import json
 import os
 import re
+import shlex
 import signal
 import subprocess
 import sys
 import tempfile
 from pathlib import Path
+from unittest.mock import patch
 
 SCRIPTS = Path(__file__).parent
 
@@ -118,6 +120,80 @@ export default laravel({
         sys.path.insert(0, str(SCRIPTS))
         import pre_push_check
 
+        print('install_playwright.py')
+        import install_playwright
+
+        browser_root = root / 'browser-project'
+        (browser_root / 'node_modules').mkdir(parents=True)
+        chromium = browser_root / 'cache/chromium/chrome'
+        ffmpeg = browser_root / 'cache/ffmpeg-1011/ffmpeg-linux'
+        browser_env = {'PATH': '', 'PLAYWRIGHT_BROWSERS_PATH': str(browser_root / 'cache')}
+        installs: list[list[str]] = []
+
+        def make_executable(path: Path) -> None:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text('#!/bin/sh\nexit 0\n')
+            path.chmod(0o755)
+
+        def install_browser(command: list[str], **kwargs: object) -> subprocess.CompletedProcess:
+            installs.append(command)
+            make_executable(chromium if command[-1] == 'chromium' else ffmpeg)
+            return subprocess.CompletedProcess(command, 0)
+
+        with patch.object(install_playwright, 'SHIPPED_BROWSERS', browser_root / 'shipped'), \
+                patch.object(install_playwright, 'runtime_paths', return_value=(chromium, ffmpeg)), \
+                patch.object(install_playwright.shutil, 'which', return_value=None), \
+                patch.object(install_playwright.subprocess, 'run', side_effect=install_browser):
+            ready = install_playwright.ensure_installed(browser_root, browser_env)
+            check('a fresh sandbox installs Chromium and FFmpeg', installs == [
+                ['npx', '--no-install', 'playwright', 'install', 'chromium'],
+                ['npx', '--no-install', 'playwright', 'install', 'ffmpeg'],
+            ], str(installs))
+            install_playwright.ensure_installed(browser_root, browser_env)
+            check('a warm setup installs nothing again', len(installs) == 2, str(installs))
+            check('the runner receives the installed Chromium path', ready['PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH'] == str(chromium))
+            check('browser discovery does not mutate caller environment', 'PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH' not in browser_env)
+
+            ffmpeg.unlink()
+            installs.clear()
+            install_playwright.ensure_installed(browser_root, browser_env)
+            check('a missing video encoder installs only FFmpeg', installs == [['npx', '--no-install', 'playwright', 'install', 'ffmpeg']], str(installs))
+
+        ffmpeg.unlink()
+        system_chromium = browser_root / 'system chrome'
+        system_ffmpeg = browser_root / 'system ffmpeg'
+        make_executable(system_chromium)
+        make_executable(system_ffmpeg)
+        which_browser = lambda name, **kwargs: str(system_chromium if name == 'chromium' else system_ffmpeg) if name in ('chromium', 'ffmpeg') else None
+        with patch.object(install_playwright, 'SHIPPED_BROWSERS', browser_root / 'shipped'), \
+                patch.object(install_playwright, 'runtime_paths', return_value=(chromium, ffmpeg)), \
+                patch.object(install_playwright.shutil, 'which', side_effect=which_browser), \
+                patch.object(install_playwright.subprocess, 'run') as installer:
+            ready = install_playwright.ensure_installed(browser_root, browser_env)
+            check('installed system binaries require no download', installer.call_count == 0)
+            check('system FFmpeg is available in the revision-specific cache', ffmpeg.is_symlink() and ffmpeg.resolve() == system_ffmpeg)
+            check('a system Chromium path reaches the browser runner', ready['PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH'] == str(system_chromium))
+            explicit = install_playwright.browser_environment(browser_root, {**browser_env, 'PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH': str(chromium)})
+            check('an explicit installed browser takes precedence over system binaries', explicit['PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH'] == str(chromium))
+            check('the generated shell exports quote paths with spaces', shlex.quote(str(system_chromium)) in (browser_root / 'node_modules/.playwright-runtime.env').read_text())
+
+        chromium.unlink()
+        ffmpeg.unlink()
+        env_file = browser_root / 'node_modules/.playwright-runtime.env'
+        env_file.unlink()
+        with patch.object(install_playwright, 'SHIPPED_BROWSERS', browser_root / 'shipped'), \
+                patch.object(install_playwright, 'runtime_paths', return_value=(chromium, ffmpeg)), \
+                patch.object(install_playwright.shutil, 'which', return_value=None), \
+                patch.object(install_playwright.subprocess, 'run', side_effect=subprocess.CalledProcessError(1, ['npx', 'playwright', 'install'])):
+            try:
+                install_playwright.ensure_installed(browser_root, browser_env)
+                check('a refused download never reports setup ready', False)
+            except subprocess.CalledProcessError:
+                check('a refused download never reports setup ready', not env_file.exists())
+
+        check('a directory cannot be mistaken for an installed browser', install_playwright.executable(browser_root) is None)
+
+        print('pre_push_check.py')
         pre_push_check.php_tools_installed = lambda: True
         pre_push_check.backend_installed = lambda: False
         labels = [label for label, _, _ in pre_push_check.full_steps()]
@@ -215,6 +291,9 @@ export default laravel({
             [label for label, _, _ in pre_push_check.attest_steps('php')] == ['Pint', 'PHPStan', 'Pest'],
         )
         e2e = {label: command for label, command, _ in pre_push_check.attest_steps('e2e')}
+        with patch.object(pre_push_check.install_playwright, 'browser_environment', return_value={'PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH': '/system/chromium'}) as discover:
+            env = pre_push_check.e2e_steps()[-1][2]
+            check('E2E uses the shared browser discovery rather than a fixed /opt path', env == {'PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH': '/system/chromium'} and discover.call_count == 1)
         check(
             'Playwright writes its output outside the work tree so a lane scanning the repo cannot race it',
             any(arg.startswith('--output=') and not arg.startswith('--output=' + str(pre_push_check.ROOT))
@@ -710,9 +789,11 @@ export default laravel({
         subprocess.run(['bash', str(hook)], capture_output=True, text=True, env=hook_environment(done_dir))
         check('a completed run records done', (done_dir / 'state').read_text().strip() == 'done')
         check('a completed run records the summary the waiter prints', 'Vite build' in (done_dir / 'summary.txt').read_text())
+        check('the setup summary reports browser availability without failing session startup', 'Playwright (Chromium and FFmpeg): unavailable' in (done_dir / 'summary.txt').read_text())
         check('a completed run records its pid', (done_dir / 'pid').read_text().strip().isdigit())
         timings = (done_dir / 'timings.txt').read_text()
         check('a completed run records how long each phase took', 'composer' in timings and 'total' in timings, timings)
+        check('browser setup runs after frontend dependencies are ready', 'playwright' in timings, timings)
 
         # npm ci is skipped while node_modules matches package-lock.json, and
         # runs again once the lock changes.
