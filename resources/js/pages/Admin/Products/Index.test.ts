@@ -669,6 +669,9 @@ describe('Products Index', () => {
         await rowCells(wrapper)[2].get('button').trigger('click');
 
         const input = wrapper.get('#products-box-count');
+        expect(input.element.closest('form')?.textContent).toContain(
+            t('common.requiredLegend'),
+        );
         expect(input.attributes('name')).toBe('boxes_count');
         expect(input.attributes('required')).toBeDefined();
         expect(input.attributes('min')).toBe('1');
@@ -745,6 +748,9 @@ describe('Products Index', () => {
         await rowCells(wrapper)[3].get('button').trigger('click');
 
         const input = wrapper.get('#products-minimum-pallets');
+        expect(input.element.closest('form')?.textContent).not.toContain(
+            t('common.requiredLegend'),
+        );
         expect(input.attributes('name')).toBe('minimum_pallets');
         expect(input.attributes('required')).toBeUndefined();
         expect(input.attributes('min')).toBe('1');
@@ -1063,6 +1069,12 @@ describe('Products Index', () => {
         await rowCells(wrapper)[4].get('button').trigger('click');
 
         const input = wrapper.get('#products-new-barcode');
+        expect(
+            wrapper.get('label[for="products-new-barcode"]').text(),
+        ).toContain(t('common.required'));
+        expect(input.element.closest('form')?.textContent).toContain(
+            t('common.requiredLegend'),
+        );
         expect(input.attributes('name')).toBe('barcode');
         expect(input.attributes('required')).toBeDefined();
         expect(wrapper.getComponent(Form).props('resetOnSuccess')).toBe(true);

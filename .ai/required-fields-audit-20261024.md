@@ -7,37 +7,37 @@ The convention, the classes and how to read this file: [.ai/rules/form-required-
 ## Summary
 
 Forms scanned: **158** Vue (resources/js/pages, resources/js/components) and **81** Blade (resources/views/shop).
-Server rules: **280** FormRequests (1 unparsed) and **25** controller actions with inline validation (5 unparsed).
+Server rules: **283** FormRequests (1 unparsed) and **25** controller actions with inline validation (5 unparsed).
 
 | Class | Meaning | Severity | Findings |
 | --- | --- | --- | ---: |
 | A | server-required, no `required` attribute (or no control at all) | high | 36 |
-| B | server-required, no visible mark | medium | 27 |
+| B | server-required, no visible mark | medium | 14 |
 | C | `required` or a mark, but the server rule is optional or absent | high | 38 |
 | D | conditional server rule, static `required` or mark | medium | 7 |
 | E | control with no matching server rule | low | 105 |
 | F | unparsed (server rules or form action) | info | 23 |
-| | **Total** | | **236** |
+| | **Total** | | **223** |
 
-By severity: high 74, medium 34, low 105, info 23.
-By priority: P1 8, P2 118, P3 110 (P1 public storefront forms: registration, address, checkout, contact, seller registration; P2 other storefront, account and seller-panel forms; P3 back office).
+By severity: high 74, medium 21, low 105, info 23.
+By priority: P1 8, P2 118, P3 97 (P1 public storefront forms: registration, address, checkout, contact, seller registration; P2 other storefront, account and seller-panel forms; P3 back office).
 
 ## Per module
 
 | Module | Forms | A | B | C | D | E | F |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | Admin/CellVerificationRounds | 1 | 0 | 0 | 0 | 0 | 0 | 0 |
-| Admin/Products | 3 | 0 | 1 | 0 | 0 | 0 | 0 |
+| Admin/Products | 3 | 0 | 0 | 0 | 0 | 0 | 0 |
 | Admin/Rows | 2 | 0 | 0 | 0 | 0 | 0 | 0 |
-| Admin/Settings | 1 | 0 | 1 | 0 | 0 | 0 | 0 |
+| Admin/Settings | 1 | 0 | 0 | 0 | 0 | 0 | 0 |
 | Admin/Users | 2 | 0 | 0 | 0 | 0 | 0 | 0 |
 | Auth | 2 | 0 | 0 | 0 | 0 | 0 | 0 |
-| Store/Admin/Blog | 7 | 0 | 2 | 0 | 0 | 0 | 0 |
+| Store/Admin/Blog | 7 | 0 | 0 | 0 | 0 | 0 | 0 |
 | Store/Admin/Catalogue | 1 | 0 | 0 | 0 | 0 | 0 | 0 |
-| Store/Admin/Customers | 13 | 0 | 4 | 7 | 0 | 0 | 0 |
+| Store/Admin/Customers | 13 | 0 | 0 | 7 | 0 | 0 | 0 |
 | Store/Admin/Languages | 7 | 3 | 0 | 0 | 0 | 2 | 0 |
 | Store/Admin/Marketing | 19 | 4 | 0 | 0 | 0 | 8 | 0 |
-| Store/Admin/Notifications | 1 | 0 | 1 | 0 | 0 | 0 | 0 |
+| Store/Admin/Notifications | 1 | 0 | 0 | 0 | 0 | 0 | 0 |
 | Store/Admin/Product | 24 | 0 | 5 | 3 | 0 | 0 | 5 |
 | Store/Admin/Profile | 1 | 0 | 0 | 0 | 0 | 1 | 0 |
 | Store/Admin/Representatives | 3 | 1 | 0 | 0 | 0 | 0 | 0 |
@@ -46,10 +46,10 @@ By priority: P1 8, P2 118, P3 110 (P1 public storefront forms: registration, add
 | Store/Admin/Settings | 2 | 0 | 0 | 0 | 0 | 0 | 1 |
 | Store/Admin/Setup | 27 | 8 | 0 | 0 | 5 | 0 | 0 |
 | Store/Admin/Staff | 4 | 0 | 0 | 0 | 0 | 0 | 0 |
-| Store/Admin/Support | 2 | 0 | 2 | 0 | 0 | 0 | 0 |
+| Store/Admin/Support | 2 | 0 | 0 | 0 | 0 | 0 | 0 |
 | Store/Admin/Trips | 11 | 3 | 0 | 0 | 0 | 1 | 1 |
 | Store/Admin/Website | 7 | 9 | 5 | 1 | 0 | 2 | 0 |
-| components | 3 | 0 | 2 | 0 | 0 | 0 | 0 |
+| components | 3 | 0 | 0 | 0 | 0 | 0 | 0 |
 | seller panel | 26 | 0 | 0 | 0 | 0 | 8 | 0 |
 | server | 0 | 0 | 0 | 0 | 0 | 0 | 1 |
 | server: Api/V2 | 0 | 0 | 0 | 0 | 0 | 0 | 1 |
@@ -91,46 +91,16 @@ Public forms first, then by high (A + C) and medium (B + D) findings.
 
 Each line: class, field (label), what differs, then the UI and server locations.
 
-### Admin/Products
-
-- `resources/js/pages/Admin/Products/Index.vue → ProductController@storeBarcode` (App\Http\Requests\Admin\StoreProductBarcodeRequest)
-  - **B** `barcode` (Barcodes for {product}): server: required|string|max|regex|unique|closure; the label shows no required mark. UI resources/js/pages/Admin/Products/Index.vue:600, server app/Http/Requests/Admin/StoreProductBarcodeRequest.php:19
-
-### Admin/Settings
-
-- `resources/js/pages/Admin/Settings/Edit.vue → SettingController@update` (App\Http\Requests\Admin\UpdateSettingRequest)
-  - **B** `allowed_open_levels[]` (Levels where opening pallets is allowed): server: required|array|min; the label shows no required mark. UI resources/js/components/SettingFormFields.vue:109, server app/Http/Requests/Admin/UpdateSettingRequest.php:22
-
-### Store/Admin/Blog
-
-- `resources/js/pages/Store/Admin/Blog/Posts/Create.vue → BlogController@store` (App\Http\Requests\Store\Admin\StoreBlogRequest)
-  - **B** `category_id` (Category): server: required|integer|exists; the label shows no required mark. UI resources/js/components/StoreBlogFormFields.vue:60, server app/Http/Requests/Concerns/ValidatesStoreBlog.php:28
-
-- `resources/js/pages/Store/Admin/Blog/Posts/Edit.vue → BlogController@update` (App\Http\Requests\Store\Admin\UpdateBlogRequest)
-  - **B** `category_id` (Category): server: required|integer|exists; the label shows no required mark. UI resources/js/components/StoreBlogFormFields.vue:60, server app/Http/Requests/Concerns/ValidatesStoreBlog.php:28
-
 ### Store/Admin/Customers
 
 - `resources/js/pages/Store/Admin/Customers/Customers/Create.vue → CustomerController@store` (App\Http\Requests\Store\Admin\StoreCustomerRequest)
-  - **C** `bank_account_number` (Bank account number): server: nullable|string|max (optional); the UI requires it. UI resources/js/components/StoreCustomerFormFields.vue:75, server app/Http/Requests/Concerns/ValidatesStoreCustomer.php:20
-  - **C** `company_address` (Company address): server: nullable|string|max (optional); the UI requires it. UI resources/js/components/StoreCustomerFormFields.vue:75, server app/Http/Requests/Concerns/ValidatesStoreCustomer.php:21
-  - **C** `company_name` (Company name): server: nullable|string|max (optional); the UI requires it. UI resources/js/components/StoreCustomerFormFields.vue:75, server app/Http/Requests/Concerns/ValidatesStoreCustomer.php:17
-  - **C** `country` (Country): server: nullable|string|exists (optional); the UI requires it. UI resources/js/components/StoreCustomerFormFields.vue:95, server app/Http/Requests/Concerns/ValidatesStoreCustomer.php:18
-  - **C** `shipping_address` (Shipping address): server: nullable|string|max (optional); the UI requires it. UI resources/js/components/StoreCustomerFormFields.vue:75, server app/Http/Requests/Concerns/ValidatesStoreCustomer.php:22
-  - **C** `tax_number` (Tax number): server: nullable|string|max (optional); the UI requires it. UI resources/js/components/StoreCustomerFormFields.vue:75, server app/Http/Requests/Concerns/ValidatesStoreCustomer.php:19
-  - **C** `trade_license` (Trade license (maximum 20 MB)): server: nullable|file|mimes|max (optional); the UI requires it. UI resources/js/components/StoreCustomerFormFields.vue:123, server app/Http/Requests/Concerns/ValidatesStoreCustomer.php:25
-
-- `resources/js/pages/Store/Admin/Customers/Customers/Edit.vue → AddressController@store` (App\Http\Requests\Store\Admin\StoreCustomerAddressRequest)
-  - **B** `country_id` (Country): server: required|integer|exists; the label shows no required mark. UI resources/js/components/StoreCustomerAddressForm.vue:88, server app/Http/Requests/Store/Admin/StoreCustomerAddressRequest.php:19
-
-- `resources/js/pages/Store/Admin/Customers/Customers/Edit.vue → AddressController@update` (App\Http\Requests\Store\Admin\StoreCustomerAddressRequest)
-  - **B** `country_id` (Country): server: required|integer|exists; the label shows no required mark. UI resources/js/components/StoreCustomerAddressForm.vue:88, server app/Http/Requests/Store/Admin/StoreCustomerAddressRequest.php:19
-
-- `resources/js/pages/Store/Admin/Customers/Customers/Edit.vue → CustomerController@changeActivityStatus` (App\Http\Requests\Store\Admin\UpdateCustomerActivityRequest)
-  - **B** `new_status` (Activity status): server: required|in; the label shows no required mark. UI resources/js/pages/Store/Admin/Customers/Customers/Edit.vue:96, server app/Http/Requests/Store/Admin/UpdateCustomerActivityRequest.php:16
-
-- `resources/js/pages/Store/Admin/Customers/Customers/Index.vue → RepresentativePackageController@assign` (App\Http\Requests\Store\Admin\AssignRepresentativePackageRequest)
-  - **B** `package_id` (Package): server: required|integer|exists; the label shows no required mark. UI resources/js/pages/Store/Admin/Customers/Customers/Index.vue:359, server app/Http/Requests/Store/Admin/AssignRepresentativePackageRequest.php:20
+  - **C** `bank_account_number` (Bank account number): server: nullable|string|max (optional); the UI requires it. UI resources/js/components/StoreCustomerFormFields.vue:76, server app/Http/Requests/Concerns/ValidatesStoreCustomer.php:20
+  - **C** `company_address` (Company address): server: nullable|string|max (optional); the UI requires it. UI resources/js/components/StoreCustomerFormFields.vue:76, server app/Http/Requests/Concerns/ValidatesStoreCustomer.php:21
+  - **C** `company_name` (Company name): server: nullable|string|max (optional); the UI requires it. UI resources/js/components/StoreCustomerFormFields.vue:76, server app/Http/Requests/Concerns/ValidatesStoreCustomer.php:17
+  - **C** `country` (Country): server: nullable|string|exists (optional); the UI requires it. UI resources/js/components/StoreCustomerFormFields.vue:97, server app/Http/Requests/Concerns/ValidatesStoreCustomer.php:18
+  - **C** `shipping_address` (Shipping address): server: nullable|string|max (optional); the UI requires it. UI resources/js/components/StoreCustomerFormFields.vue:76, server app/Http/Requests/Concerns/ValidatesStoreCustomer.php:22
+  - **C** `tax_number` (Tax number): server: nullable|string|max (optional); the UI requires it. UI resources/js/components/StoreCustomerFormFields.vue:76, server app/Http/Requests/Concerns/ValidatesStoreCustomer.php:19
+  - **C** `trade_license` (Trade license (maximum 20 MB)): server: nullable|file|mimes|max (optional); the UI requires it. UI resources/js/components/StoreCustomerFormFields.vue:125, server app/Http/Requests/Concerns/ValidatesStoreCustomer.php:25
 
 ### Store/Admin/Languages
 
@@ -170,11 +140,6 @@ Each line: class, field (label), what differs, then the UI and server locations.
   - **A** `products`: server: required|array|min|max; the form has no control for it. UI resources/js/pages/Store/Admin/Marketing/Offers/Edit.vue:25, server app/Http/Requests/Concerns/ValidatesStoreCampaign.php:31
   - **E** `brand_search` (Search brands): no server rule names this field. UI resources/js/components/StoreOfferFormFields.vue:90
   - **E** `product_search` (Search products (base and rewards)): no server rule names this field. UI resources/js/components/StoreCampaignProductRows.vue:93
-
-### Store/Admin/Notifications
-
-- `resources/js/pages/Store/Admin/Notifications/Customers/Create.vue → CustomerNotificationController@store` (App\Http\Requests\Store\Admin\StoreCustomerNotificationRequest)
-  - **B** `user_id` (Customer): server: required|integer|exists; the label shows no required mark. UI resources/js/components/StoreCustomerNotificationFormFields.vue:33, server app/Http/Requests/Store/Admin/StoreCustomerNotificationRequest.php:19
 
 ### Store/Admin/Product
 
@@ -287,14 +252,6 @@ Each line: class, field (label), what differs, then the UI and server locations.
   - **D** `shipping_cost_admin` (In-house seller shipping cost): server: required_if|numeric|min (conditional); the UI marks it required unconditionally. UI resources/js/pages/Store/Admin/Setup/ShippingConfiguration/Index.vue:117, server app/Http/Requests/Store/Admin/UpdateShippingConfigurationRequest.php:18
   - **D** `shipping_type` (Shipping method): server: required_if|in (conditional); the UI marks it required unconditionally. UI resources/js/pages/Store/Admin/Setup/ShippingConfiguration/Index.vue:56, server app/Http/Requests/Store/Admin/UpdateShippingConfigurationRequest.php:18
 
-### Store/Admin/Support
-
-- `resources/js/pages/Store/Admin/Support/Conversations/Show.vue → ConversationController@reply` (App\Http\Requests\Store\Admin\ReplyConversationRequest)
-  - **B** `message` (Type your reply): server: required|string|max; the label shows no required mark. UI resources/js/components/StoreSupportReplyForm.vue:23, server app/Http/Requests/Store/Admin/ReplyConversationRequest.php:19
-
-- `resources/js/pages/Store/Admin/Support/ProductQueries/Show.vue → ProductQueryController@reply` (App\Http\Requests\Store\Admin\ReplyProductQueryRequest)
-  - **B** `reply` (Type your reply): server: required|string|max; the label shows no required mark. UI resources/js/components/StoreSupportReplyForm.vue:23, server app/Http/Requests/Store/Admin/ReplyProductQueryRequest.php:19
-
 ### Store/Admin/Trips
 
 - `resources/js/pages/Store/Admin/Trips/Drivers/Edit.vue → DriverController@update` (App\Http\Requests\Store\Admin\UpdateDriverRequest)
@@ -340,14 +297,6 @@ Each line: class, field (label), what differs, then the UI and server locations.
 
 - `resources/js/pages/Store/Admin/Website/Pages/Edit.vue → WebsitePageController@update` (App\Http\Requests\Store\Admin\UpdateWebsitePageRequest)
   - **C** `slug` (URL slug): server: prohibited (optional); the UI requires it. UI resources/js/components/StoreWebsitePageFormFields.vue:65, server app/Http/Requests/Concerns/ValidatesWebsitePage.php:32
-
-### components
-
-- `resources/js/components/StoreSellerPaymentDialog.vue → SellerPaymentController@store` (App\Http\Requests\Store\Admin\StoreSellerPaymentRequest)
-  - **B** `payment_option` ({{ t('store.sellers.paymentMethod') }}{{ t('store.sellers.selectPaymentMethod') }}{{ t('store.sellers.cash') }}{{ t('store.sellers.bankPayment') }}): server: required|string|max; the label shows no required mark. UI resources/js/components/StoreSellerPaymentDialog.vue:157, server app/Http/Requests/Store/Admin/StoreSellerPaymentRequest.php:27
-
-- `resources/js/components/StoreTicketReplyForm.vue → SupportTicketController@reply` (App\Http\Requests\Store\Admin\ReplySupportTicketRequest)
-  - **B** `status` (Status after reply): server: required|in; the label shows no required mark. UI resources/js/components/StoreTicketReplyForm.vue:66, server app/Http/Requests/Store/Admin/ReplySupportTicketRequest.php:23
 
 ### seller panel
 

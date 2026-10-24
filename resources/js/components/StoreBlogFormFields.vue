@@ -2,6 +2,7 @@
 import { ref } from 'vue';
 import FieldError from '@/components/FieldError.vue';
 import FormField from '@/components/FormField.vue';
+import RequiredMark from '@/components/RequiredMark.vue';
 import StoreRichTextField from '@/components/StoreRichTextField.vue';
 import StoreUploadField from '@/components/StoreUploadField.vue';
 import { fieldLabelClass, plainFieldInputClass } from '@/lib/filters';
@@ -54,9 +55,9 @@ function slugChanged(value: string): void {
             @input="titleChanged(($event.target as HTMLInputElement).value)"
         />
         <div>
-            <label for="category_id" :class="fieldLabelClass">{{
-                t('store.blogPosts.fields.category')
-            }}</label>
+            <label for="category_id" :class="fieldLabelClass"
+                >{{ t('store.blogPosts.fields.category') }}<RequiredMark
+            /></label>
             <select
                 id="category_id"
                 v-model="categoryId"

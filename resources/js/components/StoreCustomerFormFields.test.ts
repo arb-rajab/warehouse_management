@@ -1,6 +1,7 @@
 import { mount } from '@vue/test-utils';
 import { expect, it } from 'vitest';
 import FormField from '@/components/FormField.vue';
+import RequiredMark from '@/components/RequiredMark.vue';
 import { t } from '@/lib/i18n';
 import StoreCustomerFormFields from './StoreCustomerFormFields.vue';
 function fields(extra: Record<string, unknown> = {}) {
@@ -105,3 +106,54 @@ it('customer edits show the established representative checkbox with an explicit
         false,
     );
 });
+
+it.each([true, false])(
+    'country follows the actual create/edit rule (creating=%s)',
+    (creating) => {
+        const wrapper = fields({ creating });
+
+        for (const id of [
+            'company_name',
+            'tax_number',
+            'bank_account_number',
+            'company_address',
+            'shipping_address',
+            'country',
+            'trade_license',
+        ]) {
+            expect(
+                wrapper.get(`#${id}`).attributes('required') !== undefined,
+            ).toBe(creating);
+            expect(
+                wrapper
+                    .get(`label[for="${id}"]`)
+                    .findComponent(RequiredMark)
+                    .exists(),
+            ).toBe(creating);
+        }
+
+        for (const id of ['name', 'email', 'phone']) {
+            expect(wrapper.get(`#${id}`).attributes('required')).toBeDefined();
+            expect(
+                wrapper
+                    .get(`label[for="${id}"]`)
+                    .findComponent(RequiredMark)
+                    .exists(),
+            ).toBe(true);
+        }
+
+        for (const id of ['member_serial', 'AccSysID']) {
+            expect(
+                wrapper.get(`#${id}`).attributes('required'),
+            ).toBeUndefined();
+            expect(
+                wrapper
+                    .get(`label[for="${id}"]`)
+                    .findComponent(RequiredMark)
+                    .exists(),
+            ).toBe(false);
+        }
+
+        wrapper.unmount();
+    },
+);

@@ -11,11 +11,14 @@ import ActionErrorBanner from '@/components/ActionErrorBanner.vue';
 import FieldError from '@/components/FieldError.vue';
 import FilterDialog from '@/components/FilterDialog.vue';
 import FormField from '@/components/FormField.vue';
+import RequiredLegend from '@/components/RequiredLegend.vue';
+import RequiredMark from '@/components/RequiredMark.vue';
 import SubmitButton from '@/components/SubmitButton.vue';
 import { confirmSellerPayment } from '@/lib/confirm';
 import { fieldLabelClass, plainFieldInputClass } from '@/lib/filters';
 import { t } from '@/lib/i18n';
 import { firstError } from '@/lib/pageErrors';
+import { provideRequiredFields } from '@/lib/requiredFields';
 import { useStoreAccess } from '@/lib/storeAccess';
 import type { StoreSellerPayout, StoreSellerWithdrawal } from '@/types/store';
 
@@ -73,6 +76,7 @@ const bankFields = [
     'bank_acc_no',
     'bank_routing_no',
 ] as const;
+const hasRequiredFields = provideRequiredFields();
 </script>
 
 <template>
@@ -98,6 +102,7 @@ const bankFields = [
             #default="{ errors, processing }"
             class="space-y-4"
         >
+            <RequiredLegend v-if="hasRequiredFields" />
             <ActionErrorBanner :message="firstError(errors)" />
             <dl class="grid grid-cols-2 gap-3">
                 <dt>
@@ -154,7 +159,7 @@ const bankFields = [
                     v-if="details.shop.admin_to_pay > 0"
                     :class="fieldLabelClass"
                     >{{ t('store.sellers.paymentMethod')
-                    }}<select
+                    }}<RequiredMark /><select
                         v-model="method"
                         name="payment_option"
                         required

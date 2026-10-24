@@ -2,6 +2,7 @@ import { mount } from '@vue/test-utils';
 import { describe, expect, it } from 'vitest';
 import FieldError from '@/components/FieldError.vue';
 import FormField from '@/components/FormField.vue';
+import RequiredMark from '@/components/RequiredMark.vue';
 import { t } from '@/lib/i18n';
 import { notificationCustomer } from '@/testing/factories';
 import StoreCustomerNotificationFormFields from './StoreCustomerNotificationFormFields.vue';
@@ -75,4 +76,20 @@ describe('StoreCustomerNotificationFormFields', () => {
         expect(wrapper.find('b').exists()).toBe(false);
         expect(wrapper.text()).toContain('<b>Customer</b>');
     });
+});
+
+it('marks every required notification field', () => {
+    const wrapper = mount(StoreCustomerNotificationFormFields, {
+        props: { customers: [notificationCustomer()], errors: {} },
+    });
+
+    for (const id of ['title', 'body', 'user_id']) {
+        expect(wrapper.get(`#${id}`).attributes('required')).toBeDefined();
+        expect(
+            wrapper
+                .get(`label[for="${id}"]`)
+                .findComponent(RequiredMark)
+                .exists(),
+        ).toBe(true);
+    }
 });

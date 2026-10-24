@@ -91,8 +91,9 @@ describe('StoreTicketReplyForm', () => {
                 modelValue: '',
             });
             expect(wrapper.get('label[for="status"]').text()).toBe(
-                t('store.support.replyStatus'),
+                t('store.support.replyStatus') + '*' + t('common.required'),
             );
+            expect(wrapper.text()).toContain(t('common.requiredLegend'));
             const select = wrapper.get('#status');
             expect(select.attributes()).toMatchObject({
                 name: 'status',

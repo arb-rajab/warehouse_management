@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue';
 import FieldError from '@/components/FieldError.vue';
 import FormField from '@/components/FormField.vue';
+import RequiredMark from '@/components/RequiredMark.vue';
 import { fieldLabelClass } from '@/lib/filters';
 import { t } from '@/lib/i18n';
 import { pxToCm } from '@/lib/qrCodeSize';
@@ -94,7 +95,7 @@ const heightCm = computed(() =>
 
         <fieldset v-if="levels.length > 0">
             <legend :class="fieldLabelClass">
-                {{ t('settings.fields.allowedOpenLevels') }}
+                {{ t('settings.fields.allowedOpenLevels') }}<RequiredMark />
             </legend>
             <p class="mb-2 text-xs text-gray-500 dark:text-neutral-400">
                 {{ t('settings.fields.allowedOpenLevelsHint') }}

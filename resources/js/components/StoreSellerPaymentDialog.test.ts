@@ -7,6 +7,7 @@ import {
 } from '@/actions/App/Http/Controllers/Store/Admin/SellerPaymentController';
 import { paymentModal } from '@/actions/App/Http/Controllers/Store/Admin/SellerWithdrawRequestController';
 import FilterDialog from '@/components/FilterDialog.vue';
+import RequiredMark from '@/components/RequiredMark.vue';
 import SubmitButton from '@/components/SubmitButton.vue';
 import { confirmSellerPayment } from '@/lib/confirm';
 import { t } from '@/lib/i18n';
@@ -207,5 +208,27 @@ describe('seller payment dialog', () => {
         await flushPromises();
         expect(post).not.toHaveBeenCalled();
         expect(w.findComponent(Form).exists()).toBe(false);
+    });
+
+    it('marks the payment method, keeps the transaction optional and shows the form legend', async () => {
+        const wrapper = mountDialog();
+        await flushPromises();
+        const method = wrapper.get('select[name="payment_option"]');
+        expect(method.attributes('required')).toBeDefined();
+        expect(method.element.closest('label')?.textContent).toContain(
+            t('common.required'),
+        );
+        expect(wrapper.text()).toContain(t('common.requiredLegend'));
+        await method.setValue('bank_payment');
+        expect(
+            wrapper.get('input[name="txn_code"]').attributes('required'),
+        ).toBeUndefined();
+        expect(
+            wrapper
+                .get('label[for="seller-payment-txn"]')
+                .findComponent(RequiredMark)
+                .exists(),
+        ).toBe(false);
+        wrapper.unmount();
     });
 });
