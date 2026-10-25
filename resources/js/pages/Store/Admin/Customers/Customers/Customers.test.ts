@@ -248,6 +248,7 @@ it('views page renders count labels and paginator contract', () => {
                     kind: 'products',
                     name: '<img onerror=alert()>',
                     slug: null,
+                    public_url: '/temp/product/~id-5?catalog_id=5',
                     view_count: 3,
                     last_viewed_at: '2026-10-08 12:00:00',
                 },
@@ -294,5 +295,32 @@ it('activity and new/edit address forms each show marks and their own legend; no
     expect(
         wrapper.get('#country_id').element.closest('form')?.textContent,
     ).toContain(t('common.requiredLegend'));
+    wrapper.unmount();
+});
+
+it.each([
+    [null, '/temp/product/~id-5?catalog_id=5'],
+    ['', '/temp/product/~id-5?catalog_id=5'],
+    ['normal-product', '/temp/product/normal-product'],
+    ['0', '/temp/product/0'],
+])('view rows use the complete server URL for slug %s', (slug, public_url) => {
+    const wrapper = mount(Views, {
+        props: {
+            customer,
+            views: paginated([
+                {
+                    id: 5,
+                    kind: 'products',
+                    name: 'Viewed product',
+                    slug,
+                    public_url,
+                    view_count: 1,
+                    last_viewed_at: '2026-10-25 12:00:00',
+                },
+            ]),
+            filters: { kind: null, per_page: 20 },
+        },
+    });
+    expect(wrapper.get('td a').attributes('href')).toBe(public_url);
     wrapper.unmount();
 });

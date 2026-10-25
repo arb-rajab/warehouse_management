@@ -2,6 +2,8 @@
 
 namespace App\Http\Resources\V2;
 
+use App\Support\StorefrontUrl;
+
 use App\Models\Attribute;
 use App\Models\Review;
 use Illuminate\Http\Resources\Json\ResourceCollection;
@@ -63,7 +65,7 @@ class ClassifiedProductDetailCollection extends ResourceCollection
                     'video_link' => $data->video_link != null ?  $data->video_link : "",
                     'brand' => $brand,
                     'category' => $data->category->name,
-                    'link' => route('product', $data->slug),
+                    'link' => StorefrontUrl::forRow('product', $data->slug, (int) $data->id),
                 ];
             }),
         ];

@@ -7730,3 +7730,137 @@ MySQL-only skips on SQLite (158.632 seconds)**. Focused MySQL and the complete
 browser run above were separate from `--full`; advisory audits, deploy-script
 tests and the remainder of the MySQL CI list were not rerun locally. No test
 was loosened, retried, quarantined or newly skipped; no trailer was hand-edited.
+
+
+## 64. D15 complete: API resources, popup targets and customer Views (2026-10-25)
+
+Branch `codex/null-slug-urls-final` starts at fetched `origin/develop`
+`f6664ccb221229461b1b110f6e592ef44aa2f0c4`, including PRs #493 and #494.
+The architecture test initially passed with exactly ten builders. All ten now
+use `StorefrontUrl`; `$remaining` is empty and an explicit assertion prevents
+reintroducing an allowlist. **Final direct-builder inventory: none. D15 is FIXED.**
+
+### URL contracts and payloads
+
+| Caller                               | Preserved URL form and field                              |
+| ------------------------------------ | --------------------------------------------------------- |
+| Store DashboardProductResource       | Absolute `public_url`                                     |
+| Store DigitalProductResource         | Absolute `public_url`; encrypted download token unchanged |
+| Store ProductListResource            | Absolute `public_url`                                     |
+| Store ReviewResource                 | Absolute `product.url`                                    |
+| V2 AuctionProductDetailCollection    | Absolute `data[].link`, historical ordinary product route |
+| V2 ClassifiedProductDetailCollection | Absolute `data[].link`, historical ordinary product route |
+| V2 DigitalProductDetailCollection    | Absolute `data[].link`                                    |
+| V2 ProductDetailCollection           | Absolute `data[].link`                                    |
+| DynamicPopupController               | Absolute stored `btn_link`                                |
+| Customers/Customers/Views.vue        | Relative `public_url` supplied by the server              |
+
+Every normal and `"0"` slug is compared against the full original named-route
+string, including scheme, host and path. Each resource has null/empty regressions
+and a complete normal-row payload assertion against the committed fixture.
+Generated IDs and encrypted download tokens are checked before normalization;
+JSON key names, nesting, wrapping and every other value are pinned. Existing
+whole-row Inertia assertions deliberately gain the customer URL field or replace
+an old null link expectation with the helper's fallback.
+
+The V2 product, classified and auction cases use their real endpoints with a
+Sanctum bearer token from `storeApiToken(createStoreUser())`. The digital detail
+collection has no live controller return (only commented references), so it is
+serialized directly. The auction addon is uninstalled: its schema lacks bid
+rows and auction attributes. Its endpoint test supplies those addon-only values
+on retrieved models in memory; it changes no schema and still runs the real
+route, controller, middleware and serializer.
+
+The classified collection consumes `CustomerProduct`, outside `to()`'s model
+union. `forRow('product', slug, id)` preserves its existing ordinary-product URL
+contract. This does not turn a classified record into a catalogue product or
+repair its historical destination. Likewise the ordinary storefront resolver
+still excludes auctions. Correcting those destinations/visibility would be a
+separate behavior change, prohibited by this batch's URL and route constraints.
+All serialization is safe; no new public visibility or ID lookup is introduced.
+
+The customer controller's existing bounded product query supplies the viewed
+Product as a loaded relation to `CustomerPageViewResource`. That resource adds
+`public_url` through `StorefrontUrl::to($product, false)`, preserving all prior
+fields. Vue binds the completed URL directly and contains no fallback logic.
+The existing shared customer types include the additive row interface;
+Wayfinder is regenerated with repository tooling, with no generated file edits.
+Category rows and deleted-product rows remain unlinked, including when a
+category's ID equals a product's ID. Mounted Vitest covers null, empty, normal
+and zero slugs; Chromium follows each actual server-supplied link.
+
+Popup buttons are consumed verbatim by the homepage and product-listing Blade
+anchors; the admin list displays the stored address. Offer selection and
+validation now accept null/empty base-product slugs while still requiring an
+existing base product and rejecting whitespace-only values. `LENGTH(slug) = 0`
+is intentional: MySQL's collation makes `slug = ''` also match spaces. Store and
+update derive `btn_link` with `forRow()`, retain the existing colors, and ignore
+forged button fields. Tests assert both writes and the rendered homepage href.
+No Blade source, route, permission, product column, migration, backfill, D7
+handler, payout, staff/role or required-field behavior changes.
+
+### Failing-first evidence
+
+Before application edits, corrected resource regressions report **36 cases:
+16 passed, 16 failed, four errors, 98 assertions**. Both missing-slug values
+are covered for every resource. ReviewResource and the unrouted digital detail
+collection throw `UrlGenerationException: Missing required parameter for
+[Route: product] ... [Missing parameter: slug]`. The real V2 product, classified
+and auction endpoints return 500 with the same exception. Dashboard, digital
+list and product list were guarded already: their failures are an actual null
+versus the expected fallback URL, not a claimed exception. Customer rows fail
+because the new field is absent. The auction fixture was corrected for missing
+addon attributes before recording these results.
+
+Popup before-fix tests report **two failed, two passed, 52 assertions**: null and
+empty targets are omitted from offer options. Existing validation rejected them;
+there was no URL-generation exception to claim. Normal and zero already pass.
+The mounted Vue suite, after regenerating its previously absent Wayfinder
+imports, reports **two failed, 11 passed**: `Unable to get td a` for null and
+empty rows. Normal and zero already retain their expected relative hrefs.
+
+### Verification
+
+- Initial architecture test: **2 passed / 2 assertions**, exact ten-entry list.
+  Final architecture test: **2 passed / 3 assertions**, empty list.
+- Focused SQLite: **445 passed / 3,236 assertions**, no skips. This includes
+  the new resource/row cases, popup/customer controllers, prior null-slug and
+  Blade regressions, and affected dashboard/digital/physical product tests.
+- Focused MySQL **8.4**: **239 passed / 1,296 assertions**, no skips, using
+  `DB_CONNECTION=mysql DB_DATABASE=warehouse_test DB_USERNAME=root DB_PASSWORD=password`.
+  The new resource file and both popup/customer controller files are registered
+  in CI's MySQL list and `MYSQL_TESTS`. New rendering cases call `withoutVite()`.
+- Customers module Vitest: **3 files / 27 tests passed**, including the Views
+  file's **13 tests**. Final whole-suite Vitest: **338 files / 2,707 tests passed**.
+  No StoreProductFormFields timeout or isolated retry occurred.
+- `npm run types:check` and `composer run types:check` pass; PHPStan reports
+  **zero errors**. Wayfinder regenerated with `--skip-routes --with-form`, and
+  the normal production `npm run build` passes. No generated file was edited.
+- Changed-file ESLint and Prettier, dirty Pint, script selftests, CI planner
+  (**23 tests**) and `git diff --check` pass. Whole-file Prettier warns on the
+  historical guide/checklist, identically on their unchanged base versions;
+  the new section is formatted without rewriting historical prose.
+- `python3 .claude/scripts/install_playwright.py` reused system Chromium and
+  FFmpeg. Both affected browser specs (`store-campaign-forms` and the extended
+  `store-slugless-catalogue`) pass **4 Chromium tests in 23.3 seconds**, including
+  actual customer Views navigation for null, empty, normal and zero slugs.
+- Final explicit `python3 .claude/scripts/pre_push_check.py --full`: **exit 0**.
+  Wayfinder, whole ESLint/Prettier, frontend types, all Vitest, Pint, PHPStan,
+  config clear and parallel Pest pass. Pest reports **7,901 passed / 44,223
+  assertions / three existing MySQL-only skips on SQLite (142.323 seconds)**.
+  The first full attempt stopped at one new browser-spec lint spacing error;
+  it was corrected before this successful full rerun.
+
+The host initially had no PHP executable. The existing Docker PHP 8.5.11 runtime
+and its libraries were copied into ignored task-local `work/`; GD was rebuilt
+with WebP for the full suite. Locked npm dependencies and Composer's optimized
+autoloader were refreshed without manifest/lock changes. An ignored stale
+`public/hot` was backed up in `work/` so Chromium used built assets. No platform
+requirements, tests, timeouts, CSP or upload validation were weakened; no
+CI-Verified trailer was written or edited.
+
+Not run locally: the rest of the MySQL CI list, the whole application browser
+suite, Composer/npm advisory audits and deploy-script tests. All specifically
+requested focused checks and the explicit full gate ran. This batch changes
+**28 files**. No owner decision blocks D15; the historical classified/auction
+URL destinations described above remain a separate behavior-policy follow-up.

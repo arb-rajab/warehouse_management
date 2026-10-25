@@ -15,6 +15,7 @@ use App\Models\ProductCollection;
 use App\Models\ProductTranslation;
 use App\Models\Upload;
 use App\Models\User;
+use App\Support\StorefrontUrl;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
@@ -25,6 +26,7 @@ use Illuminate\Testing\TestResponse;
 use Inertia\Testing\AssertableInertia as Assert;
 
 beforeEach(function () {
+    $this->withoutVite();
     seedStoreCurrency();
     config(['app.default_language' => 'en']);
     $this->category = Category::forceCreate(['name' => 'Oils', 'parent_id' => 0, 'level' => 0, 'slug' => 'oils', 'digital' => 0]);
@@ -148,7 +150,7 @@ test('the in-house list exposes the full narrow row for in-house physical produc
             ->where('variant_stocks', [['variant' => 'Small', 'qty' => 2], ['variant' => 'Large', 'qty' => 5]])
             ->where('stock_quantity', 7)->where('low_stock', true)->where('category', null)
             ->where('for_sale', true)->where('published', true)->where('featured', false)->where('approved', true)->where('todays_deal', false)->where('deleted_from_api', false)
-            ->where('public_url', null))
+            ->where('public_url', StorefrontUrl::to($variant)))
         ->where('filters', ['search' => null, 'category_id' => null, 'type' => null, 'active' => true, 'for_sale' => true, 'featured' => false, 'per_page' => 20])
         ->where('categories', [['id' => $this->category->id, 'name' => 'Oils']])
         ->where('defaultLanguage', 'en'));

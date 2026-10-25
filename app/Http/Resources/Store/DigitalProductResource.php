@@ -3,6 +3,7 @@
 namespace App\Http\Resources\Store;
 
 use App\Models\Product;
+use App\Support\StorefrontUrl;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -36,7 +37,7 @@ class DigitalProductResource extends JsonResource
             'todays_deal' => (bool) $this->todays_deal,
             'published' => (bool) $this->published,
             'featured' => (bool) $this->featured,
-            'public_url' => $this->slug === null || $this->slug === '' ? null : route('product', $this->slug),
+            'public_url' => StorefrontUrl::to($this->resource),
             'download_token' => encrypt($this->id),
         ];
     }

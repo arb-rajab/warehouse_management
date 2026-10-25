@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { loginAsStoreAdmin } from './support/auth';
 import { seedStoreFixtures, storedProduct } from './support/storeFixtures';
 
 test('customer and campaign links open the same slugless product in the storefront', async ({
@@ -64,5 +65,50 @@ test('customer and campaign links open the same slugless product in the storefro
         if (productPage !== page) {
             await productPage.close();
         }
+    }
+});
+
+test('customer views follow the server URL for null empty normal and zero product slugs', async ({
+    page,
+    baseURL,
+}) => {
+    seedStoreFixtures(String.raw`
+        $customer = new App\Models\StoreUser;
+        $customer->forceFill(['name' => 'D15 Views Browser', 'email' => 'd15-views@example.test', 'user_type' => 'customer', 'email_verified_at' => now(), 'banned' => 0])->save();
+        foreach ([null, '', 'd15-views-normal', '0'] as $index => $slug) {
+            $product = App\Models\Product::factory()->create(['name' => 'D15 viewed '.$index, 'ar_name' => 'Viewed Arabic', 'slug' => $slug, 'approved' => 1, 'auction_product' => 0, 'category_id' => null, 'brand_id' => null]);
+            Illuminate\Support\Facades\DB::table('user_page_views')->insert(['user_id' => $customer->id, 'viewable_type' => App\Models\Product::class, 'viewable_id' => $product->id, 'viewed_at' => now()]);
+        }
+    `);
+    await loginAsStoreAdmin(page);
+    await page.goto('/temp/admin/customers?search=d15-views@example.test');
+    const viewsLink = page
+        .getByRole('row')
+        .filter({ hasText: 'd15-views@example.test' })
+        .getByRole('link', { name: 'Page views', exact: true });
+    const viewsUrl = await viewsLink.getAttribute('href');
+    expect(viewsUrl).toBeTruthy();
+    await viewsLink.click();
+
+    for (const index of [0, 1, 2, 3]) {
+        const id = Number(storedProduct(`D15 viewed ${index}`, '$product->id'));
+        const destination =
+            index < 2
+                ? `/temp/product/~id-${id}?catalog_id=${id}`
+                : `/temp/product/${index === 2 ? 'd15-views-normal' : '0'}`;
+        const link = page.getByRole('link', {
+            name: `D15 viewed ${index}`,
+            exact: true,
+        });
+        await expect(link).toHaveAttribute('href', destination);
+        await link.click();
+        await expect(page).toHaveURL(`${baseURL}${destination}`);
+        await expect(
+            page.getByRole('heading', {
+                name: `D15 viewed ${index} | Viewed Arabic`,
+                exact: true,
+            }),
+        ).toBeVisible();
+        await page.goto(viewsUrl!);
     }
 });

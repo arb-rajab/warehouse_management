@@ -1,0 +1,228 @@
+{
+    "dashboard": {
+        "id": 0,
+        "name": "Final product",
+        "public_url": "<app-url>/temp/product/d15-final",
+        "thumbnail_url": "<app-url>/assets/img/placeholder.jpg",
+        "base_price": "3€",
+        "discounted_price": "3€",
+        "rating": 4
+    },
+    "digital": {
+        "id": 0,
+        "name": "Final product",
+        "added_by": "admin",
+        "thumbnail_url": "<app-url>/assets/img/placeholder.jpg",
+        "unit_price": "2.50",
+        "todays_deal": false,
+        "published": true,
+        "featured": false,
+        "public_url": "<app-url>/temp/product/d15-final",
+        "download_token": "<encrypted product id>"
+    },
+    "list": {
+        "id": 0,
+        "name": "Final product",
+        "ar_name": "المنتج",
+        "thumbnail_url": "<app-url>/assets/img/placeholder.jpg",
+        "mat_id": null,
+        "unit": "(1)",
+        "num_of_sale": 0,
+        "base_price": "3€",
+        "profit": "0€",
+        "variant_stocks": null,
+        "stock_quantity": 50,
+        "low_stock": false,
+        "category": null,
+        "for_sale": true,
+        "published": true,
+        "featured": false,
+        "approved": true,
+        "todays_deal": false,
+        "deleted_from_api": false,
+        "public_url": "<app-url>/temp/product/d15-final"
+    },
+    "review": {
+        "id": 0,
+        "rating": 4,
+        "comment": "Review",
+        "published": true,
+        "product": {
+            "id": 0,
+            "name": "Final product",
+            "owner": "admin",
+            "url": "<app-url>/temp/product/d15-final"
+        },
+        "customer": {
+            "id": 0,
+            "name": "Customer Tester",
+            "email": "d15@example.test"
+        }
+    },
+    "v2-auction": {
+        "data": [
+            {
+                "id": 0,
+                "name": "Final product",
+                "added_by": "admin",
+                "seller_id": 0,
+                "shop_id": 0,
+                "shop_name": "In House Product",
+                "shop_logo": "<app-url>/assets/img/placeholder.jpg",
+                "photos": [
+                    {
+                        "variant": "",
+                        "path": "<app-url>/assets/img/placeholder.jpg"
+                    }
+                ],
+                "thumbnail_image": "<app-url>/assets/img/placeholder.jpg",
+                "tags": ["final"],
+                "rating": 4,
+                "rating_count": 0,
+                "brand": {
+                    "id": 0,
+                    "name": "",
+                    "logo": ""
+                },
+                "auction_end_date": "Ended",
+                "starting_bid": "5€",
+                "unit": "Box",
+                "min_bid_price": 5,
+                "highest_bid": "",
+                "description": "Description",
+                "video_link": "",
+                "link": "<app-url>/temp/product/d15-final"
+            }
+        ],
+        "success": true,
+        "status": 200
+    },
+    "v2-classified": {
+        "data": [
+            {
+                "id": 0,
+                "name": "Classified product",
+                "added_by": "Customer Tester",
+                "phone": "1234567890",
+                "condition": null,
+                "photos": [
+                    {
+                        "variant": "",
+                        "path": "<app-url>/assets/img/placeholder.jpg"
+                    }
+                ],
+                "thumbnail_image": "<app-url>/assets/img/placeholder.jpg",
+                "tags": ["final"],
+                "location": null,
+                "unit_price": "3€",
+                "unit": "",
+                "description": "Description",
+                "video_link": "",
+                "brand": {
+                    "id": 0,
+                    "name": "",
+                    "logo": ""
+                },
+                "category": "Classified category",
+                "link": "<app-url>/temp/product/d15-final"
+            }
+        ],
+        "success": true,
+        "status": 200
+    },
+    "v2-digital": {
+        "id": 0,
+        "name": "Final product",
+        "added_by": "admin",
+        "seller_id": 0,
+        "shop_id": 0,
+        "shop_name": "In House Product",
+        "shop_logo": "<app-url>/assets/img/placeholder.jpg",
+        "photos": [
+            {
+                "variant": "",
+                "path": "<app-url>/assets/img/placeholder.jpg"
+            }
+        ],
+        "thumbnail_image": "<app-url>/assets/img/placeholder.jpg",
+        "tags": ["final"],
+        "price_high_low": "3€",
+        "has_discount": false,
+        "stroked_price": "3€",
+        "main_price": "3€",
+        "calculable_price": 2.5,
+        "currency_symbol": "€",
+        "rating": 4,
+        "rating_count": 0,
+        "earn_point": 0,
+        "description": "Description",
+        "video_link": "",
+        "link": "<app-url>/temp/product/d15-final"
+    },
+    "v2-product": {
+        "data": [
+            {
+                "id": 0,
+                "name": "Final product",
+                "added_by": "admin",
+                "seller_id": 0,
+                "shop_id": 0,
+                "shop_name": "In House Product",
+                "shop_logo": "<app-url>/assets/img/placeholder.jpg",
+                "photos": [
+                    {
+                        "variant": "",
+                        "path": "<app-url>/assets/img/placeholder.jpg"
+                    }
+                ],
+                "thumbnail_image": "<app-url>/assets/img/placeholder.jpg",
+                "tags": ["final"],
+                "price_high_low": "3€",
+                "choice_options": [],
+                "colors": [],
+                "has_discount": false,
+                "discount": "-0%",
+                "stroked_price": "3€",
+                "main_price": "3€",
+                "price_per_piece": "3€",
+                "calculable_price": 2.5,
+                "currency_symbol": "€",
+                "current_stock": 50,
+                "unit": "Box",
+                "unit_equal": 1,
+                "tax": 0,
+                "tax_type": null,
+                "rating": 4,
+                "rating_count": 0,
+                "earn_point": 0,
+                "description": "Description",
+                "video_link": "",
+                "brand": {
+                    "id": 0,
+                    "name": "",
+                    "logo": ""
+                },
+                "category": {
+                    "id": 0,
+                    "name": "",
+                    "banner": ""
+                },
+                "serial": null,
+                "mat_id": null,
+                "max_qty": 1000,
+                "link": "<app-url>/temp/product/d15-final",
+                "wholesale": [],
+                "variation": [],
+                "count_in_cart": 0,
+                "cart_id": null,
+                "is_favorite": false,
+                "stars": 0,
+                "offers": null,
+                "for_sale": 1,
+                "published": 1
+            }
+        ],
+        "success": true,
+        "status": 200
+    }
+}
