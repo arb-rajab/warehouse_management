@@ -45,7 +45,7 @@
                                 <span class="fs-14 text-light">{{ translate('Rating') }}</span>
                             </p>
                             <h3 class="mb-0 text-white fs-30">
-                                {{ Auth::user()->shop->rating }}
+                                {{ $shop?->rating ?? 0 }}
                             </h3>
 
                         </div>
@@ -126,16 +126,7 @@
                                 <span class="fs-14 text-light">{{ translate('Total Sales') }}</span>
                             </p>
                             <h3 class="mb-0 text-white fs-30">
-                                @php
-                                    $orderDetails = \App\Models\OrderDetail::where('seller_id', Auth::user()->id)->get();
-                                    $total = 0;
-                                    foreach ($orderDetails as $key => $orderDetail) {
-                                        if ($orderDetail->order != null && $orderDetail->order->payment_status == 'paid') {
-                                            $total += $orderDetail->price;
-                                        }
-                                    }
-                                @endphp
-                                {{ single_price($total) }}
+                                {{ single_price($total_sales) }}
                             </h3>
 
                         </div>
@@ -215,15 +206,13 @@
                     </div>
                     <hr>
                     <ul class="list-group">
-                        @foreach (\App\Models\Category::all() as $key => $category)
-                            @if (count($category->products->where('user_id', Auth::user()->id)) > 0)
-                                <li class="d-flex justify-content-between align-items-center my-2 text-primary fs-13">
-                                    {{ $category->getTranslation('name') }}
-                                    <span class="">
-                                        {{ count($category->products->where('user_id', Auth::user()->id)) }}
-                                    </span>
-                                </li>
-                            @endif
+                        @foreach ($categories as $category)
+                            <li class="d-flex justify-content-between align-items-center my-2 text-primary fs-13">
+                                {{ $category->getTranslation('name') }}
+                                <span class="">
+                                    {{ $category->seller_product_count }}
+                                </span>
+                            </li>
                         @endforeach
                     </ul>
                 </div>
@@ -387,22 +376,22 @@
                         <div class="card-title">
                             <h6 class="mb-0">{{ translate('Purchased Package') }}</h6>
                         </div>
-                        @if (Auth::user()->shop->seller_package)
+                        @if ($shop?->seller_package)
                             <div class="d-flex">
                                 <div class="col-3">
-                                    <img src="{{ uploaded_asset(Auth::user()->shop->seller_package->logo) }}"
+                                    <img src="{{ uploaded_asset($shop->seller_package->logo) }}"
                                         class="img-fluid mb-4 w-64px">
                                 </div>
                                 <div class="col-9">
                                     <a class="fw-600 mb-3 text-primary">{{ translate('Current Package') }}:</a>
                                     <h6 class="text-primary">
-                                        {{ Auth::user()->shop->seller_package->name }}
+                                        {{ $shop->seller_package->name }}
                                         </h3>
                                         <p class="mb-1 text-muted">{{ translate('Product Upload Limit') }}:
-                                            {{ Auth::user()->shop->product_upload_limit }} {{ translate('Times') }}
+                                            {{ $shop->product_upload_limit }} {{ translate('Times') }}
                                         </p>
                                         <p class="text-muted mb-4">{{ translate('Package Expires at') }}:
-                                            {{ Auth::user()->shop->package_invalid_at }}
+                                            {{ $shop->package_invalid_at }}
                                         </p>
                                         <div class="">
                                             <a href="{{ route('seller.seller_packages_list') }}"
@@ -419,7 +408,7 @@
             @endif
             <div
                 class="card mb-0 @if (addon_is_activated('seller_subscription')) px-4 py-5 @else p-5 h-100 @endif d-flex align-items-center justify-content-center">
-                @if (Auth::user()->shop->verification_status == 0)
+                @if (($shop?->verification_status ?? 0) == 0)
                     <div class="my-n4 py-1 text-center">
                         <img src="{{ static_asset('assets/img/non_verified.png') }}" alt=""
                             class="w-xxl-130px w-90px d-block">
