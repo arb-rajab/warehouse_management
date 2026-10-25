@@ -7333,3 +7333,215 @@ publishing refusal and D8 already pass. No new business-policy or migration
 choice is left to the owner for the shipped D6/D8 work. The unchanged responsive
 withdrawal assertion still needs verification before merging. No CI-Verified
 trailer was written or edited.
+
+## 62. D15: resolving slugless storefront catalogue URLs, primary pages (2026-10-25)
+
+Branch `codex/null-slug-urls` starts at fetched `origin/develop`
+`f7532b293ac5f98031f8f7c4f58d99aef62fc322` (PR #492). This is the
+requested **30-file batch**, with an explicit remainder. It does not claim that
+all D15 callers are fixed: the primary storefront pages and SEO are repaired;
+36 individually inventoried builders remain for the continuation below.
+
+### One read-only address and matching resolution
+
+`App\Support\StorefrontUrl::to(Product|Category|Brand)` is the shared model
+URL helper. A non-null, non-empty slug is passed verbatim to its original named
+route. This includes numeric slugs and `"0"`: no truthiness fallback and no
+changed meaning for the persisted `slug` attribute. Null or `''` uses
+`/product/~id-123?catalog_id=123` (or the corresponding category/brand route).
+All paths come from named routes; `/temp` is not hardcoded in application code.
+`forRow()` serves the sitemap's streamed rows without model hydration.
+
+The query discriminator is intentional. A bare numeric fallback can select a
+different row's numeric slug. Even an apparently reserved `~id-N` path could
+already be a legacy literal slug. With `catalog_id=N`, the ID resolver runs
+only when the token and integer discriminator match exactly, and then restricts
+the lookup to a row with a null/empty slug. The same path **without** that
+query still resolves an existing literal slug normally. Tests follow both
+addresses and assert the exact resolved product, rather than just HTTP 200.
+Missing/mismatched IDs return 404. Existing product approval, publication and
+auction exclusions still apply. The category and brand actions retain their
+existing logging and listing filters. No nullable route parameters, route
+names, permissions or D7 handlers are changed.
+
+The helper performs no query or write. No model accessor/mutator changes the
+meaning of `slug`, no migration or backfill exists, and no product column is
+assigned by this change. Tests snapshot every column before/after rendering,
+including a feed-origin row under Option A. An owner-run slug backfill is an
+optional separate follow-up and would need a policy for previously issued
+fallback links; nothing here requires one to render or resolve these pages.
+
+The related-products query now lives in the existing product controller action,
+with explicit columns and eager-loaded translations/taxes. After URL repair,
+a multi-product verified-customer test reproduced the additional
+`LazyLoadingViolationException` already noted in §43. The offered-products
+partial also eagerly loads the columns, translations and taxes its cards read.
+The existing ten-item related limit, filters and pricing rules are retained.
+
+### SEO: one actual address, with an explicit sitemap exclusion
+
+`Seo::canonicalUrl()` uses `StorefrontUrl::requestPath()`, which shares the
+same generator and retains a matching `catalog_id` as identity. Content query
+keys still follow §42; tracking is discarded. A plain fallback is indexable;
+adding a sort/filter still gives `noindex, follow`. The canonical and `og:url`
+printed by `partials/seo_meta.blade.php` equal the real working fallback URL.
+`StructuredData` uses `StorefrontUrl::to()` for Product/Offer URLs and each
+product/category/brand breadcrumb. `partials/json_ld.blade.php` continues its
+existing safe encoder and prints these same URLs. The two partials require no
+source changes: their existing values now come from the shared generator.
+
+The sitemap **deliberately retains §42's exclusion of null and empty slugs** for
+products, categories and brands. The new regression follows every generated
+sitemap file with both kinds of missing slug present and checks for 200 and no
+fallback URL; it also checks that a normal product remains listed. Existing
+sitemap tests pass unmodified. Non-empty catalogue sitemap rows now pass
+through `forRow()`, giving exactly their previous addresses. Blog, CMS, shop,
+flash-deal and customer-product slug routes use other models and stay unchanged.
+
+### Reproduction, before the production fix
+
+The initial SQLite and MySQL runs each reported **27 tests: 3 passed,
+20 failed, 4 errors, 47 assertions**. Four errors were the expected missing
+new-helper method; six failures were fallback destinations returning 404 on
+the original slug-only resolver. Request fixtures were corrected before relying
+on their page-specific evidence: AJAX search is POST-only, confirmation is
+under `/checkout`, and order lines join products by `product_serial`/`serial`.
+The corrected SQLite listing dataset reproduced the customer-order failure too.
+The error excerpts below are from actual runs, not inferred from grep.
+
+| Page type / request                                                                                           | Before output                                                                                                                                                    |
+| ------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Listing `/temp/search`, category `/temp/category/d15-category`, brand `/temp/brand/d15-brand`, keyword search | `Expected response status code [200] but received 500` — `UrlGenerationException: Missing required parameter for [Route: product] ... [Missing parameter: slug]` |
+| AJAX search `POST /temp/ajax-search`                                                                          | Same product-route 500, after correcting the initial GET fixture (which correctly returned 404)                                                                  |
+| Product page, related block                                                                                   | Same product-route 500, `related_products.blade.php`                                                                                                             |
+| Product page, offered block                                                                                   | Same product-route 500, `offered_products.blade.php`                                                                                                             |
+| Category index `/temp/categories`                                                                             | 500 — missing `category_slug` for `products.category`                                                                                                            |
+| Brand index `/temp/brands`                                                                                    | 500 — missing `brand_slug` for `products.brand`                                                                                                                  |
+| Wishlist `/temp/wishlists`, compare `/temp/compare`                                                           | Same product-route 500                                                                                                                                           |
+| Customer order `/temp/purchase_history/details/{encrypted-id}`                                                | Corrected product-serial fixture: same product-route 500; the first incomplete address fixture hit an unrelated missing-address error                            |
+| Cart `/temp/cart`                                                                                             | Already 200 with the product retained; the dropdown's raw product links are in a Blade comment                                                                   |
+| Confirmation `/temp/checkout/order-confirmed`                                                                 | Already 200 after correcting the path; its raw line-item product links are in a Blade comment, and the live page renders the order summary                       |
+| Sitemap index and all its files                                                                               | Already 200; null/empty slugs already excluded explicitly                                                                                                        |
+| Product/category/brand fallback destinations, null and empty slugs                                            | 404 before resolver support; six cases now assert 200, matching canonical/JSON-LD and unchanged row snapshots                                                    |
+| Deferred seller physical-product list (isolated MySQL probe)                                                  | 500 — product-route `UrlGenerationException`                                                                                                                     |
+| Deferred back-office `ReviewResource` (isolated MySQL probe)                                                  | `UrlGenerationException` building its product URL                                                                                                                |
+
+The two intentionally failing remainder probes lived under ignored/uncommitted
+`work/`, outside the passing suite. They were not added and then skipped or
+quarantined. The architecture guard was also run with an empty remainder:
+**1 passed / 1 failed**, listing every retained direct builder, before pinning
+the explicit remainder. It checks duplicate occurrences and detects multiline
+calls, array parameters, `getAttribute('slug')`, URL facade calls and the known
+Vue Wayfinder caller. New raw calls fail; removing a retained call also fails
+until its exact entry is deleted. No blanket path exclusion is used.
+
+### Complete call-site inventory and disposition
+
+Re-inventoried with `rg` over `app`, `resources/views`, `resources/js`,
+`public/assets/js` and routes, including mobile/API resources, server-built
+client URLs, guarded calls and Blade comments. **76 PHP/Blade direct named-route
+builders in 41 files (31 Blade files), plus one Vue Wayfinder builder = 77 in
+42 files.** Also audited the sitemap's dynamic named-route builder and the SEO
+partial pipeline. Generated Wayfinder definitions and test fixture URLs are
+not application call sites. Request objects' `$this->route('product')` reads
+are route-parameter reads, not URL generation.
+
+Every `file:line` below refers to this batch's final source. Lines grouped in a
+cell enumerate separate occurrences, including commented occurrences.
+
+**Handled: 41 direct builders in 19 files**, plus the dynamic sitemap builder
+and canonical adapter. The shared helper and three controller lookups are
+listed after the table.
+
+| File                                                                       | Lines handled                     |
+| -------------------------------------------------------------------------- | --------------------------------- |
+| `app/Support/StructuredData.php`                                           | 85, 104, 123, 127                 |
+| `resources/views/shop/frontend/all_brand.blade.php`                        | 31                                |
+| `resources/views/shop/frontend/all_category.blade.php`                     | 34, 41, 49                        |
+| `resources/views/shop/frontend/index.blade.php`                            | 105, 107, 173, 303, 312, 317, 650 |
+| `resources/views/shop/frontend/order_confirmed.blade.php`                  | 169                               |
+| `resources/views/shop/frontend/partials/cart.blade.php`                    | 58                                |
+| `resources/views/shop/frontend/partials/category_elements.blade.php`       | 6, 10                             |
+| `resources/views/shop/frontend/partials/category_menu.blade.php`           | 5                                 |
+| `resources/views/shop/frontend/partials/home_categories_section.blade.php` | 23                                |
+| `resources/views/shop/frontend/partials/product_box_1.blade.php`           | 20, 22                            |
+| `resources/views/shop/frontend/partials/search_content.blade.php`          | 20, 33                            |
+| `resources/views/shop/frontend/product_details.blade.php`                  | 184                               |
+| `resources/views/shop/frontend/product_details/details.blade.php`          | 88                                |
+| `resources/views/shop/frontend/product_details/offered_products.blade.php` | 21, 32                            |
+| `resources/views/shop/frontend/product_details/related_products.blade.php` | 15, 26                            |
+| `resources/views/shop/frontend/product_listing.blade.php`                  | 59, 71, 78, 85, 273               |
+| `resources/views/shop/frontend/user/order_details_customer.blade.php`      | 159, 162                          |
+| `resources/views/shop/frontend/user/view_wishlist.blade.php`               | 19, 38                            |
+| `resources/views/shop/frontend/view_compare.blade.php`                     | 26                                |
+
+Additional adapters: `app/Services/Sitemap.php:189`,
+`app/Support/Seo.php:89`; generation and resolution:
+`app/Support/StorefrontUrl.php:17,29,45,55`,
+`app/Http/Controllers/HomeController.php:253`,
+`app/Http/Controllers/SearchController.php:150,160`.
+
+**Remainder: 36 builders in 23 files**, exactly the line-by-line `$remaining`
+allowlist in `tests/Feature/StorefrontUrlArchitectureTest.php`. These are
+unmodified at the file cutoff; the continuation must migrate each to the helper
+(or its correct model's route) and delete that entry. A guarded call is still
+listed rather than silently counted as repaired.
+
+| File                                                                           | Remaining lines              | Disposition                                                                                          |
+| ------------------------------------------------------------------------------ | ---------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `app/Http/Controllers/Store/Admin/DynamicPopupController.php`                  | 121                          | Already rejects missing base-product slugs with validation; shared-helper adoption deferred          |
+| `app/Http/Resources/Store/DashboardProductResource.php`                        | 27                           | Already guards null/empty and emits null public_url; link restoration deferred                       |
+| `app/Http/Resources/Store/DigitalProductResource.php`                          | 39                           | Already guards null/empty and emits null public_url; link restoration deferred                       |
+| `app/Http/Resources/Store/ProductListResource.php`                             | 71                           | Already guards null/empty and emits null public_url; link restoration deferred                       |
+| `app/Http/Resources/Store/ReviewResource.php`                                  | 32                           | Back-office server-built public link; MySQL probe still reproduces failure                           |
+| `app/Http/Resources/V2/AuctionProductDetailCollection.php`                     | 82                           | Mobile/API auction product currently targets ordinary product route, whose resolver rejects auctions |
+| `app/Http/Resources/V2/ClassifiedProductDetailCollection.php`                  | 66                           | Mobile/API CustomerProduct resource uses ordinary product route; correct model/route needs follow-up |
+| `app/Http/Resources/V2/DigitalProductDetailCollection.php`                     | 69                           | Mobile/API server-built public link; unguarded null-slug failure remains                             |
+| `app/Http/Resources/V2/ProductDetailCollection.php`                            | 156                          | Mobile/API server-built public link; unguarded null-slug failure remains                             |
+| `resources/js/pages/Store/Admin/Customers/Customers/Views.vue`                 | 68                           | Already hides the link when slug is missing; uses server-provided slug via Wayfinder                 |
+| `resources/views/shop/frontend/digital_product_details.blade.php`              | 160, 477, 489, 637, 648, 810 | Unrouted retained Blade view (six builders)                                                          |
+| `resources/views/shop/frontend/flash_deal_details.blade.php`                   | 36, 38                       | Retained storefront/account builder; unguarded failure remains                                       |
+| `resources/views/shop/frontend/partials/addedToCart.blade.php`                 | 56, 66                       | Retained storefront/account builder; unguarded failure remains                                       |
+| `resources/views/shop/frontend/partials/coupon_box.blade.php`                  | 74                           | Retained storefront/account builder; unguarded failure remains                                       |
+| `resources/views/shop/frontend/product_details/top_selling_products.blade.php` | 12, 25                       | Already excludes slugless products via topSellingOf; existing exclusion/tests unchanged              |
+| `resources/views/shop/frontend/user/customer/dashboard.blade.php`              | 263, 279                     | Retained storefront/account builder; unguarded failure remains                                       |
+| `resources/views/shop/frontend/user/digital_purchase_history.blade.php`        | 23                           | Retained storefront/account builder; unguarded failure remains                                       |
+| `resources/views/shop/seller/dashboard.blade.php`                              | 542, 561                     | Seller Blade public links; unguarded failure remains (physical list reproduced on MySQL)             |
+| `resources/views/shop/seller/orders/show.blade.php`                            | 161, 165, 174, 179           | Seller Blade public links; unguarded failure remains (physical list reproduced on MySQL)             |
+| `resources/views/shop/seller/orders/show_backup.blade.php`                     | 150                          | Seller Blade public links; unguarded failure remains (physical list reproduced on MySQL)             |
+| `resources/views/shop/seller/product/digitalproducts/index.blade.php`          | 82                           | Seller Blade public links; unguarded failure remains (physical list reproduced on MySQL)             |
+| `resources/views/shop/seller/product/products/index.blade.php`                 | 95                           | Seller Blade public links; unguarded failure remains (physical list reproduced on MySQL)             |
+| `resources/views/shop/seller/reviews.blade.php`                                | 31                           | Seller Blade public links; unguarded failure remains (physical list reproduced on MySQL)             |
+
+The inventory also found other `{slug}` routes: `flash-deal-details`,
+`shop.visit`/`shop.visit.type`, `customer.product`, `blog.details`,
+`mobile.custom-pages`, `custom-pages.show_custom_page`, and the category/brand
+routes' actual `{category_slug}`/`{brand_slug}` parameters. Their resolvers were
+read: they operate on FlashDeal, Shop, CustomerProduct, Blog or Page rather
+than the three D15 models. No nullable route or generic ID resolution is added
+for those unrelated models. `SearchController::index` and shop filters also
+read a brand slug from filter query input; they do not generate one of these
+three URLs. The root D7 `ProductController::search` and
+`get_products_by_subcategory` handlers are untouched.
+
+### Verification
+
+Focused SQLite and MySQL: **34 passed / 150 assertions on each engine**, no
+skips (32 regression cases plus two architecture cases). The DB-rendering test
+file is added to **both** `.github/workflows/tests.yml` and `MYSQL_TESTS` in
+`.claude/scripts/pre_push_check.py`. All rendering setup in the new file calls
+`withoutVite()`. No existing storefront test was modified. Final broad-gate,
+existing-storefront and browser results are recorded below after completion.
+
+Final verification in this environment:
+
+- Existing and new `Storefront*Test.php`: **460 passed / 2,141 assertions**, no skips; no existing test changed.
+- Focused new tests: **34 passed / 150 assertions on SQLite and MySQL 8.4**, using `DB_CONNECTION=mysql DB_DATABASE=warehouse_test DB_USERNAME=root DB_PASSWORD=password` for MySQL.
+- `npm run types:check`, `composer run types:check` (**zero errors**), dirty Pint, changed-workflow Prettier, script selftests and CI planner (**23 tests**) passed. `npm ci` refreshed stale installed packages; Wayfinder regenerated successfully; the production `npm run build` passed with fonts.
+- First explicit `python3 .claude/scripts/pre_push_check.py --full`: Wayfinder, whole ESLint/Prettier, frontend types, **338 Vitest files / 2,703 tests**, Pint and PHPStan passed. Pest: **7,800 passed / 1 failed / 6 errors / 3 existing SQLite skips / 43,790 assertions**, out of 7,810 cases. Five failing/error cases require GD WebP support (admin upload plus four raster-normalisation cases). Two errors were stale Composer classmap entries for deleted root digital-product/trip controllers. `composer dump-autoload --no-scripts` repaired the classmap; the digital-product form tests plus the new tests subsequently passed **89 cases / 632 assertions**. The trip-map controller file also passed **28 cases / 146 assertions** after the refresh. The existing MySQL-only longitude skips were not added or changed.
+- A second explicit `--full` passed the frontend checks and all **2,703 Vitest tests**, then stopped at Pint: `Failed to listen on "tcp://127.0.0.1:0": Success`. This attempt ran in the restricted shell because additional network approval was unavailable; the parallel formatter needs a local listener. Standalone dirty Pint passes. PHPStan/Pest were not reached in this second run; the first run above remains the full backend evidence.
+- `python3 .claude/scripts/install_playwright.py` reused system Chromium and FFmpeg. The unmodified `store-categories`, `store-brands`, `store-product-create` specs ran: **6 passed / 4 failed**. Passing cases include public category/brand Blade pages and a public product page. Four upload-dependent cases received **422** and could not find the uploaded fixture. The supplied GD build has no `imagewebp` support. An earlier browser attempt was stopped after traces exposed a stale ignored `public/hot` marker pointing to a CSP-blocked Vite dev server; moving that marker aside fixed hydration without changing CSP or tests. A subsequent launch briefly found an orphaned test server; its task-owned processes were stopped before the recorded rerun.
+- A task-local WebP-capable GD repair was attempted without replacing the shared runtime. Docker's apt update failed to obtain Release metadata. The next package-download attempt was **not executed**: automatic approval review reported that the workspace was out of credits, explicitly a review failure rather than an unsafe-action determination. The runtime repair remains blocked pending workspace-owner recovery/refill. No platform requirements, tests, CSP rules or upload validation were weakened.
+- Whole-file Prettier reports formatting warnings for the two historical `.ai` documents; the same warnings occur on their unchanged base versions. Existing prose is preserved to avoid a large unrelated reformat. The new §62 section and changed workflow pass Prettier. `git diff --check` passes.
+
+Not run: the remaining MySQL CI file list, the full application Playwright suite, Composer/npm advisory audits or deploy-script tests. The full gate and affected browser run are **not green**; the commit and PR carry **Unverified:** for Claude to finish verification on a WebP-capable runtime with local-listener permission. No CI-Verified trailer was written or edited. No production system, real data or secrets were used. The remaining D15 callers above are the explicit follow-up under the requested file cap; no new business-policy decision or data backfill is required for the shipped fallback.

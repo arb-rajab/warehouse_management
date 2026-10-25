@@ -55,7 +55,7 @@
                 @if ($product != null)
                     <li class="list-group-item border-0 hov-scale-img">
                         <span class="d-flex align-items-center">
-                            <a href="{{ route('product', $product->slug) }}"
+                            <a href="{{ \App\Support\StorefrontUrl::to($product) }}"
                                 class="text-reset d-flex align-items-center flex-grow-1">
                                 <img src="{{ static_asset('assets/img/placeholder.jpg') }}"
                                     data-src="{{ uploaded_asset($product->thumbnail_img) }}"

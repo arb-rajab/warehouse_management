@@ -156,10 +156,10 @@
                                     <td class="pl-0">{{ sprintf('%02d', $key+1) }}</td>
                                     <td>
                                         @if ($orderDetail->product != null && $orderDetail->product->auction_product == 0)
-                                            <a href="{{ route('product', $orderDetail->product->slug) }}"
+                                            <a href="{{ \App\Support\StorefrontUrl::to($orderDetail->product) }}"
                                                 target="_blank">{{ $orderDetail->product->getTranslation('name') }}</a>
                                         @elseif($orderDetail->product != null && $orderDetail->product->auction_product == 1)
-                                            <a href="{{ route('product', $orderDetail->product->slug) }}"
+                                            <a href="{{ \App\Support\StorefrontUrl::to($orderDetail->product) }}"
                                                 target="_blank">{{ $orderDetail->product->getTranslation('name') }}</a>
                                         @else
                                             <strong>{{ translate('Product Unavailable') }}</strong>

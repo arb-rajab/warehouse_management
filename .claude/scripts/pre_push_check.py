@@ -110,6 +110,7 @@ MYSQL_TESTS = [
     'tests/Feature/Store/Admin/SellerPayoutDefectsTest.php',
     'tests/Feature/SellerDashboardTest.php',
     'tests/Feature/Store/Admin/ProductEditRoutingTest.php',
+    'tests/Feature/StorefrontNullSlugTest.php',
     'tests/Feature/Database/DropRedundantForeignKeyIndexesTest.php',
     'tests/Feature/Database/SchemaIdentifierLengthTest.php',
     'tests/Feature/Database/AddFulltextIndexToProductsTableTest.php',

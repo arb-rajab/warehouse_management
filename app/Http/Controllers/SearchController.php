@@ -147,7 +147,7 @@ class SearchController extends Controller
 
     public function listingByCategory(Request $request, $category_slug)
     {
-        $category = Category::where('slug', $category_slug)->first();
+        $category = \App\Support\StorefrontUrl::resolve(Category::query(), $category_slug, $request)->first();
         if ($category != null) {
             logCategoryView($category->id);
             return $this->index($request, $category->id);
@@ -157,7 +157,7 @@ class SearchController extends Controller
 
     public function listingByBrand(Request $request, $brand_slug)
     {
-        $brand = Brand::where('slug', $brand_slug)->first();
+        $brand = \App\Support\StorefrontUrl::resolve(Brand::query(), $brand_slug, $request)->first();
         if ($brand != null) {
             return $this->index($request, null, $brand->id);
         }

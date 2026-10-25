@@ -86,10 +86,10 @@ final class Seo
      */
     public function canonicalUrl(): string
     {
-        $path = '/'.trim($this->request->getPathInfo(), '/');
+        $path = StorefrontUrl::requestPath($this->request) ?? '/'.trim($this->request->getPathInfo(), '/');
         $query = $this->contentQuery();
 
-        return self::origin($this->request).$path.($query === '' ? '' : '?'.$query);
+        return self::origin($this->request).$path.($query === '' ? '' : (str_contains($path, '?') ? '&' : '?').$query);
     }
 
     /**
