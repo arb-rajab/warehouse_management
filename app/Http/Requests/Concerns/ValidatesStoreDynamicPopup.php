@@ -23,7 +23,7 @@ trait ValidatesStoreDynamicPopup
             'offer_id' => ['required', 'integer', Rule::exists('offers', 'id')->where(fn (Builder $query) => $query->whereExists(fn (Builder $products) => $products
                 ->selectRaw('1')->from('offer_products')->join('products', 'products.id', '=', 'offer_products.product_id')
                 ->whereColumn('offer_products.offer_id', 'offers.id')->where('is_base_product', 1)
-                ->whereNotNull('products.slug')->whereRaw("TRIM(products.slug) <> ''")))],
+                ->where(fn (Builder $slugs) => $slugs->whereNull('products.slug')->orWhereRaw('LENGTH(products.slug) = 0')->orWhereRaw("TRIM(products.slug) <> ''"))))],
             'show_page' => ['bail', 'required', 'integer', 'min:0', function (string $attribute, mixed $value, \Closure $fail): void {
                 if ((int) $value !== 0 && ! Category::query()->whereKey($value)->exists()) {
                     $fail(__('validation.exists', ['attribute' => $attribute]));

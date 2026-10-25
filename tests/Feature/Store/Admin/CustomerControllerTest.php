@@ -235,7 +235,7 @@ test('page views aggregate counts exclude other customers and paginate grouped r
     }
     DB::table('user_page_views')->insert(['user_id' => $customer->id, 'viewable_type' => Product::class, 'viewable_id' => $ids[0], 'viewed_at' => '2026-10-08 13:00:00']);
     DB::table('user_page_views')->insert(['user_id' => $noise->id, 'viewable_type' => Product::class, 'viewable_id' => $ids[0], 'viewed_at' => '2026-10-08 14:00:00']);
-    $this->get(route('customers.page-views', $customer))->assertInertia(fn (Assert $page) => $page->has('views.data', 20)->where('views.meta.total', 23)->where('views.data.0.view_count', 2)->where('views.data.0', ['id' => $ids[0], 'kind' => 'products', 'name' => 'Viewed product 1', 'slug' => 'viewed-product-1', 'view_count' => 2, 'last_viewed_at' => '2026-10-08 13:00:00']));
+    $this->get(route('customers.page-views', $customer))->assertInertia(fn (Assert $page) => $page->has('views.data', 20)->where('views.meta.total', 23)->where('views.data.0.view_count', 2)->where('views.data.0', ['id' => $ids[0], 'kind' => 'products', 'name' => 'Viewed product 1', 'slug' => 'viewed-product-1', 'public_url' => route('product', 'viewed-product-1', false), 'view_count' => 2, 'last_viewed_at' => '2026-10-08 13:00:00']));
     $this->get(route('customers.page-views', [$customer, 'per_page' => 7]))->assertSessionHasErrors('per_page');
 });
 

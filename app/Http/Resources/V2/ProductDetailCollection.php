@@ -2,6 +2,8 @@
 
 namespace App\Http\Resources\V2;
 
+use App\Support\StorefrontUrl;
+
 use App\Models\Attribute;
 use App\Models\Cart;
 use App\Models\ProductVariation;
@@ -153,7 +155,7 @@ class ProductDetailCollection extends ResourceCollection
                     'serial' => $data->serial,
                     'mat_id' => $data->mat_id,
                     'max_qty' => $data->max_qty,
-                    'link' => route('product', $data->slug),
+                    'link' => StorefrontUrl::to($data),
                     'wholesale' => $whole_sale,
                     'variation' => $productVariation,
                     'count_in_cart' => count_in_cart($data->id),

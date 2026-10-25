@@ -28,20 +28,8 @@ test('storefront route builders use the shared helper except for the exact D15 r
             }
         }
     }
-    // API/resources and the customer Views page form the final D15 batch.
-    // These ten unchanged call sites are deferred at the approximately 30-file cap.
-    $remaining = [
-        'app/Http/Controllers/Store/Admin/DynamicPopupController.php:121',
-        'app/Http/Resources/Store/DashboardProductResource.php:27',
-        'app/Http/Resources/Store/DigitalProductResource.php:39',
-        'app/Http/Resources/Store/ProductListResource.php:71',
-        'app/Http/Resources/Store/ReviewResource.php:32',
-        'app/Http/Resources/V2/AuctionProductDetailCollection.php:82',
-        'app/Http/Resources/V2/ClassifiedProductDetailCollection.php:66',
-        'app/Http/Resources/V2/DigitalProductDetailCollection.php:69',
-        'app/Http/Resources/V2/ProductDetailCollection.php:156',
-        'resources/js/pages/Store/Admin/Customers/Customers/Views.vue:68',
-    ];
+    $remaining = [];
+    expect($remaining)->toBe([], 'D15 is complete: the storefront builder allowlist must stay empty.');
     sort($actual);
     sort($remaining);
 

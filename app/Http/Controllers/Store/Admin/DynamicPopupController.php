@@ -14,6 +14,7 @@ use App\Models\Category;
 use App\Models\DynamicPopup;
 use App\Models\Offer;
 use App\Models\OfferProduct;
+use App\Support\StorefrontUrl;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Database\Query\JoinClause;
@@ -109,16 +110,16 @@ class DynamicPopupController extends Controller implements HasMiddleware
     private function popupAttributes(StoreDynamicPopupRequest|UpdateDynamicPopupRequest $request): array
     {
         $attributes = $request->validated();
-        $slug = OfferProduct::query()->join('products', 'products.id', '=', 'offer_products.product_id')
+        $product = OfferProduct::query()->join('products', 'products.id', '=', 'offer_products.product_id')
             ->where('offer_products.offer_id', $attributes['offer_id'])->where('is_base_product', 1)
-            ->value('products.slug');
-        if (! is_string($slug) || trim($slug) === '') {
+            ->first(['products.id', 'products.slug']);
+        if ($product === null || (is_string($product->getAttribute('slug')) && $product->getAttribute('slug') !== '' && trim($product->getAttribute('slug')) === '')) {
             throw ValidationException::withMessages(['offer_id' => __('validation.exists', ['attribute' => 'offer_id'])]);
         }
 
         return [
             ...$attributes,
-            'btn_link' => route('product', ['slug' => $slug]),
+            'btn_link' => StorefrontUrl::forRow('product', $product->getAttribute('slug'), (int) $product->getAttribute('id')),
             'btn_background_color' => '#000000',
             'btn_text_color' => 'white',
         ];
@@ -132,7 +133,7 @@ class DynamicPopupController extends Controller implements HasMiddleware
                 ->whereExists(fn (QueryBuilder $query) => $query->selectRaw('1')->from('offer_products')
                     ->join('products', 'products.id', '=', 'offer_products.product_id')
                     ->whereColumn('offer_products.offer_id', 'offers.id')->where('is_base_product', 1)
-                    ->whereNotNull('products.slug')->whereRaw("TRIM(products.slug) <> ''"))
+                    ->where(fn (QueryBuilder $slugs) => $slugs->whereNull('products.slug')->orWhereRaw('LENGTH(products.slug) = 0')->orWhereRaw("TRIM(products.slug) <> ''")))
                 ->orderBy('title')->orderBy('id')->get()
                 ->map(fn (Offer $offer) => ['id' => $offer->id, 'name' => $offer->title])->all(),
             'categories' => Category::query()->without('category_translations')->select(['categories.id'])

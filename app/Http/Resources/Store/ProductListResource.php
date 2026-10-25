@@ -4,6 +4,7 @@ namespace App\Http\Resources\Store;
 
 use App\Models\Product;
 use App\Models\ProductStock;
+use App\Support\StorefrontUrl;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -68,7 +69,7 @@ class ProductListResource extends JsonResource
             'approved' => (bool) $this->approved,
             'todays_deal' => (bool) $this->todays_deal,
             'deleted_from_api' => (bool) $this->deleted_from_api,
-            'public_url' => $this->slug === null || $this->slug === '' ? null : route('product', $this->slug),
+            'public_url' => StorefrontUrl::to($this->resource),
         ];
     }
 }

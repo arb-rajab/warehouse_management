@@ -6,6 +6,7 @@ use App\Models\CategoryTranslation;
 use App\Models\Product;
 use App\Models\ProductTranslation;
 use App\Models\StoreUser;
+use App\Support\StorefrontUrl;
 use App\Utility\CategoryUtility;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -13,6 +14,7 @@ use Illuminate\Support\Str;
 use Inertia\Testing\AssertableInertia as Assert;
 
 beforeEach(function () {
+    $this->withoutVite();
     seedStoreCurrency();
     config(['app.default_language' => 'en']);
 });
@@ -174,5 +176,5 @@ test('published products without a storefront slug do not break the dashboard', 
     actingAsStoreUser(createStoreStaff('admin_dashboard'));
     $product = createStoreProduct(['name' => 'Warehouse product', 'slug' => null, 'added_by' => 'admin', 'thumbnail_img' => null]);
     $this->get(route('shop.admin.dashboard'))->assertOk()->assertInertia(fn (Assert $p) => $p
-        ->has('topProducts', 1)->where('topProducts.0.id', $product->id)->where('topProducts.0.public_url', null));
+        ->has('topProducts', 1)->where('topProducts.0.id', $product->id)->where('topProducts.0.public_url', StorefrontUrl::to($product)));
 });

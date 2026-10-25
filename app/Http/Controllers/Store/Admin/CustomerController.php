@@ -359,6 +359,7 @@ class CustomerController extends Controller implements HasMiddleware
             $product = $products->get($view->viewable_id);
             $view->setAttribute('view_name', $view->viewable_type === Product::class ? $product?->name : $categoryNames->get($view->viewable_id));
             $view->setAttribute('product_slug', $view->viewable_type === Product::class ? $product?->slug : null);
+            $view->setRelation('viewedProduct', $view->viewable_type === Product::class ? $product : null);
         }
 
         return Inertia::render('Store/Admin/Customers/Customers/Views', ['customer' => ['id' => $customer->id, 'name' => $customer->name], 'views' => $this->paginated(CustomerPageViewResource::collection($views)), 'filters' => ['kind' => $request->input('kind'), 'per_page' => $perPage]]);
