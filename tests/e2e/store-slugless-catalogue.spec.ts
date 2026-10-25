@@ -19,6 +19,8 @@ test('customer and campaign links open the same slugless product in the storefro
         $deal = App\Models\FlashDeal::forceCreate(['title' => 'D15 browser campaign', 'slug' => 'd15-browser-campaign', 'status' => 1, 'start_date' => now()->subDay()->timestamp, 'end_date' => now()->addDay()->timestamp, 'text_color' => 'dark']);
         App\Models\FlashDealProduct::forceCreate(['flash_deal_id' => $deal->id, 'product_id' => $product->id]);
         App\Models\Coupon::forceCreate(['user_id' => $owner->id, 'type' => 'product_base', 'code' => 'D15-BROWSER', 'discount' => 1, 'discount_type' => 'amount', 'start_date' => now()->subDay()->timestamp, 'end_date' => now()->addDay()->timestamp, 'details' => json_encode([['product_id' => $product->id]])]);
+        // Multiple active coupons exercise the listing's eager-loading contract even in an isolated run.
+        App\Models\Coupon::forceCreate(['user_id' => $owner->id, 'type' => 'cart_base', 'code' => 'D15-BROWSER-CART', 'discount' => 1, 'discount_type' => 'amount', 'start_date' => now()->subDay()->timestamp, 'end_date' => now()->addDay()->timestamp, 'details' => json_encode(['min_buy' => 5, 'max_discount' => 1])]);
     `);
     const id = Number(storedProduct('D15 browser download', '$product->id'));
     const destination = `${baseURL}/temp/product/~id-${id}?catalog_id=${id}`;
@@ -38,7 +40,7 @@ test('customer and campaign links open the same slugless product in the storefro
         '/temp/coupons',
     ]) {
         const response = await page.goto(path);
-        expect(response?.status()).toBe(200);
+        expect(response?.status(), `GET ${path}`).toBe(200);
         const link = page.locator(`a[href="${destination}"]`).first();
         await expect(link).toHaveAttribute('href', destination);
         let productPage = page;

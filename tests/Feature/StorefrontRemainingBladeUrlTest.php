@@ -101,6 +101,23 @@ test('the retained digital detail view keeps brand top and related addresses', f
     expect(htmlXPath($response)->evaluate('string(//textarea[@name="message"])'))->toBe(remainingBladeUrl($displayed, $slug));
 })->with('remaining Blade slugs');
 
+test('the public coupon listing loads multiple owners and their shops with exact product links', function (?string $slug) {
+    $admin = createStoreUser('admin');
+    $seller = createStoreUser('seller');
+    $shopId = createShopFor($seller, 0);
+    DB::table('shops')->where('id', $shopId)->update(['slug' => 'd15-coupon-seller', 'verification_status' => 1]);
+    $product = remainingBladeProduct($slug);
+
+    foreach ([$admin, $seller] as $owner) {
+        Coupon::forceCreate(['user_id' => $owner->id, 'type' => 'product_base', 'code' => 'D15-'.$owner->id, 'discount' => 1, 'discount_type' => 'amount', 'start_date' => now()->subDay()->timestamp, 'end_date' => now()->addDay()->timestamp, 'details' => json_encode([['product_id' => $product->id]])]);
+    }
+
+    $response = $this->get(route('coupons.all'))->assertOk();
+    $response->assertSee('D15-'.$admin->id)->assertSee('D15-'.$seller->id);
+    assertRemainingBladeLink($response->getContent(), remainingBladeUrl($product, $slug));
+    assertRemainingBladeLink($response->getContent(), route('shop.visit', 'd15-coupon-seller'));
+})->with('remaining Blade slugs');
+
 test('top selling widget preserves exact normal URLs and its existing slugless exclusion', function () {
     $displayed = remainingBladeProduct('displayed-top');
     remainingBladeProduct('0', ['user_id' => $displayed->user_id]);

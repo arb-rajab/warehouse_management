@@ -7697,3 +7697,36 @@ its slugless browser row remain the final batch. D15 is not marked fully fixed.
 No owner policy decision blocks this batch. Seller reviews' unrelated query,
 the retained digital brand-name normal destination, and auction visibility
 remain explicitly documented above rather than silently altered.
+
+### CI follow-up: multiple active coupons
+
+PR #494's first full Chromium run passed 145 cases and failed the new catalogue
+case at `/temp/coupons`: `LazyLoadingViolationException` for `Coupon::user`.
+The isolated browser fixture had only one active coupon, which did not exercise
+Laravel's collection lazy-loading guard. Running the seller uploader and
+marketing specs before it reproduced the failure (13 passed, one failed).
+
+`HomeController::all_coupons()` now selects the listing's columns and eagerly
+loads `user` and `user.shop` with their required columns. Date filters,
+pagination, visibility checks and URL destinations are unchanged. The browser
+fixture includes two active coupons and reports the requested path in a failed
+status assertion. A real endpoint Pest regression uses both an admin and a
+verified seller owner for null, blank, normal and `0` product slugs: all four
+failed before the fix with the same 500/lazy-loading exception. The existing
+MySQL registrations already cover the extended test file. The architecture
+allowlist remains 10; this batch now changes 21 files.
+
+After the fix, focused Pest passes **87 tests / 314 assertions** on SQLite and
+MySQL **8.4.13**, with no skips in either focused run. The portable browser
+installer passes, and the **entire Chromium suite passes 146 tests (9.3
+minutes)**, including the previously failing catalogue case in suite order.
+Dirty Pint, changed-spec ESLint/Prettier and `git diff --check` pass.
+
+The final explicit `python3 .claude/scripts/pre_push_check.py --full` exits
+**0**: Wayfinder, ESLint, Prettier, TypeScript, **338 Vitest files / 2,703
+tests**, Pint, PHPStan (zero errors), configuration clear and parallel Pest
+pass. Pest reports **7,860 passed / 43,998 assertions / three existing
+MySQL-only skips on SQLite (158.632 seconds)**. Focused MySQL and the complete
+browser run above were separate from `--full`; advisory audits, deploy-script
+tests and the remainder of the MySQL CI list were not rerun locally. No test
+was loosened, retried, quarantined or newly skipped; no trailer was hand-edited.

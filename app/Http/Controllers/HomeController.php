@@ -750,7 +750,9 @@ class HomeController extends Controller
 
     public function all_coupons(Request $request)
     {
-        $coupons = Coupon::where('start_date', '<=', strtotime(date('d-m-Y')))->where('end_date', '>=', strtotime(date('d-m-Y')))->paginate(15);
+        $coupons = Coupon::select(['id', 'user_id', 'type', 'code', 'details', 'discount', 'discount_type', 'start_date', 'end_date'])
+            ->with(['user:id,user_type', 'user.shop:id,user_id,name,slug,verification_status'])
+            ->where('start_date', '<=', strtotime(date('d-m-Y')))->where('end_date', '>=', strtotime(date('d-m-Y')))->paginate(15);
         return view('shop.frontend.coupons', compact('coupons'));
     }
 
