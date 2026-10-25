@@ -135,6 +135,9 @@ test('the server side reads an inline validator behind a helper method, with the
             'email' => 'required',
             'country' => 'required',
             'phone' => 'required',
+            'tax_number' => 'optional',
+            'company_address' => 'optional',
+            'trade_license' => 'optional',
             'g-recaptcha-response' => 'optional',
             'password_confirmation' => 'required',
         ])
@@ -295,7 +298,7 @@ test('the command writes the markdown and json reports for the given date', func
         ->and($json['totals']['forms']['vue'])->toBeGreaterThan(100)
         ->and($json['totals']['forms']['blade'])->toBeGreaterThan(50)
         ->and($json['top'])->toHaveCount(20)
-        ->and(collect($json['forms'])->firstWhere('file', 'resources/views/shop/auth/register.blade.php')['findings'])->toBe(['E' => 5]);
+        ->and(collect($json['forms'])->firstWhere('file', 'resources/views/shop/auth/register.blade.php')['findings'])->toBe([]);
 
     File::deleteDirectory(base_path($directory));
 });

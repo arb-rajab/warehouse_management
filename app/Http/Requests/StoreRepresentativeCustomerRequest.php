@@ -12,8 +12,9 @@ use Illuminate\Validation\Rule;
  * posting to CustomerController::store_customer. The twelve fields stay
  * required, as the inline rules required them, and are now limited to their
  * columns: users.name and users.email varchar(191), users.phone varchar(20),
- * users.country varchar(30), users.company_name and both addresses
- * varchar(255); the tax and bank numbers keep their 100. A longer value was a
+ * users.country varchar(30), users.company_name and company_address
+ * varchar(191) (the default string length); shipping_address keeps its existing
+ * max:255 rule; the tax and bank numbers keep their 100. A longer value was a
  * MySQL error, and an array for most fields a 500. The trade license is one of
  * the kinds TradeLicenseStorage keeps (the old list's "bmb" matched nothing).
  * With reCAPTCHA on, the widget's token is verified with Google (Recaptcha).
@@ -37,7 +38,7 @@ class StoreRepresentativeCustomerRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:191'],
-            'company_name' => ['required', 'string', 'max:255'],
+            'company_name' => ['required', 'string', 'max:191'],
             'password' => ['required', 'string', 'min:6', 'confirmed'],
             'email' => ['required', 'string', 'email', 'max:191', Rule::unique(StoreUser::class, 'email')],
             'tax_number' => ['required', 'string', 'max:100'],
@@ -45,7 +46,7 @@ class StoreRepresentativeCustomerRequest extends FormRequest
             'trade_license' => ['required', 'file', 'mimes:doc,docx,pdf,png,jpg,jpeg', 'max:20000'],
             'country' => ['required', 'string', 'max:30'],
             'phone' => ['required', 'string', 'max:20'],
-            'company_address' => ['required', 'string', 'max:255'],
+            'company_address' => ['required', 'string', 'max:191'],
             'shipping_address' => ['required', 'string', 'max:255'],
             'g-recaptcha-response' => Recaptcha::rules(),
         ];

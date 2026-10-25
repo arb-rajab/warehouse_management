@@ -366,6 +366,7 @@ jobs:
         timeout-minutes: 10
         run: >-
           php artisan test
+          tests/Feature/StorefrontRegistrationFieldsTest.php
           tests/Feature/Database/WidenPaymentTransactionCodeTest.php
           tests/Feature/Store/Admin/SellerPayoutDefectsTest.php
           tests/Feature/SellerDashboardTest.php

@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
-use App\Http\Controllers\OTPVerificationController;
 use App\Models\Address;
 use App\Models\BusinessSetting;
 use App\Models\Cart;
@@ -12,7 +11,7 @@ use App\Models\Customer;
 use App\Models\StoreUser;
 use App\Notifications\EmailVerificationNotification;
 use App\Rules\Recaptcha;
-use App\Services\StoreVerificationCodes;
+use App\Services\TradeLicenseStorage;
 use App\Services\UserService;
 use Carbon\Carbon;
 use Cookie;
@@ -25,6 +24,7 @@ use Illuminate\Routing\Controllers\Middleware;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 use Nexmo;
 use Session;
 
@@ -101,12 +101,15 @@ class RegisterController extends Controller implements HasMiddleware
     protected function validator(array $data)
     {
         return Validator::make($data, [
-            'name' => 'required|string|max:255',
-            'company_name' => 'required|string|max:255',
+            'name' => 'required|string|max:191',
+            'company_name' => 'required|string|max:191',
             'password' => 'required|string|min:6|confirmed',
-            'email' => 'required|email',
-            'country' => 'required',
-            'phone' => 'required',
+            'email' => ['required', 'string', 'email', 'max:191', Rule::unique(StoreUser::class, 'email')],
+            'country' => 'required|string|max:30',
+            'phone' => 'required|string|max:20',
+            'tax_number' => 'nullable|string|max:100',
+            'company_address' => 'nullable|string|max:191',
+            'trade_license' => 'nullable|file|mimes:doc,docx,pdf,png,jpg,jpeg|max:20000',
             'g-recaptcha-response' => Recaptcha::rules(),
         ], Recaptcha::messages());
     }
@@ -121,46 +124,28 @@ class RegisterController extends Controller implements HasMiddleware
     {
 
 
-        // if (request()->hasFile('trade_license')) {
-        //     $uploadedFile = request()->file('trade_license');
-        //     $pdfFileName = $uploadedFile->getClientOriginalName(); // Get the original filename
-
-        //     // Store the PDF file in the 'local' disk with the specified filename
-        //     $pdfPath = $uploadedFile->storeAs('uploads/licenses', $pdfFileName, 'local');
-
-        //     $data['trade_license'] = $pdfFileName; // Store the path in your database
-        // }
+        $tradeLicense = isset($data['trade_license'])
+            ? app(TradeLicenseStorage::class)->store($data['trade_license'])
+            : null;
 
 
-        if (filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
-            $user = StoreUser::create([
-                'name' => $data['name'],
-                'company_name' => $data['company_name'],
-                'email' => $data['email'],
-                'password' => Hash::make($data['password']),
-                'phone' => $data['phone'],
-                'country' => $data['country'],
-                'registration_completed' => false,
-            ]);
-        }
-        else {
-            if (addon_is_activated('otp_system')){
-                $user = StoreUser::create([
-                    'name' => $data['name'],
-                    'phone' => '+'.$data['country_code'].$data['phone'],
-                    'password' => Hash::make($data['password']),
-                ]);
-
-                $otpController = new OTPVerificationController;
-                $otpController->send_code($user, app(StoreVerificationCodes::class)->issue($user));
-            }
-        }
+        $user = StoreUser::create([
+            'name' => $data['name'],
+            'company_name' => $data['company_name'],
+            'email' => $data['email'],
+            'password' => Hash::make($data['password']),
+            'phone' => $data['phone'],
+            'country' => $data['country'],
+            'tax_number' => $data['tax_number'] ?? null,
+            'company_address' => $data['company_address'] ?? null,
+            'trade_license' => $tradeLicense,
+            'registration_completed' => false,
+        ]);
 
         // Create an address for the user Task:BS-130
         $country_id = Country::where('name', $data['country'])->value('id');
         $address = new Address;
         $address->user_id       = $user->id;
-        //$address->address       = $data['shipping_address'];
         $address->country_id    = $country_id;
         $address->phone         = $data['phone'];
         $address->set_default   = 1;
@@ -190,21 +175,8 @@ class RegisterController extends Controller implements HasMiddleware
 
     public function register(Request $request)
     {
-        if (filter_var($request->email, FILTER_VALIDATE_EMAIL)) {
-            if(StoreUser::where('email', $request->email)->first() != null){
-                flash(translate('Email Already exists.'));
-                return back();
-            }
-        }
-        elseif (StoreUser::where('phone', '+'.$request->country_code.$request->phone)->first() != null) {
-            flash(translate('Phone already exists.'));
-            return back();
-        }
-
-        $this->validator($request->all())->validate();
-
-
-        $user = $this->create($request->all()); // 1. first create an account for the user
+        $data = $this->validator($request->all())->validate();
+        $user = $this->create($data);
 
         $this->guard()->login($user);
 
