@@ -7864,3 +7864,112 @@ suite, Composer/npm advisory audits and deploy-script tests. All specifically
 requested focused checks and the explicit full gate ran. This batch changes
 **28 files**. No owner decision blocks D15; the historical classified/auction
 URL destinations described above remain a separate behavior-policy follow-up.
+
+## 65. D7: retire the unconsumed root product handlers (2026-10-25)
+
+Branch `codex/product-handlers-d7` starts at fetched `origin/develop`
+`2067dde296f66bb182e598ff5b49bf7fd29295bb`, including PR #495. This task
+explicitly authorizes removal **only after proving no live consumer**, superseding
+§61's earlier restriction on deleting these compatibility routes. Both qualify.
+The already-safe package refusal and its permanent stock-preservation test from
+PR #492 are retained; no publication writer is changed.
+
+### Consumer inventory and decisions
+
+The following commands were run before production edits; the `git grep` form
+makes the evidence reproducible against the exact base even after removal:
+
+```sh
+git grep -n -E "get_products_by_subcategory|['\"]products\\.search['\"]|/products/search" 2067dde296f66bb182e598ff5b49bf7fd29295bb -- resources routes tests public/assets config app/Http/Controllers/ProductController.php
+rg -n -F '@/actions/App/Http/Controllers/ProductController' resources/js --glob '!actions/**'
+rg -n 'get_products_by_subcategory|products.search|products/search' resources routes tests public/assets config app --glob '!*.map' --glob '!vendors.js' --glob '!resources/js/actions/**' --glob '!resources/js/routes/**'
+rg -n 'get_products_by_subcategory' resources/js/actions/App/Http/Controllers/ProductController.ts
+```
+
+| Root handler                  | Findings                                                                                                                                                                                                                                                                                                                                    | Decision                                                                    |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| `get_products_by_subcategory` | Only its shop-admin registration, the ungated-route ratchet entry and generated Wayfinder definition. No Blade, Vue, public JS, menu/config, mobile/API or application caller. No controller method exists.                                                                                                                                 | Remove its POST route and ratchet entry; regenerate Wayfinder.              |
+| `search`                      | Only its root definition, shop-admin registration, ratchet entry and generated Wayfinder definition. Both Vue imports from the root controller import **fetch only**. `store.products.search` in the list and its test is a translation label; the actual list submits GET filters to the migrated list action. No live root-search caller. | Remove its POST route, dead method and ratchet entry; regenerate Wayfinder. |
+
+Other `products/search` matches were individually resolved: WMS routes/tests
+use `Admin\ProductController`; mobile routes use `Api\V2\ProductController`
+and `Api\V2\Seller\ProductController`; customer-product search uses its own
+controller. The sidebar/menu contains no reference to either retired handler.
+Generated actions are declarations, not consumers, and are ignored by Git.
+No generated file was hand-edited.
+
+The source-level WMS `products.search` name sits inside `name('admin.')`, so
+its effective name is **admin.products.search** at GET `/admin/products/search`.
+The removed store name was **products.search** at POST
+`/temp/admin/products/search`. Before and after route listings confirm those
+are distinct; tests pin the WMS URI, verbs and controller and reject duplicate
+registered names. Neither `routes/web.php` nor any WMS handler changes.
+
+### Contract and failing-first evidence
+
+Before application edits, the new permanent regression file reported
+**14 tests: 13 failed, 1 passed, 23 assertions** on SQLite. For product-list
+staff, subcategory returned **500**, with
+`Call to undefined method App\Http\Controllers\ProductController::get_products_by_subcategory()`;
+search failed **Expecting '' not to be ''**, reproducing the empty response.
+The route-absence test also failed because the registrations still existed.
+Guest JSON requests returned 401; customer/seller requests returned 404;
+unprivileged staff could reach both broken handlers. These were real requests,
+not conclusions inferred from source.
+
+After removal, both POST URIs return **405 for every caller**, including guests,
+customers, sellers, staff without permissions, product-list staff and Super Admin.
+An existing DELETE `/products/{product}` matches the same path pattern, so 405,
+rather than 404, is the router's correct absence response. No product payload or
+successful empty 200 remains. The `search` versus `q` mismatch is eliminated with
+the dead method; there is no retained input/JSON/view/search-matching contract to
+invent. FormRequest validation, result limits and 403 permission gates apply to
+kept handlers; these removed endpoints have no handler to authorize or validate.
+The caller matrix instead pins their uniform 405 rejection before dispatch.
+
+`Store/Admin/RootProductHandlersTest.php` snapshots **every column of every
+product row**, including store-origin and feed-origin noise, and checks both
+private names stay out of every response. It also asserts both root methods and
+routes are absent, preserves WMS search and scans application sources for
+consumer names/URLs/imports, excluding generated Wayfinder directories. The two
+obsolete exceptions leave `LegacyAdminPermissionsTest`; its remaining gates
+are unchanged. Existing root fetch, SKU and details consumers remain.
+Option A, permission definitions, migrations and all other D-items are unchanged.
+The new regression file is registered in **both** MySQL test lists.
+
+### Verification
+
+Focused SQLite (new regression and permission ratchet): **20 passed / 92 assertions**.
+Focused MySQL 8.4 (`warehouse_test`, root/password, loopback port 3307):
+**14 passed / 71 assertions**, no skips. Frontend types and PHPStan (**zero
+errors**) pass. Wayfinder regenerated through
+`php artisan wayfinder:generate --skip-routes --with-form`. Dirty Pint, workflow
+Prettier, script selftests and CI planner (**23 tests**) pass.
+
+The normal production build passes. The portable Playwright helper reused system
+Chromium and FFmpeg; the unchanged `store-products.spec.ts` passes **2 tests
+(17.6 seconds)**, covering list actions, Inertia navigation, RTL and dark contrast.
+Focused product-list Vitest passes **15 tests**. Whole-file Prettier warns on
+the historical guide/checklist, identically on their unchanged base versions;
+the new guide section and workflow pass without reformatting historical prose.
+Final full-gate results follow below.
+The host lacked PHP; a task-local copy of the existing Docker PHP 8.5.11 runtime
+and libraries supplies it. GD is rebuilt with WebP in a task-owned image and
+copied only into that local runtime. Locked npm dependencies and Composer's
+optimized autoloader are refreshed without manifest or lockfile changes. A stale
+ignored `public/hot` is backed up outside the repository before browser testing.
+No test assertion, timeout, retry, platform requirement or CSP setting is relaxed.
+
+Final explicit `python3 .claude/scripts/pre_push_check.py --full`: **exit 0**.
+Wayfinder, whole-repository ESLint/Prettier, frontend types, **338 Vitest files /
+2,707 tests**, Pint, PHPStan (**zero errors**), config clear and parallel Pest
+pass. Pest reports **7,915 passed / 44,294 assertions / three existing MySQL-only
+skips on SQLite (137.376 seconds)**. No StoreProductFormFields timeout or isolated
+retry occurred. Focused MySQL and both Chromium cases ran separately from this
+explicit full mode. No bare or attested run was used, and no CI-Verified trailer
+was written or edited. `git diff --check` passes. The change fits **eight files**.
+
+Not run locally: the remaining MySQL CI file list, the whole application browser
+suite, Composer/npm advisory audits or deploy-script tests. The workflow change
+runs every CI group on the non-draft PR. No production data, migration or deployment
+operation was performed. **No owner decision remains for D7.**
