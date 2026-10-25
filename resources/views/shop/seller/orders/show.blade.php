@@ -158,11 +158,11 @@
                                     <td>{{ $key + 1 }}</td>
                                     <td>
                                         @if ($orderDetail->product != null && $orderDetail->product->auction_product == 0)
-                                            <a href="{{ route('product', $orderDetail->product->slug) }}"
+                                            <a href="{{ \App\Support\StorefrontUrl::to($orderDetail->product) }}"
                                                 target="_blank"><img height="50"
                                                     src="{{ uploaded_asset($orderDetail->product->thumbnail_img) }}"></a>
                                         @elseif ($orderDetail->product != null && $orderDetail->product->auction_product == 1)
-                                            <a href="{{ route('product', $orderDetail->product->slug) }}"
+                                            <a href="{{ \App\Support\StorefrontUrl::to($orderDetail->product) }}"
                                                 target="_blank"><img height="50"
                                                     src="{{ uploaded_asset($orderDetail->product->thumbnail_img) }}"></a>
                                         @else
@@ -171,12 +171,12 @@
                                     </td>
                                     <td>
                                         @if ($orderDetail->product != null && $orderDetail->product->auction_product == 0)
-                                            <strong><a href="{{ route('product', $orderDetail->product->slug) }}"
+                                            <strong><a href="{{ \App\Support\StorefrontUrl::to($orderDetail->product) }}"
                                                     target="_blank"
                                                     class="text-muted">{{ $orderDetail->product->getTranslation('name') }}</a></strong>
                                             <small>{{ $orderDetail->entry_unit ?? $orderDetail->variation }}</small>
                                         @elseif ($orderDetail->product != null && $orderDetail->product->auction_product == 1)
-                                            <strong><a href="{{ route('product', $orderDetail->product->slug) }}"
+                                            <strong><a href="{{ \App\Support\StorefrontUrl::to($orderDetail->product) }}"
                                                     target="_blank"
                                                     class="text-muted">{{ $orderDetail->product->getTranslation('name') }}</a></strong>
                                         @else

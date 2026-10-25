@@ -157,7 +157,7 @@
                                 @if ($detailedProduct->brand != null)
                                     <div class="col-md-4 fs-14 fw-700 mb-3">
                                         <div class="d-flex">
-                                            <a href="{{ route('products.brand', $detailedProduct->brand->slug) }}" class="size-40px rounded-content mr-2 overflow-hidden border p-1">
+                                            <a href="{{ \App\Support\StorefrontUrl::to($detailedProduct->brand) }}" class="size-40px rounded-content mr-2 overflow-hidden border p-1">
                                                 <img class="lazyload img-fit h-100 mx-auto"
                                                     src="{{ static_asset('assets/img/placeholder.jpg') }}"
                                                     data-src="{{ uploaded_asset($detailedProduct->brand->logo) }}"
@@ -166,7 +166,7 @@
                                             </a>
                                             <div>
                                                 <span class="opacity-60 fw-400">{{ translate('Brand') }}</span><br>
-                                                <a href="{{ route('shop.visit', $detailedProduct->brand->slug) }}"
+                                                <a href="{{ ($detailedProduct->brand->slug === null || $detailedProduct->brand->slug === '') ? \App\Support\StorefrontUrl::to($detailedProduct->brand) : route('shop.visit', $detailedProduct->brand->slug) }}"
                                                     class="text-reset hov-text-primary">{{ $detailedProduct->brand->name }}</a>
                                             </div>
                                         </div>
@@ -469,12 +469,13 @@
                         <div class="px-4 pb-4">
                             <ul class="list-group list-group-flush">
                                 @foreach (filter_products(\App\Models\Product::where('user_id', $detailedProduct->user_id)
+                                            ->with(['product_translations:id,product_id,lang,name', 'taxes:id,product_id,tax,tax_type', 'stocks:id,product_id,price,qty'])
                                             ->orderBy('num_of_sale', 'desc'))->limit(6)->get() as $key => $top_product)
                                     <li class="py-3 px-0 list-group-item border-0">
                                         <div class="row gutters-10 align-items-center hov-scale-img hov-shadow-md overflow-hidden has-transition">
                                             <div class="col-4">
                                                 <!-- Image -->
-                                                <a href="{{ route('product', $top_product->slug) }}"
+                                                <a href="{{ \App\Support\StorefrontUrl::to($top_product) }}"
                                                     class="d-block text-reset">
                                                     <img class="img-fit lazyload h-xl-80px h-120px has-transition"
                                                         src="{{ static_asset('assets/img/placeholder.jpg') }}"
@@ -486,7 +487,7 @@
                                             <div class="col-8 text-left">
                                                 <!-- Product name -->
                                                 <h4 class="fs-14 fw-400 text-truncate-2">
-                                                    <a href="{{ route('product', $top_product->slug) }}"
+                                                    <a href="{{ \App\Support\StorefrontUrl::to($top_product) }}"
                                                         class="d-block text-reset hov-text-primary">{{ $top_product->getTranslation('name') }}</a>
                                                 </h4>
                                                 <div class="mt-2 ">
@@ -630,11 +631,12 @@
                                 data-lg-items="4" data-md-items="3" data-sm-items="2" data-xs-items="2"
                                 data-arrows='true' data-infinite='true'>
                                 @foreach (filter_products(\App\Models\Product::where('category_id', $detailedProduct->category_id)
-                                            ->where('id', '!=', $detailedProduct->id))->limit(10)->get() as $key => $related_product)
+                                            ->where('id', '!=', $detailedProduct->id)
+                                            ->with(['product_translations:id,product_id,lang,name', 'taxes:id,product_id,tax,tax_type', 'stocks:id,product_id,price,qty']))->limit(10)->get() as $key => $related_product)
                                     <div class="carousel-box">
                                         <div class="aiz-card-box hov-shadow-md my-2 has-transition hov-scale-img">
                                             <div class="">
-                                                <a href="{{ route('product', $related_product->slug) }}"
+                                                <a href="{{ \App\Support\StorefrontUrl::to($related_product) }}"
                                                     class="d-block">
                                                     <img class="img-fit lazyload mx-auto h-140px h-md-190px has-transition"
                                                         src="{{ static_asset('assets/img/placeholder.jpg') }}"
@@ -645,7 +647,7 @@
                                             </div>
                                             <div class="p-md-3 p-2 text-center">
                                                 <h3 class="fw-400 fs-14 text-dark text-truncate-2 lh-1-4 mb-0 h-35px">
-                                                    <a href="{{ route('product', $related_product->slug) }}"
+                                                    <a href="{{ \App\Support\StorefrontUrl::to($related_product) }}"
                                                         class="d-block text-reset hov-text-primary">{{ $related_product->getTranslation('name') }}</a>
                                                 </h3>
                                                 <div class="fs-14 mt-3">
@@ -807,7 +809,7 @@
                         </div>
                         <div class="form-group">
                             <label for="conversation_message">{{ translate('Your Question') }}<x-required-mark /></label>
-                            <textarea id="conversation_message" class="form-control @error('message', 'storeConversation') is-invalid @enderror" rows="8" name="message" maxlength="65535" required placeholder="{{ translate('Your Question') }}">{{ $keepInput ? old('message') : route('product', $detailedProduct->slug) }}</textarea>
+                            <textarea id="conversation_message" class="form-control @error('message', 'storeConversation') is-invalid @enderror" rows="8" name="message" maxlength="65535" required placeholder="{{ translate('Your Question') }}">{{ $keepInput ? old('message') : \App\Support\StorefrontUrl::to($detailedProduct) }}</textarea>
                             @error('message', 'storeConversation')
                                 <span class="invalid-feedback" role="alert"><strong>{{ $message }}</strong></span>
                             @enderror
