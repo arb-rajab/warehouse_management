@@ -28,6 +28,8 @@ test('storefront route builders use the shared helper except for the exact D15 r
             }
         }
     }
+    // API/resources and the customer Views page form the final D15 batch.
+    // These ten unchanged call sites are deferred at the approximately 30-file cap.
     $remaining = [
         'app/Http/Controllers/Store/Admin/DynamicPopupController.php:121',
         'app/Http/Resources/Store/DashboardProductResource.php:27',
@@ -39,32 +41,6 @@ test('storefront route builders use the shared helper except for the exact D15 r
         'app/Http/Resources/V2/DigitalProductDetailCollection.php:69',
         'app/Http/Resources/V2/ProductDetailCollection.php:156',
         'resources/js/pages/Store/Admin/Customers/Customers/Views.vue:68',
-        'resources/views/shop/frontend/digital_product_details.blade.php:160',
-        'resources/views/shop/frontend/digital_product_details.blade.php:477',
-        'resources/views/shop/frontend/digital_product_details.blade.php:489',
-        'resources/views/shop/frontend/digital_product_details.blade.php:637',
-        'resources/views/shop/frontend/digital_product_details.blade.php:648',
-        'resources/views/shop/frontend/digital_product_details.blade.php:810',
-        'resources/views/shop/frontend/flash_deal_details.blade.php:36',
-        'resources/views/shop/frontend/flash_deal_details.blade.php:38',
-        'resources/views/shop/frontend/partials/addedToCart.blade.php:56',
-        'resources/views/shop/frontend/partials/addedToCart.blade.php:66',
-        'resources/views/shop/frontend/partials/coupon_box.blade.php:74',
-        'resources/views/shop/frontend/product_details/top_selling_products.blade.php:12',
-        'resources/views/shop/frontend/product_details/top_selling_products.blade.php:25',
-        'resources/views/shop/frontend/user/customer/dashboard.blade.php:263',
-        'resources/views/shop/frontend/user/customer/dashboard.blade.php:279',
-        'resources/views/shop/frontend/user/digital_purchase_history.blade.php:23',
-        'resources/views/shop/seller/dashboard.blade.php:542',
-        'resources/views/shop/seller/dashboard.blade.php:561',
-        'resources/views/shop/seller/orders/show.blade.php:161',
-        'resources/views/shop/seller/orders/show.blade.php:165',
-        'resources/views/shop/seller/orders/show.blade.php:174',
-        'resources/views/shop/seller/orders/show.blade.php:179',
-        'resources/views/shop/seller/orders/show_backup.blade.php:150',
-        'resources/views/shop/seller/product/digitalproducts/index.blade.php:82',
-        'resources/views/shop/seller/product/products/index.blade.php:95',
-        'resources/views/shop/seller/reviews.blade.php:31',
     ];
     sort($actual);
     sort($remaining);

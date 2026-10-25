@@ -79,7 +79,7 @@
                     @foreach ($products as $key => $product)
                         <tr>
                             <td>{{ $key+1 }}</td>
-                            <td><a href="{{ route('product', $product->slug) }}" target="_blank">{{   $product->getTranslation('name')  }}</a></td>
+                            <td><a href="{{ \App\Support\StorefrontUrl::to($product) }}" target="_blank">{{   $product->getTranslation('name')  }}</a></td>
                             <td>
                                 @if ($product->category != null)
                                     {{ $product->category->getTranslation('name') }}

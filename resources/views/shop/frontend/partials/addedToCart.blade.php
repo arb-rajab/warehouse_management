@@ -53,7 +53,7 @@
                     <div class="carousel-box hov-scale-img hov-shadow-sm">
                         <div class="aiz-card-box my-2 has-transition">
                             <div class="">
-                                <a href="{{ route('product', $related_product->slug) }}" class="d-block">
+                                <a href="{{ \App\Support\StorefrontUrl::to($related_product) }}" class="d-block">
                                     <img class="img-fit lazyload mx-auto h-140px h-md-200px has-transition"
                                         src="{{ static_asset('assets/img/placeholder.jpg') }}"
                                         data-src="{{ uploaded_asset($related_product->thumbnail_img) }}"
@@ -63,7 +63,7 @@
                             </div>
                             <div class="p-md-3 p-2 text-center">
                                 <h3 class="fw-400 fs-14 text-dark text-truncate-2 lh-1-4 mb-0 h-35px">
-                                    <a href="{{ route('product', $related_product->slug) }}" class="d-block text-reset hov-text-primary">{{ $related_product->getTranslation('name') }}</a>
+                                    <a href="{{ \App\Support\StorefrontUrl::to($related_product) }}" class="d-block text-reset hov-text-primary">{{ $related_product->getTranslation('name') }}</a>
                                 </h3>
                                 @if(Auth::check() && Auth::user()->admin_verifed)
                                 <div class="fs-14 mt-3">

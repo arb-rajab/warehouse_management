@@ -71,7 +71,7 @@
                 @php $products = App\Models\Product::whereIn('id', $coupon_products)->get(); @endphp
                 <div class="aiz-carousel coupon-slider gutters-16 arrow-none" data-items="6" data-lg-items="6"  data-md-items="4" data-sm-items="4" data-xs-items="4" data-arrows='true' data-infinite='true' data-autoplay="true">
                     @foreach($products as $key => $product)
-                        <a href="{{ route('product', $product->slug) }}" title="{{ $product->name }}" class='p-1 border border-transparent hov-border' target="_blank">
+                        <a href="{{ \App\Support\StorefrontUrl::to($product) }}" title="{{ $product->name }}" class='p-1 border border-transparent hov-border' target="_blank">
                             <img class="img-fit mx-auto h-48px w-48px" 
                                 src="{{ uploaded_asset($product->thumbnail_img) }}"
                                 data-src="{{ uploaded_asset($product->thumbnail_img) }}"

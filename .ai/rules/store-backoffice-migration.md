@@ -7545,3 +7545,188 @@ Final verification in this environment:
 - Whole-file Prettier reports formatting warnings for the two historical `.ai` documents; the same warnings occur on their unchanged base versions. Existing prose is preserved to avoid a large unrelated reformat. The new §62 section and changed workflow pass Prettier. `git diff --check` passes.
 
 Not run: the remaining MySQL CI file list, the full application Playwright suite, Composer/npm advisory audits or deploy-script tests. The full gate and affected browser run are **not green**; the commit and PR carry **Unverified:** for Claude to finish verification on a WebP-capable runtime with local-listener permission. No CI-Verified trailer was written or edited. No production system, real data or secrets were used. The remaining D15 callers above are the explicit follow-up under the requested file cap; no new business-policy decision or data backfill is required for the shipped fallback.
+
+
+## 63. D15 remainder: storefront and seller Blade URLs (2026-10-25)
+
+Branch `codex/null-slug-urls-remainder` starts at current `origin/develop`
+`4d969626cf5cd02d1e849c6d6cd8b5185564bf02` (PR #493). The full continuation
+would exceed the requested approximate 30-file budget once API/resource,
+server-row, Vue, regression-test and CI/documentation changes are included.
+This batch therefore completes the storefront and seller Blade areas first.
+The architecture allowlist shrinks **36 → 10**. D15 remains open for the final
+API/resources + Vue batch; no remaining raw builder is a permanent exception.
+
+### Migrated inventory
+
+All addresses below retain their original absolute form. Nonempty slugs,
+including `"0"`, retain their exact former URL bytes; null/empty slugs pass
+through `StorefrontUrl::to()`. No product columns, fillable lists, route names,
+permissions, payouts, staff/roles, marks, D7 handlers, migrations or data are changed.
+
+| Blade file under `resources/views/shop/`        | Original builders | Disposition                                                                                   |
+| ----------------------------------------------- | ----------------: | --------------------------------------------------------------------------------------------- |
+| `frontend/digital_product_details`              |                 6 | Brand logo, top/related cards and conversation default use the helper.                        |
+| `frontend/flash_deal_details`                   |                 2 | Delete unused `$product_url` calculations; the included product card already uses the helper. |
+| `frontend/partials/addedToCart`                 |                 2 | Related product image/name links use the helper.                                              |
+| `frontend/partials/coupon_box`                  |                 1 | Product coupon links use the helper.                                                          |
+| `frontend/product_details/top_selling_products` |                 2 | Use the helper; retain the existing `topSellingOf` slugless exclusion and filters.            |
+| `frontend/user/customer/dashboard`              |                 2 | Wishlist image/name links use the helper.                                                     |
+| `frontend/user/digital_purchase_history`        |                 1 | Purchased-product links use the helper.                                                       |
+| `seller/dashboard`                              |                 2 | Top-product image/name links use the helper.                                                  |
+| `seller/orders/show`                            |                 4 | Both physical and auction image/name branches use the helper.                                 |
+| `seller/orders/show_backup`                     |                 1 | Delete the unreferenced backup.                                                               |
+| `seller/product/digitalproducts/index`          |                 1 | Product link uses the helper.                                                                 |
+| `seller/product/products/index`                 |                 1 | Product link uses the helper.                                                                 |
+| `seller/reviews`                                |                 1 | Reviewed-product link uses the helper.                                                        |
+
+The backup search (`rg show_backup app routes resources config tests
+public/assets/js`) finds only the old architecture allowlist, with no renderer,
+include or route. No source references its view name. The flash-deal variable
+has no consumer; its card constructs its own address, so deleting both unused
+calculations preserves normal output.
+
+The retained digital view has no production route (§42); tests render it through
+a test-only web route. Its two product queries now eager-load translations,
+taxes and stocks, with narrow relation columns, after the new multi-product
+render reproduced a strict-loading exception. Limits, filters and prices stay.
+Its adjacent brand-name link historically targets `shop.visit`, unlike the brand
+logo. That old nonempty-slug URL stays byte-identical; only a missing brand slug
+uses the shared brand fallback, otherwise the adjacent link still throws after
+the logo is repaired. Tests pin both normal URLs. Correcting that historical
+normal-slug destination is a separate behavior change.
+
+Seller auction order links retain the ordinary product route they already used.
+The helper makes their URL generation safe, but the existing storefront resolver
+still excludes auctions. This batch does not broaden storefront visibility or
+invent an auction route. Normal and fallback URL strings are both tested.
+
+### Reproduction and normal-slug evidence
+
+The corrected before-fix SQLite suite reports **26 failed / 23 passed /
+90 assertions**, before any production edit. Ten storefront/account/fragment
+cases and twelve seller cases reproduce `Expected response status code [200]
+but received 500` with `UrlGenerationException: Missing required parameter ...
+[Missing parameter: slug]`. The digital view's null/blank-brand cases reproduce
+missing `brand_slug`; its normal/zero cases expose the existing
+`LazyLoadingViolationException` on product translations.
+
+Initial fixture errors (single-segment test URLs shadowed by the CMS catch-all,
+missing coupon dates and the seller order's legacy manual-payment columns) were
+corrected before relying on that reproduction. Seller reviews' actual endpoint
+also has an unrelated `ambiguous column name: id` query error, before it reaches
+the template. Its four render cases therefore use a test-only web/auth route
+with the real review rows, seller login and unchanged Blade view. The endpoint
+query is deliberately not changed or claimed fixed.
+
+`StorefrontRemainingBladeUrlTest` has **49 cases**: null, blank, normal and zero
+slugs for each migrated live page/fragment, physical and auction order branches,
+and the retained digital view; plus exact top-widget URL/exclusion coverage.
+It parses actual rendered anchors and compares their full `href` bytes with the
+original named-route URL for normal/zero rows. It also checks the digital
+conversation textarea, both brand links and full product-column snapshots.
+The backup has no live page to render; the architecture scan proves no raw Blade
+builder remains. The guarded top widget was already safe and keeps its filter.
+
+### Final ten callers, not exceptions
+
+The exact final file:line inventory remains in
+`tests/Feature/StorefrontUrlArchitectureTest.php`:
+
+- DynamicPopupController:121;
+- Store DashboardProductResource:27, DigitalProductResource:39,
+  ProductListResource:71 and ReviewResource:32;
+- V2 AuctionProductDetailCollection:82, ClassifiedProductDetailCollection:66,
+  DigitalProductDetailCollection:69 and ProductDetailCollection:156;
+- Customers/Customers/Views.vue:68.
+
+The final batch must preserve each API URL's absolute/relative form and JSON
+shape, send a finished server URL to the customer Views row, extend its mounted
+Vitest, and remove these final ten entries. No TypeScript fallback or generated
+Wayfinder edit is introduced here. Checklist D15 remains explicitly partial.
+
+### Verification
+
+The focused SQLite run passes **93 tests / 330 assertions**: the 49 new cases,
+the architecture guard, existing null-slug regressions, top-selling and seller
+dashboard tests. Focused MySQL **8.4** passes **83 tests / 294 assertions**, no
+skips, with the requested `warehouse_test`, root/password test settings: the new
+file, architecture guard and existing null-slug file. The new file is in both
+CI's MySQL list and `MYSQL_TESTS`; every new rendering setup calls `withoutVite()`.
+PHPStan reports zero errors; dirty Pint and script selftests pass. The existing
+customer-page Vitest passes **9 tests**; no Vue source changed in this batch.
+
+Final explicit `python3 .claude/scripts/pre_push_check.py --full`: **exit 0**.
+Wayfinder generation, whole-repository ESLint/Prettier, frontend types,
+**338 Vitest files / 2,703 tests**, Pint, PHPStan (**zero errors**), config clear
+and parallel Pest all pass: **7,856 passed / 3 existing MySQL-only skips on
+SQLite / 43,978 assertions (184.169 seconds)**. Vitest uses four workers;
+no timeout, retry, skip, quarantine or checker configuration changes. No bare
+or attested run and no CI-Verified trailer were used.
+
+The portable Playwright installer reused system Chromium and FFmpeg. The four
+existing affected specs (seller legacy uploader, storefront address, categories
+and brands) pass **18 Chromium cases (1.4 minutes)**. The new
+`store-slugless-catalogue.spec.ts` passes **one case (11.3 seconds)**, following
+the real fallback from customer dashboard, digital purchase history, flash deal
+and coupon pages to the expected product; the coupon retains its new-tab link.
+Its draft fixture initially omitted required order fields and its initial
+assertions overlooked the bilingual heading and new-tab behavior. Those test
+fixtures/assertions were corrected without changing application behavior or
+loosening deadlines. Final changed-spec ESLint and Prettier pass.
+
+The first build exposed missing locked font packages; `npm ci` restored them
+without manifest/lock changes. Wayfinder regenerated through repository tooling,
+and the normal production build passed. The supplied GD lacked WebP; a local
+Docker build with the configured proxy/CA produced a task-local extension and
+PHP configuration, without replacing the shared runtime. Composer's autoloader
+was refreshed before the full gate. An ignored stale `public/hot` was backed up
+outside the repository so browser tests use the production assets. The isolated
+MySQL/PHP containers were removed after focused verification.
+
+Script selftests pass, CI planner passes **23 tests**, and `git diff --check`
+passes. Whole-file Prettier warns on the historical guide and checklist; the
+same warnings reproduce on both unchanged base files. The new guide section,
+workflow and browser spec are formatted; historical prose is not reformatted.
+This batch contains **20 changed files**, including the two new test files.
+
+Not run locally: the rest of the MySQL CI list, the whole application browser
+suite, Composer/npm advisory audits or deploy-script tests. Focused MySQL and
+Chromium ran separately from explicit `--full`. API/resource/Vue migration and
+its slugless browser row remain the final batch. D15 is not marked fully fixed.
+No owner policy decision blocks this batch. Seller reviews' unrelated query,
+the retained digital brand-name normal destination, and auction visibility
+remain explicitly documented above rather than silently altered.
+
+### CI follow-up: multiple active coupons
+
+PR #494's first full Chromium run passed 145 cases and failed the new catalogue
+case at `/temp/coupons`: `LazyLoadingViolationException` for `Coupon::user`.
+The isolated browser fixture had only one active coupon, which did not exercise
+Laravel's collection lazy-loading guard. Running the seller uploader and
+marketing specs before it reproduced the failure (13 passed, one failed).
+
+`HomeController::all_coupons()` now selects the listing's columns and eagerly
+loads `user` and `user.shop` with their required columns. Date filters,
+pagination, visibility checks and URL destinations are unchanged. The browser
+fixture includes two active coupons and reports the requested path in a failed
+status assertion. A real endpoint Pest regression uses both an admin and a
+verified seller owner for null, blank, normal and `0` product slugs: all four
+failed before the fix with the same 500/lazy-loading exception. The existing
+MySQL registrations already cover the extended test file. The architecture
+allowlist remains 10; this batch now changes 21 files.
+
+After the fix, focused Pest passes **87 tests / 314 assertions** on SQLite and
+MySQL **8.4.13**, with no skips in either focused run. The portable browser
+installer passes, and the **entire Chromium suite passes 146 tests (9.3
+minutes)**, including the previously failing catalogue case in suite order.
+Dirty Pint, changed-spec ESLint/Prettier and `git diff --check` pass.
+
+The final explicit `python3 .claude/scripts/pre_push_check.py --full` exits
+**0**: Wayfinder, ESLint, Prettier, TypeScript, **338 Vitest files / 2,703
+tests**, Pint, PHPStan (zero errors), configuration clear and parallel Pest
+pass. Pest reports **7,860 passed / 43,998 assertions / three existing
+MySQL-only skips on SQLite (158.632 seconds)**. Focused MySQL and the complete
+browser run above were separate from `--full`; advisory audits, deploy-script
+tests and the remainder of the MySQL CI list were not rerun locally. No test
+was loosened, retried, quarantined or newly skipped; no trailer was hand-edited.
