@@ -3,10 +3,9 @@
 namespace App\Http\Requests\Store\Admin;
 
 use App\Enums\CheckpointStatus;
-use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
-class UpdateCheckpointStatusRequest extends FormRequest
+class UpdateCheckpointStatusRequest extends TripWriteRequest
 {
     /**
      * Get the validation rules that apply to the request.
@@ -15,6 +14,6 @@ class UpdateCheckpointStatusRequest extends FormRequest
      */
     public function rules(): array
     {
-        return ['status' => ['required', Rule::enum(CheckpointStatus::class)]];
+        return [...parent::rules(), 'status' => ['required', Rule::enum(CheckpointStatus::class)]];
     }
 }

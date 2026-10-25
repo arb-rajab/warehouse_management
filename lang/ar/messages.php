@@ -57,6 +57,8 @@ return [
     'Manage Website Scripts' => 'إدارة سكريبتات الموقع',
     'upload_refused' => 'نوع هذا الملف غير مسموح به.',
     'store_trip_departure_unavailable' => 'نقطة الانطلاق الافتراضية غير متاحة.',
+    'trip_closed_read_only' => 'الرحلات المغلقة للقراءة فقط.',
+    'trip_order_not_deliverable' => 'يمكن تحديد الطلبات المؤكدة أو الجاهزة للتوصيل أو الجاري توصيلها فقط على أنها مسلّمة.',
     'trip_cmr_unavailable' => 'لا يوجد ملف CMR لهذه النقطة.',
     'order_submission_conflict' => 'تم استخدام مفتاح الإرسال لطلب مختلف.',
     'order_stock_unavailable' => 'الكمية المطلوبة غير متوفرة.',

@@ -3253,10 +3253,11 @@ files, the font-less build). No stand-in Wayfinder modules were needed.
   authorized), MySQL (Pest and Playwright use SQLite), the full Playwright
   suite (only the three trip and driver specs), and `npm run build` with the
   remote font.
-- **Known limits.** Mark as delivered and the invoice number still apply to
-  any order the caller can name, as the Blade handlers did (no status
-  precondition); the map picker's popup reloads after a successful response
-  instead of reading the old JSON `success`.
+- **D10 resolved (2026-10-26).** Order writes now require `trip_id`, resolve
+  through its order checkpoints and reject closed trips. Mark delivered accepts
+  confirmed, ready-for-delivery or out-for-delivery orders; delivered/cancelled
+  orders are refused without mutation. See migration guide §66. The map picker
+  still reloads after success instead of reading the old JSON `success`.
 - **Inventory** (from the files and `route:list`). **38** backend Blade
   files; **19**/**3** literal consumers of the app/layout shells; **1,048**
   `/temp` and **436** `/temp/admin` registrations; Blade editor: **8** fields
@@ -3372,11 +3373,11 @@ package source were used instead. On a detached checkout of `develop` at
   authorized), MySQL (Pest and Playwright use SQLite), the full Playwright
   suite (only the four trip and driver specs), and `npm run build` with the
   remote font.
-- **Known limits.** A checkpoint status still applies to any checkpoint of any
-  trip, closed or not, as the Blade handler did; the CMR download opens only
-  the first upload id in `cmr_file` (the driver API stores one); printing
-  relies on the browser's own print of the Inertia page, not the Blade card
-  layout.
+- **D10 resolved (2026-10-26).** Checkpoint notes/status require `trip_id`,
+  resolve through that trip and reject a closed parent without mutation (guide
+  §66). **Known limits retained:** CMR download opens only the first upload ID
+  in `cmr_file` (the driver API stores one); printing uses the browser's own
+  print of the Inertia page. Both are outside D10 write scoping.
 - **Inventory** (from the files and `route:list`). **36** backend Blade
   files; **18**/**3** literal consumers of the app/layout shells; **1,048**
   `/temp` and **436** `/temp/admin` registrations; Blade editor: **8** fields

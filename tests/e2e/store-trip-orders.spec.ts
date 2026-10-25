@@ -20,6 +20,9 @@ function seedOrder(id: number, code: string, status: string): void {
             'date' => now()->timestamp,
             'delivery_status' => ${php(status)},
         ])->save();
+        $truck = App\Models\Truck::create(['name' => 'D10 order truck']);
+        $trip = App\Models\Trip::create(['code' => 'D10-${id}', 'truck_id' => $truck->id, 'due_date' => now()->toDateString(), 'status' => 'started', 'active' => true]);
+        $trip->checkpoints()->create(['relationable_type' => App\Models\Order::class, 'relationable_id' => $order->id, 'type' => 'delivery', 'status' => 'pending', 'sort_order_in_trip' => 1]);
     `);
 }
 

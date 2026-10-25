@@ -16,6 +16,7 @@ use Inertia\Testing\AssertableInertia as Assert;
 // The coordinate lookup answers per store user (default: the depot's spot);
 // the routing service is down, so the posted stop order is kept.
 beforeEach(function () {
+    $this->withoutVite();
     Http::fake(fn () => Http::response([], 503));
     $this->coordinates = [];
     $this->mock(UserService::class)->shouldReceive('getUserLongLat')->andReturnUsing(
@@ -56,7 +57,7 @@ function mapPickerState(): array
 describe('map picker page', function () {
     test('the picker renders every located order, the free and the busy trucks with their open trips and photos', function () {
         $alma = createStoreUser();
-        $alma->forceFill(['name' => 'Alma Customer', 'phone' => '0611111111', 'AccSysID' => 'ACC-7', 'shipping_address' => 'Alma street 1'])->save();
+        $alma->forceFill(['name' => 'Alma Customer', 'phone' => '0611111111', 'AccSysID' => 7007, 'shipping_address' => 'Alma street 1'])->save();
         $bram = createStoreUser();
         $bram->forceFill(['name' => 'Bram Customer', 'phone' => '0622222222', 'AccSysID' => null, 'shipping_address' => 'Bram street 2'])->save();
         $rep = createStoreUser();
@@ -108,7 +109,7 @@ describe('map picker page', function () {
                 ],
                 [
                     'id' => $own->id, 'code' => '20261017-0001', 'latitude' => 52.37, 'longitude' => 4.89, 'postal_code' => '1011AB', 'address' => 'Dock road 5',
-                    'customer' => ['id' => $alma->id, 'name' => 'Alma Customer', 'phone' => '0611111111', 'accounting_id' => 'ACC-7'],
+                    'customer' => ['id' => $alma->id, 'name' => 'Alma Customer', 'phone' => '0611111111', 'accounting_id' => 7007],
                 ],
             ])
             ->where('availableTrucks', [
@@ -146,6 +147,25 @@ describe('map picker page', function () {
         $this->get(route('trips.create-from-map'))->assertOk()->assertInertia(fn (Assert $page) => $page
             ->component('Store/Admin/Trips/Trips/CreateFromMap')
             ->where('orders', [])->where('availableTrucks', [])->where('busyTrucks', [])->where('photos', []));
+    });
+
+    test('delivery actions receive only real order attachments on open trips', function () {
+        $truck = Truck::create(['name' => 'Context truck']);
+        $older = mapPickerTrip($truck);
+        $latest = mapPickerTrip($truck, ['status' => 'started']);
+        $closed = mapPickerTrip($truck, ['status' => 'closed']);
+        $attached = mapPickerOrder();
+        $closedOnly = mapPickerOrder();
+        $unassigned = mapPickerOrder();
+        foreach ([$older, $latest, $closed] as $trip) {
+            $trip->checkpoints()->create(['relationable_type' => Order::class, 'relationable_id' => $attached->id, 'type' => 'delivery', 'status' => 'pending', 'sort_order_in_trip' => 1]);
+        }
+        $closed->checkpoints()->create(['relationable_type' => Order::class, 'relationable_id' => $closedOnly->id, 'type' => 'delivery', 'status' => 'pending', 'sort_order_in_trip' => 2]);
+        $latest->checkpoints()->create(['relationable_type' => StoreUser::class, 'relationable_id' => $unassigned->id, 'type' => 'other', 'status' => 'pending', 'sort_order_in_trip' => 2]);
+        actingAsStoreUser(createStoreStaff('add_trip'));
+
+        $this->get(route('trips.create-from-map'))->assertOk()->assertInertia(fn (Assert $page) => $page
+            ->where('orderTrips', [$attached->id => $latest->id]));
     });
 
     test('the picker refuses unauthorized callers', function (string $caller) {
@@ -291,9 +311,11 @@ describe('map picker row actions', function () {
 
     test('an order is marked delivered with return_to=map and the picker reloads', function () {
         $order = mapPickerOrder();
+        $trip = mapPickerTrip(Truck::create(['name' => 'Delivery truck']));
+        $trip->checkpoints()->create(['relationable_type' => Order::class, 'relationable_id' => $order->id, 'type' => 'delivery', 'status' => 'pending', 'sort_order_in_trip' => 1]);
         actingAsStoreUser(createStoreStaff('add_trip', 'edit_trip'));
 
-        $this->put(route('trips.orders.update_order_status_to_delivered', $order), ['return_to' => 'map'])->assertRedirect(route('trips.create-from-map'));
+        $this->put(route('trips.orders.update_order_status_to_delivered', $order), ['return_to' => 'map', 'trip_id' => $trip->id])->assertRedirect(route('trips.create-from-map'));
 
         expect($order->fresh()->delivery_status)->toBe('delivered');
     });
