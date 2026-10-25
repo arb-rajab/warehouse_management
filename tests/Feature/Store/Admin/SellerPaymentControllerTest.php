@@ -96,12 +96,12 @@ test('a forged amount or shop is rejected and nothing moves', function (array $o
 ]);
 
 test('a seller paying the admin raises the balance by the amount', function () {
-    $shopId = createShopFor(createStoreUser('seller'), 100);
+    $shopId = createShopFor(createStoreUser('seller'), -100);
     actingAsStoreUser(createStoreAdmin());
 
     $this->post('/temp/admin/pay_to_seller', payoutForm($shopId, ['payment_option' => 'paypal']))->assertRedirect(route('sellers.index'));
 
-    expect(shopBalance($shopId))->toBe(140.0)->and(DB::table('payments')->count())->toBe(1);
+    expect(shopBalance($shopId))->toBe(-60.0)->and(DB::table('payments')->count())->toBe(1);
 });
 
 test('a customer and a guest cannot pay sellers out', function () {
@@ -119,15 +119,16 @@ test('a customer and a guest cannot pay sellers out', function () {
         ->and((int) DB::table('seller_withdraw_requests')->where('id', $requestId)->value('status'))->toBe(0);
 });
 
-test('legacy payout limits methods wallet and messaging are pinned before conversion', function (string $method, float $delta, string $recorded) {
+test('payout methods wallet and messaging retain their existing money effects within the balance limit', function (string $method, float $delta, string $recorded) {
     Mail::fake();
     Notification::fake();
     $seller = createStoreUser('seller');
     $seller->forceFill(['balance' => 91])->save();
-    $shop = createShopFor($seller, 10);
+    $initial = $method === 'arbitrary_manual_option' ? -200 : 200;
+    $shop = createShopFor($seller, $initial);
     actingAsStoreUser(createStoreAdmin());
     $this->post(route('commissions.pay_to_seller'), payoutForm($shop, ['amount' => 150.25, 'payment_option' => $method, 'txn_code' => 'BANK-191']))->assertRedirect(route('sellers.index'));
-    expect(shopBalance($shop))->toBe(10 + $delta)
+    expect(shopBalance($shop))->toBe($initial + $delta)
         ->and((float) $seller->fresh()->balance)->toBe(91.0);
     $payment = DB::table('payments')->sole();
     expect((float) $payment->amount)->toBe(150.25)->and($payment->seller_id)->toBe($seller->id)
@@ -136,7 +137,7 @@ test('legacy payout limits methods wallet and messaging are pinned before conver
     Notification::assertNothingSent();
 })->with([['cash', -150.25, 'cash'], ['bank_payment', -150.25, 'bank_payment'], ['arbitrary_manual_option', 150.25, 'Seller paid to admin']]);
 
-test('legacy partial withdrawal payment closes the request without changing its amount or message', function () {
+test('partial withdrawal payment is refused without changing its amount message or money', function () {
     Mail::fake();
     Notification::fake();
     $seller = createStoreUser('seller');
@@ -144,15 +145,19 @@ test('legacy partial withdrawal payment closes the request without changing its 
     $id = createWithdrawRequestFor($seller, 80);
     DB::table('seller_withdraw_requests')->where('id', $id)->update(['message' => '<b>original</b>']);
     actingAsStoreUser(createStoreAdmin());
-    $this->post(route('commissions.pay_to_seller'), payoutForm($shop, ['amount' => 12.5, 'payment_withdraw' => 'withdraw_request', 'withdraw_request_id' => $id]))->assertRedirect(route('withdraw_requests_all'));
+    $this->post(route('commissions.pay_to_seller'), payoutForm($shop, ['amount' => 12.5, 'payment_withdraw' => 'withdraw_request', 'withdraw_request_id' => $id]))->assertSessionHasErrors('amount');
     $row = DB::table('seller_withdraw_requests')->find($id);
-    expect(shopBalance($shop))->toBe(87.5)->and((int) $row->status)->toBe(1)->and((int) $row->viewed)->toBe(1)
+    expect(shopBalance($shop))->toBe(100.0)->and((int) $row->status)->toBe(0)->and((int) $row->viewed)->toBe(0)
+        ->and(DB::table('payments')->count())->toBe(0)
         ->and((float) $row->amount)->toBe(80.0)->and($row->message)->toBe('<b>original</b>');
     Mail::assertNothingSent();
     Notification::assertNothingSent();
 });
 
-beforeEach(fn () => seedStoreCurrency());
+beforeEach(function () {
+    $this->withoutVite();
+    seedStoreCurrency();
+});
 
 test('seller payment history and the seller scoped history render as Inertia', function () {
     actingAsStoreUser(createStoreStaff('seller_payment_history'));
@@ -262,13 +267,13 @@ test('only pending zero or null withdrawals transition to paid and nonpending st
     $seller = createStoreUser('seller');
     $shop = createShopFor($seller, 100);
     $id = createWithdrawRequestFor($seller, 50, $status);
-    $response = $this->post(route('commissions.pay_to_seller'), payoutForm($shop, ['payment_withdraw' => 'withdraw_request', 'withdraw_request_id' => $id]));
+    $response = $this->post(route('commissions.pay_to_seller'), payoutForm($shop, ['amount' => 50, 'payment_withdraw' => 'withdraw_request', 'withdraw_request_id' => $id]));
     if ($allowed) {
         $response->assertRedirect(route('withdraw_requests_all'));
     } else {
         $response->assertNotFound();
     }
-    expect(shopBalance($shop))->toBe($allowed ? 60.0 : 100.0)
+    expect(shopBalance($shop))->toBe($allowed ? 50.0 : 100.0)
         ->and(DB::table('payments')->count())->toBe($allowed ? 1 : 0)
         ->and((int) DB::table('seller_withdraw_requests')->where('id', $id)->value('status'))->toBe($allowed ? 1 : $status);
 })->with([[null, true], [0, true], [1, false], [2, false]]);
@@ -276,10 +281,10 @@ test('only pending zero or null withdrawals transition to paid and nonpending st
 test('a non cash bank option keeps legacy credit semantics even when a withdrawal is supplied', function () {
     actingAsStoreUser(createStoreStaff('pay_to_seller'));
     $seller = createStoreUser('seller');
-    $shop = createShopFor($seller, 100);
+    $shop = createShopFor($seller, -100);
     $id = createWithdrawRequestFor($seller, 40);
     $this->post(route('commissions.pay_to_seller'), payoutForm($shop, ['payment_option' => 'manual', 'payment_withdraw' => 'withdraw_request', 'withdraw_request_id' => $id]))->assertRedirect(route('sellers.index'));
-    expect(shopBalance($shop))->toBe(140.0)
+    expect(shopBalance($shop))->toBe(-60.0)
         ->and((int) DB::table('seller_withdraw_requests')->where('id', $id)->value('status'))->toBe(0)
         ->and(DB::table('payments')->sole()->txn_code)->toBeNull();
 });
