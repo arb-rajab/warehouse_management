@@ -2792,11 +2792,13 @@ a write).
 
 - **Statuses shown:** every order except pending and cancelled ones.
 - **Bulk transition:** each selected order takes confirmed or ready for
-  delivery, whatever it had, saved per order in one transaction.
+  delivery, whatever it had, saved per order in one transaction. D10 (§66)
+  now requires every selected order to be attached to the supplied open trip.
 - **Invoice number:** stored as typed (an empty field clears it) and the
   order goes out for delivery (`on_delivery`) whatever its status, saved on
-  change as before.
-- **Mark as delivered:** sets `delivered`.
+  change as before. D10 (§66) now requires an attachment to the supplied open trip.
+- **Mark as delivered:** sets `delivered`; D10 (§66) now permits only confirmed,
+  ready-for-delivery and out-for-delivery orders attached to the supplied open trip.
 - **Order totals:** the stored grand total through `single_price()`; nothing
   recomputes tax or totals (the order tax hold, §5, is untouched).
 - **Columns:** every Blade column, including the latest checkpoint's trip,
@@ -2933,7 +2935,8 @@ change (both ran and pass).
 - **Status:** the legacy transition in one transaction: the checkpoint is
   locked (`lockForUpdate`), takes any `CheckpointStatus` value, and a delivered
   checkpoint keeps its first `arrived_at`. The trip's own status flow (§24) is
-  untouched: a checkpoint status never changes the trip.
+  untouched: a checkpoint status never changes the trip. D10 (§66) now scopes
+  notes and status through the supplied open trip before writing.
 - **CMR download:** still a GET that sends the browser to the uploaded file.
 - **Columns:** every Blade column: customer (for an order, the customer it was
   placed for), representative, the customer's stored shipping address, status,
@@ -7973,3 +7976,133 @@ Not run locally: the remaining MySQL CI file list, the whole application browser
 suite, Composer/npm advisory audits or deploy-script tests. The workflow change
 runs every CI group on the non-draft PR. No production data, migration or deployment
 operation was performed. **No owner decision remains for D7.**
+
+
+## 66. D10: trip write scoping (2026-10-26)
+
+Branch `codex/trip-write-scoping` starts at current `origin/develop`,
+`29fbb8216c1ac0a9df45f60fef5bafee046e8783` (PR #496). The existing URLs carry
+only an order or checkpoint ID; Trips → Orders is a global list, including
+unattached orders. The owner confirmed using **required `trip_id` request
+context** while retaining every route, route name and permission.
+
+### Conservative rules
+
+1. **Order ownership.** Invoice, delivered and bulk-status writes resolve the
+   order through the supplied trip's `checkpoints()` relation, restricted to
+   the `Order` polymorphic type. There is no trip-order pivot. Unattached orders,
+   another trip's orders and a customer stop with the same numeric ID cannot
+   authorize the write. A missing parent or route-bound child, or a child outside
+   that parent, is **404**. Bulk references retain the module's **422 `id`**
+   convention, and the whole selection rolls back if any attachment is invalid.
+2. **Checkpoint ownership.** Notes and status resolve through that same parent's
+   `checkpoints()` relation, with the existing `lockForUpdate`; a foreign or
+   missing checkpoint is **404**. `trip_id` is validated by the shared
+   `TripWriteRequest`: absent, malformed or nonpositive values are **422
+   `trip_id`**. Parent and child lookups happen inside the transaction.
+3. **Finished trips.** Actual `TripStatus` cases are `pending`, `started` and
+   `closed`. Only `closed` is terminal; no cancelled/finished state is invented.
+   These order/checkpoint endpoints reject a closed parent with **422 `trip_id`**,
+   “Closed trips are read-only.” (English and Arabic). They lock the parent
+   before its children, so closure and child writes serialize. Reads, the trip
+   status/reopen flow and the CMR download remain available and unchanged.
+4. **Mark delivered.** `orders.delivery_status` is nullable free text, separate
+   from `payment_status`, `wms_status`, delivery dates and the checkpoint status.
+   Legitimate source states are `confirmed`, `ready_for_delivery`, `on_delivery`:
+   trip creation/map assignment use out-for-delivery orders, and the existing
+   bulk actions can subsequently set confirmed or ready-for-delivery. Pending,
+   unknown/null, already-delivered and cancelled values are **422
+   `delivery_status`**. Valid delivery still changes only the order's
+   `delivery_status` to `delivered`. It does not mark checkpoints delivered,
+   settle payment/commission or notify anyone. Invoice save/clear still sets
+   `on_delivery` for any attached order's prior status on an open trip; bulk
+   still sets either existing bulk target status. No additional status rule is
+   invented for those two actions. The trip-update driver-notification fix
+   (§26: integer comparison; notify only when the driver changes) is untouched.
+
+The three pages now supply their displayed parent ID. Unattached list orders
+have no invoice/delivery control; the map's `orderTrips` payload contains only
+actual `Order` attachments to open trips, with the latest attachment per order.
+Unassigned map markers stay available for assignment. A bulk status selection
+must have one common trip; delete-selection behavior is unchanged. The detail
+hides checkpoint write controls when closed. Server errors remain visible and
+server checks are authoritative for stale pages. `trip_id` is removed from
+redirect queries; the checkpoint redirect's parent cannot be overridden by a
+query parameter.
+
+### Evidence and tests
+
+The unchanged endpoint suite passed **66 tests / 612 assertions** before the
+fix. The first reproduction run failed all **13** added cases. Required defect
+output included:
+
+- foreign order delivered: `- delivery_status: on_delivery; + delivered`;
+- foreign invoice: `- invoice_number: OLD; + WRONG`;
+- foreign checkpoint status: `- pending / arrived_at null; + delivered / timestamp`;
+- closed-trip checkpoint: the same unauthorized status/arrival mutation;
+- already delivered: `Expected response status code [422] but received 302`;
+- cancelled: `- delivery_status: cancelled; + delivered`.
+
+Two initial extra rejections for confirmed/ready orders were corrected after
+tracing the legitimate bulk flow: they are now explicit success cases, preserving
+existing valid behavior. No existing test was skipped, quarantined or weakened.
+
+`TripWriteScopingTest` snapshots every column of every row in `orders`,
+`order_details`, `checkpoints`, `trips`, `trucks`, `notifications`, `wms_jobs`,
+`wms_job_batches`, `wms_failed_jobs`, with unrelated trip/order/checkpoint noise.
+Every refusal checks exact before/after equality plus no sent notifications or
+queued jobs. Coverage includes cross-trip and unattached references, morph-type
+collisions, closed parents, missing/malformed parents, missing children, invalid
+order states, each route's guest/customer/unprivileged-staff rejections and
+mixed-selection rollback after an earlier valid bulk write. Successful snapshots
+pin order-only delivery/invoice changes, checkpoint notes/status changes and
+first-arrival retention, with payment/commission/attachments/trips untouched.
+Closed-trip reads still work. Existing controller tests retain their rejection
+matrices and now submit explicit parent context; Inertia readers call
+`withoutVite()`. The regression file is registered in both MySQL test lists.
+
+Vue tests pin submitted parent IDs, unassigned controls, mixed-trip selection,
+closed-trip reads and native confirmation. Browser fixtures now attach orders
+before testing valid writes, and the map spec also proves delivery is absent
+before attachment. Existing accounting-ID fixtures use a schema-valid integer,
+retaining their exact payload/search assertions on SQLite and MySQL.
+
+**CMR limit left alone:** download still opens only the first upload ID in
+`cmr_file`; the driver API stores one. Printing still uses the browser's print
+layout. No CMR code or behavior changed. No owner decision remains for the D10
+write rules; the first-ID CMR behavior is explicitly outside this task.
+
+Verification results are recorded with the PR and final task report.
+
+### Final verification
+
+- Focused SQLite: **251 passed / 1,885 assertions**, including the unchanged
+  driver-notification cases; focused MySQL 8.4: **150 passed / 1,124 assertions**,
+  no skips. The added map-context payload case runs on both engines.
+- Explicit `python3 .claude/scripts/pre_push_check.py --full`: **exit 0**.
+  Wayfinder, whole ESLint/Prettier, frontend types, **338 Vitest files / 2,710
+  tests**, Pint, PHPStan (**zero errors**), config clear and parallel Pest pass.
+  Pest: **7,971 passed / 44,660 assertions**, plus **three existing MySQL-only
+  skips on SQLite** (143.618 seconds). No StoreProductFormFields timeout or
+  isolated retry occurred.
+- Trip and driver Playwright: **8 passed (39.5 seconds)** across all five
+  requested specs; enforced CSP, unchanged assertions/timeouts/retries.
+  Focused page Vitest: **43 passed**. Production build, changed-file ESLint and
+  Prettier, script selftests, **23 CI planner tests** and `git diff --check` pass.
+- Setup repairs used only the task-local runtime: locked npm refresh, stale
+  Composer classmap refresh, an ignored stale `public/hot` moved aside, and GD
+  rebuilt with WebP. The initial full run's five unrelated upload failures
+  disappear with WebP; all **87 unchanged upload tests** pass. No manifest,
+  lockfile, upload code, platform requirement or test was altered for setup.
+- Whole-file Markdown warnings reproduce on all three unchanged base documents;
+  the new guide section passes Prettier without reformatting historical prose.
+- Not run locally: the remaining MySQL CI list, the whole application Playwright
+  suite, advisory audits or deploy-script tests. Both MySQL lists contain the
+  new regression file; the workflow edit runs every CI group on the non-draft PR.
+  No bare/attested pre-push run or hand-edited CI-Verified trailer was used.
+
+The change spans **29 files**, above the initial estimate because explicit parent
+context reaches five existing FormRequests, three pages, the map payload,
+translations and their endpoint/component/browser tests, both MySQL lists and
+three required documentation updates. Routes, permissions, migrations and all
+other D-items remain untouched.

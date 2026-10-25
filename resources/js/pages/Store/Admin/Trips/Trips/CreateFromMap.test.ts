@@ -136,11 +136,13 @@ const idleTruck = storeTripMapTruck({
 
 function mountPage({
     orders = [alma, bram],
+    orderTrips = { 77: 41 },
     availableTrucks = [freeTruck, plainTruck],
     busyTrucks = [busyTruck, idleTruck],
     permissions = allPermissions,
 }: {
     orders?: StoreTripMapOrder[];
+    orderTrips?: Record<number, number>;
     availableTrucks?: StoreTripMapTruck[];
     busyTrucks?: StoreTripMapTruck[];
     permissions?: string[];
@@ -155,6 +157,7 @@ function mountPage({
     return mount(CreateFromMap, {
         props: {
             orders,
+            orderTrips,
             availableTrucks,
             busyTrucks,
             photos: [
@@ -518,7 +521,10 @@ describe('Store trip map picker', () => {
 
         expect(action.text()).toBe(t('store.trips.orders.markDelivered'));
         expect(action.props('href')).toEqual(
-            markDelivered({ id: 77 }, { query: { return_to: 'map' } }),
+            markDelivered(
+                { id: 77 },
+                { query: { return_to: 'map', trip_id: 41 } },
+            ),
         );
         expect(action.attributes('method')).toBe('put');
         const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false);
@@ -532,6 +538,14 @@ describe('Store trip map picker', () => {
                 status: t('store.orders.status.delivered'),
             }),
         );
+    });
+
+    it('does not offer delivery for an order with no trip attachment', async () => {
+        const wrapper = mountPage({ orderTrips: {} });
+        await select(wrapper, 77);
+        expect(
+            stopItems(wrapper)[0].findComponent(TableActionLink).exists(),
+        ).toBe(false);
     });
 
     it("gates the row actions and the busy-truck assignment by their routes' permissions", async () => {

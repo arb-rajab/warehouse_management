@@ -114,6 +114,7 @@ MYSQL_TESTS = [
     'tests/Feature/SellerDashboardTest.php',
     'tests/Feature/Store/Admin/ProductEditRoutingTest.php',
     'tests/Feature/Store/Admin/RootProductHandlersTest.php',
+    'tests/Feature/Store/Admin/TripWriteScopingTest.php',
     'tests/Feature/StorefrontNullSlugTest.php',
     'tests/Feature/StorefrontRemainingBladeUrlTest.php',
     'tests/Feature/Database/DropRedundantForeignKeyIndexesTest.php',

@@ -11,6 +11,7 @@ use App\Http\Resources\Store\TripCheckpointResource;
 use App\Http\Resources\Store\TripOrderResource;
 use App\Http\Resources\Store\TruckPhotoResource;
 use App\Models\Order;
+use App\Models\Trip;
 use App\Models\Upload;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\Relation;
@@ -20,6 +21,7 @@ use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -111,7 +113,14 @@ class TripOrderController extends Controller implements HasMiddleware
     {
         $status = $request->string('delivery_status')->toString();
         DB::transaction(function () use ($request, $status): void {
-            foreach (Order::query()->whereIn('id', $request->validated('id'))->orderBy('id')->lockForUpdate()->get() as $order) {
+            $trip = $request->lockedTrip();
+            $ids = $request->validated('id');
+            sort($ids, SORT_NUMERIC);
+            foreach ($ids as $id) {
+                if (! $trip->checkpoints()->whereMorphedTo('relationable', Order::class)->where('relationable_id', $id)->exists()) {
+                    throw ValidationException::withMessages(['id' => __('validation.exists', ['attribute' => 'order'])]);
+                }
+                $order = $this->lockedOrder($trip, (int) $id);
                 $order->delivery_status = $status;
                 $order->save();
             }
@@ -126,9 +135,12 @@ class TripOrderController extends Controller implements HasMiddleware
      */
     public function updateInvoiceNumber(UpdateTripOrderInvoiceRequest $request, Order $order): RedirectResponse
     {
-        $order->invoice_number = $request->validated('invoice_number');
-        $order->delivery_status = 'on_delivery';
-        $order->save();
+        DB::transaction(function () use ($request, $order): void {
+            $order = $this->lockedOrder($request->lockedTrip(), $order->id);
+            $order->invoice_number = $request->validated('invoice_number');
+            $order->delivery_status = 'on_delivery';
+            $order->save();
+        });
 
         return $this->redirectToList($request);
     }
@@ -139,14 +151,31 @@ class TripOrderController extends Controller implements HasMiddleware
      */
     public function markDelivered(MarkTripOrderDeliveredRequest $request, Order $order): RedirectResponse
     {
-        $order->delivery_status = 'delivered';
-        $order->save();
+        DB::transaction(function () use ($request, $order): void {
+            $order = $this->lockedOrder($request->lockedTrip(), $order->id);
+            if (! in_array($order->delivery_status, ['confirmed', 'ready_for_delivery', 'on_delivery'], true)) {
+                throw ValidationException::withMessages(['delivery_status' => __('messages.trip_order_not_deliverable')]);
+            }
+            $order->delivery_status = 'delivered';
+            $order->save();
+        });
 
         if ($request->validated('return_to') === 'map') {
             return redirect()->route('trips.create-from-map');
         }
 
         return $this->redirectToList($request);
+    }
+
+    /** Resolve through the trip's polymorphic attachment, under the parent lock. */
+    private function lockedOrder(Trip $trip, int $id): Order
+    {
+        $checkpoint = $trip->checkpoints()->whereMorphedTo('relationable', Order::class)
+            ->where('relationable_id', $id)->lockForUpdate()->firstOrFail();
+        /** @var Order $order */
+        $order = $checkpoint->relationable()->lockForUpdate()->firstOrFail();
+
+        return $order;
     }
 
     /**
@@ -172,6 +201,6 @@ class TripOrderController extends Controller implements HasMiddleware
 
     private function redirectToList(Request $request): RedirectResponse
     {
-        return redirect()->route('trips.orders', Arr::except($request->query(), ['return_to']));
+        return redirect()->route('trips.orders', Arr::except($request->query(), ['return_to', 'trip_id']));
     }
 }

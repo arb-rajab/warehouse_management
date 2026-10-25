@@ -21,6 +21,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -78,8 +79,11 @@ class TripCheckpointController extends Controller implements HasMiddleware
 
     public function updateNotes(UpdateCheckpointNotesRequest $request, Checkpoint $checkpoint): RedirectResponse
     {
-        $checkpoint->notes = $request->validated('notes');
-        $checkpoint->save();
+        DB::transaction(function () use ($request, $checkpoint): void {
+            $checkpoint = $request->lockedTrip()->checkpoints()->lockForUpdate()->findOrFail($checkpoint->id);
+            $checkpoint->notes = $request->validated('notes');
+            $checkpoint->save();
+        });
 
         return $this->redirectToTrip($checkpoint, $request);
     }
@@ -91,8 +95,8 @@ class TripCheckpointController extends Controller implements HasMiddleware
     public function updateStatus(UpdateCheckpointStatusRequest $request, Checkpoint $checkpoint): RedirectResponse
     {
         $status = CheckpointStatus::from($request->string('status')->toString());
-        DB::transaction(function () use ($checkpoint, $status): void {
-            $checkpoint = Checkpoint::query()->lockForUpdate()->findOrFail($checkpoint->id);
+        DB::transaction(function () use ($request, $checkpoint, $status): void {
+            $checkpoint = $request->lockedTrip()->checkpoints()->lockForUpdate()->findOrFail($checkpoint->id);
             $checkpoint->status = $status->value;
             if ($status === CheckpointStatus::Delivered) {
                 $checkpoint->arrived_at ??= now();
@@ -126,6 +130,6 @@ class TripCheckpointController extends Controller implements HasMiddleware
 
     private function redirectToTrip(Checkpoint $checkpoint, Request $request): RedirectResponse
     {
-        return redirect()->route('trips.show', ['trip' => $checkpoint->trip_id, ...$request->query()]);
+        return redirect()->route('trips.show', [...Arr::except($request->query(), ['trip_id', 'trip']), 'trip' => $checkpoint->trip_id]);
     }
 }

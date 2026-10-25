@@ -460,6 +460,9 @@ describe('Store trip orders list', () => {
         const wrapper = mountPage([
             order,
             storeTripOrder({ id: 79, delivery_status: 'delivered' }),
+            storeTripOrder({ id: 80, delivery_status: 'cancelled' }),
+            storeTripOrder({ id: 81, delivery_status: 'pending' }),
+            storeTripOrder({ id: 82, trip: null }),
         ]);
         const links = wrapper
             .findAllComponents(TableActionLink)
@@ -469,7 +472,7 @@ describe('Store trip orders list', () => {
         expect(links).toHaveLength(1);
         const action = actionLink(wrapper, 'markDelivered');
         expect(action?.props('href')).toEqual(
-            markDelivered(order, { mergeQuery: {} }),
+            markDelivered(order, { mergeQuery: { trip_id: order.trip!.id } }),
         );
         expect(action?.attributes('method')).toBe('put');
         const onBefore = action
@@ -505,7 +508,10 @@ describe('Store trip orders list', () => {
         await invoice.setValue('INV-2');
         expect(submitMock).toHaveBeenCalledWith(
             updateInvoiceNumber(order, { mergeQuery: {} }),
-            expect.objectContaining({ invoice_number: 'INV-2' }),
+            expect.objectContaining({
+                invoice_number: 'INV-2',
+                trip_id: order.trip!.id,
+            }),
             expect.objectContaining({
                 preserveScroll: true,
                 preserveState: true,
@@ -611,6 +617,36 @@ describe('Store trip orders list', () => {
         confirmed.vm.$emit('success');
         await wrapper.vm.$nextTick();
         expect(remove.findAll('input[name="id[]"]')).toHaveLength(0);
+    });
+
+    it('offers writes only for attached orders and blocks mixed-trip bulk selections', async () => {
+        const first = storeTripOrder();
+        const second = storeTripOrder({
+            id: 79,
+            code: 'OTHER',
+            trip: { ...first.trip!, id: 999 },
+        });
+        const plain = storeTripOrder({ id: 80, code: 'PLAIN', trip: null });
+        const wrapper = mountPage([first, second, plain]);
+        expect(wrapper.find('#order-invoice-80').exists()).toBe(false);
+        const bulk = forms(wrapper)[1];
+        await wrapper
+            .get(
+                `input[aria-label="${t('store.trips.orders.selectOrder', { code: first.code })}"]`,
+            )
+            .setValue(true);
+        expect(bulk.get('input[name="trip_id"]').attributes('value')).toBe(
+            String(first.trip!.id),
+        );
+        await wrapper
+            .get(
+                `input[aria-label="${t('store.trips.orders.selectOrder', { code: second.code })}"]`,
+            )
+            .setValue(true);
+        expect(
+            bulk.getComponent(SubmitButton).attributes('disabled'),
+        ).toBeDefined();
+        expect((bulk.props('onBefore') as () => boolean)()).toBe(false);
     });
 
     it('shows a refused bulk action under its button', () => {

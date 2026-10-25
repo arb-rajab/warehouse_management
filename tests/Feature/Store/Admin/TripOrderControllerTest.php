@@ -2,6 +2,7 @@
 
 use App\Models\Checkpoint;
 use App\Models\Order;
+use App\Models\StoreUser;
 use App\Models\Trip;
 use App\Models\Truck;
 use App\Models\Upload;
@@ -9,7 +10,10 @@ use Inertia\Testing\AssertableInertia as Assert;
 
 // The list prints each grand total through single_price(), which reads the
 // default currency.
-beforeEach(fn () => seedStoreCurrency());
+beforeEach(function () {
+    $this->withoutVite();
+    seedStoreCurrency();
+});
 
 /**
  * A trip on its own truck holding `$order` as a delivery checkpoint.
@@ -42,7 +46,7 @@ function tripOrderStates(): array
 describe('trip orders list', function () {
     test('the list renders every row field for an order with a trip and one without', function () {
         $customer = createStoreUser();
-        $customer->forceFill(['name' => 'Alma Customer', 'AccSysID' => 'ACC-7', 'company_name' => 'Alma BV', 'shipping_address' => 'Fallback street 1'])->save();
+        $customer->forceFill(['name' => 'Alma Customer', 'AccSysID' => 7007, 'company_name' => 'Alma BV', 'shipping_address' => 'Fallback street 1'])->save();
         $rep = createStoreUser();
         $rep->forceFill(['name' => 'Rita Rep'])->save();
         $driver = createStoreUser('driver');
@@ -81,7 +85,7 @@ describe('trip orders list', function () {
             ->has('orders.data.0', fn (Assert $row) => $row
                 ->where('id', $order->id)->where('code', '20261015-0001')->where('is_new', true)->where('details_count', 1)
                 ->where('otajer_order_id', 'OT-9')->where('order_from', 'app')->where('wms_status', 'picked')
-                ->where('customer', ['id' => $customer->id, 'name' => 'Alma Customer', 'accounting_id' => 'ACC-7', 'company_name' => 'Alma BV'])
+                ->where('customer', ['id' => $customer->id, 'name' => 'Alma Customer', 'accounting_id' => 7007, 'company_name' => 'Alma BV'])
                 ->where('by_rep', true)->where('representative', ['id' => $rep->id, 'name' => 'Rita Rep'])
                 ->where('address', 'Main street 5')->where('country', 'Netherlands')->where('phone', '0611111111')
                 ->where('invoice_number', 'INV-1')->where('customer_notes', 'Ring twice')->where('manager_notes', 'Handle with care')
@@ -92,7 +96,7 @@ describe('trip orders list', function () {
             ->has('orders.data.1', fn (Assert $row) => $row
                 ->where('id', $plain->id)->where('code', '20261014-0001')->where('is_new', false)->where('details_count', 0)
                 ->where('otajer_order_id', null)->where('order_from', null)->where('wms_status', null)
-                ->where('customer', ['id' => $customer->id, 'name' => 'Alma Customer', 'accounting_id' => 'ACC-7', 'company_name' => 'Alma BV'])
+                ->where('customer', ['id' => $customer->id, 'name' => 'Alma Customer', 'accounting_id' => 7007, 'company_name' => 'Alma BV'])
                 ->where('by_rep', false)->where('representative', null)
                 ->where('address', 'Fallback street 1')->where('country', null)->where('phone', $customer->phone)
                 ->where('invoice_number', null)->where('customer_notes', null)->where('manager_notes', null)
@@ -103,7 +107,7 @@ describe('trip orders list', function () {
 
     test('the list hides pending and cancelled orders and filters by status, date and search', function () {
         $customer = createStoreUser();
-        $customer->forceFill(['name' => 'Alma Customer', 'AccSysID' => 'ACC-7'])->save();
+        $customer->forceFill(['name' => 'Alma Customer', 'AccSysID' => 7007])->save();
         $other = createStoreUser();
         $other->forceFill(['name' => 'Bram Buyer'])->save();
         $confirmed = createStoreOrder($customer, ['code' => 'C-1', 'delivery_status' => 'confirmed']);
@@ -127,7 +131,7 @@ describe('trip orders list', function () {
             ->and($ids(['search' => 'INV-77']))->toBe([$ready->id])
             ->and($ids(['search' => 'Harbour']))->toBe([$delivered->id])
             ->and($ids(['search' => 'Alma']))->toBe([$repOrder->id, $confirmed->id])
-            ->and($ids(['search' => 'ACC-7']))->toBe([$repOrder->id, $confirmed->id])
+            ->and($ids(['search' => '7007']))->toBe([$repOrder->id, $confirmed->id])
             ->and($ids(['search' => 'Bram']))->toBe([$delivered->id, $ready->id])
             ->and($ids(['search' => 'Rita']))->toBe([])
             ->and($ids(['search' => $customer->phone]))->toBe([$repOrder->id, $confirmed->id])
@@ -170,15 +174,30 @@ describe('trip orders list', function () {
     })->with('refused store admin callers');
 });
 
+/** Valid action fixtures always have an explicit trip attachment. */
+function attachedTripWriteOrder(StoreUser $customer, array $attributes = []): Order
+{
+    $order = createStoreOrder($customer, $attributes);
+    tripOrderCheckpoint($order);
+
+    return $order;
+}
+
+function tripWriteOrderContext(Order $order): array
+{
+    return [$order, 'trip_id' => $order->checkpoints()->firstOrFail()->trip_id];
+}
+
 describe('trip order actions', function () {
     test('the bulk action sets the chosen status on every selected order and returns to the list with its filters', function (string $status) {
         $customer = createStoreUser();
-        $first = createStoreOrder($customer, ['delivery_status' => 'on_delivery']);
-        $second = createStoreOrder($customer, ['delivery_status' => 'delivered']);
-        $untouched = createStoreOrder($customer, ['delivery_status' => 'on_delivery']);
+        $first = attachedTripWriteOrder($customer, ['delivery_status' => 'on_delivery']);
+        $second = attachedTripWriteOrder($customer, ['delivery_status' => 'delivered']);
+        $second->checkpoints()->update(['trip_id' => $first->checkpoints()->firstOrFail()->trip_id]);
+        $untouched = attachedTripWriteOrder($customer, ['delivery_status' => 'on_delivery']);
         actingAsStoreUser(createStoreStaff('edit_trip'));
 
-        $this->post(route('trips.orders.bulk-change-delivery-status', ['search' => 'x', 'page' => 2]), ['id' => [$first->id, $second->id], 'delivery_status' => $status])
+        $this->post(route('trips.orders.bulk-change-delivery-status', ['search' => 'x', 'page' => 2]), ['trip_id' => $first->checkpoints()->firstOrFail()->trip_id, 'id' => [$first->id, $second->id], 'delivery_status' => $status])
             ->assertRedirect(route('trips.orders', ['search' => 'x', 'page' => 2]));
 
         expect($first->fresh()->delivery_status)->toBe($status)
@@ -187,7 +206,7 @@ describe('trip order actions', function () {
     })->with(['confirmed', 'ready_for_delivery']);
 
     test('the bulk action validates its selection and status without writing', function (array $payload, string $error) {
-        $order = createStoreOrder(createStoreUser(), ['delivery_status' => 'on_delivery']);
+        $order = attachedTripWriteOrder(createStoreUser(), ['delivery_status' => 'on_delivery']);
         actingAsStoreUser(createStoreStaff('edit_trip'));
         $before = tripOrderStates();
 
@@ -206,7 +225,7 @@ describe('trip order actions', function () {
     ]);
 
     test('the bulk action refuses duplicate ids', function () {
-        $order = createStoreOrder(createStoreUser(), ['delivery_status' => 'on_delivery']);
+        $order = attachedTripWriteOrder(createStoreUser(), ['delivery_status' => 'on_delivery']);
         actingAsStoreUser(createStoreStaff('edit_trip'));
 
         $this->post(route('trips.orders.bulk-change-delivery-status'), ['id' => [$order->id, $order->id], 'delivery_status' => 'confirmed'])
@@ -215,11 +234,11 @@ describe('trip order actions', function () {
     });
 
     test('saving an invoice number stores it, sends the order out for delivery and returns to the list', function (?string $invoice) {
-        $order = createStoreOrder(createStoreUser(), ['delivery_status' => 'delivered', 'invoice_number' => 'OLD-1']);
-        $other = createStoreOrder(createStoreUser(), ['delivery_status' => 'confirmed', 'invoice_number' => 'OTHER']);
+        $order = attachedTripWriteOrder(createStoreUser(), ['delivery_status' => 'delivered', 'invoice_number' => 'OLD-1']);
+        $other = attachedTripWriteOrder(createStoreUser(), ['delivery_status' => 'confirmed', 'invoice_number' => 'OTHER']);
         actingAsStoreUser(createStoreStaff('edit_trip'));
 
-        $this->put(route('trips.orders.update_invoice_number', [$order, 'delivery_status' => 'delivered']), ['invoice_number' => $invoice])
+        $this->put(route('trips.orders.update_invoice_number', [...tripWriteOrderContext($order), 'delivery_status' => 'delivered']), ['invoice_number' => $invoice])
             ->assertRedirect(route('trips.orders', ['delivery_status' => 'delivered']));
 
         expect($order->fresh()->only(['invoice_number', 'delivery_status']))->toBe(['invoice_number' => $invoice === '' ? null : $invoice, 'delivery_status' => 'on_delivery'])
@@ -227,23 +246,23 @@ describe('trip order actions', function () {
     })->with(['a number' => ['INV-2026-01'], 'cleared' => ['']]);
 
     test('an invoice number over 255 characters or not text is refused without writing', function (mixed $invoice) {
-        $order = createStoreOrder(createStoreUser(), ['delivery_status' => 'confirmed', 'invoice_number' => 'OLD-1']);
+        $order = attachedTripWriteOrder(createStoreUser(), ['delivery_status' => 'confirmed', 'invoice_number' => 'OLD-1']);
         actingAsStoreUser(createStoreStaff('edit_trip'));
 
-        $this->put(route('trips.orders.update_invoice_number', $order), ['invoice_number' => $invoice])->assertSessionHasErrors('invoice_number');
+        $this->put(route('trips.orders.update_invoice_number', tripWriteOrderContext($order)), ['invoice_number' => $invoice])->assertSessionHasErrors('invoice_number');
 
         expect($order->fresh()->only(['invoice_number', 'delivery_status']))->toBe(['invoice_number' => 'OLD-1', 'delivery_status' => 'confirmed']);
     })->with(['too long' => [str_repeat('x', 256)], 'not text' => [['bad']]]);
 
     test('marking an order delivered returns to the list, or to the map picker for return_to=map', function () {
-        $order = createStoreOrder(createStoreUser(), ['delivery_status' => 'on_delivery']);
-        $map = createStoreOrder(createStoreUser(), ['delivery_status' => 'on_delivery']);
-        $other = createStoreOrder(createStoreUser(), ['delivery_status' => 'on_delivery']);
+        $order = attachedTripWriteOrder(createStoreUser(), ['delivery_status' => 'on_delivery']);
+        $map = attachedTripWriteOrder(createStoreUser(), ['delivery_status' => 'on_delivery']);
+        $other = attachedTripWriteOrder(createStoreUser(), ['delivery_status' => 'on_delivery']);
         actingAsStoreUser(createStoreStaff('edit_trip'));
 
-        $this->put(route('trips.orders.update_order_status_to_delivered', [$order, 'page' => 3]))->assertRedirect(route('trips.orders', ['page' => 3]));
-        $this->put(route('trips.orders.update_order_status_to_delivered', $map), ['return_to' => 'map'])->assertRedirect(route('trips.create-from-map'));
-        $this->put(route('trips.orders.update_order_status_to_delivered', $other), ['return_to' => 'elsewhere'])->assertSessionHasErrors('return_to');
+        $this->put(route('trips.orders.update_order_status_to_delivered', [...tripWriteOrderContext($order), 'page' => 3]))->assertRedirect(route('trips.orders', ['page' => 3]));
+        $this->put(route('trips.orders.update_order_status_to_delivered', tripWriteOrderContext($map)), ['return_to' => 'map'])->assertRedirect(route('trips.create-from-map'));
+        $this->put(route('trips.orders.update_order_status_to_delivered', tripWriteOrderContext($other)), ['return_to' => 'elsewhere'])->assertSessionHasErrors('return_to');
 
         expect($order->fresh()->delivery_status)->toBe('delivered')
             ->and($map->fresh()->delivery_status)->toBe('delivered')
@@ -251,44 +270,44 @@ describe('trip order actions', function () {
     });
 
     test('the map picker\'s PUT with return_to in its query marks the order delivered and returns to the picker', function () {
-        $order = createStoreOrder(createStoreUser(), ['delivery_status' => 'on_delivery']);
+        $order = attachedTripWriteOrder(createStoreUser(), ['delivery_status' => 'on_delivery']);
         actingAsStoreUser(createStoreStaff('edit_trip'));
 
-        $this->put(route('trips.orders.update_order_status_to_delivered', [$order, 'return_to' => 'map']), [], inertiaHeaders())
+        $this->put(route('trips.orders.update_order_status_to_delivered', [...tripWriteOrderContext($order), 'return_to' => 'map']), [], inertiaHeaders())
             ->assertRedirect(route('trips.create-from-map'));
 
         expect($order->fresh()->delivery_status)->toBe('delivered');
     });
 
     test('a missing order is a 404 and the old order-id URIs are gone', function () {
-        $order = createStoreOrder(createStoreUser(), ['delivery_status' => 'on_delivery']);
+        $order = attachedTripWriteOrder(createStoreUser(), ['delivery_status' => 'on_delivery']);
         actingAsStoreUser(createStoreStaff('edit_trip'));
 
         $this->put(route('trips.orders.update_invoice_number', 999999), ['invoice_number' => 'X'])->assertNotFound();
         $this->put(route('trips.orders.update_order_status_to_delivered', 999999))->assertNotFound();
         $this->post('/temp/admin/trips/orders/update-invoice-number', ['order_id' => $order->id, 'invoice_number' => 'X'])->assertNotFound();
         $this->post('/temp/admin/trips/orders/update-order-status', ['order_id' => $order->id])->assertNotFound();
-        $this->post(route('trips.orders.update_order_status_to_delivered', $order))->assertMethodNotAllowed();
+        $this->post(route('trips.orders.update_order_status_to_delivered', tripWriteOrderContext($order)))->assertMethodNotAllowed();
 
         expect($order->fresh()->only(['invoice_number', 'delivery_status']))->toBe(['invoice_number' => null, 'delivery_status' => 'on_delivery']);
     });
 
     test('every order action refuses callers and changes no order', function (string $caller) {
-        $order = createStoreOrder(createStoreUser(), ['delivery_status' => 'on_delivery']);
+        $order = attachedTripWriteOrder(createStoreUser(), ['delivery_status' => 'on_delivery']);
         actingAsRefusedStoreCaller($caller);
         $before = tripOrderStates();
 
-        assertStoreCallerRefused($this->post(route('trips.orders.bulk-change-delivery-status'), ['id' => [$order->id], 'delivery_status' => 'confirmed']), $caller);
-        assertStoreCallerRefused($this->put(route('trips.orders.update_invoice_number', $order), ['invoice_number' => 'X']), $caller);
-        assertStoreCallerRefused($this->put(route('trips.orders.update_order_status_to_delivered', $order)), $caller);
+        assertStoreCallerRefused($this->post(route('trips.orders.bulk-change-delivery-status'), ['trip_id' => $order->checkpoints()->firstOrFail()->trip_id, 'id' => [$order->id], 'delivery_status' => 'confirmed']), $caller);
+        assertStoreCallerRefused($this->put(route('trips.orders.update_invoice_number', tripWriteOrderContext($order)), ['invoice_number' => 'X']), $caller);
+        assertStoreCallerRefused($this->put(route('trips.orders.update_order_status_to_delivered', tripWriteOrderContext($order))), $caller);
 
         expect(tripOrderStates())->toBe($before);
     })->with('refused store admin callers');
 
     test('each trip order route needs its own permission', function (string $method, string $route, string $permission) {
-        $order = createStoreOrder(createStoreUser(), ['delivery_status' => 'on_delivery']);
-        $url = in_array($route, ['trips.orders', 'trips.orders.bulk-change-delivery-status'], true) ? route($route) : route($route, $order);
-        $payload = ['id' => [$order->id], 'delivery_status' => 'confirmed', 'invoice_number' => 'X'];
+        $order = attachedTripWriteOrder(createStoreUser(), ['delivery_status' => 'on_delivery']);
+        $url = in_array($route, ['trips.orders', 'trips.orders.bulk-change-delivery-status'], true) ? route($route) : route($route, tripWriteOrderContext($order));
+        $payload = ['trip_id' => $order->checkpoints()->firstOrFail()->trip_id, 'id' => [$order->id], 'delivery_status' => 'confirmed', 'invoice_number' => 'X'];
         actingAsStoreUser(createStoreStaff(...array_values(array_diff(['view_all_trips', 'edit_trip', 'edit_order', 'update_order_delivery_status'], [$permission]))));
 
         $this->call($method, $url, $payload)->assertForbidden();
@@ -305,8 +324,8 @@ describe('trip order actions', function () {
 
     test('deleting a selection from the trip orders list returns there with its filters', function () {
         $customer = createStoreUser();
-        $order = createStoreOrder($customer, ['delivery_status' => 'confirmed', 'payment_status' => 'unpaid']);
-        $kept = createStoreOrder($customer, ['delivery_status' => 'confirmed', 'payment_status' => 'unpaid']);
+        $order = attachedTripWriteOrder($customer, ['delivery_status' => 'confirmed', 'payment_status' => 'unpaid']);
+        $kept = attachedTripWriteOrder($customer, ['delivery_status' => 'confirmed', 'payment_status' => 'unpaid']);
         actingAsStoreUser(createStoreStaff('delete_order'));
 
         $this->post(route('bulk-order-delete', ['return_to' => 'trip_orders', 'search' => 'x']), ['id' => [$order->id]])
