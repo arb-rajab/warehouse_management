@@ -138,9 +138,7 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
     Route::delete('/products/destroy/{product}', [StoreProductController::class, 'sellerDestroy'])->defaults('productList', 'seller')->name('products.destroy');
     Route::delete('/bulk-product-delete', [StoreProductController::class, 'sellerBulkDestroy'])->defaults('productList', 'seller')->name('bulk-product-delete');
     Route::controller(ProductController::class)->group(function () {
-        Route::post('/products/get_products_by_subcategory', 'get_products_by_subcategory')->name('products.get_products_by_subcategory');
         Route::post('/products/fetch', 'fetch')->name('products.fetch')->middleware('permission:add_new_product');
-        Route::post('/products/search', 'search')->name('products.search');
         Route::get('products/get-details/{id}', 'getDetails')->name('products.get-details');
         Route::post('/products/sku_combination', 'sku_combination')->name('products.sku_combination');
     });
