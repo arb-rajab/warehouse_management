@@ -108,6 +108,8 @@ MYSQL_ENV = {
 MYSQL_TESTS = [
     'tests/Feature/Database/WidenPaymentTransactionCodeTest.php',
     'tests/Feature/Store/Admin/SellerPayoutDefectsTest.php',
+    'tests/Feature/SellerDashboardTest.php',
+    'tests/Feature/Store/Admin/ProductEditRoutingTest.php',
     'tests/Feature/Database/DropRedundantForeignKeyIndexesTest.php',
     'tests/Feature/Database/SchemaIdentifierLengthTest.php',
     'tests/Feature/Database/AddFulltextIndexToProductsTableTest.php',

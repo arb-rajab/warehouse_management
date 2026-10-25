@@ -7169,3 +7169,167 @@ separately because explicit `--full` does not include those CI-only groups.
 The finance-owner grants/sign-off in checklist 4.10 remain an operational owner
 responsibility; this change grants no permissions. True partial-payment support
 remains future owner-approved work, not an unresolved decision in this repair.
+
+
+## 61. Page-break defects: D6 repaired, D8 already fixed; D15/D7 remainder (2026-10-25)
+
+Branch `codex/page-break-defects` starts at fetched `origin/develop`
+`b24133f4380f60b903c63a8658a257315b96b15b` (includes PR #491).
+The requested approximately 30-file cutoff applies: this batch ships D6 and
+verification of D8. D15's shared URL fallback and D7's remaining handlers are
+explicitly deferred together. No routes/names, permission gates, fillable lists,
+product ownership, payouts, required-field marks or migrations change.
+
+### D6: seller dashboard on both database engines
+
+The historical SQLite-only classification was incomplete. Before changing code,
+`SellerDashboardTest` failed all four render cases on MySQL 8.4 with strict
+`ONLY_FULL_GROUP_BY`: `Expected response status code [200] but received 500`,
+`SQLSTATE[42000] ... 1055 Expression #2 of SELECT list is not in GROUP BY clause`.
+The selected `DATE_FORMAT(created_at, '%d %b')` differed from the grouped
+`DATE_FORMAT(created_at, '%Y-%m-%d')`. The same four cases failed on SQLite:
+`SQLSTATE[HY000] ... no such function: DATE_FORMAT`. The two refusal cases passed.
+
+Selection and grouping now both use portable `DATE(created_at)`, sum in SQL,
+order chronologically, then format the existing `d M` labels in PHP. There is
+no driver switch. The seller, delivered-status and exact rolling seven-day
+cutoff are unchanged. Empty charts stay empty. Tests cross December/January,
+include October/November orders, two orders on one day, the exact cutoff and
+one second before it, pending orders and another seller's orders.
+
+After repairing the query, the same tests exposed two further dashboard 500s:
+`Attempt to read property "rating" on null`, and
+`Attempted to lazy load [order] on model [App\Models\OrderDetail]`.
+The view now renders a missing shop with rating zero and the existing Verify Now
+state. Product translations/taxes and category translations are eager loaded;
+category counts are scoped SQL counts. Total Sales still sums **line price only**
+for this seller's lines whose parent order is paid; quantity is not multiplied.
+A SQL aggregate replaces the lazy-loading loop. Paid/unpaid and other-seller
+noise lines prove the sum, alongside multiple products/categories under strict
+loading. The existing rolling 30/60-day Sold Amount calculations remain unchanged.
+
+Tests: `tests/Feature/SellerDashboardTest.php` (six cases, including both
+shop/no-shop empty states, populated rendering, chart boundaries, guest/customer
+refusals). The existing retained seller uploader browser spec already lands on
+the dashboard after verification; that case now also checks the dashboard
+heading, Sales Stat, chart canvas and Top 12 Products. No new standalone spec.
+
+### D8: already repaired by the earlier conversion
+
+The named root methods no longer exist. Sections 21 and 23 superseded the old
+section-15 evidence: current `Store/Admin/ProductController.php:530-534`
+redirects digital products through `redirect()->route('digitalproducts.edit',
+['product' => ..., 'lang' => ...])`. The two entries are the admin back-office
+aliases `products.admin.edit` and `products.seller.edit`, not seller-panel
+ownership routes. Physical products render their existing edit screen.
+
+New `tests/Feature/Store/Admin/ProductEditRoutingTest.php` passed **all eight
+cases on the untouched implementation on MySQL**, before the D6 change:
+admin/seller alias × physical/digital × default/Arabic. It asserts the literal
+`/temp/admin/digitalproducts/edit/{id}` path, exact named redirect with language,
+and follows it to the real working edit page; physical cases assert the component,
+list type and language. Thus no wrong-URL failure can honestly be reported for
+the current base, and no production D8 change is made. Every Inertia render in
+the new file calls `withoutVite()`.
+
+Both new test files are in **both** MySQL lists: tests.yml and pre_push_check.py.
+
+### D15 and D7: reproduced remainder at the file cutoff
+
+D15's initial Blade/PHP inventory finds **76 calls in 41 files, 31 of them
+Blade files**, including guarded sites. A consistent helper/accessor adoption
+with page-render tests exceeds this batch's approximate 30-file limit. It must
+not be reduced by changing the meaning or persisted value of `slug` globally.
+No D15 call site is fixed in this batch. On isolated MySQL, disposable regression
+probes for `/temp/search?keyword=Slugless`, `/temp/categories` and `/temp/brands`
+each expected 200 and received **500**, with `UrlGenerationException: Missing
+required parameter` for `product`, `products.category`, `products.brand`.
+The next batch must provide the shared fallback, working destination resolution,
+and retained-page tests for every affected product/category/brand surface.
+
+D7 probes on MySQL found **500** with
+`Call to undefined method App\Http\Controllers\ProductController::get_products_by_subcategory()`
+and search **200 with an empty body** (`Expecting '' not to be ''`). The registered
+routes remain at `routes/shop-admin.php:141,143`, and search still lacks a return
+at `app/Http/Controllers/ProductController.php:96-121`. Searches across routes,
+Blade, Vue, public JS and the mobile API found no application caller of these
+root helper names beyond their registrations (generated Wayfinder is not a
+live caller). Route removal is forbidden by this task; retain and implement
+these compatibility names in the remainder rather than guessing at their deletion.
+
+The stock-before-package part of D7 is **already fixed** on the current admin
+path: `Concerns/UpdatesStoreProductFlags.php:29-35` checks before
+`saveAvailability()`. A separate real MySQL POST to `products.published` with an
+invalid package returned **422**, preserved the full stock-row snapshot (quantity
+37) and left publication false. The root publishing method was removed in §38;
+its existing permanent regression is `ProductControllerTest`:
+`publishing a seller product outside its shop package is refused before anything is written`.
+No D7 production code changes in this batch. The deferred disposable probes
+were kept outside tests/ under work/, not added to or skipped in the passing suite.
+
+### Found on the way, not fixed
+
+- D15 URL call sites remain throughout the inventoried storefront and seller
+  views: for example `partials/product_box_1.blade.php:20`,
+  `product_details/related_products.blade.php:16`,
+  `product_details/offered_products.blade.php:21`,
+  `all_category.blade.php:34`, `all_brand.blade.php:31` and the seller dashboard
+  product links (`resources/views/shop/seller/dashboard.blade.php`, grep
+  `route('product'`). These require the deferred shared URL fix.
+- The full retained-seller Chromium spec passes 10/11 cases, including the
+  extended dashboard case, but its unchanged withdrawal assertion at
+  `tests/e2e/store-legacy-uploader.spec.ts:82` finds the saved message cell
+  hidden. `resources/views/shop/seller/money_withdraw_requests/index.blade.php:47`
+  marks Message with `data-breakpoints="lg"`; the browser snapshot shows the
+  responsive row collapsed. The stored text exists. No payout view, assertion,
+  viewport, timeout or retry was changed to make this pass; payout work is
+  explicitly excluded from this task.
+- `app/Http/Controllers/Api/V2/Seller/ShopController.php:119-120` has a separate
+  DATE_FORMAT aggregate. It is outside the seller-home defect; no mobile API
+  behavior is changed or claimed verified here.
+- `resources/views/shop/seller/dashboard.blade.php` labels rolling 30/60-day
+  paid-order totals Current month/Last Month (grep `days_ago_30`); changing the
+  reporting period or labels would alter normal-data behavior and is deferred.
+
+### Verification
+
+Final verification results are recorded in the PR and task report. Pre-fix
+MySQL: **10 passed / 4 failed / 98 assertions** (D8's eight cases plus two D6
+refusals pass). Pre-fix SQLite D6: **2 passed / 4 failed**. The query-only
+intermediate D6 run: **4 passed / 2 failed**, exposing missing-shop/strict-loading
+failures above. Focused post-fix SQLite and MySQL: **14 passed / 114 assertions**
+on each engine, without skips. Deferred MySQL probes: **1 passed / 5 expected
+failures / 9 assertions**, demonstrating all three D15 row kinds, both remaining
+D7 handlers and the already-safe publishing refusal.
+
+One local MySQL verification attempt incorrectly overlapped two schema-resetting
+suites and failed on missing/existing tables. Both runs were discarded and
+repeated sequentially; only the isolated results above count. No test was
+loosened, quarantined or skipped to address that scheduling error.
+
+
+Final explicit `python3 .claude/scripts/pre_push_check.py --full`: **passed**.
+Wayfinder, whole-repository ESLint/Prettier, frontend types, **338 Vitest files /
+2,703 tests**, Pint, PHPStan (**zero errors**), config clear and parallel Pest
+completed: **7,773 passed / 3 existing MySQL-only skips on SQLite / 43,684
+assertions (228.075 seconds)**. No new skip or quarantine. The full mode does
+not run MySQL/browser/audit/deploy lanes; focused MySQL and the affected browser
+spec ran separately as above. The commit/PR is labelled **Unverified** because
+that browser spec still has its unchanged withdrawal visibility failure.
+
+Separate checks passed: frontend/backend types, dirty Pint, changed-spec ESLint,
+changed-spec/workflow Prettier, script selftests, CI planner (**23 tests**),
+production build and diff checks. The Playwright helper reused system Chromium
+and FFmpeg. Initial missing Wayfinder/packages and stale autoload metadata were
+repaired without lockfile changes. WebP-enabled GD was built using the configured
+proxy/CA and loaded through task-local PHP configuration; the shared runtime
+was not replaced. No raw secrets or real data were used.
+
+Not run locally: the remaining MySQL CI file list, the full application browser
+suite, Composer/npm advisory audits, deploy-script tests or production operations.
+The three existing SQLite skips are driver-specific longitude precision cases.
+D15 and both remaining D7 handlers remain the next batch; the current admin
+publishing refusal and D8 already pass. No new business-policy or migration
+choice is left to the owner for the shipped D6/D8 work. The unchanged responsive
+withdrawal assertion still needs verification before merging. No CI-Verified
+trailer was written or edited.
