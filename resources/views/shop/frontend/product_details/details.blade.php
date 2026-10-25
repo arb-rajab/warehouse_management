@@ -85,7 +85,7 @@
     @if ($detailedProduct->brand != null)
         <div class="d-flex flex-wrap align-items-center mb-3">
             <span class="text-secondary fs-14 fw-400 mr-4 w-50px">{{ translate('Brand') }}</span><br>
-            <a href="{{ route('products.brand', $detailedProduct->brand->slug) }}"
+            <a href="{{ \App\Support\StorefrontUrl::to($detailedProduct->brand) }}"
                 class="text-reset hov-text-primary fs-14 fw-700">{{ $detailedProduct->brand->name }}</a>
         </div>
     @endif

@@ -82,7 +82,7 @@ final class StructuredData
      */
     public static function product(Product $product): array
     {
-        $url = self::url(route('product', [$product->slug], false));
+        $url = self::url(StorefrontUrl::to($product, false));
         $description = self::plainText($product->description) ?: self::plainText($product->meta_description);
 
         $schema = [
@@ -101,7 +101,7 @@ final class StructuredData
         $trail = [['name' => translate('Home'), 'url' => self::url(route('home', [], false))]];
 
         foreach (self::categoryTrail($product->category) as $category) {
-            $trail[] = ['name' => (string) $category->getTranslation('name'), 'url' => self::url(route('products.category', [$category->slug], false))];
+            $trail[] = ['name' => (string) $category->getTranslation('name'), 'url' => self::url(StorefrontUrl::to($category, false))];
         }
 
         $trail[] = ['name' => $product->name, 'url' => $url];
@@ -120,11 +120,11 @@ final class StructuredData
 
         if ($categoryId !== null) {
             foreach (self::categoryTrail(Category::query()->find($categoryId)) as $category) {
-                $trail[] = ['name' => (string) $category->getTranslation('name'), 'url' => self::url(route('products.category', [$category->slug], false))];
+                $trail[] = ['name' => (string) $category->getTranslation('name'), 'url' => self::url(StorefrontUrl::to($category, false))];
             }
         } elseif ($brandId !== null && ($brand = Brand::query()->find($brandId)) !== null) {
             $trail[] = ['name' => translate('Brands'), 'url' => self::url(route('brands.all', [], false))];
-            $trail[] = ['name' => (string) $brand->getTranslation('name'), 'url' => self::url(route('products.brand', [$brand->slug], false))];
+            $trail[] = ['name' => (string) $brand->getTranslation('name'), 'url' => self::url(StorefrontUrl::to($brand, false))];
         }
 
         return count($trail) > 1 ? [self::breadcrumbs($trail)] : [];

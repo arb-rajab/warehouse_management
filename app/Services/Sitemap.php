@@ -9,6 +9,7 @@ use App\Models\CustomerProduct;
 use App\Models\Page;
 use App\Models\Product;
 use App\Support\Seo;
+use App\Support\StorefrontUrl;
 use Closure;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
@@ -159,7 +160,7 @@ class Sitemap
 
         // Explicit columns, one query per file, rows streamed rather than hydrated.
         foreach ($this->query($source)->forPage($page, $this->chunkSize)->cursor() as $row) {
-            yield [$path($row->slug), $withLastModified ? $this->lastModified($row->updated_at ?? null) : null];
+            yield [$path($row), $withLastModified ? $this->lastModified($row->updated_at ?? null) : null];
         }
     }
 
@@ -179,12 +180,14 @@ class Sitemap
         return array_map(fn (string $path): array => [$path, null], array_values(array_unique($paths)));
     }
 
-    /** @return (Closure(string): string) */
+    /** @return (Closure(\stdClass): string) */
     private function pathFor(string $source): Closure
     {
         $route = self::ROUTES[$source];
 
-        return fn (string $slug): string => route($route, [$slug], false);
+        return fn (\stdClass $row): string => isset(StorefrontUrl::PARAMETERS[$route])
+            ? StorefrontUrl::forRow($route, $row->slug, $row->id, false)
+            : route($route, [$row->slug], false);
     }
 
     /**

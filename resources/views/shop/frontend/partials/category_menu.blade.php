@@ -2,7 +2,7 @@
     <ul class="list-unstyled categories no-scrollbar mb-0 text-left">
         @foreach (\App\Models\Category::where('level', 0)->orderBy('order_level', 'desc')->get()->take(10) as $key => $category)
             <li class="category-nav-element border border-top-0" data-id="{{ $category->id }}">
-                <a href="{{ route('products.category', $category->slug) }}" class="text-truncate text-dark px-4 fs-14 d-block hov-column-gap-1">
+                <a href="{{ \App\Support\StorefrontUrl::to($category) }}" class="text-truncate text-dark px-4 fs-14 d-block hov-column-gap-1">
                     <img class="cat-image lazyload mr-2 opacity-60"
                         src="{{ static_asset('assets/img/placeholder.jpg') }}"
                         data-src="{{ uploaded_asset($category->icon) }}"

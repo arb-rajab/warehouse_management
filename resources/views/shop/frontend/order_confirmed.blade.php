@@ -166,7 +166,7 @@
                                                         <td class="border-top-0 border-bottom pl-0">{{ $key+1 }}</td>
                                                         <td class="border-top-0 border-bottom">
                                                             @if ($orderDetail->product != null)
-                                                                <a href="{{ route('product', $orderDetail->product->slug) }}" target="_blank" class="text-reset">
+                                                                <a href="{{ \App\Support\StorefrontUrl::to($orderDetail->product) }}" target="_blank" class="text-reset">
                                                                     {{ $orderDetail->product->getTranslation('name') }}
                                                                     @php
                                                                         if($orderDetail->combo_id != null) {
