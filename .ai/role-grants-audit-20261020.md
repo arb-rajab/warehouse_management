@@ -96,7 +96,7 @@ until the owner grants them only a Super Admin passes their gates.
 **Follow-up (2026-10-20, step 40, [PR #452](https://github.com/arb-rajab/warehouse_management/pull/452); this report's findings above are unchanged).**
 The owner launches with only the Super Admin role and creates staff roles later
 in the app, so risk 1's grants are not made here. Three risks were fixed in code
-([guide §40](rules/store-backoffice-migration.md#40-launch-with-super-admin-only-permission-sync-fetch-gate-and-login-landing-2026-10-20)):
+([guide §40](archive/store-backoffice/changes-20261020.md#40-launch-with-super-admin-only-permission-sync-fetch-gate-and-login-landing-2026-10-20)):
 
 - **Risk 3 (undefined permissions):** `php artisan store:sync-permissions`, an
   additive migration and `StoreRoleSeeder` now define all 182 names (the 181

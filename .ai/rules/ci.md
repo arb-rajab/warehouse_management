@@ -3,7 +3,7 @@ paths:
   - '.github/**,.claude/scripts/pre_push_check.py,.claude/scripts/install_playwright.py,.claude/hooks/session-start.sh'
 ---
 
-# CI
+# CI check selection and attested pre-push verification
 
 ## Sandbox browser setup is idempotent and shared across agents
 

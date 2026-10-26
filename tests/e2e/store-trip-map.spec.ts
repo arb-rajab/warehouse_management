@@ -16,7 +16,7 @@ import {
 } from './support/storeFixtures';
 
 /**
- * The trip map picker (store-backoffice-migration.md §30) with the real
+ * The trip map picker (.ai/archive/store-backoffice/changes-20261017.md §30) with the real
  * Leaflet bundled from node_modules. OpenStreetMap tiles are answered
  * locally so the spec needs no network, but still pass through the page's
  * enforced CSP (`img-src` allows only that tile host beyond 'self').

@@ -5,7 +5,7 @@ paths:
   - 'app/Http/Middleware/RestrictToAllowedIps.php,config/telescope.php,config/pulse.php'
 ---
 
-# Middleware
+# Authentication props, WAF and redirect middleware
 
 ## Keep the shared auth prop narrow
 `HandleInertiaRequests::share()` sends `$request->user()?->only(['id', 'name', 'email'])`, NOT the model. Sharing `$request->user()` directly puts every current and future `users` column on every page of the app — that is how password hashes and tokens leak into HTML.
@@ -58,4 +58,4 @@ Allowlist entries may be a literal IP, a CIDR range (`10.0.0.0/8`, IPv6 too — 
 The IP compared is `$request->ip()`, which reads X-Forwarded-For only for proxies TRUSTED_PROXIES names — see bootstrap.md. `tests/Feature/RestrictToAllowedIpsTest.php` pins that a forged X-Forwarded-For can't get past the list.
 
 ## SendNoIndexHeader must sit ahead of `auth` in the priority list
-`SendNoIndexHeader` sends `X-Robots-Tag: noindex, nofollow` (store-backoffice-migration.md §42). `noindex:always` is on the store admin, seller and API route groups and the `api` group; bare `noindex` is in the `web` group and marks only Inertia responses (root view `app` or an Inertia visit), so the Blade storefront keeps its own robots rules. `bootstrap/app.php` puts it ahead of `UseStoreAuthGuard` / `auth` in the priority list: Laravel sorts priority-list middleware before the others, and without that the exception `auth` throws (a guest's redirect, an API caller's 401) is rendered outside the middleware and ships without the header. Pinned by tests/Feature/StorefrontRobotsTest.php.
+`SendNoIndexHeader` sends `X-Robots-Tag: noindex, nofollow` (.ai/archive/store-backoffice/changes-20261020.md §42). `noindex:always` is on the store admin, seller and API route groups and the `api` group; bare `noindex` is in the `web` group and marks only Inertia responses (root view `app` or an Inertia visit), so the Blade storefront keeps its own robots rules. `bootstrap/app.php` puts it ahead of `UseStoreAuthGuard` / `auth` in the priority list: Laravel sorts priority-list middleware before the others, and without that the exception `auth` throws (a guest's redirect, an API caller's 401) is rendered outside the middleware and ships without the header. Pinned by tests/Feature/StorefrontRobotsTest.php.

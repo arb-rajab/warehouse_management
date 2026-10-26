@@ -3,7 +3,7 @@ paths:
   - 'composer.json,composer.lock,package.json,package-lock.json,.github/dependabot.yml'
 ---
 
-# Dependencies
+# Dependency security updates and lockfile handling
 
 ## Always address and fix Dependabot/audit-reported issues — don't just report them
 When Dependabot (PR, security-update run, or `.github/dependabot.yml`-driven update) or a local `composer audit` / `npm audit` reports a vulnerable dependency, fix it in the same session rather than only describing the problem: bump the affected package (and any package pinning it below the safe range) to a version that clears the advisory, confirm with `composer audit --locked` / `npm audit` that it reports zero findings, run the affected test suite, then commit and push. Don't wait for explicit user confirmation to bump a transitive dependency purely to clear a security advisory — that is exactly the kind of change this instruction pre-authorizes.

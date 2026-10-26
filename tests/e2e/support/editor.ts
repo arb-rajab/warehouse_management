@@ -6,7 +6,7 @@ import { seedStoreFixtures } from './storeFixtures';
 
 /**
  * Helpers for the specs that drive the shared Tiptap editor,
- * StoreRichTextField (.ai/rules/store-backoffice-migration.md §18), on
+ * StoreRichTextField (.ai/archive/store-backoffice/changes-20261013.md §18), on
  * Inertia pages under the strict CSP.
  */
 

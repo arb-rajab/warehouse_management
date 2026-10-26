@@ -73,7 +73,7 @@ test('product attribute choice JSON creates literal values and titles without in
     page,
 }) => {
     // The choice script's last consumer, the Blade edit form, is now the
-    // Inertia edit form (.ai/rules/store-backoffice-migration.md §23): the
+    // Inertia edit form (.ai/archive/store-backoffice/changes-20261014.md §23): the
     // attribute title comes from the server and the values from the JSON
     // endpoint, both rendered as text.
     const value = '"><img src=x onerror="window.catalogueXss=true">';

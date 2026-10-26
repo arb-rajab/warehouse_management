@@ -31,7 +31,7 @@ import type { TruckPhoto } from '@/types/storeTruck';
 
 /**
  * The trip map picker, in place of the Blade `create-from-map` page
- * (store-backoffice-migration.md §30): the orders out for delivery on a
+ * (.ai/archive/store-backoffice/changes-20261017.md §30): the orders out for delivery on a
  * Leaflet map, where a marker click selects or drops an order; the selected
  * orders as an ordered list of stops that can be moved and removed, as the
  * trip form's stops are (§25); and the trucks, each assigning the stops to a

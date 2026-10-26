@@ -12,7 +12,7 @@ paths:
 Every form tells the user which fields they must fill, and what it says
 agrees with what the server enforces. Introduced on 2026-10-21; the history,
 the first audit and the phased plan are in
-[store-backoffice-migration.md §44](store-backoffice-migration.md#44-required-and-optional-form-fields-2026-10-21).
+[.ai/archive/store-backoffice/changes-20261021.md §44](../archive/store-backoffice/changes-20261021.md#44-required-and-optional-form-fields-2026-10-21).
 
 ## The convention
 
@@ -96,6 +96,10 @@ name.
 
 ## The audit: `php artisan forms:audit-required`
 
+See the [audit report index](../required-fields-audits.md) for the newest committed
+Markdown/JSON pair and older snapshots. Generated reports are evidence for their
+recorded code and scanner, not a replacement for the standing rule.
+
 Development only (it refuses in production) and read-only. It writes
 `.ai/required-fields-audit-<Ymd>.md` and `.json` (`--date=`, `--output=`).
 It needs `node` and the installed `node_modules` (`@vue/compiler-sfc`,
@@ -149,8 +153,7 @@ held the 111 findings known on 2026-10-21 and can only shrink:
   keep its reason.
 
 A fourth test covers the storefront and seller-panel Blade forms that have
-been fixed (`FIXED_STOREFRONT_FORMS` in the same file, store-backoffice-migration.md
-§45, §47, §48): any class A to D finding on one of them fails, with no baseline. Add a
+been fixed (`FIXED_STOREFRONT_FORMS` in the same file, .ai/archive/store-backoffice/changes-20261021.md §45, §47, §48): any class A to D finding on one of them fails, with no baseline. Add a
 form to that list in the PR that fixes it.
 
 **Blade error display.** A storefront form that shares its page with another

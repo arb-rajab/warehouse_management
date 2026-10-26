@@ -3,7 +3,7 @@ paths:
   - 'tests/e2e/**'
 ---
 
-# E2E
+# Browser tests for HTTPS, accessibility and editor behavior
 
 ## Enforced CSP browser tests use local HTTPS
 

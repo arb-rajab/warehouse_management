@@ -3,7 +3,7 @@ paths:
   - 'app/Http/Controllers/**'
 ---
 
-# Controllers
+# Controller query shapes, pagination and explicit redirects
 
 ## Inertia pagination helper and shared Cell query shapes
 Inertia pages need the `data` + `meta` array shape, which plain serialization of a ResourceCollection drops. Use `$this->paginated($resourceCollection)` from the base Controller — do not re-type `->response()->getData(true)`.
@@ -27,7 +27,7 @@ Every `Model::query()->...->paginate()/get()` in a controller must have an expli
 ## Shared dashboard stats computation lives in Concerns/BuildsDashboardStats trait
 Admin\DashboardController (Inertia page) and Api\V1\DashboardController (mobile JSON endpoint at GET /api/v1/dashboard) both use the `App\Http\Controllers\Concerns\BuildsDashboardStats` trait for occupancy/expiring/activity-count computation, so the two stay identical. Each controller still owns its own response envelope (Inertia::render vs response()->json) and its own ShowDashboardRequest (Admin\ vs Api\V1\ namespace), both delegating `rules()` entirely to `App\Http\Requests\Concerns\FiltersDashboard::dashboardFilterRules()` the same way `FilterCellStatusLogsRequest` delegates to `FiltersCellStatusLogs`. The mobile dashboard route has no role gate — it sits in the same auth:sanctum group as the other v1 endpoints (products, rows, pallets), matching the existing convention that v1 API routes aren't role-restricted. If a third dashboard consumer appears, extend the trait rather than copying its private methods again.
 
-The admin dashboard sends `Product::selectedOptions($productIds ?? [])` in `filterOptions.products`: just the already-selected products, since its filter fetches the catalog on demand (http-controllers-admin.md). The Api/V1 dashboard sends the normalized filter values but no product-options list.
+The admin dashboard sends `Product::selectedOptions($productIds ?? [])` in `filterOptions.products`: just the already-selected products, since its filter fetches the catalog on demand ([product filters](product-filters.md)). The Api/V1 dashboard sends the normalized filter values but no product-options list.
 
 ## Carbon's diffIn*() methods return float, not int
 `CarbonInterface::diffInDays()`/`diffInMonths()`/etc. return `float` (they carry fractional precision even though the two `CarbonImmutable::toDateString()`-only inputs here are always whole days apart). Any PHPDoc `@return` array shape typing that field `int` will fail PHPStan's `return.type` check — cast explicitly (`(int) $today->diffInDays($until)`) rather than typing the shape `float`, since every consumer (Inertia prop, JSON response, query param) expects a whole day count. This bit `BuildsDashboardStats::expiringMonthWindow()`'s `days` field and only surfaced in CI, since PHPStan can't run in this sandbox (see CLAUDE.md's sandbox section) — don't assume a Carbon diff method returns `int` just because the values in practice are whole numbers.

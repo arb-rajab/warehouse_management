@@ -462,7 +462,7 @@ function assertStoreCallerRefused(TestResponse $response, string $caller): void
  * The URI of the retired generic settings writer, `business_settings.update`.
  * The footer and appearance forms were its last consumers; since they moved
  * to their typed writers no route answers it, so a post to it is a 404 for
- * every caller, before any write (.ai/rules/store-backoffice-migration.md §20).
+ * every caller, before any write (.ai/archive/store-backoffice/changes-20261013.md §20).
  */
 function retiredSettingsWriterUri(): string
 {

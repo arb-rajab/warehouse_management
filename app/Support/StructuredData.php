@@ -14,7 +14,7 @@ use Illuminate\Support\Str;
  * partials/json_ld.blade.php), one array per <script> block. Each builder
  * returns only what the page really has: no rating without reviews, no author
  * the blog does not record, no price the visitor is not shown. The decisions
- * are recorded in store-backoffice-migration.md §42.
+ * are recorded in .ai/archive/store-backoffice/changes-20261020.md §42.
  *
  * encode() is the only way a schema reaches the page. Its HEX flags turn `<`,
  * `>`, `&`, `'` and `"` into \u escapes, so no product name can close the

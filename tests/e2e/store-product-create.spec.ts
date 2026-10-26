@@ -23,7 +23,7 @@ import {
 /**
  * The physical product create form is Inertia, on the shared editor, the
  * canonical upload picker and the typed variant endpoint
- * (.ai/rules/store-backoffice-migration.md §22), under the strict CSP.
+ * (.ai/archive/store-backoffice/changes-20261013.md §22), under the strict CSP.
  */
 
 const names = [

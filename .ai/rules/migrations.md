@@ -4,7 +4,7 @@ paths:
   - database/migrations/2026_08_08_154136_create_products_table.php
 ---
 
-# Migrations
+# Migration tests, shared table names and product foreign keys
 
 ## Every migration needs a matching test file in tests/Feature/Database/
 When adding, editing, or dropping a migration, add or update a test file in `tests/Feature/Database/` named after that migration (strip the timestamp, StudlyCase the rest — e.g. `2026_08_08_154138_create_cells_table.php` → `CreateCellsTableTest.php`). One file per migration, not one shared file — each migration's constraints live and evolve with their own test file. A pure column addition/rename with no new constraint (e.g. a migration only adding a plain nullable column) doesn't need its own file.

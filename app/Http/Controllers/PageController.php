@@ -6,7 +6,7 @@ use App\Models\Page;
 
 /**
  * The storefront's page rendering. The back office's page administration is
- * Store\Admin\WebsitePageController (.ai/rules/store-backoffice-migration.md §20).
+ * Store\Admin\WebsitePageController (.ai/archive/store-backoffice/changes-20261013.md §20).
  */
 class PageController extends Controller
 {

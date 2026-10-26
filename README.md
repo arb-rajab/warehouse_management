@@ -173,4 +173,7 @@ A freshly deployed catalog therefore needs someone to walk the list and set the 
 
 ## Contributing / conventions
 
+See the [documentation map](.ai/README.md) for warehouse and integrated-store
+guidance, the newest required-fields audit and dated historical evidence.
+
 This repo checks in its own convention notes for AI coding agents under [`.ai/rules`](.ai/rules/index.md) (per-area: controllers, models, requests, enums, resources, observers, exceptions, factories, seeders, routes, tests, and the Vue frontend) and broader engineering conventions in [`AGENTS.md`](AGENTS.md). Skim those before making structural changes — they capture settled decisions and non-obvious traps (e.g. why `cell_status_logs.pallet_id` has no FK constraint, or why observers are registered via attribute instead of a service provider) that aren't obvious from a single file.

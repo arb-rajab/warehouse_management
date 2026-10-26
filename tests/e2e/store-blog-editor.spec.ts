@@ -23,7 +23,7 @@ import {
 
 /**
  * Blog post create/edit use the shared Tiptap editor, StoreRichTextField
- * (.ai/rules/store-backoffice-migration.md §18), under the strict Inertia CSP.
+ * (.ai/archive/store-backoffice/changes-20261013.md §18), under the strict Inertia CSP.
  */
 
 /** Representative markup the retired Blade (summernote) editor stored. */

@@ -16,7 +16,7 @@ use Illuminate\Support\Str;
  * active country to choose; state, city, latitude and longitude optional, each
  * matched to its column) and StoreShippingInfoRequest (address_id required).
  * The forms mark and require exactly those fields
- * (.ai/rules/form-required-fields.md, store-backoffice-migration.md §45).
+ * (.ai/rules/form-required-fields.md, .ai/archive/store-backoffice/changes-20261021.md §45).
  */
 function storefrontAddressCountry(string $code = 'NL', string $name = 'Netherlands', int $status = 1): int
 {
