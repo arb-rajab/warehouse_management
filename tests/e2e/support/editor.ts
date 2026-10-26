@@ -99,7 +99,9 @@ export async function uploadFixture(
 
 /**
  * Waits for focus and, when selecting text, the typed editor content before
- * pressing `key`. Then waits for both the browser and Tiptap to select the
+ * pressing `key`. Synchronizes the click's selection before sending the key,
+ * so a pending pointer update cannot restore the old caret afterward.
+ * Then waits for both the browser and Tiptap to select the
  * expected text. Matching positions alone can also describe an empty caret;
  * moving to the toolbar then would toggle a stored mark instead of formatting.
  */
@@ -125,53 +127,56 @@ export async function press(
             .toContain(selectedText);
     }
 
-    await page.keyboard.press(key);
-    await expect
-        .poll(() =>
-            field.evaluate((element) => {
-                const current = (element as HTMLElement & { editor?: Editor })
-                    .editor;
-                const selection = document.getSelection();
+    const selectionState = () =>
+        field.evaluate((element) => {
+            const current = (element as HTMLElement & { editor?: Editor })
+                .editor;
+            const selection = document.getSelection();
 
-                if (
-                    !current ||
-                    !selection?.anchorNode ||
-                    !selection.focusNode ||
-                    !element.contains(selection.anchorNode) ||
-                    !element.contains(selection.focusNode)
-                ) {
-                    return null;
-                }
+            if (
+                !current ||
+                !selection?.anchorNode ||
+                !selection.focusNode ||
+                !element.contains(selection.anchorNode) ||
+                !element.contains(selection.focusNode)
+            ) {
+                return null;
+            }
 
-                const { state, view } = current;
-                const { from, to } = state.selection;
-                const anchor = view.posAtDOM(
-                    selection.anchorNode,
-                    selection.anchorOffset,
-                );
-                const head = view.posAtDOM(
-                    selection.focusNode,
-                    selection.focusOffset,
-                );
+            const { state, view } = current;
+            const { from, to } = state.selection;
+            const anchor = view.posAtDOM(
+                selection.anchorNode,
+                selection.anchorOffset,
+            );
+            const head = view.posAtDOM(
+                selection.focusNode,
+                selection.focusOffset,
+            );
 
-                return {
-                    focused:
-                        document.activeElement === element && current.isFocused,
-                    synchronized:
-                        Math.min(anchor, head) === from &&
-                        Math.max(anchor, head) === to,
-                    browserText: selection.toString(),
-                    editorText: state.doc.textBetween(from, to, '\n'),
-                };
-            }),
-        )
-        .toMatchObject({
-            focused: true,
-            synchronized: true,
-            ...(selectedText === undefined
-                ? {}
-                : { browserText: selectedText, editorText: selectedText }),
+            return {
+                focused:
+                    document.activeElement === element && current.isFocused,
+                synchronized:
+                    Math.min(anchor, head) === from &&
+                    Math.max(anchor, head) === to,
+                browserText: selection.toString(),
+                editorText: state.doc.textBetween(from, to, '\n'),
+            };
         });
+
+    await expect.poll(selectionState).toMatchObject({
+        focused: true,
+        synchronized: true,
+    });
+    await page.keyboard.press(key);
+    await expect.poll(selectionState).toMatchObject({
+        focused: true,
+        synchronized: true,
+        ...(selectedText === undefined
+            ? {}
+            : { browserText: selectedText, editorText: selectedText }),
+    });
 }
 
 export async function focusedToolbarItem(

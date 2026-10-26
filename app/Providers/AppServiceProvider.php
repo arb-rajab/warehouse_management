@@ -4,13 +4,21 @@ namespace App\Providers;
 
 use App\Models\PersonalAccessToken;
 use App\Models\User;
+use App\Support\ApiResourceResponse;
 use Carbon\CarbonImmutable;
+use Dedoc\Scramble\Scramble;
+use Dedoc\Scramble\Support\Generator\OpenApi;
+use Dedoc\Scramble\Support\Generator\Operation;
+use Dedoc\Scramble\Support\Generator\SecurityRequirement;
+use Dedoc\Scramble\Support\Generator\SecurityScheme;
+use Dedoc\Scramble\Support\RouteInfo;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Console\Events\CommandStarting;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Pagination\Paginator;
+use Illuminate\Routing\Route;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
@@ -31,6 +39,7 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureDefaults();
+        $this->configureApiDocumentation();
 
         // Merged from the legacy store's AppServiceProvider (see
         // .ai/rules/legacy-albaraka-holland.md section 2). Its migrations
@@ -123,6 +132,22 @@ class AppServiceProvider extends ServiceProvider
         // The warehouse client is one server calling in with a static token, so the
         // bucket is per IP and sized for a sync that pages through every list.
         RateLimiter::for('wms', fn (Request $request): Limit => Limit::perMinute(120)->by('wms|'.$request->ip()));
+    }
+
+    private function configureApiDocumentation(): void
+    {
+        Scramble::registerExtension(ApiResourceResponse::class);
+
+        Scramble::configure()
+            ->routes(fn (Route $route): bool => (str_starts_with($route->uri(), 'api/') || str_starts_with($route->uri(), 'temp/api/')) && ! $route->isFallback)
+            ->withDocumentTransformers(function (OpenApi $openApi): void {
+                $openApi->components->addSecurityScheme('privateToken', SecurityScheme::apiKey('header', 'private-token'));
+            })
+            ->withOperationTransformers(function (Operation $operation, RouteInfo $routeInfo): void {
+                if (in_array('wms.auth', $routeInfo->route->gatherMiddleware(), true)) {
+                    $operation->security = [new SecurityRequirement(['privateToken' => []])];
+                }
+            });
     }
 
     /**

@@ -19,6 +19,7 @@ use App\Services\StoreVerificationCodes;
 use App\Services\UserService;
 use App\Utility\PayhereUtility;
 use Carbon\Carbon;
+use Dedoc\Scramble\Attributes\BodyParameter;
 use GeneaLabs\LaravelSocialiter\Facades\Socialiter;
 use GuzzleHttp\Client as GuzzleClient;
 use Hash;
@@ -190,6 +191,17 @@ class AuthController extends Controller
         }
     }
 
+    /**
+     * Sign in to the store.
+     *
+     * Use login_by=email for an email address or login_by=phone for a numeric
+     * phone value in the email field. Validation failures return HTTP 200 with
+     * result=false. Successful responses contain access_token for bearer auth.
+     */
+    #[BodyParameter('email', description: 'Email address or numeric phone value, selected by login_by.', required: true, type: 'string', infer: false, example: 'customer@example.com')]
+    #[BodyParameter('password', required: true, type: 'string', format: 'password', infer: false)]
+    #[BodyParameter('login_by', description: 'Use email or phone to select credential validation.', required: true, type: 'string', infer: false, example: 'email')]
+    #[BodyParameter('user_type', description: 'Optional account filter: seller, driver or delivery_boy.', type: 'string', infer: false)]
     public function login(Request $request)
     {
         $messages = [
