@@ -56,6 +56,50 @@ Token-based, under `/api/v1`, authenticated with Sanctum bearer tokens (all rout
 
 Full request/response schemas are auto-generated from the code — browse them at `/docs/api` once the app is running (see `config/scramble.php`).
 
+## API documentation
+
+Warehouse and Store APIs share one Scramble reference at `/docs/api` and one OpenAPI document at `/docs/api.json`. The document uses the application root as its server URL and preserves full endpoint paths: `/api/v1/*` for warehouse mobile clients and `/temp/api/*` for Store clients. Documentation is available locally; other environments require the `viewApiDocs` gate. Web and back-office pages are excluded.
+
+The reference includes warehouse mobile, customer/catalogue, seller, representative, delivery, driver/trip, and warehouse integration endpoints. Request validation and response schemas are inferred from the implementation, preserving each API's resource envelope. Legacy dynamic payloads may have incomplete inferred schemas.
+
+- Send `Accept: application/json`. Sign in with `POST /temp/api/v2/auth/login`, using `login_by`, `email` (also used for phone login), and `password`. Send the returned `access_token` as `Authorization: Bearer <access_token>` on protected routes. Warehouse mobile tokens are separate from store tokens.
+- Seller and driver endpoints also enforce their corresponding roles; public catalogue endpoints need no token.
+- `/temp/api/v2/warehouse/*` uses `private-token: <configured WMS token>`, documented separately from bearer authentication. The middleware reports an invalid token as a JSON business failure with `status: 401` and HTTP 200.
+- Check `result`, `success`, and `status` where present: some legacy validation/business failures use HTTP 200. Disabled payment gateways return 404. Throttled routes can return 429.
+
+For example, sign in to the Store and use the returned token:
+
+```bash
+curl --request POST "$APP_URL/temp/api/v2/auth/login" \
+  --header 'Accept: application/json' \
+  --header 'Content-Type: application/json' \
+  --data '{"login_by":"email","email":"customer@example.com","password":"your-password"}'
+
+curl "$APP_URL/temp/api/v2/auth/user" \
+  --header 'Accept: application/json' \
+  --header "Authorization: Bearer $STORE_ACCESS_TOKEN"
+```
+
+Export or validate the unified reference with the installed Scramble commands:
+
+```bash
+php artisan scramble:export --path=api.json
+php artisan scramble:analyze
+```
+
+Eight registered legacy routes currently reference missing controller methods and are omitted by Scramble. They need implementation decisions before they can have request/response documentation; this documentation change does not implement them. Paths below are relative to `/temp/api`:
+
+| Method | Path | Missing controller method (under `Api\V2`) |
+| --- | --- | --- |
+| GET | `/v2/products/featured-from-seller/{id}` | `ProductController::newFromSeller` |
+| GET | `/v2/products/inhouse` | `ProductController::inhouse` |
+| GET | `/v2/products/sub-category/{id}` | `ProductController::subCategory` |
+| GET | `/v2/products/sub-sub-category/{id}` | `ProductController::subSubCategory` |
+| GET | `/v2/seller/dashboard/dashboard-counters` | `Seller\ShopController::app_dashboard_counters` |
+| GET | `/v2/seller/products/search` | `Seller\ProductController::search` |
+| GET | `/v2/trips/notifications` | `Trip\DriverController::assignTripByQrScan` |
+| POST | `/v2/wallet/offline-recharge` | `WalletController::offline_recharge` |
+
 ## Localization
 
 The app ships English and Arabic translations (`lang/en`, `lang/ar`). Locale is switched via `POST /locale/{locale}` (web) or the `Accept-Language` header (API). Every translation key must exist in both locales — see `.ai/rules/lang.md`.
