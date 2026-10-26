@@ -17,11 +17,6 @@ class PayhereController extends Controller
 {
     private $security_key;
 
-    public function __construct()
-    {
-
-    }
-
     public function pay(Request $request){
         if(Session::has('payment_type')){
             if(Session::get('payment_type') == 'cart_payment'){
