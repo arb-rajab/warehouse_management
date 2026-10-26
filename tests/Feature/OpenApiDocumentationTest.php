@@ -34,11 +34,65 @@ test('the API reference covers implemented routes with their actual authenticati
     }
     $normalizePath = fn (string $path): string => preg_replace('/\{[^}]+\}/', '{}', $path);
     $operations = [];
+    $tags = [
+        'Warehouse · Authentication',
+        'Warehouse · Inventory',
+        'Warehouse · Pallets',
+        'Warehouse · Audit logs',
+        'Store · Authentication',
+        'Store · Catalogue',
+        'Store · Orders',
+        'Store · Customers',
+        'Store · Sellers',
+        'Store · Delivery & Trips',
+        'Store · Warehouse integration',
+    ];
+    expect(array_column($document['tags'], 'name'))->toBe($tags);
 
     foreach ($document['paths'] as $path => $methods) {
         foreach ($methods as $method => $operation) {
+            expect($operation['tags'])->toHaveCount(1);
+            expect($tags)->toContain($operation['tags'][0]);
+            expect($operation['tags'][0])->toStartWith(str_starts_with($path, '/api/') ? 'Warehouse · ' : 'Store · ');
             $operations[$method.' '.$normalizePath($path)] = $operation;
         }
+    }
+
+    foreach ([
+        'post /api/v1/login' => 'Warehouse · Authentication',
+        'get /api/v1/user' => 'Warehouse · Authentication',
+        'get /api/v1/dashboard' => 'Warehouse · Inventory',
+        'get /api/v1/rows' => 'Warehouse · Inventory',
+        'get /api/v1/products' => 'Warehouse · Inventory',
+        'post /api/v1/pallets' => 'Warehouse · Pallets',
+        'get /api/v1/cell-logs' => 'Warehouse · Audit logs',
+        'get /api/v1/cell-verification-rounds' => 'Warehouse · Audit logs',
+        'post /api/v1/cell-verification-reports' => 'Warehouse · Audit logs',
+        'post /temp/api/v2/auth/login' => 'Store · Authentication',
+        'post /temp/api/v2/auth/password/forget_request' => 'Store · Authentication',
+        'post /temp/api/v2/get-user-by-access_token' => 'Store · Authentication',
+        'get /temp/api/v2/products' => 'Store · Catalogue',
+        'get /temp/api/v2/categories' => 'Store · Catalogue',
+        'get /temp/api/v2/shops' => 'Store · Catalogue',
+        'post /temp/api/v2/order/store' => 'Store · Orders',
+        'post /temp/api/v2/carts/add' => 'Store · Orders',
+        'get /temp/api/v2/purchase-history' => 'Store · Orders',
+        'post /temp/api/v2/payments/pay/cod' => 'Store · Orders',
+        'get /temp/api/v2/wallet/balance' => 'Store · Orders',
+        'get /temp/api/v2/user/shipping/address' => 'Store · Customers',
+        'get /temp/api/v2/customer/info' => 'Store · Customers',
+        'post /temp/api/v2/profile/update' => 'Store · Customers',
+        'get /temp/api/v2/representatives/get-customers' => 'Store · Customers',
+        'get /temp/api/v2/seller/products/all' => 'Store · Sellers',
+        'get /temp/api/v2/seller/orders' => 'Store · Sellers',
+        'get /temp/api/v2/trips/get-active-trip' => 'Store · Delivery & Trips',
+        'get /temp/api/v2/driver/notifications' => 'Store · Delivery & Trips',
+        'get /temp/api/v2/delivery-boy/dashboard-summary/{id}' => 'Store · Delivery & Trips',
+        'get /temp/api/get-user-coordinates/{id}' => 'Store · Delivery & Trips',
+        'get /temp/api/v2/warehouse/products' => 'Store · Warehouse integration',
+        'get /temp/api/v2/warehouse/orders' => 'Store · Warehouse integration',
+    ] as $endpoint => $tag) {
+        expect($operations[$normalizePath($endpoint)]['tags'])->toBe([$tag]);
     }
 
     $missingMethods = [];
