@@ -103,8 +103,12 @@ async function openTicket(page: Page, subject: string, view = 'View') {
 }
 
 /** Selects the editor's current line and makes it bold, by keyboard only. */
-async function boldCurrentLine(page: Page, content: string): Promise<void> {
-    await press(page, 'Shift+Home', content);
+async function boldCurrentLine(
+    page: Page,
+    content: string,
+    text: string,
+): Promise<void> {
+    await press(page, 'Shift+Home', content, text);
     await page.keyboard.press('Alt+F10');
     expect(await focusedToolbarItem(page)).toBe('blockStyle');
     await arrowTo(page, 'bold');
@@ -132,7 +136,7 @@ test('a newsletter is composed with formatting, keeps its draft after a refused 
     await page.keyboard.type('Plain line');
     await page.keyboard.press('Enter');
     await page.keyboard.type('Fresh dates');
-    await boldCurrentLine(page, '#content');
+    await boldCurrentLine(page, '#content', 'Fresh dates');
     await expect(page.locator('#content strong')).toHaveText('Fresh dates');
 
     // A recipient the search never offered is refused by the server, and
@@ -225,7 +229,7 @@ test('a ticket is answered with formatting and a library image, and its status c
     await page.keyboard.type('Tracking follows');
     await page.keyboard.press('Enter');
     await page.keyboard.type('Shipped today');
-    await boldCurrentLine(page, '#reply');
+    await boldCurrentLine(page, '#reply', 'Shipped today');
     await expectBold(page, '#reply', 'Shipped today');
 
     await page

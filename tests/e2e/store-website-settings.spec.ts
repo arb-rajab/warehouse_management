@@ -126,7 +126,7 @@ async function typeBold(page: Page, editor: string, text: string) {
     await page.locator(editor).click();
     await page.keyboard.press('Control+A');
     await page.keyboard.type(text);
-    await press(page, 'Control+A', editor);
+    await press(page, 'Control+A', editor, text);
     await expect
         .poll(() => page.evaluate(() => String(document.getSelection())))
         .toBe(text);

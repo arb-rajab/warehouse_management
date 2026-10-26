@@ -1,5 +1,4 @@
 import { readFileSync } from 'node:fs';
-import type { Page } from '@playwright/test';
 import { expect, test } from '@playwright/test';
 import { loginAsStoreAdmin } from './support/auth';
 import { contrastRatio } from './support/contrast';
@@ -11,6 +10,7 @@ import {
     php,
     pickUploads,
     press,
+    uploadFixture,
     uploadPhoto,
     watchCsp,
 } from './support/editor';
@@ -60,21 +60,6 @@ function resetDigitalForms(products: Record<string, string> = {}): void {
     `);
 }
 
-/** Uploads a text file to the library; it lists under `name`. */
-async function uploadDocument(page: Page, name: string): Promise<void> {
-    await page.goto('/temp/admin/uploads/create');
-    await page.locator('#upload-files').setInputFiles({
-        name: `${name}.txt`,
-        mimeType: 'text/plain',
-        buffer: Buffer.from('The browser bread guide'),
-    });
-    await page
-        .getByRole('button', { name: 'Upload files', exact: true })
-        .last()
-        .click();
-    await expect(page.getByRole('button', { name, exact: true })).toBeVisible();
-}
-
 test('a digital product is created with editor content, canonical uploads, taxes and a discount range, edited per language and downloaded from the list', async ({
     page,
 }) => {
@@ -82,7 +67,11 @@ test('a digital product is created with editor content, canonical uploads, taxes
     await loginAsStoreAdmin(page);
     await uploadPhoto(page, 'digital-photo-one');
     await uploadPhoto(page, 'digital-photo-two');
-    await uploadDocument(page, 'digital-guide');
+    await uploadFixture(page, 'digital-guide', {
+        extension: 'txt',
+        mimeType: 'text/plain',
+        buffer: Buffer.from('The browser bread guide'),
+    });
     const reports = await watchCsp(page);
 
     await expectStrictPolicy(page, '/temp/admin/digitalproducts');
@@ -150,7 +139,7 @@ test('a digital product is created with editor content, canonical uploads, taxes
     await page.keyboard.press('Tab');
     await expect(page.locator('#description')).toBeFocused();
     await page.keyboard.type('Knead well');
-    await press(page, 'Shift+Home', '#description');
+    await press(page, 'Shift+Home', '#description', 'Knead well');
     await page.keyboard.press('Alt+F10');
     await page.keyboard.press('ArrowRight');
     expect(await focusedToolbarItem(page)).toBe('bold');

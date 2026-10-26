@@ -8263,3 +8263,65 @@ A separate inherited limit remains outside D16: the representative shipping
 address still has a max-255 rule against its default-length 191 column.
 Self-registration no longer asks for that value. No owner decision remains for
 the D16 registration fields implemented here.
+
+## 68. Editor keyboard-selection readiness (2026-10-26)
+
+Branch `codex/fix-flaky-editor-test` starts at `origin/develop`
+`e44eb09b7d95312d8f283cdcf49de12b423c9a3a`. The missing `#description strong`
+failure in run **40240871478**, PR #499 attempt 1, was **not reproduced**:
+before changing the editor interaction, the product case passed **30/30 normally**
+and **30/30 under CPU pressure** (four CPUs, three competing CPU workers,
+Playwright `--repeat-each=30 --workers=1`, existing retries/timeouts).
+
+Static diagnosis found a test-readiness gap: `press()` accepted matching browser
+and Tiptap positions even when both described an empty caret. Tiptap 3.31.3's
+`setMark` adds a stored mark for an empty selection, which produces no `<strong>`
+around existing text. The shared helper now waits for focus and typed Tiptap
+content before the selection key, then polls the exact expected text in both
+selections and their matching positions within the editor. Physical/digital
+product, blog, newsletter/ticket and website callers supply the expected text;
+all existing formatting assertions, including **"Cold pressed"**, remain.
+
+No component accessibility defect was demonstrated. `StoreRichTextField` already
+copies the DOM selection before Alt+F10/Tab; its existing selection-transfer
+Vitest passes (**17/17** overall). Toolbar buttons retain keyed DOM nodes and use
+native `type="button"` click activation. The component is unchanged. Both the
+Actions artifact redirect and the connector's download reference returned 403 in
+this runtime, so the failed CI trace could not be inspected. The CI incident's
+precise cause remains unconfirmed; successful repeats provide weaker evidence
+than reproducing the failure and observing its disappearance.
+
+Repeated runs also exposed duplicate named upload fixtures. The shared fixture
+uploader now removes the earlier named copy through the canonical upload service
+and the guarded browser-database seeder; photo and digital-document uploads use
+it. This setup correction was present in both valid baseline runs. Initial
+attempts were excluded: missing GD WebP support (**3 failed, 1 interrupted,
+26 not run**), then duplicate uploads (**1 passed, 12 failed, 1 interrupted,
+16 not run**). A two-CPU overload trial produced **2 passed, 1 total-test timeout
+on the storefront after formatting, 1 interrupted, 26 not run**; the four-CPU
+pressure condition above kept the existing 30-second total timeout feasible.
+
+**Browser verification.** With the selection checks in place, the same
+four-CPU/three-worker pressure condition passed **60/60** in two unchanged
+`--repeat-each=30 --workers=1` runs (**7.8 minutes each**). All five affected specs
+(`store-product-create`, `store-digital-product-forms`, `store-blog-editor`,
+`store-newsletter-ticket`, `store-website-settings`) also passed **60/60** with
+`--repeat-each=3 --workers=1` (**5.9 minutes**), including the mirrored RTL
+toolbars. No assertion, retry setting or timeout was weakened.
+
+**Full gate.** `python3 .claude/scripts/pre_push_check.py --full` exited **0**:
+Wayfinder, whole ESLint/Prettier, frontend types, **338 Vitest files / 2,710 tests**,
+Pint, PHPStan (**zero errors**), config clear and parallel Pest passed. Pest:
+**8,013 passed / 44,937 assertions**, with **three existing MySQL-only skips**
+on SQLite (**208.981 seconds**). No isolated Vitest timeout rerun was needed.
+Standalone frontend and E2E TypeScript checks, changed-code ESLint/Prettier,
+production build and `git diff --check` passed. Whole-file Markdown warnings
+reproduce on both base documents; the added sections pass formatting separately.
+
+Runtime repairs stayed outside tracked files: locked npm refresh, autoload and
+Wayfinder generation, removal of the stale ignored Vite hot marker, and GD rebuilt
+with WebP. Three stale Composer packages (SVG sanitizer, Livewire and YAML) were
+corrected to the lock after the baselines; editor JavaScript, browser and CPU
+settings stayed the same. The entire application browser suite, separate MySQL
+suite, dependency advisory audits and deploy-script tests were not run locally.
+No bare/attested pre-push run or hand-edited `CI-Verified` trailer was used.

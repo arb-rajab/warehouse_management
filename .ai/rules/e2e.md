@@ -27,3 +27,13 @@ checking `dir` alone can race the reload and cancel the next visit.
 
 ## Shared editor and CSP helpers live in tests/e2e/support/editor.ts
 Specs that drive the shared Tiptap editor (`StoreRichTextField`) import `watchCsp`/`documentViolations`/`expectStrictPolicy` (enforced strict policy, no violations), `uploadPhoto`, `press(page, key, editorSelector)` (waits for the editor to take in the selection), `focusedToolbarItem`/`arrowTo` and `colorsOf` from there: `store-blog-editor.spec.ts`, `store-newsletter-ticket.spec.ts` and `store-website-settings.spec.ts`. Don't re-inline them in a new spec. `pickUploads(page, id, files)` (editor.ts) picks library files for a canonical `StoreUploadField`, and `storedProduct(name, expression)` (storeFixtures.ts) reads a product back from the browser database; the digital and physical product form specs share both. The webServer env pins `MAIL_MAILER=array` (no spec can deliver mail) and a placeholder `MAIL_USERNAME` that only satisfies the newsletter's SMTP guard.
+
+Before selecting text for keyboard toolbar formatting, use
+`press(page, key, editorSelector, expectedText)`: it waits for editor focus and
+typed Tiptap content, then polls for the exact text in both the browser and
+editor selections, with matching positions inside that editor. Matching positions
+alone can describe an empty caret. Check the intended toolbar item's focus before
+activation and retain the formatting/`aria-pressed` assertions afterward. Wait on
+these real states with locator assertions or `expect.poll`; never add sleeps,
+retries or longer timeouts to hide editor timing failures. Named upload fixtures
+must replace their earlier copies so repeated runs keep strict locators unique.

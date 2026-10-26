@@ -107,7 +107,7 @@ test('a post is written, formatted by keyboard, saved and reloaded with a table 
     await press(page, 'End', '#description');
     await page.keyboard.press('Enter');
     await page.keyboard.type('Bold words');
-    await press(page, 'Shift+Home', '#description');
+    await press(page, 'Shift+Home', '#description', 'Bold words');
     await page.keyboard.press('Alt+F10');
     expect(await focusedToolbarItem(page)).toBe('blockStyle');
     await page.keyboard.press('ArrowRight');
