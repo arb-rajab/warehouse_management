@@ -9,17 +9,14 @@ return new class extends Migration
     /**
      * Run the migrations.
      *
-     * `uploads` is the second *shared* table, owned by the store app: it is
-     * where `products.thumbnail_img` points, and the only way to turn that id
-     * into a usable image URL. Like `products`, this app only ever reads it,
-     * and this migration builds a local stand-in for development and testing
-     * while no-opping wherever the real table already exists.
+     * Initially a stand-in for the store's shared `uploads` table, where
+     * `products.thumbnail_img` points. This create remains a no-op wherever
+     * the table already exists. The integrated store now writes upload rows;
+     * later migrations add user_id and metadata to this initial shape.
      *
-     * The stand-in carries only the three columns this app reads, at the
-     * store's own types — `id` is a signed `int(11)`, matching `products.id`.
-     * The store's table has eleven columns; the rest are deliberately absent
-     * so nothing here can start depending on them. See
-     * .ai/rules/shared-database.md.
+     * The initial shape has id, file_name, external_link and timestamps, at
+     * the store's types — id is a signed int(11), matching products.id. See
+     * .ai/rules/shared-database.md for current consumers and write ownership.
      */
     public function up(): void
     {

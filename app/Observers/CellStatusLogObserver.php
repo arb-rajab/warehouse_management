@@ -10,11 +10,10 @@ use Illuminate\Support\Facades\DB;
 
 /**
  * Evaluates the rule-based auto-flagging thresholds (config/cell_status_log_flags.php)
- * against every newly created cell status log, regardless of which mobile-user action
- * (store/open/empty/transfer) produced it — CellStatusLog::create() is the single choke
- * point for all of them (see PalletController::logCellStatus()). This is also the single
- * choke point for every occupancy/activity-changing pallet action, so it doubles as the
- * dashboard stats cache's invalidation trigger (see DashboardStatsCache, RowObserver).
+ * against every newly created cell status log, including pallet actions from
+ * PalletActionService and cell activation changes from Admin\CellController.
+ * Each log also triggers dashboard stats cache invalidation after commit;
+ * PalletObserver covers pallet corrections that do not produce a log.
  *
  * The flags are written inside the caller's transaction, so they commit or roll back
  * together with the log they belong to. Only the cache flush waits for the commit:

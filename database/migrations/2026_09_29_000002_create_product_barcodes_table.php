@@ -9,10 +9,9 @@ return new class extends Migration
     /**
      * Run the migrations.
      *
-     * `product_barcodes` is a *shared* table, owned by the store app --
-     * `App\Models\StoreProductBarcode`'s own docblock already named this
-     * table as "future DB-merge work" (see .ai/rules/legacy-albaraka-holland.md
-     * section 2), which `Product::storeBarcodes()` now needs. Mirrors the
+     * `product_barcodes` is the inherited store table used by
+     * Product::storeBarcodes() and integrated store product writers. It is
+     * separate from the warehouse's wms_product_barcodes. Mirrors the
      * store's own `create_product_barcodes_table` migration: `product_id`
      * matches `products.id`'s signed `integer` type (see
      * `create_products_table`'s own docblock on why every product_id FK in
@@ -21,10 +20,9 @@ return new class extends Migration
      * the store's own migration, since nothing references this table's own
      * id as a foreign key.
      *
-     * The `hasTable()` guard is what makes this safe on the shared
-     * database: in production this table already exists as the store's own,
-     * so `up()` is a no-op there -- this app must never alter a table it
-     * only reads.
+     * The inherited hasTable() guard preserves an existing store table;
+     * up() creates it only when absent. This schema guard does not prevent
+     * integrated store writers from inserting or deleting barcode rows.
      */
     public function up(): void
     {

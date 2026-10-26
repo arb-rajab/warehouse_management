@@ -1,6 +1,6 @@
 # Warehouse Management
 
-An internal warehouse management system: an admin panel for laying out storage racks and tracking what's stored where, plus a mobile-facing API for warehouse staff to store, move, and empty pallets on the floor.
+An integrated warehouse and store application. The warehouse has an admin panel for laying out storage racks and tracking stock, plus a mobile-facing API for warehouse staff. The store under `/temp` includes a storefront, seller area, Inertia back office, and customer, seller, delivery, driver/trip and warehouse integration APIs. Storefront, seller, auth, email and PDF views remain Blade; see the [store integration guide](.ai/rules/legacy-albaraka-holland.md) and [back-office migration guide](.ai/rules/store-backoffice-migration.md).
 
 ## Domain model
 
@@ -16,7 +16,7 @@ Creating a `Row` automatically generates its full grid of `Cell` rows (see `App\
 
 ## Tech stack
 
-- **Backend**: Laravel 13 (PHP 8.4+), Inertia.js v3 for the admin panel, Laravel Sanctum for the mobile API, `spatie/laravel-permission` for role-based access, `dedoc/scramble` for auto-generated OpenAPI docs.
+- **Backend**: Laravel 13 (PHP `^8.5`, as required by `composer.json`), Inertia.js v3 for the admin panels, Laravel Sanctum for API authentication, `spatie/laravel-permission` for role-based access, `dedoc/scramble` for auto-generated OpenAPI docs.
 - **Frontend**: Vue 3 + TypeScript, Tailwind CSS, `vue-i18n` for translations.
 - **Testing**: Pest (backend), Vitest (frontend units), Playwright (e2e).
 
@@ -32,15 +32,21 @@ The app is served at the URL in `APP_URL` (`http://localhost:8000` by default).
 
 The seeded user (`test@example.com` / `password`) is an admin by default — `User::factory()` assigns the `admin` role unless the `mobileUser()` state is used. Mobile-app users should carry no roles at all; admin panel access is gated by the `role:admin` middleware, not a policy.
 
-## Admin panel
+## Warehouse admin panel
 
-An Inertia-driven SPA, session-authenticated, at `/login`. Signed-in users land on `/admin/rows`. Available areas:
+An Inertia-driven SPA, session-authenticated, with sign-in at `/admin/login`. Successful login redirects to `/admin` (the dashboard); users required to change their password are routed through `/password/change`. Available areas include:
 
+- `/admin` — warehouse dashboard.
 - `/admin/rows` — manage rows (create/edit/delete), view a row's cell grid and what's stored in each cell.
-- `/admin/users` — manage admin users.
+- `/admin/warehouse-map` — browse the warehouse map.
+- `/admin/pallets` — browse matching pallets.
+- `/admin/products` — configure box counts, minimum stock, barcodes and reference images.
+- `/admin/users` — manage warehouse admin and mobile users.
 - `/admin/cell-logs` — browse the full cell status audit trail, filterable by product/pallet/row/column/user/action/date range.
+- `/admin/cell-verification-rounds` — review verification rounds and reports.
+- `/admin/settings` and `/admin/help` — warehouse settings and help.
 
-There is no public landing page — `/` redirects straight to `/login`.
+`/` unconditionally redirects to `https://albaraka-holland.nl/`. The integrated storefront is at `/temp`, store sign-in is at `/temp/login`, and the store back office is at `/temp/admin`. Store accounts use a separate guard from warehouse accounts.
 
 ## API (mobile app)
 
@@ -51,7 +57,8 @@ Token-based, under `/api/v1`, authenticated with Sanctum bearer tokens (all rout
 - `GET /api/v1/rows`, `GET /api/v1/rows/{row}/cells`, `GET /api/v1/rows/{row}/cells/{cellNumber}/flats/{flatNumber}` — browse rows and cells.
 - `GET /api/v1/products` — browse the product catalog.
 - `POST /api/v1/pallets` — store a new pallet on a cell.
-- `POST /api/v1/pallets/{pallet}/open`, `.../empty`, `.../transfer` — the pallet lifecycle actions; each one atomically updates the cell's state and writes a `CellStatusLog` row.
+- `GET /api/v1/pallets/{pallet}` — read a pallet and its current contents.
+- `POST /api/v1/pallets/{pallet}/open`, `.../remove-boxes`, `.../empty`, `.../transfer` — pallet actions delegated to `PalletActionService`, which locks and updates the affected records and writes audit logs in a transaction. Removing boxes preserves the cell's state; a transfer writes paired source/destination logs.
 - `GET /api/v1/cell-logs` — the same audit trail as the admin panel, filtered the same way.
 
 Full request/response schemas are auto-generated from the code — browse them at `/docs/api` once the app is running (see `config/scramble.php`).
@@ -148,9 +155,9 @@ onto MySQL, rebuild it with `migrate:fresh` rather than migrating it in place.
 
 ### 2. Set `STORE_ASSET_BASE_URL`
 
-The store's `uploads.file_name` holds a relative path; the absolute URL is built by whichever app serves the file. `STORE_ASSET_BASE_URL` is the store app's public base URL, and `Product::$image_url` resolves through it.
+The store's `uploads.file_name` holds a relative path; the absolute URL is built by whichever app serves the file. `STORE_ASSET_BASE_URL` is the base URL serving those store files. `Product::$image_url` uses a warehouse reference image from the public disk when present, otherwise falls back to the store upload URL.
 
-Leave it unset and every product image resolves to `null` — deliberately, since a relative path would 404 against this app's own domain. Uploads that carry their own `external_link` (a CDN or object store) ignore it.
+Leave it unset and relative store upload URLs resolve to `null`. Warehouse reference images and uploads carrying their own `external_link` (a CDN or object store) do not depend on it.
 
 ### 3. Configure box counts
 
@@ -158,7 +165,7 @@ Leave it unset and every product image resolves to `null` — deliberately, sinc
 
 A product with no `wms_product_settings` row falls back to `Product::DEFAULT_BOXES_COUNT` (50), so **every product reads as 50 boxes until configured**, and pallets are placed with a remaining count of 50.
 
-Box counts are set per product from the products screen at `/admin/products` — the **Boxes / pallet** column is an editable field, saved on change. That is the only write path for box counts; the integrated store's product CRUD and the sync follow Option A above.
+Box counts are set per product from the products screen at `/admin/products` — clicking the count in the **Boxes / pallet** column opens a dialog with an explicit save through `Admin\ProductController::updateBoxCount()`. Creating a minimum-pallet setting also stores the default box count when no settings row exists. The integrated store's product CRUD and the sync follow Option A above.
 
 A freshly deployed catalog therefore needs someone to walk the list and set the real counts; there is nothing to import them from.
 
