@@ -36,11 +36,12 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 /**
  * The digital products list, its row actions and the create and edit forms.
  *
- * Creating and updating write WMS-owned `products` rows beside
- * `products:sync`, the table's single writer (shared-database.md), as the
- * legacy forms did: an owner decision, like deletion
- * (.ai/rules/store-backoffice-migration.md §§14–16, §21). The product, its
- * stock row, its translation and its taxes now commit or fail together.
+ * Under Option A, products:sync owns name, ar_name and published on feed-origin
+ * rows (synced_at is non-null). Store writers own the remaining business columns
+ * and may change those three only on store-origin rows; new store rows start
+ * with null synced_at. ProductColumnOwnership and ProductBuilder enforce this
+ * boundary (shared-database.md). Deletion policy is unchanged (migration guide
+ * §§14–16, §21, §52). Product, stock, translation and tax writes are transactional.
  */
 class DigitalProductController extends Controller implements HasMiddleware
 {

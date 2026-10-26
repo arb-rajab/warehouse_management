@@ -25,7 +25,8 @@ Seller catalogue follow-up: [digital validation and transactional persistence, p
 Reference-data follow-up: [legacy countries, states, currencies, languages and CMS pages as a migration](#46-legacy-reference-data-as-a-migration-2026-10-21).
 Required-field follow-up: [Trips, Sales and Languages complete](#57-back-office-required-fields-phase-2b-batch-2b-trips-sales-and-languages-2026-10-24).
 Forms follow-up: [required and optional form fields](#44-required-and-optional-form-fields-2026-10-21), then [the public address forms and the checkout address pick](#45-public-forms-phase-2a-address-forms-and-the-checkout-address-pick-2026-10-21), then [the longitude columns, seller registration and create customer](#47-public-forms-phase-2a-continued-the-longitude-columns-seller-registration-create-customer-2026-10-21).
-Latest follow-up: [retire the unused admin shells](#39-retire-the-unused-admin-shells-2026-10-20).
+Latest follow-up: [editor keyboard-selection readiness](#68-editor-keyboard-selection-readiness-2026-10-26).
+Admin-shell retirement: [retire the unused admin shells](#39-retire-the-unused-admin-shells-2026-10-20).
 Catalogue follow-up: [admin seller product list](#38-admin-seller-product-list-2026-10-20).
 Classified-products follow-up: [admin classified products](#37-admin-classified-products-2026-10-19).
 Seller-settings follow-up: [seller commission and verification form](#36-seller-commission-and-verification-form-2026-10-19).
@@ -4188,7 +4189,7 @@ Super Admin through every gate. Staff roles are created later in the app's own
 role screen (`/temp/admin/roles`), from the permissions the sync below defines.
 No migration, seeder or command in this step creates a staff role, assigns a
 permission to a role or grants one to a user; `StoreRoleSeeder` still creates
-exactly `Super Admin` and `Clerk` (since [§41](#41-go-live-hardening-seeders-the-first-admin-the-production-env-template-event-cache-and-migrate---pretend-2026-10-20) `Clerk` only in `local` and `testing`).
+exactly `Super Admin` and `Clerk` (since [§41](#41-go-live-hardening-seeders-the-first-admin-the-production-env-template-eventcache-and-migrate---pretend-2026-10-20) `Clerk` only in `local` and `testing`).
 
 **Permission sync.** `App\Support\StorePermissions` is the one versioned list
 (`name => section`). `php artisan store:sync-permissions` inserts the rows it

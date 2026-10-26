@@ -12,10 +12,10 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * Per-product operational data this app owns, keyed by the store's product id.
+ * Warehouse operational settings, keyed by the integrated product id.
  *
- * Exists because `products` belongs to the store app and has no column for any
- * of this — see .ai/rules/shared-database.md.
+ * Box counts and minimum-pallet thresholds live here rather than in the
+ * inherited store catalogue columns — see .ai/rules/shared-database.md.
  *
  * @property int $product_id
  * @property int $boxes_count

@@ -6,7 +6,7 @@ paths:
 # Models Observers
 
 ## Rule-based auto-flagging lives in CellStatusLogObserver, hooked on CellStatusLog::created
-CellStatusLog::create() (the single choke point in PalletController::logCellStatus()) triggers CellStatusLogObserver::created(), which evaluates the RapidActions/OffHours/QuickFlip rules from config/cell_status_log_flags.php and writes zero or more CellStatusLogFlag rows via $log->flags()->create(). This avoids touching PalletController at all and avoided introducing a new app/Services directory (none existed).
+`CellStatusLog::create()` triggers `CellStatusLogObserver::created()`, which evaluates the RapidActions/OffHours/QuickFlip rules from config/cell_status_log_flags.php and writes zero or more CellStatusLogFlag rows via `$log->flags()->create()`. Pallet logs originate in `PalletActionService::logCellStatus()`; `Admin\CellController::toggleActive()` also creates logs. Rule evaluation stays in the observer so callers do not duplicate it.
 
 CellStatusLog::flagged is a computed Attribute following the exact RowResource.has_pallets pattern: prefers a `flags_count` alias (withCount), then an already-loaded `flags` relation, then falls back to a dedicated exists() query. WITH_DETAILS eager-loads `flags` (id, cell_status_log_id, reason, acknowledged_at) since the admin UI shows reasons on hover — don't switch it to withCount unless the eager-loaded reasons stop being needed there.
 

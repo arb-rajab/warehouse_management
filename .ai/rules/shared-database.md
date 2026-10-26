@@ -21,8 +21,9 @@ table in this app is named the way it is, and the reason `products` and
 
 ## The `wms_` prefixes stay, whatever the history
 
-Every table this app owns carries a `wms_` prefix (`wms_users`, `wms_migrations`,
-`wms_roles`, …). Those prefixes were adopted to avoid collisions in the shared
+Warehouse tables carry a `wms_` prefix (`wms_users`, `wms_migrations`,
+`wms_roles`, …); inherited store tables retain their names. Those prefixes were
+adopted to avoid collisions in the shared
 database. The collision risk is gone; **the names are not negotiable anyway.**
 
 They are the live table names in every existing database, and
@@ -36,27 +37,21 @@ table name to its colliding default. The inventory and the reasoning are in
 
 ## `products` is WMS-owned; `uploads` still holds the store's data
 
-This is the one thing that changed, and the two tables are no longer symmetric:
+The integrated application uses both tables on the default connection:
 
 - **`products` belongs to this app.** WMS owns its schema. The integrated
   store and `products:sync` write separated columns under Option A below. New migrations may alter it like any other WMS table
   — see "Migration
   conventions" below, which is where the old "never alter this table" rule used
   to live and no longer does.
-- **`uploads` is still the store's data, and this app is still fully read-only
-  on it.** Nothing here writes an `Upload`, and nothing should: its rows are
-  authored by the store's own file management, and `Product::$thumbnail_img`
-  merely points at them. `Upload` declares no `$connection`, so it reads the
-  default one like every other model.
-
-  **Open question, flagged rather than guessed:** now that the databases are
-  separate, nothing in this repo populates or refreshes `uploads` — there is no
-  uploads equivalent of `products:sync`, and no second connection pointing at
-  the store. So it is not clear how the table stays current, or whether it is
-  now a frozen copy taken at the split. Find out before relying on a newly
-  uploaded product image appearing here; the symptom of a stale table is a
-  `thumbnail_img` pointing at a row that does not exist, which surfaces as a
-  null `image_url` rather than an error.
+- **`uploads` holds the integrated store's file metadata.** Warehouse thumbnail
+  consumers read it through `Product::$thumbnail_img`. The store upload flows
+  in this repository write it: `MultipartUploadService` uses
+  `Concerns\WritesUploads::writeUpload()` to save metadata and its `delete()`
+  method removes managed files and hard-deletes rows. `Store\Admin\UploadController`
+  delegates to that service. `Upload` uses the default connection; no separate
+  upload sync is required for these integrated writes. A missing referenced
+  upload still yields a null thumbnail URL.
 
 The integrated store now creates, updates, duplicates and deletes products.
 Option A below replaces the former single-writer rule; deletion rules and
@@ -70,17 +65,16 @@ narrow column lists.
 | --- | --- | --- |
 | `Product::$id` | `products.id` `int(11)` signed | see below |
 | `Product::$name` | `products.name` `varchar(200)` NOT NULL | direct match; shipped raw, and the label the frontend renders outside Arabic |
-| `Product::$ar_name` | `products.ar_name` `varchar(191)` NOT NULL | searched in both locales, shipped raw alongside `name`, rendered in Arabic — see below. The store's `product_translations` table is still not read |
+| `Product::$ar_name` | `products.ar_name` `varchar(191)` NOT NULL | searched in both locales, shipped raw alongside `name`, rendered in Arabic — see below. Warehouse consumers do not read `product_translations`; store forms do |
 | `Product::$thumbnail_img` | `products.thumbnail_img` `varchar(100)` | holds an `uploads` row id, **not** a URL |
 | `Product::$published` | `products.published` `int(11) NOT NULL DEFAULT 1` | the store admin's own active/inactive toggle, cast to `bool` here — see below |
-| `Product::$image_url` | derived | `thumbnailUpload->url` — see below |
+| `Product::$image_url` | derived | public-disk warehouse reference image, otherwise `thumbnailUpload->url` — see below |
 | `Product::$boxes_count` | `wms_product_settings.boxes_count` | WMS-owned, not a store column at all — see below |
 | `Upload::$file_name`, `$external_link` | same columns | the two halves of `Upload::url()` |
 
-Do not widen a `select()` to `Product::all()` — the narrow column lists are what
-keep this app insulated from the other ~65 columns it inherited and never reads.
-That discipline outlived the shared database: those columns are still there,
-still unread, and still free to change shape.
+Keep warehouse queries scoped to the columns their consumers need. Store forms
+and writers use additional inherited product columns; that does not justify
+unrestricted selects in warehouse catalogue queries.
 
 ### `ar_name`: searched in both locales, rendered in Arabic by the frontend
 
@@ -354,27 +348,29 @@ derived from another table's row and would go stale the moment an upload
 changed, and `boxes_count` is WMS configuration that has nothing to do with the
 store's catalog. Keep them derived.
 
-- **`image_url`** resolves `thumbnail_img` through the shared `uploads` table.
+- **`image_url`** first uses `warehouse_image_path` on the public disk when set,
+  otherwise resolves `thumbnail_img` through the store's `uploads` table.
   `Upload::url()` returns `external_link` verbatim when set (the store uses it
   for files already on a CDN), otherwise joins `file_name` to
-  `config('store.asset_base_url')`. That config is the store app's public base
-  URL — this app is served from a different host and cannot derive it. Unset,
-  the URL resolves to `null` rather than to a relative path that would 404
-  against this app's own domain.
+  `config('store.asset_base_url')`, the configured base URL serving store files.
+  When unset, relative upload URLs resolve to `null`; warehouse reference images
+  and uploads with `external_link` do not depend on this setting.
 - **`boxes_count`** lives in `wms_product_settings`, keyed on the product id. A
   product the sync has created but this app has never configured has no row, and
   falls back to `Product::DEFAULT_BOXES_COUNT`. There is no inherited column to
   backfill this from: `products.unit_equal` reads like a units-per-carton value
   and was the obvious candidate, but it has been checked with the store's owners
-  and is **not** the box count — do not wire it up. The only write path is `Admin\ProductController::updateBoxCount()`,
-  behind the editable box-count column on the admin products screen; a product
-  nobody has set resolves to the default rather than to a stored zero.
+  and is **not** the box count — do not wire it up. Explicit box-count edits use
+  `Admin\ProductController::updateBoxCount()`, behind the dialog on the admin
+  products screen. `updateMinimumPallets()` also stores the default box count
+  when creating a settings row, preserving the previously displayed fallback.
 
-Both are relation-backed, so anything reading them must eager-load first or
-trip the lazy-loading guard in local/testing. `Product::WITH_DERIVED_ATTRIBUTES`
-is the pair of eager loads; use it, or spell out whichever half a given payload
-actually needs (the admin product listing only renders the image, so it loads
-`thumbnailUpload` alone).
+Box counts and fallback thumbnail URLs are relation-backed, so eager-load the
+needed relations to avoid the lazy-loading guard in local/testing.
+`Product::WITH_DERIVED_ATTRIBUTES` loads `thumbnailUpload` and `setting` (box
+count and minimum pallets); the admin product listing uses the full constant.
+Narrower consumers can load just the relation they need. Select
+`warehouse_image_path` when the payload supports warehouse reference images.
 
 In tests, `boxes_count` and `image_url` cannot be passed to
 `Product::factory()->create()` — they are not columns. Use the
@@ -543,13 +539,14 @@ is created. It is effectively vestigial and harmless — but it is also the thin
 that will mislead the next person, so read it as "this create is a no-op if the
 table is somehow already there", not as a pattern to follow.
 
-**`uploads` is still guarded, because this app still does not own it.**
+**The inherited `uploads` create/rollback guards remain.**
 `create_uploads_table` is the remaining worked example: `hasTable()` on `up()`
 makes it a no-op wherever the real table is present, while still building a
 local stand-in for development and testing; `down()` cannot use `hasTable()` (it
 cannot tell a real table from a stand-in), so it guards on
-`app()->isProduction()` — a rollback drops the development copy and never real
-data. Do not use `isProduction()` on `up()`: that was an even earlier guard, and
+`app()->isProduction()` — a production rollback preserves the table; a
+non-production rollback drops it regardless of its contents. These guards do
+not make integrated upload writes read-only. Do not use `isProduction()` on `up()`: that was an even earlier guard, and
 it breaks any non-production environment pointed at real data.
 
 **A rename migration checks both ends.** `rename_users_table_to_wms_users` and
