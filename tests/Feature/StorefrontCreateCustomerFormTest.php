@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\Storage;
  * since §48, inline rules before), and the form says so: the mark and
  * `required` on each, the legend, labels tied to their controls and each
  * error under its field (.ai/rules/form-required-fields.md,
- * store-backoffice-migration.md §47).
+ * .ai/archive/store-backoffice/changes-20261021.md §47).
  */
 const CREATE_CUSTOMER_REQUIRED_FIELDS = [
     'name', 'company_name', 'email', 'phone', 'country', 'tax_number', 'bank_account_number',
@@ -121,7 +121,7 @@ test('a refused form shows each error under its field and keeps the input', func
  * users.name / users.email varchar(191), users.phone varchar(20),
  * users.country varchar(30), company name/company address varchar(191), shipping address rule max:255, the tax and
  * bank numbers to the 100 the rules always allowed, and the trade license to
- * the kinds TradeLicenseStorage keeps (store-backoffice-migration.md §48).
+ * the kinds TradeLicenseStorage keeps (.ai/archive/store-backoffice/changes-20261021.md §48).
  */
 describe('the limits', function () {
     test('takes every field up to its column', function () {

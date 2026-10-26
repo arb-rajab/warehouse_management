@@ -3,7 +3,7 @@ paths:
     - 'resources/js/**'
 ---
 
-# Js
+# Vue forms, shared UI, routing and frontend verification
 
 ## Build admin UI from the shared FormField / SubmitButton / DataTable components
 
@@ -80,7 +80,7 @@ When adding or touching a page/component, give common affordances an icon instea
 
 - Add=Plus, Edit=Pencil, Delete=Trash2, View=Eye, external/related-record link=ArrowUpRight
 - Sort=ArrowUp/ArrowDown/ArrowUpDown, Close=X, Filter trigger=SlidersHorizontal, Clear=X, Apply/confirm=Check
-- Cell states (mirrored by hand in the Flutter app, see js-components.md): empty=CircleDashed, full=Inbox, opened=PackageOpen; expiration=CalendarX, added-at/stored=CalendarPlus
+- Cell states (mirrored by hand in the Flutter app, see [cell-state visuals](cell-state-visuals.md)): empty=CircleDashed, full=Inbox, opened=PackageOpen; expiration=CalendarX, added-at/stored=CalendarPlus
 - Warning/disabled hint=TriangleAlert, field/form error=CircleAlert, admin/privileged role=ShieldCheck, signed-in user=CircleUser, processing/loading=LoaderCircle (with animate-spin), ongoing/duration=Clock, transfer=ArrowLeftRight, empty table state=PackageSearch, brand mark=Warehouse
 - Nav icons: LayoutDashboard, Rows3, Map, ArrowLeftRight, Users, LogOut, Languages
 

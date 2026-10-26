@@ -5,7 +5,7 @@ paths:
   - config/cache.php
 ---
 
-# Config
+# SQLite concurrency, backup CLI and Pulse cache configuration
 
 ## spatie/laravel-backup's sqlite dump needs the sqlite3 CLI, not just the PHP extension
 Scheduled backups run `backup:run --only-db` (see routes/console.php), which for a sqlite connection shells out to the `sqlite3` command-line binary (spatie/db-dumper), separate from PHP's pdo_sqlite/sqlite3 extensions. If a machine doesn't have it on PATH, set SQLITE3_DUMP_BINARY_PATH in its .env (read by the 'dump.dump_binary_path' key on the 'sqlite' connection in config/database.php) to the directory containing sqlite3.exe/sqlite3. Production on MySQL/Postgres needs mysqldump/pg_dump instead, which is a separate concern.

@@ -4,7 +4,7 @@ import type { StoreTripCheckpointType } from '@/types/store';
 /**
  * What a stored checkpoint shows for its stop, on the trip edit form and the
  * trip detail: the order's code and customer for a delivery, otherwise the
- * customer (store-backoffice-migration.md §25).
+ * customer (.ai/archive/store-backoffice/changes-20261015.md §25).
  */
 export function tripCheckpointLabel(
     type: StoreTripCheckpointType,

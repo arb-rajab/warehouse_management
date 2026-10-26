@@ -11,7 +11,7 @@ use Illuminate\Validation\Validator;
 /**
  * The footer form's typed writer: the keys the retired Blade footer posted to
  * the generic settings writer, and nothing else
- * (.ai/rules/store-backoffice-migration.md §20).
+ * (.ai/archive/store-backoffice/changes-20261013.md §20).
  */
 class UpdateWebsiteFooterRequest extends FormRequest
 {

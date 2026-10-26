@@ -25,7 +25,7 @@ import {
 /**
  * The website footer, appearance and custom pages on Inertia with the shared
  * editor and their typed writers; the header and footer scripts keep their
- * compatibility endpoint (.ai/rules/store-backoffice-migration.md §20).
+ * compatibility endpoint (.ai/archive/store-backoffice/changes-20261013.md §20).
  */
 
 const FOOTER_KEYS = [

@@ -3,7 +3,7 @@ paths:
   - 'resources/js/layouts/**'
 ---
 
-# Layouts
+# Admin navigation, account menu and logout confirmation
 
 ## App bar nav links: active indicator + icon are required
 Every top-level nav link in AdminLayout.vue (and any future app bar) must show which section is active and carry an icon:

@@ -3,7 +3,7 @@ paths:
   - 'app/Http/Requests/**'
 ---
 
-# Requests
+# FormRequest conventions, shared rules and filter validation
 
 ## Conventions: Filter* names, helper-only traits, one `use` per line
 - A request validating a list endpoint's query params is named `Filter*Request` (`FilterMatchingPalletsRequest`, `Api\V1\FilterCellsRequest`, `FilterRowsFullRequest`, `FilterCellVerificationRoundsRequest`); `Show*Request` is reserved for a single record's detail page (`ShowRowRequest`, `ShowUserRequest`, `ShowDashboardRequest`).
@@ -22,8 +22,10 @@ Requests that address a slot by human-readable coordinates (row letter + cell nu
 
 Pass the field prefix (`''` for StorePalletRequest, `'to_'` for TransferPalletRequest) rather than re-implementing the lookup — the two copies used to drift.
 
-## Cell status log filters: shared trait + model scope, not per-request duplication
-The product/pallet/row/column/user/action/date-range filters for listing `CellStatusLog` are shared by `Admin\FilterCellStatusLogsRequest` and `Api\V1\FilterCellStatusLogsRequest` via `App\Http\Requests\Concerns\FiltersCellStatusLogs::cellStatusLogFilterRules()`. The actual query filtering lives once, as `CellStatusLog::filtered(Request $request)` (a `#[Scope]`), used by both `Admin\CellStatusLogController::index()` and `Api\V1\CellStatusLogController::index()` — it reads straight off `$request->filled()`/`->integer()`/etc, not `->validated()`, so an absent filter is skipped. Column/eager-load shape is likewise shared via `CellStatusLog::SELECT_COLUMNS` / `CellStatusLog::WITH_DETAILS`. If a third cell-log listing appears, extend these rather than re-writing the filter chain.
+## Cell status log filters share one contract
+
+Use the shared request trait, model query/listing shapes and filter UI contract in
+[cell-log filtering](cell-log-filters.md); extend them for another consumer.
 
 ## ValidatesOptionalNote: merge via noteRules(), don't inline the note rule
 Requests that need an optional note field alongside other rules (e.g. `StorePalletRequest`, `TransferPalletRequest`) must merge `App\Http\Requests\Concerns\ValidatesOptionalNote::noteRules()` into their `rules()` array with `...$this->noteRules()`, not retype `'note' => ['nullable', 'string', 'max:1000']`. `EmptyPalletRequest` (which validates nothing else) declares `rules()` as just `return $this->noteRules();`. The trait defines no `rules()` of its own (see "Conventions" above), so there is exactly one definition of the note rule.
@@ -45,7 +47,7 @@ A `FormRequest` validation failure's default `redirect()->back()` used to silent
 ## FiltersByProductStatus now also covers the mobile product listing and rows/full
 `App\Http\Requests\Concerns\FiltersByProductStatus` (`product_status=active|inactive` -> `product_published` boolean) is used by `Api\V1\ShowDashboardRequest`, `Api\V1\FilterCellStatusLogsRequest`, `Api\V1\FilterProductsRequest`, and `Api\V1\FilterRowsFullRequest`. `ProductController::index()` applies it directly against `products.published`; `RowController::full()` applies it as `whereHas('pallet.product', ...)` inside the `cells` eager-load closure. Since `FilterProductsRequest`/`FilterRowsFullRequest` have no `product_id` field, the trait's `prohibits:product_id,product_id.*` rule is inert there — harmless, kept for consistency with the other two consumers rather than forked into a narrower rule set.
 
-`ProductController::index()` keeps `null` meaning "no filter" like every other consumer, but always narrows its listing with `Product::activeOrInWarehouse()` (see concerns.md): an unfiltered `GET /api/v1/products` returns active products plus inactive ones the warehouse still holds, `?product_status=active` active ones only, `?product_status=inactive` only the inactive ones still in the warehouse. The other consumers (`ShowDashboardRequest`, `FilterCellStatusLogsRequest`, `FilterRowsFullRequest`) apply no visibility scope — don't add one without a specific reason, since they're occupancy/reporting views where an inactive product's existing pallets/logs still need to show up unfiltered.
+`ProductController::index()` keeps `null` meaning "no filter" like every other consumer, but always narrows its listing with `Product::activeOrInWarehouse()` (see product-filters.md): an unfiltered `GET /api/v1/products` returns active products plus inactive ones the warehouse still holds, `?product_status=active` active ones only, `?product_status=inactive` only the inactive ones still in the warehouse. The other consumers (`ShowDashboardRequest`, `FilterCellStatusLogsRequest`, `FilterRowsFullRequest`) apply no visibility scope — don't add one without a specific reason, since they're occupancy/reporting views where an inactive product's existing pallets/logs still need to show up unfiltered.
 
 `RowController::full()`'s `product_status` filter drops every cell whose pallet doesn't match, **including empty cells** — a filtered call no longer returns the full per-row grid. This mirrors what the mobile client used to compute itself (pre-resolve matching product ids, then keep only cells whose pallet's `product_id` was in that set) now done server-side in one query; an unfiltered call is unaffected. Extend this trait rather than adding a fourth private `product_status` implementation if another mobile listing needs the same filter.
 

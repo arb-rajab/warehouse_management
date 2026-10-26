@@ -23,7 +23,7 @@ import {
 
 /**
  * Digital product create/edit use the shared Tiptap editor and the canonical
- * upload picker (.ai/rules/store-backoffice-migration.md §21) under the
+ * upload picker (.ai/archive/store-backoffice/changes-20261013.md §21) under the
  * strict Inertia CSP.
  */
 

@@ -1,14 +1,26 @@
 ---
 paths:
   - 'database/migrations/**'
-  - 'config/database.php,config/permission.php,config/session.php,config/cache.php,config/queue.php,config/auth.php'
-  - app/Models/PersonalAccessToken.php
-  - app/Models/Product.php
-  - app/Providers/AppServiceProvider.php
-  - resources/js/lib/productName.ts
-  - resources/js/components/ProductOptionLabel.vue
-  - app/Console/Commands/SyncProductsCommand.php
-  - config/store.php
+  - 'config/database.php'
+  - 'config/permission.php'
+  - 'config/session.php'
+  - 'config/cache.php'
+  - 'config/queue.php'
+  - 'config/auth.php'
+  - 'app/Models/PersonalAccessToken.php'
+  - 'app/Models/Product.php'
+  - 'app/Providers/AppServiceProvider.php'
+  - 'resources/js/lib/productName.ts'
+  - 'resources/js/components/ProductOptionLabel.vue'
+  - 'app/Console/Commands/SyncProductsCommand.php'
+  - 'config/store.php'
+  - 'app/Support/ProductColumnOwnership.php'
+  - 'app/Models/ProductBuilder.php'
+  - 'app/Services/Store/*ProductWriter.php'
+  - 'app/Http/Requests/Seller/*Product*Request.php'
+  - 'app/Services/ProductService.php'
+  - 'app/Models/ProductsImport.php'
+  - 'app/Http/Controllers/Seller/*ProductController.php'
 ---
 
 # Database ownership, and the shared-database history behind it

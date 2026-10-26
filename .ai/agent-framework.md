@@ -190,7 +190,7 @@ Use Wayfinder to generate TypeScript functions for Laravel routes. Import from `
 
 # Inertia + Vue
 
-Vue components must have a single root element.
+Vue components must have a single root element. Existing cell-log table row cell fragments are a project exception; follow [rules/cell-log-display.md](rules/cell-log-display.md) and do not rely on non-prop attribute fallthrough.
 - IMPORTANT: Activate `inertia-vue-development` when working with Inertia Vue client-side patterns.
 
 </laravel-boost-guidelines>

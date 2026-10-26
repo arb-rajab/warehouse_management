@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\Mail;
  * StoreSupportTicketRequest requires the subject (tickets.subject,
  * varchar(255)) and the details (the back office's limit for support text,
  * 10,000 characters); the photos are optional, comma-separated image uploads
- * of the customer's own, into its own error bag (store-backoffice-migration.md
+ * of the customer's own, into its own error bag (.ai/archive/store-backoffice/changes-20261021.md
  * §48).
  */
 const SUPPORT_TICKET_FIELDS = ['subject', 'details'];

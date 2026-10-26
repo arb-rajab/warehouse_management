@@ -17,7 +17,7 @@ export interface StoreTripMapPoint {
 }
 
 /**
- * The trip map picker's Leaflet map (store-backoffice-migration.md §30): one
+ * The trip map picker's Leaflet map (.ai/archive/store-backoffice/changes-20261017.md §30): one
  * marker per point on OpenStreetMap tiles, fitted to the points. Clicking a
  * marker (or pressing Enter or Space on it) emits `toggle` with its point's id; a
  * selected point's marker takes the highlighted icon and `aria-pressed`.

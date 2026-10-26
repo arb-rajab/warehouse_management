@@ -40,8 +40,8 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
  * rows (synced_at is non-null). Store writers own the remaining business columns
  * and may change those three only on store-origin rows; new store rows start
  * with null synced_at. ProductColumnOwnership and ProductBuilder enforce this
- * boundary (shared-database.md). Deletion policy is unchanged (migration guide
- * §§14–16, §21, §52). Product, stock, translation and tax writes are transactional.
+ * boundary (shared-database.md). Deletion policy is unchanged
+ * (.ai/archive/store-backoffice/README.md §§14–16, §21, §52). Product, stock, translation and tax writes are transactional.
  */
 class DigitalProductController extends Controller implements HasMiddleware
 {

@@ -36,7 +36,7 @@ test('downloading an upload that does not exist is a not-found, not a null deref
     'the seller API uploader' => [SellerFileUploadController::class],
 ]);
 
-// The Blade page editor is gone (store-backoffice-migration.md §20): its
+// The Blade page editor is gone (.ai/archive/store-backoffice/changes-20261013.md §20): its
 // Inertia successor prints every value through Vue's escaped interpolation,
 // never raw HTML, and receives its content cleaned.
 test('the page editor prints its values escaped', function () {

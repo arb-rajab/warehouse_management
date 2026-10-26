@@ -25,7 +25,7 @@ import {
 
 /**
  * The newsletter form and the support ticket detail/reply page use the shared
- * Tiptap editor (.ai/rules/store-backoffice-migration.md §§18–19) on Inertia
+ * Tiptap editor (.ai/archive/store-backoffice/changes-20261013.md §§18–19) on Inertia
  * pages under the strict CSP. The harness runs Laravel's array mail driver,
  * so nothing here delivers mail.
  */

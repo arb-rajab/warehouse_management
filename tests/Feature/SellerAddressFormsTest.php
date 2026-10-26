@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\DB;
  * Seller\UpdateAddressRequest (ValidatesAddress): address and phone required,
  * the country required while the store has an active country; state, city,
  * postal code and coordinates optional. The forms mark and require exactly
- * those fields (store-backoffice-migration.md §45).
+ * those fields (.ai/archive/store-backoffice/changes-20261021.md §45).
  */
 /**
  * A signed-in seller with a shop, as every real seller has: the profile page

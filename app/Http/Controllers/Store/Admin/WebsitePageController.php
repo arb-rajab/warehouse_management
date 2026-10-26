@@ -27,7 +27,7 @@ use Inertia\Response;
  * The storefront's website pages: custom pages, the policy pages and the home
  * page row, whose own settings are WebsiteHomeController's. The storefront
  * renders them through root PageController, unchanged
- * (.ai/rules/store-backoffice-migration.md §20).
+ * (.ai/archive/store-backoffice/changes-20261013.md §20).
  */
 class WebsitePageController extends Controller implements HasMiddleware
 {

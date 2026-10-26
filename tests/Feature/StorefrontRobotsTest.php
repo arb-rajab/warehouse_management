@@ -11,7 +11,7 @@ use Illuminate\Support\ViewErrorBag;
  * Which storefront pages may be indexed (App\Support\Seo::robots()), the
  * X-Robots-Tag header on the back offices and the API (SendNoIndexHeader) and
  * the generated /robots.txt (RobotsController). The rule for listings is in
- * store-backoffice-migration.md §42.
+ * .ai/archive/store-backoffice/changes-20261020.md §42.
  */
 beforeEach(function () {
     config(['app.url' => 'https://shop.example.test']);

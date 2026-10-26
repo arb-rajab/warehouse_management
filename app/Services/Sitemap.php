@@ -19,7 +19,7 @@ use Illuminate\Support\Facades\Cache;
  * The storefront's sitemap: an index at `sitemap` and, under it, one or more
  * `sitemap.show` files per kind of content, each holding at most $chunkSize
  * URLs (the protocol's limit is 50,000 URLs and 50 MB; a URL is about 150
- * bytes, so the count is the binding limit). See store-backoffice-migration.md
+ * bytes, so the count is the binding limit). See .ai/archive/store-backoffice/changes-20261020.md
  * §42.
  *
  * Only what a visitor can open is listed: published and approved products
