@@ -20,10 +20,6 @@ class EmailVerificationNotification extends Notification
      */
     public const LINK_LIFETIME_HOURS = 24;
 
-    public function __construct()
-    {
-    }
-
     public function via($notifiable)
     {
         return ['mail'];
