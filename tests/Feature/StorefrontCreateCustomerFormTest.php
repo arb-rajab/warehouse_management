@@ -119,7 +119,7 @@ test('a refused form shows each error under its field and keeps the input', func
 /**
  * StoreCustomerByRepresentativeRequest holds each field to its column:
  * users.name / users.email varchar(191), users.phone varchar(20),
- * users.country varchar(30), company name, addresses varchar(255), the tax and
+ * users.country varchar(30), company name/company address varchar(191), shipping address rule max:255, the tax and
  * bank numbers to the 100 the rules always allowed, and the trade license to
  * the kinds TradeLicenseStorage keeps (store-backoffice-migration.md §48).
  */
@@ -130,13 +130,13 @@ describe('the limits', function () {
 
         $this->post('/temp/store_customer', createCustomerPayload([
             'name' => str_repeat('é', 191), 'email' => str_repeat('a', 179).'@example.com', 'phone' => str_repeat('1', 20),
-            'country' => str_repeat('c', 30), 'company_name' => str_repeat('ü', 255), 'tax_number' => str_repeat('t', 100),
-            'bank_account_number' => str_repeat('b', 100), 'company_address' => str_repeat('a', 255), 'shipping_address' => str_repeat('s', 255),
+            'country' => str_repeat('c', 30), 'company_name' => str_repeat('ü', 191), 'tax_number' => str_repeat('t', 100),
+            'bank_account_number' => str_repeat('b', 100), 'company_address' => str_repeat('a', 191), 'shipping_address' => str_repeat('s', 255),
         ]))->assertRedirect(route('dashboard'))->assertSessionHasNoErrors();
 
         $customer = StoreUser::where('email', str_repeat('a', 179).'@example.com')->sole();
         expect(mb_strlen($customer->name))->toBe(191)
-            ->and(mb_strlen($customer->company_name))->toBe(255)
+            ->and(mb_strlen($customer->company_name))->toBe(191)
             ->and($customer->phone)->toBe(str_repeat('1', 20))
             ->and($customer->country)->toBe(str_repeat('c', 30));
     });
@@ -156,10 +156,10 @@ describe('the limits', function () {
         'email, users.email' => [['email' => str_repeat('a', 180).'@example.com'], 'email'],
         'phone, users.phone' => [['phone' => str_repeat('1', 21)], 'phone'],
         'country, users.country' => [['country' => str_repeat('c', 31)], 'country'],
-        'company name, users.company_name' => [['company_name' => str_repeat('a', 256)], 'company_name'],
+        'company name, users.company_name' => [['company_name' => str_repeat('a', 192)], 'company_name'],
         'tax number' => [['tax_number' => str_repeat('t', 101)], 'tax_number'],
         'bank account number' => [['bank_account_number' => str_repeat('b', 101)], 'bank_account_number'],
-        'company address, users.company_address' => [['company_address' => str_repeat('a', 256)], 'company_address'],
+        'company address, users.company_address' => [['company_address' => str_repeat('a', 192)], 'company_address'],
         'shipping address, users.shipping_address' => [['shipping_address' => str_repeat('s', 256)], 'shipping_address'],
     ]);
 
@@ -225,7 +225,7 @@ describe('the limits', function () {
         $attribute = fn (string $name, string $attribute) => $xpath->query('.//input[@name="'.$name.'"]', $form)->item(0)->getAttribute($attribute);
 
         expect(array_map(fn (string $name) => $attribute($name, 'maxlength'), ['name', 'email', 'phone', 'company_name', 'tax_number', 'bank_account_number', 'company_address', 'shipping_address']))
-            ->toBe(['191', '191', '20', '255', '100', '100', '255', '255'])
+            ->toBe(['191', '191', '20', '191', '100', '100', '191', '255'])
             ->and($attribute('trade_license', 'accept'))->toBe('.pdf,.doc,.docx,.png,.jpg,.jpeg');
     });
 });

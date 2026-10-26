@@ -8106,3 +8106,160 @@ context reaches five existing FormRequests, three pages, the map payload,
 translations and their endpoint/component/browser tests, both MySQL lists and
 three required documentation updates. Routes, permissions, migrations and all
 other D-items remain untouched.
+
+## 67. D16: persist self-registration business fields (2026-10-26)
+
+Branch `codex/registration-fields` starts at current `origin/develop`
+`7f622a71a0a8bc344bfb253885297114708c29c3`. This implements the owner's
+2026-10-25 D16 decision. No migration, route, permission, payout, staff, trip or
+product-ownership change is involved.
+
+### Characterization before the fix
+
+Both registration pages post to `RegisterController::register`; it has an inline
+`validator()` rather than a FormRequest. `create()` writes `StoreUser` (`users`),
+then its default `addresses` row. `Customer` only permits `user_id`; it is not the
+business-field storage used by `store_customer`.
+
+| Input                                        | Posted before                                                                                                 | Validated before | Stored before                                |
+| -------------------------------------------- | ------------------------------------------------------------------------------------------------------------- | ---------------- | -------------------------------------------- |
+| `tax_number` on `/temp/register`             | Yes                                                                                                           | No               | No                                           |
+| `company_address` on `/temp/register`        | Yes                                                                                                           | No               | No                                           |
+| `trade_license` on `/temp/register`          | The browser sent its filename because multipart encoding was missing; a real multipart POST accepted the file | No               | No                                           |
+| `shipping_address` on `/temp/register`       | Yes                                                                                                           | No               | No; its address assignment was commented out |
+| `country_code` on `/temp/register`           | Hidden input populated by the phone widget while the OTP addon was enabled                                    | No               | No                                           |
+| `country_code` on `/temp/users/registration` | Same                                                                                                          | No               | No                                           |
+
+The grep did find two registration-controller references to `country_code`,
+contrary to the earlier audit's shorthand "read by nothing": a pre-validation
+phone-duplicate probe for an invalid/missing email, and a phone-only creation
+branch. The existing `required|email` rule prevents that creation branch from
+running on a valid registration. The email unique rule now returns the requested
+422 for duplicates, before any file or account write. The obsolete duplicate
+probes and unreachable phone-only branch are removed with both registration
+inputs and their local widget assignments. Login/password-reset consumers and
+the shared layout's phone widget remain intact. No successful phone-only
+registration existed under the previous validator. The reachable email
+verification, terms modal, country selection and phone widget behavior are
+unchanged.
+
+### Storage and validation
+
+`users.tax_number`, `users.company_address` and `users.trade_license` already
+exist and are fillable. Registration now explicitly writes the first two and the
+license's generated basename, using the same `TradeLicenseStorage` as
+`CustomerController::store_customer`. Files go to the **local private disk**,
+`storage/app/private/uploads/licenses/<random 40-character name>.<content extension>`.
+There is no upload-table row and no public copy. The existing content checks and
+`store:move-trade-licenses` conventions remain authoritative; the migration
+command is for old public files, not for new registrations. A supplied string,
+URL or existing stored path cannot substitute for an uploaded file. Outside
+paths are also refused by the existing WAF (403).
+
+| Rule            | Before                                                 | After                                                                                               |
+| --------------- | ------------------------------------------------------ | --------------------------------------------------------------------------------------------------- |
+| Name            | required/string/max 255                                | required/string/max 191                                                                             |
+| Company name    | required/string/max 255                                | required/string/max 191                                                                             |
+| Email           | required/email; duplicate email flashed and redirected | required/string/email/max 191/unique on store `users`; JSON duplicate is 422                        |
+| Phone           | required                                               | required/string/max 20                                                                              |
+| Country         | required                                               | required/string/max 30; same country-select behavior                                                |
+| Tax number      | No rule                                                | nullable/string/max 100                                                                             |
+| Company address | No rule                                                | nullable/string/max 191                                                                             |
+| Trade license   | No rule                                                | nullable/file/mimes doc,docx,pdf,png,jpg,jpeg/max 20000 KiB; existing private-storage content check |
+| Password        | required/string/min 6/confirmed                        | Unchanged                                                                                           |
+| reCAPTCHA       | Existing conditional rules and messages                | Unchanged                                                                                           |
+
+**Why 191 instead of the guide's earlier 255.** Real MySQL 8.4 boundary tests
+returned error 1406 at 255 for company name and company address.
+`2026_09_30_000000_add_legacy_columns_to_store_tables` uses `string()` without a
+length and `AppServiceProvider` sets `Schema::defaultStringLength(191)`.
+`db:table users` confirms both are `varchar(191)`. The registration and
+representative request, native `maxlength` attributes and boundary tests now
+agree at **191**, without widening the existing columns. This corrects §§47–48's
+assumption about these two columns. The representative form's other fields and
+requiredness are unchanged; its shipping-address rule is outside this change.
+
+**Why optional.** Self-registration already allowed these three inputs to be
+omitted, and this task explicitly requires that flow to keep working. They keep
+`(optional)`, no required mark and no native `required`, matching `nullable`.
+The representative's complete-customer workflow continues to require its twelve
+inputs; this is a workflow distinction, not a change to the resulting customer
+account type. Its tax/document rules and the two corrected shared column limits
+are reused by self-registration. The form gains multipart encoding, matching
+`accept`/`maxlength`, associated labels and the corrected company-address old
+input key. File controls never repopulate an old filename. The shipping-address
+control is removed; registration still makes its original country/phone-only
+default address.
+
+### Evidence and audit
+
+The three new real-endpoint cases were run before the implementation: tax number
+read back as `null` instead of `NL123456789B01`, company address as `null` instead
+of `Damrak 1, Amsterdam`, and the license's stored name was `null`. Both
+addon-enabled rendered-page removal cases also failed first (`1` country-code
+control instead of `0`). Tests now cover success with and without the optional
+fields, each text boundary and boundary+1 (multibyte included), actual document
+sizes 20000/20001 KiB, invalid types/content, external paths, duplicate email,
+and unchanged guest rate limits. Refusals compare every database table against
+its prior contents; successes allow exactly the new customer and default
+address, preserving unrelated rows and files. Rendered HTML pins the optional
+marks, encoding, field limits, error redisplay and dropped controls; Vite is
+disabled for the Blade tests. Playwright submits both pages through the real
+terms agreement, including an actual file upload and omitted-field submissions.
+The regression file is in both MySQL lists.
+
+`php artisan forms:audit-required --date=20261026`:
+
+| Class |  Before |   After |
+| ----- | ------: | ------: |
+| A     |      36 |      36 |
+| B     |      14 |      14 |
+| C     |      38 |      38 |
+| D     |       7 |       7 |
+| E     |     105 |      99 |
+| F     |      23 |      23 |
+| Total | **223** | **217** |
+
+P1 falls **8 → 2**; both registration forms have no findings. Reports:
+[Markdown](../required-fields-audit-20261026.md) and
+[JSON](../required-fields-audit-20261026.json). The ratchet baseline stays **55**:
+it covers back-office A–C findings, and none of those was fixed here. Removing a
+still-live entry would fail the ratchet; no entry was added or loosened. The six
+removed E findings were never baseline entries. Remaining scanner limitations
+retain their documented evidence. D16's registration decision is **FIXED**; no
+further owner decision is needed for it.
+
+### Final verification
+
+- Final focused SQLite: **177 passed / 1,062 assertions**. Final MySQL 8.4
+  regression file: **42 passed / 281 assertions**, using
+  `DB_CONNECTION=mysql DB_DATABASE=warehouse_test DB_USERNAME=root DB_PASSWORD=password`.
+- Explicit `python3 .claude/scripts/pre_push_check.py --full`: **exit 0**.
+  Wayfinder generation, whole ESLint/Prettier, TypeScript, **338 Vitest files /
+  2,710 tests**, Pint, PHPStan (**zero errors**), config clear and parallel Pest
+  passed. Pest: **8,013 passed / 44,937 assertions**, plus the **three existing
+  MySQL-only skips on SQLite**, in **141.684 seconds**. No test was loosened,
+  skipped or quarantined to obtain this result; no Vitest timeout retry occurred.
+- The new registration browser spec and existing required-mark spec: **8 passed
+  (36.7 seconds)**. Both real signup pages submit through the existing terms
+  agreement; the long form stores the uploaded PDF and also works without it.
+- Production build, changed-file ESLint/Prettier, standalone frontend/backend
+  type checks, dirty Pint, script selftests, **23 CI planner tests**, audit,
+  required-fields ratchet and `git diff --check` passed. Blade files have no
+  configured Prettier parser and are covered by rendered-page tests.
+- Setup corrections: locked `npm ci` restored missing fonts/Tiptap/Leaflet,
+  Composer's stale classmap was regenerated without scripts, the ignored stale
+  `public/hot` marker was moved aside, and the workspace PHP GD extension was
+  rebuilt with WebP. No manifest, lockfile, application configuration or platform
+  requirement changed for setup. Browser fixture iterations corrected a missing
+  active country, a guarded-model fixture assignment and the existing translated
+  account-button capitalization; no assertion timeout or retry was raised.
+- Not run locally: the remaining MySQL CI list, the whole application Playwright
+  suite, dependency advisory audits or deploy-script tests. The workflow change
+  runs all CI groups on the non-draft PR. No bare/attested pre-push run or
+  hand-edited `CI-Verified` trailer was used.
+
+A separate inherited limit remains outside D16: the representative shipping
+address still has a max-255 rule against its default-length 191 column.
+Self-registration no longer asks for that value. No owner decision remains for
+the D16 registration fields implemented here.
