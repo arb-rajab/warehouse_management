@@ -62,6 +62,8 @@ Warehouse and Store APIs share one Scramble reference at `/docs/api` and one Ope
 
 The reference includes warehouse mobile, customer/catalogue, seller, representative, delivery, driver/trip, and warehouse integration endpoints. Request validation and response schemas are inferred from the implementation, preserving each API's resource envelope. Legacy dynamic payloads may have incomplete inferred schemas.
 
+Each endpoint has one area-and-feature tag. Warehouse groups cover Authentication, Inventory, Pallets, and Audit logs. Store groups cover Authentication, Catalogue, Orders, Customers, Sellers, Delivery & Trips, and Warehouse integration. The Warehouse groups appear first in the shared reference; endpoint paths and authentication requirements are unchanged.
+
 - Send `Accept: application/json`. Sign in with `POST /temp/api/v2/auth/login`, using `login_by`, `email` (also used for phone login), and `password`. Send the returned `access_token` as `Authorization: Bearer <access_token>` on protected routes. Warehouse mobile tokens are separate from store tokens.
 - Seller and driver endpoints also enforce their corresponding roles; public catalogue endpoints need no token.
 - `/temp/api/v2/warehouse/*` uses `private-token: <configured WMS token>`, documented separately from bearer authentication. The middleware reports an invalid token as a JSON business failure with `status: 401` and HTTP 200.
