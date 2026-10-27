@@ -18,9 +18,11 @@ test('a used external image is downloaded, stored and the upload points at it', 
 
     $stored = $upload->fresh();
 
-    expect($stored->file_name)->toBe('uploads/otajer/a.png')
-        ->and($stored->external_link)->toBeNull();
-    Storage::assertExists('uploads/otajer/a.png');
+    expect($stored->file_name)->toBe('uploads/otajer/'.$upload->id.'.png')
+        ->and($stored->external_link)->toBeNull()
+        ->and($stored->extension)->toBe('png')
+        ->and($stored->file_size)->toBe(strlen(Storage::get($stored->file_name)));
+    Storage::assertExists('uploads/otajer/'.$upload->id.'.png');
 });
 
 test('an upload no product uses is deleted without being downloaded', function () {

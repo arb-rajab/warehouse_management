@@ -143,10 +143,22 @@ HTTP(S)-only external URLs and storage-failure handling. Cross-owner references
 require the canonical library permission and policy; defining a permission
 grants no role.
 
-Only admin uploads opt into `MultipartUploadService::store(...,
-normalizeRaster: true)` (WebP, 40-megapixel limit). Legacy API/seller/trip
-consumers retain their default format/optimization policy. Global normalization,
-opt-out and SVG policy changes remain decisions; preserve existing SVG sanitation.
+All image upload paths use `ImageOptimizer`: 40-megapixel/20 MiB input limits,
+1500px longest edge (1600px warehouse references, 2400px private scans), and a
+1 MiB stored raster limit. The base64 API retains its stricter 8 MiB input limit.
+Raster uploads are re-encoded even when small to strip unsafe content and metadata.
+Admin uploads request WebP, falling back to the source format if the encoder is
+unavailable; legacy clients and private scans retain their source format.
+The legacy optimization opt-out cannot bypass these limits. Animated images are
+refused before GD can flatten them. SVG sanitation is preserved with a 512 KiB
+stored limit. This global policy was authorized by the image upload audit task.
+Browser compression uses `resources/js/lib/imageUpload.ts` before transport in
+`StoreUploadManager`, warehouse reference uploads, the retained Uppy uploader,
+and private document forms. Limits match the server. Small images and non-image
+documents retain their bytes; unsupported browser codecs fall back to server
+validation. The shared Blade partial loads the legacy Vite entry in all three
+retained layouts. Native mobile clients are outside this repository; trip photos
+arrive through the mobile API and retain server-side enforcement.
 Private offers/import storage stays separate. Retain `/temp/aiz-uploader*`, its
 Blade responses, assets and endpoints while protected consumers remain.
 

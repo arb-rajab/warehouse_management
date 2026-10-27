@@ -820,6 +820,7 @@ lang="{{ str_replace('_', '-', app()->getLocale()) }}"
             });
         });
     </script>
+    @include('shop.partials.image-upload')
     @yield('script')
 
     @php

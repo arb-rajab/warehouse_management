@@ -7,6 +7,7 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
+use InvalidArgumentException;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\Mime\MimeTypes;
 use ZipArchive;
@@ -49,8 +50,16 @@ abstract class PrivateDocumentStorage
     {
         $extension = $this->validatedExtension($file);
 
+        $contents = (string) file_get_contents($file->getRealPath());
+        if (in_array($extension, ['jpg', 'png'], true)) {
+            try {
+                [$contents, $extension] = app(ImageOptimizer::class)->optimise($contents, maxDimension: 2400);
+            } catch (InvalidArgumentException $exception) {
+                throw ValidationException::withMessages([static::FIELD => $exception->getMessage()]);
+            }
+        }
         $name = Str::random(40).'.'.$extension;
-        Storage::disk('local')->put(static::DIRECTORY.'/'.$name, (string) file_get_contents($file->getRealPath()));
+        Storage::disk('local')->put(static::DIRECTORY.'/'.$name, $contents);
 
         return $name;
     }

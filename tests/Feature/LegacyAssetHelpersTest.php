@@ -2,6 +2,7 @@
 
 use App\Models\Upload;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Vite;
 
 /**
  * Regression test for the webshell-incident fix in
@@ -63,10 +64,9 @@ test('uploaded_asset() returns an upload\'s external_link as-is', function () {
 });
 
 /**
- * The legacy views load prebuilt theme bundles through static_asset(), not
- * Mix or Vite (the legacy Mix pipeline was dead and is gone — see
- * .ai/rules/legacy-albaraka-holland.md section 5), so the only thing that
- * can break them is a file missing from public/. Only literal paths are
+ * Legacy theme bundles remain prebuilt assets loaded through static_asset().
+ * The shared image compressor is a separate Vite entry and does not boot
+ * Inertia. Theme references still need files under public/. Only literal paths are
  * checked: the ones built from a variable (flags, uploads, card images per
  * gateway) can't be resolved statically.
  */
@@ -90,7 +90,7 @@ test('every literal theme bundle the legacy views reference exists under public/
     expect($missing)->toBe([]);
 });
 
-test('the legacy login page loads its bundles from public/assets and none of the Inertia/Vite build', function () {
+test('the legacy login page loads theme bundles and the standalone compressor without the Inertia app', function () {
     $response = $this->get('/temp/users/login');
 
     $response->assertOk();
@@ -98,6 +98,8 @@ test('the legacy login page loads its bundles from public/assets and none of the
     $response->assertSee('/assets/js/vendors.js', false);
     $response->assertSee('/assets/js/aiz-core.js', false);
     $response->assertDontSee('data-page=', false);
-    $response->assertDontSee('/build/assets/', false);
+    $response->assertSee(Vite::asset('resources/js/legacy-image-upload.ts'), false);
+    $response->assertDontSee(Vite::asset('resources/js/app.ts'), false);
+    $response->assertDontSee(Vite::asset('resources/css/app.css'), false);
     expect($response->headers->has('X-Inertia'))->toBeFalse();
 });
