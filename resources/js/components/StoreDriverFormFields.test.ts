@@ -159,4 +159,31 @@ describe('StoreDriverFormFields', () => {
         ).toBe('');
         wrapper.unmount();
     });
+    it.each([false, true])(
+        'marks exactly the server-required driver fields editing=%s',
+        (editing) => {
+            const wrapper = mountFields({ editing });
+
+            for (const id of [
+                'name',
+                'email',
+                'phone',
+                'country',
+                'password',
+                'password_confirmation',
+            ]) {
+                const required =
+                    !editing || ['name', 'phone', 'country'].includes(id);
+                expect(
+                    wrapper.get(`#${id}`).attributes('required') !== undefined,
+                ).toBe(required);
+                expect(
+                    wrapper
+                        .get(`label[for="${id}"]`)
+                        .find('[data-required-mark]')
+                        .exists(),
+                ).toBe(required);
+            }
+        },
+    );
 });

@@ -138,9 +138,7 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
     Route::delete('/products/destroy/{product}', [StoreProductController::class, 'sellerDestroy'])->defaults('productList', 'seller')->name('products.destroy');
     Route::delete('/bulk-product-delete', [StoreProductController::class, 'sellerBulkDestroy'])->defaults('productList', 'seller')->name('bulk-product-delete');
     Route::controller(ProductController::class)->group(function () {
-        Route::post('/products/get_products_by_subcategory', 'get_products_by_subcategory')->name('products.get_products_by_subcategory');
         Route::post('/products/fetch', 'fetch')->name('products.fetch')->middleware('permission:add_new_product');
-        Route::post('/products/search', 'search')->name('products.search');
         Route::get('products/get-details/{id}', 'getDetails')->name('products.get-details');
         Route::post('/products/sku_combination', 'sku_combination')->name('products.sku_combination');
     });
@@ -263,7 +261,7 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
         Route::post('/representatives/packages/set_package', 'assign')->name('rep.set-package');
     });
     Route::group(['prefix' => 'trips'], function () {
-        // The trip lists and their row actions (store-backoffice-migration.md §24)
+        // The trip lists and their row actions (.ai/archive/store-backoffice/changes-20261014.md §24)
         // and the trip create and edit forms (§25).
         Route::controller(TripController::class)->group(function () {
             Route::get('/index', 'index')->name('trips.index');
@@ -432,7 +430,7 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
     Route::post('/website/scripts/compatibility', [LegacyWebsiteScriptsController::class, 'update'])->name('website.scripts.compatibility.update');
 
     // Website setup: Inertia pages, each settings page writing only its own
-    // keys (.ai/rules/store-backoffice-migration.md §20). The home settings
+    // keys (.ai/archive/store-backoffice/changes-20261013.md §20). The home settings
     // route stays ahead of the custom-page edit route, whose slug it shares.
     Route::get('/website/header', [WebsiteHeaderController::class, 'edit'])->name('website.header');
     Route::put('/website/header', [WebsiteHeaderController::class, 'update'])->name('website.header.update');

@@ -10,16 +10,14 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * A row in the store app's shared `uploads` table.
+ * A row in the integrated store's `uploads` table on the default connection.
  *
- * The store's own upload flow (AizUploadController, the import commands) is
- * the writer — see .ai/rules/legacy-albaraka-holland.md section 2 — with
- * $fillable merged in from the legacy model for that, though none of those
- * extra columns exist in this app's local `uploads` stand-in migration yet
- * (it deliberately carries only the 3 columns this app itself reads). The
- * legacy model's SoftDeletes trait is dropped for the same reason: it adds a
- * global `deleted_at` scope to every query, and that column doesn't exist
- * here either — resolving both is DB-merge-phase work, not this move.
+ * Store upload flows persist metadata through services such as
+ * MultipartUploadService and its WritesUploads concern. The initial stand-in
+ * migration provides paths and timestamps; later migrations add user_id and
+ * upload metadata. Warehouse thumbnails read this row through Product.
+ * This model does not use SoftDeletes: managed upload deletion removes the
+ * file through MultipartUploadService and hard-deletes its metadata row.
  *
  * @property int $id
  * @property string|null $file_original_name
@@ -65,10 +63,9 @@ class Upload extends Model
      *
      * `external_link` wins when set — the store uses it for files already
      * living on a CDN or object store, where `file_name` is not meaningful.
-     * Otherwise the relative `file_name` is joined to the store app's public
-     * base URL, which this app cannot derive on its own because it is served
-     * from a different host. A missing base URL resolves to null rather than
-     * to a relative path that would 404 against this app's own domain.
+     * Otherwise the relative `file_name` is joined to the configured
+     * store.asset_base_url for the host serving those files. A missing base URL
+     * or file name resolves to null.
      *
      * @return Attribute<string|null, never>
      */

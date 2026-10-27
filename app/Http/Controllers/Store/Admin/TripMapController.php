@@ -63,6 +63,10 @@ class TripMapController extends Controller implements HasMiddleware
 
         return Inertia::render('Store/Admin/Trips/Trips/CreateFromMap', [
             'orders' => $this->getOrdersCoordinates($orders),
+            'orderTrips' => (object) Checkpoint::query()->whereMorphedTo('relationable', Order::class)
+                ->whereIn('relationable_id', $orders->modelKeys())
+                ->whereHas('trip', fn (Builder $trips) => $trips->where('status', '<>', TripStatus::Closed->value))
+                ->orderBy('id')->pluck('trip_id', 'relationable_id')->all(),
             'availableTrucks' => TripMapTruckResource::collection($trucks->filter(fn (Truck $truck) => $truck->is_available)->values()),
             'busyTrucks' => TripMapTruckResource::collection($trucks->reject(fn (Truck $truck) => $truck->is_available)->values()),
             'photos' => TruckPhotoResource::collection(Upload::query()

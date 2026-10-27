@@ -4,7 +4,7 @@ import { seedStoreFixtures } from './support/storeFixtures';
 
 /**
  * The storefront's "New Address" form in a real browser
- * (store-backoffice-migration.md §45): a customer sees the legend and the
+ * (.ai/archive/store-backoffice/changes-20261021.md §45): a customer sees the legend and the
  * marks, the browser holds back an empty required field, and a complete
  * address is saved and listed on the profile.
  */

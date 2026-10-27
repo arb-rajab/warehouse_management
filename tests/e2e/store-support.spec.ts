@@ -132,7 +132,11 @@ test('a failed reply retains text and the native field has dark-mode styling', a
         }
     });
     await page.goto('/temp/admin/product-queries/43');
-    const field = page.getByLabel('Type your reply');
+    const field = page.getByRole('textbox', {
+        name: 'Type your reply required',
+        exact: true,
+    });
+    await expect(field).toHaveAttribute('required', '');
     await field.fill('Keep this reply');
     const colors = await field.evaluate((element) => {
         const style = getComputedStyle(element);

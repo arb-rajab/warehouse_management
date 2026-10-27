@@ -17,7 +17,7 @@
         <ul class="list-group list-group-raw">
             @foreach ($categories as $key => $category)
                 <li class="list-group-item py-1">
-                    <a class="text-reset hov-text-primary" href="{{ route('products.category', $category->slug) }}">{{ $category->getTranslation('name') }}</a>
+                    <a class="text-reset hov-text-primary" href="{{ \App\Support\StorefrontUrl::to($category) }}">{{ $category->getTranslation('name') }}</a>
                 </li>
             @endforeach
         </ul>
@@ -30,7 +30,7 @@
         <ul class="list-group list-group-raw">
             @foreach ($products as $key => $product)
                 <li class="list-group-item">
-                    <a class="text-reset" href="{{ route('product', $product->slug) }}">
+                    <a class="text-reset" href="{{ \App\Support\StorefrontUrl::to($product) }}">
                         <div class="d-flex search-product align-items-center">
                             <div class="mr-3">
                                 <img class="size-40px img-fit rounded" src="{{ uploaded_asset($product->thumbnail_img) }}">

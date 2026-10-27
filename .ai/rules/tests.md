@@ -3,7 +3,7 @@ paths:
   - 'tests/**'
 ---
 
-# Tests
+# Test authorization, payload assertions and shared fixtures
 
 ## Authenticate API tests with actingAsMobileUser()
 Use the `actingAsMobileUser()` helper in `tests/Pest.php` instead of writing `Sanctum::actingAs(User::factory()->mobileUser()->create(), ['*'])`. It returns the user, so tests that assert on who performed an action can do `$user = actingAsMobileUser();`. There should be zero `Sanctum::` references outside Pest.php.
@@ -58,7 +58,7 @@ test('viewing the edit page for a non-existent row returns a 404', function () {
 ## Backdate model timestamps with backdate(), build transfer pairs with createTransferPair()
 `created_at` is never mass-assignable, so a factory's `create(['created_at' => ...])` silently ignores it — use the `backdate($model, $timestamp)` helper in `tests/Pest.php` (`forceFill(['created_at' => ...])->save()`, returns the model) instead of fighting mass assignment or freezing `Carbon::now()` for the whole test.
 
-`createTransferPair($pallet, $source, $destination, $outAt, $inAt)` (also in Pest.php) creates the matching `transferred_out`/`transferred_in` `CellStatusLog` row pair a real transfer writes in one transaction (see concerns-models.md, cell-status-logs.md), already backdated — use it instead of hand-rolling both factory calls whenever a test needs a transfer pair or a next-log/duration chain to test against.
+`createTransferPair($pallet, $source, $destination, $outAt, $inAt)` (also in Pest.php) creates the matching `transferred_out`/`transferred_in` `CellStatusLog` row pair a real transfer writes in one transaction (see cell-log-filters.md, cell-log-display.md), already backdated — use it instead of hand-rolling both factory calls whenever a test needs a transfer pair or a next-log/duration chain to test against.
 
 ## Grep for ALL occurrences of a pattern before fixing any single one
 Before fixing (or updating) one instance of a pattern — a selector, a key name, a PHPDoc annotation — grep the entire relevant file (or codebase) for all occurrences of that pattern and fix every one in the same change:

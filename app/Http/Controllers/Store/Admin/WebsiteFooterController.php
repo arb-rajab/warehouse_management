@@ -16,7 +16,7 @@ use Inertia\Response;
 
 /**
  * The storefront footer's settings, one language at a time for the
- * translatable texts (.ai/rules/store-backoffice-migration.md §20).
+ * translatable texts (.ai/archive/store-backoffice/changes-20261013.md §20).
  */
 class WebsiteFooterController extends Controller implements HasMiddleware
 {

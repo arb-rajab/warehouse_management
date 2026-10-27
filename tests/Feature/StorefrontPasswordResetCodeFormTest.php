@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\Hash;
  * fields; the code's expiry, single use and attempt cap
  * (StoreVerificationCodes) and the store-auth throttle are as they were.
  * The flows themselves are in LegacyStorePasswordResetTest and
- * LegacyStoreAccountRecoveryTest (store-backoffice-migration.md §48).
+ * LegacyStoreAccountRecoveryTest (.ai/archive/store-backoffice/changes-20261021.md §48).
  */
 const PASSWORD_RESET_CODE_FIELDS = ['email', 'code', 'password', 'password_confirmation'];
 

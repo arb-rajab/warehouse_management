@@ -47,7 +47,7 @@ test('the root settings controller keeps the gates of its remaining compatibilit
 
     // general_setting moved to Store\Admin\GeneralSettingsController with its
     // gate; the generic `update` writer and its four-permission gate retired
-    // with the footer and appearance forms (store-backoffice-migration.md §20).
+    // with the footer and appearance forms (.ai/archive/store-backoffice/changes-20261013.md §20).
     expect($middleware->all())->toBe([
         'permission:features_activation' => ['updateSellerCommissionActivation'],
     ])->and(method_exists(BusinessSettingsController::class, 'update'))->toBeFalse();

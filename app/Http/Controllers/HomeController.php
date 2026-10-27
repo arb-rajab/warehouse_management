@@ -128,16 +128,6 @@ class HomeController extends Controller
     }
 
     /**
-     * Create a new controller instance.
-     *
-     * @return void
-     */
-    public function __construct()
-    {
-        //$this->middleware('auth');
-    }
-
-    /**
      * Show the customer/seller dashboard.
      *
      * @return \Illuminate\Http\Response
@@ -250,7 +240,11 @@ class HomeController extends Controller
 
     public function product(Request $request, $slug)
     {
-        $detailedProduct  = Product::with('reviews', 'brand', 'stocks', 'user', 'user.shop', 'barcodes')->where('auction_product', 0)->where('slug', $slug)->where('approved', 1)->first();
+        $detailedProduct = \App\Support\StorefrontUrl::resolve(
+            Product::with('reviews', 'brand', 'stocks', 'user', 'user.shop', 'barcodes')->where('auction_product', 0)->where('approved', 1),
+            $slug,
+            $request
+        )->first();
         logProductView($detailedProduct?->id);
 
         if ($detailedProduct && ProductVariation::where('product_id', $detailedProduct->id)->exists()) {
@@ -296,7 +290,11 @@ class HomeController extends Controller
                 $affiliateController = new AffiliateController;
                 $affiliateController->processAffiliateStats($referred_by_user->id, 1, 0, 0, 0);
             }
-            return view('shop.frontend.product_details', compact('detailedProduct', 'product_queries', 'total_query', 'reviews', 'review_status', 'variations'));
+            $relatedProducts = filter_products(Product::query()->where('category_id', $detailedProduct->category_id)->where('id', '!=', $detailedProduct->id))
+                ->select(['id', 'slug', 'name', 'ar_name', 'thumbnail_img', 'unit_price', 'discount', 'discount_type', 'discount_start_date', 'discount_end_date'])
+                ->with(['product_translations:id,product_id,lang,name', 'taxes:id,product_id,tax,tax_type'])
+                ->limit(10)->get();
+            return view('shop.frontend.product_details', compact('detailedProduct', 'product_queries', 'total_query', 'reviews', 'review_status', 'variations', 'relatedProducts'));
         }
         abort(404);
     }
@@ -742,7 +740,9 @@ class HomeController extends Controller
 
     public function all_coupons(Request $request)
     {
-        $coupons = Coupon::where('start_date', '<=', strtotime(date('d-m-Y')))->where('end_date', '>=', strtotime(date('d-m-Y')))->paginate(15);
+        $coupons = Coupon::select(['id', 'user_id', 'type', 'code', 'details', 'discount', 'discount_type', 'start_date', 'end_date'])
+            ->with(['user:id,user_type', 'user.shop:id,user_id,name,slug,verification_status'])
+            ->where('start_date', '<=', strtotime(date('d-m-Y')))->where('end_date', '>=', strtotime(date('d-m-Y')))->paginate(15);
         return view('shop.frontend.coupons', compact('coupons'));
     }
 

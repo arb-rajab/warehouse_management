@@ -2,6 +2,8 @@
 
 namespace App\Http\Resources\V2;
 
+use App\Support\StorefrontUrl;
+
 use App\Models\Review;
 use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Http\Request;
@@ -79,7 +81,7 @@ class AuctionProductDetailCollection extends ResourceCollection
                     'highest_bid' => $highest_bid != null ?  single_price($highest_bid) : '',
                     'description' => str_replace('&nbsp;', ' ', strip_tags($data->getTranslation('description'))),
                     'video_link' => $data->video_link != null ?  $data->video_link : "",
-                    'link' => route('product', $data->slug)
+                    'link' => StorefrontUrl::to($data)
                     // 'data' => $data
 
 

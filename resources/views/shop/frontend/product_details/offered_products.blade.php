@@ -1,6 +1,6 @@
 @php
     $offer = $active_offers->first();
-    $offer_products = $offer->offer_products->load('product');
+    $offer_products = $offer->offer_products->load(['product:id,slug,name,ar_name,thumbnail_img,unit_price', 'product.product_translations:id,product_id,lang,name', 'product.taxes:id,product_id,tax,tax_type']);
 @endphp
 <div class="bg-white border">
     <div class="p-3 p-sm-4">
@@ -18,7 +18,7 @@
                 <div class="carousel-box">
                     <div class="aiz-card-box hov-shadow-md my-2 has-transition hov-scale-img">
                         <div class="">
-                            <a href="{{ route('product', $offered_product->product->slug) }}"
+                            <a href="{{ \App\Support\StorefrontUrl::to($offered_product->product) }}"
                                 class="d-block">
                                 <img class="img-fit lazyload mx-auto h-140px h-md-190px has-transition"
                                     src="{{ static_asset('assets/img/placeholder.jpg') }}"
@@ -29,7 +29,7 @@
                         </div>
                         <div class="p-md-3 p-2 text-center">
                             <h3 class="fw-400 fs-14 text-dark text-truncate-2 lh-1-4 mb-0 h-35px">
-                                <a href="{{ route('product', $offered_product->product->slug) }}"
+                                <a href="{{ \App\Support\StorefrontUrl::to($offered_product->product) }}"
                                     class="d-block text-reset hov-text-primary">{{ $offered_product->product->getTranslation('name') }}</a>
                             </h3>
 

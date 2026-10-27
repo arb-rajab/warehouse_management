@@ -12,6 +12,8 @@ use Illuminate\Support\Facades\DB;
  * other fields say "(optional)"; a legend explains the asterisk
  * (.ai/rules/form-required-fields.md).
  */
+beforeEach(fn () => $this->withoutVite());
+
 const REGISTRATION_REQUIRED_FIELDS = ['name', 'company_name', 'email', 'phone', 'country', 'password', 'password_confirmation'];
 
 /**
@@ -20,7 +22,7 @@ const REGISTRATION_REQUIRED_FIELDS = ['name', 'company_name', 'email', 'phone', 
 function registrationPages(): array
 {
     return [
-        'shop.auth.register' => ['/temp/register', ['tax_number', 'company_address', 'shipping_address', 'trade_license']],
+        'shop.auth.register' => ['/temp/register', ['tax_number', 'company_address', 'trade_license']],
         // Its tax number, bank account, address and trade license fields are commented out.
         'shop.frontend.user_registration' => ['/temp/users/registration', []],
     ];

@@ -13,7 +13,9 @@ import {
 } from '@/actions/App/Http/Controllers/Admin/PalletController';
 import ActionErrorBanner from '@/components/ActionErrorBanner.vue';
 import FilterDialog from '@/components/FilterDialog.vue';
+import ProductImageReviewFields from '@/components/ProductImageReviewFields.vue';
 import ProductSelect from '@/components/ProductSelect.vue';
+import RequiredLegend from '@/components/RequiredLegend.vue';
 import SubmitButton from '@/components/SubmitButton.vue';
 import { formatDate, formatDateTime } from '@/lib/date';
 import {
@@ -64,6 +66,9 @@ const form = useForm({
     cell_number: '',
     flat_number: '',
     note: '',
+    image_review_status: '',
+    image_review_note: '',
+    image_source: '',
 });
 
 function resetFields(): void {
@@ -92,6 +97,17 @@ watch(selectedAction, (action) => {
         form.boxes_count = String(props.cell.pallet.remaining_boxes);
     }
 });
+
+const imageReviewReady = ref(false);
+watch(
+    () => form.product?.id,
+    () => {
+        imageReviewReady.value = false;
+        form.image_review_status = '';
+        form.image_review_note = '';
+        form.image_source = '';
+    },
+);
 
 const remainingBoxes = computed(() => props.cell?.pallet?.remaining_boxes ?? 0);
 
@@ -129,6 +145,9 @@ function buildRequest(): PalletActionRequest | null {
         return {
             action: store(cell, query),
             data: {
+                image_review_status: form.image_review_status,
+                image_review_note: form.image_review_note || null,
+                image_source: form.image_source,
                 product_id: form.product?.id ?? null,
                 expiration_date: form.expiration_date,
                 note: noteOrNull(),
@@ -192,6 +211,13 @@ function buildRequest(): PalletActionRequest | null {
 }
 
 function submit(): void {
+    if (
+        selectedAction.value === 'store' &&
+        (!imageReviewReady.value || !form.image_review_status)
+    ) {
+        return;
+    }
+
     const request = buildRequest();
 
     if (!request) {
@@ -314,6 +340,7 @@ const submitLabel = computed(() => {
             class="space-y-4"
             @submit.prevent="submit"
         >
+            <RequiredLegend v-if="selectedAction === 'store'" />
             <ActionErrorBanner :message="firstError(form.errors)" />
 
             <template
@@ -335,6 +362,16 @@ const submitLabel = computed(() => {
                             `cells.palletActions.${selectedAction}.productPlaceholder`,
                         )
                     "
+                />
+                <ProductImageReviewFields
+                    v-if="selectedAction === 'store' && form.product"
+                    :key="form.product.id"
+                    :product-id="form.product.id"
+                    id-prefix="receiving-image-review"
+                    v-model:status="form.image_review_status"
+                    v-model:note="form.image_review_note"
+                    v-model:source="form.image_source"
+                    @ready="imageReviewReady = $event"
                 />
                 <div>
                     <label
@@ -522,6 +559,11 @@ const submitLabel = computed(() => {
                 :label="submitLabel"
                 :processing-label="t('cells.palletActions.submitting')"
                 :processing="form.processing"
+                :disabled="
+                    form.processing ||
+                    (selectedAction === 'store' &&
+                        (!imageReviewReady || !form.image_review_status))
+                "
             />
         </template>
     </FilterDialog>

@@ -4,6 +4,7 @@ namespace App\Http\Resources\Store;
 
 use App\Models\Product;
 use App\Models\StoreUser;
+use App\Support\StorefrontUrl;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -29,7 +30,7 @@ class ReviewResource extends JsonResource
                 'id' => $this->product->id,
                 'name' => $this->product->getTranslation('name'),
                 'owner' => $this->product->getAttribute('added_by'),
-                'url' => route('product', $this->product->getAttribute('slug')),
+                'url' => StorefrontUrl::to($this->product),
             ]),
             'customer' => $this->whenLoaded('user', fn () => [
                 'id' => $this->user->id,

@@ -20,7 +20,7 @@
                                     @endif
                                 </div>
                                 <div class="pb-4 px-3 absolute-bottom-left w-100 has-transition h-100 d-flex flex-column align-items-center justify-content-end" style="background: linear-gradient(to top, rgba(0,0,0,0.7) 0%,rgba(0,0,0,0) 100%) !important;">
-                                    <a class="fs-16 fw-700 text-white text-center animate-underline-white home-category-name d-flex align-items-center hov-column-gap-1" href="{{ route('products.category', $category->slug) }}" style="width: max-content;">{{ $category->getTranslation('name') }}&nbsp;<i class="las la-angle-right"></i></a>
+                                    <a class="fs-16 fw-700 text-white text-center animate-underline-white home-category-name d-flex align-items-center hov-column-gap-1" href="{{ \App\Support\StorefrontUrl::to($category) }}" style="width: max-content;">{{ $category->getTranslation('name') }}&nbsp;<i class="las la-angle-right"></i></a>
                                 </div>
                             </div>
                         </div>

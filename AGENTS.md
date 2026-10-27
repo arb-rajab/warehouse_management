@@ -24,6 +24,8 @@ rules below take precedence over environment-specific wording in those files.
 
 ## Project context and setup
 
+The [documentation map](.ai/README.md) separates current guidance from dated evidence.
+
 - Backend requirements and scripts are in `composer.json`; frontend requirements
   and scripts are in `package.json`. Lockfiles pin resolved versions.
 - The stack includes Laravel 13, PHP 8.5, Inertia 3, Vue 3, TypeScript, Tailwind,
@@ -31,8 +33,13 @@ rules below take precedence over environment-specific wording in those files.
 - Read [README.md](README.md) for warehouse workflows and local setup. Also consult
   [.ai/rules/legacy-albaraka-holland.md](.ai/rules/legacy-albaraka-holland.md) for
   the integrated store and [.ai/rules/store-backoffice-migration.md](.ai/rules/store-backoffice-migration.md)
-  for its existing migration constraints; the README alone is not a complete
-  inventory of the current application.
+  for current architecture, constraints and operational guidance. Historical
+  migration evidence is indexed there; the reconciliation ledger is historical,
+  and its approval/checkpoint claims do not authorize new actions. The README
+  alone is not a complete inventory of the current application.
+- [Required-fields audit reports](.ai/required-fields-audits.md) identifies the newest
+  committed Markdown/JSON pair and archived snapshots. Keep generated report pairs
+  together and preserve the ratchet baseline and command output contract.
 - `composer run setup` installs dependencies, creates local environment files,
   migrates the database, and builds assets. Inspect its effects and confirm the
   database target before running it. `composer run dev` starts local services.
@@ -54,6 +61,12 @@ rules below take precedence over environment-specific wording in those files.
 - Keep the existing `.claude/scripts/` utilities available to both agents. Read
   their usage and limitations before invoking them. Avoid concurrent installers,
   never bypass platform requirements, and preserve lockfiles during setup.
+- Before browser tests in a Linux sandbox, after frontend dependencies are ready,
+  run `python3 .claude/scripts/install_playwright.py`. It reuses installed Chromium
+  and FFmpeg and installs only missing binaries. For a direct Playwright run,
+  source `node_modules/.playwright-runtime.env`; the pre-push runner discovers
+  the paths itself. This helper is portable across agents and does not require
+  launching the Claude SessionStart hook.
 - Prefer Laravel Boost tools when they are available. If `search-docs` or other
   Boost tools are unavailable, use installed package source, repository files,
   existing commands, and official documentation matching the installed version.

@@ -15,7 +15,7 @@ use Illuminate\Support\Facades\Route;
  * StoreConversationRequest requires a visible product (published and
  * approved), a title within conversations.title (varchar(1000)) and a message
  * within messages.message (text), into its own error bag
- * (store-backoffice-migration.md §48).
+ * (.ai/archive/store-backoffice/changes-20261021.md §48).
  */
 const CONVERSATION_FIELDS = ['title', 'message'];
 

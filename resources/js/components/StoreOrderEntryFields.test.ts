@@ -41,3 +41,48 @@ it('reuses async fields, applies representative discount, converts pieces, prese
         true,
     );
 });
+
+it.each([false, true])(
+    'marks order row units and required fields, leaving optional controls unmarked representative=%s',
+    async (representativeOrder) => {
+        const wrapper = mount(StoreOrderEntryFields, {
+            props: { representativeOrder, errors: {} },
+        });
+
+        for (const id of [
+            'customer_id',
+            ...(representativeOrder ? ['rep_id'] : []),
+            'product-1',
+            'quantity-1',
+            'unit-1',
+            'price-1',
+        ]) {
+            expect(wrapper.get(`#${id}`).attributes('required')).toBeDefined();
+            expect(
+                wrapper
+                    .find(`label[for="${id}"] [data-required-mark]`)
+                    .exists(),
+            ).toBe(true);
+        }
+
+        for (const id of ['delivery_date', 'additional_info', 'info-1']) {
+            expect(
+                wrapper.get(`#${id}`).attributes('required'),
+            ).toBeUndefined();
+            expect(
+                wrapper
+                    .get(`label[for="${id}"]`)
+                    .find('[data-required-mark]')
+                    .exists(),
+            ).toBe(false);
+        }
+
+        await wrapper
+            .findAll('button')
+            .find((button) => button.text().includes('Add product'))!
+            .trigger('click');
+        expect(
+            wrapper.find('label[for="unit-2"] [data-required-mark]').exists(),
+        ).toBe(true);
+    },
+);

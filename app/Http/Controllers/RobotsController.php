@@ -15,7 +15,7 @@ use Illuminate\Http\Response;
  * cart and checkout pages and the seller area. Internal search results and
  * filtered listings are deliberately NOT disallowed: they carry
  * `noindex, follow`, which a crawler can only see if it may fetch the page.
- * See store-backoffice-migration.md §42.
+ * See .ai/archive/store-backoffice/changes-20261020.md §42.
  */
 class RobotsController extends Controller
 {

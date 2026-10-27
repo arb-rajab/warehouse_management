@@ -148,7 +148,7 @@ prefix. That is the single point every storefront asset URL goes through.
   `WMS_TOKEN`. Its `DEMO_MODE` guard read `env()`, null once config is cached.
   **Fixed 2026-10-01:** it writes nothing and returns false (logging the key,
   never the value; removed on 2026-10-13 with its last callers, the generic
-  settings writer, store-backoffice-migration.md §20), `env_key_update` refuses, and the two activation toggles
+  settings writer, .ai/archive/store-backoffice/changes-20261013.md §20), `env_key_update` refuses, and the two activation toggles
   that lived in `.env` (`FORCE_HTTPS`, `FILESYSTEM_DRIVER`) report failure.
   Credentials the screens used to save (SMTP, social login, analytics, gateway
   keys) are now set in the server `.env` by whoever deploys.
@@ -304,7 +304,7 @@ prefix. That is the single point every storefront asset URL goes through.
   or a translated description. **Not covered:** admin-written content, which is
   trusted with markup and printed as it is (CMS pages, settings texts,
   payment-method notes; blog posts are cleaned on write and on display since
-  store-backoffice-migration.md §18), so a compromised admin account can still plant
+  .ai/archive/store-backoffice/changes-20261013.md §18), so a compromised admin account can still plant
   script; and the API, which returns descriptions as stored for the mobile app
   to render.
 - The store changed data on GET: delete, ban, approve, restore, duplicate and

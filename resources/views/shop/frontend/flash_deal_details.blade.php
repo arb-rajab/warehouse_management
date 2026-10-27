@@ -32,12 +32,6 @@
                                         $product = \App\Models\Product::find($flash_deal_product->product_id);
                                     @endphp
                                     @if ($product != null && $product->published != 0)
-                                        @php
-                                            $product_url = route('product', $product->slug);
-                                            if($product->auction_product == 1) {
-                                                $product_url = route('product', $product->slug);
-                                            }
-                                        @endphp
                                         <div class="col text-center border-right border-bottom has-transition hov-shadow-out z-1">
                                             @include('shop.frontend.partials.product_box_1',['product' => $product])
                                         </div>

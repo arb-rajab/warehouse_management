@@ -2,11 +2,15 @@
 import type { UrlMethodPair } from '@inertiajs/core';
 import { Form } from '@inertiajs/vue3';
 import FieldError from '@/components/FieldError.vue';
+import RequiredLegend from '@/components/RequiredLegend.vue';
+import RequiredMark from '@/components/RequiredMark.vue';
 import SubmitButton from '@/components/SubmitButton.vue';
 import { fieldLabelClass, plainFieldInputClass } from '@/lib/filters';
 import { t } from '@/lib/i18n';
+import { provideRequiredFields } from '@/lib/requiredFields';
 
 defineProps<{ action: UrlMethodPair; field: 'message' | 'reply' }>();
+const hasRequiredFields = provideRequiredFields();
 </script>
 
 <template>
@@ -16,10 +20,11 @@ defineProps<{ action: UrlMethodPair; field: 'message' | 'reply' }>();
         #default="{ errors, processing }"
         class="space-y-3"
     >
+        <RequiredLegend v-if="hasRequiredFields" />
         <div>
-            <label :for="field" :class="fieldLabelClass">{{
-                t('store.support.replyLabel')
-            }}</label>
+            <label :for="field" :class="fieldLabelClass"
+                >{{ t('store.support.replyLabel') }}<RequiredMark
+            /></label>
             <textarea
                 :id="field"
                 :name="field"

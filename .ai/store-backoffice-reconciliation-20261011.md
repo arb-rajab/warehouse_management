@@ -1,9 +1,29 @@
 # Store back-office reconciliation — 2026-10-11
 
-Integration and audit handoff; current results are recorded in
-[final all-store browser verification](#final-all-store-browser-verification-2026-10-12)
-below. The browser gate has passed. Earlier integration and blocked attempts
-remain historical evidence. Original integration branch:
+**Historical evidence, 2026-10-11 through 2026-10-20.** This is the canonical
+reconciliation account for source disposition, runtime recovery, verification
+attempts and shipping outcomes in that period. Statements about “current”,
+“remaining”, approvals or checkpoints describe their entry's date. They do not
+establish today's status, runtime readiness or authority for a new action.
+
+Use the [active store guide](rules/store-backoffice-migration.md) for current
+constraints and operations. The [final all-store browser verification](#final-all-store-browser-verification-2026-10-12)
+records the historical browser gate; earlier blocked attempts remain evidence of
+what was and was not checked. Later entries retain their own verification limits.
+
+## Evidence navigation
+
+- [Integration sources](#source-disposition) and [conflict decisions](#contract-and-conflict-resolutions).
+- [Deferred source decisions at integration](#deferred-source-changes-and-owner-decisions).
+- [Reconstructed audit](#independent-reconstructed-audit--prompt-3),
+  [combined verification attempt](#final-combined-verification-attempt--prompt-4-2026-10-11),
+  [runtime recovery](#resumed-runtime-verification-2026-10-11) and
+  [final browser run](#final-all-store-browser-verification-2026-10-12).
+- Dated module entries below record their own contracts and checks. Detailed
+  migration implementation history is indexed by the active guide; repeated
+  summaries there link here for canonical reconciliation evidence.
+
+Original integration branch:
 `codex/store-backoffice-reconciliation-20261011-01`, worktree:
 `/workspace/store-backoffice-reconciliation-20261011-01`, based on latest fetched
 `origin/develop`, `8e3f82b60b2b4dc951b97ccfed985a75e9e6be69`.
@@ -3253,10 +3273,11 @@ files, the font-less build). No stand-in Wayfinder modules were needed.
   authorized), MySQL (Pest and Playwright use SQLite), the full Playwright
   suite (only the three trip and driver specs), and `npm run build` with the
   remote font.
-- **Known limits.** Mark as delivered and the invoice number still apply to
-  any order the caller can name, as the Blade handlers did (no status
-  precondition); the map picker's popup reloads after a successful response
-  instead of reading the old JSON `success`.
+- **D10 resolved (2026-10-26).** Order writes now require `trip_id`, resolve
+  through its order checkpoints and reject closed trips. Mark delivered accepts
+  confirmed, ready-for-delivery or out-for-delivery orders; delivered/cancelled
+  orders are refused without mutation. See migration guide §66. The map picker
+  still reloads after success instead of reading the old JSON `success`.
 - **Inventory** (from the files and `route:list`). **38** backend Blade
   files; **19**/**3** literal consumers of the app/layout shells; **1,048**
   `/temp` and **436** `/temp/admin` registrations; Blade editor: **8** fields
@@ -3372,11 +3393,11 @@ package source were used instead. On a detached checkout of `develop` at
   authorized), MySQL (Pest and Playwright use SQLite), the full Playwright
   suite (only the four trip and driver specs), and `npm run build` with the
   remote font.
-- **Known limits.** A checkpoint status still applies to any checkpoint of any
-  trip, closed or not, as the Blade handler did; the CMR download opens only
-  the first upload id in `cmr_file` (the driver API stores one); printing
-  relies on the browser's own print of the Inertia page, not the Blade card
-  layout.
+- **D10 resolved (2026-10-26).** Checkpoint notes/status require `trip_id`,
+  resolve through that trip and reject a closed parent without mutation (guide
+  §66). **Known limits retained:** CMR download opens only the first upload ID
+  in `cmr_file` (the driver API stores one); printing uses the browser's own
+  print of the Inertia page. Both are outside D10 write scoping.
 - **Inventory** (from the files and `route:list`). **36** backend Blade
   files; **18**/**3** literal consumers of the app/layout shells; **1,048**
   `/temp` and **436** `/temp/admin` registrations; Blade editor: **8** fields
@@ -5151,7 +5172,7 @@ the framework and convention guides, the index, the rules for the changed paths
 and the audit (`.md`, `.json`, `.sql`) were read first; `wait_for_setup.py`
 reported the tooling ready before any composer, artisan or Pest use. The Boost
 MCP tools were not used. The decision, the command, the section mapping and the
-guard are in [guide §40](rules/store-backoffice-migration.md#40-launch-with-super-admin-only-permission-sync-fetch-gate-and-login-landing-2026-10-20).
+guard are in [guide §40](archive/store-backoffice/changes-20261020.md#40-launch-with-super-admin-only-permission-sync-fetch-gate-and-login-landing-2026-10-20).
 
 **Launch decision.** Production launches with only the Super Admin role
 (`Gate::before()` passes it through every gate); staff roles are created later
@@ -5233,7 +5254,7 @@ rules for the changed paths and guide §29 and §40 were read first;
 `wait_for_setup.py` reported the tooling ready (local MySQL included) before any
 composer, artisan or Pest use. The Boost MCP tools were not used. The decisions
 and behaviour changes are in
-[guide §41](rules/store-backoffice-migration.md#41-go-live-hardening-seeders-the-first-admin-the-production-env-template-event-cache-and-migrate---pretend-2026-10-20).
+[guide §41](archive/store-backoffice/changes-20261020.md#41-go-live-hardening-seeders-the-first-admin-the-production-env-template-eventcache-and-migrate---pretend-2026-10-20).
 This PR does **not** carry `[skip ci]`: it is the first to run the full `tests`
 workflow and SAST since about 40 PRs merged without them.
 

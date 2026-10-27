@@ -17,7 +17,7 @@ use Inertia\Response;
 /**
  * The storefront's appearance settings. The header and footer scripts are
  * shown here as stored and saved through LegacyWebsiteScriptsController,
- * unchanged (.ai/rules/store-backoffice-migration.md §20).
+ * unchanged (.ai/archive/store-backoffice/changes-20261013.md §20).
  */
 class WebsiteAppearanceController extends Controller implements HasMiddleware
 {

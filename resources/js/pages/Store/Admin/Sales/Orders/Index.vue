@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Form, Head, router } from '@inertiajs/vue3';
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import {
     all_orders,
     show,
@@ -17,6 +17,8 @@ import DataTable from '@/components/DataTable.vue';
 import FormField from '@/components/FormField.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import Pagination from '@/components/Pagination.vue';
+import RequiredLegend from '@/components/RequiredLegend.vue';
+import RequiredMark from '@/components/RequiredMark.vue';
 import SubmitButton from '@/components/SubmitButton.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
@@ -24,6 +26,7 @@ import { confirmDelete } from '@/lib/confirm';
 import { fieldLabelClass, plainFieldInputClass } from '@/lib/filters';
 import { t } from '@/lib/i18n';
 import { usePageError } from '@/lib/pageErrors';
+import { provideRequiredFields } from '@/lib/requiredFields';
 import { useStoreAccess } from '@/lib/storeAccess';
 import type { Paginated } from '@/types/admin';
 import type { StoreOrder } from '@/types/store';
@@ -40,6 +43,7 @@ const props = defineProps<{
     listRoute: string;
 }>();
 const access = useStoreAccess();
+const selected = ref<number[]>([]);
 const error = usePageError('action');
 const listAction = computed(
     () =>
@@ -60,6 +64,7 @@ function changePerPage(perPage: number): void {
         }),
     );
 }
+const hasRequiredFields = provideRequiredFields();
 </script>
 <template>
     <Head :title="t('store.orders.title')" />
@@ -161,78 +166,103 @@ function changePerPage(perPage: number): void {
             :action="bulk_order_delete({ mergeQuery: {} })"
             :options="{ preserveScroll: true }"
             #default="{ processing }"
+            @success="selected = []"
         >
-            <DataTable
-                :columns="[
-                    t('store.orders.select'),
-                    t('store.orders.code'),
-                    t('store.orders.customer'),
-                    t('store.orders.total'),
-                    t('store.orders.deliveryStatus'),
-                    t('store.orders.paymentStatus'),
-                    t('store.orders.actions'),
-                ]"
-                :rows="orders.data"
-                :empty-message="t('store.orders.empty')"
-            >
-                <template #row="{ row }">
-                    <td class="px-3 py-3">
-                        <input
-                            v-if="access.can('delete_order')"
-                            type="checkbox"
-                            name="id[]"
-                            :value="row.id"
-                            :aria-label="
-                                t('store.orders.selectOrder', {
-                                    code: row.code,
-                                })
-                            "
-                        />
-                    </td>
-                    <td class="px-3 py-3">{{ row.code }}</td>
-                    <td class="px-3 py-3">{{ row.customer?.name }}</td>
-                    <td class="px-3 py-3">{{ row.grand_total.toFixed(2) }}</td>
-                    <td class="px-3 py-3">
-                        {{ t(`store.orders.status.${row.delivery_status}`) }}
-                    </td>
-                    <td class="px-3 py-3">
-                        {{ t(`store.orders.status.${row.payment_status}`) }}
-                    </td>
-                    <td class="space-x-2 px-3 py-3">
-                        <TableActionLink
-                            v-if="access.can('view_order_details')"
-                            :href="
-                                show['/temp/admin/orders/{order}/show'](row.id)
-                            "
-                            :label="t('store.orders.view')"
-                            >{{ t('store.orders.view') }}</TableActionLink
-                        ><TableActionLink
-                            v-if="access.can('delete_order')"
-                            :href="destroy(row, { mergeQuery: {} })"
-                            as="button"
-                            variant="danger"
-                            :on-before="() => confirmDelete(row.code)"
-                            >{{ t('store.orders.delete') }}</TableActionLink
-                        >
-                    </td>
-                </template>
-            </DataTable>
-            <div
-                v-if="access.can('delete_order')"
-                class="mt-3"
-                @click.capture="
-                    (event) => {
-                        if (!confirmDelete(t('store.orders.selectedOrders')))
-                            event.preventDefault();
-                    }
-                "
-            >
-                <SubmitButton
-                    :label="t('store.orders.deleteSelected')"
-                    :processing-label="t('store.orders.saving')"
-                    :processing="processing"
-                />
-            </div>
+            <RequiredLegend
+                v-if="hasRequiredFields && access.can('delete_order')"
+            />
+            <fieldset>
+                <legend
+                    v-if="access.can('delete_order')"
+                    :class="fieldLabelClass"
+                >
+                    {{ t('store.orders.selectedOrders') }}<RequiredMark />
+                </legend>
+                <DataTable
+                    :columns="[
+                        t('store.orders.select'),
+                        t('store.orders.code'),
+                        t('store.orders.customer'),
+                        t('store.orders.total'),
+                        t('store.orders.deliveryStatus'),
+                        t('store.orders.paymentStatus'),
+                        t('store.orders.actions'),
+                    ]"
+                    :rows="orders.data"
+                    :empty-message="t('store.orders.empty')"
+                >
+                    <template #row="{ row }">
+                        <td class="px-3 py-3">
+                            <input
+                                v-if="access.can('delete_order')"
+                                v-model="selected"
+                                type="checkbox"
+                                name="id[]"
+                                :required="
+                                    selected.length === 0 &&
+                                    row.id === orders.data[0]?.id
+                                "
+                                :value="row.id"
+                                :aria-label="
+                                    t('store.orders.selectOrder', {
+                                        code: row.code,
+                                    })
+                                "
+                            />
+                        </td>
+                        <td class="px-3 py-3">{{ row.code }}</td>
+                        <td class="px-3 py-3">{{ row.customer?.name }}</td>
+                        <td class="px-3 py-3">
+                            {{ row.grand_total.toFixed(2) }}
+                        </td>
+                        <td class="px-3 py-3">
+                            {{
+                                t(`store.orders.status.${row.delivery_status}`)
+                            }}
+                        </td>
+                        <td class="px-3 py-3">
+                            {{ t(`store.orders.status.${row.payment_status}`) }}
+                        </td>
+                        <td class="space-x-2 px-3 py-3">
+                            <TableActionLink
+                                v-if="access.can('view_order_details')"
+                                :href="
+                                    show['/temp/admin/orders/{order}/show'](
+                                        row.id,
+                                    )
+                                "
+                                :label="t('store.orders.view')"
+                                >{{ t('store.orders.view') }}</TableActionLink
+                            ><TableActionLink
+                                v-if="access.can('delete_order')"
+                                :href="destroy(row, { mergeQuery: {} })"
+                                as="button"
+                                variant="danger"
+                                :on-before="() => confirmDelete(row.code)"
+                                >{{ t('store.orders.delete') }}</TableActionLink
+                            >
+                        </td>
+                    </template>
+                </DataTable>
+                <div
+                    v-if="access.can('delete_order')"
+                    class="mt-3"
+                    @click.capture="
+                        (event) => {
+                            if (
+                                !confirmDelete(t('store.orders.selectedOrders'))
+                            )
+                                event.preventDefault();
+                        }
+                    "
+                >
+                    <SubmitButton
+                        :label="t('store.orders.deleteSelected')"
+                        :processing-label="t('store.orders.saving')"
+                        :processing="processing"
+                    />
+                </div>
+            </fieldset>
         </Form>
         <Pagination
             :links="orders.meta.links"

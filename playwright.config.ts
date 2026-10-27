@@ -64,8 +64,9 @@ export default defineConfig({
         // Reset only dedicated e2e files, including ancillary connections that
         // migrate:fresh does not drop. --no-reload keeps these DB overrides in
         // the PHP server child; serve otherwise discards them when .env exists.
+        // Fresh checkouts also need the public disk link for uploaded images.
         command:
-            "rm -f database/e2e.sqlite database/e2e-telescope.sqlite database/e2e-pulse.sqlite database/e2e-health.sqlite && touch database/e2e.sqlite database/e2e-telescope.sqlite database/e2e-pulse.sqlite database/e2e-health.sqlite && php artisan migrate:fresh --seed --force && php artisan db:seed --class='Tests\\Fixtures\\StoreCampaignBrowserSeeder' --force && php tests/e2e/support/seed-store-orders.php && " +
+            "rm -f database/e2e.sqlite database/e2e-telescope.sqlite database/e2e-pulse.sqlite database/e2e-health.sqlite && touch database/e2e.sqlite database/e2e-telescope.sqlite database/e2e-pulse.sqlite database/e2e-health.sqlite && php artisan storage:link --no-interaction && php artisan migrate:fresh --seed --force && php artisan db:seed --class='Tests\\Fixtures\\StoreCampaignBrowserSeeder' --force && php tests/e2e/support/seed-store-orders.php && " +
             serverCommand,
         url: baseURL,
         ignoreHTTPSErrors: baseURL.startsWith('https://'),

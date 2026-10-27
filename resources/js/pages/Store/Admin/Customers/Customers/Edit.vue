@@ -19,6 +19,8 @@ import {
 import FieldError from '@/components/FieldError.vue';
 import FilterDialog from '@/components/FilterDialog.vue';
 import FormField from '@/components/FormField.vue';
+import RequiredLegend from '@/components/RequiredLegend.vue';
+import RequiredMark from '@/components/RequiredMark.vue';
 import ResourceFormPage from '@/components/ResourceFormPage.vue';
 import StoreCustomerAddressForm from '@/components/StoreCustomerAddressForm.vue';
 import StoreCustomerFormFields from '@/components/StoreCustomerFormFields.vue';
@@ -90,9 +92,11 @@ function editAddress(address?: CustomerAddress): void {
                     :action="changeActivityStatus(customer)"
                     #default="{ errors, processing }"
                     class="space-y-3"
-                    ><label for="new_status" :class="fieldLabelClass">{{
-                        t('store.customers.activity')
-                    }}</label
+                    ><RequiredLegend /><label
+                        for="new_status"
+                        :class="fieldLabelClass"
+                        >{{ t('store.customers.activity')
+                        }}<RequiredMark /></label
                     ><select
                         id="new_status"
                         name="new_status"
@@ -196,7 +200,7 @@ function editAddress(address?: CustomerAddress): void {
                         @success="addressOpen = false"
                         #default="{ errors, processing }"
                         class="space-y-4"
-                        ><StoreCustomerAddressForm
+                        ><RequiredLegend /><StoreCustomerAddressForm
                             :address="editingAddress"
                             :countries="countries"
                             :errors="errors" /><SubmitButton

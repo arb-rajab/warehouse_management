@@ -15,11 +15,14 @@ import AddResourceLink from '@/components/AddResourceLink.vue';
 import DataTable from '@/components/DataTable.vue';
 import FormField from '@/components/FormField.vue';
 import PageHeader from '@/components/PageHeader.vue';
+import RequiredLegend from '@/components/RequiredLegend.vue';
+import RequiredMark from '@/components/RequiredMark.vue';
 import SubmitButton from '@/components/SubmitButton.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
 import { fieldLabelClass, plainFieldInputClass } from '@/lib/filters';
 import { t } from '@/lib/i18n';
 import { firstError } from '@/lib/pageErrors';
+import { provideRequiredFields } from '@/lib/requiredFields';
 import { useStoreAccess } from '@/lib/storeAccess';
 import type { StoreOrder } from '@/types/store';
 const props = defineProps<{
@@ -67,6 +70,7 @@ const actions = computed(() => [
         visible: props.order.delivery_status !== 'cancelled',
     },
 ]);
+const hasRequiredFields = provideRequiredFields();
 </script>
 <template>
     <Head :title="t('store.orders.show', { code: order.code })" />
@@ -119,13 +123,14 @@ const actions = computed(() => [
                     #default="{ processing, errors }"
                     class="space-y-2"
                 >
+                    <RequiredLegend v-if="hasRequiredFields" />
                     <input
                         name="order_id"
                         type="hidden"
                         :value="order.id"
-                    /><label :for="action.id" :class="fieldLabelClass">{{
-                        t(`store.orders.${action.label}`)
-                    }}</label>
+                    /><label :for="action.id" :class="fieldLabelClass"
+                        >{{ t(`store.orders.${action.label}`) }}<RequiredMark
+                    /></label>
                     <select
                         :id="action.id"
                         name="status"
@@ -220,7 +225,7 @@ const actions = computed(() => [
                         :action="edit_item_price()"
                         #default="{ processing, errors }"
                         class="space-y-2"
-                        ><input
+                        ><RequiredLegend v-if="hasRequiredFields" /><input
                             name="id"
                             type="hidden"
                             :value="row.id" /><FormField

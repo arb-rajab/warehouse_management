@@ -4,10 +4,13 @@ import { watch } from 'vue';
 import { updateStatus } from '@/actions/App/Http/Controllers/Store/Admin/TripController';
 import ActionErrorBanner from '@/components/ActionErrorBanner.vue';
 import FilterDialog from '@/components/FilterDialog.vue';
+import RequiredLegend from '@/components/RequiredLegend.vue';
+import RequiredMark from '@/components/RequiredMark.vue';
 import SubmitButton from '@/components/SubmitButton.vue';
 import { fieldLabelClass, plainFieldInputClass } from '@/lib/filters';
 import { t } from '@/lib/i18n';
 import { firstError } from '@/lib/pageErrors';
+import { provideRequiredFields } from '@/lib/requiredFields';
 import type {
     StoreTrip,
     StoreTripListType,
@@ -49,6 +52,7 @@ function submit(): void {
         },
     );
 }
+const hasRequiredFields = provideRequiredFields();
 </script>
 
 <template>
@@ -58,10 +62,11 @@ function submit(): void {
         :close-label="t('common.close')"
     >
         <form id="trip-status-form" @submit.prevent="submit">
+            <RequiredLegend v-if="hasRequiredFields" />
             <ActionErrorBanner :message="firstError(form.errors)" />
-            <label for="trip-status" :class="fieldLabelClass">{{
-                t('store.trips.status.label')
-            }}</label>
+            <label for="trip-status" :class="fieldLabelClass"
+                >{{ t('store.trips.status.label') }}<RequiredMark
+            /></label>
             <select
                 id="trip-status"
                 v-model="form.status"

@@ -701,7 +701,7 @@ return [
             'self' => true,
 
             // The trip map picker's OpenStreetMap tiles, which Leaflet loads
-            // as <img> elements (store-backoffice-migration.md §30).
+            // as <img> elements (.ai/archive/store-backoffice/changes-20261017.md §30).
             'allow' => [
                 'https://tile.openstreetmap.org',
             ],

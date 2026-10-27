@@ -7,6 +7,7 @@ import {
 } from '@/actions/App/Http/Controllers/Store/Admin/SellerPaymentController';
 import { paymentModal } from '@/actions/App/Http/Controllers/Store/Admin/SellerWithdrawRequestController';
 import FilterDialog from '@/components/FilterDialog.vue';
+import RequiredMark from '@/components/RequiredMark.vue';
 import SubmitButton from '@/components/SubmitButton.vue';
 import { confirmSellerPayment } from '@/lib/confirm';
 import { t } from '@/lib/i18n';
@@ -120,15 +121,16 @@ describe('seller payment dialog', () => {
         w.unmount();
         expect(cancel).toHaveBeenCalled();
     });
-    it('uses the withdrawal route and caps only the default amount while retaining its hidden ids and absent txn field', async () => {
+    it('uses the withdrawal route and requires the full amount with an optional transaction code', async () => {
         post.mockResolvedValue(
             storeSellerPayout({ withdrawal: { id: 8, amount: 150 } }),
         );
         const w = mountDialog(true, true);
         await flushPromises();
         expect(post).toHaveBeenCalledWith(paymentModal.url());
-        expect(w.get('input[name="amount"]').attributes('value')).toBe('100');
-        expect(w.get('input[name="amount"]').attributes('max')).toBeUndefined();
+        expect(w.get('input[name="amount"]').attributes('value')).toBe('150');
+        expect(w.get('input[name="amount"]').attributes('min')).toBe('150');
+        expect(w.get('input[name="amount"]').attributes('max')).toBe('100');
         expect(
             w.get('input[name="withdraw_request_id"]').attributes('value'),
         ).toBe('8');
@@ -136,9 +138,14 @@ describe('seller payment dialog', () => {
             w.get('input[name="payment_withdraw"]').attributes('value'),
         ).toBe('withdraw_request');
         await w.get('select').setValue('bank_payment');
-        expect(w.find('input[name="txn_code"]').exists()).toBe(false);
+        expect(w.get('input[name="txn_code"]').attributes()).toMatchObject({
+            maxlength: '191',
+        });
+        expect(
+            w.get('input[name="txn_code"]').attributes('required'),
+        ).toBeUndefined();
     });
-    it('preserves negative due form behavior and hides payment methods disabled by the shop', async () => {
+    it('D2 offers a marked required method for clearing negative due', async () => {
         const payout = storeSellerPayout();
         payout.shop.admin_to_pay = -12.5;
         payout.shop.bank_enabled = false;
@@ -147,9 +154,70 @@ describe('seller payment dialog', () => {
         await flushPromises();
         expect(w.text()).toContain(t('store.sellers.dueToAdmin'));
         expect(w.text()).toContain(t('store.sellers.clearDue'));
-        expect(w.find('select').exists()).toBe(false);
+        expect(
+            w.get('select[name="payment_option"]').attributes('required'),
+        ).toBe('');
+        expect(
+            w.get('select[name="payment_option"]').element.closest('label')
+                ?.textContent,
+        ).toContain(t('common.required'));
+        expect(w.find('option[value="cash"]').exists()).toBe(false);
+        expect(w.find('option[value="bank_payment"]').exists()).toBe(false);
+        expect(w.get('option[value="seller_paid_to_admin"]').text()).toBe(
+            t('store.sellers.sellerPaidToAdmin'),
+        );
+        expect(w.get('input[name="amount"]').attributes('max')).toBe('12.5');
+        expect(w.text()).toContain(t('common.requiredLegend'));
         expect(w.find('input[name="txn_code"]').exists()).toBe(false);
         expect(w.text()).not.toContain(t('store.sellers.bank_name'));
+    });
+    it('D3 renders an optional transaction code for a cash withdrawal', async () => {
+        post.mockResolvedValue(
+            storeSellerPayout({ withdrawal: { id: 8, amount: 40 } }),
+        );
+        const wrapper = mountDialog(true, true);
+        await flushPromises();
+        await wrapper.get('select').setValue('cash');
+        const txn = wrapper.get('input[name="txn_code"]');
+        expect(txn.attributes('maxlength')).toBe('191');
+        expect(txn.attributes('required')).toBeUndefined();
+        expect(wrapper.text()).toContain(t('store.sellers.txnCode'));
+        expect(
+            wrapper
+                .get('label[for="seller-payment-txn"]')
+                .findComponent(RequiredMark)
+                .exists(),
+        ).toBe(false);
+        wrapper.unmount();
+    });
+    it('D2 posts the selected clear due method and keeps zero due bounded at zero', async () => {
+        const payout = storeSellerPayout();
+        payout.shop.admin_to_pay = -40;
+        post.mockResolvedValue(payout);
+        const wrapper = mountDialog();
+        await flushPromises();
+        await wrapper
+            .get('select[name="payment_option"]')
+            .setValue('seller_paid_to_admin');
+        const payload = new FormData(
+            wrapper.get('form').element as HTMLFormElement,
+        );
+        expect(payload.get('payment_option')).toBe('seller_paid_to_admin');
+        expect(payload.get('amount')).toBe('40');
+        await wrapper.setProps({ open: false });
+        payout.shop.admin_to_pay = 0;
+        post.mockResolvedValue(payout);
+        await wrapper.setProps({ open: true });
+        await flushPromises();
+        expect(
+            wrapper.get('select[name="payment_option"]').attributes('required'),
+        ).toBe('');
+        expect(wrapper.get('input[name="amount"]').attributes()).toMatchObject({
+            value: '0',
+            max: '0',
+            min: '0.01',
+        });
+        wrapper.unmount();
     });
     it('does not offer a withdrawal payment for a nonpositive balance', async () => {
         const payout = storeSellerPayout({ withdrawal: { id: 8, amount: 40 } });
@@ -207,5 +275,27 @@ describe('seller payment dialog', () => {
         await flushPromises();
         expect(post).not.toHaveBeenCalled();
         expect(w.findComponent(Form).exists()).toBe(false);
+    });
+
+    it('marks the payment method, keeps the transaction optional and shows the form legend', async () => {
+        const wrapper = mountDialog();
+        await flushPromises();
+        const method = wrapper.get('select[name="payment_option"]');
+        expect(method.attributes('required')).toBeDefined();
+        expect(method.element.closest('label')?.textContent).toContain(
+            t('common.required'),
+        );
+        expect(wrapper.text()).toContain(t('common.requiredLegend'));
+        await method.setValue('bank_payment');
+        expect(
+            wrapper.get('input[name="txn_code"]').attributes('required'),
+        ).toBeUndefined();
+        expect(
+            wrapper
+                .get('label[for="seller-payment-txn"]')
+                .findComponent(RequiredMark)
+                .exists(),
+        ).toBe(false);
+        wrapper.unmount();
     });
 });

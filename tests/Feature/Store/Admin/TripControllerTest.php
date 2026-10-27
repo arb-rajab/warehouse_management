@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Http;
 use Inertia\Testing\AssertableInertia as Assert;
 
 beforeEach(function () {
+    $this->withoutVite();
     $this->routingResponse = Http::response([], 503);
     Http::fake(fn () => $this->routingResponse);
     $this->mock(UserService::class)->shouldReceive('getUserLongLat')->andReturn(['latitude' => '52.1', 'longitude' => '4.2', 'postal_code' => '1234']);
@@ -229,7 +230,7 @@ test('repeated transitions retain the first start close and arrival timestamps',
     actingAsStoreUser(createStoreStaff('edit_trip'));
 
     $this->put(route('trips.update-status', [$trip, 'list' => 'all']), ['status' => 'started'])->assertRedirect();
-    $this->put(route('checkpoints.update-status', $checkpoint), ['status' => 'delivered'])->assertRedirect(route('trips.show', $trip));
+    $this->put(route('checkpoints.update-status', [$checkpoint, 'trip_id' => $checkpoint->trip_id]), ['status' => 'delivered'])->assertRedirect(route('trips.show', $trip));
     $this->put(route('trips.update-status', [$trip, 'list' => 'all']), ['status' => 'closed'])->assertRedirect();
     $closedAt = $trip->fresh()->closed_at;
     $this->travel(1)->hours();

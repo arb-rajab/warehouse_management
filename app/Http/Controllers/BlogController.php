@@ -9,7 +9,7 @@ use Illuminate\Http\Request;
 
 /**
  * The public blog. Its back-office actions live in
- * Store\Admin\BlogController (store-backoffice-migration.md §18).
+ * Store\Admin\BlogController (.ai/archive/store-backoffice/changes-20261013.md §18).
  */
 class BlogController extends Controller
 {

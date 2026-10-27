@@ -24,7 +24,7 @@
                                                 <!-- Name -->
                                                 <div class="form-group">
                                                     <label for="name" class="fs-12 fw-700 text-soft-dark">{{  translate('Full Name') }}<x-required-mark /></label>
-                                                    <input type="text" class="form-control rounded-0{{ $errors->has('name') ? ' is-invalid' : '' }}" value="{{ old('name') }}" placeholder="{{  translate('Full Name') }}" name="name" required>
+                                                    <input type="text" class="form-control rounded-0{{ $errors->has('name') ? ' is-invalid' : '' }}" value="{{ old('name') }}" placeholder="{{  translate('Full Name') }}" name="name" required maxlength="191">
                                                     @if ($errors->has('name'))
                                                         <span class="invalid-feedback" role="alert">
                                                             <strong>{{ $errors->first('name') }}</strong>
@@ -35,7 +35,7 @@
                                                 <!-- Company Name -->
                                                 <div class="form-group">
                                                     <label for="company_name" class="fs-12 fw-700 text-soft-dark">{{  translate('Company Name') }}<x-required-mark /></label>
-                                                    <input type="text" class="form-control rounded-0{{ $errors->has('company_name') ? ' is-invalid' : '' }}" value="{{ old('company_name') }}" placeholder="{{  translate('Company name') }}" name="company_name" required>
+                                                    <input type="text" class="form-control rounded-0{{ $errors->has('company_name') ? ' is-invalid' : '' }}" value="{{ old('company_name') }}" placeholder="{{  translate('Company name') }}" name="company_name" required maxlength="191">
                                                     @if ($errors->has('company_name'))
                                                         <span class="invalid-feedback" role="alert">
                                                             <strong>{{ $errors->first('company_name') }}</strong>
@@ -47,14 +47,12 @@
                                                 @if (addon_is_activated('otp_system'))
                                                     <div class="form-group phone-form-group mb-1">
                                                         <label for="phone" class="fs-12 fw-700 text-soft-dark">{{  translate('Phone') }}</label>
-                                                        <input type="tel" id="phone-code" class="form-control rounded-0{{ $errors->has('phone') ? ' is-invalid' : '' }}" value="{{ old('phone') }}" placeholder="" name="phone" autocomplete="off">
+                                                        <input type="tel" id="phone-code" class="form-control rounded-0{{ $errors->has('phone') ? ' is-invalid' : '' }}" value="{{ old('phone') }}" placeholder="" name="phone" autocomplete="off" maxlength="20">
                                                     </div>
-
-                                                    <input type="hidden" name="country_code" value="">
 
                                                     <div class="form-group email-form-group mb-1 d-none">
                                                         <label for="email" class="fs-12 fw-700 text-soft-dark">{{  translate('Email') }}</label>
-                                                        <input type="email" class="form-control rounded-0 {{ $errors->has('email') ? ' is-invalid' : '' }}" value="{{ old('email') }}" placeholder="{{  translate('Email') }}" name="email"  autocomplete="off">
+                                                        <input type="email" class="form-control rounded-0 {{ $errors->has('email') ? ' is-invalid' : '' }}" value="{{ old('email') }}" placeholder="{{  translate('Email') }}" name="email"  autocomplete="off" maxlength="191">
                                                         @if ($errors->has('email'))
                                                             <span class="invalid-feedback" role="alert">
                                                                 <strong>{{ $errors->first('email') }}</strong>
@@ -68,7 +66,7 @@
                                                 @else
                                                     <div class="form-group">
                                                         <label for="email" class="fs-12 fw-700 text-soft-dark">{{  translate('Email') }}<x-required-mark /></label>
-                                                        <input type="email" class="form-control rounded-0{{ $errors->has('email') ? ' is-invalid' : '' }}" value="{{ old('email') }}" placeholder="{{  translate('Email') }}" name="email" required>
+                                                        <input type="email" class="form-control rounded-0{{ $errors->has('email') ? ' is-invalid' : '' }}" value="{{ old('email') }}" placeholder="{{  translate('Email') }}" name="email" required maxlength="191">
                                                         @if ($errors->has('email'))
                                                             <span class="invalid-feedback" role="alert">
                                                                 <strong>{{ $errors->first('email') }}</strong>
@@ -80,7 +78,7 @@
 
                                                 <div class="form-group">
                                                     <label for="phone" class="fs-12 fw-700 text-soft-dark">{{  translate('phone') }}<x-required-mark /></label>
-                                                    <input type="tel" class="form-control rounded-0{{ $errors->has('phone') ? ' is-invalid' : '' }}" value="{{ old('phone') }}" placeholder="{{  translate('phone') }}" name="phone" required>
+                                                    <input type="tel" class="form-control rounded-0{{ $errors->has('phone') ? ' is-invalid' : '' }}" value="{{ old('phone') }}" placeholder="{{  translate('phone') }}" name="phone" required maxlength="20">
                                                     @if ($errors->has('phone'))
                                                         <span class="invalid-feedback" role="alert">
                                                             <strong>{{ $errors->first('phone') }}</strong>
@@ -337,7 +335,7 @@
             }
         }
 
-        var iti = intlTelInput(input, {
+        intlTelInput(input, {
             separateDialCode: true,
             utilsScript: "{{ static_asset('assets/js/intlTelutils.js') }}?1590403638580",
             onlyCountries: @php echo json_encode(\App\Models\Country::where('status', 1)->pluck('code')->toArray()) @endphp,
@@ -347,17 +345,6 @@
                 }
                 return selectedCountryPlaceholder;
             }
-        });
-
-        var country = iti.getSelectedCountryData();
-        $('input[name=country_code]').val(country.dialCode);
-
-        input.addEventListener("countrychange", function(e) {
-            // var currentMask = e.currentTarget.placeholder;
-
-            var country = iti.getSelectedCountryData();
-            $('input[name=country_code]').val(country.dialCode);
-
         });
 
         function toggleEmailPhone(el){

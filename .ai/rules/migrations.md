@@ -4,7 +4,7 @@ paths:
   - database/migrations/2026_08_08_154136_create_products_table.php
 ---
 
-# Migrations
+# Migration tests, shared table names and product foreign keys
 
 ## Every migration needs a matching test file in tests/Feature/Database/
 When adding, editing, or dropping a migration, add or update a test file in `tests/Feature/Database/` named after that migration (strip the timestamp, StudlyCase the rest — e.g. `2026_08_08_154138_create_cells_table.php` → `CreateCellsTableTest.php`). One file per migration, not one shared file — each migration's constraints live and evolve with their own test file. A pure column addition/rename with no new constraint (e.g. a migration only adding a plain nullable column) doesn't need its own file.
@@ -22,15 +22,17 @@ Model relationship tests (`tests/Feature/Models/*Test.php`) cover normal relatio
 ## A new table also has to be registered in SharedDatabaseTableNamesTest
 `tests/Feature/SharedDatabaseTableNamesTest.php` asserts the **exact** sorted list of every bare-named (non-`wms_`) table, so creating one breaks that test by design — the failure is the prompt to justify the name, not a bug. Add the name to that list in the same change, in `sort()`'s byte order (`_` sorts before letters, so `cell_verification_round_row` precedes `cell_verification_rounds`), and make sure it earns a bare name per the section below. Pest can't run locally, so missing this costs a full CI round every time; `Schema::getTableListing(schemaQualified: false)` through `php artisan tinker` after migrating prints the expected list directly.
 
-## Several tables are shared, and most default table names are collisions
-In production this app shares one MySQL database with a store app. It would
-collide with this app on `users`, `sessions`, `cache`, `jobs`,
-`personal_access_tokens`, the Spatie permission tables and `migrations`
-itself, so every table this app owns carries a `wms_` prefix. `products` is
-now WMS-owned and takes ordinary migrations — no `hasTable()`/environment
-guard. `uploads` and `product_barcodes` are still the store's own and stay
-read-only, guarded with `Schema::hasTable()` on `up()` /
-`app()->isProduction()` on `down()`. Every `product_id` FK is a signed
+## Preserve warehouse prefixes and inherited store table names
+Warehouse tables retain the `wms_` prefixes introduced for the former shared
+database: `users`, `sessions`, `cache`, `jobs`, `personal_access_tokens`, the
+Spatie permission tables and `migrations` would otherwise have collided.
+The integrated store retains its inherited table names. `products` is now
+owned by this app and takes ordinary migrations — no `hasTable()`/environment
+guard for new alterations. The existing `uploads` and `product_barcodes`
+create migrations retain `Schema::hasTable()` on `up()` and
+`app()->isProduction()` on `down()`; those historical schema guards do not
+make the tables read-only. Integrated upload and product writers mutate them.
+Every `product_id` FK is a signed
 `integer` rather than `foreignId()` regardless of which of these a migration
 touches. Read **.ai/rules/shared-database.md** before adding a migration —
 it carries the full table inventory, the guard conventions, and the products

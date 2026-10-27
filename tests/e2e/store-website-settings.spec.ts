@@ -25,7 +25,7 @@ import {
 /**
  * The website footer, appearance and custom pages on Inertia with the shared
  * editor and their typed writers; the header and footer scripts keep their
- * compatibility endpoint (.ai/rules/store-backoffice-migration.md §20).
+ * compatibility endpoint (.ai/archive/store-backoffice/changes-20261013.md §20).
  */
 
 const FOOTER_KEYS = [
@@ -126,7 +126,7 @@ async function typeBold(page: Page, editor: string, text: string) {
     await page.locator(editor).click();
     await page.keyboard.press('Control+A');
     await page.keyboard.type(text);
-    await press(page, 'Control+A', editor);
+    await press(page, 'Control+A', editor, text);
     await expect
         .poll(() => page.evaluate(() => String(document.getSelection())))
         .toBe(text);

@@ -1,5 +1,6 @@
 import { mount } from '@vue/test-utils';
 import { describe, expect, it } from 'vitest';
+import RequiredMark from '@/components/RequiredMark.vue';
 import { t } from '@/lib/i18n';
 import { pxToCm } from '@/lib/qrCodeSize';
 import SettingFormFields from './SettingFormFields.vue';
@@ -200,4 +201,22 @@ describe('SettingFormFields', () => {
             ).toBe(true);
         });
     });
+});
+
+it('marks the levels group and accepts any selected level, then restores the empty requirement', async () => {
+    const wrapper = mount(SettingFormFields, {
+        props: { errors: {}, levels: [1, 2], allowedOpenLevels: [] },
+    });
+    expect(wrapper.get('legend').findComponent(RequiredMark).exists()).toBe(
+        true,
+    );
+    const boxes = wrapper.findAll<HTMLInputElement>('input[type="checkbox"]');
+    expect(boxes.every((box) => box.element.required)).toBe(true);
+    await boxes[1].setValue(true);
+    expect(boxes.every((box) => !box.element.required)).toBe(true);
+    await boxes[1].setValue(false);
+    expect(boxes.every((box) => box.element.required)).toBe(true);
+    expect(wrapper.get('legend').findComponent(RequiredMark).exists()).toBe(
+        true,
+    );
 });

@@ -11,11 +11,14 @@ import ActionErrorBanner from '@/components/ActionErrorBanner.vue';
 import FieldError from '@/components/FieldError.vue';
 import FilterDialog from '@/components/FilterDialog.vue';
 import FormField from '@/components/FormField.vue';
+import RequiredLegend from '@/components/RequiredLegend.vue';
+import RequiredMark from '@/components/RequiredMark.vue';
 import SubmitButton from '@/components/SubmitButton.vue';
 import { confirmSellerPayment } from '@/lib/confirm';
 import { fieldLabelClass, plainFieldInputClass } from '@/lib/filters';
 import { t } from '@/lib/i18n';
 import { firstError } from '@/lib/pageErrors';
+import { provideRequiredFields } from '@/lib/requiredFields';
 import { useStoreAccess } from '@/lib/storeAccess';
 import type { StoreSellerPayout, StoreSellerWithdrawal } from '@/types/store';
 
@@ -73,6 +76,7 @@ const bankFields = [
     'bank_acc_no',
     'bank_routing_no',
 ] as const;
+const hasRequiredFields = provideRequiredFields();
 </script>
 
 <template>
@@ -98,6 +102,7 @@ const bankFields = [
             #default="{ errors, processing }"
             class="space-y-4"
         >
+            <RequiredLegend v-if="hasRequiredFields" />
             <ActionErrorBanner :message="firstError(errors)" />
             <dl class="grid grid-cols-2 gap-3">
                 <dt>
@@ -136,10 +141,8 @@ const bankFields = [
                     id="seller-payment-amount"
                     name="amount"
                     type="number"
-                    min="0.01"
-                    step="0.01"
-                    required
-                    :value="
+                    :min="details.withdrawal ? details.withdrawal.amount : 0.01"
+                    :max="
                         details.withdrawal
                             ? Math.min(
                                   details.withdrawal.amount,
@@ -147,14 +150,19 @@ const bankFields = [
                               )
                             : Math.abs(details.shop.admin_to_pay)
                     "
+                    step="0.01"
+                    required
+                    :value="
+                        details.withdrawal
+                            ? details.withdrawal.amount
+                            : Math.abs(details.shop.admin_to_pay)
+                    "
                     :label="t('store.sellers.amount')"
                     :error="errors.amount"
                 />
-                <label
-                    v-if="details.shop.admin_to_pay > 0"
-                    :class="fieldLabelClass"
+                <label :class="fieldLabelClass"
                     >{{ t('store.sellers.paymentMethod')
-                    }}<select
+                    }}<RequiredMark /><select
                         v-model="method"
                         name="payment_option"
                         required
@@ -163,19 +171,34 @@ const bankFields = [
                         <option value="">
                             {{ t('store.sellers.selectPaymentMethod') }}
                         </option>
-                        <option v-if="details.shop.cash_enabled" value="cash">
+                        <option
+                            v-if="
+                                details.shop.admin_to_pay > 0 &&
+                                details.shop.cash_enabled
+                            "
+                            value="cash"
+                        >
                             {{ t('store.sellers.cash') }}
                         </option>
                         <option
-                            v-if="details.shop.bank_enabled"
+                            v-if="
+                                details.shop.admin_to_pay > 0 &&
+                                details.shop.bank_enabled
+                            "
                             value="bank_payment"
                         >
                             {{ t('store.sellers.bankPayment') }}
+                        </option>
+                        <option
+                            v-if="details.shop.admin_to_pay <= 0"
+                            value="seller_paid_to_admin"
+                        >
+                            {{ t('store.sellers.sellerPaidToAdmin') }}
                         </option></select
                     ><FieldError :message="errors.payment_option"
                 /></label>
                 <FormField
-                    v-if="!details.withdrawal && method === 'bank_payment'"
+                    v-if="details.withdrawal || method === 'bank_payment'"
                     id="seller-payment-txn"
                     name="txn_code"
                     maxlength="191"

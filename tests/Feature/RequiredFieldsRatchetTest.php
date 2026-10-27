@@ -23,7 +23,7 @@ const REQUIRED_FIELDS_BASELINE = __DIR__.'/Support/required-fields-baseline.json
 
 /**
  * The storefront and seller-panel Blade forms whose server rules, `required`
- * attributes and marks agree (store-backoffice-migration.md §44, §45), by
+ * attributes and marks agree (.ai/archive/store-backoffice/changes-20261021.md §44, §45), by
  * view and the route it posts to. They may not regress to any class A-D
  * finding; there is no baseline for them. Add a form here once it is fixed.
  */

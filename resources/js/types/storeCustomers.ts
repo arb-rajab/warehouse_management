@@ -42,3 +42,13 @@ export interface AddressOption {
     id: number;
     name: string;
 }
+
+export interface StoreCustomerPageView {
+    id: number;
+    kind: string;
+    name: string | null;
+    slug: string | null;
+    public_url: string | null;
+    view_count: number;
+    last_viewed_at: string;
+}

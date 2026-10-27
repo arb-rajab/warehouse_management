@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Auth;
  * limited to its column: users.name and users.email are varchar(191),
  * shops.name varchar(200), shops.address varchar(500). The form marks and
  * requires exactly those fields (.ai/rules/form-required-fields.md,
- * store-backoffice-migration.md §47).
+ * .ai/archive/store-backoffice/changes-20261021.md §47).
  */
 const SELLER_REGISTRATION_FIELDS = ['name', 'email', 'password', 'password_confirmation', 'shop_name', 'address'];
 

@@ -17,9 +17,9 @@
 <div class="aiz-card-box h-auto bg-white py-3 hov-scale-img">
     <div class="position-relative h-140px h-md-200px img-fit overflow-hidden">
         @php
-            $product_url = route('product', $product->slug);
+            $product_url = \App\Support\StorefrontUrl::to($product);
             if($product->auction_product == 1) {
-                $product_url = route('product', $product->slug);
+                $product_url = \App\Support\StorefrontUrl::to($product);
             }
         @endphp
         <!-- Image -->

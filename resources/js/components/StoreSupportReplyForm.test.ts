@@ -23,7 +23,7 @@ describe('StoreSupportReplyForm', () => {
     });
     it.each(['message', 'reply'] as const)(
         'posts the named %s field through Inertia with native validation',
-        (field) => {
+        async (field) => {
             const action = {
                 url: '/temp/admin/example/reply',
                 method: 'post' as const,
@@ -31,12 +31,14 @@ describe('StoreSupportReplyForm', () => {
             const wrapper = mount(StoreSupportReplyForm, {
                 props: { action, field },
             });
+            await wrapper.vm.$nextTick();
+            expect(wrapper.text()).toContain(t('common.requiredLegend'));
             expect(wrapper.getComponent(Form).props('action')).toEqual(action);
             expect(wrapper.getComponent(Form).props('resetOnSuccess')).toBe(
                 true,
             );
             expect(wrapper.get('label').text()).toBe(
-                t('store.support.replyLabel'),
+                t('store.support.replyLabel') + '*' + t('common.required'),
             );
             expect(wrapper.get('label').attributes('for')).toBe(field);
             expect(wrapper.get('textarea').attributes()).toMatchObject({

@@ -93,31 +93,6 @@ class ProductController extends Controller
         }
     }
 
-    public function search(Request $request)
-    {
-        $products = Product::where('auction_product', 0)->where('wholesale_product', 0);
-        if ($request->has('user_id') && $request->user_id != null) {
-            $products = $products->where('user_id', $request->user_id);
-            $seller_id = $request->user_id;
-        }
-        if ($request->search != null) {
-            $sort_search = $request->q;
-
-            $products_query = $products->where(function ($q) use ($sort_search) {
-                foreach (explode(' ', trim($sort_search)) as $word) {
-                    $q->where(function ($innerQ) use ($word) {
-                        $innerQ->where('name', 'like', '%' . $word . '%')
-                            ->orWhere('ar_name', 'like', '%' . $word . '%')
-                            ->orWhere('mat_id', 'like', '%' . $word . '%')
-                            ->orWhereHas('barcodes', function ($barcodeQ) use ($word) {
-                                $barcodeQ->where('barcode', 'like', '%' . $word . '%');
-                            });
-                    });
-                }
-            })->get();
-        }
-    }
-
     public function getDetails($id)
     {
         $product = Product::findOrFail($id);

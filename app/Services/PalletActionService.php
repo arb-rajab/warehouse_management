@@ -17,10 +17,12 @@ use Illuminate\Support\Facades\DB;
 
 /**
  * The cell/pallet occupancy state machine (store/open/remove-boxes/empty/transfer),
- * shared by every caller that can perform these actions — currently
- * Api\V1\PalletController (mobile app) and Admin\PalletController (admin web UI).
- * Every public method here opens its own transaction, locks the cell(s)/pallet it
- * touches, and writes the matching CellStatusLog row before returning.
+ * shared by Api\V1\PalletController (mobile app), Admin\PalletController (admin web
+ * UI), and CellVerificationService when accepting reported corrections.
+ * Mutating actions open transactions and lock the affected cells/pallets. Lifecycle
+ * actions write audit logs; update() logs product changes or confirmed emptying,
+ * but not expiration-date or positive remaining-box corrections alone. The public
+ * lockCell() helper relies on the caller's transaction and writes no log itself.
  */
 class PalletActionService
 {
@@ -155,9 +157,9 @@ class PalletActionService
 
     /**
      * Empty an already cell-locked, pallet-locked pallet: delete it, free its cell,
-     * and log the Emptied transition. Shared by emptyPallet() and by open()/
-     * removeBoxes() when the caller confirms emptying instead of a boxes_count that
-     * would exceed what remains.
+     * and log the Emptied transition. Shared by emptyPallet(), open()/removeBoxes()
+     * when confirmed removal meets or exceeds what remains, and update() when a
+     * zero remaining-box correction is confirmed.
      */
     private function emptyLockedPallet(Cell $cell, Pallet $pallet, int $userId, ?string $note): void
     {
@@ -247,7 +249,7 @@ class PalletActionService
     }
 
     /**
-     * Write a CellStatusLog row for a cell state transition.
+     * Write a pallet-action audit row; from/to states may be identical.
      */
     private function logCellStatus(
         Cell $cell,
@@ -277,11 +279,13 @@ class PalletActionService
 
     /**
      * Store a new pallet into an Empty cell, transitioning it to Full — or straight to
-     * Opened when the cell is on the first level (see targetStateForCell()).
+     * Opened when first-level opening is allowed (see targetStateForCell()).
+     *
+     * @param  array{image_review_status: string, image_source: ?string, image_review_note?: ?string}|null  $imageReview
      */
-    public function store(int $cellId, int $productId, ?string $expirationDate, int $userId, ?string $note): Pallet
+    public function store(int $cellId, int $productId, ?string $expirationDate, int $userId, ?string $note, ?array $imageReview = null): Pallet
     {
-        return DB::transaction(function () use ($cellId, $productId, $expirationDate, $userId, $note) {
+        return DB::transaction(function () use ($cellId, $productId, $expirationDate, $userId, $note, $imageReview) {
             $cell = $this->lockCell($cellId);
 
             if ($cell->state !== CellState::Empty) {
@@ -294,6 +298,10 @@ class PalletActionService
                 ->select(['id'])
                 ->with('setting:product_id,boxes_count')
                 ->findOrFail($productId);
+
+            if ($imageReview !== null) {
+                app(ProductImageReviewService::class)->record($productId, $userId, $imageReview);
+            }
 
             $pallet = Pallet::create([
                 'product_id' => $product->id,
@@ -432,8 +440,8 @@ class PalletActionService
     /**
      * Move a pallet to another Empty cell — the source cell frees to Empty, the
      * destination inherits the source's prior state, unless the destination is on
-     * the first level, in which case it's opened automatically regardless of the
-     * source's state (see targetStateForCell()).
+     * the first level and opening there is allowed, in which case it's opened
+     * automatically (see targetStateForCell()).
      *
      * Both cells are locked in ascending id order, then the pallet (see
      * lockPalletInCell() for why cells come first): locking source-then-

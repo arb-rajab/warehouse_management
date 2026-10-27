@@ -122,8 +122,4 @@ class ShopController extends Controller
         flash(translate('Sorry! Something went wrong.'))->error();
         return back();
     }
-
-    public function show()
-    {
-    }
 }

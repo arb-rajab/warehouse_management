@@ -7,8 +7,7 @@ use Spatie\Permission\PermissionRegistrar;
 
 /**
  * Every permission the store back office enforces, with the section the role
- * form groups it under (.ai/rules/store-backoffice-migration.md, "Launch with
- * Super Admin only"). The one versioned list behind `store:sync-permissions`,
+ * form groups it under (.ai/archive/store-backoffice/changes-20261020.md §40). The one versioned list behind `store:sync-permissions`,
  * the migration that runs it on deploy and the seeder that gives fresh local
  * and e2e databases the rows. A new gate in routes/shop-admin.php, a Store
  * controller or storeAdminMenu.ts has to be added here: StorePermissionsTest

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import FieldError from '@/components/FieldError.vue';
 import FormField from '@/components/FormField.vue';
+import RequiredMark from '@/components/RequiredMark.vue';
 import { fieldLabelClass, plainFieldInputClass } from '@/lib/filters';
 import { t } from '@/lib/i18n';
 import type { NotificationCustomer } from '@/types/storeNotifications';
@@ -27,9 +28,9 @@ defineProps<{
             required
         />
         <div>
-            <label for="user_id" :class="fieldLabelClass">{{
-                t('store.notifications.fields.customer')
-            }}</label>
+            <label for="user_id" :class="fieldLabelClass"
+                >{{ t('store.notifications.fields.customer') }}<RequiredMark
+            /></label>
             <select
                 id="user_id"
                 name="user_id"

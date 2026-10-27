@@ -17,12 +17,14 @@ import DataTable from '@/components/DataTable.vue';
 import FormField from '@/components/FormField.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import Pagination from '@/components/Pagination.vue';
+import RequiredLegend from '@/components/RequiredLegend.vue';
 import StoreBooleanField from '@/components/StoreBooleanField.vue';
 import SubmitButton from '@/components/SubmitButton.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
 import { confirmDelete } from '@/lib/confirm';
 import { t } from '@/lib/i18n';
+import { provideRequiredFields } from '@/lib/requiredFields';
 import { useStoreAccess } from '@/lib/storeAccess';
 import type { Paginated, PerPageFilters } from '@/types/admin';
 import type { AdminLanguage } from '@/types/store';
@@ -39,6 +41,7 @@ function onPerPageChange(per_page: number): void {
         { preserveState: true, replace: true },
     );
 }
+const hasRequiredFields = provideRequiredFields();
 </script>
 <template>
     <div>
@@ -84,6 +87,7 @@ function onPerPageChange(per_page: number): void {
                             "
                             #default="{ errors, processing }"
                         >
+                            <RequiredLegend v-if="hasRequiredFields" />
                             <input
                                 type="hidden"
                                 name="id"
@@ -116,12 +120,16 @@ function onPerPageChange(per_page: number): void {
                             "
                             #default="{ errors, processing }"
                         >
+                            <RequiredLegend
+                                v-if="hasRequiredFields && !language.is_default"
+                            />
                             <input
                                 type="hidden"
                                 name="id"
                                 :value="language.id"
                             />
                             <StoreBooleanField
+                                :required="!language.is_default"
                                 :name="`status-${language.id}`"
                                 :label="t('store.languages.status')"
                                 :value="language.status"
@@ -191,6 +199,7 @@ function onPerPageChange(per_page: number): void {
                 #default="{ errors, processing }"
                 class="mt-6 max-w-sm space-y-4"
             >
+                <RequiredLegend v-if="hasRequiredFields" />
                 <FormField
                     id="lang_file"
                     type="file"

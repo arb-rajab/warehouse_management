@@ -14,7 +14,7 @@ use Illuminate\Support\Str;
 use Inertia\Testing\AssertableInertia as Assert;
 
 /**
- * The physical product edit form (.ai/rules/store-backoffice-migration.md
+ * The physical product edit form (.ai/archive/store-backoffice/changes-20261014.md
  * §23): one stored variant product with an Arabic translation, a foreign
  * variant photo, a tax, a flash deal, a type and a store barcode, beside a
  * second product whose rows must never change.

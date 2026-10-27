@@ -12,6 +12,7 @@ use App\Models\ProductBarcode;
 use App\Models\ProductTranslation;
 use App\Models\Upload;
 use App\Models\User;
+use App\Support\StorefrontUrl;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
@@ -24,6 +25,7 @@ use Illuminate\Support\Str;
 use Inertia\Testing\AssertableInertia as Assert;
 
 beforeEach(function () {
+    $this->withoutVite();
     seedStoreCurrency();
     config(['app.default_language' => 'en']);
     Language::forceCreate(['code' => 'en', 'name' => 'English', 'rtl' => 0]);
@@ -82,7 +84,7 @@ test('digital product list exposes the full narrow row for digital products only
             ->where('id', $older->id)->where('name', 'Older guide')->where('added_by', 'seller')
             ->where('thumbnail_url', static_asset('assets/img/placeholder.jpg'))->where('unit_price', '3.00')
             ->where('todays_deal', true)->where('published', false)->where('featured', false)
-            ->where('public_url', null)->where('download_token', fn (string $token) => decrypt($token) === $older->id))
+            ->where('public_url', StorefrontUrl::to($older))->where('download_token', fn (string $token) => decrypt($token) === $older->id))
         ->where('filters', ['search' => null, 'per_page' => 20])->where('defaultLanguage', 'en'));
     expect(array_column($this->get(route('digitalproducts.index'))->inertiaProps('products.data'), 'id'))->not->toContain($physical->id);
 });

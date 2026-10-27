@@ -1,15 +1,11 @@
 ---
 paths:
-  - resources/js/components/CellSlot.vue
   - resources/js/components/ResourceFormPage.vue
   - resources/js/components/UserFormFields.vue
   - resources/js/components/DataTable.vue
 ---
 
-# Js Components
-
-## Cell-state styling is mirrored by hand in the Flutter mobile app
-CELL_STATE_COLOR (lib/cellStateColor.ts) is the canonical source for cell-state visuals: empty=gray-100/gray-400 border/CircleDashed, full=green-50/green-500 border/Inbox, opened=orange-50/orange-500 border/PackageOpen (light shades; dark variants alongside). The Flutter mobile app (separate repo, not in this codebase) has its own `_getBgColor`/`_getBorderColor`/`_getStateIcon` widget methods that duplicate these same three values as Dart `Color`/`IconData` literals — there's no shared code between the two, so whenever these values change, the Dart literals must be updated by hand to match (green=full, orange=opened, gray=empty; icons: inbox/package-open/circle-dashed equivalents). See components-js-components-js-lib.md for why these live in a shared lib file.
+# Shared resource forms and table components
 
 ## ResourceFormPage supports an optional cancelHref back to the resource's index
 ResourceFormPage.vue has an optional `cancelHref?: string | UrlMethodPair` prop; when given it renders a "Cancel" Link (t('common.cancel')) beside SubmitButton (wrapped together in `.flex.gap-3`, SubmitButton gets `class="flex-1"`). All four current Create/Edit pages (Rows, Users) pass their resource's `index()` action as `cancel-href`. Pass it on any new Create/Edit page using this component too, so users always have an in-app way back besides the browser back button.
@@ -17,11 +13,8 @@ ResourceFormPage.vue has an optional `cancelHref?: string | UrlMethodPair` prop;
 ## Password-confirmation mismatch shows both native validity and an app-styled FormField error
 `syncConfirmationValidity()` still sets native `setCustomValidity` on `#password_confirmation` (js.md — don't remove, it's the flood guard before submit), but now also updates local `passwordValue`/`confirmationValue` refs feeding a `confirmationMismatchError` computed, bound to `password_confirmation`'s FormField `:error` prop. This makes the mismatch visible immediately with the same red-text+CircleAlert styling every other field error uses, instead of only a browser validation-bubble on submit. No server-side error exists for this key today, so this doesn't collide with backend `errors.password_confirmation`.
 
-## DataTable columns support a `filtered` indicator icon
-`Column` accepts `{ label, sortKey?, filtered? }`. When `filtered` is true, DataTable renders a small `Filter` (lucide) icon next to the header label with a `title="common.filteredColumn"` tooltip. DataTable only renders this state — the parent page computes `filtered` per column from its own reactive filter object (same split of responsibility as the existing sort arrows). When adding filters to a page with a DataTable, compute a `computed(() => ...)` per column (or group of columns affected identically) and wire it into the `columns` array's `filtered` field, rather than leaving users to guess which filters affect which columns. See Products/Index.vue and CellStatusLogs/Index.vue for the pattern.
-
 ## DataTable's column filter icon opens a quick popover, not just an indicator
-Superseded the earlier "passive indicator" design. `Column` now accepts `{ label, sortKey?, filtered?, filterKey? }`. Any column with `filterKey` set always renders a clickable Filter icon (gray when `filtered` is false, blue when true) — DataTable manages a `v-model:open-filter-key` (two-way, string|null) and toggles/closes it on icon click, outside click, or Escape (same click-outside/Escape pattern as FilterMultiSelect/FilterDialog). The popover's content comes from the `#column-filter="{ filterKey }"` scoped slot, rendered by the parent page.
+`Column` accepts `{ label, sortKey?, filtered?, filterKey? }`. Any column with `filterKey` set always renders a clickable Filter icon (gray when `filtered` is false, blue when true) — DataTable manages a `v-model:open-filter-key` (two-way, string|null) and toggles/closes it on icon click, outside click, or Escape (same click-outside/Escape pattern as FilterMultiSelect/FilterDialog). The parent computes `filtered` per column/group from its reactive filter state; DataTable renders that state rather than owning the filter logic. The popover's content comes from the `#column-filter="{ filterKey }"` scoped slot, rendered by the parent page.
 
 Multiple columns can share the same `filterKey` (e.g. Products' Full/Opened/Expired/Expiring-soon columns all use `'occupancy'`) when the backend applies those filters identically — clicking any of their icons opens the same popover.
 

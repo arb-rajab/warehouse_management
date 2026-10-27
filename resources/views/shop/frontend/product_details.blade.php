@@ -181,7 +181,7 @@
                         <div class="form-group">
                             <label for="conversation_message">{{ translate('Your Question') }}<x-required-mark /></label>
                             <textarea id="conversation_message" class="form-control rounded-0 @error('message', 'storeConversation') is-invalid @enderror" rows="8" name="message" maxlength="65535" required
-                                placeholder="{{ translate('Your Question') }}">{{ $keepInput ? old('message') : route('product', $detailedProduct->slug) }}</textarea>
+                                placeholder="{{ translate('Your Question') }}">{{ $keepInput ? old('message') : \App\Support\StorefrontUrl::to($detailedProduct) }}</textarea>
                             @error('message', 'storeConversation')
                                 <span class="invalid-feedback" role="alert"><strong>{{ $message }}</strong></span>
                             @enderror
