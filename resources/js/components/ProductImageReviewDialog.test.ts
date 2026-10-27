@@ -6,9 +6,14 @@ import {
 } from '@/actions/App/Http/Controllers/Admin/ProductImageReviewController';
 import ProductImageReviewFields from '@/components/ProductImageReviewFields.vue';
 import { t } from '@/lib/i18n';
+import { compressUploadImage } from '@/lib/imageUpload';
 import ProductImageReviewDialog from './ProductImageReviewDialog.vue';
 
 const { submit } = vi.hoisted(() => ({ submit: vi.fn() }));
+vi.mock('@/lib/imageUpload', async () => ({
+    ...(await vi.importActual<Record<string, unknown>>('@/lib/imageUpload')),
+    compressUploadImage: vi.fn(),
+}));
 vi.mock('@inertiajs/vue3', async () => {
     const { createUseFormStub } = await import('@/testing/inertiaStubs');
 
@@ -18,7 +23,10 @@ vi.mock('@inertiajs/vue3', async () => {
     };
 });
 describe('ProductImageReviewDialog', () => {
-    beforeEach(() => submit.mockReset());
+    beforeEach(() => {
+        submit.mockReset();
+        vi.mocked(compressUploadImage).mockImplementation(async (file) => file);
+    });
     it('submits notes and the reviewed source through the review action, preserving list filters', async () => {
         const wrapper = mount(ProductImageReviewDialog, {
             props: { productId: 7, open: true },
@@ -50,6 +58,7 @@ describe('ProductImageReviewDialog', () => {
         Object.defineProperty(input.element, 'files', { value: [file] });
         await input.trigger('change');
         await wrapper.findAll('form')[1].trigger('submit');
+        await flushPromises();
         expect(submit.mock.calls[0][0]).toEqual(
             updateImage(7, { mergeQuery: {} }),
         );
@@ -57,4 +66,35 @@ describe('ProductImageReviewDialog', () => {
         submit.mock.calls[0][2].onSuccess();
         expect(wrapper.emitted('update:open')?.at(-1)).toEqual([false]);
     });
+});
+
+it('compresses to the warehouse limit and cancels a stale product upload', async () => {
+    submit.mockReset();
+    let done!: (file: File) => void;
+    vi.mocked(compressUploadImage).mockImplementation(
+        () =>
+            new Promise((resolve) => {
+                done = resolve;
+            }),
+    );
+    const wrapper = mount(ProductImageReviewDialog, {
+        props: { productId: 7, open: true },
+        global: { stubs: { ProductImageReviewFields: true } },
+    });
+    const file = new File(['photo'], 'new.jpg', { type: 'image/jpeg' });
+    const input = wrapper.get('input[type=file]');
+    Object.defineProperty(input.element, 'files', { value: [file] });
+    await input.trigger('change');
+    await wrapper.findAll('form')[1].trigger('submit');
+    expect(compressUploadImage).toHaveBeenCalledWith(
+        file,
+        1600,
+        expect.any(AbortSignal),
+    );
+    expect(wrapper.text()).toContain(t('common.imageUpload.preparing'));
+    await wrapper.setProps({ productId: 8 });
+    done(file);
+    await flushPromises();
+    expect(submit).not.toHaveBeenCalled();
+    wrapper.unmount();
 });

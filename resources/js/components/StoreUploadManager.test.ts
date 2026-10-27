@@ -8,6 +8,7 @@ import {
 } from '@/actions/App/Http/Controllers/Store/Admin/UploadController';
 import Pagination from '@/components/Pagination.vue';
 import { t } from '@/lib/i18n';
+import { compressUploadImage } from '@/lib/imageUpload';
 import { storeSharedProps, storeUpload, paginated } from '@/testing/factories';
 import { createUseHttpStub } from '@/testing/inertiaStubs';
 import StoreUploadManager from './StoreUploadManager.vue';
@@ -15,6 +16,10 @@ import StoreUploadManager from './StoreUploadManager.vue';
 const { usePageMock, useHttpMock } = vi.hoisted(() => ({
     usePageMock: vi.fn(),
     useHttpMock: vi.fn(),
+}));
+vi.mock('@/lib/imageUpload', async () => ({
+    ...(await vi.importActual<Record<string, unknown>>('@/lib/imageUpload')),
+    compressUploadImage: vi.fn(),
 }));
 vi.mock('@inertiajs/vue3', async () => {
     const { createLinkStub, createFormStub } =
@@ -55,6 +60,7 @@ function context(
 }
 beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(compressUploadImage).mockImplementation(async (file) => file);
 });
 
 describe('StoreUploadManager', () => {
@@ -305,4 +311,39 @@ describe('StoreUploadManager', () => {
         wrapper.unmount();
         expect(cancel).toHaveBeenCalled();
     });
+});
+
+it('waits for compression before uploading and ignores repeated submits', async () => {
+    const { upload } = context();
+    const post = vi.spyOn(upload, 'post').mockImplementation(async () => {
+        expect(upload.file).toBe(small);
+
+        return storeUpload({ id: 2 });
+    });
+    const wrapper = mount(StoreUploadManager, {
+        props: { initialTab: 'upload' },
+    });
+    const file = new File(['large'], 'photo.jpg', { type: 'image/jpeg' });
+    const small = new File(['small'], 'photo.jpg', { type: 'image/jpeg' });
+    let done!: (file: File) => void;
+    vi.mocked(compressUploadImage).mockImplementation(
+        () =>
+            new Promise((resolve) => {
+                done = resolve;
+            }),
+    );
+    const input = wrapper.get('#upload-files');
+    Object.defineProperty(input.element, 'files', { value: [file] });
+    await input.trigger('change');
+    await wrapper.get('form').trigger('submit');
+    await wrapper.get('form').trigger('submit');
+    expect(post).not.toHaveBeenCalled();
+    expect(wrapper.text()).toContain(t('common.imageUpload.preparing'));
+    expect(input.attributes('disabled')).toBeDefined();
+    expect(compressUploadImage).toHaveBeenCalledTimes(1);
+    done(small);
+    await flushPromises();
+    expect(post).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(compressUploadImage).mock.calls[0][1]).toBe(1500);
+    wrapper.unmount();
 });

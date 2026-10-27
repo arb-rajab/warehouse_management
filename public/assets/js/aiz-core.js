@@ -1139,6 +1139,13 @@ $.fn.toggleAttr = function (attr, attr1, attr2) {
                         }
                     }
                 });
+                uppy.addPreProcessor(function (fileIDs) {
+                    // The shared module loads before DOMContentLoaded; keep the
+                    // server fallback if a browser cannot load it.
+                    return window.AIZImageUploads
+                        ? window.AIZImageUploads.prepare(uppy, fileIDs)
+                        : Promise.resolve();
+                });
                 uppy.use(Uppy.XHRUpload, {
                     endpoint: AIZ.data.appUrl + "/aiz-uploader/upload",
                     fieldName: "aiz_file",

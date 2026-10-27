@@ -22,6 +22,11 @@
         "ar": "Arabic"
     },
     "common": {
+        "imageUpload": {
+            "preparing": "Preparing images…",
+            "animated": "Animated images are not supported. Please choose a still image.",
+            "tooLarge": "The image exceeds the 40-megapixel limit."
+        },
         "confirmDelete": "Delete {label}? This cannot be undone.",
         "cancel": "Cancel",
         "close": "Close",
