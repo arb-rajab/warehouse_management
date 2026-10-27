@@ -177,6 +177,9 @@ class CustomerController extends Controller implements HasMiddleware
     {
         $this->assertCustomer($customer);
         $customer->fill($request->safe()->except(['trade_license', 'password_confirmation', 'password', 'is_rep']));
+        if (array_key_exists('company_name', $request->validated()) && $request->validated('company_name') === null) {
+            $customer->company_name = '';
+        }
         if (array_key_exists('is_rep', $request->validated())) {
             $customer->forceFill(['is_rep' => $request->boolean('is_rep')]);
         }
@@ -356,6 +359,7 @@ class CustomerController extends Controller implements HasMiddleware
             $product = $products->get($view->viewable_id);
             $view->setAttribute('view_name', $view->viewable_type === Product::class ? $product?->name : $categoryNames->get($view->viewable_id));
             $view->setAttribute('product_slug', $view->viewable_type === Product::class ? $product?->slug : null);
+            $view->setRelation('viewedProduct', $view->viewable_type === Product::class ? $product : null);
         }
 
         return Inertia::render('Store/Admin/Customers/Customers/Views', ['customer' => ['id' => $customer->id, 'name' => $customer->name], 'views' => $this->paginated(CustomerPageViewResource::collection($views)), 'filters' => ['kind' => $request->input('kind'), 'per_page' => $perPage]]);

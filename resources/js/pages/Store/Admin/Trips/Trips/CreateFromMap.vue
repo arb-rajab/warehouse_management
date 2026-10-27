@@ -23,7 +23,7 @@ import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
 import { pillLinkClass, primaryPillVariantClass } from '@/lib/actionLink';
 import { confirmDelete, confirmDeliveryStatus } from '@/lib/confirm';
 import { t } from '@/lib/i18n';
-import { firstError } from '@/lib/pageErrors';
+import { firstError, usePageError } from '@/lib/pageErrors';
 import { useStoreAccess } from '@/lib/storeAccess';
 import { tripCheckpointLabel } from '@/lib/storeTrip';
 import type { StoreTripMapOrder, StoreTripMapTruck } from '@/types/store';
@@ -31,7 +31,7 @@ import type { TruckPhoto } from '@/types/storeTruck';
 
 /**
  * The trip map picker, in place of the Blade `create-from-map` page
- * (store-backoffice-migration.md §30): the orders out for delivery on a
+ * (.ai/archive/store-backoffice/changes-20261017.md §30): the orders out for delivery on a
  * Leaflet map, where a marker click selects or drops an order; the selected
  * orders as an ordered list of stops that can be moved and removed, as the
  * trip form's stops are (§25); and the trucks, each assigning the stops to a
@@ -39,11 +39,14 @@ import type { TruckPhoto } from '@/types/storeTruck';
  */
 const props = defineProps<{
     orders: StoreTripMapOrder[];
+    orderTrips: Record<number, number>;
     availableTrucks: StoreTripMapTruck[];
     busyTrucks: StoreTripMapTruck[];
     photos: TruckPhoto[];
 }>();
 const access = useStoreAccess();
+const tripError = usePageError('trip_id');
+const deliveryError = usePageError('delivery_status');
 const selected = ref<number[]>([]);
 const assignForm = useForm({
     truck_id: 0,
@@ -126,7 +129,11 @@ function hasStops(truck: StoreTripMapTruck): boolean {
         <p class="mb-4 text-sm text-gray-600 dark:text-neutral-400">
             {{ t('store.trips.map.help') }}
         </p>
-        <ActionErrorBanner :message="firstError(assignForm.errors)" />
+        <ActionErrorBanner
+            :message="
+                firstError(assignForm.errors) || tripError || deliveryError
+            "
+        />
         <div class="mb-8 grid gap-6 lg:grid-cols-3">
             <div class="lg:col-span-2">
                 <StoreTripMap
@@ -246,11 +253,19 @@ function hasStops(truck: StoreTripMapTruck): boolean {
                             </dt>
                             <dd>{{ order.customer.accounting_id || '-' }}</dd>
                         </dl>
-                        <div v-if="access.can('edit_trip')" class="mt-2">
+                        <div
+                            v-if="
+                                access.can('edit_trip') && orderTrips[order.id]
+                            "
+                            class="mt-2"
+                        >
                             <TableActionLink
                                 :href="
                                     markDelivered(order, {
-                                        query: { return_to: 'map' },
+                                        query: {
+                                            return_to: 'map',
+                                            trip_id: orderTrips[order.id],
+                                        },
                                     })
                                 "
                                 method="put"

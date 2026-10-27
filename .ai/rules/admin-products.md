@@ -4,7 +4,7 @@ paths:
   - app/Http/Controllers/Admin/ProductController.php
 ---
 
-# Admin Products
+# Products index mutations, dialogs and sorting
 
 ## Mutations from the products page must redirect to `admin.products.index`
 

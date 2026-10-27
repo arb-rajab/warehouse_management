@@ -4,13 +4,22 @@ namespace App\Providers;
 
 use App\Models\PersonalAccessToken;
 use App\Models\User;
+use App\Support\ApiResourceResponse;
 use Carbon\CarbonImmutable;
+use Dedoc\Scramble\Scramble;
+use Dedoc\Scramble\Support\Generator\OpenApi;
+use Dedoc\Scramble\Support\Generator\Operation;
+use Dedoc\Scramble\Support\Generator\SecurityRequirement;
+use Dedoc\Scramble\Support\Generator\SecurityScheme;
+use Dedoc\Scramble\Support\Generator\Tag;
+use Dedoc\Scramble\Support\RouteInfo;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Console\Events\CommandStarting;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Pagination\Paginator;
+use Illuminate\Routing\Route;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
@@ -25,12 +34,27 @@ use RuntimeException;
 
 class AppServiceProvider extends ServiceProvider
 {
+    private const API_DOCUMENTATION_TAGS = [
+        'warehouse.auth' => 'Warehouse · Authentication',
+        'warehouse.inventory' => 'Warehouse · Inventory',
+        'warehouse.pallets' => 'Warehouse · Pallets',
+        'warehouse.audit' => 'Warehouse · Audit logs',
+        'store.auth' => 'Store · Authentication',
+        'store.catalogue' => 'Store · Catalogue',
+        'store.orders' => 'Store · Orders',
+        'store.customers' => 'Store · Customers',
+        'store.sellers' => 'Store · Sellers',
+        'store.delivery' => 'Store · Delivery & Trips',
+        'store.warehouse' => 'Store · Warehouse integration',
+    ];
+
     /**
      * Bootstrap any application services.
      */
     public function boot(): void
     {
         $this->configureDefaults();
+        $this->configureApiDocumentation();
 
         // Merged from the legacy store's AppServiceProvider (see
         // .ai/rules/legacy-albaraka-holland.md section 2). Its migrations
@@ -123,6 +147,55 @@ class AppServiceProvider extends ServiceProvider
         // The warehouse client is one server calling in with a static token, so the
         // bucket is per IP and sized for a sync that pages through every list.
         RateLimiter::for('wms', fn (Request $request): Limit => Limit::perMinute(120)->by('wms|'.$request->ip()));
+    }
+
+    private function configureApiDocumentation(): void
+    {
+        Scramble::registerExtension(ApiResourceResponse::class);
+
+        Scramble::configure()
+            ->routes(fn (Route $route): bool => (str_starts_with($route->uri(), 'api/') || str_starts_with($route->uri(), 'temp/api/')) && ! $route->isFallback)
+            ->withDocumentTransformers(function (OpenApi $openApi): void {
+                $openApi->components->addSecurityScheme('privateToken', SecurityScheme::apiKey('header', 'private-token'));
+                $openApi->tags = array_map(fn (string $name): Tag => new Tag($name), array_values(self::API_DOCUMENTATION_TAGS));
+            })
+            ->withOperationTransformers(function (Operation $operation, RouteInfo $routeInfo): void {
+                $uri = $routeInfo->route->uri();
+                $controller = class_basename($routeInfo->route->getControllerClass() ?? '');
+                $warehouse = str_starts_with($uri, 'api/');
+                $tag = match (true) {
+                    $warehouse => match ($controller) {
+                        'AuthController' => 'warehouse.auth',
+                        'PalletController' => 'warehouse.pallets',
+                        'CellStatusLogController', 'CellVerificationReportController', 'CellVerificationRoundController' => 'warehouse.audit',
+                        default => 'warehouse.inventory',
+                    },
+                    str_starts_with($uri, 'temp/api/v2/warehouse/') => 'store.warehouse',
+                    str_starts_with($uri, 'temp/api/v2/seller/') => 'store.sellers',
+                    str_starts_with($uri, 'temp/api/v2/trips/'),
+                    str_starts_with($uri, 'temp/api/v2/driver/'),
+                    str_starts_with($uri, 'temp/api/v2/delivery-boy/'),
+                    str_starts_with($uri, 'temp/api/get-user-coordinates/') => 'store.delivery',
+                    str_starts_with($uri, 'temp/api/v2/auth/'), $controller === 'UserController' => 'store.auth',
+                    in_array($controller, [
+                        'CartController', 'CheckoutController', 'OrderController', 'PurchaseHistoryController',
+                        'DigitalProductController', 'ShippingController', 'CarrierController', 'PaymentController',
+                        'PaymentTypesController', 'OfflinePaymentController', 'WalletController', 'ClubpointController',
+                        'RefundRequestController', 'BkashController', 'IyzicoController', 'NagadController', 'SslCommerzController',
+                    ], true) => 'store.orders',
+                    in_array($controller, [
+                        'AddressController', 'CustomerController', 'CustomerPackageController', 'ProfileController',
+                        'RepresentativePaymentController', 'WishlistController', 'ChatController', 'FileController', 'AizUploadController',
+                    ], true) => 'store.customers',
+                    default => 'store.catalogue',
+                };
+                $operation->setTags([self::API_DOCUMENTATION_TAGS[$tag]]);
+                $operation->setAttribute('groupWeight', $warehouse ? 0 : 1);
+
+                if (in_array('wms.auth', $routeInfo->route->gatherMiddleware(), true)) {
+                    $operation->security = [new SecurityRequirement(['privateToken' => []])];
+                }
+            });
     }
 
     /**

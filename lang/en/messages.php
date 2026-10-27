@@ -57,6 +57,8 @@ return [
     'Manage Website Scripts' => 'Manage website scripts',
     'upload_refused' => 'This file type is not allowed.',
     'store_trip_departure_unavailable' => 'The default departure checkpoint is unavailable.',
+    'trip_closed_read_only' => 'Closed trips are read-only.',
+    'trip_order_not_deliverable' => 'Only confirmed, ready for delivery or out for delivery orders can be marked delivered.',
     'trip_cmr_unavailable' => 'This checkpoint has no CMR file to open.',
     'order_submission_conflict' => 'This submission key has already been used for a different order.',
     'order_stock_unavailable' => 'The requested stock is unavailable.',
@@ -68,4 +70,8 @@ return [
     'order_terminal' => 'This completed transition cannot be reversed.',
     'order_updated_title' => 'Order updated',
     'order_updated_body' => 'Order :code was updated. Please review it in the app.',
+    'role_permission_not_held' => 'You can only give a role permissions that you hold yourself.',
+    'staff_role_not_assignable' => 'You can only give a role that grants nothing beyond your own permissions, and you cannot change your own role.',
+    'seller_payout_full_request' => 'Pay the full requested amount (:amount), or ask the seller to submit a new request. Partial payments are not supported.',
+    'seller_payout_balance_limit' => 'The amount cannot exceed the available balance for this payment method (:amount).',
 ];

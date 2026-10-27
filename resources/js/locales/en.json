@@ -3079,6 +3079,7 @@
     "store.sellers.cash": "Cash",
     "store.sellers.bankPayment": "Bank Payment",
     "store.sellers.pay": "Pay",
+    "store.sellers.sellerPaidToAdmin": "Seller paid to admin",
     "store.sellers.clearDue": "Clear due",
     "store.sellers.paying": "Processing payment…",
     "store.sellers.paymentError": "Could not load payment details. Close and try again.",

@@ -12,12 +12,14 @@ use App\Models\Payment;
 use App\Models\SellerWithdrawRequest;
 use App\Models\Shop;
 use App\Models\StoreUser;
+use Brick\Math\BigDecimal;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -86,11 +88,26 @@ class SellerPaymentController extends Controller implements HasMiddleware
         try {
             DB::transaction(function () use ($request, $data, $outgoing, $withdrawal) {
                 $shop = Shop::query()->lockForUpdate()->findOrFail($request->integer('shop_id'));
+                $amount = BigDecimal::of((string) $data['amount']);
+                $balance = BigDecimal::of((string) $shop->admin_to_pay);
+                $limit = BigDecimal::max(0, $outgoing ? $balance : $balance->negated());
                 if ($withdrawal) {
                     $pending = SellerWithdrawRequest::query()->lockForUpdate()
                         ->where('user_id', $shop->user_id)
                         ->where(fn (Builder $query) => $query->whereNull('status')->orWhere('status', 0))
                         ->findOrFail($request->integer('withdraw_request_id'));
+                    if ($pending->amount === null || ! $amount->isEqualTo((string) $pending->amount)) {
+                        throw ValidationException::withMessages([
+                            'amount' => __('messages.seller_payout_full_request', ['amount' => $pending->amount]),
+                        ]);
+                    }
+                }
+                if ($amount->isGreaterThan($limit)) {
+                    throw ValidationException::withMessages([
+                        'amount' => __('messages.seller_payout_balance_limit', ['amount' => (string) $limit->strippedOfTrailingZeros()]),
+                    ]);
+                }
+                if ($withdrawal) {
                     $pending->status = 1;
                     $pending->viewed = 1;
                     $pending->save();

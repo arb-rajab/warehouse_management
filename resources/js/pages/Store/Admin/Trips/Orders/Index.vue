@@ -20,6 +20,7 @@ import {
     updateInvoiceNumber,
 } from '@/actions/App/Http/Controllers/Store/Admin/TripOrderController';
 import { edit as truckEdit } from '@/actions/App/Http/Controllers/Store/Admin/TruckController';
+import ActionErrorBanner from '@/components/ActionErrorBanner.vue';
 import AddResourceLink from '@/components/AddResourceLink.vue';
 import DataTable from '@/components/DataTable.vue';
 import FieldError from '@/components/FieldError.vue';
@@ -33,7 +34,7 @@ import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
 import { confirmDelete, confirmDeliveryStatus } from '@/lib/confirm';
 import { fieldLabelClass, plainFieldInputClass } from '@/lib/filters';
 import { t } from '@/lib/i18n';
-import { firstError } from '@/lib/pageErrors';
+import { firstError, usePageError } from '@/lib/pageErrors';
 import { useStoreAccess } from '@/lib/storeAccess';
 import type { Paginated } from '@/types/admin';
 import type { StoreTripOrder, StoreTripOrderFilters } from '@/types/store';
@@ -47,6 +48,8 @@ const props = defineProps<{
     bulkStatuses: string[];
 }>();
 const access = useStoreAccess();
+const tripError = usePageError('trip_id');
+const deliveryError = usePageError('delivery_status');
 const canSelect = computed(
     () => access.value.can('edit_trip') || access.value.can('delete_order'),
 );
@@ -64,7 +67,17 @@ watch(
         selected.value = [];
     },
 );
-const invoiceForm = useForm({ invoice_number: '' });
+const selectedTrip = computed(() => {
+    const rows = props.orders.data.filter((order) =>
+        selected.value.includes(order.id),
+    );
+    const trip = rows[0]?.trip;
+
+    return trip && rows.every((order) => order.trip?.id === trip.id)
+        ? trip.id
+        : null;
+});
+const invoiceForm = useForm({ invoice_number: '', trip_id: 0 });
 const invoiceOrderId = ref<number | null>(null);
 const savedInvoiceOrderId = ref<number | null>(null);
 
@@ -79,6 +92,11 @@ function selection(): string {
 }
 /** Saves a row's invoice number when the field changes, as the Blade list did. */
 function saveInvoice(order: StoreTripOrder, event: Event): void {
+    if (!order.trip) {
+        return;
+    }
+
+    invoiceForm.trip_id = order.trip.id;
     invoiceOrderId.value = order.id;
     savedInvoiceOrderId.value = null;
     invoiceForm.invoice_number = (event.target as HTMLInputElement).value;
@@ -125,6 +143,7 @@ function onPerPageChange(perPage: number): void {
                 :label="t('store.trips.orders.createOrder')"
             />
         </PageHeader>
+        <ActionErrorBanner :message="tripError || deliveryError" />
         <p
             v-if="access.can('edit_trip')"
             class="mb-4 text-sm text-gray-600 dark:text-neutral-400"
@@ -207,6 +226,7 @@ function onPerPageChange(perPage: number): void {
                     :on-before="
                         () =>
                             selected.length > 0 &&
+                            selectedTrip !== null &&
                             confirmDeliveryStatus(
                                 selection(),
                                 statusLabel(status),
@@ -215,6 +235,11 @@ function onPerPageChange(perPage: number): void {
                     #default="{ errors, processing }"
                     @success="selected = []"
                 >
+                    <input
+                        type="hidden"
+                        name="trip_id"
+                        :value="selectedTrip ?? ''"
+                    />
                     <input
                         type="hidden"
                         name="delivery_status"
@@ -235,7 +260,11 @@ function onPerPageChange(perPage: number): void {
                         "
                         :processing-label="t('store.trips.orders.updating')"
                         :processing="processing"
-                        :disabled="processing || selected.length === 0"
+                        :disabled="
+                            processing ||
+                            selected.length === 0 ||
+                            selectedTrip === null
+                        "
                     />
                     <FieldError :message="firstError(errors)" />
                 </Form>
@@ -400,7 +429,7 @@ function onPerPageChange(perPage: number): void {
                     {{ order.phone ?? '-' }}
                 </td>
                 <td class="px-4 py-2">
-                    <template v-if="access.can('edit_trip')">
+                    <template v-if="access.can('edit_trip') && order.trip">
                         <input
                             :id="`order-invoice-${order.id}`"
                             type="text"
@@ -476,9 +505,18 @@ function onPerPageChange(perPage: number): void {
                         <TableActionLink
                             v-if="
                                 access.can('edit_trip') &&
-                                order.delivery_status !== 'delivered'
+                                order.trip &&
+                                [
+                                    'confirmed',
+                                    'ready_for_delivery',
+                                    'on_delivery',
+                                ].includes(order.delivery_status)
                             "
-                            :href="markDelivered(order, sameList)"
+                            :href="
+                                markDelivered(order, {
+                                    mergeQuery: { trip_id: order.trip!.id },
+                                })
+                            "
                             method="put"
                             as="button"
                             preserve-scroll

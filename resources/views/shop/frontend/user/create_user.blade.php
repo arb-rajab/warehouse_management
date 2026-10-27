@@ -38,7 +38,7 @@
                     <input type="text" id="create_customer_company_name"
                         class="form-control rounded-0{{ $errors->has('company_name') ? ' is-invalid' : '' }}"
                         value="{{ old('company_name') }}" placeholder="{{ translate('Company name') }}"
-                        name="company_name" maxlength="255" required>
+                        name="company_name" maxlength="191" required>
                     @if ($errors->has('company_name'))
                         <span class="invalid-feedback" role="alert">
                             <strong>{{ $errors->first('company_name') }}</strong>
@@ -154,7 +154,7 @@
                     <input type="text" id="create_customer_company_address"
                         class="form-control rounded-0{{ $errors->has('company_address') ? ' is-invalid' : '' }}"
                         value="{{ old('company_address') }}" placeholder="{{ translate('Company Address') }}"
-                        name="company_address" maxlength="255" required>
+                        name="company_address" maxlength="191" required>
                     @if ($errors->has('company_address'))
                         <span class="invalid-feedback" role="alert">
                             <strong>{{ $errors->first('company_address') }}</strong>

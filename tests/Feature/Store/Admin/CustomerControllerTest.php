@@ -12,6 +12,10 @@ use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Testing\AssertableInertia as Assert;
 
+beforeEach(function () {
+    $this->withoutVite();
+});
+
 /** @return array<string,mixed> */
 function storeCustomerForm(array $overrides = []): array
 {
@@ -231,7 +235,7 @@ test('page views aggregate counts exclude other customers and paginate grouped r
     }
     DB::table('user_page_views')->insert(['user_id' => $customer->id, 'viewable_type' => Product::class, 'viewable_id' => $ids[0], 'viewed_at' => '2026-10-08 13:00:00']);
     DB::table('user_page_views')->insert(['user_id' => $noise->id, 'viewable_type' => Product::class, 'viewable_id' => $ids[0], 'viewed_at' => '2026-10-08 14:00:00']);
-    $this->get(route('customers.page-views', $customer))->assertInertia(fn (Assert $page) => $page->has('views.data', 20)->where('views.meta.total', 23)->where('views.data.0.view_count', 2)->where('views.data.0', ['id' => $ids[0], 'kind' => 'products', 'name' => 'Viewed product 1', 'slug' => 'viewed-product-1', 'view_count' => 2, 'last_viewed_at' => '2026-10-08 13:00:00']));
+    $this->get(route('customers.page-views', $customer))->assertInertia(fn (Assert $page) => $page->has('views.data', 20)->where('views.meta.total', 23)->where('views.data.0.view_count', 2)->where('views.data.0', ['id' => $ids[0], 'kind' => 'products', 'name' => 'Viewed product 1', 'slug' => 'viewed-product-1', 'public_url' => route('product', 'viewed-product-1', false), 'view_count' => 2, 'last_viewed_at' => '2026-10-08 13:00:00']));
     $this->get(route('customers.page-views', [$customer, 'per_page' => 7]))->assertSessionHasErrors('per_page');
 });
 
@@ -321,4 +325,35 @@ test('authorized customer edits preserve representative conversion and its exist
     expect($customer->fresh()->is_rep)->toBeTrue()->and($customer->fresh()->rep_package_id)->toBe(42)->and((float) $customer->fresh()->rep_discount_percentage)->toBe(10.0);
     $this->post(route('customers.update', $customer), storeCustomerForm(['is_rep' => 0]))->assertRedirect(route('customers.index'));
     expect($customer->fresh()->is_rep)->toBeFalse()->and($customer->fresh()->rep_package_id)->toBe(42);
+});
+
+test('customer create requires the seven route-dependent business fields', function (string $field) {
+    actingAsStoreUser(createStoreStaff('edit_customer'));
+    $before = StoreUser::count();
+    $this->post(route('customers.store'), storeCustomerForm([$field => null]))->assertSessionHasErrors($field);
+    expect(StoreUser::count())->toBe($before);
+})->with(['company_name', 'country', 'tax_number', 'bank_account_number', 'company_address', 'shipping_address', 'trade_license']);
+
+test('customer edit permits empty business fields and persists the allowed profile update without a license', function () {
+    actingAsStoreUser(createStoreStaff('edit_customer'));
+    $customer = createStoreUser();
+    $optional = array_fill_keys(['company_name', 'country', 'tax_number', 'bank_account_number', 'company_address', 'shipping_address'], null);
+    $customer->forceFill(array_fill_keys(array_keys($optional), 'Previous value'))->save();
+    $payload = storeCustomerForm([...$optional, 'trade_license' => null]);
+    $this->post(route('customers.update', $customer), $payload)->assertSessionHasNoErrors()->assertRedirect(route('customers.index'));
+    $customer->refresh();
+    foreach ($optional as $field => $value) {
+        expect($customer->getAttribute($field))->toBe($field === 'company_name' ? '' : null);
+    }
+    expect($customer->name)->toBe($payload['name'])->and($customer->trade_license)->toBeNull();
+});
+
+test('customer edit retains a company name when it is not submitted', function () {
+    actingAsStoreUser(createStoreStaff('edit_customer'));
+    $customer = createStoreUser();
+    $customer->forceFill(['company_name' => 'Retained Company'])->save();
+    $payload = storeCustomerForm(['trade_license' => null]);
+    unset($payload['company_name']);
+    $this->post(route('customers.update', $customer), $payload)->assertSessionHasNoErrors()->assertRedirect(route('customers.index'));
+    expect($customer->fresh()->company_name)->toBe('Retained Company');
 });

@@ -24,6 +24,8 @@ import FieldError from '@/components/FieldError.vue';
 import FilterDialog from '@/components/FilterDialog.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import Pagination from '@/components/Pagination.vue';
+import RequiredLegend from '@/components/RequiredLegend.vue';
+import RequiredMark from '@/components/RequiredMark.vue';
 import SubmitButton from '@/components/SubmitButton.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
@@ -349,13 +351,13 @@ function choosePackage(customer: StoreCustomer): void {
                 :action="assignPackage()"
                 @success="packageOpen = false"
                 #default="{ processing, errors }"
-                ><input
+                ><RequiredLegend /><input
                     type="hidden"
                     name="user_id"
                     :value="packageCustomer.id" /><label
                     for="package_id"
                     :class="fieldLabelClass"
-                    >{{ t('store.customers.package') }}</label
+                    >{{ t('store.customers.package') }}<RequiredMark /></label
                 ><select
                     id="package_id"
                     name="package_id"

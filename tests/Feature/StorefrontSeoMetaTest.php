@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\DB;
 
 /**
  * The storefront layout's canonical / og / twitter / robots head, computed by
- * App\Support\Seo (store-backoffice-migration.md §42). Every page type is
+ * App\Support\Seo (.ai/archive/store-backoffice/changes-20261020.md §42). Every page type is
  * rendered through its real route. APP_URL is pinned to a host the test client
  * does not use, so a URL built from the request's own host fails the assertions.
  */

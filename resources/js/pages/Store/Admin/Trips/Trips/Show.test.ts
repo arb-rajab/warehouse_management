@@ -331,7 +331,10 @@ describe('Store trip detail', () => {
         await notes.setValue('Front door');
         expect(submitMock).toHaveBeenCalledWith(
             updateNotes(storeTripCheckpointRow(), { mergeQuery: {} }),
-            expect.objectContaining({ notes: 'Front door' }),
+            expect.objectContaining({
+                notes: 'Front door',
+                trip_id: storeTrip().id,
+            }),
             expect.objectContaining({
                 preserveScroll: true,
                 preserveState: true,
@@ -398,7 +401,10 @@ describe('Store trip detail', () => {
         await select.setValue('has_issue');
         expect(submitMock).toHaveBeenCalledWith(
             updateStatus(visit, { mergeQuery: {} }),
-            expect.objectContaining({ status: 'has_issue' }),
+            expect.objectContaining({
+                status: 'has_issue',
+                trip_id: storeTrip().id,
+            }),
             expect.objectContaining({ preserveScroll: true }),
         );
         (submitMock.mock.calls[0][2] as { onError: () => void }).onError();
@@ -479,5 +485,12 @@ describe('Store trip detail', () => {
         expect(viewer.find('[data-required-mark]').exists()).toBe(false);
         expect(viewer.find('[data-required-legend]').exists()).toBe(false);
         viewer.unmount();
+    });
+    it('keeps closed trip checkpoints readable without write controls', async () => {
+        const wrapper = mountPage([visit]);
+        await wrapper.setProps({ trip: storeTrip({ status: 'closed' }) });
+        expect(wrapper.find('textarea').exists()).toBe(false);
+        expect(wrapper.find('select').exists()).toBe(false);
+        expect(wrapper.text()).toContain(visit.notes ?? '');
     });
 });

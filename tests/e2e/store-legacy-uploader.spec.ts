@@ -269,6 +269,16 @@ test.describe('seller validated shop and commerce forms', () => {
         });
         await page.getByRole('button', { name: 'Apply', exact: true }).click();
         await expect(page).toHaveURL(/\/temp\/seller\/dashboard/);
+        await expect(
+            page.getByRole('heading', { name: 'Dashboard', exact: true }),
+        ).toBeVisible();
+        await expect(
+            page.getByText('Sales Stat', { exact: true }),
+        ).toBeVisible();
+        await expect(page.locator('#graph-1')).toBeVisible();
+        await expect(
+            page.getByText('Top 12 Products', { exact: true }),
+        ).toBeVisible();
     });
 
     test('coupon refusal keeps its fields before a successful save', async ({

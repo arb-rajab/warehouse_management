@@ -10,7 +10,7 @@ import {
 
 /**
  * General settings moved to Inertia with a typed writer
- * (.ai/rules/store-backoffice-migration.md §17). The timezone stays
+ * (.ai/archive/store-backoffice/changes-20261012.md §17). The timezone stays
  * config-managed; saved logos are previewed through the canonical uploader.
  */
 function resetGeneralSettings(): void {

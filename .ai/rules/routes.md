@@ -6,7 +6,7 @@ paths:
   - 'routes/shop-*.php'
 ---
 
-# Routes
+# Route entry points, authentication and legacy seller namespaces
 
 ## `/` redirects to the external marketing site; sign-in lives at /admin/login
 `/` (`WelcomeController`, still named `welcome`) issues an HTTP redirect via `redirect()->away('https://albaraka-holland.nl/')` to the external site `https://albaraka-holland.nl/`, with no auth branching — it redirects unconditionally for guests and authenticated users alike. `redirect()->away()` is used (not an Inertia-side redirect) because the target is an external domain. The formerly-rendered `Welcome.vue` "under construction" page and its test were removed since nothing else referenced them once `/` stopped rendering it. Sign-in is `Route::get('admin/login', ...)`/`Route::post('admin/login', ...)` inside the `guest` middleware group, still named `login` (so every `route('login')` call — `LoginController::destroy`, `RedirectIfAuthenticated::redirectUsing()` in AppServiceProvider, tests — is unaffected by the URI move). Covered by `tests/Feature/RootRedirectTest.php`.

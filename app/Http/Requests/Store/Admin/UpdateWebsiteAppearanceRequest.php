@@ -12,7 +12,7 @@ use Illuminate\Validation\Validator;
  * form posted to the generic settings writer, and nothing else. The header
  * and footer scripts keep their own compatibility endpoint
  * (UpdateLegacyWebsiteScriptsRequest) and are refused here
- * (.ai/rules/store-backoffice-migration.md §20).
+ * (.ai/archive/store-backoffice/changes-20261013.md §20).
  */
 class UpdateWebsiteAppearanceRequest extends FormRequest
 {

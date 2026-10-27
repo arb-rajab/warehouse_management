@@ -38,6 +38,10 @@ function adminDynamicPopup(string $title = 'Welcome'): DynamicPopup
     return DynamicPopup::forceCreate(['title' => $title, 'summary' => 'Hello', 'banner' => null, 'status' => 0, 'btn_link' => '/temp/product/example', 'btn_text' => 'Open', 'delay_seconds' => 5, 'offer_id' => null, 'show_page' => 0]);
 }
 
+beforeEach(function () {
+    $this->withoutVite();
+});
+
 test('the dynamic popup list can be rendered', function () {
     actingAsStoreUser(createStoreStaff('view_all_dynamic_popups'));
     $this->get(route('dynamic-popups.index'))->assertOk()->assertInertia(fn (Assert $page) => $page->component('Store/Admin/Marketing/DynamicPopups/Index'));
@@ -222,7 +226,7 @@ test('a popup refuses an offer whose base product has no usable canonical slug',
     $this->postJson(route('dynamic-popups.store'), adminPopupForm($offer->id))->assertUnprocessable()->assertJsonValidationErrors('offer_id');
     $this->putJson(route('dynamic-popups.update', $popup), adminPopupForm($offer->id))->assertUnprocessable()->assertJsonValidationErrors('offer_id');
     expect(DynamicPopup::count())->toBe(1)->and($popup->fresh()->title)->toBe('Unchanged');
-})->with(['empty' => '', 'whitespace' => '   ']);
+})->with(['whitespace' => '   ']);
 
 test('popup images resolve through one narrow list query without per-row upload lookups', function () {
     $upload = Upload::factory()->create(['type' => 'image', 'file_name' => 'uploads/popup.webp', 'external_link' => null]);
@@ -239,7 +243,7 @@ test('popup images resolve through one narrow list query without per-row upload 
     $this->get(route('dynamic-popups.index'))->assertOk()->assertInertia(fn (Assert $page) => $page->has('popups.data', 3)->where('popups.data.0.banner_url', my_asset('uploads/popup.webp')));
     expect($queries)->toHaveCount(2);
     foreach ($queries as $sql) {
-        expect($sql)->toContain('join "uploads"')->not->toContain('select *');
+        expect($sql)->toContain('join '.DB::connection()->getQueryGrammar()->wrapTable('uploads'))->not->toContain('select *');
     }
 });
 
@@ -254,3 +258,22 @@ test('marketing upload references follow the selected picker ownership contract'
     $this->post(route('dynamic-popups.store'), array_replace($payload, ['banner' => (string) $owned->id]))->assertRedirect(route('dynamic-popups.index'));
     expect(DynamicPopup::sole()->banner)->toBe((string) $owned->id);
 });
+
+test('popup buttons preserve the original absolute URL and accept slugless base products', function (?string $slug) {
+    $product = createStoreProduct(['slug' => $slug]);
+    $offer = Offer::forceCreate(['title' => 'Final popup offer', 'is_active' => 1]);
+    OfferProduct::forceCreate(['offer_id' => $offer->id, 'product_id' => $product->id, 'is_base_product' => 1]);
+    actingAsStoreUser(createStoreStaff('add_dynamic_popups', 'edit_dynamic_popups'));
+    $this->get(route('dynamic-popups.create'))->assertOk()->assertInertia(fn (Assert $page) => $page->where('offers', [['id' => $offer->id, 'name' => 'Final popup offer']]));
+    $this->postJson(route('dynamic-popups.store'), adminPopupForm($offer->id))->assertRedirect(route('dynamic-popups.index'));
+    $popup = DynamicPopup::sole();
+    $url = $slug === null || $slug === '' ? config('app.url').'/temp/product/~id-'.$product->id.'?catalog_id='.$product->id : route('product', ['slug' => $slug]);
+    expect($popup->btn_link)->toBe($url);
+    $this->putJson(route('dynamic-popups.update', $popup), adminPopupForm($offer->id))->assertRedirect(route('dynamic-popups.index'));
+    expect($popup->fresh()->btn_link)->toBe($url);
+    $popup->forceFill(['status' => 1])->save();
+    seedStoreCurrency();
+    actingAsStoreUser(createStoreUser());
+    $response = $this->get(route('home'))->assertOk();
+    expect(htmlXPath($response)->evaluate('string(//a[normalize-space(.)="Open"]/@href)'))->toBe($url);
+})->with(['null' => null, 'empty' => '', 'normal' => 'd15-popup', 'zero' => '0']);

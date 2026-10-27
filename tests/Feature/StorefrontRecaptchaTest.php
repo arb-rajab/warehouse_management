@@ -20,7 +20,7 @@ use Illuminate\Testing\TestResponse;
  * services.recaptcha.secret_key (CAPTCHA_SECRET). They fail closed: a missing
  * secret, a provider error or an unreachable provider refuses the form like a
  * wrong answer. With the setting off nothing changes and Google is never
- * called (store-backoffice-migration.md §48).
+ * called (.ai/archive/store-backoffice/changes-20261021.md §48).
  */
 const RECAPTCHA_VERIFY_URL = 'https://www.google.com/recaptcha/api/siteverify';
 

@@ -20,7 +20,7 @@
                             @endphp
                             <tr>
                                 <td class="pl-0">
-                                    <a href="{{ route('product', $order->product->slug) }}" class="d-flex align-items-center">
+                                    <a href="{{ \App\Support\StorefrontUrl::to($order->product) }}" class="d-flex align-items-center">
                                         <img class="lazyload img-fit size-80px"
                                             src="{{ static_asset('assets/img/placeholder.jpg') }}"
                                             data-src="{{ uploaded_asset($order->product->thumbnail_img) }}"

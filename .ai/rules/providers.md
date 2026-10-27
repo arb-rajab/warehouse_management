@@ -3,7 +3,7 @@ paths:
   - 'config/health.php,database/migrations/*health*,app/Providers/HealthServiceProvider.php'
 ---
 
-# Providers
+# Health checks and cross-connection migration ownership
 
 ## spatie/laravel-health: own DB connection, checks registered in HealthServiceProvider, no auto-routes
 Like Telescope/Pulse, health results are stored on a dedicated 'health' sqlite connection (config/database.php), set via config/health.php result_stores.connection = env('HEALTH_DB_CONNECTION', 'health'). Keep HEALTH_DB_DATABASE=:memory: in phpunit.xml for the same RefreshDatabase reason as telescope/pulse.

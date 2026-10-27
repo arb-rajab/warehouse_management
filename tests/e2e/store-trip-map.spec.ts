@@ -16,7 +16,7 @@ import {
 } from './support/storeFixtures';
 
 /**
- * The trip map picker (store-backoffice-migration.md §30) with the real
+ * The trip map picker (.ai/archive/store-backoffice/changes-20261017.md §30) with the real
  * Leaflet bundled from node_modules. OpenStreetMap tiles are answered
  * locally so the spec needs no network, but still pass through the page's
  * enforced CSP (`img-src` allows only that tile host beyond 'self').
@@ -229,6 +229,21 @@ test("the map picker confirms a busy truck's trip deletion and a stop's delivery
     await expect(page).toHaveURL(/\/temp\/admin\/trips\/create-from-map$/);
     expectStoredTruck(truck, '$truck->is_available && $trip === null');
 
+    // A trip write is unavailable until this order has a trip attachment.
+    await marker(page, `MAP-A-${stamp}`, `Map customer A ${stamp}`).click();
+    await expect(
+        page
+            .locator('section[aria-labelledby="trip-map-stops"]')
+            .getByRole('button', { name: 'Mark as delivered', exact: true }),
+    ).toHaveCount(0);
+    seedStoreFixtures(String.raw`
+        $truck = App\Models\Truck::query()->where('name', ${php(truck)})->sole();
+        $truck->forceFill(['is_available' => false])->save();
+        $trip = App\Models\Trip::create(['code' => ${php(`DELIVERY-${stamp}`)}, 'truck_id' => $truck->id, 'due_date' => now()->toDateString(), 'status' => 'started', 'active' => true]);
+        $trip->checkpoints()->create(['relationable_type' => App\Models\Order::class, 'relationable_id' => ${first}, 'type' => 'delivery', 'status' => 'pending', 'sort_order_in_trip' => 1]);
+    `);
+    await page.reload();
+
     const a = marker(page, `MAP-A-${stamp}`, `Map customer A ${stamp}`);
     await a.click();
     const stop = page.locator(
@@ -245,8 +260,8 @@ test("the map picker confirms a busy truck's trip deletion and a stop's delivery
             request.method() === 'PUT' &&
             request
                 .url()
-                .endsWith(
-                    `/temp/admin/trips/orders/${first}/delivered?return_to=map`,
+                .includes(
+                    `/temp/admin/trips/orders/${first}/delivered?return_to=map&trip_id=`,
                 ),
     );
     page.once('dialog', (confirm) => {

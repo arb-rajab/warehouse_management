@@ -88,11 +88,11 @@ test('retained store Blade templates still serve their protected consumers', fun
         ])
         ->and($userDownloadConsumers)->toContain('app/Http/Controllers/Store/Admin/ProductBulkUploadController.php')
         // The blank shell (the removed installer's card layout) had no
-        // consumer and is gone (store-backoffice-migration.md §23).
+        // consumer and is gone (.ai/archive/store-backoffice/changes-20261014.md §23).
         ->and($sources)->not->toHaveKey($blankLayout)
         ->and(array_keys(array_filter([...$sources, ...$controllerSources], fn (string $source): bool => str_contains($source, 'shop.backend.layouts.blank'))))->toBe([])
         // The server status page (a controller-less Route::view) was deleted
-        // on the owner's decision (store-backoffice-migration.md §29).
+        // on the owner's decision (.ai/archive/store-backoffice/changes-20261017.md §29).
         ->and($sources)->not->toHaveKey('resources/views/shop/backend/system/server_status.blade.php')
         ->and(file_get_contents(base_path('routes/shop-admin.php')))->not->toContain('server_status')
         ->and(config('store.blade_csp.script-src.unsafe-inline'))->toBeTrue();

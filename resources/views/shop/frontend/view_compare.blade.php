@@ -23,7 +23,7 @@
                                             <div class="p-4 border-bottom">
                                                 <span class="fs-12 text-gray">{{ translate('Name')}}</span>
                                                 <h5 class="mb-0 text-dark h-45px text-truncate-2 mt-1">
-                                                    <a class="text-reset fs-14 fw-700 hov-text-primary" href="{{ route('product', \App\Models\Product::find($item)->slug) }}" title="{{ \App\Models\Product::find($item)->getTranslation('name') }}">
+                                                    <a class="text-reset fs-14 fw-700 hov-text-primary" href="{{ \App\Support\StorefrontUrl::to(\App\Models\Product::find($item)) }}" title="{{ \App\Models\Product::find($item)->getTranslation('name') }}">
                                                         {{ \App\Models\Product::find($item)->getTranslation('name') }}
                                                     </a>
                                                 </h5>

@@ -2,6 +2,7 @@ import { flushPromises, mount } from '@vue/test-utils';
 import type { VueWrapper } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import FieldError from '@/components/FieldError.vue';
+import RequiredMark from '@/components/RequiredMark.vue';
 import StoreRichTextField from '@/components/StoreRichTextField.vue';
 import StoreUploadField from '@/components/StoreUploadField.vue';
 import { i18n, t } from '@/lib/i18n';
@@ -253,3 +254,46 @@ describe('StoreBlogFormFields', () => {
         );
     });
 });
+
+it.each([undefined, storeBlog()])(
+    'marks required blog fields and leaves metadata optional on create/edit',
+    (blog) => {
+        const wrapper = mountFields({ blog });
+
+        for (const id of ['title', 'slug', 'category_id']) {
+            expect(wrapper.get(`#${id}`).attributes('required')).toBeDefined();
+            expect(
+                wrapper
+                    .get(`label[for="${id}"]`)
+                    .findComponent(RequiredMark)
+                    .exists(),
+            ).toBe(true);
+        }
+
+        for (const id of [
+            'short_description',
+            'meta_title',
+            'meta_description',
+            'meta_keywords',
+        ]) {
+            expect(
+                wrapper.get(`#${id}`).attributes('required'),
+            ).toBeUndefined();
+            expect(
+                wrapper
+                    .get(`label[for="${id}"]`)
+                    .findComponent(RequiredMark)
+                    .exists(),
+            ).toBe(false);
+        }
+
+        expect(wrapper.getComponent(StoreRichTextField).props('required')).toBe(
+            false,
+        );
+        expect(
+            wrapper
+                .findAllComponents(StoreUploadField)
+                .every((field) => !field.props('required')),
+        ).toBe(true);
+    },
+);

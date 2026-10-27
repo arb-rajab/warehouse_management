@@ -13,6 +13,7 @@ use Inertia\Testing\AssertableInertia as Assert;
 // Each order checkpoint prints its grand total through single_price(), which
 // reads the default currency; the page must never call the routing service.
 beforeEach(function () {
+    $this->withoutVite();
     seedStoreCurrency();
     Http::fake();
     config(['store.asset_base_url' => null]);
@@ -148,7 +149,7 @@ describe('trip detail', function () {
         $trip = checkpointDetailTrip();
         $checkpoint = checkpointDetailStop($trip);
         $url = $route === 'trips.show' ? route($route, $trip) : route($route, $checkpoint);
-        $payload = ['notes' => 'Changed', 'status' => 'delivered'];
+        $payload = ['trip_id' => $trip->id, 'notes' => 'Changed', 'status' => 'delivered'];
         actingAsStoreUser(createStoreStaff(...array_values(array_diff(['view_all_trips', 'edit_trip', 'add_trip', 'delete_trip'], [$permission]))));
         $before = checkpointDetailStates();
 
@@ -172,12 +173,12 @@ describe('checkpoint notes', function () {
         $other = checkpointDetailStop(checkpointDetailTrip(), ['notes' => 'Untouched']);
         actingAsStoreUser(createStoreStaff('edit_trip'));
 
-        $this->put(route('checkpoints.update-notes', [$checkpoint, 'tab' => 'stops']), ['notes' => 'Leave at the back door'])
+        $this->put(route('checkpoints.update-notes', [$checkpoint, 'trip_id' => $checkpoint->trip_id, 'tab' => 'stops']), ['notes' => 'Leave at the back door'])
             ->assertRedirect(route('trips.show', [$trip, 'tab' => 'stops']));
         expect($checkpoint->fresh()->only(['notes', 'status', 'cmr_file', 'photos']))->toBe(['notes' => 'Leave at the back door', 'status' => 'delivered', 'cmr_file' => '17', 'photos' => '18'])
             ->and($other->fresh()->notes)->toBe('Untouched');
 
-        $this->put(route('checkpoints.update-notes', $checkpoint), ['notes' => ''])->assertRedirect(route('trips.show', $trip));
+        $this->put(route('checkpoints.update-notes', [$checkpoint, 'trip_id' => $checkpoint->trip_id]), ['notes' => ''])->assertRedirect(route('trips.show', $trip));
         expect($checkpoint->fresh()->notes)->toBeNull();
     });
 
@@ -185,13 +186,13 @@ describe('checkpoint notes', function () {
         $checkpoint = checkpointDetailStop(checkpointDetailTrip(), ['notes' => 'Old']);
         actingAsStoreUser(createStoreStaff('edit_trip'));
 
-        $this->put(route('checkpoints.update-notes', $checkpoint), ['notes' => str_repeat('a', 1001)])->assertSessionHasErrors('notes');
-        $this->put(route('checkpoints.update-notes', $checkpoint), ['notes' => ['array']])->assertSessionHasErrors('notes');
+        $this->put(route('checkpoints.update-notes', [$checkpoint, 'trip_id' => $checkpoint->trip_id]), ['notes' => str_repeat('a', 1001)])->assertSessionHasErrors('notes');
+        $this->put(route('checkpoints.update-notes', [$checkpoint, 'trip_id' => $checkpoint->trip_id]), ['notes' => ['array']])->assertSessionHasErrors('notes');
         $this->put(route('checkpoints.update-notes', ['checkpoint' => 999999]), ['notes' => 'x'])->assertNotFound();
         $this->post('/temp/admin/trips/update-checkpoint-notes', ['checkpoint_id' => $checkpoint->id, 'notes' => 'x'])->assertMethodNotAllowed();
         expect($checkpoint->fresh()->notes)->toBe('Old');
 
-        $this->put(route('checkpoints.update-notes', $checkpoint), ['notes' => str_repeat('a', 1000)])->assertRedirect();
+        $this->put(route('checkpoints.update-notes', [$checkpoint, 'trip_id' => $checkpoint->trip_id]), ['notes' => str_repeat('a', 1000)])->assertRedirect();
         expect($checkpoint->fresh()->notes)->toBe(str_repeat('a', 1000));
     });
 
@@ -200,7 +201,7 @@ describe('checkpoint notes', function () {
         actingAsRefusedStoreCaller($caller);
         $before = checkpointDetailStates();
 
-        assertStoreCallerRefused($this->put(route('checkpoints.update-notes', $checkpoint), ['notes' => 'Changed']), $caller);
+        assertStoreCallerRefused($this->put(route('checkpoints.update-notes', [$checkpoint, 'trip_id' => $checkpoint->trip_id]), ['notes' => 'Changed']), $caller);
 
         expect(checkpointDetailStates())->toBe($before);
     })->with('refused store admin callers');
@@ -212,7 +213,7 @@ describe('checkpoint status', function () {
         $checkpoint = checkpointDetailStop($trip);
         actingAsStoreUser(createStoreStaff('edit_trip'));
 
-        $this->put(route('checkpoints.update-status', [$checkpoint, 'tab' => 'stops']), ['status' => $status])
+        $this->put(route('checkpoints.update-status', [$checkpoint, 'trip_id' => $checkpoint->trip_id, 'tab' => 'stops']), ['status' => $status])
             ->assertRedirect(route('trips.show', [$trip, 'tab' => 'stops']));
 
         expect($checkpoint->fresh()->status)->toBe($status);
@@ -228,9 +229,9 @@ describe('checkpoint status', function () {
         $checkpoint = checkpointDetailStop(checkpointDetailTrip(), ['status' => 'delivered', 'arrived_at' => '2026-10-09 10:00:00']);
         actingAsStoreUser(createStoreStaff('edit_trip'));
 
-        $this->put(route('checkpoints.update-status', $checkpoint), ['status' => 'delivered'])->assertRedirect();
+        $this->put(route('checkpoints.update-status', [$checkpoint, 'trip_id' => $checkpoint->trip_id]), ['status' => 'delivered'])->assertRedirect();
         expect($checkpoint->fresh()->arrived_at->toDateTimeString())->toBe('2026-10-09 10:00:00');
-        $this->put(route('checkpoints.update-status', $checkpoint), ['status' => 'has_issue'])->assertRedirect();
+        $this->put(route('checkpoints.update-status', [$checkpoint, 'trip_id' => $checkpoint->trip_id]), ['status' => 'has_issue'])->assertRedirect();
         expect($checkpoint->fresh()->status)->toBe('has_issue')->and($checkpoint->fresh()->arrived_at->toDateTimeString())->toBe('2026-10-09 10:00:00');
     });
 
@@ -239,7 +240,7 @@ describe('checkpoint status', function () {
         actingAsRefusedStoreCaller($caller);
         $before = checkpointDetailStates();
 
-        assertStoreCallerRefused($this->put(route('checkpoints.update-status', $checkpoint), ['status' => 'delivered']), $caller);
+        assertStoreCallerRefused($this->put(route('checkpoints.update-status', [$checkpoint, 'trip_id' => $checkpoint->trip_id]), ['status' => 'delivered']), $caller);
 
         expect(checkpointDetailStates())->toBe($before);
     })->with('refused store admin callers');
@@ -249,8 +250,8 @@ describe('checkpoint status', function () {
         actingAsStoreUser(createStoreStaff('edit_trip'));
         $before = checkpointDetailStates();
 
-        $this->put(route('checkpoints.update-status', $checkpoint), ['status' => 'closed'])->assertSessionHasErrors('status');
-        $this->put(route('checkpoints.update-status', $checkpoint), [])->assertSessionHasErrors('status');
+        $this->put(route('checkpoints.update-status', [$checkpoint, 'trip_id' => $checkpoint->trip_id]), ['status' => 'closed'])->assertSessionHasErrors('status');
+        $this->put(route('checkpoints.update-status', [$checkpoint, 'trip_id' => $checkpoint->trip_id]), [])->assertSessionHasErrors('status');
         $this->put(route('checkpoints.update-status', ['checkpoint' => 999999]), ['status' => 'delivered'])->assertNotFound();
         $this->post('/temp/admin/trips/update-checkpoint-status', ['id' => $checkpoint->id, 'status' => 'delivered'])->assertMethodNotAllowed();
 

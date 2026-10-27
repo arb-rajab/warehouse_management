@@ -3,6 +3,7 @@
 namespace App\Http\Resources\Store;
 
 use App\Models\Product;
+use App\Support\StorefrontUrl;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -24,7 +25,7 @@ class DashboardProductResource extends JsonResource
         return [
             'id' => $this->id,
             'name' => (string) $this->resource->getTranslation('name'),
-            'public_url' => $this->slug === null || $this->slug === '' ? null : route('product', $this->slug),
+            'public_url' => StorefrontUrl::to($this->resource),
             'thumbnail_url' => $url !== null && in_array(parse_url($url, PHP_URL_SCHEME), ['http', 'https'], true) ? $url : static_asset('assets/img/placeholder.jpg'),
             'base_price' => home_base_price($this->resource),
             'discounted_price' => home_discounted_base_price($this->resource),

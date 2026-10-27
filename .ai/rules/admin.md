@@ -3,7 +3,7 @@ paths:
   - 'resources/js/pages/Admin/**'
 ---
 
-# Admin
+# Admin filters, help pages and active-state labels
 
 ## Shared filter-dialog scaffolding lives in lib/filters.ts
 `resources/js/lib/filters.ts` exports `filterSectionHeadingClass` (the filter-dialog section heading Tailwind classes), `filterTriggerButtonClass`/`filterClearButtonClass` (the dialog's trigger/clear buttons), `fieldLabelClass` (the filter-field label), `countBadgeClass` (the small rounded-pill count badge — blue, not the page's usual gray-900/white pairing, so it stays visible on a selected/dark background), and `columnNumberOptions(maxColumnNumber)` (builds the 1..N column dropdown options). `CellHighlightFilters.vue` and `CellStatusLogs/Index.vue` both import these instead of redefining them locally — import `filterSectionHeadingClass` aliased as `sectionHeadingClass` to keep the template unchanged. `countBadgeClass` is used for filter triggers' active-filter counts (e.g. CellHighlightFilters.vue). Reuse these in any future admin listing page with a filter dialog instead of re-copying them.

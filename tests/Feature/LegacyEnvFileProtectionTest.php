@@ -37,7 +37,7 @@ function scratchEnvContents(): string
 
 // The refusing overWriteEnvFile() stub went with its last callers, the
 // generic settings writer's `site_name` and `timezone` branches
-// (store-backoffice-migration.md §20): no settings code can reach the file.
+// (.ai/archive/store-backoffice/changes-20261013.md §20): no settings code can reach the file.
 test('no settings writer is left that could rewrite the .env file', function () {
     $original = scratchEnvContents();
     actingAsStoreUser(createStoreStaff('general_settings', 'footer_setup', 'website_appearance', 'edit_website_page'));

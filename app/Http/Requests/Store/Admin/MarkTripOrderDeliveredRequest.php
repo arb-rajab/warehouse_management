@@ -3,14 +3,13 @@
 namespace App\Http\Requests\Store\Admin;
 
 use Illuminate\Contracts\Validation\ValidationRule;
-use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 /**
  * Marking an order delivered from the trip orders list or, with
  * `return_to=map`, from the trip map picker's selected stops.
  */
-class MarkTripOrderDeliveredRequest extends FormRequest
+class MarkTripOrderDeliveredRequest extends TripWriteRequest
 {
     /**
      * Get the validation rules that apply to the request.
@@ -19,6 +18,6 @@ class MarkTripOrderDeliveredRequest extends FormRequest
      */
     public function rules(): array
     {
-        return ['return_to' => ['nullable', 'string', Rule::in(['map'])]];
+        return [...parent::rules(), 'return_to' => ['nullable', 'string', Rule::in(['map'])]];
     }
 }

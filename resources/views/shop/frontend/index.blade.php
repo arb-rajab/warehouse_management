@@ -102,9 +102,9 @@
                                     @endphp
                                     @if ($product != null && $product->published != 0)
                                         @php
-                                            $product_url = route('product', $product->slug);
+                                            $product_url = \App\Support\StorefrontUrl::to($product);
                                             if($product->auction_product == 1) {
-                                                $product_url = route('product', $product->slug);
+                                                $product_url = \App\Support\StorefrontUrl::to($product);
                                             }
                                         @endphp
                                         <div class="h-100px h-md-200px h-lg-auto flash-deal-item position-relative text-center border-bottom @if($i!=4) border-right @endif has-transition hov-shadow-out z-1">
@@ -170,7 +170,7 @@
                         <div class="todays-deal aiz-carousel" data-items="7" data-xxl-items="7" data-xl-items="6" data-lg-items="5" data-md-items="4" data-sm-items="3" data-xs-items="2" data-arrows="true" data-dots="false" data-autoplay="true" data-infinite="true">
                             @foreach ($todays_deal_products as $key => $product)
                                 <div class="carousel-box h-100 px-3 px-lg-0">
-                                    <a href="{{ route('product', $product->slug) }}" class="h-100 overflow-hidden hov-scale-img mx-auto" title="{{  $product->getTranslation('name')  }}">
+                                    <a href="{{ \App\Support\StorefrontUrl::to($product) }}" class="h-100 overflow-hidden hov-scale-img mx-auto" title="{{  $product->getTranslation('name')  }}">
                                         <!-- Image -->
                                         <div class="img h-80px w-80px rounded-content overflow-hidden mx-auto">
                                             <img class="lazyload img-fit m-auto has-transition"
@@ -300,7 +300,7 @@
                                 <div class="bg-white pt-3 pl-3 pr-3 h-100 hov-scale-img" style="min-height: 240px !important;">
                                     <div class="row">
                                         <!-- Category Banner -->
-                                        <a class="text-reset fw-700 fs-14 hov-text-primary" href="{{ route('products.category', $category->slug) }}">
+                                        <a class="text-reset fw-700 fs-14 hov-text-primary" href="{{ \App\Support\StorefrontUrl::to($category) }}">
                                         <div class=" h-300px text-center h-md-100">
                                             <img src="{{ uploaded_asset($category->banner) }}" alt="{{ $category->getTranslation('name') }}" class="h-100 has-transition"
                                             onerror="this.onerror=null;this.src='{{ static_asset('assets/img/placeholder.jpg') }}';" style="width: 100%; object-fit: contain;">
@@ -309,12 +309,12 @@
                                         <!-- Categories -->
                                         <div class="col py-1 text-center text-md-left">
                                             <!-- Category Name -->
-                                            {{-- <h6 class="text-dark mb-3"><a class="text-reset fw-700 fs-14 hov-text-primary" href="{{ route('products.category', $category->slug) }}">{{ $category->getTranslation('name') }}</a></h6> --}}
+                                            {{-- <h6 class="text-dark mb-3"><a class="text-reset fw-700 fs-14 hov-text-primary" href="{{ \App\Support\StorefrontUrl::to($category) }}">{{ $category->getTranslation('name') }}</a></h6> --}}
                                             <!-- Sub Categories -->
                                             <ul class="mb-3 list-unstyled">
                                                 @foreach (array_slice(\App\Utility\CategoryUtility::get_immediate_children_ids($category->id), 0, 5, true) as $key => $first_level_id)
                                                 <li class="text-dark mb-2">
-                                                    <a class="text-reset fw-400 fs-14 hov-text-primary animate-underline-primary" href="{{ route('products.category', \App\Models\Category::find($first_level_id)->slug) }}" >{{ \App\Models\Category::find($first_level_id)->getTranslation('name') }}</a>
+                                                    <a class="text-reset fw-400 fs-14 hov-text-primary animate-underline-primary" href="{{ \App\Support\StorefrontUrl::to(\App\Models\Category::find($first_level_id)) }}" >{{ \App\Models\Category::find($first_level_id)->getTranslation('name') }}</a>
                                                 </li>
                                                 @endforeach
                                             </ul>
@@ -647,7 +647,7 @@
                             @php $brand = \App\Models\Brand::find($value); @endphp
                             @if ($brand != null)
                                 <div class="col text-center border-right border-bottom hov-scale-img has-transition hov-shadow-out z-1">
-                                    <a href="{{ route('products.brand', $brand->slug) }}" class="d-block p-sm-3">
+                                    <a href="{{ \App\Support\StorefrontUrl::to($brand) }}" class="d-block p-sm-3">
                                         <img src="{{ uploaded_asset($brand->logo) }}" class="lazyload h-md-100px mx-auto has-transition p-2 p-sm-4 mw-100"
                                             alt="{{ $brand->getTranslation('name') }}" onerror="this.onerror=null;this.src='{{ static_asset('assets/img/placeholder.jpg') }}';">
                                         <p class="text-center text-dark fs-12 fs-md-14 fw-700 mt-2">{{ $brand->getTranslation('name') }}</p>

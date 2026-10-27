@@ -7,6 +7,7 @@ import {
 } from '@/actions/App/Http/Controllers/Store/Admin/AddressController';
 import FieldError from '@/components/FieldError.vue';
 import FormField from '@/components/FormField.vue';
+import RequiredMark from '@/components/RequiredMark.vue';
 import { plainFieldInputClass, fieldLabelClass } from '@/lib/filters';
 import { t } from '@/lib/i18n';
 import type { AddressOption, CustomerAddress } from '@/types/storeCustomers';
@@ -82,9 +83,9 @@ onMounted(() => {
             maxlength="255"
         />
         <div>
-            <label for="country_id" :class="fieldLabelClass">{{
-                t('store.customers.fields.country')
-            }}</label
+            <label for="country_id" :class="fieldLabelClass"
+                >{{ t('store.customers.fields.country')
+                }}<RequiredMark /></label
             ><select
                 id="country_id"
                 v-model="country"

@@ -11,6 +11,7 @@ use App\Http\Resources\Store\StaffResource;
 use App\Models\Role;
 use App\Models\Staff;
 use App\Models\StoreUser;
+use App\Support\StaffPrivileges;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Http\RedirectResponse;
@@ -60,10 +61,10 @@ class StaffController extends Controller implements HasMiddleware
         ]);
     }
 
-    public function create(): Response
+    public function create(Request $request): Response
     {
         return Inertia::render('Store/Admin/Staff/Staffs/Create', [
-            'roles' => RoleResource::collection($this->assignableRoles()),
+            'roles' => RoleResource::collection($this->assignableRoles($request)),
         ]);
     }
 
@@ -91,20 +92,20 @@ class StaffController extends Controller implements HasMiddleware
         return redirect()->route('staffs.index');
     }
 
-    public function edit(Staff $staff): Response
+    public function edit(Request $request, Staff $staff): Response
     {
         $staff->load($this->staffRelations());
-        abort_if($staff->isSuperAdmin(), 403);
+        abort_if($staff->isSuperAdmin() || ! $this->privileges($request)->canManage($staff), 403);
 
         return Inertia::render('Store/Admin/Staff/Staffs/Edit', [
             'staffMember' => new StaffResource($staff),
-            'roles' => RoleResource::collection($this->assignableRoles()),
+            'roles' => RoleResource::collection($this->assignableRoles($request)),
         ]);
     }
 
     public function update(UpdateStaffRequest $request, Staff $staff): RedirectResponse
     {
-        abort_if($staff->isSuperAdmin(), 403);
+        abort_if($staff->isSuperAdmin() || ! $this->privileges($request)->canManage($staff), 403);
         $role = Role::query()->findOrFail($request->integer('role_id'));
 
         DB::transaction(function () use ($request, $role, $staff) {
@@ -132,7 +133,7 @@ class StaffController extends Controller implements HasMiddleware
 
     public function destroy(Request $request, Staff $staff): RedirectResponse
     {
-        abort_if($staff->user_id === $request->user('store')?->id || $staff->isSuperAdmin(), 403);
+        abort_if($staff->user_id === $request->user('store')?->id || $staff->isSuperAdmin() || ! $this->privileges($request)->canManage($staff), 403);
 
         DB::transaction(function () use ($staff) {
             StoreUser::destroy($staff->user_id);
@@ -158,12 +159,21 @@ class StaffController extends Controller implements HasMiddleware
     }
 
     /**
-     * The roles a staff member can be given: every store role but Super Admin.
+     * The roles the signed-in staff member can give: every store role but
+     * Super Admin that grants nothing beyond their own permissions.
      *
      * @return Collection<int, Role>
      */
-    private function assignableRoles(): Collection
+    private function assignableRoles(Request $request): Collection
     {
-        return Role::query()->excludingSuperAdmin()->select(['id', 'name'])->orderByDesc('id')->get();
+        return $this->privileges($request)->assignableRoles();
+    }
+
+    private function privileges(Request $request): StaffPrivileges
+    {
+        /** @var StoreUser $actor */
+        $actor = $request->user('store');
+
+        return new StaffPrivileges($actor);
     }
 }

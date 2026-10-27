@@ -11,7 +11,7 @@ use Illuminate\Support\Str;
  * its <head> for search engines and link previews: the page's title and
  * description, its canonical URL (which og:url repeats), its robots directive
  * and its Open Graph / Twitter tags. The decisions are recorded in
- * .ai/rules/store-backoffice-migration.md §42.
+ * .ai/archive/store-backoffice/changes-20261020.md §42.
  *
  * A view still sets its own values with the @section names it always used
  * (`meta_title`, `meta_description`, `meta_keywords`, and `meta` for extra
@@ -86,10 +86,10 @@ final class Seo
      */
     public function canonicalUrl(): string
     {
-        $path = '/'.trim($this->request->getPathInfo(), '/');
+        $path = StorefrontUrl::requestPath($this->request) ?? '/'.trim($this->request->getPathInfo(), '/');
         $query = $this->contentQuery();
 
-        return self::origin($this->request).$path.($query === '' ? '' : '?'.$query);
+        return self::origin($this->request).$path.($query === '' ? '' : (str_contains($path, '?') ? '&' : '?').$query);
     }
 
     /**

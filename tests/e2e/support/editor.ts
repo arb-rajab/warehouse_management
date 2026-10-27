@@ -1,10 +1,12 @@
 import { readFileSync } from 'node:fs';
 import type { Page } from '@playwright/test';
 import { expect } from '@playwright/test';
+import type { Editor } from '@tiptap/core';
+import { seedStoreFixtures } from './storeFixtures';
 
 /**
  * Helpers for the specs that drive the shared Tiptap editor,
- * StoreRichTextField (.ai/rules/store-backoffice-migration.md §18), on
+ * StoreRichTextField (.ai/archive/store-backoffice/changes-20261013.md §18), on
  * Inertia pages under the strict CSP.
  */
 
@@ -62,11 +64,31 @@ export async function expectStrictPolicy(
 
 /** Uploads the fixture photo to the library under `name`. */
 export async function uploadPhoto(page: Page, name: string): Promise<void> {
-    await page.goto('/temp/admin/uploads/create');
-    await page.locator('#upload-files').setInputFiles({
-        name: `${name}.png`,
+    await uploadFixture(page, name, {
+        extension: 'png',
         mimeType: 'image/png',
         buffer: readFileSync('tests/e2e/fixtures/store-avatar.png'),
+    });
+}
+
+/** Uploads one named fixture, replacing an earlier repetition's copy. */
+export async function uploadFixture(
+    page: Page,
+    name: string,
+    file: { extension: string; mimeType: string; buffer: Buffer },
+): Promise<void> {
+    // Repetitions reuse the database; keep this named fixture unambiguous.
+    seedStoreFixtures(String.raw`
+        $uploads = app(App\Services\MultipartUploadService::class);
+        foreach (App\Models\Upload::where('file_original_name', ${php(name)})->get() as $upload) {
+            $uploads->delete($upload);
+        }
+    `);
+    await page.goto('/temp/admin/uploads/create');
+    await page.locator('#upload-files').setInputFiles({
+        name: `${name}.${file.extension}`,
+        mimeType: file.mimeType,
+        buffer: file.buffer,
     });
     await page
         .getByRole('button', { name: 'Upload files', exact: true })
@@ -76,48 +98,85 @@ export async function uploadPhoto(page: Page, name: string): Promise<void> {
 }
 
 /**
- * Presses `key`, then waits until the editor at `content` has taken in the
- * browser's selection. Playwright can send the next key before Chromium
- * dispatches `selectionchange`, which no human typist can, so a
- * selection-moving key is followed by this.
+ * Waits for focus and, when selecting text, the typed editor content before
+ * pressing `key`. Synchronizes the click's selection before sending the key,
+ * so a pending pointer update cannot restore the old caret afterward.
+ * Then waits for both the browser and Tiptap to select the
+ * expected text. Matching positions alone can also describe an empty caret;
+ * moving to the toolbar then would toggle a stored mark instead of formatting.
  */
 export async function press(
     page: Page,
     key: string,
     content: string,
+    selectedText?: string,
 ): Promise<void> {
+    const field = page.locator(content);
+    await expect(field).toBeFocused();
+
+    if (selectedText !== undefined) {
+        await expect
+            .poll(() =>
+                field.evaluate(
+                    (element) =>
+                        (
+                            element as HTMLElement & { editor?: Editor }
+                        ).editor?.getText() ?? '',
+                ),
+            )
+            .toContain(selectedText);
+    }
+
+    const selectionState = () =>
+        field.evaluate((element) => {
+            const current = (element as HTMLElement & { editor?: Editor })
+                .editor;
+            const selection = document.getSelection();
+
+            if (
+                !current ||
+                !selection?.anchorNode ||
+                !selection.focusNode ||
+                !element.contains(selection.anchorNode) ||
+                !element.contains(selection.focusNode)
+            ) {
+                return null;
+            }
+
+            const { state, view } = current;
+            const { from, to } = state.selection;
+            const anchor = view.posAtDOM(
+                selection.anchorNode,
+                selection.anchorOffset,
+            );
+            const head = view.posAtDOM(
+                selection.focusNode,
+                selection.focusOffset,
+            );
+
+            return {
+                focused:
+                    document.activeElement === element && current.isFocused,
+                synchronized:
+                    Math.min(anchor, head) === from &&
+                    Math.max(anchor, head) === to,
+                browserText: selection.toString(),
+                editorText: state.doc.textBetween(from, to, '\n'),
+            };
+        });
+
+    await expect.poll(selectionState).toMatchObject({
+        focused: true,
+        synchronized: true,
+    });
     await page.keyboard.press(key);
-    await page.waitForFunction((selector) => {
-        const element = document.querySelector(selector) as
-            | (HTMLElement & {
-                  editor?: {
-                      state: { selection: { from: number; to: number } };
-                      view: { posAtDOM(node: Node, offset: number): number };
-                  };
-              })
-            | null;
-        const selection = document.getSelection();
-
-        if (
-            !element?.editor ||
-            !selection?.anchorNode ||
-            !selection.focusNode
-        ) {
-            return false;
-        }
-
-        const { state, view } = element.editor;
-        const anchor = view.posAtDOM(
-            selection.anchorNode,
-            selection.anchorOffset,
-        );
-        const head = view.posAtDOM(selection.focusNode, selection.focusOffset);
-
-        return (
-            Math.min(anchor, head) === state.selection.from &&
-            Math.max(anchor, head) === state.selection.to
-        );
-    }, content);
+    await expect.poll(selectionState).toMatchObject({
+        focused: true,
+        synchronized: true,
+        ...(selectedText === undefined
+            ? {}
+            : { browserText: selectedText, editorText: selectedText }),
+    });
 }
 
 export async function focusedToolbarItem(

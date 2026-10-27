@@ -57,6 +57,8 @@ return [
     'Manage Website Scripts' => 'إدارة سكريبتات الموقع',
     'upload_refused' => 'نوع هذا الملف غير مسموح به.',
     'store_trip_departure_unavailable' => 'نقطة الانطلاق الافتراضية غير متاحة.',
+    'trip_closed_read_only' => 'الرحلات المغلقة للقراءة فقط.',
+    'trip_order_not_deliverable' => 'يمكن تحديد الطلبات المؤكدة أو الجاهزة للتوصيل أو الجاري توصيلها فقط على أنها مسلّمة.',
     'trip_cmr_unavailable' => 'لا يوجد ملف CMR لهذه النقطة.',
     'order_submission_conflict' => 'تم استخدام مفتاح الإرسال لطلب مختلف.',
     'order_stock_unavailable' => 'الكمية المطلوبة غير متوفرة.',
@@ -68,4 +70,8 @@ return [
     'order_terminal' => 'لا يمكن عكس هذا الانتقال المكتمل.',
     'order_updated_title' => 'تم تعديل الطلبية',
     'order_updated_body' => 'تم تعديل الطلبية رقم :code. يرجى مراجعتها في التطبيق.',
+    'role_permission_not_held' => 'يمكنك فقط منح الدور صلاحيات تملكها أنت.',
+    'staff_role_not_assignable' => 'يمكنك فقط منح دور لا يتجاوز صلاحياتك، ولا يمكنك تغيير دورك الخاص.',
+    'seller_payout_full_request' => 'ادفع كامل المبلغ المطلوب (:amount)، أو اطلب من البائع تقديم طلب جديد. الدفعات الجزئية غير مدعومة.',
+    'seller_payout_balance_limit' => 'لا يمكن أن يتجاوز المبلغ الرصيد المتاح لطريقة الدفع هذه (:amount).',
 ];

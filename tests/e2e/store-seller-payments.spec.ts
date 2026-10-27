@@ -22,6 +22,8 @@ test('seller payment and withdrawal dialogs retain native constraints confirmati
         $seller = App\Models\StoreUser::forceCreate(['name' => 'Payout Browser Seller', 'email' => 'payout-browser@example.com', 'password' => 'password', 'user_type' => 'seller', 'email_verified_at' => now(), 'balance' => 77]);
         App\Models\Shop::forceCreate(['user_id' => $seller->id, 'name' => 'Payout Browser Shop', 'slug' => 'payout-browser-shop', 'admin_to_pay' => 100, 'cash_on_delivery_status' => 1, 'bank_payment_status' => 1, 'bank_name' => '<script>bank text</script>', 'bank_acc_name' => 'Seller account', 'bank_acc_no' => '123', 'bank_routing_no' => 456]);
         App\Models\SellerWithdrawRequest::forceCreate(['user_id' => $seller->id, 'amount' => 40, 'message' => '<script>withdraw text</script>', 'status' => 0, 'viewed' => 0]);
+        $clearSeller = App\Models\StoreUser::forceCreate(['name' => 'Clear Due Browser Seller', 'email' => 'clear-due-browser@example.com', 'password' => 'password', 'user_type' => 'seller', 'email_verified_at' => now()]);
+        App\Models\Shop::forceCreate(['user_id' => $clearSeller->id, 'name' => 'Clear Due Browser Shop', 'slug' => 'clear-due-browser-shop', 'admin_to_pay' => -40]);
         foreach (['vendor_system_activation', 'Payouts_Section', 'Payout_request_Section'] as $key) {
             Illuminate\Support\Facades\DB::table('business_settings')->updateOrInsert(['type' => $key], ['value' => '1']);
         }
@@ -70,6 +72,35 @@ test('seller payment and withdrawal dialogs retain native constraints confirmati
     await expect(page.locator('main')).toContainText('Bank payment');
     await expect(page.locator('#app')).toHaveCount(1);
 
+    await page.goto('/temp/admin/sellers');
+    const clearRow = page
+        .locator('main tbody tr')
+        .filter({ hasText: 'Clear Due Browser Shop' });
+    await clearRow
+        .getByRole('button', { name: 'Go to payment', exact: true })
+        .click();
+    await expect(
+        payment.getByRole('spinbutton', {
+            name: 'Amount required',
+            exact: true,
+        }),
+    ).toHaveValue('40');
+    await payment
+        .getByRole('combobox', { name: 'Payment Method required', exact: true })
+        .selectOption('seller_paid_to_admin');
+    page.once('dialog', (dialog) => dialog.accept());
+    await payment
+        .getByRole('button', { name: 'Clear due', exact: true })
+        .click();
+    await expect(payment).not.toBeVisible();
+    seedStoreFixtures(String.raw`
+        $shop = App\Models\Shop::where('slug', 'clear-due-browser-shop')->sole();
+        $payments = App\Models\Payment::where('seller_id', $shop->user_id)->get();
+        if ((float) $shop->admin_to_pay !== 0.0 || $payments->count() !== 1 || $payments->sole()->payment_method !== 'Seller paid to admin' || (float) $payments->sole()->amount !== 40.0) {
+            throw new RuntimeException('Clear due must credit exactly once');
+        }
+    `);
+
     await page.goto('/temp/admin/withdraw_requests_all');
     const row = page
         .locator('main tbody tr')
@@ -86,8 +117,18 @@ test('seller payment and withdrawal dialogs retain native constraints confirmati
     ).toBeFocused();
     await row.getByRole('button', { name: 'Pay Now', exact: true }).click();
     await expect(payment.locator('input[name="amount"]')).toHaveValue('40');
+    await payment.locator('input[name="amount"]').fill('39');
+    expect(
+        await payment
+            .locator('input[name="amount"]')
+            .evaluate((input: HTMLInputElement) => input.checkValidity()),
+    ).toBe(false);
+    await payment.locator('input[name="amount"]').fill('40');
     await payment.locator('select').selectOption('cash');
-    await expect(payment.locator('input[name="txn_code"]')).toHaveCount(0);
+    const txn = payment.getByRole('textbox', { name: 'TRX ID', exact: true });
+    await expect(txn).toBeVisible();
+    await expect(txn).not.toHaveAttribute('required');
+    await txn.fill('WITHDRAWAL-40');
     page.once('dialog', (dialog) => dialog.accept());
     await payment.getByRole('button', { name: 'Pay', exact: true }).click();
     await expect(payment).not.toBeVisible();

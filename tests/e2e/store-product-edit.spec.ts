@@ -14,7 +14,7 @@ import {
 
 /**
  * The physical product edit form is Inertia, on the shared editor and the
- * structured variant editor (.ai/rules/store-backoffice-migration.md §23),
+ * structured variant editor (.ai/archive/store-backoffice/changes-20261014.md §23),
  * under the strict CSP. Pest covers the writes; this covers what only the
  * browser shows: the real form posting the stored rows back unchanged, and
  * the language tabs as Inertia visits.

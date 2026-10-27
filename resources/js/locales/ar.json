@@ -3079,6 +3079,7 @@
     "store.sellers.cash": "نقداً",
     "store.sellers.bankPayment": "دفع بنكي",
     "store.sellers.pay": "دفع",
+    "store.sellers.sellerPaidToAdmin": "دفع البائع للإدارة",
     "store.sellers.clearDue": "تسوية المستحقات",
     "store.sellers.paying": "جارٍ معالجة الدفع…",
     "store.sellers.paymentError": "تعذر تحميل تفاصيل الدفع. أغلق وحاول مرة أخرى.",

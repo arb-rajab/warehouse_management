@@ -4,6 +4,7 @@ import {
     states,
     cities,
 } from '@/actions/App/Http/Controllers/Store/Admin/AddressController';
+import RequiredMark from '@/components/RequiredMark.vue';
 import { t } from '@/lib/i18n';
 import StoreCustomerAddressForm from './StoreCustomerAddressForm.vue';
 const { getMock } = vi.hoisted(() => ({ getMock: vi.fn() }));
@@ -71,3 +72,60 @@ it('loads JSON options with Wayfinder and clears dependent selections', async ()
     );
     expect(wrapper.get('#city_id').text()).not.toContain('Amsterdam');
 });
+
+it.each([
+    undefined,
+    {
+        id: 1,
+        country_id: 1,
+        address: 'Street',
+        phone: '31600000001',
+        state_id: null,
+        city_id: null,
+        postal_code: null,
+        latitude: null,
+        longitude: null,
+        set_default: 1,
+    },
+])(
+    'marks only required address controls for new and existing addresses',
+    (address) => {
+        const wrapper = mount(StoreCustomerAddressForm, {
+            props: {
+                address,
+                countries: [{ id: 1, name: 'Netherlands' }],
+                errors: {},
+            },
+        });
+
+        for (const id of ['address', 'phone', 'country_id']) {
+            expect(wrapper.get(`#${id}`).attributes('required')).toBeDefined();
+            expect(
+                wrapper
+                    .get(`label[for="${id}"]`)
+                    .findComponent(RequiredMark)
+                    .exists(),
+            ).toBe(true);
+        }
+
+        for (const id of [
+            'state_id',
+            'city_id',
+            'postal_code',
+            'latitude',
+            'longitude',
+        ]) {
+            expect(
+                wrapper.get(`#${id}`).attributes('required'),
+            ).toBeUndefined();
+            expect(
+                wrapper
+                    .get(`label[for="${id}"]`)
+                    .findComponent(RequiredMark)
+                    .exists(),
+            ).toBe(false);
+        }
+
+        wrapper.unmount();
+    },
+);

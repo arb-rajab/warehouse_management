@@ -4,7 +4,7 @@ paths:
   - 'config/pulse.php,database/migrations/*pulse*'
 ---
 
-# Config Migrations
+# Isolated Telescope and Pulse database connections
 
 ## Telescope uses its own 'telescope' DB connection — keep TELESCOPE_DB_DATABASE=:memory: in phpunit.xml
 Telescope entries are stored in a separate sqlite connection (`config/database.php` 'telescope' connection, file database/telescope.sqlite), configured via `config/telescope.php` storage.database.connection = env('TELESCOPE_DB_CONNECTION', 'telescope'). The published migration overrides its own connection via getConnection(), so it runs against this connection regardless of the app's default DB_CONNECTION. phpunit.xml sets TELESCOPE_DB_DATABASE=:memory: for the same reason DB_DATABASE is :memory: — without it, RefreshDatabase tries to re-create telescope tables in the real on-disk file every test run and fails with "table already exists".

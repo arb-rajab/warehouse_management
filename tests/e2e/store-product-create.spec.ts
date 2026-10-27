@@ -23,7 +23,7 @@ import {
 /**
  * The physical product create form is Inertia, on the shared editor, the
  * canonical upload picker and the typed variant endpoint
- * (.ai/rules/store-backoffice-migration.md §22), under the strict CSP.
+ * (.ai/archive/store-backoffice/changes-20261013.md §22), under the strict CSP.
  */
 
 const names = [
@@ -162,7 +162,7 @@ test('a simple product is created from the in-house list with editor content, a 
     await page.keyboard.press('Tab');
     await expect(page.locator('#description')).toBeFocused();
     await page.keyboard.type('Cold pressed');
-    await press(page, 'Shift+Home', '#description');
+    await press(page, 'Shift+Home', '#description', 'Cold pressed');
     await page.keyboard.press('Alt+F10');
     await page.keyboard.press('ArrowRight');
     expect(await focusedToolbarItem(page)).toBe('bold');

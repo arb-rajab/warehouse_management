@@ -135,6 +135,9 @@ test('the server side reads an inline validator behind a helper method, with the
             'email' => 'required',
             'country' => 'required',
             'phone' => 'required',
+            'tax_number' => 'optional',
+            'company_address' => 'optional',
+            'trade_license' => 'optional',
             'g-recaptcha-response' => 'optional',
             'password_confirmation' => 'required',
         ])
@@ -153,7 +156,7 @@ test('the server side calls a FormRequest\'s rules() with its route model and te
         ->and($update['source'])->toBe('App\Http\Requests\Store\Admin\UpdateStaffRequest')
         ->and($update['fields']['password']['presence'])->toBe('optional')
         ->and($update['fields']['password_confirmation']['presence'])->toBe('conditional')
-        ->and($update['fields']['role_id']['file'].':'.$update['fields']['role_id']['line'])->toBe('app/Http/Requests/Concerns/ValidatesStoreStaff.php:28');
+        ->and($update['fields']['role_id']['file'].':'.$update['fields']['role_id']['line'])->toBe('app/Http/Requests/Concerns/ValidatesStoreStaff.php:31');
 });
 
 test('required_with and required_without rules are conditional', function () {
@@ -188,7 +191,7 @@ test('each finding class is raised by exactly the mismatch it names', function (
     ]);
     $missing = collect($result['findings'])->firstWhere('field', 'password_confirmation');
     expect($missing['detail'])->toContain('the form has no control for it')
-        ->and($missing['server'])->toBe('app/Http/Requests/Concerns/ValidatesStoreStaff.php:33')
+        ->and($missing['server'])->toBe('app/Http/Requests/Concerns/ValidatesStoreStaff.php:37')
         ->and($missing['severity'])->toBe('high')
         ->and($missing['priority'])->toBe('P3')
         ->and($missing['fingerprint'])->toBe('A|resources/js/pages/Fixture.vue|StaffController@store|password_confirmation');
@@ -295,7 +298,7 @@ test('the command writes the markdown and json reports for the given date', func
         ->and($json['totals']['forms']['vue'])->toBeGreaterThan(100)
         ->and($json['totals']['forms']['blade'])->toBeGreaterThan(50)
         ->and($json['top'])->toHaveCount(20)
-        ->and(collect($json['forms'])->firstWhere('file', 'resources/views/shop/auth/register.blade.php')['findings'])->toBe(['E' => 5]);
+        ->and(collect($json['forms'])->firstWhere('file', 'resources/views/shop/auth/register.blade.php')['findings'])->toBe([]);
 
     File::deleteDirectory(base_path($directory));
 });
