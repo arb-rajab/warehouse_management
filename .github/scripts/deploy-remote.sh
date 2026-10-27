@@ -47,6 +47,19 @@ fail() {
     exit 1
 }
 
+# Preserve the host's Composer wrapper support while selecting the app's PHP
+# explicitly whenever Composer is a PHP script.
+release_composer() {
+    local composer_bin
+    composer_bin="$(command -v composer)"
+
+    if head -n 1 "$composer_bin" | grep -qE '^#!.*[ /]php'; then
+        (cd "$RELEASE_DIR" && "$PHP_BINARY" "$composer_bin" "$@")
+    else
+        (cd "$RELEASE_DIR" && "$composer_bin" "$@")
+    fi
+}
+
 # Artisan against whichever release is actually serving traffic. Before the
 # symlink flip that is the previous release -- known-good, and the one whose
 # maintenance file the web server is reading. Falling back to the new release
@@ -147,6 +160,11 @@ trap on_exit EXIT
 [ -d "$SHARED_DIR" ] || fail "$SHARED_DIR does not exist. Run the one-time layout setup first."
 [ -f "$SHARED_DIR/.env" ] || fail "$SHARED_DIR/.env is missing; every release symlinks to it."
 [ -d "$REPO_DIR/.git" ] || fail "$REPO_DIR is not a git checkout. Run the one-time layout setup first."
+
+# PHP2Shell is a PHP engine issue; Composer's package audit cannot detect it.
+# https://www.php.net/releases/8_5_12.php
+"$PHP_BINARY" -r 'exit(PHP_MAJOR_VERSION === 8 && version_compare(PHP_VERSION, "8.5.12", ">=") ? 0 : 1);' \
+    || fail "PHP2Shell (CVE-2026-109618/CVE-2026-109619): PHP 8.5.12 or newer on the supported PHP 8 branch is required. Upgrade both CLI and the domain web runtime, restart all PHP workers, and verify both versions before deploying."
 
 command -v mysqldump >/dev/null || fail "mysqldump not found; it is required to snapshot the database before migrating."
 command -v mysql >/dev/null || fail "mysql client not found; it is required to restore a failed migration."
@@ -250,6 +268,11 @@ if [ -n "$previous_release" ] \
     reuse_dependencies=1
 fi
 
+# New advisories can affect an unchanged lockfile after CI has passed. Abort
+# on findings or an unavailable advisory service before touching the live site.
+log "Auditing production PHP dependencies"
+release_composer audit --locked --no-dev --abandoned=report --no-interaction --no-plugins --no-scripts
+
 if [ "$reuse_dependencies" -eq 1 ]; then
     log "Lockfiles unchanged; reusing the previous release's dependencies"
     for tree in vendor node_modules; do
@@ -261,19 +284,7 @@ if [ "$reuse_dependencies" -eq 1 ]; then
 else
     log "Installing dependencies"
 
-    composer_bin="$(command -v composer)"
-
-    # Composer's shebang resolves to the account's default PHP, which is not
-    # necessarily the one this app is pinned to. Drive it through $PHP_BINARY
-    # when composer is a PHP script; CloudLinux hosts ship a shell wrapper that
-    # picks the PHP itself, and handing that to `php` would fail outright.
-    if head -n 1 "$composer_bin" | grep -qE '^#!.*[ /]php'; then
-        (cd "$RELEASE_DIR" && "$PHP_BINARY" "$composer_bin" install \
-            --no-dev --optimize-autoloader --no-interaction --prefer-dist --no-scripts)
-    else
-        (cd "$RELEASE_DIR" && "$composer_bin" install \
-            --no-dev --optimize-autoloader --no-interaction --prefer-dist --no-scripts)
-    fi
+    release_composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist --no-scripts
 
     # --no-scripts above skipped composer's post-autoload-dump hook, which runs
     # `artisan package:discover` through Symfony Process and therefore needs
@@ -284,6 +295,11 @@ else
 
     (cd "$RELEASE_DIR" && npm ci)
 fi
+
+# Reused vendor/ must still match the host's current PHP and extensions.
+# Unlike install, this checks the real runtime rather than config.platform.
+log "Checking production PHP platform requirements"
+release_composer check-platform-reqs --no-dev --no-interaction --no-plugins --no-scripts
 
 # The Vite Wayfinder plugin shells out to a bare `php`, which on this host is
 # the account's default PHP and not necessarily the one this app is pinned to.
