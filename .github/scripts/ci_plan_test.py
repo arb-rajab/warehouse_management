@@ -6,7 +6,11 @@ Run directly: python3 .github/scripts/ci_plan_test.py
 
 import importlib.util
 import io
+import os
+import subprocess
 import sys
+import tempfile
+import textwrap
 import unittest
 from contextlib import redirect_stdout
 from pathlib import Path
@@ -157,6 +161,134 @@ class CliTest(unittest.TestCase):
     def test_all_and_none_flags(self):
         self.assertEqual(_cli(['--all'], ''), ''.join(f'{group}=true\n' for group in ci_plan.GROUPS))
         self.assertEqual(_cli(['--none'], 'app/Models/Pallet.php\n'), ''.join(f'{group}=false\n' for group in ci_plan.GROUPS))
+
+
+class RequiredAttestationTest(unittest.TestCase):
+    def run_gate(self, paths, message='', tree=TREE, merged_tree=TREE, extra=()):
+        with tempfile.NamedTemporaryFile('w') as handle:
+            handle.write(message)
+            handle.flush()
+            return subprocess.run(
+                [sys.executable, str(_MODULE_PATH), '--require-attestation',
+                 '--attested-message-file', handle.name, '--tree', tree,
+                 '--merged-tree', merged_tree, *extra],
+                input='\n'.join(paths), capture_output=True, text=True,
+            )
+
+    def test_missing_stale_malformed_and_partial_attestations_fail_without_outputs(self):
+        for message in ('', 'CI-Verified: invalid',
+                        ci_plan.format_attestation('b' * 40, ['php', 'js', 'e2e']),
+                        ci_plan.format_attestation(TREE, ['php', 'js'])):
+            with self.subTest(message=message):
+                result = self.run_gate(['app/Models/Pallet.php'], message)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertEqual(result.stdout, '')
+                self.assertIn('--attest', result.stderr)
+
+    def test_coverage_follows_the_changed_paths(self):
+        for paths, groups in ((['tests/Feature/FooTest.php'], ['php']),
+                              (['composer.lock'], ['php', 'mysql', 'js', 'e2e', 'audit'])):
+            with self.subTest(paths=paths):
+                result = self.run_gate(paths, ci_plan.format_attestation(TREE, groups))
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertEqual(_true_groups(result.stdout), set())
+
+    def test_new_merged_content_and_missing_hashes_fail(self):
+        for tree, merged in ((TREE, 'b' * 40), ('', TREE), (TREE, '')):
+            with self.subTest(tree=tree, merged=merged):
+                result = self.run_gate(['routes/web.php'], ci_plan.format_attestation(TREE, ci_plan.GROUPS), tree, merged)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertEqual(result.stdout, '')
+
+    def test_docs_and_workflow_exemptions_do_not_require_hashes(self):
+        for paths, groups in ((['AGENTS.md', '.ai/rules/ci.md'], set()),
+                              (['.github/workflows/tests.yml', 'routes/web.php'], set(ci_plan.GROUPS))):
+            with self.subTest(paths=paths):
+                result = self.run_gate(paths, tree='', merged_tree='')
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertEqual(_true_groups(result.stdout), groups)
+
+    def test_empty_file_list_and_override_flags_fail(self):
+        for paths, extra in (([], ()), (['routes/web.php'], ('--all',)), (['routes/web.php'], ('--none',))):
+            with self.subTest(extra=extra):
+                result = self.run_gate(paths, extra=extra)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertEqual(result.stdout, '')
+
+
+class WorkflowGateTest(unittest.TestCase):
+    """Execute the real workflow's planning shell against a fake GitHub API."""
+
+    def run_plan(self, paths=('routes/web.php',), message='', merged_tree=TREE,
+                 event='pull_request', failure=''):
+        root = _MODULE_PATH.parents[2]
+        workflow = (root / '.github/workflows/tests.yml').read_text()
+        step = workflow.split('        id: plan\n', 1)[1]
+        shell = step.split('        run: |\n', 1)[1].split('\n  format-js:', 1)[0]
+        with tempfile.TemporaryDirectory() as temporary:
+            directory = Path(temporary)
+            gh = directory / 'gh'
+            gh.write_text(f'#!{sys.executable}\n' + textwrap.dedent('''\
+                import json, os, sys
+                args = ' '.join(sys.argv[1:])
+                if os.environ['FAKE_FAILURE'] and os.environ['FAKE_FAILURE'] in args:
+                    sys.exit(1)
+                if '/files?' in args:
+                    print(os.environ['FAKE_FILES'])
+                elif '/commits/merge' in args:
+                    print(os.environ['FAKE_MERGED_TREE'])
+                elif '/commits/head' in args:
+                    print(json.dumps({'commit': {'tree': {'sha': os.environ['FAKE_TREE']},
+                                                 'message': os.environ['FAKE_MESSAGE']}}))
+                else:
+                    sys.exit(2)
+                '''))
+            gh.chmod(0o755)
+            output = directory / 'outputs'
+            env = {**os.environ, 'PATH': f'{directory}{os.pathsep}{os.environ["PATH"]}',
+                   'REPO': 'owner/repo', 'EVENT_NAME': event, 'PR_NUMBER': '1',
+                   'HEAD_SHA': 'head', 'MERGE_SHA': 'merge', 'RUNNER_TEMP': temporary,
+                   'GITHUB_OUTPUT': str(output), 'FAKE_FILES': '\n'.join(paths),
+                   'FAKE_TREE': TREE, 'FAKE_MERGED_TREE': merged_tree,
+                   'FAKE_MESSAGE': message, 'FAKE_FAILURE': failure}
+            result = subprocess.run(['bash', '-c', textwrap.dedent(shell)], cwd=root,
+                                    env=env, capture_output=True, text=True)
+            return result, output.read_text() if output.exists() else ''
+
+    def test_missing_attestation_blocks_the_workflow_without_job_outputs(self):
+        result, outputs = self.run_plan()
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(outputs, '')
+        self.assertIn('--attest', result.stderr)
+
+    def test_complete_attestation_skips_expensive_jobs(self):
+        result, outputs = self.run_plan(message=ci_plan.format_attestation(TREE, ['php', 'js', 'e2e']))
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(_true_groups(outputs), set())
+
+    def test_api_failures_and_incomplete_file_lists_fail_closed(self):
+        for options in ({'failure': '/commits/merge'}, {'failure': '/commits/head'},
+                        {'failure': '/files?'}, {'paths': ()},
+                        {'paths': tuple(f'file-{i}.php' for i in range(3000))}):
+            with self.subTest(options=list(options)):
+                result, outputs = self.run_plan(**options)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertEqual(outputs, '')
+
+    def test_exemptions_and_non_pr_runs(self):
+        for options, groups in (({'paths': ('README.md',)}, set()),
+                                ({'paths': ('.github/workflows/tests.yml',)}, set(ci_plan.GROUPS)),
+                                ({'event': 'workflow_dispatch'}, set(ci_plan.GROUPS)),
+                                ({'event': 'workflow_call'}, set(ci_plan.GROUPS))):
+            with self.subTest(options=options):
+                result, outputs = self.run_plan(**options)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertEqual(_true_groups(outputs), groups)
+
+    def test_changed_merged_tree_blocks_even_a_complete_attestation(self):
+        result, outputs = self.run_plan(message=ci_plan.format_attestation(TREE, ci_plan.GROUPS), merged_tree='b' * 40)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(outputs, '')
 
 
 if __name__ == "__main__":

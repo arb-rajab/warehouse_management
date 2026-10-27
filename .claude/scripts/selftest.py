@@ -312,7 +312,15 @@ export default laravel({
             str(prereq('php', 'e2e')),
         )
         check('a js-only attest regenerates the Wayfinder types and builds nothing', prereq('js') == ['Wayfinder types'])
-        check('mysql, audit and deploy-script need no prerequisite', prereq('mysql', 'audit', 'deploy-script') == [])
+        check('a mysql-only attest generates Wayfinder types and builds assets', prereq('mysql') == ['Wayfinder types', 'Build assets'])
+        mysql_job = workflow.split('  test-php-mysql:', 1)[1].split('\n  audit:', 1)[0]
+        check(
+            'the MySQL CI job installs frontend dependencies and builds before testing',
+            mysql_job.index('uses: ./.github/actions/setup-frontend')
+            < mysql_job.index('run: npm run build')
+            < mysql_job.index('- name: Run database Pest tests on MySQL'),
+        )
+        check('audit and deploy-script need no prerequisite', prereq('audit', 'deploy-script') == [])
         pre_push_check.backend_installed = lambda: False
 
         with tempfile.TemporaryDirectory() as lane_dir:
@@ -473,6 +481,51 @@ export default laravel({
             env={'PATH': '/nonexistent'},
         )
         check('--check without php is unsatisfied and silent', no_php.returncode == 1 and no_php.stdout == '', no_php.stdout + no_php.stderr)
+
+        print('install_mysql.sh')
+        mysql_script = SCRIPTS / 'install_mysql.sh'
+        syntax = subprocess.run(['bash', '-n', str(mysql_script)], capture_output=True, text=True)
+        check('MySQL installer parses', syntax.returncode == 0, syntax.stderr)
+        mysql_bin = root / 'mysql-bin'
+        mysql_bin.mkdir()
+        mysql_log = root / 'mysql.log'
+        (mysql_bin / 'mysql').write_text(
+            '#!/bin/bash\nprintf "%s\\n" "$*" >> "$MYSQL_TEST_LOG"\n'
+            'if [[ "$*" == *"CREATE DATABASE"* ]]; then exit "${MYSQL_TEST_CREATE_STATUS:-0}"; fi\n'
+            'exit "${MYSQL_TEST_STATUS:-0}"\n'
+        )
+        (mysql_bin / 'mysql').chmod(0o755)
+        for command in ('apt-get', 'service', 'mysqladmin'):
+            stub = mysql_bin / command
+            stub.write_text('#!/bin/bash\nprintf "unexpected %s\\n" "${0##*/}" >> "$MYSQL_TEST_LOG"\nexit 99\n')
+            stub.chmod(0o755)
+        mysql_env = {**os.environ, 'PATH': str(mysql_bin), 'MYSQL_TEST_LOG': str(mysql_log)}
+        prepared = subprocess.run(['/bin/bash', str(mysql_script)], env=mysql_env, capture_output=True, text=True)
+        queries = mysql_log.read_text().splitlines()
+        check(
+            'an answering prepared server is reused without package or service management',
+            prepared.returncode == 0 and queries == [
+                '-uroot -ppassword -h127.0.0.1 -e SELECT 1',
+                '-uroot -ppassword -h127.0.0.1 -e CREATE DATABASE IF NOT EXISTS warehouse_test;',
+            ],
+            str(queries) + prepared.stderr,
+        )
+        mysql_log.write_text('')
+        creation_failed = subprocess.run(['/bin/bash', str(mysql_script)], env={**mysql_env, 'MYSQL_TEST_CREATE_STATUS': '1'}, capture_output=True, text=True)
+        check(
+            'a prepared server that cannot create the test database is not reported as ready',
+            creation_failed.returncode != 0 and 'CREATE DATABASE IF NOT EXISTS warehouse_test;' in mysql_log.read_text(),
+            creation_failed.stderr,
+        )
+        for status in ('0', '1'):
+            mysql_log.write_text('')
+            checked = subprocess.run(['/bin/bash', str(mysql_script), '--check'], env={**mysql_env, 'MYSQL_TEST_STATUS': status}, capture_output=True, text=True)
+            check(
+                f'MySQL --check returns query status {status} without changing anything',
+                checked.returncode == int(status)
+                and mysql_log.read_text().splitlines() == ['-uroot -ppassword -h127.0.0.1 -e SELECT 1'],
+                checked.stderr,
+            )
 
         print('install_dev_tools.py')
         import install_dev_tools

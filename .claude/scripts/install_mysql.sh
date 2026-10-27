@@ -4,8 +4,8 @@
 # the CI "Pest (MySQL migrations)" job uses, so .claude/scripts/pre_push_check.py
 # can run those tests locally.
 #
-# Idempotent: with the server installed it only makes sure it is running and
-# configured. Meant for Debian/Ubuntu containers (Claude Code web sessions),
+# Idempotent: reuses an answering prepared server, or makes sure an installed
+# server is running and configured. Meant for Debian/Ubuntu containers,
 # where it runs as root from .claude/hooks/session-start.sh; on any other
 # machine install MySQL your own way.
 #
@@ -37,9 +37,20 @@ answers() {
     mysql -uroot "-p${DB_ROOT_PASSWORD}" -h127.0.0.1 -e 'SELECT 1' >/dev/null 2>&1
 }
 
+ensure_database() {
+    mysql -uroot "-p${DB_ROOT_PASSWORD}" -h127.0.0.1 -e "CREATE DATABASE IF NOT EXISTS ${DB_NAME};" 2>/dev/null
+}
+
 if [ "${1:-}" = '--check' ]; then
     answers
     exit $?
+fi
+
+# Prepared environments may provide a remote or containerized server without
+# mysqld or service management on this machine. Reuse it when CI's login works.
+if answers; then
+    ensure_database
+    exit 0
 fi
 
 export DEBIAN_FRONTEND=noninteractive
@@ -74,6 +85,6 @@ if ! answers; then
     mysql -uroot -e "ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY '${DB_ROOT_PASSWORD}'; FLUSH PRIVILEGES;"
 fi
 
-mysql -uroot "-p${DB_ROOT_PASSWORD}" -h127.0.0.1 -e "CREATE DATABASE IF NOT EXISTS ${DB_NAME};" 2>/dev/null
+ensure_database
 
 answers

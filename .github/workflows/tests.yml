@@ -36,26 +36,13 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # Decides which job groups this run needs, so a pull request pays only for
-  # the checks its changes can affect. Two reasons to skip, both on pull
-  # request events only -- workflow_dispatch and deploy.yml's workflow_call
-  # always run everything:
-  #
-  # 1. Content already tested. A release PR (develop -> staging, staging -> main)
-  #    proposes a head whose tree is byte-identical to a PR head this suite
-  #    already passed on, so re-running it cannot produce a different result.
-  #    Mirrors deploy.yml's verify-tested: the PR's merge tree must equal its
-  #    head's tree (the base adds nothing), and a successful tests run must
-  #    exist for that head or, when the head is a merge with an identical tree,
-  #    for its second parent.
-  # 2. Paths. .github/scripts/ci_plan.py maps the PR's changed files to groups;
-  #    its docstring carries the rules (docs-only needs nothing, PHP tests
-  #    skip the JS jobs and E2E, any .github/ change needs everything).
-  #
-  # Every lookup fails open: an API error runs everything. A job skipped by its
-  # `if:` still reports a successful check run, so required checks are
-  # satisfied rather than left pending. Draft PRs skip this job, and with it
-  # every job below.
+  # Enforces local attestation before any expensive job can start. Ordinary
+  # code PRs need every planned group on the exact head and merged tree;
+  # missing/stale/partial trailers and API failures fail this job closed.
+  # Docs-only changes need nothing; .github/ changes ignore trailers and run
+  # everything. Manual and deployment workflow calls also run everything.
+  # Keep this job's check name stable and require "Plan CI jobs" in branch
+  # protection. Draft PRs skip it and every job below.
   plan:
     name: Plan CI jobs
     if: github.event.pull_request.draft != true
@@ -77,7 +64,9 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-          sparse-checkout: .github/scripts
+          sparse-checkout: |
+            .github/scripts
+            .github/workflows/tests.yml
           sparse-checkout-cone-mode: false
 
       - name: Test the planner
@@ -110,50 +99,30 @@ jobs:
           }
 
           if ! merge_tree="$(tree_of "$MERGE_SHA")" || ! head_json="$(gh api "repos/$REPO/commits/$HEAD_SHA")"; then
-            finish "Could not read the PR's commits; checking everything." --all
+            echo '::error::Could not read the PR commits; refusing to start paid CI without verifying attestation.'
+            exit 1
           fi
 
           head_tree="$(jq -r '.commit.tree.sha' <<< "$head_json")"
-          candidates=()
-          attest_args=()
+          jq -r '.commit.message' <<< "$head_json" > "$RUNNER_TEMP/head-message.txt"
 
-          if [ "$merge_tree" = "$head_tree" ]; then
-            candidates+=("$HEAD_SHA")
-            # The head commit may attest a local run of some groups on this tree
-            # (.claude/scripts/pre_push_check.py --attest). ci_plan.py honours it
-            # only for exactly this tree, and never for a change under .github/.
-            jq -r '.commit.message' <<< "$head_json" > "$RUNNER_TEMP/head-message.txt"
-            attest_args=(--attested-message-file "$RUNNER_TEMP/head-message.txt" --tree "$head_tree")
-            second_parent="$(jq -r 'if (.parents | length) == 2 then .parents[1].sha else "" end' <<< "$head_json")"
-
-            if [ -n "$second_parent" ] && [ "$(tree_of "$second_parent" || true)" = "$head_tree" ]; then
-              candidates+=("$second_parent")
-            fi
-          else
-            echo "The base adds content the head lacks; the merged tree is new."
-          fi
-
-          for sha in "${candidates[@]}"; do
-            successes="$(gh api "repos/$REPO/actions/workflows/tests.yml/runs?head_sha=$sha&per_page=100" \
-              --jq '[.workflow_runs[] | select(.conclusion == "success")] | length' || echo 0)"
-
-            if [ "${successes:-0}" -gt 0 ]; then
-              finish "Tree $head_tree already passed at $sha; skipping the suite. Run this workflow by hand to force it." --none
-            fi
-          done
-
-          # The files API lists at most 3000 files; a PR that large checks everything.
+          # The files API lists at most 3000 files; incomplete coverage cannot
+          # establish either an exemption or a valid attestation.
           if ! files="$(gh api --paginate "repos/$REPO/pulls/$PR_NUMBER/files?per_page=100" \
             --jq '.[] | .filename, (.previous_filename // empty)')"; then
-            finish "Could not list the PR's files; checking everything." --all
+            echo '::error::Could not list the PR files; refusing to start paid CI.'
+            exit 1
           fi
 
           if [ "$(wc -l <<< "$files")" -ge 3000 ]; then
-            finish "The PR lists 3000+ files; checking everything." --all
+            echo '::error::The PR lists 3000+ files; split it so attestation coverage can be verified.'
+            exit 1
           fi
 
           echo "$files"
-          finish "Planned from the $(wc -l <<< "$files") changed paths above:" "${attest_args[@]}" <<< "$files"
+          finish "Verifying attestation for the changed paths above:" \
+            --require-attestation --attested-message-file "$RUNNER_TEMP/head-message.txt" \
+            --tree "$head_tree" --merged-tree "$merge_tree" <<< "$files"
 
   format-js:
     name: Prettier
@@ -278,6 +247,7 @@ jobs:
     # never failed or cancelled.
     if: >-
       !cancelled() &&
+      needs.plan.result == 'success' &&
       needs.plan.outputs.php == 'true' &&
       contains(fromJSON('["success", "skipped"]'), needs.lint-php.result) &&
       contains(fromJSON('["success", "skipped"]'), needs.format-js.result)
@@ -328,6 +298,7 @@ jobs:
     # never failed or cancelled.
     if: >-
       !cancelled() &&
+      needs.plan.result == 'success' &&
       needs.plan.outputs.mysql == 'true' &&
       contains(fromJSON('["success", "skipped"]'), needs.lint-php.result) &&
       contains(fromJSON('["success", "skipped"]'), needs.format-js.result)
@@ -361,6 +332,13 @@ jobs:
 
       - name: Setup backend
         uses: ./.github/actions/setup-backend
+
+      - name: Setup frontend
+        uses: ./.github/actions/setup-frontend
+
+      # These tests also render Inertia pages, which require the Vite manifest.
+      - name: Build frontend assets
+        run: npm run build
 
       - name: Run database Pest tests on MySQL
         timeout-minutes: 10
@@ -433,6 +411,7 @@ jobs:
     # skipped need must not skip this job too.
     if: >-
       !cancelled() &&
+      needs.plan.result == 'success' &&
       needs.plan.outputs.e2e == 'true' &&
       contains(fromJSON('["success", "skipped"]'), needs.lint-php.result) &&
       contains(fromJSON('["success", "skipped"]'), needs.format-js.result)

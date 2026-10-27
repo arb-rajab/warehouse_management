@@ -45,6 +45,8 @@ so any later content change makes it stale. `--attested-message-file` and
 `--tree` let the `plan` job subtract those groups for a pull request whose
 merged tree equals its head tree. It is ignored when the change touches
 .github/, so a workflow change is still exercised by the run that introduces it.
+With --require-attestation, ordinary code changes fail instead of falling back
+to paid CI when any required group is missing or the merged tree differs.
 
 Usage (CI): changed paths on stdin, one per line; prints `group=true|false`
 lines for $GITHUB_OUTPUT. An empty list prints all-true: an empty answer from
@@ -53,6 +55,7 @@ the files API is more likely a fault than a change touching nothing.
     python3 .github/scripts/ci_plan.py --all    # every group
     python3 .github/scripts/ci_plan.py --none   # no group
     python3 .github/scripts/ci_plan.py --attested-message-file msg.txt --tree <sha> < changed-files.txt
+    python3 .github/scripts/ci_plan.py --require-attestation --attested-message-file msg.txt --tree <sha> --merged-tree <sha> < changed-files.txt
 """
 
 import re
@@ -158,6 +161,10 @@ def option(argv: list[str], name: str) -> str | None:
 
 
 def main(argv: list[str]) -> int:
+    if '--require-attestation' in argv and ('--all' in argv or '--none' in argv):
+        print('Cannot override the required attestation with --all or --none.', file=sys.stderr)
+        return 1
+
     if '--all' in argv:
         needed = dict.fromkeys(GROUPS, True)
     elif '--none' in argv:
@@ -166,6 +173,27 @@ def main(argv: list[str]) -> int:
         paths = [line.strip() for line in sys.stdin if line.strip()]
         needed = plan(paths) if paths else dict.fromkeys(GROUPS, True)
         message_file, tree = option(argv, '--attested-message-file'), option(argv, '--tree')
+
+        if '--require-attestation' in argv:
+            error = None
+            if not paths:
+                error = 'The changed-file list is empty; cannot verify attestation coverage.'
+            elif any(needed.values()) and not any(path.startswith('.github/') for path in paths):
+                merged_tree = option(argv, '--merged-tree')
+                if not tree or not merged_tree or merged_tree != tree:
+                    error = 'The merged tree differs from the PR head or its hash is unavailable. Update the branch first.'
+                else:
+                    message = Path(message_file).read_text() if message_file else ''
+                    vouched = attested_groups(message, tree)
+                    missing = [group for group in GROUPS if needed[group] and group not in vouched]
+                    if missing:
+                        error = f'Missing or stale CI-Verified attestation for: {", ".join(missing)}.'
+
+            if error:
+                print(f'{error}\nCommit all changes, then run '
+                      'python3 .claude/scripts/pre_push_check.py --attest '
+                      'and push the amended commit. Do not write the trailer by hand.', file=sys.stderr)
+                return 1
 
         # Never for a change under .github/: it must run everything it touches.
         if paths and message_file and tree and not any(path.startswith('.github/') for path in paths):
