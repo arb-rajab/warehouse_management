@@ -132,7 +132,12 @@ CI-Verified: tree=<head tree sha> groups=<groups that passed>
 ```
 
 CI's `plan` job then skips exactly those groups for that tree, which cuts a
-typical pull request from about 24 billed minutes to about 1. Rules:
+typical pull request from about 24 billed minutes to about 1. Ordinary code PRs
+fail in `Plan CI jobs` before expensive jobs start if the trailer is missing,
+stale, incomplete, or the PR's merged tree differs from its head tree. Require
+`Plan CI jobs` in branch protection to block merging on that failure. Docs-only
+changes are exempt; `.github/` changes and manual/deployment runs still use CI.
+`--full` is not an attestation and does not satisfy this gate. Rules:
 
 - Do not push before it finishes: the amend needs an unpushed commit.
 - Any later content change (a new commit, a rebase, a merge of the base) makes the
@@ -143,8 +148,10 @@ typical pull request from about 24 billed minutes to about 1. Rules:
   first failing lane stops the rest and records nothing. Fix the cause (do not skip
   or loosen a test), then run it again.
 - A change under `.github/` always runs everything in CI; the trailer is ignored.
-- It needs the Claude web sandbox's tooling (local MySQL from `session-start.sh`,
-  the preinstalled Chromium). A group that cannot run is left out of the trailer
-  and CI runs it, so state which groups were attested.
+- It needs PHP/Composer, the dev dependencies, Chromium and local MySQL for
+  the groups that use them. Activate the current environment's runtime first;
+  Codex does not run Claude's setup hook. A group that cannot run is left out
+  of the trailer; ordinary code PRs then fail the gate until every required
+  group can run and pass. Report missing groups and fix setup before pushing.
 - Never write or edit the trailer by hand: it vouches for a run that must have
   happened. Details and constraints are in [.ai/rules/ci.md](.ai/rules/ci.md).

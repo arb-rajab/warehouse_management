@@ -36,11 +36,12 @@ covered by `.claude/scripts/selftest.py`.
 | PHPStan, Pest | full, `--parallel` (needs the dev tools) | full, `--parallel`, when `php` is planned |
 | Pest on MySQL (only for schema-related paths), Playwright, dependency audit, deploy-script test | only in the attested run (the default on a clean tree) | when planned, unless attested |
 
-CI is the gate; the sandbox run exists to catch the common failure before it
-costs a CI round (or, with `--attest`, to replace the run). `pre_push_check.py --full` runs the whole-repo sequence. In the
+The `Plan CI jobs` gate requires a complete local attestation for ordinary code
+PRs before expensive jobs can start. `pre_push_check.py --full` runs the
+whole-repo sequence but does not satisfy that gate. In the
 Claude web sandbox, dev dists are 403, so Pint, Pest and PHPStan come from
-`install_dev_tools.py` (shallow git fetches); when that install fails, they come
-from CI only.
+`install_dev_tools.py` (shallow git fetches). Repair unavailable tools before
+pushing an ordinary code PR; missing groups fail the attestation gate.
 
 ## `--attest` lets CI skip what already passed here
 
@@ -86,7 +87,8 @@ Constraints that keep it honest:
 
 - It refuses unless the work tree is clean and nothing is skip-worktree, so what
   ran is what the commit holds. A group that cannot run here is left out of the
-  trailer and CI runs it; a failing check records nothing.
+  trailer; ordinary code PRs reject that partial coverage. A failing check
+  records nothing.
 - It is self-attested: CI cannot prove the local run happened, and the sandbox
   differs from CI (local MySQL 8.0 against `mysql:8.4`). Do not amend a trailer
   in by hand.
@@ -120,14 +122,20 @@ before planning). Its docstring is the rule list. The constraints behind it:
   one runner to more jobs.
 - Any `.github/` change runs everything, so a workflow change is exercised by
   the run that introduces it.
-- A release PR whose merged tree equals a head the suite already passed on
-  skips every job. That mirrors `deploy.yml`'s `verify-tested`, and both rely
-  on a skipped-everything run concluding `success`. Use the workflow's
-  `workflow_dispatch` to force a full run.
-- Every lookup fails open (an API error runs everything), and skipping is done
-  with job-level `if:`, never by narrowing `on:`, so required checks still
-  report a conclusion. Do not rename jobs: their names are the check names
-  branch protection may require.
+- `Plan CI jobs` requires `--require-attestation` for PRs: the head's trailer
+  must cover every planned group on the exact head and merged tree. Missing,
+  malformed, stale or partial attestations fail before any expensive job starts.
+  This also applies to release PRs; a previous successful run does not replace
+  the required trailer. Update the branch and attest again if the base adds
+  content. Require `Plan CI jobs` in branch protection; repository code alone
+  cannot configure that merge requirement.
+- Docs-only PRs need no trailer. Changes under `.github/` ignore it and run
+  everything. `workflow_dispatch` and deployment workflow calls run everything
+  without requiring a trailer, retaining a way to validate merged content.
+- PR API failures, an empty file list and the API's 3000-file limit fail closed
+  instead of falling back to paid CI. The three jobs using `!cancelled()` also
+  require a successful plan. Skipping uses job-level `if:`, never narrower `on:`
+  filters. Do not rename jobs: branch protection may require their check names.
 
 ## Permissions under `workflow_call`
 
