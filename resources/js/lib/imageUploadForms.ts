@@ -1,4 +1,8 @@
-import { compressUploadImage, ImageUploadError } from '@/lib/imageUpload';
+import {
+    compressUploadImage,
+    ImageUploadError,
+    isImageUpload,
+} from '@/lib/imageUpload';
 
 export type ImageUploadMessages = {
     preparing: string;
@@ -45,18 +49,22 @@ export function installImageUploadForms(
 
         const inputs = Array.from(
             form.querySelectorAll<HTMLInputElement>(selector),
-        ).filter((input) => input.files?.length && !input.disabled);
+        ).filter(
+            (input) =>
+                !input.disabled &&
+                Array.from(input.files ?? []).some(isImageUpload),
+        );
 
-        if (!inputs.length || typeof DataTransfer !== 'function') {
+        if (
+            !inputs.length ||
+            typeof DataTransfer !== 'function' ||
+            typeof form.requestSubmit !== 'function'
+        ) {
             return;
         }
 
         event.preventDefault();
         event.stopImmediatePropagation();
-
-        if (pending.has(form)) {
-            return;
-        }
 
         const controller = new AbortController();
         pending.set(form, controller);
@@ -114,8 +122,7 @@ export function installImageUploadForms(
                 replacements.forEach(
                     ([input, transfer]) => (input.files = transfer.files),
                 );
-                restore();
-                resume();
+                await resume();
             } catch (error) {
                 restore();
 
@@ -128,14 +135,24 @@ export function installImageUploadForms(
                     invalid.add(failed);
                     failed.reportValidity();
                 } else if (!controller.signal.aborted && form.isConnected) {
-                    resume();
+                    await resume();
                 }
             } finally {
                 restore();
                 pending.delete(form);
             }
         })();
-        function resume() {
+        async function resume(): Promise<void> {
+            // Native submit events run a microtask checkpoint while the browser's
+            // submission guard is still set. Resume in the next task so a fast
+            // passthrough cannot turn requestSubmit() into a silent no-op.
+            await new Promise<void>((resolve) => setTimeout(resolve, 0));
+
+            if (controller.signal.aborted || !form.isConnected) {
+                return;
+            }
+
+            restore();
             prepared.add(form);
             // Re-run validation and the original submit handlers (including Inertia).
             form.requestSubmit(

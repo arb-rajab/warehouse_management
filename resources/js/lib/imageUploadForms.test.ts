@@ -16,6 +16,7 @@ const messages = {
 let dispose: () => void;
 beforeEach(() => {
     compress.mockReset();
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
     vi.stubGlobal(
         'DataTransfer',
         class {
@@ -31,6 +32,7 @@ beforeEach(() => {
 });
 afterEach(() => {
     dispose();
+    vi.useRealTimers();
     document.body.innerHTML = '';
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
@@ -75,6 +77,7 @@ it('replaces private scan bytes at 2400px before the original handler and preven
     expect(button.disabled).toBe(true);
     resolve(result);
     await flushPromises();
+    await vi.runAllTimersAsync();
     expect(compress).toHaveBeenCalledWith(
         expect.any(File),
         2400,
@@ -92,6 +95,7 @@ it('retains the original and shows native validation on animation, clearing it w
     const report = vi.spyOn(input, 'reportValidity');
     send();
     await flushPromises();
+    await vi.runAllTimersAsync();
     expect(input.files![0]).toBe(file);
     expect(input.validationMessage).toBe(messages.animated);
     expect(report).toHaveBeenCalled();
@@ -112,6 +116,7 @@ it('never submits a detached form after navigation or reset', async () => {
     element.remove();
     resolve(file);
     await flushPromises();
+    await vi.runAllTimersAsync();
     expect(submitted).not.toHaveBeenCalled();
 });
 it('does not re-enable buttons that the original form handler locks during upload', async () => {
@@ -120,5 +125,32 @@ it('does not re-enable buttons that the original form handler locks during uploa
     element.addEventListener('submit', () => (button.disabled = true));
     send();
     await flushPromises();
+    await vi.runAllTimersAsync();
     expect(button.disabled).toBe(true);
+});
+
+it('lets document-only submissions reach the original handler without preparation', () => {
+    const { element, input, button, submitted, send } = form();
+    const documentFile = new File(['%PDF'], 'license.pdf', {
+        type: 'application/pdf',
+    });
+    Object.defineProperty(input, 'files', { value: [documentFile] });
+    send();
+    expect(compress).not.toHaveBeenCalled();
+    expect(submitted).toHaveBeenCalledTimes(1);
+    expect(input.files![0]).toBe(documentFile);
+    expect(button.disabled).toBe(false);
+    expect(element.hasAttribute('aria-busy')).toBe(false);
+});
+
+it('resumes an immediate image passthrough in a later task, preserving the submitter', async () => {
+    const { file, button, submitted, send } = form();
+    compress.mockResolvedValue(file);
+    send();
+    await flushPromises();
+    expect(submitted).not.toHaveBeenCalled();
+    expect(button.disabled).toBe(true);
+    await vi.runAllTimersAsync();
+    expect(submitted).toHaveBeenCalledTimes(1);
+    expect((submitted.mock.calls[0][0] as SubmitEvent).submitter).toBe(button);
 });

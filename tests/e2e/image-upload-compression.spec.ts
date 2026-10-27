@@ -260,3 +260,70 @@ test('browser encoding preserves PNG alpha and applies JPEG EXIF orientation', a
         `Browser PNG: ${result.originalBytes} -> ${result.compressedBytes} bytes`,
     );
 });
+
+for (const fixture of [
+    {
+        name: 'license.pdf',
+        type: 'application/pdf',
+        contents: '%PDF-1.4\n%%EOF',
+        missingReader: false,
+    },
+    {
+        name: 'bulk.xlsx',
+        type: 'text/plain',
+        contents: 'not a spreadsheet',
+        missingReader: false,
+    },
+    {
+        name: 'scan.png',
+        type: 'image/png',
+        contents: 'image for server validation',
+        missingReader: true,
+    },
+]) {
+    test(`native ${fixture.name} submission continues when compression is unnecessary or unsupported`, async ({
+        page,
+    }) => {
+        await page.goto('/temp/login');
+        await page.waitForFunction(() => !!(window as any).AIZImageUploads);
+        await page.route('**/compression-passthrough-test', (route) =>
+            route.fulfill({
+                contentType: 'text/html',
+                body: '<p>Received</p>',
+            }),
+        );
+        await page.evaluate((missingReader) => {
+            if (missingReader) {
+                Object.defineProperty(Blob.prototype, 'arrayBuffer', {
+                    configurable: true,
+                    value: undefined,
+                });
+            }
+
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '/compression-passthrough-test';
+            form.enctype = 'multipart/form-data';
+            form.innerHTML =
+                '<input type="file" name="trade_license" id="passthrough-file"><button type="submit" name="action" value="save">Send original</button>';
+            document.body.append(form);
+        }, fixture.missingReader);
+        await page.locator('#passthrough-file').setInputFiles({
+            name: fixture.name,
+            mimeType: fixture.type,
+            buffer: Buffer.from(fixture.contents),
+        });
+        const outgoing = page.waitForRequest((request) =>
+            request.url().endsWith('/compression-passthrough-test'),
+        );
+        await page
+            .getByRole('button', { name: 'Send original', exact: true })
+            .click();
+        const request = await outgoing;
+        expect(multipartImage(request)).toEqual(Buffer.from(fixture.contents));
+        expect(request.postDataBuffer()!.toString()).toContain(
+            'name="action"\r\n\r\nsave',
+        );
+        await expect(page).toHaveURL(/\/compression-passthrough-test$/);
+    });
+}

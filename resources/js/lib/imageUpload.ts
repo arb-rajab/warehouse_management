@@ -104,6 +104,14 @@ function contentType(bytes: Uint8Array): string | undefined {
     return undefined;
 }
 
+/** Match image selections even when a browser omits the file MIME type. */
+export function isImageUpload(file: File): boolean {
+    return (
+        file.type.startsWith('image/') ||
+        /\.(jpe?g|png|webp|gif)$/i.test(file.name)
+    );
+}
+
 /**
  * Reduce upload bandwidth. The server still validates and normalizes every file.
  * Decode with EXIF orientation applied; preserve the source format and alpha.
@@ -116,10 +124,7 @@ export async function compressUploadImage(
 ): Promise<File> {
     checkAborted(signal);
 
-    if (
-        !file.type.startsWith('image/') &&
-        !/\.(jpe?g|png|webp|gif)$/i.test(file.name)
-    ) {
+    if (!isImageUpload(file)) {
         return file;
     }
 
