@@ -74,6 +74,13 @@ STUB
     # which ran and in what order.
     cat > "$WORK/bin/php85" <<'STUB'
 #!/bin/bash
+if [ "$1" = '-r' ]; then
+    exit "${FAIL_PHP_SECURITY_CHECK:-0}"
+fi
+if [ "$1" = "$(command -v composer)" ]; then
+    echo "composer:$2" >> "$ARTISAN_LOG"
+    exec bash "$@"
+fi
 echo "$2" >> "$ARTISAN_LOG"
 case "$2" in
   migrate) echo "orphan_table" >> "$DBSTATE"
@@ -96,7 +103,13 @@ STUB
     # from a reused vendor/ (only the files carried over).
     cat > "$WORK/bin/composer" <<'STUB'
 #!/bin/sh
-mkdir -p vendor && touch "vendor/installed-by-$(basename "$PWD")"
+echo "$*" >> "$COMPOSER_LOG"
+case "$1" in
+  audit) exit "${FAIL_AUDIT:-0}" ;;
+  check-platform-reqs) exit "${FAIL_PLATFORM:-0}" ;;
+  install) mkdir -p vendor && touch "vendor/installed-by-$(basename "$PWD")" ;;
+  *) exit 99 ;;
+esac
 exit 0
 STUB
     chmod +x "$WORK/bin"/*
@@ -123,6 +136,7 @@ commit_new_revision() {
 deploy() {
     env PATH="$WORK/bin:$PATH" \
         DBSTATE="$WORK/dbstate" MAINT="$WORK/maint" ARTISAN_LOG="$WORK/artisan.log" \
+        COMPOSER_LOG="$WORK/composer.log" \
         DEPLOY_PATH="$WORK/host" TARGET_BRANCH=develop TARGET_SHA="$1" \
         PHP_BINARY=php85 KEEP_RELEASES=2 \
         "${@:2}" \
@@ -219,6 +233,73 @@ check "a composer.json change alone reinstalls" "$(vendor_installed_by)" "$(publ
 )
 deploy "$(git -C "$WORK/origin" rev-parse HEAD)" >/dev/null
 check "a lockfile change reinstalls" "$(vendor_installed_by)" "$(published)"
+
+echo "PHP security checks run for installs and reused dependencies"
+check "every deploy audits production dependencies" \
+    "$(grep -c '^audit --locked --no-dev --abandoned=report --no-interaction --no-plugins --no-scripts$' "$WORK/composer.log")" "4"
+check "every deploy checks real production platform requirements" \
+    "$(grep -c '^check-platform-reqs --no-dev --no-interaction --no-plugins --no-scripts$' "$WORK/composer.log")" "4"
+
+for security_failure in 'FAIL_AUDIT=1' 'FAIL_AUDIT=100' 'FAIL_PLATFORM=1'; do
+    for dependency_mode in reused fresh; do
+        echo "$security_failure blocks a deploy with $dependency_mode dependencies before maintenance"
+        setup
+        deploy "$(git -C "$WORK/origin" rev-parse HEAD)"
+        before_release="$(published)"
+        before_tables="$(tables)"
+        before_artisan="$(cat "$WORK/artisan.log")"
+        if [ "$dependency_mode" = fresh ]; then
+            echo '{"lock":2}' > "$WORK/origin/composer.lock"
+        fi
+        deploy "$(commit_new_revision)" "$security_failure" && rc=0 || rc=$?
+        check "exits with the security check failure" "$rc" "${security_failure#*=}"
+        check "live release is unchanged" "$(published)" "$before_release"
+        check "database is untouched" "$(tables)" "$before_tables"
+        check "site never entered maintenance" "$(maintenance_state)" "off"
+        check "no backup was taken for the rejected release" \
+            "$(ls -1 "$WORK/host/shared/backups" | wc -l | tr -d ' ')" "1"
+        check "rejected release is removed" \
+            "$(ls -1 "$WORK/host/releases" | wc -l | tr -d ' ')" "1"
+        if [ "$security_failure" != 'FAIL_PLATFORM=1' ] || [ "$dependency_mode" = reused ]; then
+            check "no application command ran" "$(cat "$WORK/artisan.log")" "$before_artisan"
+        fi
+    done
+done
+
+echo "an unpatched PHP engine blocks deployment before any live operation"
+setup
+deploy "$(git -C "$WORK/origin" rev-parse HEAD)"
+before_release="$(published)"
+before_tables="$(tables)"
+before_artisan="$(cat "$WORK/artisan.log")"
+before_composer="$(cat "$WORK/composer.log")"
+deploy "$(commit_new_revision)" FAIL_PHP_SECURITY_CHECK=1 && rc=0 || rc=$?
+check "exits non-zero" "$rc" "1"
+check "live release is unchanged" "$(published)" "$before_release"
+check "database is untouched" "$(tables)" "$before_tables"
+check "site never entered maintenance" "$(maintenance_state)" "off"
+check "no application command ran" "$(cat "$WORK/artisan.log")" "$before_artisan"
+check "no dependency command ran" "$(cat "$WORK/composer.log")" "$before_composer"
+
+echo "a PHP Composer script uses PHP_BINARY for security checks and installation"
+setup
+sed -i '1c#!/usr/bin/env php' "$WORK/bin/composer"
+deploy "$(git -C "$WORK/origin" rev-parse HEAD)" && rc=0 || rc=$?
+check "exits successfully" "$rc" "0"
+check "all Composer commands ran through the selected PHP" \
+    "$(grep '^composer:' "$WORK/artisan.log" | tr '\n' ' ')" \
+    "composer:audit composer:install composer:check-platform-reqs "
+
+echo "an unavailable advisory service also blocks the first deploy safely"
+setup
+deploy "$(git -C "$WORK/origin" rev-parse HEAD)" FAIL_AUDIT=100 && rc=0 || rc=$?
+check "exits with the audit error" "$rc" "100"
+check "no release was published" "$([ -L "$WORK/host/current" ] && echo yes || echo no)" "no"
+check "database is untouched" "$(tables)" "users migrations "
+check "site never entered maintenance" "$(maintenance_state)" "off"
+check "no application command ran" "$([ -f "$WORK/artisan.log" ] && echo yes || echo no)" "no"
+check "rejected release is removed" \
+    "$(ls -1 "$WORK/host/releases" | wc -l | tr -d ' ')" "0"
 
 echo "shared public entries are relinked into every release"
 setup
