@@ -30,7 +30,7 @@ class UpdateShopRequest extends FormRequest
                 'meta_title' => ['nullable', 'string', 'max:255'],
                 'meta_description' => ['bail', 'nullable', 'string', 'max:65535', function (string $attribute, mixed $value, Closure $fail): void {
                     if (strlen($value) > 65535) {
-                        $fail(translate('The meta description may not exceed 65,535 bytes.'));
+                        $fail(__('seller.shop.the_meta_description_may_not_exceed_65_535_bytes'));
                     }
                 }],
                 'logo' => ['nullable', 'integer', Rule::exists('uploads', 'id')->where('type', 'image')->where('user_id', $this->user('store')?->id)],

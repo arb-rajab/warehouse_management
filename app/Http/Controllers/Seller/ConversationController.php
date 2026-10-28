@@ -25,7 +25,7 @@ class ConversationController extends Controller
             $conversations = Conversation::where('sender_id', Auth::user()->id)->orWhere('receiver_id', Auth::user()->id)->orderBy('created_at', 'desc')->paginate(5);
             return view('shop.seller.conversations.index', compact('conversations'));
         } else {
-            flash(translate('Conversation is disabled at this moment'))->warning();
+            flash(__('storefront.support.conversation_is_disabled_at_this_moment'))->warning();
             return back();
         }
     }

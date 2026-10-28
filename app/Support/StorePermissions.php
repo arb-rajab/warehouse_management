@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Spatie\Permission\PermissionRegistrar;
 
 /**
@@ -262,6 +263,22 @@ final class StorePermissions
         }
 
         return $permissions;
+    }
+
+    /** Application permission labels belong to files; custom records remain content. */
+    public static function displayName(string $name): string
+    {
+        return array_key_exists($name, self::all())
+            ? __('store_permissions.permissions.'.$name)
+            : translate(Str::headline($name));
+    }
+
+    /** Application sections use the same canonical vocabulary as permission syncing. */
+    public static function displaySection(string $section): string
+    {
+        return array_key_exists($section, self::SECTIONS)
+            ? __('store_permissions.sections.'.$section)
+            : translate(Str::headline($section));
     }
 
     /**

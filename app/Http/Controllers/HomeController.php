@@ -420,7 +420,7 @@ class HomeController extends Controller
             }
         }
 
-        flash(translate('Top 10 categories and brands have been updated successfully'))->success();
+        flash(__('store_admin.top_10_categories_and_brands_have_been_updated_successfully'))->success();
         return redirect()->route('home_settings.index');
     }
 

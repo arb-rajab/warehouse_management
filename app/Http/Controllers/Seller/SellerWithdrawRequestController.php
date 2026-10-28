@@ -41,7 +41,7 @@ class SellerWithdrawRequestController extends Controller
             return back();
         }
 
-        flash(translate('Request has been sent successfully'))->success();
+        flash(__('seller.withdrawals.request_has_been_sent_successfully'))->success();
         return redirect()->route('seller.money_withdraw_requests.index');
     }
 }

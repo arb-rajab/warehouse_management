@@ -42,8 +42,8 @@
                     if (revision !== choiceRevision) return;
                     const row = $('<div class="form-group row" data-choice-row><div class="col-md-3"><input type="hidden" name="choice_no[]"><label></label><div><button type="button" data-choice-move="-1">↑</button><button type="button" data-choice-move="1">↓</button></div></div><div class="col-md-8"><select class="form-control aiz-selectpicker attribute_choice" multiple required aria-required="true"></select></div></div>');
                     row.find('input').val(i);
-                    row.find('[data-choice-move=-1]').attr('aria-label', @json(translate('Move attribute up')) + ': ' + name);
-                    row.find('[data-choice-move=1]').attr('aria-label', @json(translate('Move attribute down')) + ': ' + name);
+                    row.find('[data-choice-move=-1]').attr('aria-label', {{ \Illuminate\Support\Js::from(__('seller.products.move_attribute_up_label', ['name' => ':name'])) }}.replace(':name', () => name));
+                    row.find('[data-choice-move=1]').attr('aria-label', {{ \Illuminate\Support\Js::from(__('seller.products.move_attribute_down_label', ['name' => ':name'])) }}.replace(':name', () => name));
                     row.find('label').attr('for', 'choice-options-' + i).text(name).append(document.getElementById('choice-required-mark').content.cloneNode(true));
                     row.find('select').attr('id', 'choice-options-' + i).attr('name', 'choice_options_' + i + '[]').html(options);
                     $('#customer_choice_options').append(row);
@@ -106,7 +106,7 @@
                 error: function() {
                     if (revision !== previewRevision) return;
                     $('#variant-preview-error').remove();
-                    $('<div id="variant-preview-error" class="alert alert-danger" role="alert"></div>').text(@json(translate('Could not generate variants. Check the selected options.'))).insertBefore('#sku_combination');
+                    $('<div id="variant-preview-error" class="alert alert-danger" role="alert"></div>').text({{ \Illuminate\Support\Js::from(__('seller.products.could_not_generate_variants_check_the_selected_options')) }}).insertBefore('#sku_combination');
                 }
             });
         }

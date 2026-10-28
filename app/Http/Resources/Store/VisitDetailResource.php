@@ -38,7 +38,7 @@ class VisitDetailResource extends JsonResource
                 'delivery_status' => $this->order->delivery_status,
                 'date' => (int) $this->order->date,
                 'amount' => single_price((float) $this->order->grand_total),
-                'payment_type' => translate(ucfirst(str_replace('_', ' ', (string) $this->order->payment_type))),
+                'payment_type' => \App\Support\StoreLocale::paymentMethod($this->order->payment_type),
                 'customer_notes' => $this->order->additional_info,
                 'customer_otajer_id' => $this->order->by_rep ? $this->order->rep?->AccSysID : null,
                 'delivery_date' => $this->order->delivery_date,

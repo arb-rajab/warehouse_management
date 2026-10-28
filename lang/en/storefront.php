@@ -762,6 +762,9 @@ return [
         'your_review' => 'Your review',
     ],
     'status' => [
+        'cash' => 'Cash',
+        'open' => 'Open',
+        'solved' => 'Solved',
         'aamarpay' => 'Aamarpay',
         'applepay' => 'Applepay',
         'authorizenet' => 'Authorizenet',

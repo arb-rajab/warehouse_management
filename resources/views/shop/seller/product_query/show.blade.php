@@ -37,8 +37,8 @@
                         <x-required-legend />
                         <div class="row">
                             <div class="col-md-12">
-                                <label for="seller-query-reply">{{ translate('Type your reply') }}<x-required-mark /></label>
-                                <textarea class="form-control" rows="4" name="reply" id="seller-query-reply" maxlength="10000" placeholder="{{ translate('Type your reply') }}"
+                                <label for="seller-query-reply">{{ __('storefront.support.type_your_reply') }}<x-required-mark /></label>
+                                <textarea class="form-control" rows="4" name="reply" id="seller-query-reply" maxlength="10000" placeholder="{{ __('storefront.support.type_your_reply') }}"
                                     required>{{ is_string(old('reply')) ? old('reply') : '' }}</textarea>
                                 @error('reply')
                                     <small class="form-text text-danger">{{ $message }}</small>
@@ -47,7 +47,7 @@
                         </div>
                         <br>
                         <div class="text-right">
-                            <button type="submit" class="btn btn-info">{{ translate('Send') }}</button>
+                            <button type="submit" class="btn btn-info">{{ __('storefront.common.send') }}</button>
                         </div>
                     </form>
                 @endif

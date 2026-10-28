@@ -3,19 +3,19 @@
     <thead>
         <tr>
             <td class="text-center">
-                {{translate('Variant')}}
+                {{__('seller.products.variant')}}
             </td>
             <td class="text-center">
-                {{translate('Variant Price')}}
+                {{__('seller.products.variant_price')}}
             </td>
             <td class="text-center" data-breakpoints="lg">
-                {{translate('SKU')}}
+                {{__('seller.products.sku')}}
             </td>
             <td class="text-center" data-breakpoints="lg">
-                {{translate('Quantity')}}
+                {{__('storefront.product.quantity')}}
             </td>
             <td class="text-center" data-breakpoints="lg">
-                {{translate('Photo')}}
+                {{__('storefront.common.photo')}}
             </td>
         </tr>
     </thead>
@@ -95,9 +95,9 @@
                 <td>
                     <div class="input-group" data-toggle="aizuploader" data-type="image">
                         <div class="input-group-prepend">
-                            <div class="input-group-text bg-soft-secondary font-weight-medium">{{ translate('Browse') }}</div>
+                            <div class="input-group-text bg-soft-secondary font-weight-medium">{{ __('storefront.upload.browse') }}</div>
                         </div>
-                        <div class="form-control file-amount text-truncate">{{ translate('Choose File') }}</div>
+                        <div class="form-control file-amount text-truncate">{{ __('storefront.upload.choose_file') }}</div>
                         <input type="hidden" name="img_{{ $str }}" class="selected-files" value="@php
                                 if($stock != null){
                                     echo $stock->image;

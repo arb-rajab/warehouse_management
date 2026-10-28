@@ -109,7 +109,7 @@ class SubscriberController extends Controller implements HasMiddleware
     public function destroy($id)
     {
         Subscriber::destroy($id);
-        flash(translate('Subscriber has been deleted successfully'))->success();
+        flash(__('store_admin.subscriber_has_been_deleted_successfully'))->success();
         return redirect()->route('admin.subscribers.index');
     }
 }

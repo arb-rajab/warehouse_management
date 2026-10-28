@@ -1,11 +1,11 @@
 @extends('shop.seller.layouts.app')
 
 @section('panel_content')
-<h1 class="h3">{{ translate('Update Your Product') }}</h1>
+<h1 class="h3">{{ __('seller.products.update_your_product') }}</h1>
 <form action="{{ route('seller.digitalproducts.update', $product->id) }}" method="POST" enctype="multipart/form-data" id="digital-product-form">
     @csrf
     @include('shop.seller.product.digitalproducts.form_fields')
-    <button type="submit" class="btn btn-primary">{{ translate('Update Product') }}</button>
+    <button type="submit" class="btn btn-primary">{{ __('storefront.product.update_product') }}</button>
 </form>
 @endsection
 

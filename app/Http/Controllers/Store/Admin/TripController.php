@@ -284,7 +284,7 @@ class TripController extends Controller implements HasMiddleware
             if ($id > 0) {
                 $checkpoint = $trip?->checkpoints()->lockForUpdate()->find($id);
                 if ($checkpoint === null || $checkpoint->relationable_type !== $type || $checkpoint->relationable_id !== (int) $row['checkpoint_related_id'] || $checkpoint->type !== $row['checkpoint_type']) {
-                    throw ValidationException::withMessages(['checkpoints_array' => __('validation.exists', ['attribute' => 'checkpoint'])]);
+                    throw ValidationException::withMessages(['checkpoints_array' => __('validation.exists', ['attribute' => __('validation.attributes.checkpoint')])]);
                 }
                 $checkpoints[] = ['id' => $id, 'sort_order_in_trip' => $index + $offset + 1, 'notes' => $row['checkpoint_notes'] ?? ''];
 

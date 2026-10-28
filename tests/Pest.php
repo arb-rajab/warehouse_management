@@ -62,6 +62,19 @@ afterEach(function () {
 |--------------------------------------------------------------------------
 */
 
+function startStorefrontTranslationQueryLog(): void
+{
+    DB::flushQueryLog();
+    DB::enableQueryLog();
+}
+
+function expectNoStorefrontTranslationQueries(): void
+{
+    $queries = DB::getQueryLog();
+    DB::disableQueryLog();
+    expect(array_values(array_filter($queries, fn (array $query) => preg_match('/\btranslations\b/i', $query['query']))))->toBe([]);
+}
+
 /**
  * Authenticate a warehouse worker against the API's token guard, as the mobile app
  * does. Returns the user for tests that assert on who performed the action.

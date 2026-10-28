@@ -37,7 +37,7 @@ class StoreShopRequest extends FormRequest
     {
         /** @var StoreUser $user */
         $user = Auth::user();
-        flash(self::refusalFor($user) ?? translate('Sorry! Something went wrong.'))->error();
+        flash(self::refusalFor($user) ?? __('seller.shop.sorry_something_went_wrong'))->error();
 
         throw new HttpResponseException(back());
     }
@@ -49,8 +49,8 @@ class StoreShopRequest extends FormRequest
     public static function refusalFor(StoreUser $user): ?string
     {
         return match ($user->user_type) {
-            'admin', 'customer' => translate('Admin or Customer can not be a seller'),
-            'seller' => translate('This user already a seller'),
+            'admin', 'customer' => __('seller.shop.admin_or_customer_can_not_be_a_seller'),
+            'seller' => __('seller.shop.this_user_already_a_seller'),
             default => null,
         };
     }

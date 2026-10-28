@@ -112,8 +112,8 @@ class PhysicalProductRequest extends FormRequest
         $labels = [];
         foreach ($this->variantNames() as $name) {
             $key = ProductVariantCombinations::inputKey($name);
-            foreach (['price' => 'Variant Price', 'qty' => 'Quantity', 'sku' => 'SKU', 'img' => 'Photo'] as $prefix => $label) {
-                $labels[$prefix.'_'.$key] = translate($label).': '.$name;
+            foreach (['price' => 'seller.products.variant_price', 'qty' => 'storefront.product.quantity', 'sku' => 'seller.products.sku', 'img' => 'storefront.common.photo'] as $prefix => $label) {
+                $labels[$prefix.'_'.$key] = __('seller.products.variant_label', ['label' => __($label), 'name' => $name]);
             }
         }
 
@@ -126,21 +126,21 @@ class PhysicalProductRequest extends FormRequest
         return [function (Validator $validator): void {
             $names = $this->variantNames();
             if ($names === [] && ($this->choiceIds() !== [] || ($this->boolean('colors_active') && $this->input('colors')))) {
-                $validator->errors()->add('choice_no', __('validation.max.array', ['attribute' => 'variants', 'max' => 500]));
+                $validator->errors()->add('choice_no', __('validation.max.array', ['attribute' => __('validation.attributes.variants'), 'max' => 500]));
             }
             if (count(array_unique(array_map(fn ($name) => ProductVariantCombinations::inputKey($name), $names))) !== count($names)
                 || collect($names)->contains(fn ($name) => mb_strlen($name) > 255)) {
-                $validator->errors()->add('choice_no', __('validation.distinct', ['attribute' => 'variants']));
+                $validator->errors()->add('choice_no', __('validation.distinct', ['attribute' => __('validation.attributes.variants')]));
             }
             $dates = $this->input('date_range');
             if (is_string($dates) && preg_match('/^(.+) to (.+)$/D', $dates, $parts)) {
                 if (strtotime($parts[1]) < -2147483648 || strtotime($parts[2]) > 2147483647) {
-                    $validator->errors()->add('date_range', __('validation.date', ['attribute' => 'date_range']));
+                    $validator->errors()->add('date_range', __('validation.date', ['attribute' => __('validation.attributes.date_range')]));
                 }
             }
             foreach ((array) $this->input('tax_type', []) as $index => $type) {
                 if ($type === 'percent' && is_numeric($this->input('tax.'.$index)) && $this->input('tax.'.$index) > 100) {
-                    $validator->errors()->add('tax.'.$index, __('validation.max.numeric', ['attribute' => 'tax', 'max' => 100]));
+                    $validator->errors()->add('tax.'.$index, __('validation.max.numeric', ['attribute' => __('validation.attributes.tax'), 'max' => 100]));
                 }
             }
         }];

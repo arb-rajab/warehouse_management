@@ -53,7 +53,7 @@ class ProductVariantCombinations
     public function assertLegacyStocksRetained(Product $product, array $postedNames): void
     {
         if (array_diff($this->unmatchedStocks($product), $postedNames ?: ['']) !== []) {
-            throw ValidationException::withMessages(['choice_options' => translate('Stored stock does not match the product choices. Reconcile the choices with the existing stock before saving.')]);
+            throw ValidationException::withMessages(['choice_options' => __('seller.products.stock_choices_mismatch')]);
         }
     }
 

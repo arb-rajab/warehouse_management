@@ -16,19 +16,6 @@ beforeEach(function () {
     Mail::fake();
 });
 
-function startStorefrontTranslationQueryLog(): void
-{
-    DB::flushQueryLog();
-    DB::enableQueryLog();
-}
-
-function expectNoStorefrontTranslationQueries(): void
-{
-    $queries = DB::getQueryLog();
-    DB::disableQueryLog();
-    expect(array_values(array_filter($queries, fn (array $query) => preg_match('/\btranslations\b/i', $query['query']))))->toBe([]);
-}
-
 test('both customer login routes render Arabic labels with an empty translations table', function (string $path) {
     expect(DB::table('translations')->count())->toBe(0);
     startStorefrontTranslationQueryLog();

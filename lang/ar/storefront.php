@@ -762,6 +762,9 @@ return [
         'your_review' => 'تقييمك',
     ],
     'status' => [
+        'cash' => 'نقدًا',
+        'open' => 'مفتوح',
+        'solved' => 'تم الحل',
         'aamarpay' => 'Aamarpay',
         'applepay' => 'Applepay',
         'authorizenet' => 'Authorizenet',

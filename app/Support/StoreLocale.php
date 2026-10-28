@@ -23,6 +23,14 @@ class StoreLocale
         return Lang::has($key) ? __($key) : __('storefront.status.unknown');
     }
 
+    /** Known payment methods are UI vocabulary; custom names remain content. */
+    public static function paymentMethod(?string $value): string
+    {
+        $key = 'storefront.status.'.$value;
+
+        return Lang::has($key) ? __($key) : translate(ucfirst(str_replace('_', ' ', (string) $value)));
+    }
+
     public static function isSupported(mixed $locale): bool
     {
         return is_string($locale) && (Locale::tryFrom($locale) !== null

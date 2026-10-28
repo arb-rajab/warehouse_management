@@ -33,7 +33,7 @@ class ProfileController extends Controller
     public function update(SellerProfileRequest $request , $id)
     {
         if(env('DEMO_MODE') == 'On'){
-            flash(translate('Sorry! the action is not permitted in demo '))->error();
+            flash(__('storefront.common.sorry_the_action_is_not_permitted_in_demo'))->error();
             return back();
         }
 
@@ -65,7 +65,7 @@ class ProfileController extends Controller
 
         $user->save();
 
-        flash(translate('Your Profile has been updated successfully!'))->success();
+        flash(__('storefront.upload.your_profile_has_been_updated_successfully'))->success();
         return back();
     }
 }

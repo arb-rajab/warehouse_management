@@ -3,7 +3,7 @@
 @section('panel_content')
     <div class="aiz-titlebar mt-2 mb-4">
         <div class="h6">
-            <span>{{ translate('Conversations With ')}}</span>
+            <span>{{ __('storefront.support.conversations_with')}}</span>
             @if ($conversation->sender_id == Auth::user()->id && $conversation->receiver->shop != null)
                 <a href="{{ route('shop.visit', $conversation->receiver->shop->slug) }}" class="">{{ $conversation->receiver->shop->name }}</a>
             @endif
@@ -13,7 +13,7 @@
         <div class="card-header">
             <h5 class="card-title fs-16 fw-600 mb-0">#{{ $conversation->title }}
             (
-                {{ translate('Between you and') }}
+                {{ __('storefront.common.between_you_and') }}
                 @if ($conversation->sender_id == Auth::user()->id)
                     {{ $conversation->receiver->name }}
                 @else
@@ -52,14 +52,14 @@
                     <small class="form-text text-danger">{{ $message }}</small>
                 @enderror
                 <div class="form-group">
-                    <label for="seller-conversation-message">{{ translate('Type your reply') }}<x-required-mark /></label>
-                    <textarea class="form-control" rows="4" name="message" id="seller-conversation-message" maxlength="65535" placeholder="{{ translate('Type your reply') }}" required>{{ is_string(old('message')) ? old('message') : '' }}</textarea>
+                    <label for="seller-conversation-message">{{ __('storefront.support.type_your_reply') }}<x-required-mark /></label>
+                    <textarea class="form-control" rows="4" name="message" id="seller-conversation-message" maxlength="65535" placeholder="{{ __('storefront.support.type_your_reply') }}" required>{{ is_string(old('message')) ? old('message') : '' }}</textarea>
                     @error('message')
                         <small class="form-text text-danger">{{ $message }}</small>
                     @enderror
                 </div>
                 <div class="form-group mb-0 text-right">
-                    <button type="submit" class="btn btn-primary">{{ translate('Send') }}</button>
+                    <button type="submit" class="btn btn-primary">{{ __('storefront.common.send') }}</button>
                 </div>
             </form>
         </div>
