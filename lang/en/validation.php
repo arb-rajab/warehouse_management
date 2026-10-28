@@ -197,6 +197,36 @@ return [
     |
     */
 
-    'attributes' => [],
+    'attributes' => [
+        'name' => 'name',
+        'email' => 'email',
+        'phone' => 'phone',
+        'password' => 'password',
+        'password_confirmation' => 'password confirmation',
+        'code' => 'code',
+        'company_name' => 'company name',
+        'company_address' => 'company address',
+        'tax_number' => 'tax number',
+        'country' => 'country',
+        'country_code' => 'country code',
+        'country_id' => 'country id',
+        'address' => 'address',
+        'address_id' => 'address id',
+        'postal_code' => 'postal code',
+        'latitude' => 'latitude',
+        'longitude' => 'longitude',
+        'subject' => 'subject',
+        'title' => 'title',
+        'details' => 'details',
+        'message' => 'message',
+        'product_id' => 'product id',
+        'rating' => 'rating',
+        'comment' => 'comment',
+        'attachments' => 'attachments',
+        'amount' => 'amount',
+        'payment_option' => 'payment option',
+        'delivery_date' => 'delivery date',
+        'trade_license' => 'trade license',
+    ],
 
 ];

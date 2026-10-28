@@ -11,27 +11,27 @@
                         <div class="col done">
                             <div class="text-center border border-bottom-6px p-2 text-success">
                                 <i class="la-3x mb-2 las la-shopping-cart"></i>
-                                <h3 class="fs-14 fw-600 d-none d-lg-block">{{ translate('1. My Cart') }}</h3>
+                                <h3 class="fs-14 fw-600 d-none d-lg-block">{{ __('storefront.cart.1_my_cart') }}</h3>
                             </div>
                         </div>
                         <div class="col done">
                             <div class="text-center border border-bottom-6px p-2 text-success">
                                 <i class="la-3x mb-2 las la-map"></i>
-                                <h3 class="fs-14 fw-600 d-none d-lg-block">{{ translate('2. Shipping info') }}
+                                <h3 class="fs-14 fw-600 d-none d-lg-block">{{ __('storefront.checkout.2_shipping_info') }}
                                 </h3>
                             </div>
                         </div>
                         <div class="col done">
                             <div class="text-center border border-bottom-6px p-2 text-success">
                                 <i class="la-3x mb-2 las la-truck"></i>
-                                <h3 class="fs-14 fw-600 d-none d-lg-block">{{ translate('3. Delivery info') }}
+                                <h3 class="fs-14 fw-600 d-none d-lg-block">{{ __('storefront.checkout.3_delivery_info') }}
                                 </h3>
                             </div>
                         </div>
                         <div class="col done">
                             <div class="text-center border border-bottom-6px p-2 text-success">
                                 <i class="la-3x mb-2 las la-credit-card"></i>
-                                <h3 class="fs-14 fw-600 d-none d-lg-block">{{ translate('4. Payment') }}</h3>
+                                <h3 class="fs-14 fw-600 d-none d-lg-block">{{ __('storefront.checkout.4_payment') }}</h3>
                             </div>
                         </div>
                         <div class="col active">
@@ -44,7 +44,7 @@
                                       </g>
                                     </g>
                                 </svg>
-                                <h3 class="fs-14 fw-600 d-none d-lg-block">{{ translate('5. Confirmation') }}
+                                <h3 class="fs-14 fw-600 d-none d-lg-block">{{ __('storefront.common.5_confirmation') }}
                                 </h3>
                             </div>
                         </div>
@@ -73,29 +73,29 @@
                               </g>
                             </g>
                         </svg>
-                        <h1 class="mb-2 fs-28 fw-500 text-success">{{ translate('Thank You for Your Order!')}}</h1>
-                        {{-- <p class="fs-13 text-soft-dark">{{  translate('A copy or your order summary has been sent to') }} <strong>{{ json_decode($first_order->shipping_address)->email }}</strong></p> --}}
+                        <h1 class="mb-2 fs-28 fw-500 text-success">{{ __('storefront.checkout.thank_you_for_your_order')}}</h1>
+                        {{-- <p class="fs-13 text-soft-dark">{{  __('storefront.checkout.a_copy_or_your_order_summary_has_been_sent_to') }} <strong>{{ json_decode($first_order->shipping_address)->email }}</strong></p> --}}
                     </div>
                     <!-- Order Summary -->
                     <div class="mb-4 bg-white p-4 border">
-                        <h5 class="fw-600 mb-3 fs-16 text-soft-dark pb-2 border-bottom">{{ translate('Order Summary')}}</h5>
+                        <h5 class="fw-600 mb-3 fs-16 text-soft-dark pb-2 border-bottom">{{ __('storefront.checkout.order_summary')}}</h5>
                         <div class="row">
                             <div class="col-md-6">
                                 <table class="table fs-14 text-soft-dark">
                                     <tr>
-                                        <td class="w-50 fw-600 border-top-0 pl-0 py-2">{{ translate('Order date')}}:</td>
+                                        <td class="w-50 fw-600 border-top-0 pl-0 py-2">{{ __('storefront.checkout.order_date')}}:</td>
                                         <td class="border-top-0 py-2">{{ \App\Support\StoreLocale::date($first_order->date, true) }}</td>
                                     </tr>
                                     <tr>
-                                        <td class="w-50 fw-600 border-top-0 pl-0 py-2">{{ translate('Name')}}:</td>
+                                        <td class="w-50 fw-600 border-top-0 pl-0 py-2">{{ __('storefront.common.name')}}:</td>
                                         <td class="border-top-0 py-2">{{ json_decode($first_order->shipping_address)->name }}</td>
                                     </tr>
                                     <tr>
-                                        <td class="w-50 fw-600 border-top-0 pl-0 py-2">{{ translate('Email')}}:</td>
+                                        <td class="w-50 fw-600 border-top-0 pl-0 py-2">{{ __('storefront.auth.email')}}:</td>
                                         <td class="border-top-0 py-2">{{ json_decode($first_order->shipping_address)->email }}</td>
                                     </tr>
                                     <tr>
-                                        <td class="w-50 fw-600 border-top-0 pl-0 py-2">{{ translate('Shipping address')}}:</td>
+                                        <td class="w-50 fw-600 border-top-0 pl-0 py-2">{{ __('storefront.checkout.shipping_address')}}:</td>
                                         <td class="border-top-0 py-2">{{ json_decode($first_order->shipping_address)->address }}, {{ json_decode($first_order->shipping_address)->city }}, {{ json_decode($first_order->shipping_address)->country }}</td>
                                     </tr>
                                 </table>
@@ -103,30 +103,30 @@
                             <div class="col-md-6">
                                 <table class="table">
                                     <tr>
-                                        <td class="w-50 fw-600 border-top-0 py-2">{{ translate('Order status')}}:</td>
-                                        <td class="border-top-0 pr-0 py-2">{{ translate(ucfirst(str_replace('_', ' ', $first_order->delivery_status))) }}</td>
+                                        <td class="w-50 fw-600 border-top-0 py-2">{{ __('storefront.checkout.order_status')}}:</td>
+                                        <td class="border-top-0 pr-0 py-2">{{ \App\Support\StoreLocale::status($first_order->delivery_status) }}</td>
                                     </tr>
                                     @if(Auth::check() && Auth::user()->admin_verified)
                                     <tr>
-                                        <td class="w-50 fw-600 border-top-0 py-2">{{ translate('Total order amount')}}:</td>
+                                        <td class="w-50 fw-600 border-top-0 py-2">{{ __('storefront.checkout.total_order_amount')}}:</td>
                                         <td class="border-top-0 pr-0 py-2">{{ single_price($combined_order->grand_total) }}</td>
                                     </tr>
                                     @endif
                                     @if(Auth::check() && Auth::user()->is_rep)
                                         <tr>
-                                            <td class="w-50 fw-600 border-top-0 py-2">{{ translate('Customer name')}}:</td>
+                                            <td class="w-50 fw-600 border-top-0 py-2">{{ __('storefront.common.customer_name')}}:</td>
                                             <td class="border-top-0 pr-0 py-2">{{ $first_order->customer?->name }}</td>
                                         </tr>
                                     @endif
                                     {{--
                                     <tr>
-                                        <td class="w-50 fw-600 border-top-0 py-2">{{ translate('Shipping')}}:</td>
-                                        <td class="border-top-0 pr-0 py-2">{{ translate('Flat shipping rate')}}</td>
+                                        <td class="w-50 fw-600 border-top-0 py-2">{{ __('storefront.checkout.shipping')}}:</td>
+                                        <td class="border-top-0 pr-0 py-2">{{ __('storefront.checkout.flat_shipping_rate')}}</td>
                                     </tr>
 
                                     <tr>
-                                        <td class="w-50 fw-600 border-top-0 py-2">{{ translate('Payment method')}}:</td>
-                                        <td class="border-top-0 pr-0 py-2">{{ translate(ucfirst(str_replace('_', ' ', $first_order->payment_type))) }}</td>
+                                        <td class="w-50 fw-600 border-top-0 py-2">{{ __('storefront.checkout.payment_method')}}:</td>
+                                        <td class="border-top-0 pr-0 py-2">{{ \App\Support\StoreLocale::status($first_order->payment_type) }}</td>
                                     </tr>
                                     --}}
                                 </table>
@@ -140,23 +140,23 @@
                             <div class="card-body">
                                 <!-- Order Code -->
                                 <div class="text-center py-1 mb-4">
-                                    <h2 class="h5 fs-20">{{ translate('Order Code:')}} <span class="fw-700 text-primary">{{ $order->code }}</span></h2>
+                                    <h2 class="h5 fs-20">{{ __('storefront.checkout.order_code')}} <span class="fw-700 text-primary">{{ $order->code }}</span></h2>
                                 </div>
                                 <!-- Order Details -->
                                 <div>
-                                    <h5 class="fw-600 text-soft-dark mb-3 fs-16 pb-2">{{ translate('Order Details')}}</h5>
+                                    <h5 class="fw-600 text-soft-dark mb-3 fs-16 pb-2">{{ __('storefront.checkout.order_details')}}</h5>
                                     <!-- Product Details -->
                                     <div>
                                         <table class="table table-responsive-md text-soft-dark fs-14">
                                             <thead>
                                                 <tr>
                                                     <th class="opacity-60 border-top-0 pl-0">#</th>
-                                                    <th class="opacity-60 border-top-0" width="30%">{{ translate('Product')}}</th>
-                                                    <th class="opacity-60 border-top-0">{{ translate('Variation')}}</th>
-                                                    <th class="opacity-60 border-top-0">{{ translate('Quantity')}}</th>
-                                                   {{--  <th class="opacity-60 border-top-0">{{ translate('Delivery Type')}}</th>
+                                                    <th class="opacity-60 border-top-0" width="30%">{{ __('storefront.product.product')}}</th>
+                                                    <th class="opacity-60 border-top-0">{{ __('storefront.common.variation')}}</th>
+                                                    <th class="opacity-60 border-top-0">{{ __('storefront.product.quantity')}}</th>
+                                                   {{--  <th class="opacity-60 border-top-0">{{ __('storefront.checkout.delivery_type')}}</th>
                                                     @if(Auth::check() && Auth::user()->admin_verified)
-                                                    <th class="text-right opacity-60 border-top-0 pr-0">{{ translate('Price')}}</th>
+                                                    <th class="text-right opacity-60 border-top-0 pr-0">{{ __('storefront.product.price')}}</th>
                                                     @endif
                                                 </tr>
                                             </thead>
@@ -177,7 +177,7 @@
                                                                     @endphp
                                                                 </a>
                                                             @else
-                                                                <strong>{{  translate('Product Unavailable') }}</strong>
+                                                                <strong>{{  __('storefront.product.product_unavailable') }}</strong>
                                                             @endif
                                                         </td>
                                                         <td class="border-top-0 border-bottom">
@@ -189,12 +189,12 @@
                                                         {{--
                                                         <td class="border-top-0 border-bottom">
                                                             @if ($order->shipping_type != null && $order->shipping_type == 'home_delivery')
-                                                                {{  translate('Home Delivery') }}
+                                                                {{  __('storefront.checkout.home_delivery') }}
                                                             @elseif ($order->shipping_type != null && $order->shipping_type == 'carrier')
-                                                                {{  translate('Carrier') }}
+                                                                {{  __('storefront.checkout.carrier') }}
                                                             @elseif ($order->shipping_type == 'pickup_point')
                                                                 @if ($order->pickup_point != null)
-                                                                    {{ $order->pickup_point->getTranslation('name') }} ({{ translate('Pickip Point') }})
+                                                                    {{ $order->pickup_point->getTranslation('name') }} ({{ __('storefront.common.pickip_point') }})
                                                                 @endif
                                                             @endif
                                                         </td>
@@ -215,7 +215,7 @@
                                                 <tbody>
                                                     <!-- Subtotal -->
                                                     <tr>
-                                                        <th class="border-top-0 py-2">{{ translate('Subtotal')}}</th>
+                                                        <th class="border-top-0 py-2">{{ __('storefront.common.subtotal')}}</th>
                                                         <td class="text-right border-top-0 pr-0 py-2">
                                                             <span class="fw-600">{{ single_price($order->orderDetails->sum('price')) }}</span>
                                                         </td>
@@ -223,14 +223,14 @@
 
                                                     <!-- Shipping -->
                                                     <tr>
-                                                        <th class="border-top-0 py-2">{{ translate('Shipping')}}</th>
+                                                        <th class="border-top-0 py-2">{{ __('storefront.checkout.shipping')}}</th>
                                                         <td class="text-right border-top-0 pr-0 py-2">
                                                             <span>{{ single_price($order->orderDetails->sum('shipping_cost')) }}</span>
                                                         </td>
                                                     </tr>
                                                     <!-- Tax -->
                                                     {{-- <tr>
-                                                        <th class="border-top-0 py-2">{{ translate('Tax')}}</th>
+                                                        <th class="border-top-0 py-2">{{ __('storefront.common.tax')}}</th>
                                                         <td class="text-right border-top-0 pr-0 py-2">
                                                             <span>{{ single_price($order->orderDetails->sum('tax')) }}</span>
                                                         </td>
@@ -239,7 +239,7 @@
                                                     <!-- Coupon Discount -->
                                                     {{--
                                                     <tr>
-                                                        <th class="border-top-0 py-2">{{ translate('Coupon Discount')}}</th>
+                                                        <th class="border-top-0 py-2">{{ __('storefront.cart.coupon_discount')}}</th>
                                                         <td class="text-right border-top-0 pr-0 py-2">
                                                             <span>{{ single_price($order->coupon_discount) }}</span>
                                                         </td>
@@ -247,7 +247,7 @@
 
                                                     <!-- Total -->
                                                     <tr>
-                                                        <th class="py-2"><span class="fw-600">{{ translate('Total')}}</span></th>
+                                                        <th class="py-2"><span class="fw-600">{{ __('storefront.common.total')}}</span></th>
                                                         <td class="text-right pr-0">
                                                             <strong><span>{{ single_price($order->grand_total) }}</span></strong>
                                                         </td>

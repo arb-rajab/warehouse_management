@@ -119,10 +119,10 @@ class HomeController extends Controller
                     auth()->login($user, false);
                 }
             } else {
-                flash(translate('Invalid email or password!'))->warning();
+                flash(__('storefront.auth.invalid_email_or_password'))->warning();
             }
         } else {
-            flash(translate('Invalid email or password!'))->warning();
+            flash(__('storefront.auth.invalid_email_or_password'))->warning();
         }
         return back();
     }
@@ -165,7 +165,7 @@ class HomeController extends Controller
     public function userProfileUpdate(Request $request)
     {
         if (env('DEMO_MODE') == 'On') {
-            flash(translate('Sorry! the action is not permitted in demo '))->error();
+            flash(__('storefront.common.sorry_the_action_is_not_permitted_in_demo'))->error();
             return back();
         }
 
@@ -193,7 +193,7 @@ class HomeController extends Controller
         $user->avatar_original = $request->photo;
         $user->save();
 
-        flash(translate('Your Profile has been updated successfully!'))->success();
+        flash(__('storefront.upload.your_profile_has_been_updated_successfully'))->success();
         return back();
     }
 
@@ -470,9 +470,9 @@ class HomeController extends Controller
         //Product Stock Visibility
         if ($product->stock_visibility_state == 'text') {
             if ($quantity >= 1 && $product->min_qty < $quantity) {
-                $quantity = translate('In Stock');
+                $quantity = __('storefront.product.in_stock');
             } else {
-                $quantity = translate('Out Of Stock');
+                $quantity = __('storefront.product.out_of_stock');
             }
         }
 
@@ -580,7 +580,7 @@ class HomeController extends Controller
         $email = $request->email;
         if (isUnique($email) == '0') {
             $response['status'] = 2;
-            $response['message'] = translate('Email already exists!');
+            $response['message'] = __('storefront.auth.email_already_exists');
             return json_encode($response);
         }
 
@@ -595,11 +595,11 @@ class HomeController extends Controller
         $email = $request->email;
         if (isUnique($email)) {
             $this->send_email_change_verification_mail($request, $email);
-            flash(translate('A verification mail has been sent to the mail you provided us with.'))->success();
+            flash(__('storefront.auth.a_verification_mail_has_been_sent_to_the_mail_you_provided_us_with'))->success();
             return back();
         }
 
-        flash(translate('Email already exists!'))->warning();
+        flash(__('storefront.auth.email_already_exists'))->warning();
         return back();
     }
 
@@ -610,12 +610,12 @@ class HomeController extends Controller
 
         $verification_code = Str::random(32);
 
-        $array['subject'] = translate('Email Verification');
+        $array['subject'] = __('storefront.auth.email_verification');
         $array['from'] = config('mail.from.address');
-        $array['content'] = translate('Verify your account');
+        $array['content'] = __('storefront.auth.verify_account');
         $array['link'] = route('email_change.callback') . '?new_email_verificiation_code=' . $verification_code . '&email=' . $email;
         $array['sender'] = Auth::user()->name;
-        $array['details'] = translate("Email Second");
+        $array['details'] = __('storefront.auth.secondary_email');
 
         $user = Auth::user();
         $user->new_email_verificiation_code = $verification_code;
@@ -625,7 +625,7 @@ class HomeController extends Controller
             Mail::to($email)->queue(new SecondEmailVerifyMailManager($array));
 
             $response['status'] = 1;
-            $response['message'] = translate("Your verification mail has been Sent to your email.");
+            $response['message'] = __('storefront.auth.your_verification_mail_has_been_sent_to_your_email');
         } catch (\Exception $e) {
             // return $e->getMessage();
             $response['status'] = 0;
@@ -649,7 +649,7 @@ class HomeController extends Controller
 
                 auth()->login($user, true);
 
-                flash(translate('Email Changed successfully'))->success();
+                flash(__('storefront.auth.email_changed_successfully'))->success();
                 if ($user->user_type == 'seller') {
                     return redirect()->route('seller.dashboard');
                 }
@@ -657,7 +657,7 @@ class HomeController extends Controller
             }
         }
 
-        flash(translate('Email was not verified. Please resend your mail!'))->error();
+        flash(__('storefront.auth.email_was_not_verified_please_resend_your_mail'))->error();
         return redirect()->route('dashboard');
     }
 
@@ -671,7 +671,7 @@ class HomeController extends Controller
         $user = StoreUser::where('email', $request->validated('email'))->first();
 
         if ($user === null || ! app(StoreVerificationCodes::class)->consume($user, $request->validated('code'))) {
-            flash(translate("Verification code mismatch"))->error();
+            flash(__('storefront.auth.verification_code_mismatch'))->error();
 
             return view('shop.auth.passwords.reset', ['email' => $request->validated('email')]);
         }
@@ -683,7 +683,7 @@ class HomeController extends Controller
         auth()->login($user, true);
         $request->session()->regenerate();
 
-        flash(translate('Password updated successfully'))->success();
+        flash(__('storefront.auth.password_updated_successfully'))->success();
 
         if ($user->user_type == 'admin' || $user->user_type == 'staff') {
             return redirect()->route('shop.admin.dashboard');

@@ -1,6 +1,6 @@
 <div class="py-3">
     <h3 class="fs-16 fw-700 mb-0">
-        <span>{{ translate('Other Questions') }}</span>
+        <span>{{ __('storefront.support.other_questions') }}</span>
     </h3>
 </div>
 
@@ -36,7 +36,7 @@
             </span>
             <div class="ml-3 mt-0 p-0">
                 <div class="fs-14">
-                    {{ strip_tags($product_query->reply ? $product_query->reply : translate('Seller did not respond yet')) }}
+                    {{ strip_tags($product_query->reply ? $product_query->reply : __('storefront.product.seller_did_not_respond_yet')) }}
                 </div>
                 <span class=" text-secondary"> {{ $product_query->product->user->name }}
                 </span>
@@ -44,7 +44,7 @@
         </div>
     </div>
 @empty
-    <p>{{ translate('No none asked to seller yet') }}</p>
+    <p>{{ __('storefront.product.no_none_asked_to_seller_yet') }}</p>
 @endforelse
 
 <!-- Pagination -->

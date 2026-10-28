@@ -22,20 +22,17 @@
                     @if(get_setting('show_language_switcher') == 'on')
                     <li class="list-inline-item dropdown mr-4" id="lang-change">
                         @php
-                            if(Session::has('locale')){
-                                $locale = app()->getLocale();
-                            }
-                            else{
-                                $locale = 'en';
-                            }
+                            $locale = app()->getLocale();
+                            $uiLocale = \App\Support\StoreLocale::uiLocale();
+                            $currentLanguage = \App\Models\Language::query()->where('code', $locale)->orWhere('app_lang_code', $uiLocale)->first(['name', 'code']);
                         @endphp
                         <a href="javascript:void(0)" class="dropdown-toggle text-secondary fs-12 py-2" data-toggle="dropdown" data-display="static">
-                            <span class="">{{ \App\Models\Language::where('code', $locale)->first()->name }}</span>
+                            <span class="">{{ $currentLanguage?->name ?? strtoupper($uiLocale) }}</span>
                         </a>
                         <ul class="dropdown-menu dropdown-menu-left">
                             @foreach (\App\Models\Language::where('status', 1)->get() as $key => $language)
                                 <li>
-                                    <a href="javascript:void(0)" data-flag="{{ $language->code }}" class="dropdown-item @if($locale == $language) active @endif">
+                                    <a href="javascript:void(0)" data-flag="{{ $language->code }}" class="dropdown-item @if($currentLanguage?->code == $language->code) active @endif">
                                         <img src="{{ static_asset('assets/img/placeholder.jpg') }}" data-src="{{ static_asset('assets/img/flags/'.$language->code.'.png') }}" class="mr-1 lazyload" alt="{{ $language->name }}" height="11">
                                         <span class="language">{{ $language->name }}</span>
                                     </a>
@@ -78,19 +75,19 @@
                         <!-- Become a Seller -->
                         {{--
                         <li class="list-inline-item mr-0 pl-0 py-2">
-                            <a href="{{ route('shops.create') }}" class="text-secondary fs-12 pr-3 d-inline-block border-width-2 border-right">{{ translate('Become a Seller !')}}</a>
+                            <a href="{{ route('shops.create') }}" class="text-secondary fs-12 pr-3 d-inline-block border-width-2 border-right">{{ __('storefront.product.become_a_seller_label')}}</a>
                         </li>  --}}
                         <!-- Seller Login -->
                         {{--
                         <li class="list-inline-item mr-0 pl-0 py-2">
-                            <a href="{{ route('seller.login') }}" class="text-secondary fs-12 pl-3 d-inline-block">{{ translate('Login to Seller')}}</a>
+                            <a href="{{ route('seller.login') }}" class="text-secondary fs-12 pl-3 d-inline-block">{{ __('storefront.auth.login_to_seller')}}</a>
                         </li>  --}}
                     @endif
                     @if (get_setting('helpline_number'))
                         <!-- Helpline -->
                         <li class="list-inline-item ml-3 pl-3 mr-0 pr-0">
                             <a href="tel:{{ get_setting('helpline_number') }}" class="text-secondary fs-12 d-inline-block py-2">
-                                <span>{{ translate('Helpline')}}</span>
+                                <span>{{ __('storefront.navigation.helpline')}}</span>
                                 <span>{{ get_setting('helpline_number') }}</span>
                             </a>
                         </li>
@@ -145,7 +142,7 @@
                                 <div class="search-input-box">
                                     <input type="text" class="border border-soft-light form-control fs-14 hov-animate-outline" id="search" name="keyword" @isset($query)
                                         value="{{ $query }}"
-                                    @endisset placeholder="{{translate('I am shopping for...')}}" autocomplete="off">
+                                    @endisset placeholder="{{__('storefront.navigation.i_am_shopping_for')}}" autocomplete="off">
 
                                     <svg id="Group_723" data-name="Group 723" xmlns="http://www.w3.org/2000/svg" width="20.001" height="20" viewBox="0 0 20.001 20">
                                         <path id="Path_3090" data-name="Path 3090" d="M9.847,17.839a7.993,7.993,0,1,1,7.993-7.993A8,8,0,0,1,9.847,17.839Zm0-14.387a6.394,6.394,0,1,0,6.394,6.394A6.4,6.4,0,0,0,9.847,3.453Z" transform="translate(-1.854 -1.854)" fill="#b5b5bf"/>
@@ -205,7 +202,7 @@
                         @auth
                             <div class="dropdown-menu dropdown-menu-right dropdown-menu-lg py-0 rounded-0">
                                 <div class="p-3 bg-light border-bottom">
-                                    <h6 class="mb-0">{{ translate('Notifications') }}</h6>
+                                    <h6 class="mb-0">{{ __('storefront.navigation.notifications') }}</h6>
                                 </div>
                                 <div class="px-3 c-scrollbar-light overflow-auto " style="max-height:300px;">
                                     <ul class="list-group list-group-flush" >
@@ -215,20 +212,20 @@
                                                     @if(Auth::user()->user_type == 'customer')
                                                     <a href="{{route('purchase_history.details', encrypt($notification->data['order_id']))}}" class="text-secondary fs-12">
                                                         <span class="ml-2">
-                                                            {{translate('Order code: ')}} {{$notification->data['order_code']}} {{ translate('has been '. ucfirst(str_replace('_', ' ', $notification->data['status'])))}}
+                                                            {{__('storefront.checkout.order_code')}} {{$notification->data['order_code']}} {{ __('storefront.checkout.notification_status', ['status' => \App\Support\StoreLocale::status($notification->data['status'])])}}
                                                         </span>
                                                     </a>
                                                     @elseif (Auth::user()->user_type == 'seller')
                                                         <a href="{{ route('seller.orders.show', encrypt($notification->data['order_id'])) }}" class="text-secondary fs-12">
                                                             <span class="ml-2">
-                                                                {{translate('Order code: ')}} {{$notification->data['order_code']}} {{ translate('has been '. ucfirst(str_replace('_', ' ', $notification->data['status'])))}}
+                                                                {{__('storefront.checkout.order_code')}} {{$notification->data['order_code']}} {{ __('storefront.checkout.notification_status', ['status' => \App\Support\StoreLocale::status($notification->data['status'])])}}
                                                             </span>
                                                         </a>
 
                                                         @elseif(Auth::user()->user_type == 'admin')
                                                         <a href="{{ route('all_orders.show', encrypt($notification->data['order_id'])) }}" class="text-secondary fs-12">
                                                         <p class="mb-1 text-truncate-2">
-                                                            {{translate('Order code: ')}} {{$notification->data['order_code']}} {{ translate('has been '. ucfirst(str_replace('_', ' ', $notification->data['status'])))}}
+                                                            {{__('storefront.checkout.order_code')}} {{$notification->data['order_code']}} {{ __('storefront.checkout.notification_status', ['status' => \App\Support\StoreLocale::status($notification->data['status'])])}}
                                                         </p>
                                                         <small class="text-muted">
                                                             {{ \App\Support\StoreLocale::date(strtotime($notification->created_at), true) }}
@@ -242,7 +239,7 @@
                                         @empty
                                             <li class="list-group-item">
                                                 <div class="py-4 text-center fs-16">
-                                                    {{ translate('No notification found') }}
+                                                    {{ __('storefront.navigation.no_notification_found') }}
                                                 </div>
                                             </li>
                                         @endforelse
@@ -251,13 +248,13 @@
                                 @if(Auth::user()->user_type == 'admin')
                                 <div class="text-center border-top">
                                     <a href="{{ route('admin.all-notification') }}" class="text-reset d-block py-2">
-                                        {{translate('View All Notifications')}}
+                                        {{__('storefront.navigation.view_all_notifications')}}
                                     </a>
                                 </div>
                                 @else
                                 <div class="text-center border-top">
                                     <a href="{{ route('all-notifications') }}" class="text-secondary fs-12 d-block py-2">
-                                        {{translate('View All Notifications')}}
+                                        {{__('storefront.navigation.view_all_notifications')}}
                                     </a>
                                 </div>
                                 @endif
@@ -291,8 +288,8 @@
                                     <path id="fe2df171891038b33e9624c27e96e367" d="M15.71,12.71a6,6,0,1,0-7.42,0,10,10,0,0,0-6.22,8.18,1.006,1.006,0,1,0,2,.22,8,8,0,0,1,15.9,0,1,1,0,0,0,1,.89h.11a1,1,0,0,0,.88-1.1,10,10,0,0,0-6.25-8.19ZM12,12a4,4,0,1,1,4-4A4,4,0,0,1,12,12Z" transform="translate(-2.064 -1.995)" fill="#91919b"/>
                                 </svg>
                             </span>
-                            <a href="{{ route('user.login') }}" class="text-reset opacity-60 hov-opacity-100 hov-text-primary fs-12 d-inline-block border-right border-soft-light border-width-2 pr-2 ml-3">{{ translate('Login')}}</a>
-                            <a href="{{ route('user.registration') }}" class="text-reset opacity-60 hov-opacity-100 hov-text-primary fs-12 d-inline-block py-2 pl-2">{{ translate('Registration')}}</a>
+                            <a href="{{ route('user.login') }}" class="text-reset opacity-60 hov-opacity-100 hov-text-primary fs-12 d-inline-block border-right border-soft-light border-width-2 pr-2 ml-3">{{ __('storefront.auth.login')}}</a>
+                            <a href="{{ route('user.registration') }}" class="text-reset opacity-60 hov-opacity-100 hov-text-primary fs-12 d-inline-block py-2 pl-2">{{ __('storefront.auth.registration')}}</a>
                         </span>
                     @endauth
                 </div>
@@ -311,7 +308,7 @@
                                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16">
                                             <path id="Path_2916" data-name="Path 2916" d="M15.3,5.4,9.561.481A2,2,0,0,0,8.26,0H7.74a2,2,0,0,0-1.3.481L.7,5.4A2,2,0,0,0,0,6.92V14a2,2,0,0,0,2,2H14a2,2,0,0,0,2-2V6.92A2,2,0,0,0,15.3,5.4M10,15H6V9A1,1,0,0,1,7,8H9a1,1,0,0,1,1,1Zm5-1a1,1,0,0,1-1,1H11V9A2,2,0,0,0,9,7H7A2,2,0,0,0,5,9v6H2a1,1,0,0,1-1-1V6.92a1,1,0,0,1,.349-.76l5.74-4.92A1,1,0,0,1,7.74,1h.52a1,1,0,0,1,.651.24l5.74,4.92A1,1,0,0,1,15,6.92Z" fill="#b5b5c0"/>
                                         </svg>
-                                        <span class="user-top-menu-name has-transition ml-3">{{ translate('Dashboard') }}</span>
+                                        <span class="user-top-menu-name has-transition ml-3">{{ __('storefront.navigation.dashboard') }}</span>
                                     </a>
                                 </li>
                             @else
@@ -320,7 +317,7 @@
                                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16">
                                             <path id="Path_2916" data-name="Path 2916" d="M15.3,5.4,9.561.481A2,2,0,0,0,8.26,0H7.74a2,2,0,0,0-1.3.481L.7,5.4A2,2,0,0,0,0,6.92V14a2,2,0,0,0,2,2H14a2,2,0,0,0,2-2V6.92A2,2,0,0,0,15.3,5.4M10,15H6V9A1,1,0,0,1,7,8H9a1,1,0,0,1,1,1Zm5-1a1,1,0,0,1-1,1H11V9A2,2,0,0,0,9,7H7A2,2,0,0,0,5,9v6H2a1,1,0,0,1-1-1V6.92a1,1,0,0,1,.349-.76l5.74-4.92A1,1,0,0,1,7.74,1h.52a1,1,0,0,1,.651.24l5.74,4.92A1,1,0,0,1,15,6.92Z" fill="#b5b5c0"/>
                                         </svg>
-                                        <span class="user-top-menu-name has-transition ml-3">{{ translate('Dashboard') }}</span>
+                                        <span class="user-top-menu-name has-transition ml-3">{{ __('storefront.navigation.dashboard') }}</span>
                                     </a>
                                 </li>
                             @endif
@@ -340,7 +337,7 @@
                                             <path id="Path_2960" data-name="Path 2960" d="M13.5,28.963h5a.5.5,0,0,1,0,1h-5a.5.5,0,0,1,0-1" transform="translate(20.966 525.5)" fill="#b5b5bf"/>
                                             </g>
                                         </svg>
-                                        <span class="user-top-menu-name has-transition ml-3">{{ translate('Purchase History') }}</span>
+                                        <span class="user-top-menu-name has-transition ml-3">{{ __('storefront.navigation.purchase_history') }}</span>
                                     </a>
                                 </li>
                                 {{-- <li class="user-top-nav-element border border-top-0" data-id="1">
@@ -351,7 +348,7 @@
                                             <path id="Path_2964" data-name="Path 2964" d="M67.155,88.6a3,3,0,0,1-.474-5.963q-.009-.089-.015-.179a5.5,5.5,0,0,1,10.977-.718,3.5,3.5,0,0,1-.989,6.859h-1.5a.5.5,0,0,1,0-1l1.5,0a2.5,2.5,0,0,0,.417-4.967.5.5,0,0,1-.417-.5,4.5,4.5,0,1,0-8.908.866.512.512,0,0,1,.009.121.5.5,0,0,1-.52.479,2,2,0,1,0-.162,4l.081,0h2a.5.5,0,0,1,0,1Z" transform="translate(1324 486)" fill="#b5b5bf"/>
                                             </g>
                                         </svg>
-                                        <span class="user-top-menu-name has-transition ml-3">{{ translate('Downloads') }}</span>
+                                        <span class="user-top-menu-name has-transition ml-3">{{ __('storefront.common.downloads') }}</span>
                                     </a>
                                 </li> --}}
                                 @if (get_setting('conversation_system') == 1)
@@ -365,7 +362,7 @@
                                             <path id="Path_3015" data-name="Path 3015" d="M131.349,99.312h5a.5.5,0,1,1,0,1h-5a.5.5,0,1,1,0-1" transform="translate(-1181 -346.5)" fill="#b5b5bf"/>
                                             </g>
                                         </svg>
-                                        <span class="user-top-menu-name has-transition ml-3">{{ translate('Conversations') }}</span>
+                                        <span class="user-top-menu-name has-transition ml-3">{{ __('storefront.support.conversations') }}</span>
                                     </a>
                                 </li>
                                 @endif
@@ -383,7 +380,7 @@
                                               <path id="Path_2936" data-name="Path 2936" d="M13.5,4H13V2.5A2.5,2.5,0,0,0,10.5,0h-8A2.5,2.5,0,0,0,0,2.5v11A2.5,2.5,0,0,0,2.5,16h11A2.5,2.5,0,0,0,16,13.5v-7A2.5,2.5,0,0,0,13.5,4M2.5,1h8A1.5,1.5,0,0,1,12,2.5V4H2.5a1.5,1.5,0,0,1,0-3M15,11H10a1,1,0,0,1,0-2h5Zm0-3H10a2,2,0,0,0,0,4h5v1.5A1.5,1.5,0,0,1,13.5,15H2.5A1.5,1.5,0,0,1,1,13.5v-9A2.5,2.5,0,0,0,2.5,5h11A1.5,1.5,0,0,1,15,6.5Z" fill="#b5b5bf"/>
                                             </g>
                                         </svg>
-                                        <span class="user-top-menu-name has-transition ml-3">{{ translate('My Wallet') }}</span>
+                                        <span class="user-top-menu-name has-transition ml-3">{{ __('storefront.checkout.my_wallet') }}</span>
                                     </a>
                                 </li>
                                 @endif
@@ -397,7 +394,7 @@
                                             <path id="Union_12" data-name="Union 12" d="M16414,895a1,1,0,1,1,1,1A1,1,0,0,1,16414,895Zm.5-2.5V891h.5a2,2,0,1,0-2-2h-1a3,3,0,1,1,3.5,2.958v.54a.5.5,0,1,1-1,0Zm-2.5-3.5h1a.5.5,0,1,1-1,0Z" transform="translate(-16090.998 183.001)" fill="#b5b5bf"/>
                                             </g>
                                         </svg>
-                                        <span class="user-top-menu-name has-transition ml-3">{{ translate('Support Ticket') }}</span>
+                                        <span class="user-top-menu-name has-transition ml-3">{{ __('storefront.support.support_ticket') }}</span>
                                     </a>
                                 </li>
                                 @endif
@@ -412,7 +409,7 @@
                                           <rect id="Rectangle_19022" data-name="Rectangle 19022" width="1" height="8" rx="0.5" transform="translate(31.5 377)" fill="#d43533"/>
                                         </g>
                                     </svg>
-                                    <span class="user-top-menu-name text-primary has-transition ml-3">{{ translate('Logout') }}</span>
+                                    <span class="user-top-menu-name text-primary has-transition ml-3">{{ __('storefront.navigation.logout') }}</span>
                                 </a>
                             </li>
                         </ul>
@@ -431,9 +428,9 @@
                     <div class="px-3 h-100" style="padding-top: 12px;padding-bottom: 12px; width:270px; cursor: pointer;">
                         <div class="d-flex align-items-center justify-content-between">
                             <div>
-                                <span class="fw-700 fs-16 text-white mr-3">{{ translate('Categories') }}</span>
+                                <span class="fw-700 fs-16 text-white mr-3">{{ __('storefront.product.categories') }}</span>
                                 <a href="{{ route('categories.all') }}" class="text-reset">
-                                    <span class="d-none d-lg-inline-block text-white hov-opacity-80">({{ translate('See All') }})</span>
+                                    <span class="d-none d-lg-inline-block text-white hov-opacity-80">({{ __('storefront.navigation.see_all') }})</span>
                                 </a>
                             </div>
                             <i class="las la-angle-down text-white has-transition" id="category-menu-bar-icon" style="font-size: 1.2rem !important"></i>
@@ -510,8 +507,8 @@
                         <path id="fe2df171891038b33e9624c27e96e367" d="M15.71,12.71a6,6,0,1,0-7.42,0,10,10,0,0,0-6.22,8.18,1.006,1.006,0,1,0,2,.22,8,8,0,0,1,15.9,0,1,1,0,0,0,1,.89h.11a1,1,0,0,0,.88-1.1,10,10,0,0,0-6.25-8.19ZM12,12a4,4,0,1,1,4-4A4,4,0,0,1,12,12Z" transform="translate(-2.064 -1.995)" fill="#91919b"/>
                     </svg>
                 </span>
-                <a href="{{ route('user.login') }}" class="text-reset opacity-60 hov-opacity-100 hov-text-primary fs-12 d-inline-block border-right border-soft-light border-width-2 pr-2 ml-3">{{ translate('Login')}}</a>
-                <a href="{{ route('user.registration') }}" class="text-reset opacity-60 hov-opacity-100 hov-text-primary fs-12 d-inline-block py-2 pl-2">{{ translate('Registration')}}</a>
+                <a href="{{ route('user.login') }}" class="text-reset opacity-60 hov-opacity-100 hov-text-primary fs-12 d-inline-block border-right border-soft-light border-width-2 pr-2 ml-3">{{ __('storefront.auth.login')}}</a>
+                <a href="{{ route('user.registration') }}" class="text-reset opacity-60 hov-opacity-100 hov-text-primary fs-12 d-inline-block py-2 pl-2">{{ __('storefront.auth.registration')}}</a>
             </span>
         @endauth
         <hr>
@@ -531,7 +528,7 @@
                     <li class="mr-0">
                         <a href="{{ route('shop.admin.dashboard') }}"
                             class="fs-13 px-3 py-3 w-100 d-inline-block fw-700 text-dark header_menu_links">
-                            {{ translate('My Account') }}
+                            {{ __('storefront.auth.my_account') }}
                         </a>
                     </li>
                 @else
@@ -540,7 +537,7 @@
                         <a href="{{ route('dashboard') }}"
                             class="fs-13 px-3 py-3 w-100 d-inline-block fw-700 text-dark header_menu_links
                             {{ areActiveRoutes(['dashboard'],' active')}}">
-                            {{ translate('My Account') }}
+                            {{ __('storefront.auth.my_account') }}
                         </a>
                     </li>
                 @endif
@@ -549,21 +546,21 @@
                         <a href="{{ route('all-notifications') }}"
                             class="fs-13 px-3 py-3 w-100 d-inline-block fw-700 text-dark header_menu_links
                             {{ areActiveRoutes(['all-notifications'],' active')}}">
-                            {{ translate('Notifications') }}
+                            {{ __('storefront.navigation.notifications') }}
                         </a>
                     </li>
                     <li class="mr-0">
                         <a href="{{ route('wishlists.index') }}"
                             class="fs-13 px-3 py-3 w-100 d-inline-block fw-700 text-dark header_menu_links
                             {{ areActiveRoutes(['wishlists.index'],' active')}}">
-                            {{ translate('Wishlist') }}
+                            {{ __('storefront.cart.wishlist') }}
                         </a>
                     </li>
                     <li class="mr-0">
                         <a href="{{ route('compare') }}"
                             class="fs-13 px-3 py-3 w-100 d-inline-block fw-700 text-dark header_menu_links
                             {{ areActiveRoutes(['compare'],' active')}}">
-                            {{ translate('Compare') }}
+                            {{ __('storefront.cart.compare') }}
                         </a>
                     </li>
                 @endif
@@ -571,7 +568,7 @@
                 <li class="mr-0">
                     <a href="{{ route('shop.logout') }}"
                         class="fs-13 px-3 py-3 w-100 d-inline-block fw-700 text-primary header_menu_links">
-                        {{ translate('Logout') }}
+                        {{ __('storefront.navigation.logout') }}
                     </a>
                 </li>
             @endauth

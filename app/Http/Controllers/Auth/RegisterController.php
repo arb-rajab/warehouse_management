@@ -187,15 +187,15 @@ class RegisterController extends Controller implements HasMiddleware
             if(BusinessSetting::where('type', 'email_verification')->first()?->value != 1){
                 $user->email_verified_at = now();
                 $user->save();
-                flash(translate('Registration successful.'))->success();
+                flash(__('storefront.auth.registration_successful'))->success();
             }
             else {
                 try {
                     $user->sendEmailVerificationNotification();
-                    flash(translate('Registration successful. Please verify your email.'))->success();
+                    flash(__('storefront.auth.registration_successful_please_verify_your_email'))->success();
                 } catch (\Throwable $th) {
                     $user->delete();
-                    flash(translate('Registration failed. Please try again later.'))->error();
+                    flash(__('storefront.auth.registration_failed_please_try_again_later'))->error();
                 }
             }
         }

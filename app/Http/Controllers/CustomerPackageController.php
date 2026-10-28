@@ -26,13 +26,13 @@ class CustomerPackageController extends Controller
             if ($user->customer_package_id != $customer_package->id) {
                 return $this->purchase_payment_done(Session::get('payment_data'), null);
             } else {
-                flash(translate('You can not purchase this package anymore.'))->warning();
+                flash(__('storefront.common.you_can_not_purchase_this_package_anymore'))->warning();
                 return back();
             }
         }
 
         if (! app(PaymentOptions::class)->isAllowed((string) $request->payment_option)) {
-            flash(translate('Select Payment Option.'))->warning();
+            flash(__('storefront.checkout.select_payment_option'))->warning();
             return back();
         }
 
@@ -50,7 +50,7 @@ class CustomerPackageController extends Controller
         $user->remaining_uploads += $customer_package->product_upload;
         $user->save();
 
-        flash(translate('Package purchasing successful'))->success();
+        flash(__('storefront.common.package_purchasing_successful'))->success();
         return redirect()->route('dashboard');
     }
 }

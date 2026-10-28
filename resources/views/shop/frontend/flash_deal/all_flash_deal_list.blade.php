@@ -8,18 +8,18 @@
             <section class="pt-4 mb-4">
                     <div class="row">
                         <div class="col-lg-6 text-center text-lg-left">
-                            <h1 class="fw-700 fs-20 fs-md-24 text-dark">{{ translate('Flash Deals')}}</h1>
+                            <h1 class="fw-700 fs-20 fs-md-24 text-dark">{{ __('storefront.common.flash_deals')}}</h1>
                         </div>
                         <div class="col-lg-6">
                             <ul class="breadcrumb bg-transparent p-0 justify-content-center justify-content-lg-end">
                                 <li class="breadcrumb-item has-transition opacity-60 hov-opacity-80">
                                     <a class="text-reset" href="{{ route('home') }}">
-                                        {{ translate('Home')}}
+                                        {{ __('storefront.navigation.home')}}
                                     </a>
                                 </li>
                                 <li class="text-dark fw-600 breadcrumb-item">
                                     <a class="text-dark" href="{{ route('flash-deals') }}">
-                                        "{{ translate('Flash Deals') }}"
+                                        "{{ __('storefront.common.flash_deals') }}"
                                     </a>
                                 </li>
                             </ul>
@@ -29,15 +29,15 @@
             <!-- Banner -->
             @if (get_setting('flash_deal_banner') != null || get_setting('flash_deal_banner_small') != null)
                 <div class="mb-3 overflow-hidden hov-scale-img d-none d-md-block">
-                    <img src="{{ static_asset('assets/img/placeholder-rect.jpg') }}" 
-                        data-src="{{ uploaded_asset(get_setting('flash_deal_banner')) }}" 
-                        alt="{{ config('app.name') }} promo" class="lazyload img-fit h-100 has-transition" 
+                    <img src="{{ static_asset('assets/img/placeholder-rect.jpg') }}"
+                        data-src="{{ uploaded_asset(get_setting('flash_deal_banner')) }}"
+                        alt="{{ config('app.name') }} promo" class="lazyload img-fit h-100 has-transition"
                         onerror="this.onerror=null;this.src='{{ static_asset('assets/img/placeholder-rect.jpg') }}';">
                 </div>
                 <div class="mb-3 overflow-hidden hov-scale-img d-md-none">
-                    <img src="{{ static_asset('assets/img/placeholder-rect.jpg') }}" 
-                        data-src="{{ get_setting('flash_deal_banner_small') != null ? uploaded_asset(get_setting('flash_deal_banner_small')) : uploaded_asset(get_setting('flash_deal_banner')) }}" 
-                        alt="{{ config('app.name') }} promo" class="lazyload img-fit h-100 has-transition" 
+                    <img src="{{ static_asset('assets/img/placeholder-rect.jpg') }}"
+                        data-src="{{ get_setting('flash_deal_banner_small') != null ? uploaded_asset(get_setting('flash_deal_banner_small')) : uploaded_asset(get_setting('flash_deal_banner')) }}"
+                        alt="{{ config('app.name') }} promo" class="lazyload img-fit h-100 has-transition"
                         onerror="this.onerror=null;this.src='{{ static_asset('assets/img/placeholder-rect.jpg') }}';">
                 </div>
             @endif
@@ -49,7 +49,7 @@
                         <a href="{{ route('flash-deal-details', $single->slug) }}" target="_blank" rel="noopener noreferrer">
                             <div class="h-100 w-100 position-relative hov-scale-img">
                                 <div class="position-absolute overflow-hidden h-100 w-100">
-                                    <img src="{{ uploaded_asset($single->banner) }}" class="img-fit h-100 has-transition"  
+                                    <img src="{{ uploaded_asset($single->banner) }}" class="img-fit h-100 has-transition"
                                                         onerror="this.onerror=null;this.src='{{ static_asset('assets/img/placeholder.jpg') }}';">
                                 </div>
                                 <div class="py-5 px-2 px-lg-3 px-xl-5 absolute-top-left w-100">

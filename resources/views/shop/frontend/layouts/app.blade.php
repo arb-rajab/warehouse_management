@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" dir="{{ \App\Support\StoreLocale::isRtl() ? 'rtl' : 'ltr' }}">
+<html lang="{{ str_replace('_', '-', \App\Support\StoreLocale::uiLocale()) }}" dir="{{ \App\Support\StoreLocale::isRtl() ? 'rtl' : 'ltr' }}">
 <head>
 
     <meta name="csrf-token" content="{{ csrf_token() }}">
@@ -53,26 +53,29 @@
     <script>
         var AIZ = AIZ || {};
         AIZ.local = {
-            nothing_selected: '{!! translate('Nothing selected', null, true) !!}',
-            nothing_found: '{!! translate('Nothing found', null, true) !!}',
-            choose_file: '{{ translate('Choose file') }}',
-            file_selected: '{{ translate('File selected') }}',
-            files_selected: '{{ translate('Files selected') }}',
-            add_more_files: '{{ translate('Add more files') }}',
-            adding_more_files: '{{ translate('Adding more files') }}',
-            drop_files_here_paste_or: '{{ translate('Drop files here, paste or') }}',
-            browse: '{{ translate('Browse') }}',
-            upload_complete: '{{ translate('Upload complete') }}',
-            upload_paused: '{{ translate('Upload paused') }}',
-            resume_upload: '{{ translate('Resume upload') }}',
-            pause_upload: '{{ translate('Pause upload') }}',
-            retry_upload: '{{ translate('Retry upload') }}',
-            cancel_upload: '{{ translate('Cancel upload') }}',
-            uploading: '{{ translate('Uploading') }}',
-            processing: '{{ translate('Processing') }}',
-            complete: '{{ translate('Complete') }}',
-            file: '{{ translate('File') }}',
-            files: '{{ translate('Files') }}',
+            minimum_quantity: {{ \Illuminate\Support\Js::from(__('storefront.cart.minimum_limit')) }},
+            maximum_quantity: {{ \Illuminate\Support\Js::from(__('storefront.cart.maximum_limit')) }},
+            nothing_selected: {{ \Illuminate\Support\Js::from(__('storefront.common.nothing_selected')) }},
+            nothing_found: {{ \Illuminate\Support\Js::from(__('storefront.common.nothing_found')) }},
+            choose_file: {{ \Illuminate\Support\Js::from(__('storefront.upload.choose_file')) }},
+            file_selected: {{ \Illuminate\Support\Js::from(__('storefront.upload.file_selected')) }},
+            files_selected: {{ \Illuminate\Support\Js::from(__('storefront.upload.files_selected')) }},
+            add_more_files: {{ \Illuminate\Support\Js::from(__('storefront.upload.add_more_files')) }},
+            adding_more_files: {{ \Illuminate\Support\Js::from(__('storefront.upload.adding_more_files')) }},
+            drop_files_here_paste_or: {{ \Illuminate\Support\Js::from(__('storefront.upload.drop_files_here_paste_or')) }},
+            browse: {{ \Illuminate\Support\Js::from(__('storefront.upload.browse')) }},
+            upload_complete: {{ \Illuminate\Support\Js::from(__('storefront.upload.upload_complete')) }},
+            upload_paused: {{ \Illuminate\Support\Js::from(__('storefront.upload.upload_paused')) }},
+            resume_upload: {{ \Illuminate\Support\Js::from(__('storefront.upload.resume_upload')) }},
+            pause_upload: {{ \Illuminate\Support\Js::from(__('storefront.upload.pause_upload')) }},
+            retry_upload: {{ \Illuminate\Support\Js::from(__('storefront.upload.retry_upload')) }},
+            cancel_upload: {{ \Illuminate\Support\Js::from(__('storefront.upload.cancel_upload')) }},
+            uploading: {{ \Illuminate\Support\Js::from(__('storefront.upload.uploading')) }},
+            processing: {{ \Illuminate\Support\Js::from(__('storefront.upload.processing')) }},
+            complete: {{ \Illuminate\Support\Js::from(__('storefront.common.complete')) }},
+            file: {{ \Illuminate\Support\Js::from(__('storefront.upload.file')) }},
+            files: {{ \Illuminate\Support\Js::from(__('storefront.upload.files')) }},
+            selected_files: {{ \Illuminate\Support\Js::from(collect([0, 1, 2, 3, 11])->mapWithKeys(fn ($count) => [$count => trans_choice('storefront.upload.selected_files', $count, ['count' => ':count'])])) }},
         }
     </script>
 
@@ -271,7 +274,7 @@
         @if (get_setting('registration_tutorial_button') && !auth()->check() && request()->route() && !in_array(request()->route()->getName(), ['user.register', 'user.login']))
             <a id="registration-button" class="registration-tutorial" href="{{ get_setting('registration_tutorial_link') }}" target="_blank">
                 <i class="lab la-info-circle my-float"></i>
-                {!! get_setting('registration_tutorial_text') ?? translate("Don't know how to register") . "?<br>" . translate("Click here") . "!" !!}
+                {!! get_setting('registration_tutorial_text') ?? __('storefront.auth.don_t_know_how_to_register') . "?<br>" . __('storefront.common.click_here') . "!" !!}
             </a>
         @endif
 
@@ -279,11 +282,11 @@
             @if (auth()->user()->is_rep && !auth()->user()->has_open_visit())
                 <a  class="visit-button" href="{{ route('checkout.getCustomers') }}">
                     <i class="las la-plus"></i>
-                    <span>{{ translate('New visit') }}</span>
+                    <span>{{ __('storefront.common.new_visit') }}</span>
                 </a>
             @elseif(auth()->user()->is_rep && auth()->user()->has_open_visit())
                 <a class="visit-button" href="{{ route('checkout.getCustomers') }}">
-                    <span>{{ translate('Current visit is to') .' '. auth()->user()->rep_last_open_visit()->customer->name }}</span>
+                    <span>{{ __('storefront.common.current_visit_is_to') .' '. auth()->user()->rep_last_open_visit()->customer->name }}</span>
                 </a>
             @endif
         @endauth
@@ -306,7 +309,7 @@
                     @endphp
                 </div>
                 <button class="btn btn-primary aiz-cookie-accept">
-                    {{ translate('Ok. I Understood') }}
+                    {{ __('storefront.common.ok_i_understood') }}
                 </button>
             </div>
         </div>
@@ -326,10 +329,10 @@
                             <form class="" method="POST" action="{{ route('subscribers.store') }}">
                                 @csrf
                                 <div class="form-group mb-0">
-                                    <input type="email" class="form-control" placeholder="{{ translate('Your Email Address') }}" name="email" required>
+                                    <input type="email" class="form-control" placeholder="{{ __('storefront.auth.your_email_address') }}" name="email" required>
                                 </div>
                                 <button type="submit" class="btn btn-primary btn-block mt-3">
-                                    {{ translate('Subscribe Now') }}
+                                    {{ __('storefront.common.subscribe_now') }}
                                 </button>
                             </form>
                         </div>
@@ -352,7 +355,7 @@
                 <div class="c-preloader text-center p-3">
                     <i class="las la-spinner la-spin la-3x"></i>
                 </div>
-                <button type="button" class="close absolute-top-right btn-icon close z-1 btn-circle bg-gray mr-2 mt-2 d-flex justify-content-center align-items-center" data-dismiss="modal" aria-label="Close" style="background: #ededf2; width: calc(2rem + 2px); height: calc(2rem + 2px);">
+                <button type="button" class="close absolute-top-right btn-icon close z-1 btn-circle bg-gray mr-2 mt-2 d-flex justify-content-center align-items-center" data-dismiss="modal" aria-label="{{ __('storefront.common.close') }}" style="background: #ededf2; width: calc(2rem + 2px); height: calc(2rem + 2px);">
                     <span aria-hidden="true" class="fs-24 fw-700" style="margin-left: 2px;">&times;</span>
                 </button>
                 <div id="addToCart-modal-body">
@@ -397,7 +400,7 @@
 
     <script>
         @foreach (collect(session('flash_notification', []))->toArray() as $message)
-            AIZ.plugins.notify('{{ $message['level'] }}', '{{ $message['message'] }}');
+            AIZ.plugins.notify({{ \Illuminate\Support\Js::from($message['level']) }}, {{ \Illuminate\Support\Js::from($message['message']) }});
         @endforeach
     </script>
 
@@ -461,7 +464,7 @@
                     if(data == '0'){
                         // $('.typed-search-box').addClass('d-none');
                         $('#search-content').html(null);
-                        $('.typed-search-box .search-nothing').removeClass('d-none').html('{{ translate('Sorry, nothing found for') }} <strong>"'+searchKey+'"</strong>');
+                        $('.typed-search-box .search-nothing').removeClass('d-none').html(({{ \Illuminate\Support\Js::from(__('storefront.common.sorry_nothing_found_for')) }} + ' <strong>"')+searchKey+'"</strong>');
                         $('.search-preloader').addClass('d-none');
 
                     }
@@ -505,7 +508,7 @@
             }, function(data){
                 updateNavCart(data.nav_cart_view,data.cart_count);
                 $('#cart-summary').html(data.cart_view);
-                AIZ.plugins.notify('success', "{{ translate('Item has been removed from cart') }}");
+                AIZ.plugins.notify('success', {{ \Illuminate\Support\Js::from(__('storefront.cart.item_has_been_removed_from_cart')) }});
                 $('#cart_items_sidenav').html(parseInt($('#cart_items_sidenav').html())-1);
                 window.location.reload();
             });
@@ -514,7 +517,7 @@
         function addToCompare(id){
             $.post('{{ route('compare.addToCompare') }}', {_token: AIZ.data.csrf, id:id}, function(data){
                 $('#compare').html(data);
-                AIZ.plugins.notify('success', "{{ translate('Item has been added to compare list') }}");
+                AIZ.plugins.notify('success', {{ \Illuminate\Support\Js::from(__('storefront.cart.item_has_been_added_to_compare_list')) }});
                 $('#compare_items_sidenav').html(parseInt($('#compare_items_sidenav').html())+1);
             });
         }
@@ -524,16 +527,16 @@
                 $.post('{{ route('wishlists.store') }}', {_token: AIZ.data.csrf, id:id}, function(data){
                     if(data != 0){
                         $('#wishlist').html(data);
-                        AIZ.plugins.notify('success', "{{ translate('Item has been added to wishlist') }}");
+                        AIZ.plugins.notify('success', {{ \Illuminate\Support\Js::from(__('storefront.cart.item_has_been_added_to_wishlist')) }});
                     }
                     else{
-                        AIZ.plugins.notify('warning', "{{ translate('Please login first') }}");
+                        AIZ.plugins.notify('warning', {{ \Illuminate\Support\Js::from(__('storefront.auth.please_login_first')) }});
                     }
                 });
             @elseif(Auth::check() && Auth::user()->user_type != 'customer')
-                AIZ.plugins.notify('warning', "{{ translate('Please Login as a customer to add products to the WishList.') }}");
+                AIZ.plugins.notify('warning', {{ \Illuminate\Support\Js::from(__('storefront.auth.please_login_as_a_customer_to_add_products_to_the_wishlist')) }});
             @else
-                AIZ.plugins.notify('warning', "{{ translate('Please login first') }}");
+                AIZ.plugins.notify('warning', {{ \Illuminate\Support\Js::from(__('storefront.auth.please_login_first')) }});
             @endif
         }
 
@@ -614,7 +617,7 @@
 
         function addToCart(){
             @if(Auth::check() && Auth::user()->user_type != 'customer')
-                AIZ.plugins.notify('warning', "{{ translate('Please Login as a customer to add products to the Cart.') }}");
+                AIZ.plugins.notify('warning', {{ \Illuminate\Support\Js::from(__('storefront.auth.please_login_as_a_customer_to_add_products_to_the_cart')) }});
                 return false;
             @endif
 
@@ -642,13 +645,13 @@
                 });
             }
             else{
-                AIZ.plugins.notify('warning', "{{ translate('Please choose all the options') }}");
+                AIZ.plugins.notify('warning', {{ \Illuminate\Support\Js::from(__('storefront.common.please_choose_all_the_options')) }});
             }
         }
 
         function buyNow(){
             @if(Auth::check() && Auth::user()->user_type != 'customer')
-                AIZ.plugins.notify('warning', "{{ translate('Please Login as a customer to add products to the Cart.') }}");
+                AIZ.plugins.notify('warning', {{ \Illuminate\Support\Js::from(__('storefront.auth.please_login_as_a_customer_to_add_products_to_the_cart')) }});
                 return false;
             @endif
 
@@ -680,19 +683,19 @@
                });
             }
             else{
-                AIZ.plugins.notify('warning', "{{ translate('Please choose all the options') }}");
+                AIZ.plugins.notify('warning', {{ \Illuminate\Support\Js::from(__('storefront.common.please_choose_all_the_options')) }});
             }
         }
 
         function bid_single_modal(bid_product_id, min_bid_amount){
             @if (Auth::check() && (isCustomer() || isSeller()))
-                var min_bid_amount_text = "({{ translate('Min Bid Amount: ')}}"+min_bid_amount+")";
+                var min_bid_amount_text = ("(" + {{ \Illuminate\Support\Js::from(__('storefront.product.min_bid_amount')) }})+min_bid_amount+")";
                 $('#min_bid_amount').text(min_bid_amount_text);
                 $('#bid_product_id').val(bid_product_id);
                 $('#bid_amount').attr('min', min_bid_amount);
                 $('#bid_for_product').modal('show');
             @elseif (Auth::check() && isAdmin())
-                AIZ.plugins.notify('warning', '{{ translate("Sorry, Only customers & Sellers can Bid.") }}');
+                AIZ.plugins.notify('warning', {{ \Illuminate\Support\Js::from(__('storefront.product.sorry_only_customers_sellers_can_bid')) }});
             @else
                 $('#login_modal').modal('show');
             @endif
@@ -713,7 +716,7 @@
 
         function copyCouponCode(code){
             navigator.clipboard.writeText(code);
-            AIZ.plugins.notify('success', "{{ translate('Coupon Code Copied') }}");
+            AIZ.plugins.notify('success', {{ \Illuminate\Support\Js::from(__('storefront.cart.coupon_code_copied')) }});
         }
 
         $(document).ready(function(){
@@ -748,6 +751,7 @@
             }
         }
 
+        if (input) {
         var iti = intlTelInput(input, {
             separateDialCode: true,
             utilsScript: "{{ static_asset('assets/js/intlTelutils.js') }}?1590403638580",
@@ -770,19 +774,21 @@
 
         });
 
+        }
+
         function toggleEmailPhone(el) {
             if (isPhoneShown) {
                 $('.phone-form-group').addClass('d-none');
                 $('.email-form-group').removeClass('d-none');
                 $('input[name=phone]').val(null);
                 isPhoneShown = false;
-                $(el).html('*{{ translate('Use Phone Instead') }}');
+                $(el).html(('*' + {{ \Illuminate\Support\Js::from(__('storefront.auth.use_phone_instead')) }}));
             } else {
                 $('.phone-form-group').removeClass('d-none');
                 $('.email-form-group').addClass('d-none');
                 $('input[name=email]').val(null);
                 isPhoneShown = true;
-                $(el).html('<i>*{{ translate('Use Email Instead') }}</i>');
+                $(el).html(('<i>*' + {{ \Illuminate\Support\Js::from(__('storefront.auth.use_email_instead')) }} + '</i>'));
             }
         }
     </script>

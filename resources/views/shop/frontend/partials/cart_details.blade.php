@@ -7,21 +7,21 @@
                         <!-- Headers -->
                         <div class="row gutters- d-none d-lg-flex border-bottom mb-3 pb-3 text-secondary fs-12">
 
-                            <div class="col-md-4 fw-600">{{ translate('Product') }}</div>
-                            <div class="col-md-1 fw-600">{{ translate('Qty') }}</div>
+                            <div class="col-md-4 fw-600">{{ __('storefront.product.product') }}</div>
+                            <div class="col-md-1 fw-600">{{ __('storefront.product.qty') }}</div>
                             @if (Auth::check() && Auth::user()->admin_verified)
-                                <div class="col-md-1 fw-600">{{ translate('Price') }}</div>
+                                <div class="col-md-1 fw-600">{{ __('storefront.product.price') }}</div>
 
-                                {{-- <div class="col-md-1 fw-600">{{ translate('Tax')}}</div> --}}
-                                <div class="col-md-1 fw-600">{{ translate('Total') }}</div>
+                                {{-- <div class="col-md-1 fw-600">{{ __('storefront.common.tax')}}</div> --}}
+                                <div class="col-md-1 fw-600">{{ __('storefront.common.total') }}</div>
                             @endif
-                            <div class="col-md-1 fw-600">{{ translate('Remove') }}</div>
-                            <div class="col-md-1 fw-600 text-center">{{ translate('Variation') }}</div>
-                            <div class="col-md-1 fw-600">{{ translate('Notes') }}</div>
+                            <div class="col-md-1 fw-600">{{ __('storefront.common.remove') }}</div>
+                            <div class="col-md-1 fw-600 text-center">{{ __('storefront.common.variation') }}</div>
+                            <div class="col-md-1 fw-600">{{ __('storefront.common.notes') }}</div>
 
                             @if(Auth::check() && Auth::user()->is_rep && Auth::user()->representativePackage)
-                            <div class="col-md-1 fw-600">{{ translate('Change Price') }}</div>
-                            <div class="col-md-1 fw-600">{{ translate('Edited Price') }}</div>
+                            <div class="col-md-1 fw-600">{{ __('storefront.product.change_price') }}</div>
+                            <div class="col-md-1 fw-600">{{ __('storefront.product.edited_price') }}</div>
                             @endif
                         </div>
                         @php
@@ -100,19 +100,19 @@
                                             <!-- Price -->
                                             <div class="col-md-1 order-2 order-md-0 my-3 my-md-0">
                                                 <span
-                                                    class="opacity-60 fs-12 d-block d-md-none">{{ translate('Price') }}</span>
+                                                    class="opacity-60 fs-12 d-block d-md-none">{{ __('storefront.product.price') }}</span>
                                                 <span
                                                     class="fw-700 fs-14">{{ cart_product_price($cartItem, $product, true, false) }}</span>
                                             </div>
                                             <!-- Tax -->
                                             {{-- <div class="col-md col-4 order-3 order-md-0 my-3 my-md-0">
-                                        <span class="opacity-60 fs-12 d-block d-md-none">{{ translate('Tax')}}</span>
+                                        <span class="opacity-60 fs-12 d-block d-md-none">{{ __('storefront.common.tax')}}</span>
                                         <span class="fw-700 fs-14">{{ cart_product_tax($cartItem, $product) }}</span>
                                     </div> --}}
                                             <!-- Total -->
                                             <div class="col-md-1 order-4 order-md-0 my-3 my-md-0">
                                                 <span
-                                                    class="opacity-60 fs-12 d-block d-md-none">{{ translate('Total') }}</span>
+                                                    class="opacity-60 fs-12 d-block d-md-none">{{ __('storefront.common.total') }}</span>
                                                 <span
                                                     class="fw-700 fs-16 text-primary">{{ single_price(cart_product_price($cartItem, $product, false) * $cartItem['quantity']) }}</span>
                                             </div>
@@ -143,7 +143,7 @@
                                         <!-- Item Notes -->
 
                                         <div class="col-md-1 order-5 order-md-0 text-center">
-                                            <a href="#" onclick="openUpdateModal(this)" data-item-id="{{ $cartItem['id'] }}" data-old-notes="{{ $cartItem['item_notes'] }}" class="btn btn-soft-warning btn-icon btn-circle btn-sm" title="{{ translate('Update Item Notes') }}">
+                                            <a href="#" onclick="openUpdateModal(this)" data-item-id="{{ $cartItem['id'] }}" data-old-notes="{{ $cartItem['item_notes'] }}" class="btn btn-soft-warning btn-icon btn-circle btn-sm" title="{{ __('storefront.common.update_item_notes') }}">
                                                 <i class="las la-edit"></i>
                                             </a>
                                         </div>
@@ -153,7 +153,7 @@
                                         <!-- Rep Price -->
 
                                         <div class="col-md-1 order-6 order-md-0 text-center">
-                                            <a href="#" onclick="openRepPriceModal(this)" data-item-id-price="{{ $cartItem['id'] }}" data-original-price="{{ $cartItem['price'] }}"  data-old-price="{{ $cartItem['rep_price'] }}"  class="btn btn-soft-success btn-icon btn-circle btn-sm" title="{{ translate('Change Item price') }}">
+                                            <a href="#" onclick="openRepPriceModal(this)" data-item-id-price="{{ $cartItem['id'] }}" data-original-price="{{ $cartItem['price'] }}"  data-old-price="{{ $cartItem['rep_price'] }}"  class="btn btn-soft-success btn-icon btn-circle btn-sm" title="{{ __('storefront.product.change_item_price') }}">
                                                 <i class="text-success las la-edit"></i>
                                             </a>
                                         </div>
@@ -177,13 +177,13 @@
                     <!-- Subtotal -->
                     @if (Auth::check() && Auth::user()->admin_verified)
                         <div class="px-0 py-2 mb-4 border-top d-flex justify-content-between">
-                            <span class="opacity-60 fs-14">{{ translate('Subtotal') }}</span>
+                            <span class="opacity-60 fs-14">{{ __('storefront.common.subtotal') }}</span>
                             <span class="fw-700 fs-16">{{ single_price($total) }}</span>
                         </div>
                     @endif
                     @if(Auth::check() && Auth::user()->is_rep && Auth::user()->representativePackage)
                         <div class="px-0 py-2 mb-4 border-top d-flex justify-content-between">
-                            <span class="opacity-60 fs-14">{{ translate('Edited Subtotal') }}</span>
+                            <span class="opacity-60 fs-14">{{ __('storefront.common.edited_subtotal') }}</span>
                             <p id="display-edited-total" class="text-danger fw-700 fs-16">{{ single_price($edited_total) }}</p>
                         </div>
                     @endif
@@ -192,7 +192,7 @@
                     @endphp
                     @if ($offered_cart->count() != 0 && !$offered_cart->first()->is_postponed)
 
-                        <span class="opacity-60 fs-14">{{ translate('Offerd Products') }}
+                        <span class="opacity-60 fs-14">{{ __('storefront.cart.offerd_products') }}
 
                         </span>
                         <!-- Cart Items -->
@@ -236,14 +236,14 @@
                                             <!-- Price -->
                                             <div class="col-md-1 order-2 order-md-0 my-3 my-md-0">
                                                 <span
-                                                    class="opacity-60 fs-12 d-block d-md-none">{{ translate('Price') }}</span>
+                                                    class="opacity-60 fs-12 d-block d-md-none">{{ __('storefront.product.price') }}</span>
                                                 <span
                                                     class="fw-700 fs-14">{{ format_price($cartItem->price) }}</span>
                                             </div>
                                             <!-- Total -->
                                             <div class="col-md-1 order-4 order-md-0 my-3 my-md-0">
                                                 <span
-                                                    class="opacity-60 fs-12 d-block d-md-none">{{ translate('Total') }}</span>
+                                                    class="opacity-60 fs-12 d-block d-md-none">{{ __('storefront.common.total') }}</span>
                                                 <span
                                                     class="fw-700 fs-16 text-primary">{{ format_price($cartItem->price) }}</span>
                                             </div>
@@ -268,7 +268,7 @@
                                         <a href="javascript:void(0)"
                                             onclick="postponed()"
                                             class="btn btn-sm btn-soft-primary bg-soft-warning hov-bg-primary btn-circle">
-                                            {{ translate("Do you want to postponed the offer?") }}
+                                            {{ __('storefront.cart.do_you_want_to_postponed_the_offer') }}
                                             <i class="las la-clock fs-16"></i>
                                         </a>
 
@@ -276,7 +276,7 @@
                                         <a href="javascript:void(0)"
                                             onclick="removeOffersFromCartView()"
                                             class="btn btn-sm btn-soft-danger hov-bg-danger btn-circle">
-                                            {{ translate("Do you want to delete the offer products from your cart?") }}
+                                            {{ __('storefront.cart.do_you_want_to_delete_the_offer_products_from_your_cart') }}
                                             <i class="las la-trash fs-16"></i>
                                         </a>
                                     </div>
@@ -286,7 +286,7 @@
                         <!-- Subtotal -->
                         @if (Auth::check() && Auth::user()->admin_verified)
                             <div class="px-0 py-2 mb-4 border-top d-flex justify-content-between">
-                                <span class="opacity-60 fs-14">{{ translate('Subtotal') }}</span>
+                                <span class="opacity-60 fs-14">{{ __('storefront.common.subtotal') }}</span>
                                 <span class="fw-700 fs-16">{{ single_price($total) }}</span>
                             </div>
                         @endif
@@ -297,7 +297,7 @@
                         <div class="col-md-6 text-center text-md-left order-1 order-md-0">
                             <a href="{{ route('home') }}" class="btn btn-link fs-14 fw-700 px-0">
                                 <i class="las la-arrow-left fs-16"></i>
-                                {{ translate('Return to shop') }}
+                                {{ __('storefront.common.return_to_shop') }}
                             </a>
                         </div>
                         <!-- Continue to Shipping -->
@@ -305,11 +305,11 @@
                             @if (Auth::check())
                                 <a href="{{ route('checkout.shipping_info') }}"
                                     class="btn btn-primary fs-14 fw-700 rounded-0 px-4">
-                                    {{ translate('Continue to Shipping') }}
+                                    {{ __('storefront.checkout.continue_to_shipping') }}
                                 </a>
                             @else
                                 <button class="btn btn-primary fs-14 fw-700 rounded-0 px-4"
-                                    onclick="showLoginModal()">{{ translate('Continue to Shipping') }}</button>
+                                    onclick="showLoginModal()">{{ __('storefront.checkout.continue_to_shipping') }}</button>
                             @endif
                         </div>
                     </div>
@@ -323,7 +323,7 @@
                     <!-- Empty cart -->
                     <div class="text-center p-3">
                         <i class="las la-frown la-3x opacity-60 mb-3"></i>
-                        <h3 class="h4 fw-700">{{ translate('Your Cart is empty') }}</h3>
+                        <h3 class="h4 fw-700">{{ __('storefront.cart.empty') }}</h3>
                     </div>
                 </div>
             </div>
@@ -336,14 +336,14 @@
     <div class="modal-dialog modal-sm modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
-                <h4 class="modal-title h6">{{translate('Update Item Notes')}}</h4>
+                <h4 class="modal-title h6">{{__('storefront.common.update_item_notes')}}</h4>
                 <button type="button" class="close" data-dismiss="modal" aria-hidden="true"></button>
             </div>
             <div class="modal-body text-center">
                 <input type="hidden" id="item-id">
                 <textarea id="update-notes" class="form-control" rows="4" value=""></textarea>
-                <button type="button" class="btn btn-secondary rounded-0 mt-2" data-dismiss="modal">{{translate('Cancel')}}</button>
-                <button type="button" class="btn btn-primary rounded-0 mt-2" onclick="update_notes()">{{translate('Update')}}</button>
+                <button type="button" class="btn btn-secondary rounded-0 mt-2" data-dismiss="modal">{{__('storefront.common.cancel')}}</button>
+                <button type="button" class="btn btn-primary rounded-0 mt-2" onclick="update_notes()">{{__('storefront.common.update')}}</button>
             </div>
         </div>
     </div>
@@ -355,14 +355,14 @@
     <div class="modal-dialog modal-sm modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
-                <h4 class="modal-title h6">{{translate('Update Item Price')}}</h4>
+                <h4 class="modal-title h6">{{__('storefront.product.update_item_price')}}</h4>
                 <button type="button" class="close" data-dismiss="modal" aria-hidden="true"></button>
             </div>
             <div class="modal-body text-center">
                 <input type="hidden" id="item-id-rep">
                 <input type="number" id="update-price" class="form-control" rows="4" value=""></input>
-                <button type="button" class="btn btn-secondary rounded-0 mt-2" data-dismiss="modal">{{translate('Cancel')}}</button>
-                <button type="button" class="btn btn-primary rounded-0 mt-2" onclick="update_price()">{{translate('Update')}}</button>
+                <button type="button" class="btn btn-secondary rounded-0 mt-2" data-dismiss="modal">{{__('storefront.common.cancel')}}</button>
+                <button type="button" class="btn btn-primary rounded-0 mt-2" onclick="update_price()">{{__('storefront.common.update')}}</button>
             </div>
         </div>
     </div>
@@ -377,11 +377,11 @@
     function postponed(){
         $.post('{{ route('cart-offered.postpone') }}', {_token:'{{ csrf_token() }}'}, function(data){
             if(data == 1){
-                AIZ.plugins.notify('success', '{{ translate('Offer postponed successfully') }}');
+                AIZ.plugins.notify('success', {{ \Illuminate\Support\Js::from(__('storefront.cart.offer_postponed_successfully')) }});
                 var offer_products = document.getElementById('offer_products').style.display = 'none';
             }
             else{
-                AIZ.plugins.notify('danger', '{{ translate('Something went wrong') }}');
+                AIZ.plugins.notify('danger', {{ \Illuminate\Support\Js::from(__('storefront.common.something_went_wrong')) }});
             }
         });
     }
@@ -392,7 +392,7 @@
         }, function(data){
             updateNavCart(data.nav_cart_view,data.cart_count);
             $('#cart-summary').html(data.cart_view);
-            AIZ.plugins.notify('success', "{{ translate('Offer has been removed from cart') }}");
+            AIZ.plugins.notify('success', {{ \Illuminate\Support\Js::from(__('storefront.cart.offer_has_been_removed_from_cart')) }});
             $('#cart_items_sidenav').html(parseInt($('#cart_items_sidenav').html())-1);
             window.location.reload();
         });
@@ -404,12 +404,12 @@
         $('#update-modal').modal('hide');
         $.post('{{ route('cart.update_item_notes') }}', {_token:'{{ csrf_token() }}', id:itemId, item_notes:updatedNotes }, function(data){
             if(data == 1){
-                AIZ.plugins.notify('success', '{{ translate('Item Notes updated successfully') }}');
+                AIZ.plugins.notify('success', {{ \Illuminate\Support\Js::from(__('storefront.common.item_notes_updated_successfully')) }});
                 var updateButton = document.querySelector('[data-item-id="' + itemId + '"]');
                 updateButton.setAttribute('data-old-notes', updatedNotes);
             }
             else{
-                AIZ.plugins.notify('danger', '{{ translate('Something went wrong') }}');
+                AIZ.plugins.notify('danger', {{ \Illuminate\Support\Js::from(__('storefront.common.something_went_wrong')) }});
             }
         });
     }
@@ -430,7 +430,7 @@
         $('#rep-price-modal').modal('hide');
         $.post('{{ route('cart.update_item_price') }}', {_token:'{{ csrf_token() }}', id:itemId, rep_price:updatedPrice }, function(data){
             if(data == 1){
-                AIZ.plugins.notify('success', '{{ translate('Item Price updated successfully') }}');
+                AIZ.plugins.notify('success', {{ \Illuminate\Support\Js::from(__('storefront.product.item_price_updated_successfully')) }});
                 var updateButton = document.querySelector('[data-item-id-price="' + itemId + '"]');
                 updateButton.setAttribute('data-old-price', updatedPrice);
                 $('[display_rep_price_id="' + itemId + '"]').text("€" + updatedPrice); // update the <p> tag to display the edited price
@@ -439,7 +439,7 @@
                     recalculateTotal();
             }
             else{
-                AIZ.plugins.notify('danger', '{{ translate('Price exceeded your discount limit') }}');
+                AIZ.plugins.notify('danger', {{ \Illuminate\Support\Js::from(__('storefront.product.price_exceeded_your_discount_limit')) }});
             }
         });
     }

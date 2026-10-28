@@ -21,7 +21,7 @@ class WalletController extends Controller
     public function recharge(Request $request)
     {
         if (! app(PaymentOptions::class)->isAllowed((string) $request->payment_option)) {
-            flash(translate('Select Payment Option.'))->warning();
+            flash(__('storefront.checkout.select_payment_option'))->warning();
             return back();
         }
 
@@ -54,11 +54,11 @@ class WalletController extends Controller
         Session::forget('payment_type');
 
         if ($payerId === null || ! app(GatewayPaymentService::class)->complete($payment, (int) $payerId, GatewayPaymentService::WALLET)) {
-            flash(translate('Payment could not be verified'))->error();
+            flash(__('storefront.checkout.payment_could_not_be_verified'))->error();
             return redirect()->route('wallet.index');
         }
 
-        flash(translate('Recharge completed'))->success();
+        flash(__('storefront.checkout.recharge_completed'))->success();
         return redirect()->route('wallet.index');
     }
 }

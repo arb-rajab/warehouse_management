@@ -6,7 +6,7 @@
     <form class="" id="sort_customers" action="" method="GET">
         <div class="card-header border-bottom-0 row gutters-5">
             <div class="col">
-                <h5 class="mb-0 fs-20 fw-700 text-dark">{{translate('Notifications')}}</h5>
+                <h5 class="mb-0 fs-20 fw-700 text-dark">{{__('storefront.navigation.notifications')}}</h5>
             </div>
         </div>
         <div class="card-body">
@@ -18,11 +18,11 @@
                             <div class="media text-inherit">
                                 <div class="media-body">
                                     <p class="mb-1 text-truncate-2">
-                                        {{translate('Your Order: ')}}
+                                        {{__('storefront.checkout.your_order')}}
                                         <a href="{{route('purchase_history.details', encrypt($notification->data['order_id']))}}">
                                             {{$notification->data['order_code']}}
                                         </a>
-                                        {{translate(' has been '. ucfirst(str_replace('_', ' ', $notification->data['status'])))}}
+                                        {{__('storefront.checkout.notification_status', ['status' => \App\Support\StoreLocale::status($notification->data['status'])])}}
                                     </p>
                                     <small class="text-muted">
                                         {{ \App\Support\StoreLocale::date(strtotime($notification->created_at), true) }}
@@ -34,7 +34,7 @@
 
                 @empty
                     <li class="list-group-item">
-                        <div class="py-4 text-center fs-16">{{ translate('No notification found') }}</div>
+                        <div class="py-4 text-center fs-16">{{ __('storefront.navigation.no_notification_found') }}</div>
                     </li>
                 @endforelse
             </ul>

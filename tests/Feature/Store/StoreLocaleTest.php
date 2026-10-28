@@ -12,7 +12,8 @@ test('all web interfaces use the configured UI default independently of content 
 
     $this->get('/temp/users/login')->assertOk()
         ->assertSee('lang="'.$locale.'" dir="'.$direction.'"', false)
-        ->assertSee('Localized login')
+        ->assertSee($locale === 'ar' ? 'تسجيل الدخول' : 'Login')
+        ->assertDontSee('Localized login')
         ->assertSessionMissing('locale');
 
     actingAsStoreUser(createStoreStaff('view_all_staffs'));

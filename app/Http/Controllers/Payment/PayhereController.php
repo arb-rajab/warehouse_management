@@ -186,7 +186,7 @@ class PayhereController extends Controller
         Session::forget('coupon_id');
         Session::forget('coupon_discount');
 
-        flash(translate('Payment process completed'))->success();
+        flash(__('storefront.checkout.payment_process_completed'))->success();
         return redirect()->route('order_confirmed');
     }
 
@@ -230,7 +230,7 @@ class PayhereController extends Controller
     public static function checkout_incomplete()
     {
         Session::forget('order_id');
-        flash(translate("Incomplete"))->error();
+        flash(__('storefront.common.incomplete'))->error();
         //flash(translate('Payment failed'))->error();
         //dd($response_text);
         return redirect()->route('home')->send();
@@ -256,7 +256,7 @@ class PayhereController extends Controller
         Session::forget('payment_data');
         Session::forget('payment_type');
 
-        flash(translate('Payment process completed'))->success();
+        flash(__('storefront.checkout.payment_process_completed'))->success();
         return redirect()->route('wallet.index');
     }
 
@@ -284,7 +284,7 @@ class PayhereController extends Controller
     public static function wallet_incomplete()
     {
         Session::forget('payment_data');
-        flash(translate('Payment Incomplete'))->error();
+        flash(__('storefront.checkout.payment_incomplete'))->error();
         return redirect()->route('home')->send();
     }
     //wallet related functions ------------------------------------<ends>
@@ -307,7 +307,7 @@ class PayhereController extends Controller
     public static function customer_package_return()
     {
         Session::forget('payment_data');
-        flash(translate('Payment process completed'))->success();
+        flash(__('storefront.checkout.payment_process_completed'))->success();
         return redirect()->route('dashboard');
     }
 
@@ -334,7 +334,7 @@ class PayhereController extends Controller
     public static function customer_package_incomplete()
     {
         Session::forget('payment_data');
-        flash(translate("Payment Incomplete"))->error();
+        flash(__('storefront.checkout.payment_incomplete'))->error();
         return redirect()->route('home')->send();
     }
     //customer package related functions ------------------------------------<ends>

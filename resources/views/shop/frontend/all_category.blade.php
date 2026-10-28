@@ -6,15 +6,15 @@
         <div class="container text-center">
             <div class="row">
                 <div class="col-lg-6 text-center text-lg-left">
-                    <h1 class="fw-700 fs-20 fs-md-24 text-dark">{{ translate('All Categories') }}</h1>
+                    <h1 class="fw-700 fs-20 fs-md-24 text-dark">{{ __('storefront.product.all_categories') }}</h1>
                 </div>
                 <div class="col-lg-6">
                     <ul class="breadcrumb bg-transparent p-0 justify-content-center justify-content-lg-end">
                         <li class="breadcrumb-item has-transition opacity-60 hov-opacity-80">
-                            <a class="text-reset" href="{{ route('home') }}">{{ translate('Home')}}</a>
+                            <a class="text-reset" href="{{ route('home') }}">{{ __('storefront.navigation.home')}}</a>
                         </li>
                         <li class="text-dark fw-600 breadcrumb-item">
-                            <a class="text-reset" href="{{ route('categories.all') }}">"{{ translate('All Categories') }}"</a>
+                            <a class="text-reset" href="{{ route('categories.all') }}">"{{ __('storefront.product.all_categories') }}"</a>
                         </li>
                     </ul>
                 </div>
@@ -51,9 +51,9 @@
                                         @endforeach
                                     </ul>
                                     @if (count($first_level_categories) > 5)
-                                        <a href="javascript:void(1)" class="show-hide-cetegoty text-primary hov-text-primary fs-12 fw-700">{{ translate('More') }} <i class="las la-angle-down"></i></a>
+                                        <a href="javascript:void(1)" class="show-hide-cetegoty text-primary hov-text-primary fs-12 fw-700">{{ __('storefront.common.more') }} <i class="las la-angle-down"></i></a>
                                     @endif
-                                    
+
                                 </div>
                             @endforeach
                         </div>
@@ -70,10 +70,10 @@
             var el = $(this).siblings('ul');
             if(el.hasClass('less')){
                 el.removeClass('less');
-                $(this).html('{{ translate("Less") }} <i class="las la-angle-up"></i>');
+                $(this).html(({{ \Illuminate\Support\Js::from(__('storefront.common.less')) }} + ' <i class="las la-angle-up"></i>'));
             }else{
                 el.addClass('less');
-                $(this).html('{{ translate("More") }} <i class="las la-angle-down"></i>');
+                $(this).html(({{ \Illuminate\Support\Js::from(__('storefront.common.more')) }} + ' <i class="las la-angle-down"></i>'));
             }
         });
     </script>

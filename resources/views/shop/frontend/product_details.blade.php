@@ -132,7 +132,7 @@
         <div class="modal-dialog modal-dialog-centered modal-dialog-zoom product-modal" id="modal-size" role="document">
             <div class="modal-content position-relative">
                 <div class="modal-header">
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="{{ __('storefront.common.close') }}">
                         <span aria-hidden="true">&times;</span>
                     </button>
                 </div>
@@ -154,8 +154,8 @@
         <div class="modal-dialog modal-dialog-centered modal-dialog-zoom product-modal" id="modal-size" role="document">
             <div class="modal-content position-relative">
                 <div class="modal-header">
-                    <h5 class="modal-title fw-600 h5">{{ translate('Any query about this product') }}</h5>
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <h5 class="modal-title fw-600 h5">{{ __('storefront.product.any_query_about_this_product') }}</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="{{ __('storefront.common.close') }}">
                         <span aria-hidden="true">&times;</span>
                     </button>
                 </div>
@@ -170,18 +170,18 @@
                             <div class="alert alert-danger" role="alert">{{ $message }}</div>
                         @enderror
                         <div class="form-group">
-                            <label for="conversation_title">{{ translate('Title') }}<x-required-mark /></label>
+                            <label for="conversation_title">{{ __('storefront.common.title') }}<x-required-mark /></label>
                             <input type="text" id="conversation_title" class="form-control mb-3 rounded-0 @error('title', 'storeConversation') is-invalid @enderror" name="title"
-                                value="{{ $keepInput ? old('title') : $detailedProduct->name }}" placeholder="{{ translate('Product Name') }}"
+                                value="{{ $keepInput ? old('title') : $detailedProduct->name }}" placeholder="{{ __('storefront.product.product_name') }}"
                                 maxlength="1000" required>
                             @error('title', 'storeConversation')
                                 <span class="invalid-feedback" role="alert"><strong>{{ $message }}</strong></span>
                             @enderror
                         </div>
                         <div class="form-group">
-                            <label for="conversation_message">{{ translate('Your Question') }}<x-required-mark /></label>
+                            <label for="conversation_message">{{ __('storefront.support.your_question') }}<x-required-mark /></label>
                             <textarea id="conversation_message" class="form-control rounded-0 @error('message', 'storeConversation') is-invalid @enderror" rows="8" name="message" maxlength="65535" required
-                                placeholder="{{ translate('Your Question') }}">{{ $keepInput ? old('message') : \App\Support\StorefrontUrl::to($detailedProduct) }}</textarea>
+                                placeholder="{{ __('storefront.support.your_question') }}">{{ $keepInput ? old('message') : \App\Support\StorefrontUrl::to($detailedProduct) }}</textarea>
                             @error('message', 'storeConversation')
                                 <span class="invalid-feedback" role="alert"><strong>{{ $message }}</strong></span>
                             @enderror
@@ -189,8 +189,8 @@
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-outline-primary fw-600 rounded-0"
-                            data-dismiss="modal">{{ translate('Cancel') }}</button>
-                        <button type="submit" class="btn btn-primary fw-600 rounded-0 w-100px">{{ translate('Send') }}</button>
+                            data-dismiss="modal">{{ __('storefront.common.cancel') }}</button>
+                        <button type="submit" class="btn btn-primary fw-600 rounded-0 w-100px">{{ __('storefront.common.send') }}</button>
                     </div>
                 </form>
             </div>
@@ -207,8 +207,8 @@
             <div class="modal-dialog modal-dialog-centered" role="document">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title" id="exampleModalLabel">{{ translate('Bid For Product') }} <small>({{ translate('Min Bid Amount: ').$min_bid_amount }})</small> </h5>
-                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <h5 class="modal-title" id="exampleModalLabel">{{ __('storefront.product.bid_for_product') }} <small>({{ __('storefront.product.min_bid_amount').$min_bid_amount }})</small> </h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="{{ __('storefront.common.close') }}">
                         </button>
                     </div>
                     <div class="modal-body">
@@ -217,15 +217,15 @@
                             <input type="hidden" name="product_id" value="{{ $detailedProduct->id }}">
                             <div class="form-group">
                                 <label class="form-label">
-                                    {{translate('Place Bid Price')}}
+                                    {{__('storefront.product.place_bid_price')}}
                                     <span class="text-danger">*</span>
                                 </label>
                                 <div class="form-group">
-                                    <input type="number" step="0.01" class="form-control form-control-sm" name="amount" min="{{ $min_bid_amount }}" placeholder="{{ translate('Enter Amount') }}" required>
+                                    <input type="number" step="0.01" class="form-control form-control-sm" name="amount" min="{{ $min_bid_amount }}" placeholder="{{ __('storefront.common.enter_amount') }}" required>
                                 </div>
                             </div>
                             <div class="form-group text-right">
-                                <button type="submit" class="btn btn-sm btn-primary transition-3d-hover mr-1">{{ translate('Submit') }}</button>
+                                <button type="submit" class="btn btn-sm btn-primary transition-3d-hover mr-1">{{ __('storefront.common.submit') }}</button>
                             </div>
                         </form>
                     </div>
@@ -257,9 +257,9 @@
             $temp.val(url).select();
             try {
                 document.execCommand("copy");
-                AIZ.plugins.notify('success', '{{ translate('Link copied to clipboard') }}');
+                AIZ.plugins.notify('success', {{ \Illuminate\Support\Js::from(__('storefront.common.link_copied_to_clipboard')) }});
             } catch (err) {
-                AIZ.plugins.notify('danger', '{{ translate('Oops, unable to copy') }}');
+                AIZ.plugins.notify('danger', {{ \Illuminate\Support\Js::from(__('storefront.common.oops_unable_to_copy')) }});
             }
             $temp.remove();
             // if (document.selection) {
@@ -324,7 +324,7 @@
                 $('.'+section).html(data);
                 location.hash = page;
             }).fail(function() {
-                alert('Something went worng! Data could not be loaded.');
+                alert({{ \Illuminate\Support\Js::from(__('storefront.common.loading_failed')) }});
             });
         }
         // Pagination end
@@ -339,7 +339,7 @@
             @if (Auth::check() && (isCustomer() || isSeller()))
                 $('#bid_for_detail_product').modal('show');
           	@elseif (Auth::check() && isAdmin())
-                AIZ.plugins.notify('warning', '{{ translate("Sorry, Only customers & Sellers can Bid.") }}');
+                AIZ.plugins.notify('warning', {{ \Illuminate\Support\Js::from(__('storefront.product.sorry_only_customers_sellers_can_bid')) }});
             @else
                 $('#login_modal').modal('show');
             @endif
@@ -359,10 +359,10 @@
                         AIZ.extra.inputRating();
                     });
                 @else
-                    AIZ.plugins.notify('warning', '{{ translate("Sorry, You need to buy this product to give review.") }}');
+                    AIZ.plugins.notify('warning', {{ \Illuminate\Support\Js::from(__('storefront.product.sorry_you_need_to_buy_this_product_to_give_review')) }});
                 @endif
             @elseif (Auth::check() && !isCustomer())
-                AIZ.plugins.notify('warning', '{{ translate("Sorry, Only customers can give review.") }}');
+                AIZ.plugins.notify('warning', {{ \Illuminate\Support\Js::from(__('storefront.product.sorry_only_customers_can_give_review')) }});
             @else
                 $('#login_modal').modal('show');
             @endif

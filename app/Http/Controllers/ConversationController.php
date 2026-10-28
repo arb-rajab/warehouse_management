@@ -42,7 +42,7 @@ class ConversationController extends Controller implements HasMiddleware
             $conversations = Conversation::where('sender_id', Auth::user()->id)->orWhere('receiver_id', Auth::user()->id)->orderBy('created_at', 'desc')->paginate(8);
             return view('shop.frontend.user.conversations.index', compact('conversations'));
         } else {
-            flash(translate('Conversation is disabled at this moment'))->warning();
+            flash(__('storefront.support.conversation_is_disabled_at_this_moment'))->warning();
             return back();
         }
     }
@@ -82,16 +82,16 @@ class ConversationController extends Controller implements HasMiddleware
             }
         }
 
-        flash(translate('Message has been sent to seller'))->success();
+        flash(__('storefront.product.message_has_been_sent_to_seller'))->success();
         return back();
     }
 
     public function send_message_to_seller($conversation, $message, $user_type)
     {
         $array['view'] = 'shop.emails.conversation';
-        $array['subject'] = translate('Sender').':- '. Auth::user()->name;
+        $array['subject'] = __('storefront.support.sender_subject', ['name' => Auth::user()->name]);
         $array['from'] = config('mail.from.address');
-        $array['content'] = translate('Hi! You recieved a message from ') . Auth::user()->name . '.';
+        $array['content'] = __('storefront.support.received_message', ['name' => Auth::user()->name]);
         $array['sender'] = Auth::user()->name;
 
         if ($user_type == 'admin') {
@@ -182,7 +182,7 @@ class ConversationController extends Controller implements HasMiddleware
         $conversation->messages()->delete();
 
         if (Conversation::destroy(decrypt($id))) {
-            flash(translate('Conversation has been deleted successfully'))->success();
+            flash(__('storefront.support.conversation_has_been_deleted_successfully'))->success();
             return back();
         }
     }

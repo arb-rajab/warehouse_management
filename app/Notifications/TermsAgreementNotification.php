@@ -34,13 +34,13 @@ class TermsAgreementNotification extends Notification
         $notifiable->save();
 
         $array['view'] = 'shop.emails.verification';
-        $array['subject'] = translate('Terms Agreement');
-        $array['content'] = translate('By Clicking The Button Below You Agree To The Terms & Conditions');
+        $array['subject'] = __('storefront.auth.terms_agreement');
+        $array['content'] = __('storefront.auth.agree_to_terms');
         $array['link'] = route('terms.activation', $notifiable->verification_code);
 
         return (new MailMessage)
             ->view('shop.emails.terms', ['array' => $array])
-            ->subject(translate('Terms Agreements - ').config('app.name'));
+            ->subject(__('storefront.auth.terms_subject', ['app' => config('app.name')]));
     }
 
     /**

@@ -4,7 +4,7 @@
     <div class="aiz-titlebar mb-4">
       <div class="row align-items-center">
         <div class="col-md-6">
-            <h1 class="fs-20 fw-700 text-dark">{{ translate('Manage Profile') }}</h1>
+            <h1 class="fs-20 fw-700 text-dark">{{ __('storefront.upload.manage_profile') }}</h1>
         </div>
       </div>
     </div>
@@ -12,67 +12,67 @@
     <!-- Basic Info -->
     <div class="card rounded-0 shadow-none border">
         <div class="card-header pt-4 border-bottom-0">
-            <h5 class="mb-0 fs-18 fw-700 text-dark">{{ translate('Basic Info')}}</h5>
+            <h5 class="mb-0 fs-18 fw-700 text-dark">{{ __('storefront.common.basic_info')}}</h5>
         </div>
         <div class="card-body">
             <form action="{{ route('user.profile.update') }}" method="POST" enctype="multipart/form-data">
                 @csrf
                 <!-- Name-->
                 <div class="form-group row">
-                    <label class="col-md-2 col-form-label fs-14 fs-14">{{ translate('Full Name') }}</label>
+                    <label class="col-md-2 col-form-label fs-14 fs-14">{{ __('storefront.common.full_name') }}</label>
                     <div class="col-md-10">
-                        <input type="text" class="form-control rounded-0" placeholder="{{ translate('Full Name') }}" name="name" value="{{ Auth::user()->name }}">
+                        <input type="text" class="form-control rounded-0" placeholder="{{ __('storefront.common.full_name') }}" name="name" value="{{ Auth::user()->name }}">
                     </div>
                 </div>
                 <!-- Company Name-->
                 <div class="form-group row">
-                    <label class="col-md-2 col-form-label fs-14 fs-14">{{ translate('Company Name') }}</label>
+                    <label class="col-md-2 col-form-label fs-14 fs-14">{{ __('storefront.common.company_name') }}</label>
                     <div class="col-md-10">
-                        <input type="text" class="form-control rounded-0" placeholder="{{ translate('Company Name') }}" name="company_name" value="{{ Auth::user()->company_name }}">
+                        <input type="text" class="form-control rounded-0" placeholder="{{ __('storefront.common.company_name') }}" name="company_name" value="{{ Auth::user()->company_name }}">
                     </div>
                 </div>
                 <!-- Phone-->
                 <div class="form-group row">
-                    <label class="col-md-2 col-form-label fs-14">{{ translate('Your Phone') }}</label>
+                    <label class="col-md-2 col-form-label fs-14">{{ __('storefront.auth.your_phone') }}</label>
                     <div class="col-md-10">
-                        <input type="text" class="form-control rounded-0" placeholder="{{ translate('Your Phone')}}" name="phone" value="{{ Auth::user()->phone }}">
+                        <input type="text" class="form-control rounded-0" placeholder="{{ __('storefront.auth.your_phone')}}" name="phone" value="{{ Auth::user()->phone }}">
                     </div>
                 </div>
                 <!-- tax number -->
                 <div class="form-group row">
-                    <label class="col-md-2 col-form-label fs-14 fs-14">{{ translate('Tax Number') }}</label>
+                    <label class="col-md-2 col-form-label fs-14 fs-14">{{ __('storefront.common.tax_number') }}</label>
                     <div class="col-md-10">
-                        <input type="text" class="form-control rounded-0" placeholder="{{ translate('Tax Number') }}" name="tax_number" value="{{ Auth::user()->tax_number }}">
+                        <input type="text" class="form-control rounded-0" placeholder="{{ __('storefront.common.tax_number') }}" name="tax_number" value="{{ Auth::user()->tax_number }}">
                     </div>
                 </div>
 
                 <!-- bank account number -->
                 <div class="form-group row">
-                    <label class="col-md-2 col-form-label fs-14 fs-14">{{ translate('Bank Account Number') }}</label>
+                    <label class="col-md-2 col-form-label fs-14 fs-14">{{ __('storefront.auth.bank_account_number') }}</label>
                     <div class="col-md-10">
-                        <input type="text" class="form-control rounded-0" placeholder="{{ translate('Bank Account Number') }}" name="bank_account_number" value="{{ Auth::user()->bank_account_number }}">
+                        <input type="text" class="form-control rounded-0" placeholder="{{ __('storefront.auth.bank_account_number') }}" name="bank_account_number" value="{{ Auth::user()->bank_account_number }}">
                     </div>
                 </div>
 
                 <!-- Company Address -->
                 <div class="form-group row">
-                    <label class="col-md-2 col-form-label fs-14 fs-14">{{ translate('Company Address') }}</label>
+                    <label class="col-md-2 col-form-label fs-14 fs-14">{{ __('storefront.common.company_address') }}</label>
                     <div class="col-md-10">
-                        <input type="text" class="form-control rounded-0" placeholder="{{ translate('Company Address') }}" name="company_address" value="{{ Auth::user()->company_address }}">
+                        <input type="text" class="form-control rounded-0" placeholder="{{ __('storefront.common.company_address') }}" name="company_address" value="{{ Auth::user()->company_address }}">
                     </div>
                 </div>
 
 
                 <!-- Shipping Address -->
                 <div class="form-group row">
-                    <label class="col-md-2 col-form-label fs-14 fs-14">{{ translate('Shipping Address') }}</label>
+                    <label class="col-md-2 col-form-label fs-14 fs-14">{{ __('storefront.checkout.shipping_address') }}</label>
                     <div class="col-md-10">
-                        <input type="text" class="form-control rounded-0" placeholder="{{ translate('Shipping Address') }}" name="shipping_address" value="{{ Auth::user()->shipping_address }}">
+                        <input type="text" class="form-control rounded-0" placeholder="{{ __('storefront.checkout.shipping_address') }}" name="shipping_address" value="{{ Auth::user()->shipping_address }}">
                     </div>
                 </div>
 
                 <div class="form-group row">
-                    <label class="col-md-2 col-form-label fs-14 fs-14">{{ translate('Country') }}</label>
+                    <label class="col-md-2 col-form-label fs-14 fs-14">{{ __('storefront.common.country') }}</label>
                     <div class="col-md-10">
                         <select class="form-control aiz-selectpicker" name="country">
                             @foreach ($countries as $country)
@@ -83,13 +83,13 @@
                 </div>
                 <!-- Photo-->
                 <div class="form-group row">
-                    <label class="col-md-2 col-form-label fs-14">{{ translate('Photo') }}</label>
+                    <label class="col-md-2 col-form-label fs-14">{{ __('storefront.common.photo') }}</label>
                     <div class="col-md-10">
                         <div class="input-group" data-toggle="aizuploader" data-type="image">
                             <div class="input-group-prepend">
-                                <div class="input-group-text bg-soft-secondary font-weight-medium rounded-0">{{ translate('Browse')}}</div>
+                                <div class="input-group-text bg-soft-secondary font-weight-medium rounded-0">{{ __('storefront.upload.browse')}}</div>
                             </div>
-                            <div class="form-control file-amount">{{ translate('Choose File') }}</div>
+                            <div class="form-control file-amount">{{ __('storefront.upload.choose_file') }}</div>
                             <input type="hidden" name="photo" value="{{ Auth::user()->avatar_original }}" class="selected-files">
                         </div>
                         <div class="file-preview box sm">
@@ -98,13 +98,13 @@
                 </div>
                 <!-- Trade license-->
                 <div class="form-group row">
-                    <label class="col-md-2 col-form-label fs-14">{{ translate('Trade license') }}</label>
+                    <label class="col-md-2 col-form-label fs-14">{{ __('storefront.common.trade_license') }}</label>
                     <div class="col-md-10">
                         <div class="input-group" style="cursor: pointer;" onclick="document.getElementById('trade_license').click()">
                             <div class="input-group-prepend">
-                                <div class="input-group-text bg-soft-secondary font-weight-medium rounded-0">{{ translate('Browse') }}</div>
+                                <div class="input-group-text bg-soft-secondary font-weight-medium rounded-0">{{ __('storefront.upload.browse') }}</div>
                             </div>
-                            <div class="form-control file-amount" id="file-name-label">{{ translate('Choose File') }}</div>
+                            <div class="form-control file-amount" id="file-name-label">{{ __('storefront.upload.choose_file') }}</div>
                             <input type="file" hidden class="custom-file-input" id="trade_license" name="trade_license" value="{{ Auth::user()->trade_license }}">
                         </div>
                     </div>
@@ -114,27 +114,27 @@
                     <div class="col-6">
                     </div>
                     <div class="col-6 text-right">
-                        <a href="{{ route('profile.trade_license') }}" class="text-blue fs-10 fs-md-12 fw-700 hov-text-primary animate-underline-primary" target="_blank">{{ translate('Show Your Trade License') }}</a>
+                        <a href="{{ route('profile.trade_license') }}" class="text-blue fs-10 fs-md-12 fw-700 hov-text-primary animate-underline-primary" target="_blank">{{ __('storefront.common.show_your_trade_license') }}</a>
                     </div>
                 </div>
                 @endif
                 <!-- Password-->
                 <div class="form-group row">
-                    <label class="col-md-2 col-form-label fs-14">{{ translate('Your Password') }}</label>
+                    <label class="col-md-2 col-form-label fs-14">{{ __('storefront.auth.your_password') }}</label>
                     <div class="col-md-10">
-                        <input type="password" class="form-control rounded-0" placeholder="{{ translate('New Password') }}" name="new_password">
+                        <input type="password" class="form-control rounded-0" placeholder="{{ __('storefront.auth.new_password') }}" name="new_password">
                     </div>
                 </div>
                 <!-- Confirm Password-->
                 <div class="form-group row">
-                    <label class="col-md-2 col-form-label fs-14">{{ translate('Confirm Password') }}</label>
+                    <label class="col-md-2 col-form-label fs-14">{{ __('storefront.auth.confirm_password') }}</label>
                     <div class="col-md-10">
-                        <input type="password" class="form-control rounded-0" placeholder="{{ translate('Confirm Password') }}" name="confirm_password">
+                        <input type="password" class="form-control rounded-0" placeholder="{{ __('storefront.auth.confirm_password') }}" name="confirm_password">
                     </div>
                 </div>
                 <!-- Submit Button-->
                 <div class="form-group mb-0 text-right">
-                    <button type="submit" class="btn btn-primary rounded-0 w-150px mt-3">{{translate('Update Profile')}}</button>
+                    <button type="submit" class="btn btn-primary rounded-0 w-150px mt-3">{{__('storefront.upload.update_profile')}}</button>
                 </div>
             </form>
         </div>
@@ -143,44 +143,44 @@
     <!-- Address -->
     <div class="card rounded-0 shadow-none border">
         <div class="card-header pt-4 border-bottom-0">
-            <h5 class="mb-0 fs-18 fw-700 text-dark">{{ translate('Shipping Address')}}</h5>
+            <h5 class="mb-0 fs-18 fw-700 text-dark">{{ __('storefront.checkout.shipping_address')}}</h5>
         </div>
         <div class="card-body">
             @foreach (Auth::user()->addresses as $key => $address)
                 <div class="">
                     <div class="border p-4 mb-4 position-relative">
                         <div class="row fs-14 mb-2 mb-md-0">
-                            <span class="col-md-2 text-secondary">{{ translate('Shipping Address') }}:</span>
+                            <span class="col-md-2 text-secondary">{{ __('storefront.checkout.shipping_address') }}:</span>
                             <span class="col-md-8 text-dark">{{ $address->address }}</span>
                         </div>
                         {{--
                         <div class="row fs-14 mb-2 mb-md-0">
-                            <span class="col-md-2 text-secondary">{{ translate('Postal Code') }}:</span>
+                            <span class="col-md-2 text-secondary">{{ __('storefront.common.postal_code') }}:</span>
                             <span class="col-md-10 text-dark">{{ $address->postal_code }}</span>
                         </div>  --}}
                         <div class="row fs-14 mb-2 mb-md-0">
-                            <span class="col-md-2 text-secondary">{{ translate('City') }}:</span>
+                            <span class="col-md-2 text-secondary">{{ __('storefront.common.city') }}:</span>
                             <span class="col-md-10 text-dark">{{ optional($address->city)->name }}</span>
                         </div>
                         <div class="row fs-14 mb-2 mb-md-0">
-                            <span class="col-md-2 text-secondary">{{ translate('State') }}:</span>
+                            <span class="col-md-2 text-secondary">{{ __('storefront.common.state') }}:</span>
                             <span class="col-md-10 text-dark">{{ optional($address->state)->name }}</span>
                         </div>
                         <div class="row fs-14 mb-2 mb-md-0">
-                            <span class="col-md-2 text-secondary">{{ translate('Country') }}:</span>
+                            <span class="col-md-2 text-secondary">{{ __('storefront.common.country') }}:</span>
                             <span class="col-md-10 text-dark">{{ optional($address->country)->name }}</span>
                         </div>
                         <div class="row fs-14 mb-2 mb-md-0">
-                            <span class="col-md-2 text-secondary text-secondary">{{ translate('Phone') }}:</span>
+                            <span class="col-md-2 text-secondary text-secondary">{{ __('storefront.auth.phone') }}:</span>
                             <span class="col-md-10 text-dark">{{ $address->phone }}</span>
                         </div>
                         <div class="row fs-14 mb-2 mb-md-0">
-                            <span class="col-md-2 text-secondary text-secondary">{{ translate('Postal code') }}:</span>
+                            <span class="col-md-2 text-secondary text-secondary">{{ __('storefront.common.postal_code') }}:</span>
                             <span class="col-md-10 text-dark">{{ $address->postal_code }}</span>
                         </div>
                         @if ($address->set_default)
                             <div class="absolute-md-top-right pt-2 pt-md-4 pr-md-5">
-                                <span class="badge badge-inline badge-warning text-white p-3 fs-12" style="border-radius: 25px; min-width: 80px !important;">{{ translate('Default') }}</span>
+                                <span class="badge badge-inline badge-warning text-white p-3 fs-12" style="border-radius: 25px; min-width: 80px !important;">{{ __('storefront.common.default') }}</span>
                             </div>
                         @endif
                         <div class="dropdown position-absolute right-0 top-0 pt-4 mr-1">
@@ -189,12 +189,12 @@
                             </button>
                             <div class="dropdown-menu dropdown-menu-right" aria-labelledby="dropdownMenuButton">
                                 <a class="dropdown-item" onclick="edit_address('{{$address->id}}')">
-                                    {{ translate('Edit') }}
+                                    {{ __('storefront.common.edit') }}
                                 </a>
                                 @if (!$address->set_default)
-                                    <a class="dropdown-item" data-method="post" href="{{ route('addresses.set_default', $address->id) }}">{{ translate('Make This Default') }}</a>
+                                    <a class="dropdown-item" data-method="post" href="{{ route('addresses.set_default', $address->id) }}">{{ __('storefront.common.make_this_default') }}</a>
                                 @endif
-                                <a class="dropdown-item" data-method="post" href="{{ route('addresses.destroy', $address->id) }}">{{ translate('Delete') }}</a>
+                                <a class="dropdown-item" data-method="post" href="{{ route('addresses.destroy', $address->id) }}">{{ __('storefront.common.delete') }}</a>
                             </div>
                         </div>
                     </div>
@@ -204,7 +204,7 @@
             <div class="" onclick="add_new_address()">
                 <div class="border p-3 mb-3 c-pointer text-center bg-light has-transition hov-bg-soft-light">
                     <i class="la la-plus la-2x"></i>
-                    <div class="alpha-7 fs-14 fw-700">{{ translate('Add New Address') }}</div>
+                    <div class="alpha-7 fs-14 fw-700">{{ __('storefront.common.add_new_address') }}</div>
                 </div>
             </div>
         </div>
@@ -216,27 +216,27 @@
         @csrf
         <div class="card rounded-0 shadow-none border">
           <div class="card-header pt-4 border-bottom-0">
-              <h5 class="mb-0 fs-18 fw-700 text-dark">{{ translate('Change your email')}}</h5>
+              <h5 class="mb-0 fs-18 fw-700 text-dark">{{ __('storefront.auth.change_your_email')}}</h5>
           </div>
           <div class="card-body">
               <div class="row">
                   <div class="col-md-2">
-                      <label class="fs-14">{{ translate('Your Email') }}</label>
+                      <label class="fs-14">{{ __('storefront.auth.your_email') }}</label>
                   </div>
                   <div class="col-md-10">
                       <div class="input-group mb-3">
-                        <input type="email" class="form-control rounded-0" placeholder="{{ translate('Your Email')}}" name="email" value="{{ Auth::user()->email }}" />
+                        <input type="email" class="form-control rounded-0" placeholder="{{ __('storefront.auth.your_email')}}" name="email" value="{{ Auth::user()->email }}" />
                         <div class="input-group-append">
                            <button type="button" class="btn btn-outline-secondary new-email-verification">
                                <span class="d-none loading">
-                                   <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>{{ translate('Sending Email...') }}
+                                   <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>{{ __('storefront.auth.sending_email') }}
                                </span>
-                               <span class="default">{{ translate('Verify') }}</span>
+                               <span class="default">{{ __('storefront.auth.verify') }}</span>
                            </button>
                         </div>
                       </div>
                       <div class="form-group mb-0 text-right">
-                          <button type="submit" class="btn btn-primary rounded-0 w-150px mt-3">{{translate('Update Email')}}</button>
+                          <button type="submit" class="btn btn-primary rounded-0 w-150px mt-3">{{__('storefront.auth.update_email')}}</button>
                       </div>
                   </div>
               </div>

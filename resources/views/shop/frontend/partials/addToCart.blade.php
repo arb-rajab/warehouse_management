@@ -68,7 +68,7 @@
                     @if (Auth::user()->admin_verified)
                         <div class="row no-gutters mt-3">
                             <div class="col-3">
-                                <div class="text-secondary fs-14 fw-400">{{ translate('Price') }}</div>
+                                <div class="text-secondary fs-14 fw-400">{{ __('storefront.product.price') }}</div>
                             </div>
                             <div class="col-9">
                                 <div class="">
@@ -112,7 +112,7 @@
                                                 </g>
                                             </g>
                                         </svg>
-                                        <small class="fs-11 fw-500 text-white ml-2">{{ translate('Club Point') }}:
+                                        <small class="fs-11 fw-500 text-white ml-2">{{ __('storefront.common.club_point') }}:
                                             {{ $product->earn_point }}</small>
                                     </div>
                                 @endif
@@ -123,7 +123,7 @@
                     @if (Auth::check() && Auth::user()->admin_verified)
                         <div class="row no-gutters mt-3">
                             <div class="col-3">
-                                <div class="text-secondary fs-14 fw-400">{{ translate('Price') }}</div>
+                                <div class="text-secondary fs-14 fw-400">{{ __('storefront.product.price') }}</div>
                             </div>
                             <div class="col-9">
                                 <div class="">
@@ -185,7 +185,7 @@
                         @if (count(json_decode($product->colors)) > 0)
                             <div class="row no-gutters mt-3">
                                 <div class="col-3">
-                                    <div class="text-secondary fs-14 fw-400 mt-2">{{ translate('Color') }}</div>
+                                    <div class="text-secondary fs-14 fw-400 mt-2">{{ __('storefront.common.color') }}</div>
                                 </div>
                                 <div class="col-9">
                                     <div class="aiz-radio-inline">
@@ -235,7 +235,7 @@
                             @endforeach
                             <div class="row no-gutters mt-3">
                                 <div class="col-3">
-                                    <div class="text-secondary fs-14 fw-400 mt-2">{{ translate('Quantity') }}</div>
+                                    <div class="text-secondary fs-14 fw-400 mt-2">{{ __('storefront.product.quantity') }}</div>
                                 </div>
                                 <div class="col-9">
                                     <div class="product-quantity d-flex align-items-center">
@@ -258,9 +258,9 @@
                                         <div class="avialable-amount opacity-60">
                                             @if ($product->stock_visibility_state == 'quantity')
                                                 (<span id="available-quantity">{{ $qty }}</span>
-                                                {{ translate('available') }})
+                                                {{ __('storefront.common.available') }})
                                             @elseif($product->stock_visibility_state == 'text' && $qty >= 1)
-                                                (<span id="available-quantity">{{ translate('In Stock') }}</span>)
+                                                (<span id="available-quantity">{{ __('storefront.product.in_stock') }}</span>)
                                             @endif
                                         </div>
                                     </div>
@@ -269,7 +269,7 @@
                         @else
                             <div class="row no-gutters mt-3">
                                 <div class="col-3">
-                                    <div class="text-secondary fs-14 fw-400 mt-2">{{ translate('Quantity') }}</div>
+                                    <div class="text-secondary fs-14 fw-400 mt-2">{{ __('storefront.product.quantity') }}</div>
                                 </div>
                                 <div class="col-9">
                                     <div class="product-quantity d-flex align-items-center">
@@ -292,9 +292,9 @@
                                         <div class="avialable-amount opacity-60">
                                             @if ($product->stock_visibility_state == 'quantity')
                                                 (<span id="available-quantity">{{ $qty }}</span>
-                                                {{ translate('available') }})
+                                                {{ __('storefront.common.available') }})
                                             @elseif($product->stock_visibility_state == 'text' && $qty >= 1)
-                                                (<span id="available-quantity">{{ translate('In Stock') }}</span>)
+                                                (<span id="available-quantity">{{ __('storefront.product.in_stock') }}</span>)
                                             @endif
                                         </div>
                                     </div>
@@ -308,7 +308,7 @@
                     @if (Auth::check() && Auth::user()->admin_verified)
                         <div class="row no-gutters mt-3 pb-3 d-none" id="chosen_price_div">
                             <div class="col-3">
-                                <div class="text-secondary fs-14 fw-400 mt-1">{{ translate('Total Price') }}</div>
+                                <div class="text-secondary fs-14 fw-400 mt-1">{{ __('storefront.product.total_price') }}</div>
                             </div>
                             <div class="col-9">
                                 <div class="product-price">
@@ -328,7 +328,7 @@
                         <button type="button" class="btn btn-primary rounded-0 buy-now fw-600 add-to-cart"
                             onclick="addToCart()">
                             <i class="la la-shopping-cart"></i>
-                            <span class="d-none d-md-inline-block">{{ translate('Add to cart') }}</span>
+                            <span class="d-none d-md-inline-block">{{ __('storefront.cart.add_to_cart') }}</span>
                         </button>
                     @elseif($qty > 0)
                         @if ($product->external_link != null)
@@ -342,12 +342,12 @@
                             <button type="button" class="btn btn-primary rounded-0 buy-now fw-600 add-to-cart"
                                 onclick="addToCart()">
                                 <i class="la la-shopping-cart"></i>
-                                <span class="d-none d-md-inline-block">{{ translate('Add to cart') }}</span>
+                                <span class="d-none d-md-inline-block">{{ __('storefront.cart.add_to_cart') }}</span>
                             </button>
                         @endif
                     @endif
                     <button type="button" class="btn btn-secondary rounded-0 out-of-stock fw-600 d-none" disabled>
-                        <i class="la la-cart-arrow-down"></i>{{ translate('Out of Stock') }}
+                        <i class="la la-cart-arrow-down"></i>{{ __('storefront.product.out_of_stock') }}
                     </button>
                 </div>
 

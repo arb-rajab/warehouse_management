@@ -3,23 +3,23 @@
 @section('panel_content')
     <div class="card shadow-none rounded-0 border">
         <div class="card-header border-bottom-0 d-flex justify-content-between align-items-center">
-            <h5 class="mb-0 fs-20 fw-700 text-dark">{{ translate('Representative Payments') }}</h5>
-            <a href="{{ route('payments.create') }}" class="btn btn-sm btn-primary">{{ translate('Add New Payment') }}</a>
+            <h5 class="mb-0 fs-20 fw-700 text-dark">{{ __('storefront.checkout.representative_payments') }}</h5>
+            <a href="{{ route('payments.create') }}" class="btn btn-sm btn-primary">{{ __('storefront.checkout.add_new_payment') }}</a>
         </div>
         <div class="card-body">
             <table class="table aiz-table mb-0">
                 <thead class="text-gray fs-12">
                     <tr>
-                        <th>{{ translate('Receipt Code') }}</th>
-                        <th>{{ translate('Customer Name') }}</th>
-                        <th>{{ translate('Customer Account ID') }}</th>
-                        <th>{{ translate('Invoice Code') }}</th>
-                        <th>{{ translate('Accountant') }}</th>
-                        <th>{{ translate('Amount') }}</th>
-                        <th>{{ translate('Date') }}</th>
-                        <th>{{ translate('Notes') }}</th>
-                        <th>{{ translate('Status') }}</th>
-                        <th class="text-right pr-0">{{ translate('Options')}}</th>
+                        <th>{{ __('storefront.checkout.receipt_code') }}</th>
+                        <th>{{ __('storefront.common.customer_name') }}</th>
+                        <th>{{ __('storefront.auth.customer_account_id') }}</th>
+                        <th>{{ __('storefront.checkout.invoice_code') }}</th>
+                        <th>{{ __('storefront.auth.accountant') }}</th>
+                        <th>{{ __('storefront.common.amount') }}</th>
+                        <th>{{ __('storefront.common.date') }}</th>
+                        <th>{{ __('storefront.common.notes') }}</th>
+                        <th>{{ __('storefront.common.status') }}</th>
+                        <th class="text-right pr-0">{{ __('storefront.common.options')}}</th>
                     </tr>
                 </thead>
                 <tbody class="fs-14">
@@ -55,17 +55,17 @@
                             <td class="text-right pr-0">
                                 <a href="{{route('payments.share-by-whatsapp', $payment->id)}}"
                                     class="btn btn-soft-success btn-icon btn-circle btn-sm hov-svg-white"
-                                    title="{{ translate('Send PDF to Customer Whatsapp') }}">
+                                    title="{{ __('storefront.common.send_pdf_to_customer_whatsapp') }}">
                                     <i class="lab la-whatsapp"></i>
                                 </a>
 
                                 <a href="{{ URL::signedRoute('payments.export', ['id' => $payment->id]) }}"
                                     class="btn btn-soft-info btn-icon btn-circle btn-sm hov-svg-white"
-                                    title="{{ translate('Export Payment Details') }}">
+                                    title="{{ __('storefront.checkout.export_payment_details') }}">
                                     <i class="las la-download"></i>
                                 </a>
 
-                                <button class="btn btn-soft-warning btn-icon btn-circle btn-sm hov-svg-white" onclick="generateQR({{ $payment->id }}, this)" title="{{ translate('Generate QR') }}">
+                                <button class="btn btn-soft-warning btn-icon btn-circle btn-sm hov-svg-white" onclick="generateQR({{ $payment->id }}, this)" title="{{ __('storefront.common.generate_qr') }}">
                                     <i class="las la-qrcode"></i>
                                 </button>
 
@@ -91,7 +91,7 @@
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h4 class="modal-title h6">{{translate('QR Code')}}</h4>
+                    <h4 class="modal-title h6">{{__('storefront.common.qr_code')}}</h4>
                     <button type="button" class="close" data-dismiss="modal" aria-hidden="true"></button>
                 </div>
                 <div class="modal-body text-center" id="qr-modal-body">

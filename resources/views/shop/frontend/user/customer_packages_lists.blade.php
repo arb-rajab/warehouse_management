@@ -5,7 +5,7 @@
     <div class="container">
         <div class="row">
             <div class="col-xl-8 mx-auto text-center">
-                <h1 class="mb-0 fw-700">{{ translate('Premium Packages for Customers') }}</h1>
+                <h1 class="mb-0 fw-700">{{ __('storefront.common.premium_packages_for_customers') }}</h1>
             </div>
         </div>
     </div>
@@ -27,13 +27,13 @@
                             <ul class="list-group list-group-raw fs-20 mb-5">
                                 <li class="list-group-item py-2">
                                     <i class="las la-check text-success mr-2"></i>
-                                    {{ $customer_package->product_upload }} {{translate('Product Upload')}}
+                                    {{ $customer_package->product_upload }} {{__('storefront.product.product_upload')}}
                                 </li>
                             </ul>
                             <!-- Amount -->
                             <div class="mb-5 d-flex align-items-center justify-content-center">
                                 @if ($customer_package->amount == 0)
-                                    <span class="display-4 fw-600 lh-1 mb-0">{{ translate('Free') }}</span>
+                                    <span class="display-4 fw-600 lh-1 mb-0">{{ __('storefront.common.free') }}</span>
                                 @else
                                     <span class="display-4 fw-600 lh-1 mb-0">{{ single_price($customer_package->amount) }}</span>
                                 @endif
@@ -42,9 +42,9 @@
                             <!-- Purchase Button -->
                             <div class="text-center">
                                 @if ($customer_package->amount == 0)
-                                    <button class="btn btn-primary rounded-0" onclick="get_free_package({{ $customer_package->id}})">{{ translate('Free Package')}}</button>
+                                    <button class="btn btn-primary rounded-0" onclick="get_free_package({{ $customer_package->id}})">{{ __('storefront.common.free_package')}}</button>
                                 @else
-                                    <button class="btn btn-primary rounded-0" onclick="show_price_modal({{ $customer_package->id}})">{{ translate('Purchase Package')}}</button>
+                                    <button class="btn btn-primary rounded-0" onclick="show_price_modal({{ $customer_package->id}})">{{ __('storefront.common.purchase_package')}}</button>
                                 @endif
                             </div>
                         </div>
@@ -64,8 +64,8 @@
         <div class="modal-dialog modal-dialog-centered" role="document">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="exampleModalLabel">{{ translate('Purchase Your Package') }}</h5>
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"></button>
+                    <h5 class="modal-title" id="exampleModalLabel">{{ __('storefront.common.purchase_your_package') }}</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="{{ __('storefront.common.close') }}"></button>
                 </div>
                 <div class="modal-body gry-bg px-3 pt-3" style="overflow-y: inherit;">
                     <form class="" id="package_payment_form" action="{{ route('customer_packages.purchase') }}" method="post">
@@ -73,34 +73,34 @@
                         <input type="hidden" name="customer_package_id" value="">
                         <div class="row">
                             <div class="col-md-2">
-                                <label>{{ translate('Payment Method')}}</label>
+                                <label>{{ __('storefront.checkout.payment_method')}}</label>
                             </div>
                             <div class="col-md-10">
                                 <div class="mb-3">
                                     <select class="form-control selectpicker rounded-0" data-live-search="true" name="payment_option">
                                         @if(get_setting('toyyibpay_payment') == 1)
-                                            <option value="toyyibpay">{{ translate('ToyyibPay')}}</option>
+                                            <option value="toyyibpay">{{ __('storefront.common.toyyibpay')}}</option>
                                         @endif
                                         @if(get_setting('sslcommerz_payment') == 1)
-                                            <option value="sslcommerz">{{ translate('sslcommerz')}}</option>
+                                            <option value="sslcommerz">{{ __('storefront.common.sslcommerz')}}</option>
                                         @endif
                                         @if(get_setting('voguepay') == 1)
-                                            <option value="voguepay">{{ translate('Voguepay')}}</option>
+                                            <option value="voguepay">{{ __('storefront.common.voguepay_label')}}</option>
                                         @endif
                                         @if(get_setting('payhere') == 1)
-                                            <option value="payhere">{{ translate('Payhere')}}</option>
+                                            <option value="payhere">{{ __('storefront.common.payhere_label')}}</option>
                                         @endif
                                         @if(get_setting('ngenius') == 1)
-                                            <option value="ngenius">{{ translate('Ngenius')}}</option>
+                                            <option value="ngenius">{{ __('storefront.common.ngenius_label')}}</option>
                                         @endif
                                         @if(get_setting('iyzico') == 1)
-                                            <option value="iyzico">{{ translate('Iyzico')}}</option>
+                                            <option value="iyzico">{{ __('storefront.common.iyzico')}}</option>
                                         @endif
                                         @if(get_setting('nagad') == 1)
-                                            <option value="nagad">{{ translate('Nagad')}}</option>
+                                            <option value="nagad">{{ __('storefront.common.nagad')}}</option>
                                         @endif
                                         @if(get_setting('bkash') == 1)
-                                            <option value="bkash">{{ translate('Bkash')}}</option>
+                                            <option value="bkash">{{ __('storefront.common.bkash')}}</option>
                                         @endif
                                     </select>
                                 </div>
@@ -108,8 +108,8 @@
                         </div>
 
                         <div class="form-group text-right">
-                            <button type="button" class="btn btn-sm btn-secondary rounded-0 transition-3d-hover mr-1" data-dismiss="modal">{{translate('cancel')}}</button>
-                            <button type="submit" class="btn btn-sm btn-primary rounded-0 transition-3d-hover mr-1">{{translate('Confirm')}}</button>
+                            <button type="button" class="btn btn-sm btn-secondary rounded-0 transition-3d-hover mr-1" data-dismiss="modal">{{__('storefront.common.cancel')}}</button>
+                            <button type="submit" class="btn btn-sm btn-primary rounded-0 transition-3d-hover mr-1">{{__('storefront.common.confirm')}}</button>
                         </div>
                     </form>
                 </div>

@@ -17,21 +17,21 @@
                         {{ renderStarRating($detailedProduct->rating) }}
                     </span>
                     <span class="ml-1 opacity-50 fs-14">({{ $total }}
-                        {{ translate('reviews') }})</span>
+                        {{ __('storefront.product.reviews') }})</span>
                 </div>
             @endif
         @endif
         <!-- Estimate Shipping Time -->
         @if ($detailedProduct->est_shipping_days)
             <div class="col-auto fs-14 mt-1">
-                <small class="mr-1 opacity-50 fs-14">{{ translate('Estimate Shipping Time') }}:</small>
-                <span class="fw-500">{{ $detailedProduct->est_shipping_days }} {{ translate('Days') }}</span>
+                <small class="mr-1 opacity-50 fs-14">{{ __('storefront.checkout.estimate_shipping_time') }}:</small>
+                <span class="fw-500">{{ $detailedProduct->est_shipping_days }} {{ __('storefront.common.days') }}</span>
             </div>
         @endif
         <!-- In stock -->
         @if ($detailedProduct->digital == 1)
             <div class="col-12 mt-1">
-                <span class="badge badge-md badge-inline badge-pill badge-success">{{ translate('In stock') }}</span>
+                <span class="badge badge-md badge-inline badge-pill badge-success">{{ __('storefront.product.in_stock') }}</span>
             </div>
         @endif
     </div>
@@ -56,7 +56,7 @@
                                 transform="translate(962.004 400.504)" fill="#f3af3d" />
                         </g>
                     </svg>
-                    <span class="ml-2 text-primary animate-underline-blue">{{ translate('Product Inquiry') }}</span>
+                    <span class="ml-2 text-primary animate-underline-blue">{{ __('storefront.product.product_inquiry') }}</span>
                 </a>
             </div>
         @endif
@@ -67,13 +67,13 @@
                     <a href="javascript:void(0)" onclick="addToWishList({{ $detailedProduct->id }})"
                         class="mr-3 fs-14 text-dark opacity-60 has-transitiuon hov-opacity-100">
                         <i class="la la-heart-o mr-1"></i>
-                        {{ translate('Add to Wishlist') }}
+                        {{ __('storefront.cart.add_to_wishlist') }}
                     </a>
                     <!-- Add to compare button -->
                     <a href="javascript:void(0)" onclick="addToCompare({{ $detailedProduct->id }})"
                         class="fs-14 text-dark opacity-60 has-transitiuon hov-opacity-100">
                         <i class="las la-sync mr-1"></i>
-                        {{ translate('Add to Compare') }}
+                        {{ __('storefront.cart.add_to_compare') }}
                     </a>
                 </div>
             @endif
@@ -84,7 +84,7 @@
     <!-- Brand Logo & Name -->
     @if ($detailedProduct->brand != null)
         <div class="d-flex flex-wrap align-items-center mb-3">
-            <span class="text-secondary fs-14 fw-400 mr-4 w-50px">{{ translate('Brand') }}</span><br>
+            <span class="text-secondary fs-14 fw-400 mr-4 w-50px">{{ __('storefront.product.brand') }}</span><br>
             <a href="{{ \App\Support\StorefrontUrl::to($detailedProduct->brand) }}"
                 class="text-reset hov-text-primary fs-14 fw-700">{{ $detailedProduct->brand->name }}</a>
         </div>
@@ -95,11 +95,11 @@
         <div class="d-flex align-items-center mr-4">
             <!-- Shop Name -->
             @if ($detailedProduct->added_by == 'seller' && get_setting('vendor_system_activation') == 1)
-                <span class="text-secondary fs-14 fw-400 mr-4 w-50px">{{ translate('Sold by') }}</span>
+                <span class="text-secondary fs-14 fw-400 mr-4 w-50px">{{ __('storefront.common.sold_by') }}</span>
                 <a href="{{ route('shop.visit', $detailedProduct->user->shop->slug) }}"
                     class="text-reset hov-text-primary fs-14 fw-700">{{ $detailedProduct->user->shop->name }}</a>
             @else
-                <p class="mb-0 fs-14 fw-700">{{ translate('Inhouse product') }}</p>
+                <p class="mb-0 fs-14 fw-700">{{ __('storefront.product.inhouse_product') }}</p>
             @endif
         </div>
 
@@ -126,7 +126,7 @@
                         </g>
                     </svg>
 
-                    {{ translate('Message Seller') }}
+                    {{ __('storefront.product.message_seller') }}
                 </button>
             </div>
         @endif
@@ -150,14 +150,14 @@
     @if ($detailedProduct->auction_product)
         <div class="row no-gutters mb-3">
             <div class="col-sm-2">
-                <div class="text-secondary fs-14 fw-400 mt-1">{{ translate('Auction Will End') }}</div>
+                <div class="text-secondary fs-14 fw-400 mt-1">{{ __('storefront.common.auction_will_end') }}</div>
             </div>
             <div class="col-sm-10">
                 @if ($detailedProduct->auction_end_date > strtotime('now'))
                     <div class="aiz-count-down align-items-center"
                         data-date="{{ date('Y/m/d H:i:s', $detailedProduct->auction_end_date) }}"></div>
                 @else
-                    <p>{{ translate('Ended') }}</p>
+                    <p>{{ __('storefront.common.ended') }}</p>
                 @endif
 
             </div>
@@ -165,7 +165,7 @@
 
         <div class="row no-gutters mb-3">
             <div class="col-sm-2">
-                <div class="text-secondary fs-14 fw-400 mt-1">{{ translate('Starting Bid') }}</div>
+                <div class="text-secondary fs-14 fw-400 mt-1">{{ __('storefront.product.starting_bid') }}</div>
             </div>
             <div class="col-sm-10">
                 <span class="opacity-50 fs-20">
@@ -181,7 +181,7 @@
                 Auth::user()->product_bids->where('product_id', $detailedProduct->id)->first() != null)
             <div class="row no-gutters mb-3">
                 <div class="col-sm-2">
-                    <div class="text-secondary fs-14 fw-400 mt-1">{{ translate('My Bidded Amount') }}</div>
+                    <div class="text-secondary fs-14 fw-400 mt-1">{{ __('storefront.product.my_bidded_amount') }}</div>
                 </div>
                 <div class="col-sm-10">
                     <span class="opacity-50 fs-20">
@@ -195,7 +195,7 @@
         @php $highest_bid = $detailedProduct->bids->max('amount'); @endphp
         <div class="row no-gutters my-2 mb-3">
             <div class="col-sm-2">
-                <div class="text-secondary fs-14 fw-400 mt-1">{{ translate('Highest Bid') }}</div>
+                <div class="text-secondary fs-14 fw-400 mt-1">{{ __('storefront.product.highest_bid') }}</div>
             </div>
             <div class="col-sm-10">
                 <strong class="h3 fw-600 text-primary">
@@ -212,9 +212,9 @@
             <table class="table mb-3">
                 <thead>
                     <tr>
-                        <th class="border-top-0">{{ translate('Min Qty') }}</th>
-                        <th class="border-top-0">{{ translate('Max Qty') }}</th>
-                        <th class="border-top-0">{{ translate('Unit Price') }}</th>
+                        <th class="border-top-0">{{ __('storefront.product.min_qty') }}</th>
+                        <th class="border-top-0">{{ __('storefront.product.max_qty') }}</th>
+                        <th class="border-top-0">{{ __('storefront.product.unit_price') }}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -234,7 +234,7 @@
                 @if (Auth::check() && Auth::user()->admin_verified)
                     <div class="row no-gutters mb-3">
                         <div class="col-sm-2">
-                            <div class="text-secondary fs-14 fw-400">{{ translate('Price') }}</div>
+                            <div class="text-secondary fs-14 fw-400">{{ __('storefront.product.price') }}</div>
                         </div>
                         <div class="col-sm-10">
                             <div class="d-flex align-items-center">
@@ -284,7 +284,7 @@
                                                 </g>
                                             </g>
                                         </svg>
-                                        <small class="fs-11 fw-500 text-white ml-2">{{ translate('Club Point') }}:
+                                        <small class="fs-11 fw-500 text-white ml-2">{{ __('storefront.common.club_point') }}:
                                             {{ $detailedProduct->earn_point }}</small>
                                     </div>
                                 @endif
@@ -294,7 +294,7 @@
                     @if ($detailedProduct->price_per_piece !== null)
                         <div class="row no-gutters mb-3">
                             <div class="col-sm-2">
-                                <div class="text-secondary fs-14 fw-400">{{ translate('Price Per Piece') }}</div>
+                                <div class="text-secondary fs-14 fw-400">{{ __('storefront.product.price_per_piece') }}</div>
                             </div>
                             <div class="col-sm-10">
                                 <strong
@@ -310,7 +310,7 @@
                 @if ($detailedProduct->unit != null)
                     <div class="row no-gutters mb-3">
                         <div class="col-sm-2">
-                            <div class="text-secondary fs-14 fw-400">{{ translate('Unit') }}</div>
+                            <div class="text-secondary fs-14 fw-400">{{ __('storefront.common.unit') }}</div>
                         </div>
 
                         <div class="col-sm-10">
@@ -325,7 +325,7 @@
                 @if (Auth::check() && Auth::user()->admin_verified)
                     <div class="row no-gutters mb-3">
                         <div class="col-sm-2">
-                            <div class="text-secondary fs-14 fw-400">{{ translate('Price') }}</div>
+                            <div class="text-secondary fs-14 fw-400">{{ __('storefront.product.price') }}</div>
                         </div>
                         <div class="col-sm-10">
                             <div class="d-flex align-items-center">
@@ -367,7 +367,7 @@
                                                 </g>
                                             </g>
                                         </svg>
-                                        <small class="fs-11 fw-500 text-white ml-2">{{ translate('Club Point') }}:
+                                        <small class="fs-11 fw-500 text-white ml-2">{{ __('storefront.common.club_point') }}:
                                             {{ $detailedProduct->earn_point }}</small>
                                     </div>
                                 @endif
@@ -378,7 +378,7 @@
                     @if ($detailedProduct->price_per_piece !== null)
                         <div class="row no-gutters mb-3">
                             <div class="col-sm-2">
-                                <div class="text-secondary fs-14 fw-400">{{ translate('Price Per Piece') }}</div>
+                                <div class="text-secondary fs-14 fw-400">{{ __('storefront.product.price_per_piece') }}</div>
                             </div>
 
 
@@ -396,7 +396,7 @@
                 @if ($detailedProduct->unit != null)
                     <div class="row no-gutters mb-3">
                         <div class="col-sm-2">
-                            <div class="text-secondary fs-14 fw-400">{{ translate('Unit') }}</div>
+                            <div class="text-secondary fs-14 fw-400">{{ __('storefront.common.unit') }}</div>
                         </div>
                         <div class="col-sm-10">
                             <strong
@@ -408,7 +408,7 @@
                 @if ($detailedProduct->tax)
                     <div class="row no-gutters mb-3">
                         <div class="col-sm-2">
-                            <div class="text-secondary fs-14 fw-400">{{ translate('Tax') }}</div>
+                            <div class="text-secondary fs-14 fw-400">{{ __('storefront.common.tax') }}</div>
                         </div>
                         <div class="col-sm-10">
                             <div class="d-flex align-items-center">
@@ -462,7 +462,7 @@
                 @if ($detailedProduct->colors != null && count(json_decode($detailedProduct->colors)) > 0)
                     <div class="row no-gutters mb-3">
                         <div class="col-sm-2">
-                            <div class="text-secondary fs-14 fw-400 mt-2">{{ translate('Color') }}</div>
+                            <div class="text-secondary fs-14 fw-400 mt-2">{{ __('storefront.common.color') }}</div>
                         </div>
                         <div class="col-sm-10">
                             <div class="aiz-radio-inline">
@@ -512,7 +512,7 @@
                     @endforeach
                     <div class="row no-gutters mb-3">
                         <div class="col-sm-2">
-                            <div class="text-secondary fs-14 fw-400 mt-2">{{ translate('Quantity') }}</div>
+                            <div class="text-secondary fs-14 fw-400 mt-2">{{ __('storefront.product.quantity') }}</div>
                         </div>
                         <div class="col-sm-10">
                             <div class="product-quantity d-flex align-items-center">
@@ -540,9 +540,9 @@
                                 <div class="avialable-amount opacity-60">
                                     @if ($detailedProduct->stock_visibility_state == 'quantity')
                                         (<span id="available-quantity">{{ $qty }}</span>
-                                        {{ translate('available') }})
+                                        {{ __('storefront.common.available') }})
                                     @elseif($detailedProduct->stock_visibility_state == 'text' && $qty >= 1)
-                                        (<span id="available-quantity">{{ translate('In Stock') }}</span>)
+                                        (<span id="available-quantity">{{ __('storefront.product.in_stock') }}</span>)
                                     @endif
                                 </div>
                             </div>
@@ -551,7 +551,7 @@
                 @else
                     <div class="row no-gutters mb-3">
                         <div class="col-sm-2">
-                            <div class="text-secondary fs-14 fw-400 mt-2">{{ translate('Quantity') }}</div>
+                            <div class="text-secondary fs-14 fw-400 mt-2">{{ __('storefront.product.quantity') }}</div>
                         </div>
                         <div class="col-sm-10">
                             <div class="product-quantity d-flex align-items-center">
@@ -580,9 +580,9 @@
                                 <div class="avialable-amount opacity-60">
                                     @if ($detailedProduct->stock_visibility_state == 'quantity')
                                         (<span id="available-quantity">{{ $qty }}</span>
-                                        {{ translate('available') }})
+                                        {{ __('storefront.common.available') }})
                                     @elseif($detailedProduct->stock_visibility_state == 'text' && $qty >= 1)
-                                        (<span id="available-quantity">{{ translate('In Stock') }}</span>)
+                                        (<span id="available-quantity">{{ __('storefront.product.in_stock') }}</span>)
                                     @endif
                                 </div>
                             </div>
@@ -599,7 +599,7 @@
             @if (Auth::check() && Auth::user()->admin_verified)
                 <div class="row no-gutters pb-3 d-none" id="chosen_price_div">
                     <div class="col-sm-2">
-                        <div class="text-secondary fs-14 fw-400 mt-1">{{ translate('Total Price') }}</div>
+                        <div class="text-secondary fs-14 fw-400 mt-1">{{ __('storefront.product.total_price') }}</div>
                     </div>
                     <div class="col-sm-10">
                         <div class="product-price">
@@ -623,16 +623,16 @@
             <div class="mt-4">
                 @if (Auth::check() && $detailedProduct->user_id == Auth::user()->id)
                     <span
-                        class="badge badge-inline badge-danger">{{ translate('Seller Can Not Place Bid to His Own Product') }}</span>
+                        class="badge badge-inline badge-danger">{{ __('storefront.product.seller_can_not_place_bid_to_his_own_product') }}</span>
                 @else
                     <button type="button" class="btn btn-primary buy-now  fw-600 w-150px rounded-0"
                         onclick="bid_modal()">
                         <i class="las la-gavel"></i>
                         @if (Auth::check() &&
                                 Auth::user()->product_bids->where('product_id', $detailedProduct->id)->first() != null)
-                            {{ translate('Change Bid') }}
+                            {{ __('storefront.product.change_bid') }}
                         @else
-                            {{ translate('Place Bid') }}
+                            {{ __('storefront.product.place_bid') }}
                         @endif
                     </button>
                 @endif
@@ -653,25 +653,25 @@
                         class="btn btn-warning mr-2 add-to-cart fw-600 w-150px rounded-0 text-white"
                         onclick="addToCart()">
                         <i class="las la-shopping-bag"></i>
-                        <span class="d-none d-md-inline-block"> {{ translate('Add to cart') }}</span>
+                        <span class="d-none d-md-inline-block"> {{ __('storefront.cart.add_to_cart') }}</span>
                     </button>
                     <button type="button" class="btn btn-primary buy-now fw-600 add-to-cart w-150px rounded-0"
                         onclick="buyNow()">
-                        <i class="la la-shopping-cart"></i> {{ translate('Buy Now') }}
+                        <i class="la la-shopping-cart"></i> {{ __('storefront.common.buy_now') }}
                     </button>
                 @endif
                 <button type="button" class="btn btn-secondary out-of-stock fw-600 d-none" disabled>
-                    <i class="la la-cart-arrow-down"></i> {{ translate('Out of Stock') }}
+                    <i class="la la-cart-arrow-down"></i> {{ __('storefront.product.out_of_stock') }}
                 </button>
             @elseif ($detailedProduct->digital == 1)
                 <button type="button" class="btn btn-warning mr-2 add-to-cart fw-600 w-150px rounded-0 text-white"
                     onclick="addToCart()">
                     <i class="las la-shopping-bag"></i>
-                    <span class="d-none d-md-inline-block"> {{ translate('Add to cart') }}</span>
+                    <span class="d-none d-md-inline-block"> {{ __('storefront.cart.add_to_cart') }}</span>
                 </button>
                 <button type="button" class="btn btn-primary buy-now fw-600 add-to-cart w-150px rounded-0"
                     onclick="buyNow()">
-                    <i class="la la-shopping-cart"></i> {{ translate('Buy Now') }}
+                    <i class="la la-shopping-cart"></i> {{ __('storefront.common.buy_now') }}
                 </button>
             @endif
         </div>
@@ -698,8 +698,8 @@
                     @endphp
                     <div>
                         <button type="button" id="ref-cpurl-btn" class="btn btn-secondary w-200px rounded-0"
-                            data-attrcpy="{{ translate('Copied') }}" onclick="CopyToClipboard(this)"
-                            data-url="{{ $referral_code_url }}">{{ translate('Copy the Promote Link') }}</button>
+                            data-attrcpy="{{ __('storefront.common.copied') }}" onclick="CopyToClipboard(this)"
+                            data-url="{{ $referral_code_url }}">{{ __('storefront.common.copy_the_promote_link') }}</button>
                     </div>
                 @endif
             </div>
@@ -712,7 +712,7 @@
         @if (addon_is_activated('refund_request'))
             <div class="row no-gutters mt-3">
                 <div class="col-sm-2">
-                    <div class="text-secondary fs-14 fw-400 mt-2">{{ translate('Refund') }}</div>
+                    <div class="text-secondary fs-14 fw-400 mt-2">{{ __('storefront.common.refund') }}</div>
                 </div>
                 <div class="col-sm-10">
                     @if ($detailedProduct->refundable == 1)
@@ -724,9 +724,9 @@
                             @endif
                         </a>
                         <a href="{{ route('returnpolicy') }}" class="text-blue hov-text-primary fs-14 ml-3"
-                            target="_blank">{{ translate('View Policy') }}</a>
+                            target="_blank">{{ __('storefront.common.view_policy') }}</a>
                     @else
-                        <div class="text-dark fs-14 fw-400 mt-2">{{ translate('Not Applicable') }}</div>
+                        <div class="text-dark fs-14 fw-400 mt-2">{{ __('storefront.common.not_applicable') }}</div>
                     @endif
                 </div>
             </div>
@@ -737,13 +737,13 @@
             @if ($detailedProduct->added_by == 'seller')
                 <div class="row no-gutters mt-3">
                     <div class="col-2">
-                        <div class="text-secondary fs-14 fw-400">{{ translate('Seller Guarantees') }}</div>
+                        <div class="text-secondary fs-14 fw-400">{{ __('storefront.product.seller_guarantees') }}</div>
                     </div>
                     <div class="col-10">
                         @if ($detailedProduct->user->shop->verification_status == 1)
-                            <span class="text-success fs-14 fw-700">{{ translate('Verified seller') }}</span>
+                            <span class="text-success fs-14 fw-700">{{ __('storefront.product.verified_seller') }}</span>
                         @else
-                            <span class="text-danger fs-14 fw-700">{{ translate('Non verified seller') }}</span>
+                            <span class="text-danger fs-14 fw-700">{{ __('storefront.product.non_verified_seller') }}</span>
                         @endif
                     </div>
                 </div>
@@ -754,7 +754,7 @@
     <!-- Share -->
     <div class="row no-gutters mt-4">
         <div class="col-sm-2">
-            <div class="text-secondary fs-14 fw-400 mt-2">{{ translate('Share') }}</div>
+            <div class="text-secondary fs-14 fw-400 mt-2">{{ __('storefront.common.share') }}</div>
         </div>
         <div class="col-sm-10">
             <div class="aiz-share"></div>

@@ -2,14 +2,14 @@
     <!-- Tabs -->
     <div class="nav aiz-nav-tabs">
         <a href="#tab_default_1" data-toggle="tab"
-            class="mr-5 pb-2 fs-16 fw-700 text-reset active show">{{ translate('Description') }}</a>
+            class="mr-5 pb-2 fs-16 fw-700 text-reset active show">{{ __('storefront.common.description') }}</a>
         @if ($detailedProduct->video_link != null)
             <a href="#tab_default_2" data-toggle="tab"
-                class="mr-5 pb-2 fs-16 fw-700 text-reset">{{ translate('Video') }}</a>
+                class="mr-5 pb-2 fs-16 fw-700 text-reset">{{ __('storefront.common.video') }}</a>
         @endif
         @if ($detailedProduct->pdf != null)
             <a href="#tab_default_3" data-toggle="tab"
-                class="mr-5 pb-2 fs-16 fw-700 text-reset">{{ translate('Downloads') }}</a>
+                class="mr-5 pb-2 fs-16 fw-700 text-reset">{{ __('storefront.common.downloads') }}</a>
         @endif
     </div>
 
@@ -43,12 +43,12 @@
                 </div>
             </div>
         </div>
-        
+
         <!-- Download -->
         <div class="tab-pane fade" id="tab_default_3">
             <div class="py-5 text-center ">
                 <a href="{{ uploaded_asset($detailedProduct->pdf) }}"
-                    class="btn btn-primary">{{ translate('Download') }}</a>
+                    class="btn btn-primary">{{ __('storefront.common.download') }}</a>
             </div>
         </div>
     </div>

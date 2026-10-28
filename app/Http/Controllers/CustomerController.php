@@ -13,7 +13,7 @@ class CustomerController extends Controller
     public function create_customer()
     {
         if (!auth()->user()->is_rep) {
-            flash(translate('This action is for Representatives only'))->error();
+            flash(__('storefront.common.this_action_is_for_representatives_only'))->error();
             return back();
         }
 
@@ -56,7 +56,7 @@ class CustomerController extends Controller
 
         $this->userService()->createCustomerOnOtajer($user);
 
-        flash(translate('Customer added successfully.'))->success();
+        flash(__('storefront.common.customer_added_successfully'))->success();
         return redirect()->route('dashboard');
     }
 
@@ -72,9 +72,9 @@ class CustomerController extends Controller
             $user->registration_completed = true;
             $user->save();
             auth()->login($user, true);
-            flash(translate('Your Account has been Activated'))->success();
+            flash(__('storefront.auth.your_account_has_been_activated'))->success();
         } else {
-            flash(translate('Sorry, we could not Activate your account. Please try again'))->error();
+            flash(__('storefront.auth.sorry_we_could_not_activate_your_account_please_try_again'))->error();
         }
 
         return redirect()->route('dashboard');

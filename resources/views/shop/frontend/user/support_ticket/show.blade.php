@@ -14,7 +14,7 @@
             </div>
         </div>
         <hr class="mx-4">
-        
+
         <div class="card-body">
             <!-- Reply form -->
             <form action="{{route('support_ticket.seller_store')}}" method="POST" enctype="multipart/form-data">
@@ -28,9 +28,9 @@
                     <div class="col-md-12">
                         <div class="input-group" data-toggle="aizuploader" data-type="image" data-multiple="true">
                             <div class="input-group-prepend">
-                                <div class="input-group-text bg-soft-secondary font-weight-medium rounded-0">{{ translate('Browse')}}</div>
+                                <div class="input-group-text bg-soft-secondary font-weight-medium rounded-0">{{ __('storefront.upload.browse')}}</div>
                             </div>
-                            <div class="form-control file-amount">{{ translate('Choose File') }}</div>
+                            <div class="form-control file-amount">{{ __('storefront.upload.choose_file') }}</div>
                             <input type="hidden" name="attachments" class="selected-files">
                         </div>
                         <div class="file-preview box sm">
@@ -38,10 +38,10 @@
                     </div>
                 </div>
                 <div class="form-group mb-0 text-right">
-                    <button type="submit" class="btn btn-sm btn-primary rounded-0 w-150px" onclick="submit_reply('pending')">{{ translate('Send Reply') }}</button>
+                    <button type="submit" class="btn btn-sm btn-primary rounded-0 w-150px" onclick="submit_reply('pending')">{{ __('storefront.support.send_reply') }}</button>
                 </div>
             </form>
-            
+
             <div class="pad-top">
                 <ul class="list-group list-group-flush mt-3">
                     <!-- Replies -->
@@ -119,7 +119,7 @@
                             @endforeach
                         </div>
                     </li>
-                    
+
                 </ul>
             </div>
 

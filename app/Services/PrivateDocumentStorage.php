@@ -71,7 +71,7 @@ abstract class PrivateDocumentStorage
         $extension = $path === false || $file->getSize() > static::MAX_BYTES ? null : $this->extensionOf($path, strtolower($file->getClientOriginalExtension()));
 
         if ($extension === null) {
-            throw ValidationException::withMessages([static::FIELD => translate(static::REFUSAL)]);
+            throw ValidationException::withMessages([static::FIELD => __(static::REFUSAL)]);
         }
 
         return $extension;

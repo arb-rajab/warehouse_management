@@ -180,7 +180,7 @@ class NagadController{
             && GatewayPaymentService::covers((float) ($result['amount'] ?? 0), $amountDue);
 
         if (! $isPaid) {
-            flash(translate('Payment Failed'))->error();
+            flash(__('storefront.checkout.payment_failed'))->error();
             return redirect()->route('home');
         }
 

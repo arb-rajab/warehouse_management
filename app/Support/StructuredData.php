@@ -98,7 +98,7 @@ final class StructuredData
             'aggregateRating' => self::aggregateRating($product),
         ];
 
-        $trail = [['name' => translate('Home'), 'url' => self::url(route('home', [], false))]];
+        $trail = [['name' => __('storefront.navigation.home'), 'url' => self::url(route('home', [], false))]];
 
         foreach (self::categoryTrail($product->category) as $category) {
             $trail[] = ['name' => (string) $category->getTranslation('name'), 'url' => self::url(StorefrontUrl::to($category, false))];
@@ -116,14 +116,14 @@ final class StructuredData
      */
     public static function listing(?int $categoryId, ?int $brandId): array
     {
-        $trail = [['name' => translate('Home'), 'url' => self::url(route('home', [], false))]];
+        $trail = [['name' => __('storefront.navigation.home'), 'url' => self::url(route('home', [], false))]];
 
         if ($categoryId !== null) {
             foreach (self::categoryTrail(Category::query()->find($categoryId)) as $category) {
                 $trail[] = ['name' => (string) $category->getTranslation('name'), 'url' => self::url(StorefrontUrl::to($category, false))];
             }
         } elseif ($brandId !== null && ($brand = Brand::query()->find($brandId)) !== null) {
-            $trail[] = ['name' => translate('Brands'), 'url' => self::url(route('brands.all', [], false))];
+            $trail[] = ['name' => __('storefront.product.brands'), 'url' => self::url(route('brands.all', [], false))];
             $trail[] = ['name' => (string) $brand->getTranslation('name'), 'url' => self::url(StorefrontUrl::to($brand, false))];
         }
 

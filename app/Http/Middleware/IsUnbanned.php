@@ -22,7 +22,7 @@ class IsUnbanned
 
 
 
-            $message = translate("You are banned");
+            $message = __('storefront.common.you_are_banned');
             flash($message);
 
 

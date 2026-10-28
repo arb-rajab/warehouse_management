@@ -36,10 +36,10 @@ class FollowSellerController extends Controller
                     'shop_id' => $request->id
                 ]);
             }
-            flash(translate('Seller is followed Successfully'))->success();
+            flash(__('storefront.product.seller_followed'))->success();
             return back();
         }
-        flash(translate('You need to login as a customer to follow this seller'))->success();
+        flash(__('storefront.product.follow_login_required'))->success();
         return back();
     }
 
@@ -48,7 +48,7 @@ class FollowSellerController extends Controller
         $followed_seller = FollowSeller::where('user_id', Auth::user()->id)->where('shop_id', $request->id)->first();
         if($followed_seller!=null){
             FollowSeller::where('user_id', Auth::user()->id)->where('shop_id', $request->id)->delete();
-            flash(translate('Seller is unfollowed Successfully'))->success();
+            flash(__('storefront.product.seller_unfollowed'))->success();
             return back();
         }
     }

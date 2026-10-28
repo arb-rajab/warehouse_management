@@ -4,7 +4,7 @@
 
     <section class="mb-4 pt-5">
         <div class="container">
-            <h1 class="fw-700 fs-24 text-dark mb-4">{{ translate('Inhouse products') }}</h1>
+            <h1 class="fw-700 fs-24 text-dark mb-4">{{ __('storefront.product.inhouse_products') }}</h1>
             <div class="px-3">
                 <div class="row gutters-16 row-cols-xxl-6 row-cols-xl-5 row-cols-lg-4 row-cols-md-3 row-cols-2 border-top border-left">
                     @foreach ($products as $key => $product)

@@ -7,19 +7,19 @@
 @endif
 
 @if($coupon->type == 'product_base')
-    @php 
-        $products = json_decode($coupon->details); 
+    @php
+        $products = json_decode($coupon->details);
         $coupon_products = [];
-        foreach($products as $product) {                            
-            array_push($coupon_products, $product->product_id);                           
+        foreach($products as $product) {
+            array_push($coupon_products, $product->product_id);
         }
     @endphp
-@else                 
-    @php 
-        $order_discount = json_decode($coupon->details); 
-    @endphp             
+@else
+    @php
+        $order_discount = json_decode($coupon->details);
+    @endphp
 @endif
-@php 
+@php
     if($coupon->user->user_type != 'admin') {
         $shop = $coupon->user->shop;
         $name = $shop->name;
@@ -35,27 +35,27 @@
     <div class="position-absolute" style="top:2rem; left:2rem;">
         <h3 class="fs-13 text-white fw-500 px-3">{{ $name }}
             @if (\Request::route()->getName() == 'coupons.all')
-                <a 
+                <a
                     @if($coupon->user->user_type != 'admin')
                         href="{{ route('shop.visit', $shop->slug) }}"
-                    @else 
+                    @else
                         href="{{ route('inhouse.all') }}"
                     @endif
                     class="ml-3 text-white hov-text-warning fs-13" style="text-decoration: underline;"
                 >
-                    {{ translate('Visit Store') }}
+                    {{ __('storefront.common.visit_store') }}
                 </a>
             @endif
         </h3>
         <div class="align-self-center px-3 flex-grow-1 text-white">
             @if($coupon->discount_type == 'amount')
-                <p class="fs-16 fw-500 mb-1">{{ single_price($coupon->discount) }} {{ translate('OFF') }}</p>    
+                <p class="fs-16 fw-500 mb-1">{{ single_price($coupon->discount) }} {{ __('storefront.common.off') }}</p>
             @else
-                <p class="fs-16 fw-500 mb-1">{{ $coupon->discount }}% {{ translate('OFF') }}</p>    
+                <p class="fs-16 fw-500 mb-1">{{ $coupon->discount }}% {{ __('storefront.common.off') }}</p>
             @endif
         </div>
     </div>
-    
+
     <!-- Middle design -->
     <div class="d-flex jystify-content-between align-items-center w-100 position-absolute">
         <span class="bg-white rounded-content" style="min-height: 48px; min-width: 48px; margin-left: -24px;"></span>
@@ -72,32 +72,32 @@
                 <div class="aiz-carousel coupon-slider gutters-16 arrow-none" data-items="6" data-lg-items="6"  data-md-items="4" data-sm-items="4" data-xs-items="4" data-arrows='true' data-infinite='true' data-autoplay="true">
                     @foreach($products as $key => $product)
                         <a href="{{ \App\Support\StorefrontUrl::to($product) }}" title="{{ $product->name }}" class='p-1 border border-transparent hov-border' target="_blank">
-                            <img class="img-fit mx-auto h-48px w-48px" 
+                            <img class="img-fit mx-auto h-48px w-48px"
                                 src="{{ uploaded_asset($product->thumbnail_img) }}"
                                 data-src="{{ uploaded_asset($product->thumbnail_img) }}"
                                 onerror="this.onerror=null;this.src='{{ static_asset('assets/img/placeholder.jpg') }}';"
                                 alt="">
                         </a>
-                    @endforeach      
-                </div>       
+                    @endforeach
+                </div>
             @else
                 <!-- Coupon Discount range -->
                 <span class="fs-12 text-white pb-lg-3 d-block m-auto ">
                     @if($coupon->discount_type == 'amount')
-                        {{ translate('Min Spend ') }} <strong>{{ single_price($order_discount->min_buy) }}</strong> {{ translate('from') }} <strong>{{ $name }}</strong> {{ translate('to get') }} <strong>{{ single_price($coupon->discount) }}</strong> {{ translate('OFF on total orders') }}
-                    @else 
-                        {{ translate('Min Spend ') }} <strong>{{ single_price($order_discount->min_buy) }}</strong> {{ translate('from') }} <strong>{{ $name }}</strong> {{ translate('to get') }} <strong>{{ $coupon->discount }}%</strong> {{ translate('OFF on total orders') }}                                   
+                        {{ __('storefront.common.min_spend') }} <strong>{{ single_price($order_discount->min_buy) }}</strong> {{ __('storefront.common.from') }} <strong>{{ $name }}</strong> {{ __('storefront.common.to_get') }} <strong>{{ single_price($coupon->discount) }}</strong> {{ __('storefront.checkout.off_on_total_orders') }}
+                    @else
+                        {{ __('storefront.common.min_spend') }} <strong>{{ single_price($order_discount->min_buy) }}</strong> {{ __('storefront.common.from') }} <strong>{{ $name }}</strong> {{ __('storefront.common.to_get') }} <strong>{{ $coupon->discount }}%</strong> {{ __('storefront.checkout.off_on_total_orders') }}
                     @endif
                 </span>
             @endif
         </div>
-        
+
         <!-- Coupon Code -->
         <div class="text-right">
             <span class="fs-13 d-block mb-0 text-white">
-                {{ translate('Code') }}:
+                {{ __('storefront.common.code') }}:
                 <span class="fw-600">{{ $coupon->code }}</span>
-                <span class="ml-2 text-white fs-16" style="cursor:pointer;" onclick="copyCouponCode('{{ $coupon->code }}')" data-toggle="tooltip" data-title="{{ translate('Copy the Code') }}" data-placement="top"><i class="las la-copy"></i></span>
+                <span class="ml-2 text-white fs-16" style="cursor:pointer;" onclick="copyCouponCode('{{ $coupon->code }}')" data-toggle="tooltip" data-title="{{ __('storefront.common.copy_the_code') }}" data-placement="top"><i class="las la-copy"></i></span>
             </span>
         </div>
     </div>

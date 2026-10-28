@@ -73,7 +73,7 @@ class StoreAddressRequest extends FormRequest
     protected function failedValidation(Validator $validator): void
     {
         $errors = $validator->errors();
-        flash($errors->has('phone') && blank($this->input('phone')) ? translate('Phone number is required') : $errors->first())->error();
+        flash($errors->has('phone') && blank($this->input('phone')) ? __('storefront.auth.phone_number_is_required') : $errors->first())->error();
 
         parent::failedValidation($validator);
     }

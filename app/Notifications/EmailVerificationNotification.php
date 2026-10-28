@@ -28,8 +28,8 @@ class EmailVerificationNotification extends Notification
     public function toMail($notifiable)
     {
         $array['view'] = 'shop.emails.verification';
-        $array['subject'] = translate('Account Verification & Terms Agreement');
-        $array['content'] = translate('By Clicking The Button Below You Agree To The Terms & Conditions');
+        $array['subject'] = __('storefront.auth.verification_terms');
+        $array['content'] = __('storefront.auth.agree_to_terms');
         // Signed and expiring, and bound to the address it was sent to: it
         // used to carry `users.verification_code`, which never expired and
         // is the same column the six-digit reset codes went into.
@@ -41,7 +41,7 @@ class EmailVerificationNotification extends Notification
 
         return (new MailMessage)
             ->view('shop.emails.verification', ['array' => $array])
-            ->subject(translate('Email Verification - ').config('app.name'));
+            ->subject(__('storefront.auth.verification_subject', ['app' => config('app.name')]));
     }
 
     public function toArray($notifiable)

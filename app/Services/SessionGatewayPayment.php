@@ -64,7 +64,7 @@ class SessionGatewayPayment
             && app(GatewayPaymentService::class)->complete($payment, (int) $payerId, (string) $paymentType, null, $packageId)) {
             Session::forget('payment_data');
             Session::forget('payment_type');
-            flash(translate('Package purchasing successful'))->success();
+            flash(__('storefront.common.package_purchasing_successful'))->success();
 
             return redirect()->route('dashboard');
         }
@@ -74,7 +74,7 @@ class SessionGatewayPayment
 
     public function notVerified(): RedirectResponse
     {
-        flash(translate('Payment could not be verified'))->error();
+        flash(__('storefront.checkout.payment_could_not_be_verified'))->error();
 
         return redirect()->route('home');
     }

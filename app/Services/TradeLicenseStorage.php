@@ -14,5 +14,5 @@ class TradeLicenseStorage extends PrivateDocumentStorage
 
     protected const FIELD = 'trade_license';
 
-    protected const REFUSAL = 'The trade license must be a PDF, Word document or PNG/JPEG image of at most 20 MB.';
+    protected const REFUSAL = 'storefront.upload.trade_license_refusal';
 }

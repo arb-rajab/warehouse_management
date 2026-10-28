@@ -88,8 +88,8 @@ class ForgotPasswordController extends Controller implements HasMiddleware
             if ($code !== null) {
                 $array['view'] = 'shop.emails.verification';
                 $array['from'] = config('mail.from.address');
-                $array['subject'] = translate('Password Reset');
-                $array['content'] = translate('Verification Code is').': '.$code;
+                $array['subject'] = __('storefront.auth.password_reset_subject');
+                $array['content'] = __('storefront.auth.verification_code_message', ['code' => $code]);
 
                 Mail::to($user->email)->queue(new SecondEmailVerifyMailManager($array));
             }
@@ -107,7 +107,7 @@ class ForgotPasswordController extends Controller implements HasMiddleware
         // Back to the form that asked, with the same notice either way. The
         // phone-code reset page the SMS add-on supplies is not part of this
         // app, and the notice must not depend on an account having matched.
-        flash(translate('If an account matches, a code has been sent.'))->info();
+        flash(__('storefront.auth.if_an_account_matches_a_code_has_been_sent'))->info();
 
         return back();
     }

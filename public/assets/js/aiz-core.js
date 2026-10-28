@@ -174,6 +174,11 @@ $.fn.toggleAttr = function (attr, attr1, attr2) {
             });
         },
         updateFileHtml: function (array) {
+            if (AIZ.local.selected_files) {
+                var count = array.length;
+                var form = count <= 2 ? count : count <= 10 ? 3 : 11;
+                return AIZ.local.selected_files[form].replace(":count", count);
+            }
             var fileText = "";
             if (array.length > 1) {
                 var fileText = AIZ.local.files_selected;
@@ -1971,13 +1976,13 @@ $.fn.toggleAttr = function (attr, attr1, attr2) {
                 if (valueCurrent >= minValue) {
                     $(this).siblings("[data-type='minus']").removeAttr("disabled");
                 } else {
-                    alert(translate("Sorry, the minimum limit has been reached"));
+                    alert(AIZ.local.minimum_quantity);
                     $(this).val(minValue);
                 }
                 if (valueCurrent <= maxValue) {
                     $(this).siblings("[data-type='plus']").removeAttr("disabled");
                 } else {
-                    alert(translate("Sorry, the maximum limit has been reached"));
+                    alert(AIZ.local.maximum_quantity);
                     $(this).val(maxValue);
                 }
 

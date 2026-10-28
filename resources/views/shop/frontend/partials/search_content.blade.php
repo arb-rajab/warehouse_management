@@ -1,6 +1,6 @@
 <div class="">
     @if (sizeof($keywords) > 0)
-        <div class="px-2 py-1 text-uppercase fs-10 text-right text-muted bg-soft-secondary">{{translate('Popular Suggestions')}}</div>
+        <div class="px-2 py-1 text-uppercase fs-10 text-right text-muted bg-soft-secondary">{{__('storefront.common.popular_suggestions')}}</div>
         <ul class="list-group list-group-raw">
             @foreach ($keywords as $key => $keyword)
                 <li class="list-group-item py-1">
@@ -13,7 +13,7 @@
 {{--
 <div class="">
     @if (count($categories) > 0)
-        <div class="px-2 py-1 text-uppercase fs-10 text-right text-muted bg-soft-secondary">{{translate('Category Suggestions')}}</div>
+        <div class="px-2 py-1 text-uppercase fs-10 text-right text-muted bg-soft-secondary">{{__('storefront.product.category_suggestions')}}</div>
         <ul class="list-group list-group-raw">
             @foreach ($categories as $key => $category)
                 <li class="list-group-item py-1">
@@ -26,7 +26,7 @@
  --}}
 <div class="">
     @if (count($products) > 0)
-        <div class="px-2 py-1 text-uppercase fs-10 text-right text-muted bg-soft-secondary">{{translate('Products')}}</div>
+        <div class="px-2 py-1 text-uppercase fs-10 text-right text-muted bg-soft-secondary">{{__('storefront.product.products')}}</div>
         <ul class="list-group list-group-raw">
             @foreach ($products as $key => $product)
                 <li class="list-group-item">
@@ -58,7 +58,7 @@
 @if(get_setting('vendor_system_activation') == 1)
     <div class="">
         @if (count($shops) > 0)
-            <div class="px-2 py-1 text-uppercase fs-10 text-right text-muted bg-soft-secondary">{{translate('Shops')}}</div>
+            <div class="px-2 py-1 text-uppercase fs-10 text-right text-muted bg-soft-secondary">{{__('storefront.common.shops')}}</div>
             <ul class="list-group list-group-raw">
                 @foreach ($shops as $key => $shop)
                     <li class="list-group-item">

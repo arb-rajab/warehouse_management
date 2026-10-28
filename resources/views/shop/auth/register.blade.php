@@ -12,7 +12,7 @@
                                 <div class="col-lg-6 col-md-7 p-4 p-lg-5">
                                     <!-- Titles -->
                                     <div class="text-center">
-                                        <h1 class="fs-20 fs-md-24 fw-700 text-primary">{{ translate('Create an account')}}</h1>
+                                        <h1 class="fs-20 fs-md-24 fw-700 text-primary">{{ __('storefront.auth.create_an_account')}}</h1>
                                     </div>
                                     <!-- Register form -->
                                     <div class="pt-3 pt-lg-4">
@@ -23,8 +23,8 @@
 
                                                 <!-- Name -->
                                                 <div class="form-group">
-                                                    <label for="name" class="fs-12 fw-700 text-soft-dark">{{  translate('Full Name') }}<x-required-mark /></label>
-                                                    <input type="text" class="form-control rounded-0{{ $errors->has('name') ? ' is-invalid' : '' }}" value="{{ old('name') }}" placeholder="{{  translate('Full Name') }}" name="name" required maxlength="191">
+                                                    <label for="name" class="fs-12 fw-700 text-soft-dark">{{  __('storefront.common.full_name') }}<x-required-mark /></label>
+                                                    <input type="text" class="form-control rounded-0{{ $errors->has('name') ? ' is-invalid' : '' }}" value="{{ old('name') }}" placeholder="{{  __('storefront.common.full_name') }}" name="name" required maxlength="191">
                                                     @if ($errors->has('name'))
                                                         <span class="invalid-feedback" role="alert">
                                                             <strong>{{ $errors->first('name') }}</strong>
@@ -34,8 +34,8 @@
 
                                                 <!-- Company Name -->
                                                 <div class="form-group">
-                                                    <label for="company_name" class="fs-12 fw-700 text-soft-dark">{{  translate('Company Name') }}<x-required-mark /></label>
-                                                    <input type="text" class="form-control rounded-0{{ $errors->has('company_name') ? ' is-invalid' : '' }}" value="{{ old('company_name') }}" placeholder="{{  translate('Company name') }}" name="company_name" required maxlength="191">
+                                                    <label for="company_name" class="fs-12 fw-700 text-soft-dark">{{  __('storefront.common.company_name') }}<x-required-mark /></label>
+                                                    <input type="text" class="form-control rounded-0{{ $errors->has('company_name') ? ' is-invalid' : '' }}" value="{{ old('company_name') }}" placeholder="{{  __('storefront.common.company_name') }}" name="company_name" required maxlength="191">
                                                     @if ($errors->has('company_name'))
                                                         <span class="invalid-feedback" role="alert">
                                                             <strong>{{ $errors->first('company_name') }}</strong>
@@ -46,13 +46,13 @@
                                                 <!-- Email or Phone -->
                                                 @if (addon_is_activated('otp_system'))
                                                     <div class="form-group phone-form-group mb-1">
-                                                        <label for="phone" class="fs-12 fw-700 text-soft-dark">{{  translate('Phone') }}</label>
+                                                        <label for="phone" class="fs-12 fw-700 text-soft-dark">{{  __('storefront.auth.phone') }}</label>
                                                         <input type="tel" id="phone-code" class="form-control rounded-0{{ $errors->has('phone') ? ' is-invalid' : '' }}" value="{{ old('phone') }}" placeholder="" name="phone" autocomplete="off" maxlength="20">
                                                     </div>
 
                                                     <div class="form-group email-form-group mb-1 d-none">
-                                                        <label for="email" class="fs-12 fw-700 text-soft-dark">{{  translate('Email') }}</label>
-                                                        <input type="email" class="form-control rounded-0 {{ $errors->has('email') ? ' is-invalid' : '' }}" value="{{ old('email') }}" placeholder="{{  translate('Email') }}" name="email"  autocomplete="off" maxlength="191">
+                                                        <label for="email" class="fs-12 fw-700 text-soft-dark">{{  __('storefront.auth.email') }}</label>
+                                                        <input type="email" class="form-control rounded-0 {{ $errors->has('email') ? ' is-invalid' : '' }}" value="{{ old('email') }}" placeholder="{{  __('storefront.auth.email') }}" name="email"  autocomplete="off" maxlength="191">
                                                         @if ($errors->has('email'))
                                                             <span class="invalid-feedback" role="alert">
                                                                 <strong>{{ $errors->first('email') }}</strong>
@@ -61,12 +61,12 @@
                                                     </div>
 
                                                     <div class="form-group text-right">
-                                                        <button class="btn btn-link p-0 text-primary" type="button" onclick="toggleEmailPhone(this)"><i>*{{ translate('Use Email Instead') }}</i></button>
+                                                        <button class="btn btn-link p-0 text-primary" type="button" onclick="toggleEmailPhone(this)"><i>*{{ __('storefront.auth.use_email_instead') }}</i></button>
                                                     </div>
                                                 @else
                                                     <div class="form-group">
-                                                        <label for="email" class="fs-12 fw-700 text-soft-dark">{{  translate('Email') }}<x-required-mark /></label>
-                                                        <input type="email" class="form-control rounded-0{{ $errors->has('email') ? ' is-invalid' : '' }}" value="{{ old('email') }}" placeholder="{{  translate('Email') }}" name="email" required maxlength="191">
+                                                        <label for="email" class="fs-12 fw-700 text-soft-dark">{{  __('storefront.auth.email') }}<x-required-mark /></label>
+                                                        <input type="email" class="form-control rounded-0{{ $errors->has('email') ? ' is-invalid' : '' }}" value="{{ old('email') }}" placeholder="{{  __('storefront.auth.email') }}" name="email" required maxlength="191">
                                                         @if ($errors->has('email'))
                                                             <span class="invalid-feedback" role="alert">
                                                                 <strong>{{ $errors->first('email') }}</strong>
@@ -77,8 +77,8 @@
 
 
                                                 <div class="form-group">
-                                                    <label for="phone" class="fs-12 fw-700 text-soft-dark">{{  translate('phone') }}<x-required-mark /></label>
-                                                    <input type="tel" class="form-control rounded-0{{ $errors->has('phone') ? ' is-invalid' : '' }}" value="{{ old('phone') }}" placeholder="{{  translate('phone') }}" name="phone" required maxlength="20">
+                                                    <label for="phone" class="fs-12 fw-700 text-soft-dark">{{  __('storefront.auth.phone') }}<x-required-mark /></label>
+                                                    <input type="tel" class="form-control rounded-0{{ $errors->has('phone') ? ' is-invalid' : '' }}" value="{{ old('phone') }}" placeholder="{{  __('storefront.auth.phone') }}" name="phone" required maxlength="20">
                                                     @if ($errors->has('phone'))
                                                         <span class="invalid-feedback" role="alert">
                                                             <strong>{{ $errors->first('phone') }}</strong>
@@ -87,19 +87,19 @@
                                                 </div>
 
                                                 <div class="form-group">
-                                                    <label for="country" class="fs-12 fw-700 text-soft-dark">{{  translate('Country') }}<x-required-mark /></label>
+                                                    <label for="country" class="fs-12 fw-700 text-soft-dark">{{  __('storefront.common.country') }}<x-required-mark /></label>
                                                     @php
                                                         $registrationCountries = \App\Models\Country::query()->where('status', 1)->orderByDesc('priority')->orderBy('name')->pluck('name');
                                                     @endphp
                                                     @if ($registrationCountries->isNotEmpty())
                                                         <select class="form-control rounded-0{{ $errors->has('country') ? ' is-invalid' : '' }}" id="country" name="country" required>
-                                                            <option value="">{{ translate('Select your country') }}</option>
+                                                            <option value="">{{ __('storefront.auth.select_your_country') }}</option>
                                                             @foreach ($registrationCountries as $registrationCountry)
                                                                 <option value="{{ $registrationCountry }}" @selected(old('country') === $registrationCountry)>{{ $registrationCountry }}</option>
                                                             @endforeach
                                                         </select>
                                                     @else
-                                                        <input type="text" class="form-control rounded-0{{ $errors->has('country') ? ' is-invalid' : '' }}" id="country" value="{{ old('country') }}" placeholder="{{  translate('country') }}" name="country" required maxlength="30">
+                                                        <input type="text" class="form-control rounded-0{{ $errors->has('country') ? ' is-invalid' : '' }}" id="country" value="{{ old('country') }}" placeholder="{{  __('storefront.auth.country') }}" name="country" required maxlength="30">
                                                     @endif
                                                     @if ($errors->has('country'))
                                                         <span class="invalid-feedback" role="alert">
@@ -111,8 +111,8 @@
 
                                                 <!-- Tax Number -->
                                                 <div class="form-group">
-                                                    <label for="tax_number" class="fs-12 fw-700 text-soft-dark">{{  translate('Tax Number') }} <x-optional-mark /></label>
-                                                    <input type="text" class="form-control rounded-0{{ $errors->has('tax_number') ? ' is-invalid' : '' }}" value="{{ old('tax_number') }}" placeholder="{{  translate('Tax Number') }}" name="tax_number" id="tax_number" maxlength="100">
+                                                    <label for="tax_number" class="fs-12 fw-700 text-soft-dark">{{  __('storefront.common.tax_number') }} <x-optional-mark /></label>
+                                                    <input type="text" class="form-control rounded-0{{ $errors->has('tax_number') ? ' is-invalid' : '' }}" value="{{ old('tax_number') }}" placeholder="{{  __('storefront.common.tax_number') }}" name="tax_number" id="tax_number" maxlength="100">
                                                     @if ($errors->has('tax_number'))
                                                         <span class="invalid-feedback" role="alert">
                                                             <strong>{{ $errors->first('tax_number') }}</strong>
@@ -121,8 +121,8 @@
                                                 </div>
                                                 <!-- Company Address -->
                                                 <div class="form-group">
-                                                    <label for="company_address" class="fs-12 fw-700 text-soft-dark">{{  translate('Company Address') }} <x-optional-mark /></label>
-                                                    <input type="text" class="form-control rounded-0{{ $errors->has('company_address') ? ' is-invalid' : '' }}" value="{{ old('company_address') }}" placeholder="{{  translate('Company Address') }}" name="company_address" id="company_address" maxlength="191">
+                                                    <label for="company_address" class="fs-12 fw-700 text-soft-dark">{{  __('storefront.common.company_address') }} <x-optional-mark /></label>
+                                                    <input type="text" class="form-control rounded-0{{ $errors->has('company_address') ? ' is-invalid' : '' }}" value="{{ old('company_address') }}" placeholder="{{  __('storefront.common.company_address') }}" name="company_address" id="company_address" maxlength="191">
                                                     @if ($errors->has('company_address'))
                                                         <span class="invalid-feedback" role="alert">
                                                             <strong>{{ $errors->first('company_address') }}</strong>
@@ -130,8 +130,8 @@
                                                     @endif
                                                 </div>
                                                 <div class="form-group">
-                                                    <label for="trade_license" class="fs-14 fw-700 text-soft-dark">{{  translate('Trade License') }} <x-optional-mark /></label>
-                                                    <input type="file" class="form-control rounded-0{{ $errors->has('trade_license') ? ' is-invalid' : '' }}" placeholder="{{  translate('Upload Trade License') }}" name="trade_license" id="trade_license" accept=".pdf,.doc,.docx,.png,.jpg,.jpeg">
+                                                    <label for="trade_license" class="fs-14 fw-700 text-soft-dark">{{  __('storefront.common.trade_license') }} <x-optional-mark /></label>
+                                                    <input type="file" class="form-control rounded-0{{ $errors->has('trade_license') ? ' is-invalid' : '' }}" placeholder="{{  __('storefront.upload.upload_trade_license') }}" name="trade_license" id="trade_license" accept=".pdf,.doc,.docx,.png,.jpg,.jpeg">
                                                     @if ($errors->has('trade_license'))
                                                         <span class="invalid-feedback" role="alert">
                                                             <strong>{{ $errors->first('trade_license') }}</strong>
@@ -141,10 +141,10 @@
 
                                                 <!-- password -->
                                                 <div class="form-group">
-                                                    <label for="password" class="fs-12 fw-700 text-soft-dark">{{  translate('Password') }}<x-required-mark /></label>
-                                                    <input type="password" class="form-control rounded-0{{ $errors->has('password') ? ' is-invalid' : '' }}" placeholder="{{  translate('Password') }}" name="password" required>
+                                                    <label for="password" class="fs-12 fw-700 text-soft-dark">{{  __('storefront.auth.password') }}<x-required-mark /></label>
+                                                    <input type="password" class="form-control rounded-0{{ $errors->has('password') ? ' is-invalid' : '' }}" placeholder="{{  __('storefront.auth.password') }}" name="password" required>
                                                     <div class="text-right mt-1">
-                                                        <span class="fs-12 fw-400 text-gray-dark">{{ translate('Password must contain at least 6 digits') }}</span>
+                                                        <span class="fs-12 fw-400 text-gray-dark">{{ __('storefront.auth.password_must_contain_at_least_6_digits') }}</span>
                                                     </div>
                                                     @if ($errors->has('password'))
                                                         <span class="invalid-feedback" role="alert">
@@ -155,8 +155,8 @@
 
                                                 <!-- password Confirm -->
                                                 <div class="form-group">
-                                                    <label for="password_confirmation" class="fs-12 fw-700 text-soft-dark">{{  translate('Confirm Password') }}<x-required-mark /></label>
-                                                    <input type="password" class="form-control rounded-0" placeholder="{{  translate('Confirm Password') }}" name="password_confirmation" required>
+                                                    <label for="password_confirmation" class="fs-12 fw-700 text-soft-dark">{{  __('storefront.auth.confirm_password') }}<x-required-mark /></label>
+                                                    <input type="password" class="form-control rounded-0" placeholder="{{  __('storefront.auth.confirm_password') }}" name="password_confirmation" required>
                                                 </div>
 
                                                 <!-- Recaptcha -->
@@ -178,8 +178,8 @@
                                                             <div class="modal-header d-block py-4">
                                                                 <div class="d-flex justify-content-center">
                                                                 </div>
-                                                                <h4 class="modal-title text-center fw-700" id="personalInfo_enterPassword_modalModalLabel" style="color: #ff0000;">{{ translate('Terms & Conditions')}}</h4>
-                                                                <p class="fs-16 fw-600 text-center" style="color: #8d8d8d;">{{ translate('Please Read and Agree to Terms and Conditions to create an account')}}</p>
+                                                                <h4 class="modal-title text-center fw-700" id="personalInfo_enterPassword_modalModalLabel" style="color: #ff0000;">{{ __('storefront.common.terms_conditions')}}</h4>
+                                                                <p class="fs-16 fw-600 text-center" style="color: #8d8d8d;">{{ __('storefront.auth.please_read_and_agree_to_terms_and_conditions_to_create_an_account')}}</p>
                                                             </div>
 
                                                             <div class="modal-body">
@@ -189,15 +189,15 @@
                                                                 @endphp
                                                                 @if (filled($termsContent))
                                                                     <div class="border p-3" id="terms_conditions_text" style="max-height: 60vh; overflow-y: auto;">{!! $termsContent !!}</div>
-                                                                    <a href="{{ route('terms') }}" target="_blank" rel="noopener" class="d-inline-block mt-2 fs-12">{{ translate('Open the terms in a new page') }}</a>
+                                                                    <a href="{{ route('terms') }}" target="_blank" rel="noopener" class="d-inline-block mt-2 fs-12">{{ __('storefront.common.open_the_terms_in_a_new_page') }}</a>
                                                                 @else
-                                                                    <p class="text-muted mb-0" id="terms_conditions_text">{{ translate('The terms and conditions are not available yet.') }}</p>
+                                                                    <p class="text-muted mb-0" id="terms_conditions_text">{{ __('storefront.common.the_terms_and_conditions_are_not_available_yet') }}</p>
                                                                 @endif
                                                             </div>
 
                                                             <div class="modal-footer">
-                                                                <button type="submit" id="submitButton" class="btn btn-primary btn-block fw-600 rounded-4">{{ translate('Agree') }}</button>
-                                                                <button type="button" class="btn btn-secondary btn-block fw-600 rounded-4" data-dismiss="modal">{{ translate('Cancel')}}</button>
+                                                                <button type="submit" id="submitButton" class="btn btn-primary btn-block fw-600 rounded-4">{{ __('storefront.common.agree') }}</button>
+                                                                <button type="button" class="btn btn-secondary btn-block fw-600 rounded-4" data-dismiss="modal">{{ __('storefront.common.cancel')}}</button>
                                                             </div>
                                                         </div>
                                                     </div>
@@ -206,7 +206,7 @@
 <!-- end modal -->
 
                                                 <div class="mb-4 mt-4">
-                                                    <a href="javascript:void(0)" onclick="terms_conditions_modal()" class="btn btn-primary btn-block fw-600 rounded-4">{{ translate('Create An Account') }}</a>
+                                                    <a href="javascript:void(0)" onclick="terms_conditions_modal()" class="btn btn-primary btn-block fw-600 rounded-4">{{ __('storefront.auth.create_an_account') }}</a>
 
                                                 </div>
                                             </form>
@@ -214,7 +214,7 @@
                                             <!-- Social Login -->
                                             @if(get_setting('google_login') == 1 || get_setting('facebook_login') == 1 || get_setting('twitter_login') == 1 || get_setting('apple_login') == 1)
                                                 <div class="text-center mb-3">
-                                                    <span class="bg-white fs-12 text-gray">{{ translate('Or Join With')}}</span>
+                                                    <span class="bg-white fs-12 text-gray">{{ __('storefront.common.or_join_with')}}</span>
                                                 </div>
                                                 <ul class="list-inline social colored text-center mb-4">
                                                     @if (get_setting('facebook_login') == 1)
@@ -251,8 +251,8 @@
 
                                         <!-- Log In -->
                                         <div class="text-center">
-                                            <p class="fs-12 text-gray mb-0">{{ translate('Already have an account?')}}</p>
-                                            <a href="{{ route('user.login') }}" class="fs-14 fw-700 animate-underline-primary">{{ translate('Log In')}}</a>
+                                            <p class="fs-12 text-gray mb-0">{{ __('storefront.auth.already_have_an_account')}}</p>
+                                            <a href="{{ route('user.login') }}" class="fs-14 fw-700 animate-underline-primary">{{ __('storefront.auth.log_in')}}</a>
                                         </div>
                                     </div>
                                 </div>
@@ -288,7 +288,7 @@
                 if(response.length == 0)
                 {
                 //reCaptcha not verified
-                    alert("please verify you are humann!");
+                    alert({{ \Illuminate\Support\Js::from(__('storefront.auth.verify_human')) }});
                     evt.preventDefault();
                     return false;
                 }
@@ -327,13 +327,13 @@
                 $('.phone-form-group').addClass('d-none');
                 $('.email-form-group').removeClass('d-none');
                 isPhoneShown = false;
-                $(el).html('<i>*{{ translate('Use Phone Number Instead') }}</i>');
+                $(el).html(('<i>*' + {{ \Illuminate\Support\Js::from(__('storefront.auth.use_phone_number_instead')) }} + '</i>'));
             }
             else{
                 $('.phone-form-group').removeClass('d-none');
                 $('.email-form-group').addClass('d-none');
                 isPhoneShown = true;
-                $(el).html('*{{ translate('Use Email Instead') }}');
+                $(el).html(('*' + {{ \Illuminate\Support\Js::from(__('storefront.auth.use_email_instead')) }}));
             }
         }
     </script>

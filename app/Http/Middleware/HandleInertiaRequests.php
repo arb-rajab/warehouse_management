@@ -129,8 +129,8 @@ class HandleInertiaRequests extends Middleware
     {
         return [
             'name' => config('app.name'),
-            'locale' => fn () => app()->getLocale(),
-            'fallbackLocale' => config('app.fallback_locale'),
+            'locale' => fn () => StoreLocale::uiLocale(),
+            'fallbackLocale' => StoreLocale::uiLocale(config('app.fallback_locale')),
             'auth' => [
                 'user' => fn () => $request->user('store')?->only(['id', 'name', 'email']),
             ],

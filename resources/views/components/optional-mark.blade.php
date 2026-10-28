@@ -3,4 +3,4 @@
     are required (.ai/rules/form-required-fields.md). Never on a field that
     also shows <x-required-mark />.
 --}}
-<span class="fw-400 text-muted" data-optional-mark>({{ translate('optional') }})</span>
+<span class="fw-400 text-muted" data-optional-mark>({{ __('storefront.forms.optional') }})</span>

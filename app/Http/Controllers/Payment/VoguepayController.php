@@ -58,7 +58,7 @@ class VoguepayController extends Controller
             && GatewayPaymentService::covers((float) ($transaction['total'] ?? 0), $amountDue);
 
         if (! $isApproved) {
-            flash(translate('Payment Failed'))->error();
+            flash(__('storefront.checkout.payment_failed'))->error();
             return redirect()->route('home');
         }
 
@@ -69,7 +69,7 @@ class VoguepayController extends Controller
 
     public function paymentFailure($id)
     {
-        flash(translate('Payment Failed'))->error();
+        flash(__('storefront.checkout.payment_failed'))->error();
         return redirect()->route('home');
     }
 }

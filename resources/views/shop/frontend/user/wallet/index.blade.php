@@ -4,7 +4,7 @@
     <div class="aiz-titlebar mb-4">
         <div class="row align-items-center">
             <div class="col-md-6">
-                <h1 class="fs-20 fw-700 text-dark">{{ translate('My Wallet') }}</h1>
+                <h1 class="fs-20 fw-700 text-dark">{{ __('storefront.checkout.my_wallet') }}</h1>
             </div>
         </div>
     </div>
@@ -15,7 +15,7 @@
             <div class="bg-dark text-white overflow-hidden text-center p-4 h-100">
                 <img src="{{ static_asset('assets/img/wallet-icon.png') }}" alt="">
                 <div class="py-2">
-                    <div class="fs-14 fw-400 text-center">{{ translate('Wallet Balance') }}</div>
+                    <div class="fs-14 fw-400 text-center">{{ __('storefront.checkout.wallet_balance') }}</div>
                     <div class="fs-30 fw-700 text-center">{{ single_price(Auth::user()->balance) }}</div>
                 </div>
             </div>
@@ -29,7 +29,7 @@
                     class="size-60px rounded-circle mx-auto bg-dark d-flex align-items-center justify-content-center mb-3">
                     <i class="las la-plus la-3x text-white"></i>
                 </span>
-                <div class="fs-14 fw-600 text-dark">{{ translate('Recharge Wallet') }}</div>
+                <div class="fs-14 fw-600 text-dark">{{ __('storefront.checkout.recharge_wallet') }}</div>
             </div>
         </div>
 
@@ -38,17 +38,17 @@
     <!-- Wallet Recharge History -->
     <div class="card rounded-0 shadow-none border">
         <div class="card-header border-bottom-0">
-            <h5 class="mb-0 fs-20 fw-700 text-dark text-center text-md-left">{{ translate('Wallet recharge history') }}</h5>
+            <h5 class="mb-0 fs-20 fw-700 text-dark text-center text-md-left">{{ __('storefront.checkout.wallet_recharge_history') }}</h5>
         </div>
         <div class="card-body py-0">
             <table class="table aiz-table mb-4">
                 <thead class="text-gray fs-12">
                     <tr>
                         <th class="pl-0">#</th>
-                        <th data-breakpoints="lg">{{ translate('Date') }}</th>
-                        <th>{{ translate('Amount') }}</th>
-                        <th data-breakpoints="lg">{{ translate('Payment Method') }}</th>
-                        <th class="text-right pr-0">{{ translate('Status') }}</th>
+                        <th data-breakpoints="lg">{{ __('storefront.common.date') }}</th>
+                        <th>{{ __('storefront.common.amount') }}</th>
+                        <th data-breakpoints="lg">{{ __('storefront.checkout.payment_method') }}</th>
+                        <th class="text-right pr-0">{{ __('storefront.common.status') }}</th>
                     </tr>
                 </thead>
                 <tbody class="fs-14">
@@ -61,9 +61,9 @@
                             <td class="text-right pr-0">
                                 @if ($wallet->offline_payment)
                                     @if ($wallet->approval)
-                                        <span class="badge badge-inline badge-success p-3 fs-12" style="border-radius: 25px; min-width: 80px !important;">{{ translate('Approved') }}</span>
+                                        <span class="badge badge-inline badge-success p-3 fs-12" style="border-radius: 25px; min-width: 80px !important;">{{ __('storefront.common.approved') }}</span>
                                     @else
-                                        <span class="badge badge-inline badge-info p-3 fs-12" style="border-radius: 25px; min-width: 80px !important;">{{ translate('Pending') }}</span>
+                                        <span class="badge badge-inline badge-info p-3 fs-12" style="border-radius: 25px; min-width: 80px !important;">{{ __('storefront.common.pending') }}</span>
                                     @endif
                                 @else
                                     N/A

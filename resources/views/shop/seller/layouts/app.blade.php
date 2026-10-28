@@ -1,9 +1,5 @@
 <!doctype html>
-@if(\App\Models\Language::where('code', Session::get('locale', Config::get('app.locale')))->first()?->rtl == 1)
-<html dir="rtl" lang="{{ str_replace('_', '-', app()->getLocale()) }}">
-@else
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
-@endif
+<html lang="{{ str_replace('_', '-', \App\Support\StoreLocale::uiLocale()) }}" dir="{{ \App\Support\StoreLocale::isRtl() ? 'rtl' : 'ltr' }}">
 <head>
 	<meta name="csrf-token" content="{{ csrf_token() }}">
 	<meta name="app-url" content="{{ url('/temp') }}">
@@ -23,7 +19,7 @@
 
 	<!-- aiz core css -->
 	<link rel="stylesheet" href="{{ static_asset('assets/css/vendors.css') }}">
-    @if(\App\Models\Language::where('code', Session::get('locale', Config::get('app.locale')))->first()?->rtl == 1)
+    @if(\App\Support\StoreLocale::isRtl())
     <link rel="stylesheet" href="{{ static_asset('assets/css/bootstrap-rtl.min.css') }}">
     @endif
 	<link rel="stylesheet" href="{{ static_asset('assets/css/aiz-seller.css') }}">
@@ -48,6 +44,8 @@
 	<script>
     	var AIZ = AIZ || {};
         AIZ.local = {
+            minimum_quantity: {{ \Illuminate\Support\Js::from(__('storefront.cart.minimum_limit')) }},
+            maximum_quantity: {{ \Illuminate\Support\Js::from(__('storefront.cart.maximum_limit')) }},
             nothing_selected: '{!! translate('Nothing selected', null, true) !!}',
             nothing_found: '{!! translate('Nothing found', null, true) !!}',
             choose_file: '{{ translate('Choose file') }}',

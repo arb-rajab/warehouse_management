@@ -127,8 +127,11 @@ Back-office UI copy lives under `store.*` in `resources/js/locales/{en,ar}.json`
 Merge leaf keys; preserve existing upload namespace shapes. Database-owned
 values (roles, permission sections, category names) are translated server-side
 and sent as data. The translation admin still edits the `translations` table
-for the storefront, seller panel, emails, PDFs and mobile API; it does not edit
-converted back-office UI copy. Other store locales fall back to English in the
+for dynamic storefront content and remaining seller, email, PDF and mobile
+consumers; it does not edit converted back-office or migrated storefront UI copy.
+Static customer-facing storefront copy lives in `lang/{en,ar}/storefront.php`;
+see the [staged localization inventory](../localization-migration.md).
+Other store locales fall back to English in the
 back office. `LanguageSwitcher` uses the `locale` session key shared with the
 store's `Language` middleware.
 

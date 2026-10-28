@@ -14,6 +14,8 @@ class Language
         $locale = $request->session()->get('locale');
 
         app()->setLocale(StoreLocale::isSupported($locale) ? $locale : config('app.locale'));
+        app('translator')->setLocale(StoreLocale::uiLocale());
+        app('translator')->setFallback(StoreLocale::uiLocale(config('app.fallback_locale')));
 
         return $next($request);
     }

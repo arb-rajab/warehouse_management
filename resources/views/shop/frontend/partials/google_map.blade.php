@@ -52,7 +52,7 @@
             var place = autocomplete.getPlace();
 
             if (!place.geometry) {
-                window.alert("Autocomplete's returned place contains no geometry");
+                window.alert({{ \Illuminate\Support\Js::from(__('storefront.common.location_not_found')) }});
                 return;
             }
 

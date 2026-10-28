@@ -8,15 +8,15 @@
             <section class="pt-4 mb-3">
                 <div class="row">
                     <div class="col-lg-6 text-center text-lg-left">
-                        <h1 class="fw-700 fs-20 fs-md-24 text-dark">{{ translate('All Sellers') }}</h1>
+                        <h1 class="fw-700 fs-20 fs-md-24 text-dark">{{ __('storefront.product.all_sellers') }}</h1>
                     </div>
                     <div class="col-lg-6">
                         <ul class="breadcrumb bg-transparent p-0 justify-content-center justify-content-lg-end">
                             <li class="breadcrumb-item has-transition opacity-60 hov-opacity-80">
-                                <a class="text-reset" href="{{ route('home') }}">{{ translate('Home')}}</a>
+                                <a class="text-reset" href="{{ route('home') }}">{{ __('storefront.navigation.home')}}</a>
                             </li>
                             <li class="text-dark fw-600 breadcrumb-item">
-                                <a class="text-reset" href="{{ route('sellers') }}">"{{ translate('All Sellers') }}"</a>
+                                <a class="text-reset" href="{{ route('sellers') }}">"{{ __('storefront.product.all_sellers') }}"</a>
                             </li>
                         </ul>
                     </div>
@@ -70,7 +70,7 @@
                                         <div class="rating rating-mr-1 text-dark mb-3">
                                             {{ renderStarRating($shop->rating) }}
                                             <span class="opacity-60 fs-14">({{ $shop->num_of_reviews }}
-                                                {{ translate('Reviews') }})</span>
+                                                {{ __('storefront.product.reviews') }})</span>
                                         </div>
                                         @endif
                                         <!-- Visit Button -->
@@ -78,7 +78,7 @@
                                             <span class="circle" aria-hidden="true">
                                                 <span class="icon arrow"></span>
                                             </span>
-                                            <span class="button-text">{{ translate('Visit Store') }}</span>
+                                            <span class="button-text">{{ __('storefront.common.visit_store') }}</span>
                                         </a>
                                     </div>
                                 </div>

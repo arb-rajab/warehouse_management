@@ -19,7 +19,7 @@ class AamarpayController extends Controller
 {
     public function pay(){
         if (Auth::user()->phone == null) {
-            flash(translate('Please add phone number to your profile'))->warning();
+            flash(__('storefront.auth.please_add_phone_number_to_your_profile'))->warning();
             return redirect()->route('profile');
         }
 
@@ -182,7 +182,7 @@ class AamarpayController extends Controller
     }
 
     public function fail(Request $request){
-        flash(translate('Payment failed'))->error();
+        flash(__('storefront.checkout.payment_failed'))->error();
     	return redirect()->route('cart');
     }
 }

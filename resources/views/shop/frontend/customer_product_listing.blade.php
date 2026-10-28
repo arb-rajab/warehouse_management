@@ -32,7 +32,7 @@
                             <div class="overlay overlay-fixed dark c-pointer" data-toggle="class-toggle" data-target=".aiz-filter-sidebar" data-same=".filter-sidebar-thumb"></div>
                             <div class="collapse-sidebar c-scrollbar-light text-left">
                                 <div class="d-flex d-xl-none justify-content-between align-items-center pl-3 border-bottom">
-                                    <h3 class="h6 mb-0 fw-600">{{ translate('Filters') }}</h3>
+                                    <h3 class="h6 mb-0 fw-600">{{ __('storefront.common.filters') }}</h3>
                                     <button type="button" class="btn btn-sm p-2 filter-sidebar-thumb" data-toggle="class-toggle" data-target=".aiz-filter-sidebar" type="button">
                                         <i class="las la-times la-2x"></i>
                                     </button>
@@ -41,7 +41,7 @@
                                 <!-- Categories -->
                                 <div class="bg-white border mb-3">
                                     <div class="fs-16 fw-700 p-3">
-                                        {{ translate('Categories')}}
+                                        {{ __('storefront.product.categories')}}
                                     </div>
                                     <div class="p-3">
                                         <ul class="mb-0 list-unstyled">
@@ -55,7 +55,7 @@
                                                 <li class="mb-3">
                                                     <a class="text-reset fs-14 fw-600 hov-text-primary" href="{{ route('customer.products') }}">
                                                         <i class="las la-angle-left"></i>
-                                                        {{ translate('All Categories')}}
+                                                        {{ __('storefront.product.all_categories')}}
                                                     </a>
                                                 </li>
                                                 @if (\App\Models\Category::find($category_id)->parent_id != 0)
@@ -91,15 +91,15 @@
                         <!-- Breadcrumb -->
                         <ul class="breadcrumb bg-transparent p-0 mb-4">
                             <li class="breadcrumb-item opacity-50">
-                                <a class="text-reset" href="{{ route('home') }}">{{ translate('Home')}}</a>
+                                <a class="text-reset" href="{{ route('home') }}">{{ __('storefront.navigation.home')}}</a>
                             </li>
                             @if(!isset($category_id))
                                 <li class="breadcrumb-item fw-600  text-dark">
-                                    <a class="text-reset" href="{{ route('customer.products') }}">"{{ translate('All Categories')}}"</a>
+                                    <a class="text-reset" href="{{ route('customer.products') }}">"{{ __('storefront.product.all_categories')}}"</a>
                                 </li>
                             @else
                                 <li class="breadcrumb-item opacity-50">
-                                    <a class="text-reset" href="{{ route('customer.products') }}">{{ translate('All Categories')}}</a>
+                                    <a class="text-reset" href="{{ route('customer.products') }}">{{ __('storefront.product.all_categories')}}</a>
                                 </li>
                             @endif
                             @if(isset($category_id))
@@ -118,23 +118,23 @@
                             <div class="d-flex">
                                 <div class="form-group w-200px">
                                     <select class="form-control form-control-sm aiz-selectpicker rounded-0" name="sort_by" onchange="filter()">
-                                        <option value="">{{ translate('Sort by')}}</option>
-                                        <option value="1" @isset($sort_by) @if ($sort_by == '1') selected @endif @endisset>{{ translate('Newest')}}</option>
-                                        <option value="2" @isset($sort_by) @if ($sort_by == '2') selected @endif @endisset>{{ translate('Oldest')}}</option>
-                                        <option value="3" @isset($sort_by) @if ($sort_by == '3') selected @endif @endisset>{{ translate('Price low to high')}}</option>
-                                        <option value="4" @isset($sort_by) @if ($sort_by == '4') selected @endif @endisset>{{ translate('Price high to low')}}</option>
+                                        <option value="">{{ __('storefront.common.sort_by')}}</option>
+                                        <option value="1" @isset($sort_by) @if ($sort_by == '1') selected @endif @endisset>{{ __('storefront.common.newest')}}</option>
+                                        <option value="2" @isset($sort_by) @if ($sort_by == '2') selected @endif @endisset>{{ __('storefront.common.oldest')}}</option>
+                                        <option value="3" @isset($sort_by) @if ($sort_by == '3') selected @endif @endisset>{{ __('storefront.product.price_low_to_high')}}</option>
+                                        <option value="4" @isset($sort_by) @if ($sort_by == '4') selected @endif @endisset>{{ __('storefront.product.price_high_to_low')}}</option>
                                     </select>
                                 </div>
                                 <div class="form-group ml-auto mr-0 w-200px d-none d-md-block">
                                     <select class="form-control form-control-sm aiz-selectpicker rounded-0" name="condition" onchange="filter()">
-                                        <option value="">{{ translate('Type')}}</option>
-                                        <option value="new" @isset($condition) @if ($condition == 'new') selected @endif @endisset>{{ translate('New')}}</option>
-                                        <option value="used" @isset($condition) @if ($condition == 'used') selected @endif @endisset>{{ translate('Used')}}</option>
+                                        <option value="">{{ __('storefront.common.type')}}</option>
+                                        <option value="new" @isset($condition) @if ($condition == 'new') selected @endif @endisset>{{ __('storefront.common.new')}}</option>
+                                        <option value="used" @isset($condition) @if ($condition == 'used') selected @endif @endisset>{{ __('storefront.common.used')}}</option>
                                     </select>
                                 </div>
                                 <div class="form-group ml-2 mr-0 w-200px d-none d-md-block">
                                     <select class="form-control form-control-sm aiz-selectpicker rounded-0" data-live-search="true" name="brand" onchange="filter()">
-                                        <option value="">{{ translate('Brands')}}</option>
+                                        <option value="">{{ __('storefront.product.brands')}}</option>
                                         @foreach (\App\Models\Brand::all() as $brand)
                                             <option value="{{ $brand->slug }}" @isset($brand_id) @if ($brand_id == $brand->id) selected @endif @endisset>{{ $brand->getTranslation('name') }}</option>
                                         @endforeach
@@ -166,9 +166,9 @@
                                                 <!-- badge -->
                                                 <div class="absolute-top-left">
                                                     @if($product->conditon == 'new')
-                                                        <span class="badge badge-inline badge-info fs-13 fw-700 p-3 text-white" style="border-radius: 20px;">{{translate('New')}}</span>
+                                                        <span class="badge badge-inline badge-info fs-13 fw-700 p-3 text-white" style="border-radius: 20px;">{{__('storefront.common.new')}}</span>
                                                     @elseif($product->conditon == 'used')
-                                                        <span class="badge badge-inline badge-warning fs-13 fw-700 p-3 text-white" style="border-radius: 20px;">{{translate('Used')}}</span>
+                                                        <span class="badge badge-inline badge-warning fs-13 fw-700 p-3 text-white" style="border-radius: 20px;">{{__('storefront.common.used')}}</span>
                                                     @endif
                                                 </div>
                                             </div>

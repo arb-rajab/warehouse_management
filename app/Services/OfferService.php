@@ -113,7 +113,7 @@ class OfferService
 
                             $is_offer_created = $this->createCartOffer($data, $offer_product, $repeatable_quantity, $offer, $user);
                             if (!$is_offer_created) {
-                                $offer_message = translate('You did not get the offer, something went wrong');
+                                $offer_message = __('storefront.cart.you_did_not_get_the_offer_something_went_wrong');
                                 return $offer_message;
                             }
                         } else {
@@ -123,7 +123,7 @@ class OfferService
                             if($cart_offer_item == null){
                                 $is_offer_created = $this->createCartOffer($data, $offer_product, $repeatable_quantity, $offer, $user);
                                 if (!$is_offer_created) {
-                                    $offer_message = translate('You did not get the offer, something went wrong');
+                                    $offer_message = __('storefront.cart.you_did_not_get_the_offer_something_went_wrong');
                                     return $offer_message;
                                 }
                             }else{
@@ -133,9 +133,9 @@ class OfferService
                             }
                         }
                     }
-                    $offer_message = translate('Congratulation!, the offered products has been added to your cart!');
+                    $offer_message = __('storefront.cart.congratulation_the_offered_products_has_been_added_to_your_cart');
                 } else {
-                    $offer_message = translate('You did not get the offer, you need to add more quantity of the product');
+                    $offer_message = __('storefront.cart.you_did_not_get_the_offer_you_need_to_add_more_quantity_of_the_product');
                 }
             } else {
                 // to delete the cart offered if the new quantity is less than the required quantity

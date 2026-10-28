@@ -38,7 +38,7 @@
                             <div class="overlay overlay-fixed dark c-pointer" data-toggle="class-toggle" data-target=".aiz-filter-sidebar" data-same=".filter-sidebar-thumb"></div>
                             <div class="collapse-sidebar c-scrollbar-light text-left">
                                 <div class="d-flex d-xl-none justify-content-between align-items-center pl-3 border-bottom">
-                                    <h3 class="h6 mb-0 fw-600">{{ translate('Filters') }}</h3>
+                                    <h3 class="h6 mb-0 fw-600">{{ __('storefront.common.filters') }}</h3>
                                     <button type="button" class="btn btn-sm p-2 filter-sidebar-thumb" data-toggle="class-toggle" data-target=".aiz-filter-sidebar" >
                                         <i class="las la-times la-2x"></i>
                                     </button>
@@ -48,7 +48,7 @@
                                 <div class="bg-white border mb-3">
                                     <div class="fs-16 fw-700 p-3">
                                         <a href="#collapse_1" class="dropdown-toggle filter-section text-dark d-flex align-items-center justify-content-between" data-toggle="collapse">
-                                            {{ translate('Categories')}}
+                                            {{ __('storefront.product.categories')}}
                                         </a>
                                     </div>
                                     <div class="collapse show" id="collapse_1">
@@ -63,7 +63,7 @@
                                                 <li class="mb-3">
                                                     <a class="text-reset fs-14 fw-600 hov-text-primary" href="{{ route('search') }}">
                                                         <i class="las la-angle-left"></i>
-                                                        {{ translate('All Categories')}}
+                                                        {{ __('storefront.product.all_categories')}}
                                                     </a>
                                                 </li>
                                                 @if (\App\Models\Category::find($category_id)->parent_id != 0)
@@ -95,7 +95,7 @@
                                     @if(Auth::user()->admin_verified)
                                     <div class="bg-white border mb-3">
                                         <div class="fs-16 fw-700 p-3">
-                                            {{ translate('Price range')}}
+                                            {{ __('storefront.product.price_range')}}
                                         </div>
                                         <div class="p-3 mr-3">
                                             <div class="aiz-range-slider">
@@ -216,7 +216,7 @@
                                     <div class="bg-white border mb-3">
                                         <div class="fs-16 fw-700 p-3">
                                             <a href="#" class="dropdown-toggle text-dark filter-section collapsed d-flex align-items-center justify-content-between" data-toggle="collapse" data-target="#collapse_color">
-                                                {{ translate('Filter by color')}}
+                                                {{ __('storefront.common.filter_by_color')}}
                                             </a>
                                         </div>
                                         @php
@@ -257,15 +257,15 @@
                         <!-- Breadcrumb -->
                         <ul class="breadcrumb bg-transparent py-0 px-1">
                             <li class="breadcrumb-item opacity-50">
-                                <a class="text-reset" href="{{ route('home') }}">{{ translate('Home')}}</a>
+                                <a class="text-reset" href="{{ route('home') }}">{{ __('storefront.navigation.home')}}</a>
                             </li>
                             @if(!isset($category_id))
                                 <li class="breadcrumb-item fw-700  text-dark">
-                                    <a class="text-reset" href="{{ route('search') }}">"{{ translate('All Categories')}}"</a>
+                                    <a class="text-reset" href="{{ route('search') }}">"{{ __('storefront.product.all_categories')}}"</a>
                                 </li>
                             @else
                                 <li class="breadcrumb-item opacity-50">
-                                    <a class="text-reset" href="{{ route('search') }}">{{ translate('All Categories')}}</a>
+                                    <a class="text-reset" href="{{ route('search') }}">{{ __('storefront.product.all_categories')}}</a>
                                 </li>
                             @endif
                             @if(isset($category_id))
@@ -283,9 +283,9 @@
                                         @if(isset($category_id))
                                             {{ \App\Models\Category::find($category_id)->getTranslation('name') }}
                                         @elseif(isset($query))
-                                            {{ translate('Search result for ') }}"{{ $query }}"
+                                            {{ __('storefront.common.search_result_for') }}"{{ $query }}"
                                         @else
-                                            {{ translate('All Products') }}
+                                            {{ __('storefront.product.all_products') }}
                                         @endif
                                     </h1>
                                     <input type="hidden" name="keyword" value="{{ $query }}">
@@ -298,7 +298,7 @@
                                 <div class="col-6 col-lg-auto mb-3 w-lg-200px mr-xl-4 mr-lg-3">
                                     @if (Route::currentRouteName() != 'products.brand')
                                         <select class="form-control form-control-sm aiz-selectpicker rounded-0" data-live-search="true" name="brand" onchange="filter()">
-                                            <option value="">{{ translate('Brands')}}</option>
+                                            <option value="">{{ __('storefront.product.brands')}}</option>
                                             @foreach (\App\Models\Brand::all() as $brand)
                                                 <option value="{{ $brand->slug }}" @isset($brand_id) @if ($brand_id == $brand->id) selected @endif @endisset>{{ $brand->getTranslation('name') }}</option>
                                             @endforeach
@@ -307,11 +307,11 @@
                                 </div>
                                 <div class="col-6 col-lg-auto mb-3 w-lg-200px">
                                     <select class="form-control form-control-sm aiz-selectpicker rounded-0" name="sort_by" onchange="filter()">
-                                        <option value="">{{ translate('Sort by')}}</option>
-                                        <option value="newest" @isset($sort_by) @if ($sort_by == 'newest') selected @endif @endisset>{{ translate('Newest')}}</option>
-                                        <option value="oldest" @isset($sort_by) @if ($sort_by == 'oldest') selected @endif @endisset>{{ translate('Oldest')}}</option>
-                                        <option value="price-asc" @isset($sort_by) @if ($sort_by == 'price-asc') selected @endif @endisset>{{ translate('Price low to high')}}</option>
-                                        <option value="price-desc" @isset($sort_by) @if ($sort_by == 'price-desc') selected @endif @endisset>{{ translate('Price high to low')}}</option>
+                                        <option value="">{{ __('storefront.common.sort_by')}}</option>
+                                        <option value="newest" @isset($sort_by) @if ($sort_by == 'newest') selected @endif @endisset>{{ __('storefront.common.newest')}}</option>
+                                        <option value="oldest" @isset($sort_by) @if ($sort_by == 'oldest') selected @endif @endisset>{{ __('storefront.common.oldest')}}</option>
+                                        <option value="price-asc" @isset($sort_by) @if ($sort_by == 'price-asc') selected @endif @endisset>{{ __('storefront.product.price_low_to_high')}}</option>
+                                        <option value="price-desc" @isset($sort_by) @if ($sort_by == 'price-desc') selected @endif @endisset>{{ __('storefront.product.price_high_to_low')}}</option>
                                     </select>
                                 </div>
                             </div>
