@@ -2,37 +2,17 @@
 
 namespace App\Mail;
 
-use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Mail\Mailable;
-use Illuminate\Queue\SerializesModels;
-
-class InvoiceEmailManager extends Mailable
+class InvoiceEmailManager extends LocalizedMail
 {
-    use Queueable, SerializesModels;
-    /**
-     * Create a new message instance.
-     *
-     * @return void
-     */
-    public $array;
-
-    public function __construct($array)
+    public function build(): static
     {
-        $this->array = $array;
+        $this->localizeMessage();
+
+        return $this->text('shop.emails.plain.invoice')->view($this->array['view'])
+            ->from($this->array['from'], config('mail.from.name'))
+            ->subject($this->array['subject'])
+            ->with([
+                'order' => $this->array['order'],
+            ]);
     }
-    /**
-     * Build the message.
-     *
-     * @return $this
-     */
-     public function build()
-     {
-         return $this->view($this->array['view'])
-                     ->from($this->array['from'], config('mail.from.name'))
-                     ->subject($this->array['subject'])
-                     ->with([
-                         'order' => $this->array['order']
-                     ]);
-     }
 }

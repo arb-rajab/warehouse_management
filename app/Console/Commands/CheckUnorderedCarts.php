@@ -53,8 +53,7 @@ class CheckUnorderedCarts extends Command
                     continue;
                 }
 
-                $message = 'have added '.$user->carts_count.' products to their cart since 5 days and not placed an order.';
-                Notification::send($admins, new UnorderedCartNotification($user->name, $user->id, $user->carts_count, $message));
+                Notification::send($admins, new UnorderedCartNotification($user->name, $user->id, $user->carts_count));
 
                 // Every stale cart of this user, so the next run does not notify about the same user again.
                 Cart::query()

@@ -227,7 +227,7 @@ class OrderController extends Controller implements HasMiddleware
         $order->load('user:id,device_token');
         NotificationUtility::sendNotification($order, $status);
         if (get_setting('google_firebase') == 1 && $order->user?->getAttribute('device_token')) {
-            NotificationUtility::sendOrderFirebaseNotification($order, __('messages.order_updated_title'), __('messages.order_updated_body', ['code' => $order->code]));
+            NotificationUtility::sendOrderFirebaseNotification($order, __('messages.order_updated_title', [], \App\Support\StoreLocale::deliveryLocale($order->user)), __('messages.order_updated_body', ['code' => $order->code], \App\Support\StoreLocale::deliveryLocale($order->user)));
         }
     }
 

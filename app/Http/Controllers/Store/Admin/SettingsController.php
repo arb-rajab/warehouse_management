@@ -208,9 +208,10 @@ class SettingsController extends Controller implements HasMiddleware
     {
         Mail::to($request->validated('email'))->queue(new EmailManager([
             'view' => 'shop.emails.newsletter',
-            'subject' => 'SMTP Test',
+            'subject_key' => 'delivery.mail.smtp_subject',
+            'locale' => \App\Support\StoreLocale::documentLocale(),
             'from' => config('mail.from.address'),
-            'content' => 'This is a test email.',
+            'content_key' => 'delivery.mail.smtp_body',
         ]));
 
         return redirect()->route('smtp_settings.index');

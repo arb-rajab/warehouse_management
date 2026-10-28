@@ -158,6 +158,9 @@ return [
 
     'locale' => env('APP_LOCALE', 'en'),
 
+    // Laravel mutates app.locale for requests/jobs; deliveries need the configured default.
+    'ui_default_locale' => env('APP_LOCALE', 'en'),
+
     /*
     |--------------------------------------------------------------------------
     | Default Content Language

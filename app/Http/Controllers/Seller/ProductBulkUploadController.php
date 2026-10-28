@@ -28,6 +28,7 @@ class ProductBulkUploadController extends Controller
         $categories = Category::all();
 
         return PDF::loadView('shop.backend.downloads.category',[
+            'documentLocale' => \App\Support\StoreLocale::documentLocale(),
             'categories' => $categories,
         ], [], [])->download('category.pdf');
     }
@@ -37,6 +38,7 @@ class ProductBulkUploadController extends Controller
         $brands = Brand::all();
 
         return PDF::loadView('shop.backend.downloads.brand',[
+            'documentLocale' => \App\Support\StoreLocale::documentLocale(),
             'brands' => $brands,
         ], [], [])->download('brands.pdf');
     }

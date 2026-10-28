@@ -12,7 +12,7 @@ use Illuminate\Support\Js;
 use Inertia\Testing\AssertableInertia as Assert;
 
 beforeEach(function () {
-    config(['app.locale' => 'ar', 'app.fallback_locale' => 'en', 'app.default_language' => 'en']);
+    config(['app.locale' => 'ar', 'app.ui_default_locale' => 'ar', 'app.fallback_locale' => 'en', 'app.default_language' => 'en']);
     Mail::fake();
 });
 
@@ -210,7 +210,7 @@ test('auth verification messages and email actions use files without creating tr
     startStorefrontTranslationQueryLog();
     $message = (new EmailVerificationNotification)->toMail($customer);
     expect($message->subject)->toBe('التحقق من البريد الإلكتروني - '.config('app.name'));
-    expect(view($message->view, $message->viewData)->render())->toContain('موافق');
+    expect(view($message->view['html'], $message->viewData)->render())->toContain('موافق');
     expectNoStorefrontTranslationQueries();
 });
 

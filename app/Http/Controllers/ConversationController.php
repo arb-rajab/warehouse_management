@@ -89,9 +89,11 @@ class ConversationController extends Controller implements HasMiddleware
     public function send_message_to_seller($conversation, $message, $user_type)
     {
         $array['view'] = 'shop.emails.conversation';
-        $array['subject'] = __('storefront.support.sender_subject', ['name' => Auth::user()->name]);
+        $array['subject_key'] = 'storefront.support.sender_subject';
+        $array['subject_parameters'] = ['name' => Auth::user()->name];
         $array['from'] = config('mail.from.address');
-        $array['content'] = __('storefront.support.received_message', ['name' => Auth::user()->name]);
+        $array['content_key'] = 'storefront.support.received_message';
+        $array['content_parameters'] = ['name' => Auth::user()->name];
         $array['sender'] = Auth::user()->name;
 
         if ($user_type == 'admin') {
@@ -103,7 +105,7 @@ class ConversationController extends Controller implements HasMiddleware
         $array['details'] = $message->message;
 
         try {
-            Mail::to($conversation->receiver->email)->queue(new ConversationMailManager($array));
+            Mail::to($conversation->receiver->email)->queue(new ConversationMailManager($array, $conversation->receiver));
         } catch (\Exception $e) {
             //dd($e->getMessage());
         }

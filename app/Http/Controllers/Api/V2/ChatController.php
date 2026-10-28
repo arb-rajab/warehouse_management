@@ -88,9 +88,11 @@ class ChatController extends Controller
     public function send_message_to_seller($conversation, $message, $seller_user, $user)
     {
         $array['view'] = 'shop.emails.conversation';
-        $array['subject'] = translate('Sender').':- '. $user->name;
+        $array['subject_key'] = 'storefront.support.sender_subject';
+        $array['subject_parameters'] = ['name' => $user->name];
         $array['from'] = config('mail.from.address');
-        $array['content'] = translate('Hi! You recieved a message from ') . $user->name . '.';
+        $array['content_key'] = 'storefront.support.received_message';
+        $array['content_parameters'] = ['name' => $user->name];
         $array['sender'] = $user->name;
 
         if ($seller_user->type == 'admin') {
@@ -102,7 +104,7 @@ class ChatController extends Controller
         $array['details'] = $message->message;
 
         try {
-            Mail::to($conversation->receiver->email)->queue(new ConversationMailManager($array));
+            Mail::to($conversation->receiver->email)->queue(new ConversationMailManager($array, $conversation->receiver));
         } catch (\Exception $e) {
             //dd($e->getMessage());
         }

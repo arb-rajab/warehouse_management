@@ -104,8 +104,9 @@ test('reference PDFs remain server rendered and preserve translated labels', fun
     $pdf = Mockery::mock();
     $pdf->shouldReceive('download')->once()->with($filename)->andReturn(response('PDF contents', 200, ['Content-Type' => 'application/pdf']));
     PDF::shouldReceive('loadView')->once()->withArgs(function (string $actualView, array $data) use ($view, $expectedLabel): bool {
-        expect($actualView)->toBe($view)->and($data)->toHaveCount(1)
-            ->and(array_values($data)[0])->toHaveCount(2)
+        expect($actualView)->toBe($view)->and($data)->toHaveCount(2)
+            ->and($data['documentLocale'])->toBeIn(['en', 'ar'])
+            ->and(collect($data)->except('documentLocale')->first())->toHaveCount(2)
             ->and(view($actualView, $data)->render())->toContain($expectedLabel);
 
         return true;

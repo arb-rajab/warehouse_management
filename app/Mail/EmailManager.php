@@ -2,34 +2,14 @@
 
 namespace App\Mail;
 
-use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Mail\Mailable;
-use Illuminate\Queue\SerializesModels;
-
-class EmailManager extends Mailable
+class EmailManager extends LocalizedMail
 {
-    use Queueable, SerializesModels;
-    /**
-     * Create a new message instance.
-     *
-     * @return void
-     */
-    public $array;
+    public function build(): static
+    {
+        $this->localizeMessage();
 
-    public function __construct($array)
-    {
-        $this->array = $array;
-    }
-    /**
-     * Build the message.
-     *
-     * @return $this
-     */
-    public function build()
-    {
-        return $this->view($this->array['view'])
-                    ->from($this->array['from'], config('mail.from.name'))
-                    ->subject($this->array['subject']);
+        return $this->text('shop.emails.plain.message')->view($this->array['view'])
+            ->from($this->array['from'], config('mail.from.name'))
+            ->subject($this->array['subject']);
     }
 }

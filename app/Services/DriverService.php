@@ -14,14 +14,18 @@ class DriverService{
         $driver = StoreUser::find($trip->driver_id);
         if($driver){
 
+            $locale = \App\Support\StoreLocale::deliveryLocale($driver);
+            $title = __('delivery.notifications.trip_assigned', [], $locale);
+            $body = __('delivery.notifications.trip_body', ['code' => $trip->code], $locale);
+
             // notify the user
-            Notification::send($driver, new NewDriverTripNotification(translate('New trip assigned!'), translate("You have been assigned to a new trip, trip code: {$trip->code}!"), $trip));
+            Notification::send($driver, new NewDriverTripNotification($title, $body, $trip));
 
             if ($driver->device_token != null) {
                 $data = collect();
                 $data->device_token = $driver->device_token;
-                $data->title = translate('New trip assigned!');
-                $data->text = translate("You have been assigned to a new trip, trip code: {$trip->code}!");
+                $data->title = $title;
+                $data->text = $body;
 
                 $data->type = "trip";
                 $data->id = $trip->id;

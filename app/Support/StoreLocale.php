@@ -4,6 +4,7 @@ namespace App\Support;
 
 use App\Enums\Locale;
 use App\Models\Language;
+use Illuminate\Contracts\Translation\HasLocalePreference;
 use Illuminate\Support\Facades\Lang;
 
 class StoreLocale
@@ -16,11 +17,30 @@ class StoreLocale
         return $locale === 'sa' ? 'ar' : $locale;
     }
 
-    public static function status(?string $value): string
+    /** Deliveries never inherit the request session or a queue worker's locale. */
+    public static function deliveryLocale(?object $recipient = null, ?string $locale = null): string
+    {
+        $preference = $locale ?? ($recipient instanceof HasLocalePreference ? $recipient->preferredLocale() : null);
+        $preference = is_string($preference) ? self::uiLocale($preference) : null;
+
+        return in_array($preference, ['en', 'ar'], true)
+            ? $preference
+            : (self::uiLocale(config('app.ui_default_locale')) === 'ar' ? 'ar' : 'en');
+    }
+
+    /** Downloads follow the validated UI choice, independently of content language. */
+    public static function documentLocale(): string
+    {
+        $locale = request()->hasSession() ? request()->session()->get('locale') : null;
+
+        return self::deliveryLocale(locale: is_string($locale) ? $locale : null);
+    }
+
+    public static function status(?string $value, ?string $locale = null): string
     {
         $key = 'storefront.status.'.$value;
 
-        return Lang::has($key) ? __($key) : __('storefront.status.unknown');
+        return Lang::has($key, $locale) ? __($key, [], $locale) : __('storefront.status.unknown', [], $locale);
     }
 
     /** Known payment methods are UI vocabulary; custom names remain content. */

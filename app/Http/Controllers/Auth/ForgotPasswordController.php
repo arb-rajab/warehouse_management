@@ -88,10 +88,11 @@ class ForgotPasswordController extends Controller implements HasMiddleware
             if ($code !== null) {
                 $array['view'] = 'shop.emails.verification';
                 $array['from'] = config('mail.from.address');
-                $array['subject'] = __('storefront.auth.password_reset_subject');
-                $array['content'] = __('storefront.auth.verification_code_message', ['code' => $code]);
+                $array['subject_key'] = 'storefront.auth.password_reset_subject';
+                $array['content_key'] = 'storefront.auth.verification_code_message';
+                $array['content_parameters'] = ['code' => $code];
 
-                Mail::to($user->email)->queue(new SecondEmailVerifyMailManager($array));
+                Mail::to($user->email)->queue(new SecondEmailVerifyMailManager($array, $user));
             }
 
             return view('shop.auth.passwords.reset');

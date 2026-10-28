@@ -44,10 +44,20 @@ class OrderNotification extends Notification
      */
     public function toMail($notifiable)
     {
+        $locale = \App\Support\StoreLocale::deliveryLocale($notifiable, $this->locale);
+        $array = [
+            'locale' => $locale,
+            'subject' => __('messages.order_updated_title', [], $locale),
+            'content' => __('delivery.notifications.order_updated', [
+                'code' => $this->order_notification['order_code'],
+                'status' => \App\Support\StoreLocale::status($this->order_notification['status'], $locale),
+            ], $locale),
+            'link' => url('/'),
+        ];
+
         return (new MailMessage)
-                    ->line('The introduction to the notification.')
-                    ->action('Notification Action', url('/'))
-                    ->line('Thank you for using our application!');
+            ->view(['html' => 'shop.emails.order_notification', 'text' => 'shop.emails.plain.message'], ['array' => $array])
+            ->subject($array['subject']);
     }
 
     /**

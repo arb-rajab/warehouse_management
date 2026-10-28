@@ -145,7 +145,7 @@ class StoreAdminOrderService
             DB::afterCommit(function () use ($drivers, $order): void {
                 foreach ($drivers as $driver) {
                     if ($driver->getAttribute('device_token')) {
-                        NotificationUtility::sendPushNotificationToUser($driver, __('messages.order_updated_title'), __('messages.order_updated_body', ['code' => $order->code]));
+                        NotificationUtility::sendPushNotificationToUser($driver, __('messages.order_updated_title', [], \App\Support\StoreLocale::deliveryLocale($driver)), __('messages.order_updated_body', ['code' => $order->code], \App\Support\StoreLocale::deliveryLocale($driver)));
                     }
                 }
             });

@@ -14,9 +14,7 @@ function emailedResetCode(): string
 {
     $mail = Mail::queued(SecondEmailVerifyMailManager::class)->last();
 
-    preg_match('/\d{6}/', $mail->array['content'], $matches);
-
-    return $matches[0];
+    return (string) $mail->array['content_parameters']['code'];
 }
 
 /**

@@ -1,3 +1,7 @@
+@php
+    $mailLocale = $mailLocale ?? ($array['locale'] ?? \App\Support\StoreLocale::deliveryLocale());
+@endphp
+<html lang="{{ $mailLocale }}" dir="{{ $mailLocale === 'ar' ? 'rtl' : 'ltr' }}"><head><meta charset="utf-8"></head><body>
 <table width="100%" border="0" cellspacing="0" cellpadding="0" bgcolor="#e8ebef">
     @php
     $logo = get_setting('header_logo');
@@ -74,3 +78,5 @@
         </td>
     </tr>
 </table>
+
+</body></html>

@@ -29,13 +29,15 @@ class AppEmailVerificationNotification extends Notification
 
     public function toMail($notifiable)
     {
+        $locale = \App\Support\StoreLocale::deliveryLocale($notifiable, $this->locale);
+        $array['locale'] = $locale;
         $array['view'] = 'shop.emails.app_verification';
-        $array['subject'] = translate('Email Verification');
-        $array['content'] = translate('Please enter the code:'.$this->code);
+        $array['subject'] = __('storefront.auth.email_verification', [], $locale);
+        $array['content'] = __('storefront.auth.verification_code_message', ['code' => $this->code], $locale);
 
         return (new MailMessage)
-            ->view('shop.emails.app_verification', ['array' => $array])
-            ->subject(translate('Email Verification - ').config('app.name'));
+            ->view(['html' => 'shop.emails.app_verification', 'text' => 'shop.emails.plain.message'], ['array' => $array])
+            ->subject(__('storefront.auth.verification_subject', ['app' => config('app.name')], $locale));
     }
 
     public function toArray($notifiable)

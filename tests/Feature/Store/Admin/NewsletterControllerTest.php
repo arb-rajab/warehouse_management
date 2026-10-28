@@ -118,7 +118,7 @@ test('the SMTP test validates its address and queues the existing test message',
     $this->postJson(route('test.smtp'), ['email' => 'bad'])->assertUnprocessable()->assertJsonValidationErrors('email');
     Mail::assertNothingQueued();
     $this->post(route('test.smtp'), ['email' => 'test@example.test'])->assertRedirect(route('smtp_settings.index'));
-    Mail::assertQueued(EmailManager::class, fn (EmailManager $mail) => $mail->hasTo('test@example.test') && $mail->array['subject'] === 'SMTP Test' && $mail->array['content'] === 'This is a test email.');
+    Mail::assertQueued(EmailManager::class, fn (EmailManager $mail) => $mail->hasTo('test@example.test') && $mail->array['subject_key'] === 'delivery.mail.smtp_subject' && $mail->array['content_key'] === 'delivery.mail.smtp_body');
 });
 
 foreach (['index', 'recipients', 'send', 'testEmail'] as $action) {

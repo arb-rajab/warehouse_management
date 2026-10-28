@@ -1,9 +1,10 @@
-# Localization migration: storefront, seller and admin stages
+# Localization migration: storefront, seller, admin and delivery/document stages
 
 The shared branch is `codex/localization-migration`; keep its PR into `develop`
 open for subsequent stages. This stage starts from `bf85892f`, the merge of
 PR #511. Its APP_LOCALE fixes are inherited, not cherry-picked or duplicated.
 The seller/admin stage continues from the actual storefront head `ff546a93`.
+The delivery/document stage continues from the actual seller/admin head `b12995a5`.
 Verification is explicitly deferred by the user until the migration prompts
 are complete; see the verification contract below.
 
@@ -82,31 +83,81 @@ locking, balance arithmetic and response envelopes are preserved; its two shared
 messages now use files. `ProductsImport` keeps its `notify` switch, spreadsheet
 binding, data/persistence behavior and validation. Seller-created support email
 subject/body reuse the already migrated storefront composition keys; the retained
-email template remains for the document stage. No routes, guards, ownership
+email template is migrated by the delivery/document stage below. No routes, guards, ownership
 checks, uploads, dependencies, schemas, `.env`, seeders, DEFAULT_LANGUAGE or
 translation records were changed by this stage.
 
-## Remaining static consumers
+## Delivery/document stage completed
+
+- All eight `resources/views/shop/emails` paths (support, conversation, auction
+  bid, newsletter, invoice, app verification, verification and terms) now use
+  file-based static labels and explicit language/direction metadata. Reuse the
+  existing storefront auth/support keys; new copy is in matching
+  `lang/{en,ar}/delivery.php`. Add password-reset/order-notification views and
+  plain-text alternatives. Business-owned newsletter HTML, message/ticket
+  details, terms/settings, product names and customer/shop information keep
+  their existing print/sanitization/content rules.
+- The six existing mail managers share `LocalizedMail`. Static subject/body
+  keys and interpolation parameters survive queue serialization; translation
+  happens when the message builds. Recipient `HasLocalePreference` is honored
+  when available, with `sa` normalized to `ar`; otherwise use the configured
+  UI default. Store users currently have no saved locale preference. An
+  explicit locale can be pinned (SMTP tests use the requesting UI choice).
+  Each mailable carries its locale before queueing and restores both the
+  application locale and the separately selected translator locale afterward.
+  Existing serialized payloads with custom/precomposed content are still accepted.
+- Laravel mutates `app.locale` when switching a request/job's language.
+  `app.ui_default_locale` captures the same APP_LOCALE configuration without
+  that mutation, so delivery fallback cannot inherit a sender's browser or a
+  preceding worker job. No new environment variable or `.env` edit is needed.
+  DEFAULT_LANGUAGE and APP_FALLBACK_LOCALE retain their existing purposes.
+- `AppEmailVerificationNotification`, `PasswordResetRequest`, existing
+  verification/terms notifications and the dormant `OrderNotification::toMail`
+  resolve static copy explicitly for the notifiable/explicit notification
+  locale. They do not change the worker's global locale to compose text.
+  New driver-trip notifications and order Firebase updates resolve the
+  recipient locale; unordered-cart notifications pluralize for each admin.
+  Existing type names, channels, routing, payload keys, raw status identifiers,
+  recipient lists and historical records are preserved. User-authored pushes
+  and historical/precomposed notification messages are not translated again.
+- `backend/invoices/invoice`, `backend/downloads/{brand,category,user}` and
+  `frontend/user/export-rep-payments` use an explicit document UI locale,
+  language/direction metadata and readable Latin identifier spans. Both invoice
+  controllers, both bulk-upload reference generators and both receipt export
+  controllers pass that locale. A validated `en`, `ar` or legacy `sa` request
+  session choice wins; otherwise use the immutable configured UI default.
+  Dynamic category/brand translation still uses the selected content code.
+- Store documents keep mPDF and its bundled DejaVu Sans Arabic/OpenType support.
+  TripService keeps TCPDF/FPDI and the existing fixed CMR template, coordinates,
+  barcode/signature content and filenames. Its generated headings, instructions
+  and interpolated labels now use file keys and language metadata. The CMR
+  coordinate system remains LTR because mirroring it would misalign the fixed
+  form; TCPDF's existing DejaVu shaping handles Arabic overlay text. Printed
+  labels baked into the externally supplied CMR PDF remain part of that form,
+  rather than application translation-table consumers.
+- The human-facing reference PDF headings are localized. `ProductsExport`
+  spreadsheet column names are import identifiers and remain byte-for-byte
+  unchanged. QR/barcode labels contain identifiers, not translatable headings.
+  Amount calculations, tax/total visibility, currency/precision, timezone,
+  identifiers, download routes, receipt/attachment filenames and authorization
+  are preserved. Invoice-email sending remains commented out; this stage does
+  not enable it or add an attachment/delivery channel.
+
+## Remaining consumers and boundaries
 
 | Group | Remaining consumers |
 | --- | --- |
-| Seller/admin UI | No remaining static `translate()` calls found in seller templates/controllers/requests or converted admin controllers/resources/services. Remaining calls on these surfaces are the explicitly retained dynamic product-query content and custom payment/permission fallbacks. Retained backend invoice/download templates are documented below. This is a source-inspection result, not runtime verification. |
-| Emails/documents | `resources/views/shop/emails/{support,conversation,invoice,newsletter,auction_bid,app_verification}.blade.php`; backend invoice/download templates; `AppEmailVerificationNotification`, `PasswordResetRequest`, driver/order notifications and `NotificationUtility`. Customer-request message composition and auth verification/terms email actions migrated in this stage; other email/document UI remains for its stage. |
-| API/mobile | `app/Http/Controllers/Api/V2/**`, seller/driver/trip API paths, `IsAppUserUnbanned`, and mobile notification/services. Existing API locale/content lookup and response contracts remain unchanged. Shared payment/cart/document services now resolve their static messages from files wherever reused. |
+| Seller/admin/customer UI | No remaining active static database-helper calls found in the migrated surfaces. Dynamic product-query content, configured navigation/CMS/coupon content and custom payment/permission fallbacks intentionally remain. Commented legacy markup and SVG transforms are not active static consumers. This is source inspection, not runtime verification. |
+| API/mobile | `app/Http/Controllers/Api/V2/**` customer/auth/catalogue/cart/checkout/payment/address/wallet/chat/auction/upload messages; seller product/shop/order/coupon/conversation/upload/package/refund/withdrawal messages; delivery and driver/trip responses; `IsAppUserUnbanned`; static labels in `app/Http/Resources/V2/**`. Only their shared email/notification composition was migrated here. Existing response envelopes/statuses and content locale behavior remain intact. `NotificationUtility::sendPushNotificationToUser` also retains its API response message `Notification status` for that stage. |
+| Translation management | `Store/Admin/LanguageController` still reads/writes/imports/exports `translations` and `app_translations`; its requests, models, cache invalidation and mobile language endpoints remain dependent on them. These tables and the legacy `translate()` helper must remain until their consumers are migrated. |
+| Intentional database content | `getTranslation()` model methods, custom role/permission/payment names, products/categories/brands/shops, CMS, configured menus/coupon headings, business settings and user-authored content retain existing behavior. These are separate from static application vocabulary. |
+| Documents | Runtime/visual review of Arabic emails and both PDF engines is deferred. The external fixed CMR form's preprinted labels and business/company literals are preserved; only generated static overlay vocabulary is localized. |
 
-Additional deferred boundaries: `DriverService`, seller `OrderController` and
-shared `OrderService` still compose Firebase/mobile notification title/body;
-`NotificationUtility` composes order email text. `Store/Admin/SettingsController`
-has a hardcoded SMTP-test email subject/body; treat it with emails. Retained
-`backend/downloads/{brand,category,user}.blade.php` and
-`backend/invoices/invoice.blade.php` keep their document text. API/V2 seller
-responses (product, upload, coupon, withdrawal, shop, order and conversation),
-customer/auth/catalog/payment, delivery and driver/trip messages still use the
-legacy helper. Keep these for the email/document and API/mobile prompts.
-
-Do not mistake `getTranslation()` model methods, configured menu/coupon
-content, SVG transforms, or vendor JavaScript `translate` functions for static
-database-backed UI labels.
+Do not mistake `getTranslation()` model methods, configured menu/coupon content,
+SVG transforms, Laravel validation's `->translate()` or vendor JavaScript
+`translate` functions for static database-backed UI labels. Legacy helper calls
+remaining outside the intentional content list are predominantly API/V2 and its
+resources/middleware; do not remove the tables/helper during this stage.
 
 ## Verification contract
 
@@ -129,18 +180,29 @@ variant rendering, plurals, reCAPTCHA and catalog/source boundaries.
 canonical permissions, custom records/role content, payment labels and the SMTP
 refusal. Query helpers now live in `tests/Pest.php` for both migration suites.
 
-**Deferred by explicit user instruction:** no tests, browser suites, pre-push
+`DeliveryLocalizationTest` adds queued mailable serialization and consecutive
+recipient locale isolation, HTML/text subjects and bodies, empty-table and
+stored-override isolation, safe names/URLs/content interpolation, recipient
+preferences/default/sa handling, serialized auth notifications, unchanged
+order/cart/trip payload contracts, plural cart copy, document metadata and
+content-language separation, real mPDF generation, invoice calculations,
+receipt values and unchanged spreadsheet headers. Existing storefront auth,
+password-reset, newsletter/SMTP and bulk-reference tests are updated for deferred
+message composition and explicit document locale. These tests are unexecuted.
+
+**Deferred by explicit user instruction:** no tests, browser suites, builds, pre-push
 scripts, formatter/type-check workflows or attestation commands were run for
-this stage. Review used source inspection, searches and `git diff --check`.
+the seller/admin or delivery/document stages. Review used source inspection, searches and `git diff --check`.
 The earlier storefront development results are historical and do not verify
-the seller/admin commit. The stopped storefront attestation was not restarted;
+the seller/admin or delivery/document commits. The stopped storefront attestation was not restarted;
 no CI-Verified trailer was created or fabricated. Intermediate commit/push is
 explicitly authorized without that attestation. Keep PR #512 draft and open.
 
 Reserve these checks until the user finishes all migration prompts:
 
 ```sh
-php artisan test --compact tests/Feature/StorefrontLocalizationTest.php tests/Feature/SellerLocalizationTest.php tests/Feature/Store/StorePermissionLocalizationTest.php
+php artisan test --compact tests/Feature/StorefrontLocalizationTest.php tests/Feature/SellerLocalizationTest.php tests/Feature/DeliveryLocalizationTest.php tests/Feature/Store/StorePermissionLocalizationTest.php
+php artisan test --compact tests/Feature/LegacyStoreInvoiceTest.php tests/Feature/LegacyStorePasswordResetTest.php tests/Feature/Console/CheckUnorderedCartsCommandTest.php tests/Feature/Store/Admin/ProductBulkUploadControllerTest.php tests/Feature/Store/Admin/RepresentativePaymentControllerTest.php
 php artisan test --compact --filter='Seller|StorePermissions|RoleController|NewsletterController|Recaptcha|ProductVariant'
 php artisan test --compact --filter='DefaultLanguageConfig|StoreLocale|Language|RequiredFieldsRatchet|StoreAuthGuard|AuthGuardIsolation'
 vendor/bin/pint --dirty --format agent

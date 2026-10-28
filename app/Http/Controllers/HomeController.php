@@ -610,19 +610,19 @@ class HomeController extends Controller
 
         $verification_code = Str::random(32);
 
-        $array['subject'] = __('storefront.auth.email_verification');
+        $array['subject_key'] = 'storefront.auth.email_verification';
         $array['from'] = config('mail.from.address');
-        $array['content'] = __('storefront.auth.verify_account');
+        $array['content_key'] = 'storefront.auth.verify_account';
         $array['link'] = route('email_change.callback') . '?new_email_verificiation_code=' . $verification_code . '&email=' . $email;
         $array['sender'] = Auth::user()->name;
-        $array['details'] = __('storefront.auth.secondary_email');
+        $array['details_key'] = 'storefront.auth.secondary_email';
 
         $user = Auth::user();
         $user->new_email_verificiation_code = $verification_code;
         $user->save();
 
         try {
-            Mail::to($email)->queue(new SecondEmailVerifyMailManager($array));
+            Mail::to($email)->queue(new SecondEmailVerifyMailManager($array, $user));
 
             $response['status'] = 1;
             $response['message'] = __('storefront.auth.your_verification_mail_has_been_sent_to_your_email');

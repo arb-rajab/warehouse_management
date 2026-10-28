@@ -63,9 +63,10 @@ class SupportTicketController extends Controller
 
     public function send_support_mail_to_admin($ticket){
         $array['view'] = 'shop.emails.support';
-        $array['subject'] = __('storefront.support.ticket_subject', ['code' => $ticket->code]);
+        $array['subject_key'] = 'storefront.support.ticket_subject';
+        $array['subject_parameters'] = ['code' => $ticket->code];
         $array['from'] = config('mail.from.address');
-        $array['content'] = __('storefront.support.ticket_created');
+        $array['content_key'] = 'storefront.support.ticket_created';
         $array['link'] = route('support_ticket.admin_show', encrypt($ticket->id));
         $array['sender'] = $ticket->user->name;
         $array['details'] = $ticket->details;
@@ -73,7 +74,8 @@ class SupportTicketController extends Controller
         // dd($array);
         // dd(StoreUser::where('user_type', 'admin')->first()->email);
         try {
-            Mail::to(StoreUser::where('user_type', 'admin')->first()->email)->queue(new SupportMailManager($array));
+            $recipient = StoreUser::where('user_type', 'admin')->first();
+            Mail::to($recipient->email)->queue(new SupportMailManager($array, $recipient));
         } catch (\Exception $e) {
             // dd($e->getMessage());
         }
@@ -81,15 +83,16 @@ class SupportTicketController extends Controller
 
     public function send_support_reply_email_to_user($ticket, $tkt_reply){
         $array['view'] = 'shop.emails.support';
-        $array['subject'] = __('storefront.support.ticket_subject', ['code' => $ticket->code]);
+        $array['subject_key'] = 'storefront.support.ticket_subject';
+        $array['subject_parameters'] = ['code' => $ticket->code];
         $array['from'] = config('mail.from.address');
-        $array['content'] = __('storefront.support.ticket_created');
+        $array['content_key'] = 'storefront.support.ticket_created';
         $array['link'] = route('support_ticket.show', encrypt($ticket->id));
         $array['sender'] = $tkt_reply->user->name;
         $array['details'] = $tkt_reply->reply;
 
         try {
-            Mail::to($ticket->user->email)->queue(new SupportMailManager($array));
+            Mail::to($ticket->user->email)->queue(new SupportMailManager($array, $ticket->user));
         } catch (\Exception $e) {
             //dd($e->getMessage());
         }
