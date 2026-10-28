@@ -5,10 +5,10 @@ namespace App\Http\Middleware;
 use App\Http\Resources\Store\AdminNotificationResource;
 use App\Models\BusinessSetting;
 use App\Models\Conversation;
-use App\Models\Language;
 use App\Models\Role;
 use App\Models\Shop;
 use App\Models\StoreUser;
+use App\Support\StoreLocale;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Middleware;
@@ -93,6 +93,7 @@ class HandleInertiaRequests extends Middleware
             ...parent::share($request),
             'name' => config('app.name'),
             'locale' => app()->getLocale(),
+            'fallbackLocale' => config('app.fallback_locale'),
             'auth' => [
                 'user' => $request->user()?->only(['id', 'name', 'email']),
             ],
@@ -129,11 +130,12 @@ class HandleInertiaRequests extends Middleware
         return [
             'name' => config('app.name'),
             'locale' => fn () => app()->getLocale(),
+            'fallbackLocale' => config('app.fallback_locale'),
             'auth' => [
                 'user' => fn () => $request->user('store')?->only(['id', 'name', 'email']),
             ],
             'store' => fn () => [
-                'rtl' => Language::query()->where('code', app()->getLocale())->value('rtl') == 1,
+                'rtl' => StoreLocale::isRtl(),
                 'permissions' => $request->user('store')?->getAllPermissions()->pluck('name')->sort()->values()->all() ?? [],
                 'isSuperAdmin' => (bool) $request->user('store')?->hasRole(Role::SUPER_ADMIN, 'store'),
                 'isRaizerAdmin' => (bool) $request->user('store')?->raizer_admin,

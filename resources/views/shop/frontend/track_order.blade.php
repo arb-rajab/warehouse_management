@@ -75,7 +75,7 @@
                                 <table class="table table-borderless">
                                     <tr>
                                         <td class="w-50 fw-600">{{ translate('Order date')}}:</td>
-                                        <td>{{ date('d-m-Y H:i A', $order->date) }}</td>
+                                        <td>{{ \App\Support\StoreLocale::date($order->date, true) }}</td>
                                     </tr>
                                     <tr>
                                         <td class="w-50 fw-600">{{ translate('Total order amount')}}:</td>

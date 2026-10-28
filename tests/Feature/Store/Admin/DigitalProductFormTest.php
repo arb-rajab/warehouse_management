@@ -113,9 +113,10 @@ test('the create form renders Inertia with the digital category tree and the act
     app()->setLocale('ar');
     $this->get(route('digitalproducts.create'))->assertOk()->assertInertia(fn (Assert $page) => $page
         ->component('Store/Admin/Product/DigitalProducts/Create')
+        ->where('locale', 'ar')
         ->where('categories', [
             ['id' => $this->root->id, 'name' => 'E-books'],
-            ['id' => $this->child->id, 'name' => '-- Recipes'],
+            ['id' => $this->child->id, 'name' => '-- وصفات'],
             ['id' => $this->grandchild->id, 'name' => '---- Baking'],
         ])
         ->where('taxes', [

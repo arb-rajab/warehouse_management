@@ -25,7 +25,7 @@
                                         {{translate(' has been '. ucfirst(str_replace('_', ' ', $notification->data['status'])))}}
                                     </p>
                                     <small class="text-muted">
-                                        {{ date("F j Y, g:i a", strtotime($notification->created_at)) }}
+                                        {{ \App\Support\StoreLocale::date(strtotime($notification->created_at), true) }}
                                     </small>
                                 </div>
                             </div>

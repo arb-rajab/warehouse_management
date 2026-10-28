@@ -54,7 +54,7 @@
                             <!-- Member Since -->
                             <div class="mt-3">
                                 <div class="fs-10 fw-400 text-secondary">{{ translate('Member Since') }}</div>
-                                <div class="fs-16 fw-700 text-secondary">{{ date('d M Y',strtotime($shop->created_at)) }}</div>
+                                <div class="fs-16 fw-700 text-secondary">{{ \App\Support\StoreLocale::date(strtotime($shop->created_at)) }}</div>
                             </div>
                         </div>
                     </div>

@@ -18,7 +18,8 @@ class SetLocale
      */
     public function handle(Request $request, Closure $next): Response
     {
-        $sessionLocale = Locale::tryFrom((string) $request->session()->get('locale'))?->value;
+        $requested = $request->session()->get('locale');
+        $sessionLocale = is_string($requested) ? Locale::tryFrom($requested)?->value : null;
 
         app()->setLocale($sessionLocale ?? config('app.locale'));
 

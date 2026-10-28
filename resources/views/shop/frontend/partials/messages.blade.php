@@ -16,7 +16,7 @@
                         {{ $message->message }}
                     </div>
                     <span class="comment-date alpha-7 small mt-1 d-block text-right">
-                        {{ date('h:i:m d-m-Y', strtotime($message->created_at)) }}
+                        {{ \App\Support\StoreLocale::date(strtotime($message->created_at), true) }}
                     </span>
                 </div>
             </div>
@@ -38,7 +38,7 @@
                         {{ $message->message }}
                     </div>
                     <span class="comment-date alpha-7 small mt-1 d-block">
-                        {{ date('h:i:m d-m-Y', strtotime($message->created_at)) }}
+                        {{ \App\Support\StoreLocale::date(strtotime($message->created_at), true) }}
                     </span>
                 </div>
             </div>

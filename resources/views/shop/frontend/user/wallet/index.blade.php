@@ -55,7 +55,7 @@
                     @foreach ($wallets as $key => $wallet)
                         <tr>
                             <td class="pl-0">{{ sprintf('%02d', ($key+1)) }}</td>
-                            <td>{{ date('d-m-Y', strtotime($wallet->created_at)) }}</td>
+                            <td>{{ \App\Support\StoreLocale::date(strtotime($wallet->created_at)) }}</td>
                             <td class="fw-700">{{ single_price($wallet->amount) }}</td>
                             <td>{{ ucfirst(str_replace('_', ' ', $wallet->payment_method)) }}</td>
                             <td class="text-right pr-0">

@@ -14,7 +14,7 @@
                     @php
                         $last_recharge = \App\Models\Wallet::where('user_id', Auth::user()->id)->orderBy('id', 'desc')->first();
                     @endphp
-                    <p class="fs-14 fw-400 text-gray mb-1">{{ translate('Last Recharge') }} <strong>{{ $last_recharge ? date('d.m.Y', strtotime($last_recharge->created_at)) : '' }}</strong></p>
+                    <p class="fs-14 fw-400 text-gray mb-1">{{ translate('Last Recharge') }} <strong>{{ $last_recharge ? \App\Support\StoreLocale::date(strtotime($last_recharge->created_at)) : '' }}</strong></p>
                     <h3 class="fs-20 fw-700 text-white ">{{ $last_recharge ? single_price($last_recharge->amount) : 0 }}</h3>
                     <button class="btn btn-block border border-soft-light hov-bg-dark text-white mt-5 py-3" onclick="show_wallet_modal()" style="border-radius: 30px; background: rgba(255, 255, 255, 0.1);">
                         <i class="la la-plus fs-18 fw-700 mr-2"></i>
