@@ -98,7 +98,7 @@
                                 <!-- Member Since -->
                                 <div class="pr-md-3 mt-2 mt-md-0 border-md-right">
                                     <div class="fs-10 fw-400 text-secondary">{{ translate('Member Since') }}</div>
-                                    <div class="mt-1 fs-16 fw-700 text-secondary">{{ date('d M Y',strtotime($shop->created_at)) }}</div>
+                                    <div class="mt-1 fs-16 fw-700 text-secondary">{{ \App\Support\StoreLocale::date(strtotime($shop->created_at)) }}</div>
                                 </div>
                                 <!-- Social Links -->
                                 @if ($shop->facebook || $shop->instagram || $shop->google || $shop->twitter || $shop->youtube)

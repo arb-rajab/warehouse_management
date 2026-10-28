@@ -36,7 +36,7 @@
                         <div class="col-4">
                             <!-- Date -->
                             <div>
-                                <small class="fs-12 fw-400 opacity-60">{{ date('M d, Y',strtotime($blog->created_at)) }}</small>
+                                <small class="fs-12 fw-400 opacity-60">{{ \App\Support\StoreLocale::date(strtotime($blog->created_at)) }}</small>
                             </div>
                             <!-- Caregory -->
                             @if($blog->category != null)
@@ -95,7 +95,7 @@
                                     </h2>
                                     <!-- Date -->
                                     <div>
-                                        <small class="fs-12 fw-400 opacity-60">{{ date('M d, Y',strtotime($recent_blog->created_at)) }}</small>
+                                        <small class="fs-12 fw-400 opacity-60">{{ \App\Support\StoreLocale::date(strtotime($recent_blog->created_at)) }}</small>
                                     </div>
                                     <!-- Category -->
                                     @if($recent_blog->category != null)

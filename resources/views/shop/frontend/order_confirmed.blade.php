@@ -84,7 +84,7 @@
                                 <table class="table fs-14 text-soft-dark">
                                     <tr>
                                         <td class="w-50 fw-600 border-top-0 pl-0 py-2">{{ translate('Order date')}}:</td>
-                                        <td class="border-top-0 py-2">{{ date('d-m-Y H:i A', $first_order->date) }}</td>
+                                        <td class="border-top-0 py-2">{{ \App\Support\StoreLocale::date($first_order->date, true) }}</td>
                                     </tr>
                                     <tr>
                                         <td class="w-50 fw-600 border-top-0 pl-0 py-2">{{ translate('Name')}}:</td>

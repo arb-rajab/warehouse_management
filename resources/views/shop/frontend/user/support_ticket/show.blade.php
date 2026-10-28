@@ -62,7 +62,7 @@
                                 <div class="media-body">
                                     <div class="comment-header">
                                         <span class="fs-14 fw-700 text-dark">{{ $ticketreply->user->name }}</span>
-                                        <p class="text-muted text-sm fs-12 mt-2">{{ date('d.m.Y h:i:m', strtotime($ticketreply->created_at)) }}</p>
+                                        <p class="text-muted text-sm fs-12 mt-2">{{ \App\Support\StoreLocale::date(strtotime($ticketreply->created_at), true) }}</p>
                                     </div>
                                 </div>
                             </div>
@@ -100,7 +100,7 @@
                             <div class="media-body">
                                 <div class="comment-header">
                                     <span class="fs-14 fw-700 text-dark">{{ $ticket->user->name }}</span>
-                                    <p class="text-muted text-sm fs-12 mt-2">{{ date('d.m.Y h:i:m', strtotime($ticket->created_at)) }}</p>
+                                    <p class="text-muted text-sm fs-12 mt-2">{{ \App\Support\StoreLocale::date(strtotime($ticket->created_at), true) }}</p>
                                 </div>
                             </div>
                         </div>

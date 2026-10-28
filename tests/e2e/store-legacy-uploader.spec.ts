@@ -77,8 +77,12 @@ test('seller account withdrawal and support forms show honest requirements and s
         .locator('#withdraw-message')
         .fill('Browser withdrawal note');
     await withdrawal.getByRole('button', { name: 'Send', exact: true }).click();
+    // FooTable collapses the message column at this viewport; open its details.
+    await page.locator('table.aiz-table .footable-toggle').first().click();
     await expect(
-        page.getByText('Browser withdrawal note', { exact: true }),
+        page
+            .getByText('Browser withdrawal note', { exact: true })
+            .filter({ visible: true }),
     ).toBeVisible();
 
     await page.goto('/temp/seller/support_ticket');

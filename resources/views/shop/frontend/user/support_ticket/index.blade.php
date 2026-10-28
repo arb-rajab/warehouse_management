@@ -35,7 +35,7 @@
                       @foreach ($tickets as $key => $ticket)
                           <tr>
                               <td class="pl-0 fw-700">#{{ $ticket->code }}</td>
-                              <td>{{ date('Y.m.d h:i:m', strtotime($ticket->created_at)) }}</td>
+                              <td>{{ \App\Support\StoreLocale::date(strtotime($ticket->created_at), true) }}</td>
                               <td>{{ $ticket->subject }}</td>
                               <td>
                                   @if ($ticket->status == 'pending')

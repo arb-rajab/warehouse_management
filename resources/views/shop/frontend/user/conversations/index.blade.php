@@ -53,7 +53,7 @@
                                             <h6 class="text-dark fw-700 fs-14 mb-2">{{ $conversation->sender->name }}</h6>
                                         @endif
                                         <small class="text-secondary fs-12">
-                                            {{ date('d.m.Y h:i:m', strtotime($conversation->messages->last()->created_at)) }}
+                                            {{ \App\Support\StoreLocale::date(strtotime($conversation->messages->last()->created_at), true) }}
                                         </small>
                                 </div>
                                 <!-- conversation -->

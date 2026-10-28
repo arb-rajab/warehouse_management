@@ -599,7 +599,7 @@
                                                             </span>
                                                         </div>
                                                         <div class="opacity-60 mb-2">
-                                                            {{ date('d-m-Y', strtotime($review->created_at)) }}</div>
+                                                            {{ \App\Support\StoreLocale::date(strtotime($review->created_at)) }}</div>
                                                         <p class="comment-text">
                                                             {{ $review->comment }}
                                                         </p>

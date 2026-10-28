@@ -29,7 +29,7 @@
                                     <a href="{{route('purchase_history.details', encrypt($order->id))}}">{{ $order->code }}</a>
                                 </td>
                                 <!-- Date -->
-                                <td class="text-secondary">{{ date('d-m-Y', $order->date) }}</td>
+                                <td class="text-secondary">{{ \App\Support\StoreLocale::date($order->date) }}</td>
                                 <!-- Amount -->
                                 @if(Auth::check() && Auth::user()->admin_verified)
                                 <td class="fw-700">

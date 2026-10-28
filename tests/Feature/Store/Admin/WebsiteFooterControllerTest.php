@@ -106,6 +106,8 @@ test('the footer sends exactly its own settings for the chosen language, cleaned
         ->where('settings.widget_one_links', ['/help'])
         ->where('settings.frontend_copyright_text', '<p>© Store <img src="x"></p>'));
     $this->withSession(['locale' => 'ar'])->get(route('website.footer'))->assertInertia(fn (Assert $page) => $page->where('lang', 'ar'));
+    // Each real request boots with APP_LOCALE, independent of the previous request.
+    config(['app.locale' => 'en']);
     $this->withSession(['locale' => 'fr'])->get(route('website.footer'))->assertInertia(fn (Assert $page) => $page->where('lang', 'en'));
     $this->getJson(route('website.footer', ['lang' => 'fr']))->assertUnprocessable()->assertJsonValidationErrors('lang');
 });

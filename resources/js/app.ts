@@ -1,5 +1,5 @@
-import { createInertiaApp } from '@inertiajs/vue3';
-import { i18n, isSupportedLocale, t } from '@/lib/i18n';
+import { createInertiaApp, router } from '@inertiajs/vue3';
+import { i18n, syncPageLocale, t } from '@/lib/i18n';
 import { installImageUploadForms } from '@/lib/imageUploadForms';
 
 if (typeof document !== 'undefined') {
@@ -23,8 +23,9 @@ createInertiaApp({
     withApp(app, { page }) {
         app.use(i18n);
 
-        if (isSupportedLocale(page.props.locale)) {
-            i18n.global.locale.value = page.props.locale;
-        }
+        syncPageLocale(page.props);
+        router.on('navigate', (event) =>
+            syncPageLocale(event.detail.page.props),
+        );
     },
 });

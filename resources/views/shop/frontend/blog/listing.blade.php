@@ -51,7 +51,7 @@
                                         {{ $blog->short_description }}
                                     </p>
                                     <div>
-                                        <small class="fs-12 fw-400 opacity-60">{{ date('M d, Y',strtotime($blog->created_at)) }}</small>
+                                        <small class="fs-12 fw-400 opacity-60">{{ \App\Support\StoreLocale::date(strtotime($blog->created_at)) }}</small>
                                     </div>
                                     @if($blog->category != null)
                                         <div>
@@ -144,7 +144,7 @@
                                             </a>
                                         </h2>
                                         <div>
-                                            <small class="fs-12 fw-400 opacity-60">{{ date('M d, Y',strtotime($recent_blog->created_at)) }}</small>
+                                            <small class="fs-12 fw-400 opacity-60">{{ \App\Support\StoreLocale::date(strtotime($recent_blog->created_at)) }}</small>
                                         </div>
                                         @if($recent_blog->category != null)
                                             <div>

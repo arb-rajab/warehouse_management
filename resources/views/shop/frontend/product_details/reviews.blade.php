@@ -18,7 +18,7 @@
                         </h3>
                         <!-- Review Date -->
                         <div class="opacity-60 mb-1">
-                            {{ date('d-m-Y', strtotime($review->created_at)) }}
+                            {{ \App\Support\StoreLocale::date(strtotime($review->created_at)) }}
                         </div>
                         <!-- Review ratting -->
                         <span class="rating rating-mr-1">

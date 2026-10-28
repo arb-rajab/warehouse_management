@@ -215,12 +215,7 @@ if (!function_exists('currency_symbol')) {
 if (!function_exists('format_price')) {
     function format_price($price, $isMinimize = false)
     {
-        if (get_setting('decimal_separator') == 1) {
-            $fomated_price = number_format($price, get_setting('no_of_decimals'));
-        } else {
-            $fomated_price = number_format($price, get_setting('no_of_decimals'), ',', '.');
-        }
-
+        $fomated_price = \App\Support\StoreLocale::number((float) $price, (int) get_setting('no_of_decimals'));
 
         // Minimize the price
         if ($isMinimize) {

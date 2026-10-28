@@ -58,7 +58,7 @@
                                     @endif
                                 </h6>
                                 <p class="fs-12 text-secondary">
-                                    {{ date('d.m.Y h:i:m', strtotime($message->created_at)) }}
+                                    {{ \App\Support\StoreLocale::date(strtotime($message->created_at), true) }}
                                 </p>
                             </div>
                         </div>
