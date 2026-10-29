@@ -4,7 +4,7 @@ The entry point is `Database\Seeders\StoreFilterCoverageSeeder`. It is standalon
 
 ## Manual execution
 
-Development/staging databases were not migrated or seeded during implementation. Tests use isolated in-memory SQLite databases.
+Development/staging databases were not migrated or seeded during implementation. Tests use isolated in-memory SQLite databases and a dedicated MySQL 8.4 test container.
 
 Prerequisites: installed dependencies, PHP 8.5, otherwise current application schema, and the intended development/staging database configured. Allowed environments: local, development, dev, staging and testing. All others, including production, are refused. Use the same commands separately in development and staging; do not override production's environment to bypass refusal.
 
@@ -68,8 +68,12 @@ Source translation search gets a `store_filter_coverage_example` key only if the
 - No email, SMS, push, payment, webhook or external sync operation is dispatched by seeding. Most inserts bypass events; product writes use the guarded model with events disabled. Financial/stock rows represent fixture states rather than real settlement or stock-debit operations.
 - Three read-query eager-loading changes were needed to render multi-row fixtures under strict lazy-loading protection: storefront search, API product search and representative-payment API. Their filter predicates and authorization rules are unchanged.
 - Existing representative-payment API related-name search has ungrouped OR clauses around lines 31–37 of `app/Http/Controllers/Api/V2/RepresentativePaymentController.php`, which can return another representative's receipts. This pre-existing ownership bug was not changed as part of data seeding. Tests prove the intended receipt-code search and representative fixture path, not security of every search branch.
-- Verification is SQLite-based. No execution against staging/MySQL or its current data/schema is claimed.
+- Verification uses SQLite and an isolated MySQL 8.4 test database. Development/staging databases and their current data remain untouched.
 
 ## Verification
 
 The updated seeding suite passes 47 tests (1,977 assertions); scoped PHPStan reports zero errors, and Pint and diff checks pass. The suite verifies seeding without new tables or migrations, existing-row preservation, rerun identity/count stability, repair, relative-date refresh, credential collisions, full-transaction rollback, environment refusal, and duplicate/corrupt ownership metadata rejection. Tests exercise actual HTTP filters. PHP formatting and scoped static analysis are also checked. PHPStan requires `--debug` here because worker subprocess execution exits without diagnostics.
+
+Continued verification: all 2,730 frontend unit tests pass across 341 files with `--maxWorkers=2`. The required MySQL migration checks plus the filter-seeder tests pass against MySQL 8.4 (930 passed, 6 skipped; 6,474 assertions). The MySQL server runs in a dedicated container matching the CI image; no system database installation or application schema change is required.
+
+The complete Playwright browser suite also passes: 156 tests. Browser checks use built assets (temporarily moving a stale ignored `public/hot` marker aside) and the repository's idempotent Playwright setup helper. Verification may set `VITEST_MAX_WORKERS=2` and use the pre-push runner's `--serial` mode to avoid contention without changing test coverage or timeouts.
