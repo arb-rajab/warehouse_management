@@ -343,7 +343,7 @@ test.describe('seller validated shop and commerce forms', () => {
             .getByRole('button', { name: 'Upload CSV', exact: true })
             .click();
         await expect(page.locator('.invalid-feedback')).toContainText([
-            'bulk file',
+            'import file',
         ]);
     });
 });
@@ -380,7 +380,7 @@ test('seller physical forms preserve old input and persist owner approval price 
         node.noValidate = true;
     });
     await form
-        .getByRole('button', { name: 'Save product', exact: true })
+        .getByRole('button', { name: 'Save Product', exact: true })
         .click();
     await expect(page.locator('[role=alert]')).toContainText('unit');
     await expect(page.locator('[name=name]')).toHaveValue(
@@ -388,7 +388,7 @@ test('seller physical forms preserve old input and persist owner approval price 
     );
     await page.locator('[name=unit]').fill('bottle');
     await page
-        .getByRole('button', { name: 'Save product', exact: true })
+        .getByRole('button', { name: 'Save Product', exact: true })
         .click();
     await expect(page).toHaveURL(/\/temp\/seller\/products$/);
     seedStoreFixtures(String.raw`
@@ -405,7 +405,7 @@ test('seller physical forms preserve old input and persist owner approval price 
     await page.locator('[name=unit_price]').fill('13.75');
     await page.locator('[name=current_stock]').fill('9');
     await page
-        .getByRole('button', { name: 'Save product', exact: true })
+        .getByRole('button', { name: 'Save Product', exact: true })
         .click();
     await expect(page.locator('[name=unit_price]')).toHaveValue('13.75');
     seedStoreFixtures(String.raw`
@@ -444,7 +444,7 @@ test('seller physical variant choices generate rows and retain their prices on e
     await form.locator('[name=price_L]').fill('22.50');
     await form.locator('[name=qty_L]').fill('8');
     await form
-        .getByRole('button', { name: 'Save product', exact: true })
+        .getByRole('button', { name: 'Save Product', exact: true })
         .click();
     await expect(page).toHaveURL(/\/temp\/seller\/products$/);
     await page
@@ -455,7 +455,7 @@ test('seller physical variant choices generate rows and retain their prices on e
     await expect(page.locator('[name=price_M]')).toHaveValue('17.5');
     await page.locator('[name=price_M]').fill('19.50');
     await page
-        .getByRole('button', { name: 'Save product', exact: true })
+        .getByRole('button', { name: 'Save Product', exact: true })
         .click();
     await expect(page.locator('[name=price_M]')).toHaveValue('19.5');
     seedStoreFixtures(String.raw`
@@ -495,7 +495,7 @@ test('seller explicitly reorders legacy attribute choices and preserves the stoc
     await expect(page.locator('[name="qty_Cotton-M"]')).toHaveValue('47');
     expect(storedProduct(productName, expression)).toEqual(before);
     await page
-        .getByRole('button', { name: 'Save product', exact: true })
+        .getByRole('button', { name: 'Save Product', exact: true })
         .click();
     await expect(
         page.getByRole('alert').filter({ hasText: 'Stored stock' }),
@@ -527,7 +527,7 @@ test('seller digital create and edit round trip retains owned file pending appro
     await form.locator('[name=purchase_price]').fill('3.50');
     await form.locator('[name=discount]').fill('1.50');
     await form
-        .getByRole('button', { name: 'Save product', exact: true })
+        .getByRole('button', { name: 'Save Product', exact: true })
         .click();
     await expect(page.locator('[role=alert]')).toContainText('file');
     await expect(form.locator('[name=name]')).toHaveValue(
@@ -557,7 +557,7 @@ test('seller digital create and edit round trip retains owned file pending appro
     await modal.getByRole('button', { name: 'Add Files', exact: true }).click();
     const fileId = await form.locator('[name=file]').inputValue();
     await form
-        .getByRole('button', { name: 'Save product', exact: true })
+        .getByRole('button', { name: 'Save Product', exact: true })
         .click();
     await expect(page).toHaveURL(/\/temp\/seller\/digitalproducts$/);
     const id = storedProduct(
