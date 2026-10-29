@@ -27,14 +27,14 @@ test('account fixtures populate each individual customer and representative filt
     foreach (['customers.index', 'representatives.index'] as $route) {
         foreach (['important', 'verified', 'from_api', 'registration_completed', 'archived'] as $filter) {
             foreach ([0, 1] as $value) {
-                $this->get(route($route, [$filter => $value]))->assertOk()->assertInertia(
-                    fn (Assert $page) => $page->where('customers.meta.total', fn ($count) => $count > 0)
+                $this->get(route($route, [$filter => $value, 'page' => 2]))->assertOk()->assertInertia(
+                    fn (Assert $page) => $page->where('customers.meta.total', fn ($count) => $count > 20)->where('customers.meta.current_page', 2)->where('customers.data', fn ($rows) => count($rows) > 0)
                 );
             }
         }
         foreach (['new_user', 'has_been_contacted'] as $activity) {
-            $this->get(route($route, ['activity_status' => $activity]))->assertOk()->assertInertia(
-                fn (Assert $page) => $page->where('customers.meta.total', fn ($count) => $count > 0)
+            $this->get(route($route, ['activity_status' => $activity, 'page' => 2]))->assertOk()->assertInertia(
+                fn (Assert $page) => $page->where('customers.meta.total', fn ($count) => $count > 20)->where('customers.meta.current_page', 2)->where('customers.data', fn ($rows) => count($rows) > 0)
             );
         }
     }
@@ -132,4 +132,36 @@ test('new fixture accounts use a hashed password literal and reruns preserve cha
     DB::table('users')->where('id', $id)->update(['password' => $changed]);
     expect($data->user('password-example'))->toBe($id)
         ->and(DB::table('users')->where('id', $id)->value('password'))->toBe($changed);
+});
+
+test('upgrading earlier fixtures replaces placeholder labels without changing their identities or passwords', function () {
+    $data = app(StoreFilterSeedData::class);
+    $customer = $data->user('customer', ['name' => 'Filter fixture customer']);
+    $hash = Hash::make('my-updated-password');
+    DB::table('users')->where('id', $customer)->update(['password' => $hash]);
+    $category = $data->row('categories', 'catalogue-category', ['name' => 'Filter coverage', 'slug' => 'filter-coverage']);
+    $product = $data->row('products', 'catalogue-state-admin-0-0-0-1', [
+        'name' => 'Filter coverage state-admin', 'slug' => 'filter-coverage-product',
+        'user_id' => $data->user('admin'), 'added_by' => 'admin', 'published' => 0,
+        'for_sale' => 0, 'featured' => 0, 'approved' => 1, 'category_id' => $category,
+    ]);
+    $unrelated = createStoreProduct(['name' => 'Filter coffee paper cones']);
+    $before = $unrelated->fresh()->getAttributes();
+    $zone = $data->row('zones', 'reference-zone', ['name' => 'Filter coverage zone', 'status' => 1]);
+    $country = $data->row('countries', 'reference-country', ['name' => 'Filter coverage country', 'code' => 'ZZ', 'zone_id' => $zone, 'status' => 1]);
+    $state = $data->row('states', 'reference-state-'.$country, ['name' => 'Filter coverage state', 'country_id' => $country, 'status' => 1]);
+    $city = $data->row('cities', 'reference-city-'.$state, ['name' => 'Filter coverage city', 'state_id' => $state, 'status' => 1]);
+
+    (new StoreFilterCoverageSeeder)->run();
+
+    expect($data->find('users', 'customer'))->toBe($customer)
+        ->and(DB::table('users')->where('id', $customer)->value('password'))->toBe($hash)
+        ->and(DB::table('users')->where('id', $customer)->value('name'))->not->toContain('Filter')
+        ->and($data->find('products', 'catalogue-state-admin-0-0-0-1'))->toBe($product)
+        ->and(DB::table('products')->where('id', $product)->value('name'))->not->toContain('Filter')
+        ->and(DB::table('categories')->where('id', $category)->value('name'))->toBe('Mediterranean Pantry')
+        ->and(DB::table('countries')->where('id', $country)->value('name'))->toBe('Netherlands')
+        ->and(DB::table('states')->where('id', $state)->value('name'))->toBe('Noord-Holland')
+        ->and(DB::table('cities')->where('id', $city)->value('name'))->toBe('Amsterdam')
+        ->and($unrelated->fresh()->getAttributes())->toBe($before);
 });

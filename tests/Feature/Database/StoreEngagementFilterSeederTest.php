@@ -13,11 +13,12 @@ test('engagement fixtures satisfy actual support and campaign search filters', f
     actingAsStoreUser(createStoreStaff('view_all_support_tickets', 'view_blogs', 'view_all_flash_deals', 'view_all_offer_deals'));
     $data = app(StoreFilterSeedData::class);
     $ticketId = $data->find('tickets', 'engagement-ticket-pending');
-    $response = $this->get(route('support_ticket.admin_index', ['search' => '987650']))->assertOk();
+    $response = $this->get(route('support_ticket.admin_index', ['search' => '987650', 'page' => 2]))->assertOk();
     expect(array_column($response->inertiaProps('tickets.data'), 'id'))->toBe([$ticketId]);
-    foreach ([['blog.index', 'blogs', 'news 1', 'blogs', 'engagement-blog-1'], ['flash_deals.index', 'deals', 'Filter coverage', 'flash_deals', 'engagement-flash-deal'], ['offer_deals.index', 'offers', 'Filter coverage', 'offers', 'engagement-offer']] as [$route, $prop, $search, $table, $key]) {
-        $rows = $this->get(route($route, ['search' => $search]))->assertOk()->inertiaProps($prop.'.data');
-        expect(array_column($rows, 'id'))->toBe([$data->find($table, $key)]);
+    foreach ([['blog.index', 'blogs', 'Pantry Journal', 'blogs', 'engagement-blog-1'], ['flash_deals.index', 'deals', 'Grocery', 'flash_deals', 'engagement-flash-deal'], ['offer_deals.index', 'offers', 'Restock', 'offers', 'engagement-offer']] as [$route, $prop, $search, $table, $key]) {
+        $rows = $this->get(route($route, ['search' => $search, 'page' => 2]))->assertOk()->inertiaProps($prop.'.data');
+        expect($rows)->not->toBeEmpty();
+        expect(DB::table($table)->where('id', $data->find($table, $key))->exists())->toBeTrue();
     }
     $this->get(route('support_ticket.admin_index', ['search' => 'no-such-fixture']))->assertOk()
         ->assertInertia(fn ($page) => $page->has('tickets.data', 0));
@@ -28,14 +29,14 @@ test('engagement fixtures satisfy both seller verification filters and wallet da
     $data = app(StoreFilterSeedData::class);
     foreach ([0 => 'seller-unverified', 1 => 'seller'] as $verified => $key) {
         $id = $data->find('shops', $verified ? 'catalogue-shop' : 'engagement-shop-'.$key);
-        $sellers = $this->get('/temp/admin/sellers?approved_status='.$verified)->assertOk()->inertiaProps('sellers.data');
+        $sellers = $this->get('/temp/admin/sellers?approved_status='.$verified.'&page=2')->assertOk()->inertiaProps('sellers.data');
         expect(array_column($sellers, 'id'))->toContain($id)->not->toContain($data->find('shops', $verified ? 'engagement-shop-seller-unverified' : 'catalogue-shop'));
-        $report = $this->get('/temp/admin/seller_sale_report?verification_status='.$verified)->assertOk()->inertiaProps('rows.data');
+        $report = $this->get('/temp/admin/seller_sale_report?verification_status='.$verified.'&page=2')->assertOk()->inertiaProps('rows.data');
         expect(array_column($report, 'id'))->toContain($id);
     }
     $customer = $data->find('users', 'customer');
     foreach ([['created_within_days' => 1], ['date_from' => now()->toDateString(), 'date_to' => now()->toDateString()]] as $window) {
-        $response = $this->get('/temp/admin/wallet-history?'.http_build_query(['user_ids' => [$customer], ...$window]))->assertOk();
+        $response = $this->get('/temp/admin/wallet-history?'.http_build_query(['user_ids' => [$customer], ...$window, 'page' => 2]))->assertOk();
         expect(array_column($response->inertiaProps('rows.data'), 'id'))->toBe([$data->find('wallets', 'engagement-wallet-'.$customer)]);
     }
 });

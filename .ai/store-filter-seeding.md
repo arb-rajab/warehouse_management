@@ -22,7 +22,7 @@ Use the actual checkout path on other hosts. Do not run the default DatabaseSeed
 
 No migration or schema change is needed. The seeder adds one reserved `business_settings` row with type `store_filter_seed_v1`; its versioned JSON value tracks `(table_name, seed_key, record_id)` ownership. Tracking keys and record identities are checked for duplicates. The helper locks an existing migration-history row while bootstrapping the index and locks the tracking row for updates; it does not write migration history. Existing settings remain untouched, and a conflicting or malformed reserved setting causes a refusal. Do not delete/repoint this metadata while retaining fixtures.
 
-Only registry-owned records are updated. Existing users, credentials, roles, products, stocks, orders and original business rows remain intact. Existing catalogue matches are reused. Additional products/users are created only for missing fixture scenarios. New related rows may reference existing records without changing them. Reserved email/key collisions fail instead of adopting an original record, and the complete transaction rolls back on failure. Missing owned rows are recreated, and explicitly time-sensitive dates refresh on reruns. No other seed chain is invoked.
+Only registry-owned records are updated. Non-fixture users, credentials, roles, products, stocks, orders and original business rows remain intact. Owned fixtures are refreshed while their identities and passwords are preserved. Existing catalogue matches are reused. Additional products/users are created only for missing fixture scenarios. New related rows may reference existing records without changing them. Reserved email/key collisions fail instead of adopting an original record, and the complete transaction rolls back on failure. Missing owned rows are recreated, and explicitly time-sensitive dates refresh on reruns. No other seed chain is invoked.
 
 Inspect fixture IDs without exposing credentials:
 
@@ -36,25 +36,29 @@ Main logins are `store-filter-admin@example.invalid`, `store-filter-customer@exa
 
 ## Coverage inventory and matching inputs
 
-Individual discrete options are covered. Arbitrary filter combinations, text, date/price ranges and pagination page numbers cannot all be guaranteed to match.
+The seeders use realistic fictional customer and merchant names, grocery products, delivery references, and support/campaign content. Internal ownership keys and reserved login emails remain stable. Rerunning upgrades earlier “Filter …” fixtures in place, preserving their IDs and passwords; non-fixture records stay untouched.
+
+Each individual business filter has enough matching records to reach page two at its default page size: at least 21 for the 20-row admin lists, and 121 for the 120-row storefront search. The catalogue reuses existing matching products and adds only the missing quantity; state combinations also retain their default scopes. Changing page size, arbitrary combined filters, unique-ID lookups, or arbitrary search/date/price inputs are outside this guarantee.
+
+Reference lists are an exception: geographic data is never invented or multiplied to fill pages. Missing regions/cities are supplied only from the curated Netherlands, Belgium, Germany and selected international region/city pairs in `StoreReferenceFilterSeeder`. Unsupported existing geography is left for the normal reference-data setup; existing reference records are preserved.
 
 | Surface / filters | Fixtures and sample matching inputs |
 | --- | --- |
 | Admin customers and representatives | Both values for important, verified, from_api, registration_completed and archived; new_user/has_been_contacted activity; default important-customer scope retained |
 | Admin catalogue | Active/for-sale/featured switches, deleted presets, approval, existing categories/sellers, all six rating/sales/price sorts |
-| Storefront catalogue | Existing category/brand/color/attribute gaps; keyword `filter-coverage`; price 20–30; newest/oldest/price ascending/descending |
+| Storefront catalogue | Existing category/brand/color/attribute gaps; keyword `pantry`; price 20–30; newest/oldest/price ascending/descending |
 | Classified catalogue | Category/brand fixtures; new/used condition; all six public sorts |
-| Product API | Five search sort keys, price 20–30, category/brand data and barcode `STORE-FILTER-COVERAGE` |
+| Product API | Five search sort keys, price 20–30, category/brand data and barcode `2000000000015` |
 | Product subsets | Missing digital and today/new/offer scenarios |
-| Orders | All/in-house/seller/pickup lists, every accepted delivery state and paid/unpaid; cancelled remains unpaid; search code `FILTER-activity`; creation/delivery dates refreshed to run date |
-| Representative payments/visits | Pending/accepted/rejected, search `FILTER-RECEIPT`, today's open and ordered visits |
-| Representative customer lookup | Name `Filter fixture customer`, company `Filter coverage company`, account-code input `987654321` |
-| Trips/trucks | Pending/started/closed, including today's trips, separate drivers/trucks and checkpoints; available/unavailable trucks; search `FILTER-TRIP` |
+| Orders | All/in-house/seller/pickup lists, every accepted delivery state and paid/unpaid; cancelled remains unpaid; search code `ORD-`; creation/delivery dates refreshed to run date |
+| Representative payments/visits | Pending/accepted/rejected, search `RCPT-`, today's open and ordered visits |
+| Representative customer lookup | Name `Yasmin Sabbagh`, company `Olive Grove Grocers`, account-code input `987654321` |
+| Trips/trucks | Pending/started/closed, including today's trips, separate drivers/trucks and checkpoints; available/unavailable trucks; search `RTM-` |
 | Reports | Existing category options, verification 0/1, per-seller commissions, wallet user options; use today as date_from/date_to or created_within_days=1 |
-| Support/marketing/finance | Ticket searches `987650`, `987651`, `987652`; campaign/blog search `Filter coverage`; questions/replies/conversations, seller payments/withdrawals, coupons, offers/deals and related products, subscribers, push-log records |
-| Reference/setup | Active country/state dropdowns have child rows; reviews have both rating sorts; five upload types with four sorts; missing package/language/page/setup baselines, staff and notification metadata; brand-discount listing reuses catalogue brands |
+| Support/marketing/finance | Ticket searches `987650`, `987651`, `987652`; offer search `Restock`, deal search `Grocery`, and blog search `Pantry Journal`; questions/replies/conversations, seller payments/withdrawals, coupons, offers/deals and related products, subscribers, push-log records |
+| Reference/setup | Supported country/state dropdowns have accurate child rows; reviews have both rating sorts; five upload types with four sorts; missing package/language/page/setup baselines, staff and notification metadata; brand-discount listing reuses catalogue brands |
 
-Source translation search gets a `store_filter_coverage_example` key only if the English source table is empty. Otherwise search an existing source key. Use the complete entry point for prerequisite order.
+English source translations are topped up with meaningful delivery, order and customer-account labels when fewer than 21 exist. Search `delivery_estimate` for an exact example. Use the complete entry point for prerequisite order.
 
 ## Limits and existing behavior
 
@@ -67,8 +71,6 @@ Source translation search gets a `store_filter_coverage_example` key only if the
 
 ## Verification
 
-The updated seeding suite passes 48 tests (1,980 assertions); scoped PHPStan reports zero errors, and Pint and diff checks pass. The suite verifies seeding without new tables or migrations, existing-row preservation, rerun identity/count stability, repair, relative-date refresh, credential collisions, full-transaction rollback, environment refusal, and duplicate/corrupt ownership metadata rejection. Tests exercise actual HTTP filters. PHP formatting and scoped static analysis are also checked. PHPStan requires `--debug` here because worker subprocess execution exits without diagnostics.
+Focused feature tests exercise the actual filtered endpoints on page two, legacy-fixture upgrades, unchanged non-fixture records, identity/count stability on reruns, missing-record repair, relative-date refresh, password preservation, transaction rollback, environment refusal, and ownership metadata validation. Ownership changes are batched per seeder so the larger dataset does not rewrite its complete JSON registry for every row.
 
-Continued verification: all 2,730 frontend unit tests pass across 341 files with `--maxWorkers=2`. The required MySQL migration checks pass against MySQL 8.4 (902 passed, 6 skipped; 4,546 assertions). The MySQL server runs in a dedicated container matching the CI image; no system database installation or application schema change is required.
-
-The complete Playwright browser suite also passes: 156 tests. Browser checks use built assets (temporarily moving a stale ignored `public/hot` marker aside) and the repository's idempotent Playwright setup helper. Verification may set `VITEST_MAX_WORKERS=2` and use the pre-push runner's `--serial` mode to avoid contention without changing test coverage or timeouts.
+Run the affected seed tests before the complete repository pre-push verification. Full verification uses the existing sequential runner and two Vitest workers on this environment. Browser tests use built assets; temporarily move aside an ignored `public/hot` marker if it points to an unavailable development server. All database verification uses disposable test databases.

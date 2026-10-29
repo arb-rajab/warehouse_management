@@ -36,3 +36,21 @@ test('duplicate tracking settings refuse writes', function () {
     expect(fn () => app(StoreFilterSeedData::class)->row('zones', 'example', ['name' => 'New fixture']))->toThrow(RuntimeException::class, 'Duplicate');
     expect(DB::table('zones')->count())->toBe(0);
 });
+
+test('batched fixtures publish one ownership index and roll back failed batches', function () {
+    $data = app(StoreFilterSeedData::class);
+    $data->batch(function () use ($data) {
+        $first = $data->row('zones', 'north', ['name' => 'Northern Netherlands', 'status' => 1]);
+        $data->row('zones', 'south', ['name' => 'Southern Netherlands', 'status' => 1]);
+        expect($data->find('zones', 'north'))->toBe($first)
+            ->and($data->records())->toHaveCount(2);
+    });
+    $before = $data->records();
+    expect(fn () => $data->batch(function () use ($data) {
+        $data->row('zones', 'west', ['name' => 'Western Netherlands', 'status' => 1]);
+        throw new RuntimeException('Abort the fixture batch');
+    }))->toThrow(RuntimeException::class, 'Abort');
+    expect($data->records())->toBe($before)
+        ->and($data->find('zones', 'west'))->toBeNull()
+        ->and(DB::table('zones')->count())->toBe(2);
+});

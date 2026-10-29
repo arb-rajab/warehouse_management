@@ -20,9 +20,11 @@ test('catalogue fixtures satisfy real admin switches presets category and seller
         foreach ([0, 1] as $active) {
             foreach ([0, 1] as $forSale) {
                 foreach ([0, 1] as $featured) {
-                    $response = $this->get(route($route, ['active' => $active, 'for_sale' => $forSale, 'featured' => $featured]));
+                    $response = $this->get(route($route, ['active' => $active, 'for_sale' => $forSale, 'featured' => $featured, 'page' => 2]));
                     $response->assertOk();
-                    expect($response->inertiaProps('products.data'))->not->toBeEmpty();
+                    expect($response->inertiaProps('products.meta.total'))->toBeGreaterThan(20)
+                        ->and($response->inertiaProps('products.meta.current_page'))->toBe(2)
+                        ->and($response->inertiaProps('products.data'))->not->toBeEmpty();
                     foreach ($response->inertiaProps('products.data') as $product) {
                         expect((int) $product['published'])->toBe($active)
                             ->and((int) $product['for_sale'])->toBe($forSale)
@@ -31,20 +33,20 @@ test('catalogue fixtures satisfy real admin switches presets category and seller
                 }
             }
         }
-        expect($this->get(route($route, ['category_id' => $category]))->assertOk()->inertiaProps('products.data'))->not->toBeEmpty();
+        expect($this->get(route($route, ['category_id' => $category, 'page' => 2]))->assertOk()->inertiaProps('products.data'))->not->toBeEmpty();
     }
     foreach (['allProducts', 'allDeleted', 'allActive', 'allForSale', 'allFeatured'] as $preset) {
-        expect($this->get(route('products.all', [$preset => 1]))->assertOk()->inertiaProps('products.data'))->not->toBeEmpty();
+        expect($this->get(route('products.all', [$preset => 1, 'page' => 2]))->assertOk()->inertiaProps('products.data'))->not->toBeEmpty();
     }
     foreach (['rating', 'num_of_sale', 'unit_price'] as $column) {
         foreach (['asc', 'desc'] as $direction) {
-            expect($this->get(route('products.all', ['type' => $column.','.$direction]))->assertOk()->inertiaProps('products.data'))->not->toBeEmpty();
+            expect($this->get(route('products.all', ['type' => $column.','.$direction, 'page' => 2]))->assertOk()->inertiaProps('products.data'))->not->toBeEmpty();
         }
     }
     foreach ([0, 1] as $approved) {
-        expect($this->get(route('products.seller', ['approved' => $approved]))->assertOk()->inertiaProps('products.data'))->not->toBeEmpty();
+        expect($this->get(route('products.seller', ['approved' => $approved, 'page' => 2]))->assertOk()->inertiaProps('products.data'))->not->toBeEmpty();
     }
-    expect($this->get(route('products.seller', ['user_id' => $seller->id]))->assertOk()->inertiaProps('products.data'))->not->toBeEmpty();
+    expect($this->get(route('products.seller', ['user_id' => $seller->id, 'page' => 2]))->assertOk()->inertiaProps('products.data'))->not->toBeEmpty();
 });
 
 test('catalogue fixtures satisfy real public category brand color attribute price and sort filters', function () {
@@ -57,14 +59,14 @@ test('catalogue fixtures satisfy real public category brand color attribute pric
 
     foreach ([
         ['brand' => 'existing-brand'], ['color' => '#FF0000'], ['selected_attribute_values' => ['كبير']],
-        ['min_price' => 20, 'max_price' => 30], ['keyword' => 'filter-coverage'],
+        ['min_price' => 20, 'max_price' => 30], ['keyword' => 'pantry'],
         ...array_map(fn ($sort) => ['sort_by' => $sort], ['newest', 'oldest', 'price-asc', 'price-desc']),
     ] as $filters) {
-        $this->get(route('search', $filters))->assertOk()->assertViewHas('products', fn ($products) => $products->total() > 0);
+        $this->get(route('search', [...$filters, 'page' => 2]))->assertOk()->assertViewHas('products', fn ($products) => $products->total() > $products->perPage() && $products->currentPage() === 2 && $products->isNotEmpty());
     }
-    $this->get(route('products.category', ['category_slug' => 'existing-category']))->assertOk()
+    $this->get(route('products.category', ['category_slug' => 'existing-category', 'page' => 2]))->assertOk()
         ->assertViewHas('products', fn ($products) => $products->contains(fn ($product) => (int) $product->category_id === $category));
-    $this->get(route('products.brand', ['brand_slug' => 'existing-brand']))->assertOk()
+    $this->get(route('products.brand', ['brand_slug' => 'existing-brand', 'page' => 2]))->assertOk()
         ->assertViewHas('products', fn ($products) => $products->contains(fn ($product) => (int) $product->brand_id === $brand));
 });
 
@@ -72,19 +74,19 @@ test('classified fixtures match condition category brand and every sort option',
     DB::table('business_settings')->insert(['type' => 'classified_product', 'value' => '1']);
     $this->seed(StoreCatalogueFilterSeeder::class);
     foreach ([['condition' => 'new'], ['condition' => 'used'], ...array_map(fn ($sort) => ['sort_by' => $sort], range(1, 6))] as $filters) {
-        $this->get(route('customer.products', $filters))->assertOk()
-            ->assertViewHas('customer_products', fn ($products) => $products->total() > 0);
+        $this->get(route('customer.products', [...$filters, 'page' => 2]))->assertOk()
+            ->assertViewHas('customer_products', fn ($products) => $products->total() > $products->perPage() && $products->currentPage() === 2 && $products->isNotEmpty());
     }
 });
 
 test('catalogue fixtures return results through real API search sorts ranges and barcode lookup', function () {
     $this->seed(StoreCatalogueFilterSeeder::class);
     foreach (['price_low_to_high', 'price_high_to_low', 'new_arrival', 'popularity', 'top_rated'] as $sort) {
-        $this->getJson('/temp/api/v2/products/search?'.http_build_query(['sort_key' => $sort, 'min' => 20, 'max' => 30]))
+        $this->getJson('/temp/api/v2/products/search?'.http_build_query(['sort_key' => $sort, 'min' => 20, 'max' => 30, 'page' => 2]))
             ->assertOk()->assertJson(fn ($json) => $json->has('data')->where('success', true)->etc());
         expect($this->getJson('/temp/api/v2/products/search?'.http_build_query(['sort_key' => $sort]))->json('data'))->not->toBeEmpty();
     }
-    $this->postJson('/temp/api/v2/products/search-barcode', ['barcode' => 'STORE-FILTER-COVERAGE'])
+    $this->postJson('/temp/api/v2/products/search-barcode', ['barcode' => '2000000000015'])
         ->assertOk()->assertJson(fn ($json) => $json->has('data', 1)->etc());
 });
 
