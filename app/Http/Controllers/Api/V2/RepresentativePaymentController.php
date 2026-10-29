@@ -15,7 +15,10 @@ class RepresentativePaymentController extends Controller
     public function index(Request $request)
     {
         $user = auth()->user();
-        $payment_query = RepresentativePayment::query()->where('rep_id', $user->id);
+        $payment_query = RepresentativePayment::query()
+            ->select(['id', 'amount', 'customer_id', 'otajer_id', 'receipt_code', 'invoice_code', 'admin_id', 'rep_id', 'notes', 'status', 'date', 'created_at'])
+            ->with(['customer:id,name,AccSysID,phone', 'rep:id,name', 'admin:id,name'])
+            ->where('rep_id', $user->id);
 
             if ($request->filled('search')) {
                 $searchTerm = '%' . $request->search . '%';

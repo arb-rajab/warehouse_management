@@ -10,6 +10,12 @@ use Database\Seeders\CellStatusLogSeeder;
 use Database\Seeders\CellVerificationRoundSeeder;
 use Database\Seeders\DatabaseSeeder;
 use Database\Seeders\StagingRealisticDataSeeder;
+use Database\Seeders\StoreAccountFilterSeeder;
+use Database\Seeders\StoreActivityFilterSeeder;
+use Database\Seeders\StoreCatalogueFilterSeeder;
+use Database\Seeders\StoreEngagementFilterSeeder;
+use Database\Seeders\StoreFilterCoverageSeeder;
+use Database\Seeders\StoreReferenceFilterSeeder;
 use Database\Seeders\StoreRoleSeeder;
 use Database\Seeders\StoreUserSeeder;
 use Illuminate\Support\Facades\DB;
@@ -47,6 +53,12 @@ function accountAndRoleCounts(): array
 
 dataset('account-writing seeders', [
     'StoreUserSeeder' => StoreUserSeeder::class,
+    'StoreFilterCoverageSeeder' => StoreFilterCoverageSeeder::class,
+    'StoreAccountFilterSeeder' => StoreAccountFilterSeeder::class,
+    'StoreActivityFilterSeeder' => StoreActivityFilterSeeder::class,
+    'StoreCatalogueFilterSeeder' => StoreCatalogueFilterSeeder::class,
+    'StoreEngagementFilterSeeder' => StoreEngagementFilterSeeder::class,
+    'StoreReferenceFilterSeeder' => StoreReferenceFilterSeeder::class,
     'CellStatusLogSeeder' => CellStatusLogSeeder::class,
     'CellVerificationRoundSeeder' => CellVerificationRoundSeeder::class,
     'StagingRealisticDataSeeder' => StagingRealisticDataSeeder::class,
