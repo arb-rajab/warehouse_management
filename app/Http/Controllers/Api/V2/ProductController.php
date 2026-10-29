@@ -461,7 +461,7 @@ class ProductController extends Controller
         $max = $request->max;
 
 
-        $products = Product::query();
+        $products = Product::with(self::LIST_RELATIONS);
 
         $products->where('published', 1)->physical();
 
