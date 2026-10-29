@@ -58,7 +58,7 @@ class ProfileController extends Controller
         if(!$user){
             return response()->json([
                 'result' => false,
-                'message' => translate("User not found.")
+                'message' => __('api.auth.user_not_found')
             ]);
         }
 
@@ -72,7 +72,7 @@ class ProfileController extends Controller
         if ($validator->fails()) {
             return response()->json([
                 'result' => false,
-                'message' => translate('Validation Error'),
+                'message' => __('api.common.validation_error'),
                 'errors' => $validator->errors(),
             ], 422);
         }
@@ -117,7 +117,7 @@ class ProfileController extends Controller
                     return response()->json([
                         'result' => false,
                         'errors' => $e->getMessage(),
-                        'message' => translate('Email notification failed'),
+                        'message' => __('api.account.email_notification_failed'),
                     ], 500);
                 }
             }
@@ -137,7 +137,7 @@ class ProfileController extends Controller
 
         return response()->json([
             'result' => true,
-            'message' => translate("Profile information updated"),
+            'message' => __('api.account.profile_updated'),
             'user' => [
                 'id' => $user->id,
                 'type' => $user->user_type,
@@ -169,7 +169,7 @@ class ProfileController extends Controller
         if(!$user){
             return response()->json([
                 'result' => false,
-                'message' => translate("User not found.")
+                'message' => __('api.auth.user_not_found')
             ]);
         }
 
@@ -180,7 +180,7 @@ class ProfileController extends Controller
 
         return response()->json([
             'result' => true,
-            'message' => translate("device token updated")
+            'message' => __('api.account.device_token_updated')
         ]);
     }
 
@@ -190,7 +190,7 @@ class ProfileController extends Controller
         if(!$user){
             return response()->json([
                 'result' => false,
-                'message' => translate("User not found."),
+                'message' => __('api.auth.user_not_found'),
                 'path' => ""
             ]);
         }
@@ -210,7 +210,7 @@ class ProfileController extends Controller
 
         return response()->json([
             'result' => true,
-            'message' => translate("Image updated"),
+            'message' => __('api.account.image_updated'),
             'path' => uploaded_asset($upload->id)
         ]);
     }
@@ -222,7 +222,7 @@ class ProfileController extends Controller
         if(!$user){
             return response()->json([
                 'result' => false,
-                'message' => translate("User not found."),
+                'message' => __('api.auth.user_not_found'),
                 'path' => "",
                 'upload_id' => 0
             ]);
@@ -241,7 +241,7 @@ class ProfileController extends Controller
 
         return response()->json([
             'result' => true,
-            'message' => translate("Image updated"),
+            'message' => __('api.account.image_updated'),
             'path' => uploaded_asset($upload->id),
             'upload_id' => $upload->id
         ]);
@@ -253,19 +253,19 @@ class ProfileController extends Controller
 
         $phone_available = false;
         $email_available = false;
-        $phone_available_message = translate("User phone number not found");
-        $email_available_message = translate("User email  not found");
+        $phone_available_message = __('api.account.phone_not_found');
+        $email_available_message = __('api.account.email_not_found');
 
         $user = StoreUser::find(auth()->user()->id);
 
         if ($user->phone != null || $user->phone != "") {
             $phone_available = true;
-            $phone_available_message = translate("User phone number found");
+            $phone_available_message = __('api.account.phone_found');
         }
 
         if ($user->email != null || $user->email != "") {
             $email_available = true;
-            $email_available_message = translate("User email found");
+            $email_available_message = __('api.account.email_found');
         }
         return response()->json(
             [

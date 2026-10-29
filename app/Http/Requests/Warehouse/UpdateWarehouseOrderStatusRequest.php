@@ -27,9 +27,9 @@ class UpdateWarehouseOrderStatusRequest extends WarehouseRequest
     public function messages(): array
     {
         return [
-            'status.required' => 'status must be `fetched` or `sent` ',
-            'status.in' => 'status must be `fetched` or `sent` ',
-            'otajerOrderID.required_if' => 'otajerOrderID is missing in the request body',
+            'status.required' => __('api.warehouse.status_required'),
+            'status.in' => __('api.warehouse.status_required'),
+            'otajerOrderID.required_if' => __('api.warehouse.order_id_required'),
         ];
     }
 

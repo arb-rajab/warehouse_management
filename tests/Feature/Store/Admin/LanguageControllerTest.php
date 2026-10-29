@@ -172,6 +172,70 @@ test('English app imports validate the entire file before writing and export use
     expect(json_decode($response->streamedContent(), true))->toBe(['Hello' => 'مرحبا']);
 });
 
+test('mobile catalog imports and downloads preserve client keys independently of general translations', function () {
+    actingAsStoreUser(createStoreStaff('language_setup'));
+    $language = adminLanguage('en');
+    $catalog = [
+        'Cart.item-count' => '{count} items in your cart',
+        'Checkout.Total' => 'Total: {amount}',
+        'checkout_total' => 'Checkout total',
+        '@checkout_total' => 'Client-owned string metadata',
+    ];
+
+    $this->post(route('app-translations.import'), [
+        'lang_file' => UploadedFile::fake()->createWithContent('app_en.json', json_encode($catalog, JSON_THROW_ON_ERROR)),
+    ])->assertRedirectToRoute('languages.index');
+
+    $response = $this->get(route('app-translations.export', $language))
+        ->assertOk()->assertDownload('app_en.arb')->assertHeader('Content-Type', 'application/json');
+
+    expect(json_decode($response->streamedContent(), true, 512, JSON_THROW_ON_ERROR))->toBe($catalog)
+        ->and(DB::table('app_translations')->where('lang', 'en')->pluck('lang_value', 'lang_key')->all())->toBe($catalog)
+        ->and(DB::table('translations')->count())->toBe(0);
+});
+
+test('an empty mobile catalog keeps the existing empty array download without borrowing another language', function () {
+    actingAsStoreUser(createStoreStaff('language_setup'));
+    $language = adminLanguage('sa');
+    $language->forceFill(['app_lang_code' => 'ar_SA'])->save();
+    DB::table('app_translations')->insert([
+        ['lang' => 'en', 'lang_key' => 'Cart.item-count', 'lang_value' => '{count} items'],
+        ['lang' => 'ar', 'lang_key' => 'Cart.item-count', 'lang_value' => 'عدد العناصر: {count}'],
+        ['lang' => 'sa', 'lang_key' => 'Cart.item-count', 'lang_value' => 'Legacy catalog content'],
+    ]);
+
+    $response = $this->get(route('app-translations.export', $language))
+        ->assertOk()->assertDownload('app_ar_SA.arb')->assertHeader('Content-Type', 'application/json');
+
+    expect($response->streamedContent())->toBe('[]')
+        ->and($language->fresh()->code)->toBe('sa')
+        ->and($language->fresh()->app_lang_code)->toBe('ar_SA')
+        ->and(DB::table('translations')->count())->toBe(0);
+});
+
+test('Arabic mobile catalogs retain their exact regional codes and stored content language identities', function () {
+    actingAsStoreUser(createStoreStaff('language_setup'));
+    $legacy = adminLanguage('sa');
+    $legacy->forceFill(['app_lang_code' => 'ar_SA'])->save();
+    $arabic = adminLanguage('ar');
+    DB::table('app_translations')->insert([
+        ['lang' => 'ar_SA', 'lang_key' => 'Checkout.Total', 'lang_value' => 'الإجمالي الإقليمي: {amount}'],
+        ['lang' => 'ar', 'lang_key' => 'Checkout.Total', 'lang_value' => 'الإجمالي: {amount}'],
+        ['lang' => 'sa', 'lang_key' => 'Excluded.Key', 'lang_value' => 'Excluded legacy catalog'],
+    ]);
+
+    $regional = $this->get(route('app-translations.export', $legacy))->assertOk()->assertDownload('app_ar_SA.arb');
+    $standard = $this->get(route('app-translations.export', $arabic))->assertOk()->assertDownload('app_ar.arb');
+
+    expect(json_decode($regional->streamedContent(), true, 512, JSON_THROW_ON_ERROR))->toBe(['Checkout.Total' => 'الإجمالي الإقليمي: {amount}'])
+        ->and(json_decode($standard->streamedContent(), true, 512, JSON_THROW_ON_ERROR))->toBe(['Checkout.Total' => 'الإجمالي: {amount}'])
+        ->and($legacy->fresh()->code)->toBe('sa')
+        ->and($legacy->fresh()->app_lang_code)->toBe('ar_SA')
+        ->and($arabic->fresh()->code)->toBe('ar')
+        ->and($arabic->fresh()->app_lang_code)->toBe('ar')
+        ->and(DB::table('translations')->count())->toBe(0);
+});
+
 dataset('language admin actions', [
     ['GET', 'languages.index'], ['GET', 'languages.create'], ['POST', 'languages.store'], ['GET', 'languages.edit'], ['POST', 'languages.update'], ['DELETE', 'languages.destroy'],
     ['GET', 'languages.show'], ['GET', 'app-translations.show'], ['POST', 'languages.update-status'], ['POST', 'languages.update_rtl_status'], ['POST', 'languages.key_value_store'],

@@ -9,6 +9,34 @@ use Illuminate\Support\Facades\Lang;
 
 class StoreLocale
 {
+    /**
+     * Keep content and UI locales separate and restore both after a request.
+     *
+     * @template TReturn
+     *
+     * @param  \Closure(): TReturn  $callback
+     * @return TReturn
+     */
+    public static function withLocale(string $contentLocale, string $uiLocale, \Closure $callback): mixed
+    {
+        $applicationLocale = app()->getLocale();
+        $translator = app('translator');
+        $translatorLocale = $translator->getLocale();
+        $fallback = $translator->getFallback();
+
+        try {
+            app()->setLocale($contentLocale);
+            $translator->setLocale(self::uiLocale($uiLocale));
+            $translator->setFallback(self::uiLocale(config('app.fallback_locale')));
+
+            return $callback();
+        } finally {
+            app()->setLocale($applicationLocale);
+            $translator->setLocale($translatorLocale);
+            $translator->setFallback($fallback);
+        }
+    }
+
     /** The legacy Arabic content language keeps its store code, sa. */
     public static function uiLocale(?string $locale = null): string
     {

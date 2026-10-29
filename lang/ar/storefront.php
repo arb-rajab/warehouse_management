@@ -359,7 +359,7 @@ return [
         'flash_sale' => 'تخفيضات سريعة',
         'followed' => 'تتم متابعته',
         'for_customer' => 'للعميل:',
-        'free' => 'حر',
+        'free' => 'مجاني',
         'free_package' => 'باقة مجانية',
         'frequently_bought_together' => 'منتجات تُشترى معًا عادةً',
         'from' => 'من',

@@ -222,7 +222,7 @@ class CartController extends Controller
             if (!auth()->user()->has_open_visit()) {
                 return response()->json([
                     'result' => false,
-                    'message' => "Please make a visit first"
+                    'message' => __('storefront.cart.visit_required')
                 ], 403);
             }
         }
@@ -230,7 +230,7 @@ class CartController extends Controller
 
         $product = Product::with('stocks')->find($request->id);
         if (!$product) {
-            return response()->json(['result' => false, 'message' => "Product not found"], 404);
+            return response()->json(['result' => false, 'message' => __('api.product.not_found')], 404);
         }
         $authUser = $request->user();
         $product_stocks = ProductStock::where('product_id', $product->id);
@@ -282,7 +282,7 @@ class CartController extends Controller
             $original_price = $price;
             $representative_discount_percentage  = Auth::user()->rep_discount_percentage;
             if (! $representative_discount_percentage) { // if the rep does not have a package
-                return response()->json(['result' => false, 'message' => translate('Only Representatives with discount packages can change the price')], 403);
+                return response()->json(['result' => false, 'message' => __('api.cart.representative_price_only')], 403);
             }
             $representative_discount_percentage  = $representative_discount_percentage  / 100;
             $minimum_discount_price = $original_price - ($original_price * $representative_discount_percentage); // the minimum limit
@@ -291,10 +291,10 @@ class CartController extends Controller
                     $rep_price = $discounted_price;
                     $is_price_changed = true;
                 } else {
-                    return response()->json(['result' => false, 'message' => translate('Price can not be higher than original price!')], 403);
+                    return response()->json(['result' => false, 'message' => __('api.cart.price_above_original')], 403);
                 }
             } else {
-                return response()->json(['result' => false, 'message' => translate('Price exceeds your discount limit!')], 403);
+                return response()->json(['result' => false, 'message' => __('api.cart.discount_limit_exceeded')], 403);
             }
         }
         //discount calculation based on flash deal and regular discount
@@ -327,33 +327,33 @@ class CartController extends Controller
         }
 
         if (filter_var($request->quantity, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]) === false) {
-            return response()->json(['result' => false, 'message' => translate('Something went wrong')], 200);
+            return response()->json(['result' => false, 'message' => __('storefront.common.something_went_wrong')], 200);
         }
 
         if ($product->min_qty > $request->quantity) {
-            return response()->json(['result' => false, 'message' => translate("Minimum") . " {$product->min_qty} " . translate("item(s) should be ordered")], 200);
+            return response()->json(['result' => false, 'message' => trans_choice('api.cart.minimum_quantity', $product->min_qty, ['count' => $product->min_qty])], 200);
         }
 
         if ($product->max_qty < $request->quantity) {
-            return response()->json(['result' => false, 'message' => translate("Maximum") . " {$product->max_qty} " . translate("item(s) should be ordered")], 200);
+            return response()->json(['result' => false, 'message' => trans_choice('api.cart.maximum_quantity', $product->max_qty, ['count' => $product->max_qty])], 200);
         }
 
 
 
         $stock = $product_stocks->where('variant', 'like', '%' . $variant . '%')->first()->qty;
 
-        $variant_string = $variant != null && $variant != "" ? translate("for") . " ($variant)" : "";
+        $variant_string = $variant != null && $variant != "" ? " ($variant)" : "";
         if ($stock < $request->quantity && $product->digital == 0) {
             if ($stock == 0) {
-                return response()->json(['result' => false, 'message' => "Stock out"], 200);
+                return response()->json(['result' => false, 'message' => __('api.cart.stock_out')], 200);
             } else {
-                return response()->json(['result' => false, 'message' => translate("Only") . " {$stock} " . translate("item(s) are available") . " {$variant_string}"], 200);
+                return response()->json(['result' => false, 'message' => trans_choice('api.cart.available_quantity', $stock, ['count' => $stock, 'variant' => $variant_string])], 200);
             }
         }
 
         $cart_item = Cart::where('product_id', $request->id)->where("user_id", auth()->id())->where('variation', $variant)->first();
         if ($cart_item && $cart_item->product->digital == 1) {
-            return response()->json(['result' => false, 'message' => 'Already added this product']);
+            return response()->json(['result' => false, 'message' => __('api.cart.already_added')]);
         }
 
         if ($cart_item) {
@@ -379,7 +379,7 @@ class CartController extends Controller
                 $original_price = $price;
                 $representative_discount_percentage  = Auth::user()->rep_discount_percentage;
                 if (! $representative_discount_percentage) { // if the rep does not have a package
-                    return response()->json(['result' => false, 'message' => translate('Only Representatives with discount packages can change the price')], 403);
+                    return response()->json(['result' => false, 'message' => __('api.cart.representative_price_only')], 403);
                 }
                 $representative_discount_percentage  = $representative_discount_percentage  / 100;
                 $minimum_discount_price = $original_price - ($original_price * $representative_discount_percentage); // the minimum limit
@@ -388,10 +388,10 @@ class CartController extends Controller
                         $rep_price = $discounted_price;
                         $is_price_changed = true;
                     } else {
-                        return response()->json(['result' => false, 'message' => translate('Price can not be higher than original price!')], 403);
+                        return response()->json(['result' => false, 'message' => __('api.cart.price_above_original')], 403);
                     }
                 } else {
-                    return response()->json(['result' => false, 'message' => translate('Price exceeds your discount limit!')], 403);
+                    return response()->json(['result' => false, 'message' => __('api.cart.discount_limit_exceeded')], 403);
                 }
             } //
 
@@ -429,12 +429,12 @@ class CartController extends Controller
         }
 
         if (NagadUtility::create_balance_reference($request->cost_matrix) == false) {
-            return response()->json(['result' => false, 'message' => 'Cost matrix error']);
+            return response()->json(['result' => false, 'message' => __('api.cart.cost_error')]);
         }
 
         return response()->json([
             'result' => true,
-            'message' => translate('Product added to cart successfully'),
+            'message' => __('api.cart.added'),
             'offer_message' => $offerMessage ?? null
         ]);
     }
@@ -453,13 +453,13 @@ class CartController extends Controller
                     'quantity' => $request->quantity
                 ]);
 
-                return response()->json(['result' => true, 'message' => translate('Cart updated')], 200);
+                return response()->json(['result' => true, 'message' => __('api.cart.updated')], 200);
             } else {
-                return response()->json(['result' => false, 'message' => translate('Maximum available quantity reached')], 200);
+                return response()->json(['result' => false, 'message' => __('api.cart.maximum_available')], 200);
             }
         }
 
-        return response()->json(['result' => false, 'message' => translate('Something went wrong')], 200);
+        return response()->json(['result' => false, 'message' => __('storefront.common.something_went_wrong')], 200);
     }
 
     public function process(Request $request)
@@ -473,17 +473,17 @@ class CartController extends Controller
                 $cart_item = Cart::where('id', $cart_id)->where('user_id', auth()->user()->id)->first();
                 if ($cart_item) {
                     if (filter_var($cart_quantities[$i] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]) === false) {
-                        return response()->json(['result' => false, 'message' => translate('Something went wrong')], 200);
+                        return response()->json(['result' => false, 'message' => __('storefront.common.something_went_wrong')], 200);
                     }
 
                     $product = Product::where('id', $cart_item->product_id)->first();
 
                     if ($product->min_qty > $cart_quantities[$i]) {
-                        return response()->json(['result' => false, 'message' => translate("Minimum") . " {$product->min_qty} " . translate("item(s) should be ordered for") . " {$product->name}"], 200);
+                        return response()->json(['result' => false, 'message' => trans_choice('api.cart.minimum_product_quantity', $product->min_qty, ['count' => $product->min_qty, 'product' => $product->name])], 200);
                     }
 
                     if ($product->max_qty < $cart_quantities[$i]) {
-                        return response()->json(['result' => false, 'message' => translate("Maximum") . " {$product->max_qty} " . translate("item(s) should be ordered for") . " {$product->name}"], 200);
+                        return response()->json(['result' => false, 'message' => trans_choice('api.cart.maximum_product_quantity', $product->max_qty, ['count' => $product->max_qty, 'product' => $product->name])], 200);
                     }
 
                     $stock = $cart_item->product->stocks->where('variant', $cart_item->variation)->first()->qty;
@@ -494,9 +494,9 @@ class CartController extends Controller
                         ]);
                     } else {
                         if ($stock == 0) {
-                            return response()->json(['result' => false, 'message' => translate("No item is available for") . " {$product->name}{$variant_string}," . translate("remove this from cart")], 200);
+                            return response()->json(['result' => false, 'message' => __('api.cart.product_unavailable', ['product' => $product->name, 'variant' => $variant_string])], 200);
                         } else {
-                            return response()->json(['result' => false, 'message' => translate("Only") . " {$stock} " . translate("item(s) are available for") . " {$product->name}{$variant_string}"], 200);
+                            return response()->json(['result' => false, 'message' => trans_choice('api.cart.product_available_quantity', $stock, ['count' => $stock, 'product' => $product->name, 'variant' => $variant_string])], 200);
                         }
                     }
                 }
@@ -504,9 +504,9 @@ class CartController extends Controller
                 $i++;
             }
 
-            return response()->json(['result' => true, 'message' => translate('Cart updated')], 200);
+            return response()->json(['result' => true, 'message' => __('api.cart.updated')], 200);
         } else {
-            return response()->json(['result' => false, 'message' => translate('Cart is empty')], 200);
+            return response()->json(['result' => false, 'message' => __('api.cart.empty')], 200);
         }
     }
 
@@ -516,14 +516,14 @@ class CartController extends Controller
         $cart = Cart::where('id', $id)->where('user_id', auth()->user()->id)->first();
 
         if (! $cart) {
-            return response()->json(['result' => false, 'message' => translate('Cart item not found')], 404);
+            return response()->json(['result' => false, 'message' => __('api.cart.item_not_found')], 404);
         }
 
         $this->offerService()->removeProductOfferFromCart($cart->id);
 
         $cart->delete();
 
-        return response()->json(['result' => true, 'message' => translate('Product is successfully removed from your cart')], 200);
+        return response()->json(['result' => true, 'message' => __('api.cart.removed')], 200);
     }
     public function update_item_price(Request $request)
     {
@@ -543,7 +543,7 @@ class CartController extends Controller
         $original_price = $cart->price;
         $representative_discount_percentage  = Auth::user()->rep_discount_percentage;
         if (! $representative_discount_percentage) { // if the rep does not have a package
-            return response()->json(['result' => false, 'message' => translate('Only Representatives with discount packages can change the price')], 403);
+            return response()->json(['result' => false, 'message' => __('api.cart.representative_price_only')], 403);
         }
         $representative_discount_percentage  = $representative_discount_percentage  / 100;
         $minimum_discount_price = $original_price - ($original_price * $representative_discount_percentage); // the minimum limit
@@ -552,15 +552,15 @@ class CartController extends Controller
                 $cart->rep_price = $discounted_price;
                 $cart->is_price_changed = true;
                 if ($cart->save()) {
-                    return response()->json(['result' => true, 'message' => translate('Price Updated Successfully')], 200);
+                    return response()->json(['result' => true, 'message' => __('api.cart.price_updated')], 200);
                 } else {
-                    return response()->json(['result' => false, 'message' => translate('Error!')], 200);
+                    return response()->json(['result' => false, 'message' => __('api.common.error')], 200);
                 }
             } else {
-                return response()->json(['result' => false, 'message' => translate('Price can not be higher than original price!')], 403);
+                return response()->json(['result' => false, 'message' => __('api.cart.price_above_original')], 403);
             }
         } else {
-            return response()->json(['result' => false, 'message' => translate('Price exceeds your discount limit!')], 403);
+            return response()->json(['result' => false, 'message' => __('api.cart.discount_limit_exceeded')], 403);
         }
     }
 }

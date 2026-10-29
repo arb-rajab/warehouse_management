@@ -50,7 +50,7 @@ class OfflinePaymentController extends Controller
 
             return response()->json([
                 'result' => true,
-                'message' => translate('Submitted Successfully')
+                'message' => __('api.common.submitted')
             ]);
         });
     }
@@ -59,7 +59,7 @@ class OfflinePaymentController extends Controller
     {
         return response()->json([
             'result' => false,
-            'message' => translate('Something went wrong')
+            'message' => __('storefront.common.something_went_wrong')
         ]);
     }
 }

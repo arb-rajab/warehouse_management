@@ -12,11 +12,11 @@ class RefundRequestCollection extends ResourceCollection
             'data' => $this->collection->map(function ($data) {
                 $refund_label = '';
                 if($data->refund_status == 1) {
-                    $refund_label = 'Approved';
+                    $refund_label = __('storefront.common.approved');
                 } elseif($data->refund_status == 2) {
-                    $refund_label = 'Rejected';
+                    $refund_label = __('storefront.common.rejected');
                 }else {
-                    $refund_label = 'PENDING';
+                    $refund_label = __('storefront.status.pending');
                 }
 
                 return [

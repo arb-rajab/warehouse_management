@@ -16,7 +16,7 @@ class OffersCatalogController extends Controller
         if ($offer === null) {
             return response()->json([
                 'success' => false,
-                'message' => "No Offers Available"
+                'message' => __('api.product.no_offers')
             ], 404);
         }
 

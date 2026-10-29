@@ -112,7 +112,7 @@ class  TripService
 
             return response()->download($outputPath);
         } else {
-            return response()->json(['error' => 'Checkpoint not found'], 404);
+            return response()->json(['error' => __('api.trip.checkpoint_not_found')], 404);
         }
     }
 

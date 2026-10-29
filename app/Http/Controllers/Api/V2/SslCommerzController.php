@@ -56,7 +56,7 @@ class SslCommerzController extends Controller
         $payment = app(ApiGatewayPayment::class)->resolve($request);
 
         if ($payment === null) {
-            return response()->json(['result' => false, 'url' => '', 'message' => translate('Nothing to pay')]);
+            return response()->json(['result' => false, 'url' => '', 'message' => __('api.payment.nothing_due')]);
         }
 
         $post_data = [];
@@ -101,15 +101,15 @@ class SslCommerzController extends Controller
         $pending = GatewayPayment::query()->where('gateway', 'sslcommerz')->where('reference', $tran_id)->whereNull('completed_at')->first();
 
         if ($tran_id === '' || $pending === null || $this->sslcommerz_validate($tran_id, (float) $pending->amount, 'BDT', $request->all()) !== true) {
-            return response()->json(['result' => false, 'message' => translate('Payment Failed')]);
+            return response()->json(['result' => false, 'message' => __('storefront.checkout.payment_failed')]);
         }
 
         $verified = new VerifiedPayment('sslcommerz', $tran_id, (float) ($this->sslc_data->amount ?? 0), json_encode($this->sslc_data));
         if (! app(GatewayPaymentService::class)->completePending($verified)) {
-            return response()->json(['result' => false, 'message' => translate('Payment Failed')]);
+            return response()->json(['result' => false, 'message' => __('storefront.checkout.payment_failed')]);
         }
 
-        return response()->json(['result' => true, 'message' => translate("Payment is successful")]);
+        return response()->json(['result' => true, 'message' => __('api.payment.successful')]);
     }
 
     public function payment_process(Request $request)
@@ -120,7 +120,7 @@ class SslCommerzController extends Controller
     {
         return response()->json([
             'result' => false,
-            'message' => translate('Payment Failed')
+            'message' => __('storefront.checkout.payment_failed')
         ]);
     }
 
@@ -128,7 +128,7 @@ class SslCommerzController extends Controller
     {
         return response()->json([
             'result' => false,
-            'message' => translate('Payment Cancelled')
+            'message' => __('storefront.checkout.payment_cancelled')
         ]);
     }
 
@@ -156,13 +156,13 @@ class SslCommerzController extends Controller
                         return response()->json([
                             'result' => true,
                             'url' =>  $this->sslc_data['GatewayPageURL'],
-                            'message' => 'Redirect Url is found'
+                            'message' => __('api.payment.redirect_found')
                         ]);
                     } else {
                         return response()->json([
                             'result' => false,
                             'url' => '',
-                            'message' => 'No redirect URL found!'
+                            'message' => __('api.payment.redirect_missing')
                         ]);
                     }
                 } else {
@@ -170,7 +170,7 @@ class SslCommerzController extends Controller
                     return response()->json([
                         'result' => false,
                         'url' => '',
-                        'message' => "Invalid Credential!",
+                        'message' => __('api.payment.invalid_credentials'),
                     ]);
                 }
             } else {
@@ -178,7 +178,7 @@ class SslCommerzController extends Controller
                 return response()->json([
                     'result' => false,
                     'url' => '',
-                    'message' => "Connectivity Issue. Please contact your sslcommerz manager",
+                    'message' => __('api.payment.connectivity_issue'),
                 ]);
             }
         } else {
@@ -186,7 +186,7 @@ class SslCommerzController extends Controller
             return response()->json([
                 'result' => false,
                 'url' => '',
-                'message' => "Please provide a valid information list about transaction with transaction id, amount, success url, fail url, cancel url, store id and pass at least",
+                'message' => __('api.payment.transaction_data_required'),
             ]);
         }
     }

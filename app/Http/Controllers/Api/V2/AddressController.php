@@ -59,7 +59,7 @@ class AddressController extends Controller
 
         return response()->json([
             'result' => true,
-            'message' => translate('Shipping information has been added successfully')
+            'message' => __('api.address.added')
         ]);
     }
 
@@ -76,7 +76,7 @@ class AddressController extends Controller
 
         return response()->json([
             'result' => true,
-            'message' => translate('Shipping information has been updated successfully')
+            'message' => __('api.address.updated')
         ]);
     }
 
@@ -89,7 +89,7 @@ class AddressController extends Controller
 
         return response()->json([
             'result' => true,
-            'message' => translate('Shipping location in map updated successfully')
+            'message' => __('api.address.map_updated')
         ]);
     }
 
@@ -100,13 +100,13 @@ class AddressController extends Controller
         if($address == null || Gate::denies('manage', $address)) {
             return response()->json([
                 'result' => false,
-                'message' => translate('Address not found')
+                'message' => __('api.address.not_found')
             ]);
         }
         $address->delete();
         return response()->json([
             'result' => true,
-            'message' => translate('Shipping information has been deleted')
+            'message' => __('api.address.deleted')
         ]);
     }
 
@@ -120,7 +120,7 @@ class AddressController extends Controller
         $address->save();
         return response()->json([
             'result' => true,
-            'message' => translate('Default shipping information has been updated')
+            'message' => __('api.address.default_updated')
         ]);
     }
 
@@ -134,12 +134,12 @@ class AddressController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'result' => false,
-                'message' => translate('Could not save the address')
+                'message' => __('api.address.save_failed')
             ]);
         }
         return response()->json([
             'result' => true,
-            'message' => translate('Address is saved')
+            'message' => __('api.address.saved')
         ]);
 
 
@@ -194,12 +194,12 @@ class AddressController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'result' => false,
-                'message' => translate('Could not save the address')
+                'message' => __('api.address.save_failed')
             ]);
         }
         return response()->json([
             'result' => true,
-            'message' => translate('Delivery address is saved')
+            'message' => __('api.address.delivery_saved')
         ]);
 
 

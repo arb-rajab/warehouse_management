@@ -1,10 +1,12 @@
-# Localization migration: storefront, seller, admin and delivery/document stages
+# Localization migration: storefront, seller, admin, delivery/documents and API/mobile
 
 The shared branch is `codex/localization-migration`; keep its PR into `develop`
 open for subsequent stages. This stage starts from `bf85892f`, the merge of
 PR #511. Its APP_LOCALE fixes are inherited, not cherry-picked or duplicated.
 The seller/admin stage continues from the actual storefront head `ff546a93`.
 The delivery/document stage continues from the actual seller/admin head `b12995a5`.
+The API/mobile stage continues from the fetched delivery/document head `236a502b`;
+the reported head was confirmed against the existing draft PR #512 before editing.
 Verification is explicitly deferred by the user until the migration prompts
 are complete; see the verification contract below.
 
@@ -143,21 +145,128 @@ translation records were changed by this stage.
   are preserved. Invoice-email sending remains commented out; this stage does
   not enable it or add an attachment/delivery channel.
 
+## API/mobile stage completed
+
+- Repository-owned API/V2 static responses now use matching English/Arabic
+  `lang/{en,ar}/api.php`, reusing storefront, seller and Laravel validation keys.
+  Covered paths include authentication/recovery, accounts/representatives/visits,
+  addresses, cart/checkout/coupons/wishlist, payments/wallet/packages/refunds,
+  orders/reviews, seller products/shop/orders/coupons/conversations/uploads and
+  withdrawals, customer support/chat, delivery-boy and driver/trip responses,
+  product/offer lookups and warehouse customer/order responses. Shared services
+  retain their earlier file messages. `NotificationUtility`'s API response
+  `Notification status` is also file-backed; push payload contracts are unchanged.
+- Cart minimum/maximum/available-quantity messages use complete messages and
+  plural forms, preserving stock counts, product names and variant text. Delivery
+  status response text interpolates a display label; the underlying status stays
+  unchanged. Validation fields, rules, authorization, ownership, provider-supplied
+  errors, calculations, response nesting/types/statuses and deliberately empty
+  response messages are preserved.
+- V2 resources use file labels for Free, Verified/Non-Verified seller, In House
+  Product, payment/delivery/shipping display statuses, refund/approval labels,
+  missing-user/order placeholders, transaction captions and price ranges. New
+  resource-specific labels live in `api_resources.php`; known status vocabulary
+  reuses storefront keys. `ApiResourceLabel` preserves the prior humanized value
+  for unknown/custom statuses. Raw enum/status/shipping values, identifiers,
+  product/package/shop names and descriptions, custom method names, pagination,
+  currency/precision, timestamps and authorization are unchanged. Existing
+  humanized `payment_type`/`payment_method` fields without separate machine codes
+  remain stable; their external client usage is unknown. The auction resource's
+  mixed timestamp/`Ended` sentinel is preserved for the same reason. Arabic Free
+  is corrected to the natural price label `مجاني` in the shared catalog.
+- `IsAppUserUnbanned`, driver/delivery role refusals and the warehouse token
+  refusal use files. Ban token revocation, `result_key: banned`, the 403 response,
+  role checks and the warehouse refusal's legacy HTTP 200/body `status: 401`
+  contract remain intact. Existing minimum-app-version messages already use files.
+
+### API locale-header behavior
+
+`SetLocaleFromHeader` still reads `Accept-Language` for the API group. It accepts
+supported English/Arabic regional choices in quality order, maps legacy `sa` to
+Arabic UI, rejects malformed/unsupported tokens and malformed quality weights,
+and skips zero-quality choices.
+Missing, wildcard-only and unsupported values use the immutable
+`app.ui_default_locale`, rather than an earlier request's mutable `app.locale`.
+The translator's configured fallback retains `APP_FALLBACK_LOCALE` with `sa`
+normalized for file lookup.
+
+Store API routes still apply `AppLanguage` afterward: **App-Language retains
+precedence over Accept-Language**, including when absent or invalid. Valid exact
+codes are `en`, `ar` and legacy `sa`; lists, paths, unsupported codes and uppercase
+App-Language values do not select a locale. Valid explicit codes keep their
+content-language value (including `sa`) and use `ar` for Arabic static UI. With
+no valid App-Language, content lookups keep `app.default_language`
+(`DEFAULT_LANGUAGE`), while static messages use the immutable UI default. No
+stored language rows or content-language keys are renamed. Global/API middleware
+ordering and authentication behavior are unchanged.
+
+`StoreLocale::withLocale` follows the delivery stage's scoped restoration
+mechanism: snapshot application locale, translator locale and translator fallback,
+then restore each in `finally`, including exceptions and nested middleware.
+The separately configured UI default is never mutated. Existing queued delivery
+locale capture/restoration remains intact.
+
+### Mobile language/catalog and ARB boundary
+
+The only repository-owned public language endpoint is
+`GET /temp/api/v2/languages` (`Api/V2/LanguageController::getList`). It returns
+language records, **not a translation catalog**. Its `data` fields remain
+`id`, `name`, `code`, `mobile_app_code`, `rtl`, `is_default`, `image`, plus
+`success`/`status`. Configured language names are content; stored codes, app codes,
+default flags and booleans are preserved.
+
+`Store/Admin/LanguageController` owns the existing mobile catalog screens and
+ARB import/export. Export is flat JSON with unescaped Unicode and exact stored
+mobile keys, downloaded as `app_<sanitized app_lang_code>.arb` with JSON content
+type. Exact regional codes such as `ar_SA` stay distinct from `ar` and `sa`;
+empty catalogs still serialize as `[]`. Import accepts arbitrary string keys and
+string values within the existing limits, into the English app catalog; it does
+not accept nested ARB metadata objects. Catalog screens retain English-key
+pagination/search, destination app code, IDs and `id/key/source/value` fields.
+
+No production ARB files, mobile key declarations, external client source or
+runtime mobile catalog reader exist in this checkout. Synthetic test keys do not
+establish installed clients' vocabulary. Consequently **no file-backed mobile
+catalog adapter is claimed in this stage**: creating one without that inventory
+would invent keys or silently drop supported clients' keys. Existing DB-backed
+management/export remains compatible and has new unexecuted contract tests.
+External follow-up must collect versioned customer/seller/delivery client ARB
+catalogs and usages, including exact keys, interpolation syntax, locale codes and
+fallback expectations. Then commit complete matching English/Arabic mobile
+catalogs and an explicit legacy-key-to-file-key reader/export adapter. Files
+must be authoritative for mapped static keys; unknown catalogs must remain
+available until their supported consumers are accounted for.
+
 ## Remaining consumers and boundaries
 
 | Group | Remaining consumers |
 | --- | --- |
 | Seller/admin/customer UI | No remaining active static database-helper calls found in the migrated surfaces. Dynamic product-query content, configured navigation/CMS/coupon content and custom payment/permission fallbacks intentionally remain. Commented legacy markup and SVG transforms are not active static consumers. This is source inspection, not runtime verification. |
-| API/mobile | `app/Http/Controllers/Api/V2/**` customer/auth/catalogue/cart/checkout/payment/address/wallet/chat/auction/upload messages; seller product/shop/order/coupon/conversation/upload/package/refund/withdrawal messages; delivery and driver/trip responses; `IsAppUserUnbanned`; static labels in `app/Http/Resources/V2/**`. Only their shared email/notification composition was migrated here. Existing response envelopes/statuses and content locale behavior remain intact. `NotificationUtility::sendPushNotificationToUser` also retains its API response message `Notification status` for that stage. |
-| Translation management | `Store/Admin/LanguageController` still reads/writes/imports/exports `translations` and `app_translations`; its requests, models, cache invalidation and mobile language endpoints remain dependent on them. These tables and the legacy `translate()` helper must remain until their consumers are migrated. |
+| API/mobile | No remaining active static database-helper calls in API/V2 controllers, scoped requests/services, API middleware or V2 resources. `V2/LanguageCollection` deliberately retains content translation of configured language names. External client catalogs remain unestablished; DB-backed ARB management/export is retained as described above. |
+| Translation management: active DB catalog consumers | `Store/Admin/LanguageController::{show,storeTranslations}` uses `translationPage(false)`/`saveTranslations(false)` for general translations. `::{showAppTranslations,storeAppTranslations,importAppTranslations,exportAppTranslations}` reads/writes mobile catalogs through `translationPage`, `saveTranslations`, `writeTranslation`. `UpdateTranslationsRequest::rules` validates keys against English DB rows; `ImportAppTranslationsRequest::{after,translations}` validates/returns arbitrary imported JSON keys. Retain management routes in `routes/shop-admin.php`, permission gates, Vue language screens/forms, pagination, `translations`/`app_translations` tables and `translations-<locale>` cache invalidation until final cleanup decisions and external-client mapping. |
 | Intentional database content | `getTranslation()` model methods, custom role/permission/payment names, products/categories/brands/shops, CMS, configured menus/coupon headings, business settings and user-authored content retain existing behavior. These are separate from static application vocabulary. |
 | Documents | Runtime/visual review of Arabic emails and both PDF engines is deferred. The external fixed CMR form's preprinted labels and business/company literals are preserved; only generated static overlay vocabulary is localized. |
+| Retained static legacy templates without repository callers | `resources/views/shop/partials/coupons/{cart_base_coupon,cart_base_coupon_edit,product_base_coupon,product_base_coupon_edit}.blade.php` contain 44 static helper calls. No include/view/controller/test reference to these partial names was found. They are potential externally invoked legacy consumers, not established active runtime paths; confirm external integrations before retiring them. |
+| Unused cleanup candidates | `TranslationUtility::{getInstance,reInstantiate,cached_translation_row,getAllTranslations}` and the `AppTranslation` model have no repository caller. Review/retire in cleanup; do not count them as current runtime consumers. |
 
 Do not mistake `getTranslation()` model methods, configured menu/coupon content,
 SVG transforms, Laravel validation's `->translate()` or vendor JavaScript
 `translate` functions for static database-backed UI labels. Legacy helper calls
-remaining outside the intentional content list are predominantly API/V2 and its
-resources/middleware; do not remove the tables/helper during this stage.
+remaining outside the intentional content list are the retained coupon partials
+and DB catalog management; do not remove the tables/helper during this stage.
+
+The exact remaining active global `translate()` content call sites are:
+`StorePermissions::{displayName,displaySection}` for custom permission/section
+records; `StoreLocale::paymentMethod` for custom payment methods (invoice,
+seller order detail and VisitDetailResource consumers); `V2/LanguageCollection`
+for configured names; seller product-query index for user/product names and
+truncated question/reply (four calls); frontend index for configured coupon
+title/subtitle (two); frontend navigation for configured desktop/mobile menu
+labels (two); product-details/add-to-cart external button text (two). Dedicated
+model `getTranslation()` and content-translation tables remain intentional.
+The helper itself (`app/Http/Helpers.php`) still allows DB overrides and inserts
+missing English content keys; no migrated static path calls it. Final cleanup
+must retain or deliberately replace those content behaviors before removing it.
 
 ## Verification contract
 
@@ -190,11 +299,22 @@ receipt values and unchanged spreadsheet headers. Existing storefront auth,
 password-reset, newsletter/SMTP and bulk-reference tests are updated for deferred
 message composition and explicit document locale. These tests are unexecuted.
 
+`ApiMessageLocalizationTest`, `ApiResourceLocalizationTest` and
+`ApiLocaleLocalizationTest` add English/Arabic and legacy `sa` API/refusal/resource
+coverage with an empty translations table and stored-override isolation; safe
+quantity/product/variant/transaction interpolation; unchanged envelopes, raw
+statuses, ownership, token revocation and empty messages; malformed/supported
+headers, precedence, default/content separation and nested/consecutive/exception
+locale restoration. Existing `SetLocaleTest` assertions now inspect localized
+responses and restored surrounding state. `Store/Admin/LanguageControllerTest`
+adds arbitrary mobile key/interpolation, ARB format/filename, regional isolation
+and empty-export compatibility. These additions remain unexecuted.
+
 **Deferred by explicit user instruction:** no tests, browser suites, builds, pre-push
 scripts, formatter/type-check workflows or attestation commands were run for
-the seller/admin or delivery/document stages. Review used source inspection, searches and `git diff --check`.
+the seller/admin, delivery/document or API/mobile stages. Review used source inspection, searches and `git diff --check`.
 The earlier storefront development results are historical and do not verify
-the seller/admin or delivery/document commits. The stopped storefront attestation was not restarted;
+the seller/admin, delivery/document or API/mobile commits. The stopped storefront attestation was not restarted;
 no CI-Verified trailer was created or fabricated. Intermediate commit/push is
 explicitly authorized without that attestation. Keep PR #512 draft and open.
 
@@ -202,6 +322,7 @@ Reserve these checks until the user finishes all migration prompts:
 
 ```sh
 php artisan test --compact tests/Feature/StorefrontLocalizationTest.php tests/Feature/SellerLocalizationTest.php tests/Feature/DeliveryLocalizationTest.php tests/Feature/Store/StorePermissionLocalizationTest.php
+php artisan test --compact tests/Feature/ApiMessageLocalizationTest.php tests/Feature/ApiResourceLocalizationTest.php tests/Feature/ApiLocaleLocalizationTest.php tests/Feature/SetLocaleTest.php tests/Feature/SetLocaleFromHeaderTest.php tests/Feature/Store/Admin/LanguageControllerTest.php
 php artisan test --compact tests/Feature/LegacyStoreInvoiceTest.php tests/Feature/LegacyStorePasswordResetTest.php tests/Feature/Console/CheckUnorderedCartsCommandTest.php tests/Feature/Store/Admin/ProductBulkUploadControllerTest.php tests/Feature/Store/Admin/RepresentativePaymentControllerTest.php
 php artisan test --compact --filter='Seller|StorePermissions|RoleController|NewsletterController|Recaptcha|ProductVariant'
 php artisan test --compact --filter='DefaultLanguageConfig|StoreLocale|Language|RequiredFieldsRatchet|StoreAuthGuard|AuthGuardIsolation'

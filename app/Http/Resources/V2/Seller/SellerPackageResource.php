@@ -21,7 +21,7 @@ class SellerPackageResource extends JsonResource
             'name'                  => $this->getTranslation('name'),
             'logo'                  => uploaded_asset($this->logo),
             'product_upload_limit'  =>(int) $this->product_upload_limit,
-            'amount'                => ($this->amount > 0) ? single_price($this->amount) : translate('Free'),
+            'amount'                => ($this->amount > 0) ? single_price($this->amount) : __('storefront.common.free'),
             'price'                 => (float) $this->amount,
             'duration'              =>(int) $this->duration,
         ];

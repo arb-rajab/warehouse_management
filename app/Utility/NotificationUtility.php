@@ -181,7 +181,7 @@ class NotificationUtility
         $response = curl_exec($ch);
 
         return response()->json([
-            'message' => 'Notification status',
+            'message' => __('api.common.notification_status'),
             'response' => json_decode($response, true)
         ]);
     }

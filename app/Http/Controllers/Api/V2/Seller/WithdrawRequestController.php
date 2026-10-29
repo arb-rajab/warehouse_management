@@ -42,6 +42,6 @@ class WithdrawRequestController extends Controller
             return $this->failed($exception->getMessage());
         }
 
-        return $this->success(translate('Request has been sent successfully'));
+        return $this->success(__('seller.withdrawals.request_has_been_sent_successfully'));
     }
 }

@@ -44,7 +44,7 @@ class NagadController
         $this->payment = app(ApiGatewayPayment::class)->resolve($request);
 
         if ($this->payment === null) {
-            return response()->json(['data' => null, 'result' => false, 'url' => '', 'message' => translate('Nothing to pay')]);
+            return response()->json(['data' => null, 'result' => false, 'url' => '', 'message' => __('api.payment.nothing_due')]);
         }
 
         $this->amount = $this->payment['amount'];
@@ -128,14 +128,14 @@ class NagadController
                             'data' => $Result_Data_Order,
                             'result' => true,
                             'url' => $Result_Data_Order['callBackUrl'],
-                            'message' => translate('Redirect Url is found')
+                            'message' => __('api.payment.redirect_found')
                         ]);
                     } else {
                         return response()->json([
                             'data' => $Result_Data_Order,
                             'result' => false,
                             'url' => '',
-                            'message' => translate('Could not generate payment link')
+                            'message' => __('api.payment.link_failed')
                         ]);
                     }
                 } else {
@@ -143,7 +143,7 @@ class NagadController
                         'data' => $PlainResponse,
                         'result' => false,
                         'url' => '',
-                        'message' => translate('Payment reference id or challenge is missing')
+                        'message' => __('api.payment.reference_missing')
                     ]);
                 }
             } else {
@@ -151,7 +151,7 @@ class NagadController
                     'data' => null,
                     'result' => false,
                     'url' => '',
-                    'message' => translate('Sensitive data or Signature is empty')
+                    'message' => __('api.payment.signature_empty')
                 ]);
             }
         } else {
@@ -159,7 +159,7 @@ class NagadController
                 'data' => null,
                 'result' => false,
                 'url' => '',
-                'message' => translate('Sensitive data or Signature is missing')
+                'message' => __('api.payment.signature_missing')
             ]);
         }
     }
@@ -186,13 +186,13 @@ class NagadController
         if ($isPaid) {
             return response()->json([
                 'result' => true,
-                'message' => translate('Payment is successful'),
+                'message' => __('api.payment.successful'),
                 'payment_details' => $json
             ]);
         }
         return response()->json([
             'result' => false,
-            'message' => translate('Payment failed !'),
+            'message' => __('storefront.checkout.payment_failed'),
             'payment_details' => ''
         ]);
     }

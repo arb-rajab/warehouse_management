@@ -129,11 +129,14 @@ values (custom roles/permissions, category names) are translated server-side
 and sent as data. Application-defined permission identifiers and sections use
 `StorePermissions` display methods and `lang/{en,ar}/store_permissions.php`;
 custom records retain content translation. The translation admin still edits
-the `translations` table for dynamic content and remaining email, PDF and mobile
-consumers; it does not edit converted back-office, storefront or seller UI copy.
+the `translations` table for dynamic content and `app_translations` for mobile
+catalogs whose external key inventory has not been established; it does not edit
+converted back-office, storefront, seller, email, PDF or API static copy.
 Static customer-facing storefront copy lives in `lang/{en,ar}/storefront.php`;
 seller-specific copy uses `seller.php` and remaining server admin messages use
-`store_admin.php`. Shared labels reuse existing storefront/validation keys;
+`store_admin.php`. Delivery/document copy uses `delivery.php`; API messages and
+resource display labels use `api.php` and `api_resources.php`. Shared labels
+reuse existing storefront/validation keys;
 see the [staged localization inventory](../localization-migration.md).
 Other store locales fall back to English in the
 back office. `LanguageSwitcher` uses the `locale` session key shared with the

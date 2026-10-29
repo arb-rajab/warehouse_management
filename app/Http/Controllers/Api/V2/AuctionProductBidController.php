@@ -42,13 +42,13 @@ class AuctionProductBidController extends Controller
 
             return response()->json([
                 'result' => true,
-                'message' => translate('Bid Placed Successfully.'),
+                'message' => __('api.auction.bid_placed'),
 
             ], 200);
         } else {
             return response()->json([
                 'result' => false,
-                'message' => translate('Something Went Wrong'),
+                'message' => __('storefront.common.something_went_wrong'),
             ], 201);
         }
         return back();

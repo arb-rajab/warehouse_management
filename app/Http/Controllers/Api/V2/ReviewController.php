@@ -37,7 +37,7 @@ class ReviewController extends Controller
         if(!$reviewable){
             return response()->json([
                 'result' => false,
-                'message' => translate('You cannot review this product')
+                'message' => __('storefront.product.you_cannot_review_this_product')
             ]);
         }
 
@@ -67,7 +67,7 @@ class ReviewController extends Controller
 
         return response()->json([
             'result' => true,
-            'message' => translate('Review  Submitted')
+            'message' => __('api.review.submitted')
         ]);
     }
 }

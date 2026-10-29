@@ -39,7 +39,7 @@ class PublicShopDetailsCollection extends JsonResource
             'rating' => (float) $this->rating,
             'verified' => $this->verification_status == 1,
             'verified_img' => static_asset('assets/img/verified.png'),
-            'verify_text' => translate('Verified seller'),
+            'verify_text' => __('storefront.product.verified_seller'),
             'products' => $this->user->products()->where('published', 1)->count(),
         ];
     }

@@ -45,7 +45,7 @@ class ShopDetailsCollection extends JsonResource
             'rating' => (float) $this->rating,
             'verified'=> $this->verification_status==1?true:false,
             'verified_img'=> $this->verification_status==1?static_asset("assets/img/verified.png"):static_asset("assets/img/non_verified.png"),
-            'verify_text'=> $this->verification_status==1?translate("Verified seller"):translate("Non-Verified seller"),
+            'verify_text'=> $this->verification_status==1?__('storefront.product.verified_seller'):__('storefront.product.non_verified_seller'),
             'email'=> $this->user->email,
             'products'=> $this->user->products()->count(),
             'orders'=> $this->user->seller_orders()->where("delivery_status","delivered")->count(),

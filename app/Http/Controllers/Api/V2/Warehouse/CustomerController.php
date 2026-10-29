@@ -40,7 +40,7 @@ class CustomerController extends Controller
         if ($customer == null) {
             return response()->json([
                 'result' => false,
-                'message' => 'Customer not found',
+                'message' => __('api.account.customer_not_found'),
                 'status' => 404
             ]);
         }
@@ -64,7 +64,7 @@ class CustomerController extends Controller
         if (! $customer) {
             return response()->json([
                 'result' => false,
-                'message' => 'Customer not found',
+                'message' => __('api.account.customer_not_found'),
                 'status' => 404
             ]);
         }
@@ -80,7 +80,7 @@ class CustomerController extends Controller
 
         return response()->json([
             'result' => true,
-            'message' => 'Customer updated successfully',
+            'message' => __('api.account.customer_updated'),
             'status' => 201,
             'data' => new CustomerDetailsResource($customer)
         ]);
