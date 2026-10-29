@@ -508,7 +508,7 @@ return [
         'something_went_wrong_please_try_again' => 'Something Went wrong. Please try again.',
         'sorry_for_the_inconvenience_but_we_re_working_on_it' => 'Sorry for the inconvenience, but we\'re working on it.',
         'sorry_nothing_found_for' => 'Sorry, nothing found for',
-        'sorry_the_action_is_not_permitted_in_demo' => 'Sorry! the action is not permitted in demo ',
+        'sorry_the_action_is_not_permitted_in_demo' => 'Sorry! the action is not permitted in demo',
         'sorry_we_could_not_verifiy_you_please_try_again' => 'Sorry, we could not verifiy you. Please try again',
         'sort_by' => 'Sort by',
         'sort_by_largest' => 'Sort by largest',

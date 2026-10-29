@@ -46,6 +46,7 @@ class PasswordResetRequest extends Notification
         $locale = \App\Support\StoreLocale::deliveryLocale($notifiable, $this->locale);
         $url = config('app.url') . '/password/reset/' . $this->token;
         return (new MailMessage)
+            ->action(__('delivery.mail.reset_action', [], $locale), $url)
             ->view('shop.emails.password_reset', ['array' => ['locale' => $locale, 'link' => $url]])
             ->text('shop.emails.plain.password_reset', ['array' => ['locale' => $locale, 'link' => $url]])
             ->subject(__('storefront.auth.password_reset_subject', [], $locale));
