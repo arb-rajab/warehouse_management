@@ -8,6 +8,7 @@ use App\Models\OrderDetail;
 use App\Models\Product;
 use App\Models\ProductStock;
 use App\Models\StoreUser;
+use App\Support\StoreLocale;
 use App\Utility\NotificationUtility;
 use DomainException;
 use Illuminate\Database\UniqueConstraintViolationException;
@@ -145,7 +146,7 @@ class StoreAdminOrderService
             DB::afterCommit(function () use ($drivers, $order): void {
                 foreach ($drivers as $driver) {
                     if ($driver->getAttribute('device_token')) {
-                        NotificationUtility::sendPushNotificationToUser($driver, __('messages.order_updated_title', [], \App\Support\StoreLocale::deliveryLocale($driver)), __('messages.order_updated_body', ['code' => $order->code], \App\Support\StoreLocale::deliveryLocale($driver)));
+                        NotificationUtility::sendPushNotificationToUser($driver, __('messages.order_updated_title', [], StoreLocale::deliveryLocale($driver)), __('messages.order_updated_body', ['code' => $order->code], StoreLocale::deliveryLocale($driver)));
                     }
                 }
             });

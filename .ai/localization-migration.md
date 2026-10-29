@@ -406,9 +406,10 @@ PHP tokenization and Blade compilation distinguish executable PHP from comments,
 SVG transforms, JavaScript methods and Laravel validation methods. Scanner tests
 pin added calls, case variants, helper aliases, model access and raw SQL. This is
 a source regression boundary, not arbitrary dynamic-call/data-flow analysis or
-proof about unavailable external client code. All new coverage is unexecuted.
+proof about unavailable external client code. Coverage was added during the staged migration;
+final verification is now authorized as described below.
 
-**Deferred by explicit user instruction:** no tests, browser suites, builds, pre-push
+**Historical stage verification:** no tests, browser suites, builds, pre-push
 scripts, formatter/type-check workflows or attestation commands were run for
 the seller/admin, delivery/document, API/mobile or final repository cleanup stages.
 No manually triggered CI was requested. Review used source inspection, searches
@@ -416,9 +417,11 @@ and `git diff --check`.
 The earlier storefront development results are historical and do not verify
 the seller/admin, delivery/document or API/mobile commits. The stopped storefront attestation was not restarted;
 no CI-Verified trailer was created or fabricated. Intermediate commit/push is
-explicitly authorized without that attestation. Keep PR #512 draft and open.
+explicitly authorized without that attestation. The user has now authorized final
+verification of the combined migration. PR #512 is open for review; merge remains
+conditional on observed final verification and repository merge requirements.
 
-Reserve these checks until the user finishes all migration prompts:
+Run the consolidated checks as part of final verification:
 
 ```sh
 php artisan test --compact tests/Feature/LocalizationBoundaryTest.php
@@ -436,7 +439,7 @@ npm run test:e2e
 python3 .claude/scripts/pre_push_check.py --attest
 ```
 
-Consolidated final-verification checklist (all still deferred):
+Consolidated final-verification checklist:
 
 - Run the targeted suites above and the complete required backend/frontend suites,
   including language screen component tests, permission/ownership refusals, content
@@ -459,10 +462,11 @@ Consolidated final-verification checklist (all still deferred):
   wrapping, page breaks, totals/currency, fixed-form overlay positions, barcode/
   signatures and unchanged downloads. The external CMR's preprinted labels remain
   supplied-document content, not application labels to translate.
-- After external mobile catalogs arrive, implement/verify complete file-backed
-  mappings against every supported client/locale. Do not close this dependency
-  based on synthetic backend test keys. Keep #512 draft/open pending this work
-  and observed final verification.
+- External mobile application catalogs are outside this PR by explicit user
+  instruction because their source is not in this repository. Keep existing
+  server-side mobile catalog management/import/export compatible and verify
+  those contracts. Migrating external client catalogs is a separate future scope,
+  not an outstanding implementation dependency for this PR.
 
 The final attested run needs a clean tree and an unpushed final commit; follow
 its actual prerequisites then. Record only observed results, and do not count

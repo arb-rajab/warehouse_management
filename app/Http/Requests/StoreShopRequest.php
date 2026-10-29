@@ -8,6 +8,7 @@ use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
+use LogicException;
 
 /**
  * "Register your shop" (shop.frontend.seller_form), the storefront's seller
@@ -48,11 +49,22 @@ class StoreShopRequest extends FormRequest
      */
     public static function refusalFor(StoreUser $user): ?string
     {
-        return match ($user->user_type) {
-            'admin', 'customer' => __('seller.shop.admin_or_customer_can_not_be_a_seller'),
-            'seller' => __('seller.shop.this_user_already_a_seller'),
+        $key = match ($user->user_type) {
+            'admin', 'customer' => 'seller.shop.admin_or_customer_can_not_be_a_seller',
+            'seller' => 'seller.shop.this_user_already_a_seller',
             default => null,
         };
+
+        if ($key === null) {
+            return null;
+        }
+
+        $message = __($key);
+        if (! is_string($message)) {
+            throw new LogicException('Seller registration refusal translations must be strings.');
+        }
+
+        return $message;
     }
 
     /**

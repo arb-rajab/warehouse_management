@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Store\Admin\FilterRepresentativePaymentsRequest;
 use App\Http\Resources\Store\RepresentativePaymentResource;
 use App\Models\RepresentativePayment;
+use App\Support\StoreLocale;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -71,7 +72,7 @@ class RepresentativePaymentController extends Controller implements HasMiddlewar
         $payment->load(['rep:id,name', 'customer:id,name,AccSysID', 'admin:id,name']);
         $qr = QrCode::size(200)->generate(URL::signedRoute('payments.show', ['id' => $payment->id]));
 
-        return PDF::loadView('shop.frontend.user.export-rep-payments', ['documentLocale' => \App\Support\StoreLocale::documentLocale(), 'payment' => $payment, 'qr' => $qr])->download('payment-'.$payment->id.'.pdf');
+        return PDF::loadView('shop.frontend.user.export-rep-payments', ['documentLocale' => StoreLocale::documentLocale(), 'payment' => $payment, 'qr' => $qr])->download('payment-'.$payment->id.'.pdf');
     }
 
     private function decide(Request $request, RepresentativePayment $payment, string $status): RedirectResponse

@@ -23,7 +23,7 @@ class SetLocaleFromHeader
         // Symfony coerces malformed quality weights; validate before negotiating.
         $choices = array_filter(
             explode(',', (string) $request->header('Accept-Language')),
-            fn (string $choice) => preg_match('/^\s*(en|ar|sa)(?:[-_][a-z0-9]{2,8})*(?:\s*;\s*q=(?:0(?:\.[0-9]{0,3})?|1(?:\.0{0,3})?))?\s*$/iD', $choice),
+            fn (string $choice) => preg_match('/^\s*(en|ar|sa)(?:[-_][a-z0-9]{2,8})*(?:\s*;\s*q=(?:0(?:\.[0-9]{0,3})?|1(?:\.0{0,3})?))?\s*$/iD', $choice) === 1,
         );
 
         foreach (AcceptHeader::fromString(implode(',', $choices))->all() as $language) {

@@ -31,6 +31,9 @@ beforeEach(function () {
 
 test('seller screens render natural Arabic with an empty translations table and no translation queries', function (string $route, array $labels) {
     expect(DB::table('translations')->count())->toBe(0);
+    if ($route === 'seller.orders.index') {
+        createStoreOrder(createStoreUser('customer'), ['seller_id' => $this->seller->id]);
+    }
     startStorefrontTranslationQueryLog();
     $response = $this->get(route($route))->assertOk()->assertSee('lang="ar" dir="rtl"', false);
     foreach ($labels as $label) {
@@ -44,8 +47,8 @@ test('seller screens render natural Arabic with an empty translations table and 
     'shop' => ['seller.shop.index', ['شعار المتجر', 'عنوان المتجر', 'إعدادات اللافتات']],
     'verification' => ['seller.shop.verify', ['التحقق من المتجر', 'معلومات التحقق']],
     'products' => ['seller.products', ['المنتجات', 'الكمية الحالية']],
-    'product form' => ['seller.products.create', ['معلومات المنتج', 'تنويعات المنتج', 'الحد الأدنى لكمية الشراء', 'طريقة عرض المخزون']],
-    'digital form' => ['seller.digitalproducts.create', ['إضافة منتج رقمي جديد', 'ملف المنتج', 'سعر الشراء']],
+    'product form' => ['seller.products.create', ['أضف منتجك', 'تنويعات المنتج', 'الحد الأدنى لكمية الشراء', 'طريقة عرض المخزون']],
+    'digital form' => ['seller.digitalproducts.create', ['أضف منتجك', 'ملف المنتج', 'سعر الشراء']],
     'bulk import' => ['seller.product_bulk_upload.index', ['إضافة المنتجات دفعة واحدة', 'رفع ملف CSV', 'تنزيل الفئات']],
     'uploads' => ['seller.uploaded-files.index', ['جميع الملفات المرفوعة', 'رفع ملف جديد']],
     'orders' => ['seller.orders.index', ['الطلبات', 'تصفية حسب حالة الدفع', 'عدد المنتجات']],
@@ -94,7 +97,7 @@ test('seller content still uses its legacy language while static form text uses 
     $category->category_translations()->create(['lang' => 'ar', 'name' => 'Different content record']);
     startStorefrontTranslationQueryLog();
     $this->withSession(['locale' => 'sa'])->get(route('seller.products.create'))->assertOk()
-        ->assertSee('تصنيف مخصص قديم')->assertDontSee('Different content record')->assertSee('معلومات المنتج');
+        ->assertSee('تصنيف مخصص قديم')->assertDontSee('Different content record')->assertSee('أضف منتجك');
     expectNoStorefrontTranslationQueries();
     expect(app()->getLocale())->toBe('sa')->and(app('translator')->getLocale())->toBe('ar');
 });
@@ -132,7 +135,7 @@ test('seller validation and successful writes use Arabic without translating dat
 test('seller localization leaves ownership refusals ahead of malformed product input', function () {
     $other = createStoreUser('seller');
     $product = createStoreProduct(['user_id' => $other->id, 'added_by' => 'seller', 'digital' => 1]);
-    $before = $product->getAttributes();
+    $before = $product->fresh()->getAttributes();
     startStorefrontTranslationQueryLog();
     $this->post(route('seller.digitalproducts.update', $product), ['name' => []])->assertRedirect();
     expect(flashedMessage())->toBe('هذا المنتج لا يخصك.');

@@ -10,6 +10,7 @@ use App\Models\ProductsExport;
 use App\Models\ProductsImport;
 use App\Models\StoreUser;
 use App\Services\ProductSpreadsheetImporter;
+use App\Support\StoreLocale;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
@@ -58,7 +59,7 @@ class ProductBulkUploadController extends Controller implements HasMiddleware
     public function pdfDownloadCategory(): HttpResponse
     {
         return PDF::loadView('shop.backend.downloads.category', [
-            'documentLocale' => \App\Support\StoreLocale::documentLocale(),
+            'documentLocale' => StoreLocale::documentLocale(),
             'categories' => Category::query()->select(['id', 'name'])->with('category_translations:id,category_id,name,lang')->orderBy('id')->get(),
         ], [], [])->download('category.pdf');
     }
@@ -66,7 +67,7 @@ class ProductBulkUploadController extends Controller implements HasMiddleware
     public function pdfDownloadBrand(): HttpResponse
     {
         return PDF::loadView('shop.backend.downloads.brand', [
-            'documentLocale' => \App\Support\StoreLocale::documentLocale(),
+            'documentLocale' => StoreLocale::documentLocale(),
             'brands' => Brand::query()->select(['id', 'name'])->with('brand_translations:id,brand_id,name,lang')->orderBy('id')->get(),
         ], [], [])->download('brands.pdf');
     }
@@ -74,7 +75,7 @@ class ProductBulkUploadController extends Controller implements HasMiddleware
     public function pdfDownloadSeller(): HttpResponse
     {
         return PDF::loadView('shop.backend.downloads.user', [
-            'documentLocale' => \App\Support\StoreLocale::documentLocale(),
+            'documentLocale' => StoreLocale::documentLocale(),
             'users' => StoreUser::query()->select(['id', 'name', 'email', 'user_type'])->where('user_type', 'seller')->orderBy('id')->get(),
         ], [], [])->download('user.pdf');
     }

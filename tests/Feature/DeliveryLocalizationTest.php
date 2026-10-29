@@ -7,14 +7,19 @@ use App\Mail\InvoiceEmailManager;
 use App\Mail\LocalizedMail;
 use App\Mail\SecondEmailVerifyMailManager;
 use App\Mail\SupportMailManager;
+use App\Models\Category;
+use App\Models\OrderDetail;
 use App\Models\ProductsExport;
+use App\Models\RepresentativePayment;
 use App\Models\StoreUser;
 use App\Notifications\AppEmailVerificationNotification;
 use App\Notifications\EmailVerificationNotification;
+use App\Notifications\NewDriverTripNotification;
 use App\Notifications\OrderNotification;
 use App\Notifications\PasswordResetRequest;
 use App\Notifications\TermsAgreementNotification;
 use App\Notifications\UnorderedCartNotification;
+use App\Services\DriverService;
 use App\Support\StoreLocale;
 use Illuminate\Contracts\Mail\Factory as MailFactory;
 use Illuminate\Contracts\Translation\HasLocalePreference;
@@ -22,13 +27,12 @@ use Illuminate\Mail\SendQueuedMailable;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Notification;
 use Symfony\Component\Mime\Email;
 
 class DeliveryLocaleRecipient implements HasLocalePreference
 {
-    public function __construct(private string $preference)
-    {
-    }
+    public function __construct(private string $preference) {}
 
     public function preferredLocale(): string
     {
@@ -49,6 +53,7 @@ beforeEach(function () {
 });
 
 test('delivery defaults cannot inherit browser or worker locale and honor valid recipient preferences', function () {
+    request()->setLaravelSession(app('session')->driver());
     app()->setLocale('en');
     session(['locale' => 'en']);
     expect(StoreLocale::deliveryLocale())->toBe('ar')
@@ -90,7 +95,7 @@ test('queued static mail renders subjects HTML and text for each recipient witho
         ->and(app('translator')->getLocale())->toBe('ar');
     expectNoStorefrontTranslationQueries();
 })->with([
-    ['en', 'Support ticket Code is:- T-123', 'Ticket'],
+    ['en', 'Support ticket Code is:- T-123', 'ticket'],
     ['ar', 'رمز تذكرة الدعم هو: T-123', 'تذكرة دعم'],
     ['sa', 'رمز تذكرة الدعم هو: T-123', 'تذكرة دعم'],
 ]);
@@ -210,9 +215,10 @@ test('invoice HTML and PDF retain amounts identifiers and dynamic content in bot
     DB::table('business_settings')->insert(['type' => 'no_of_decimals', 'value' => '2']);
     $customer = createStoreUser();
     $order = createStoreOrder($customer, ['code' => 'INV-ABC-123', 'grand_total' => 37.50, 'company_tax_number' => 'NL123ABC']);
-    $product = createStoreProduct(['name' => 'Original Rice', 'ar_name' => 'أرز أصلي']);
-    $detail = \App\Models\OrderDetail::forceCreate([
-        'order_id' => $order->id, 'seller_id' => $product->user_id, 'product_id' => $product->id,
+    $product = createStoreProduct(['name' => 'Original Rice']);
+    $product->forceFill(['ar_name' => 'أرز أصلي', 'serial' => 987654321])->save();
+    $detail = OrderDetail::forceCreate([
+        'order_id' => $order->id, 'seller_id' => $product->user_id, 'product_id' => $product->id, 'product_serial' => $product->serial,
         'price' => 37.50, 'tax' => 4.25, 'quantity' => 3, 'item_notes' => '<script>notes</script>',
     ]);
     $order->load('orderDetails.product');
@@ -234,7 +240,7 @@ test('invoice HTML and PDF retain amounts identifiers and dynamic content in bot
 ]);
 
 test('reference downloads keep content language while localizing human headings', function (string $locale, string $heading) {
-    $category = \App\Models\Category::forceCreate(['name' => 'Base category']);
+    $category = Category::forceCreate(['name' => 'Base category']);
     $category->category_translations()->create(['lang' => 'sa', 'name' => 'تصنيف المحتوى القديم']);
     $category->category_translations()->create(['lang' => 'ar', 'name' => 'Different content']);
     $category->load('category_translations');
@@ -251,7 +257,7 @@ test('reference downloads keep content language while localizing human headings'
 ]);
 
 test('receipt labels and direction do not alter its monetary and identifier values', function (string $locale, string $label) {
-    $payment = new \App\Models\RepresentativePayment;
+    $payment = new RepresentativePayment;
     $payment->forceFill([
         'receipt_code' => 'R-001', 'invoice_code' => 42, 'amount' => '125.50', 'otajer_id' => 'ACC-5',
         'date' => '2026-10-08 10:00:00', 'notes' => '<b>Customer note</b>',
@@ -297,11 +303,11 @@ test('trip notifications resolve the driver delivery language and preserve their
         'id' => 123, 'driver_id' => $driver->id, 'code' => 'TRIP-123',
         'truck' => (object) ['name' => 'Truck A', 'photos' => ''],
     ];
-    \Illuminate\Support\Facades\Notification::fake();
+    Notification::fake();
     app()->setLocale($locale === 'ar' ? 'en' : 'ar');
     startStorefrontTranslationQueryLog();
-    (new \App\Services\DriverService)->notifyDriver($trip);
-    \Illuminate\Support\Facades\Notification::assertSentTo($driver, \App\Notifications\NewDriverTripNotification::class, function ($notification, array $channels) use ($driver, $title): bool {
+    (new DriverService)->notifyDriver($trip);
+    Notification::assertSentTo($driver, NewDriverTripNotification::class, function ($notification, array $channels) use ($driver, $title): bool {
         $restored = unserialize(serialize($notification));
         $data = $restored->toArray($driver);
         expect($channels)->toBe(['database'])->and(array_keys($data))->toBe(['message', 'body', 'trip_id', 'trip_code', 'truck_name', 'truck_images'])

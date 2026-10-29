@@ -6,6 +6,7 @@ use App\Http\Middleware\HandleStoreBladePages;
 use App\Http\Middleware\HttpsProtocol;
 use App\Http\Middleware\Language;
 use App\Http\Middleware\SendNoIndexHeader;
+use App\Http\Middleware\SetLocaleFromHeader;
 use App\Http\Middleware\UseStoreAuthGuard;
 use App\Http\Middleware\WrapStoreApiResources;
 use Illuminate\Foundation\Support\Providers\RouteServiceProvider as ServiceProvider;
@@ -77,8 +78,8 @@ class RouteServiceProvider extends ServiceProvider
             // one group of throttle:wms + wms.auth, the trip routes auth:store_api
             // and driver). WrapStoreApiResources is this app's own
             // addition, as above.
-            Route::prefix('api')->middleware([SendNoIndexHeader::class.':always', WrapStoreApiResources::class])->group(base_path('routes/shop-api_warehouse.php'));
-            Route::prefix('api')->middleware([SendNoIndexHeader::class.':always', WrapStoreApiResources::class])->group(base_path('routes/shop-api_trip.php'));
+            Route::prefix('api')->middleware([SendNoIndexHeader::class.':always', SetLocaleFromHeader::class, WrapStoreApiResources::class])->group(base_path('routes/shop-api_warehouse.php'));
+            Route::prefix('api')->middleware([SendNoIndexHeader::class.':always', SetLocaleFromHeader::class, WrapStoreApiResources::class])->group(base_path('routes/shop-api_trip.php'));
 
             Route::middleware(['web', UseStoreAuthGuard::class, Language::class, HttpsProtocol::class, HandleStoreBladePages::class])
                 ->group(base_path('routes/shop-web.php'));

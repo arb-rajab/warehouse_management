@@ -4,6 +4,7 @@ use App\Models\Permission;
 use App\Models\Role;
 use App\Support\StoreLocale;
 use App\Support\StorePermissions;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -20,7 +21,7 @@ test('the Arabic role form uses file labels for every application permission wit
     startStorefrontTranslationQueryLog();
     $this->get(route('roles.create'))->assertOk()->assertInertia(fn (Assert $page) => $page
         ->component('Store/Admin/Staff/Roles/Create')
-        ->where('permissionGroups', function (array $groups): bool {
+        ->where('permissionGroups', function (Collection $groups): bool {
             $listed = collect($groups)->flatMap(fn (array $group) => $group['permissions'])->keyBy('id');
             foreach (StorePermissions::all() as $name => $section) {
                 $permission = Permission::findByName($name, 'store');
@@ -73,7 +74,7 @@ test('custom permission sections labels assignments and role content remain data
     actingAsStoreUser(createStoreAdmin());
     $this->withSession(['locale' => 'sa'])->get(route('roles.create'))->assertOk()->assertInertia(fn (Assert $page) => $page
         ->where('locale', 'ar')
-        ->where('permissionGroups', fn (array $groups) => collect($groups)->contains(fn (array $group) => $group === [
+        ->where('permissionGroups', fn (Collection $groups) => collect($groups)->contains(fn (array $group) => $group === [
             'section' => 'custom_logistics', 'label' => 'لوجستيات مخصصة',
             'permissions' => [['id' => $custom->id, 'label' => 'اعتماد الشحنة المخصصة']],
         ])));

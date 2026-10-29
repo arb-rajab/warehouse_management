@@ -5,11 +5,13 @@ use App\Http\Middleware\IsDeliveryBoy;
 use App\Http\Middleware\IsDriver;
 use App\Http\Middleware\SetLocaleFromHeader;
 use App\Http\Middleware\WmsAuthMiddleware;
+use App\Models\PersonalAccessToken;
 use App\Support\StoreLocale;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
-function apiLocaleSnapshot(): \Illuminate\Http\JsonResponse
+function apiLocaleSnapshot(): JsonResponse
 {
     return response()->json([
         'content' => app()->getLocale(),
@@ -32,8 +34,7 @@ test('store headers select UI and content separately and restore the surrounding
     }
 
     startStorefrontTranslationQueryLog();
-    $response = (new SetLocaleFromHeader)->handle($request, fn (Request $request) =>
-        (new AppLanguage)->handle($request, fn () => apiLocaleSnapshot()));
+    $response = (new SetLocaleFromHeader)->handle($request, fn (Request $request) => (new AppLanguage)->handle($request, fn () => apiLocaleSnapshot()));
 
     expect($response->getData(true))->toBe([
         'content' => $content, 'ui' => $ui, 'fallback' => 'ar', 'default_content' => 'sa',
@@ -61,6 +62,7 @@ test('Accept-Language negotiates valid weighted regional choices with an immutab
     app()->setLocale('en');
     app('translator')->setFallback('en');
     $request = Request::create('/api/v1/products');
+    $request->headers->remove('Accept-Language');
     if ($header !== null) {
         $request->headers->set('Accept-Language', $header);
     }
@@ -126,8 +128,8 @@ test('API ban messages use files and preserve the refusal and token revocation c
         ->assertForbidden()->assertExactJson(['result' => false, 'result_key' => 'banned', 'message' => $message]);
 
     expectNoStorefrontTranslationQueries();
-    expect(\App\Models\PersonalAccessToken::findToken($token))->toBeNull()
-        ->and(\App\Models\PersonalAccessToken::findToken($otherToken)?->tokenable_id)->toBe($bystander->id);
+    expect(PersonalAccessToken::findToken($token))->toBeNull()
+        ->and(PersonalAccessToken::findToken($otherToken)?->tokenable_id)->toBe($bystander->id);
 })->with([['en', 'You are banned'], ['ar', 'تم حظر حسابك'], ['sa', 'تم حظر حسابك']]);
 
 test('delivery and driver API gates localize only the human refusal', function (string $middleware, string $locale, string $message) {
@@ -135,8 +137,7 @@ test('delivery and driver API gates localize only the human refusal', function (
     $customer = createStoreUser('customer');
     $request->setUserResolver(fn () => $customer);
     startStorefrontTranslationQueryLog();
-    $response = StoreLocale::withLocale($locale, StoreLocale::uiLocale($locale), fn () =>
-        (new $middleware)->handle($request, fn () => response('unexpected')));
+    $response = StoreLocale::withLocale($locale, StoreLocale::uiLocale($locale), fn () => (new $middleware)->handle($request, fn () => response('unexpected')));
 
     expect($response->getStatusCode())->toBe(403)->and($response->getData(true))->toBe(['message' => $message]);
     expectNoStorefrontTranslationQueries();
@@ -152,8 +153,7 @@ test('warehouse token refusals preserve the legacy HTTP status and numeric body 
     $request = Request::create('/temp/api/v2/warehouse/orders');
     $request->headers->set('private-token', 'wrong-test-token');
     startStorefrontTranslationQueryLog();
-    $response = StoreLocale::withLocale($locale, $locale, fn () =>
-        (new WmsAuthMiddleware)->handle($request, fn () => response('unexpected')));
+    $response = StoreLocale::withLocale($locale, $locale, fn () => (new WmsAuthMiddleware)->handle($request, fn () => response('unexpected')));
 
     expect($response->getStatusCode())->toBe(200)
         ->and($response->getData(true))->toBe(['result' => false, 'message' => $message, 'status' => 401]);

@@ -145,7 +145,7 @@ test('a successful current-visit response retains its deliberately empty message
     startStorefrontTranslationQueryLog();
 
     $response = $this->withToken(storeApiToken($representative))->withHeader('App-Language', $locale)
-        ->getJson('/temp/api/v2/current-visit')->assertOk()
+        ->getJson('/temp/api/v2/representatives/current-visit')->assertOk()
         ->assertJsonPath('message', '')
         ->assertJsonPath('result', true)
         ->assertJsonPath('data.id', $visit->id)
