@@ -13,6 +13,52 @@ class StoreFilterSeedData
 {
     public const string TRACKING_KEY = 'store_filter_seed_v1';
 
+    /** @var list<array{table_name: string, seed_key: string, record_id: string}>|null */
+    private ?array $batchRecords = null;
+
+    /** @var array<string, int> */
+    private array $positions = [];
+
+    /** @var array<string, bool> */
+    private array $timestampColumns = [];
+
+    private ?string $passwordHash = null;
+
+    /** Persist the ownership index once for a complete group of fixtures. */
+    public function batch(callable $callback): mixed
+    {
+        self::guard();
+        if ($this->batchRecords !== null) {
+            return $callback();
+        }
+
+        try {
+            return DB::transaction(function () use ($callback): mixed {
+                DB::table(config('database.migrations.table'))->orderBy('id')->lockForUpdate()->first();
+                $tracking = $this->trackingRow(lock: true);
+                if ($tracking !== null && $tracking->value === null) {
+                    throw new RuntimeException('Reserved store filter setting already exists without a fixture index.');
+                }
+                $this->batchRecords = $this->decodeTracking($tracking?->value);
+                foreach ($this->batchRecords as $position => $record) {
+                    $this->positions[$record['table_name']."\0".$record['seed_key']] = $position;
+                }
+                $result = $callback();
+                $value = json_encode(['version' => 1, 'records' => $this->batchRecords], JSON_THROW_ON_ERROR);
+                if ($tracking === null) {
+                    DB::table('business_settings')->insert(['type' => self::TRACKING_KEY, 'value' => $value]);
+                } else {
+                    DB::table('business_settings')->where('id', $tracking->id)->update(['value' => $value]);
+                }
+
+                return $result;
+            });
+        } finally {
+            $this->batchRecords = null;
+            $this->positions = [];
+        }
+    }
+
     public static function guard(): void
     {
         if (! app()->environment('local', 'development', 'dev', 'staging', 'testing')) {
@@ -23,11 +69,20 @@ class StoreFilterSeedData
     /** @return list<array{table_name: string, seed_key: string, record_id: string}> */
     public function records(): array
     {
-        return $this->decodeTracking($this->trackingRow()?->value);
+        return $this->batchRecords ?? $this->decodeTracking($this->trackingRow()?->value);
     }
 
     public function find(string $table, string $key): int|string|null
     {
+        if ($this->batchRecords !== null) {
+            $position = $this->positions[$table."\0".$key] ?? null;
+            $record = $position === null ? null : $this->batchRecords[$position];
+            if ($record === null || ! DB::table($table)->where('id', $record['record_id'])->exists()) {
+                return null;
+            }
+
+            return ctype_digit($record['record_id']) ? (int) $record['record_id'] : $record['record_id'];
+        }
         foreach ($this->records() as $record) {
             if ($record['table_name'] === $table && $record['seed_key'] === $key
                 && DB::table($table)->where('id', $record['record_id'])->exists()) {
@@ -86,82 +141,63 @@ class StoreFilterSeedData
     {
         self::guard();
 
-        return DB::transaction(function () use ($table, $key, $data): int|string {
-            // Serialize first-time index creation using an existing schema-history row.
-            DB::table(config('database.migrations.table'))->orderBy('id')->lockForUpdate()->first();
-            $tracking = $this->trackingRow(lock: true);
-            if ($tracking !== null && $tracking->value === null) {
-                throw new RuntimeException('Reserved store filter setting already exists without a fixture index.');
-            }
-            $records = $this->decodeTracking($tracking?->value);
-            $position = null;
-            $id = null;
-            foreach ($records as $index => $record) {
-                if ($record['table_name'] === $table && $record['seed_key'] === $key) {
-                    $position = $index;
-                    if (DB::table($table)->where('id', $record['record_id'])->exists()) {
-                        $id = ctype_digit($record['record_id']) ? (int) $record['record_id'] : $record['record_id'];
-                    }
-                    break;
-                }
-            }
-            if ($id !== null) {
-                unset($data['id']);
-                if ($table === 'users') {
-                    unset($data['password']);
-                }
-                if ($table === 'products') {
-                    Product::query()->findOrFail($id)->forceFill($data)->saveQuietly();
-                } elseif ($data !== []) {
-                    DB::table($table)->where('id', $id)->update($data);
-                }
-
-                return $id;
-            }
-
-            if (Schema::hasColumn($table, 'created_at')) {
-                $data += ['created_at' => now()];
-            }
-            if (Schema::hasColumn($table, 'updated_at')) {
-                $data += ['updated_at' => now()];
+        if ($this->batchRecords === null) {
+            return $this->batch(fn (): int|string => $this->row($table, $key, $data));
+        }
+        $position = $this->positions[$table."\0".$key] ?? null;
+        $record = $position === null ? null : $this->batchRecords[$position];
+        $id = $record !== null && DB::table($table)->where('id', $record['record_id'])->exists()
+            ? (ctype_digit($record['record_id']) ? (int) $record['record_id'] : $record['record_id']) : null;
+        if ($id !== null) {
+            unset($data['id']);
+            if ($table === 'users') {
+                unset($data['password']);
             }
             if ($table === 'products') {
-                $product = new Product;
-                $product->forceFill($data)->saveQuietly();
-                $id = $product->getKey();
-            } elseif (isset($data['id'])) {
-                DB::table($table)->insert($data);
-                $id = $data['id'];
-            } else {
-                $id = DB::table($table)->insertGetId($data);
-            }
-            $record = ['table_name' => $table, 'seed_key' => $key, 'record_id' => (string) $id];
-            if ($position === null) {
-                $records[] = $record;
-            } else {
-                $records[$position] = $record;
-            }
-            $value = json_encode(['version' => 1, 'records' => $records], JSON_THROW_ON_ERROR);
-            if ($tracking === null) {
-                DB::table('business_settings')->insert(['type' => self::TRACKING_KEY, 'value' => $value]);
-            } else {
-                DB::table('business_settings')->where('id', $tracking->id)->update(['value' => $value]);
+                Product::query()->findOrFail($id)->forceFill($data)->saveQuietly();
+            } elseif ($data !== []) {
+                DB::table($table)->where('id', $id)->update($data);
             }
 
             return $id;
-        });
+        }
+        foreach (['created_at', 'updated_at'] as $column) {
+            $hasColumn = $this->timestampColumns[$table.'.'.$column] ??= Schema::hasColumn($table, $column);
+            if ($hasColumn) {
+                $data += [$column => now()];
+            }
+        }
+        if ($table === 'products') {
+            $product = new Product;
+            $product->forceFill($data)->saveQuietly();
+            $id = $product->getKey();
+        } elseif (isset($data['id'])) {
+            DB::table($table)->insert($data);
+            $id = $data['id'];
+        } else {
+            $id = DB::table($table)->insertGetId($data);
+        }
+        $record = ['table_name' => $table, 'seed_key' => $key, 'record_id' => (string) $id];
+        if ($position === null) {
+            $this->positions[$table."\0".$key] = count($this->batchRecords);
+            $this->batchRecords[] = $record;
+        } else {
+            $this->batchRecords[$position] = $record;
+        }
+
+        return $id;
     }
 
     /** @param array<string, mixed> $data */
     public function user(string $key, array $data = []): int
     {
         self::guard();
+        $data += ['name' => StoreSeedExamples::person($key)];
         if ($this->find('users', $key) === null) {
             $type = in_array($key, ['admin', 'seller', 'driver', 'staff'], true) ? $key : 'customer';
             $data += [
-                'name' => 'Filter fixture '.$key,
                 'email' => 'store-filter-'.$key.'@example.invalid',
-                'password' => Hash::make('password'),
+                'password' => $this->passwordHash ??= Hash::make('password'),
                 'user_type' => $type,
                 'is_rep' => $key === 'representative' ? 1 : 0,
                 'admin_verified' => 1,
