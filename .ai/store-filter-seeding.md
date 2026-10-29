@@ -13,15 +13,10 @@ Prerequisites: installed dependencies, PHP 8.5, otherwise current application sc
 source /workspace/cloud-setup/activate.sh
 cd /workspace/warehouse_management
 
-# Bash: enter a password of at least 16 characters without echoing it or
-# placing it in shell history. All newly created fixture accounts use it.
-read -rsp 'Fixture account password: ' STORE_FILTER_SEED_PASSWORD
-export STORE_FILTER_SEED_PASSWORD
 php artisan db:seed --class=StoreFilterCoverageSeeder --no-interaction
-unset STORE_FILTER_SEED_PASSWORD
 ```
 
-Use the actual checkout path on other hosts. Do not run the default DatabaseSeeder, migrate:fresh, or an existing staging seed chain. The runtime password variable takes precedence over `config/store_filter_seed.php`, including with cached config. The config file also supports normal environment configuration before caching. Reruns preserve fixture passwords; the password variable is required whenever a new fixture account is needed.
+Use the actual checkout path on other hosts. Do not run the default DatabaseSeeder, migrate:fresh, or an existing staging seed chain. New fixture accounts use the literal password `password`, stored as a hash. No dedicated environment variable or configuration is required. Reruns preserve existing fixture passwords, including passwords changed after the first run.
 
 ## Preservation and reruns
 
@@ -72,8 +67,8 @@ Source translation search gets a `store_filter_coverage_example` key only if the
 
 ## Verification
 
-The updated seeding suite passes 47 tests (1,977 assertions); scoped PHPStan reports zero errors, and Pint and diff checks pass. The suite verifies seeding without new tables or migrations, existing-row preservation, rerun identity/count stability, repair, relative-date refresh, credential collisions, full-transaction rollback, environment refusal, and duplicate/corrupt ownership metadata rejection. Tests exercise actual HTTP filters. PHP formatting and scoped static analysis are also checked. PHPStan requires `--debug` here because worker subprocess execution exits without diagnostics.
+The updated seeding suite passes 48 tests (1,980 assertions); scoped PHPStan reports zero errors, and Pint and diff checks pass. The suite verifies seeding without new tables or migrations, existing-row preservation, rerun identity/count stability, repair, relative-date refresh, credential collisions, full-transaction rollback, environment refusal, and duplicate/corrupt ownership metadata rejection. Tests exercise actual HTTP filters. PHP formatting and scoped static analysis are also checked. PHPStan requires `--debug` here because worker subprocess execution exits without diagnostics.
 
-Continued verification: all 2,730 frontend unit tests pass across 341 files with `--maxWorkers=2`. The required MySQL migration checks plus the filter-seeder tests pass against MySQL 8.4 (930 passed, 6 skipped; 6,474 assertions). The MySQL server runs in a dedicated container matching the CI image; no system database installation or application schema change is required.
+Continued verification: all 2,730 frontend unit tests pass across 341 files with `--maxWorkers=2`. The required MySQL migration checks pass against MySQL 8.4 (902 passed, 6 skipped; 4,546 assertions). The MySQL server runs in a dedicated container matching the CI image; no system database installation or application schema change is required.
 
 The complete Playwright browser suite also passes: 156 tests. Browser checks use built assets (temporarily moving a stale ignored `public/hot` marker aside) and the repository's idempotent Playwright setup helper. Verification may set `VITEST_MAX_WORKERS=2` and use the pre-push runner's `--serial` mode to avoid contention without changing test coverage or timeouts.

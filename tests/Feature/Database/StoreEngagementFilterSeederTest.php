@@ -5,13 +5,8 @@ use Database\Seeders\Support\StoreFilterSeedData;
 use Illuminate\Support\Facades\DB;
 
 beforeEach(function () {
-    putenv('STORE_FILTER_SEED_PASSWORD=isolated-fixture-password');
     seedStoreCurrency();
     $this->seed(StoreEngagementFilterSeeder::class);
-});
-
-afterEach(function () {
-    putenv('STORE_FILTER_SEED_PASSWORD');
 });
 
 test('engagement fixtures satisfy actual support and campaign search filters', function () {

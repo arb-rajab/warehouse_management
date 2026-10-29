@@ -15,17 +15,12 @@ use Inertia\Testing\AssertableInertia as Assert;
 beforeEach(function () {
     $this->withoutVite();
     config(['app.key' => 'base64:'.base64_encode(str_repeat('a', 32))]);
-    putenv('STORE_FILTER_SEED_PASSWORD=isolated-activity-test-password');
     Http::preventStrayRequests();
     Mail::fake();
     Notification::fake();
     createStoreProduct();
     (new StoreAccountFilterSeeder)->run();
     (new StoreActivityFilterSeeder)->run();
-});
-
-afterEach(function () {
-    putenv('STORE_FILTER_SEED_PASSWORD');
 });
 
 test('activity fixtures populate every order delivery and payment option in each list', function () {

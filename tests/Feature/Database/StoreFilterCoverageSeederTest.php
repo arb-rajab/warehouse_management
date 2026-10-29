@@ -6,6 +6,7 @@ use Database\Seeders\StoreFilterCoverageSeeder;
 use Database\Seeders\Support\StoreFilterSeedData;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Notification;
@@ -15,14 +16,9 @@ use Inertia\Testing\AssertableInertia as Assert;
 beforeEach(function () {
     $this->withoutVite();
     config(['app.key' => 'base64:'.base64_encode(str_repeat('a', 32))]);
-    putenv('STORE_FILTER_SEED_PASSWORD=isolated-fixture-test-password');
     Http::preventStrayRequests();
     Mail::fake();
     Notification::fake();
-});
-
-afterEach(function () {
-    putenv('STORE_FILTER_SEED_PASSWORD');
 });
 
 test('account fixtures populate each individual customer and representative filter with defaults applied', function () {
@@ -101,10 +97,7 @@ test('fixture seeders refuse environments outside development staging and testin
     }
 })->with(['production', 'preview']);
 
-test('fixture credentials are required and reserved email collisions never overwrite existing users', function () {
-    putenv('STORE_FILTER_SEED_PASSWORD');
-    expect(fn () => app(StoreFilterSeedData::class)->user('admin'))->toThrow(RuntimeException::class);
-    putenv('STORE_FILTER_SEED_PASSWORD=isolated-fixture-test-password');
+test('reserved email collisions never overwrite existing users', function () {
     $user = createStoreUser('customer', 'store-filter-admin@example.invalid');
     $before = $user->getAttributes();
     expect(fn () => app(StoreFilterSeedData::class)->user('admin'))->toThrow(QueryException::class);
@@ -128,4 +121,15 @@ test('the complete seed transaction rolls back on a reserved identity collision'
     expect(DB::table('users')->count())->toBe(1)
         ->and(count(app(StoreFilterSeedData::class)->records()))->toBe(0)
         ->and($existing->fresh()->getAttributes())->toBe($before);
+});
+
+test('new fixture accounts use a hashed password literal and reruns preserve changed credentials', function () {
+    $data = app(StoreFilterSeedData::class);
+    $id = $data->user('password-example');
+    $hash = DB::table('users')->where('id', $id)->value('password');
+    expect($hash)->not->toBe('password')->and(Hash::check('password', $hash))->toBeTrue();
+    $changed = Hash::make('changed-fixture-password');
+    DB::table('users')->where('id', $id)->update(['password' => $changed]);
+    expect($data->user('password-example'))->toBe($id)
+        ->and(DB::table('users')->where('id', $id)->value('password'))->toBe($changed);
 });

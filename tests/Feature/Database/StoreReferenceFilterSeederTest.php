@@ -5,12 +5,7 @@ use Database\Seeders\Support\StoreFilterSeedData;
 use Illuminate\Support\Facades\DB;
 
 beforeEach(function () {
-    putenv('STORE_FILTER_SEED_PASSWORD=isolated-fixture-password');
     seedStoreCurrency();
-});
-
-afterEach(function () {
-    putenv('STORE_FILTER_SEED_PASSWORD');
 });
 
 test('reference fixtures fill every available country and state filter without changing existing geography', function () {

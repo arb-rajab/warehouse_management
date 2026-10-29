@@ -6,13 +6,8 @@ use Database\Seeders\Support\StoreFilterSeedData;
 use Illuminate\Support\Facades\DB;
 
 beforeEach(function () {
-    putenv('STORE_FILTER_SEED_PASSWORD=coverage-test-password-2026');
     $this->withoutVite();
     seedStoreCurrency();
-});
-
-afterEach(function () {
-    putenv('STORE_FILTER_SEED_PASSWORD');
 });
 
 test('catalogue fixtures satisfy real admin switches presets category and seller filters', function () {

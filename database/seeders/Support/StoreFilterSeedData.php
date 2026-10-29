@@ -157,15 +157,11 @@ class StoreFilterSeedData
     {
         self::guard();
         if ($this->find('users', $key) === null) {
-            $password = (string) (getenv('STORE_FILTER_SEED_PASSWORD') ?: config('store_filter_seed.password', ''));
-            if (strlen($password) < 16) {
-                throw new RuntimeException('Set STORE_FILTER_SEED_PASSWORD to at least 16 characters before creating filter fixture accounts.');
-            }
             $type = in_array($key, ['admin', 'seller', 'driver', 'staff'], true) ? $key : 'customer';
             $data += [
                 'name' => 'Filter fixture '.$key,
                 'email' => 'store-filter-'.$key.'@example.invalid',
-                'password' => Hash::make($password),
+                'password' => Hash::make('password'),
                 'user_type' => $type,
                 'is_rep' => $key === 'representative' ? 1 : 0,
                 'admin_verified' => 1,
