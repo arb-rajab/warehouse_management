@@ -65,7 +65,7 @@ class AuctionProductDetailCollection extends ResourceCollection
                     'added_by' => $data->added_by,
                     'seller_id' => $data->user->id,
                     'shop_id' => $data->added_by == 'admin' ? 0 : $data->user->shop->id,
-                    'shop_name' => $data->added_by == 'admin' ? translate('In House Product') : $data->user->shop->name,
+                    'shop_name' => $data->added_by == 'admin' ? __('api_resources.shop.in_house_product') : $data->user->shop->name,
                     'shop_logo' => $data->added_by == 'admin' ? uploaded_asset(get_setting('header_logo')) : uploaded_asset($data->user->shop->logo) ?? "",
                     'photos' => $photos,
                     'thumbnail_image' => uploaded_asset($data->thumbnail_img),

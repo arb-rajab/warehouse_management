@@ -51,7 +51,7 @@
             <div class="d-flex flex-wrap mb-2 mb-md-3 align-items-baseline justify-content-between">
                 <!-- Title -->
                 <h3 class="fs-16 fs-md-20 fw-700 mb-2 mb-sm-0">
-                    <span class="d-inline-block">{{ translate('Flash Sale') }}</span>
+                    <span class="d-inline-block">{{ __('storefront.common.flash_sale') }}</span>
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="24" viewBox="0 0 16 24" class="ml-3">
                         <path id="Path_28795" data-name="Path 28795" d="M30.953,13.695a.474.474,0,0,0-.424-.25h-4.9l3.917-7.81a.423.423,0,0,0-.028-.428.477.477,0,0,0-.4-.207H21.588a.473.473,0,0,0-.429.263L15.041,18.151a.423.423,0,0,0,.034.423.478.478,0,0,0,.4.2h4.593l-2.229,9.683a.438.438,0,0,0,.259.5.489.489,0,0,0,.571-.127L30.9,14.164a.425.425,0,0,0,.054-.469Z" transform="translate(-15 -5)" fill="#fcc201"/>
                     </svg>
@@ -59,9 +59,9 @@
                 <!-- Links -->
                 <div>
                     <div class="text-dark d-flex align-items-center mb-0">
-                        <a href="{{ route('flash-deals') }}" class="fs-10 fs-md-12 fw-700 text-reset has-transition opacity-60 hov-opacity-100 hov-text-primary animate-underline-primary mr-3">{{ translate('View All Flash Sale') }}</a>
+                        <a href="{{ route('flash-deals') }}" class="fs-10 fs-md-12 fw-700 text-reset has-transition opacity-60 hov-opacity-100 hov-text-primary animate-underline-primary mr-3">{{ __('storefront.common.view_all_flash_sale') }}</a>
                         <span class=" border-left border-soft-light border-width-2 pl-3">
-                            <a href="{{ route('flash-deal-details', $flash_deal->slug) }}" class="fs-10 fs-md-12 fw-700 text-reset has-transition opacity-60 hov-opacity-100 hov-text-primary animate-underline-primary">{{ translate('View All Products from This Flash Sale') }}</a>
+                            <a href="{{ route('flash-deal-details', $flash_deal->slug) }}" class="fs-10 fs-md-12 fw-700 text-reset has-transition opacity-60 hov-opacity-100 hov-text-primary animate-underline-primary">{{ __('storefront.product.view_all_products_from_this_flash_sale') }}</a>
                         </span>
                     </div>
                 </div>
@@ -163,7 +163,7 @@
             <!-- Products -->
             <div class="" style="background-color: {{ get_setting('todays_deal_bg_color', '#3d4666') }}">
                 <div class="text-right px-4 px-xl-5 pt-4 pt-md-3">
-                    <a href="{{ route('todays-deal') }}" class="fs-12 fw-700 text-white has-transition hov-text-warning">{{ translate('View All') }}</a>
+                    <a href="{{ route('todays-deal') }}" class="fs-12 fw-700 text-white has-transition hov-text-warning">{{ __('storefront.common.view_all') }}</a>
                 </div>
                 <div class="c-scrollbar-light overflow-hidden pl-5 pr-5 pb-3 pt-2 pb-md-5 pt-md-3">
                     <div class="h-100 d-flex flex-column justify-content-center">
@@ -229,7 +229,7 @@
 @if($offers_catalog)
     <div class="mx-5 my-5">
             <div class="col justify-content-center">
-                <a class="btn btn-info btn-block " href="{{ route('offers.download') }}">Download Offers Catalog </a>
+                <a class="btn btn-info btn-block " href="{{ route('offers.download') }}">{{ __('storefront.navigation.download_offers_catalog') }} </a>
             </div>
     </div>
 @endif
@@ -248,12 +248,12 @@
                  <div class="d-flex mb-2 mb-md-3 align-items-baseline justify-content-between">
                      <!-- Title -->
                      <h3 class="fs-16 fs-md-20 fw-700 mb-2 mb-sm-0">
-                         <span class="">{{ translate('New Products') }}</span>
+                         <span class="">{{ __('storefront.product.new_products') }}</span>
                      </h3>
                      <!-- Links -->
                      <div class="d-flex">
                          <a type="button" class="arrow-prev slide-arrow link-disable text-secondary mr-2" onclick="clickToSlide('slick-prev','section_newest')"><i class="las la-angle-left fs-20 fw-600"></i></a>
-                         <a class="text-blue fs-10 fs-md-12 fw-700 hov-text-primary animate-underline-primary" href="{{ route('search',['sort_by'=>'newest']) }}">{{ translate('View All') }}</a>
+                         <a class="text-blue fs-10 fs-md-12 fw-700 hov-text-primary animate-underline-primary" href="{{ route('search',['sort_by'=>'newest']) }}">{{ __('storefront.common.view_all') }}</a>
                          <a type="button" class="arrow-next slide-arrow text-secondary ml-2" onclick="clickToSlide('slick-next','section_newest')"><i class="las la-angle-right fs-20 fw-600"></i></a>
                      </div>
                  </div>
@@ -287,11 +287,11 @@
                     <div class="d-flex mb-2 mb-md-3 align-items-baseline justify-content-between">
                         <!-- Title -->
                         <h3 class="fs-16 fs-md-20 fw-700 mb-2 mb-sm-0">
-                            <span class="">{{ translate('Featured Categories') }}</span>
+                            <span class="">{{ __('storefront.product.featured_categories') }}</span>
                         </h3>
                         <!-- Links -->
                         <div class="d-flex">
-                            <a class="text-blue fs-10 fs-md-12 fw-700 hov-text-primary animate-underline-primary" href="{{ route('categories.all') }}">{{ translate('View All Categories') }}</a>
+                            <a class="text-blue fs-10 fs-md-12 fw-700 hov-text-primary animate-underline-primary" href="{{ route('categories.all') }}">{{ __('storefront.product.view_all_categories') }}</a>
                         </div>
                     </div>
                     <div class="row no-gutters border-top border-left">
@@ -419,7 +419,7 @@
                     </div>
                 </div>
                 <div class="col-xl-4 text-center text-xl-right mt-4">
-                    <a href="{{ route('coupons.all') }}" class="btn text-white hov-bg-white hov-text-dark border border-width-2 fs-16 px-4" style="border-radius: 28px;background: rgba(255, 255, 255, 0.2);box-shadow: 0px 20px 30px rgba(0, 0, 0, 0.16);">{{ translate('View All Coupons') }}</a>
+                    <a href="{{ route('coupons.all') }}" class="btn text-white hov-bg-white hov-text-dark border border-width-2 fs-16 px-4" style="border-radius: 28px;background: rgba(255, 255, 255, 0.2);box-shadow: 0px 20px 30px rgba(0, 0, 0, 0.16);">{{ __('storefront.cart.view_all_coupons') }}</a>
                 </div>
             </div>
         </div>
@@ -443,11 +443,11 @@
                     <div class="d-flex mb-2 mb-md-3 align-items-baseline justify-content-between">
                         <!-- Title -->
                         <h3 class="fs-16 fs-md-20 fw-700 mb-2 mb-sm-0">
-                            <span class="">{{ translate('Classified Ads') }}</span>
+                            <span class="">{{ __('storefront.common.classified_ads') }}</span>
                         </h3>
                         <!-- Links -->
                         <div class="d-flex">
-                            <a class="text-blue fs-10 fs-md-12 fw-700 hov-text-primary animate-underline-primary" href="{{ route('customer.products') }}">{{ translate('View All Products') }}</a>
+                            <a class="text-blue fs-10 fs-md-12 fw-700 hov-text-primary animate-underline-primary" href="{{ route('customer.products') }}">{{ __('storefront.product.view_all_products') }}</a>
                         </div>
                     </div>
                     <!-- Banner -->
@@ -490,9 +490,9 @@
                                                     <span class="fw-700 text-primary">{{ single_price($classified_product->unit_price) }}</span>
                                                 </div>
                                                 @if($classified_product->conditon == 'new')
-                                                    <span class="badge badge-inline badge-soft-info fs-13 fw-700 p-3 text-info" style="border-radius: 20px;">{{translate('New')}}</span>
+                                                    <span class="badge badge-inline badge-soft-info fs-13 fw-700 p-3 text-info" style="border-radius: 20px;">{{__('storefront.common.new')}}</span>
                                                 @elseif($classified_product->conditon == 'used')
-                                                    <span class="badge badge-inline badge-soft-warning fs-13 fw-700 p-3 text-danger" style="border-radius: 20px;">{{translate('Used')}}</span>
+                                                    <span class="badge badge-inline badge-soft-warning fs-13 fw-700 p-3 text-danger" style="border-radius: 20px;">{{__('storefront.common.used')}}</span>
                                                 @endif
                                             </div>
                                         </div>
@@ -519,11 +519,11 @@
                 <div class="d-flex mb-2 mb-md-3 align-items-baseline justify-content-between">
                     <!-- Title -->
                     <h3 class="fs-16 fs-md-20 fw-700 mb-2 mb-sm-0">
-                        <span class="pb-3">{{ translate('Top Sellers') }}</span>
+                        <span class="pb-3">{{ __('storefront.product.top_sellers') }}</span>
                     </h3>
                     <!-- Links -->
                     <div class="d-flex">
-                        <a class="text-blue fs-10 fs-md-12 fw-700 hov-text-primary animate-underline-primary" href="{{ route('sellers') }}">{{ translate('View All Sellers') }}</a>
+                        <a class="text-blue fs-10 fs-md-12 fw-700 hov-text-primary animate-underline-primary" href="{{ route('sellers') }}">{{ __('storefront.product.view_all_sellers') }}</a>
                     </div>
                 </div>
                 <!-- Sellers Section -->
@@ -572,7 +572,7 @@
                                     <div class="rating rating-mr-1 text-dark mb-3">
                                         {{ renderStarRating($seller->rating) }}
                                         <span class="opacity-60 fs-14">({{ $seller->num_of_reviews }}
-                                            {{ translate('Reviews') }})</span>
+                                            {{ __('storefront.product.reviews') }})</span>
                                     </div>
                                     @endif
                                     <!-- Visit Button -->
@@ -580,7 +580,7 @@
                                         <span class="circle" aria-hidden="true">
                                             <span class="icon arrow"></span>
                                         </span>
-                                        <span class="button-text">{{ translate('Visit Store') }}</span>
+                                        <span class="button-text">{{ __('storefront.common.visit_store') }}</span>
                                     </a>
                                 </div>
                             </div>
@@ -633,10 +633,10 @@
                 <!-- Top Section -->
                 <div class="d-flex mb-2 mb-md-3 align-items-baseline justify-content-between">
                     <!-- Title -->
-                    <h3 class="fs-16 fs-md-20 fw-700 mb-2 mb-sm-0">{{ translate('Top Brands') }}</h3>
+                    <h3 class="fs-16 fs-md-20 fw-700 mb-2 mb-sm-0">{{ __('storefront.product.top_brands') }}</h3>
                     <!-- Links -->
                     <div class="d-flex">
-                        <a class="text-blue fs-10 fs-md-12 fw-700 hov-text-primary animate-underline-primary" href="{{ route('brands.all') }}">{{ translate('View All Brands') }}</a>
+                        <a class="text-blue fs-10 fs-md-12 fw-700 hov-text-primary animate-underline-primary" href="{{ route('brands.all') }}">{{ __('storefront.product.view_all_brands') }}</a>
                     </div>
                 </div>
                 <!-- Brands Section -->

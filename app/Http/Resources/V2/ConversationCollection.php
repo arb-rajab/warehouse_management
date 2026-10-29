@@ -15,7 +15,7 @@ class ConversationCollection extends ResourceCollection
                     'receiver_id' => intval($data->receiver_id) ,
                     'receiver_type'=> $data->receiver->user_type,
                     'shop_id' => $data->receiver->user_type == 'admin' ? 0 : $data->receiver->shop->id,
-                    'shop_name' => $data->receiver->user_type == 'admin' ? 'In House Product' : $data->receiver->shop->name,
+                    'shop_name' => $data->receiver->user_type == 'admin' ? __('api_resources.shop.in_house_product') : $data->receiver->shop->name,
                     'shop_logo' => $data->receiver->user_type == 'admin' ? uploaded_asset(get_setting('header_logo'))  : uploaded_asset($data->receiver->shop->logo),
                     'title'=> $data->title,
                     'sender_viewed'=> intval($data->sender_viewed),

@@ -11,32 +11,32 @@
                         <div class="col done">
                             <div class="text-center border border-bottom-6px p-2 text-success">
                                 <i class="la-3x mb-2 las la-shopping-cart"></i>
-                                <h3 class="fs-14 fw-600 d-none d-lg-block">{{ translate('1. My Cart') }}</h3>
+                                <h3 class="fs-14 fw-600 d-none d-lg-block">{{ __('storefront.cart.1_my_cart') }}</h3>
                             </div>
                         </div>
                         <div class="col done">
                             <div class="text-center border border-bottom-6px p-2 text-success">
                                 <i class="la-3x mb-2 las la-map"></i>
-                                <h3 class="fs-14 fw-600 d-none d-lg-block">{{ translate('2. Shipping info') }}</h3>
+                                <h3 class="fs-14 fw-600 d-none d-lg-block">{{ __('storefront.checkout.2_shipping_info') }}</h3>
                             </div>
                         </div>
                         <div class="col done">
                             <div class="text-center border border-bottom-6px p-2 text-success">
                                 <i class="la-3x mb-2 las la-truck"></i>
-                                <h3 class="fs-14 fw-600 d-none d-lg-block">{{ translate('3. Delivery info') }}
+                                <h3 class="fs-14 fw-600 d-none d-lg-block">{{ __('storefront.checkout.3_delivery_info') }}
                                 </h3>
                             </div>
                         </div>
                         <div class="col active">
                             <div class="text-center border border-bottom-6px p-2 text-primary">
                                 <i class="la-3x mb-2 las la-credit-card cart-animate" style="margin-right: -100px; transition: 2s;"></i>
-                                <h3 class="fs-14 fw-600 d-none d-lg-block">{{ translate('4. Payment') }}</h3>
+                                <h3 class="fs-14 fw-600 d-none d-lg-block">{{ __('storefront.checkout.4_payment') }}</h3>
                             </div>
                         </div>
                         <div class="col">
                             <div class="text-center border border-bottom-6px p-2">
                                 <i class="la-3x mb-2 opacity-50 las la-check-circle"></i>
-                                <h3 class="fs-14 fw-600 d-none d-lg-block opacity-50">{{ translate('5. Confirmation') }}
+                                <h3 class="fs-14 fw-600 d-none d-lg-block opacity-50">{{ __('storefront.common.5_confirmation') }}
                                 </h3>
                             </div>
                         </div>
@@ -58,7 +58,7 @@
 
                         <div class="card rounded-0 border shadow-none">
                             <div class="col-md-6 mt-3">
-                                <h6 class="fs-14 fw-700 mt-3">{{ translate('Choose Delivery Date') }}</h6>
+                                <h6 class="fs-14 fw-700 mt-3">{{ __('storefront.checkout.choose_delivery_date') }}</h6>
                             </div>
                             <div class="col-md-6 mt-3">
                                 <div class="row gutters-5">
@@ -78,16 +78,16 @@
                             <!-- Additional Info -->
                             <div class="card-header p-4 border-bottom-0">
                                 <h3 class="fs-16 fw-700 text-dark mb-0">
-                                    {{ translate('Any additional info?') }}
+                                    {{ __('storefront.common.any_additional_info') }}
                                 </h3>
                             </div>
                             <div class="form-group px-4">
-                                <textarea name="additional_info" rows="5" class="form-control rounded-0" placeholder="{{ translate('Type your text...') }}"></textarea>
+                                <textarea name="additional_info" rows="5" class="form-control rounded-0" placeholder="{{ __('storefront.common.type_your_text') }}"></textarea>
                             </div>
 
                             <div class="card-header p-4 border-bottom-0 d-none">
                                 <h3 class="fs-16 fw-700 text-dark mb-0">
-                                    {{ translate('Select a payment option') }}
+                                    {{ __('storefront.checkout.select_a_payment_option') }}
                                 </h3>
                             </div>
                             <!-- Payment Options -->
@@ -105,7 +105,7 @@
                                                         class="img-fit mb-2">
                                                     <span class="d-block text-center">
                                                         <span
-                                                            class="d-block fw-600 fs-15">{{ translate('sslcommerz') }}</span>
+                                                            class="d-block fw-600 fs-15">{{ __('storefront.common.sslcommerz') }}</span>
                                                     </span>
                                                 </span>
                                             </label>
@@ -122,7 +122,7 @@
                                                         class="img-fit mb-2">
                                                     <span class="d-block text-center">
                                                         <span
-                                                            class="d-block fw-600 fs-15">{{ translate('VoguePay') }}</span>
+                                                            class="d-block fw-600 fs-15">{{ __('storefront.common.voguepay') }}</span>
                                                     </span>
                                                 </span>
                                             </label>
@@ -139,7 +139,7 @@
                                                         class="img-fit mb-2">
                                                     <span class="d-block text-center">
                                                         <span
-                                                            class="d-block fw-600 fs-15">{{ translate('payhere') }}</span>
+                                                            class="d-block fw-600 fs-15">{{ __('storefront.common.payhere') }}</span>
                                                     </span>
                                                 </span>
                                             </label>
@@ -156,7 +156,7 @@
                                                         class="img-fit mb-2">
                                                     <span class="d-block text-center">
                                                         <span
-                                                            class="d-block fw-600 fs-15">{{ translate('ngenius') }}</span>
+                                                            class="d-block fw-600 fs-15">{{ __('storefront.common.ngenius') }}</span>
                                                     </span>
                                                 </span>
                                             </label>
@@ -173,7 +173,7 @@
                                                         class="img-fit mb-2">
                                                     <span class="d-block text-center">
                                                         <span
-                                                            class="d-block fw-600 fs-15">{{ translate('Iyzico') }}</span>
+                                                            class="d-block fw-600 fs-15">{{ __('storefront.common.iyzico') }}</span>
                                                     </span>
                                                 </span>
                                             </label>
@@ -190,7 +190,7 @@
                                                         class="img-fit mb-2">
                                                     <span class="d-block text-center">
                                                         <span
-                                                            class="d-block fw-600 fs-15">{{ translate('Nagad') }}</span>
+                                                            class="d-block fw-600 fs-15">{{ __('storefront.common.nagad') }}</span>
                                                     </span>
                                                 </span>
                                             </label>
@@ -207,7 +207,7 @@
                                                         class="img-fit mb-2">
                                                     <span class="d-block text-center">
                                                         <span
-                                                            class="d-block fw-600 fs-15">{{ translate('Bkash') }}</span>
+                                                            class="d-block fw-600 fs-15">{{ __('storefront.common.bkash') }}</span>
                                                     </span>
                                                 </span>
                                             </label>
@@ -224,7 +224,7 @@
                                                         class="img-fit mb-2">
                                                     <span class="d-block text-center">
                                                         <span
-                                                            class="d-block fw-600 fs-15">{{ translate('Aamarpay') }}</span>
+                                                            class="d-block fw-600 fs-15">{{ __('storefront.common.aamarpay') }}</span>
                                                     </span>
                                                 </span>
                                             </label>
@@ -256,7 +256,7 @@
                                                             class="img-fit mb-2">
                                                         <span class="d-block text-center">
                                                             <span
-                                                                class="d-block fw-600 fs-15">{{ translate('Cash on Delivery') }}</span>
+                                                                class="d-block fw-600 fs-15">{{ __('storefront.checkout.cash_on_delivery') }}</span>
                                                         </span>
                                                     </span>
                                                 </label>
@@ -291,13 +291,13 @@
                                                     @if ($method->bank_info != null)
                                                         <ul>
                                                             @foreach (json_decode($method->bank_info) as $key => $info)
-                                                                <li>{{ translate('Bank Name') }} -
+                                                                <li>{{ __('storefront.common.bank_name') }} -
                                                                     {{ $info->bank_name }},
-                                                                    {{ translate('Account Name') }} -
+                                                                    {{ __('storefront.auth.account_name') }} -
                                                                     {{ $info->account_name }},
-                                                                    {{ translate('Account Number') }} -
+                                                                    {{ __('storefront.auth.account_number') }} -
                                                                     {{ $info->account_number }},
-                                                                    {{ translate('Routing Number') }} -
+                                                                    {{ __('storefront.common.routing_number') }} -
                                                                     {{ $info->routing_number }}</li>
                                                             @endforeach
                                                         </ul>
@@ -317,24 +317,24 @@
                                         <br>
                                         <div class="row">
                                             <div class="col-md-3">
-                                                <label>{{ translate('Transaction ID') }} <span
+                                                <label>{{ __('storefront.checkout.transaction_id') }} <span
                                                         class="text-danger">*</span></label>
                                             </div>
                                             <div class="col-md-9">
                                                 <input type="text" class="form-control mb-3" name="trx_id"
-                                                    id="trx_id" placeholder="{{ translate('Transaction ID') }}"
+                                                    id="trx_id" placeholder="{{ __('storefront.checkout.transaction_id') }}"
                                                     required>
                                             </div>
                                         </div>
                                         <div class="form-group row">
-                                            <label class="col-md-3 col-form-label">{{ translate('Photo') }}</label>
+                                            <label class="col-md-3 col-form-label">{{ __('storefront.common.photo') }}</label>
                                             <div class="col-md-9">
                                                 <div class="input-group" data-toggle="aizuploader" data-type="image">
                                                     <div class="input-group-prepend">
                                                         <div class="input-group-text bg-soft-secondary font-weight-medium">
-                                                            {{ translate('Browse') }}</div>
+                                                            {{ __('storefront.upload.browse') }}</div>
                                                     </div>
-                                                    <div class="form-control file-amount">{{ translate('Choose image') }}
+                                                    <div class="form-control file-amount">{{ __('storefront.common.choose_image') }}
                                                     </div>
                                                     <input type="hidden" name="photo" class="selected-files">
                                                 </div>
@@ -349,16 +349,16 @@
                                 {{-- @if (Auth::check() && get_setting('wallet_system') == 1)
                                     <div class="py-4 px-4 text-center bg-soft-warning mt-4">
                                         <div class="fs-14 mb-3">
-                                            <span class="opacity-80">{{ translate('Or, Your wallet balance :') }}</span>
+                                            <span class="opacity-80">{{ __('storefront.checkout.or_your_wallet_balance') }}</span>
                                             <span class="fw-700">{{ single_price(Auth::user()->balance) }}</span>
                                         </div>
                                         @if (Auth::user()->balance < $total)
                                             <button type="button" class="btn btn-secondary" disabled>
-                                                {{ translate('Insufficient balance') }}
+                                                {{ __('storefront.common.insufficient_balance') }}
                                             </button>
                                         @else
                                             <button type="button" onclick="use_wallet()" class="btn btn-primary fs-14 fw-700 px-5 rounded-0">
-                                                {{ translate('Pay with wallet') }}
+                                                {{ __('storefront.checkout.pay_with_wallet') }}
                                             </button>
                                         @endif
                                     </div>
@@ -370,11 +370,11 @@
                                 <label class="aiz-checkbox">
                                     <input type="checkbox" required id="agree_checkbox">
                                     <span class="aiz-square-check"></span>
-                                    <span>{{ translate('I agree to the') }}</span>
+                                    <span>{{ __('storefront.common.i_agree_to_the') }}</span>
                                 </label>
-                                <a href="{{ route('terms') }}" class="fw-700">{{ translate('terms and conditions') }}</a>,
-                                <a href="{{ route('returnpolicy') }}" class="fw-700">{{ translate('return policy') }}</a> &
-                                <a href="{{ route('privacypolicy') }}" class="fw-700">{{ translate('privacy policy') }}</a>
+                                <a href="{{ route('terms') }}" class="fw-700">{{ __('storefront.common.terms_and_conditions') }}</a>,
+                                <a href="{{ route('returnpolicy') }}" class="fw-700">{{ __('storefront.common.return_policy') }}</a> &
+                                <a href="{{ route('privacypolicy') }}" class="fw-700">{{ __('storefront.common.privacy_policy') }}</a>
                             </div>
 
                             @if(get_setting('minimum_order_amount_check') == 1)
@@ -389,8 +389,8 @@
                                             $default_delivery_fees = 0;
                                         }
                                     @endphp
-                                    <span>* {{ translate("If the order's total is less than") }}: €{{ get_setting('minimum_order_amount') }},</span>
-                                    <p>Will add <span class="text-danger">€{{ $default_delivery_fees }}</span> Shipping Fees.</p>
+                                    <span>* {{ __('storefront.checkout.if_the_order_s_total_is_less_than') }}: €{{ get_setting('minimum_order_amount') }},</span>
+                                    <p>{!! str_replace(':amount', '<span class="text-danger">€'.e($default_delivery_fees).'</span>', e(__('storefront.checkout.shipping_fee'))) !!}</p>
                                 </label>
                             </div>
                             @endif
@@ -399,13 +399,13 @@
                                 <div class="col-6">
                                     <a href="{{ route('home') }}" class="btn btn-link fs-14 fw-700 px-0">
                                         <i class="las la-arrow-left fs-16"></i>
-                                        {{ translate('Return to shop') }}
+                                        {{ __('storefront.common.return_to_shop') }}
                                     </a>
                                 </div>
                                 <!-- Complete Ordert -->
                                 <div class="col-6 text-right">
                                     <button type="button" onclick="submitOrder(this)"
-                                        class="btn btn-primary fs-14 fw-700 rounded-0 px-4">{{ translate('Complete Order') }}</button>
+                                        class="btn btn-primary fs-14 fw-700 rounded-0 px-4">{{ __('storefront.checkout.complete_order') }}</button>
                                 </div>
                             </div>
                         </div>
@@ -442,12 +442,12 @@
                 ;
                 if (minimum_order_amount_check && $('#sub_total').val() < minimum_order_amount) {
                     AIZ.plugins.notify('danger',
-                        '{{ translate('You order amount is less then the minimum order amount') }}');
+                        {{ \Illuminate\Support\Js::from(__('storefront.checkout.you_order_amount_is_less_then_the_minimum_order_amount')) }});
                 } else {
                     $('#checkout-form').submit();
                 }
             } else {
-                AIZ.plugins.notify('danger', '{{ translate('You need to agree with our policies') }}');
+                AIZ.plugins.notify('danger', {{ \Illuminate\Support\Js::from(__('storefront.common.you_need_to_agree_with_our_policies')) }});
             }
         }
 
@@ -455,25 +455,25 @@
             $(el).prop('disabled', true);
             var deliveryDateValue = $('#deliveryDate').val();
             if (deliveryDateValue.trim() === '') {
-                AIZ.plugins.notify('danger', '{{ translate('Delivery date is required') }}');
+                AIZ.plugins.notify('danger', {{ \Illuminate\Support\Js::from(__('storefront.checkout.delivery_date_is_required')) }});
             }
             if ($('#agree_checkbox').is(":checked")) {
                 if (minimum_order_amount_check && $('#sub_total').val() < minimum_order_amount) {
                     AIZ.plugins.notify('danger',
-                        '{{ translate('You order amount is less then the minimum order amount') }}');
+                        {{ \Illuminate\Support\Js::from(__('storefront.checkout.you_order_amount_is_less_then_the_minimum_order_amount')) }});
                 } else {
                     var offline_payment_active = '{{ addon_is_activated('offline_payment') }}';
                     if (offline_payment_active == 'true' && $('.offline_payment_option').is(":checked") && $('#trx_id')
                         .val() == '') {
                         AIZ.plugins.notify('danger',
-                            '{{ translate('You need to put Transaction id') }}');
+                            {{ \Illuminate\Support\Js::from(__('storefront.checkout.you_need_to_put_transaction_id')) }});
                         $(el).prop('disabled', false);
                     } else {
                         $('#checkout-form').submit();
                     }
                 }
             } else {
-                AIZ.plugins.notify('danger', '{{ translate('You need to agree with our policies') }}');
+                AIZ.plugins.notify('danger', {{ \Illuminate\Support\Js::from(__('storefront.common.you_need_to_agree_with_our_policies')) }});
                 $(el).prop('disabled', false);
             }
         }
@@ -542,7 +542,7 @@
 
                 if (dayOfWeek === 0 || dayOfWeek === 6) {
                     this.value = '';
-                    alert('Please choose a date on a weekday (Monday to Friday).');
+                    alert({{ \Illuminate\Support\Js::from(__('storefront.checkout.weekday_required')) }});
                 }
             });
         });

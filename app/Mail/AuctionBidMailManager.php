@@ -2,41 +2,18 @@
 
 namespace App\Mail;
 
-use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Mail\Mailable;
-use Illuminate\Queue\SerializesModels;
-
-class AuctionBidMailManager extends Mailable
+class AuctionBidMailManager extends LocalizedMail
 {
-    use Queueable, SerializesModels;
-
-    /**
-     * Create a new message instance.
-     *
-     * @return void
-     */
-
-    public $array;
-
-    public function __construct($array)
+    public function build(): static
     {
-        $this->array = $array;
-    }
+        $this->localizeMessage();
 
-    /**
-     * Build the message.
-     *
-     * @return $this
-     */
-    public function build()
-    {
-        return $this->view('shop.emails.auction_bid')
-                    ->from($this->array['from'], config('mail.from.name'))
-                    ->subject($this->array['subject'])
-                    ->with([
-                        'content' => $this->array['content'],
-                        'link' => $this->array['link'],
-                    ]);
+        return $this->text('shop.emails.plain.message')->view('shop.emails.auction_bid')
+            ->from($this->array['from'], config('mail.from.name'))
+            ->subject($this->array['subject'])
+            ->with([
+                'content' => $this->array['content'],
+                'link' => $this->array['link'],
+            ]);
     }
 }

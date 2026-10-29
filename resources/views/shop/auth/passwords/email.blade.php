@@ -7,8 +7,8 @@
             <div class="row">
                 <div class="col-xxl-5 col-xl-6 col-md-8 mx-auto">
                     <div class="bg-white rounded shadow-sm p-4 text-left">
-                        <h1 class="h3 fw-600">{{ translate('Forgot Password?') }}</h1>
-                        <p class="mb-4 opacity-60">{{ translate('Enter your email address to recover your password.') }}
+                        <h1 class="h3 fw-600">{{ __('storefront.auth.forgot_password') }}</h1>
+                        <p class="mb-4 opacity-60">{{ __('storefront.auth.enter_your_email_address_to_recover_your_password') }}
                         </p>
                         <form method="POST" action="{{ route('password.email') }}">
                             @csrf
@@ -26,7 +26,7 @@
                                     <div class="form-group email-form-group mb-1 d-none">
                                         <input type="email"
                                             class="form-control {{ $errors->has('email') ? ' is-invalid' : '' }}"
-                                            value="{{ old('email') }}" placeholder="{{ translate('Email') }}"
+                                            value="{{ old('email') }}" placeholder="{{ __('storefront.auth.email') }}"
                                             name="email" id="email" autocomplete="off">
                                         @if ($errors->has('email'))
                                             <span class="invalid-feedback" role="alert">
@@ -37,13 +37,13 @@
 
                                     <div class="form-group text-right">
                                         <button class="btn btn-link p-0 text-primary" type="button"
-                                            onclick="toggleEmailPhone(this)"><i>*{{ translate('Use Email Instead') }}</i></button>
+                                            onclick="toggleEmailPhone(this)"><i>*{{ __('storefront.auth.use_email_instead') }}</i></button>
                                     </div>
                                 @else
                                     <div class="form-group">
                                         <input type="email"
                                             class="form-control{{ $errors->has('email') ? ' is-invalid' : '' }}"
-                                            value="{{ old('email') }}" placeholder="{{ translate('Email') }}"
+                                            value="{{ old('email') }}" placeholder="{{ __('storefront.auth.email') }}"
                                             name="email" id="email" autocomplete="off">
                                         @if ($errors->has('email'))
                                             <span class="invalid-feedback" role="alert">
@@ -61,13 +61,13 @@
                             </div>
                             <div class="form-group text-right">
                                 <button class="btn btn-primary btn-block" type="submit">
-                                    {{ translate('Send Password Reset Link') }}
+                                    {{ __('storefront.auth.send_password_reset_link') }}
                                 </button>
                             </div>
                         </form>
                         <div class="mt-3">
                             <a href="{{ route('user.login') }}"
-                                class="text-reset opacity-60">{{ translate('Back to Login') }}</a>
+                                class="text-reset opacity-60">{{ __('storefront.auth.back_to_login') }}</a>
                         </div>
                     </div>
                 </div>
@@ -92,6 +92,7 @@
             }
         }
 
+        if (input) {
         var iti = intlTelInput(input, {
             separateDialCode: true,
             utilsScript: "{{ static_asset('assets/js/intlTelutils.js') }}?1590403638580",
@@ -121,19 +122,21 @@
 
         });
 
+        }
+
         function toggleEmailPhone(el) {
             if (isPhoneShown) {
                 $('.phone-form-group').addClass('d-none');
                 $('.email-form-group').removeClass('d-none');
                 $('input[name=phone]').val(null);
                 isPhoneShown = false;
-                $(el).html('<i>*{{ translate('Use Phone Number Instead') }}</i>');
+                $(el).html(('<i>*' + {{ \Illuminate\Support\Js::from(__('storefront.auth.use_phone_number_instead')) }} + '</i>'));
             } else {
                 $('.phone-form-group').removeClass('d-none');
                 $('.email-form-group').addClass('d-none');
                 $('input[name=email]').val(null);
                 isPhoneShown = true;
-                $(el).html('<i>*{{ translate('Use Email Instead') }}</i>');
+                $(el).html(('<i>*' + {{ \Illuminate\Support\Js::from(__('storefront.auth.use_email_instead')) }} + '</i>'));
             }
         }
     </script>

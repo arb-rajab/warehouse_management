@@ -47,8 +47,8 @@ class ShopController extends Controller
 
 
         $shop = Shop::where('user_id',auth()->user()->id)->first();
-        $successMessage='Shop info updated successfully';
-        $failedMessage='Shop info updated failed';
+        $successMessage='api.seller.shop_updated';
+        $failedMessage='api.seller.shop_update_failed';
 
         if ($request->has('name') && $request->has('address')) {
             if ($request->has('shipping_cost')) {
@@ -95,7 +95,7 @@ class ShopController extends Controller
                 $shop->bank_acc_no = $request->bank_acc_no;
                 $shop->bank_routing_no = $request->bank_routing_no;
 
-                $successMessage='Payment info updated successfully';
+                $successMessage='api.seller.payment_info_updated';
 
 
         }else {
@@ -103,10 +103,10 @@ class ShopController extends Controller
         }
 
         if ($shop->save()) {
-            return $this->success(translate($successMessage));
+            return $this->success(__($successMessage));
         }
 
-        return $this->failed(translate($failedMessage));
+        return $this->failed(__($failedMessage));
 
     }
 

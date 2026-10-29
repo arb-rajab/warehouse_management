@@ -38,7 +38,7 @@ class ProductQueryController extends Controller
         $query = ProductQuery::where('seller_id', Auth::id())->findOrFail($id);
         $query->reply = $request->reply;
         $query->save();
-        flash(translate('Replied successfully!'))->success();
+        flash(__('seller.products.replied_successfully'))->success();
         return redirect()->route('seller.product_query.index');
     }
 }

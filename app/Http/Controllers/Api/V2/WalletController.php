@@ -32,7 +32,7 @@ class WalletController extends Controller
             return response()->json([
                 'result' => false,
                 'combined_order_id' => 0,
-                'message' => translate('Insufficient wallet balance')
+                'message' => __('storefront.checkout.insufficient_wallet_balance')
             ]);
         }
 

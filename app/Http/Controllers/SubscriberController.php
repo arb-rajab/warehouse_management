@@ -58,10 +58,10 @@ class SubscriberController extends Controller implements HasMiddleware
             $subscriber = new Subscriber;
             $subscriber->email = $request->email;
             $subscriber->save();
-            flash(translate('You have subscribed successfully'))->success();
+            flash(__('storefront.common.you_have_subscribed_successfully'))->success();
         }
         else{
-            flash(translate('You are  already a subscriber'))->success();
+            flash(__('storefront.common.you_are_already_a_subscriber'))->success();
         }
         return back();
     }
@@ -109,7 +109,7 @@ class SubscriberController extends Controller implements HasMiddleware
     public function destroy($id)
     {
         Subscriber::destroy($id);
-        flash(translate('Subscriber has been deleted successfully'))->success();
+        flash(__('store_admin.subscriber_has_been_deleted_successfully'))->success();
         return redirect()->route('admin.subscribers.index');
     }
 }

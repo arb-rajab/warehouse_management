@@ -5,7 +5,7 @@
     server rule is `required`. The red is fixed (#b91c1c, 6.5:1 on white): the
     theme's .text-danger is too light for text (3.6:1).
 
-        <label for="name">{{ translate('Full Name') }}<x-required-mark /></label>
+        <label for="name">{{ __('storefront.common.full_name') }}<x-required-mark /></label>
         <input id="name" name="name" required>
 --}}
-<span style="color: #b91c1c" data-required-mark><span aria-hidden="true">*</span><span class="sr-only">{{ translate('required') }}</span></span>
+<span style="color: #b91c1c" data-required-mark><span aria-hidden="true">*</span><span class="sr-only">{{ __('storefront.forms.required') }}</span></span>

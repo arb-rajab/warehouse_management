@@ -114,7 +114,7 @@ class DynamicPopupController extends Controller implements HasMiddleware
             ->where('offer_products.offer_id', $attributes['offer_id'])->where('is_base_product', 1)
             ->first(['products.id', 'products.slug']);
         if ($product === null || (is_string($product->getAttribute('slug')) && $product->getAttribute('slug') !== '' && trim($product->getAttribute('slug')) === '')) {
-            throw ValidationException::withMessages(['offer_id' => __('validation.exists', ['attribute' => 'offer_id'])]);
+            throw ValidationException::withMessages(['offer_id' => __('validation.exists', ['attribute' => __('validation.attributes.offer_id')])]);
         }
 
         return [

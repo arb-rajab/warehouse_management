@@ -26,7 +26,7 @@ class PasswordResetController extends Controller
      */
     public function forgetRequest(Request $request)
     {
-        return $this->sendCode($request->send_code_by, $request->email_or_phone, translate('A code is sent'));
+        return $this->sendCode($request->send_code_by, $request->email_or_phone, __('api.auth.code_sent'));
     }
 
     /**
@@ -49,8 +49,8 @@ class PasswordResetController extends Controller
         if ($identifier === '' || $code === '') {
             return response()->json([
                 'result' => false,
-                'message' => translate('Validation Error'),
-                'errors' => ['email_or_phone' => [translate('The email or phone and the code are required.')]],
+                'message' => __('api.common.validation_error'),
+                'errors' => ['email_or_phone' => [__('api.auth.reset_code_required')]],
                 'user_id' => 0
             ], 422);
         }
@@ -62,7 +62,7 @@ class PasswordResetController extends Controller
         if ($validatedData->fails()) {
             return response()->json([
                 'result' => false,
-                'message' => translate('Validation Error'),
+                'message' => __('api.common.validation_error'),
                 'errors' => $validatedData->errors(),
                 'user_id' => 0
             ], 422);
@@ -73,7 +73,7 @@ class PasswordResetController extends Controller
         if ($user === null || ! $this->codes->consume($user, $code)) {
             return response()->json([
                 'result' => false,
-                'message' => translate('The code is invalid or has expired'),
+                'message' => __('api.auth.code_invalid'),
             ], 404);
         }
 
@@ -82,13 +82,13 @@ class PasswordResetController extends Controller
 
         return response()->json([
             'result' => true,
-            'message' => translate('Your password is reset.Please login'),
+            'message' => __('api.auth.password_reset'),
         ], 200);
     }
 
     public function resendCode(Request $request)
     {
-        return $this->sendCode($request->verify_by, $request->email_or_phone, translate('A code is sent again'));
+        return $this->sendCode($request->verify_by, $request->email_or_phone, __('api.auth.reset_code_resent'));
     }
 
     private function sendCode(?string $by, mixed $identifier, string $message): JsonResponse

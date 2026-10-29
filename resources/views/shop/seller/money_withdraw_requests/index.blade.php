@@ -5,7 +5,7 @@
     <div class="aiz-titlebar mt-2 mb-4">
       <div class="row align-items-center">
         <div class="col-md-6">
-            <h1 class="h3">{{ translate('Money Withdraw') }}</h1>
+            <h1 class="h3">{{ __('seller.dashboard.money_withdraw') }}</h1>
         </div>
       </div>
     </div>
@@ -18,7 +18,7 @@
               </span>
               <div class="px-3 pt-3 pb-3">
                   <div class="h4 fw-700 text-center">{{ single_price(Auth::user()->shop->admin_to_pay) }}</div>
-                  <div class="opacity-50 text-center">{{ translate('Pending Balance') }}</div>
+                  <div class="opacity-50 text-center">{{ __('seller.withdrawals.pending_balance') }}</div>
               </div>
             </div>
         </div>
@@ -27,24 +27,24 @@
               <span class="size-60px rounded-circle mx-auto bg-secondary d-flex align-items-center justify-content-center mb-3">
                   <i class="las la-plus la-3x text-white"></i>
               </span>
-              <div class="fs-18 text-primary">{{ translate('Send Withdraw Request') }}</div>
+              <div class="fs-18 text-primary">{{ __('seller.withdrawals.send_withdraw_request') }}</div>
           </div>
         </div>
     </div>
 
     <div class="card">
         <div class="card-header">
-            <h5 class="mb-0 h6">{{ translate('Withdraw Request history')}}</h5>
+            <h5 class="mb-0 h6">{{ __('storefront.navigation.withdraw_request_history')}}</h5>
         </div>
           <div class="card-body">
               <table class="table aiz-table mb-0">
                   <thead>
                       <tr>
                           <th>#</th>
-                          <th>{{ translate('Date') }}</th>
-                          <th>{{ translate('Amount')}}</th>
-                          <th data-breakpoints="lg">{{ translate('Status')}}</th>
-                          <th data-breakpoints="lg" width="60%">{{ translate('Message')}}</th>
+                          <th>{{ __('storefront.common.date') }}</th>
+                          <th>{{ __('storefront.common.amount')}}</th>
+                          <th data-breakpoints="lg">{{ __('storefront.common.status')}}</th>
+                          <th data-breakpoints="lg" width="60%">{{ __('storefront.support.message')}}</th>
                       </tr>
                   </thead>
                   <tbody>
@@ -55,9 +55,9 @@
                               <td>{{ single_price($seller_withdraw_request->amount) }}</td>
                               <td>
                                   @if ($seller_withdraw_request->status == 1)
-                                      <span class=" badge badge-inline badge-success" >{{ translate('Paid')}}</span>
+                                      <span class=" badge badge-inline badge-success" >{{ __('storefront.status.paid')}}</span>
                                   @else
-                                      <span class=" badge badge-inline badge-info" >{{ translate('Pending')}}</span>
+                                      <span class=" badge badge-inline badge-info" >{{ __('storefront.status.pending')}}</span>
                                   @endif
                               </td>
                               <td>
@@ -79,8 +79,8 @@
         <div class="modal-dialog modal-dialog-centered" role="document">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="exampleModalLabel">{{ translate('Send A Withdraw Request') }}</h5>
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"></button>
+                    <h5 class="modal-title" id="exampleModalLabel">{{ __('seller.withdrawals.send_a_withdraw_request') }}</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="{{ __('storefront.common.close') }}"></button>
                 </div>
                 @if (Auth::user()->shop->admin_to_pay > 5) 
                     <form class="" action="{{ route('seller.money_withdraw_request.store') }}" method="post">
@@ -89,10 +89,10 @@
                         <div class="modal-body gry-bg px-3 pt-3">
                             <div class="row">
                                 <div class="col-md-3">
-                                    <label for="withdraw-amount">{{ translate('Amount')}}<x-required-mark /></label>
+                                    <label for="withdraw-amount">{{ __('storefront.common.amount')}}<x-required-mark /></label>
                                 </div>
                                 <div class="col-md-9">
-                                    <input type="number" lang="en" class="form-control mb-3" name="amount" id="withdraw-amount" value="{{ (is_scalar(old('amount')) ? old('amount') : '') }}" step="any" min="{{ max(0.01, (float) get_setting('minimum_seller_amount_withdraw')) }}" max="{{ Auth::user()->shop->admin_to_pay }}" placeholder="{{ translate('Amount') }}" required>
+                                    <input type="number" lang="en" class="form-control mb-3" name="amount" id="withdraw-amount" value="{{ (is_scalar(old('amount')) ? old('amount') : '') }}" step="any" min="{{ max(0.01, (float) get_setting('minimum_seller_amount_withdraw')) }}" max="{{ Auth::user()->shop->admin_to_pay }}" placeholder="{{ __('storefront.common.amount') }}" required>
                                     @error('amount')
                                         <small class="form-text text-danger">{{ $message }}</small>
                                     @enderror
@@ -100,7 +100,7 @@
                             </div>
                             <div class="row">
                                 <div class="col-md-3">
-                                    <label for="withdraw-message">{{ translate('Message')}}</label>
+                                    <label for="withdraw-message">{{ __('storefront.support.message')}}</label>
                                 </div>
                                 <div class="col-md-9">
                                     <textarea name="message" id="withdraw-message" rows="8" class="form-control mb-3" maxlength="2000">{{ (is_scalar(old('message')) ? old('message') : '') }}</textarea>
@@ -110,14 +110,14 @@
                                 </div>
                             </div>
                             <div class="form-group text-right">
-                                <button type="submit" class="btn btn-sm btn-primary">{{translate('Send')}}</button>
+                                <button type="submit" class="btn btn-sm btn-primary">{{__('storefront.common.send')}}</button>
                             </div>
                         </div>
                     </form>
                 @else
                     <div class="modal-body gry-bg px-3 pt-3">
                         <div class="p-5 heading-3">
-                            {{ translate('You do not have enough balance to send withdraw request') }}
+                            {{ __('seller.withdrawals.you_do_not_have_enough_balance_to_send_withdraw_request') }}
                         </div>
                     </div>
                 @endif

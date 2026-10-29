@@ -4,11 +4,11 @@
 <div class="aiz-titlebar text-left mt-2 mb-3">
 	<div class="row align-items-center">
 		<div class="col-md-6">
-			<h1 class="h3">{{translate('All uploaded files')}}</h1>
+			<h1 class="h3">{{__('seller.uploads.all_uploaded_files')}}</h1>
 		</div>
 		<div class="col-md-6 text-md-right">
 			<a href="{{ route('seller.uploads.create') }}" class="btn btn-primary">
-				<span>{{translate('Upload New File')}}</span>
+				<span>{{__('seller.uploads.upload_new_file')}}</span>
 			</a>
 		</div>
 	</div>
@@ -18,29 +18,29 @@
     <form id="sort_uploads" action="">
         <div class="card-header row gutters-5">
             <div class="col">
-                <h5 class="mb-0 h6">{{translate('All files')}}</h5>
+                <h5 class="mb-0 h6">{{__('seller.uploads.all_files')}}</h5>
             </div>
 			<div class="dropdown mb-2 mb-md-0">
                 <button class="btn border dropdown-toggle" type="button" data-toggle="dropdown">
-                    {{translate('Bulk Action')}}
+                    {{__('seller.uploads.bulk_action')}}
                 </button>
                 <div class="dropdown-menu dropdown-menu-right">
-                    <a class="dropdown-item" href="#" onclick="bulk_delete()"> {{translate('Delete selection')}}</a>
+                    <a class="dropdown-item" href="#" onclick="bulk_delete()"> {{__('seller.uploads.delete_selection')}}</a>
                 </div>
             </div>
             <div class="col-md-3 ml-auto mr-0">
                 <select class="form-control form-control-xs aiz-selectpicker" name="sort" onchange="sort_uploads()">
-                    <option value="newest" @if($sort_by == 'newest') selected="" @endif>{{ translate('Sort by newest') }}</option>
-                    <option value="oldest" @if($sort_by == 'oldest') selected="" @endif>{{ translate('Sort by oldest') }}</option>
-                    <option value="smallest" @if($sort_by == 'smallest') selected="" @endif>{{ translate('Sort by smallest') }}</option>
-                    <option value="largest" @if($sort_by == 'largest') selected="" @endif>{{ translate('Sort by largest') }}</option>
+                    <option value="newest" @if($sort_by == 'newest') selected="" @endif>{{ __('storefront.common.sort_by_newest') }}</option>
+                    <option value="oldest" @if($sort_by == 'oldest') selected="" @endif>{{ __('storefront.common.sort_by_oldest') }}</option>
+                    <option value="smallest" @if($sort_by == 'smallest') selected="" @endif>{{ __('storefront.common.sort_by_smallest') }}</option>
+                    <option value="largest" @if($sort_by == 'largest') selected="" @endif>{{ __('storefront.common.sort_by_largest') }}</option>
                 </select>
             </div>
             <div class="col-md-3">
-                <input type="text" class="form-control form-control-xs" name="search" placeholder="{{ translate('Search your files') }}" value="{{ $search }}">
+                <input type="text" class="form-control form-control-xs" name="search" placeholder="{{ __('storefront.upload.search_your_files') }}" value="{{ $search }}">
             </div>
             <div class="col-auto">
-                <button type="submit" class="btn btn-primary">{{ translate('Search') }}</button>
+                <button type="submit" class="btn btn-primary">{{ __('storefront.common.search') }}</button>
             </div>
         </div>
     
@@ -48,7 +48,7 @@
 			<div class="form-group">
 				<div class="aiz-checkbox-inline">
 					<label class="aiz-checkbox">
-						{{ translate('Select All')}}
+						{{ __('seller.uploads.select_all')}}
 						<input type="checkbox" class="check-all">
 						<span class="aiz-square-check"></span>
 					</label>
@@ -59,7 +59,7 @@
 				@foreach($all_uploads as $key => $file)
 					@php
 						if($file->file_original_name == null){
-							$file_name = translate('Unknown');
+							$file_name = __('storefront.status.unknown');
 						}else{
 							$file_name = $file->file_original_name;
 						}
@@ -73,19 +73,19 @@
 								<div class="dropdown-menu dropdown-menu-right">
 									<a href="javascript:void(0)" class="dropdown-item" onclick="detailsInfo(this)" data-id="{{ $file->id }}">
 										<i class="las la-info-circle mr-2"></i>
-										<span>{{ translate('Details Info') }}</span>
+										<span>{{ __('seller.uploads.details_info') }}</span>
 									</a>
 									<a href="{{ my_asset($file->file_name) }}" target="_blank" download="{{ $file_name }}.{{ $file->extension }}" class="dropdown-item">
 										<i class="la la-download mr-2"></i>
-										<span>{{ translate('Download') }}</span>
+										<span>{{ __('storefront.common.download') }}</span>
 									</a>
 									<a href="javascript:void(0)" class="dropdown-item" onclick="copyUrl(this)" data-url="{{ my_asset($file->file_name) }}">
 										<i class="las la-clipboard mr-2"></i>
-										<span>{{ translate('Copy Link') }}</span>
+										<span>{{ __('seller.uploads.copy_link') }}</span>
 									</a>
 									<a href="javascript:void(0)" class="dropdown-item confirm-alert" data-method="post" data-href="{{ route('seller.my_uploads.destroy', $file->id ) }}" data-target="#delete-modal">
 										<i class="las la-trash mr-2"></i>
-										<span>{{ translate('Delete') }}</span>
+										<span>{{ __('storefront.common.delete') }}</span>
 									</a>
 								</div>
 							</div>
@@ -133,13 +133,13 @@
     <div class="modal-dialog modal-sm modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
-                <h4 class="modal-title h6">{{ translate('Delete Confirmation') }}</h4>
+                <h4 class="modal-title h6">{{ __('storefront.common.delete_confirmation') }}</h4>
                 <button type="button" class="close" data-dismiss="modal" aria-hidden="true"></button>
             </div>
             <div class="modal-body text-center">
-                <p class="mt-1">{{ translate('Are you sure to delete this file?') }}</p>
-                <button type="button" class="btn btn-link mt-2" data-dismiss="modal">{{ translate('Cancel') }}</button>
-                <a href="" class="btn btn-primary mt-2 comfirm-link">{{ translate('Delete') }}</a>
+                <p class="mt-1">{{ __('seller.uploads.are_you_sure_to_delete_this_file') }}</p>
+                <button type="button" class="btn btn-link mt-2" data-dismiss="modal">{{ __('storefront.common.cancel') }}</button>
+                <a href="" class="btn btn-primary mt-2 comfirm-link">{{ __('storefront.common.delete') }}</a>
             </div>
         </div>
     </div>
@@ -148,7 +148,7 @@
 	<div class="modal-dialog modal-dialog-right">
 			<div class="modal-content">
 			<div class="modal-header">
-				<h5 class="modal-title h6">{{ translate('File Info') }}</h5>
+				<h5 class="modal-title h6">{{ __('seller.uploads.file_info') }}</h5>
 				<button type="button" class="close" data-dismiss="modal">
 				</button>
 			</div>
@@ -180,9 +180,9 @@
 		    $temp.val(url).select();
 		    try {
 			    document.execCommand("copy");
-			    AIZ.plugins.notify('success', '{{ translate('Link copied to clipboard') }}');
+			    AIZ.plugins.notify('success', {{ \Illuminate\Support\Js::from(__('storefront.common.link_copied_to_clipboard')) }});
 			} catch (err) {
-			    AIZ.plugins.notify('danger', '{{ translate('Oops, unable to copy') }}');
+			    AIZ.plugins.notify('danger', {{ \Illuminate\Support\Js::from(__('storefront.common.oops_unable_to_copy')) }});
 			}
 		    $temp.remove();
 		}
@@ -220,7 +220,7 @@
 						location.reload();
                     }
 					else{
-						AIZ.plugins.notify('danger', '{{ translate('Something Went Wrong.') }}');
+						AIZ.plugins.notify('danger', {{ \Illuminate\Support\Js::from(__('storefront.common.something_went_wrong_label')) }});
 					}
                 }
             });

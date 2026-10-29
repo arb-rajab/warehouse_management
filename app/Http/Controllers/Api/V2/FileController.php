@@ -36,7 +36,7 @@ class FileController extends Controller
 
         return response()->json([
             'result' => true,
-            'message' => translate("Image updated"),
+            'message' => __('api.account.image_updated'),
             'path' => uploaded_asset($upload->id),
             'upload_id' => $upload->id
         ]);

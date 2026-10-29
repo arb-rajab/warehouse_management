@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Checkpoint;
+use App\Support\StoreLocale;
 use Auth;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
@@ -54,7 +55,9 @@ class  TripService
             $outputPath = storage_path('app/EDITED-PrintCMR-PDF-NL.pdf');
 
             // Initialize FPDI (Using TcpdfFpdi for template handling)
-            $pdf = new TcpdfFpdi();  // Use TcpdfFpdi class here for template handling
+            $documentLocale = StoreLocale::documentLocale();
+            $pdf = new TcpdfFpdi();
+            $pdf->setLanguageArray(['a_meta_charset' => 'UTF-8', 'a_meta_language' => $documentLocale, 'a_meta_dir' => 'ltr']);
             $pdf->AddPage();
 
             // Load the template
@@ -66,15 +69,15 @@ class  TripService
 
             $this->sectionOne($pdf); // Company Data
 
-            $this->sectionTwo($pdf, $customer); // Customer Company Address
+            $this->sectionTwo($pdf, $customer, $documentLocale); // Customer Company Address
 
             $this->sectionFour($pdf); // Company Location
 
             // $this->sectionFour($pdf, $request); // Company Shipping
 
-            $this->sectionFive($pdf, $checkpoint); // Order Data
+            $this->sectionFive($pdf, $checkpoint, $documentLocale); // Order Data
 
-            $this->sectionSix($pdf); // Pallets
+            $this->sectionSix($pdf, $documentLocale); // Pallets
 
             $this->sectionThirteen($pdf, $checkpoint); // Notes
 
@@ -109,7 +112,7 @@ class  TripService
 
             return response()->download($outputPath);
         } else {
-            return response()->json(['error' => 'Checkpoint not found'], 404);
+            return response()->json(['error' => __('api.trip.checkpoint_not_found')], 404);
         }
     }
 
@@ -285,7 +288,7 @@ class  TripService
         return $pdf;
     }
 
-    private function sectionSix(&$pdf)
+    private function sectionSix(&$pdf, string $documentLocale)
     {
         // Base height for section
         $section_base_height = 130;
@@ -296,13 +299,13 @@ class  TripService
 
         // Draw the titles
         $pdf->SetXY(20, $section_base_height);
-        $pdf->Write(5, 'LEVENSEMIDDELEN');
+        $pdf->Write(5, __('delivery.cmr.foodstuffs', [], $documentLocale));
 
         $pdf->SetXY(70, $section_base_height);
-        $pdf->Write(5, 'AANTAL PALETTEN');
+        $pdf->Write(5, __('delivery.cmr.pallet_count', [], $documentLocale));
 
         $pdf->SetXY(70, $section_base_height + 12);
-        $pdf->Write(5, 'GEWICHT');
+        $pdf->Write(5, __('delivery.cmr.weight', [], $documentLocale));
 
         // Draw boxes
         $pdf->SetLineWidth(0.1); // Set box line thickness
@@ -315,12 +318,12 @@ class  TripService
         // Add notes or footnotes
         $pdf->SetFont('dejavusans', '', 8, true);
         $pdf->SetXY(20, $section_base_height + 35);
-        $pdf->Write(5, 'After signing CMR you have agreed to our terms and conditions and you confirm that goods are delivered.');
+        $pdf->Write(5, __('delivery.cmr.signing_terms', [], $documentLocale));
 
         return $pdf;
     }
 
-    private function sectionFive(&$pdf, $checkpoint)
+    private function sectionFive(&$pdf, $checkpoint, string $documentLocale)
     {
         if ($checkpoint->isOrder()) {
             $order = $checkpoint->getOrder();
@@ -338,11 +341,11 @@ class  TripService
 
         // Write Order Code in first line
         $pdf->SetXY(20, $section_base_height);
-        $pdf->Write(5, "Order Code: $order_code");
+        $pdf->Write(5, __('delivery.cmr.order_code', ['code' => $order_code], $documentLocale));
 
         // Write Delivery Date in next line
         $pdf->SetXY(20, $section_base_height + 6); // Move down by 6 units
-        $pdf->Write(5, "Delivery Date: $order_date");
+        $pdf->Write(5, __('delivery.cmr.delivery_date', ['date' => $order_date], $documentLocale));
 
         return $pdf;
     }
@@ -389,13 +392,20 @@ class  TripService
     }
 
 
-    private function sectionTwo(&$pdf, $customer)
+    private function sectionTwo(&$pdf, $customer, string $documentLocale)
     {
         $company_name = $customer?->company_name ?? '-';
         $tax_number = $customer?->tax_number ?? '-';
         $address = $customer?->address ?? '-';
         $phone = $customer?->phone ?? '-';
         $email = $customer?->email ?? '-';
+
+        // Keep identifiers in reading order when TCPDF shapes their Arabic labels.
+        if ($documentLocale === 'ar') {
+            $tax_number = "\u{202D}".$tax_number."\u{202C}";
+            $phone = "\u{202D}".$phone."\u{202C}";
+            $email = "\u{202D}".$email."\u{202C}";
+        }
 
         $y = 41;
 
@@ -407,20 +417,20 @@ class  TripService
         $pdf->SetFont('dejavusans', '', 8);
         $y += 5;
         $pdf->SetXY(20, $y);
-        $pdf->Write(5, 'Tax Number: ' . $tax_number);
+        $pdf->Write(5, __('delivery.cmr.tax_number', ['number' => $tax_number], $documentLocale));
 
         $y += 5;
         $pdf->SetXY(20, $y);
-        $pdf->Write(5, 'Address: ' . $address);
+        $pdf->Write(5, __('delivery.cmr.address', ['address' => $address], $documentLocale));
 
 
         $y += 5;
         $pdf->SetXY(20, $y);
-        $pdf->Write(5, 'Phone: ' . $phone);
+        $pdf->Write(5, __('delivery.cmr.phone', ['phone' => $phone], $documentLocale));
 
         $y += 5;
         $pdf->SetXY(20, $y);
-        $pdf->Write(5, 'Email: ' . $email);
+        $pdf->Write(5, __('delivery.cmr.email', ['email' => $email], $documentLocale));
 
         return $pdf;
     }

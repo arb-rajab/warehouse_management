@@ -19,12 +19,13 @@ class NotificationUtility
     {
         //sends email to customer with the invoice pdf attached
         $array['view'] = 'shop.emails.invoice';
-        $array['subject'] = translate('A new order has been placed') . ' - ' . $order->code;
+        $array['subject_key'] = 'delivery.mail.order_placed_subject';
+        $array['subject_parameters'] = ['code' => $order->code];
         $array['from'] = config('mail.from.address');
         $array['order'] = $order;
         try {
-          //  Mail::to($order->user->email)->queue(new InvoiceEmailManager($array));
-           // Mail::to($order->orderDetails->first()->product->user->email)->queue(new InvoiceEmailManager($array));
+          //  Mail::to($order->user->email)->queue(new InvoiceEmailManager($array, $order->user));
+           // Mail::to($order->orderDetails->first()->product->user->email)->queue(new InvoiceEmailManager($array, $order->orderDetails->first()->product->user));
         } catch (\Exception $e) {
 
         }
@@ -41,7 +42,8 @@ class NotificationUtility
         //sends Notifications to user
         self::sendNotification($order, 'placed');
         if ($request !=null && get_setting('google_firebase') == 1 && $order->user->device_token != null) {
-            self::sendOrderFirebaseNotification($order, "Order placed !", "An order {$order->code} has been placed");
+            $locale = \App\Support\StoreLocale::deliveryLocale($order->user);
+            self::sendOrderFirebaseNotification($order, __('delivery.notifications.order_placed', [], $locale), __('delivery.notifications.order_placed_body', ['code' => $order->code], $locale));
         }
     }
 
@@ -115,6 +117,14 @@ class NotificationUtility
     /**
      * Push an order update to the order's customer through sendFirebaseNotification().
      */
+    public static function sendLocalizedOrderUpdate(Order $order, string $status): void
+    {
+        $locale = \App\Support\StoreLocale::deliveryLocale($order->user);
+        self::sendOrderFirebaseNotification($order,
+            __('messages.order_updated_title', [], $locale),
+            __('delivery.notifications.order_updated', ['code' => $order->code, 'status' => \App\Support\StoreLocale::status($status, $locale)], $locale));
+    }
+
     public static function sendOrderFirebaseNotification(Order $order, string $title, string $text): void
     {
         self::sendFirebaseNotification((object) [
@@ -171,7 +181,7 @@ class NotificationUtility
         $response = curl_exec($ch);
 
         return response()->json([
-            'message' => 'Notification status',
+            'message' => __('api.common.notification_status'),
             'response' => json_decode($response, true)
         ]);
     }

@@ -34,10 +34,10 @@ class RefundController extends Controller
 
         if ($refund->save())
         {
-           return $this->success(translate('Refund Status has been change successfully'))  ;
+           return $this->success(__('api.refund.status_updated'))  ;
         }
         else {
-              return $this->failed(translate('Refund Status change failed!'));
+              return $this->failed(__('api.refund.status_failed'));
         }
     }
 
@@ -55,10 +55,10 @@ class RefundController extends Controller
 
       if ($refund->save())
         {
-           return $this->success(translate('Refund Status has been change successfully'))  ;
+           return $this->success(__('api.refund.status_updated'))  ;
         }
         else {
-              return $this->failed(translate('Refund Status change failed!'));
+              return $this->failed(__('api.refund.status_failed'));
         }
     }
 

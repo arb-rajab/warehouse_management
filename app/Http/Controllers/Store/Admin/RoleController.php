@@ -14,12 +14,12 @@ use App\Models\Role;
 use App\Models\RoleTranslation;
 use App\Models\StoreUser;
 use App\Support\StaffPrivileges;
+use App\Support\StorePermissions;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -163,8 +163,8 @@ class RoleController extends Controller implements HasMiddleware
 
     /**
      * The role form's checkboxes: the store's permissions grouped by section,
-     * each label run through the store's translations the way the Blade form
-     * did, since the permission vocabulary lives in the database.
+     * using file labels for application identifiers and content translations
+     * for custom permission records. Stored identifiers remain unchanged.
      *
      * Only the permissions the signed-in staff member holds are offered: no one
      * can grant what they lack (App\Support\StaffPrivileges).
@@ -182,9 +182,9 @@ class RoleController extends Controller implements HasMiddleware
             ->groupBy(fn (Permission $permission) => (string) $permission->section)
             ->map(fn ($permissions, string $section) => [
                 'section' => $section,
-                'label' => translate(Str::headline($section)),
+                'label' => StorePermissions::displaySection($section),
                 'permissions' => $permissions
-                    ->map(fn (Permission $permission) => ['id' => $permission->id, 'label' => translate(Str::headline($permission->name))])
+                    ->map(fn (Permission $permission) => ['id' => $permission->id, 'label' => StorePermissions::displayName($permission->name)])
                     ->values()
                     ->all(),
             ])

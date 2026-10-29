@@ -1,3 +1,7 @@
+@php
+    $documentLocale = $documentLocale ?? \App\Support\StoreLocale::documentLocale();
+@endphp
+<html lang="{{ $documentLocale }}" dir="{{ $documentLocale === 'ar' ? 'rtl' : 'ltr' }}"><head><meta charset="utf-8"></head><body>
 <div style="margin-left:auto;margin-right:auto;">
 <style media="all">
     @page {
@@ -10,7 +14,8 @@
 	}
 	body{
 		line-height: 1.5;
-		font-family: 'DejaVuSans', 'sans-serif';
+		font-family: 'dejavusans', 'sans-serif';
+        direction: {{ $documentLocale === 'ar' ? 'rtl' : 'ltr' }};
 		color: #333542;
 	}
 	div{
@@ -77,15 +82,15 @@
 		<table class="padding text-left small border-bottom">
 			<thead>
                 <tr class="gry-color" style="background: #eceff4;">
-                    <th width="50%">{{translate('Category Name') }}</th>
-                    <th width="50%">{{translate('ID') }}</th>
+                    <th width="50%">{{__('delivery.documents.category_name', [], $documentLocale) }}</th>
+                    <th width="50%">{{__('storefront.common.id', [], $documentLocale) }}</th>
                 </tr>
 			</thead>
 			<tbody class="strong">
                 @foreach ($categories as $key => $category)
 	                <tr class="">
 						<td>{{ $category->getTranslation('name') }}</td>
-						<td>{{ $category->id }}</td>
+						<td><span dir="ltr" style="direction:ltr;unicode-bidi:embed;">{{ $category->id }}</span></td>
 					</tr>
 				@endforeach
             </tbody>
@@ -93,3 +98,5 @@
 	</div>
 
 </div>
+
+</body></html>

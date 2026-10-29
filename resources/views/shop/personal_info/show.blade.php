@@ -61,7 +61,7 @@ $best_selers = remember_models(\App\Models\Shop::class, 'best_selers', 86400, fu
                                 <span class="circle" aria-hidden="true">
                                     <span class="icon arrow"></span>
                                 </span>
-                                <span class="button-text">{{ translate('Visit Store') }}</span>
+                                <span class="button-text">{{ __('storefront.common.visit_store') }}</span>
                             </a>
                         </div>
                     </div>

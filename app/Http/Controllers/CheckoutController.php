@@ -66,7 +66,7 @@ class CheckoutController extends Controller
 
         if ($request->payment_option != null) {
             if (! app(PaymentOptions::class)->isAllowed((string) $request->payment_option)) {
-                flash(translate('Select Payment Option.'))->warning();
+                flash(__('storefront.checkout.select_payment_option'))->warning();
                 return back();
             }
 
@@ -107,12 +107,12 @@ class CheckoutController extends Controller
                         $order->manual_payment_data = json_encode($manual_payment_data);
                         $order->save();
                     }
-                    flash(translate('Your order has been placed successfully. Please submit payment information from purchase history'))->success();
+                    flash(__('storefront.checkout.your_order_has_been_placed_successfully_please_submit_payment_information_from_purchase_history'))->success();
                     return redirect()->route('order_confirmed');
                 }
             }
         } else {
-            flash(translate('Select Payment Option.'))->warning();
+            flash(__('storefront.checkout.select_payment_option'))->warning();
             return back();
         }
     }
@@ -128,7 +128,7 @@ class CheckoutController extends Controller
         $payerId = Auth::id();
 
         if ($payerId === null || ! app(GatewayPaymentService::class)->complete($payment, (int) $payerId, GatewayPaymentService::CART, $combined_order_id)) {
-            flash(translate('Payment could not be verified'))->error();
+            flash(__('storefront.checkout.payment_could_not_be_verified'))->error();
             return redirect()->route('cart');
         }
 
@@ -143,7 +143,7 @@ class CheckoutController extends Controller
         if (Auth::user()->is_rep) {
             $filteredCarts = $carts->where('for_customer', null);
             if ($filteredCarts->count() > 0) {
-                flash(translate('Please pick a user.'))->warning();
+                flash(__('storefront.common.please_pick_a_user'))->warning();
                 return redirect()->route('checkout.getCustomers');
             }
 
@@ -163,7 +163,7 @@ class CheckoutController extends Controller
             $categories = Category::all();
             return view('shop.frontend.shipping_info', compact('categories', 'carts', 'customer_addresses'));
         }
-        flash(translate('Your cart is empty'))->success();
+        flash(__('storefront.cart.empty'))->success();
         return back();
     }
 
@@ -171,7 +171,7 @@ class CheckoutController extends Controller
     {
         $carts = Cart::where('user_id', Auth::user()->id)->get();
         if ($carts->isEmpty()) {
-            flash(translate('Your cart is empty'))->warning();
+            flash(__('storefront.cart.empty'))->warning();
             return redirect()->route('home');
         }
 
@@ -202,7 +202,7 @@ class CheckoutController extends Controller
         $carts = Cart::with('product')->where('user_id', Auth::user()->id)->get();
 
         if ($carts->isEmpty()) {
-            flash(translate('Your cart is empty'))->warning();
+            flash(__('storefront.cart.empty'))->warning();
             return redirect()->route('home');
         }
 
@@ -237,7 +237,7 @@ class CheckoutController extends Controller
 
         if (! Cart::where('user_id', Auth::user()->id)->exists()) {
             return response()->json([
-                'response_message' => ['response' => 'warning', 'message' => translate('Your cart is empty')],
+                'response_message' => ['response' => 'warning', 'message' => __('storefront.cart.empty')],
                 'html' => '',
             ]);
         }
@@ -264,22 +264,22 @@ class CheckoutController extends Controller
                                 ]
                             );
                         $response_message['response'] = 'success';
-                        $response_message['message'] = translate('Coupon has been applied');
+                        $response_message['message'] = __('storefront.cart.coupon_has_been_applied');
                     } else {
                         $response_message['response'] = 'warning';
-                        $response_message['message'] = translate('This coupon is not applicable to your cart products!');
+                        $response_message['message'] = __('storefront.cart.this_coupon_is_not_applicable_to_your_cart_products');
                     }
                 } else {
                     $response_message['response'] = 'warning';
-                    $response_message['message'] = translate('You already used this coupon!');
+                    $response_message['message'] = __('storefront.cart.you_already_used_this_coupon');
                 }
             } else {
                 $response_message['response'] = 'warning';
-                $response_message['message'] = translate('Coupon expired!');
+                $response_message['message'] = __('storefront.cart.coupon_expired');
             }
         } else {
             $response_message['response'] = 'danger';
-            $response_message['message'] = translate('Invalid coupon!');
+            $response_message['message'] = __('storefront.cart.invalid_coupon');
         }
 
         $carts = Cart::where('user_id', Auth::user()->id)
@@ -318,9 +318,9 @@ class CheckoutController extends Controller
 
             if (Auth::user()->point_balance >= $point) {
                 $request->session()->put('club_point', $point);
-                flash(translate('Point has been redeemed'))->success();
+                flash(__('storefront.common.point_has_been_redeemed'))->success();
             } else {
-                flash(translate('Invalid point!'))->warning();
+                flash(__('storefront.common.invalid_point'))->warning();
             }
         }
         return back();

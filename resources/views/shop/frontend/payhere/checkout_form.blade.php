@@ -6,15 +6,15 @@
         <input type="hidden" name="return_url" value="{{ route('payhere.checkout.return') }}">
         <input type="hidden" name="cancel_url" value="{{ route('payhere.checkout.cancel') }}">
         <input type="hidden" name="notify_url" value="{{ route('payhere.checkout.notify') }}">
-        <br><br>Custom Params<br>
+        <br><br>{{ __('storefront.checkout.custom_parameters') }}<br>
         <input type="text" name="custom_1" value="{{ $combined_order_id }}">
         <input type="text" name="custom_2" value="">
-        <br><br>Item Details<br>
+        <br><br>{{ __('storefront.checkout.item_details') }}<br>
         <input type="text" name="order_id" value="{{ $combined_order_id }}">
-        <input type="text" name="items" value="{{ translate("Checkout Payment")  }}"><br>
+        <input type="text" name="items" value="{{ __('storefront.checkout.checkout_payment')  }}"><br>
         <input type="text" name="currency" value="{{ config('services.payhere.currency') }}">
         <input type="text" name="amount" value="{{ $amount }}">
-        <br><br>Customer Details<br>
+        <br><br>{{ __('storefront.checkout.customer_details') }}<br>
         <input type="text" name="first_name" value="{{ $first_name }}">
         <input type="text" name="last_name" value="{{ $last_name }}"><br>
         <input type="text" name="email" value="{{ $email }}">

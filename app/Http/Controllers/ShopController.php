@@ -72,7 +72,7 @@ class ShopController extends Controller implements HasMiddleware
     public function store(StoreShopRequest $request)
     {
         if (StoreUser::where('email', $request->email)->first() != null) {
-            flash(translate('Email already exists!'))->error();
+            flash(__('storefront.auth.email_already_exists'))->error();
             return back();
         }
         if ($request->password == $request->password_confirmation) {
@@ -83,7 +83,7 @@ class ShopController extends Controller implements HasMiddleware
             $user->password = Hash::make($request->password);
             $user->save();
         } else {
-            flash(translate('Sorry! Password did not match.'))->error();
+            flash(__('seller.shop.sorry_password_did_not_match'))->error();
             return back();
         }
 
@@ -103,7 +103,7 @@ class ShopController extends Controller implements HasMiddleware
                     $user->notify(new EmailVerificationNotification());
                 }
 
-                flash(translate('Your Shop has been created successfully!'))->success();
+                flash(__('seller.shop.your_shop_has_been_created_successfully'))->success();
                 return redirect()->route('seller.shop.index');
             } else {
                 $user->user_type == 'customer';
@@ -111,7 +111,7 @@ class ShopController extends Controller implements HasMiddleware
             }
         }
 
-        flash(translate('Sorry! Something went wrong.'))->error();
+        flash(__('seller.shop.sorry_something_went_wrong'))->error();
         return back();
     }
 

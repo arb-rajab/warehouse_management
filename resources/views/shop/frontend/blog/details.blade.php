@@ -68,11 +68,11 @@
                 </div>
             </div>
 
-            
+
             <!-- recent posts -->
             <div class="col-xl-3 col-lg-4">
                 <div class="p-3 border">
-                    <h3 class="fs-16 fw-700 text-dark mb-3">{{ translate('Recent Posts') }}</h3>
+                    <h3 class="fs-16 fw-700 text-dark mb-3">{{ __('storefront.common.recent_posts') }}</h3>
                     <div class="row">
                         @foreach($recent_blogs as $recent_blog)
                         <div class="col-lg-12 col-sm-6 mb-4 hov-scale-img">

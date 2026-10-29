@@ -35,7 +35,7 @@ class CouponRequest extends \App\Http\Requests\CouponRequest
             'discount' => ['required', 'numeric', 'min:1', 'max:999999999999999999.99', ...($this->input('discount_type') === 'percent' ? ['max:100'] : [])],
             'date_range' => ['bail', 'required', 'string', 'max:23', function (string $attribute, mixed $value, \Closure $fail): void {
                 if ($this->dates() === null) {
-                    $fail(__('validation.date', ['attribute' => $attribute]));
+                    $fail(__('validation.date', ['attribute' => __('validation.attributes.date_range')]));
                 }
             }],
             'product_ids' => ['required_if:type,product_base', 'missing_unless:type,product_base', 'array', 'list', 'min:1', 'max:1000'],

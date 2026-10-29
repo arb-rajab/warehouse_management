@@ -44,7 +44,7 @@ class OrderPlacementService
             ->first();
 
         if ($stock === null || $quantity > $stock->qty) {
-            throw new DomainException(translate('The requested quantity is not available for ').$product->name);
+            throw new DomainException(__('storefront.product.quantity_unavailable', ['product' => $product->name]));
         }
 
         $stock->decrement('qty', $quantity);
@@ -64,25 +64,25 @@ class OrderPlacementService
         $coupon = Coupon::query()->where('code', $code)->lockForUpdate()->first();
 
         if ($coupon === null) {
-            throw new DomainException(translate('Invalid coupon!'));
+            throw new DomainException(__('storefront.cart.invalid_coupon'));
         }
 
         $today = strtotime(date('d-m-Y'));
 
         if ($today < $coupon->start_date || $today > $coupon->end_date) {
-            throw new DomainException(translate('Coupon expired!'));
+            throw new DomainException(__('storefront.cart.coupon_expired'));
         }
 
         $alreadyUsed = CouponUsage::query()->where('user_id', $userId)->where('coupon_id', $coupon->id)->exists();
 
         if ($alreadyUsed) {
-            throw new DomainException(translate('You already used this coupon!'));
+            throw new DomainException(__('storefront.cart.you_already_used_this_coupon'));
         }
 
         $discount = app(CouponService::class)->discountFor($coupon, $lines->where('owner_id', $coupon->user_id));
 
         if ($discount <= 0) {
-            throw new DomainException(translate('This coupon is not applicable to your cart products!'));
+            throw new DomainException(__('storefront.cart.this_coupon_is_not_applicable_to_your_cart_products'));
         }
 
         $usage = new CouponUsage;
@@ -92,7 +92,7 @@ class OrderPlacementService
         try {
             $usage->save();
         } catch (UniqueConstraintViolationException) {
-            throw new DomainException(translate('You already used this coupon!'));
+            throw new DomainException(__('storefront.cart.you_already_used_this_coupon'));
         }
 
         return $discount;

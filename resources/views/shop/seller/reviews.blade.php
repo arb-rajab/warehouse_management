@@ -3,18 +3,18 @@
 @section('panel_content')
     <div class="card">
         <div class="card-header">
-            <h5 class="mb-0 h6">{{ translate('Product Reviews') }}</h5>
+            <h5 class="mb-0 h6">{{ __('seller.common.product_reviews') }}</h5>
         </div>
         <div class="card-body">
             <table class="table aiz-table mb-0">
                 <thead>
                     <tr>
                         <th>#</th>
-                        <th>{{ translate('Product')}}</th>
-                        <th data-breakpoints="lg">{{ translate('Customer')}}</th>
-                        <th>{{ translate('Rating')}}</th>
-                        <th data-breakpoints="lg">{{ translate('Comment')}}</th>
-                        <th data-breakpoints="lg">{{ translate('Published')}}</th>
+                        <th>{{ __('storefront.product.product')}}</th>
+                        <th data-breakpoints="lg">{{ __('storefront.common.customer')}}</th>
+                        <th>{{ __('storefront.product.rating')}}</th>
+                        <th data-breakpoints="lg">{{ __('storefront.common.comment')}}</th>
+                        <th data-breakpoints="lg">{{ __('storefront.common.published')}}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -44,9 +44,9 @@
                                 <td>{{ $review->comment }}</td>
                                 <td>
                                     @if ($review->status == 1)
-                                        <span class="badge badge-inline badge-success">{{  translate('Published') }}</span>
+                                        <span class="badge badge-inline badge-success">{{  __('storefront.common.published') }}</span>
                                     @else
-                                        <span class="badge badge-inline badge-danger">{{  translate('Unpublished') }}</span>
+                                        <span class="badge badge-inline badge-danger">{{  __('seller.common.unpublished') }}</span>
                                     @endif
                                 </td>
                             </tr>

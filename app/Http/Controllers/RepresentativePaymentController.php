@@ -100,6 +100,7 @@ class RepresentativePaymentController extends Controller
         $qrCode = $this->generate_qr_to_show_payment(new Request(['id' => $id]));
 
         $pdf = PDF::loadView('shop.frontend.user.export-rep-payments', [
+            'documentLocale' => \App\Support\StoreLocale::documentLocale(),
             'payment' => $payment,
             'qr' => $qrCode,
         ]);

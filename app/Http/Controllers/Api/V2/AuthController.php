@@ -45,14 +45,14 @@ class AuthController extends Controller
     public function signup(Request $request)
     {
         $messages = [
-            'name.required' => translate('Name is required'),
-            'email_or_phone.required' => $request->register_by == 'email' ? translate('Email is required') : translate('Phone is required'),
-            'email_or_phone.email' => translate('Email must be a valid email address'),
-            'email_or_phone.numeric' => translate('Phone must be a number.'),
-            'email_or_phone.unique' => $request->register_by == 'email' ? translate('The email has already been taken') : translate('The phone has already been taken'),
-            'password.required' => translate('Password is required'),
-            'password.confirmed' => translate('Password confirmation does not match'),
-            'password.min' => translate('Minimum 6 digits required for password'),
+            'name.required' => __('validation.required', ['attribute' => __('validation.attributes.name')]),
+            'email_or_phone.required' => $request->register_by == 'email' ? __('validation.required', ['attribute' => __('validation.attributes.email')]) : __('validation.required', ['attribute' => __('validation.attributes.phone')]),
+            'email_or_phone.email' => __('validation.email', ['attribute' => __('validation.attributes.email')]),
+            'email_or_phone.numeric' => __('validation.numeric', ['attribute' => __('validation.attributes.phone')]),
+            'email_or_phone.unique' => $request->register_by == 'email' ? __('validation.unique', ['attribute' => __('validation.attributes.email')]) : __('validation.unique', ['attribute' => __('validation.attributes.phone')]),
+            'password.required' => __('validation.required', ['attribute' => __('validation.attributes.password')]),
+            'password.confirmed' => __('validation.confirmed', ['attribute' => __('validation.attributes.password')]),
+            'password.min' => __('validation.min.string', ['attribute' => __('validation.attributes.password'), 'min' => 6]),
         ];
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
@@ -67,7 +67,7 @@ class AuthController extends Controller
         if ($validator->fails()) {
             return response()->json([
                 'result' => false,
-                'message' => "Inputs Validation Error",
+                'message' => __('api.common.validation_error'),
                 'errors' => $validator->errors()
             ]);
         }
@@ -152,7 +152,7 @@ class AuthController extends Controller
         if ($code === null) {
             return response()->json([
                 'result' => false,
-                'message' => translate('Please wait a moment before asking for another code'),
+                'message' => __('api.auth.code_throttled'),
             ], 429);
         }
 
@@ -168,7 +168,7 @@ class AuthController extends Controller
 
         return response()->json([
             'result' => true,
-            'message' => translate('Verification code is sent again'),
+            'message' => __('api.auth.code_resent'),
         ], 200);
     }
 
@@ -181,12 +181,12 @@ class AuthController extends Controller
             $user->save();
             return response()->json([
                 'result' => true,
-                'message' => translate('Your account is now verified'),
+                'message' => __('api.auth.verified'),
             ], 200);
         } else {
             return response()->json([
                 'result' => false,
-                'message' => translate('Code does not match, you can request for resending the code'),
+                'message' => __('api.auth.code_mismatch'),
             ], 200);
         }
     }
@@ -205,10 +205,10 @@ class AuthController extends Controller
     public function login(Request $request)
     {
         $messages = [
-            'email.required' => $request->login_by == 'email' ? translate('Email is required') : translate('Phone is required'),
-            'email.email' => translate('Email must be a valid email address'),
-            'email.numeric' => translate('Phone must be a number.'),
-            'password.required' => translate('Password is required'),
+            'email.required' => $request->login_by == 'email' ? __('validation.required', ['attribute' => __('validation.attributes.email')]) : __('validation.required', ['attribute' => __('validation.attributes.phone')]),
+            'email.email' => __('validation.email', ['attribute' => __('validation.attributes.email')]),
+            'email.numeric' => __('validation.numeric', ['attribute' => __('validation.attributes.phone')]),
+            'password.required' => __('validation.required', ['attribute' => __('validation.attributes.password')]),
         ];
         $validator = Validator::make($request->all(), [
             'password' => 'required',
@@ -223,7 +223,7 @@ class AuthController extends Controller
         if ($validator->fails()) {
             return response()->json([
                 'result' => false,
-                'message' => "Email and Password Are Required!"
+                'message' => __('api.auth.credentials_required')
             ]);
         }
 
@@ -264,7 +264,7 @@ class AuthController extends Controller
         // if (!$delivery_boy_condition) {
         if (!$delivery_boy_condition && !$seller_condition) {
             if (PayhereUtility::create_wallet_reference($request->identity_matrix) == false) {
-                return response()->json(['result' => false, 'message' => 'Identity matrix error', 'user' => null], 401);
+                return response()->json(['result' => false, 'message' => __('api.auth.identity_error'), 'user' => null], 401);
             }
         }
 
@@ -280,17 +280,17 @@ class AuthController extends Controller
                         $user->save();
                     }
                     // if ($user->email_verified_at == null) {
-                    //     return response()->json(['result' => false, 'message' => translate('Please verify your account'), 'user' => null], 401);
+                    //     return response()->json(['result' => false, 'message' => __('api.auth.verify_required'), 'user' => null], 401);
                     // }
                     return $this->loginSuccess($user);
                 } else {
-                    return response()->json(['result' => false, 'message' => translate('Unauthorized'), 'user' => null], 401);
+                    return response()->json(['result' => false, 'message' => __('api.auth.unauthorized'), 'user' => null], 401);
                 }
             } else {
-                return response()->json(['result' => false, 'message' => translate('User is banned'), 'user' => null], 401);
+                return response()->json(['result' => false, 'message' => __('api.auth.banned'), 'user' => null], 401);
             }
         } else {
-            return response()->json(['result' => false, 'message' => translate('User not found'), 'user' => null], 401);
+            return response()->json(['result' => false, 'message' => __('api.auth.user_not_found'), 'user' => null], 401);
         }
     }
 
@@ -307,7 +307,7 @@ class AuthController extends Controller
 
         return response()->json([
             'result' => true,
-            'message' => translate('Successfully logged out')
+            'message' => __('api.auth.logged_out')
         ]);
     }
 
@@ -345,7 +345,7 @@ class AuthController extends Controller
                 $social_user = null;
         }
         if ($social_user == null) {
-            return response()->json(['result' => false, 'message' => translate('No social provider matches'), 'user' => null]);
+            return response()->json(['result' => false, 'message' => __('api.auth.social_provider_not_found'), 'user' => null]);
         }
 
         if ($request->social_provider == 'twitter') {
@@ -355,7 +355,7 @@ class AuthController extends Controller
         }
 
         if ($social_user_details == null) {
-            return response()->json(['result' => false, 'message' => translate('No social account matches'), 'user' => null]);
+            return response()->json(['result' => false, 'message' => __('api.auth.social_account_not_found'), 'user' => null]);
         }
 
         $user = app(SocialAccounts::class)->resolve($request->social_provider, $social_user_details, $request->name);
@@ -363,13 +363,13 @@ class AuthController extends Controller
         if ($user === null) {
             return response()->json([
                 'result' => false,
-                'message' => translate('An account with this email already exists. Sign in with your password instead.'),
+                'message' => __('storefront.auth.an_account_with_this_email_already_exists_sign_in_with_your_password_instead'),
                 'user' => null
             ], 403);
         }
 
         if ($user->banned) {
-            return response()->json(['result' => false, 'message' => translate('User is banned'), 'user' => null], 401);
+            return response()->json(['result' => false, 'message' => __('api.auth.banned'), 'user' => null], 401);
         }
 
         return $this->loginSuccess($user);
@@ -383,7 +383,7 @@ class AuthController extends Controller
         }
         return response()->json([
             'result' => true,
-            'message' => translate('Successfully logged in'),
+            'message' => __('api.auth.logged_in'),
             'access_token' => $token,
             'token_type' => 'Bearer',
             'expires_at' => null,
@@ -418,7 +418,7 @@ class AuthController extends Controller
 
         return response()->json([
             'result' => false,
-            'message' => translate('Login Failed'),
+            'message' => __('api.auth.login_failed'),
             'access_token' => '',
             'token_type' => '',
             'expires_at' => null,
@@ -457,7 +457,7 @@ class AuthController extends Controller
 
         return response()->json([
             "result" => true,
-            "message" => translate('Your account deletion successfully done')
+            "message" => __('storefront.auth.your_account_deletion_successfully_done')
         ]);
     }
 

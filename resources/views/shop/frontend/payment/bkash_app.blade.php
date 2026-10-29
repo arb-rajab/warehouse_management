@@ -12,8 +12,8 @@
     <section class="py-4 mb-4 bg-light">
         <div class="container text-center">
           <form action="{{route('api.bkash.checkout',['token'=>$token,'amount'=>$amount])}}" method="get">
-          <button id="bKash_button" class="d-none">Pay With bKash</button>         
-        </form>   
+          <button id="bKash_button" class="d-none">{{ __('storefront.checkout.pay_with_bkash') }}</button>
+        </form>
         </div>
     </section>
 
@@ -26,7 +26,7 @@
         <script src="https://scripts.pay.bka.sh/versions/1.2.0-beta/checkout/bKash-checkout.js"></script>
     @endif
 
-    <script type="text/javascript">        
+    <script type="text/javascript">
 
         $(document).ready(function(){
             $('#bKash_button').trigger('click');
@@ -57,7 +57,7 @@
                 paymentID = data.paymentID;
                 bKash.create().onSuccess(data); //pass the whole response data in bKash.create().onSucess() method as a parameter
             } else {
-                
+
                 alert(data.errorMessage);
                 bKash.create().onError();
             }

@@ -37,7 +37,7 @@ class DigitalProductController  extends Controller
                 return view('shop.seller.product.digitalproducts.create', $this->formOptions());
             }
             else {
-                flash(translate('Please upgrade your package.'))->warning();
+                flash(__('seller.products.please_upgrade_your_package'))->warning();
                 return back();
             }
         }
@@ -53,11 +53,11 @@ class DigitalProductController  extends Controller
     public function store(DigitalProductRequest $request, SellerDigitalProductWriter $writer)
     {
         if (addon_is_activated('seller_subscription') && ! seller_package_validity_check()) {
-            flash(translate('Please upgrade your package.'))->warning();
+            flash(__('seller.products.please_upgrade_your_package'))->warning();
             return redirect()->route('seller.digitalproducts');
         }
         $writer->create($request->user('store'), $request->productData());
-        flash(translate('Digital Product has been inserted successfully'))->success();
+        flash(__('seller.products.digital_product_has_been_inserted_successfully'))->success();
         return redirect()->route('seller.digitalproducts');
     }
 
@@ -72,7 +72,7 @@ class DigitalProductController  extends Controller
         $lang = is_string($request->lang) ? $request->lang : config('app.default_language');
         $product = Product::findOrFail($id);
         if (Gate::denies('updateAsSeller', $product)) {
-            flash(translate('This product is not yours.'))->warning();
+            flash(__('seller.products.this_product_is_not_yours'))->warning();
             return back();
         }
 
@@ -94,11 +94,11 @@ class DigitalProductController  extends Controller
     public function update(DigitalProductRequest $request, Product $id, SellerDigitalProductWriter $writer)
     {
         if (Gate::denies('updateAsSeller', $id)) {
-            flash(translate('This product is not yours.'))->warning();
+            flash(__('seller.products.this_product_is_not_yours'))->warning();
             return back();
         }
         $writer->update($request->user('store'), $id, $request->productData());
-        flash(translate('Digital Product has been updated successfully'))->success();
+        flash(__('seller.products.digital_product_has_been_updated_successfully'))->success();
         return back();
     }
 
@@ -112,7 +112,7 @@ class DigitalProductController  extends Controller
     {
         $product = Product::findOrFail($id);
         if (Gate::denies('updateAsSeller', $product)) {
-            flash(translate('This product is not yours.'))->warning();
+            flash(__('seller.products.this_product_is_not_yours'))->warning();
             return back();
         }
 
@@ -121,7 +121,7 @@ class DigitalProductController  extends Controller
 
         Product::destroy($id);
 
-        flash(translate('Product has been deleted successfully'))->success();
+        flash(__('storefront.product.product_has_been_deleted_successfully'))->success();
         return redirect()->route('seller.digitalproducts');
     }
 

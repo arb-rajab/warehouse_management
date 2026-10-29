@@ -40,7 +40,7 @@ class Recaptcha implements ValidationRule
      */
     public static function messages(): array
     {
-        $message = translate('Please confirm that you are not a robot.');
+        $message = __('validation.recaptcha.confirm_human');
 
         return ['g-recaptcha-response.required' => $message, 'g-recaptcha-response.string' => $message];
     }
@@ -51,7 +51,7 @@ class Recaptcha implements ValidationRule
 
         if (! is_string($secret) || $secret === '') {
             Log::warning('reCAPTCHA is on but CAPTCHA_SECRET is not set: every form that shows it is refused.');
-            $fail(translate('The robot check could not be completed. Please try again.'));
+            $fail(__('validation.recaptcha.robot_check_failed'));
 
             return;
         }
@@ -64,20 +64,20 @@ class Recaptcha implements ValidationRule
             ]);
         } catch (ConnectionException) {
             Log::warning('reCAPTCHA verification could not reach Google.');
-            $fail(translate('The robot check could not be completed. Please try again.'));
+            $fail(__('validation.recaptcha.robot_check_failed'));
 
             return;
         }
 
         if (! $response->successful() || ! is_array($response->json())) {
             Log::warning('reCAPTCHA verification failed at Google.', ['status' => $response->status()]);
-            $fail(translate('The robot check could not be completed. Please try again.'));
+            $fail(__('validation.recaptcha.robot_check_failed'));
 
             return;
         }
 
         if ($response->json('success') !== true) {
-            $fail(translate('Please confirm that you are not a robot.'));
+            $fail(__('validation.recaptcha.confirm_human'));
         }
     }
 }

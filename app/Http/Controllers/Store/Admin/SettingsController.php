@@ -7,6 +7,7 @@ use App\Http\Requests\Store\Admin\TestSmtpRequest;
 use App\Http\Requests\Store\Admin\UpdateStoreSettingsRequest;
 use App\Mail\EmailManager;
 use App\Models\BusinessSetting;
+use App\Support\StoreLocale;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
@@ -208,9 +209,10 @@ class SettingsController extends Controller implements HasMiddleware
     {
         Mail::to($request->validated('email'))->queue(new EmailManager([
             'view' => 'shop.emails.newsletter',
-            'subject' => 'SMTP Test',
+            'subject_key' => 'delivery.mail.smtp_subject',
+            'locale' => StoreLocale::documentLocale(),
             'from' => config('mail.from.address'),
-            'content' => 'This is a test email.',
+            'content_key' => 'delivery.mail.smtp_body',
         ]));
 
         return redirect()->route('smtp_settings.index');

@@ -1,7 +1,7 @@
 @if ($detailedProduct->added_by == 'seller' && $detailedProduct->user->shop != null)
     <div class="border mb-4" style="background: #fcfcfd;">
         <div class="position-relative p-3 p-sm-4 text-left">
-            <div class="opacity-60 fs-14 mb-3">{{ translate('Seller') }}</div>
+            <div class="opacity-60 fs-14 mb-3">{{ __('storefront.product.seller') }}</div>
             <div class="mt-1">
                 <!-- Shop Logo -->
                 @if ($detailedProduct->added_by == 'seller' && get_setting('vendor_system_activation') == 1)
@@ -52,7 +52,7 @@
                     @endif
                 </div>
                 <div class="opacity-60 fs-12">({{ $total }}
-                    {{ translate('customer reviews') }})</div>
+                    {{ __('storefront.product.customer_reviews') }})</div>
             </div>
             <!-- Social Links -->
             @if ($detailedProduct->user->shop->facebook || $detailedProduct->user->shop->google || $detailedProduct->user->shop->twitter || $detailedProduct->user->shop->youtube)
@@ -104,7 +104,7 @@
             <!-- shop link button -->
             <div class="mt-3">
                 <a href="{{ route('shop.visit', $detailedProduct->user->shop->slug) }}"
-                    class="btn btn-block btn-slide-warning fs-14 fw-700 rounded-0">{{ translate('Visit Store') }}</a>
+                    class="btn btn-block btn-slide-warning fs-14 fw-700 rounded-0">{{ __('storefront.common.visit_store') }}</a>
             </div>
         </div>
     </div>

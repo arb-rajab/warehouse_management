@@ -24,7 +24,7 @@
                 </div>
                 <!-- Flash Deals Products -->
                 <div class="col-xxl-8 col-lg-7">
-                    @if($flash_deal->status == 1 && strtotime(date('Y-m-d H:i:s')) <= $flash_deal->end_date) 
+                    @if($flash_deal->status == 1 && strtotime(date('Y-m-d H:i:s')) <= $flash_deal->end_date)
                         <div class="px-3 z-5">
                             <div class="row row-cols-xxl-4 row-cols-xl-3 row-cols-md-3 row-cols-sm-2 row-cols-2 gutters-16 border-top border-left">
                                 @foreach ($flash_deal->flash_deal_products->take(20) as $key => $flash_deal_product)
@@ -42,7 +42,7 @@
                     @else
                         <div class="text-center text-{{ $flash_deal->text_color }}">
                             <h1 class="h3 my-4">{{ $flash_deal->title }}</h1>
-                            <p class="h4">{{  translate('This offer has been expired.') }}</p>
+                            <p class="h4">{{  __('storefront.cart.this_offer_has_been_expired') }}</p>
                         </div>
                     @endif
                 </div>

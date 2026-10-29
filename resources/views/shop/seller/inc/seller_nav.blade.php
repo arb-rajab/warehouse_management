@@ -11,7 +11,7 @@
             <div class="d-flex justify-content-around align-items-center align-items-stretch">
                 <div class="aiz-topbar-item">
                     <div class="d-flex align-items-center">
-                        <a class="btn btn-icon btn-circle btn-light" href="{{ route('home')}}" target="_blank" title="{{ translate('Browse Website') }}">
+                        <a class="btn btn-icon btn-circle btn-light" href="{{ route('home')}}" target="_blank" title="{{ __('seller.common.browse_website') }}">
                             <i class="las la-globe"></i>
                         </a>
                     </div>
@@ -21,7 +21,7 @@
                 <div class="d-flex justify-content-around align-items-center align-items-stretch ml-3">
                     <div class="aiz-topbar-item">
                         <div class="d-flex align-items-center">
-                            <a class="btn btn-icon btn-circle btn-light" href="{{ route('poin-of-sales.seller_index') }}" target="_blank" title="{{ translate('POS') }}">
+                            <a class="btn btn-icon btn-circle btn-light" href="{{ route('poin-of-sales.seller_index') }}" target="_blank" title="{{ __('seller.common.pos') }}">
                                 <i class="las la-print"></i>
                             </a>
                         </div>
@@ -45,7 +45,7 @@
                     </a>
                     <div class="dropdown-menu dropdown-menu-right dropdown-menu-animated dropdown-menu-lg py-0">
                         <div class="p-3 bg-light border-bottom">
-                            <h6 class="mb-0">{{ translate('Notifications') }}</h6>
+                            <h6 class="mb-0">{{ __('storefront.navigation.notifications') }}</h6>
                         </div>
                         <div class="px-3 c-scrollbar-light overflow-auto " style="max-height:300px;">
                             <ul class="list-group list-group-flush">
@@ -56,7 +56,7 @@
                                                 @if($notification->type == 'App\Notifications\OrderNotification')
                                                     <p class="mb-1 text-truncate-2">
                                                         <a href="{{ route('seller.orders.show', encrypt($notification->data['order_id'])) }}">
-                                                            {{translate('Order code: ')}} {{$notification->data['order_code']}} {{ translate('has been '. ucfirst(str_replace('_', ' ', $notification->data['status'])))}}
+                                                            {{ __('seller.orders.notification', ['code' => $notification->data['order_code'], 'status' => \App\Support\StoreLocale::status($notification->data['status'])]) }}
                                                         </a>
                                                     </p>
                                                     <small class="text-muted">
@@ -69,7 +69,7 @@
                                 @empty
                                     <li class="list-group-item">
                                         <div class="py-4 text-center fs-16">
-                                            {{ translate('No notification found') }}
+                                            {{ __('storefront.navigation.no_notification_found') }}
                                         </div>
                                     </li>
                                 @endforelse
@@ -77,7 +77,7 @@
                         </div>
                         <div class="text-center border-top">
                             <a href="{{ route('seller.all-notification') }}" class="text-reset d-block py-2">
-                                {{translate('View All Notifications')}}
+                                {{__('storefront.navigation.view_all_notifications')}}
                             </a>
                         </div>
                     </div>
@@ -126,19 +126,19 @@
                             </span>
                             <span class="d-none d-md-block">
                                 <span class="d-block fw-500">{{Auth::user()->name}}</span>
-                                <span class="d-block small opacity-60">{{Auth::user()->user_type}}</span>
+                                <span class="d-block small opacity-60">{{ __('storefront.product.seller') }}</span>
                             </span>
                         </span>
                     </a>
                     <div class="dropdown-menu dropdown-menu-right dropdown-menu-animated dropdown-menu-md">
                         <a href="{{ route('seller.profile.index') }}" class="dropdown-item">
                             <i class="las la-user-circle"></i>
-                            <span>{{translate('Profile')}}</span>
+                            <span>{{__('seller.common.profile')}}</span>
                         </a>
 
                         <a href="{{ route('shop.logout')}}" class="dropdown-item">
                             <i class="las la-sign-out-alt"></i>
-                            <span>{{translate('Logout')}}</span>
+                            <span>{{__('storefront.navigation.logout')}}</span>
                         </a>
                     </div>
                 </div>

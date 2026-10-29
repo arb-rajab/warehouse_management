@@ -88,7 +88,7 @@ class NgeniusController extends Controller
 
         if (! $isCaptured) {
             Session::forget('payment_data');
-            flash(translate('Payment incomplete'))->error();
+            flash(__('storefront.checkout.payment_incomplete'))->error();
             return redirect()->route('home');
         }
 

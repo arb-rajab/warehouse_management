@@ -61,7 +61,7 @@ class AddressController extends Controller
         $address->fillFromForm($request->validated());
         $address->save();
 
-        flash(translate('Address info updated successfully'))->success();
+        flash(__('storefront.common.address_info_updated_successfully'))->success();
         return back();
     }
 
@@ -79,13 +79,13 @@ class AddressController extends Controller
             $address->delete();
             return back();
         }
-        flash(translate('Default address can not be deleted'))->warning();
+        flash(__('storefront.common.default_address_can_not_be_deleted'))->warning();
         return back();
     }
 
     public function getStates(Request $request) {
         $states = State::where('status', 1)->where('country_id', $request->country_id)->get();
-        $html = '<option value="">'.translate("Select State").'</option>';
+        $html = '<option value="">'.__('storefront.common.select_state').'</option>';
 
         foreach ($states as $state) {
             $html .= '<option value="' . $state->id . '">' . $state->name . '</option>';
@@ -96,7 +96,7 @@ class AddressController extends Controller
 
     public function getCities(Request $request) {
         $cities = City::where('status', 1)->where('state_id', $request->state_id)->get();
-        $html = '<option value="">'.translate("Select City").'</option>';
+        $html = '<option value="">'.__('storefront.common.select_city').'</option>';
 
         foreach ($cities as $row) {
             $html .= '<option value="' . $row->id . '">' . $row->getTranslation('name') . '</option>';

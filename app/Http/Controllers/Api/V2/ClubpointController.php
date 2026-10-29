@@ -63,13 +63,13 @@ class ClubpointController extends Controller
         if (! $converted) {
             return response()->json([
                 'success' => false,
-                'message' => translate('Something went wrong')
+                'message' => __('storefront.common.something_went_wrong')
             ]);
         }
 
         return response()->json([
             'success' => true,
-            'message' => translate('Successfully converted')
+            'message' => __('api.clubpoint.converted')
         ]);
     }
 }

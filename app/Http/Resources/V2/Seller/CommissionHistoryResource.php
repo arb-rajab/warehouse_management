@@ -16,7 +16,7 @@ class CommissionHistoryResource extends JsonResource
      */
     public function toArray($request)
     {
-        $order_code = 'Order Deleted';
+        $order_code = __('api_resources.order.deleted');
         if(isset($this->order)){
             $order_code = $this->order->code;
         }

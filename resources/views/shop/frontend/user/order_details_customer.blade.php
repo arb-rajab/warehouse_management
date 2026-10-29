@@ -5,7 +5,7 @@
     <div class="aiz-titlebar mb-4">
         <div class="row align-items-center">
             <div class="col-md-6">
-                <h1 class="fs-20 fw-700 text-dark">{{ translate('Order id') }}: {{ $order->code }}</h1>
+                <h1 class="fs-20 fw-700 text-dark">{{ __('storefront.checkout.order_id') }}: {{ $order->code }}</h1>
             </div>
         </div>
     </div>
@@ -13,7 +13,7 @@
     <!-- Order Summary -->
     <div class="card rounded-0 shadow-none border mb-4">
         <div class="card-header border-bottom-0">
-            <h5 class="fs-16 fw-700 text-dark mb-0">{{ translate('Order Summary') }}</h5>
+            <h5 class="fs-16 fw-700 text-dark mb-0">{{ __('storefront.checkout.order_summary') }}</h5>
         </div>
         <div class="card-body">
             <div class="row">
@@ -21,29 +21,29 @@
                 <div class="col-lg-6">
                     <table class="table-borderless table">
                         <tr>
-                            <td class="w-50 fw-600">{{ translate('Order Code') }}:</td>
+                            <td class="w-50 fw-600">{{ __('storefront.checkout.order_code_label') }}:</td>
                             <td>{{ $order->code }}</td>
                         </tr>
                         <tr>
-                            <td class="w-50 fw-800">{{ translate('Order By') }}:</td>
+                            <td class="w-50 fw-800">{{ __('storefront.checkout.order_by') }}:</td>
                             <td class="fw-800">{{ json_decode($order->shipping_address)->name }}</td>
                         </tr>
 
                         @if($order->user_id != null && ! $order->by_rep)
                         <tr>
-                            <td class="w-50 fw-800">{{ translate('Customer Otajer ID') }}:</td>
+                            <td class="w-50 fw-800">{{ __('storefront.common.customer_otajer_id') }}:</td>
                             <td class="fw-800"> {{ $order->user->AccSysID }}</td>
                         </tr>
                         @endif
 
                         <tr>
-                            <td class="w-50 fw-600">{{ translate('Email') }}:</td>
+                            <td class="w-50 fw-600">{{ __('storefront.auth.email') }}:</td>
                             @if ($order->user_id != null)
                                 <td>{{ $order->user->email }}</td>
                             @endif
                         </tr>
                         <tr>
-                            <td class="w-50 fw-600">{{ translate('Shipping address') }}:</td>
+                            <td class="w-50 fw-600">{{ __('storefront.checkout.shipping_address') }}:</td>
                             <td>{{ json_decode($order->shipping_address)->address }},
                                 {{ json_decode($order->shipping_address)->city }},
                                 @if(isset(json_decode($order->shipping_address)->state)) {{ json_decode($order->shipping_address)->state }} - @endif
@@ -56,53 +56,53 @@
                 <div class="col-lg-6">
                     <table class="table-borderless table">
                         <tr>
-                            <td class="w-50 fw-600">{{ translate('Order date') }}:</td>
+                            <td class="w-50 fw-600">{{ __('storefront.checkout.order_date') }}:</td>
                             <td>{{ \App\Support\StoreLocale::date($order->date, true) }}</td>
                         </tr>
                         <tr>
-                            <td class="w-50 fw-600">{{ translate('Order status') }}:</td>
-                            <td>{{ translate(ucfirst(str_replace('_', ' ', $order->delivery_status))) }}</td>
+                            <td class="w-50 fw-600">{{ __('storefront.checkout.order_status') }}:</td>
+                            <td>{{ \App\Support\StoreLocale::status($order->delivery_status) }}</td>
                         </tr>
                         @if(Auth::check() && Auth::user()->admin_verified)
                         <tr>
-                            <td class="w-50 fw-600">{{ translate('Total order amount') }}:</td>
+                            <td class="w-50 fw-600">{{ __('storefront.checkout.total_order_amount') }}:</td>
                             <td>{{ single_price($order->orderDetails->sum('price')) }}
                             </td>
                         </tr>
                         @endif
                         {{--
                         <tr>
-                            <td class="w-50 fw-600">{{ translate('Shipping method') }}:</td>
-                            <td>{{ translate('Flat shipping rate') }}</td>
+                            <td class="w-50 fw-600">{{ __('storefront.checkout.shipping_method') }}:</td>
+                            <td>{{ __('storefront.checkout.flat_shipping_rate') }}</td>
                         </tr>
 
                         <tr>
-                            <td class="w-50 fw-600">{{ translate('Payment method') }}:</td>
-                            <td>{{ translate(ucfirst(str_replace('_', ' ', $order->payment_type))) }}</td>
+                            <td class="w-50 fw-600">{{ __('storefront.checkout.payment_method') }}:</td>
+                            <td>{{ \App\Support\StoreLocale::status($order->payment_type) }}</td>
                         </tr>
                          --}}
                         <tr>
-                            <td class="text-main w-50 fw-800">{{ translate('Order Notes') }}</td>
+                            <td class="text-main w-50 fw-800">{{ __('storefront.checkout.order_notes') }}</td>
                             <td class="fw-800">{{ $order->additional_info }}</td>
                         </tr>
                         @if ($order->by_rep)
                             <tr>
-                                <td class="text-main fw-800">{{ translate('By Representative :') }}</td>
+                                <td class="text-main fw-800">{{ __('storefront.common.by_representative') }}</td>
                                 <td class="fw-800">{{ $order->user->name }}</td>
                             </tr>
                             <tr>
-                                <td class="text-main fw-800">{{ translate('For Customer :') }}</td>
+                                <td class="text-main fw-800">{{ __('storefront.common.for_customer') }}</td>
                                 <td class="fw-800">{{ $order->rep->name }}</td>
                             </tr>
 
                             <tr>
-                                <td class="text-main fw-800">{{ translate('Customer Otajer ID:') }}</td>
+                                <td class="text-main fw-800">{{ __('storefront.common.customer_otajer_id_label') }}</td>
                                 <td class="fw-800">{{ $order->rep->AccSysID }}</td>
                             </tr>
                         @endif
                         @if ($order->tracking_code)
                             <tr>
-                                <td class="w-50 fw-600">{{ translate('Tracking code') }}:</td>
+                                <td class="w-50 fw-600">{{ __('storefront.common.tracking_code') }}:</td>
                                 <td>{{ $order->tracking_code }}</td>
                             </tr>
                         @endif
@@ -117,28 +117,28 @@
         <div class="col-md-9">
             <div class="card rounded-0 shadow-none border mt-2 mb-4">
                 <div class="card-header border-bottom-0">
-                    <h5 class="fs-16 fw-700 text-dark mb-0">{{ translate('Order Details') }}</h5>
+                    <h5 class="fs-16 fw-700 text-dark mb-0">{{ __('storefront.checkout.order_details') }}</h5>
                 </div>
                 <div class="card-body table-responsive">
                     <table class="aiz-table table">
                         <thead class="text-gray fs-12">
                             <tr>
                                 <th class="pl-0">#</th>
-                                <th width="30%">{{ translate('Product') }}</th>
-                                <th data-breakpoints="md">{{ translate('Unit') }}</th>
-                                <th data-breakpoints="md">{{ translate('Variation') }}</th>
+                                <th width="30%">{{ __('storefront.product.product') }}</th>
+                                <th data-breakpoints="md">{{ __('storefront.common.unit') }}</th>
+                                <th data-breakpoints="md">{{ __('storefront.common.variation') }}</th>
 
-                                {{-- <th data-breakpoints="md">{{ translate('Delivery Type') }}</th> --}}
-                                <th>{{ translate('Item Notes') }}</th>
-                                <th>{{ translate('Quantity') }}</th>
+                                {{-- <th data-breakpoints="md">{{ __('storefront.checkout.delivery_type') }}</th> --}}
+                                <th>{{ __('storefront.common.item_notes') }}</th>
+                                <th>{{ __('storefront.product.quantity') }}</th>
                                 @if(Auth::check() && Auth::user()->admin_verified)
-                                <th>{{ translate('Price') }}</th>
+                                <th>{{ __('storefront.product.price') }}</th>
                                 @endif
                                 @if (addon_is_activated('refund_request'))
-                                    <th data-breakpoints="md">{{ translate('Refund') }}</th>
+                                    <th data-breakpoints="md">{{ __('storefront.common.refund') }}</th>
                                 @endif
                                 @if(get_setting("Product_Reviews_Section") == 1)
-                                <th data-breakpoints="md" class="text-right pr-0">{{ translate('Review') }}</th>
+                                <th data-breakpoints="md" class="text-right pr-0">{{ __('storefront.product.review') }}</th>
                                 @endif
                             </tr>
                         </thead>
@@ -162,7 +162,7 @@
                                             <a href="{{ \App\Support\StorefrontUrl::to($orderDetail->product) }}"
                                                 target="_blank">{{ $orderDetail->product->getTranslation('name') }}</a>
                                         @else
-                                            <strong>{{ translate('Product Unavailable') }}</strong>
+                                            <strong>{{ __('storefront.product.product_unavailable') }}</strong>
                                         @endif
                                     </td>
                                     <td>
@@ -186,20 +186,20 @@
 
                                     {{-- <td>
                                         @if ($order->shipping_type != null && $order->shipping_type == 'home_delivery')
-                                            {{ translate('Standard Delivery') }}
+                                            {{ __('storefront.checkout.standard_delivery') }}
                                         @elseif ($order->shipping_type == 'pickup_point')
                                             @if ($order->pickup_point != null)
-                                                {{ $order->pickup_point->name }} ({{ translate('Pickip Point') }})
+                                                {{ $order->pickup_point->name }} ({{ __('storefront.common.pickip_point') }})
                                             @else
-                                                {{ translate('Pickup Point') }}
+                                                {{ __('storefront.checkout.pickup_point') }}
                                             @endif
                                         @elseif($order->shipping_type == 'carrier')
                                             @if ($order->carrier != null)
-                                                {{ $order->carrier->name }} ({{ translate('Carrier') }})
+                                                {{ $order->carrier->name }} ({{ __('storefront.checkout.carrier') }})
                                                 <br>
-                                                {{ translate('Transit Time').' - '.$order->carrier->transit_time }}
+                                                {{ __('storefront.common.transit_time').' - '.$order->carrier->transit_time }}
                                             @else
-                                                {{ translate('Carrier') }}
+                                                {{ __('storefront.checkout.carrier') }}
                                             @endif
                                         @endif
                                     </td> --}}
@@ -225,17 +225,17 @@
                                         <td>
                                             @if ($orderDetail->product != null && $orderDetail->product->refundable != 0 && $orderDetail->refund_request == null && $today_date <= $last_refund_date && $orderDetail->payment_status == 'paid' && $orderDetail->delivery_status == 'delivered')
                                                 <a href="{{ route('refund_request_send_page', $orderDetail->id) }}"
-                                                    class="btn btn-primary btn-sm rounded-0">{{ translate('Send') }}</a>
+                                                    class="btn btn-primary btn-sm rounded-0">{{ __('storefront.common.send') }}</a>
                                             @elseif ($orderDetail->refund_request != null && $orderDetail->refund_request->refund_status == 0)
-                                                <b class="text-info">{{ translate('Pending') }}</b>
+                                                <b class="text-info">{{ __('storefront.common.pending') }}</b>
                                             @elseif ($orderDetail->refund_request != null && $orderDetail->refund_request->refund_status == 2)
-                                                <b class="text-success">{{ translate('Rejected') }}</b>
+                                                <b class="text-success">{{ __('storefront.common.rejected') }}</b>
                                             @elseif ($orderDetail->refund_request != null && $orderDetail->refund_request->refund_status == 1)
-                                                <b class="text-success">{{ translate('Approved') }}</b>
+                                                <b class="text-success">{{ __('storefront.common.approved') }}</b>
                                             @elseif ($orderDetail->product->refundable != 0)
-                                                <b>{{ translate('N/A') }}</b>
+                                                <b>{{ __('storefront.common.n_a') }}</b>
                                             @else
-                                                <b>{{ translate('Non-refundable') }}</b>
+                                                <b>{{ __('storefront.common.non_refundable') }}</b>
                                             @endif
                                         </td>
                                     @endif
@@ -244,9 +244,9 @@
                                         @if ($orderDetail->delivery_status == 'delivered')
                                             <a href="javascript:void(0);"
                                                 onclick="product_review('{{ $orderDetail->product_id }}')"
-                                                class="btn btn-primary btn-sm rounded-0"> {{ translate('Review') }} </a>
+                                                class="btn btn-primary btn-sm rounded-0"> {{ __('storefront.product.review') }} </a>
                                         @else
-                                            <span class="text-danger">{{ translate('Not Delivered Yet') }}</span>
+                                            <span class="text-danger">{{ __('storefront.common.not_delivered_yet') }}</span>
                                         @endif
                                         @endif
                                     </td>
@@ -266,37 +266,37 @@
         <div class="col-md-3">
             <div class="card rounded-0 shadow-none border mt-2">
                 <div class="card-header border-bottom-0">
-                    <b class="fs-16 fw-700 text-dark">{{ translate('Order Ammount') }}</b>
+                    <b class="fs-16 fw-700 text-dark">{{ __('storefront.checkout.order_ammount') }}</b>
                 </div>
                 <div class="card-body pb-0">
                     <table class="table-borderless table">
                         <tbody>
                             <tr>
-                                <td class="w-50 fw-600">{{ translate('Subtotal') }}</td>
+                                <td class="w-50 fw-600">{{ __('storefront.common.subtotal') }}</td>
                                 <td class="text-right">
                                     <span class="strong-600">{{ single_price($order->orderDetails->sum('price')) }}</span>
                                 </td>
                             </tr>
                             {{-- <tr>
-                                <td class="w-50 fw-600">{{ translate('Shipping') }}</td>
+                                <td class="w-50 fw-600">{{ __('storefront.checkout.shipping') }}</td>
                                 <td class="text-right">
                                     <span class="text-italic">{{ single_price($order->orderDetails->sum('shipping_cost')) }}</span>
                                 </td>
                             </tr> --}}
                             {{-- <tr>
-                                <td class="w-50 fw-600">{{ translate('Tax') }}</td>
+                                <td class="w-50 fw-600">{{ __('storefront.common.tax') }}</td>
                                 <td class="text-right">
                                     <span class="text-italic">{{ single_price($order->orderDetails->sum('tax')) }}</span>
                                 </td>
                             </tr> --}}
                             {{-- <tr>
-                                <td class="w-50 fw-600">{{ translate('Coupon') }}</td>
+                                <td class="w-50 fw-600">{{ __('storefront.cart.coupon') }}</td>
                                 <td class="text-right">
                                     <span class="text-italic">{{ single_price($order->coupon_discount) }}</span>
                                 </td>
                             </tr> --}}
                             <tr>
-                                <td class="w-50 fw-600">{{ translate('Total') }}</td>
+                                <td class="w-50 fw-600">{{ __('storefront.common.total') }}</td>
                                 <td class="text-right">
                                     <strong>{{ single_price($order->grand_total) }}</strong>
                                 </td>

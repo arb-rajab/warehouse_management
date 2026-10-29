@@ -51,7 +51,7 @@ class NewsletterController extends Controller implements HasMiddleware
     public function send(SendNewsletterRequest $request): RedirectResponse
     {
         if (blank(config('mail.mailers.smtp.username'))) {
-            throw ValidationException::withMessages(['smtp' => translate('Please configure SMTP first')]);
+            throw ValidationException::withMessages(['smtp' => __('store_admin.please_configure_smtp_first')]);
         }
 
         $recipients = array_unique([

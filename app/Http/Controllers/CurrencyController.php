@@ -14,7 +14,7 @@ class CurrencyController extends Controller
         $request->session()->put('currency_code', $currency->code);
         $request->session()->put('currency_symbol', $currency->symbol);
         $request->session()->put('currency_exchange_rate', $currency->exchange_rate);
-        flash(translate('Currency changed to ').$currency->name)->success();
+        flash(__('storefront.common.currency_changed', ['currency' => $currency->name]))->success();
 
         return response('');
     }

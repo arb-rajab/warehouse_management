@@ -8,8 +8,8 @@
 		<div class="row">
 			<div class="col-lg-6 mx-auto">
 				<img src="{{ static_asset('assets/img/403.svg') }}" class="mw-100 mx-auto mb-5" height="350">
-			    <h1 class="fw-700">{{ translate('Access Denined!') }}</h1>
-			    <p class="fs-16 opacity-60">{{ translate("You Do not Have The Right Permission To Access.") }}</p>
+			    <h1 class="fw-700">{{ __('storefront.common.access_denined') }}</h1>
+			    <p class="fs-16 opacity-60">{{ __('storefront.common.you_do_not_have_the_right_permission_to_access') }}</p>
 			</div>
 		</div>
     </div>

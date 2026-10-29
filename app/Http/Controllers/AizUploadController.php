@@ -73,7 +73,7 @@ class AizUploadController extends Controller
             $upload = $uploads->store($request->file('aiz_file'), Auth::user()->id);
 
             if ($upload === null) {
-                return response()->json(['result' => false, 'message' => translate('This file type is not allowed')], 422);
+                return response()->json(['result' => false, 'message' => __('storefront.upload.type_not_allowed')], 422);
             }
 
             return '{}';
@@ -113,7 +113,7 @@ class AizUploadController extends Controller
         $upload = Upload::findOrFail($id);
 
         if (auth()->user()->cannot('delete', $upload)) {
-            flash(translate("You don't have permission for deleting this!"))->error();
+            flash(__('storefront.upload.delete_forbidden'))->error();
             return back();
         }
         try {
@@ -126,10 +126,10 @@ class AizUploadController extends Controller
                 unlink(public_path() . '/' . $upload->file_name);
             }
             $upload->delete();
-            flash(translate('File deleted successfully'))->success();
+            flash(__('storefront.upload.deleted'))->success();
         } catch (\Exception $e) {
             $upload->delete();
-            flash(translate('File deleted successfully'))->success();
+            flash(__('storefront.upload.deleted'))->success();
         }
         return back();
     }
@@ -172,7 +172,7 @@ class AizUploadController extends Controller
             $file_path = public_path($project_attachment->file_name);
             return Response::download($file_path);
         } catch (\Exception $e) {
-            flash(translate('File does not exist!'))->error();
+            flash(__('storefront.upload.not_found'))->error();
             return back();
         }
     }

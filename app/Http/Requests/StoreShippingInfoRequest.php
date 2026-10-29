@@ -28,7 +28,7 @@ class StoreShippingInfoRequest extends FormRequest
     protected function failedValidation(Validator $validator): void
     {
         if (blank($this->input('address_id'))) {
-            flash(translate('Please add shipping address'))->warning();
+            flash(__('storefront.checkout.please_add_shipping_address'))->warning();
         }
 
         parent::failedValidation($validator);

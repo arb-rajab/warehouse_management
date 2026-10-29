@@ -53,7 +53,7 @@
                                             }])->where('product_id', $review->product_id)->where('delivery_status', 'delivered')->first();
                         @endphp
                         @if ($OrderDetail && $OrderDetail->variation)
-                            <small class="text-secondary fs-12">{{ translate('Variation :') }} {{ $OrderDetail->variation }}</small>
+                            <small class="text-secondary fs-12">{{ __('storefront.common.variation_label') }} {{ $OrderDetail->variation }}</small>
                         @endif
                     </div>
                 </li>
@@ -63,10 +63,10 @@
 
     @if (count($reviews) <= 0)
         <div class="text-center fs-18 opacity-70">
-            {{ translate('There have been no reviews for this product yet.') }}
+            {{ __('storefront.product.there_have_been_no_reviews_for_this_product_yet') }}
         </div>
     @endif
-    
+
     <!-- Pagination -->
     <div class="aiz-pagination product-reviews-pagination py-2 px-4 d-flex justify-content-end">
         {{ $reviews->links() }}

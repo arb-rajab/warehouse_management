@@ -45,7 +45,7 @@
                               <path id="Path_2916" data-name="Path 2916" d="M15.3,5.4,9.561.481A2,2,0,0,0,8.26,0H7.74a2,2,0,0,0-1.3.481L.7,5.4A2,2,0,0,0,0,6.92V14a2,2,0,0,0,2,2H14a2,2,0,0,0,2-2V6.92A2,2,0,0,0,15.3,5.4M10,15H6V9A1,1,0,0,1,7,8H9a1,1,0,0,1,1,1Zm5-1a1,1,0,0,1-1,1H11V9A2,2,0,0,0,9,7H7A2,2,0,0,0,5,9v6H2a1,1,0,0,1-1-1V6.92a1,1,0,0,1,.349-.76l5.74-4.92A1,1,0,0,1,7.74,1h.52a1,1,0,0,1,.651.24l5.74,4.92A1,1,0,0,1,15,6.92Z" transform="translate(-3495.144 602)" fill="#b5b5bf"/>
                             </g>
                         </svg>
-                        <span class="aiz-side-nav-text ml-3">{{ translate('Dashboard') }}</span>
+                        <span class="aiz-side-nav-text ml-3">{{ __('storefront.navigation.dashboard') }}</span>
                     </a>
                 </li>
 
@@ -76,9 +76,9 @@
                                 <path id="Path_2960" data-name="Path 2960" d="M13.5,28.963h5a.5.5,0,0,1,0,1h-5a.5.5,0,0,1,0-1" transform="translate(20.966 525.5)" fill="#b5b5bf"/>
                             </g>
                         </svg>
-                        <span class="aiz-side-nav-text ml-3">{{ translate('Purchase History') }}</span>
+                        <span class="aiz-side-nav-text ml-3">{{ __('storefront.navigation.purchase_history') }}</span>
                         @if ($delivery_viewed > 0 || $payment_status_viewed > 0)
-                            <span class="badge badge-inline badge-success">{{ translate('New') }}</span>
+                            <span class="badge badge-inline badge-success">{{ __('storefront.common.new') }}</span>
                         @endif
                     </a>
                 </li>
@@ -100,9 +100,9 @@
                                     <path id="Path_2960" data-name="Path 2960" d="M13.5,28.963h5a.5.5,0,0,1,0,1h-5a.5.5,0,0,1,0-1" transform="translate(20.966 525.5)" fill="#b5b5bf"/>
                                 </g>
                             </svg>
-                            <span class="aiz-side-nav-text ml-3">{{ translate('Representative Payments') }}</span>
+                            <span class="aiz-side-nav-text ml-3">{{ __('storefront.checkout.representative_payments') }}</span>
                             @if ($delivery_viewed > 0 || $payment_status_viewed > 0)
-                                <span class="badge badge-inline badge-success">{{ translate('New') }}</span>
+                                <span class="badge badge-inline badge-success">{{ __('storefront.common.new') }}</span>
                             @endif
                         </a>
                     </li>
@@ -119,7 +119,7 @@
                                 <path id="Path_2925" data-name="Path 2925" d="M332.144,20h-10a3,3,0,0,0,0,6h10a3,3,0,0,0,0-6m0,5h-10a2,2,0,0,1,0-4h10a2,2,0,0,1,0,4" transform="translate(-3495.144 592)" fill="#b5b5bf"/>
                                 </g>
                             </svg>
-                            <span class="aiz-side-nav-text ml-3">{{ translate('Add Customer') }}</span>
+                            <span class="aiz-side-nav-text ml-3">{{ __('storefront.navigation.add_customer') }}</span>
                         </a>
                     </li>
                 @endif
@@ -134,7 +134,7 @@
                                 <path id="Path_2964" data-name="Path 2964" d="M67.155,88.6a3,3,0,0,1-.474-5.963q-.009-.089-.015-.179a5.5,5.5,0,0,1,10.977-.718,3.5,3.5,0,0,1-.989,6.859h-1.5a.5.5,0,0,1,0-1l1.5,0a2.5,2.5,0,0,0,.417-4.967.5.5,0,0,1-.417-.5,4.5,4.5,0,1,0-8.908.866.512.512,0,0,1,.009.121.5.5,0,0,1-.52.479,2,2,0,1,0-.162,4l.081,0h2a.5.5,0,0,1,0,1Z" transform="translate(1324 486)" fill="#b5b5bf"/>
                             </g>
                         </svg>
-                        <span class="aiz-side-nav-text ml-3">{{ translate('Downloads') }}</span>
+                        <span class="aiz-side-nav-text ml-3">{{ __('storefront.common.downloads') }}</span>
                     </a>
                 </li> --}}
 
@@ -149,7 +149,7 @@
                                     <path id="Path_2952" data-name="Path 2952" d="M120.688,9.323v-1a.5.5,0,0,0-1,0v1a2,2,0,0,0-2,2v.5a2,2,0,0,0,2,2h1a1,1,0,0,1,1,1v.5a1,1,0,0,1-1,1h-1a1,1,0,0,1-1-1,.5.5,0,1,0-1,0,2,2,0,0,0,2,2v1a.5.5,0,0,0,1,0v-1a2,2,0,0,0,2-2v-.5a2,2,0,0,0-2-2h-1a1,1,0,0,1-1-1v-.5a1,1,0,0,1,1-1h1a1,1,0,0,1,1,1,.5.5,0,0,0,1,0,2,2,0,0,0-2-2" transform="translate(21.965 534.5)" fill="#b5b5bf"/>
                                 </g>
                             </svg>
-                            <span class="aiz-side-nav-text ml-3">{{ translate('Refund Requests') }}</span>
+                            <span class="aiz-side-nav-text ml-3">{{ __('storefront.navigation.refund_requests') }}</span>
                         </a>
                     </li>
                 @endif
@@ -168,7 +168,7 @@
                                 <path id="Path_2981" data-name="Path 2981" d="M14.682,1.318a4.5,4.5,0,0,0-6.364,0L8,1.636l-.318-.318A4.5,4.5,0,0,0,1.318,7.682l6.046,6.054a.9.9,0,0,0,1.273,0l6.045-6.054a4.5,4.5,0,0,0,0-6.364m-.707,5.657L8,12.959,2.025,6.975a3.5,3.5,0,0,1,4.95-4.95l.389.389a.9.9,0,0,0,1.273,0l.388-.389a3.5,3.5,0,0,1,4.95,4.95" transform="translate(0 0)" fill="#b5b5bf"/>
                             </g>
                         </svg>
-                        <span class="aiz-side-nav-text ml-3">{{ translate('Wishlist') }}</span>
+                        <span class="aiz-side-nav-text ml-3">{{ __('storefront.cart.wishlist') }}</span>
                     </a>
                 </li>
 
@@ -183,7 +183,7 @@
                                 <path id="Path_25678" data-name="Path 25678" d="M292.141,414.371V416.4a.5.5,0,1,1-.993,0v-3.238a.5.5,0,0,1,.5-.5h3.216a.5.5,0,0,1,0,1h-2.006a6.924,6.924,0,0,0,11.8-1,.493.493,0,0,1,.666-.221.5.5,0,0,1,.219.671,7.913,7.913,0,0,1-13.4,1.256Z" transform="translate(-291.148 -412.39)" fill="#b5b5bf"/>
                             </g>
                         </svg>
-                        <span class="aiz-side-nav-text ml-3">{{ translate('Compare') }}</span>
+                        <span class="aiz-side-nav-text ml-3">{{ __('storefront.cart.compare') }}</span>
                     </a>
                 </li>
 
@@ -196,7 +196,7 @@
                                 <path id="Path_2977" data-name="Path 2977" d="M193.408,3.756,192.05.862A1.5,1.5,0,0,0,190.692,0H180.666a1.5,1.5,0,0,0-1.357.862L177.95,3.756l.029-.062A3,3,0,0,0,179.373,7.7a3.091,3.091,0,0,0,.306.128V16h12V9.5a.5.5,0,0,0-1,0V15h-3V10.5a.5.5,0,0,0-.5-.5h-3a.5.5,0,0,0-.5.5V15h-3V8a3,3,0,0,0,2.5-1.342,3,3,0,0,0,5,0,3,3,0,0,0,5.229-2.9M184.679,11h2v4h-2Zm6.4-4.041A2,2,0,0,1,188.719,5.4a.5.5,0,0,0-.49-.4h-.1a.5.5,0,0,0-.49.4,2,2,0,0,1-3.919,0,.5.5,0,0,0-.49-.4h-.1a.5.5,0,0,0-.49.4,2,2,0,1,1-3.781-1.225l1.357-2.888A.5.5,0,0,1,180.666,1h10.025a.5.5,0,0,1,.452.288L192.5,4.175a2,2,0,0,1-1.422,2.784" transform="translate(1324 486)" fill="#b5b5bf"/>
                             </g>
                         </svg>
-                        <span class="aiz-side-nav-text ml-3">{{ translate('Followed Sellers') }}</span>
+                        <span class="aiz-side-nav-text ml-3">{{ __('storefront.product.followed_sellers') }}</span>
                     </a>
                 </li>
                 @endif
@@ -220,7 +220,7 @@
                                     <path id="Subtraction_176" data-name="Subtraction 176" d="M6,6H5V5A4,4,0,0,0,1,1H0V0H1A5.005,5.005,0,0,1,6,5V6Z" transform="translate(249 1188.963) rotate(180)" fill="#b5b5bf"/>
                                 </g>
                             </svg>
-                            <span class="aiz-side-nav-text ml-3">{{ translate('Classified Products') }}</span>
+                            <span class="aiz-side-nav-text ml-3">{{ __('storefront.product.classified_products') }}</span>
                         </a>
                     </li>
                 @endif
@@ -243,19 +243,19 @@
                                     <path id="Path_3027" data-name="Path 3027" d="M4.439,19.007a.5.5,0,0,0-.707,0l-.707.706a.5.5,0,0,0,.707.706l.707-.706a.5.5,0,0,0,0-.706" transform="translate(9.975 -9.431)" fill="#b5b5bf"/>
                                 </g>
                             </svg>
-                            <span class="aiz-side-nav-text ml-3">{{ translate('Auction') }}</span>
+                            <span class="aiz-side-nav-text ml-3">{{ __('storefront.navigation.auction') }}</span>
                             <span class="aiz-side-nav-arrow"></span>
                         </a>
                         <ul class="aiz-side-nav-list level-2">
                             <li class="aiz-side-nav-item">
                                 <a href="{{ route('auction_product_bids.index') }}" class="aiz-side-nav-link">
-                                    <span class="aiz-side-nav-text">{{ translate('Bidded Products') }}</span>
+                                    <span class="aiz-side-nav-text">{{ __('storefront.product.bidded_products') }}</span>
                                 </a>
                             </li>
                             <li class="aiz-side-nav-item">
                                 <a href="{{ route('auction_product.purchase_history') }}"
                                     class="aiz-side-nav-link">
-                                    <span class="aiz-side-nav-text">{{ translate('Purchase History') }}</span>
+                                    <span class="aiz-side-nav-text">{{ __('storefront.navigation.purchase_history') }}</span>
                                 </a>
                             </li>
                         </ul>
@@ -280,7 +280,7 @@
                                     <path id="Path_3015" data-name="Path 3015" d="M131.349,99.312h5a.5.5,0,1,1,0,1h-5a.5.5,0,1,1,0-1" transform="translate(-1181 -346.5)" fill="#b5b5bf"/>
                                 </g>
                             </svg>
-                            <span class="aiz-side-nav-text ml-3">{{ translate('Conversations') }}</span>
+                            <span class="aiz-side-nav-text ml-3">{{ __('storefront.support.conversations') }}</span>
                             @if (count($conversation) > 0)
                                 <span class="badge badge-success">({{ count($conversation) }})</span>
                             @endif
@@ -303,7 +303,7 @@
                                     <path id="Path_2936" data-name="Path 2936" d="M13.5,4H13V2.5A2.5,2.5,0,0,0,10.5,0h-8A2.5,2.5,0,0,0,0,2.5v11A2.5,2.5,0,0,0,2.5,16h11A2.5,2.5,0,0,0,16,13.5v-7A2.5,2.5,0,0,0,13.5,4M2.5,1h8A1.5,1.5,0,0,1,12,2.5V4H2.5a1.5,1.5,0,0,1,0-3M15,11H10a1,1,0,0,1,0-2h5Zm0-3H10a2,2,0,0,0,0,4h5v1.5A1.5,1.5,0,0,1,13.5,15H2.5A1.5,1.5,0,0,1,1,13.5v-9A2.5,2.5,0,0,0,2.5,5h11A1.5,1.5,0,0,1,15,6.5Z" fill="#b5b5bf"/>
                                 </g>
                             </svg>
-                            <span class="aiz-side-nav-text ml-3">{{ translate('My Wallet') }}</span>
+                            <span class="aiz-side-nav-text ml-3">{{ __('storefront.checkout.my_wallet') }}</span>
                         </a>
                     </li>
                 @endif
@@ -319,7 +319,7 @@
                                     <path id="Union_11" data-name="Union 11" d="M16425.393,420.226l-3.777-5.039a.42.42,0,0,1-.012-.482l1.662-2.515a.416.416,0,0,1,.313-.186l0,0h4.26a.41.41,0,0,1,.346.19l1.674,2.515a.414.414,0,0,1-.012.482l-3.777,5.039a.413.413,0,0,1-.338.169A.419.419,0,0,1,16425.393,420.226Zm-2.775-5.245,3.113,4.148,3.109-4.148-1.32-1.983h-3.592Z" transform="translate(-16177.195 129)" fill="#b5b5bf"/>
                                 </g>
                             </svg>
-                            <span class="aiz-side-nav-text ml-3">{{ translate('Earning Points') }}</span>
+                            <span class="aiz-side-nav-text ml-3">{{ __('storefront.navigation.earning_points') }}</span>
                         </a>
                     </li>
                 @endif
@@ -338,26 +338,26 @@
                                     <rect id="Rectangle_18625" data-name="Rectangle 18625" width="0.992" height="7.939" rx="0.496" transform="translate(309.93 942.417) rotate(45)" fill="#b5b5bf"/>
                                 </g>
                             </svg>
-                            <span class="aiz-side-nav-text ml-3">{{ translate('Affiliate') }}</span>
+                            <span class="aiz-side-nav-text ml-3">{{ __('storefront.navigation.affiliate') }}</span>
                             <span class="aiz-side-nav-arrow"></span>
                         </a>
                         <ul class="aiz-side-nav-list level-2">
                             <li class="aiz-side-nav-item">
                                 <a href="{{ route('affiliate.user.index') }}" class="aiz-side-nav-link {{ areActiveRoutes(['affiliate.user.index','affiliate.payment_settings']) }}">
-                                    <span class="aiz-side-nav-text">{{ translate('Affiliate System') }}</span>
+                                    <span class="aiz-side-nav-text">{{ __('storefront.navigation.affiliate_system') }}</span>
                                 </a>
                             </li>
                             <li class="aiz-side-nav-item">
                                 <a href="{{ route('affiliate.user.payment_history') }}"
                                     class="aiz-side-nav-link">
-                                    <span class="aiz-side-nav-text">{{ translate('Payment History') }}</span>
+                                    <span class="aiz-side-nav-text">{{ __('storefront.checkout.payment_history') }}</span>
                                 </a>
                             </li>
                             <li class="aiz-side-nav-item">
                                 <a href="{{ route('affiliate.user.withdraw_request_history') }}"
                                     class="aiz-side-nav-link">
                                     <span
-                                        class="aiz-side-nav-text">{{ translate('Withdraw request history') }}</span>
+                                        class="aiz-side-nav-text">{{ __('storefront.navigation.withdraw_request_history') }}</span>
                                 </a>
                             </li>
 
@@ -383,7 +383,7 @@
                                 <path id="Union_12" data-name="Union 12" d="M16414,895a1,1,0,1,1,1,1A1,1,0,0,1,16414,895Zm.5-2.5V891h.5a2,2,0,1,0-2-2h-1a3,3,0,1,1,3.5,2.958v.54a.5.5,0,1,1-1,0Zm-2.5-3.5h1a.5.5,0,1,1-1,0Z" transform="translate(-16090.998 183.001)" fill="#b5b5bf"/>
                             </g>
                         </svg>
-                        <span class="aiz-side-nav-text ml-3">{{ translate('Support Ticket') }}</span>
+                        <span class="aiz-side-nav-text ml-3">{{ __('storefront.support.support_ticket') }}</span>
                         @if ($support_ticket > 0)
                             <span class="badge badge-inline badge-success">{{ $support_ticket }}</span>
                         @endif
@@ -400,7 +400,7 @@
                               <path id="Path_2925" data-name="Path 2925" d="M332.144,20h-10a3,3,0,0,0,0,6h10a3,3,0,0,0,0-6m0,5h-10a2,2,0,0,1,0-4h10a2,2,0,0,1,0,4" transform="translate(-3495.144 592)" fill="#b5b5bf"/>
                             </g>
                         </svg>
-                        <span class="aiz-side-nav-text ml-3">{{ translate('Manage Profile') }}</span>
+                        <span class="aiz-side-nav-text ml-3">{{ __('storefront.upload.manage_profile') }}</span>
                     </a>
                 </li>
 
@@ -414,7 +414,7 @@
                               <path id="Path_2925" data-name="Path 2925" d="M332.144,20h-10a3,3,0,0,0,0,6h10a3,3,0,0,0,0-6m0,5h-10a2,2,0,0,1,0-4h10a2,2,0,0,1,0,4" transform="translate(-3495.144 592)" fill="#b5b5bf"/>
                             </g>
                         </svg>
-                        <span class="aiz-side-nav-text ml-3">{{ translate('Create QR') }}</span>
+                        <span class="aiz-side-nav-text ml-3">{{ __('storefront.navigation.create_qr') }}</span>
                     </a>
                 </li>
 
@@ -427,7 +427,7 @@
                               <path id="Path_2925" data-name="Path 2925" d="M332.144,20h-10a3,3,0,0,0,0,6h10a3,3,0,0,0,0-6m0,5h-10a2,2,0,0,1,0-4h10a2,2,0,0,1,0,4" transform="translate(-3495.144 592)" fill="#b5b5bf"/>
                             </g>
                         </svg>
-                        <span class="aiz-side-nav-text ml-3">{{ translate('My Connections') }}</span>
+                        <span class="aiz-side-nav-text ml-3">{{ __('storefront.navigation.my_connections') }}</span>
                     </a>
                 </li>
                 @endif
@@ -442,14 +442,14 @@
                             <rect id="Rectangle_18942" data-name="Rectangle 18942" width="8" height="1" rx="0.5" transform="translate(244.535 544.5)" fill="#b5b5bf"/>
                             </g>
                         </svg>
-                        <span class="aiz-side-nav-text ml-3">{{ translate('Delete My Account') }}</span>
+                        <span class="aiz-side-nav-text ml-3">{{ __('storefront.auth.delete_my_account') }}</span>
                     </a>
                 </li>
 
             </ul>
 
             <!-- logout -->
-            <a href="{{ route('shop.logout') }}" class="btn btn-primary btn-block fs-14 fw-700 mb-5 mb-md-0" style="border-radius: 25px;">{{ translate('Sign Out') }}</a>
+            <a href="{{ route('shop.logout') }}" class="btn btn-primary btn-block fs-14 fw-700 mb-5 mb-md-0" style="border-radius: 25px;">{{ __('storefront.navigation.sign_out') }}</a>
         </div>
 
     </div>

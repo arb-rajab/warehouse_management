@@ -57,9 +57,9 @@ class SellerProfileRequest extends FormRequest
     public function messages()
     {
         return [
-            'name.required'         => translate('Name is required'),
-            'new_password.min'      => translate('Minimum 6 characters'),
-            'confirm_password.min'  => translate('Minimum 6 characters'),
+            'name.required'         => __('seller.profile.name_is_required'),
+            'new_password.min'      => __('seller.profile.minimum_6_characters'),
+            'confirm_password.min'  => __('seller.profile.minimum_6_characters'),
         ];
     }
 }

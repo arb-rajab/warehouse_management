@@ -25,7 +25,7 @@ class SellerPackageController extends Controller
             return SellerPackageResource::collection($seller_packages);
         }
 
-        return $this->failed(translate('Package is not available'));
+        return $this->failed(__('api.package.unavailable'));
     }
 
     public function purchase_free_package(Request $request)
@@ -37,15 +37,15 @@ class SellerPackageController extends Controller
 
         if ($seller_package->amount == 0) {
             seller_purchase_payment_done(auth()->user()->id, $seller_package->id, 0, 'Free Package', null);
-            return $this->success(translate('Package purchasing successful'));
+            return $this->success(__('storefront.common.package_purchasing_successful'));
         } elseif (
             auth()->user()->shop->seller_package != null &&
             $seller_package->product_upload_limit < auth()->user()->shop->seller_package->product_upload_limit
         ) {
-            return $this->failed(translate('You have more uploaded products than this package limit. You need to remove excessive products to downgrade.'));
+            return $this->failed(__('api.package.product_limit'));
         }
 
-        return $this->failed(translate('Package is not available'));
+        return $this->failed(__('api.package.unavailable'));
     }
 
     public function purchase_package_offline(Request $request, PaymentOptions $paymentOptions)
@@ -57,7 +57,7 @@ class SellerPackageController extends Controller
         ]);
 
         if (! $paymentOptions->isAllowed($validated['payment_option'])) {
-            return $this->failed(translate('Something went wrong'));
+            return $this->failed(__('storefront.common.something_went_wrong'));
         }
 
         $seller_package = SellerPackage::findOrFail($validated['package_id']);
@@ -68,14 +68,14 @@ class SellerPackageController extends Controller
             $shop = Shop::query()->where('user_id', auth()->user()->id)->lockForUpdate()->first();
 
             if ($shop === null) {
-                return $this->failed(translate('Something went wrong'));
+                return $this->failed(__('storefront.common.something_went_wrong'));
             }
 
             if (
                 $shop->seller_package != null &&
                 $seller_package->product_upload_limit < $shop->seller_package->product_upload_limit
             ) {
-                return $this->failed(translate('You have more uploaded products than this package limit. You need to remove excessive products to downgrade.'));
+                return $this->failed(__('api.package.product_limit'));
             }
 
             $alreadyPending = SellerPackagePayment::query()
@@ -86,7 +86,7 @@ class SellerPackageController extends Controller
                 ->exists();
 
             if ($alreadyPending) {
-                return $this->failed(translate('You have already submitted a payment for this package. Please wait for response.'));
+                return $this->failed(__('api.package.payment_pending'));
             }
 
             $payment = new SellerPackagePayment;
@@ -100,7 +100,7 @@ class SellerPackageController extends Controller
 
             $payment->save();
 
-            return $this->success(translate('Offline payment has been done. Please wait for response.'));
+            return $this->success(__('api.package.offline_submitted'));
         });
     }
 }

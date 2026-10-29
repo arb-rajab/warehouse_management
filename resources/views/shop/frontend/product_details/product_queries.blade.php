@@ -2,15 +2,15 @@
     <div class="bg-white border mt-4 mb-4" id="product_query">
         <div class="p-3 p-sm-4">
             <h3 class="fs-16 fw-700 mb-0">
-                <span>{{ translate(' Product Queries ') }} ({{ $total_query }})</span>
+                <span>{{ __('storefront.product.product_queries') }} ({{ $total_query }})</span>
             </h3>
         </div>
 
         <!-- Login & Register -->
         @guest
             <p class="fs-14 fw-400 mb-0 px-3 px-sm-4 mt-3"><a
-                    href="{{ route('user.login') }}">{{ translate('Login') }}</a> or <a class="mr-1"
-                    href="{{ route('user.registration') }}">{{ translate('Register ') }}</a>{{ translate(' to submit your questions to seller') }}
+                    href="{{ route('user.login') }}">{{ __('storefront.auth.login') }}</a> or <a class="mr-1"
+                    href="{{ route('user.registration') }}">{{ __('storefront.auth.register') }}</a>{{ __('storefront.product.to_submit_your_questions_to_seller') }}
             </p>
         @endguest
 
@@ -31,10 +31,10 @@
                     <input type="hidden" name="product" value="{{ $detailedProduct->id }}">
                     <div class="form-group">
                         <textarea class="form-control rounded-0" rows="3" cols="40" name="question"
-                            placeholder="{{ translate('Write your question here...') }}" style="resize: none;"></textarea>
-                        
+                            placeholder="{{ __('storefront.support.write_your_question_here') }}" style="resize: none;"></textarea>
+
                     </div>
-                    <button type="submit" class="btn btn-sm w-150px btn-primary rounded-0">{{ translate('Submit') }}</button>
+                    <button type="submit" class="btn btn-sm w-150px btn-primary rounded-0">{{ __('storefront.common.submit') }}</button>
                 </form>
             </div>
 
@@ -43,12 +43,12 @@
                 $own_product_queries = Auth::user()->product_queries->where('product_id',$detailedProduct->id);
             @endphp
             @if ($own_product_queries->count() > 0)
-            
+
                 <div class="question-area my-4 mb-0 px-3 px-sm-4">
 
                     <div class="py-3">
                         <h3 class="fs-16 fw-700 mb-0">
-                            <span class="mr-4">{{ translate('My Questions') }}</span>
+                            <span class="mr-4">{{ __('storefront.support.my_questions') }}</span>
                         </h3>
                     </div>
                     @foreach ($own_product_queries as $product_query)
@@ -86,7 +86,7 @@
 
                                 <div class="ml-3">
                                     <div class="fs-14">
-                                        {{ strip_tags($product_query->reply ? $product_query->reply : translate('Seller did not respond yet')) }}
+                                        {{ strip_tags($product_query->reply ? $product_query->reply : __('storefront.product.seller_did_not_respond_yet')) }}
                                     </div>
                                     <span class=" text-secondary">
                                         {{ $product_query->product->user->name }} </span>
@@ -95,10 +95,10 @@
                         </div>
                     @endforeach
                 </div>
-            
+
             @endif
         @endauth
-                
+
         <!-- Others Queries -->
         <div class="queries-area my-4 mb-0 px-3 px-sm-4">
             @include('shop.frontend.partials.product_query_pagination')

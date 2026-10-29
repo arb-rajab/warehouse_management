@@ -52,12 +52,12 @@ class CustomerProductController extends Controller
         if($product)
         return response()->json([
             'result' => true,
-            'message' => translate('Product delete successfully')
+            'message' => __('storefront.product.product_has_been_deleted_successfully')
         ]);
         else
         return response()->json([
             'result' => false,
-            'message' => translate('Product delete failed')
+            'message' => __('api.product.delete_failed')
         ]);
     }
 
@@ -69,7 +69,7 @@ class CustomerProductController extends Controller
         $product->save();
         return response()->json([
             'result' => true,
-            'message' => translate('Product has updated successfully')
+            'message' => __('seller.products.product_has_been_updated_successfully')
         ]);
     }
 

@@ -123,13 +123,13 @@ class VerificationController extends Controller implements HasMiddleware
             $user->save();
             auth()->login($user);
             $request->session()->regenerate();
-            flash(translate('Your email has been verified successfully'))->success();
+            flash(__('storefront.auth.your_email_has_been_verified_successfully'))->success();
 
             if ($user->user_type == 'seller') {
                 return redirect()->route('seller.dashboard');
             }
         } else {
-            flash(translate('Sorry, we could not verifiy you. Please try again'))->error();
+            flash(__('storefront.common.sorry_we_could_not_verifiy_you_please_try_again'))->error();
         }
 
         return redirect()->route('dashboard');

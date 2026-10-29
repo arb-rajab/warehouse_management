@@ -10,33 +10,33 @@
                         <div class="col active">
                             <div class="text-center border border-bottom-6px p-2 text-primary">
                                 <i class="la-3x mb-2 las la-shopping-cart cart-animate" style="margin-left: -100px; transition: 2s;"></i>
-                                <h3 class="fs-14 fw-600 d-none d-lg-block">{{ translate('1. My Cart') }}</h3>
+                                <h3 class="fs-14 fw-600 d-none d-lg-block">{{ __('storefront.cart.1_my_cart') }}</h3>
                             </div>
                         </div>
                         <div class="col">
                             <div class="text-center border border-bottom-6px p-2">
                                 <i class="la-3x mb-2 opacity-50 las la-map"></i>
-                                <h3 class="fs-14 fw-600 d-none d-lg-block opacity-50">{{ translate('2. Shipping info') }}
+                                <h3 class="fs-14 fw-600 d-none d-lg-block opacity-50">{{ __('storefront.checkout.2_shipping_info') }}
                                 </h3>
                             </div>
                         </div>
                         <div class="col">
                             <div class="text-center border border-bottom-6px p-2">
                                 <i class="la-3x mb-2 opacity-50 las la-truck"></i>
-                                <h3 class="fs-14 fw-600 d-none d-lg-block opacity-50">{{ translate('3. Delivery info') }}
+                                <h3 class="fs-14 fw-600 d-none d-lg-block opacity-50">{{ __('storefront.checkout.3_delivery_info') }}
                                 </h3>
                             </div>
                         </div>
                         <div class="col">
                             <div class="text-center border border-bottom-6px p-2">
                                 <i class="la-3x mb-2 opacity-50 las la-credit-card"></i>
-                                <h3 class="fs-14 fw-600 d-none d-lg-block opacity-50">{{ translate('4. Payment') }}</h3>
+                                <h3 class="fs-14 fw-600 d-none d-lg-block opacity-50">{{ __('storefront.checkout.4_payment') }}</h3>
                             </div>
                         </div>
                         <div class="col">
                             <div class="text-center border border-bottom-6px p-2">
                                 <i class="la-3x mb-2 opacity-50 las la-check-circle"></i>
-                                <h3 class="fs-14 fw-600 d-none d-lg-block opacity-50">{{ translate('5. Confirmation') }}
+                                <h3 class="fs-14 fw-600 d-none d-lg-block opacity-50">{{ __('storefront.common.5_confirmation') }}
                                 </h3>
                             </div>
                         </div>

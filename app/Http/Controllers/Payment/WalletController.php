@@ -33,7 +33,7 @@ class WalletController extends Controller
                 }
                 DB::rollBack();
 
-                flash(translate('Insufficient wallet balance'))->warning();
+                flash(__('storefront.checkout.insufficient_wallet_balance'))->warning();
                 return redirect()->route('checkout.payment_info');
             }
             elseif (Session::get('payment_type') == 'customer_package_payment') {

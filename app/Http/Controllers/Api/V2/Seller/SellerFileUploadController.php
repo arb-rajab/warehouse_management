@@ -65,22 +65,22 @@ class SellerFileUploadController extends Controller
                     env('DEMO_MODE') == 'On' &&
                     (MultipartUploadService::KINDS[$extension] ?? null) == 'archive'
                 ) {
-                    return $this->failed(translate('File has been inserted successfully'));
+                    return $this->failed(__('api.upload.inserted'));
                 }
 
                 $upload = $uploads->store($request->file('aiz_file'), Auth::user()->id);
 
                 if ($upload === null) {
-                    return response()->json(['result' => false, 'message' => translate('This file type is not allowed')], 422);
+                    return response()->json(['result' => false, 'message' => __('storefront.upload.type_not_allowed')], 422);
                 }
 
-                return $this->success(translate('File has been inserted successfully'));
+                return $this->success(__('api.upload.inserted'));
             } else {
-                return $this->failed(translate("Upload file is missing"));
+                return $this->failed(__('api.upload.missing'));
             }
         }
 
-        return $this->failed(translate("You can't upload the file"));
+        return $this->failed(__('api.upload.forbidden'));
     }
 
     public function destroy($id)
@@ -88,7 +88,7 @@ class SellerFileUploadController extends Controller
         $upload = Upload::findOrFail($id);
 
         if (Gate::denies('delete', $upload)) {
-            return $this->failed(translate("You don't have permission for deleting this!"));
+            return $this->failed(__('storefront.upload.delete_forbidden'));
         }
         try {
             if (config('filesystems.default') == 's3') {
@@ -100,12 +100,12 @@ class SellerFileUploadController extends Controller
                 unlink(public_path() . '/' . $upload->file_name);
             }
             $upload->delete();
-           return $this->success(translate('File deleted successfully'));
+           return $this->success(__('storefront.upload.deleted'));
         } catch (\Exception $e) {
             $upload->delete();
-            return $this->failed(translate('File deleted Failed'));
+            return $this->failed(__('api.upload.delete_failed'));
         }
-        return $this->success(translate('File deleted successfully'));
+        return $this->success(__('storefront.upload.deleted'));
     }
 
     public function bulk_uploaded_files_delete(Request $request)
@@ -145,7 +145,7 @@ class SellerFileUploadController extends Controller
             $file_path = public_path($project_attachment->file_name);
             return Response::download($file_path);
         } catch (\Exception $e) {
-            flash(translate('File does not exist!'))->error();
+            flash(__('storefront.upload.not_found'))->error();
             return back();
         }
     }

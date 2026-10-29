@@ -38,7 +38,7 @@ class ConversationController extends Controller
                 ->get();
             return  ConversationResource::collection($conversations);
         } else {
-            return $this->failed(translate('Conversation is disabled at this moment'));
+            return $this->failed(__('storefront.support.conversation_is_disabled_at_this_moment'));
         }
     }
 
@@ -54,9 +54,9 @@ class ConversationController extends Controller
         $message->message = $requrest->message;
         $message->save();
 
-        return $this->success(translate('Message send successfully'));
+        return $this->success(__('api.support.message_sent'));
         }else{
-            return $this->failed(translate('You can not send this message.'));
+            return $this->failed(__('api.support.send_forbidden'));
         }
     }
 
@@ -88,7 +88,7 @@ class ConversationController extends Controller
             return new MessageCollection($messages);
         } else {
 
-            return $this->failed(translate('You can not see this message.'));
+            return $this->failed(__('api.support.view_forbidden'));
 
         }
 
@@ -108,7 +108,7 @@ class ConversationController extends Controller
             $message->delete();
         }
         if (Conversation::destroy(decrypt($id))) {
-            flash(translate('Conversation has been deleted successfully'))->success();
+            flash(__('storefront.support.conversation_has_been_deleted_successfully'))->success();
             return back();
         }
     }

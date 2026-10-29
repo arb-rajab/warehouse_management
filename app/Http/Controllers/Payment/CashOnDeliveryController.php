@@ -7,9 +7,9 @@ use App\Http\Controllers\Controller;
 class CashOnDeliveryController extends Controller
 {
     public function pay($request = null){
-        flash(translate("Your order has been placed successfully"))->success();
+        flash(__('storefront.checkout.your_order_has_been_placed_successfully'))->success();
         if($request?->session()->get('delete_product')){
-            flash(translate('Some products have been deleted from your cart. For more details check the order notes.'))->warning();
+            flash(__('storefront.cart.some_products_have_been_deleted_from_your_cart_for_more_details_check_the_order_notes'))->warning();
 
             // Delete the session item
             $request->session()->forget('delete_product');

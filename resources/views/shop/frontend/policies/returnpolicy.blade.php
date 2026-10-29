@@ -19,10 +19,10 @@
             <div class="col-lg-6">
                 <ul class="breadcrumb bg-transparent p-0 justify-content-center justify-content-lg-end">
                     <li class="breadcrumb-item opacity-50">
-                        <a class="text-reset" href="{{ route('home') }}">{{ translate('Home')}}</a>
+                        <a class="text-reset" href="{{ route('home') }}">{{ __('storefront.navigation.home')}}</a>
                     </li>
                     <li class="text-dark fw-600 breadcrumb-item">
-                        <a class="text-reset" href="{{ route('returnpolicy') }}">"{{ translate('Return Policy') }}"</a>
+                        <a class="text-reset" href="{{ route('returnpolicy') }}">"{{ __('storefront.navigation.return_policy') }}"</a>
                     </li>
                 </ul>
             </div>

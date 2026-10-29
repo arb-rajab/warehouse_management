@@ -4,7 +4,7 @@
     <div class="aiz-titlebar mb-4">
         <div class="row align-items-center">
             <div class="col-md-6">
-                <b class="fs-20 fw-700 text-dark">{{ translate('Wishlist')}}</b>
+                <b class="fs-20 fw-700 text-dark">{{ __('storefront.cart.wishlist')}}</b>
             </div>
         </div>
     </div>
@@ -22,14 +22,14 @@
                             </a>
                             <!-- Remove from wishlisht -->
                             <div class="absolute-top-right aiz-p-hov-icon">
-                                <a href="javascript:void(0)" onclick="removeFromWishlist({{ $wishlist->id }})" data-toggle="tooltip" data-title="{{ translate('Remove from wishlist') }}" data-placement="left">
+                                <a href="javascript:void(0)" onclick="removeFromWishlist({{ $wishlist->id }})" data-toggle="tooltip" data-title="{{ __('storefront.cart.remove_from_wishlist') }}" data-placement="left">
                                     <i class="la la-trash"></i>
                                 </a>
                             </div>
                             <!-- add to cart -->
 
                             <a class="cart-btn absolute-bottom-left w-100 h-35px aiz-p-hov-icon text-white fs-13 fw-700 d-flex justify-content-center align-items-center"
-                                href="javascript:void(0)" onclick="showAddToCartModal({{ $wishlist->product->id }})">{{ translate('Add to Cart') }}
+                                href="javascript:void(0)" onclick="showAddToCartModal({{ $wishlist->product->id }})">{{ __('storefront.cart.add_to_cart') }}
                             </a>
 
                         </div>
@@ -56,7 +56,7 @@
             <div class="col">
                 <div class="text-center bg-white p-4 border">
                     <img class="mw-100 h-200px" src="{{ static_asset('assets/img/nothing.svg') }}" alt="Image">
-                    <h5 class="mb-0 h5 mt-3">{{ translate("There isn't anything added yet")}}</h5>
+                    <h5 class="mb-0 h5 mt-3">{{ __('storefront.common.there_isn_t_anything_added_yet')}}</h5>
                 </div>
             </div>
         </div>
@@ -75,7 +75,7 @@
                 <div class="c-preloader">
                     <i class="fa fa-spin fa-spinner"></i>
                 </div>
-                <button type="button" class="close absolute-close-btn" data-dismiss="modal" aria-label="Close">
+                <button type="button" class="close absolute-close-btn" data-dismiss="modal" aria-label="{{ __('storefront.common.close') }}">
                     <span aria-hidden="true">&times;</span>
                 </button>
                 <div id="addToCart-modal-body">
@@ -93,7 +93,7 @@
             $.post('{{ route('wishlists.remove') }}',{_token:'{{ csrf_token() }}', id:id}, function(data){
                 $('#wishlist').html(data);
                 $('#wishlist_'+id).hide();
-                AIZ.plugins.notify('success', '{{ translate("Item has been renoved from wishlist") }}');
+                AIZ.plugins.notify('success', {{ \Illuminate\Support\Js::from(__('storefront.cart.item_has_been_renoved_from_wishlist')) }});
             })
         }
     </script>

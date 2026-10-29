@@ -17,7 +17,7 @@ class UnorderedCartNotification extends Notification
     protected $message;
 
 
-    public function __construct($userName, $userId, $cartCount, $message)
+    public function __construct($userName, $userId, $cartCount, $message = null)
     {
         $this->userName = $userName;
         $this->userId = $userId;
@@ -36,7 +36,7 @@ class UnorderedCartNotification extends Notification
             'user_name' => $this->userName,
             'user_id' => $this->userId,
             'cart_count' => $this->cartCount,
-            'message' => $this->message,
+            'message' => $this->message ?? trans_choice('delivery.notifications.unordered_cart', $this->cartCount, ['count' => $this->cartCount], \App\Support\StoreLocale::deliveryLocale($notifiable, $this->locale)),
         ];
     }
 }

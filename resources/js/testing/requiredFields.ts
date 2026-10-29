@@ -4,6 +4,8 @@ import RequiredMark from '@/components/RequiredMark.vue';
 
 /** Assert the complete set of native requirements and labelled marks on a full mount. */
 export function expectRequiredFields(wrapper: VueWrapper, ids: string[]): void {
+    const marks = wrapper.findAllComponents(RequiredMark);
+
     expect([
         ...new Set(
             wrapper
@@ -20,7 +22,9 @@ export function expectRequiredFields(wrapper: VueWrapper, ids: string[]): void {
     expect(
         wrapper
             .findAll('label, legend')
-            .filter((label) => label.findComponent(RequiredMark).exists())
+            .filter((label) =>
+                marks.some((mark) => label.element.contains(mark.element)),
+            )
             .map(
                 (label) =>
                     label.attributes('for') ??

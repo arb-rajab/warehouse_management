@@ -30,7 +30,7 @@ class ImportProductsRequest extends FormRequest
                 $readable = false;
             }
             if (! $readable) {
-                $fail(__('validation.mimes', ['attribute' => str_replace('_', ' ', $attribute), 'values' => 'xlsx, xls, csv, txt']));
+                $fail(__('validation.mimes', ['attribute' => __('validation.attributes.bulk_file'), 'values' => 'xlsx, xls, csv, txt']));
             }
         }];
 

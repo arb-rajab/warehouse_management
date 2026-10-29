@@ -23,7 +23,7 @@ class UserController extends Controller
             'name' => $request->name
         ]);
         return response()->json([
-            'message' => translate('Profile information has been updated successfully')
+            'message' => __('api.account.profile_updated')
         ]);
     }
 

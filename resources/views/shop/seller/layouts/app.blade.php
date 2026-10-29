@@ -1,9 +1,5 @@
 <!doctype html>
-@if(\App\Models\Language::where('code', Session::get('locale', Config::get('app.locale')))->first()?->rtl == 1)
-<html dir="rtl" lang="{{ str_replace('_', '-', app()->getLocale()) }}">
-@else
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
-@endif
+<html lang="{{ str_replace('_', '-', \App\Support\StoreLocale::uiLocale()) }}" dir="{{ \App\Support\StoreLocale::isRtl() ? 'rtl' : 'ltr' }}">
 <head>
 	<meta name="csrf-token" content="{{ csrf_token() }}">
 	<meta name="app-url" content="{{ url('/temp') }}">
@@ -23,7 +19,7 @@
 
 	<!-- aiz core css -->
 	<link rel="stylesheet" href="{{ static_asset('assets/css/vendors.css') }}">
-    @if(\App\Models\Language::where('code', Session::get('locale', Config::get('app.locale')))->first()?->rtl == 1)
+    @if(\App\Support\StoreLocale::isRtl())
     <link rel="stylesheet" href="{{ static_asset('assets/css/bootstrap-rtl.min.css') }}">
     @endif
 	<link rel="stylesheet" href="{{ static_asset('assets/css/aiz-seller.css') }}">
@@ -48,26 +44,29 @@
 	<script>
     	var AIZ = AIZ || {};
         AIZ.local = {
-            nothing_selected: '{!! translate('Nothing selected', null, true) !!}',
-            nothing_found: '{!! translate('Nothing found', null, true) !!}',
-            choose_file: '{{ translate('Choose file') }}',
-            file_selected: '{{ translate('File selected') }}',
-            files_selected: '{{ translate('Files selected') }}',
-            add_more_files: '{{ translate('Add more files') }}',
-            adding_more_files: '{{ translate('Adding more files') }}',
-            drop_files_here_paste_or: '{{ translate('Drop files here, paste or') }}',
-            browse: '{{ translate('Browse') }}',
-            upload_complete: '{{ translate('Upload complete') }}',
-            upload_paused: '{{ translate('Upload paused') }}',
-            resume_upload: '{{ translate('Resume upload') }}',
-            pause_upload: '{{ translate('Pause upload') }}',
-            retry_upload: '{{ translate('Retry upload') }}',
-            cancel_upload: '{{ translate('Cancel upload') }}',
-            uploading: '{{ translate('Uploading') }}',
-            processing: '{{ translate('Processing') }}',
-            complete: '{{ translate('Complete') }}',
-            file: '{{ translate('File') }}',
-            files: '{{ translate('Files') }}',
+            minimum_quantity: {{ \Illuminate\Support\Js::from(__('storefront.cart.minimum_limit')) }},
+            maximum_quantity: {{ \Illuminate\Support\Js::from(__('storefront.cart.maximum_limit')) }},
+            nothing_selected: {{ \Illuminate\Support\Js::from(__('storefront.common.nothing_selected')) }},
+            nothing_found: {{ \Illuminate\Support\Js::from(__('storefront.common.nothing_found')) }},
+            choose_file: {{ \Illuminate\Support\Js::from(__('storefront.upload.choose_file')) }},
+            file_selected: {{ \Illuminate\Support\Js::from(__('storefront.upload.file_selected')) }},
+            files_selected: {{ \Illuminate\Support\Js::from(__('storefront.upload.files_selected')) }},
+            add_more_files: {{ \Illuminate\Support\Js::from(__('storefront.upload.add_more_files')) }},
+            adding_more_files: {{ \Illuminate\Support\Js::from(__('storefront.upload.adding_more_files')) }},
+            drop_files_here_paste_or: {{ \Illuminate\Support\Js::from(__('storefront.upload.drop_files_here_paste_or')) }},
+            browse: {{ \Illuminate\Support\Js::from(__('storefront.upload.browse')) }},
+            upload_complete: {{ \Illuminate\Support\Js::from(__('storefront.upload.upload_complete')) }},
+            upload_paused: {{ \Illuminate\Support\Js::from(__('storefront.upload.upload_paused')) }},
+            resume_upload: {{ \Illuminate\Support\Js::from(__('storefront.upload.resume_upload')) }},
+            pause_upload: {{ \Illuminate\Support\Js::from(__('storefront.upload.pause_upload')) }},
+            retry_upload: {{ \Illuminate\Support\Js::from(__('storefront.upload.retry_upload')) }},
+            cancel_upload: {{ \Illuminate\Support\Js::from(__('storefront.upload.cancel_upload')) }},
+            uploading: {{ \Illuminate\Support\Js::from(__('storefront.upload.uploading')) }},
+            processing: {{ \Illuminate\Support\Js::from(__('storefront.upload.processing')) }},
+            complete: {{ \Illuminate\Support\Js::from(__('storefront.common.complete')) }},
+            file: {{ \Illuminate\Support\Js::from(__('storefront.upload.file')) }},
+            files: {{ \Illuminate\Support\Js::from(__('storefront.upload.files')) }},
+            selected_files: {{ \Illuminate\Support\Js::from(collect([0, 1, 2, 3, 11])->mapWithKeys(fn ($count) => [$count => trans_choice('storefront.upload.selected_files', $count, ['count' => ':count'])])) }},
         }
 	</script>
 
@@ -100,7 +99,7 @@
 
     <script type="text/javascript">
 	    @foreach (collect(session('flash_notification', []))->toArray() as $message)
-	        AIZ.plugins.notify('{{ $message['level'] }}', '{{ $message['message'] }}');
+	        AIZ.plugins.notify({{ \Illuminate\Support\Js::from($message['level']) }}, {{ \Illuminate\Support\Js::from($message['message']) }});
 	    @endforeach
 
 
@@ -137,7 +136,7 @@
 						 $("#search-menu").append(`<li class="aiz-side-nav-item"><a href="${link}" class="aiz-side-nav-link"><i class="las la-ellipsis-h aiz-side-nav-icon"></i><span>${text}</span></a></li`);
 					}
 				}else{
-					$("#search-menu").html(`<li class="aiz-side-nav-item"><span	class="text-center text-muted d-block">{{ translate('Nothing Found') }}</span></li>`);
+					$("#search-menu").empty().append($('<li class="aiz-side-nav-item"></li>').append($('<span class="text-center text-muted d-block"></span>').text({{ \Illuminate\Support\Js::from(__('storefront.common.nothing_found')) }})));
 				}
 			}else{
 				$("#main-menu").removeClass('d-none');

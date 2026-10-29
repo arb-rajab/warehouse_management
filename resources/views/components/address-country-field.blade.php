@@ -14,19 +14,19 @@
 @endphp
 <div class="row">
     <div class="col-md-2">
-        <label for="{{ $id }}">{{ translate('Country') }}@if ($countries->isNotEmpty())<x-required-mark />@endif</label>
+        <label for="{{ $id }}">{{ __('storefront.common.country') }}@if ($countries->isNotEmpty())<x-required-mark />@endif</label>
     </div>
     <div class="col-md-10">
         <div class="mb-3">
             @if ($countries->isNotEmpty())
-                <select id="{{ $id }}" class="form-control aiz-selectpicker{{ $error ? ' is-invalid' : '' }}" data-live-search="true" data-placeholder="{{ translate('Select your country') }}" name="country_id" required>
-                    <option value="">{{ translate('Select your country') }}</option>
+                <select id="{{ $id }}" class="form-control aiz-selectpicker{{ $error ? ' is-invalid' : '' }}" data-live-search="true" data-placeholder="{{ __('storefront.auth.select_your_country') }}" name="country_id" required>
+                    <option value="">{{ __('storefront.auth.select_your_country') }}</option>
                     @foreach ($countries as $country)
                         <option value="{{ $country->id }}" @selected((string) $country->id === (string) $chosen)>{{ $country->name }}</option>
                     @endforeach
                 </select>
             @else
-                <p id="{{ $id }}" class="fs-13 text-muted mb-0" data-no-countries>{{ translate('No countries are set up yet. You can save the address without one.') }}</p>
+                <p id="{{ $id }}" class="fs-13 text-muted mb-0" data-no-countries>{{ __('storefront.common.no_countries_are_set_up_yet_you_can_save_the_address_without_one') }}</p>
             @endif
             @if ($error)
                 <span class="invalid-feedback d-block" role="alert"><strong>{{ $error }}</strong></span>

@@ -1,5 +1,5 @@
 <div class="card-header bg-white py-3">
-    <h5 class="heading-6 mb-0">{{translate('Select Nearest Pick-up Point')}}</h5>
+    <h5 class="heading-6 mb-0">{{__('storefront.checkout.select_nearest_pick_up_point')}}</h5>
 </div>
 @php
     $admin_products = array();
@@ -24,9 +24,9 @@
     <label class="mega-radio w-100">
         <input type="radio" name="pickup_point_id" value="{{ $pick_up_point->id }}" checked required>
         <span class="d-block">
-            <br><strong>{{ translate('Address') }}: {{ $pick_up_point->getTranslation('name') }}</strong>
-            <br><strong>{{ translate('Address') }}: {{ $pick_up_point->getTranslation('address') }}</strong>
-            <br><strong>{{ translate('Phone') }}: {{ $pick_up_point->phone }}</strong>
+            <br><strong>{{ __('storefront.common.address') }}: {{ $pick_up_point->getTranslation('name') }}</strong>
+            <br><strong>{{ __('storefront.common.address') }}: {{ $pick_up_point->getTranslation('address') }}</strong>
+            <br><strong>{{ __('storefront.auth.phone') }}: {{ $pick_up_point->phone }}</strong>
         </span>
     </label>
     @endforeach

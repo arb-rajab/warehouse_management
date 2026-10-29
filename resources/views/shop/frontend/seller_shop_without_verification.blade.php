@@ -47,13 +47,13 @@
                             <div class="rating rating-mr-1 text-dark">
                                 {{ renderStarRating($shop->rating) }}
                                 <span class="opacity-60 fs-12">({{ $shop->num_of_reviews }}
-                                    {{ translate('Reviews') }})</span>
+                                    {{ __('storefront.product.reviews') }})</span>
                             </div>
                             <!-- Address -->
                             <div class="location fs-12 opacity-70 text-dark mt-1">{{ $shop->address }}</div>
                             <!-- Member Since -->
                             <div class="mt-3">
-                                <div class="fs-10 fw-400 text-secondary">{{ translate('Member Since') }}</div>
+                                <div class="fs-10 fw-400 text-secondary">{{ __('storefront.common.member_since') }}</div>
                                 <div class="fs-16 fw-700 text-secondary">{{ \App\Support\StoreLocale::date(strtotime($shop->created_at)) }}</div>
                             </div>
                         </div>
@@ -69,7 +69,7 @@
                 <div class="col-xxl-5 col-xl-6 col-md-8 mx-auto">
                     <div class="bg-white border p-4 text-center">
                         <h3 class="fw-600 fs-20">
-                            {{$shop->user->name}} {{ translate('has not been verified yet.')}}
+                            {{$shop->user->name}} {{ __('storefront.common.has_not_been_verified_yet')}}
                         </h3>
                     </div>
                 </div>

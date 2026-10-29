@@ -5,15 +5,15 @@
     <div class="container text-center">
         <div class="row">
             <div class="col-lg-6 text-center text-lg-left">
-                {{-- <h1 class="fw-700 fs-24 text-dark">{{ translate('Register your shop')}}</h1> --}}
+                {{-- <h1 class="fw-700 fs-24 text-dark">{{ __('storefront.auth.register_your_shop')}}</h1> --}}
             </div>
             <div class="col-lg-6">
                 <ul class="breadcrumb bg-transparent p-0 justify-content-center justify-content-lg-end">
                     <li class="breadcrumb-item opacity-50">
-                        <a class="text-reset" href="{{ route('home') }}">{{ translate('Home')}}</a>
+                        <a class="text-reset" href="{{ route('home') }}">{{ __('storefront.navigation.home')}}</a>
                     </li>
                     <li class="text-dark fw-600 breadcrumb-item">
-                        <a class="text-dark" href="{{ route('shops.create') }}">"{{ translate('Register your shop')}}"</a>
+                        <a class="text-dark" href="{{ route('shops.create') }}">"{{ __('storefront.auth.register_your_shop')}}"</a>
                     </li>
                 </ul>
             </div>
@@ -24,59 +24,59 @@
     <div class="container">
         <div class="row">
             <div class="col-xxl-5 col-xl-6 col-md-8 mx-auto">
-                <h1 class="fw-700 fs-20 fs-md-24 text-dark text-center mb-3">{{ translate('Register Your Shop')}}</h1>
+                <h1 class="fw-700 fs-20 fs-md-24 text-dark text-center mb-3">{{ __('storefront.auth.register_your_shop')}}</h1>
                 <form id="shop" class="" action="{{ route('shops.store') }}" method="POST" enctype="multipart/form-data">
                     @csrf
                     <x-required-legend />
                     @if (!Auth::check())
                         <div class="bg-white border mb-4">
                             <div class="fs-15 fw-600 p-3">
-                                {{ translate('Personal Info')}}
+                                {{ __('storefront.common.personal_info')}}
                             </div>
                             <div class="p-3">
                                 <div class="form-group">
-                                    <label for="seller_name">{{ translate('Your Name')}}<x-required-mark /></label>
-                                    <input type="text" id="seller_name" class="form-control rounded-0 @error('name') is-invalid @enderror" value="{{ old('name') }}" placeholder="{{  translate('Name') }}" name="name" maxlength="191" required>
+                                    <label for="seller_name">{{ __('storefront.common.your_name')}}<x-required-mark /></label>
+                                    <input type="text" id="seller_name" class="form-control rounded-0 @error('name') is-invalid @enderror" value="{{ old('name') }}" placeholder="{{  __('storefront.common.name') }}" name="name" maxlength="191" required>
                                     @error('name')
                                         <span class="invalid-feedback" role="alert"><strong>{{ $message }}</strong></span>
                                     @enderror
                                 </div>
                                 <div class="form-group">
-                                    <label for="seller_email">{{ translate('Your Email')}}<x-required-mark /></label>
-                                    <input type="email" id="seller_email" class="form-control rounded-0 @error('email') is-invalid @enderror" value="{{ old('email') }}" placeholder="{{  translate('Email') }}" name="email" maxlength="191" required>
+                                    <label for="seller_email">{{ __('storefront.auth.your_email')}}<x-required-mark /></label>
+                                    <input type="email" id="seller_email" class="form-control rounded-0 @error('email') is-invalid @enderror" value="{{ old('email') }}" placeholder="{{  __('storefront.auth.email') }}" name="email" maxlength="191" required>
                                     @error('email')
                                         <span class="invalid-feedback" role="alert"><strong>{{ $message }}</strong></span>
                                     @enderror
                                 </div>
                                 <div class="form-group">
-                                    <label for="seller_password">{{ translate('Your Password')}}<x-required-mark /></label>
-                                    <input type="password" id="seller_password" class="form-control rounded-0 @error('password') is-invalid @enderror" placeholder="{{  translate('Password') }}" name="password" minlength="6" autocomplete="new-password" required>
+                                    <label for="seller_password">{{ __('storefront.auth.your_password')}}<x-required-mark /></label>
+                                    <input type="password" id="seller_password" class="form-control rounded-0 @error('password') is-invalid @enderror" placeholder="{{  __('storefront.auth.password') }}" name="password" minlength="6" autocomplete="new-password" required>
                                     @error('password')
                                         <span class="invalid-feedback" role="alert"><strong>{{ $message }}</strong></span>
                                     @enderror
                                 </div>
                                 <div class="form-group">
-                                    <label for="seller_password_confirmation">{{ translate('Repeat Password')}}<x-required-mark /></label>
-                                    <input type="password" id="seller_password_confirmation" class="form-control rounded-0" placeholder="{{  translate('Confirm Password') }}" name="password_confirmation" minlength="6" autocomplete="new-password" required>
+                                    <label for="seller_password_confirmation">{{ __('storefront.auth.repeat_password')}}<x-required-mark /></label>
+                                    <input type="password" id="seller_password_confirmation" class="form-control rounded-0" placeholder="{{  __('storefront.auth.confirm_password') }}" name="password_confirmation" minlength="6" autocomplete="new-password" required>
                                 </div>
                             </div>
                         </div>
                     @endif
                     <div class="bg-white border mb-4">
                         <div class="fs-15 fw-600 p-3">
-                            {{ translate('Basic Info')}}
+                            {{ __('storefront.common.basic_info')}}
                         </div>
                         <div class="p-3">
                             <div class="form-group">
-                                <label for="seller_shop_name">{{ translate('Shop Name')}}<x-required-mark /></label>
-                                <input type="text" id="seller_shop_name" class="form-control rounded-0 @error('shop_name') is-invalid @enderror" value="{{ old('shop_name') }}" placeholder="{{ translate('Shop Name')}}" name="shop_name" maxlength="200" required>
+                                <label for="seller_shop_name">{{ __('storefront.common.shop_name')}}<x-required-mark /></label>
+                                <input type="text" id="seller_shop_name" class="form-control rounded-0 @error('shop_name') is-invalid @enderror" value="{{ old('shop_name') }}" placeholder="{{ __('storefront.common.shop_name')}}" name="shop_name" maxlength="200" required>
                                 @error('shop_name')
                                     <span class="invalid-feedback" role="alert"><strong>{{ $message }}</strong></span>
                                 @enderror
                             </div>
                             <div class="form-group">
-                                <label for="seller_shop_address">{{ translate('Address')}}<x-required-mark /></label>
-                                <input type="text" id="seller_shop_address" class="form-control mb-3 rounded-0 @error('address') is-invalid @enderror" value="{{ old('address') }}" placeholder="{{ translate('Address')}}" name="address" maxlength="500" required>
+                                <label for="seller_shop_address">{{ __('storefront.common.address')}}<x-required-mark /></label>
+                                <input type="text" id="seller_shop_address" class="form-control mb-3 rounded-0 @error('address') is-invalid @enderror" value="{{ old('address') }}" placeholder="{{ __('storefront.common.address')}}" name="address" maxlength="500" required>
                                 @error('address')
                                     <span class="invalid-feedback" role="alert"><strong>{{ $message }}</strong></span>
                                 @enderror
@@ -94,7 +94,7 @@
                     @endif
 
                     <div class="text-right">
-                        <button type="submit" class="btn btn-primary fw-600 rounded-0">{{ translate('Register Your Shop')}}</button>
+                        <button type="submit" class="btn btn-primary fw-600 rounded-0">{{ __('storefront.auth.register_your_shop')}}</button>
                     </div>
                 </form>
             </div>
@@ -115,7 +115,7 @@
             if(response.length == 0)
             {
             //reCaptcha not verified
-                alert("please verify you are humann!");
+                alert({{ \Illuminate\Support\Js::from(__('storefront.auth.verify_human')) }});
                 evt.preventDefault();
                 return false;
             }

@@ -39,7 +39,7 @@ class ProductsImport implements ToCollection, WithHeadingRow, WithValidation, To
                 || (int) Carbon::now()->diffInDays(Carbon::parse($user->shop->package_invalid_at), false) < 0
             ) {
                 $canImport = false;
-                flash(translate('Please upgrade your package.'))->warning();
+                flash(__('seller.products.please_upgrade_your_package'))->warning();
             }
         }
 
@@ -82,7 +82,7 @@ class ProductsImport implements ToCollection, WithHeadingRow, WithValidation, To
             }
 
             if ($this->notify) {
-                flash(translate('Products imported successfully'))->success();
+                flash(__('seller.products.products_imported_successfully'))->success();
             }
         }
     }

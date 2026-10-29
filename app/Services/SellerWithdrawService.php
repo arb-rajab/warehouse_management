@@ -29,7 +29,7 @@ class SellerWithdrawService
             $shop = Shop::query()->where('user_id', $seller->id)->lockForUpdate()->first();
 
             if ($shop === null || $shop->admin_to_pay <= 5) {
-                throw new DomainException(translate('You do not have enough balance to send withdraw request'));
+                throw new DomainException(__('seller.withdrawals.you_do_not_have_enough_balance_to_send_withdraw_request'));
             }
 
             $pending = (float) SellerWithdrawRequest::query()
@@ -38,7 +38,7 @@ class SellerWithdrawService
                 ->sum('amount');
 
             if ($amount < (float) get_setting('minimum_seller_amount_withdraw') || $amount > (float) $shop->admin_to_pay - $pending) {
-                throw new DomainException(translate('Invalid amount'));
+                throw new DomainException(__('seller.withdrawals.invalid_amount'));
             }
 
             $withdrawRequest = new SellerWithdrawRequest;

@@ -4,7 +4,7 @@
     <div class="aiz-titlebar mb-4">
       <div class="row align-items-center">
         <div class="col-md-6">
-            <h1 class="fs-20 fw-700 text-dark">{{ translate('Classified Products') }}</h1>
+            <h1 class="fs-20 fw-700 text-dark">{{ __('storefront.product.classified_products') }}</h1>
         </div>
       </div>
     </div>
@@ -24,12 +24,12 @@
                     </g>
                 </svg>
                 <div class="py-2">
-                    <div class="fs-14 fw-400 text-center">{{  translate('Remaining Uploads') }}</div>
+                    <div class="fs-14 fw-400 text-center">{{  __('storefront.upload.remaining_uploads') }}</div>
                     <div class="fs-30 fw-700 text-center">{{ max(0, Auth::user()->remaining_uploads) }}</div>
                 </div>
             </div>
         </div>
-        
+
         <!-- Add New Product -->
         <div class="col-md-4 mx-auto mb-4" >
             <a href="{{ route('customer_products.create')}}">
@@ -37,11 +37,11 @@
                   <span class="size-60px rounded-circle mx-auto bg-dark d-flex align-items-center justify-content-center mb-3">
                       <i class="las la-plus la-3x text-white"></i>
                   </span>
-                  <div class="fs-14 fw-600 text-dark">{{ translate('Add New Product') }}</div>
+                  <div class="fs-14 fw-600 text-dark">{{ __('storefront.product.add_new_product') }}</div>
               </div>
             </a>
         </div>
-        
+
         <!-- Current Package -->
         @php
             $customer_package = \App\Models\CustomerPackage::find(Auth::user()->customer_package_id);
@@ -50,13 +50,13 @@
             <div class="text-center bg-light d-block p-4 h-100 border">
                 @if($customer_package != null)
                     <img src="{{ uploaded_asset($customer_package->logo) }}" height="44" class="mw-100 mx-auto mb-2">
-                    <span class="d-block text-dark fs-14 fw-600 mb-2">{{ translate('Current Package')}}: {{ $customer_package->getTranslation('name') }}</span>
+                    <span class="d-block text-dark fs-14 fw-600 mb-2">{{ __('storefront.common.current_package')}}: {{ $customer_package->getTranslation('name') }}</span>
                 @else
                     <i class="la la-frown-o mb-1 la-3x"></i>
-                    <div class="d-block text-dark fs-14 fw-600 mb-2">{{ translate('No Package Found')}}</div>
+                    <div class="d-block text-dark fs-14 fw-600 mb-2">{{ __('storefront.common.no_package_found')}}</div>
                 @endif
                 <a href="{{ route('customer_packages_list_show') }}" class="text-primary hov-text-dark fs-14 fw-700">
-                    {{ translate('Upgrade Package')}}
+                    {{ __('storefront.common.upgrade_package')}}
                     <i class="las la-angle-right fs-16 fw-900"></i>
                 </a>
             </div>
@@ -67,18 +67,18 @@
     <!-- All Products -->
     <div class="card rounded-0 shadow-none border">
         <div class="card-header border-bottom-0">
-            <h5 class="mb-md-0 fs-20 fw-700 text-dark text-center text-md-left">{{ translate('All Products') }}</h5>
+            <h5 class="mb-md-0 fs-20 fw-700 text-dark text-center text-md-left">{{ __('storefront.product.all_products') }}</h5>
         </div>
         <div class="card-body py-0">
             <table class="table aiz-table mb-0">
                 <thead class="text-gray fs-12">
                     <tr>
                         <th class="pl-0">#</th>
-                        <th>{{ translate('Product')}}</th>
-                        <th data-breakpoints="lg">{{ translate('Price')}}</th>
-                        <th data-breakpoints="lg" class="w-120px">{{ translate('Available Status')}}</th>
-                        <th data-breakpoints="lg">{{ translate('Admin Status')}}</th>
-                        <th class="text-right pr-0 w-90px">{{ translate('Options')}}</th>
+                        <th>{{ __('storefront.product.product')}}</th>
+                        <th data-breakpoints="lg">{{ __('storefront.product.price')}}</th>
+                        <th data-breakpoints="lg" class="w-120px">{{ __('storefront.common.available_status')}}</th>
+                        <th data-breakpoints="lg">{{ __('storefront.common.admin_status')}}</th>
+                        <th class="text-right pr-0 w-90px">{{ __('storefront.common.options')}}</th>
                     </tr>
                 </thead>
 
@@ -104,13 +104,13 @@
                         </td>
                         <td style="vertical-align: middle;">
                             @if ($product->published == '1')
-                                <span class="badge badge-inline badge-success p-3 fs-12" style="border-radius: 25px; min-width: 80px !important;">{{ translate('PUBLISHED')}}</span>
+                                <span class="badge badge-inline badge-success p-3 fs-12" style="border-radius: 25px; min-width: 80px !important;">{{ __('storefront.common.published')}}</span>
                             @else
-                                <span class="badge badge-inline badge-info p-3 fs-12" style="border-radius: 25px; min-width: 80px !important;">{{ translate('PENDING')}}</span>
+                                <span class="badge badge-inline badge-info p-3 fs-12" style="border-radius: 25px; min-width: 80px !important;">{{ __('storefront.common.pending')}}</span>
                             @endif
                         </td>
                         <td class="text-right pr-0" style="vertical-align: middle;">
-                            <a class="btn btn-soft-warning btn-icon btn-circle btn-sm hov-svg-white" href="{{route('customer_products.edit', ['id'=>$product->id, 'lang'=>config('app.default_language')] )}}" title="{{ translate('Edit') }}">
+                            <a class="btn btn-soft-warning btn-icon btn-circle btn-sm hov-svg-white" href="{{route('customer_products.edit', ['id'=>$product->id, 'lang'=>config('app.default_language')] )}}" title="{{ __('storefront.common.edit') }}">
                                 <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="12" height="12.001" viewBox="0 0 12 12.001">
                                     <defs>
                                     <clipPath id="clip-path">
@@ -127,7 +127,7 @@
                                     </g>
                                 </svg>
 						    </a>
-                            <a href="javascript:void(0)" class="btn btn-soft-danger btn-icon btn-circle btn-sm hov-svg-white confirm-delete" data-method="post" data-href="{{route('customer_products.destroy', $product->id)}}" title="{{ translate('Delete') }}">
+                            <a href="javascript:void(0)" class="btn btn-soft-danger btn-icon btn-circle btn-sm hov-svg-white confirm-delete" data-method="post" data-href="{{route('customer_products.destroy', $product->id)}}" title="{{ __('storefront.common.delete') }}">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="9.202" height="12" viewBox="0 0 9.202 12">
                                     <path id="Path_28714" data-name="Path 28714" d="M15.041,7.608l-.193,5.85a1.927,1.927,0,0,1-1.933,1.864H9.243A1.927,1.927,0,0,1,7.31,13.46L7.117,7.608a.483.483,0,0,1,.966-.032l.193,5.851a.966.966,0,0,0,.966.929h3.672a.966.966,0,0,0,.966-.931l.193-5.849a.483.483,0,1,1,.966.032Zm.639-1.947a.483.483,0,0,1-.483.483H6.961a.483.483,0,1,1,0-.966h1.5a.617.617,0,0,0,.615-.555,1.445,1.445,0,0,1,1.442-1.3h1.126a1.445,1.445,0,0,1,1.442,1.3.617.617,0,0,0,.615.555h1.5a.483.483,0,0,1,.483.483ZM9.913,5.178h2.333a1.6,1.6,0,0,1-.123-.456.483.483,0,0,0-.48-.435H10.516a.483.483,0,0,0-.48.435,1.6,1.6,0,0,1-.124.456ZM10.4,12.5V8.385a.483.483,0,0,0-.966,0V12.5a.483.483,0,1,0,.966,0Zm2.326,0V8.385a.483.483,0,0,0-.966,0V12.5a.483.483,0,1,0,.966,0Z" transform="translate(-6.478 -3.322)" fill="#d43533"/>
                                 </svg>
@@ -161,10 +161,10 @@
             }
             $.post('{{ route('customer_products.update.status') }}', {_token:'{{ csrf_token() }}', id:el.value, status:status}, function(data){
                 if(data == 1){
-                    AIZ.plugins.notify('success', '{{ translate('Status has been updated successfully') }}');
+                    AIZ.plugins.notify('success', {{ \Illuminate\Support\Js::from(__('storefront.common.status_has_been_updated_successfully')) }});
                 }
                 else{
-                    AIZ.plugins.notify('danger', '{{ translate('Something went wrong') }}');
+                    AIZ.plugins.notify('danger', {{ \Illuminate\Support\Js::from(__('storefront.common.something_went_wrong')) }});
                 }
             });
         }

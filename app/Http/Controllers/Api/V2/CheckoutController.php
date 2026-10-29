@@ -20,7 +20,7 @@ class CheckoutController
         if ($coupon == null) {
             return response()->json([
                 'result' => false,
-                'message' => translate('Invalid coupon code!')
+                'message' => __('storefront.cart.invalid_coupon')
             ]);
         }
 
@@ -29,7 +29,7 @@ class CheckoutController
         if ($cart_items->isEmpty()) {
             return response()->json([
                 'result' => false,
-                'message' => translate('This coupon is not applicable to your cart products!')
+                'message' => __('storefront.cart.this_coupon_is_not_applicable_to_your_cart_products')
             ]);
         }
 
@@ -38,7 +38,7 @@ class CheckoutController
         if (!$in_range) {
             return response()->json([
                 'result' => false,
-                'message' => translate('Coupon expired!')
+                'message' => __('storefront.cart.coupon_expired')
             ]);
         }
 
@@ -47,7 +47,7 @@ class CheckoutController
         if ($is_used) {
             return response()->json([
                 'result' => false,
-                'message' => translate('You already used this coupon!')
+                'message' => __('storefront.cart.you_already_used_this_coupon')
             ]);
         }
 
@@ -62,12 +62,12 @@ class CheckoutController
 
             return response()->json([
                 'result' => true,
-                'message' => translate('Coupon Applied')
+                'message' => __('api.cart.coupon_applied')
             ]);
         }else{
             return response()->json([
                 'result' => false,
-                'message' => translate('This coupon is not applicable to your cart products!')
+                'message' => __('storefront.cart.this_coupon_is_not_applicable_to_your_cart_products')
             ]);
         }
 
@@ -84,7 +84,7 @@ class CheckoutController
 
         return response()->json([
             'result' => true,
-            'message' => translate('Coupon Removed')
+            'message' => __('api.cart.coupon_removed')
         ]);
     }
 }

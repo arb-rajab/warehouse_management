@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources\V2;
 
+use App\Support\ApiResourceLabel;
 use Carbon\Carbon;
 use Illuminate\Http\Resources\Json\ResourceCollection;
 
@@ -24,11 +25,17 @@ class PurchaseHistoryCollection extends ResourceCollection
                     'payment_type' => ucwords(str_replace('_', ' ', $data->payment_type)),
                     'pickup_point' => $pickup_point,
                     'shipping_type' => $data->shipping_type,
-                    'shipping_type_string' => $data->shipping_type != null ? ucwords(str_replace('_', ' ', $data->shipping_type)) : "",
+                    'shipping_type_string' => match ($data->shipping_type) {
+                        'home_delivery' => __('storefront.checkout.home_delivery'),
+                        'pickup_point' => __('storefront.checkout.pickup_point'),
+                        'carrier' => __('storefront.checkout.carrier'),
+                        null => '',
+                        default => ucwords(str_replace('_', ' ', $data->shipping_type)),
+                    },
                     'payment_status' => $data->payment_status,
-                    'payment_status_string' => ucwords(str_replace('_', ' ', $data->payment_status)),
+                    'payment_status_string' => ApiResourceLabel::status($data->payment_status),
                     'delivery_status' => $data->delivery_status,
-                    'delivery_status_string' => $data->delivery_status == 'pending'? "Order Placed" : ucwords(str_replace('_', ' ',  $data->delivery_status)),
+                    'delivery_status_string' => ApiResourceLabel::deliveryStatus($data->delivery_status),
                     'delivery_date' =>  date('d-m-Y', strtotime($data->delivery_date) ),
                     'grand_total' => format_price($data->grand_total),
                     'plane_grand_total' => $data->grand_total,

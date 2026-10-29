@@ -40,7 +40,7 @@ class CustomerController extends Controller
     {
         if (!auth()->user()->is_rep) {
             return response()->json([
-                'error' => 'You are not representative',
+                'error' => __('api.account.representative_required'),
                 'status' => 0
             ], 403);
         }
@@ -74,7 +74,7 @@ class CustomerController extends Controller
     {
         if (!auth()->user()->is_rep) {
             return response()->json([
-                'error' => 'You are not representative',
+                'error' => __('api.account.representative_required'),
                 'status' => 0
             ], 403);
         }
@@ -82,7 +82,7 @@ class CustomerController extends Controller
 
         if (!$current_customer) {
             return response()->json([
-                'message' => 'You did not choose a user for your cart yet.',
+                'message' => __('api.account.cart_customer_required'),
                 'status' => 0
             ], 404);
         }
@@ -102,7 +102,7 @@ class CustomerController extends Controller
         if ($validator->fails()) {
             return response()->json([
                 'result' => false,
-                'message' => "Inputs Validation Error",
+                'message' => __('api.common.validation_error'),
                 'errors' => $validator->errors()
             ]);
         }
@@ -112,7 +112,7 @@ class CustomerController extends Controller
         if (!$chosenUser) {
             return response()->json([
                 'rep_id' => 0,
-                'message' => 'User not found',
+                'message' => __('api.auth.user_not_found'),
                 'result' => false
             ], 404);
         }
@@ -120,7 +120,7 @@ class CustomerController extends Controller
         if (!$user->is_rep) {
             return response()->json([
                 'rep_id' => 0,
-                'message' => 'You cannot do this action, you are not representative',
+                'message' => __('api.account.representative_only'),
                 'result' => false
             ], 403);
         }
@@ -128,7 +128,7 @@ class CustomerController extends Controller
         if ($chosenUser->is_rep) {
             return response()->json([
                 'rep_id' => 0,
-                'message' => 'You cannot do this action, you cannot choose another representative',
+                'message' => __('api.account.other_representative_forbidden'),
                 'result' => false
             ], 403);
         }
@@ -136,7 +136,7 @@ class CustomerController extends Controller
         if ($chosenUser->user_type != 'customer') {
             return response()->json([
                 'rep_id' => 0,
-                'message' => 'You cannot do this action, you cannot choose this user',
+                'message' => __('api.account.customer_forbidden'),
                 'result' => false
             ], 403);
         }
@@ -190,7 +190,7 @@ class CustomerController extends Controller
 
         return response()->json([
             'rep_id' => $user->id,
-            'message' => 'The user has been chosen successfully',
+            'message' => __('api.account.customer_selected'),
             'data' => new CustomerDetailsResource($chosenUser),
             'result' => true,
             'open_visit' => $open_visit
@@ -200,14 +200,14 @@ class CustomerController extends Controller
     public function create_customer(Request $request)
     {
         $messages = [
-            'name.required' => translate('Name is required'),
-            'email_or_phone.required' => $request->register_by == 'email' ? translate('Email is required') : translate('Phone is required'),
-            'email_or_phone.email' => translate('Email must be a valid email address'),
-            'email_or_phone.numeric' => translate('Phone must be a number.'),
-            'email_or_phone.unique' => $request->register_by == 'email' ? translate('The email has already been taken') : translate('The phone has already been taken'),
-            'password.required' => translate('Password is required'),
-            'password.confirmed' => translate('Password confirmation does not match'),
-            'password.min' => translate('Minimum 6 digits required for password'),
+            'name.required' => __('validation.required', ['attribute' => __('validation.attributes.name')]),
+            'email_or_phone.required' => $request->register_by == 'email' ? __('validation.required', ['attribute' => __('validation.attributes.email')]) : __('validation.required', ['attribute' => __('validation.attributes.phone')]),
+            'email_or_phone.email' => __('validation.email', ['attribute' => __('validation.attributes.email')]),
+            'email_or_phone.numeric' => __('validation.numeric', ['attribute' => __('validation.attributes.phone')]),
+            'email_or_phone.unique' => $request->register_by == 'email' ? __('validation.unique', ['attribute' => __('validation.attributes.email')]) : __('validation.unique', ['attribute' => __('validation.attributes.phone')]),
+            'password.required' => __('validation.required', ['attribute' => __('validation.attributes.password')]),
+            'password.confirmed' => __('validation.confirmed', ['attribute' => __('validation.attributes.password')]),
+            'password.min' => __('validation.min.string', ['attribute' => __('validation.attributes.password'), 'min' => 6]),
         ];
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
@@ -273,7 +273,7 @@ class CustomerController extends Controller
 
         return response()->json([
             'result' => true,
-            'message' => translate('Customer Account Successfully Created.'),
+            'message' => __('api.account.customer_created'),
             'access_token' => '',
             'token_type' => '',
             'expires_at' => null,
@@ -307,14 +307,14 @@ class CustomerController extends Controller
             $visit->save();
 
             return response()->json([
-                'message' => 'Visit note has been added successfully',
+                'message' => __('api.account.visit_note_added'),
                 'data' => $visit,
                 'result' => true,
             ], 200);
         }
 
         return response()->json([
-            'message' => 'Visit not found',
+            'message' => __('api.account.visit_not_found'),
             'result' => false
         ], 404);
     }
@@ -333,7 +333,7 @@ class CustomerController extends Controller
         }
 
         return response()->json([
-            'message' => 'Rep did not make a visit yet',
+            'message' => __('api.account.visit_required'),
             'result' => false
         ], 404);
     }

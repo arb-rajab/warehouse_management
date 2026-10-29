@@ -39,7 +39,7 @@ class RepresentativePaymentController extends Controller
 
         if(!$user->is_rep){
             return response()->json([
-                'message' => 'You cannot do this action, you are not representative',
+                'message' => __('api.account.representative_only'),
                 'result' => false
             ], 403);
         }
@@ -56,7 +56,7 @@ class RepresentativePaymentController extends Controller
 
         if(!$user->is_rep){
             return response()->json([
-                'message' => 'You cannot do this action, you are not representative',
+                'message' => __('api.account.representative_only'),
                 'result' => false
             ], 403);
         }
@@ -82,7 +82,7 @@ class RepresentativePaymentController extends Controller
         $customer = $request->customer_id ? StoreUser::find($request->customer_id) : StoreUser::where('AccSysId', $request->customer_otajer_id)->first();
         if(!$customer){
             return response()->json([
-                'message' => 'User not found',
+                'message' => __('api.auth.user_not_found'),
                 'result' => false
             ], 404);
         }
@@ -103,7 +103,7 @@ class RepresentativePaymentController extends Controller
         ]);
 
         return response()->json([
-            'message' => 'Payment has been added successfully, and it is waiting for approval.',
+            'message' => __('api.payment.approval_pending'),
             'result' => true,
             'pdf_link' => URL::signedRoute('payments.export', ['id' => $representativePayment->id]),
             'qr' => URL::signedRoute('api.rep.payment.generate_qr', ['id' => $representativePayment->id])

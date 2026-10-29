@@ -2,7 +2,7 @@
 
 @section('content')
 
-    <button id="bKash_button" class="d-none">Pay With bKash</button>
+    <button id="bKash_button" class="d-none">{{ __('storefront.checkout.pay_with_bkash') }}</button>
 
 @endsection
 

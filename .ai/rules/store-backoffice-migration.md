@@ -125,10 +125,20 @@ WMS and store layouts.
 
 Back-office UI copy lives under `store.*` in `resources/js/locales/{en,ar}.json`.
 Merge leaf keys; preserve existing upload namespace shapes. Database-owned
-values (roles, permission sections, category names) are translated server-side
-and sent as data. The translation admin still edits the `translations` table
-for the storefront, seller panel, emails, PDFs and mobile API; it does not edit
-converted back-office UI copy. Other store locales fall back to English in the
+values (custom roles/permissions, category names) are translated server-side
+and sent as data. Application-defined permission identifiers and sections use
+`StorePermissions` display methods and `lang/{en,ar}/store_permissions.php`;
+custom records retain content translation. The translation admin still edits
+the `translations` table for dynamic content and `app_translations` for mobile
+catalogs whose external key inventory has not been established; it does not edit
+converted back-office, storefront, seller, email, PDF or API static copy.
+Static customer-facing storefront copy lives in `lang/{en,ar}/storefront.php`;
+seller-specific copy uses `seller.php` and remaining server admin messages use
+`store_admin.php`. Delivery/document copy uses `delivery.php`; API messages and
+resource display labels use `api.php` and `api_resources.php`. Shared labels
+reuse existing storefront/validation keys;
+see the [staged localization inventory](../localization-migration.md).
+Other store locales fall back to English in the
 back office. `LanguageSwitcher` uses the `locale` session key shared with the
 store's `Language` middleware.
 

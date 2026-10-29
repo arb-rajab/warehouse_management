@@ -8,7 +8,7 @@
               <rect id="Rectangle_18069" data-name="Rectangle 18069" width="3" height="13" rx="1.5" transform="translate(6295.657 -7760.707) rotate(45)" fill="#fff"/>
             </g>
         </svg>
-        <h3 class="fs-28 fw-500">{{ translate('Item added to your cart!')}}</h3>
+        <h3 class="fs-28 fw-500">{{ __('storefront.cart.item_added_to_your_cart')}}</h3>
     </div>
 
     <!-- Product Info -->
@@ -22,7 +22,7 @@
             @if(Auth::check() && Auth::user()->admin_verified)
             <div class="row mt-2">
                 <div class="col-sm-3 fs-14 fw-400 text-secondary">
-                    <div>{{ translate('Price')}}</div>
+                    <div>{{ __('storefront.product.price')}}</div>
                 </div>
                 <div class="col-sm-9">
                     <div class="fs-16 fw-700 text-primary">
@@ -44,7 +44,7 @@
         <div class="bg-white shadow-sm">
             <div class="py-3">
                 <h3 class="fs-16 fw-700 mb-0 text-dark">
-                    <span class="mr-4">{{ translate('Frequently Bought Together')}}</span>
+                    <span class="mr-4">{{ __('storefront.common.frequently_bought_together')}}</span>
                 </h3>
             </div>
             <div class="p-3">
@@ -90,10 +90,10 @@
     <!-- Back to shopping & Checkout buttons -->
     <div class="row gutters-5">
         <div class="col-sm-6">
-            <button class="btn btn-warning mb-3 mb-sm-0 btn-block rounded-0 text-white" data-dismiss="modal">{{ translate('Back to shopping')}}</button>
+            <button class="btn btn-warning mb-3 mb-sm-0 btn-block rounded-0 text-white" data-dismiss="modal">{{ __('storefront.common.back_to_shopping')}}</button>
         </div>
         <div class="col-sm-6">
-            <a href="{{ route('cart') }}" class="btn btn-primary mb-3 mb-sm-0 btn-block rounded-0">{{ translate('Proceed to Checkout')}}</a>
+            <a href="{{ route('cart') }}" class="btn btn-primary mb-3 mb-sm-0 btn-block rounded-0">{{ __('storefront.checkout.proceed_to_checkout')}}</a>
         </div>
 
     </div>

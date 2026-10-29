@@ -5,16 +5,16 @@
         <form class="" action="" id="sort_commission_history" method="GET">
             <div class="card-header row gutters-5">
                 <div class="col">
-                    <h5 class="mb-md-0 h6">{{ translate('Commission History') }}</h5>
+                    <h5 class="mb-md-0 h6">{{ __('seller.common.commission_history') }}</h5>
                 </div>
                 <div class="col-lg-2">
                     <div class="form-group mb-0">
-                        <input type="text" class="form-control form-control-sm aiz-date-range" id="search" name="date_range"@isset($date_range) value="{{ $date_range }}" @endisset placeholder="{{ translate('Daterange') }}" autocomplete="off">
+                        <input type="text" class="form-control form-control-sm aiz-date-range" id="search" name="date_range"@isset($date_range) value="{{ $date_range }}" @endisset placeholder="{{ __('seller.common.daterange') }}" autocomplete="off">
                     </div>
                 </div>
                 <div class="col-auto">
                     <div class="form-group mb-0">
-                        <button type="submit" class="btn btn-primary">{{ translate('Filter') }}</button>
+                        <button type="submit" class="btn btn-primary">{{ __('seller.common.filter') }}</button>
                     </div>
                 </div>
             </div>
@@ -24,10 +24,10 @@
                 <thead>
                     <tr>
                         <th>#</th>
-                        <th data-breakpoints="lg">{{ translate('Order Code') }}</th>
-                        <th>{{ translate('Admin Commission') }}</th>
-                        <th>{{ translate('Earning') }}</th>
-                        <th data-breakpoints="lg">{{ translate('Created At') }}</th>
+                        <th data-breakpoints="lg">{{ __('storefront.checkout.order_code_label') }}</th>
+                        <th>{{ __('seller.common.admin_commission') }}</th>
+                        <th>{{ __('seller.common.earning') }}</th>
+                        <th data-breakpoints="lg">{{ __('seller.common.created_at') }}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -39,7 +39,7 @@
                                 {{ $history->order->code }}
                             @else
                                 <span class="badge badge-inline badge-danger">
-                                    {{ translate('Order Deleted') }}
+                                    {{ __('seller.common.order_deleted') }}
                                 </span>
                             @endif
                         </td>

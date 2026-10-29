@@ -10,7 +10,7 @@
                         <div class="search-input-box">
                             <input type="text"
                                 class="border border-soft-light form-control fs-14 hov-animate-outline"
-                                id="search_customers" name="keyword" placeholder="Search user..." autocomplete="off">
+                                id="search_customers" name="keyword" placeholder="{{ __('storefront.common.search_user') }}" autocomplete="off">
 
                             <svg id="Group_723" data-name="Group 723" xmlns="http://www.w3.org/2000/svg" width="20.001"
                                 height="20" viewBox="0 0 20.001 20">
@@ -37,13 +37,13 @@
                         <div
                             class="row gutters-5 d-none d-lg-flex border-bottom mb-3 pb-3 text-secondary fs-12 text-center">
 
-                            <div class="col-md-2 fw-600">{{ translate('ID') }}</div>
-                            <div class="col col-md-2 fw-600">{{ translate('Name') }}</div>
-                            <div class="col-md-2 fw-600">{{ translate('Company name') }}</div>
+                            <div class="col-md-2 fw-600">{{ __('storefront.common.id') }}</div>
+                            <div class="col col-md-2 fw-600">{{ __('storefront.common.name') }}</div>
+                            <div class="col-md-2 fw-600">{{ __('storefront.common.company_name') }}</div>
 
-                            <div class="col-md-2 fw-600">{{ translate('Address') }}</div>
-                            <div class="col-md-2 fw-600">{{ translate('Phone number') }}</div>
-                            <div class="col-md-2 fw-600">{{ translate('Pick') }}</div>
+                            <div class="col-md-2 fw-600">{{ __('storefront.common.address') }}</div>
+                            <div class="col-md-2 fw-600">{{ __('storefront.auth.phone_number') }}</div>
+                            <div class="col-md-2 fw-600">{{ __('storefront.common.pick') }}</div>
                         </div>
                         @php
                             $total = 0;
@@ -101,7 +101,7 @@
                         <div class="col-md-12 text-center text-md-right">
                             <a href="{{ route('home') }}" id="cart_index"
                                 class="btn btn-primary fs-14 fw-700 rounded-0 px-4">
-                                {{ translate('Continue to visit details') }}
+                                {{ __('storefront.common.continue_to_visit_details') }}
                             </a>
                         </div>
                     </div>
@@ -115,7 +115,7 @@
                     <!--  -->
                     <div class="text-center p-3">
                         <i class="las la-frown la-3x opacity-60 mb-3"></i>
-                        <h3 class="h4 fw-700">{{ translate('No customers are available at the moment.') }}</h3>
+                        <h3 class="h4 fw-700">{{ __('storefront.common.no_customers_are_available_at_the_moment') }}</h3>
                     </div>
                 </div>
             </div>

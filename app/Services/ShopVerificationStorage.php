@@ -14,5 +14,5 @@ class ShopVerificationStorage extends PrivateDocumentStorage
 
     protected const FIELD = 'verification_file';
 
-    protected const REFUSAL = 'A verification document must be a PDF, Word document or PNG/JPEG image of at most 20 MB.';
+    protected const REFUSAL = 'storefront.upload.verification_refusal';
 }

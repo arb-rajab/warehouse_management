@@ -1,12 +1,12 @@
 <div class="card rounded-0 border shadow-none">
 
     <div class="card-header pt-4 pb-1 border-bottom-0">
-        <h3 class="fs-16 fw-700 mb-0">{{ translate('Summary') }}</h3>
+        <h3 class="fs-16 fw-700 mb-0">{{ __('storefront.common.summary') }}</h3>
         <div class="text-right">
             <!-- Items Count -->
             <span class="badge badge-inline badge-primary fs-12 rounded-0 px-2">
                 {{ count($carts) }}
-                {{ translate('Items') }}
+                {{ __('storefront.common.items') }}
             </span>
 
             <!-- Minimum Order Amount -->
@@ -41,7 +41,7 @@
             @endforeach
             @if (get_setting('minimum_order_amount_check') == 1 && $subtotal_for_min_order_amount < get_setting('minimum_order_amount'))
                 <span class="badge badge-inline badge-primary fs-12 rounded-0 px-2">
-                    {{ translate('Minimum Order Amount') . ' ' . single_price(get_setting('minimum_order_amount')) }}
+                    {{ __('storefront.checkout.minimum_order_amount') . ' ' . single_price(get_setting('minimum_order_amount')) }}
                 </span>
             @endif
 
@@ -51,7 +51,7 @@
     <!-- Club point -->
     @if (addon_is_activated('club_point'))
     <div class="px-4 pt-1 w-100 d-flex align-items-center justify-content-between">
-        <h3 class="fs-14 fw-700 mb-0">{{ translate('Total Clubpoint') }}</h3>
+        <h3 class="fs-14 fw-700 mb-0">{{ __('storefront.common.total_clubpoint') }}</h3>
         <div class="text-right">
             <span class="badge badge-inline badge-warning fs-12 rounded-0 px-2 text-white">
                 @php
@@ -85,8 +85,8 @@
         <table class="table">
             <thead>
                 <tr>
-                    <th class="product-name border-top-0 border-bottom-1 pl-0 fs-12 fw-400 opacity-60">{{ translate('Product') }}</th>
-                    <th class="product-total text-right border-top-0 border-bottom-1 pr-0 fs-12 fw-400 opacity-60">{{ translate('Total') }}</th>
+                    <th class="product-name border-top-0 border-bottom-1 pl-0 fs-12 fw-400 opacity-60">{{ __('storefront.product.product') }}</th>
+                    <th class="product-total text-right border-top-0 border-bottom-1 pr-0 fs-12 fw-400 opacity-60">{{ __('storefront.common.total') }}</th>
                 </tr>
             </thead>
             <tbody>
@@ -133,21 +133,21 @@
             <tfoot>
                 <!-- Subtotal -->
                 <tr class="cart-subtotal">
-                    <th class="pl-0 fs-14 pt-0 pb-2 text-dark fw-600 border-top-0">{{ translate('Subtotal') }}</th>
+                    <th class="pl-0 fs-14 pt-0 pb-2 text-dark fw-600 border-top-0">{{ __('storefront.common.subtotal') }}</th>
                     <td class="text-right pr-0 fs-14 pt-0 pb-2 fw-600 text-primary border-top-0">
                         <span class="fw-600">{{ single_price($subtotal) }}</span>
                     </td>
                 </tr>
                 <!-- Tax -->
                 {{-- <tr class="cart-shipping">
-                    <th class="pl-0 fs-14 pt-0 pb-2 text-dark fw-600 border-top-0">{{ translate('Tax') }}</th>
+                    <th class="pl-0 fs-14 pt-0 pb-2 text-dark fw-600 border-top-0">{{ __('storefront.common.tax') }}</th>
                     <td class="text-right pr-0 fs-14 pt-0 pb-2 fw-600 text-primary border-top-0">
                         <span class="fw-600">{{ single_price($tax) }}</span>
                     </td>
                 </tr> --}}
                 <!-- Total Shipping -->
                 <tr class="cart-shipping">
-                    <th class="pl-0 fs-14 pt-0 pb-2 text-dark fw-600 border-top-0">{{ translate('Total Shipping') }}</th>
+                    <th class="pl-0 fs-14 pt-0 pb-2 text-dark fw-600 border-top-0">{{ __('storefront.checkout.total_shipping') }}</th>
                     <td class="text-right pr-0 fs-14 pt-0 pb-2 fw-600 text-primary border-top-0">
                         <span class="fw-600">{{ single_price($shipping) }}</span>
                     </td>
@@ -155,7 +155,7 @@
                 <!-- Redeem point -->
                 @if (Session::has('club_point'))
                     <tr class="cart-shipping">
-                        <th class="pl-0 fs-14 pt-0 pb-2 text-dark fw-600 border-top-0">{{ translate('Redeem point') }}</th>
+                        <th class="pl-0 fs-14 pt-0 pb-2 text-dark fw-600 border-top-0">{{ __('storefront.common.redeem_point') }}</th>
                         <td class="text-right pr-0 fs-14 pt-0 pb-2 fw-600 text-primary border-top-0">
                             <span class="fw-600">{{ single_price(Session::get('club_point')) }}</span>
                         </td>
@@ -164,7 +164,7 @@
                 <!-- Coupon Discount -->
                 @if ($coupon_discount > 0)
                     <tr class="cart-shipping">
-                        <th class="pl-0 fs-14 pt-0 pb-2 text-dark fw-600 border-top-0">{{ translate('Coupon Discount') }}</th>
+                        <th class="pl-0 fs-14 pt-0 pb-2 text-dark fw-600 border-top-0">{{ __('storefront.cart.coupon_discount') }}</th>
                         <td class="text-right pr-0 fs-14 pt-0 pb-2 fw-600 text-primary border-top-0">
                             <span class="fw-600">{{ single_price($coupon_discount) }}</span>
                         </td>
@@ -182,7 +182,7 @@
                 @endphp
                 <!-- Total -->
                 <tr class="cart-total">
-                    <th class="pl-0 fs-14 text-dark fw-600"><span class="strong-600">{{ translate('Total') }}</span></th>
+                    <th class="pl-0 fs-14 text-dark fw-600"><span class="strong-600">{{ __('storefront.common.total') }}</span></th>
                     <td class="text-right pr-0 fs-14 fw-600 text-primary">
                         <strong><span>{{ single_price($total) }}</span></strong>
                     </td>
@@ -201,7 +201,7 @@
                             <div class="form-control">{{ Session::get('club_point') }}</div>
                             <div class="input-group-append">
                                 <button type="submit"
-                                    class="btn btn-primary">{{ translate('Remove Redeem Point') }}</button>
+                                    class="btn btn-primary">{{ __('storefront.common.remove_redeem_point') }}</button>
                             </div>
                         </div>
                     </form>
@@ -219,7 +219,7 @@
                             <div class="form-control">{{ $coupon_code }}</div>
                             <div class="input-group-append">
                                 <button type="button" id="coupon-remove"
-                                    class="btn btn-primary">{{ translate('Change Coupon') }}</button>
+                                    class="btn btn-primary">{{ __('storefront.cart.change_coupon') }}</button>
                             </div>
                         </div>
                     </form>
@@ -232,10 +232,10 @@
                         <div class="input-group">
                             <input type="text" class="form-control rounded-0" name="code"
                                 onkeydown="return event.key != 'Enter';"
-                                placeholder="{{ translate('Have coupon code? Apply here') }}" required>
+                                placeholder="{{ __('storefront.cart.have_coupon_code_apply_here') }}" required>
                             <div class="input-group-append">
                                 <button type="button" id="coupon-apply"
-                                    class="btn btn-primary rounded-0">{{ translate('Apply') }}</button>
+                                    class="btn btn-primary rounded-0">{{ __('storefront.common.apply') }}</button>
                             </div>
                         </div>
                     </form>

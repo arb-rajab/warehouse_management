@@ -54,18 +54,18 @@ class ProductRequest extends FormRequest
     public function messages()
     {
         return [
-            'name.required'             => 'Product name is required',
-            'category_id.required'      => 'Category is required',
-            'unit.required'             => 'Unit field is required',
-            'min_qty.required'          => 'Minimum purchase quantity is required',
-            'min_qty.numeric'           => 'Minimum purchase must be numeric',
-            'unit_price.required'       => 'Unit price is required',
-            'unit_price.numeric'        => 'Unit price must be numeric',
-            'discount.required'         => 'Discount is required',
-            'discount.numeric'          => 'Discount must be numeric',
-            'discount.lt:unit_price'    => 'Discount can not be gretaer than unit price',
-            'current_stock.required'    => 'Current stock is required',
-            'current_stock.numeric'     => 'Current stock must be numeric',
+            'name.required'             => __('validation.required', ['attribute' => __('validation.attributes.name')]),
+            'category_id.required'      => __('validation.required', ['attribute' => __('validation.attributes.category_id')]),
+            'unit.required'             => __('validation.required', ['attribute' => __('validation.attributes.unit')]),
+            'min_qty.required'          => __('validation.required', ['attribute' => __('validation.attributes.min_qty')]),
+            'min_qty.numeric'           => __('validation.numeric', ['attribute' => __('validation.attributes.min_qty')]),
+            'unit_price.required'       => __('validation.required', ['attribute' => __('validation.attributes.unit_price')]),
+            'unit_price.numeric'        => __('validation.numeric', ['attribute' => __('validation.attributes.unit_price')]),
+            'discount.required'         => __('validation.required', ['attribute' => __('validation.attributes.discount')]),
+            'discount.numeric'          => __('validation.numeric', ['attribute' => __('validation.attributes.discount')]),
+            'discount.lt:unit_price'    => __('api.product.discount_below_price'),
+            'current_stock.required'    => __('validation.required', ['attribute' => __('validation.attributes.current_stock')]),
+            'current_stock.numeric'     => __('validation.numeric', ['attribute' => __('validation.attributes.current_stock')]),
         ];
     }
 

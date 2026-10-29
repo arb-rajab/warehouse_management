@@ -27,6 +27,6 @@ class IsDeliveryBoy
             return $next($request);
         }
 
-        return response()->json(['message' => 'You must be a delivery boy to access this page.'], 403);
+        return response()->json(['message' => __('api.access.delivery_boy_required')], 403);
     }
 }

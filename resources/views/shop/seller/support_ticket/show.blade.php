@@ -8,7 +8,7 @@
                <div class="mt-2">
                    <span> {{ $ticket->user->name }} </span>
                    <span class="ml-2"> {{ $ticket->created_at }} </span>
-                   <span class="badge badge-inline badge-secondary ml-2"> {{ ucfirst($ticket->status) }} </span>
+                   <span class="badge badge-inline badge-secondary ml-2"> {{ \App\Support\StoreLocale::status($ticket->status) }} </span>
                </div>
             </div>
         </div>
@@ -21,7 +21,7 @@
                     <small class="form-text text-danger">{{ $message }}</small>
                 @enderror
                 <div class="form-group">
-                    <label for="seller-ticket-reply">{{ translate('Type your reply') }}<x-required-mark /></label>
+                    <label for="seller-ticket-reply">{{ __('storefront.support.type_your_reply') }}<x-required-mark /></label>
                     <textarea class="aiz-text-editor" name="reply" id="seller-ticket-reply" maxlength="10000" data-buttons='[["font", ["bold", "underline", "italic"]],["para", ["ul", "ol"]],["view", ["undo","redo"]]]' required>{{ is_string(old('reply')) ? old('reply') : '' }}</textarea>
                     @error('reply')
                         <small class="form-text text-danger">{{ $message }}</small>
@@ -31,9 +31,9 @@
                     <div class="col-md-12">
                         <div class="input-group" data-toggle="aizuploader" data-type="image" data-multiple="true">
                             <div class="input-group-prepend">
-                                <div class="input-group-text bg-soft-secondary font-weight-medium">{{ translate('Browse')}}</div>
+                                <div class="input-group-text bg-soft-secondary font-weight-medium">{{ __('storefront.upload.browse')}}</div>
                             </div>
-                            <div class="form-control file-amount">{{ translate('Choose File') }}</div>
+                            <div class="form-control file-amount">{{ __('storefront.upload.choose_file') }}</div>
                             <input type="hidden" name="attachments" class="selected-files" value="{{ is_string(old('attachments')) ? old('attachments') : '' }}">
                         </div>
                         <div class="file-preview box sm">
@@ -44,7 +44,7 @@
                     </div>
                 </div>
                 <div class="form-group mb-0 text-right">
-                    <button type="submit" class="btn btn-sm btn-primary" onclick="submit_reply('pending')">{{ translate('Send Reply') }}</button>
+                    <button type="submit" class="btn btn-sm btn-primary" onclick="submit_reply('pending')">{{ __('storefront.support.send_reply') }}</button>
                 </div>
             </form>
             <div class="pad-top">

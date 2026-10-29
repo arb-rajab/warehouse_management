@@ -118,8 +118,7 @@ class OrderController extends Controller
         //sends Notifications to user
         NotificationUtility::sendNotification($order, $request->status);
         if (get_setting('google_firebase') == 1 && $order->user->device_token != null) {
-            $status = str_replace("_", "", $order->delivery_status);
-            NotificationUtility::sendOrderFirebaseNotification($order, "Order updated !", " Your order {$order->code} has been {$status}");
+            NotificationUtility::sendLocalizedOrderUpdate($order, $order->delivery_status);
         }
 
 
@@ -162,8 +161,7 @@ class OrderController extends Controller
         //sends Notifications to user
         NotificationUtility::sendNotification($order, $request->status);
         if (get_setting('google_firebase') == 1 && $order->user->device_token != null) {
-            $status = str_replace("_", "", $order->payment_status);
-            NotificationUtility::sendOrderFirebaseNotification($order, "Order updated !", " Your order {$order->code} has been {$status}");
+            NotificationUtility::sendLocalizedOrderUpdate($order, $order->payment_status);
         }
 
 

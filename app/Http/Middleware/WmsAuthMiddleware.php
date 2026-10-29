@@ -27,7 +27,7 @@ class WmsAuthMiddleware
         if ($expected === '' || ! hash_equals($expected, (string) $request->header('private-token'))) {
             return response()->json([
                 'result' => false,
-                'message' => 'invalid token, who are you?',
+                'message' => __('api.access.invalid_warehouse_token'),
                 'status' => 401
             ]);
         }

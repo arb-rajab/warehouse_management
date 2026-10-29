@@ -16,9 +16,9 @@ class SellerWithdrawResource extends JsonResource
      */
     public function toArray($request)
     {
-        $status = translate('Paid');
+        $status = __('storefront.status.paid');
         if($this->status == 0) {
-            $status = translate('Pending');
+            $status = __('storefront.status.pending');
         }
         return [
             'id' => $this->id,

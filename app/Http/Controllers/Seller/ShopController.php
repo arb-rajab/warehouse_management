@@ -66,11 +66,11 @@ class ShopController extends Controller
         }
 
         if ($shop->save()) {
-            flash(translate('Your Shop has been updated successfully!'))->success();
+            flash(__('seller.shop.your_shop_has_been_updated_successfully'))->success();
             return back();
         }
 
-        flash(translate('Sorry! Something went wrong.'))->error();
+        flash(__('seller.shop.sorry_something_went_wrong'))->error();
         return back();
     }
 
@@ -80,7 +80,7 @@ class ShopController extends Controller
             $shop = Auth::user()->shop;
             return view('shop.seller.verify_form', compact('shop'));
         } else {
-            flash(translate('Sorry! You have sent verification request already.'))->error();
+            flash(__('seller.shop.sorry_you_have_sent_verification_request_already'))->error();
             return back();
         }
     }
@@ -115,11 +115,11 @@ class ShopController extends Controller
         $shop = Auth::user()->shop;
         $shop->verification_info = json_encode($data);
         if ($shop->save()) {
-            flash(translate('Your shop verification request has been submitted successfully!'))->success();
+            flash(__('seller.shop.your_shop_verification_request_has_been_submitted_successfully'))->success();
             return redirect()->route('seller.dashboard');
         }
 
-        flash(translate('Sorry! Something went wrong.'))->error();
+        flash(__('seller.shop.sorry_something_went_wrong'))->error();
         return back();
     }
 }
