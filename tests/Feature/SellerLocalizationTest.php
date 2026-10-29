@@ -2,7 +2,9 @@
 
 use App\Http\Requests\Seller\PhysicalProductRequest;
 use App\Models\Category;
+use App\Models\Coupon;
 use App\Models\ProductStock;
+use App\Models\ProductTranslation;
 use App\Models\StoreUser;
 use App\Rules\Recaptcha;
 use App\Services\SellerWithdrawService;
@@ -218,7 +220,7 @@ test('seller and remaining admin catalogs match in keys translations and interpo
 });
 
 test('seller static sources and retained variant fragments resolve file keys with only content helper exceptions', function () {
-    $paths = [resource_path('views/shop/seller'), app_path('Http/Controllers/Seller'), app_path('Http/Requests/Seller')];
+    $paths = [resource_path('views/shop/seller'), resource_path('views/shop/partials/coupons'), app_path('Http/Controllers/Seller'), app_path('Http/Requests/Seller')];
     $files = [resource_path('views/shop/backend/product/products/sku_combinations.blade.php'), resource_path('views/shop/backend/product/products/sku_combinations_edit.blade.php')];
     foreach ($paths as $path) {
         foreach (new RecursiveIteratorIterator(new RecursiveDirectoryIterator($path)) as $file) {
@@ -242,3 +244,68 @@ test('seller static sources and retained variant fragments resolve file keys wit
         expect($source)->not->toMatch('/\btranslate\(/');
     }
 });
+
+test('retained coupon fragments use files and preserve content and form contracts', function (string $fragment, string $locale, string $heading) {
+    $product = createStoreProduct(['name' => 'English product <safe>']);
+    foreach (['ar' => 'منتج عربي <safe>', 'sa' => 'محتوى سعودي <safe>'] as $code => $name) {
+        ProductTranslation::forceCreate(['product_id' => $product->id, 'lang' => $code, 'name' => $name]);
+    }
+    $product->load('product_translations');
+    $cart = str_starts_with($fragment, 'cart_');
+    $editing = str_ends_with($fragment, '_edit');
+    $coupon = new Coupon([
+        'code' => 'KEEP"<safe>', 'discount' => 5, 'discount_type' => 'percent',
+        'details' => json_encode($cart ? ['min_buy' => 10, 'max_discount' => 7] : [['product_id' => $product->id]]),
+        'start_date' => strtotime('2026-10-01'), 'end_date' => strtotime('2026-10-31'),
+    ]);
+    $labels = $locale === 'en'
+        ? ['Coupon code', 'Discount', 'Amount', 'Percent', 'Date', 'Select Date']
+        : ['رمز القسيمة', 'الخصم', 'المبلغ', 'نسبة مئوية', 'التاريخ', 'اختر التاريخ'];
+    $labels = [...$labels, ...($cart
+        ? ($locale === 'en' ? ['Minimum Shopping', 'Maximum Discount Amount'] : ['الحد الأدنى للشراء', 'الحد الأقصى للخصم'])
+        : ($locale === 'en' ? ['Product'] : ['المنتج']))];
+
+    expect(DB::table('translations')->count())->toBe(0);
+    foreach ([false, true] as $overrides) {
+        if ($overrides) {
+            foreach (['Add Your Cart Base Coupon', 'Edit Your Cart Base Coupon', 'Add Your Product Base Coupon', 'Coupon code', 'Minimum Shopping', 'Maximum Discount Amount', 'Discount', 'Amount', 'Percent', 'Product', 'Date', 'Select Date'] as $key) {
+                DB::table('translations')->insert([
+                    'lang' => $locale,
+                    'lang_key' => preg_replace('/[^A-Za-z0-9_]/', '', str_replace(' ', '_', strtolower($key))),
+                    'lang_value' => 'DATABASE OVERRIDE',
+                ]);
+            }
+        }
+        startStorefrontTranslationQueryLog();
+        $html = StoreLocale::withLocale($locale, $locale, fn (): string => view('shop.partials.coupons.'.$fragment, [
+            'coupon' => $coupon, 'products' => collect([$product]),
+        ])->render());
+        expectNoStorefrontTranslationQueries();
+        expect($html)->toContain($heading, ...$labels)->not->toContain('DATABASE OVERRIDE')
+            ->and($html)->toContain('name="code"', 'name="discount"', 'name="discount_type"', 'name="date_range"', 'value="amount"', 'value="percent"', "$('.aiz-date-range').daterangepicker()");
+        if ($cart) {
+            expect($html)->toContain('name="min_buy"', 'name="max_discount"');
+        } else {
+            $name = ['en' => 'English product <safe>', 'ar' => 'منتج عربي <safe>', 'sa' => 'محتوى سعودي <safe>'][$locale];
+            expect($html)->toContain('name="product_ids[]"', e($name), 'value="'.$product->id.'"')
+                ->not->toContain($name);
+        }
+        if ($editing) {
+            expect($html)->toContain(e($coupon->code), 'value="10/01/2026 - 10/31/2026"', 'selected');
+        }
+        expect(DB::table('translations')->count())->toBe($overrides ? 12 : 0);
+    }
+})->with([
+    ['cart_base_coupon', 'en', 'Add Your Cart Base Coupon'],
+    ['cart_base_coupon_edit', 'en', 'Edit Your Cart Base Coupon'],
+    ['product_base_coupon', 'en', 'Add Your Product Base Coupon'],
+    ['product_base_coupon_edit', 'en', 'Add Your Product Base Coupon'],
+    ['cart_base_coupon', 'ar', 'إضافة قسيمتك على مستوى السلة'],
+    ['cart_base_coupon_edit', 'ar', 'تعديل قسيمتك على مستوى السلة'],
+    ['product_base_coupon', 'ar', 'إضافة قسيمتك على مستوى المنتج'],
+    ['product_base_coupon_edit', 'ar', 'إضافة قسيمتك على مستوى المنتج'],
+    ['cart_base_coupon', 'sa', 'إضافة قسيمتك على مستوى السلة'],
+    ['cart_base_coupon_edit', 'sa', 'تعديل قسيمتك على مستوى السلة'],
+    ['product_base_coupon', 'sa', 'إضافة قسيمتك على مستوى المنتج'],
+    ['product_base_coupon_edit', 'sa', 'إضافة قسيمتك على مستوى المنتج'],
+]);

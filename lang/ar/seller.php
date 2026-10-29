@@ -33,6 +33,10 @@ return [
         'wholesale_products' => 'منتجات الجملة',
     ],
     'coupons' => [
+        'add_your_cart_base_coupon' => 'إضافة قسيمتك على مستوى السلة',
+        'edit_your_cart_base_coupon' => 'تعديل قسيمتك على مستوى السلة',
+        'add_your_product_base_coupon' => 'إضافة قسيمتك على مستوى المنتج',
+        'select_date' => 'اختر التاريخ',
         'minimum_shopping' => 'الحد الأدنى للشراء',
         'maximum_discount_amount' => 'الحد الأقصى للخصم',
         'add_new_coupon' => 'إضافة قسيمة جديدة',

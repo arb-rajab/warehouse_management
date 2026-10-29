@@ -1,6 +1,6 @@
 import { Form } from '@inertiajs/vue3';
 import { mount } from '@vue/test-utils';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ComponentPublicInstance } from 'vue';
 import {
     exportAppTranslations,
@@ -10,7 +10,7 @@ import {
 import DataTable from '@/components/DataTable.vue';
 import Pagination from '@/components/Pagination.vue';
 import ResourceFormPage from '@/components/ResourceFormPage.vue';
-import { t } from '@/lib/i18n';
+import { syncPageLocale, t } from '@/lib/i18n';
 import {
     adminLanguage,
     paginated,
@@ -38,6 +38,7 @@ vi.mock('@inertiajs/vue3', async () => {
     };
 });
 beforeEach(() => {
+    syncPageLocale({ locale: 'en' });
     vi.clearAllMocks();
     formSlotPropsMock.mockReturnValue({ errors: {}, processing: false });
     usePageMock.mockReturnValue({
@@ -47,6 +48,7 @@ beforeEach(() => {
         }),
     });
 });
+afterEach(() => syncPageLocale({ locale: 'en' }));
 
 const language = adminLanguage();
 const translation = storeTranslation({
@@ -83,6 +85,7 @@ describe('Language Translations', () => {
 
             for (const key of [
                 'translationScope',
+                app ? 'mobileScope' : 'contentScope',
                 'search',
                 'copy',
                 'key',
@@ -136,6 +139,46 @@ describe('Language Translations', () => {
                         .text(),
                 ).toBe(t('store.languages.export'));
             }
+        },
+    );
+    it.each([
+        ['en', false],
+        ['ar', false],
+        ['en', true],
+        ['ar', true],
+    ] as const)(
+        'explains the catalog boundary in %s app=%s with the exact target code',
+        async (locale, app) => {
+            syncPageLocale({ locale });
+            const wrapper = mountPage(app);
+            await wrapper.setProps({
+                language: adminLanguage({ code: 'sa', app_lang_code: 'ar_SA' }),
+            });
+            expect(wrapper.getComponent(ResourceFormPage).props('title')).toBe(
+                t(
+                    app
+                        ? 'store.languages.appTranslations'
+                        : 'store.languages.translations',
+                ),
+            );
+            expect(wrapper.text()).toContain(
+                t('store.languages.translationScope'),
+            );
+            expect(wrapper.text()).toContain(
+                t(
+                    app
+                        ? 'store.languages.mobileScope'
+                        : 'store.languages.contentScope',
+                ),
+            );
+            expect(wrapper.text()).not.toContain(
+                t(
+                    app
+                        ? 'store.languages.contentScope'
+                        : 'store.languages.mobileScope',
+                ),
+            );
+            expect(wrapper.text()).toContain(app ? '(ar_SA)' : '(sa)');
         },
     );
     it('copies only the visible English values into the existing inputs', async () => {

@@ -7,6 +7,8 @@ The seller/admin stage continues from the actual storefront head `ff546a93`.
 The delivery/document stage continues from the actual seller/admin head `b12995a5`.
 The API/mobile stage continues from the fetched delivery/document head `236a502b`;
 the reported head was confirmed against the existing draft PR #512 before editing.
+The final repository cleanup continues from the fetched API/mobile head
+`285406aa9b9e2fbd4d3ed67021bcbaea21da5524`, also confirmed against PR #512.
 Verification is explicitly deferred by the user until the migration prompts
 are complete; see the verification contract below.
 
@@ -30,8 +32,8 @@ DEFAULT_LANGUAGE content default. HTML language, direction, Vue store props,
 display dates and numbers use that UI locale. APP_FALLBACK_LOCALE is preserved
 and its legacy Arabic alias is normalized for file/Vue fallback.
 
-Static file lookups never call `translate()`. That helper remains unchanged for
-unmigrated consumers, including its existing database behavior. Existing
+Static file lookups never call `translate()`. That helper retains its existing
+database behavior for business-owned content; its docblock records that boundary. Existing
 translation records are preserved. No schema, dependency, environment-file,
 currency, rounding, timezone, guard or route changes are part of this stage.
 
@@ -237,36 +239,112 @@ catalogs and an explicit legacy-key-to-file-key reader/export adapter. Files
 must be authoritative for mapped static keys; unknown catalogs must remain
 available until their supported consumers are accounted for.
 
-## Remaining consumers and boundaries
+## Final repository cleanup completed
 
-| Group | Remaining consumers |
+- Preserve all four `resources/views/shop/partials/coupons/` templates and migrate
+  their 44 static calls (13/11/10/10 respectively) to storefront/seller file keys.
+  Four new matching English/Arabic coupon keys cover the legacy headings/date
+  placeholder. No variable, field name, option value, identifier, selected-value,
+  date/currency behavior or JavaScript initialization changes. Active seller AJAX
+  endpoints return `shop.seller.coupons.fields`, and admin coupon actions render
+  Inertia; neither establishes retirement of possible external use of the four
+  partials. Unknown external use is handled by preserving their contracts.
+- Remove `app/Utility/TranslationUtility.php` and `app/Models/AppTranslation.php`,
+  with both entries in `pint.json` and `phpstan.neon`. The utility only instantiated
+  itself; the active helper uses `Translation` directly. The catalog controller
+  uses `DB::table`, with no model relationship, provider/binding, configuration,
+  route or autoload consumer of either deleted class. Tables/records remain.
+- Language Index/Translations titles and help now distinguish content/custom
+  labels, file-managed static UI and compatibility mobile catalogs in English and
+  Arabic. Mobile pages display the exact `app_lang_code`, including regional codes.
+  General catalog rows can include historical UI entries; help explicitly states
+  they no longer control migrated UI. Import help describes the English mobile
+  catalog. `LanguageController`, both translation requests, routes, permission
+  `language_setup`, input rules, payloads, search, pagination, saves, cache
+  invalidation and downloads remain unchanged. No replacement static DB editor.
+- Add the missing English `seller.common.order` counterpart to an existing Arabic
+  entry, keeping seller catalog keys aligned. No locale resolver, header/session,
+  queue, fallback, content-language or locale-restoration behavior changes here.
+
+## Exact final runtime database consumer inventory
+
+These are retained intentional dependencies, based on source inspection of the
+actual branch, not executed verification. There are **14** global-helper content
+calls; no repository-owned static literal helper calls remain in owned runtime
+PHP/Blade sources. Mobile catalogs are still DB-backed and are not counted as a
+completed file migration.
+
+| Path / consumer | Calls | Classification and justification |
+| --- | --- | --- |
+| `app/Support/StorePermissions.php::{displayName,displaySection}` | 2 | Custom permission/section content only; canonical identifiers use files. `Store/Admin/RoleController` consumes the display methods. |
+| `app/Support/StoreLocale.php::paymentMethod` | 1 | Custom payment-method content; invoice, seller order detail and `Store/VisitDetailResource` consume it. Known methods use files. |
+| `app/Http/Resources/V2/LanguageCollection.php` | 1 | Configured language-name content, returned by `Api/V2/LanguageController::getList` at `/temp/api/v2/languages`; metadata, not a mobile translation catalog. |
+| `resources/views/shop/seller/product_query/index.blade.php` | 4 | Customer name, product name, truncated question and reply, rendered by seller product-query index; preserve user/product content. |
+| `resources/views/shop/frontend/index.blade.php` | 2 | Configured `cupon_title` / `cupon_subtitle`. |
+| `resources/views/shop/frontend/inc/nav.blade.php` | 2 | Configured desktop/mobile `header_menu_labels` values. |
+| `resources/views/shop/frontend/product_details/details.blade.php` | 1 | Configured external-product button text. |
+| `resources/views/shop/frontend/partials/addToCart.blade.php` | 1 | Configured external-product button text in the AJAX fragment. |
+
+The underlying runtime catalog consumers are:
+
+| Path / consumer | Remaining database behavior and reason |
 | --- | --- |
-| Seller/admin/customer UI | No remaining active static database-helper calls found in the migrated surfaces. Dynamic product-query content, configured navigation/CMS/coupon content and custom payment/permission fallbacks intentionally remain. Commented legacy markup and SVG transforms are not active static consumers. This is source inspection, not runtime verification. |
-| API/mobile | No remaining active static database-helper calls in API/V2 controllers, scoped requests/services, API middleware or V2 resources. `V2/LanguageCollection` deliberately retains content translation of configured language names. External client catalogs remain unestablished; DB-backed ARB management/export is retained as described above. |
-| Translation management: active DB catalog consumers | `Store/Admin/LanguageController::{show,storeTranslations}` uses `translationPage(false)`/`saveTranslations(false)` for general translations. `::{showAppTranslations,storeAppTranslations,importAppTranslations,exportAppTranslations}` reads/writes mobile catalogs through `translationPage`, `saveTranslations`, `writeTranslation`. `UpdateTranslationsRequest::rules` validates keys against English DB rows; `ImportAppTranslationsRequest::{after,translations}` validates/returns arbitrary imported JSON keys. Retain management routes in `routes/shop-admin.php`, permission gates, Vue language screens/forms, pagination, `translations`/`app_translations` tables and `translations-<locale>` cache invalidation until final cleanup decisions and external-client mapping. |
-| Intentional database content | `getTranslation()` model methods, custom role/permission/payment names, products/categories/brands/shops, CMS, configured menus/coupon headings, business settings and user-authored content retain existing behavior. These are separate from static application vocabulary. |
-| Documents | Runtime/visual review of Arabic emails and both PDF engines is deferred. The external fixed CMR form's preprinted labels and business/company literals are preserved; only generated static overlay vocabulary is localized. |
-| Retained static legacy templates without repository callers | `resources/views/shop/partials/coupons/{cart_base_coupon,cart_base_coupon_edit,product_base_coupon,product_base_coupon_edit}.blade.php` contain 44 static helper calls. No include/view/controller/test reference to these partial names was found. They are potential externally invoked legacy consumers, not established active runtime paths; confirm external integrations before retiring them. |
-| Unused cleanup candidates | `TranslationUtility::{getInstance,reInstantiate,cached_translation_row,getAllTranslations}` and the `AppTranslation` model have no repository caller. Review/retire in cleanup; do not count them as current runtime consumers. |
+| `app/Http/Helpers.php::translate`, `app/Models/Translation.php` | Read `translations`, insert missing English content keys, retain `translations-en`, `translations-<requested content locale>` and `translations-<DEFAULT_LANGUAGE>` caches and fallback. Necessary for all 14 calls above. |
+| `Store/Admin/LanguageController::{show,storeTranslations}` | `translationPage(false)` / `saveTranslations(false)` / `writeTranslation` read/write general content/custom-label catalog. English-key pagination/search, target-language values and `translations-<code>` invalidation remain. |
+| `Store/Admin/LanguageController::{showAppTranslations,storeAppTranslations,importAppTranslations,exportAppTranslations}` | `translationPage(true)` / `saveTranslations(true)` / `writeTranslation` and direct export read/write `app_translations` for mobile compatibility. Exact external keys/locales and existing JSON/download contracts remain. |
+| `UpdateTranslationsRequest::rules` | Validates submitted keys against English rows in the selected general/mobile table. No file-key adapter. |
+| `ImportAppTranslationsRequest::{after,translations}` | Validates and returns flat uploaded mobile JSON keys/string values before controller writes; does not itself query a translation table. |
+| `resources/js/pages/Store/Admin/Languages/{Index,Translations}.vue` and `routes/shop-admin.php` language/catalog actions | Existing authorized management UI/route consumers of those controller/request paths. Keep exact route names and the `language_setup` permission gate. |
 
-Do not mistake `getTranslation()` model methods, configured menu/coupon content,
-SVG transforms, Laravel validation's `->translate()` or vendor JavaScript
-`translate` functions for static database-backed UI labels. Legacy helper calls
-remaining outside the intentional content list are the retained coupon partials
-and DB catalog management; do not remove the tables/helper during this stage.
+Dedicated model/content paths are also deliberately retained; they do not use
+the general static UI catalog:
 
-The exact remaining active global `translate()` content call sites are:
-`StorePermissions::{displayName,displaySection}` for custom permission/section
-records; `StoreLocale::paymentMethod` for custom payment methods (invoice,
-seller order detail and VisitDetailResource consumers); `V2/LanguageCollection`
-for configured names; seller product-query index for user/product names and
-truncated question/reply (four calls); frontend index for configured coupon
-title/subtitle (two); frontend navigation for configured desktop/mobile menu
-labels (two); product-details/add-to-cart external button text (two). Dedicated
-model `getTranslation()` and content-translation tables remain intentional.
-The helper itself (`app/Http/Helpers.php`) still allows DB overrides and inserts
-missing English content keys; no migrated static path calls it. Final cleanup
-must retain or deliberately replace those content behaviors before removing it.
+- `getTranslation()` on `Attribute`, `Brand`, `Category`, `City`,
+  `CustomerPackage`, `CustomerProduct`, `FlashDeal`, `Page`, `PickupPoint`,
+  `Product`, `Role`, `SellerPackage`; preserve their dedicated translation tables,
+  relations and writers/importers. Direct content readers include
+  `Store/{WebsitePageResource,PickupPointResource,CityResource}` and admin address
+  lookup. Product/category/brand/package/CMS/custom-role content remains dynamic.
+- `app/Http/Helpers.php::get_setting` retains language-sensitive `BusinessSetting`
+  content and `business_settings` caching. Configured shop/settings/newsletter,
+  verification forms and user-authored content retain their existing content
+  selection and sanitization rules; they are not static UI translation consumers.
+- `DEFAULT_LANGUAGE` remains `app.default_language`, the content-language default.
+  No stored `sa`/`ar` rows, model content locales or exact mobile codes are renamed.
+
+Do not classify SVG/CSS/canvas transforms, Laravel validation's `->translate()`,
+comments or vendor JavaScript translation functions as global helper consumers.
+The external CMR form's preprinted labels are document assets, not DB consumers.
+
+## Unresolved external mobile inputs
+
+The fetched branch and tracked repository still contain no authoritative `.arb`,
+`.dart`, mobile l10n inventory or runtime client catalog reader. Synthetic test
+keys are not production inventories. Before a further implementation stage, obtain:
+
+1. Versioned complete **customer, seller and delivery** client catalogs and actual
+   key usages for each supported/released client version, with obsolete and still
+   supported keys identified. Include complete English and Arabic catalogs, all
+   regional variants, and the full supported-locale manifest; exact production
+   codes cannot be inferred from this repository (`ar`, `ar_SA`, `sa` are distinct).
+2. Exact case/punctuation-sensitive keys, values and interpolation/plural syntax,
+   placeholder types and escaping, ARB metadata requirements, and generation/lookup
+   behavior. Existing import accepts flat strings only (5 MiB, 5,000 entries,
+   nonempty keys up to 255 characters and string values up to 255 characters,
+   including empty values), not nested ARB metadata; a future adapter must not
+   silently discard unsupported metadata.
+3. Client locale negotiation, normalization, fallback/missing/empty-key behavior,
+   catalog load/update paths and backward-compatibility requirements. Confirm
+   whether download names and the existing empty `[]` shape are consumed directly.
+
+Then a follow-up implementation must commit complete file catalogs and explicit
+lossless legacy-key mappings, making files authoritative for mapped static keys
+while retaining unmapped supported client vocabulary. Current exports preserve
+flat Unicode JSON, exact arbitrary keys/regional codes, sanitized
+`app_<app_lang_code>.arb` names, JSON content type and `[]` empty exports. No adapter
+or invented mobile key inventory was added. Repository static cleanup is complete;
+**another mobile implementation prompt is required after these external inputs**
+before declaring the entire localization migration complete and merging this PR.
 
 ## Verification contract
 
@@ -310,9 +388,31 @@ responses and restored surrounding state. `Store/Admin/LanguageControllerTest`
 adds arbitrary mobile key/interpolation, ARB format/filename, regional isolation
 and empty-export compatibility. These additions remain unexecuted.
 
+Final cleanup extends `SellerLocalizationTest` with all four retained coupon
+fragments in English, Arabic and legacy `sa`: every label, form/selection/date
+contract, escaped product/code content, model content-locale selection, empty
+general catalog, database override isolation and no general translation queries.
+The existing catalog/source test now includes the coupon partials. Language Vue
+tests cover distinct content/mobile help and titles in both locales, exact mobile
+regional code display, and unchanged action/form/permission contracts.
+`LanguageControllerTest` additionally pins custom-label cache refresh while
+historical DB UI overrides cannot change file text or other locale caches.
+
+`LocalizationBoundaryTest` scans owned PHP/Blade source under app/resources/routes/
+config/bootstrap, with exact file/expression/count exceptions for the 14 content
+calls and retained catalog helper/model/controller/request behavior. No directory
+is exempted for dynamic or mobile consumers; new calls in those same files fail.
+PHP tokenization and Blade compilation distinguish executable PHP from comments,
+SVG transforms, JavaScript methods and Laravel validation methods. Scanner tests
+pin added calls, case variants, helper aliases, model access and raw SQL. This is
+a source regression boundary, not arbitrary dynamic-call/data-flow analysis or
+proof about unavailable external client code. All new coverage is unexecuted.
+
 **Deferred by explicit user instruction:** no tests, browser suites, builds, pre-push
 scripts, formatter/type-check workflows or attestation commands were run for
-the seller/admin, delivery/document or API/mobile stages. Review used source inspection, searches and `git diff --check`.
+the seller/admin, delivery/document, API/mobile or final repository cleanup stages.
+No manually triggered CI was requested. Review used source inspection, searches
+and `git diff --check`.
 The earlier storefront development results are historical and do not verify
 the seller/admin, delivery/document or API/mobile commits. The stopped storefront attestation was not restarted;
 no CI-Verified trailer was created or fabricated. Intermediate commit/push is
@@ -321,6 +421,7 @@ explicitly authorized without that attestation. Keep PR #512 draft and open.
 Reserve these checks until the user finishes all migration prompts:
 
 ```sh
+php artisan test --compact tests/Feature/LocalizationBoundaryTest.php
 php artisan test --compact tests/Feature/StorefrontLocalizationTest.php tests/Feature/SellerLocalizationTest.php tests/Feature/DeliveryLocalizationTest.php tests/Feature/Store/StorePermissionLocalizationTest.php
 php artisan test --compact tests/Feature/ApiMessageLocalizationTest.php tests/Feature/ApiResourceLocalizationTest.php tests/Feature/ApiLocaleLocalizationTest.php tests/Feature/SetLocaleTest.php tests/Feature/SetLocaleFromHeaderTest.php tests/Feature/Store/Admin/LanguageControllerTest.php
 php artisan test --compact tests/Feature/LegacyStoreInvoiceTest.php tests/Feature/LegacyStorePasswordResetTest.php tests/Feature/Console/CheckUnorderedCartsCommandTest.php tests/Feature/Store/Admin/ProductBulkUploadControllerTest.php tests/Feature/Store/Admin/RepresentativePaymentControllerTest.php
@@ -334,6 +435,34 @@ npm run build
 npm run test:e2e
 python3 .claude/scripts/pre_push_check.py --attest
 ```
+
+Consolidated final-verification checklist (all still deferred):
+
+- Run the targeted suites above and the complete required backend/frontend suites,
+  including language screen component tests, permission/ownership refusals, content
+  and mobile catalog CRUD/import/export, schema-sensitive checks and the
+  required-fields ratchet. Use prepared isolated test databases, never seed
+  production or change its catalogs as verification setup.
+- Confirm English/Arabic catalog keys and interpolation parity; empty translation
+  tables/stored legacy overrides cannot affect static UI, while custom labels and
+  model content remain editable and cached. Check exact ARB keys, regional codes,
+  Unicode/flat JSON, download filenames/content type, empty `[]`, input limits,
+  invalid-file atomicity and denied callers leaving data unchanged.
+- Confirm locale defaults, session override, App-Language precedence over
+  Accept-Language, malformed/weighted headers, `sa` UI mapping/content isolation,
+  translator fallback, nested/error restoration and consecutive queue recipients.
+- Run builds/types/formatters/browser coverage and review Arabic/RTL storefront,
+  seller and language-management text with safe JavaScript interpolation.
+- Complete the **earlier deferred Arabic email/PDF/CMR visual review**: HTML and
+  plain-text mail, subjects and queued deliveries; mPDF invoices/reference PDFs/
+  receipts; TCPDF/FPDI CMR overlays. Inspect shaping, bidi/Latin identifiers,
+  wrapping, page breaks, totals/currency, fixed-form overlay positions, barcode/
+  signatures and unchanged downloads. The external CMR's preprinted labels remain
+  supplied-document content, not application labels to translate.
+- After external mobile catalogs arrive, implement/verify complete file-backed
+  mappings against every supported client/locale. Do not close this dependency
+  based on synthetic backend test keys. Keep #512 draft/open pending this work
+  and observed final verification.
 
 The final attested run needs a clean tree and an unpushed final commit; follow
 its actual prerequisites then. Record only observed results, and do not count

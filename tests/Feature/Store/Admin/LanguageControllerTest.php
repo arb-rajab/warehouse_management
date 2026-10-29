@@ -261,3 +261,37 @@ test('WMS authentication alone grants no language administration access', functi
     $this->post(route('languages.store'), ['name' => 'Arabic', 'code' => 'ar', 'app_lang_code' => 'ar'])->assertRedirectToRoute('shop.login');
     expect(Language::count())->toBe(0);
 });
+
+test('content catalog edits refresh custom labels without overriding file-managed interface text', function () {
+    actingAsStoreUser(createStoreStaff('language_setup'));
+    $language = adminLanguage();
+    DB::table('translations')->insert([
+        ['lang' => 'en', 'lang_key' => 'amount', 'lang_value' => 'Amount'],
+        ['lang' => 'ar', 'lang_key' => 'amount', 'lang_value' => 'Old amount'],
+        ['lang' => 'en', 'lang_key' => 'custom_transfer', 'lang_value' => 'Custom transfer'],
+        ['lang' => 'ar', 'lang_key' => 'custom_transfer', 'lang_value' => 'Old transfer'],
+    ]);
+    Cache::put('translations-ar', ['amount' => 'Old amount', 'custom_transfer' => 'Old transfer']);
+    Cache::put('translations-fr', ['custom_transfer' => 'Other content locale']);
+    Cache::put('wms-sentinel', 'keep');
+
+    $this->post(route('languages.key_value_store'), [
+        'id' => $language->id,
+        'translations' => [
+            ['key' => 'amount', 'value' => 'DATABASE UI OVERRIDE'],
+            ['key' => 'custom_transfer', 'value' => 'تحويل مخصص'],
+        ],
+    ])->assertRedirectToRoute('languages.show', ['language' => $language]);
+
+    expect(Cache::has('translations-ar'))->toBeFalse()
+        ->and(Cache::get('translations-fr'))->toBe(['custom_transfer' => 'Other content locale'])
+        ->and(Cache::get('wms-sentinel'))->toBe('keep')
+        ->and(translate('Custom transfer', 'ar'))->toBe('تحويل مخصص')
+        ->and(config('app.default_language'))->toBe('en');
+    startStorefrontTranslationQueryLog();
+    expect(__('storefront.common.amount', [], 'ar'))->toBe('المبلغ')
+        ->and(__('storefront.common.amount', [], 'en'))->toBe('Amount');
+    expectNoStorefrontTranslationQueries();
+    $this->assertDatabaseHas('translations', ['lang' => 'ar', 'lang_key' => 'amount', 'lang_value' => 'DATABASE UI OVERRIDE']);
+    expect(DB::table('translations')->count())->toBe(4);
+});

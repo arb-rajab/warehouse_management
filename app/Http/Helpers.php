@@ -804,6 +804,11 @@ if (!function_exists('renderStarRating')) {
     }
 }
 
+/**
+ * Translate business-owned content labels using the legacy database catalog.
+ * Repository-owned static UI belongs in lang/ and must use Laravel translation keys.
+ * Keep content-key insertion, caching and DEFAULT_LANGUAGE fallback for custom labels.
+ */
 function translate($key, $lang = null, $addslashes = false)
 {
     if ($lang == null) {

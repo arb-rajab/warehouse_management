@@ -12,6 +12,7 @@ return [
         'digital_products' => 'Digital Products',
         'earning' => 'Earning',
         'filter' => 'Filter',
+        'order' => 'Order',
         'order_deleted' => 'Order Deleted',
         'package' => 'Package',
         'packages' => 'Packages',
@@ -32,6 +33,10 @@ return [
         'wholesale_products' => 'Wholesale Products',
     ],
     'coupons' => [
+        'add_your_cart_base_coupon' => 'Add Your Cart Base Coupon',
+        'edit_your_cart_base_coupon' => 'Edit Your Cart Base Coupon',
+        'add_your_product_base_coupon' => 'Add Your Product Base Coupon',
+        'select_date' => 'Select Date',
         'minimum_shopping' => 'Minimum Shopping',
         'maximum_discount_amount' => 'Maximum Discount Amount',
         'add_new_coupon' => 'Add New Coupon',

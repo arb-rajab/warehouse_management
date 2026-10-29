@@ -1,6 +1,6 @@
 import { Form } from '@inertiajs/vue3';
 import { mount } from '@vue/test-utils';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ComponentPublicInstance } from 'vue';
 import {
     create,
@@ -17,7 +17,7 @@ import DataTable from '@/components/DataTable.vue';
 import Pagination from '@/components/Pagination.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
 import { confirmDelete } from '@/lib/confirm';
-import { t } from '@/lib/i18n';
+import { syncPageLocale, t } from '@/lib/i18n';
 import {
     adminLanguage,
     paginated,
@@ -44,6 +44,7 @@ vi.mock('@inertiajs/vue3', async () => {
     };
 });
 beforeEach(() => {
+    syncPageLocale({ locale: 'en' });
     vi.clearAllMocks();
     formSlotPropsMock.mockReturnValue({ errors: {}, processing: false });
     usePageMock.mockReturnValue({
@@ -53,6 +54,7 @@ beforeEach(() => {
         }),
     });
 });
+afterEach(() => syncPageLocale({ locale: 'en' }));
 
 vi.mock('@/lib/confirm', () => ({
     confirmDelete: vi.fn(),
@@ -91,6 +93,8 @@ describe('Language Index', () => {
             'delete',
             'importFile',
             'import',
+            'translationScope',
+            'mobileImportScope',
         ]) {
             expect(wrapper.text()).toContain(t(`store.languages.${key}`));
         }
@@ -126,6 +130,25 @@ describe('Language Index', () => {
             perPage: 20,
         });
     });
+    it.each(['en', 'ar'])(
+        'explains file-managed UI and English mobile imports in %s',
+        (locale) => {
+            syncPageLocale({ locale });
+            const wrapper = mountPage();
+            for (const key of [
+                'translations',
+                'appTranslations',
+                'translationScope',
+                'mobileImportScope',
+                'importFile',
+            ]) {
+                expect(wrapper.text()).toContain(t(`store.languages.${key}`));
+            }
+            expect(wrapper.text()).toContain(
+                t('store.languages.defaultReadOnly', { code: 'en' }),
+            );
+        },
+    );
     it('links to every language action and confirms deletion', () => {
         const wrapper = mountPage();
         const links = wrapper.findAllComponents(TableActionLink);
