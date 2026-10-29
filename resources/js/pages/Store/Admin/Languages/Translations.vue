@@ -66,7 +66,9 @@ function copy(): void {
     >
         <FieldError :message="errors.translations ?? errors.id" />
         <p>
-            {{ language.name }} ({{ app ? language.app_lang_code : language.code }})
+            {{ language.name }} ({{
+                app ? language.app_lang_code : language.code
+            }})
         </p>
         <p>{{ t('store.languages.translationScope') }}</p>
         <p>

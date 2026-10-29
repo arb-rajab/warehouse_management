@@ -20,6 +20,7 @@ use App\Notifications\PasswordResetRequest;
 use App\Notifications\TermsAgreementNotification;
 use App\Notifications\UnorderedCartNotification;
 use App\Services\DriverService;
+use App\Services\TripService;
 use App\Support\StoreLocale;
 use Illuminate\Contracts\Mail\Factory as MailFactory;
 use Illuminate\Contracts\Translation\HasLocalePreference;
@@ -28,6 +29,8 @@ use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Notification;
+use setasign\Fpdi\TcpdfFpdi;
+use Smalot\PdfParser\Parser;
 use Symfony\Component\Mime\Email;
 
 class DeliveryLocaleRecipient implements HasLocalePreference
@@ -321,6 +324,21 @@ test('trip notifications resolve the driver delivery language and preserve their
     ['en', 'New trip assigned!'],
     ['ar', 'تم إسناد رحلة جديدة إليك!'],
 ]);
+
+test('CMR PDFs preserve customer identifiers beside localized labels', function (string $locale) {
+    $pdf = new TcpdfFpdi;
+    $pdf->setLanguageArray(['a_meta_charset' => 'UTF-8', 'a_meta_language' => $locale, 'a_meta_dir' => 'ltr']);
+    $pdf->AddPage();
+    $customer = (object) [
+        'company_name' => 'Example company', 'tax_number' => 'NL123ABC',
+        'address' => 'Rotterdam', 'phone' => '+31123456789', 'email' => 'customer@example.test',
+    ];
+    $service = new TripService;
+    (new ReflectionMethod($service, 'sectionTwo'))->invokeArgs($service, [&$pdf, $customer, $locale]);
+
+    $text = (new Parser)->parseContent($pdf->Output('', 'S'))->getText();
+    expect($text)->toContain('NL123ABC', '+31123456789', 'customer@example.test');
+})->with(['en', 'ar']);
 
 test('delivery and retained document sources do not call the static database translation helper', function () {
     $roots = [app_path('Mail'), app_path('Notifications'), resource_path('views/shop/emails'), resource_path('views/shop/backend/downloads'), resource_path('views/shop/backend/invoices')];

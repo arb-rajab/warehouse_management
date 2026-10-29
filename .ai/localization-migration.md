@@ -471,3 +471,11 @@ Consolidated final-verification checklist:
 The final attested run needs a clean tree and an unpushed final commit; follow
 its actual prerequisites then. Record only observed results, and do not count
 source inspection or earlier commits' checks as verification of the final tree.
+
+Final verification review found and corrected mixed-direction CMR identifiers:
+Arabic labels now preserve the email and leading phone `+` in the generated PDF,
+with English/Arabic PDF extraction regression coverage. Arabic invoice and CMR
+overlay samples were visually inspected, and Arabic support email HTML/plain text
+were reviewed. Full fixed-form CMR alignment remains unverified because the supplied
+`storage/app/PrintCMR-PDF-EN_2.pdf` is absent from this workspace; the overlay review
+does not establish alignment against that external form.

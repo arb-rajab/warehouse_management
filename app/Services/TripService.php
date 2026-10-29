@@ -400,6 +400,13 @@ class  TripService
         $phone = $customer?->phone ?? '-';
         $email = $customer?->email ?? '-';
 
+        // Keep identifiers in reading order when TCPDF shapes their Arabic labels.
+        if ($documentLocale === 'ar') {
+            $tax_number = "\u{202D}".$tax_number."\u{202C}";
+            $phone = "\u{202D}".$phone."\u{202C}";
+            $email = "\u{202D}".$email."\u{202C}";
+        }
+
         $y = 41;
 
         $pdf->SetFont('dejavusans', 'B', 10);

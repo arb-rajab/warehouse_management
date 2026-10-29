@@ -135,6 +135,7 @@ describe('Language Index', () => {
         (locale) => {
             syncPageLocale({ locale });
             const wrapper = mountPage();
+
             for (const key of [
                 'translations',
                 'appTranslations',
@@ -144,6 +145,7 @@ describe('Language Index', () => {
             ]) {
                 expect(wrapper.text()).toContain(t(`store.languages.${key}`));
             }
+
             expect(wrapper.text()).toContain(
                 t('store.languages.defaultReadOnly', { code: 'en' }),
             );
