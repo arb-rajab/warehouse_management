@@ -59,7 +59,7 @@
         "leaflet": "1.9.4",
         "tailwindcss": "^4.1.1",
         "three": "^0.185.1",
-        "typescript": "^5.2.2",
+        "typescript": "^7.0.2",
         "vite": "^8.2.4",
         "vue": "^3.5.13",
         "vue-i18n": "^11.4.8"
