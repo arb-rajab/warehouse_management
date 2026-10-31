@@ -5,11 +5,10 @@ use App\Models\Coupon;
 use App\Models\OrderDetail;
 use App\Models\StoreUser;
 use App\Models\Upload;
-use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Routing\Route as RoutingRoute;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
-use Illuminate\Support\Facades\Schema;
 
 /**
  * Store records that any signed-in account could reach by id: the seller app
@@ -47,25 +46,6 @@ function gapConversation(StoreUser $sender, StoreUser $receiver): int
         'sender_id' => $sender->id, 'receiver_id' => $receiver->id, 'title' => 'Hello',
         'sender_viewed' => 1, 'receiver_viewed' => 0, 'created_at' => now(), 'updated_at' => now(),
     ]);
-}
-
-function gapRefundTable(): void
-{
-    Schema::create('refund_requests', function (Blueprint $table) {
-        $table->id();
-        $table->unsignedBigInteger('user_id');
-        $table->unsignedBigInteger('order_id');
-        $table->unsignedBigInteger('order_detail_id');
-        $table->unsignedBigInteger('seller_id')->nullable();
-        $table->integer('seller_approval')->default(0);
-        $table->text('reason')->nullable();
-        $table->integer('admin_approval')->default(0);
-        $table->integer('admin_seen')->default(0);
-        $table->decimal('refund_amount', 20, 2)->default(0);
-        $table->integer('refund_status')->default(0);
-        $table->text('reject_reason')->nullable();
-        $table->timestamps();
-    });
 }
 
 function gapOrderDetail(StoreUser $customer, array $attributes = []): OrderDetail
@@ -357,7 +337,6 @@ describe('web checkout address', function () {
 
 describe('app API refund requests', function () {
     test("a customer cannot ask a refund on another customer's item, or one that is not delivered and paid", function (array $detailState) {
-        gapRefundTable();
         $me = createStoreUser('customer');
         $theirs = gapOrderDetail(createStoreUser('customer'));
         $undelivered = gapOrderDetail($me, $detailState);
@@ -374,7 +353,6 @@ describe('app API refund requests', function () {
     ]);
 
     test('a customer can ask one refund per item, until it is rejected', function () {
-        gapRefundTable();
         $me = createStoreUser('customer');
         $detail = gapOrderDetail($me);
         $noise = gapOrderDetail($me);
@@ -394,8 +372,32 @@ describe('app API refund requests', function () {
         expect(DB::table('refund_requests')->where('order_detail_id', $detail->id)->count())->toBe(2);
     });
 
+    test('the purchase history items list reads the refund request filed on a line from a migrated table', function () {
+        // refund_requests had no migration, so a database built from the migrations
+        // failed here with SQLSTATE[42S02] when the list eager-loaded the request.
+        DB::table('addons')->insert(['name' => 'Refund request', 'unique_identifier' => 'refund_request', 'activated' => 1]);
+        Cache::forget('addons');
+        seedStoreCurrency();
+        storeSetting('no_of_decimals', 2);
+        $me = createStoreUser('customer');
+        $detail = gapOrderDetail($me);
+        $noise = gapOrderDetail(createStoreUser('customer'));
+        $api = gapApi($me);
+
+        $api->getJson("/temp/api/v2/purchase-history-items/{$detail->order_id}")->assertOk()
+            ->assertJsonPath('data.0.refund_request_status', 99);
+
+        $api->postJson('/temp/api/v2/refund-request/send', ['id' => $detail->id, 'reason' => 'broken'])->assertOk();
+
+        $api->getJson("/temp/api/v2/purchase-history-items/{$detail->order_id}")->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.refund_request_status', 0)
+            ->assertJsonPath('data.0.refund_label', __('storefront.status.pending'));
+
+        expect(DB::table('refund_requests')->where('order_detail_id', $noise->id)->count())->toBe(0);
+    });
+
     test('a guest is refused', function () {
-        gapRefundTable();
         $detail = gapOrderDetail(createStoreUser('customer'));
 
         gapGuestApi()->postJson('/temp/api/v2/refund-request/send', ['id' => $detail->id, 'reason' => 'x'])->assertUnauthorized();
