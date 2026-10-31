@@ -20,7 +20,7 @@ class PurchaseHistoryItemsCollection extends ResourceCollection
                 if (addon_is_activated('refund_request')) {
                     $refund_section = true;
                     $no_of_max_day = get_setting('refund_request_time');
-                    $last_refund_date = $data->created_at->addDays($no_of_max_day);
+                    $last_refund_date = ($data->created_at ?? Carbon::now())->copy()->addDays((int) $no_of_max_day);
                     $today_date = Carbon::now();
                     if ($data->product != null &&
                         $data->product->refundable != 0 &&

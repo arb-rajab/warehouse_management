@@ -54,12 +54,12 @@ class ProductController extends Controller
 
     public function inhouse()
     {
-        return new ProductMiniCollection(filter_products(Product::with(Product::WITH_STORE_LIST)->where('added_by', 'admin')->where('published', 1)->where('approved', 1))->latest()->paginate(10));
+        return new ProductMiniCollection(filter_products(Product::with(Product::WITH_STORE_LIST)->where('added_by', 'admin')->storeOpenable())->latest()->paginate(10));
     }
 
     public function show($id)
     {
-        $products = Product::where('id', $id)->where('published', 1)->where('approved', 1)->get();
+        $products = Product::storeOpenable()->where('id', $id)->get();
         abort_if($products->isEmpty(), 404);
 
         logProductView($id);
@@ -243,7 +243,7 @@ class ProductController extends Controller
                 ->limit(1)
         );
 
-        return new ProductMiniCollection(filter_products($products)->latest()->paginate(10));
+        return new ProductMiniCollection(filter_products($products->storeOpenable())->latest()->paginate(10));
     }
 
 
@@ -254,14 +254,14 @@ class ProductController extends Controller
             $products = $products->where('name', 'like', '%' . $request->name . '%');
         }
 
-        return new ProductMiniCollection(filter_products($products)->latest()->paginate(10));
+        return new ProductMiniCollection(filter_products($products->storeOpenable())->latest()->paginate(10));
     }
 
     public function todaysDeal()
     {
         return new ProductMiniCollection(remember_models(Product::class, 'app.todays_deal', 86400, function () {
             $products = Product::where('todays_deal', 1)->physical();
-            return filter_products($products)->limit(20)->latest()->get();
+            return filter_products($products->storeOpenable())->limit(20)->latest()->get();
         }, Product::WITH_STORE_LIST));
     }
 
@@ -275,22 +275,22 @@ class ProductController extends Controller
     public function featured()
     {
         $products = Product::with(Product::WITH_STORE_LIST)->where('featured', 1)->physical();
-        return new ProductMiniCollection(filter_products($products)->latest()->paginate(10));
+        return new ProductMiniCollection(filter_products($products->storeOpenable())->latest()->paginate(10));
     }
 
     public function digital()
     {
         $products = Product::with(Product::WITH_STORE_LIST)->digital();
-        return new ProductMiniCollection(filter_products($products)->latest()->paginate(10));
+        return new ProductMiniCollection(filter_products($products->storeOpenable())->latest()->paginate(10));
     }
 
 
 
     public function bestSeller()
     {
-        return new ProductMiniCollection(remember_models(Product::class, 'app.best_selling_products', 86400, function () {
+        return new ProductMiniCollection(remember_models(Product::class, 'app.best_selling_products.v2', 86400, function () {
             $products = Product::orderBy('num_of_sale', 'desc')->physical();
-            return filter_products($products)->limit(20)->get();
+            return filter_products($products->storeOpenable())->limit(20)->get();
         }, Product::WITH_STORE_LIST));
     }
 
@@ -299,7 +299,7 @@ class ProductController extends Controller
         return new ProductMiniCollection(remember_models(Product::class, "app.related_products-$id", 86400, function () use ($id) {
             $product = Product::find($id);
             $products = Product::where('category_id', $product->category_id)->where('id', '!=', $id)->physical();
-            return filter_products($products)->limit(10)->get();
+            return filter_products($products->storeOpenable())->limit(10)->get();
         }, Product::WITH_STORE_LIST));
     }
 
@@ -309,7 +309,7 @@ class ProductController extends Controller
             $product = Product::find($id);
             $products = Product::where('user_id', $product->user_id)->orderBy('num_of_sale', 'desc')->physical();
 
-            return filter_products($products)->limit(10)->get();
+            return filter_products($products->storeOpenable())->limit(10)->get();
         }, Product::WITH_STORE_LIST));
     }
 
@@ -463,7 +463,7 @@ class ProductController extends Controller
 
         $products = Product::with(Product::WITH_STORE_LIST);
 
-        $products->where('published', 1)->where('approved', 1)->physical();
+        $products->storeOpenable()->physical();
 
         if (!empty($category_ids)) {
             $products->whereIn('category_id', $category_ids);
@@ -544,7 +544,7 @@ class ProductController extends Controller
                 break;
         }
 
-        return new ProductMiniCollection(filter_products($products)->paginate(10));
+        return new ProductMiniCollection(filter_products($products->storeOpenable())->paginate(10));
     }
 
     public function getVariant(Request $request)

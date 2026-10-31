@@ -920,6 +920,20 @@ class Product extends Model
     }
 
     /**
+     * Products the store API can list and open: published, approved and
+     * carrying at least one stock row. A product without one has no price or
+     * quantity to show (it reads "0€", stock 0), and imported catalogue rows
+     * like that must not reach a list or a detail page.
+     *
+     * @param  EloquentBuilder<Product>  $query
+     */
+    #[Scope]
+    protected function storeOpenable(EloquentBuilder $query): void
+    {
+        $query->where('published', 1)->where('approved', 1)->has('stocks');
+    }
+
+    /**
      * @param  EloquentBuilder<Product>  $query
      */
     #[Scope]
