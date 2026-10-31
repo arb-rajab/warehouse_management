@@ -4,7 +4,7 @@
     <div class="aiz-titlebar mt-2 mb-4">
         <div class="row align-items-center">
             <div class="col-md-6">
-                <h1 class="h3">{{ translate('Coupons') }}</h1>
+                <h1 class="h3">{{ __('storefront.cart.coupons') }}</h1>
             </div>
         </div>
     </div>
@@ -16,7 +16,7 @@
                 <span class="size-60px rounded-circle mx-auto bg-secondary d-flex align-items-center justify-content-center mb-3">
                     <i class="las la-plus la-3x text-white"></i>
                 </span>
-                <div class="fs-18 text-primary">{{ translate('Add New Coupon') }}</div>
+                <div class="fs-18 text-primary">{{ __('seller.coupons.add_new_coupon') }}</div>
             </div>
             </a>
         </div>
@@ -24,7 +24,7 @@
     <div class="card">
         <div class="card-header row gutters-5">
             <div class="col">
-                <h5 class="mb-md-0 h6">{{ translate('All Coupons') }}</h5>
+                <h5 class="mb-md-0 h6">{{ __('storefront.cart.all_coupons') }}</h5>
             </div>
         </div>
         <div class="card-body">
@@ -32,11 +32,11 @@
                 <thead>
                     <tr>
                         <th data-breakpoints="lg">#</th>
-                        <th>{{translate('Code')}}</th>
-                        <th data-breakpoints="lg">{{translate('Type')}}</th>
-                        <th data-breakpoints="lg">{{translate('Start Date')}}</th>
-                        <th data-breakpoints="lg">{{translate('End Date')}}</th>
-                        <th width="10%">{{translate('Options')}}</th>
+                        <th>{{__('storefront.common.code')}}</th>
+                        <th data-breakpoints="lg">{{__('storefront.common.type')}}</th>
+                        <th data-breakpoints="lg">{{__('seller.coupons.start_date')}}</th>
+                        <th data-breakpoints="lg">{{__('seller.coupons.end_date')}}</th>
+                        <th width="10%">{{__('storefront.common.options')}}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -45,17 +45,17 @@
                             <td>{{$key+1}}</td>
                             <td>{{$coupon->code}}</td>
                             <td>@if ($coupon->type == 'cart_base')
-                                    {{ translate('Cart Base') }}
+                                    {{ __('seller.coupons.cart_base') }}
                                 @elseif ($coupon->type == 'product_base')
-                                    {{ translate('Product Base') }}
+                                    {{ __('seller.coupons.product_base') }}
                             @endif</td>
                             <td>{{ date('d-m-Y', $coupon->start_date) }}</td>
                             <td>{{ date('d-m-Y', $coupon->end_date) }}</td>
                             <td class="text-right">
-                                <a class="btn btn-soft-primary btn-icon btn-circle btn-sm" href="{{route('seller.coupon.edit', encrypt($coupon->id) )}}" title="{{ translate('Edit') }}">
+                                <a class="btn btn-soft-primary btn-icon btn-circle btn-sm" href="{{route('seller.coupon.edit', encrypt($coupon->id) )}}" title="{{ __('storefront.common.edit') }}">
                                     <i class="las la-edit"></i>
                                 </a>
-                                <a href="#" class="btn btn-soft-danger btn-icon btn-circle btn-sm confirm-delete" data-method="post" data-href="{{route('seller.coupon.destroy', $coupon->id)}}" title="{{ translate('Delete') }}">
+                                <a href="#" class="btn btn-soft-danger btn-icon btn-circle btn-sm confirm-delete" data-method="post" data-href="{{route('seller.coupon.destroy', $coupon->id)}}" title="{{ __('storefront.common.delete') }}">
                                     <i class="las la-trash"></i>
                                 </a>
                             </td>

@@ -18,7 +18,7 @@ class SellerPaymentResource extends JsonResource
     {
         $payment_method = ucfirst(str_replace('_', ' ', $this->payment_method));
         if ($this->txn_code != null) {
-            $payment_method = ucfirst(str_replace('_', ' ', $this->payment_method)). ' ' .translate('TRX ID'). ':' .$this->txn_code;
+            $payment_method = __('api_resources.payment.transaction', ['method' => $payment_method, 'transaction' => $this->txn_code]);
         }
 
         return [

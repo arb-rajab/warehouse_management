@@ -118,7 +118,7 @@ class TripOrderController extends Controller implements HasMiddleware
             sort($ids, SORT_NUMERIC);
             foreach ($ids as $id) {
                 if (! $trip->checkpoints()->whereMorphedTo('relationable', Order::class)->where('relationable_id', $id)->exists()) {
-                    throw ValidationException::withMessages(['id' => __('validation.exists', ['attribute' => 'order'])]);
+                    throw ValidationException::withMessages(['id' => __('validation.exists', ['attribute' => __('validation.attributes.order')])]);
                 }
                 $order = $this->lockedOrder($trip, (int) $id);
                 $order->delivery_status = $status;

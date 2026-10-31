@@ -8,13 +8,15 @@ use App\Http\Requests\Admin\StoreProductImageReviewRequest;
 use App\Http\Requests\Admin\UpdateProductImageRequest;
 use App\Models\Product;
 use App\Models\ProductImageReview;
+use App\Services\ImageOptimizer;
 use App\Services\ProductImageReviewService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
-use Intervention\Image\ImageManagerStatic as Image;
+use Illuminate\Validation\ValidationException;
+use InvalidArgumentException;
 use RuntimeException;
 use Throwable;
 
@@ -55,14 +57,11 @@ class ProductImageReviewController extends Controller
 
     public function updateImage(UpdateProductImageRequest $request, Product $product): RedirectResponse
     {
-        $image = Image::make($request->file('image')->getRealPath());
-        if (function_exists('exif_read_data')) {
-            $image->orientate();
+        try {
+            [$image] = app(ImageOptimizer::class)->optimise((string) file_get_contents($request->file('image')->getRealPath()), 'jpg', 1600);
+        } catch (InvalidArgumentException $exception) {
+            throw ValidationException::withMessages(['image' => $exception->getMessage()]);
         }
-        $image->resize(1600, 1600, function ($constraint) {
-            $constraint->aspectRatio();
-            $constraint->upsize();
-        })->encode('jpg', 90);
         $path = 'product-reference-images/'.Str::uuid().'.jpg';
 
         if (! Storage::disk('public')->put($path, (string) $image)) {

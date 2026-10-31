@@ -91,7 +91,7 @@ test('upload uses the service and signed-in owner and rejects invalid or oversiz
     withScratchPublicPath(function (string $publicPath) use ($user) {
         $this->postJson('/temp/admin/uploads', ['file' => uploadedFile('photo.png', tinyPng())])->assertCreated()->assertJsonPath('name', 'photo')->assertJsonPath('type', 'image');
         $upload = Upload::sole();
-        expect($upload->user_id)->toBe($user->id)->and($upload->extension)->toBe('webp')->and(getimagesize($publicPath.'/'.$upload->file_name)['mime'])->toBe('image/webp');
+        expect($upload->user_id)->toBe($user->id)->and($upload->extension)->toBe(function_exists('imagewebp') ? 'webp' : 'png')->and(getimagesize($publicPath.'/'.$upload->file_name)['mime'])->toBe(function_exists('imagewebp') ? 'image/webp' : 'image/png');
         foreach ([uploadedFile('bad.png', '<html><script>alert(1)</script></html>'), uploadedFile('bad.pdf', 'not a pdf'), UploadedFile::fake()->create('big.zip', 512 * 1024 + 1)] as $file) {
             $this->postJson('/temp/admin/uploads', ['file' => $file])->assertUnprocessable()->assertJsonValidationErrors('file');
         }

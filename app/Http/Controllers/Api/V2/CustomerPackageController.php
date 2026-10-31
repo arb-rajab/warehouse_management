@@ -30,13 +30,13 @@ public function purchase_package_free(Request $request)
                 $customer_package = CustomerPackage::findOrFail($data['customer_package_id']);
                 $user->remaining_uploads += $customer_package->product_upload;
                 $user->save();
-                return $this->success(translate('Package purchasing successful'));
+                return $this->success(__('storefront.common.package_purchasing_successful'));
             } else {
-               return $this->failed(translate('You can not purchase this package anymore.'));
+               return $this->failed(__('storefront.common.you_can_not_purchase_this_package_anymore'));
 
             }
         }
-        return $this->failed(translate('Invalid input'));
+        return $this->failed(__('api.common.invalid_input'));
 
     }
 
@@ -56,6 +56,6 @@ public function purchase_package_free(Request $request)
         $customer_package->reciept = ($request->photo == null) ? '' : $request->photo;
         $customer_package->save();
 
-        return $this->success(translate("Submitted Successfully"));
+        return $this->success(__('api.common.submitted'));
     }
 }

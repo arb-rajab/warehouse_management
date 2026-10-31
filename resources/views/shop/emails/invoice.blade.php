@@ -1,12 +1,15 @@
-<html>
+@php
+    $mailLocale = $mailLocale ?? ($array['locale'] ?? \App\Support\StoreLocale::deliveryLocale());
+@endphp
+<html lang="{{ $mailLocale }}" dir="{{ $mailLocale === 'ar' ? 'rtl' : 'ltr' }}">
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Order</title>
+    <title>{{ __('delivery.documents.order', [], $mailLocale) }}</title>
     <meta http-equiv="Content-Type" content="text/html;"/>
     <meta charset="UTF-8">
 	<style media="all">
 		@font-face {
-            font-family: 'Roboto';
+            font-family: Arial, 'DejaVu Sans', sans-serif;
             src: url("{{ static_asset('fonts/Roboto-Regular.ttf') }}") format("truetype");
             font-weight: normal;
             font-style: normal;
@@ -15,11 +18,12 @@
             margin: 0;
             padding: 0;
             line-height: 1.3;
-            font-family: 'Roboto';
+            font-family: Arial, 'DejaVu Sans', sans-serif;
             color: #333542;
         }
 		body{
 			font-size: .875rem;
+            direction: {{ $mailLocale === 'ar' ? 'rtl' : 'ltr' }};
 		}
 		.gry-color *,
 		.gry-color{
@@ -54,7 +58,8 @@
 			font-size: .85rem;
 		}
 		.currency{
-
+            direction: ltr;
+            unicode-bidi: embed;
 		}
 	</style>
 </head>
@@ -85,12 +90,12 @@
 					<td class="text-right"></td>
 				</tr>
 				<tr>
-					<td class="gry-color small">{{  translate('Email') }}: {{ get_setting('contact_email') }}</td>
-					<td class="text-right small"><span class="gry-color small">{{  translate('Order ID') }}:</span> <span class="strong">{{ $order->code }}</span></td>
+					<td class="gry-color small">{{  __('storefront.auth.email', [], $mailLocale) }}: <span dir="ltr" style="direction:ltr;unicode-bidi:embed;">{{ get_setting('contact_email') }}</span></td>
+					<td class="text-right small"><span class="gry-color small">{{  __('storefront.checkout.order_id', [], $mailLocale) }}:</span> <span class="strong"><span dir="ltr" style="direction:ltr;unicode-bidi:embed;">{{ $order->code }}</span></span></td>
 				</tr>
 				<tr>
-					<td class="gry-color small">{{  translate('Phone') }}: {{ get_setting('contact_phone') }}</td>
-					<td class="text-right small"><span class="gry-color small">{{  translate('Order Date') }}:</span> <span class=" strong">{{ date('d-m-Y', $order->date) }}</span></td>
+					<td class="gry-color small">{{  __('storefront.auth.phone', [], $mailLocale) }}: <span dir="ltr" style="direction:ltr;unicode-bidi:embed;">{{ get_setting('contact_phone') }}</span></td>
+					<td class="text-right small"><span class="gry-color small">{{  __('storefront.checkout.order_date', [], $mailLocale) }}:</span> <span class=" strong">{{ date('d-m-Y', $order->date) }}</span></td>
 				</tr>
 			</table>
 
@@ -101,17 +106,17 @@
 				@php
 					$shipping_address = json_decode($order->shipping_address);
 				@endphp
-				<tr><td class="strong small gry-color">{{ translate('Order To') }}:</td></tr>
+				<tr><td class="strong small gry-color">{{ __('delivery.documents.order_for', [], $mailLocale) }}:</td></tr>
 				{{-- <tr><td class="strong">{{ $shipping_address->name }}</td></tr>
 				<tr><td class="gry-color small">{{ $shipping_address->address }}, {{ $shipping_address->city }}, {{ $shipping_address->country }}</td></tr> --}}
-				<tr><td class="gry-color small">{{ translate('Email') }}: {{ $shipping_address->email }}</td></tr>
-				<tr><td class="gry-color small">{{ translate('Phone') }}: {{ $shipping_address->phone }}</td></tr>
+				<tr><td class="gry-color small">{{ __('storefront.auth.email', [], $mailLocale) }}: <span dir="ltr" style="direction:ltr;unicode-bidi:embed;">{{ $shipping_address->email }}</span></td></tr>
+				<tr><td class="gry-color small">{{ __('storefront.auth.phone', [], $mailLocale) }}: <span dir="ltr" style="direction:ltr;unicode-bidi:embed;">{{ $shipping_address->phone }}</span></td></tr>
 
                 <hr>
 
-                <tr><td>{{ translate("Company Address") }} : {{ $order->company_address }}</td></tr>
-                <tr><td>{{ translate('Company Shipping Address') }} : {{ $order->company_shipping_address }}</td></tr>
-                <tr><td>{{ translate('Tax Number') }} : {{ $order->company_tax_number }}</td></tr>
+                <tr><td>{{ __('storefront.common.company_address', [], $mailLocale) }} : {{ $order->company_address }}</td></tr>
+                <tr><td>{{ __('delivery.documents.company_shipping_address', [], $mailLocale) }} : {{ $order->company_shipping_address }}</td></tr>
+                <tr><td>{{ __('storefront.common.tax_number', [], $mailLocale) }} : <span dir="ltr" style="direction:ltr;unicode-bidi:embed;">{{ $order->company_tax_number }}</span></td></tr>
 			</table>
 		</div>
 
@@ -119,14 +124,14 @@
 			<table class="padding text-left small border-bottom">
 				<thead>
 	                <tr class="gry-color" style="background: #eceff4;">
-	                    <th width="35%">{{ translate('Product Name') }}</th>
+	                    <th width="35%">{{ __('storefront.product.product_name', [], $mailLocale) }}</th>
 
-					{{-- 	<th width="15%">{{ translate('Delivery Type') }}</th>  --}}
-	                    <th width="10%">{{ translate('Qty') }}</th>
+					{{-- 	<th width="15%">{{ __('storefront.checkout.delivery_type', [], $mailLocale) }}</th>  --}}
+	                    <th width="10%">{{ __('storefront.product.qty', [], $mailLocale) }}</th>
                         @if(Auth::check() && Auth::user()->admin_verified)
-	                    <th width="10%">{{ translate('Unit Price') }}</th>
-	                    {{-- <th width="10%">{{ translate('Tax') }}</th> --}}
-	                    <th width="10%" class="text-right">{{ translate('Total') }}</th>
+	                    <th width="10%">{{ __('storefront.product.unit_price', [], $mailLocale) }}</th>
+	                    {{-- <th width="10%">{{ __('storefront.common.tax', [], $mailLocale) }}</th> --}}
+	                    <th width="10%" class="text-right">{{ __('storefront.common.total', [], $mailLocale) }}</th>
                         @endif
 	                </tr>
 				</thead>
@@ -142,10 +147,10 @@
 								{{--
                                 <td>
 									@if ($order->shipping_type != null && $order->shipping_type == 'home_delivery')
-										{{ translate('Home Delivery') }}
+										{{ __('storefront.checkout.home_delivery', [], $mailLocale) }}
 									@elseif ($order->shipping_type == 'pickup_point')
 										@if ($order->pickup_point != null)
-											{{ $order->pickup_point->getTranslation('name') }} ({{ translate('Pickip Point') }})
+											{{ $order->pickup_point->getTranslation('name') }} ({{ __('storefront.common.pickip_point', [], $mailLocale) }})
 										@endif
 									@endif
 								</td>
@@ -168,25 +173,25 @@
 	        <table style="width: 40%;margin-left:auto;" class="text-right sm-padding small strong">
 		        <tbody>
 			        <tr>
-			            <th class="gry-color text-left">{{ translate('Sub Total') }}</th>
+			            <th class="gry-color text-left">{{ __('storefront.common.subtotal', [], $mailLocale) }}</th>
 			            <td class="currency">{{ single_price($order->orderDetails->sum('price')) }}</td>
 			        </tr>
 			        <tr>
-			            <th class="gry-color text-left">{{ translate('Shipping Cost') }}</th>
+			            <th class="gry-color text-left">{{ __('seller.products.shipping_cost', [], $mailLocale) }}</th>
 			            <td class="currency">{{ single_price($order->orderDetails->sum('shipping_cost')) }}</td>
 			        </tr>
 			        {{-- <tr class="border-bottom">
-			            <th class="gry-color text-left">{{ translate('Total Tax') }}</th>
+			            <th class="gry-color text-left">{{ __('storefront.common.tax', [], $mailLocale) }}</th>
 			            <td class="currency">{{ single_price($order->orderDetails->sum('tax')) }}</td>
 			        </tr> --}}
                     {{--
                     <tr class="border-bottom">
-			            <th class="gry-color text-left">{{ translate('Coupon') }}</th>
+			            <th class="gry-color text-left">{{ __('storefront.cart.coupon', [], $mailLocale) }}</th>
 			            <td class="currency">{{ single_price($order->coupon_discount) }}</td>
 			        </tr>
                      --}}
 			        <tr>
-			            <th class="text-left strong">{{ translate('Grand Total') }}</th>
+			            <th class="text-left strong">{{ __('delivery.documents.grand_total', [], $mailLocale) }}</th>
 			            <td class="currency">{{ single_price($order->grand_total) }}</td>
 			        </tr>
 		        </tbody>

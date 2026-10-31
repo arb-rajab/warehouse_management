@@ -31,7 +31,7 @@ class OrderController extends Controller
         if ($order == null) {
             return response()->json([
                 'result' => false,
-                'message' => 'Order not found',
+                'message' => __('api.order.not_found'),
                 'status' => 404
             ]);
         }
@@ -44,7 +44,7 @@ class OrderController extends Controller
         if ($order == null) {
             return response()->json([
                 'result' => false,
-                'message' => 'Order not found',
+                'message' => __('api.order.not_found'),
                 'status' => 404
             ]);
         }
@@ -67,7 +67,7 @@ class OrderController extends Controller
         if ($order == null) {
             return response()->json([
                 'result' => false,
-                'message' => 'Order not found',
+                'message' => __('api.order.not_found'),
                 'status' => 404
             ]);
         }
@@ -84,7 +84,7 @@ class OrderController extends Controller
 
         return response()->json([
             'result' => true,
-            'message' => 'Order Updated Successfully',
+            'message' => __('api.order.updated'),
             'status' => 200
         ]);
     }
@@ -97,7 +97,7 @@ class OrderController extends Controller
         if ($customer->user_type !== 'customer') {
             return response()->json([
                 'result' => false,
-                'message' => 'The user is not a customer',
+                'message' => __('api.account.not_customer'),
                 'status' => 422
             ], 422);
         }
@@ -122,7 +122,7 @@ class OrderController extends Controller
 
         return response()->json([
             'result' => true,
-            'message' => 'Order customer updated successfully',
+            'message' => __('api.order.customer_updated'),
             'status' => 200
         ]);
     }

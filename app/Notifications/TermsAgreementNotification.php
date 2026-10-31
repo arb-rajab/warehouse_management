@@ -30,17 +30,21 @@ class TermsAgreementNotification extends Notification
      */
     public function toMail($notifiable)
     {
+        $locale = \App\Support\StoreLocale::deliveryLocale($notifiable, $this->locale);
+        $array['locale'] = $locale;
+        $array['include_terms'] = true;
+        $array['action_key'] = 'storefront.common.agree';
         $notifiable->verification_code = encrypt($notifiable->id);
         $notifiable->save();
 
         $array['view'] = 'shop.emails.verification';
-        $array['subject'] = translate('Terms Agreement');
-        $array['content'] = translate('By Clicking The Button Below You Agree To The Terms & Conditions');
+        $array['subject'] = __('storefront.auth.terms_agreement', [], $locale);
+        $array['content'] = __('storefront.auth.agree_to_terms', [], $locale);
         $array['link'] = route('terms.activation', $notifiable->verification_code);
 
         return (new MailMessage)
-            ->view('shop.emails.terms', ['array' => $array])
-            ->subject(translate('Terms Agreements - ').config('app.name'));
+            ->view(['html' => 'shop.emails.terms', 'text' => 'shop.emails.plain.message'], ['array' => $array])
+            ->subject(__('storefront.auth.terms_subject', ['app' => config('app.name')], $locale));
     }
 
     /**

@@ -135,7 +135,11 @@ class SearchController extends Controller
             });
         }
 
-        $products = filter_products($products)->with('taxes')->paginate(120)->appends(request()->query());
+        $products = filter_products($products)->with([
+            'taxes:id,product_id,tax,tax_type',
+            'product_translations:id,product_id,lang,name',
+            'offers:offers.id',
+        ])->paginate(120)->appends(request()->query());
 
         return view('shop.frontend.product_listing', compact('products', 'query', 'category_id', 'brand_id', 'sort_by', 'seller_id', 'min_price', 'max_price', 'attributes', 'selected_attribute_values', 'colors', 'selected_color'));
     }

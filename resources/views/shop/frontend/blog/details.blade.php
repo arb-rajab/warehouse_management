@@ -36,7 +36,7 @@
                         <div class="col-4">
                             <!-- Date -->
                             <div>
-                                <small class="fs-12 fw-400 opacity-60">{{ date('M d, Y',strtotime($blog->created_at)) }}</small>
+                                <small class="fs-12 fw-400 opacity-60">{{ \App\Support\StoreLocale::date(strtotime($blog->created_at)) }}</small>
                             </div>
                             <!-- Caregory -->
                             @if($blog->category != null)
@@ -68,11 +68,11 @@
                 </div>
             </div>
 
-            
+
             <!-- recent posts -->
             <div class="col-xl-3 col-lg-4">
                 <div class="p-3 border">
-                    <h3 class="fs-16 fw-700 text-dark mb-3">{{ translate('Recent Posts') }}</h3>
+                    <h3 class="fs-16 fw-700 text-dark mb-3">{{ __('storefront.common.recent_posts') }}</h3>
                     <div class="row">
                         @foreach($recent_blogs as $recent_blog)
                         <div class="col-lg-12 col-sm-6 mb-4 hov-scale-img">
@@ -95,7 +95,7 @@
                                     </h2>
                                     <!-- Date -->
                                     <div>
-                                        <small class="fs-12 fw-400 opacity-60">{{ date('M d, Y',strtotime($recent_blog->created_at)) }}</small>
+                                        <small class="fs-12 fw-400 opacity-60">{{ \App\Support\StoreLocale::date(strtotime($recent_blog->created_at)) }}</small>
                                     </div>
                                     <!-- Category -->
                                     @if($recent_blog->category != null)

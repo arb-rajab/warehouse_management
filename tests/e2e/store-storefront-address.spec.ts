@@ -45,7 +45,7 @@ test('a customer saves a new address from the profile', async ({ page }) => {
     );
     await expect(
         modal.locator('#new_address_postal_code'),
-    ).toHaveAccessibleName('Postal code required');
+    ).toHaveAccessibleName('Postal Code required');
 
     await modal.locator('#new_address_address').fill(street);
     await modal.locator('#new_address_phone').fill('+31612345678');

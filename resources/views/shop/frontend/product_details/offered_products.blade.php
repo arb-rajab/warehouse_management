@@ -5,8 +5,8 @@
 <div class="bg-white border">
     <div class="p-3 p-sm-4">
         <h3 class="fs-16 fw-700 mb-0">
-            <span class="mr-4">{{ translate('Offered products') }}</span>
-            <span class="mr-4">{{ translate('Quantitiy required') . ":" . $offer->base_product->quantity }}</span>
+            <span class="mr-4">{{ __('storefront.cart.offered_products') }}</span>
+            <span class="mr-4">{{ __('storefront.common.quantitiy_required') . ":" . $offer->base_product->quantity }}</span>
         </h3>
     </div>
     <div class="px-4">
@@ -36,7 +36,7 @@
                             @if(Auth::check() && Auth::user()->admin_verified)
                                 <div class="fs-14 mt-3">
                                     <span class="fw-700 text-info">
-                                        {{ translate('You will get') . ": " . $offered_product->quantity }}
+                                        {{ __('storefront.common.you_will_get') . ": " . $offered_product->quantity }}
                                         @if ($offer->is_repeatable)
                                         {{ 'x ' . $offer->base_product?->product->getTranslation('name') . ' quantitity' }}
                                         @endif

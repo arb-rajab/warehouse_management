@@ -12,6 +12,7 @@ use App\Models\OrderDetail;
 use App\Models\Product;
 use App\Models\StoreUser;
 use App\Services\StoreAdminOrderService;
+use App\Support\StoreLocale;
 use App\Utility\NotificationUtility;
 use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Database\Eloquent\Builder;
@@ -227,7 +228,7 @@ class OrderController extends Controller implements HasMiddleware
         $order->load('user:id,device_token');
         NotificationUtility::sendNotification($order, $status);
         if (get_setting('google_firebase') == 1 && $order->user?->getAttribute('device_token')) {
-            NotificationUtility::sendOrderFirebaseNotification($order, __('messages.order_updated_title'), __('messages.order_updated_body', ['code' => $order->code]));
+            NotificationUtility::sendOrderFirebaseNotification($order, __('messages.order_updated_title', [], StoreLocale::deliveryLocale($order->user)), __('messages.order_updated_body', ['code' => $order->code], StoreLocale::deliveryLocale($order->user)));
         }
     }
 

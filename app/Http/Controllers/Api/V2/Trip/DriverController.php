@@ -63,12 +63,12 @@ class DriverController extends Controller
             $checkpoint->save();
 
             return response()->json([
-                'message' => translate('Checkpoint updated successfully'),
+                'message' => __('api.trip.checkpoint_updated'),
                 'data' => new TripResource($checkpoint->trip)
             ]);
         } else {
             return response()->json([
-                'message' => translate('Checkpoint not found'),
+                'message' => __('api.trip.checkpoint_not_found'),
                 'data' => null
             ], 404);
         }
@@ -106,18 +106,18 @@ class DriverController extends Controller
                 }
 
                 return response()->json([
-                    'message' => translate('Checkpoint updated successfully'),
+                    'message' => __('api.trip.checkpoint_updated'),
                     'data' => new TripResource($trip)
                 ]);
             } else {
                 return response()->json([
-                    'message' => translate('Checkpoint not found'),
+                    'message' => __('api.trip.checkpoint_not_found'),
                     'data' => null
                 ], 404);
             }
         } else {
             return response()->json([
-                'message' => translate('There is no active Trip for this driver'),
+                'message' => __('api.trip.no_active_trip'),
                 'data' => null
             ], 404);
         }
@@ -148,12 +148,12 @@ class DriverController extends Controller
             $trip->save();
 
             return response()->json([
-                'message' => translate('Trip updated successfully'),
+                'message' => __('api.trip.updated'),
                 'data' => new TripResource($trip)
             ]);
         } else {
             return response()->json([
-                'message' => translate('There is no active Trip for this driver'),
+                'message' => __('api.trip.no_active_trip'),
                 'data' => null
             ], 404);
         }
@@ -166,7 +166,7 @@ class DriverController extends Controller
 
         if(!$scanned_truck_last_trip){
             return response()->json([
-                'message' => translate('This truck has no trip'),
+                'message' => __('api.trip.truck_has_no_trip'),
                 'data' => null
             ], 400);
         }
@@ -174,7 +174,7 @@ class DriverController extends Controller
         if ($current_trip) {
             if ($current_trip->status === TripStatus::Started->value) {
                 return response()->json([
-                    'message' => translate('A trip has already started'),
+                    'message' => __('api.trip.already_started'),
                     'data' => null
                 ], 400);
             }
@@ -186,7 +186,7 @@ class DriverController extends Controller
 
         if($scanned_truck_last_trip->status === TripStatus::Closed->value){
             return response()->json([
-                'message' => translate('This trip has already closed'),
+                'message' => __('api.trip.already_closed'),
                 'data' => null
             ], 400);
         }
@@ -199,7 +199,7 @@ class DriverController extends Controller
         $this->driverService()->notifyDriver($scanned_truck_last_trip);
 
         return response()->json([
-            'message' => translate('Trip assigned successfully'),
+            'message' => __('api.trip.assigned'),
             'data' => new TripResource($scanned_truck_last_trip)
         ]);
     }
@@ -265,7 +265,7 @@ class DriverController extends Controller
         if($user){
             return $this->userService()->getUserLongLat($user, $order ?? null);
         }
-        return response()->json(['error' => 'No post code or coordinates provided for this user'], 404);
+        return response()->json(['error' => __('api.trip.coordinates_missing')], 404);
     }
 
     protected function updateCheckpointsStatuses($trip)

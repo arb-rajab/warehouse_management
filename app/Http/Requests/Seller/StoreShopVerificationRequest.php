@@ -50,7 +50,7 @@ class StoreShopVerificationRequest extends FormRequest
         $this->rejectUnexpectedInput($validator);
         $validator->after(function (Validator $validator): void {
             if (ShopVerificationForm::fields() === []) {
-                $validator->errors()->add('verification_form', translate('Verification info').' '.translate('not available'));
+                $validator->errors()->add('verification_form', __('seller.shop.verification_unavailable'));
             }
         });
     }

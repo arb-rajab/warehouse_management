@@ -11,7 +11,7 @@
             <div class="d-flex mb-2 mb-md-3 align-items-baseline justify-content-between">
                 <!-- Title -->
                 <h3 class="fs-16 fs-md-20 fw-700 mb-2 mb-sm-0">
-                    <span class="">{{ translate('Offers') }}</span>
+                    <span class="">{{ __('storefront.cart.offers') }}</span>
                 </h3>
                 <!-- Links -->
                 <div class="d-flex">

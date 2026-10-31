@@ -114,14 +114,14 @@ class LoginController extends Controller implements HasMiddleware
         try {
             $social = Socialite::driver($driver)->user();
         } catch (\Exception $e) {
-            flash(translate("Something Went wrong. Please try again."))->error();
+            flash(__('storefront.common.something_went_wrong_please_try_again'))->error();
             return redirect()->route('user.login');
         }
 
         $user = app(SocialAccounts::class)->resolve($provider, $social);
 
         if ($user === null) {
-            flash(translate('An account with this email already exists. Sign in with your password instead.'))->error();
+            flash(__('storefront.auth.an_account_with_this_email_already_exists_sign_in_with_your_password_instead'))->error();
             return redirect()->route('user.login');
         }
 
@@ -240,7 +240,7 @@ class LoginController extends Controller implements HasMiddleware
      */
     protected function sendFailedLoginResponse(Request $request)
     {
-        flash(translate('Invalid login credentials'))->error();
+        flash(__('storefront.auth.invalid_login_credentials'))->error();
         return back();
     }
 
@@ -315,7 +315,7 @@ class LoginController extends Controller implements HasMiddleware
         auth()->guard()->logout();
         $request->session()->invalidate();
 
-        flash(translate("Your account deletion successfully done."))->success();
+        flash(__('storefront.auth.your_account_deletion_successfully_done'))->success();
         return redirect()->route($redirect_route);
     }
 

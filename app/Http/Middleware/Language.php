@@ -2,32 +2,20 @@
 
 namespace App\Http\Middleware;
 
-use App;
+use App\Support\StoreLocale;
 use Closure;
-use Config;
 use Illuminate\Http\Request;
-use Session;
+use Symfony\Component\HttpFoundation\Response;
 
 class Language
 {
-    /**
-     * Handle an incoming request.
-     *
-     * @param  Request  $request
-     * @param  \Closure  $next
-     * @return mixed
-     */
-    public function handle($request, Closure $next)
+    public function handle(Request $request, Closure $next): Response
     {
-        if(Session::has('locale')){
-            $locale = Session::get('locale');
-        }
-        else{
-            $locale = config('app.default_language');
-        }
+        $locale = $request->session()->get('locale');
 
-        App::setLocale($locale);
-        $request->session()->put('locale', $locale);
+        app()->setLocale(StoreLocale::isSupported($locale) ? $locale : config('app.locale'));
+        app('translator')->setLocale(StoreLocale::uiLocale());
+        app('translator')->setFallback(StoreLocale::uiLocale(config('app.fallback_locale')));
 
         return $next($request);
     }

@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources\V2;
 
+use App\Support\ApiResourceLabel;
 use Carbon\Carbon;
 use Illuminate\Http\Resources\Json\ResourceCollection;
 
@@ -29,18 +30,18 @@ class PurchaseHistoryItemsCollection extends ResourceCollection
                         $data->delivery_status == 'delivered') {
                         $refund_button = true;
                     } else if ($data->refund_request != null && $data->refund_request->refund_status == 0) {
-                        $refund_label = "Pending";
+                        $refund_label = __('storefront.status.pending');
                         $refund_request_status = $data->refund_request->refund_status;
                     } else if ($data->refund_request != null && $data->refund_request->refund_status == 2) {
-                        $refund_label = "Rejected";
+                        $refund_label = __('storefront.common.rejected');
                         $refund_request_status = $data->refund_request->refund_status;
                     } else if ($data->refund_request != null && $data->refund_request->refund_status == 1) {
-                        $refund_label = "Approved";
+                        $refund_label = __('storefront.common.approved');
                         $refund_request_status = $data->refund_request->refund_status;
                     } else if ($data->product->refundable != 0) {
-                        $refund_label = "N/A";
+                        $refund_label = __('api_resources.payment.not_applicable');
                     } else {
-                        $refund_label = "Non-refundable";
+                        $refund_label = __('storefront.common.non_refundable');
                     }
                 }
 
@@ -70,9 +71,9 @@ class PurchaseHistoryItemsCollection extends ResourceCollection
                     'coupon_discount' => format_price($data->coupon_discount ?? 0),
                     'quantity' => (int)$data->quantity,
                     'payment_status' => $data->payment_status,
-                    'payment_status_string' => ucwords(str_replace('_', ' ', $data->payment_status)),
+                    'payment_status_string' => ApiResourceLabel::status($data->payment_status),
                     'delivery_status' => $data->delivery_status,
-                    'delivery_status_string' => $data->delivery_status == 'pending' ? "Order Placed" : ucwords(str_replace('_', ' ', $data->delivery_status)),
+                    'delivery_status_string' => ApiResourceLabel::deliveryStatus($data->delivery_status),
                     'refund_section' => $refund_section,
                     'refund_button' => $refund_button,
                     'refund_label' => $refund_label,

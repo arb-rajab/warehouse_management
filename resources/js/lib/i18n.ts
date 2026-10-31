@@ -23,3 +23,23 @@ export const i18n = createI18n({
 export function t(key: string, params?: Record<string, unknown>): string {
     return i18n.global.t(key, params ?? {});
 }
+
+/** Keep translations and document metadata aligned on hard and Inertia visits. */
+export function syncPageLocale(props: {
+    locale?: unknown;
+    fallbackLocale?: unknown;
+    store?: { rtl?: boolean };
+}): void {
+    i18n.global.locale.value = isSupportedLocale(props.locale)
+        ? props.locale
+        : 'en';
+    i18n.global.fallbackLocale.value = isSupportedLocale(props.fallbackLocale)
+        ? props.fallbackLocale
+        : 'en';
+
+    if (typeof document !== 'undefined' && typeof props.locale === 'string') {
+        document.documentElement.lang = props.locale.replaceAll('_', '-');
+        document.documentElement.dir =
+            (props.store?.rtl ?? props.locale === 'ar') ? 'rtl' : 'ltr';
+    }
+}

@@ -65,8 +65,21 @@ function copy(): void {
         #default="{ errors }"
     >
         <FieldError :message="errors.translations ?? errors.id" />
-        <p>{{ language.name }} ({{ language.code }})</p>
+        <p>
+            {{ language.name }} ({{
+                app ? language.app_lang_code : language.code
+            }})
+        </p>
         <p>{{ t('store.languages.translationScope') }}</p>
+        <p>
+            {{
+                t(
+                    app
+                        ? 'store.languages.mobileScope'
+                        : 'store.languages.contentScope',
+                )
+            }}
+        </p>
         <input type="hidden" name="id" :value="language.id" />
         <div class="flex flex-wrap items-end gap-3">
             <FormField

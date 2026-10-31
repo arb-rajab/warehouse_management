@@ -14,12 +14,12 @@ class LanguageController extends Controller
     {
         $language = Language::query()->select(['name', 'code'])->where('code', $request->input('locale'))->first();
         if ($language === null) {
-            flash(translate('Language not found'))->error();
+            flash(__('storefront.common.language_not_found'))->error();
 
             return back();
         }
         $request->session()->put('locale', $language->code);
-        flash(translate('Language changed to ').$language->name)->success();
+        flash(__('storefront.common.language_changed', ['language' => $language->name]))->success();
 
         return response('');
     }

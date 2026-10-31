@@ -33,7 +33,7 @@ class IyzicoController extends Controller
         $payment = app(ApiGatewayPayment::class)->resolve($request);
 
         if ($payment === null) {
-            return response()->json(['result' => false, 'message' => translate('Nothing to pay')]);
+            return response()->json(['result' => false, 'message' => __('api.payment.nothing_due')]);
         }
 
         $iyzicoRequest = new CreatePayWithIyzicoInitializeRequest();
@@ -101,9 +101,9 @@ class IyzicoController extends Controller
         $payment = app(IyzicoPayments::class)->retrieve((string) $request->input('token'));
 
         if ($payment['paid']) {
-            return response()->json(['result' => true, 'message' => translate("Payment is successful"), 'payment_details' => $payment['raw']]);
+            return response()->json(['result' => true, 'message' => __('api.payment.successful'), 'payment_details' => $payment['raw']]);
         } else {
-            return response()->json(['result' => false, 'message' => translate("Payment unsuccessful"), 'payment_details' => $payment['raw']]);
+            return response()->json(['result' => false, 'message' => __('storefront.checkout.payment_failed'), 'payment_details' => $payment['raw']]);
         }
     }
 
@@ -122,7 +122,7 @@ class IyzicoController extends Controller
         $token = (string) ($request->input('token') ?: (is_array($details) ? ($details['token'] ?? '') : ''));
 
         if ($payment === null || $token === '') {
-            return response()->json(['result' => false, 'message' => translate('Payment could not be verified')]);
+            return response()->json(['result' => false, 'message' => __('storefront.checkout.payment_could_not_be_verified')]);
         }
 
         $retrieved = app(IyzicoPayments::class)->retrieve($token);
@@ -130,9 +130,9 @@ class IyzicoController extends Controller
 
         if (! $retrieved['paid'] || ! GatewayPaymentService::covers($retrieved['paid_price'], $payment['amount'])
             || ! app(GatewayPaymentService::class)->complete($verified, $payment['user_id'], $payment['payment_type'], $payment['combined_order_id'], $payment['package_id'])) {
-            return response()->json(['result' => false, 'message' => translate('Payment could not be verified')]);
+            return response()->json(['result' => false, 'message' => __('storefront.checkout.payment_could_not_be_verified')]);
         }
 
-        return response()->json(['result' => true, 'message' => translate("Payment is successful")]);
+        return response()->json(['result' => true, 'message' => __('api.payment.successful')]);
     }
 }

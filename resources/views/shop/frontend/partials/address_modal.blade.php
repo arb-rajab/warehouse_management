@@ -3,8 +3,8 @@
     <div class="modal-dialog modal-dialog-centered modal-md" role="document">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="exampleModalLabel">{{ translate('New Address') }}</h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                <h5 class="modal-title" id="exampleModalLabel">{{ __('storefront.common.new_address') }}</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="{{ __('storefront.common.close') }}">
                     <span aria-hidden="true">&times;</span>
                 </button>
             </div>
@@ -19,10 +19,10 @@
                         <!-- Address -->
                         <div class="row">
                             <div class="col-md-2">
-                                <label for="new_address_address">{{ translate('Address')}}<x-required-mark /></label>
+                                <label for="new_address_address">{{ __('storefront.common.address')}}<x-required-mark /></label>
                             </div>
                             <div class="col-md-10 mb-3">
-                                <textarea id="new_address_address" class="form-control rounded-0 @error('address', 'storeAddress') is-invalid @enderror" placeholder="{{ translate('Your Address')}}" rows="2" name="address" maxlength="255" required>{{ $keepInput ? old('address') : '' }}</textarea>
+                                <textarea id="new_address_address" class="form-control rounded-0 @error('address', 'storeAddress') is-invalid @enderror" placeholder="{{ __('storefront.common.your_address')}}" rows="2" name="address" maxlength="255" required>{{ $keepInput ? old('address') : '' }}</textarea>
                                 @error('address', 'storeAddress')
                                     <span class="invalid-feedback d-block" role="alert"><strong>{{ $message }}</strong></span>
                                 @enderror
@@ -35,20 +35,20 @@
                         @if (get_setting('google_map') == 1)
                             <!-- Google Map -->
                             <div class="row mt-3 mb-3">
-                                <input id="searchInput" class="controls" type="text" placeholder="{{translate('Enter a location')}}">
+                                <input id="searchInput" class="controls" type="text" placeholder="{{__('storefront.common.enter_a_location')}}">
                                 <div id="map"></div>
                                 <ul id="geoData">
-                                    <li style="display: none;">Full Address: <span id="location"></span></li>
-                                    <li style="display: none;">Postal Code: <span id="postal_code"></span></li>
-                                    <li style="display: none;">Country: <span id="country"></span></li>
-                                    <li style="display: none;">Latitude: <span id="lat"></span></li>
-                                    <li style="display: none;">Longitude: <span id="lon"></span></li>
+                                    <li style="display: none;">{{ __('storefront.common.full_address_label') }} <span id="location"></span></li>
+                                    <li style="display: none;">{{ __('storefront.common.postal_code_label') }} <span id="postal_code"></span></li>
+                                    <li style="display: none;">{{ __('storefront.common.country_label') }} <span id="country"></span></li>
+                                    <li style="display: none;">{{ __('storefront.common.latitude_label') }} <span id="lat"></span></li>
+                                    <li style="display: none;">{{ __('storefront.common.longitude_label') }} <span id="lon"></span></li>
                                 </ul>
                             </div>
                             <!-- Longitude -->
                             <div class="row">
                                 <div class="col-md-2">
-                                    <label for="longitude">{{ translate('Longitude')}}</label>
+                                    <label for="longitude">{{ __('storefront.common.longitude')}}</label>
                                 </div>
                                 <div class="col-md-10 mb-3">
                                     <input type="text" class="form-control rounded-0 @error('longitude', 'storeAddress') is-invalid @enderror" id="longitude" name="longitude" value="{{ $keepInput ? old('longitude') : '' }}" readonly="">
@@ -60,7 +60,7 @@
                             <!-- Latitude -->
                             <div class="row">
                                 <div class="col-md-2">
-                                    <label for="latitude">{{ translate('Latitude')}}</label>
+                                    <label for="latitude">{{ __('storefront.common.latitude')}}</label>
                                 </div>
                                 <div class="col-md-10 mb-3">
                                     <input type="text" class="form-control rounded-0 @error('latitude', 'storeAddress') is-invalid @enderror" id="latitude" name="latitude" value="{{ $keepInput ? old('latitude') : '' }}" readonly="">
@@ -74,10 +74,10 @@
                         <!-- Postal code -->
                         <div class="row">
                             <div class="col-md-2">
-                                <label for="new_address_postal_code">{{ translate('Postal code')}}<x-required-mark /></label>
+                                <label for="new_address_postal_code">{{ __('storefront.common.postal_code')}}<x-required-mark /></label>
                             </div>
                             <div class="col-md-10 mb-3">
-                                <input type="text" id="new_address_postal_code" class="form-control rounded-0 @error('postal_code', 'storeAddress') is-invalid @enderror" placeholder="{{ translate('Your Postal Code')}}" name="postal_code" value="{{ $keepInput ? old('postal_code') : '' }}" maxlength="255" required>
+                                <input type="text" id="new_address_postal_code" class="form-control rounded-0 @error('postal_code', 'storeAddress') is-invalid @enderror" placeholder="{{ __('storefront.common.your_postal_code')}}" name="postal_code" value="{{ $keepInput ? old('postal_code') : '' }}" maxlength="255" required>
                                 @error('postal_code', 'storeAddress')
                                     <span class="invalid-feedback d-block" role="alert"><strong>{{ $message }}</strong></span>
                                 @enderror
@@ -87,10 +87,10 @@
                         <!-- Phone -->
                         <div class="row">
                             <div class="col-md-2">
-                                <label for="new_address_phone">{{ translate('Phone')}}<x-required-mark /></label>
+                                <label for="new_address_phone">{{ __('storefront.auth.phone')}}<x-required-mark /></label>
                             </div>
                             <div class="col-md-10 mb-3">
-                                <input type="text" id="new_address_phone" class="form-control rounded-0 @error('phone', 'storeAddress') is-invalid @enderror" placeholder="{{ translate('+')}}" name="phone" value="{{ $keepInput ? old('phone') : '' }}" maxlength="255" required>
+                                <input type="text" id="new_address_phone" class="form-control rounded-0 @error('phone', 'storeAddress') is-invalid @enderror" placeholder="{{ __('storefront.common.plus')}}" name="phone" value="{{ $keepInput ? old('phone') : '' }}" maxlength="255" required>
                                 @error('phone', 'storeAddress')
                                     <span class="invalid-feedback d-block" role="alert"><strong>{{ $message }}</strong></span>
                                 @enderror
@@ -98,7 +98,7 @@
                         </div>
                         <!-- Save button -->
                         <div class="form-group text-right">
-                            <button type="submit" class="btn btn-primary rounded-0 w-150px">{{translate('Save')}}</button>
+                            <button type="submit" class="btn btn-primary rounded-0 w-150px">{{__('storefront.common.save')}}</button>
                         </div>
                     </div>
                 </div>
@@ -112,8 +112,8 @@
     <div class="modal-dialog modal-dialog-centered modal-md" role="document">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="exampleModalLabel">{{ translate('New Address') }}</h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                <h5 class="modal-title" id="exampleModalLabel">{{ __('storefront.common.new_address') }}</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="{{ __('storefront.common.close') }}">
                     <span aria-hidden="true">&times;</span>
                 </button>
             </div>

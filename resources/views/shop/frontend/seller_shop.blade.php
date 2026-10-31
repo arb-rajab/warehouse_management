@@ -12,13 +12,13 @@
             <!--  Top Menu -->
             <div class="d-flex flex-wrap justify-content-center justify-content-md-start">
                 <a class="fw-700 fs-11 fs-md-13 mr-3 mr-sm-4 mr-md-5 text-dark opacity-60 hov-opacity-100 @if(!isset($type)) opacity-100 @endif"
-                        href="{{ route('shop.visit', $shop->slug) }}">{{ translate('Store Home')}}</a>
+                        href="{{ route('shop.visit', $shop->slug) }}">{{ __('storefront.common.store_home')}}</a>
                 <a class="fw-700 fs-11 fs-md-13 mr-3 mr-sm-4 mr-md-5 text-dark opacity-60 hov-opacity-100 @if(isset($type) && $type == 'top-selling') opacity-100 @endif"
-                        href="{{ route('shop.visit.type', ['slug'=>$shop->slug, 'type'=>'top-selling']) }}">{{ translate('Top Selling')}}</a>
+                        href="{{ route('shop.visit.type', ['slug'=>$shop->slug, 'type'=>'top-selling']) }}">{{ __('storefront.common.top_selling')}}</a>
                 <a class="fw-700 fs-11 fs-md-13 mr-3 mr-sm-4 mr-md-5 text-dark opacity-60 hov-opacity-100 @if(isset($type) && $type == 'cupons') opacity-100 @endif"
-                        href="{{ route('shop.visit.type', ['slug'=>$shop->slug, 'type'=>'cupons']) }}">{{ translate('Coupons')}}</a>
+                        href="{{ route('shop.visit.type', ['slug'=>$shop->slug, 'type'=>'cupons']) }}">{{ __('storefront.cart.coupons')}}</a>
                 <a class="fw-700 fs-11 fs-md-13 text-dark opacity-60 hov-opacity-100 @if(isset($type) && $type == 'all-products') opacity-100 @endif"
-                        href="{{ route('shop.visit.type', ['slug'=>$shop->slug, 'type'=>'all-products']) }}">{{ translate('All Products')}}</a>
+                        href="{{ route('shop.visit.type', ['slug'=>$shop->slug, 'type'=>'all-products']) }}">{{ __('storefront.product.all_products')}}</a>
             </div>
         </div>
     </section>
@@ -84,7 +84,7 @@
                                 <div class="rating rating-mr-1 text-dark">
                                     {{ renderStarRating($shop->rating) }}
                                     <span class="opacity-60 fs-12">({{ $shop->num_of_reviews }}
-                                        {{ translate('Reviews') }})</span>
+                                        {{ __('storefront.product.reviews') }})</span>
                                 </div>
                                 @endif
                                 <!-- Address -->
@@ -97,13 +97,13 @@
                             <div class="d-md-flex justify-content-md-end align-items-md-baseline">
                                 <!-- Member Since -->
                                 <div class="pr-md-3 mt-2 mt-md-0 border-md-right">
-                                    <div class="fs-10 fw-400 text-secondary">{{ translate('Member Since') }}</div>
-                                    <div class="mt-1 fs-16 fw-700 text-secondary">{{ date('d M Y',strtotime($shop->created_at)) }}</div>
+                                    <div class="fs-10 fw-400 text-secondary">{{ __('storefront.common.member_since') }}</div>
+                                    <div class="mt-1 fs-16 fw-700 text-secondary">{{ \App\Support\StoreLocale::date(strtotime($shop->created_at)) }}</div>
                                 </div>
                                 <!-- Social Links -->
                                 @if ($shop->facebook || $shop->instagram || $shop->google || $shop->twitter || $shop->youtube)
                                     <div class="pl-md-3 pr-lg-3 mt-2 mt-md-0 border-lg-right">
-                                        <span class="fs-10 fw-400 text-secondary">{{ translate('Social Media') }}</span><br>
+                                        <span class="fs-10 fw-400 text-secondary">{{ __('storefront.common.social_media') }}</span><br>
                                         <ul class="social-md colored-light list-inline mb-0 mt-1">
                                             @if ($shop->facebook)
                                             <li class="list-inline-item mr-2">
@@ -152,18 +152,18 @@
                             <!-- follow -->
                             <div class="d-flex justify-content-md-end pl-lg-3 pt-3 pt-lg-0">
                                 @if(in_array($shop->id, $followed_sellers))
-                                    <a data-method="post" href="{{ route("followed_seller.remove", ['id'=>$shop->id]) }}"  data-toggle="tooltip" data-title="{{ translate('Unfollow Seller') }}" data-placement="top"
+                                    <a data-method="post" href="{{ route("followed_seller.remove", ['id'=>$shop->id]) }}"  data-toggle="tooltip" data-title="{{ __('storefront.product.unfollow_seller') }}" data-placement="top"
                                         class="btn btn-success d-flex align-items-center justify-content-center fs-12 w-190px follow-btn followed"
                                         style="height: 40px; border-radius: 30px !important; justify-content: center;">
                                         <i class="las la-check fs-16 mr-2"></i>
-                                        <span class="fw-700">{{ translate('Followed') }}</span> &nbsp; ({{ count($shop->followers) }})
+                                        <span class="fw-700">{{ __('storefront.common.followed') }}</span> &nbsp; ({{ count($shop->followers) }})
                                     </a>
                                 @else
                                     <a data-method="post" href="{{ route("followed_seller.store", ['id'=>$shop->id]) }}"
                                         class="btn btn-primary d-flex align-items-center justify-content-center fs-12 w-190px follow-btn"
                                         style="height: 40px; border-radius: 30px !important; justify-content: center;">
                                         <i class="las la-plus fs-16 mr-2"></i>
-                                        <span class="fw-700">{{ translate('Follow Seller') }}</span> &nbsp; ({{ count($shop->followers) }})
+                                        <span class="fw-700">{{ __('storefront.product.follow_seller') }}</span> &nbsp; ({{ count($shop->followers) }})
                                     </a>
                                 @endif
                             </div>
@@ -186,7 +186,7 @@
                 <div class="d-flex mb-4 align-items-baseline justify-content-between">
                         <!-- Title -->
                         <h3 class="fs-16 fs-md-20 fw-700 mb-3 mb-sm-0">
-                            <span class="">{{ translate('Featured Products') }}</span>
+                            <span class="">{{ __('storefront.product.featured_products') }}</span>
                         </h3>
                         <!-- Links -->
                         <div class="d-flex">
@@ -234,12 +234,12 @@
                 <div class="d-flex mb-4 align-items-baseline justify-content-between">
                         <!-- Title -->
                         <h3 class="fs-16 fs-md-20 fw-700 mb-3 mb-sm-0">
-                            <span class="pb-3">{{ translate('Coupons') }}</span>
+                            <span class="pb-3">{{ __('storefront.cart.coupons') }}</span>
                         </h3>
                         <!-- Links -->
                         <div class="d-flex">
                             <a type="button" class="arrow-prev slide-arrow link-disable text-secondary mr-2" onclick="clickToSlide('slick-prev','section_coupons')"><i class="las la-angle-left fs-20 fw-600"></i></a>
-                            <a class="text-blue fs-12 fw-700 hov-text-primary" href="{{ route('shop.visit.type', ['slug'=>$shop->slug, 'type'=>'cupons']) }}">{{ translate('View All') }}</a>
+                            <a class="text-blue fs-12 fw-700 hov-text-primary" href="{{ route('shop.visit.type', ['slug'=>$shop->slug, 'type'=>'cupons']) }}">{{ __('storefront.common.view_all') }}</a>
                             <a type="button" class="arrow-next slide-arrow text-secondary ml-2" onclick="clickToSlide('slick-next','section_coupons')"><i class="las la-angle-right fs-20 fw-600"></i></a>
                         </div>
                     </div>
@@ -295,11 +295,11 @@
                 <h3 class="fs-16 fs-md-20 fw-700 mb-3 mb-sm-0">
                     <span class="pb-3">
                         @if (!isset($type))
-                            {{ translate('New Arrival Products')}}
+                            {{ __('storefront.product.new_arrival_products')}}
                         @elseif ($type == 'top-selling')
-                            {{ translate('Top Selling')}}
+                            {{ __('storefront.common.top_selling')}}
                         @elseif ($type == 'cupons')
-                            {{ translate('All Cupons')}}
+                            {{ __('storefront.common.all_cupons')}}
                         @endif
                     </span>
                 </h3>
@@ -373,7 +373,7 @@
                                 <div class="overlay overlay-fixed dark c-pointer" data-toggle="class-toggle" data-target=".aiz-filter-sidebar" data-same=".filter-sidebar-thumb"></div>
                                 <div class="collapse-sidebar c-scrollbar-light text-left">
                                     <div class="d-flex d-xl-none justify-content-between align-items-center pl-3 border-bottom">
-                                        <h3 class="h6 mb-0 fw-600">{{ translate('Filters') }}</h3>
+                                        <h3 class="h6 mb-0 fw-600">{{ __('storefront.common.filters') }}</h3>
                                         <button type="button" class="btn btn-sm p-2 filter-sidebar-thumb" data-toggle="class-toggle" data-target=".aiz-filter-sidebar" >
                                             <i class="las la-times la-2x"></i>
                                         </button>
@@ -383,7 +383,7 @@
                                     <div class="bg-white border mb-4 mx-3 mx-xl-0 mt-3 mt-xl-0">
                                         <div class="fs-16 fw-700 p-3">
                                             <a href="#collapse_1" class="dropdown-toggle filter-section text-dark d-flex align-items-center justify-content-between" data-toggle="collapse">
-                                                {{ translate('Categories')}}
+                                                {{ __('storefront.product.categories')}}
                                             </a>
                                         </div>
                                         <div class="collapse show px-3" id="collapse_1">
@@ -409,7 +409,7 @@
                                     <!-- Price range -->
                                     <div class="bg-white border mb-3">
                                         <div class="fs-16 fw-700 p-3">
-                                            {{ translate('Price range')}}
+                                            {{ __('storefront.product.price_range')}}
                                         </div>
                                         <div class="p-3 mr-3">
                                             <div class="aiz-range-slider">
@@ -456,7 +456,7 @@
                                     <div class="bg-white border mb-4 mx-3 mx-xl-0 mt-3 mt-xl-0">
                                         <div class="fs-16 fw-700 p-3">
                                             <a href="#collapse_2" class="dropdown-toggle filter-section text-dark d-flex align-items-center justify-content-between" data-toggle="collapse">
-                                                {{ translate('Ratings')}}
+                                                {{ __('storefront.product.ratings')}}
                                             </a>
                                         </div>
                                         <div class="collapse show px-3" id="collapse_2">
@@ -480,7 +480,7 @@
                                                 >
                                                 <span class="aiz-square-check"></span>
                                                 <span class="rating rating-mr-1">{{ renderStarRating(4) }}</span>
-                                                <span class="fs-14 fw-400 text-dark">{{ translate('And Up')}}</span>
+                                                <span class="fs-14 fw-400 text-dark">{{ __('storefront.common.and_up')}}</span>
                                             </label>
                                             <br>
                                             <label class="aiz-checkbox mb-3">
@@ -492,7 +492,7 @@
                                                 >
                                                 <span class="aiz-square-check"></span>
                                                 <span class="rating rating-mr-1">{{ renderStarRating(3) }}</span>
-                                                <span class="fs-14 fw-400 text-dark">{{ translate('And Up')}}</span>
+                                                <span class="fs-14 fw-400 text-dark">{{ __('storefront.common.and_up')}}</span>
                                             </label>
                                             <br>
                                             <label class="aiz-checkbox mb-3">
@@ -504,7 +504,7 @@
                                                 >
                                                 <span class="aiz-square-check"></span>
                                                 <span class="rating rating-mr-1">{{ renderStarRating(2) }}</span>
-                                                <span class="fs-14 fw-400 text-dark">{{ translate('And Up')}}</span>
+                                                <span class="fs-14 fw-400 text-dark">{{ __('storefront.common.and_up')}}</span>
                                             </label>
                                             <br>
                                             <label class="aiz-checkbox mb-3">
@@ -516,7 +516,7 @@
                                                 >
                                                 <span class="aiz-square-check"></span>
                                                 <span class="rating rating-mr-1">{{ renderStarRating(1) }}</span>
-                                                <span class="fs-14 fw-400 text-dark">{{ translate('And Up')}}</span>
+                                                <span class="fs-14 fw-400 text-dark">{{ __('storefront.common.and_up')}}</span>
                                             </label>
                                             <br>
                                         </div>
@@ -526,7 +526,7 @@
                                     <div class="bg-white border mb-4 mx-3 mx-xl-0 mt-3 mt-xl-0">
                                         <div class="fs-16 fw-700 p-3">
                                             <a href="#collapse_3" class="dropdown-toggle filter-section text-dark d-flex align-items-center justify-content-between" data-toggle="collapse">
-                                                {{ translate('Brands')}}
+                                                {{ __('storefront.product.brands')}}
                                             </a>
                                         </div>
                                         <div class="collapse show px-3" id="collapse_3">
@@ -565,7 +565,7 @@
                                 <div class="row gutters-5 flex-wrap">
                                     <div class="col-lg col-10">
                                         <h1 class="fs-20 fs-md-24 fw-700 text-dark">
-                                            {{ translate('All Products') }}
+                                            {{ __('storefront.product.all_products') }}
                                         </h1>
                                     </div>
                                     <div class="col-2 col-lg-auto d-xl-none mb-lg-3 text-right">
@@ -575,11 +575,11 @@
                                     </div>
                                     <div class="col-6 col-lg-auto mb-3 w-lg-200px">
                                         <select class="form-control form-control-sm aiz-selectpicker rounded-0" name="sort_by" onchange="filter()">
-                                            <option value="">{{ translate('Sort by')}}</option>
-                                            <option value="newest" @isset($sort_by) @if ($sort_by == 'newest') selected @endif @endisset>{{ translate('Newest')}}</option>
-                                            <option value="oldest" @isset($sort_by) @if ($sort_by == 'oldest') selected @endif @endisset>{{ translate('Oldest')}}</option>
-                                            <option value="price-asc" @isset($sort_by) @if ($sort_by == 'price-asc') selected @endif @endisset>{{ translate('Price low to high')}}</option>
-                                            <option value="price-desc" @isset($sort_by) @if ($sort_by == 'price-desc') selected @endif @endisset>{{ translate('Price high to low')}}</option>
+                                            <option value="">{{ __('storefront.common.sort_by')}}</option>
+                                            <option value="newest" @isset($sort_by) @if ($sort_by == 'newest') selected @endif @endisset>{{ __('storefront.common.newest')}}</option>
+                                            <option value="oldest" @isset($sort_by) @if ($sort_by == 'oldest') selected @endif @endisset>{{ __('storefront.common.oldest')}}</option>
+                                            <option value="price-asc" @isset($sort_by) @if ($sort_by == 'price-asc') selected @endif @endisset>{{ __('storefront.product.price_low_to_high')}}</option>
+                                            <option value="price-desc" @isset($sort_by) @if ($sort_by == 'price-desc') selected @endif @endisset>{{ __('storefront.product.price_high_to_low')}}</option>
                                         </select>
                                     </div>
                                 </div>

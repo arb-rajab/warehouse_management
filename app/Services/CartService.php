@@ -21,12 +21,12 @@ class CartService
         }
 
         if (!$auth_user->has_open_visit()) {
-            $result['message'] = 'Please make a visit first';
+            $result['message'] = __('storefront.cart.visit_required');
             $result['status'] = 'warning';
             return $result;
         }
 
-        $result['message'] = 'Success';
+        $result['message'] = __('storefront.common.success');
         $result['status'] = 'success';
         return $result;
     }
@@ -48,7 +48,7 @@ class CartService
         $cart->by_rep = 1;
         $cart->save();
 
-        $result['message'] = 'Success';
+        $result['message'] = __('storefront.common.success');
         $result['status'] = 'success';
         return $result;
     }

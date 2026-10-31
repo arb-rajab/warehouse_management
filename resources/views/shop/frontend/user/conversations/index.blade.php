@@ -4,8 +4,8 @@
     <div class="aiz-titlebar mb-4">
       <div class="row align-items-center">
           <div class="col-md-6">
-              <h5 class="fs-20 fw-700 text-dark">{{ translate('Conversations')}}</h5>
-              <p class="fs-14 fw-400 text-secondary">{{ translate('Select a conversation to view all messages')}}</p>
+              <h5 class="fs-20 fw-700 text-dark">{{ __('storefront.support.conversations')}}</h5>
+              <p class="fs-14 fw-400 text-secondary">{{ __('storefront.support.select_a_conversation_to_view_all_messages')}}</p>
           </div>
       </div>
     </div>
@@ -25,12 +25,12 @@
                                             @if (Auth::user()->id == $conversation->sender_id)
                                                 @if ($conversation->receiver->shop != null)
                                                     <a href="{{ route('shop.visit', $conversation->receiver->shop->slug) }}" class="">
-                                                        <img src="{{ uploaded_asset($conversation->receiver->shop->logo) }}" 
+                                                        <img src="{{ uploaded_asset($conversation->receiver->shop->logo) }}"
                                                             onerror="this.onerror=null;this.src='{{ static_asset('assets/img/avatar-place.png') }}';">
                                                     </a>
                                                 @else
-                                                    <img @if ($conversation->receiver->avatar_original == null) src="{{ static_asset('assets/img/avatar-place.png') }}" 
-                                                        @else src="{{ uploaded_asset($conversation->receiver->avatar_original) }}" @endif 
+                                                    <img @if ($conversation->receiver->avatar_original == null) src="{{ static_asset('assets/img/avatar-place.png') }}"
+                                                        @else src="{{ uploaded_asset($conversation->receiver->avatar_original) }}" @endif
                                                         onerror="this.onerror=null;this.src='{{ static_asset('assets/img/avatar-place.png') }}';">
                                                 @endif
                                             @else
@@ -53,7 +53,7 @@
                                             <h6 class="text-dark fw-700 fs-14 mb-2">{{ $conversation->sender->name }}</h6>
                                         @endif
                                         <small class="text-secondary fs-12">
-                                            {{ date('d.m.Y h:i:m', strtotime($conversation->messages->last()->created_at)) }}
+                                            {{ \App\Support\StoreLocale::date(strtotime($conversation->messages->last()->created_at), true) }}
                                         </small>
                                 </div>
                                 <!-- conversation -->
@@ -68,7 +68,7 @@
                                                             {{ $conversation->title }}
                                                         </a>
                                                         @if ((Auth::user()->id == $conversation->sender_id && $conversation->sender_viewed == 0) || (Auth::user()->id == $conversation->receiver_id && $conversation->receiver_viewed == 0))
-                                                            <span class="badge badge-inline badge-danger">{{ translate('New') }}</span>
+                                                            <span class="badge badge-inline badge-danger">{{ __('storefront.common.new') }}</span>
                                                         @endif
                                                     </h6>
                                                 </div>
@@ -91,7 +91,7 @@
             <div class="col">
                 <div class="text-center bg-white p-4 border">
                     <img class="mw-100 h-200px" src="{{ static_asset('assets/img/nothing.svg') }}" alt="Image">
-                    <h5 class="mb-0 h5 mt-3">{{ translate("There isn't anything added yet")}}</h5>
+                    <h5 class="mb-0 h5 mt-3">{{ __('storefront.common.there_isn_t_anything_added_yet')}}</h5>
                 </div>
             </div>
         </div>

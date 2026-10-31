@@ -15,7 +15,10 @@ class RepresentativePaymentController extends Controller
     public function index(Request $request)
     {
         $user = auth()->user();
-        $payment_query = RepresentativePayment::query()->where('rep_id', $user->id);
+        $payment_query = RepresentativePayment::query()
+            ->select(['id', 'amount', 'customer_id', 'otajer_id', 'receipt_code', 'invoice_code', 'admin_id', 'rep_id', 'notes', 'status', 'date', 'created_at'])
+            ->with(['customer:id,name,AccSysID,phone', 'rep:id,name', 'admin:id,name'])
+            ->where('rep_id', $user->id);
 
             if ($request->filled('search')) {
                 $searchTerm = '%' . $request->search . '%';
@@ -36,7 +39,7 @@ class RepresentativePaymentController extends Controller
 
         if(!$user->is_rep){
             return response()->json([
-                'message' => 'You cannot do this action, you are not representative',
+                'message' => __('api.account.representative_only'),
                 'result' => false
             ], 403);
         }
@@ -53,7 +56,7 @@ class RepresentativePaymentController extends Controller
 
         if(!$user->is_rep){
             return response()->json([
-                'message' => 'You cannot do this action, you are not representative',
+                'message' => __('api.account.representative_only'),
                 'result' => false
             ], 403);
         }
@@ -79,7 +82,7 @@ class RepresentativePaymentController extends Controller
         $customer = $request->customer_id ? StoreUser::find($request->customer_id) : StoreUser::where('AccSysId', $request->customer_otajer_id)->first();
         if(!$customer){
             return response()->json([
-                'message' => 'User not found',
+                'message' => __('api.auth.user_not_found'),
                 'result' => false
             ], 404);
         }
@@ -100,7 +103,7 @@ class RepresentativePaymentController extends Controller
         ]);
 
         return response()->json([
-            'message' => 'Payment has been added successfully, and it is waiting for approval.',
+            'message' => __('api.payment.approval_pending'),
             'result' => true,
             'pdf_link' => URL::signedRoute('payments.export', ['id' => $representativePayment->id]),
             'qr' => URL::signedRoute('api.rep.payment.generate_qr', ['id' => $representativePayment->id])

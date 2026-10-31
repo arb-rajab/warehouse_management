@@ -29,9 +29,6 @@ class Base64ImageUploadService
     /** The largest decoded image accepted, in bytes. */
     public const MAX_BYTES = 8 * 1024 * 1024;
 
-    /** The most pixels a raster image may hold, so a tiny file cannot expand into gigabytes. */
-    private const MAX_PIXELS = 40_000_000;
-
     private const RASTER_EXTENSIONS = [
         'image/jpeg' => 'jpg',
         'image/png' => 'png',
@@ -44,6 +41,10 @@ class Base64ImageUploadService
      */
     public function store(?string $base64, ?string $clientFilename, int $userId): Upload
     {
+        if (strlen((string) $base64) > (int) (ceil(self::MAX_BYTES / 3) * 4)) {
+            throw new InvalidArgumentException('The image is too large.');
+        }
+
         $decoded = base64_decode((string) $base64, true);
 
         if ($decoded === false || $decoded === '') {
@@ -56,7 +57,7 @@ class Base64ImageUploadService
 
         [$contents, $extension] = $this->normalise($decoded);
 
-        return $this->writeUpload($contents, $extension, 'image', $clientFilename, $userId);
+        return $this->writeUpload($contents, $extension, 'image', $clientFilename, $userId, $extension === 'svg' ? 'image/svg+xml' : ($extension === 'jpg' ? 'image/jpeg' : 'image/'.$extension));
     }
 
     /**
@@ -69,13 +70,13 @@ class Base64ImageUploadService
         $info = @getimagesizefromstring($decoded);
 
         if ($info !== false && isset(self::RASTER_EXTENSIONS[$info['mime']])) {
-            return [$this->reencode($decoded, $info), self::RASTER_EXTENSIONS[$info['mime']]];
+            return app(ImageOptimizer::class)->optimise($decoded);
         }
 
         if (str_contains(strtolower(substr($decoded, 0, 4096)), '<svg')) {
             $clean = (new Sanitizer)->sanitize($decoded);
 
-            if (! is_string($clean) || $clean === '') {
+            if (! is_string($clean) || $clean === '' || strlen($clean) > ImageOptimizer::MAX_SVG_BYTES) {
                 throw new InvalidArgumentException('The image is not valid.');
             }
 
@@ -83,37 +84,5 @@ class Base64ImageUploadService
         }
 
         throw new InvalidArgumentException('Only image can be uploaded');
-    }
-
-    /**
-     * @param  array<int|string, mixed>  $info
-     */
-    private function reencode(string $decoded, array $info): string
-    {
-        if ($info[0] * $info[1] > self::MAX_PIXELS) {
-            throw new InvalidArgumentException('The image is too large.');
-        }
-
-        $image = @imagecreatefromstring($decoded);
-
-        if ($image === false) {
-            throw new InvalidArgumentException('The image is not valid.');
-        }
-
-        imagealphablending($image, false);
-        imagesavealpha($image, true);
-
-        ob_start();
-
-        match ($info['mime']) {
-            'image/jpeg' => imagejpeg($image, null, 90),
-            'image/png' => imagepng($image),
-            'image/gif' => imagegif($image),
-            'image/webp' => imagewebp($image, null, 90),
-            // normalise() only passes the four types above.
-            default => false,
-        };
-
-        return (string) ob_get_clean();
     }
 }

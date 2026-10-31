@@ -18,8 +18,8 @@
                                 </div>
                                 <div class="col-sm-4">
                                     <select class="form-control selectpicker" name="{{$option->name}}_{{$options}}_variation">
-                                        <option value="increase">{{translate('Increase')}}</option>
-                                        <option value="decrease">{{translate('Decrease')}}</option>
+                                        <option value="increase">{{__('storefront.common.increase')}}</option>
+                                        <option value="decrease">{{__('storefront.common.decrease')}}</option>
                                     </select>
                                 </div>
                             </div>

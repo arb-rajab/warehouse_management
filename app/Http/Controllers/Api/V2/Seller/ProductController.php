@@ -95,12 +95,12 @@ class ProductController extends Controller
     {
         if (addon_is_activated('seller_subscription')) {
             if (!seller_package_validity_check(auth()->user()->id)) {
-                return $this->failed(translate('Please upgrade your package.'));
+                return $this->failed(__('seller.products.please_upgrade_your_package'));
             }
         }
 
         if(auth()->user()->user_type != 'seller'){
-            return $this->failed(translate('Unauthenticated User.'));
+            return $this->failed(__('api.seller.unauthenticated'));
         }
 
         $product = $this->productService->store([
@@ -127,20 +127,20 @@ class ProductController extends Controller
             'lang', 'name', 'unit', 'description', 'product_id'
         ]));
 
-        return $this->success(translate('Product has been inserted successfully'));
+        return $this->success(__('storefront.product.product_has_been_inserted_successfully'));
     }
 
     public function edit(Request $request, $id)
     {
 
         if(auth()->user()->user_type != 'seller'){
-            return $this->failed(translate('Unauthenticated User.'));
+            return $this->failed(__('api.seller.unauthenticated'));
         }
 
         $product = Product::where('id',$id)->with('stocks')->first();
 
         if (Gate::denies('updateAsSeller', $product)) {
-            return $this->failed(translate('This product is not yours.'));
+            return $this->failed(__('seller.products.this_product_is_not_yours'));
         }
         $product->lang =  $request->lang==null?config("app.default_language"):$request->lang;
 
@@ -158,7 +158,7 @@ class ProductController extends Controller
     public function update(ProductRequest $request, Product $product)
     {
         if (Gate::denies('updateAsSeller', $product)) {
-            return $this->failed(translate('This product is not yours'));
+            return $this->failed(__('seller.products.this_product_is_not_yours'));
         }
 
         //Product
@@ -192,7 +192,7 @@ class ProductController extends Controller
             ])
         );
 
-        return $this->success(translate('Product has been updated successfully'));
+        return $this->success(__('seller.products.product_has_been_updated_successfully'));
     }
 
     public function change_status(Request $request)
@@ -204,11 +204,11 @@ class ProductController extends Controller
             ]);
 
         if ($product == 0) {
-            return $this->failed(translate('This product is not yours'));
+            return $this->failed(__('seller.products.this_product_is_not_yours'));
         }
         return ($request->status == 1) ?
-            $this->success(translate('Product has been published successfully')) :
-            $this->success(translate('Product has been unpublished successfully'));
+            $this->success(__('api.product.published')) :
+            $this->success(__('api.product.unpublished'));
     }
 
     public function change_featured_status(Request $request)
@@ -220,12 +220,12 @@ class ProductController extends Controller
             ]);
 
         if ($product == 0) {
-          return  $this->failed(translate('This product is not yours'));
+          return  $this->failed(__('seller.products.this_product_is_not_yours'));
         }
 
         return ($request->featured_status == 1) ?
-            $this->success(translate('Product has been featured successfully')) :
-            $this->success(translate('Product has been unfeatured successfully'));
+            $this->success(__('api.product.featured')) :
+            $this->success(__('api.product.unfeatured'));
     }
 
     public function duplicate($id)
@@ -233,11 +233,11 @@ class ProductController extends Controller
         $product = Product::findOrFail($id);
 
         if (Gate::denies('updateAsSeller', $product)) {
-            return $this->failed(translate('This product is not yours'));
+            return $this->failed(__('seller.products.this_product_is_not_yours'));
         }
         if (addon_is_activated('seller_subscription')) {
             if (!seller_package_validity_check(auth()->user()->id)) {
-                return $this->failed(translate('Please upgrade your package'));
+                return $this->failed(__('seller.products.please_upgrade_your_package'));
             }
         }
 
@@ -252,7 +252,7 @@ class ProductController extends Controller
             //Store in Product Tax Table
             (new ProductTaxService)->product_duplicate_store($product->taxes, $product_new);
 
-            return $this->success(translate('Product has been duplicated successfully'));
+            return $this->success(__('seller.products.product_has_been_duplicated_successfully'));
         }
     }
 
@@ -261,7 +261,7 @@ class ProductController extends Controller
         $product = Product::findOrFail($id);
 
         if (Gate::denies('updateAsSeller', $product)) {
-            return $this->failed(translate('This product is not yours'));
+            return $this->failed(__('seller.products.this_product_is_not_yours'));
         }
 
         $product->product_translations()->delete();
@@ -271,7 +271,7 @@ class ProductController extends Controller
         if (Product::destroy($id)) {
             Cart::where('product_id', $id)->delete();
 
-            return $this->success(translate('Product has been deleted successfully'));
+            return $this->success(__('storefront.product.product_has_been_deleted_successfully'));
 
             Artisan::call('view:clear');
             Artisan::call('cache:clear');

@@ -7,6 +7,7 @@ use Closure;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Exists;
+use Illuminate\Validation\Validator;
 
 /** @mixin FormRequest */
 trait ValidatesStoreUploadReference
@@ -67,9 +68,9 @@ trait ValidatesStoreUploadReference
      */
     protected function retainableImageUploadIdsRule(?string $stored, bool $ownOnly = false): Closure
     {
-        return function (string $attribute, mixed $value, Closure $fail) use ($stored, $ownOnly): void {
+        return function (string $attribute, mixed $value, Closure $fail, Validator $validator) use ($stored, $ownOnly): void {
             if (! is_string($value) || preg_match('/^\d+(?:,\d+)*$/', $value) !== 1) {
-                $fail(__('validation.regex', ['attribute' => $attribute]));
+                $fail(__('validation.regex', ['attribute' => $validator->getDisplayableAttribute($attribute)]));
 
                 return;
             }
@@ -81,7 +82,7 @@ trait ValidatesStoreUploadReference
                     ->when($ownOnly || $this->refusesLibraryUploads(), fn ($query) => $query->where('user_id', $this->user('store')->id))
                     ->count();
             if (count($ids) > 50 || count(array_unique($ids)) !== count($ids) || $found !== count($ids)) {
-                $fail(__('validation.exists', ['attribute' => $attribute]));
+                $fail(__('validation.exists', ['attribute' => $validator->getDisplayableAttribute($attribute)]));
             }
         };
     }

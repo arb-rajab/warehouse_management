@@ -43,25 +43,27 @@ class SupportTicketController extends Controller
 
         if($ticket->save()){
             $this->send_support_mail_to_admin($ticket);
-            flash(translate('Ticket has been sent successfully'))->success();
+            flash(__('storefront.support.ticket_has_been_sent_successfully'))->success();
             return redirect()->route('seller.support_ticket.index');
         }
         else{
-            flash(translate('Something went wrong'))->error();
+            flash(__('storefront.common.something_went_wrong_label'))->error();
         }
     }
 
     public function send_support_mail_to_admin($ticket){
         $array['view'] = 'shop.emails.support';
-        $array['subject'] = translate('Support ticket Code is').':- '.$ticket->code;
+        $array['subject_key'] = 'storefront.support.ticket_subject';
+        $array['subject_parameters'] = ['code' => $ticket->code];
         $array['from'] = config('mail.from.address');
-        $array['content'] = translate('Hi. A ticket has been created. Please check the ticket.');
+        $array['content_key'] = 'storefront.support.ticket_created';
         $array['link'] = route('support_ticket.admin_show', encrypt($ticket->id));
         $array['sender'] = $ticket->user->name;
         $array['details'] = $ticket->details;
 
         try {
-            Mail::to(StoreUser::where('user_type', 'admin')->first()->email)->queue(new SupportMailManager($array));
+            $recipient = StoreUser::where('user_type', 'admin')->first();
+            Mail::to($recipient->email)->queue(new SupportMailManager($array, $recipient));
         } catch (\Exception $e) {
             // dd($e->getMessage());
         }
@@ -96,11 +98,11 @@ class SupportTicketController extends Controller
         $ticket_reply->ticket->save();
         if($ticket_reply->save()){
 
-            flash(translate('Reply has been sent successfully'))->success();
+            flash(__('storefront.support.reply_has_been_sent_successfully'))->success();
             return back();
         }
         else{
-            flash(translate('Something went wrong'))->error();
+            flash(__('storefront.common.something_went_wrong_label'))->error();
         }
     }
 

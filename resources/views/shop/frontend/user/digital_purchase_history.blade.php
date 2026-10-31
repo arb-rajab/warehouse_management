@@ -3,14 +3,14 @@
 @section('panel_content')
     <div class="card shadow-none rounded-0 border">
         <div class="card-header border-bottom-0">
-            <h5 class="mb-0 fs-20 fw-700 text-dark">{{ translate('Download Your Products') }}</h5>
+            <h5 class="mb-0 fs-20 fw-700 text-dark">{{ __('storefront.product.download_your_products') }}</h5>
         </div>
         <div class="card-body">
             <table class="table aiz-table mb-0">
                 <thead class="text-gray fs-12">
                     <tr>
-                        <th class="pl-0">{{ translate('Product')}}</th>
-                        <th class="pr-0 text-right" width="20%">{{ translate('Option')}}</th>
+                        <th class="pl-0">{{ __('storefront.product.product')}}</th>
+                        <th class="pr-0 text-right" width="20%">{{ __('storefront.common.option')}}</th>
                     </tr>
                 </thead>
                 <tbody class="fs-14">
@@ -30,7 +30,7 @@
                                     </a>
                                 </td>
                                 <td class="pr-0 text-right" style="vertical-align: middle;">
-                                    <a class="btn btn-soft-info btn-icon btn-circle btn-sm hov-svg-white" href="{{route('digital-products.download', encrypt($order->product->id))}}" title="{{ translate('Download') }}">
+                                    <a class="btn btn-soft-info btn-icon btn-circle btn-sm hov-svg-white" href="{{route('digital-products.download', encrypt($order->product->id))}}" title="{{ __('storefront.common.download') }}">
                                         <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12.001" viewBox="0 0 12 12.001">
                                             <g id="Group_24807" data-name="Group 24807" transform="translate(-1341 -424.999)">
                                               <path id="Union_17" data-name="Union 17" d="M13936.389,851.5l.707-.707,2.355,2.355V846h1v7.1l2.306-2.306.707.707-3.538,3.538Z" transform="translate(-12592.95 -421)" fill="#3490f3"/>

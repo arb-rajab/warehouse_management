@@ -9,18 +9,18 @@
                     <!-- Breadcrumb -->
                     <div class="row gutters-16 mb-4">
                         <div class="col-5 col-xl-6">
-                            <h1 class="fw-700 fs-20 fs-md-24 text-dark mb-0">{{ translate('Blogs')}}</h1>
+                            <h1 class="fw-700 fs-20 fs-md-24 text-dark mb-0">{{ __('storefront.common.blogs')}}</h1>
                         </div>
                         <div class="col-5 col-xl-6">
                             <ul class="breadcrumb bg-transparent p-0 justify-content-end">
                                 <li class="breadcrumb-item has-transition opacity-60 hov-opacity-80">
                                     <a class="text-reset" href="{{ route('home') }}">
-                                        {{ translate('Home')}}
+                                        {{ __('storefront.navigation.home')}}
                                     </a>
                                 </li>
                                 <li class="text-dark fw-600 breadcrumb-item">
                                     <a class="text-reset" href="{{ route('blog') }}">
-                                        "{{ translate('Blog') }}"
+                                        "{{ __('storefront.common.blog') }}"
                                     </a>
                                 </li>
                             </ul>
@@ -51,7 +51,7 @@
                                         {{ $blog->short_description }}
                                     </p>
                                     <div>
-                                        <small class="fs-12 fw-400 opacity-60">{{ date('M d, Y',strtotime($blog->created_at)) }}</small>
+                                        <small class="fs-12 fw-400 opacity-60">{{ \App\Support\StoreLocale::date(strtotime($blog->created_at)) }}</small>
                                     </div>
                                     @if($blog->category != null)
                                         <div>
@@ -60,14 +60,14 @@
                                     @endif
                                     <div class="mt-3 text-primary">
                                         <a href="{{ url("blog").'/'. $blog->slug }}" class="fs-14 fw-700 text-primary has-transition d-flex align-items-center hov-column-gap-1">
-                                            {{ translate('Read Full Blog') }}
+                                            {{ __('storefront.common.read_full_blog') }}
                                             <i class="las las-2x la-arrow-right fs-24 ml-1"></i>
                                         </a>
                                     </div>
                                 </div>
                             </div>
                         @endforeach
-                        
+
                     </div>
                     <!-- Pagination -->
                     <div class="aiz-pagination mt-4">
@@ -83,7 +83,7 @@
                             <div class="overlay overlay-fixed dark c-pointer" data-toggle="class-toggle" data-target=".aiz-filter-sidebar" data-same=".filter-sidebar-thumb"></div>
                             <div class="collapse-sidebar c-scrollbar-light text-left" style="overflow-y: auto;">
                                 <div class="d-flex d-xl-none justify-content-between align-items-center pl-3 border-bottom">
-                                    <h3 class="h6 mb-0 fw-600">{{ translate('Filters') }}</h3>
+                                    <h3 class="h6 mb-0 fw-600">{{ __('storefront.common.filters') }}</h3>
                                     <button type="button" class="btn btn-sm p-2 filter-sidebar-thumb" data-toggle="class-toggle" data-target=".aiz-filter-sidebar" >
                                         <i class="las la-times la-2x"></i>
                                     </button>
@@ -91,7 +91,7 @@
                                 <!-- Search -->
                                 <div class="mb-4 mt-3 px-3 mt-xl-0 px-xl-0">
                                     <div class="input-group w-100">
-                                        <input type="text" class="border border-right-0 rounded-0 fs-14 flex-grow-1" name="search" value="{{ $search }}" placeholder="{{translate('Search...')}}" autocomplete="off" style="padding: 14px;">
+                                        <input type="text" class="border border-right-0 rounded-0 fs-14 flex-grow-1" name="search" value="{{ $search }}" placeholder="{{__('storefront.common.search')}}" autocomplete="off" style="padding: 14px;">
                                         <div class="input-group-append">
                                             <button class="btn bg-transparent hov-bg-light rounded-0 border border-left-0" type="submit" style="">
                                                 <i class="la la-search la-flip-horizontal fs-18 text-gray"></i>
@@ -101,7 +101,7 @@
                                 </div>
                                 <!-- Categories -->
                                 <div class="bg-white border mb-3 mx-3 mx-xl-0">
-                                    <div class="fs-16 fw-700 p-3">{{ translate('Categories')}}</div>
+                                    <div class="fs-16 fw-700 p-3">{{ __('storefront.product.categories')}}</div>
                                     <div class="p-3 aiz-checkbox-list">
                                         @foreach (\App\Models\BlogCategory::all() as $category)
                                         <label class="aiz-checkbox mb-3">
@@ -117,14 +117,14 @@
                                         @endforeach
                                     </div>
                                 </div>
-                                
+
                             </div>
                         </div>
                     </form>
 
                     <!-- recent posts -->
                     <div class="p-3 border">
-                        <h3 class="fs-16 fw-700 text-dark mb-3">{{ translate('Recent Posts') }}</h3>
+                        <h3 class="fs-16 fw-700 text-dark mb-3">{{ __('storefront.common.recent_posts') }}</h3>
                         <div class="row">
                             @foreach($recent_blogs as $recent_blog)
                             <div class="col-xl-12 col-lg-4 col-sm-6 mb-4 hov-scale-img">
@@ -144,7 +144,7 @@
                                             </a>
                                         </h2>
                                         <div>
-                                            <small class="fs-12 fw-400 opacity-60">{{ date('M d, Y',strtotime($recent_blog->created_at)) }}</small>
+                                            <small class="fs-12 fw-400 opacity-60">{{ \App\Support\StoreLocale::date(strtotime($recent_blog->created_at)) }}</small>
                                         </div>
                                         @if($recent_blog->category != null)
                                             <div>

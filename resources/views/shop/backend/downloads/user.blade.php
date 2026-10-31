@@ -1,3 +1,7 @@
+@php
+    $documentLocale = $documentLocale ?? \App\Support\StoreLocale::documentLocale();
+@endphp
+<html lang="{{ $documentLocale }}" dir="{{ $documentLocale === 'ar' ? 'rtl' : 'ltr' }}"><head><meta charset="utf-8"></head><body>
 <div style="margin-left:auto;margin-right:auto;">
 <style media="all">
     @page {
@@ -10,7 +14,8 @@
 	}
 	body{
 		line-height: 1.5;
-		font-family: 'DejaVuSans', 'sans-serif';
+		font-family: 'dejavusans', 'sans-serif';
+        direction: {{ $documentLocale === 'ar' ? 'rtl' : 'ltr' }};
 		color: #333542;
 	}
 	div{
@@ -78,10 +83,10 @@
 		<table class="padding text-left small border-bottom">
 			<thead>
                 <tr class="gry-color" style="background: #eceff4;">
-					<th width="20%">{{translate('Type') }}</th>
-                    <th width="50%">{{translate('Name') }}</th>
-                    <th width="30%">{{translate('ID') }}</th>
-					<th width="30%">{{translate('Email') }}</th>
+					<th width="20%">{{__('storefront.common.type', [], $documentLocale) }}</th>
+                    <th width="50%">{{__('storefront.common.name', [], $documentLocale) }}</th>
+                    <th width="30%">{{__('storefront.common.id', [], $documentLocale) }}</th>
+					<th width="30%">{{__('storefront.auth.email', [], $documentLocale) }}</th>
                 </tr>
 			</thead>
 			<tbody class="strong">
@@ -89,8 +94,8 @@
 	                <tr class="">
 						<td>{{ $user->user_type }}</td>
 						<td>{{ $user->name }}</td>
-						<td>{{ $user->id }}</td>
-						<td>{{ $user->email }}</td>
+						<td><span dir="ltr" style="direction:ltr;unicode-bidi:embed;">{{ $user->id }}</span></td>
+						<td><span dir="ltr" style="direction:ltr;unicode-bidi:embed;">{{ $user->email }}</span></td>
 					</tr>
 				@endforeach
             </tbody>
@@ -98,3 +103,5 @@
 	</div>
 
 </div>
+
+</body></html>

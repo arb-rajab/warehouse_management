@@ -39,10 +39,10 @@ class AttributeValueRequest extends FormRequest
     public function messages()
     {
         return [
-            'attribute_id.required'             => translate('Attribute is required'),
-            'value.required'                    => translate('Attribute value is required'),
-            'value.max'                         => translate('Max 255 characters for attribute value'),
-            'color_code.required_if:type'       => translate('Color code is required'),
+            'attribute_id.required'             => __('store_admin.attribute_is_required'),
+            'value.required'                    => __('store_admin.attribute_value_is_required'),
+            'value.max'                         => __('store_admin.max_255_characters_for_attribute_value'),
+            'color_code.required_if:type'       => __('store_admin.color_code_is_required'),
         ];
     }
 }

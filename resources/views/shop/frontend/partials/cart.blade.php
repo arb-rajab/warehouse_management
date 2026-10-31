@@ -20,7 +20,7 @@
 
 @endphp
 <!-- Cart button with cart count -->
-<a href="javascript:void(0)" class="d-flex align-items-center text-dark px-3 h-100" data-toggle="dropdown" data-display="static" title="{{translate('Cart')}}">
+<a href="javascript:void(0)" class="d-flex align-items-center text-dark px-3 h-100" data-toggle="dropdown" data-display="static" title="{{__('storefront.cart.cart')}}">
     <span class="mr-2">
         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="20.562" viewBox="0 0 24 20.562">
             <g id="_5e67fc94b53aaec8ca181b806dd815ee" data-name="5e67fc94b53aaec8ca181b806dd815ee" transform="translate(-33.276 -101)">
@@ -36,7 +36,7 @@
     </span>
     {{-- <span class="d-none d-xl-block ml-2 fs-14 fw-700 text-white">{{ single_price($total) }}</span> --}}
     {{-- <span class="nav-box-text d-none d-xl-block ml-2 text-white fs-12">
-        (<span class="cart-count">{{(isset($cart) && count($cart) > 0) ? count($cart) : 0 }}</span> {{translate('Items')}})
+        (<span class="cart-count">{{(isset($cart) && count($cart) > 0) ? count($cart) : 0 }}</span> {{__('storefront.common.items')}})
     </span> --}}
 </a>
 
@@ -44,7 +44,7 @@
 <div class="dropdown-menu dropdown-menu-right dropdown-menu-lg p-0 stop-propagation rounded-0">
     @if (isset($cart) && count($cart) > 0)
         <div class="fs-16 fw-700 text-soft-dark pt-4 pb-2 mx-4 border-bottom" style="border-color: #e5e5e5 !important;">
-            {{ translate('Cart') }}
+            {{ __('storefront.cart.cart') }}
         </div>
         <!-- Cart Products -->
         {{-- <ul class="h-360px overflow-auto c-scrollbar-light list-group list-group-flush mx-1">
@@ -83,7 +83,7 @@
         </ul> --}}
         <!-- Subtotal -->
         {{-- <div class="px-3 py-2 fs-15 border-top d-flex justify-content-between mx-4" style="border-color: #e5e5e5 !important;">
-            <span class="fs-14 fw-400 text-secondary">{{ translate('Subtotal') }}</span>
+            <span class="fs-14 fw-400 text-secondary">{{ __('storefront.common.subtotal') }}</span>
             <span class="fs-16 fw-700 text-dark">{{ single_price($total) }}</span>
         </div> --}}
         <!-- View cart & Checkout Buttons -->
@@ -91,13 +91,13 @@
             <div class="row gutters-10 justify-content-center">
                 <div class="col-sm-6 mb-2">
                     <a href="{{ route('cart') }}" class="btn btn-warning btn-sm btn-block rounded-4 text-white">
-                        {{ translate('View cart') }}
+                        {{ __('storefront.cart.view_cart') }}
                     </a>
                 </div>
                 @if (Auth::check())
                 <div class="col-sm-6">
                     <a href="{{ route('checkout.shipping_info') }}" class="btn btn-primary btn-sm btn-block rounded-4">
-                        {{ translate('Checkout') }}
+                        {{ __('storefront.checkout.checkout') }}
                     </a>
                 </div>
                 @endif
@@ -106,7 +106,7 @@
     @else
         <div class="text-center p-3">
             <i class="las la-frown la-3x opacity-60 mb-3"></i>
-            <h3 class="h6 fw-700">{{ translate('Your Cart is empty') }}</h3>
+            <h3 class="h6 fw-700">{{ __('storefront.cart.empty') }}</h3>
         </div>
     @endif
 </div>

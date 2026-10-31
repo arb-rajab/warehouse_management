@@ -19,7 +19,7 @@ class AttributeValueController extends Controller
     {
         $attribute_value->update($request->validated());
 
-        flash(translate('Attribute value has been updated successfully'))->success();
+        flash(__('store_admin.attribute_value_has_been_updated_successfully'))->success();
         return back();
     }
 }

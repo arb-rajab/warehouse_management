@@ -2,36 +2,23 @@
 
 namespace App\Http\Middleware;
 
-use App;
-use App\Enums\Locale;
+use App\Support\StoreLocale;
 use Closure;
 use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\Response;
 
 class AppLanguage
 {
-    /**
-     * Handle an incoming request.
-     *
-     * The `App-Language` header is client-supplied, so it only counts when it
-     * names a locale the app has (App\Enums\Locale); anything else falls back
-     * to the configured default, the same as no header.
-     *
-     * @param  Request  $request
-     * @param  \Closure  $next
-     * @return mixed
-     */
-    public function handle($request, Closure $next)
+    /** App-Language takes precedence over Accept-Language on the store API. */
+    public function handle(Request $request, Closure $next): Response
     {
-        $requested = (string) $request->header('App-Language');
+        $requested = $request->header('App-Language');
+        $explicit = in_array($requested, ['en', 'ar', 'sa'], true);
 
-        if (in_array($requested, array_column(Locale::cases(), 'value'), true)) {
-            $locale = $requested;
-        } else {
-            $locale = config('app.default_language') ?? 'en';
-        }
-
-        App::setLocale($locale);
-
-        return $next($request);
+        return StoreLocale::withLocale(
+            $explicit ? $requested : (config('app.default_language') ?? 'en'),
+            StoreLocale::deliveryLocale(locale: $explicit ? $requested : null),
+            fn () => $next($request),
+        );
     }
 }

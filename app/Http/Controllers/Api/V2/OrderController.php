@@ -56,7 +56,7 @@ class OrderController extends Controller
         set_time_limit(0);
 
         if ($request->filled('payment_type') && ! app(PaymentOptions::class)->isAllowed((string) $request->payment_type)) {
-            return $this->failed(translate('Select Payment Option.'));
+            return $this->failed(__('storefront.checkout.select_payment_option'));
         }
 
         if (auth()->user()->is_rep) {
@@ -65,7 +65,7 @@ class OrderController extends Controller
                 $forCustomerId = Cart::where('user_id', auth()->user()->id)->where('for_customer', '!=', null)->latest()->first()?->for_customer;
 
                 if (!$forCustomerId) {
-                    return $this->failed("You didn't choose a user for your cart, please choose a user first.");
+                    return $this->failed(__('api.order.customer_required'));
                 }
 
                 foreach ($filteredCarts as $cart) {
@@ -81,7 +81,7 @@ class OrderController extends Controller
             return response()->json([
                 'combined_order_id' => 0,
                 'result' => false,
-                'message' => translate('Cart is Empty')
+                'message' => __('api.cart.empty')
             ]);
         }
 
@@ -128,7 +128,7 @@ class OrderController extends Controller
                 return response()->json([
                     'combined_order_id' => 0,
                     'result' => false,
-                    'message' => translate('The order profit is less than 1% of the total amount of the order. Try to decrease the discount amount or add more products to the order')
+                    'message' => __('api.order.profit_too_low')
                 ]);
             }
         }
@@ -193,7 +193,7 @@ class OrderController extends Controller
         }
 
         if ($seller_products === []) {
-            throw new DomainException(translate('Cart is Empty'));
+            throw new DomainException(__('api.cart.empty'));
         }
 
         $lastOrder = null;
@@ -400,7 +400,7 @@ class OrderController extends Controller
         }
 
         if ($lastOrder === null) {
-            throw new DomainException(translate('Cart is Empty'));
+            throw new DomainException(__('api.cart.empty'));
         }
         $order = $lastOrder;
 
@@ -409,7 +409,7 @@ class OrderController extends Controller
         // Charged before the cart is emptied: a wallet that cannot cover the
         // order rolls the whole order back and the cart stays as it was.
         if ($payFromWallet && ! app(WalletPaymentService::class)->charge($user, $combined_order->id)) {
-            throw new DomainException(translate('Insufficient wallet balance'));
+            throw new DomainException(__('storefront.checkout.insufficient_wallet_balance'));
         }
 
         if ($user->is_rep) {
@@ -447,7 +447,7 @@ class OrderController extends Controller
         return response()->json([
             'combined_order_id' => $combined_order->id,
             'result' => true,
-            'message' => translate('Your order has been placed successfully, all un-active products will be removed from order.'),
+            'message' => __('api.order.placed'),
         ]);
     }
 }

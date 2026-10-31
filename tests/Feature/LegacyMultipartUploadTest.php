@@ -256,7 +256,7 @@ test('raster normalisation ignores opt-out and resizes both orientations to 1500
     withScratchPublicPath(function (string $publicPath) use ($owner, $width, $height, $expectedWidth, $expectedHeight) {
         $upload = app(MultipartUploadService::class)->store(UploadedFile::fake()->image('photo.jpg', $width, $height), $owner->id, normalizeRaster: true);
         $image = getimagesize($publicPath.'/'.$upload->file_name);
-        expect($upload->extension)->toBe('webp')->and($image['mime'])->toBe('image/webp')
+        expect($upload->extension)->toBe(function_exists('imagewebp') ? 'webp' : 'jpg')->and($image['mime'])->toBe(function_exists('imagewebp') ? 'image/webp' : 'image/jpeg')
             ->and($image[0])->toBe($expectedWidth)->and($image[1])->toBe($expectedHeight)
             ->and($upload->file_size)->toBe(filesize($publicPath.'/'.$upload->file_name));
     });

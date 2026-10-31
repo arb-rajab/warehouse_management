@@ -48,7 +48,7 @@ class ProductController extends Controller
     public function create()
     {
         if (addon_is_activated('seller_subscription') && ! seller_package_validity_check()) {
-            flash(translate('Please upgrade your package.'))->warning();
+            flash(__('seller.products.please_upgrade_your_package'))->warning();
             return back();
         }
 
@@ -59,14 +59,14 @@ class ProductController extends Controller
     {
         if (addon_is_activated('seller_subscription')) {
             if (!seller_package_validity_check()) {
-                flash(translate('Please upgrade your package.'))->warning();
+                flash(__('seller.products.please_upgrade_your_package'))->warning();
                 return redirect()->route('seller.products');
             }
         }
 
         $writer->create($request->user('store'), $request->productData(), $request->variantNames());
 
-        flash(translate('Product has been inserted successfully'))->success();
+        flash(__('storefront.product.product_has_been_inserted_successfully'))->success();
 
         return redirect()->route('seller.products');
     }
@@ -76,7 +76,7 @@ class ProductController extends Controller
         $product = Product::findOrFail($id);
 
         if (Gate::denies('updateAsSeller', $product)) {
-            flash(translate('This product is not yours.'))->warning();
+            flash(__('seller.products.this_product_is_not_yours'))->warning();
             return back();
         }
 
@@ -87,13 +87,13 @@ class ProductController extends Controller
     public function update(PhysicalProductRequest $request, Product $product, SellerProductWriter $writer)
     {
         if (Gate::denies('updateAsSeller', $product)) {
-            flash(translate('This product is not yours.'))->warning();
+            flash(__('seller.products.this_product_is_not_yours'))->warning();
             return back();
         }
 
         $writer->update($request->user('store'), $product, $request->productData(), $request->variantNames());
 
-        flash(translate('Product has been updated successfully'))->success();
+        flash(__('seller.products.product_has_been_updated_successfully'))->success();
 
         return back();
     }
@@ -181,12 +181,12 @@ class ProductController extends Controller
     {
         $product = Product::find($id);
         if (Gate::denies('updateAsSeller', $product)) {
-            flash(translate('This product is not yours.'))->warning();
+            flash(__('seller.products.this_product_is_not_yours'))->warning();
             return back();
         }
         if (addon_is_activated('seller_subscription')) {
             if (!seller_package_validity_check()) {
-                flash(translate('Please upgrade your package.'))->warning();
+                flash(__('seller.products.please_upgrade_your_package'))->warning();
                 return back();
             }
         }
@@ -202,10 +202,10 @@ class ProductController extends Controller
             //VAT & Tax
             $this->productTaxService->product_duplicate_store($product->taxes, $product_new);
 
-            flash(translate('Product has been duplicated successfully'))->success();
+            flash(__('seller.products.product_has_been_duplicated_successfully'))->success();
             return redirect()->route('seller.products');
         } else {
-            flash(translate('This product is not yours.'))->warning();
+            flash(__('seller.products.this_product_is_not_yours'))->warning();
             return back();
         }
     }
@@ -215,7 +215,7 @@ class ProductController extends Controller
         $product = Product::findOrFail($id);
 
         if (Gate::denies('updateAsSeller', $product)) {
-            flash(translate('This product is not yours.'))->warning();
+            flash(__('seller.products.this_product_is_not_yours'))->warning();
             return back();
         }
 
@@ -227,14 +227,14 @@ class ProductController extends Controller
         if (Product::destroy($id)) {
             Cart::where('product_id', $id)->delete();
 
-            flash(translate('Product has been deleted successfully'))->success();
+            flash(__('storefront.product.product_has_been_deleted_successfully'))->success();
 
             Artisan::call('view:clear');
             Artisan::call('cache:clear');
 
             return back();
         } else {
-            flash(translate('Something went wrong'))->error();
+            flash(__('storefront.common.something_went_wrong_label'))->error();
             return back();
         }
     }

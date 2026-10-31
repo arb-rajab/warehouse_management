@@ -43,11 +43,13 @@ class PasswordResetRequest extends Notification
      */
     public function toMail($notifiable)
     {
+        $locale = \App\Support\StoreLocale::deliveryLocale($notifiable, $this->locale);
         $url = config('app.url') . '/password/reset/' . $this->token;
         return (new MailMessage)
-            ->line('You are receiving this email because we received a password reset request for your account.')
-            ->action('Reset Password', $url)
-            ->line('If you did not request a password reset, no further action is required.');
+            ->action(__('delivery.mail.reset_action', [], $locale), $url)
+            ->view('shop.emails.password_reset', ['array' => ['locale' => $locale, 'link' => $url]])
+            ->text('shop.emails.plain.password_reset', ['array' => ['locale' => $locale, 'link' => $url]])
+            ->subject(__('storefront.auth.password_reset_subject', [], $locale));
     }
 
     /**

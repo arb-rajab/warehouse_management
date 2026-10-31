@@ -20,6 +20,7 @@ import {
     filterApplyButtonClass,
 } from '@/lib/filters';
 import { t } from '@/lib/i18n';
+import { compressUploadImage, ImageUploadError } from '@/lib/imageUpload';
 import { useStoreAccess } from '@/lib/storeAccess';
 import type { Paginated } from '@/types/admin';
 import type { StoreUpload } from '@/types/store';
@@ -62,6 +63,9 @@ const info = ref<StoreUpload>();
 const queue = ref<File[]>([]);
 const fileInput = ref<HTMLInputElement>();
 let active = true;
+const sending = ref(false);
+const preparing = ref(false);
+const compressionController = new AbortController();
 
 async function load(page = 1): Promise<void> {
     if (!access.value.can('view_uploads')) {
@@ -116,53 +120,87 @@ function pickFiles(event: Event): void {
     );
 }
 async function send(): Promise<void> {
-    error.value = undefined;
+    if (sending.value || upload.processing || !active) {
+        return;
+    }
 
-    while (queue.value.length > 0) {
-        const file = queue.value[0];
-        upload.file = file;
+    sending.value = true;
 
-        try {
-            const stored = await upload.post(storeUpload.url());
+    try {
+        error.value = undefined;
 
-            if (!stored) {
+        while (queue.value.length > 0) {
+            const file = queue.value[0];
+
+            try {
+                preparing.value = true;
+                upload.file = await compressUploadImage(
+                    file,
+                    1500,
+                    compressionController.signal,
+                );
+                preparing.value = false;
+
+                if (!active) {
+                    return;
+                }
+
+                const stored = await upload.post(storeUpload.url());
+
+                if (!stored) {
+                    error.value =
+                        upload.errors.file ?? t('store.uploads.uploadFailed');
+
+                    return;
+                }
+
+                if (!active) {
+                    return;
+                }
+
+                emit('uploaded', stored);
+                queue.value.shift();
+
+                if (
+                    !props.library &&
+                    (!props.type || stored.type === props.type)
+                ) {
+                    selected.value = props.multiple
+                        ? [...selected.value, stored].slice(0, 100)
+                        : [stored];
+                }
+            } catch (failure) {
+                if (!active) {
+                    return;
+                }
+
                 error.value =
-                    upload.errors.file ?? t('store.uploads.uploadFailed');
+                    failure instanceof ImageUploadError
+                        ? t(`common.imageUpload.${failure.code}`)
+                        : (upload.errors.file ??
+                          t('store.uploads.uploadFailed'));
 
                 return;
             }
-
-            if (!active) {
-                return;
-            }
-
-            emit('uploaded', stored);
-            queue.value.shift();
-
-            if (!props.library && (!props.type || stored.type === props.type)) {
-                selected.value = props.multiple
-                    ? [...selected.value, stored].slice(0, 100)
-                    : [stored];
-            }
-        } catch {
-            error.value = upload.errors.file ?? t('store.uploads.uploadFailed');
-
-            return;
         }
-    }
 
-    queue.value = [];
-    upload.file = null;
+        queue.value = [];
+        upload.file = null;
 
-    if (fileInput.value) {
-        fileInput.value.value = '';
-    }
+        if (fileInput.value) {
+            fileInput.value.value = '';
+        }
 
-    if (access.value.can('view_uploads')) {
-        tab.value = 'library';
-        await load();
+        if (access.value.can('view_uploads')) {
+            tab.value = 'library';
+            await load();
+        }
+    } finally {
+        sending.value = false;
+        preparing.value = false;
     }
 }
+
 async function remove(file: StoreUpload): Promise<void> {
     if (!confirmDelete(file.name ?? String(file.id))) {
         return;
@@ -227,6 +265,7 @@ onMounted(() => {
     }
 });
 onBeforeUnmount(() => {
+    compressionController.abort();
     active = false;
     filter.cancel();
     upload.cancel();
@@ -463,7 +502,7 @@ onBeforeUnmount(() => {
                 type="file"
                 multiple
                 required
-                :disabled="upload.processing"
+                :disabled="sending || upload.processing"
                 :accept="type === 'image' ? 'image/*' : undefined"
                 :class="plainFieldInputClass"
                 @change="pickFiles"
@@ -481,8 +520,12 @@ onBeforeUnmount(() => {
             </progress>
             <SubmitButton
                 :label="t('store.uploads.upload')"
-                :processing-label="t('store.uploads.uploading')"
-                :processing="upload.processing"
+                :processing-label="
+                    preparing
+                        ? t('common.imageUpload.preparing')
+                        : t('store.uploads.uploading')
+                "
+                :processing="sending || upload.processing"
             />
         </form>
     </div>

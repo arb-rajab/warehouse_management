@@ -4,7 +4,7 @@
     <div class="aiz-titlebar mt-2 mb-4">
         <div class="row align-items-center">
             <div class="col-md-6">
-                <h1 class="h3 text-primary">{{ translate('Dashboard') }}</h1>
+                <h1 class="h3 text-primary">{{ __('storefront.navigation.dashboard') }}</h1>
             </div>
         </div>
     </div>
@@ -17,7 +17,7 @@
                         <div class="col">
                             <p class="small text-muted mb-0">
                                 <span class="fe fe-arrow-down fe-12"></span>
-                                <span class="fs-14 text-light">{{ translate('Products') }}</span>
+                                <span class="fs-14 text-light">{{ __('storefront.product.products') }}</span>
                             </p>
                             <h3 class="mb-0 text-white fs-30">
                                 {{ \App\Models\Product::where('user_id', Auth::user()->id)->count() }}
@@ -42,7 +42,7 @@
                         <div class="col">
                             <p class="small text-muted mb-0">
                                 <span class="fe fe-arrow-down fe-12"></span>
-                                <span class="fs-14 text-light">{{ translate('Rating') }}</span>
+                                <span class="fs-14 text-light">{{ __('storefront.product.rating') }}</span>
                             </p>
                             <h3 class="mb-0 text-white fs-30">
                                 {{ $shop?->rating ?? 0 }}
@@ -67,7 +67,7 @@
                         <div class="col">
                             <p class="small text-muted mb-0">
                                 <span class="fe fe-arrow-down fe-12"></span>
-                                <span class="fs-14 text-light">{{ translate('Total Order') }}</span>
+                                <span class="fs-14 text-light">{{ __('seller.dashboard.total_order') }}</span>
                             </p>
                             <h3 class="mb-0 text-white fs-30">
                                 {{ \App\Models\Order::where('seller_id', Auth::user()->id)->where('delivery_status', 'delivered')->count() }}
@@ -123,7 +123,7 @@
                         <div class="col">
                             <p class="small text-muted mb-0">
                                 <span class="fe fe-arrow-down fe-12"></span>
-                                <span class="fs-14 text-light">{{ translate('Total Sales') }}</span>
+                                <span class="fs-14 text-light">{{ __('seller.dashboard.total_sales') }}</span>
                             </p>
                             <h3 class="mb-0 text-white fs-30">
                                 {{ single_price($total_sales) }}
@@ -159,7 +159,7 @@
             <div class="card shadow-none bg-soft-primary">
                 <div class="card-body">
                     <div class="card-title text-primary fs-16 fw-600">
-                        {{ translate('Sales Stat') }}
+                        {{ __('seller.dashboard.sales_stat') }}
                     </div>
                     <canvas id="graph-1" class="w-100" height="150"></canvas>
                 </div>
@@ -179,9 +179,9 @@
 
                 <div class="card-body">
                     <div class="card-title text-primary fs-16 fw-600">
-                        {{ translate('Sold Amount') }}
+                        {{ __('seller.dashboard.sold_amount') }}
                     </div>
-                    <p>{{ translate('Your Sold Amount (Current month)') }}</p>
+                    <p>{{ __('seller.dashboard.your_sold_amount_current_month') }}</p>
                     <h3 class="text-primary fw-600 fs-30">
                         {{ single_price($orderTotal) }}
                     </h3>
@@ -193,7 +193,7 @@
                                 ->where('created_at', '<=', $days_ago_30)
                                 ->sum('grand_total');
                         @endphp
-                        {{ translate('Last Month') }}: {{ single_price($orderTotal) }}
+                        {{ __('seller.dashboard.last_month') }}: {{ single_price($orderTotal) }}
                     </p>
                 </div>
             </div>
@@ -202,7 +202,7 @@
             <div class="card shadow-none h-450px mb-0 h-100">
                 <div class="card-body">
                     <div class="card-title text-primary fs-16 fw-600">
-                        {{ translate('Category wise product count') }}
+                        {{ __('seller.dashboard.category_wise_product_count') }}
                     </div>
                     <hr>
                     <ul class="list-group">
@@ -222,9 +222,9 @@
             <div class="card h-450px mb-0 h-100">
                 <div class="card-body">
                     <div class="card-title text-primary fs-16 fw-600">
-                        {{ translate('Orders') }}
+                        {{ __('seller.dashboard.orders') }}
                         <p class="small text-muted mb-0">
-                            <span class="fs-12 fw-600">{{ translate('This Month') }}</span>
+                            <span class="fs-12 fw-600">{{ __('seller.dashboard.this_month') }}</span>
                         </p>
                     </div>
                     <div class="row align-items-center mb-4">
@@ -247,7 +247,7 @@
                         <div class="col">
                             <p class="small text-muted mb-0">
                                 <span class="fe fe-arrow-down fe-12"></span>
-                                <span class="fs-13 text-primary fw-600">{{ translate('New Order') }}</span>
+                                <span class="fs-13 text-primary fw-600">{{ __('seller.dashboard.new_order') }}</span>
                             </p>
                             <h3 class="mb-0" style="color: #A9A3CC">
                                 {{ \App\Models\OrderDetail::where('seller_id', Auth::user()->id)->where('delivery_status', 'pending')->count() }}
@@ -286,7 +286,7 @@
                         <div class="col">
                             <p class="small text-muted mb-0">
                                 <span class="fe fe-arrow-down fe-12"></span>
-                                <span class="fs-13 text-primary fw-600">{{ translate('Cancelled') }}</span>
+                                <span class="fs-13 text-primary fw-600">{{ __('storefront.status.cancelled') }}</span>
                             </p>
                             <h3 class="mb-0" style="color: #A9A3CC">
                                 {{ \App\Models\OrderDetail::where('seller_id', Auth::user()->id)->where('delivery_status', 'cancelled')->count() }}
@@ -328,7 +328,7 @@
                         <div class="col">
                             <p class="small text-muted mb-0">
                                 <span class="fe fe-arrow-down fe-12"></span>
-                                <span class="fs-13 text-primary fw-600">{{ translate('On Delivery') }}</span>
+                                <span class="fs-13 text-primary fw-600">{{ __('storefront.status.on_delivery') }}</span>
                             </p>
                             <h3 class="mb-0" style="color: #A9A3CC">
                                 {{ \App\Models\OrderDetail::where('seller_id', Auth::user()->id)->where('delivery_status', 'on_the_way')->count() }}
@@ -358,7 +358,7 @@
                         <div class="col">
                             <p class="small text-muted mb-0">
                                 <span class="fe fe-arrow-down fe-12"></span>
-                                <span class="fs-13 text-primary fw-600">{{ translate('Delivered') }}</span>
+                                <span class="fs-13 text-primary fw-600">{{ __('storefront.status.delivered') }}</span>
                             </p>
                             <h3 class="mb-0" style="color: #A9A3CC">
                                 {{ \App\Models\OrderDetail::where('seller_id', Auth::user()->id)->where('delivery_status', 'delivered')->count() }}
@@ -374,7 +374,7 @@
                 <div class="card">
                     <div class="card-body">
                         <div class="card-title">
-                            <h6 class="mb-0">{{ translate('Purchased Package') }}</h6>
+                            <h6 class="mb-0">{{ __('storefront.common.purchased_package') }}</h6>
                         </div>
                         @if ($shop?->seller_package)
                             <div class="d-flex">
@@ -383,24 +383,24 @@
                                         class="img-fluid mb-4 w-64px">
                                 </div>
                                 <div class="col-9">
-                                    <a class="fw-600 mb-3 text-primary">{{ translate('Current Package') }}:</a>
+                                    <a class="fw-600 mb-3 text-primary">{{ __('storefront.common.current_package') }}:</a>
                                     <h6 class="text-primary">
                                         {{ $shop->seller_package->name }}
                                         </h3>
-                                        <p class="mb-1 text-muted">{{ translate('Product Upload Limit') }}:
-                                            {{ $shop->product_upload_limit }} {{ translate('Times') }}
+                                        <p class="mb-1 text-muted">{{ __('seller.dashboard.product_upload_limit') }}:
+                                            {{ trans_choice('seller.dashboard.upload_limit', (int) $shop->product_upload_limit, ['count' => $shop->product_upload_limit]) }}
                                         </p>
-                                        <p class="text-muted mb-4">{{ translate('Package Expires at') }}:
+                                        <p class="text-muted mb-4">{{ __('seller.dashboard.package_expires_at') }}:
                                             {{ $shop->package_invalid_at }}
                                         </p>
                                         <div class="">
                                             <a href="{{ route('seller.seller_packages_list') }}"
-                                                class="btn btn-soft-primary">{{ translate('Upgrade Package') }}</a>
+                                                class="btn btn-soft-primary">{{ __('storefront.common.upgrade_package') }}</a>
                                         </div>
                                 </div>
                             </div>
                         @else
-                            <h6 class="fw-600 mb-3 text-primary">{{ translate('Package Not Found') }}</h6>
+                            <h6 class="fw-600 mb-3 text-primary">{{ __('storefront.common.package_not_found') }}</h6>
                         @endif
 
                     </div>
@@ -413,7 +413,7 @@
                         <img src="{{ static_asset('assets/img/non_verified.png') }}" alt=""
                             class="w-xxl-130px w-90px d-block">
                         <a href="{{ route('seller.shop.verify') }}"
-                            class="btn btn-sm btn-primary">{{ translate('Verify Now') }}</a>
+                            class="btn btn-sm btn-primary">{{ __('seller.dashboard.verify_now') }}</a>
                     </div>
                 @else
                     <div class="my-2 py-1">
@@ -430,7 +430,7 @@
             <a href="{{ route('seller.money_withdraw_requests.index') }}"
                 class="card mb-4 p-4 text-center bg-soft-primary h-180px">
                 <div class="fs-16 fw-600 text-primary">
-                    {{ translate('Money Withdraw') }}
+                    {{ __('seller.dashboard.money_withdraw') }}
                 </div>
                 <div class="m-3">
                     <svg id="Group_22725" data-name="Group 22725" xmlns="http://www.w3.org/2000/svg" width="48" height="48"
@@ -453,7 +453,7 @@
         <div class="col-sm-6 col-md-6 col-lg-3">
             <a href="{{ route('seller.products') }}" class="card mb-4 p-4 text-center h-180px">
                 <div class="fs-16 fw-600 text-primary">
-                    {{ translate('Add New Product') }}
+                    {{ __('storefront.product.add_new_product') }}
                 </div>
                 <div class="m-3">
                     <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48">
@@ -470,7 +470,7 @@
         <div class="col-sm-6 col-md-6 col-lg-3">
             <div class="card mb-4 p-4 text-center bg-soft-primary">
                 <div class="fs-16 fw-600 text-primary">
-                    {{ translate('Shop Settings') }}
+                    {{ __('seller.dashboard.shop_settings') }}
                 </div>
                 <div class=" m-3">
                     <svg id="Group_31" data-name="Group 31" xmlns="http://www.w3.org/2000/svg" width="32" height="32"
@@ -492,7 +492,7 @@
                     </svg>
                 </div>
                 <a href="{{ route('seller.shop.index') }}" class="btn btn-primary">
-                    {{ translate('Go to setting') }}
+                    {{ __('seller.dashboard.go_to_setting') }}
                 </a>
             </div>
         </div>
@@ -500,7 +500,7 @@
             @if(get_setting('Payouts_Section'))
             <div class="card mb-4 p-4 text-center bg-soft-primary">
                 <div class="fs-16 fw-600 text-primary">
-                    {{ translate('Payment Settings') }}
+                    {{ __('seller.dashboard.payment_settings') }}
                 </div>
                 <div class=" m-3">
                     <svg id="Group_30" data-name="Group 30" xmlns="http://www.w3.org/2000/svg" width="31.999" height="32"
@@ -520,7 +520,7 @@
                     </svg>
                 </div>
                 <a href="{{ route('seller.profile.index') }}" class="btn btn-primary">
-                    {{ translate('Configure Now') }}
+                    {{ __('seller.dashboard.configure_now') }}
                 </a>
             </div>
             @endif
@@ -530,7 +530,7 @@
     <div class="card">
         <div class="card-body">
             <div class="card-title text-primary">
-                <h6 class="mb-0">{{ translate('Top 12 Products') }}</h6>
+                <h6 class="mb-0">{{ __('seller.dashboard.top_12_products') }}</h6>
             </div>
             <div class="aiz-carousel gutters-10 half-outside-arrow" data-items="6" data-xl-items="5" data-lg-items="4"
                 data-md-items="3" data-sm-items="2" data-arrows='true'>
@@ -582,7 +582,7 @@
                     @endforeach
                 ],
                 datasets: [{
-                    label: 'Sales ($)',
+                    label: {{ \Illuminate\Support\Js::from(__('seller.dashboard.chart_sales', ['currency' => '$'])) }},
                     data: [
                         @foreach ($last_7_days_sales as $key => $last_7_days_sale)
                             '{{ $last_7_days_sale }}',

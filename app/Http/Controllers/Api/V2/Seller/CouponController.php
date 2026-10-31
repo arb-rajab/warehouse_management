@@ -39,7 +39,7 @@ class CouponController extends Controller
             'user_id' => $user_id,
         ]);
 
-        return $this->success(translate('Coupon has been saved successfully'));
+        return $this->success(__('seller.coupons.coupon_has_been_saved_successfully'));
     }
 
     /**
@@ -65,7 +65,7 @@ class CouponController extends Controller
     public function update(CouponRequest $request, Coupon $coupon)
     {
         if (Gate::denies('update', $coupon)) {
-            return $this->failed(translate('This coupon is not yours'));
+            return $this->failed(__('api.seller.coupon_not_owned'));
         }
 
         // The coupon's own columns only: date_range, min_buy, max_discount and
@@ -73,7 +73,7 @@ class CouponController extends Controller
         // end_date and details, and aren't columns to write.
         $coupon->update($request->safe()->only($coupon->getFillable()));
 
-        return $this->success(translate('Coupon has been updated successfully'));
+        return $this->success(__('seller.coupons.coupon_has_been_updated_successfully'));
     }
 
     /**
@@ -86,7 +86,7 @@ class CouponController extends Controller
     {
         Coupon::where('id', '=', $id)->where('user_id', auth()->user()->id)->delete();
 
-        return $this->success(translate('Coupon has been deleted successfully'));
+        return $this->success(__('seller.coupons.coupon_has_been_deleted_successfully'));
     }
 
     public function coupon_for_product(Request $request)

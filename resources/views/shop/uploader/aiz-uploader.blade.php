@@ -5,10 +5,10 @@
 				<div class="uppy-modal-nav">
 					<ul class="nav nav-tabs border-0">
 						<li class="nav-item">
-							<a class="nav-link active font-weight-medium text-dark" data-toggle="tab" href="#aiz-select-file">{{ translate('Select File') }}</a>
+							<a class="nav-link active font-weight-medium text-dark" data-toggle="tab" href="#aiz-select-file">{{ __('storefront.upload.select_file') }}</a>
 						</li>
 						<li class="nav-item">
-							<a class="nav-link font-weight-medium text-dark" data-toggle="tab" href="#aiz-upload-new">{{ translate('Upload New') }}</a>
+							<a class="nav-link font-weight-medium text-dark" data-toggle="tab" href="#aiz-upload-new">{{ __('storefront.upload.upload_new') }}</a>
 						</li>
 					</ul>
 				</div>
@@ -25,10 +25,10 @@
 									<div class="">
 										<!-- Input -->
 										<select class="form-control form-control-xs aiz-selectpicker" name="aiz-uploader-sort">
-											<option value="newest" selected>{{ translate('Sort by newest') }}</option>
-											<option value="oldest">{{ translate('Sort by oldest') }}</option>
-											<option value="smallest">{{ translate('Sort by smallest') }}</option>
-											<option value="largest">{{ translate('Sort by largest') }}</option>
+											<option value="newest" selected>{{ __('storefront.common.sort_by_newest') }}</option>
+											<option value="oldest">{{ __('storefront.common.sort_by_oldest') }}</option>
+											<option value="smallest">{{ __('storefront.common.sort_by_smallest') }}</option>
+											<option value="largest">{{ __('storefront.common.sort_by_largest') }}</option>
 										</select>
 										<!-- End Input -->
 									</div>
@@ -37,13 +37,13 @@
 									<div class="custom-control custom-radio">
 										<input type="checkbox" class="custom-control-input" name="aiz-show-selected" id="aiz-show-selected" name="stylishRadio">
 										<label class="custom-control-label" for="aiz-show-selected">
-										{{ translate('Selected Only') }}
+										{{ __('storefront.common.selected_only') }}
 										</label>
 									</div>
 								</div>
 								<div class="col-md-4 col-xl-3 ml-auto mr-0 col-2 position-static">
 									<div class="aiz-uploader-search text-right">
-										<input type="text" class="form-control form-control-xs" name="aiz-uploader-search" placeholder="{{ translate('Search your files') }}">
+										<input type="text" class="form-control form-control-xs" name="aiz-uploader-search" placeholder="{{ __('storefront.upload.search_your_files') }}">
 										<i class="search-icon d-md-none"><span></span></i>
 									</div>
 								</div>
@@ -52,7 +52,7 @@
 						<div class="aiz-uploader-all clearfix c-scrollbar-light">
 							<div class="align-items-center d-flex h-100 justify-content-center w-100">
 								<div class="text-center">
-									<h3>{{ translate('No files found') }}</h3>
+									<h3>{{ __('storefront.upload.no_files_found') }}</h3>
 								</div>
 							</div>
 						</div>
@@ -67,15 +67,15 @@
 			<div class="modal-footer justify-content-between bg-light">
 				<div class="flex-grow-1 overflow-hidden d-flex">
 					<div class="">
-						<div class="aiz-uploader-selected">{{ translate('0 File selected') }}</div>
-						<button type="button" class="btn-link btn btn-sm p-0 aiz-uploader-selected-clear">{{ translate('Clear') }}</button>
+						<div class="aiz-uploader-selected">{{ trans_choice('storefront.upload.selected_files', 0, ['count' => 0]) }}</div>
+						<button type="button" class="btn-link btn btn-sm p-0 aiz-uploader-selected-clear">{{ __('storefront.common.clear') }}</button>
 					</div>
 					<div class="mb-0 ml-3">
-						<button type="button" class="btn btn-sm btn-primary" id="uploader_prev_btn">{{ translate('Prev') }}</button>
-						<button type="button" class="btn btn-sm btn-primary" id="uploader_next_btn">{{ translate('Next') }}</button>
+						<button type="button" class="btn btn-sm btn-primary" id="uploader_prev_btn">{{ __('storefront.common.prev') }}</button>
+						<button type="button" class="btn btn-sm btn-primary" id="uploader_next_btn">{{ __('storefront.common.next') }}</button>
 					</div>
 				</div>
-				<button type="button" class="btn btn-sm btn-primary" data-toggle="aizUploaderAddSelected">{{ translate('Add Files') }}</button>
+				<button type="button" class="btn btn-sm btn-primary" data-toggle="aizUploaderAddSelected">{{ __('storefront.upload.add_files') }}</button>
 			</div>
 		</div>
 	</div>

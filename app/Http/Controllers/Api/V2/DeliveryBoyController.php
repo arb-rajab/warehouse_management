@@ -405,7 +405,7 @@ class DeliveryBoyController extends Controller
 
         return response()->json([
             'result' => true,
-            'message' => translate('Delivery status changed to ').ucwords(str_replace('_',' ',$request->status))
+            'message' => __('api.delivery.status_changed', ['status' => \App\Support\StoreLocale::status($request->status)])
         ]);
     }
 
@@ -419,7 +419,7 @@ class DeliveryBoyController extends Controller
 
         return response()->json([
             'result' => true,
-            'message' => translate('Requested for cancellation')
+            'message' => __('api.delivery.cancellation_requested')
         ]);
     }
 

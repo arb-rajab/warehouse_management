@@ -34,7 +34,7 @@ class BkashController extends Controller
         $payment = app(ApiGatewayPayment::class)->resolve($request);
 
         if ($payment === null) {
-            return response()->json(['token' => '', 'result' => false, 'url' => '', 'message' => translate('Nothing to pay')]);
+            return response()->json(['token' => '', 'result' => false, 'url' => '', 'message' => __('api.payment.nothing_due')]);
         }
 
         try {
@@ -44,7 +44,7 @@ class BkashController extends Controller
                 'token' => $token,
                 'result' => true,
                 'url' => route('api.bkash.webpage', ["token" => $token, "amount" => $payment['amount']]),
-                'message' => translate('Payment page is found')
+                'message' => __('api.payment.page_found')
             ]);
         } catch (\Exception $exception) {
             return response()->json([
@@ -99,9 +99,9 @@ class BkashController extends Controller
     {
         $allRequest = $request->all();
         if (isset($allRequest['status']) && $allRequest['status'] == 'failure') {
-            return $this->failed("Payment Failed");
+            return $this->failed(__('storefront.checkout.payment_failed'));
         } else if (isset($allRequest['status']) && $allRequest['status'] == 'cancel') {
-            return $this->failed("Payment Cancelled");
+            return $this->failed(__('storefront.checkout.payment_cancelled'));
         } else {
             return response()->json([
                 "result" => true,
@@ -127,7 +127,7 @@ class BkashController extends Controller
         $paymentID = (string) $request->input('payment_id');
 
         if ($payment === null || $paymentID === '') {
-            return $this->failed(translate('Payment could not be verified'));
+            return $this->failed(__('storefront.checkout.payment_could_not_be_verified'));
         }
 
         $token = $this->getToken();
@@ -139,15 +139,15 @@ class BkashController extends Controller
         }
 
         if (! self::isCompleted($result) || ! GatewayPaymentService::covers((float) ($result['amount'] ?? 0), $payment['amount'])) {
-            return $this->failed($result['statusMessage'] ?? translate('Payment could not be verified'));
+            return $this->failed($result['statusMessage'] ?? __('storefront.checkout.payment_could_not_be_verified'));
         }
 
         $verified = new VerifiedPayment('bkash', $paymentID, (float) $result['amount'], json_encode($result));
         if (! app(GatewayPaymentService::class)->complete($verified, $payment['user_id'], $payment['payment_type'], $payment['combined_order_id'], $payment['package_id'])) {
-            return $this->failed(translate('Payment could not be verified'));
+            return $this->failed(__('storefront.checkout.payment_could_not_be_verified'));
         }
 
-        return response()->json(['result' => true, 'message' => translate("Payment is successful")]);
+        return response()->json(['result' => true, 'message' => __('api.payment.successful')]);
     }
 
     /**
@@ -200,7 +200,7 @@ class BkashController extends Controller
     {
         return response()->json([
             'result' => false,
-            'message' => translate('Payment Failed'),
+            'message' => __('storefront.checkout.payment_failed'),
             'payment_details' => $request->payment_details
         ]);
     }

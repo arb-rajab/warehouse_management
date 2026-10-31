@@ -186,7 +186,7 @@ class SslcommerzController extends Controller
     {
         $request->session()->forget('order_id');
         $request->session()->forget('payment_data');
-        flash(translate('Payment Failed'))->warning();
+        flash(__('storefront.checkout.payment_failed'))->warning();
         return redirect()->route('home');
     }
 
@@ -194,7 +194,7 @@ class SslcommerzController extends Controller
     {
         $request->session()->forget('order_id');
         $request->session()->forget('payment_data');
-        flash(translate('Payment cancelled'))->error();
+        flash(__('storefront.checkout.payment_cancelled'))->error();
     	return redirect()->route('home');
     }
 }

@@ -29,7 +29,7 @@ class CouponController extends Controller
                     if ($this->isCouponAlreadyApplied(auth()->user()->id, $coupon->id)) {
                         return response()->json([
                             'success' => false,
-                            'message' => translate('The coupon is already applied. Please try another coupon')
+                            'message' => __('api.cart.coupon_already_applied')
                         ]);
                     } else {
                         return response()->json([
@@ -55,20 +55,20 @@ class CouponController extends Controller
                 if ($this->isCouponAlreadyApplied(auth()->user()->id, $coupon->id)) {
                     return response()->json([
                         'success' => false,
-                        'message' => translate('The coupon is already applied. Please try another coupon')
+                        'message' => __('api.cart.coupon_already_applied')
                     ]);
                 } else {
                     return response()->json([
                         'success' => true,
                         'discount' => (float) $couponDiscount,
-                        'message' => translate('Coupon code applied successfully')
+                        'message' => __('api.cart.coupon_applied')
                     ]);
                 }
             }
         } else {
             return response()->json([
                 'success' => false,
-                'message' => translate('The coupon is invalid')
+                'message' => __('storefront.cart.invalid_coupon')
             ]);
         }
     }

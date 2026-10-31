@@ -346,6 +346,6 @@ Route::fallback(function () {
         'data' => [],
         'success' => false,
         'status' => 404,
-        'message' => 'Invalid Route'
+        'message' => __('api.common.invalid_route')
     ], 404);
 });

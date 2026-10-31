@@ -11,33 +11,33 @@
                         <div class="col done">
                             <div class="text-center border border-bottom-6px p-2 text-success">
                                 <i class="la-3x mb-2 las la-shopping-cart"></i>
-                                <h3 class="fs-14 fw-600 d-none d-lg-block">{{ translate('1. My Cart') }}</h3>
+                                <h3 class="fs-14 fw-600 d-none d-lg-block">{{ __('storefront.cart.1_my_cart') }}</h3>
                             </div>
                         </div>
                         <div class="col active">
                             <div class="text-center border border-bottom-6px p-2 text-primary">
                                 <i class="la-3x mb-2 las la-map cart-animate" style="margin-right: -100px; transition: 2s;"></i>
-                                <h3 class="fs-14 fw-600 d-none d-lg-block">{{ translate('2. Shipping info') }}
+                                <h3 class="fs-14 fw-600 d-none d-lg-block">{{ __('storefront.checkout.2_shipping_info') }}
                                 </h3>
                             </div>
                         </div>
                         <div class="col">
                             <div class="text-center border border-bottom-6px p-2">
                                 <i class="la-3x mb-2 opacity-50 las la-truck"></i>
-                                <h3 class="fs-14 fw-600 d-none d-lg-block opacity-50">{{ translate('3. Delivery info') }}
+                                <h3 class="fs-14 fw-600 d-none d-lg-block opacity-50">{{ __('storefront.checkout.3_delivery_info') }}
                                 </h3>
                             </div>
                         </div>
                         <div class="col">
                             <div class="text-center border border-bottom-6px p-2">
                                 <i class="la-3x mb-2 opacity-50 las la-credit-card"></i>
-                                <h3 class="fs-14 fw-600 d-none d-lg-block opacity-50">{{ translate('4. Payment') }}</h3>
+                                <h3 class="fs-14 fw-600 d-none d-lg-block opacity-50">{{ __('storefront.checkout.4_payment') }}</h3>
                             </div>
                         </div>
                         <div class="col">
                             <div class="text-center border border-bottom-6px p-2">
                                 <i class="la-3x mb-2 opacity-50 las la-check-circle"></i>
-                                <h3 class="fs-14 fw-600 d-none d-lg-block opacity-50">{{ translate('5. Confirmation') }}
+                                <h3 class="fs-14 fw-600 d-none d-lg-block opacity-50">{{ __('storefront.common.5_confirmation') }}
                                 </h3>
                             </div>
                         </div>
@@ -58,7 +58,7 @@
                             <div class="border bg-white p-4 mb-4">
                                 <x-required-legend />
                                 <fieldset>
-                                <legend class="fs-16 fw-700 mb-3">{{ translate('Shipping address') }}<x-required-mark /></legend>
+                                <legend class="fs-16 fw-700 mb-3">{{ __('storefront.checkout.shipping_address') }}<x-required-mark /></legend>
                                 @error('address_id')
                                     <div class="invalid-feedback d-block mb-3" role="alert"><strong>{{ $message }}</strong></div>
                                 @enderror
@@ -76,31 +76,31 @@
                                                     <!-- Address -->
                                                     <span class="flex-grow-1 pl-3 text-left">
                                                         <div class="row">
-                                                            <span class="fs-14 text-secondary col-3">{{ translate('Address') }}</span>
+                                                            <span class="fs-14 text-secondary col-3">{{ __('storefront.common.address') }}</span>
                                                             <span class="fs-14 text-dark fw-500 ml-2 col">{{ $address->address }}</span>
                                                         </div>
                                                         <div class="row">
-                                                            <span class="fs-14 text-secondary col-3">{{ translate('Postal Code') }}</span>
+                                                            <span class="fs-14 text-secondary col-3">{{ __('storefront.common.postal_code') }}</span>
                                                             <span class="fs-14 text-dark fw-500 ml-2 col">{{ $address->postal_code }}</span>
                                                         </div>
                                                         <div class="row">
-                                                            <span class="fs-14 text-secondary col-3">{{ translate('City') }}</span>
+                                                            <span class="fs-14 text-secondary col-3">{{ __('storefront.common.city') }}</span>
                                                             <span class="fs-14 text-dark fw-500 ml-2 col">{{ optional($address->city)->name }}</span>
                                                         </div>
                                                         <div class="row">
-                                                            <span class="fs-14 text-secondary col-3">{{ translate('State') }}</span>
+                                                            <span class="fs-14 text-secondary col-3">{{ __('storefront.common.state') }}</span>
                                                             <span class="fs-14 text-dark fw-500 ml-2 col">{{ optional($address->state)->name }}</span>
                                                         </div>
                                                         <div class="row">
-                                                            <span class="fs-14 text-secondary col-3">{{ translate('Country') }}</span>
+                                                            <span class="fs-14 text-secondary col-3">{{ __('storefront.common.country') }}</span>
                                                             <span class="fs-14 text-dark fw-500 ml-2 col">{{ optional($address->country)->name }}</span>
                                                         </div>
                                                         <div class="row">
-                                                            <span class="fs-14 text-secondary col-3">{{ translate('Phone') }}</span>
+                                                            <span class="fs-14 text-secondary col-3">{{ __('storefront.auth.phone') }}</span>
                                                             <span class="fs-14 text-dark fw-500 ml-2 col">{{ $address->phone }}</span>
                                                         </div>
                                                         <div class="row">
-                                                            <span class="fs-14 text-secondary col-3">{{ translate('Postal Code') }}</span>
+                                                            <span class="fs-14 text-secondary col-3">{{ __('storefront.common.postal_code') }}</span>
                                                             <span class="fs-14 text-dark fw-500 ml-2 col">{{ $address->postal_code }}</span>
                                                         </div>
                                                     </span>
@@ -109,8 +109,8 @@
                                         </div>
                                         <!-- Edit Address Button -->
                                         <div class="col-md-4 p-3 text-right">
-                                            <a class="btn btn-sm btn-warning text-white mr-4 rounded-0 px-4" onclick="edit_address('{{$address->id}}')">{{ translate('Edit') }}</a>
-                                            <a class="btn btn-sm btn-warning text-white mr-4 rounded-0 px-4 confirm-delete" href="#" data-method="post" data-href="{{ route('addresses.destroy', $address->id) }}">{{ translate('Delete') }}</a>
+                                            <a class="btn btn-sm btn-warning text-white mr-4 rounded-0 px-4" onclick="edit_address('{{$address->id}}')">{{ __('storefront.common.edit') }}</a>
+                                            <a class="btn btn-sm btn-warning text-white mr-4 rounded-0 px-4 confirm-delete" href="#" data-method="post" data-href="{{ route('addresses.destroy', $address->id) }}">{{ __('storefront.common.delete') }}</a>
                                         </div>
                                     </div>
                                 </div>
@@ -121,7 +121,7 @@
                                 <div class="mb-5" >
                                     <div class="border p-3 c-pointer text-center bg-light has-transition hov-bg-soft-light h-100 d-flex flex-column justify-content-center" onclick="add_new_address()">
                                         <i class="las la-plus la-2x mb-3"></i>
-                                        <div class="alpha-7 fw-700">{{ translate('Add New Address') }}</div>
+                                        <div class="alpha-7 fw-700">{{ __('storefront.common.add_new_address') }}</div>
                                     </div>
                                 </div>
                                 <div class="row align-items-center">
@@ -129,12 +129,12 @@
                                     <div class="col-md-6 text-center text-md-left order-1 order-md-0">
                                         <a href="{{ route('home') }}" class="btn btn-link fs-14 fw-700 px-0">
                                             <i class="las la-arrow-left fs-16"></i>
-                                            {{ translate('Return to shop')}}
+                                            {{ __('storefront.common.return_to_shop')}}
                                         </a>
                                     </div>
                                     <!-- Continue to Delivery Info -->
                                     <div class="col-md-6 text-center text-md-right">
-                                        <button type="submit" class="btn btn-primary fs-14 fw-700 rounded-0 px-4">{{ translate('Continue to Delivery Info')}}</a>
+                                        <button type="submit" class="btn btn-primary fs-14 fw-700 rounded-0 px-4">{{ __('storefront.checkout.continue_to_delivery_info')}}</a>
                                     </div>
                                 </div>
                             </div>

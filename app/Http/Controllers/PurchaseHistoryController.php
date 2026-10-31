@@ -72,7 +72,7 @@ class PurchaseHistoryController extends Controller
                 }
             }
         } else {
-            flash(translate('You cannot download this product at this product.'))->success();
+            flash(__('storefront.product.you_cannot_download_this_product_at_this_product'))->success();
         }
     }
 
@@ -95,9 +95,9 @@ class PurchaseHistoryController extends Controller
                 product_restock($orderDetail);
             }
 
-            flash(translate('Order has been canceled successfully'))->success();
+            flash(__('storefront.checkout.order_has_been_canceled_successfully'))->success();
         } else {
-            flash(translate('Something went wrong'))->error();
+            flash(__('storefront.common.something_went_wrong'))->error();
         }
 
         return back();

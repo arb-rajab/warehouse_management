@@ -29,7 +29,7 @@
                                     $photos = explode(',',$detailedProduct->photos);
                                 @endphp
                                 <div class="col order-1 order-md-2">
-                                    <div class="aiz-carousel product-gallery" data-nav-for='.product-gallery-thumb' 
+                                    <div class="aiz-carousel product-gallery" data-nav-for='.product-gallery-thumb'
                                         data-fade='true' data-auto-height='true'>
                                         @foreach ($photos as $key => $photo)
                                         <div class="carousel-box img-zoom rounded">
@@ -58,7 +58,7 @@
 
                         </div>
                     </div>
-                    
+
                     <!-- Product Details -->
                     <div class="col-xl-7 col-lg-6">
                         <div class="text-left">
@@ -80,11 +80,11 @@
                                                 {{ renderStarRating($detailedProduct->rating) }}
                                             </span>
                                             <span class="ml-1 opacity-50 fs-14">({{ $total }}
-                                                {{ translate('reviews') }})</span>
+                                                {{ __('storefront.product.reviews') }})</span>
                                         </div>
                                         <!-- In stock -->
                                         <div class="col-12 mt-1">
-                                            <span class="badge badge-md badge-inline badge-pill badge-success">{{ translate('In stock')}}</span>
+                                            <span class="badge badge-md badge-inline badge-pill badge-success">{{ __('storefront.product.in_stock')}}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -93,16 +93,16 @@
                                         <!-- Add to wishlist button -->
                                         <a href="javascript:void(0)" onclick="addToWishList({{ $detailedProduct->id }})" class="mr-3 fs-14 text-dark opacity-60 has-transitiuon hov-opacity-100">
                                             <i class="la la-heart-o mr-1"></i>
-                                            {{ translate('Add to Wishlist') }}
+                                            {{ __('storefront.cart.add_to_wishlist') }}
                                         </a>
                                         <!-- Add to compare button -->
                                         <a href="javascript:void(0)" onclick="addToCompare({{ $detailedProduct->id }})" class="fs-14 text-dark opacity-60 has-transitiuon hov-opacity-100">
                                             <i class="las la-sync mr-1"></i>
-                                            {{ translate('Add to Compare') }}
+                                            {{ __('storefront.cart.add_to_compare') }}
                                         </a>
                                     </div>
                                     <div class="text-md-right mt-1">
-                                        <a href="#" class="text-blue hov-text-primary fs-14">{{ translate('Ask about this product') }}</a>
+                                        <a href="#" class="text-blue hov-text-primary fs-14">{{ __('storefront.product.ask_about_this_product') }}</a>
                                     </div>
                                 </div>
                             </div>
@@ -125,12 +125,12 @@
                                         @endif
                                         <!-- Shop Name -->
                                         <div>
-                                            <span class="opacity-60 fw-400">{{ translate('Sold by') }}</span><br>
+                                            <span class="opacity-60 fw-400">{{ __('storefront.common.sold_by') }}</span><br>
                                             @if ($detailedProduct->added_by == 'seller' && get_setting('vendor_system_activation') == 1)
                                                 <a href="{{ route('shop.visit', $detailedProduct->user->shop->slug) }}"
                                                     class="text-reset hov-text-primary">{{ $detailedProduct->user->shop->name }}</a>
                                             @else
-                                                {{ translate('Inhouse product') }}
+                                                {{ __('storefront.product.inhouse_product') }}
                                             @endif
                                         </div>
                                     </div>
@@ -148,8 +148,8 @@
                                                   <path id="Path_3015" data-name="Path 3015" d="M131.349,99.312h5a.5.5,0,1,1,0,1h-5a.5.5,0,1,1,0-1" transform="translate(-1181 -346.5)" fill="#f4b650"/>
                                                 </g>
                                               </svg>
-                                              
-                                            {{ translate('Message Seller') }}
+
+                                            {{ __('storefront.product.message_seller') }}
                                         </button>
                                     </div>
                                 @endif
@@ -165,7 +165,7 @@
                                                     onerror="this.onerror=null;this.src='{{ static_asset('assets/img/placeholder.jpg') }}';">
                                             </a>
                                             <div>
-                                                <span class="opacity-60 fw-400">{{ translate('Brand') }}</span><br>
+                                                <span class="opacity-60 fw-400">{{ __('storefront.product.brand') }}</span><br>
                                                 <a href="{{ ($detailedProduct->brand->slug === null || $detailedProduct->brand->slug === '') ? \App\Support\StorefrontUrl::to($detailedProduct->brand) : route('shop.visit', $detailedProduct->brand->slug) }}"
                                                     class="text-reset hov-text-primary">{{ $detailedProduct->brand->name }}</a>
                                             </div>
@@ -177,10 +177,10 @@
                             <hr>
 
                             @if(home_price($detailedProduct) != home_discounted_price($detailedProduct))
-                                
+
                                 <div class="row no-gutters mb-3">
                                     <div class="col-sm-2">
-                                        <div class="text-secondary fs-14 fw-400">{{ translate('Price')}}</div>
+                                        <div class="text-secondary fs-14 fw-400">{{ __('storefront.product.price')}}</div>
                                     </div>
                                     <div class="col-sm-10">
                                         <div class="d-flex align-items-center">
@@ -213,7 +213,7 @@
                                                         </g>
                                                         </g>
                                                     </svg>
-                                                    <small class="fs-11 fw-500 text-white ml-2">{{  translate('Club Point') }}: {{ $detailedProduct->earn_point }}</small>
+                                                    <small class="fs-11 fw-500 text-white ml-2">{{  __('storefront.common.club_point') }}: {{ $detailedProduct->earn_point }}</small>
                                                 </div>
                                             @endif
                                         </div>
@@ -222,7 +222,7 @@
                             @else
                                 <div class="row no-gutters mb-3">
                                     <div class="col-sm-2">
-                                        <div class="text-secondary fs-14 fw-400">{{ translate('Price') }}</div>
+                                        <div class="text-secondary fs-14 fw-400">{{ __('storefront.product.price') }}</div>
                                     </div>
                                     <div class="col-sm-10">
                                         <div class="">
@@ -248,7 +248,7 @@
                                                         </g>
                                                         </g>
                                                     </svg>
-                                                    <small class="fs-11 fw-500 text-white ml-2">{{  translate('Club Point') }}: {{ $detailedProduct->earn_point }}</small>
+                                                    <small class="fs-11 fw-500 text-white ml-2">{{  __('storefront.common.club_point') }}: {{ $detailedProduct->earn_point }}</small>
                                                 </div>
                                             @endif
                                         </div>
@@ -263,7 +263,7 @@
                                 <!-- Total Price -->
                                 <div class="row no-gutters pb-3 d-none" id="chosen_price_div">
                                     <div class="col-sm-2">
-                                        <div class="text-secondary fs-14 fw-400 mt-1">{{ translate('Total Price') }}</div>
+                                        <div class="text-secondary fs-14 fw-400 mt-1">{{ __('storefront.product.total_price') }}</div>
                                     </div>
                                     <div class="col-sm-10">
                                         <div class="product-price">
@@ -280,10 +280,10 @@
                             <div class="mt-3">
                                 <button type="button" class="btn btn-warning mr-2 add-to-cart fw-600 w-150px rounded-0 text-white" onclick="addToCart()">
                                     <i class="las la-shopping-bag"></i>
-                                    <span class="d-none d-md-inline-block"> {{ translate('Add to cart')}}</span>
+                                    <span class="d-none d-md-inline-block"> {{ __('storefront.cart.add_to_cart')}}</span>
                                 </button>
                                 <button type="button" class="btn btn-primary buy-now fw-600 add-to-cart w-150px rounded-0" onclick="buyNow()">
-                                    <i class="la la-shopping-cart"></i> {{ translate('Buy Now')}}
+                                    <i class="la la-shopping-cart"></i> {{ __('storefront.common.buy_now')}}
                                 </button>
                             </div>
 
@@ -304,7 +304,7 @@
                                         <div class="form-group">
                                             <textarea id="referral_code_url" class="form-control" readonly type="text" style="display:none">{{$referral_code_url}}</textarea>
                                         </div>
-                                        <button type="button" id="ref-cpurl-btn" class="btn btn-sm btn-secondary w-150px rounded-0" data-attrcpy="{{ translate('Copied')}}" onclick="CopyToClipboard('referral_code_url')">{{ translate('Copy the Promote Link')}}</button>
+                                        <button type="button" id="ref-cpurl-btn" class="btn btn-sm btn-secondary w-150px rounded-0" data-attrcpy="{{ __('storefront.common.copied')}}" onclick="CopyToClipboard('referral_code_url')">{{ __('storefront.common.copy_the_promote_link')}}</button>
                                     @endif
                                 </div>
                             </div>
@@ -316,7 +316,7 @@
                             @if (addon_is_activated('refund_request'))
                                 <div class="row no-gutters mt-3">
                                     <div class="col-sm-2">
-                                        <div class="text-secondary fs-14 fw-400 mt-2">{{ translate('Refund') }}</div>
+                                        <div class="text-secondary fs-14 fw-400 mt-2">{{ __('storefront.common.refund') }}</div>
                                     </div>
                                     <div class="col-sm-10">
                                         <a href="{{ route('returnpolicy') }}" target="_blank">
@@ -328,7 +328,7 @@
                                             @endif
                                         </a>
                                         <a href="{{ route('returnpolicy') }}" class="text-blue hov-text-primary fs-14 ml-2"
-                                            target="_blank">{{ translate('View Policy') }}</a>
+                                            target="_blank">{{ __('storefront.common.view_policy') }}</a>
                                     </div>
                                 </div>
                             @endif
@@ -337,22 +337,22 @@
                             @if ($detailedProduct->added_by == 'seller')
                                 <div class="row no-gutters mt-3">
                                     <div class="col-2">
-                                        <div class="text-secondary fs-14 fw-400">{{ translate('Seller Guarantees')}}</div>
+                                        <div class="text-secondary fs-14 fw-400">{{ __('storefront.product.seller_guarantees')}}</div>
                                     </div>
                                     <div class="col-10">
                                         @if ($detailedProduct->user->shop->verification_status == 1)
-                                            <span class="text-success fs-14 fw-700">{{ translate('Verified seller')}}</span>
+                                            <span class="text-success fs-14 fw-700">{{ __('storefront.product.verified_seller')}}</span>
                                         @else
-                                            <span class="text-danger fs-14 fw-700">{{ translate('Non verified seller')}}</span>
+                                            <span class="text-danger fs-14 fw-700">{{ __('storefront.product.non_verified_seller')}}</span>
                                         @endif
                                     </div>
                                 </div>
                             @endif
-                            
+
                             <!-- Share -->
                             <div class="row no-gutters mt-4">
                                 <div class="col-sm-2">
-                                    <div class="text-secondary fs-14 fw-400 mt-2">{{ translate('Share') }}</div>
+                                    <div class="text-secondary fs-14 fw-400 mt-2">{{ __('storefront.common.share') }}</div>
                                 </div>
                                 <div class="col-sm-10">
                                     <div class="aiz-share"></div>
@@ -369,7 +369,7 @@
     <section class="mb-4">
         <div class="container">
             <div class="row gutters-16">
-                
+
                 <!-- Left side -->
                 <div class="col-xl-3 order-1 order-xl-0">
 
@@ -387,7 +387,7 @@
                                         </svg>
                                     </div>
                                 @endif
-                                <div class="opacity-60 fs-12">{{ translate('Seller')}}</div>
+                                <div class="opacity-60 fs-12">{{ __('storefront.product.seller')}}</div>
                                 <div class="d-flex mt-1">
                                     <!-- Shop Logo -->
                                     @if ($detailedProduct->added_by == 'seller' && get_setting('vendor_system_activation') == 1)
@@ -421,7 +421,7 @@
                                         @endif
                                     </div>
                                     <div class="opacity-60 fs-12">({{ $total }}
-                                        {{ translate('customer reviews') }})</div>
+                                        {{ __('storefront.product.customer_reviews') }})</div>
                                 </div>
                                 <!-- Social Links -->
                                 <div class="mt-3">
@@ -455,7 +455,7 @@
                                 <!-- shop link button -->
                                 <div class="mt-3">
                                     <a href="{{ route('shop.visit', $detailedProduct->user->shop->slug) }}"
-                                        class="btn btn-block btn-warning text-white fs-14 fw-700 rounded-0">{{ translate('Visit Store') }}</a>
+                                        class="btn btn-block btn-warning text-white fs-14 fw-700 rounded-0">{{ __('storefront.common.visit_store') }}</a>
                                 </div>
                             </div>
                         </div>
@@ -464,7 +464,7 @@
                     <!-- Top Selling Products -->
                     <div class="bg-white border mb-4">
                         <div class="p-4 fs-16 fw-600">
-                            {{ translate('Top Selling Products') }}
+                            {{ __('storefront.product.top_selling_products') }}
                         </div>
                         <div class="px-4 pb-4">
                             <ul class="list-group list-group-flush">
@@ -518,17 +518,17 @@
                         <!-- Tabs -->
                         <div class="nav aiz-nav-tabs">
                             <a href="#tab_default_1" data-toggle="tab"
-                                class="mr-5 pb-2 fs-16 fw-700 text-reset active show">{{ translate('Description') }}</a>
+                                class="mr-5 pb-2 fs-16 fw-700 text-reset active show">{{ __('storefront.common.description') }}</a>
                             @if ($detailedProduct->video_link != null)
                                 <a href="#tab_default_2" data-toggle="tab"
-                                    class="mr-5 pb-2 fs-16 fw-700 text-reset">{{ translate('Video') }}</a>
+                                    class="mr-5 pb-2 fs-16 fw-700 text-reset">{{ __('storefront.common.video') }}</a>
                             @endif
                             @if ($detailedProduct->pdf != null)
                                 <a href="#tab_default_3" data-toggle="tab"
-                                    class="mr-5 pb-2 fs-16 fw-700 text-reset">{{ translate('Downloads') }}</a>
+                                    class="mr-5 pb-2 fs-16 fw-700 text-reset">{{ __('storefront.common.downloads') }}</a>
                             @endif
                             <a href="#tab_default_4" data-toggle="tab"
-                                class="mr-5 pb-2 fs-16 fw-700 text-reset">{{ translate('Reviews') }}</a>
+                                class="mr-5 pb-2 fs-16 fw-700 text-reset">{{ __('storefront.product.reviews') }}</a>
                         </div>
 
                         <!-- Description -->
@@ -561,15 +561,15 @@
                                     </div>
                                 </div>
                             </div>
-                            
+
                             <!-- Download -->
                             <div class="tab-pane fade" id="tab_default_3">
                                 <div class="py-5 text-center ">
                                     <a href="{{ uploaded_asset($detailedProduct->pdf) }}"
-                                        class="btn btn-primary">{{ translate('Download') }}</a>
+                                        class="btn btn-primary">{{ __('storefront.common.download') }}</a>
                                 </div>
                             </div>
-                            
+
                             <!-- Review -->
                             <div class="tab-pane fade" id="tab_default_4">
                                 <div class="py-5">
@@ -599,7 +599,7 @@
                                                             </span>
                                                         </div>
                                                         <div class="opacity-60 mb-2">
-                                                            {{ date('d-m-Y', strtotime($review->created_at)) }}</div>
+                                                            {{ \App\Support\StoreLocale::date(strtotime($review->created_at)) }}</div>
                                                         <p class="comment-text">
                                                             {{ $review->comment }}
                                                         </p>
@@ -611,19 +611,19 @@
 
                                     @if (count($detailedProduct->reviews) <= 0)
                                         <div class="text-center fs-18 opacity-70">
-                                            {{ translate('There have been no reviews for this product yet.') }}
+                                            {{ __('storefront.product.there_have_been_no_reviews_for_this_product_yet') }}
                                         </div>
                                     @endif
                                 </div>
                             </div>
                         </div>
                     </div>
-                    
+
                     <!-- Related products -->
                     <div class="bg-white border">
                         <div class="p-4">
                             <h3 class="fs-16 fw-700 mb-0">
-                                <span class="mr-4">{{ translate('Related products') }}</span>
+                                <span class="mr-4">{{ __('storefront.product.related_products') }}</span>
                             </h3>
                         </div>
                         <div class="px-4">
@@ -670,15 +670,15 @@
                         <div class="bg-white border mt-4">
                             <div class="p-4">
                                 <h3 class="fs-16 fw-700 mb-0">
-                                    <span>{{ translate(' Product Queries ') }} ({{ $total_query }})</span>
+                                    <span>{{ __('storefront.product.product_queries') }} ({{ $total_query }})</span>
                                 </h3>
                             </div>
 
                             <!-- Login & Register -->
                             @guest
                                 <p class="fs-14 fw-400 mb-0 px-4 mt-3"><a
-                                        href="{{ route('user.login') }}">{{ translate('Login') }}</a> or <a class="mr-1"
-                                        href="{{ route('user.registration') }}">{{ translate('Register ') }}</a>{{ translate(' to submit your questions to seller') }}
+                                        href="{{ route('user.login') }}">{{ __('storefront.auth.login') }}</a> or <a class="mr-1"
+                                        href="{{ route('user.registration') }}">{{ __('storefront.auth.register') }}</a>{{ __('storefront.product.to_submit_your_questions_to_seller') }}
                                 </p>
                             @endguest
 
@@ -699,10 +699,10 @@
                                         <input type="hidden" name="product" value="{{ $detailedProduct->id }}">
                                         <div class="form-group">
                                             <textarea class="form-control rounded-0" rows="3" cols="40" name="question"
-                                                placeholder="{{ translate('Write your question here...') }}" style="resize: none;"></textarea>
-                                            
+                                                placeholder="{{ __('storefront.support.write_your_question_here') }}" style="resize: none;"></textarea>
+
                                         </div>
-                                        <button type="submit" class="btn btn-sm w-150px btn-primary rounded-0">{{ translate('Submit') }}</button>
+                                        <button type="submit" class="btn btn-sm w-150px btn-primary rounded-0">{{ __('storefront.common.submit') }}</button>
                                     </form>
                                 </div>
 
@@ -711,12 +711,12 @@
                                     $own_product_queries = Auth::user()->product_queries->where('product_id',$detailedProduct->id);
                                 @endphp
                                 @if ($own_product_queries->count() > 0)
-                                
+
                                     <div class="question-area my-4 mb-0 px-4">
 
                                         <div class="py-3">
                                             <h3 class="fs-16 fw-700 mb-0">
-                                                <span class="mr-4">{{ translate('My Questions') }}</span>
+                                                <span class="mr-4">{{ __('storefront.support.my_questions') }}</span>
                                             </h3>
                                         </div>
                                         @foreach ($own_product_queries as $product_query)
@@ -754,7 +754,7 @@
 
                                                     <div class="ml-3">
                                                         <div class="fs-14">
-                                                            {{ strip_tags($product_query->reply ? $product_query->reply : translate('Seller did not respond yet')) }}
+                                                            {{ strip_tags($product_query->reply ? $product_query->reply : __('storefront.product.seller_did_not_respond_yet')) }}
                                                         </div>
                                                         <span class=" text-secondary">
                                                             {{ $product_query->product->user->name }} </span>
@@ -763,10 +763,10 @@
                                             </div>
                                         @endforeach
                                     </div>
-                                
+
                                 @endif
                             @endauth
-                                    
+
                             <!-- Others Queries -->
                             <div class="pagination-area my-4 mb-0 px-4">
                                 @include('shop.frontend.partials.product_query_pagination')
@@ -786,8 +786,8 @@
         <div class="modal-dialog modal-dialog-centered modal-dialog-zoom product-modal" id="modal-size" role="document">
             <div class="modal-content position-relative">
                 <div class="modal-header">
-                    <h5 class="modal-title fw-600 heading-5">{{ translate('Any question about this product?')}}</h5>
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <h5 class="modal-title fw-600 heading-5">{{ __('storefront.product.any_question_about_this_product')}}</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="{{ __('storefront.common.close') }}">
                         <span aria-hidden="true">&times;</span>
                     </button>
                 </div>
@@ -801,23 +801,23 @@
                             <div class="alert alert-danger" role="alert">{{ $message }}</div>
                         @enderror
                         <div class="form-group">
-                            <label for="conversation_title">{{ translate('Title') }}<x-required-mark /></label>
-                            <input type="text" id="conversation_title" class="form-control mb-3 @error('title', 'storeConversation') is-invalid @enderror" name="title" value="{{ $keepInput ? old('title') : $detailedProduct->getTranslation('name') }}" placeholder="{{ translate('Product Name') }}" maxlength="1000" required>
+                            <label for="conversation_title">{{ __('storefront.common.title') }}<x-required-mark /></label>
+                            <input type="text" id="conversation_title" class="form-control mb-3 @error('title', 'storeConversation') is-invalid @enderror" name="title" value="{{ $keepInput ? old('title') : $detailedProduct->getTranslation('name') }}" placeholder="{{ __('storefront.product.product_name') }}" maxlength="1000" required>
                             @error('title', 'storeConversation')
                                 <span class="invalid-feedback" role="alert"><strong>{{ $message }}</strong></span>
                             @enderror
                         </div>
                         <div class="form-group">
-                            <label for="conversation_message">{{ translate('Your Question') }}<x-required-mark /></label>
-                            <textarea id="conversation_message" class="form-control @error('message', 'storeConversation') is-invalid @enderror" rows="8" name="message" maxlength="65535" required placeholder="{{ translate('Your Question') }}">{{ $keepInput ? old('message') : \App\Support\StorefrontUrl::to($detailedProduct) }}</textarea>
+                            <label for="conversation_message">{{ __('storefront.support.your_question') }}<x-required-mark /></label>
+                            <textarea id="conversation_message" class="form-control @error('message', 'storeConversation') is-invalid @enderror" rows="8" name="message" maxlength="65535" required placeholder="{{ __('storefront.support.your_question') }}">{{ $keepInput ? old('message') : \App\Support\StorefrontUrl::to($detailedProduct) }}</textarea>
                             @error('message', 'storeConversation')
                                 <span class="invalid-feedback" role="alert"><strong>{{ $message }}</strong></span>
                             @enderror
                         </div>
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-outline-primary fw-600" data-dismiss="modal">{{ translate('Cancel')}}</button>
-                        <button type="submit" class="btn btn-primary fw-600">{{ translate('Send')}}</button>
+                        <button type="button" class="btn btn-outline-primary fw-600" data-dismiss="modal">{{ __('storefront.common.cancel')}}</button>
+                        <button type="submit" class="btn btn-primary fw-600">{{ __('storefront.common.send')}}</button>
                     </div>
                 </form>
             </div>
@@ -829,7 +829,7 @@
         <div class="modal-dialog modal-dialog-zoom" role="document">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h6 class="modal-title fw-600">{{ translate('Login')}}</h6>
+                    <h6 class="modal-title fw-600">{{ __('storefront.auth.login')}}</h6>
                     <button type="button" class="close" data-dismiss="modal">
                         <span aria-hidden="true"></span>
                     </button>
@@ -840,47 +840,47 @@
                             @csrf
                             <div class="form-group">
                                 @if (addon_is_activated('otp_system'))
-                                    <input type="text" class="form-control h-auto form-control-lg {{ $errors->has('email') ? ' is-invalid' : '' }}" value="{{ old('email') }}" placeholder="{{ translate('Email Or Phone')}}" name="email" id="email">
+                                    <input type="text" class="form-control h-auto form-control-lg {{ $errors->has('email') ? ' is-invalid' : '' }}" value="{{ old('email') }}" placeholder="{{ __('storefront.auth.email_or_phone')}}" name="email" id="email">
                                 @else
-                                    <input type="email" class="form-control h-auto form-control-lg {{ $errors->has('email') ? ' is-invalid' : '' }}" value="{{ old('email') }}" placeholder="{{  translate('Email') }}" name="email">
+                                    <input type="email" class="form-control h-auto form-control-lg {{ $errors->has('email') ? ' is-invalid' : '' }}" value="{{ old('email') }}" placeholder="{{  __('storefront.auth.email') }}" name="email">
                                 @endif
                                 @if (addon_is_activated('otp_system'))
-                                    <span class="opacity-60">{{  translate('Use country code before number') }}</span>
+                                    <span class="opacity-60">{{  __('storefront.common.use_country_code_before_number') }}</span>
                                 @endif
                             </div>
 
                             <div class="form-group">
-                                <input type="password" name="password" class="form-control h-auto form-control-lg" placeholder="{{ translate('Password')}}">
+                                <input type="password" name="password" class="form-control h-auto form-control-lg" placeholder="{{ __('storefront.auth.password')}}">
                             </div>
 
                             <div class="row mb-2">
                                 <div class="col-6">
                                     <label class="aiz-checkbox">
                                         <input type="checkbox" name="remember" {{ old('remember') ? 'checked' : '' }}>
-                                        <span class=opacity-60>{{  translate('Remember Me') }}</span>
+                                        <span class=opacity-60>{{  __('storefront.auth.remember_me') }}</span>
                                         <span class="aiz-square-check"></span>
                                     </label>
                                 </div>
                                 <div class="col-6 text-right">
-                                    <a href="{{ route('password.request') }}" class="text-reset opacity-60 fs-14">{{ translate('Forgot password?')}}</a>
+                                    <a href="{{ route('password.request') }}" class="text-reset opacity-60 fs-14">{{ __('storefront.auth.forgot_password')}}</a>
                                 </div>
                             </div>
 
                             <div class="mb-5">
-                                <button type="submit" class="btn btn-primary btn-block fw-600">{{  translate('Login') }}</button>
+                                <button type="submit" class="btn btn-primary btn-block fw-600">{{  __('storefront.auth.login') }}</button>
                             </div>
                         </form>
 
                         <div class="text-center mb-3">
-                            <p class="text-muted mb-0">{{ translate('Dont have an account?')}}</p>
-                            <a href="{{ route('user.registration') }}">{{ translate('Register Now')}}</a>
+                            <p class="text-muted mb-0">{{ __('storefront.auth.dont_have_an_account')}}</p>
+                            <a href="{{ route('user.registration') }}">{{ __('storefront.auth.register_now')}}</a>
                         </div>
                         @if(get_setting('google_login') == 1 ||
                             get_setting('facebook_login') == 1 ||
                             get_setting('twitter_login') == 1 ||
                             get_setting('apple_login') == 1)
                             <div class="separator mb-3">
-                                <span class="bg-white px-3 opacity-60">{{ translate('Or Login With')}}</span>
+                                <span class="bg-white px-3 opacity-60">{{ __('storefront.auth.or_login_with')}}</span>
                             </div>
                             <ul class="list-inline social colored text-center mb-5">
                                 @if (get_setting('facebook_login') == 1)

@@ -3,7 +3,7 @@
 @section('panel_content')
     <div class="card">
         <div class="card-header">
-            <h5 class="mb-0 h6">{{ translate('Payment History') }}</h5>
+            <h5 class="mb-0 h6">{{ __('storefront.checkout.payment_history') }}</h5>
         </div>
         @if (count($payments) > 0)
             <div class="card-body">
@@ -11,9 +11,9 @@
                     <thead>
                         <tr>
                             <th>#</th>
-                            <th>{{ translate('Date')}}</th>
-                            <th>{{ translate('Amount')}}</th>
-                            <th>{{ translate('Payment Method')}}</th>
+                            <th>{{ __('storefront.common.date')}}</th>
+                            <th>{{ __('storefront.common.amount')}}</th>
+                            <th>{{ __('storefront.checkout.payment_method')}}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -27,7 +27,7 @@
                                     {{ single_price($payment->amount) }}
                                 </td>
                                 <td>
-                                    {{ ucfirst(str_replace('_', ' ', $payment->payment_method)) }} @if ($payment->txn_code != null) ({{  translate('TRX ID') }} : {{ $payment->txn_code }}) @endif
+                                    {{ \Illuminate\Support\Facades\Lang::has('storefront.status.'.$payment->payment_method) ? \App\Support\StoreLocale::status($payment->payment_method) : ucfirst(str_replace('_', ' ', $payment->payment_method)) }} @if ($payment->txn_code != null) ({{  __('seller.orders.trx_id') }} : {{ $payment->txn_code }}) @endif
                                 </td>
                             </tr>
                         @endforeach

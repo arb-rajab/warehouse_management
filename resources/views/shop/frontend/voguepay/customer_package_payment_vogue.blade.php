@@ -2,7 +2,7 @@
 
 <script>
     closedFunction=function() {
-        alert('window closed');
+        alert({{ \Illuminate\Support\Js::from(__('storefront.checkout.window_closed')) }});
         location.href = '{{ config('app.url') }}'
     }
 

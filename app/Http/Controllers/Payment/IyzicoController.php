@@ -161,7 +161,7 @@ class IyzicoController extends Controller
             return Redirect::to($payWithIyzicoInitialize->getPayWithIyzicoPageUrl());
         }
         else {
-            flash(translate('Opps! Something went wrong.'))->warning();
+            flash(__('storefront.common.opps_something_went_wrong'))->warning();
             return redirect()->route('cart');
         }
     }

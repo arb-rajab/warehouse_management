@@ -30,7 +30,7 @@ class DigitalProductRequest extends FormRequest
 
     protected function failedAuthorization(): void
     {
-        flash(translate('This product is not yours.'))->warning();
+        flash(__('seller.products.this_product_is_not_yours'))->warning();
 
         throw new HttpResponseException(back());
     }
@@ -86,7 +86,7 @@ class DigitalProductRequest extends FormRequest
         return [function (Validator $validator): void {
             foreach ((array) $this->input('tax_type', []) as $index => $type) {
                 if ($type === 'percent' && is_numeric($this->input('tax.'.$index)) && $this->input('tax.'.$index) > 100) {
-                    $validator->errors()->add('tax.'.$index, __('validation.max.numeric', ['attribute' => 'tax', 'max' => 100]));
+                    $validator->errors()->add('tax.'.$index, __('validation.max.numeric', ['attribute' => __('validation.attributes.tax'), 'max' => 100]));
                 }
             }
         }];

@@ -34,7 +34,7 @@ class IsAppUserUnbanned
         return response()->json([
             'result' => false,
             'result_key' => 'banned',
-            'message' => translate('user is banned'),
+            'message' => __('storefront.common.you_are_banned'),
         ], 403);
     }
 }

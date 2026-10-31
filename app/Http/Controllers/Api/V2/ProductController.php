@@ -111,7 +111,7 @@ class ProductController extends Controller
                     'data' => [
                         'price' => single_price($product->unit_price),
                         'stock' => 0,
-                        'stock_txt' => translate('Out Of Stock'),
+                        'stock_txt' => __('storefront.product.out_of_stock'),
                         'digital' => $product->digital,
                         'variant' => $str,
                         'variation' => $str,
@@ -147,9 +147,9 @@ class ProductController extends Controller
         //Product Stock Visibility
         if ($product->stock_visibility_state == 'text') {
             if ($stock_qty >= 1 && $product->min_qty < $stock_qty) {
-                $stock_txt = translate('In Stock');
+                $stock_txt = __('storefront.product.in_stock');
             } else {
-                $stock_txt = translate('Out Of Stock');
+                $stock_txt = __('storefront.product.out_of_stock');
             }
         }
 
@@ -331,7 +331,7 @@ class ProductController extends Controller
                         return response()->json(
                             [
                                 'success' => false,
-                                'message' => "No Product Found",
+                                'message' => __('api.product.not_found'),
                                 'data' => [],
                             ]
                         );
@@ -345,7 +345,7 @@ class ProductController extends Controller
             return response()->json(
                 [
                     'success' => false,
-                    'message' => "The barcode not found",
+                    'message' => __('api.product.barcode_not_found'),
                     'data' => [],
                 ]
             );
@@ -461,7 +461,7 @@ class ProductController extends Controller
         $max = $request->max;
 
 
-        $products = Product::query();
+        $products = Product::with(self::LIST_RELATIONS);
 
         $products->where('published', 1)->physical();
 

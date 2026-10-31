@@ -4,7 +4,7 @@
     <div class="aiz-titlebar mt-2 mb-4">
         <div class="row align-items-center">
             <div class="col-md-6">
-                <h1 class="h3">{{ translate('Support Ticket') }}</h1>
+                <h1 class="h3">{{ __('storefront.support.support_ticket') }}</h1>
             </div>
         </div>
     </div>
@@ -14,24 +14,24 @@
                 <span class="size-70px rounded-circle mx-auto bg-secondary d-flex align-items-center justify-content-center mb-3">
                     <i class="las la-plus la-3x text-white"></i>
                 </span>
-                <div class="fs-20 text-primary">{{ translate('Create a Ticket') }}</div>
+                <div class="fs-20 text-primary">{{ __('storefront.support.create_a_ticket') }}</div>
             </div>
         </div>
     </div>
 
     <div class="card">
         <div class="card-header">
-            <h5 class="mb-0 h6">{{ translate('Tickets')}}</h5>
+            <h5 class="mb-0 h6">{{ __('storefront.support.tickets')}}</h5>
         </div>
           <div class="card-body">
               <table class="table aiz-table mb-0">
                   <thead>
                       <tr>
-                          <th data-breakpoints="lg">{{ translate('Ticket ID') }}</th>
-                          <th data-breakpoints="lg">{{ translate('Sending Date') }}</th>
-                          <th>{{ translate('Subject')}}</th>
-                          <th>{{ translate('Status')}}</th>
-                          <th data-breakpoints="lg">{{ translate('Options')}}</th>
+                          <th data-breakpoints="lg">{{ __('storefront.support.ticket_id') }}</th>
+                          <th data-breakpoints="lg">{{ __('storefront.common.sending_date') }}</th>
+                          <th>{{ __('storefront.common.subject')}}</th>
+                          <th>{{ __('storefront.common.status')}}</th>
+                          <th data-breakpoints="lg">{{ __('storefront.common.options')}}</th>
                       </tr>
                   </thead>
                   <tbody>
@@ -42,16 +42,16 @@
                               <td>{{ $ticket->subject }}</td>
                               <td>
                                   @if ($ticket->status == 'pending')
-                                      <span class="badge badge-inline badge-danger">{{ translate('Pending')}}</span>
+                                      <span class="badge badge-inline badge-danger">{{ __('storefront.status.pending')}}</span>
                                   @elseif ($ticket->status == 'open')
-                                      <span class="badge badge-inline badge-secondary">{{ translate('Open')}}</span>
+                                      <span class="badge badge-inline badge-secondary">{{ __('storefront.common.open')}}</span>
                                   @else
-                                      <span class="badge badge-inline badge-success">{{ translate('Solved')}}</span>
+                                      <span class="badge badge-inline badge-success">{{ __('storefront.common.solved')}}</span>
                                   @endif
                               </td>
                               <td>
                                   <a href="{{route('seller.support_ticket.show', encrypt($ticket->id))}}" class="btn btn-styled btn-link py-1 px-0 icon-anim text-underline--none">
-                                      {{ translate('View Details')}}
+                                      {{ __('storefront.common.view_details')}}
                                       <i class="la la-angle-right text-sm"></i>
                                   </a>
                               </td>
@@ -71,8 +71,8 @@
     <div class="modal-dialog modal-dialog-centered" role="document">
         <div class="modal-content">
             <div class="modal-header">
-                  <h5 class="modal-title strong-600 heading-5">{{ translate('Create a Ticket')}}</h5>
-                  <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                  <h5 class="modal-title strong-600 heading-5">{{ __('storefront.support.create_a_ticket')}}</h5>
+                  <button type="button" class="close" data-dismiss="modal" aria-label="{{ __('storefront.common.close') }}">
                       <span aria-hidden="true">&times;</span>
                   </button>
               </div>
@@ -82,10 +82,10 @@
                       <x-required-legend />
                       <div class="row">
                           <div class="col-md-2">
-                              <label for="seller-ticket-subject">{{ translate('Subject')}}<x-required-mark /></label>
+                              <label for="seller-ticket-subject">{{ __('storefront.common.subject')}}<x-required-mark /></label>
                           </div>
                           <div class="col-md-10">
-                              <input type="text" class="form-control mb-3" placeholder="{{ translate('Subject')}}" name="subject" id="seller-ticket-subject" value="{{ $errors->storeTicket->any() && is_string(old('subject')) ? old('subject') : '' }}" maxlength="255" required>
+                              <input type="text" class="form-control mb-3" placeholder="{{ __('storefront.common.subject')}}" name="subject" id="seller-ticket-subject" value="{{ $errors->storeTicket->any() && is_string(old('subject')) ? old('subject') : '' }}" maxlength="255" required>
                               @error('subject', 'storeTicket')
                                   <small class="form-text text-danger">{{ $message }}</small>
                               @enderror
@@ -94,23 +94,23 @@
 
                       <div class="row">
                           <div class="col-md-2">
-                              <label for="seller-ticket-details">{{ translate('Provide a detailed description')}}<x-required-mark /></label>
+                              <label for="seller-ticket-details">{{ __('storefront.common.provide_a_detailed_description')}}<x-required-mark /></label>
                           </div>
                           <div class="col-md-10">
-                              <textarea type="text" class="form-control mb-3" rows="3" name="details" id="seller-ticket-details" maxlength="10000" placeholder="{{ translate('Type your reply')}}" data-buttons="bold,underline,italic,|,ul,ol,|,paragraph,|,undo,redo" required>{{ $errors->storeTicket->any() && is_string(old('details')) ? old('details') : '' }}</textarea>
+                              <textarea type="text" class="form-control mb-3" rows="3" name="details" id="seller-ticket-details" maxlength="10000" placeholder="{{ __('storefront.support.type_your_reply')}}" data-buttons="bold,underline,italic,|,ul,ol,|,paragraph,|,undo,redo" required>{{ $errors->storeTicket->any() && is_string(old('details')) ? old('details') : '' }}</textarea>
                               @error('details', 'storeTicket')
                                   <small class="form-text text-danger">{{ $message }}</small>
                               @enderror
                           </div>
                       </div>
                       <div class="form-group row">
-                          <label class="col-md-2 col-form-label">{{ translate('Photo') }}</label>
+                          <label class="col-md-2 col-form-label">{{ __('storefront.common.photo') }}</label>
                           <div class="col-md-10">
                               <div class="input-group" data-toggle="aizuploader" data-type="image" data-multiple="true">
                                   <div class="input-group-prepend">
-                                      <div class="input-group-text bg-soft-secondary font-weight-medium">{{ translate('Browse')}}</div>
+                                      <div class="input-group-text bg-soft-secondary font-weight-medium">{{ __('storefront.upload.browse')}}</div>
                                   </div>
-                                  <div class="form-control file-amount">{{ translate('Choose File') }}</div>
+                                  <div class="form-control file-amount">{{ __('storefront.upload.choose_file') }}</div>
                                   <input type="hidden" name="attachments" class="selected-files" value="{{ $errors->storeTicket->any() && is_string(old('attachments')) ? old('attachments') : '' }}">
                               </div>
                               <div class="file-preview box sm">
@@ -121,8 +121,8 @@
                           </div>
                       </div>
                       <div class="text-right mt-4">
-                          <button type="button" class="btn btn-secondary" data-dismiss="modal">{{ translate('cancel')}}</button>
-                          <button type="submit" class="btn btn-primary">{{ translate('Send Ticket')}}</button>
+                          <button type="button" class="btn btn-secondary" data-dismiss="modal">{{ __('storefront.common.cancel')}}</button>
+                          <button type="submit" class="btn btn-primary">{{ __('storefront.support.send_ticket')}}</button>
                       </div>
                   </form>
               </div>

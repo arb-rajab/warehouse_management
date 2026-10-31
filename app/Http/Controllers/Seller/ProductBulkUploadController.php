@@ -18,7 +18,7 @@ class ProductBulkUploadController extends Controller
             return view('shop.seller.product.product_bulk_upload.index');
         }
         else{
-            flash(translate('Your shop is not verified yet!'))->warning();
+            flash(__('seller.products.your_shop_is_not_verified_yet'))->warning();
             return back();
         }
     }
@@ -28,6 +28,7 @@ class ProductBulkUploadController extends Controller
         $categories = Category::all();
 
         return PDF::loadView('shop.backend.downloads.category',[
+            'documentLocale' => \App\Support\StoreLocale::documentLocale(),
             'categories' => $categories,
         ], [], [])->download('category.pdf');
     }
@@ -37,6 +38,7 @@ class ProductBulkUploadController extends Controller
         $brands = Brand::all();
 
         return PDF::loadView('shop.backend.downloads.brand',[
+            'documentLocale' => \App\Support\StoreLocale::documentLocale(),
             'brands' => $brands,
         ], [], [])->download('brands.pdf');
     }

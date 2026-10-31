@@ -358,10 +358,10 @@ def attest_prerequisites(groups: list[str]) -> list[Step]:
     """
     steps: list[Step] = []
 
-    if backend_installed() and {'js', 'php', 'e2e'} & set(groups):
+    if backend_installed() and {'js', 'php', 'mysql', 'e2e'} & set(groups):
         steps.append(wayfinder_step())
 
-    if {'php', 'e2e'} & set(groups):
+    if {'php', 'mysql', 'e2e'} & set(groups):
         steps.append(build_step())
 
     if 'php' in groups:

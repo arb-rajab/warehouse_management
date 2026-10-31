@@ -49,7 +49,7 @@ class CouponController extends Controller
             'user_id' => $user_id,
         ]);
 
-        flash(translate('Coupon has been saved successfully.'))->success();
+        flash(__('seller.coupons.coupon_has_been_saved_successfully'))->success();
         return redirect()->route('seller.coupon.index');
     }
 
@@ -90,7 +90,7 @@ class CouponController extends Controller
         Gate::authorize('update', $coupon);
         $coupon->update($request->couponAttributes());
 
-        flash(translate('Coupon has been updated successfully'))->success();
+        flash(__('seller.coupons.coupon_has_been_updated_successfully'))->success();
         return redirect()->route('seller.coupon.index');
     }
 
@@ -105,7 +105,7 @@ class CouponController extends Controller
         $coupon = Coupon::findOrFail($id);
         Gate::authorize('delete', $coupon);
         $coupon->delete();
-        flash(translate('Coupon has been deleted successfully'))->success();
+        flash(__('seller.coupons.coupon_has_been_deleted_successfully'))->success();
         return redirect()->route('seller.coupon.index');
     }
 

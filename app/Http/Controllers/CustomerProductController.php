@@ -63,7 +63,7 @@ class CustomerProductController extends Controller implements HasMiddleware
             return view('shop.frontend.user.customer.product_upload', compact('categories'));
         }
         else{
-            flash(translate('Your classified product upload limit has been reached. Please buy a package.'))->error();
+            flash(__('storefront.product.your_classified_product_upload_limit_has_been_reached_please_buy_a_package'))->error();
             return redirect()->route('customer_packages_list_show');
         }
     }
@@ -116,11 +116,11 @@ class CustomerProductController extends Controller implements HasMiddleware
             $customer_product_translation->description  = $request->description;
             $customer_product_translation->save();
 
-            flash(translate('Product has been inserted successfully'))->success();
+            flash(__('storefront.product.product_has_been_inserted_successfully'))->success();
             return redirect()->route('customer_products.index');
         }
         else{
-            flash(translate('Something went wrong'))->error();
+            flash(__('storefront.common.something_went_wrong'))->error();
             return back();
         }
     }
@@ -201,11 +201,11 @@ class CustomerProductController extends Controller implements HasMiddleware
             $customer_product_translation->description  = $request->description;
             $customer_product_translation->save();
 
-            flash(translate('Product has been inserted successfully'))->success();
+            flash(__('storefront.product.product_has_been_inserted_successfully'))->success();
             return back();
         }
         else{
-            flash(translate('Something went wrong'))->error();
+            flash(__('storefront.common.something_went_wrong'))->error();
             return back();
         }
     }
@@ -222,7 +222,7 @@ class CustomerProductController extends Controller implements HasMiddleware
         $product->customer_product_translations()->delete();
 
         if (CustomerProduct::destroy($id)) {
-            flash(translate('Product has been deleted successfully'))->success();
+            flash(__('storefront.product.product_has_been_deleted_successfully'))->success();
             return redirect()->route('customer_products.index');
         }
     }

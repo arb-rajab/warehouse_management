@@ -33,7 +33,7 @@ class ReviewController extends Controller
         $product = Product::findOrFail($request->product_id);
 
         if (! $product->isReviewableBy(Auth::user()->id)) {
-            flash(translate('You cannot review this product'))->error();
+            flash(__('storefront.product.you_cannot_review_this_product'))->error();
             return back();
         }
 
@@ -60,7 +60,7 @@ class ReviewController extends Controller
             $seller->save();
         }
 
-        flash(translate('Review has been submitted successfully'))->success();
+        flash(__('storefront.product.review_has_been_submitted_successfully'))->success();
         return back();
     }
 

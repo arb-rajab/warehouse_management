@@ -323,7 +323,6 @@ parameters:
         - app/Models/AffiliatePayment.php
         - app/Models/AffiliateUser.php
         - app/Models/AppSettings.php
-        - app/Models/AppTranslation.php
         - app/Models/AttributeCategory.php
         - app/Models/AttributeTranslation.php
         - app/Models/AttributeValue.php
@@ -437,7 +436,6 @@ parameters:
         - app/Utility/PayhereUtility.php
         - app/Utility/ProductUtility.php
         - app/Utility/SearchUtility.php
-        - app/Utility/TranslationUtility.php
         - config/broadcasting.php
         - config/excel.php
         - config/hashing.php

@@ -4,10 +4,11 @@ namespace App\Console\Commands;
 
 use App\Models\Product;
 use App\Models\Upload;
+use App\Services\ImageOptimizer;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
-use Intervention\Image\ImageManagerStatic as Image;
+use RuntimeException;
 use Throwable;
 
 class FetchExternalImages extends Command
@@ -81,10 +82,13 @@ class FetchExternalImages extends Command
                 return false;
             }
 
-            $storagePath = 'uploads/otajer/'.basename($externalLink);
-
-            // Decrease the quality of the image to less than 50%
-            Storage::put($storagePath, Image::make($response->body())->encode('jpg', 50));
+            [$contents, $extension] = app(ImageOptimizer::class)->optimise($response->body());
+            $storagePath = 'uploads/otajer/'.$upload->id.'.'.$extension;
+            if (! Storage::put($storagePath, $contents)) {
+                throw new RuntimeException('Unable to store external image.');
+            }
+            $upload->extension = $extension;
+            $upload->file_size = strlen($contents);
 
             $upload->file_name = $storagePath;
             $upload->external_link = null;

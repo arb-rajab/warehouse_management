@@ -134,13 +134,13 @@ class TripMapController extends Controller implements HasMiddleware
             $trip = empty($data['trip_id']) ? null : Trip::query()->lockForUpdate()->findOrFail((int) $data['trip_id']);
             $truck = $this->lockTruckForTrip((int) $data['truck_id'], $trip);
             if ($trip !== null && ($trip->truck_id !== $truck->id || $trip->status === TripStatus::Closed->value)) {
-                throw ValidationException::withMessages(['trip_id' => __('validation.exists', ['attribute' => 'trip'])]);
+                throw ValidationException::withMessages(['trip_id' => __('validation.exists', ['attribute' => __('validation.attributes.trip')])]);
             }
             $trip ??= $this->createTrip($data);
             foreach ($data['markers'] as $marker) {
                 $order = Order::query()->lockForUpdate()->findOrFail((int) $marker['order_id']);
                 if ($order->delivery_status !== 'on_delivery' || Checkpoint::query()->where('relationable_type', Order::class)->where('relationable_id', $order->id)->whereIn('trip_id', Trip::query()->select('id')->where('status', '<>', 'closed'))->exists()) {
-                    throw ValidationException::withMessages(['markers' => __('validation.unique', ['attribute' => 'order'])]);
+                    throw ValidationException::withMessages(['markers' => __('validation.unique', ['attribute' => __('validation.attributes.order')])]);
                 }
             }
             $checkpoints = $this->prepareCheckpoints($data['markers'], empty($data['trip_id']));

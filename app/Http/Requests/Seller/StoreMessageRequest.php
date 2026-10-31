@@ -30,7 +30,7 @@ class StoreMessageRequest extends FormRequest
             'conversation_id' => ['required', 'integer'],
             'message' => ['bail', 'required', 'string', 'max:65535', function (string $attribute, mixed $value, Closure $fail): void {
                 if (strlen($value) > 65535) {
-                    $fail(translate('The message may not exceed 65,535 bytes.'));
+                    $fail(__('seller.common.the_message_may_not_exceed_65_535_bytes'));
                 }
             }],
         ];

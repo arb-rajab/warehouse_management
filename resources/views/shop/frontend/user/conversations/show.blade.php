@@ -3,7 +3,7 @@
 @section('panel_content')
     <div class="aiz-titlebar mb-4">
         <div class="h6 fw-700">
-            <span>{{ translate('Conversations With ')}}</span>
+            <span>{{ __('storefront.support.conversations_with')}}</span>
             @if ($conversation->sender_id == Auth::user()->id && $conversation->receiver->shop != null)
                 <a href="{{ route('shop.visit', $conversation->receiver->shop->slug) }}" class="">{{ $conversation->receiver->shop->name }}</a>
             @endif
@@ -24,7 +24,7 @@
                             <path id="Path_3015" data-name="Path 3015" d="M131.349,99.312h5a.5.5,0,1,1,0,1h-5a.5.5,0,1,1,0-1" transform="translate(-1181 -346.5)" fill="#b5b5bf"/>
                         </g>
                     </svg>
-                    {{ translate('Between you and') }}
+                    {{ __('storefront.common.between_you_and') }}
                     @if ($conversation->sender_id == Auth::user()->id)
                         {{ $conversation->receiver->shop ? $conversation->receiver->shop->name : $conversation->receiver->name }}
                     @else
@@ -42,11 +42,11 @@
                         <div class="media mb-2">
                             @if (Auth::user()->id != $message->user_id && $message->user->shop != null)
                                 <a href="{{ route('shop.visit', $message->user->shop->slug) }}" class="">
-                                    <img  class="avatar avatar-sm mr-3" src="{{ uploaded_asset($message->user->shop->logo) }}" 
+                                    <img  class="avatar avatar-sm mr-3" src="{{ uploaded_asset($message->user->shop->logo) }}"
                                         onerror="this.onerror=null;this.src='{{ static_asset('assets/img/avatar-place.png') }}';">
                                 </a>
                             @else
-                                <img class="avatar avatar-sm mr-3" @if($message->user != null) src="{{ uploaded_asset($message->user->avatar_original) }}" @endif 
+                                <img class="avatar avatar-sm mr-3" @if($message->user != null) src="{{ uploaded_asset($message->user->avatar_original) }}" @endif
                                     onerror="this.onerror=null;this.src='{{ static_asset('assets/img/avatar-place.png') }}';">
                             @endif
                             <div class="media-body">
@@ -58,7 +58,7 @@
                                     @endif
                                 </h6>
                                 <p class="fs-12 text-secondary">
-                                    {{ date('d.m.Y h:i:m', strtotime($message->created_at)) }}
+                                    {{ \App\Support\StoreLocale::date(strtotime($message->created_at), true) }}
                                 </p>
                             </div>
                         </div>
@@ -68,16 +68,16 @@
                     </li>
                 @endforeach
             </ul>
-            
+
             <!-- Send message -->
             <form class="pt-4" action="{{ route('messages.store') }}" method="POST">
                 @csrf
                 <input type="hidden" name="conversation_id" value="{{ $conversation->id }}">
                 <div class="form-group">
-                    <textarea class="form-control rounded-0" rows="4" name="message" placeholder="{{ translate('Type your reply') }}" required></textarea>
+                    <textarea class="form-control rounded-0" rows="4" name="message" placeholder="{{ __('storefront.support.type_your_reply') }}" required></textarea>
                 </div>
                 <div class="form-group mb-0 text-right">
-                    <button type="submit" class="btn btn-primary rounded-0 w-150px">{{ translate('Send') }}</button>
+                    <button type="submit" class="btn btn-primary rounded-0 w-150px">{{ __('storefront.common.send') }}</button>
                 </div>
             </form>
         </div>

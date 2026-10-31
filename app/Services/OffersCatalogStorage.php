@@ -14,7 +14,7 @@ class OffersCatalogStorage extends PrivateDocumentStorage
 
     protected const FIELD = 'catalog';
 
-    protected const REFUSAL = 'The catalog must be a PDF of at most 50 MB.';
+    protected const REFUSAL = 'storefront.upload.catalog_refusal';
 
     protected const MAX_BYTES = 50 * 1024 * 1024;
 }

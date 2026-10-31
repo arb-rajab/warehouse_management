@@ -14,15 +14,15 @@
         <div class="modal-dialog modal-sm modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h4 class="modal-title h6">{{translate('Visit Note')}}</h4>
+                    <h4 class="modal-title h6">{{__('storefront.common.visit_note')}}</h4>
                     <button type="button" class="close" data-dismiss="modal" aria-hidden="true"></button>
                 </div>
                 <form id="visit-note-form" class="modal-body text-center" action="{{ route('visits.note') }}" method="POST">
                     @csrf
                     <input type="hidden" id="visit-note-id" name="visit_id">
                     <textarea id="note" name="note" class="form-control" rows="4"></textarea>
-                    <button type="button" class="btn btn-secondary rounded-0 mt-2" data-dismiss="modal">{{translate('Cancel')}}</button>
-                    <button type="submit" class="btn btn-primary rounded-0 mt-2">{{translate('Update')}}</button>
+                    <button type="button" class="btn btn-secondary rounded-0 mt-2" data-dismiss="modal">{{__('storefront.common.cancel')}}</button>
+                    <button type="submit" class="btn btn-primary rounded-0 mt-2">{{__('storefront.common.update')}}</button>
                 </form>
             </div>
         </div>
@@ -52,7 +52,7 @@
         try {
             position = await getCurrentPosition();
         } catch (err) {
-            alert('Location data is not available. Please ensure location access is allowed. ' + err.message);
+            alert({{ \Illuminate\Support\Js::from(__('storefront.common.location_access_failed')) }}.replace(':error', err.message));
             return;
         }
 
@@ -94,7 +94,7 @@
                         // Show a notification with danger type
                         AIZ.plugins.notify('danger', data.message);
                     }
-                    AIZ.plugins.notify('success', 'The user has been choosen successfully');
+                    AIZ.plugins.notify('success', {{ \Illuminate\Support\Js::from(__('storefront.common.user_chosen')) }});
                     window.location.href = '{{ route('home') }}';
         }
 

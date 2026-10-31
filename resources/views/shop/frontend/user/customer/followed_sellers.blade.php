@@ -4,7 +4,7 @@
     <div class="aiz-titlebar mb-4">
         <div class="row align-items-center">
             <div class="col-md-6">
-                <h1 class="fs-20 fw-700 text-dark">{{ translate('Followed Sellers') }}</h1>
+                <h1 class="fs-20 fw-700 text-dark">{{ __('storefront.product.followed_sellers') }}</h1>
             </div>
         </div>
     </div>
@@ -32,14 +32,14 @@
                                 <div class="rating rating-md rating-space mt-2 mb-3">
                                     {{ renderStarRating($followed_seller->shop->rating) }}
                                     <span class="ml-1 fs-14">({{ $followed_seller->shop->num_of_reviews }}
-                                        {{ translate('reviews') }})</span>
+                                        {{ __('storefront.product.reviews') }})</span>
                                 </div>
                                 <div class="mb-3">
-                                    <a data-method="post" href="{{ route("followed_seller.remove", ['id'=>$followed_seller->shop->id]) }}" class="fs-12 fw-700 hov-text-warning">{{ translate('Unfollow This Seller') }}</a>
+                                    <a data-method="post" href="{{ route("followed_seller.remove", ['id'=>$followed_seller->shop->id]) }}" class="fs-12 fw-700 hov-text-warning">{{ __('storefront.product.unfollow_this_seller') }}</a>
                                 </div>
                                 <!-- Visit Button -->
                                 <a href="{{ route('shop.visit', $followed_seller->shop->slug) }}" class="btn btn-light text-gray-dark btn-block btn-sm rounded-0 border fw-700" tabindex="0" style="padding: 0.75rem">
-                                    {{ translate('Visit Store') }}
+                                    {{ __('storefront.common.visit_store') }}
                                 </a>
                             </div>
                         </div>
@@ -52,7 +52,7 @@
             <div class="col">
                 <div class="text-center bg-white p-4 border">
                     <img class="mw-100 h-200px" src="{{ static_asset('assets/img/nothing.svg') }}" alt="Image">
-                    <h5 class="mb-0 h5 mt-3">{{ translate("There isn't anything added yet")}}</h5>
+                    <h5 class="mb-0 h5 mt-3">{{ __('storefront.common.there_isn_t_anything_added_yet')}}</h5>
                 </div>
             </div>
         </div>

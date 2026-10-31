@@ -53,11 +53,11 @@ class OrderController extends Controller
 
     public function update_delivery_status(Request $request) {
         (new OrderService)->handle_delivery_status($request);
-        return $this->success(translate('Delivery status has been changed successfully'));
+        return $this->success(__('api.seller.delivery_status_updated'));
     }
 
     public function update_payment_status(Request $request) {
         (new OrderService)->handle_payment_status($request);
-        return $this->success(translate('Payment status has been changed successfully'));
+        return $this->success(__('api.seller.payment_status_updated'));
     }
 }

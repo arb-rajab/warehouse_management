@@ -27,12 +27,13 @@ class AuctionProductBidController extends Controller
                 if ($secound_max_bid->user->email != null) {
                     $product = Product::where('id', $request->product_id)->first();
                     $array['view'] = 'shop.emails.auction_bid';
-                    $array['subject'] = translate('Auction Bid');
+                    $array['subject_key'] = 'delivery.mail.auction_subject';
                     $array['from'] = config('mail.from.address');
-                    $array['content'] = 'Hi! A new user bidded more then you for the product, ' . $product->name . '. ' . 'Highest bid amount: ' . $bid->amount;
+                    $array['content_key'] = 'delivery.mail.outbid';
+                    $array['content_parameters'] = ['product' => $product->name, 'amount' => $bid->amount];
                     $array['link'] = route('auction-product', $product->slug);
                     try {
-                        Mail::to($secound_max_bid->user->email)->queue(new AuctionBidMailManager($array));
+                        Mail::to($secound_max_bid->user->email)->queue(new AuctionBidMailManager($array, $secound_max_bid->user));
                     } catch (\Exception $e) {
                         //dd($e->getMessage());
                     }
@@ -41,13 +42,13 @@ class AuctionProductBidController extends Controller
 
             return response()->json([
                 'result' => true,
-                'message' => translate('Bid Placed Successfully.'),
+                'message' => __('api.auction.bid_placed'),
 
             ], 200);
         } else {
             return response()->json([
                 'result' => false,
-                'message' => translate('Something Went Wrong'),
+                'message' => __('storefront.common.something_went_wrong'),
             ], 201);
         }
         return back();

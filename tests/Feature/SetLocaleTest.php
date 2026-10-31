@@ -28,19 +28,27 @@ test('a supported locale in the session is the one the page renders in', functio
 });
 
 test('the store api honours an App-Language header the app has a locale for', function () {
-    $this->withHeaders(['App-Language' => 'ar'])->postJson('/temp/api/v2/auth/info')->assertOk();
+    $previousLocale = app()->getLocale();
+    $this->withHeaders(['App-Language' => 'ar'])->postJson('/temp/api/v2/auth/info')->assertOk()
+        ->assertJsonPath('message', 'فشل تسجيل الدخول');
 
-    expect(app()->getLocale())->toBe('ar');
+    expect(app()->getLocale())->toBe($previousLocale);
 });
 
 test('the store api ignores an App-Language header the app has no locale for', function (string $header) {
-    $this->withHeaders(['App-Language' => $header])->postJson('/temp/api/v2/auth/info')->assertOk();
+    config(['app.ui_default_locale' => 'en', 'app.default_language' => 'ar']);
+    $previousLocale = app()->getLocale();
+    $this->withHeaders(['App-Language' => $header])->postJson('/temp/api/v2/auth/info')->assertOk()
+        ->assertJsonPath('message', 'Login Failed');
 
-    expect(app()->getLocale())->toBe(config('app.default_language'));
+    expect(app()->getLocale())->toBe($previousLocale);
 })->with(['unknown locale' => 'fr', 'path traversal' => '../../etc/passwd', 'wrong case' => 'AR', 'empty' => '']);
 
 test('the store api uses the default locale when it gets no App-Language header', function () {
-    $this->postJson('/temp/api/v2/auth/info')->assertOk();
+    config(['app.ui_default_locale' => 'ar', 'app.default_language' => 'en']);
+    $previousLocale = app()->getLocale();
+    $this->postJson('/temp/api/v2/auth/info')->assertOk()
+        ->assertJsonPath('message', 'فشل تسجيل الدخول');
 
-    expect(app()->getLocale())->toBe(config('app.default_language'));
+    expect(app()->getLocale())->toBe($previousLocale);
 });

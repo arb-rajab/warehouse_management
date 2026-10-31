@@ -93,7 +93,7 @@ class OrderController extends Controller implements HasMiddleware
             ->get();
 
         if ($carts->isEmpty()) {
-            throw new DomainException(translate('Your cart is empty'));
+            throw new DomainException(__('storefront.cart.empty'));
         }
 
         $address = Address::where('id', $carts[0]['address_id'])->first();
@@ -137,7 +137,7 @@ class OrderController extends Controller implements HasMiddleware
         }
 
         if ($seller_products === []) {
-            throw new DomainException(translate('Your cart is empty'));
+            throw new DomainException(__('storefront.cart.empty'));
         }
 
         $lastOrder = null;
@@ -336,7 +336,7 @@ class OrderController extends Controller implements HasMiddleware
         }
 
         if ($lastOrder === null) {
-            throw new DomainException(translate('Your cart is empty'));
+            throw new DomainException(__('storefront.cart.empty'));
         }
         $order = $lastOrder;
 

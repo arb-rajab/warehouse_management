@@ -411,7 +411,7 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
     Route::delete('/tax/{tax}', [TaxController::class, 'destroy'])->name('tax.destroy');
     Route::post('/tax/{tax}/status', [TaxController::class, 'updateStatus'])->name('taxes.tax-status');
 
-    // Database languages and translations (storefront, seller, emails, PDFs, mobile).
+    // Language records, database content labels and compatibility mobile catalogs.
     Route::get('/languages', [LanguageController::class, 'index'])->name('languages.index');
     Route::get('/languages/create', [LanguageController::class, 'create'])->name('languages.create');
     Route::post('/languages', [LanguageController::class, 'store'])->name('languages.store');

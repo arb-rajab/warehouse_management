@@ -4,7 +4,7 @@
     <div class="aiz-titlebar mt-2 mb-4">
         <div class="row align-items-center">
             <div class="col-md-6">
-                <h1 class="h3">{{ translate('Edit Your Coupon') }}</h1>
+                <h1 class="h3">{{ __('seller.coupons.edit_your_coupon') }}</h1>
             </div>
         </div>
     </div>
@@ -13,7 +13,7 @@
         <div class="col-lg-10 mx-auto">
             <div class="card">
                 <div class="card-header">
-                    <h3 class="mb-0 h6">{{translate('Coupon Information Update')}}</h3>
+                    <h3 class="mb-0 h6">{{__('seller.coupons.coupon_information_update')}}</h3>
                 </div>
                 <form action="{{ route('seller.coupon.update', $coupon->id) }}" method="POST">
                     <input name="_method" type="hidden" value="PATCH">
@@ -31,13 +31,13 @@
                     <div class="card-body">
                         <input type="hidden" value="{{ $coupon->id }}" id="id">
                         <div class="form-group row">
-                            <label class="col-lg-3 col-from-label" for="coupon_type">{{translate('Coupon Type')}}<x-required-mark /></label>
+                            <label class="col-lg-3 col-from-label" for="coupon_type">{{__('seller.coupons.coupon_type')}}<x-required-mark /></label>
                             <div class="col-lg-9">
                                 <select name="type" id="coupon_type" class="form-control aiz-selectpicker" onchange="coupon_form()" required>
                                     @if ($coupon->type == "product_base")
-                                        <option value="product_base" selected>{{translate('For Products')}}</option>
+                                        <option value="product_base" selected>{{__('seller.coupons.for_products')}}</option>
                                     @elseif ($coupon->type == "cart_base")
-                                        <option value="cart_base">{{translate('For Total Orders')}}</option>
+                                        <option value="cart_base">{{__('seller.coupons.for_total_orders')}}</option>
                                     @endif
                                 </select>
                                 @error('type')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
@@ -48,7 +48,7 @@
                             @include('shop.seller.coupons.fields')
                         </div>
                         <div class="form-group mb-0 text-right">
-                            <button type="submit" class="btn btn-primary">{{translate('Save')}}</button>
+                            <button type="submit" class="btn btn-primary">{{__('storefront.common.save')}}</button>
                         </div>
                     </div>
                 </form>

@@ -8,17 +8,17 @@
         <div class="col-xl-8 col-md-6 mb-4">
             <div class="h-100" style="background-image: url('{{ static_asset("assets/img/wallet-bg.png") }}'); background-size: cover; background-position: center center;">
                 <div class="p-4 h-100 w-100 w-xl-50">
-                    <p class="fs-14 fw-400 text-gray mb-3">{{ translate('Wallet Balance') }}</p>
+                    <p class="fs-14 fw-400 text-gray mb-3">{{ __('storefront.checkout.wallet_balance') }}</p>
                     <h1 class="fs-30 fw-700 text-white ">{{ single_price(Auth::user()->balance) }}</h1>
                     <hr class="border border-dashed border-white opacity-40 ml-0 mt-4 mb-4">
                     @php
                         $last_recharge = \App\Models\Wallet::where('user_id', Auth::user()->id)->orderBy('id', 'desc')->first();
                     @endphp
-                    <p class="fs-14 fw-400 text-gray mb-1">{{ translate('Last Recharge') }} <strong>{{ $last_recharge ? date('d.m.Y', strtotime($last_recharge->created_at)) : '' }}</strong></p>
+                    <p class="fs-14 fw-400 text-gray mb-1">{{ __('storefront.checkout.last_recharge') }} <strong>{{ $last_recharge ? \App\Support\StoreLocale::date(strtotime($last_recharge->created_at)) : '' }}</strong></p>
                     <h3 class="fs-20 fw-700 text-white ">{{ $last_recharge ? single_price($last_recharge->amount) : 0 }}</h3>
                     <button class="btn btn-block border border-soft-light hov-bg-dark text-white mt-5 py-3" onclick="show_wallet_modal()" style="border-radius: 30px; background: rgba(255, 255, 255, 0.1);">
                         <i class="la la-plus fs-18 fw-700 mr-2"></i>
-                        {{ translate('Recharge Wallet') }}
+                        {{ __('storefront.checkout.recharge_wallet') }}
                     </button>
                 </div>
             </div>
@@ -44,12 +44,12 @@
                                     @php
                                         $expenditure = \App\Models\Order::where('user_id', Auth::user()->id)->where('payment_status', 'paid')->sum('grand_total');
                                     @endphp
-                                    <span class="fs-14 fw-400 text-white mb-1">{{ translate('Total Expenditure') }}</span>
+                                    <span class="fs-14 fw-400 text-white mb-1">{{ __('storefront.common.total_expenditure') }}</span>
                                     <span class="fs-20 fw-700 text-white">{{ single_price($expenditure) }}</span>
                                 </div>
                             </div>
                             <a href="{{ route('purchase_history.index') }}" class="fs-12 text-white">
-                                {{ translate('View Order History') }}
+                                {{ __('storefront.checkout.view_order_history') }}
                                 <i class="las la-angle-right fs-14"></i>
                             </a>
                         </div>
@@ -73,12 +73,12 @@
                                     @php
                                         $club_points = \App\Models\ClubPoint::where('user_id', Auth::user()->id)->where('convert_status', 0)->sum('points');
                                     @endphp
-                                    <span class="fs-14 fw-400 text-white mb-1">{{ translate('Total Club Points') }}</span>
+                                    <span class="fs-14 fw-400 text-white mb-1">{{ __('storefront.common.total_club_points') }}</span>
                                     <span class="fs-20 fw-700 text-white">{{ $club_points }}</span>
                                 </div>
                             </div>
                             <a href="{{ route('earnng_point_for_user') }}" class="fs-12 text-white">
-                                {{ translate('Convert Club Points') }}
+                                {{ __('storefront.common.convert_club_points') }}
                                 <i class="las la-angle-right fs-14"></i>
                             </a>
                         </div>
@@ -115,7 +115,7 @@
                             $cart = \App\Models\Cart::where('user_id', $user_id)->get();
                         @endphp
                         <span class="fs-20 fw-700 mb-1">{{ count($cart) > 0 ? sprintf("%02d", count($cart)) : 0 }}</span>
-                        <span class="fs-14 fw-400 text-secondary">{{ translate('Products in Cart') }}</span>
+                        <span class="fs-14 fw-400 text-secondary">{{ __('storefront.cart.products_in_cart') }}</span>
                     </div>
                 </div>
 
@@ -138,7 +138,7 @@
                             $cart = \App\Models\Cart::where('user_id', $user_id)->get();
                         @endphp
                         <span class="fs-20 fw-700 mb-1">{{ count(Auth::user()->wishlists) > 0 ? sprintf("%02d", count(Auth::user()->wishlists)) : 0 }}</span>
-                        <span class="fs-14 fw-400 text-secondary">{{ translate('Products in Wishlist') }}</span>
+                        <span class="fs-14 fw-400 text-secondary">{{ __('storefront.cart.products_in_wishlist') }}</span>
                     </div>
                 </div>
 
@@ -159,7 +159,7 @@
                             }
                         @endphp
                         <span class="fs-20 fw-700 mb-1">{{ $total > 0 ? sprintf("%02d", $total) : 0 }}</span>
-                        <span class="fs-14 fw-400 text-secondary">{{ translate('Total Products Ordered') }}</span>
+                        <span class="fs-14 fw-400 text-secondary">{{ __('storefront.checkout.total_products_ordered') }}</span>
                     </div>
                 </div>
 
@@ -170,26 +170,26 @@
         @if (get_setting('classified_product'))
         <div class="col-xl-4 col-md-6 mb-4">
             <div class="p-4 border h-100">
-                <h6 class="fw-700 mb-3 text-dark">{{ translate('Purchased Package') }}</h6>
+                <h6 class="fw-700 mb-3 text-dark">{{ __('storefront.common.purchased_package') }}</h6>
                 @php
                     $customer_package = \App\Models\CustomerPackage::find(Auth::user()->customer_package_id);
                 @endphp
                 @if($customer_package != null)
                     <img src="{{ uploaded_asset($customer_package->logo) }}" class="img-fluid mb-4 h-70px"
                         onerror="this.onerror=null;this.src='{{ static_asset('assets/img/avatar-place.png') }}';">
-                    <p class="fs-14 fw-700 mb-3 text-primary">{{ translate('Current Package') }}: {{ $customer_package->getTranslation('name') }}</p>
+                    <p class="fs-14 fw-700 mb-3 text-primary">{{ __('storefront.common.current_package') }}: {{ $customer_package->getTranslation('name') }}</p>
                     <p class="mb-2 d-flex justify-content-between">
-                        <span class="text-secondary">{{ translate('Product Upload') }}</span>
-                        <span class="fw-700">{{ $customer_package->product_upload }} {{ translate('Times')}}</span>
+                        <span class="text-secondary">{{ __('storefront.product.product_upload') }}</span>
+                        <span class="fw-700">{{ $customer_package->product_upload }} {{ __('storefront.common.times')}}</span>
                     </p>
                     <p class="mb-3 d-flex justify-content-between">
-                        <span class="text-secondary">{{ translate('Product Upload Remains') }}</span>
-                        <span class="fw-700">{{ Auth::user()->remaining_uploads }} {{ translate('Times')}}</span>
+                        <span class="text-secondary">{{ __('storefront.product.product_upload_remains') }}</span>
+                        <span class="fw-700">{{ Auth::user()->remaining_uploads }} {{ __('storefront.common.times')}}</span>
                     </p>
                 @else
-                    <span class="fs-14 fw-700 mb-4 text-primary">{{translate('Package Not Found')}}</span>
+                    <span class="fs-14 fw-700 mb-4 text-primary">{{__('storefront.common.package_not_found')}}</span>
                 @endif
-                <a href="{{ route('customer_packages_list_show') }}" class="btn btn-primary btn-block fs-14 fw-500" style="border-radius: 25px;">{{ translate('Upgrade Package') }}</a>
+                <a href="{{ route('customer_packages_list_show') }}" class="btn btn-primary btn-block fs-14 fw-500" style="border-radius: 25px;">{{ __('storefront.common.upgrade_package') }}</a>
             </div>
         </div>
         @endif
@@ -197,10 +197,10 @@
         <!-- My Cart -->
         <div class="col-xl-4 col-md-6 mb-4">
             <div class="p-4 border h-100">
-                <h6 class="fw-700 mb-3 text-dark">My Cart</h6>
+                <h6 class="fw-700 mb-3 text-dark">{{ __('storefront.cart.my_cart') }}</h6>
                 <a href="{{ route('cart') }}" class="btn btn-info btn-block fs-14 fw-500 my-4"  style="border-radius: 25px;">
 
-                    {{ translate('View Cart') }}
+                    {{ __('storefront.cart.view_cart') }}
                 </a>
             </div>
         </div>
@@ -209,7 +209,7 @@
         <!-- Default Shipping Address -->
         <div class="col-xl-4 col-md-6 mb-4">
             <div class="p-4 border h-100">
-                <h6 class="fw-700 mb-3 text-dark">{{ translate('Default Shipping Address') }}</h6>
+                <h6 class="fw-700 mb-3 text-dark">{{ __('storefront.checkout.default_shipping_address') }}</h6>
                 @if(Auth::user()->addresses != null)
                     @php
                         $address = Auth::user()->addresses->where('set_default', 1)->first();
@@ -233,7 +233,7 @@
                 @endif
                 <button class="btn btn-dark btn-block fs-14 fw-500" onclick="add_new_address()" style="border-radius: 25px;">
                     <i class="la la-plus fs-18 fw-700 mr-2"></i>
-                    {{ translate('Add New Address') }}
+                    {{ __('storefront.common.add_new_address') }}
                 </button>
             </div>
         </div>
@@ -244,10 +244,10 @@
 
     <div class="row align-items-center mb-2 mt-1">
         <div class="col-6">
-            <h3 class=" mb-0 fs-14 fs-md-16 fw-700 text-dark">{{ translate('My Wishlist')}}</h3>
+            <h3 class=" mb-0 fs-14 fs-md-16 fw-700 text-dark">{{ __('storefront.cart.my_wishlist')}}</h3>
         </div>
         <div class="col-6 text-right">
-            <a class="text-blue fs-10 fs-md-12 fw-700 hov-text-primary animate-underline-primary" href="{{ route('wishlists.index') }}">{{ translate('View All') }}</a>
+            <a class="text-blue fs-10 fs-md-12 fw-700 hov-text-primary animate-underline-primary" href="{{ route('wishlists.index') }}">{{ __('storefront.common.view_all') }}</a>
         </div>
     </div>
     @php
@@ -266,13 +266,13 @@
                             </a>
                             <!-- Remove from wishlisht -->
                             <div class="absolute-top-right aiz-p-hov-icon">
-                                <a href="javascript:void(0)" onclick="removeFromWishlist({{ $wishlist->id }})" data-toggle="tooltip" data-title="{{ translate('Remove from wishlist') }}" data-placement="left">
+                                <a href="javascript:void(0)" onclick="removeFromWishlist({{ $wishlist->id }})" data-toggle="tooltip" data-title="{{ __('storefront.cart.remove_from_wishlist') }}" data-placement="left">
                                     <i class="la la-trash"></i>
                                 </a>
                             </div>
                             <!-- add to cart -->
                             <a class="cart-btn absolute-bottom-left w-100 h-35px aiz-p-hov-icon text-white fs-13 fw-700 d-flex justify-content-center align-items-center"
-                                href="javascript:void(0)" onclick="showAddToCartModal({{ $wishlist->product->id }})">{{ translate('Add to Cart') }}</a>
+                                href="javascript:void(0)" onclick="showAddToCartModal({{ $wishlist->product->id }})">{{ __('storefront.cart.add_to_cart') }}</a>
                         </div>
                         <!-- Product Name -->
                         <h5 class="fs-14 mb-0 lh-1-5 fw-400 text-truncate-2 mb-3">
@@ -295,7 +295,7 @@
             <div class="col">
                 <div class="text-center bg-white p-4 border">
                     <img class="mw-100 h-200px" src="{{ static_asset('assets/img/nothing.svg') }}" alt="Image">
-                    <h5 class="mb-0 h5 mt-3">{{ translate("There isn't anything added yet")}}</h5>
+                    <h5 class="mb-0 h5 mt-3">{{ __('storefront.common.there_isn_t_anything_added_yet')}}</h5>
                 </div>
             </div>
         </div>

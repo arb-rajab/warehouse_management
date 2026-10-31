@@ -61,6 +61,7 @@ const hasRequiredFields = provideRequiredFields();
                     })
                 }}
             </p>
+            <p class="mb-4">{{ t('store.languages.translationScope') }}</p>
             <DataTable
                 :columns="[
                     t('store.languages.name'),
@@ -199,6 +200,7 @@ const hasRequiredFields = provideRequiredFields();
                 #default="{ errors, processing }"
                 class="mt-6 max-w-sm space-y-4"
             >
+                <p>{{ t('store.languages.mobileImportScope') }}</p>
                 <RequiredLegend v-if="hasRequiredFields" />
                 <FormField
                     id="lang_file"

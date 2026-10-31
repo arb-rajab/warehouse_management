@@ -9,10 +9,10 @@
         <x-required-legend />
         <div class="row">
             <div class="col-md-2">
-                <label for="edit_address_address">{{ translate('Address')}}<x-required-mark /></label>
+                <label for="edit_address_address">{{ __('storefront.common.address')}}<x-required-mark /></label>
             </div>
             <div class="col-md-10 mb-3">
-                <textarea id="edit_address_address" class="form-control @error('address', 'updateAddress') is-invalid @enderror" placeholder="{{ translate('Your Address')}}" rows="2" name="address" maxlength="255" required>{{ $keepInput ? old('address') : $address_data->address }}</textarea>
+                <textarea id="edit_address_address" class="form-control @error('address', 'updateAddress') is-invalid @enderror" placeholder="{{ __('storefront.common.your_address')}}" rows="2" name="address" maxlength="255" required>{{ $keepInput ? old('address') : $address_data->address }}</textarea>
                 @error('address', 'updateAddress')
                     <span class="invalid-feedback d-block" role="alert"><strong>{{ $message }}</strong></span>
                 @enderror
@@ -22,11 +22,11 @@
 
         <div class="row">
             <div class="col-md-2">
-                <label for="edit_state">{{ translate('State')}}</label>
+                <label for="edit_state">{{ __('storefront.common.state')}}</label>
             </div>
             <div class="col-md-10 mb-3">
                 <select class="form-control aiz-selectpicker @error('state_id', 'updateAddress') is-invalid @enderror" name="state_id" id="edit_state" data-live-search="true">
-                    <option value="">{{ translate('Select State') }}</option>
+                    <option value="">{{ __('storefront.common.select_state') }}</option>
                     @foreach ($states as $key => $state)
                         <option value="{{ $state->id }}" @selected((string) $state->id === (string) ($keepInput ? old('state_id') : $address_data->state_id))>
                             {{ $state->name }}
@@ -41,11 +41,11 @@
 
         <div class="row">
             <div class="col-md-2">
-                <label for="edit_city">{{ translate('City')}}</label>
+                <label for="edit_city">{{ __('storefront.common.city')}}</label>
             </div>
             <div class="col-md-10 mb-3">
                 <select class="form-control aiz-selectpicker @error('city_id', 'updateAddress') is-invalid @enderror" data-live-search="true" name="city_id" id="edit_city">
-                    <option value="">{{ translate('Select City') }}</option>
+                    <option value="">{{ __('storefront.common.select_city') }}</option>
                     @foreach ($cities as $key => $city)
                         <option value="{{ $city->id }}" @selected((string) $city->id === (string) ($keepInput ? old('city_id') : $address_data->city_id))>
                             {{ $city->name }}
@@ -60,20 +60,20 @@
 
         @if (get_setting('google_map') == 1)
             <div class="row">
-                <input id="edit_searchInput" class="controls" type="text" placeholder="Enter a location">
+                <input id="edit_searchInput" class="controls" type="text" placeholder="{{ __('storefront.common.enter_a_location') }}">
                 <div id="edit_map"></div>
                 <ul id="geoData">
-                    <li style="display: none;">{{ translate('Full Address') }}: <span id="location"></span></li>
-                    <li style="display: none;">{{ translate('Postal Code') }}: <span id="postal_code"></span></li>
-                    <li style="display: none;">{{ translate('Country') }}: <span id="country"></span></li>
-                    <li style="display: none;">{{ translate('Latitude') }}: <span id="lat"></span></li>
-                    <li style="display: none;">{{ translate('Longitude') }}: <span id="lon"></span></li>
+                    <li style="display: none;">{{ __('storefront.common.full_address_label') }}: <span id="location"></span></li>
+                    <li style="display: none;">{{ __('storefront.common.postal_code_label') }}: <span id="postal_code"></span></li>
+                    <li style="display: none;">{{ __('storefront.common.country_label') }}: <span id="country"></span></li>
+                    <li style="display: none;">{{ __('storefront.common.latitude_label') }}: <span id="lat"></span></li>
+                    <li style="display: none;">{{ __('storefront.common.longitude_label') }}: <span id="lon"></span></li>
                 </ul>
             </div>
 
             <div class="row">
                 <div class="col-md-2">
-                    <label for="edit_longitude">{{ translate('Longitude') }}</label>
+                    <label for="edit_longitude">{{ __('storefront.common.longitude_label') }}</label>
                 </div>
                 <div class="col-md-10 mb-3">
                     <input type="text" class="form-control @error('longitude', 'updateAddress') is-invalid @enderror" id="edit_longitude" name="longitude" value="{{ $keepInput ? old('longitude') : $address_data->longitude }}" readonly="">
@@ -84,7 +84,7 @@
             </div>
             <div class="row">
                 <div class="col-md-2">
-                    <label for="edit_latitude">{{ translate('Latitude') }}</label>
+                    <label for="edit_latitude">{{ __('storefront.common.latitude_label') }}</label>
                 </div>
                 <div class="col-md-10 mb-3">
                     <input type="text" class="form-control @error('latitude', 'updateAddress') is-invalid @enderror" id="edit_latitude" name="latitude" value="{{ $keepInput ? old('latitude') : $address_data->latitude }}" readonly="">
@@ -98,17 +98,17 @@
         {{-- The postal code is not asked here (it was commented out before these rules); see ValidatesAddress. --}}
         <div class="row">
             <div class="col-md-2">
-                <label for="edit_address_phone">{{ translate('Phone')}}<x-required-mark /></label>
+                <label for="edit_address_phone">{{ __('storefront.auth.phone')}}<x-required-mark /></label>
             </div>
             <div class="col-md-10 mb-3">
-                <input type="text" id="edit_address_phone" class="form-control @error('phone', 'updateAddress') is-invalid @enderror" placeholder="{{ translate('+')}}" value="{{ $keepInput ? old('phone') : $address_data->phone }}" name="phone" maxlength="255" required>
+                <input type="text" id="edit_address_phone" class="form-control @error('phone', 'updateAddress') is-invalid @enderror" placeholder="{{ __('storefront.common.plus')}}" value="{{ $keepInput ? old('phone') : $address_data->phone }}" name="phone" maxlength="255" required>
                 @error('phone', 'updateAddress')
                     <span class="invalid-feedback d-block" role="alert"><strong>{{ $message }}</strong></span>
                 @enderror
             </div>
         </div>
         <div class="form-group text-right">
-            <button type="submit" class="btn btn-sm btn-primary">{{translate('Save')}}</button>
+            <button type="submit" class="btn btn-sm btn-primary">{{__('storefront.common.save')}}</button>
         </div>
     </div>
 </form>

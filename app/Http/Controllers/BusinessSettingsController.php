@@ -44,7 +44,7 @@ class BusinessSettingsController extends Controller implements HasMiddleware
      */
     public function env_key_update(Request $request)
     {
-        flash(translate('These settings are managed in the server environment and cannot be changed here.'))->error();
+        flash(__('store_admin.these_settings_are_managed_in_the_server_environment_and_cannot_be_changed_here'))->error();
 
         return back();
     }

@@ -8,10 +8,8 @@ use enshrined\svgSanitize\Sanitizer;
 use finfo;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
-use Intervention\Image\ImageManagerStatic as Image;
 use InvalidArgumentException;
 use Symfony\Component\Mime\MimeTypes;
-use Throwable;
 
 /**
  * Stores a file the store's uploader (the web admin and seller screens and the
@@ -27,7 +25,7 @@ use Throwable;
  * nothing is served.
  *
  * Here the client's extension only picks the kind, and the stored extension
- * comes from the content: a raster image must decode and is stored as WebP;
+ * comes from the content: raster images must decode and meet the image limits;
  * anything else keeps the allowlisted extension the client named,
  * unless it holds markup a browser would run (HTML, XHTML, scripts), which is
  * refused; SVG is sanitised wherever it turns up.
@@ -52,9 +50,6 @@ class MultipartUploadService
         'html', 'htm', 'xhtml', 'shtml', 'js', 'mjs', 'php', 'phtml', 'phar', 'hta', 'jsp', 'asp', 'aspx', 'cgi', 'pl', 'py', 'sh',
     ];
 
-    /** The most pixels an image may hold and still be decoded for resizing, so a small file cannot expand into gigabytes. */
-    private const MAX_DECODED_PIXELS = 40_000_000;
-
     /** Maximum file size in bytes (512 MB). */
     public const MAX_BYTES = 512 * 1024 * 1024;
 
@@ -70,7 +65,7 @@ class MultipartUploadService
         $kind = self::KINDS[$clientExtension] ?? null;
         $path = $file->getRealPath();
 
-        if ($kind === null || $path === false || $file->getSize() > self::MAX_BYTES) {
+        if ($kind === null || $path === false || $file->getSize() > ($kind === 'image' ? ImageOptimizer::MAX_INPUT_BYTES : self::MAX_BYTES)) {
             return null;
         }
 
@@ -90,21 +85,21 @@ class MultipartUploadService
             return null;
         }
 
-        if ($extension === 'svg') {
-            $contents = (string) (new Sanitizer)->sanitize($contents);
-
-            if ($contents === '') {
-                return null;
+        try {
+            if ($extension === 'svg') {
+                if (strlen($contents) > ImageOptimizer::MAX_INPUT_BYTES) {
+                    return null;
+                }
+                $contents = (string) (new Sanitizer)->sanitize($contents);
+                if ($contents === '' || strlen($contents) > ImageOptimizer::MAX_SVG_BYTES) {
+                    return null;
+                }
+            } elseif ($kind === 'image') {
+                [$contents, $extension] = app(ImageOptimizer::class)->optimise($contents, $normalizeRaster ? 'webp' : null);
+                $mimeType = $extension === 'jpg' ? 'image/jpeg' : 'image/'.$extension;
             }
-        } elseif ($kind === 'image' && $normalizeRaster) {
-            $contents = $this->optimised($contents);
-            if ($contents === null) {
-                return null;
-            }
-            $extension = 'webp';
-            $mimeType = 'image/webp';
-        } elseif ($kind === 'image' && get_setting('disable_image_optimization') != 1) {
-            $contents = $this->legacyOptimised($contents);
+        } catch (InvalidArgumentException) {
+            return null;
         }
 
         try {
@@ -150,37 +145,6 @@ class MultipartUploadService
         };
     }
 
-    /**
-     * Every raster image is decoded and re-encoded, or refused. SVG remains
-     * sanitised above: Intervention's installed GD driver cannot rasterise it.
-     */
-    private function optimised(string $contents): ?string
-    {
-        $info = @getimagesizefromstring($contents);
-
-        if ($info === false || $info[0] * $info[1] > self::MAX_DECODED_PIXELS) {
-            return null;
-        }
-
-        try {
-            $image = Image::make($contents);
-            $width = $image->width();
-            $height = $image->height();
-
-            if ($width > $height && $width > 1500) {
-                $image->resize(1500, null, fn ($constraint) => $constraint->aspectRatio());
-            } elseif ($height > 1500) {
-                $image->resize(null, 1500, fn ($constraint) => $constraint->aspectRatio());
-            }
-
-            $encoded = (string) $image->encode('webp');
-
-            return $encoded === '' ? null : $encoded;
-        } catch (Throwable) {
-            return null;
-        }
-    }
-
     /** Remove a managed file before removing its row; never follow a stored path outside uploads/all. */
     public function delete(Upload $upload): void
     {
@@ -195,30 +159,5 @@ class MultipartUploadService
             }
         }
         $upload->delete();
-    }
-
-    private function legacyOptimised(string $contents): string
-    {
-        $info = @getimagesizefromstring($contents);
-
-        if ($info === false || $info[0] * $info[1] > self::MAX_DECODED_PIXELS) {
-            return $contents;
-        }
-
-        try {
-            $image = Image::make($contents)->encode();
-            $width = $image->width();
-            $height = $image->height();
-
-            if ($width > $height && $width > 1500) {
-                $image->resize(1500, null, fn ($constraint) => $constraint->aspectRatio());
-            } elseif ($height > 1500) {
-                $image->resize(null, 800, fn ($constraint) => $constraint->aspectRatio());
-            }
-
-            return (string) $image->encode();
-        } catch (Throwable) {
-            return $contents;
-        }
     }
 }

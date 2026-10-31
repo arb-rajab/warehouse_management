@@ -64,7 +64,7 @@
                             <!-- Price -->
                             <div class="row no-gutters mt-3">
                                 <div class="col-sm-2">
-                                    <div class="text-secondary fs-14 fw-400">{{ translate('Price')}}:</div>
+                                    <div class="text-secondary fs-14 fw-400">{{ __('storefront.product.price')}}:</div>
                                 </div>
                                 <div class="col-sm-10">
                                     <div class="">
@@ -110,7 +110,7 @@
                                                 <span class="dummy">{{ str_replace(substr($customer_product->user->phone,3),'XXXXXXXX', $customer_product->user->phone) }}</span>
                                                 <span class="real d-none">{{ $customer_product->user->phone }}</span>
                                             </h3>
-                                            <p class="mb-0 opacity-70">{{ translate('Click to show phone number') }}</p>
+                                            <p class="mb-0 opacity-70">{{ __('storefront.auth.click_to_show_phone_number') }}</p>
                                         </div>
                                     </div>
                                 </li>
@@ -119,7 +119,7 @@
                             <!-- Share -->
                             <div class="row no-gutters mt-5">
                                 <div class="col-sm-2">
-                                    <div class="text-secondary fs-14 fw-400 mt-2">{{ translate('Share')}}:</div>
+                                    <div class="text-secondary fs-14 fw-400 mt-2">{{ __('storefront.common.share')}}:</div>
                                 </div>
                                 <div class="col-sm-10">
                                     <div class="aiz-share"></div>
@@ -138,12 +138,12 @@
             <div class="bg-white mb-4 border p-4">
                 <!-- Tabs -->
                 <div class="nav aiz-nav-tabs">
-                    <a href="#tab_default_1" data-toggle="tab" class="mr-5 pb-2 fs-16 fw-700 text-reset active show">{{ translate('Description')}}</a>
+                    <a href="#tab_default_1" data-toggle="tab" class="mr-5 pb-2 fs-16 fw-700 text-reset active show">{{ __('storefront.common.description')}}</a>
                     @if($customer_product->video_link != null)
-                        <a href="#tab_default_2" data-toggle="tab" class="mr-5 pb-2 fs-16 fw-700 text-reset">{{ translate('Video')}}</a>
+                        <a href="#tab_default_2" data-toggle="tab" class="mr-5 pb-2 fs-16 fw-700 text-reset">{{ __('storefront.common.video')}}</a>
                     @endif
                     @if($customer_product->pdf != null)
-                        <a href="#tab_default_3" data-toggle="tab" class="mr-5 pb-2 fs-16 fw-700 text-reset">{{ translate('Downloads')}}</a>
+                        <a href="#tab_default_3" data-toggle="tab" class="mr-5 pb-2 fs-16 fw-700 text-reset">{{ __('storefront.common.downloads')}}</a>
                     @endif
                 </div>
 
@@ -173,7 +173,7 @@
                     <!-- Download -->
                     <div class="tab-pane" id="tab_default_3">
                         <div class="p-4 text-center ">
-                            <a href="{{ uploaded_asset($customer_product->pdf) }}" class="btn btn-primary">{{  translate('Download') }}</a>
+                            <a href="{{ uploaded_asset($customer_product->pdf) }}" class="btn btn-primary">{{  __('storefront.common.download') }}</a>
                         </div>
                     </div>
                 </div>
@@ -187,9 +187,9 @@
            <div class="bg-white border p-4">
                 <div class="d-flex mb-3 align-items-baseline border-bottom py-3">
                     <h3 class="fs-16 fw-600 mb-0">
-                        {{ translate('Other Ads of') }} {{$customer_product->category->getTranslation('name') }}
+                        {{ __('storefront.common.other_ads_of') }} {{$customer_product->category->getTranslation('name') }}
                     </h3>
-                    <a class="ml-auto mr-0 text-blue fs-12 fw-700 hov-text-primary" href="{{ route('customer_products.category', $customer_product->category->slug) }}">{{ translate('View More') }}</a>
+                    <a class="ml-auto mr-0 text-blue fs-12 fw-700 hov-text-primary" href="{{ route('customer_products.category', $customer_product->category->slug) }}">{{ __('storefront.common.view_more') }}</a>
                 </div>
                 <div class="p-3">
                     <div class="aiz-carousel gutters-16 half-outside-arrow" data-items="6" data-xl-items="5" data-lg-items="4"  data-md-items="3" data-sm-items="2" data-xs-items="2" data-arrows='true' data-infinite='true'>
@@ -209,9 +209,9 @@
                                     </a>
                                     <div class="absolute-top-left">
                                         @if($product->conditon == 'new')
-                                            <span class="badge badge-inline badge-info fs-13 fw-700 p-3 text-white" style="border-radius: 20px;">{{translate('New')}}</span>
+                                            <span class="badge badge-inline badge-info fs-13 fw-700 p-3 text-white" style="border-radius: 20px;">{{__('storefront.common.new')}}</span>
                                         @elseif($product->conditon == 'used')
-                                            <span class="badge badge-inline badge-warning fs-13 fw-700 p-3 text-white" style="border-radius: 20px;">{{translate('Used')}}</span>
+                                            <span class="badge badge-inline badge-warning fs-13 fw-700 p-3 text-white" style="border-radius: 20px;">{{__('storefront.common.used')}}</span>
                                         @endif
                                     </div>
                                 </div>

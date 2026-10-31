@@ -344,7 +344,7 @@ class ProductController extends Controller implements HasMiddleware
         DB::transaction(function () use ($request, $ids): void {
             $products = $this->listQuery($request->productList())->whereIn('id', $ids)->orderBy('id')->lockForUpdate()->get();
             if ($products->count() !== count($ids)) {
-                throw ValidationException::withMessages(['id' => __('validation.exists', ['attribute' => 'id'])]);
+                throw ValidationException::withMessages(['id' => __('validation.exists', ['attribute' => __('validation.attributes.id')])]);
             }
             $products->each(fn (Product $product) => $this->deleteProduct($product));
         });

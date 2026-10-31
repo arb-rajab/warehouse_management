@@ -59,16 +59,16 @@ class AizUploadController extends Controller
                 env('DEMO_MODE') == 'On' &&
                 (MultipartUploadService::KINDS[$extension] ?? null) == 'archive'
             ) {
-                return $this->failed(translate('File has been inserted successfully'));
+                return $this->failed(__('api.upload.inserted'));
             }
 
             $upload = $uploads->store($request->file('aiz_file'), Auth::user()->id);
 
             if ($upload === null) {
-                return response()->json(['result' => false, 'message' => translate('This file type is not allowed')], 422);
+                return response()->json(['result' => false, 'message' => __('storefront.upload.type_not_allowed')], 422);
             }
 
-            return $this->success(translate('File has been inserted successfully'));
+            return $this->success(__('api.upload.inserted'));
         }
     }
 
@@ -105,7 +105,7 @@ class AizUploadController extends Controller
         $upload = Upload::findOrFail($id);
 
         if (auth()->user()->user_type == 'seller' && $upload->user_id != auth()->user()->id) {
-            flash(translate("You don't have permission for deleting this!"))->error();
+            flash(__('storefront.upload.delete_forbidden'))->error();
             return back();
         }
         try {
@@ -118,10 +118,10 @@ class AizUploadController extends Controller
                 unlink(public_path() . '/' . $upload->file_name);
             }
             $upload->delete();
-            flash(translate('File deleted successfully'))->success();
+            flash(__('storefront.upload.deleted'))->success();
         } catch (\Exception $e) {
             $upload->delete();
-            flash(translate('File deleted successfully'))->success();
+            flash(__('storefront.upload.deleted'))->success();
         }
         return back();
     }
@@ -163,7 +163,7 @@ class AizUploadController extends Controller
             $file_path = public_path($project_attachment->file_name);
             return Response::download($file_path);
         } catch (\Exception $e) {
-            flash(translate('File does not exist!'))->error();
+            flash(__('storefront.upload.not_found'))->error();
             return back();
         }
     }

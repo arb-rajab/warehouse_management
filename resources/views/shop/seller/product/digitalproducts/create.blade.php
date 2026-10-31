@@ -1,11 +1,11 @@
 @extends('shop.seller.layouts.app')
 
 @section('panel_content')
-<h1 class="h3">{{ translate('Add Your Product') }}</h1>
+<h1 class="h3">{{ __('storefront.product.add_your_product') }}</h1>
 <form action="{{ route('seller.digitalproducts.store') }}" method="POST" enctype="multipart/form-data" id="digital-product-form">
     @csrf
     @include('shop.seller.product.digitalproducts.form_fields')
-    <button type="submit" class="btn btn-primary">{{ translate('Save product') }}</button>
+    <button type="submit" class="btn btn-primary">{{ __('storefront.product.save_product') }}</button>
 </form>
 @endsection
 

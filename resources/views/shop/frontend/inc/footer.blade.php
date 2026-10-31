@@ -10,7 +10,7 @@
                     <svg xmlns="http://www.w3.org/2000/svg" width="26.004" height="32" viewBox="0 0 26.004 32">
                         <path id="Union_8" data-name="Union 8" d="M-14508,18932v-.01a6.01,6.01,0,0,1-5.975-5.492h-.021v-14h1v13.5h0a4.961,4.961,0,0,0,4.908,4.994h.091v0h14v1Zm17-4v-1a2,2,0,0,0,2-2h1a3,3,0,0,1-2.927,3Zm-16,0a3,3,0,0,1-3-3h1a2,2,0,0,0,2,2h16v1Zm18-3v-16.994h-4v-1h3.6l-5.6-5.6v3.6h-.01a2.01,2.01,0,0,0,2,2v1a3.009,3.009,0,0,1-3-3h.01v-4h.6l0,0H-14507a2,2,0,0,0-2,2v22h-1v-22a3,3,0,0,1,3-3v0h12l0,0,7,7-.01.01V18925Zm-16-4.992v-1h12v1Zm0-4.006v-1h12v1Zm0-4v-1h12v1Z" transform="translate(14513.998 -18900.002)" fill="#919199"/>
                     </svg>
-                    <h4 class="text-dark fs-14 fw-700 mt-3">{{ translate('Terms & conditions') }}</h4>
+                    <h4 class="text-dark fs-14 fw-700 mt-3">{{ __('storefront.navigation.terms_conditions') }}</h4>
                 </a> --}}
 
 
@@ -22,7 +22,7 @@
                     <svg xmlns="http://www.w3.org/2000/svg" width="32.001" height="23.971" viewBox="0 0 32.001 23.971">
                         <path id="Union_7" data-name="Union 7" d="M-14490,18922.967a6.972,6.972,0,0,0,4.949-2.051,6.944,6.944,0,0,0,2.052-4.943,7.008,7.008,0,0,0-7-7v0h-22.1l7.295,7.295-.707.707-7.779-7.779-.708-.707.708-.7,7.774-7.779.712.707-7.261,7.258H-14490v0a8.01,8.01,0,0,1,8,8,8.008,8.008,0,0,1-8,8Z" transform="translate(14514.001 -18900)" fill="#919199"/>
                     </svg>
-                    <h4 class="text-dark fs-14 fw-700 mt-3">{{ translate('Return Policy') }}</h4>
+                    <h4 class="text-dark fs-14 fw-700 mt-3">{{ __('storefront.navigation.return_policy') }}</h4>
                 </a>
             </div> --}}
 
@@ -39,7 +39,7 @@
                         <path id="Intersection_1" data-name="Intersection 1" d="M-14508.5,18910a4.508,4.508,0,0,0,4.5-4.5h1a5.508,5.508,0,0,1-5.5,5.5Z" transform="translate(15646.004 -16482.5)" fill="#919199"/>
                         </g>
                     </svg>
-                    <h4 class="text-dark fs-14 fw-700 mt-3">{{ translate('Support Policy') }}</h4>
+                    <h4 class="text-dark fs-14 fw-700 mt-3">{{ __('storefront.support.support_policy') }}</h4>
                 </a>
             </div> --}}
 
@@ -55,7 +55,7 @@
                         </g>
                         </g>
                     </svg>
-                    <h4 class="text-dark fs-14 fw-700 mt-3">{{ translate('Privacy Policy') }}</h4>
+                    <h4 class="text-dark fs-14 fw-700 mt-3">{{ __('storefront.navigation.privacy_policy') }}</h4>
                 </a>
             </div> --}}
         </div>
@@ -83,16 +83,16 @@
                     {!! clean_html(get_setting('about_us_description',null,App::getLocale())) !!}
                 </div>
                 @if(get_setting('Newsletters') == 1)
-                <h5 class="fs-14 fw-700 text-soft-light mt-1 mb-3">{{ translate('Subscribe to our newsletter for regular updates about Offers, Coupons & more') }}</h5>
+                <h5 class="fs-14 fw-700 text-soft-light mt-1 mb-3">{{ __('storefront.cart.subscribe_to_our_newsletter_for_regular_updates_about_offers_coupons_more') }}</h5>
                 <div class="mb-3">
                     <form method="POST" action="{{ route('subscribers.store') }}">
                         @csrf
                         <div class="row gutters-10">
                             <div class="col-8">
-                                <input type="email" class="form-control border-secondary rounded-0 text-white w-100 bg-transparent" placeholder="{{ translate('Your Email Address') }}" name="email" required>
+                                <input type="email" class="form-control border-secondary rounded-0 text-white w-100 bg-transparent" placeholder="{{ __('storefront.auth.your_email_address') }}" name="email" required>
                             </div>
                             <div class="col-4">
-                                <button type="submit" class="btn btn-primary rounded-0 w-100">{{ translate('Subscribe') }}</button>
+                                <button type="submit" class="btn btn-primary rounded-0 w-100">{{ __('storefront.navigation.subscribe') }}</button>
                             </div>
                         </div>
                     </form>
@@ -106,7 +106,7 @@
             <div class="col-xxl-3 col-xl-4 col-lg-4">
                 <!-- Social -->
                 @if ( get_setting('show_social_links') )
-                    <h5 class="fs-14 fw-700 text-secondary text-uppercase mt-3 mt-lg-0">{{ translate('Follow Us') }}</h5>
+                    <h5 class="fs-14 fw-700 text-secondary text-uppercase mt-3 mt-lg-0">{{ __('storefront.navigation.follow_us') }}</h5>
                     <ul class="list-inline social colored mb-4">
                         @if (!empty(get_setting('facebook_link')))
                             <li class="list-inline-item mr-3">
@@ -143,7 +143,7 @@
 
                 <!-- Apps link -->
                 @if((get_setting('play_store_link') != null) || (get_setting('app_store_link') != null))
-                    <h5 class="fs-14 fw-700 text-secondary text-uppercase mt-3">{{ translate('Mobile Apps') }}</h5>
+                    <h5 class="fs-14 fw-700 text-secondary text-uppercase mt-3">{{ __('storefront.navigation.mobile_apps') }}</h5>
                     <div class="d-flex mt-3">
                         @if(get_setting('play_store_link') != null)
                         <div class="">
@@ -209,18 +209,18 @@
             <div class="{{ $col_values }}">
 
                 <div class="text-center text-sm-left mt-4">
-                    <h4 class="fs-14 text-secondary text-uppercase fw-700 mb-3">{{ translate('Contacts') }}</h4>
+                    <h4 class="fs-14 text-secondary text-uppercase fw-700 mb-3">{{ __('storefront.navigation.contacts') }}</h4>
                     <ul class="list-unstyled">
                         <li class="mb-2">
-                            <p  class="fs-13 text-secondary mb-1">{{ translate('Address') }}</p>
+                            <p  class="fs-13 text-secondary mb-1">{{ __('storefront.common.address') }}</p>
                             <p  class="fs-13 text-soft-light">{{ get_setting('contact_address',null,App::getLocale()) }}</p>
                         </li>
                         <li class="mb-2">
-                            <p  class="fs-13 text-secondary mb-1">{{ translate('Phone') }}</p>
+                            <p  class="fs-13 text-secondary mb-1">{{ __('storefront.auth.phone') }}</p>
                             <p  class="fs-13 text-soft-light">{{ get_setting('contact_phone') }}</p>
                         </li>
                         <li class="mb-2">
-                            <p  class="fs-13 text-secondary mb-1">{{ translate('Email') }}</p>
+                            <p  class="fs-13 text-secondary mb-1">{{ __('storefront.auth.email') }}</p>
                             <p  class="">
                                 <a href="mailto:{{ get_setting('contact_email') }}" class="fs-13 text-soft-light hov-text-primary">{{ get_setting('contact_email')  }}</a>
                             </p>
@@ -232,38 +232,38 @@
             <!-- My Account -->
             <div class="{{ $col_values }}">
                 <div class="text-center text-sm-left mt-4">
-                    <h4 class="fs-14 text-secondary text-uppercase fw-700 mb-3">{{ translate('My Account') }}</h4>
+                    <h4 class="fs-14 text-secondary text-uppercase fw-700 mb-3">{{ __('storefront.auth.my_account') }}</h4>
                     <ul class="list-unstyled">
                         @if (Auth::check())
                             <li class="mb-2">
                                 <a class="fs-13 text-soft-light animate-underline-white" href="{{ route('shop.logout') }}">
-                                    {{ translate('Logout') }}
+                                    {{ __('storefront.navigation.logout') }}
                                 </a>
                             </li>
                         @else
                             <li class="mb-2">
                                 <a class="fs-13 text-soft-light animate-underline-white" href="{{ route('user.login') }}">
-                                    {{ translate('Login') }}
+                                    {{ __('storefront.auth.login') }}
                                 </a>
                             </li>
                         @endif
                         <li class="mb-2">
                             <a class="fs-13 text-soft-light animate-underline-white" href="{{ route('purchase_history.index') }}">
-                                {{ translate('Order History') }}
+                                {{ __('storefront.checkout.order_history') }}
                             </a>
                         </li>
                         <li class="mb-2">
                             <a class="fs-13 text-soft-light animate-underline-white" href="{{ route('wishlists.index') }}">
-                                {{ translate('My Wishlist') }}
+                                {{ __('storefront.cart.my_wishlist') }}
                             </a>
                         </li>
                         <li class="mb-2">
                             <a class="fs-13 text-soft-light animate-underline-white" href="{{ route('orders.track') }}">
-                                {{ translate('Track Order') }}
+                                {{ __('storefront.checkout.track_order') }}
                             </a>
                         </li>
                             <a class="fs-13 text-soft-light animate-underline-white" href="{{ get_setting('play_store_link') }}" target="_blank">
-                                {{ translate('Download our application') }}
+                                {{ __('storefront.navigation.download_our_application') }}
                             </a>
                         </li>
                         @if (get_setting('play_store_link'))
@@ -276,7 +276,7 @@
                         @if (addon_is_activated('affiliate_system'))
                             <li class="mb-2">
                                 <a class="fs-13 text-soft-light animate-underline-white" href="{{ route('affiliate.apply') }}">
-                                    {{ translate('Be an affiliate partner')}}
+                                    {{ __('storefront.navigation.be_an_affiliate_partner')}}
                                 </a>
                             </li>
                         @endif
@@ -290,26 +290,26 @@
                 <div class="text-center text-sm-left mt-4">
                     <!-- Seller -->
                     @if (get_setting('vendor_system_activation') == 1)
-                        <h4 class="fs-14 text-secondary text-uppercase fw-700 mb-3">{{ translate('Seller Zone') }}</h4>
+                        <h4 class="fs-14 text-secondary text-uppercase fw-700 mb-3">{{ __('storefront.product.seller_zone') }}</h4>
                         <ul class="list-unstyled">
                             {{--  <li class="mb-2">
                                 <p class="fs-13 text-soft-light mb-0">
-                                    {{ translate('Become A Seller') }}
-                                    <a href="{{ route('shops.create') }}" class="fs-13 fw-700 text-warning ml-2">{{ translate('Apply Now') }}</a>
+                                    {{ __('storefront.product.become_a_seller') }}
+                                    <a href="{{ route('shops.create') }}" class="fs-13 fw-700 text-warning ml-2">{{ __('storefront.navigation.apply_now') }}</a>
                                 </p>
                             </li> --}}
 
                             {{--  @guest
                                 <li class="mb-2">
                                     <a class="fs-13 text-soft-light animate-underline-white" href="{{ route('seller.login') }}">
-                                        {{ translate('Login to Seller Panel') }}
+                                        {{ __('storefront.auth.login_to_seller_panel') }}
                                     </a>
                                 </li>
                             @endguest --}}
                             @if(get_setting('seller_app_link'))
                                 <li class="mb-2">
                                     <a class="fs-13 text-soft-light animate-underline-white" target="_blank" href="{{ get_setting('seller_app_link')}}">
-                                        {{ translate('Download Seller App') }}
+                                        {{ __('storefront.product.download_seller_app') }}
                                     </a>
                                 </li>
                             @endif
@@ -318,12 +318,12 @@
 
                     <!-- Delivery Boy -->
                     @if (addon_is_activated('delivery_boy'))
-                        <h4 class="fs-14 text-secondary text-uppercase fw-700 mt-4 mb-3">{{ translate('Delivery Boy') }}</h4>
+                        <h4 class="fs-14 text-secondary text-uppercase fw-700 mt-4 mb-3">{{ __('storefront.checkout.delivery_boy') }}</h4>
                         <ul class="list-unstyled">
                             @guest
                                 <li class="mb-2">
                                     <a class="fs-13 text-soft-light animate-underline-white" href="{{ route('deliveryboy.login') }}">
-                                        {{ translate('Login to Delivery Boy Panel') }}
+                                        {{ __('storefront.auth.login_to_delivery_boy_panel') }}
                                     </a>
                                 </li>
                             @endguest
@@ -331,7 +331,7 @@
                             @if(get_setting('delivery_boy_app_link'))
                                 <li class="mb-2">
                                     <a class="fs-13 text-soft-light animate-underline-white" target="_blank" href="{{ get_setting('delivery_boy_app_link')}}">
-                                        {{ translate('Download Delivery Boy App') }}
+                                        {{ __('storefront.checkout.download_delivery_boy_app') }}
                                     </a>
                                 </li>
                             @endif
@@ -370,21 +370,21 @@
         <!-- Contacts -->
         <div class="aiz-accordion-wrap bg-black">
             <div class="aiz-accordion-heading container bg-black">
-                <button class="aiz-accordion fs-14 text-white bg-transparent">{{ translate('Contacts') }}</button>
+                <button class="aiz-accordion fs-14 text-white bg-transparent">{{ __('storefront.navigation.contacts') }}</button>
             </div>
             <div class="aiz-accordion-panel bg-transparent" style="background-color: #212129 !important;">
                 <div class="container">
                     <ul class="list-unstyled mt-3">
                         <li class="mb-2">
-                            <p  class="fs-13 text-secondary mb-1">{{ translate('Address') }}</p>
+                            <p  class="fs-13 text-secondary mb-1">{{ __('storefront.common.address') }}</p>
                             <p  class="fs-13 text-soft-light">{{ get_setting('contact_address',null,App::getLocale()) }}</p>
                         </li>
                         <li class="mb-2">
-                            <p  class="fs-13 text-secondary mb-1">{{ translate('Phone') }}</p>
+                            <p  class="fs-13 text-secondary mb-1">{{ __('storefront.auth.phone') }}</p>
                             <p  class="fs-13 text-soft-light">{{ get_setting('contact_phone') }}</p>
                         </li>
                         <li class="mb-2">
-                            <p  class="fs-13 text-secondary mb-1">{{ translate('Email') }}</p>
+                            <p  class="fs-13 text-secondary mb-1">{{ __('storefront.auth.email') }}</p>
                             <p  class="">
                                 <a href="mailto:{{ get_setting('contact_email') }}" class="fs-13 text-soft-light hov-text-primary">{{ get_setting('contact_email')  }}</a>
                             </p>
@@ -397,7 +397,7 @@
         <!-- My Account -->
         <div class="aiz-accordion-wrap bg-black">
             <div class="aiz-accordion-heading container bg-black">
-                <button class="aiz-accordion fs-14 text-white bg-transparent">{{ translate('My Account') }}</button>
+                <button class="aiz-accordion fs-14 text-white bg-transparent">{{ __('storefront.auth.my_account') }}</button>
             </div>
             <div class="aiz-accordion-panel bg-transparent" style="background-color: #212129 !important;">
                 <div class="container">
@@ -405,35 +405,35 @@
                         @auth
                             <li class="mb-2 pb-2">
                                 <a class="fs-13 text-soft-light text-sm-secondary animate-underline-white" href="{{ route('shop.logout') }}">
-                                    {{ translate('Logout') }}
+                                    {{ __('storefront.navigation.logout') }}
                                 </a>
                             </li>
                         @else
                             <li class="mb-2 pb-2 {{ areActiveRoutes(['user.login'],' active')}}">
                                 <a class="fs-13 text-soft-light text-sm-secondary animate-underline-white" href="{{ route('user.login') }}">
-                                    {{ translate('Login') }}
+                                    {{ __('storefront.auth.login') }}
                                 </a>
                             </li>
                         @endauth
                         <li class="mb-2 pb-2 {{ areActiveRoutes(['purchase_history.index'],' active')}}">
                             <a class="fs-13 text-soft-light text-sm-secondary animate-underline-white" href="{{ route('purchase_history.index') }}">
-                                {{ translate('Order History') }}
+                                {{ __('storefront.checkout.order_history') }}
                             </a>
                         </li>
                         <li class="mb-2 pb-2 {{ areActiveRoutes(['wishlists.index'],' active')}}">
                             <a class="fs-13 text-soft-light text-sm-secondary animate-underline-white" href="{{ route('wishlists.index') }}">
-                                {{ translate('My Wishlist') }}
+                                {{ __('storefront.cart.my_wishlist') }}
                             </a>
                         </li>
                         <li class="mb-2 pb-2 {{ areActiveRoutes(['orders.track'],' active')}}">
                             <a class="fs-13 text-soft-light text-sm-secondary animate-underline-white" href="{{ route('orders.track') }}">
-                                {{ translate('Track Order') }}
+                                {{ __('storefront.checkout.track_order') }}
                             </a>
                         </li>
                         @if (addon_is_activated('affiliate_system'))
                             <li class="mb-2 pb-2 {{ areActiveRoutes(['affiliate.apply'],' active')}}">
                                 <a class="fs-13 text-soft-light text-sm-secondary animate-underline-white" href="{{ route('affiliate.apply') }}">
-                                    {{ translate('Be an affiliate partner')}}
+                                    {{ __('storefront.navigation.be_an_affiliate_partner')}}
                                 </a>
                             </li>
                         @endif
@@ -446,28 +446,28 @@
         @if (get_setting('vendor_system_activation') == 1)
         <div class="aiz-accordion-wrap bg-black">
             <div class="aiz-accordion-heading container bg-black">
-                <button class="aiz-accordion fs-14 text-white bg-transparent">{{ translate('Seller Zone') }}</button>
+                <button class="aiz-accordion fs-14 text-white bg-transparent">{{ __('storefront.product.seller_zone') }}</button>
             </div>
             <div class="aiz-accordion-panel bg-transparent" style="background-color: #212129 !important;">
                 <div class="container">
                     <ul class="list-unstyled mt-3">
                         <li class="mb-2 pb-2 {{ areActiveRoutes(['shops.create'],' active')}}">
                             <p class="fs-13 text-soft-light text-sm-secondary mb-0">
-                                {{ translate('Become A Seller') }}
-                                <a href="{{ route('shops.create') }}" class="fs-13 fw-700 text-warning ml-2">{{ translate('Apply Now') }}</a>
+                                {{ __('storefront.product.become_a_seller') }}
+                                <a href="{{ route('shops.create') }}" class="fs-13 fw-700 text-warning ml-2">{{ __('storefront.navigation.apply_now') }}</a>
                             </p>
                         </li>
                         @guest
                             <li class="mb-2 pb-2 {{ areActiveRoutes(['deliveryboy.login'],' active')}}">
                                 <a class="fs-13 text-soft-light text-sm-secondary animate-underline-white" href="{{ route('seller.login') }}">
-                                    {{ translate('Login to Seller Panel') }}
+                                    {{ __('storefront.auth.login_to_seller_panel') }}
                                 </a>
                             </li>
                         @endguest
                         @if(get_setting('seller_app_link'))
                             <li class="mb-2 pb-2">
                                 <a class="fs-13 text-soft-light text-sm-secondary animate-underline-white" target="_blank" href="{{ get_setting('seller_app_link')}}">
-                                    {{ translate('Download Seller App') }}
+                                    {{ __('storefront.product.download_seller_app') }}
                                 </a>
                             </li>
                         @endif
@@ -481,7 +481,7 @@
         @if (addon_is_activated('delivery_boy'))
         <div class="aiz-accordion-wrap bg-black">
             <div class="aiz-accordion-heading container bg-black">
-                <button class="aiz-accordion fs-14 text-white bg-transparent">{{ translate('Delivery Boy') }}</button>
+                <button class="aiz-accordion fs-14 text-white bg-transparent">{{ __('storefront.checkout.delivery_boy') }}</button>
             </div>
             <div class="aiz-accordion-panel bg-transparent" style="background-color: #212129 !important;">
                 <div class="container">
@@ -489,14 +489,14 @@
                         @guest
                             <li class="mb-2 pb-2 {{ areActiveRoutes(['deliveryboy.login'],' active')}}">
                                 <a class="fs-13 text-soft-light text-sm-secondary animate-underline-white" href="{{ route('deliveryboy.login') }}">
-                                    {{ translate('Login to Delivery Boy Panel') }}
+                                    {{ __('storefront.auth.login_to_delivery_boy_panel') }}
                                 </a>
                             </li>
                         @endguest
                         @if(get_setting('delivery_boy_app_link'))
                             <li class="mb-2 pb-2">
                                 <a class="fs-13 text-soft-light text-sm-secondary animate-underline-white" target="_blank" href="{{ get_setting('delivery_boy_app_link')}}">
-                                    {{ translate('Download Delivery Boy App') }}
+                                    {{ __('storefront.checkout.download_delivery_boy_app') }}
                                 </a>
                             </li>
                         @endif
@@ -548,7 +548,7 @@
                       <path id="Path_2916" data-name="Path 2916" d="M15.3,5.4,9.561.481A2,2,0,0,0,8.26,0H7.74a2,2,0,0,0-1.3.481L.7,5.4A2,2,0,0,0,0,6.92V14a2,2,0,0,0,2,2H14a2,2,0,0,0,2-2V6.92A2,2,0,0,0,15.3,5.4M10,15H6V9A1,1,0,0,1,7,8H9a1,1,0,0,1,1,1Zm5-1a1,1,0,0,1-1,1H11V9A2,2,0,0,0,9,7H7A2,2,0,0,0,5,9v6H2a1,1,0,0,1-1-1V6.92a1,1,0,0,1,.349-.76l5.74-4.92A1,1,0,0,1,7.74,1h.52a1,1,0,0,1,.651.24l5.74,4.92A1,1,0,0,1,15,6.92Z" transform="translate(-3495.144 602)" fill="#b5b5bf"/>
                     </g>
                 </svg>
-                <span class="d-block mt-1 fs-10 fw-600 text-reset {{ areActiveRoutes(['home'],'text-primary')}}">{{ translate('Home') }}</span>
+                <span class="d-block mt-1 fs-10 fw-600 text-reset {{ areActiveRoutes(['home'],'text-primary')}}">{{ __('storefront.navigation.home') }}</span>
             </a>
         </div>
 
@@ -563,7 +563,7 @@
                       <path id="Path_2920" data-name="Path 2920" d="M125.213,18a3.5,3.5,0,1,0,3.5,3.5,3.5,3.5,0,0,0-3.5-3.5m0,6a2.5,2.5,0,1,1,2.5-2.5,2.5,2.5,0,0,1-2.5,2.5" transform="translate(-3495.144 593)" fill="#91919c"/>
                     </g>
                 </svg>
-                <span class="d-block mt-1 fs-10 fw-600 text-reset {{ areActiveRoutes(['categories.all'],'text-primary')}}">{{ translate('Categories') }}</span>
+                <span class="d-block mt-1 fs-10 fw-600 text-reset {{ areActiveRoutes(['categories.all'],'text-primary')}}">{{ __('storefront.product.categories') }}</span>
             </a>
         </div>
         @php
@@ -602,7 +602,7 @@
                     @endif
                 </span>
                 <span class="d-block mt-1 fs-10 fw-600 text-reset {{ areActiveRoutes(['cart'],'text-primary')}}">
-                    {{ translate('Cart') }}
+                    {{ __('storefront.cart.cart') }}
                     (<span class="cart-count">{{$count}}</span>)
                 </span>
             </a>
@@ -619,7 +619,7 @@
                         <span class="badge badge-sm badge-dot badge-circle badge-primary position-absolute absolute-top-right" style="right: 5px;top: -2px;"></span>
                     @endif
                 </span>
-                <span class="d-block mt-1 fs-10 fw-600 text-reset {{ areActiveRoutes(['all-notifications'],'text-primary')}}">{{ translate('Notifications') }}</span>
+                <span class="d-block mt-1 fs-10 fw-600 text-reset {{ areActiveRoutes(['all-notifications'],'text-primary')}}">{{ __('storefront.navigation.notifications') }}</span>
             </a>
         </div>
 
@@ -635,7 +635,7 @@
                                 <img src="{{ static_asset('assets/img/avatar-place.png') }}" class="rounded-circle size-20px">
                             @endif
                         </span>
-                        <span class="d-block mt-1 fs-10 fw-600 text-reset">{{ translate('My Account') }}</span>
+                        <span class="d-block mt-1 fs-10 fw-600 text-reset">{{ __('storefront.auth.my_account') }}</span>
                     </a>
                 @elseif(isSeller())
                     <a href="{{ route('dashboard') }}" class="text-secondary d-block text-center pb-2 pt-3">
@@ -646,7 +646,7 @@
                                 <img src="{{ static_asset('assets/img/avatar-place.png') }}" class="rounded-circle size-20px">
                             @endif
                         </span>
-                        <span class="d-block mt-1 fs-10 fw-600 text-reset">{{ translate('My Account') }}</span>
+                        <span class="d-block mt-1 fs-10 fw-600 text-reset">{{ __('storefront.auth.my_account') }}</span>
                     </a>
                 @else
                     <a href="javascript:void(0)" class="text-secondary d-block text-center pb-2 pt-3 mobile-side-nav-thumb" data-toggle="class-toggle" data-backdrop="static" data-target=".aiz-mobile-side-nav">
@@ -657,7 +657,7 @@
                                 <img src="{{ static_asset('assets/img/avatar-place.png') }}" class="rounded-circle size-20px">
                             @endif
                         </span>
-                        <span class="d-block mt-1 fs-10 fw-600 text-reset">{{ translate('My Account') }}</span>
+                        <span class="d-block mt-1 fs-10 fw-600 text-reset">{{ __('storefront.auth.my_account') }}</span>
                     </a>
                 @endif
             @else
@@ -668,7 +668,7 @@
                           <path id="Path_2925" data-name="Path 2925" d="M332.144,20h-10a3,3,0,0,0,0,6h10a3,3,0,0,0,0-6m0,5h-10a2,2,0,0,1,0-4h10a2,2,0,0,1,0,4" transform="translate(-3495.144 592)" fill="#b5b5bf"/>
                         </g>
                     </svg>
-                    <span class="d-block mt-1 fs-10 fw-600 text-reset">{{ translate('My Account') }}</span>
+                    <span class="d-block mt-1 fs-10 fw-600 text-reset">{{ __('storefront.auth.my_account') }}</span>
                 </a>
             @endif
         </div>

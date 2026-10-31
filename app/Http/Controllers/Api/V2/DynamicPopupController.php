@@ -48,7 +48,7 @@ class DynamicPopupController extends Controller
             if(!$dynamic_popup){
                 return response()->json([
                     'success' => false,
-                    'message' => translate('Record not found')
+                    'message' => __('api.common.record_not_found')
                 ], 404);
             }
             $next_popups = $this->dynamicPopupService()->getNextPopups($dynamic_popup);

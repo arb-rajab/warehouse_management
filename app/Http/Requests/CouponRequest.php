@@ -60,22 +60,22 @@ class CouponRequest extends FormRequest
     public function messages()
     {
         return [
-            'type.required'         => translate('Coupon type is required'),
-            'code.required'         => translate('Coupon code is required'),
-            'code.unique'           => translate('Coupon already exist for this coupon code'),
-            'code.max'              => translate('Max 255 characters'),
-            'product_ids.required'  => translate('Product is required'),
-            'discount.required'     => translate('Discount is required'),
-            'discount.numeric'      => translate('Discount should be numeric type'),
-            'discount.min'          => translate('Discount should be l or greater'),
-            'discount_type.required' => translate('Discount type is required'),
-            'min_buy.required'      => translate('Minimum shopping amount is required'),
-            'min_buy.numeric'       => translate('Minimum shopping amount should be numeric type'),
-            'min_buy.min'           => translate('Minimum shopping amount should be l or greater'),
-            'max_discount.required' => translate('Max discount amount is required'),
-            'max_discount.numeric'  => translate('Max discount amount should be numeric type'),
-            'max_discount.min'      => translate('Max discount amount should be l or greater'),
-            'date_range.required'   => translate('Date Range is required'),
+            'type.required'         => __('seller.coupons.coupon_type_is_required'),
+            'code.required'         => __('seller.coupons.coupon_code_is_required'),
+            'code.unique'           => __('seller.coupons.coupon_already_exist_for_this_coupon_code'),
+            'code.max'              => __('seller.coupons.max_255_characters'),
+            'product_ids.required'  => __('seller.coupons.product_is_required'),
+            'discount.required'     => __('seller.coupons.discount_is_required'),
+            'discount.numeric'      => __('seller.coupons.discount_should_be_numeric_type'),
+            'discount.min'          => __('seller.coupons.discount_should_be_l_or_greater'),
+            'discount_type.required' => __('seller.coupons.discount_type_is_required'),
+            'min_buy.required'      => __('seller.coupons.minimum_shopping_amount_is_required'),
+            'min_buy.numeric'       => __('seller.coupons.minimum_shopping_amount_should_be_numeric_type'),
+            'min_buy.min'           => __('seller.coupons.minimum_shopping_amount_should_be_l_or_greater'),
+            'max_discount.required' => __('seller.coupons.max_discount_amount_is_required'),
+            'max_discount.numeric'  => __('seller.coupons.max_discount_amount_should_be_numeric_type'),
+            'max_discount.min'      => __('seller.coupons.max_discount_amount_should_be_l_or_greater'),
+            'date_range.required'   => __('seller.coupons.date_range_is_required'),
         ];
     }
 

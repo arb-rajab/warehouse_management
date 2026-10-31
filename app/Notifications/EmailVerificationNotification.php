@@ -27,9 +27,13 @@ class EmailVerificationNotification extends Notification
 
     public function toMail($notifiable)
     {
+        $locale = \App\Support\StoreLocale::deliveryLocale($notifiable, $this->locale);
+        $array['locale'] = $locale;
+        $array['include_terms'] = true;
+        $array['action_key'] = 'storefront.common.agree';
         $array['view'] = 'shop.emails.verification';
-        $array['subject'] = translate('Account Verification & Terms Agreement');
-        $array['content'] = translate('By Clicking The Button Below You Agree To The Terms & Conditions');
+        $array['subject'] = __('storefront.auth.verification_terms', [], $locale);
+        $array['content'] = __('storefront.auth.agree_to_terms', [], $locale);
         // Signed and expiring, and bound to the address it was sent to: it
         // used to carry `users.verification_code`, which never expired and
         // is the same column the six-digit reset codes went into.
@@ -40,8 +44,8 @@ class EmailVerificationNotification extends Notification
         );
 
         return (new MailMessage)
-            ->view('shop.emails.verification', ['array' => $array])
-            ->subject(translate('Email Verification - ').config('app.name'));
+            ->view(['html' => 'shop.emails.verification', 'text' => 'shop.emails.plain.message'], ['array' => $array])
+            ->subject(__('storefront.auth.verification_subject', ['app' => config('app.name')], $locale));
     }
 
     public function toArray($notifiable)

@@ -36,7 +36,7 @@ class RefundRequestController extends Controller
         if ($has_open_refund) {
             return response()->json([
                 'success' => false,
-                'message' => translate('A refund request already exists for this item')
+                'message' => __('api.refund.already_requested')
             ], 422);
         }
 
@@ -55,7 +55,7 @@ class RefundRequestController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => translate('Request Sent')
+            'message' => __('api.refund.request_sent')
         ]);
 
 

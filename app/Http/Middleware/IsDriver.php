@@ -25,7 +25,7 @@ class IsDriver
         }
 
         return response()->json([
-            'message' => 'You must be a driver to access this page.',
+            'message' => __('api.access.driver_required'),
         ], 403);
     }
 }

@@ -11,33 +11,33 @@
                         <div class="col done">
                             <div class="text-center border border-bottom-6px p-2 text-success">
                                 <i class="la-3x mb-2 las la-shopping-cart"></i>
-                                <h3 class="fs-14 fw-600 d-none d-lg-block">{{ translate('1. My Cart') }}</h3>
+                                <h3 class="fs-14 fw-600 d-none d-lg-block">{{ __('storefront.cart.1_my_cart') }}</h3>
                             </div>
                         </div>
                         <div class="col done">
                             <div class="text-center border border-bottom-6px p-2 text-success">
                                 <i class="la-3x mb-2 las la-map"></i>
-                                <h3 class="fs-14 fw-600 d-none d-lg-block">{{ translate('2. Shipping info') }}
+                                <h3 class="fs-14 fw-600 d-none d-lg-block">{{ __('storefront.checkout.2_shipping_info') }}
                                 </h3>
                             </div>
                         </div>
                         <div class="col active">
                             <div class="text-center border border-bottom-6px p-2 text-primary">
                                 <i class="la-3x mb-2 las la-truck cart-animate" style="margin-left: -100px; transition: 2s;"></i>
-                                <h3 class="fs-14 fw-600 d-none d-lg-block">{{ translate('3. Delivery info') }}
+                                <h3 class="fs-14 fw-600 d-none d-lg-block">{{ __('storefront.checkout.3_delivery_info') }}
                                 </h3>
                             </div>
                         </div>
                         <div class="col">
                             <div class="text-center border border-bottom-6px p-2">
                                 <i class="la-3x mb-2 opacity-50 las la-credit-card"></i>
-                                <h3 class="fs-14 fw-600 d-none d-lg-block opacity-50">{{ translate('4. Payment') }}</h3>
+                                <h3 class="fs-14 fw-600 d-none d-lg-block opacity-50">{{ __('storefront.checkout.4_payment') }}</h3>
                             </div>
                         </div>
                         <div class="col">
                             <div class="text-center border border-bottom-6px p-2">
                                 <i class="la-3x mb-2 opacity-50 las la-check-circle"></i>
-                                <h3 class="fs-14 fw-600 d-none d-lg-block opacity-50">{{ translate('5. Confirmation') }}
+                                <h3 class="fs-14 fw-600 d-none d-lg-block opacity-50">{{ __('storefront.common.5_confirmation') }}
                                 </h3>
                             </div>
                         </div>
@@ -88,7 +88,7 @@
                             {{-- @if (!empty($admin_products)) --}}
                             <div class=" card mb-5 border-0 rounded-0 shadow-none">
                                 <div class="card-header py-3 px-0 border-bottom-0">
-                                    {{-- <h5 class="fs-16 fw-700 text-dark mb-0">{{ get_setting('site_name') }} {{ translate('Inhouse Products') }}</h5> --}}
+                                    {{-- <h5 class="fs-16 fw-700 text-dark mb-0">{{ get_setting('site_name') }} {{ __('storefront.product.inhouse_products') }}</h5> --}}
                                 </div>
                                 <div class="card-body p-0">
                                     <!-- Product List -->
@@ -115,7 +115,7 @@
                                                         {{ $product->getTranslation('name') }}
                                                         <br>
                                                         @if ($admin_product_variation[$key] != '')
-                                                            <span class="fs-12 text-secondary">{{ translate('Variation') }}: {{ $admin_product_variation[$key] }}</span>
+                                                            <span class="fs-12 text-secondary">{{ __('storefront.common.variation') }}: {{ $admin_product_variation[$key] }}</span>
                                                         @endif
                                                     </span>
                                                 </div>
@@ -126,7 +126,7 @@
                                     @if ($physical)
                                         <div class="row pt-3">
                                             <div class="col-md-6">
-                                                <h6 class="fs-14 fw-700 mt-3">{{ translate('Choose Delivery Type') }}</h6>
+                                                <h6 class="fs-14 fw-700 mt-3">{{ __('storefront.checkout.choose_delivery_type') }}</h6>
                                             </div>
                                             <div class="col-md-6">
                                                 <div class="row gutters-5">
@@ -144,7 +144,7 @@
                                                             >
                                                             <span class="d-flex aiz-megabox-elem rounded-0" style="padding: 0.75rem 1.2rem;">
                                                                 <span class="aiz-rounded-check flex-shrink-0 mt-1"></span>
-                                                                <span class="flex-grow-1 pl-3 fw-600">{{  translate('Standard Delivery') }}</span>
+                                                                <span class="flex-grow-1 pl-3 fw-600">{{  __('storefront.checkout.standard_delivery') }}</span>
                                                             </span>
                                                         </label>
                                                     </div>
@@ -162,7 +162,7 @@
                                                             >
                                                             <span class="d-flex aiz-megabox-elem rounded-0" style="padding: 0.75rem 1.2rem;">
                                                                 <span class="aiz-rounded-check flex-shrink-0 mt-1"></span>
-                                                                <span class="flex-grow-1 pl-3 fw-600">{{  translate('Carrier') }}</span>
+                                                                <span class="flex-grow-1 pl-3 fw-600">{{  __('storefront.checkout.carrier') }}</span>
                                                             </span>
                                                         </label>
                                                     </div>
@@ -180,7 +180,7 @@
                                                             >
                                                             <span class="d-flex aiz-megabox-elem rounded-0" style="padding: 0.75rem 1.2rem;">
                                                                 <span class="aiz-rounded-check flex-shrink-0 mt-1"></span>
-                                                                <span class="flex-grow-1 pl-3 fw-600">{{  translate('Local Pickup') }}</span>
+                                                                <span class="flex-grow-1 pl-3 fw-600">{{  __('storefront.checkout.local_pickup') }}</span>
                                                             </span>
                                                         </label>
                                                     </div>
@@ -195,7 +195,7 @@
                                                             name="pickup_point_id_{{ \App\Models\StoreUser::where('user_type', 'admin')->first()->id }}"
                                                             data-live-search="true"
                                                         >
-                                                                <option>{{ translate('Select your nearest pickup point')}}</option>
+                                                                <option>{{ __('storefront.checkout.select_your_nearest_pickup_point')}}</option>
                                                             @foreach ($pickup_point_list as $pick_up_point)
                                                                 <option
                                                                     value="{{ $pick_up_point->id }}"
@@ -231,7 +231,7 @@
                                                                     <img src="{{ uploaded_asset($carrier->logo)}}" alt="Image" class="w-50px img-fit">
                                                                 </span>
                                                                 <span class="flex-grow-1 pl-3 fw-700">{{ $carrier->name }}</span>
-                                                                <span class="flex-grow-1 pl-3 fw-600">{{ translate('Transit in').' '.$carrier->transit_time }}</span>
+                                                                <span class="flex-grow-1 pl-3 fw-600">{{ __('storefront.common.transit_in').' '.$carrier->transit_time }}</span>
                                                                 <span class="flex-grow-1 pl-3 fw-600">{{ single_price(carrier_base_price($carts, $carrier->id, \App\Models\StoreUser::where('user_type', 'admin')->first()->id)) }}</span>
                                                             </span>
                                                         </label>
@@ -249,7 +249,7 @@
                                 @foreach ($seller_products as $key => $seller_product)
                                     <div class="card mb-5 border-0 rounded-0 shadow-none">
                                         <div class="card-header py-3 px-0 border-bottom-0">
-                                            <h5 class="fs-16 fw-700 text-dark mb-0">{{ \App\Models\Shop::where('user_id', $key)->first()->name }} {{ translate('Products') }}</h5>
+                                            <h5 class="fs-16 fw-700 text-dark mb-0">{{ \App\Models\Shop::where('user_id', $key)->first()->name }} {{ __('storefront.product.products') }}</h5>
                                         </div>
                                         <div class="card-body p-0">
                                             <!-- Product List -->
@@ -276,7 +276,7 @@
                                                                 {{ $product->getTranslation('name') }}
                                                                 <br>
                                                                 @if ($seller_product_variation[$key2] != '')
-                                                                    <span class="fs-12 text-secondary">{{ translate('Variation') }}: {{ $seller_product_variation[$key2] }}</span>
+                                                                    <span class="fs-12 text-secondary">{{ __('storefront.common.variation') }}: {{ $seller_product_variation[$key2] }}</span>
                                                                 @endif
                                                             </span>
                                                         </div>
@@ -287,7 +287,7 @@
                                             @if ($physical)
                                                 <div class="row pt-3">
                                                     <div class="col-md-6">
-                                                        <h6 class="fs-14 fw-700 mt-3">{{ translate('Choose Delivery Type') }}</h6>
+                                                        <h6 class="fs-14 fw-700 mt-3">{{ __('storefront.checkout.choose_delivery_type') }}</h6>
                                                     </div>
                                                     <div class="col-md-6">
                                                         <div class="row gutters-5">
@@ -305,7 +305,7 @@
                                                                     >
                                                                     <span class="d-flex p-3 aiz-megabox-elem rounded-0" style="padding: 0.75rem 1.2rem;">
                                                                         <span class="aiz-rounded-check flex-shrink-0 mt-1"></span>
-                                                                        <span class="flex-grow-1 pl-3 fw-600">{{  translate('Standard Delivery') }}</span>
+                                                                        <span class="flex-grow-1 pl-3 fw-600">{{  __('storefront.checkout.standard_delivery') }}</span>
                                                                     </span>
                                                                 </label>
                                                             </div>
@@ -323,7 +323,7 @@
                                                                     >
                                                                     <span class="d-flex p-3 aiz-megabox-elem rounded-0" style="padding: 0.75rem 1.2rem;">
                                                                         <span class="aiz-rounded-check flex-shrink-0 mt-1"></span>
-                                                                        <span class="flex-grow-1 pl-3 fw-600">{{  translate('Carrier') }}</span>
+                                                                        <span class="flex-grow-1 pl-3 fw-600">{{  __('storefront.checkout.carrier') }}</span>
                                                                     </span>
                                                                 </label>
                                                             </div>
@@ -341,7 +341,7 @@
                                                                         >
                                                                         <span class="d-flex p-3 aiz-megabox-elem rounded-0" style="padding: 0.75rem 1.2rem;">
                                                                             <span class="aiz-rounded-check flex-shrink-0 mt-1"></span>
-                                                                            <span class="flex-grow-1 pl-3 fw-600">{{  translate('Local Pickup') }}</span>
+                                                                            <span class="flex-grow-1 pl-3 fw-600">{{  __('storefront.checkout.local_pickup') }}</span>
                                                                         </span>
                                                                     </label>
                                                                 </div>
@@ -356,7 +356,7 @@
                                                                     name="pickup_point_id_{{ $key }}"
                                                                     data-live-search="true"
                                                                 >
-                                                                    <option>{{ translate('Select your nearest pickup point')}}</option>
+                                                                    <option>{{ __('storefront.checkout.select_your_nearest_pickup_point')}}</option>
                                                                         @foreach ($pickup_point_list as $pick_up_point)
                                                                         <option
                                                                             value="{{ $pick_up_point->id }}"
@@ -392,7 +392,7 @@
                                                                             <img src="{{ uploaded_asset($carrier->logo)}}" alt="Image" class="w-50px img-fit">
                                                                         </span>
                                                                         <span class="flex-grow-1 pl-3 fw-600">{{ $carrier->name }}</span>
-                                                                        <span class="flex-grow-1 pl-3 fw-600">{{ translate('Transit in').' '.$carrier->transit_time }}</span>
+                                                                        <span class="flex-grow-1 pl-3 fw-600">{{ __('storefront.common.transit_in').' '.$carrier->transit_time }}</span>
                                                                         <span class="flex-grow-1 pl-3 fw-600">{{ single_price(carrier_base_price($carts, $carrier->id, $key)) }}</span>
                                                                     </span>
                                                                 </label>
@@ -411,10 +411,10 @@
                                 <!-- Return to shop -->
                                 <a href="{{ route('home') }}"  class="btn btn-link fs-14 fw-700 px-0">
                                     <i class="la la-arrow-left fs-16"></i>
-                                    {{ translate('Return to shop')}}
+                                    {{ __('storefront.common.return_to_shop')}}
                                 </a>
                                 <!-- Continue to Payment -->
-                                <button type="submit" class="btn btn-primary fs-14 fw-700 rounded-0 px-4">{{ translate('Continue to Payment')}}</button>
+                                <button type="submit" class="btn btn-primary fs-14 fw-700 rounded-0 px-4">{{ __('storefront.checkout.continue_to_payment')}}</button>
                             </div>
                         </form>
                     </div>

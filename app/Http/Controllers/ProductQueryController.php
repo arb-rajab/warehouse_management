@@ -59,7 +59,7 @@ class ProductQueryController extends Controller implements HasMiddleware
         $query->product_id = $product->id;
         $query->question = $request->question;
         $query->save();
-        flash(translate('Your query has been submittes successfully'))->success();
+        flash(__('storefront.support.your_query_has_been_submittes_successfully'))->success();
         return redirect()->back();
     }
 

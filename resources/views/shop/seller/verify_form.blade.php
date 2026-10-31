@@ -6,12 +6,12 @@
         $verificationErrors = $errors->getBag('sellerVerification');
     @endphp
     <div class="aiz-titlebar mt-2 mb-4">
-        <h1 class="h3">{{ translate('Shop Verification') }} <a href="{{ route('shop.visit', $shop->slug) }}" class="btn btn-link btn-sm" target="_blank">({{ translate('Visit Shop') }})<i class="la la-external-link"></i></a></h1>
+        <h1 class="h3">{{ __('seller.common.shop_verification') }} <a href="{{ route('shop.visit', $shop->slug) }}" class="btn btn-link btn-sm" target="_blank">({{ __('seller.shop.visit_shop') }})<i class="la la-external-link"></i></a></h1>
     </div>
     <form action="{{ route('seller.shop.verify.store') }}" method="POST" enctype="multipart/form-data">
         @csrf
         <div class="card">
-            <div class="card-header"><h4 class="mb-0 h6">{{ translate('Verification info') }}</h4></div>
+            <div class="card-header"><h4 class="mb-0 h6">{{ __('seller.common.verification_info') }}</h4></div>
             <div class="card-body">
                 @if ($verificationFields)
                     <x-required-legend />
@@ -56,7 +56,7 @@
                         </div>
                     @endif
                 @endforeach
-                <div class="text-right mt-4"><button type="submit" class="btn btn-primary" @disabled(!$verificationFields)>{{ translate('Apply') }}</button></div>
+                <div class="text-right mt-4"><button type="submit" class="btn btn-primary" @disabled(!$verificationFields)>{{ __('storefront.common.apply') }}</button></div>
             </div>
         </div>
     </form>
