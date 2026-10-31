@@ -293,6 +293,38 @@ of `.ai/rules/app-providers.md`.
   tens of KB of matches — prefer a single targeted keyword, `-l`/`files_with_matches`
   first to see what matched before dumping content, or a narrower path scope.
 
+## Keeping a session cheap
+
+Every tool call re-sends the whole conversation, so cost grows with the number
+of calls and with whatever early reads stay in context.
+
+- **One task per session.** Start a new session for a follow-up chore (a docs
+  fix, a rename) instead of extending a long one that carries the whole audit.
+- **Push what must outlive the session.** A cloud container is reclaimed when
+  its session ends or archives, and an unpushed commit goes with it; redoing a
+  lost audit costs more than anything else here. Once pushing is authorized,
+  push after each commit, keeping back only the final commit an attested run
+  has to amend. Hand work to another session through a pushed branch, never by
+  naming a SHA that exists only in one container. If told not to push, say once
+  that the work lives only in that container.
+- **Verify in one pass.** While iterating, run only the affected tests
+  (`--filter`) and the formatter on changed files. Run the full suite once, as
+  `python3 .claude/scripts/pre_push_check.py` on the final commit; an extra full
+  run beforehand repeats it.
+- **Grep before deleting or renaming a file.** Check the whole repo, including
+  `phpstan.neon`, `pint.json` and the path lists in `StaticAnalysisExclusionsTest`:
+  an excluded path that no longer exists stops PHPStan before it analyses
+  anything, and costs a full attested run to find.
+- **Keep large output out of the conversation.** Write route lists, probe logs
+  and PR listings to the scratchpad and `rg` or `awk` them; request small pages
+  (`perPage`), and never print a whole listing.
+- **Probe once, log to a file.** For a sweep over many routes or pages, write
+  one throwaway test that records its findings in a file, rerun it after each
+  batch of fixes, and turn it into the permanent test when it is clean.
+- **Wait once.** When a background job is running, start one watcher and end the
+  turn. A hook asking for a push while an attested run is pending gets a
+  one-line reply, not a tool call.
+
 ## Scoping review/audit sessions to control token consumption
 
 - Before launching a review/audit agent, scope it to the narrowest set of
