@@ -122,16 +122,7 @@ test('the API reference covers implemented routes with their actual authenticati
     }
 
     expect($operations)->toBeEmpty();
-    expect($missingMethods)->toEqualCanonicalizing([
-        '/v2/products/featured-from-seller/{id}',
-        '/v2/products/inhouse',
-        '/v2/products/sub-category/{id}',
-        '/v2/products/sub-sub-category/{id}',
-        '/v2/seller/dashboard/dashboard-counters',
-        '/v2/seller/products/search',
-        '/v2/trips/notifications',
-        '/v2/wallet/offline-recharge',
-    ]);
+    expect($missingMethods)->toBe([]);
     expect(parse_url($document['servers'][0]['url'], PHP_URL_PATH) ?: '/')->toBe('/');
     expect($document['paths'])->toHaveKey('/api/v1/dashboard')->not->toHaveKey('/temp/api/{fallbackPlaceholder}');
     expect($document['components']['securitySchemes']['privateToken'])->toBe([

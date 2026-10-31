@@ -280,7 +280,7 @@ class ProductController extends Controller
 
     public function product_reviews()
     {
-        $reviews = Review::orderBy('id', 'desc')
+        $reviews = Review::orderBy('reviews.id', 'desc')
             ->join('products', 'reviews.product_id', '=', 'products.id')
             ->join('users','reviews.user_id','=','users.id')
             ->where('products.user_id', auth()->user()->id)

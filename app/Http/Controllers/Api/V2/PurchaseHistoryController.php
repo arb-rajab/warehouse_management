@@ -60,7 +60,7 @@ class PurchaseHistoryController extends Controller
         $order_detail_products = OrderDetail::whereHas('order', function($q){
     		$q->where('payment_status', 'paid');
             $q->where('user_id', auth()->id());
-		})->with(['product' => function($query){
+		})->whereHas('product', fn ($query) => $query->where('digital', 1))->with(['product' => function($query){
             $query->where('digital', 1)->with('product_translations');
           }])
            ->paginate(15);

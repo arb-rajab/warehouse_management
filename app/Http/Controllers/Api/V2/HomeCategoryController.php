@@ -9,6 +9,6 @@ class HomeCategoryController extends Controller
 {
     public function index()
     {
-        return new HomeCategoryCollection(HomeCategory::all());
+        return new HomeCategoryCollection(HomeCategory::with('category')->get());
     }
 }

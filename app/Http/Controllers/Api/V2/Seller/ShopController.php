@@ -116,9 +116,11 @@ class ShopController extends Controller
         $data = Order::where('created_at', '>=', Carbon::now()->subDays(7))
             ->where('seller_id', '=', auth()->user()->id)
             ->where('delivery_status', '=', 'delivered')
-            ->select(DB::raw("sum(grand_total) as total, DATE_FORMAT(created_at, '%b-%d') as date"))
-            ->groupBy(DB::raw("DATE_FORMAT(created_at, '%Y-%m-%d')"))
-            ->get()->toArray();
+            ->select(DB::raw('sum(grand_total) as total, DATE(created_at) as day'))
+            ->groupBy(DB::raw('DATE(created_at)'))
+            ->get()
+            ->map(fn ($sales): array => ['total' => $sales->total, 'date' => Carbon::parse($sales->day)->format('M-d')])
+            ->all();
        //dd($data->toArray());
 
         //$array_date = [];
@@ -177,14 +179,15 @@ class ShopController extends Controller
 
     public function pacakge()
     {
-        $shop=auth()->user()->shop;
+        $shop = auth()->user()->shop;
+        abort_if($shop === null, 404);
+        $package = $shop->seller_package;
 
         return response()->json([
             'result' => true,
             'id' => $shop->id,
-            'package_name' => $shop->seller_package->name,
-            'package_img' => uploaded_asset($shop->seller_package->logo)
-
+            'package_name' => $package?->name,
+            'package_img' => $package ? uploaded_asset($package->logo) : null,
         ]);
     }
 
