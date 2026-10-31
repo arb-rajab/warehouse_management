@@ -165,6 +165,19 @@ test('the orders list resolves every rep serial in one query however many rep or
         ->and(collect($response->json('data'))->where('by_rep', true)->pluck('rep_serial')->unique()->all())->toBe(['REP-7']);
 });
 
+test("the order detail carries a rep order's rep serial and has none for a direct order", function () {
+    $rep = createStoreUser('customer');
+    $rep->forceFill(['is_rep' => true, 'rep_serial' => 'REP-7'])->save();
+    $other = createStoreUser('customer');
+    $other->forceFill(['is_rep' => true, 'rep_serial' => 'REP-9'])->save();
+    $repOrder = createStoreOrder($rep, ['by_rep' => 1, 'for_customer' => createStoreUser('customer')->id]);
+    createStoreOrder($other, ['by_rep' => 1, 'for_customer' => createStoreUser('customer')->id]);
+    $direct = createStoreOrder($other);
+
+    warehouse()->getJson(WAREHOUSE_URL."/order/{$repOrder->id}")->assertOk()->assertJsonPath('data.rep_serial', 'REP-7');
+    warehouse()->getJson(WAREHOUSE_URL."/order/{$direct->id}")->assertOk()->assertJsonPath('data.rep_serial', null);
+});
+
 test('the products list returns the first page only', function () {
     foreach (range(1, 3) as $i) {
         Product::factory()->create(['published' => true]);

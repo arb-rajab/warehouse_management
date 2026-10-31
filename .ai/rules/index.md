@@ -49,7 +49,7 @@ Before planning or editing, find the row whose globs match the file's path and r
 | app/Http/Requests/Admin/{FilterProductsRequest,FilterMatchingPalletsRequest}.php | .ai/rules/requests-admin.md |
 | app/Http/Requests/Concerns/NormalizesBooleanFilters.php, app/Http/Requests/Concerns/NormalizesExpiredFilter.php, app/Http/Requests/Concerns/FiltersCellStatusLogs.php | .ai/rules/requests-concerns.md |
 | app/Http/Requests/** | .ai/rules/requests.md |
-| app/Http/Resources/**, app/Http/Resources/RowResource.php | .ai/rules/resources.md |
+| app/Http/Resources/**, app/Http/Resources/RowResource.php, app/Http/Controllers/Api/V2/**, app/Models/Product.php | .ai/rules/resources.md |
 | routes/web.php, routes/api.php, routes/console.php, routes/shop-*.php | .ai/rules/routes.md |
 | app/Http/Controllers/Admin/RowController.php,resources/js/pages/Admin/Rows/Index.vue,resources/js/components/ActionErrorBanner.vue | .ai/rules/rows-js-components.md |
 | database/seeders/** | .ai/rules/seeders.md |

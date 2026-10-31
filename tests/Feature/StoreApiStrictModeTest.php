@@ -150,7 +150,7 @@ function strictApiStore(): array
         $products[] = createStoreProduct(['name' => $name, 'digital' => 1, 'published' => 1, 'approved' => 1, 'added_by' => 'admin', 'user_id' => $admin->id, 'category_id' => $categories[0]]);
     }
 
-    $offer = DB::table('offers')->insertGetId(['title' => 'Deal', 'start_date' => 1, 'end_date' => now()->addYear()->timestamp, 'is_active' => 1, 'offer_type' => 'products_offer']);
+    $offer = DB::table('offers')->insertGetId(['title' => 'Deal', 'start_date' => 1, 'end_date' => now()->addYear()->timestamp, 'is_active' => 1, 'offer_type' => 'products_offer', 'banner' => '']);
     DB::table('offer_products')->insert([
         ['offer_id' => $offer, 'product_id' => $products[0]->id, 'is_base_product' => 1, 'quantity' => 2, 'discount' => 0, 'discount_type' => null],
         ['offer_id' => $offer, 'product_id' => $products[1]->id, 'is_base_product' => 0, 'quantity' => 1, 'discount' => 10, 'discount_type' => 'percent'],
@@ -280,6 +280,22 @@ test("a product's offer lists both offered products with their taxed, discounted
         ->and(collect($offer['offered_products'])->pluck('product_name')->all())->toBe(['Prod 2 ar', 'Prod 3 ar'])
         // 2.50 less 10% is 2.25, then 10% and 1.00 of tax is 3.475; 2.50 less 1.00 is 1.50, then the same tax is 2.65.
         ->and(collect($offer['offered_products'])->pluck('discounted_price')->map(fn ($price) => round($price, 2))->all())->toBe([3.48, 2.65]);
+});
+
+test("a product's offer sends its banner, from the list and from the detail", function () {
+    $store = strictApiStore();
+    $productId = $store['products'][0]->id;
+    $upload = DB::table('uploads')->insertGetId(['file_name' => 'uploads/all/banner.png']);
+    $request = $this->withToken(storeApiToken($store['customer']))->withHeader('App-Language', 'sa');
+
+    $without = $request->getJson('/temp/api/v2/products')->assertOk()->collect('data')->firstWhere('id', $productId)['offers'];
+    DB::table('offers')->update(['banner' => (string) $upload]);
+    $list = $request->getJson('/temp/api/v2/products')->assertOk()->collect('data')->firstWhere('id', $productId)['offers'];
+    $detail = $request->getJson("/temp/api/v2/products/$productId")->assertOk()->json('data.0.offers');
+
+    expect($without)->not->toHaveKey('banner')
+        ->and($list['banner'])->toBe(uploaded_asset($upload))->toContain('banner.png')
+        ->and($detail['banner'])->toBe($list['banner']);
 });
 
 test('category, brand and sub-category lists carry their Arabic names, from the cache as from the database', function () {
