@@ -14,7 +14,7 @@ class ClubpointController extends Controller
 
     public function get_list()
     {
-        $club_points = ClubPoint::where('user_id', auth()->user()->id)->latest()->paginate(10);
+        $club_points = ClubPoint::with(['order', 'club_point_details'])->where('user_id', auth()->user()->id)->latest()->paginate(10);
 
         return new ClubpointCollection($club_points);
     }

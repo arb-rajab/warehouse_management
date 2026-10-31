@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources\V2\Trip;
 
+use App\Models\Trip;
 use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -16,6 +17,8 @@ class TripResource extends JsonResource
      */
     public function toArray($request)
     {
+        $this->resource->loadMissing(Trip::resourceRelations());
+
         return [
             'id' => $this->id,
             'code' => $this->code,

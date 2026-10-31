@@ -18,7 +18,7 @@ class ChatController extends Controller
 
     public function conversations()
     {
-        $conversations = Conversation::where('sender_id', auth()->user()->id)->latest('id')->paginate(10);
+        $conversations = Conversation::with('receiver.shop')->where('sender_id', auth()->user()->id)->latest('id')->paginate(10);
         return new ConversationCollection($conversations);
     }
 
@@ -26,7 +26,7 @@ class ChatController extends Controller
     {
         Gate::authorize('participate', Conversation::findOrFail($id));
 
-        $messages = Message::where('conversation_id', $id)->latest('id')->paginate(10);
+        $messages = Message::with('user')->where('conversation_id', $id)->latest('id')->paginate(10);
         return new MessageCollection($messages);
     }
 
@@ -46,7 +46,7 @@ class ChatController extends Controller
             $conversation->sender_viewed = "1";
         }
         $conversation->save();
-        $messages = Message::where('id', $message->id)->paginate(1);
+        $messages = Message::with('user')->where('id', $message->id)->paginate(1);
         return new MessageCollection($messages);
     }
 
@@ -54,7 +54,7 @@ class ChatController extends Controller
     {
         Gate::authorize('participate', Conversation::findOrFail($conversation_id));
 
-        $messages = Message::where('conversation_id', $conversation_id)->where('id', '>', $last_message_id)->latest('id')->paginate(10);
+        $messages = Message::with('user')->where('conversation_id', $conversation_id)->where('id', '>', $last_message_id)->latest('id')->paginate(10);
         return new MessageCollection($messages);
     }
 

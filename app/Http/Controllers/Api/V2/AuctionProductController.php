@@ -16,7 +16,7 @@ class AuctionProductController extends Controller
     public function index()
     {
 
-        $products = Product::latest()->where('published', 1)->where('auction_product', 1);
+        $products = Product::with(['taxes', 'product_translations'])->latest()->where('published', 1)->where('auction_product', 1);
         if (get_setting('seller_auction_product') == 0) {
             $products = $products->where('added_by', 'admin');
         }

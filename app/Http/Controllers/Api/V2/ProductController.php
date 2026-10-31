@@ -23,14 +23,9 @@ use Illuminate\Http\Request;
 
 class ProductController extends Controller
 {
-    /**
-     * What ProductMiniCollection reads off each product of a list.
-     */
-    private const LIST_RELATIONS = ['stocks', 'taxes', 'offers', 'collection', 'product_translations'];
-
     public function index()
     {
-        return new ProductMiniCollection(Product::with(self::LIST_RELATIONS)->where('published', 1)->where('approved', 1)->latest()->paginate(10));
+        return new ProductMiniCollection(Product::with(Product::WITH_STORE_LIST)->where('published', 1)->where('approved', 1)->latest()->paginate(10));
     }
 
 
@@ -43,7 +38,7 @@ class ProductController extends Controller
             $order = 'name';
         }
 
-        return new ProductMiniCollection(Product::with(self::LIST_RELATIONS)->where('published', 1)->where('approved', 1)
+        return new ProductMiniCollection(Product::with(Product::WITH_STORE_LIST)->where('published', 1)->where('approved', 1)
             ->where(function ($products) {
                 $products->where('isNewProduct', true)->orWhere('isOfferProduct', true);
             })
@@ -207,7 +202,7 @@ class ProductController extends Controller
     public function seller($id, Request $request)
     {
         $shop = Shop::findOrFail($id);
-        $products = Product::where('added_by', 'seller')->where('user_id', $shop->user_id);
+        $products = Product::with(Product::WITH_STORE_LIST)->where('added_by', 'seller')->where('user_id', $shop->user_id);
         if ($request->name != "" || $request->name != null) {
             $products = $products->where('name', 'like', '%' . $request->name . '%');
         }
@@ -221,7 +216,7 @@ class ProductController extends Controller
         $category_ids = CategoryUtility::children_ids($id);
         $category_ids[] = $id;
 
-        $products = Product::whereIn('category_id', $category_ids)->physical();
+        $products = Product::with(Product::WITH_STORE_LIST)->whereIn('category_id', $category_ids)->physical();
 
         if ($request->name != "" || $request->name != null) {
             $products = $products->where('name', 'like', '%' . $request->name . '%');
@@ -249,7 +244,7 @@ class ProductController extends Controller
 
     public function brand($id, Request $request)
     {
-        $products = Product::where('brand_id', $id)->physical();
+        $products = Product::with(Product::WITH_STORE_LIST)->where('brand_id', $id)->physical();
         if ($request->name != "" || $request->name != null) {
             $products = $products->where('name', 'like', '%' . $request->name . '%');
         }
@@ -262,7 +257,7 @@ class ProductController extends Controller
         return new ProductMiniCollection(remember_models(Product::class, 'app.todays_deal', 86400, function () {
             $products = Product::where('todays_deal', 1)->physical();
             return filter_products($products)->limit(20)->latest()->get();
-        }));
+        }, Product::WITH_STORE_LIST));
     }
 
     public function flashDeal()
@@ -274,13 +269,13 @@ class ProductController extends Controller
 
     public function featured()
     {
-        $products = Product::where('featured', 1)->physical();
+        $products = Product::with(Product::WITH_STORE_LIST)->where('featured', 1)->physical();
         return new ProductMiniCollection(filter_products($products)->latest()->paginate(10));
     }
 
     public function digital()
     {
-        $products = Product::digital();
+        $products = Product::with(Product::WITH_STORE_LIST)->digital();
         return new ProductMiniCollection(filter_products($products)->latest()->paginate(10));
     }
 
@@ -291,7 +286,7 @@ class ProductController extends Controller
         return new ProductMiniCollection(remember_models(Product::class, 'app.best_selling_products', 86400, function () {
             $products = Product::orderBy('num_of_sale', 'desc')->physical();
             return filter_products($products)->limit(20)->get();
-        }));
+        }, Product::WITH_STORE_LIST));
     }
 
     public function related($id)
@@ -300,7 +295,7 @@ class ProductController extends Controller
             $product = Product::find($id);
             $products = Product::where('category_id', $product->category_id)->where('id', '!=', $id)->physical();
             return filter_products($products)->limit(10)->get();
-        }));
+        }, Product::WITH_STORE_LIST));
     }
 
     public function topFromSeller($id)
@@ -310,7 +305,7 @@ class ProductController extends Controller
             $products = Product::where('user_id', $product->user_id)->orderBy('num_of_sale', 'desc')->physical();
 
             return filter_products($products)->limit(10)->get();
-        }));
+        }, Product::WITH_STORE_LIST));
     }
 
     public function barcode_search(Request $request)
@@ -461,7 +456,7 @@ class ProductController extends Controller
         $max = $request->max;
 
 
-        $products = Product::with(self::LIST_RELATIONS);
+        $products = Product::with(Product::WITH_STORE_LIST);
 
         $products->where('published', 1)->physical();
 

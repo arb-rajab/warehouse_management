@@ -49,7 +49,7 @@ class PurchaseHistoryController extends Controller
         $order = Order::findOrFail($id);
         Gate::authorize('view', $order);
 
-        $order_query = OrderDetail::where('order_id', $order->id);
+        $order_query = OrderDetail::with(OrderDetail::WITH_ITEM_DETAILS)->where('order_id', $order->id);
         return new PurchaseHistoryItemsCollection($order_query->get());
     }
 
@@ -61,7 +61,7 @@ class PurchaseHistoryController extends Controller
     		$q->where('payment_status', 'paid');
             $q->where('user_id', auth()->id());
 		})->with(['product' => function($query){
-            $query->where('digital', 1);
+            $query->where('digital', 1)->with('product_translations');
           }])
            ->paginate(15);
 

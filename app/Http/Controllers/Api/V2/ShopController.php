@@ -41,7 +41,7 @@ class ShopController extends Controller
     public function allProducts($id)
     {
         $shop = Shop::findOrFail($id);
-        return new ProductCollection(Product::where('user_id', $shop->user_id)->where('published',1)->latest()->paginate(10));
+        return new ProductCollection(Product::with(['taxes', 'product_translations'])->where('user_id', $shop->user_id)->where('published',1)->latest()->paginate(10));
     }
 
     public function topSellingProducts($id)
@@ -50,7 +50,7 @@ class ShopController extends Controller
 
         return new ProductMiniCollection(remember_models(Product::class, "app.top_selling_products-$id", 86400, function () use ($shop) {
             return Product::where('user_id', $shop->user_id)->where('published',1)->orderBy('num_of_sale', 'desc')->limit(10)->get();
-        }));
+        }, Product::WITH_STORE_LIST));
     }
 
     public function featuredProducts($id)
@@ -59,7 +59,7 @@ class ShopController extends Controller
 
         return new ProductMiniCollection(remember_models(Product::class, "app.featured_products-$id", 86400, function () use ($shop) {
             return Product::where(['user_id' => $shop->user_id, 'seller_featured' => 1])->where('published',1)->latest()->limit(10)->get();
-        }));
+        }, Product::WITH_STORE_LIST));
     }
 
     public function newProducts($id)
@@ -68,7 +68,7 @@ class ShopController extends Controller
 
         return new ProductMiniCollection(remember_models(Product::class, "app.new_products-$id", 86400, function () use ($shop) {
             return Product::where('user_id', $shop->user_id)->where('published',1)->orderBy('created_at', 'desc')->limit(10)->get();
-        }));
+        }, Product::WITH_STORE_LIST));
     }
 
     public function brands($id)

@@ -11,7 +11,7 @@ class CustomerPackageController extends Controller
 {
     public function customer_packages_list()
     {
-            $customer_packages = CustomerPackage::all();
+            $customer_packages = CustomerPackage::with('customer_package_translations')->get();
             return CustomerPackageResource::collection($customer_packages);
     }
 

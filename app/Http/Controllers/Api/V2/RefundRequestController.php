@@ -15,7 +15,7 @@ class RefundRequestController extends Controller
 
     public function get_list()
     {
-        $refunds = RefundRequest::where('user_id', auth()->user()->id)->latest()->paginate(10);
+        $refunds = RefundRequest::with(RefundRequest::WITH_LISTED)->where('user_id', auth()->user()->id)->latest()->paginate(10);
 
         return new RefundRequestCollection($refunds);
     }

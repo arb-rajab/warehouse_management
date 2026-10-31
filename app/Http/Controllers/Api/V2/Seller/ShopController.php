@@ -145,11 +145,12 @@ class ShopController extends Controller
     {
         $category_wise_product = [];
         $new_array = [];
-        foreach (Category::all() as $key => $category) {
-            if (count($category->products->where('user_id', auth()->user()->id)) > 0) {
+        $categories = Category::with(['category_translations', 'products' => fn ($products) => $products->where('user_id', auth()->user()->id)])->get();
+        foreach ($categories as $key => $category) {
+            if (count($category->products) > 0) {
                 $category_wise_product['name'] = $category->getTranslation('name');
                 $category_wise_product['banner'] = uploaded_asset($category->banner);
-                $category_wise_product['cnt_product'] = count($category->products->where('user_id', auth()->user()->id));
+                $category_wise_product['cnt_product'] = count($category->products);
 
                 $new_array[] = $category_wise_product;
             }
@@ -160,7 +161,7 @@ class ShopController extends Controller
 
     public function top_12_products()
     {
-        $products = filter_products(Product::where('user_id',  auth()->user()->id)
+        $products = filter_products(Product::with(['category', 'stocks'])->where('user_id',  auth()->user()->id)
             ->orderBy('num_of_sale', 'desc'))
             ->limit(12)
             ->get();
@@ -213,7 +214,7 @@ class ShopController extends Controller
 
     public function collection_histories()
     {
-        $commission_history = CommissionHistory::where('seller_id', auth()->user()->id)->orderBy('created_at', 'desc')->paginate(10);
+        $commission_history = CommissionHistory::with('order')->where('seller_id', auth()->user()->id)->orderBy('created_at', 'desc')->paginate(10);
         return CommissionHistoryResource::collection($commission_history);
     }
 }

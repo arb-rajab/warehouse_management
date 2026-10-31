@@ -35,7 +35,7 @@ class OrderDetailResource extends JsonResource
             'delivery_date'             =>  $this->delivery_date,
             'manager_notes'             =>  $this->manager_notes,
             'by_rep'                    =>  $this->by_rep,
-            'rep_serial'                =>  $this->rep_serial,
+            'rep_serial'                =>  null,
             'for_customer'              =>  $this->for_customer,
             'discount_percent'          =>  $this->discount_percent,
             'indicator'                 =>  $this->indicator,

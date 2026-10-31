@@ -25,7 +25,7 @@ class FlashDealCollection extends ResourceCollection
                     'title' => $data->title,
                     'date' => (int) $data->end_date,
                     'banner' => uploaded_asset($data->banner),
-                    'products' => new FlashDealProductCollection($data->flash_deal_products()->take(6)->get()),
+                    'products' => new FlashDealProductCollection($data->flash_deal_products()->withListedProduct()->take(6)->get()),
                 ];
             }),
         ];

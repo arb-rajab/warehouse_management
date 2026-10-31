@@ -17,27 +17,27 @@ class CategoryController extends Controller
 
         return new CategoryCollection(remember_models(Category::class, "app.categories-$parent_id", 86400, function () use ($parent_id) {
             return Category::orderBy('order_level', 'desc')->where('parent_id', $parent_id)->where('name', "!=", 'Uncategorized')->get();
-        }));
+        }, ['category_translations']));
     }
 
     public function featured()
     {
         return new CategoryCollection(remember_models(Category::class, 'app.featured_categories', 86400, function () {
             return Category::orderBy('order_level', 'desc')->where('featured', 1)->where('name', "!=", 'Uncategorized')->get();
-        }));
+        }, ['category_translations']));
     }
 
     public function home()
     {
         return new CategoryCollection(remember_models(Category::class, 'app.home_categories', 86400, function () {
             return Category::orderBy('order_level', 'desc')->whereIn('id', json_decode(get_setting('home_categories')))->where('name', "!=", 'Uncategorized')->get();
-        }));
+        }, ['category_translations']));
     }
 
     public function top()
     {
         return new CategoryCollection(remember_models(Category::class, 'app.top_categories', 86400, function () {
             return Category::orderBy('order_level', 'desc')->whereIn('id', json_decode(get_setting('home_categories')))->where('name', "!=", 'Uncategorized')->limit(20)->get();
-        }));
+        }, ['category_translations']));
     }
 }

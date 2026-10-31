@@ -111,7 +111,7 @@ class PaymentTypesController
             $cash_on_delivery = false;
 
             if ($mode == "order") {
-                $carts = auth()->user()->carts;
+                $carts = auth()->user()->carts()->with('product:id,digital,cash_on_delivery')->get();
 
                 foreach ($carts as $key => $cart) {
                     $haveDigitalProduct =  $cart->product->digital == 1;

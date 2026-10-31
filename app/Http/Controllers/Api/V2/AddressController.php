@@ -30,14 +30,14 @@ class AddressController extends Controller
             $current_customer = auth()->user()->current_customer;
 
             if($current_customer){
-                $customer_addresses = $current_customer->addresses;
+                $customer_addresses = $current_customer->addresses()->with(Address::WITH_PLACE)->get();
             }else {
-                $customer_addresses = auth()->user()->addresses;
+                $customer_addresses = auth()->user()->addresses()->with(Address::WITH_PLACE)->get();
             }
 
             return new AddressCollection($customer_addresses);
         }
-        return new AddressCollection(Address::where('user_id',auth()->user()->id)->get());
+        return new AddressCollection(Address::with(Address::WITH_PLACE)->where('user_id',auth()->user()->id)->get());
     }
 
     public function createShippingAddress(Request $request)
@@ -153,7 +153,7 @@ class AddressController extends Controller
            $cart= Cart::where('user_id', auth()->user()->id)->first();
 
            $address = $cart->address;
-           return new AddressCollection(Address::where('id', $address->id)->get());
+           return new AddressCollection(Address::with(Address::WITH_PLACE)->where('id', $address->id)->get());
         //    return  new AddressCollection($address);
 
     }
