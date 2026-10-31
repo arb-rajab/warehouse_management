@@ -96,18 +96,7 @@ php artisan scramble:export --path=api.json
 php artisan scramble:analyze
 ```
 
-Eight registered legacy routes currently reference missing controller methods and are omitted by Scramble. They need implementation decisions before they can have request/response documentation; this documentation change does not implement them. Paths below are relative to `/temp/api`:
-
-| Method | Path | Missing controller method (under `Api\V2`) |
-| --- | --- | --- |
-| GET | `/v2/products/featured-from-seller/{id}` | `ProductController::newFromSeller` |
-| GET | `/v2/products/inhouse` | `ProductController::inhouse` |
-| GET | `/v2/products/sub-category/{id}` | `ProductController::subCategory` |
-| GET | `/v2/products/sub-sub-category/{id}` | `ProductController::subSubCategory` |
-| GET | `/v2/seller/dashboard/dashboard-counters` | `Seller\ShopController::app_dashboard_counters` |
-| GET | `/v2/seller/products/search` | `Seller\ProductController::search` |
-| GET | `/v2/trips/notifications` | `Trip\DriverController::assignTripByQrScan` |
-| POST | `/v2/wallet/offline-recharge` | `WalletController::offline_recharge` |
+Every registered `/temp/api` route points at an existing controller action, so Scramble documents them all; `OpenApiDocumentationTest` fails if a route is added without one.
 
 ## Localization
 
