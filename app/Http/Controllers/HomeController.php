@@ -50,13 +50,13 @@ class HomeController extends Controller
         // they are.
         $featured_categories = remember_models(Category::class, 'featured_categories', null, function () {
             return Category::where('featured', 1)->get();
-        });
+        }, ['category_translations']);
 
         $todays_deal_products = $this->todaysDealProducts();
 
         $newest_products = remember_models(Product::class, 'newest_products', 20, function () {
             return filter_products(Product::where('isNewProduct', true)->where('published', 1))->orderBy('name')->get();
-        });
+        }, Product::WITH_STORE_LIST);
 
         $offers_catalog = OffersCatalog::first();
 
@@ -727,7 +727,7 @@ class HomeController extends Controller
     {
         return remember_models(Product::class, 'todays_deal_products', null, function () {
             return filter_products(Product::where('published', 1)->where('todays_deal', '1'))->orderBy('name')->get();
-        });
+        }, Product::WITH_STORE_LIST);
     }
 
     public function all_seller(Request $request)
@@ -748,7 +748,7 @@ class HomeController extends Controller
 
     public function inhouse_products(Request $request)
     {
-        $products = filter_products(Product::where('added_by', 'admin'))->where('published', true)->with('taxes')->paginate(12)->appends(request()->query());
+        $products = filter_products(Product::where('added_by', 'admin'))->where('published', true)->with(Product::WITH_STORE_LIST)->paginate(12)->appends(request()->query());
         return view('shop.frontend.inhouse_products', compact('products'));
     }
 }

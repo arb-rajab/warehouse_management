@@ -1,7 +1,7 @@
 @php
     $best_selers = remember_models(\App\Models\Shop::class, 'best_selers', 86400, function () {
         return \App\Models\Shop::where('verification_status', 1)->orderBy('num_of_sale', 'desc')->take(20)->get();
-    });
+    }, ['user']);
 @endphp
 
 @if (get_setting('vendor_system_activation') == 1)

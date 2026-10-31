@@ -85,6 +85,9 @@ class ProductMiniCollection extends ResourceCollection
                     if($offer){
                         $offer->loadMissing(Offer::WITH_OFFERED_PRODUCTS);
                         $offer_array = [];
+                        if ($offer->banner != null && $offer->banner != "") {
+                            $offer_array['banner'] = uploaded_asset($offer->banner);
+                        }
                         $offer_array['title'] = $offer->title;
                         $offer_array['multiple_usage'] = $offer->multiple_usage;
                         $offer_array['is_repeatable'] = $offer->is_repeatable;

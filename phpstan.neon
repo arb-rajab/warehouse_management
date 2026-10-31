@@ -87,7 +87,6 @@ parameters:
         - app/Http/Controllers/Api/V2/FileUploadController.php (?)
         - app/Http/Controllers/Api/V2/FilterController.php
         - app/Http/Controllers/Api/V2/FlashDealController.php
-        - app/Http/Controllers/Api/V2/GeneralSettingController.php
         - app/Http/Controllers/Api/V2/HomeCategoryController.php
         - app/Http/Controllers/Api/V2/IyzicoController.php
         - app/Http/Controllers/Api/V2/LanguageController.php
@@ -250,7 +249,6 @@ parameters:
         - app/Http/Resources/V2/DynamicPopupCollection.php
         - app/Http/Resources/V2/FlashDealCollection.php
         - app/Http/Resources/V2/FlashDealProductCollection.php
-        - app/Http/Resources/V2/GeneralSettingCollection.php
         - app/Http/Resources/V2/HomeCategoryCollection.php
         - app/Http/Resources/V2/LanguageCollection.php
         - app/Http/Resources/V2/MessageCollection.php

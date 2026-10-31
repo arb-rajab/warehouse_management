@@ -27,7 +27,7 @@ class OrderController extends Controller
 
     public function getOrderDetails($id)
     {
-        $order = Order::find($id);
+        $order = Order::with('user:id,rep_serial')->find($id);
         if ($order == null) {
             return response()->json([
                 'result' => false,

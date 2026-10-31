@@ -30,7 +30,6 @@ Route::group(['prefix' => 'v2/seller', 'middleware' => ['app_language', 'auth:st
         Route::get('dashboard/category-wise-products', 'category_wise_products');
         Route::get('dashboard/sales-stat', 'sales_stat');
         Route::get('dashboard/top-12-product', 'top_12_products');
-        Route::get('dashboard/dashboard-counters', 'app_dashboard_counters');
         Route::get('shop/info', 'info');
         Route::get('package/info', 'pacakge');
         Route::post('shop-update', 'update');
@@ -67,7 +66,6 @@ Route::group(['prefix' => 'v2/seller', 'middleware' => ['app_language', 'auth:st
 
         Route::get('products/reviews', 'product_reviews');
 
-        Route::get('products/search', 'search');
     });
 
     //Coupon Section

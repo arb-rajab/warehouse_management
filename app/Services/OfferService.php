@@ -206,6 +206,11 @@ class OfferService
             foreach($brandTotals as $brand_id => $carts_total){
                 $brand_offer = $brand_offers->where('brand_id', $brand_id)->first();
 
+                // A brand in the cart need not have an offer of its own.
+                if ($brand_offer?->base_product === null) {
+                    continue;
+                }
+
                 if ((int)$brand_offer->base_product->quantity <= $carts_total) {
                     $this->process_brand_offer($brand_offer, $order_detail, $order);
                 }

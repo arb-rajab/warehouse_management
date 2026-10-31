@@ -152,7 +152,11 @@ class AddressController extends Controller
 
            $cart= Cart::where('user_id', auth()->user()->id)->first();
 
-           $address = $cart->address;
+           $address = $cart?->address;
+           if ($address === null) {
+               return new AddressCollection(collect());
+           }
+
            return new AddressCollection(Address::with(Address::WITH_PLACE)->where('id', $address->id)->get());
         //    return  new AddressCollection($address);
 

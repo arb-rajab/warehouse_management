@@ -52,6 +52,11 @@ class ProductController extends Controller
 
 
 
+    public function inhouse()
+    {
+        return new ProductMiniCollection(filter_products(Product::with(Product::WITH_STORE_LIST)->where('added_by', 'admin')->where('published', 1)->where('approved', 1))->latest()->paginate(10));
+    }
+
     public function show($id)
     {
         $products = Product::where('id', $id)->where('published', 1)->where('approved', 1)->get();
@@ -551,70 +556,6 @@ class ProductController extends Controller
                 'data' => $product->stocks,
             ]
         );
-    }
-
-    public function variantPrice(Request $request)
-    {
-        $product = Product::findOrFail($request->id);
-        $str = '';
-        $tax = 0;
-
-        if ($request->has('color') && $request->color != "") {
-            $str = Color::where('code', '#' . $request->color)->first()->name;
-        }
-
-        $var_str = str_replace(',', '-', $request->variants);
-        $var_str = str_replace(' ', '', $var_str);
-
-        if ($var_str != "") {
-            $temp_str = $str == "" ? $var_str : '-' . $var_str;
-            $str .= $temp_str;
-        }
-        return   $this->calc($product, $str, $request, $tax);
-
-        /*
-            $product_stock = $product->stocks->where('variant', $str)->first();
-            $price = $product_stock->price;
-            $stockQuantity = $product_stock->qty;
-
-
-            //discount calculation
-            $discount_applicable = false;
-
-            if ($product->discount_start_date == null) {
-                $discount_applicable = true;
-            } elseif (
-                strtotime(date('d-m-Y H:i:s')) >= $product->discount_start_date &&
-                strtotime(date('d-m-Y H:i:s')) <= $product->discount_end_date
-            ) {
-                $discount_applicable = true;
-            }
-
-            if ($discount_applicable) {
-                if ($product->discount_type == 'percent') {
-                    $price -= ($price * $product->discount) / 100;
-                } elseif ($product->discount_type == 'amount') {
-                    $price -= $product->discount;
-                }
-            }
-
-            foreach ($product->taxes as $product_tax) {
-                if ($product_tax->tax_type == 'percent') {
-                    $tax += ($price * $product_tax->tax) / 100;
-                } elseif ($product_tax->tax_type == 'amount') {
-                    $tax += $product_tax->tax;
-                }
-            }
-            $price += $tax;
-
-            return response()->json([
-                'product_id' => $product->id,
-                'variant' => $str,
-                'price' => (float)convert_price($price),
-                'price_string' => format_price(convert_price($price)),
-                'stock' => intval($stockQuantity),
-                'image' => $product_stock->image == null ? "" : uploaded_asset($product_stock->image)
-            ]);*/
     }
 
     // public function home()

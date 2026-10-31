@@ -155,7 +155,6 @@ Route::group(['prefix' => 'v2', 'middleware' => ['app_language']], function () {
         Route::post('file/upload', 'App\Http\Controllers\Api\V2\AizUploadController@upload')->middleware('auth:store_api');
 
         Route::get('wallet/balance', 'App\Http\Controllers\Api\V2\WalletController@balance')->middleware('auth:store_api');
-        Route::post('wallet/offline-recharge', 'App\Http\Controllers\Api\V2\WalletController@offline_recharge')->middleware('auth:store_api');
 
 
         Route::get('payment-types', 'App\Http\Controllers\Api\V2\PaymentTypesController@getList')->middleware('auth:store_api');
@@ -212,7 +211,6 @@ Route::group(['prefix' => 'v2', 'middleware' => ['app_language']], function () {
         Route::get('current-visit', 'App\Http\Controllers\Api\V2\CustomerController@current_visit')->middleware('auth:store_api');
     });
 
-    Route::apiResource('general-settings', 'App\Http\Controllers\Api\V2\GeneralSettingController')->only('index');
 
     Route::apiResource('home-categories', 'App\Http\Controllers\Api\V2\HomeCategoryController')->only('index');
 
@@ -229,8 +227,9 @@ Route::group(['prefix' => 'v2', 'middleware' => ['app_language']], function () {
         Route::get('products/inhouse', 'App\Http\Controllers\Api\V2\ProductController@inhouse');
         Route::get('products/seller/{id}', 'App\Http\Controllers\Api\V2\ProductController@seller');
         Route::get('products/category/{id}', 'App\Http\Controllers\Api\V2\ProductController@category')->name('api.products.category');
-        Route::get('products/sub-category/{id}', 'App\Http\Controllers\Api\V2\ProductController@subCategory')->name('products.subCategory');
-        Route::get('products/sub-sub-category/{id}', 'App\Http\Controllers\Api\V2\ProductController@subSubCategory')->name('products.subSubCategory');
+        // A category's products include its children's, at any depth, so one action serves all three levels.
+        Route::get('products/sub-category/{id}', 'App\Http\Controllers\Api\V2\ProductController@category')->name('products.subCategory');
+        Route::get('products/sub-sub-category/{id}', 'App\Http\Controllers\Api\V2\ProductController@category')->name('products.subSubCategory');
         Route::get('products/brand/{id}', 'App\Http\Controllers\Api\V2\ProductController@brand')->name('api.products.brand');
         Route::get('products/todays-deal', 'App\Http\Controllers\Api\V2\ProductController@todaysDeal');
         Route::get('products/featured', 'App\Http\Controllers\Api\V2\ProductController@featured');
@@ -238,7 +237,6 @@ Route::group(['prefix' => 'v2', 'middleware' => ['app_language']], function () {
         Route::get('products/top-from-seller/{id}', 'App\Http\Controllers\Api\V2\ProductController@topFromSeller')->name('products.topFromSeller');
         Route::get('products/related/{id}', 'App\Http\Controllers\Api\V2\ProductController@related')->name('products.related');
 
-        Route::get('products/featured-from-seller/{id}', 'App\Http\Controllers\Api\V2\ProductController@newFromSeller')->name('products.featuredromSeller');
         Route::get('products/search', 'App\Http\Controllers\Api\V2\ProductController@search');
         Route::post('products/search-barcode', 'App\Http\Controllers\Api\V2\ProductController@barcode_search');
         Route::get('products/variants', 'App\Http\Controllers\Api\V2\ProductController@getVariant');

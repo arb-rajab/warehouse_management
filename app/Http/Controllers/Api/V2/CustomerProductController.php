@@ -29,7 +29,7 @@ class CustomerProductController extends Controller
 
     public function relatedProducts($id)
     {
-        $product =   CustomerProduct::where('id', $id)->first();
+        $product = CustomerProduct::findOrFail($id);
         $products =   CustomerProduct::with('category')->where('category_id', $product->category_id)->where('id', '!=', $product->id)->where('status', '1')->where('published', '1')->paginate(10);
         return new ClassifiedProductMiniCollection($products);
     }
