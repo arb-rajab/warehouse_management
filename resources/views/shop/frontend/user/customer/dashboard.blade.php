@@ -152,11 +152,7 @@
                     </svg>
                     <div class="ml-3 d-flex flex-column justify-content-between">
                         @php
-                            $orders = \App\Models\Order::where('user_id', Auth::user()->id)->get();
-                            $total = 0;
-                            foreach ($orders as $key => $order) {
-                                $total += count($order->orderDetails);
-                            }
+                            $total = \App\Models\Order::where('user_id', Auth::user()->id)->withCount('orderDetails')->get()->sum('order_details_count');
                         @endphp
                         <span class="fs-20 fw-700 mb-1">{{ $total > 0 ? sprintf("%02d", $total) : 0 }}</span>
                         <span class="fs-14 fw-400 text-secondary">{{ __('storefront.checkout.total_products_ordered') }}</span>
@@ -212,7 +208,7 @@
                 <h6 class="fw-700 mb-3 text-dark">{{ __('storefront.checkout.default_shipping_address') }}</h6>
                 @if(Auth::user()->addresses != null)
                     @php
-                        $address = Auth::user()->addresses->where('set_default', 1)->first();
+                        $address = Auth::user()->addresses()->with(\App\Models\Address::WITH_PLACE)->where('set_default', 1)->first();
                     @endphp
                     @if($address != null)
                         <ul class="list-unstyled mb-5">
@@ -251,7 +247,7 @@
         </div>
     </div>
     @php
-        $wishlists = \App\Models\Wishlist::where('user_id', Auth::user()->id)->get();
+        $wishlists = \App\Models\Wishlist::where('user_id', Auth::user()->id)->with(['product' => fn ($product) => $product->with(\App\Models\Product::WITH_STORE_LIST)])->get();
     @endphp
     @if (count($wishlists) > 0)
         <div class="row row-cols-xxl-5 row-cols-xl-4 row-cols-lg-4 row-cols-md-3 row-cols-sm-2 row-cols-2 gutters-16 border-top border-left mx-1 mx-md-0 mb-4">

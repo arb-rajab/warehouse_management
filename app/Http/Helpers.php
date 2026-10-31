@@ -164,11 +164,11 @@ if (!function_exists('get_cached_products')) {
                 $category_ids = CategoryUtility::children_ids($category_id);
                 $category_ids[] = $category_id;
                 return $products->whereIn('category_id', $category_ids)->orderBy('featured', 'desc')->take(12)->get();
-            });
+            }, Product::WITH_STORE_LIST);
         } else {
             return remember_models(Product::class, 'products', 86400, function () use ($products) {
                 return $products->latest()->take(12)->get();
-            });
+            }, Product::WITH_STORE_LIST);
         }
     }
 }

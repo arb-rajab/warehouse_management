@@ -68,6 +68,8 @@ test('slugless products retain links on storefront pages', function (string $pag
         $line->forceFill(['product_serial' => $product->serial])->save();
         $line->order->forceFill(['shipping_address' => json_encode(['name' => $customer->name, 'email' => $customer->email, 'phone' => $customer->phone, 'address' => 'Test Street', 'city' => 'Test City', 'state' => 'Test State', 'country' => 'Netherlands', 'postal_code' => '1234AB'])])->save();
         if ($page === 'customer order') {
+            // The order page eager-loads each line's refund request, a table the base schema lacks.
+            strictApiCreateLegacyTables();
             $path = route('purchase_history.details', encrypt($line->order_id), false);
         } else {
             $combined = CombinedOrder::forceCreate(['user_id' => $customer->id, 'grand_total' => 5, 'shipping_address' => '{}']);

@@ -138,7 +138,7 @@ class CheckoutController extends Controller
 
     public function get_shipping_info(Request $request)
     {
-        $carts = Cart::where('user_id', Auth::user()->id)->get();
+        $carts = Cart::with('product')->where('user_id', Auth::user()->id)->get();
 
         if (Auth::user()->is_rep) {
             $filteredCarts = $carts->where('for_customer', null);
@@ -150,12 +150,12 @@ class CheckoutController extends Controller
             $current_customer = Auth::user()->current_customer;
 
             if ($current_customer) {
-                $customer_addresses = $current_customer->addresses;
+                $customer_addresses = $current_customer->addresses()->with(Address::WITH_PLACE)->get();
             } else {
-                $customer_addresses = Auth::user()->addresses;
+                $customer_addresses = Auth::user()->addresses()->with(Address::WITH_PLACE)->get();
             }
         } else {
-            $customer_addresses = Auth::user()->addresses;
+            $customer_addresses = Auth::user()->addresses()->with(Address::WITH_PLACE)->get();
         }
 
         //        if (Session::has('cart') && count(Session::get('cart')) > 0) {
@@ -169,7 +169,7 @@ class CheckoutController extends Controller
 
     public function store_shipping_info(StoreShippingInfoRequest $request)
     {
-        $carts = Cart::where('user_id', Auth::user()->id)->get();
+        $carts = Cart::with('product')->where('user_id', Auth::user()->id)->get();
         if ($carts->isEmpty()) {
             flash(__('storefront.cart.empty'))->warning();
             return redirect()->route('home');
@@ -282,7 +282,7 @@ class CheckoutController extends Controller
             $response_message['message'] = __('storefront.cart.invalid_coupon');
         }
 
-        $carts = Cart::where('user_id', Auth::user()->id)
+        $carts = Cart::with('product')->where('user_id', Auth::user()->id)
             ->get();
         $shipping_info = Address::where('id', $carts->first()?->address_id)->first();
 
@@ -302,7 +302,7 @@ class CheckoutController extends Controller
             );
 
         $coupon = Coupon::where('code', $request->code)->first();
-        $carts = Cart::where('user_id', Auth::user()->id)
+        $carts = Cart::with('product')->where('user_id', Auth::user()->id)
             ->get();
 
         $shipping_info = Address::where('id', $carts->first()?->address_id)->first();
@@ -334,7 +334,7 @@ class CheckoutController extends Controller
 
     public function order_confirmed()
     {
-        $combined_order = CombinedOrder::findOrFail(Session::get('combined_order_id'));
+        $combined_order = CombinedOrder::with(['orders.user', 'orders.rep'])->findOrFail(Session::get('combined_order_id'));
 
         Cart::where('user_id', $combined_order->user_id)
             ->delete();
@@ -352,7 +352,7 @@ class CheckoutController extends Controller
     public function get_customers_to_choose()
     {
         $users = StoreUser::where('id', '!=', Auth::user()->id)->where('is_rep', false)->where('user_type', 'customer')->get();
-        $carts = Cart::where('user_id', Auth::user()->id)->get();
+        $carts = Cart::with('product')->where('user_id', Auth::user()->id)->get();
 
         if (Auth::user()->is_rep) {
             return view('shop.frontend.view_customer', compact('users', 'carts'));
