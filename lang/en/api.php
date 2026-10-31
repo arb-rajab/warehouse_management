@@ -111,6 +111,8 @@ return [
         'status_changed' => 'Delivery status changed to :status',
     ],
     'order' => [
+        'address_required' => 'A delivery address with a street address is required to place an order.',
+        'payment_type_invalid' => 'The payment type is not available.',
         'customer_required' => 'You did not choose a user for your cart. Please choose a user first.',
         'customer_updated' => 'Order customer updated successfully',
         'not_found' => 'Order not found',

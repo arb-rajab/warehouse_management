@@ -75,7 +75,24 @@ class OrderController extends Controller
             }
         }
 
+        // pay/cod, pay/manual and pay/wallet name their own method; order/store takes it from the caller.
+        if ($request->is('*/order/store') && ! $this->isListedPaymentType((string) $request->payment_type)) {
+            return response()->json([
+                'combined_order_id' => 0,
+                'result' => false,
+                'message' => __('api.order.payment_type_invalid'),
+            ], 422);
+        }
+
         $cartItems = Cart::where('user_id', auth()->user()->id)->get();
+
+        if ($cartItems->isNotEmpty() && ! Address::where('id', $cartItems->first()->address_id)->whereNotNull('address')->where('address', '!=', '')->exists()) {
+            return response()->json([
+                'combined_order_id' => 0,
+                'result' => false,
+                'message' => __('api.order.address_required'),
+            ], 422);
+        }
 
         if ($cartItems->isEmpty()) {
             return response()->json([
@@ -146,6 +163,23 @@ class OrderController extends Controller
                 'message' => $exception->getMessage(),
             ]);
         }
+    }
+
+    /**
+     * Whether GET /payment-types offers this option to the caller.
+     */
+    private function isListedPaymentType(string $paymentType): bool
+    {
+        if ($paymentType === '') {
+            return false;
+        }
+
+        $listed = json_decode(
+            app(PaymentTypesController::class)->getList(new Request(['mode' => 'order']))->getContent(),
+            true,
+        ) ?: [];
+
+        return collect($listed)->flatMap(fn (array $type) => [$type['payment_type'] ?? null, $type['payment_type_key'] ?? null])->contains($paymentType);
     }
 
     /**

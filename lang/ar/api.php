@@ -111,6 +111,8 @@ return [
         'status_changed' => 'تم تغيير حالة التوصيل إلى :status',
     ],
     'order' => [
+        'address_required' => 'عنوان التوصيل مطلوب لإتمام الطلب.',
+        'payment_type_invalid' => 'نوع الدفع غير متاح.',
         'customer_required' => 'لم تختر مستخدماً لسلتك. يرجى اختيار مستخدم أولاً.',
         'customer_updated' => 'تم تحديث عميل الطلب بنجاح',
         'not_found' => 'لم يتم العثور على الطلب',

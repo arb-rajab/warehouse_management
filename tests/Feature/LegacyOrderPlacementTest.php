@@ -22,6 +22,10 @@ function checkoutWithCash(object $test)
 function placeApiOrder(object $test, string $token, array $body = ['payment_type' => 'cash_on_delivery'])
 {
     app('auth')->forgetGuards();
+    // order/store only takes what GET /payment-types lists; cash on delivery is
+    // listed when the setting is on and every product allows it.
+    storeSetting('cash_payment', 1);
+    DB::table('products')->update(['cash_on_delivery' => 1]);
 
     return $test->withToken($token)->postJson('/temp/api/v2/order/store', $body);
 }
@@ -240,4 +244,26 @@ test('the wallet payment through the payments route charges the order and emptie
     expect((float) $customer->fresh()->balance)->toBe(5.0)
         ->and(Cart::where('user_id', $customer->id)->count())->toBe(0)
         ->and(DB::table('orders')->where('payment_status', 'paid')->count())->toBe(1);
+});
+
+test('the app refuses an order whose payment type is not listed, or that has no delivery address', function () {
+    seedStoreCurrency();
+    createStoreUser('admin');
+    $customer = createStoreUser('customer');
+    $line = orderableCartLine($customer, createStoreUser('seller'), 1, stock: 5);
+
+    placeApiOrder($this, storeApiToken($customer), ['payment_type' => 'cash_on_delivery'])->assertOk();
+
+    $other = createStoreUser('customer');
+    $line = orderableCartLine($other, createStoreUser('seller'), 1, stock: 5);
+    storeSetting('cash_payment', 0);
+    app('auth')->forgetGuards();
+    $this->withToken(storeApiToken($other))->postJson('/temp/api/v2/order/store', ['payment_type' => 'cash_on_delivery'])
+        ->assertStatus(422)->assertJsonPath('result', false);
+
+    storeSetting('cash_payment', 1);
+    $line->update(['address_id' => 0]);
+    app('auth')->forgetGuards();
+    $this->withToken(storeApiToken($other))->postJson('/temp/api/v2/order/store', ['payment_type' => 'cash_on_delivery'])
+        ->assertStatus(422)->assertJsonPath('result', false);
 });

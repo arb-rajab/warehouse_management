@@ -463,7 +463,7 @@ class ProductController extends Controller
 
         $products = Product::with(Product::WITH_STORE_LIST);
 
-        $products->where('published', 1)->physical();
+        $products->where('published', 1)->where('approved', 1)->physical();
 
         if (!empty($category_ids)) {
             $products->whereIn('category_id', $category_ids);
