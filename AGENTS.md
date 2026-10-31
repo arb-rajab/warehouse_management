@@ -17,9 +17,12 @@ Maintain shared instructions here and in the referenced `.ai/` files; keep
 5. Forms must follow [.ai/rules/form-required-fields.md](.ai/rules/form-required-fields.md):
    mark required fields, and keep the mark, `required` and the server rule in agreement.
 
-Read the shared files fully once per session before editing; use multiple
-bounded reads if tool output is truncated. For narrow follow-up work, reuse
-already-read guidance and read only newly applicable area rules. The portability
+Read this file and the rules index fully once per session. For
+`.ai/agent-framework.md` and `.ai/agent-conventions.md`, read the whole file for
+broad or cross-cutting work; for a narrow task read only the sections that apply
+(find them with `rg -n '^## '`) plus [Keeping a session cheap](.ai/agent-conventions.md#keeping-a-session-cheap).
+Use multiple bounded reads if tool output is truncated. For follow-up work,
+reuse already-read guidance and read only newly applicable area rules. The portability
 rules below take precedence over environment-specific wording in those files.
 
 ## Project context and setup
@@ -106,7 +109,8 @@ Backend feature tests need a configured local `APP_KEY` and a Vite manifest;
 generated Wayfinder files may also be required. Never print environment secrets.
 The pre-push script can skip unavailable PHP tools: report skipped checks, rather
 than describing a partial run as full verification. Do not commit or push unless
-authorized by the user or the applicable task instructions.
+authorized by the user or the applicable task instructions; once authorized, push
+after each commit, except the final one an attested run still has to amend.
 
 ### Attested pre-push run
 
