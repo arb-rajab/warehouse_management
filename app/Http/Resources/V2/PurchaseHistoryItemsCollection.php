@@ -38,7 +38,7 @@ class PurchaseHistoryItemsCollection extends ResourceCollection
                     } else if ($data->refund_request != null && $data->refund_request->refund_status == 1) {
                         $refund_label = __('storefront.common.approved');
                         $refund_request_status = $data->refund_request->refund_status;
-                    } else if ($data->product->refundable != 0) {
+                    } else if ($data->product?->refundable != 0) {
                         $refund_label = __('api_resources.payment.not_applicable');
                     } else {
                         $refund_label = __('storefront.common.non_refundable');
@@ -57,9 +57,9 @@ class PurchaseHistoryItemsCollection extends ResourceCollection
 
                 return [
                     'id' => $data->id,
-                    'product_id' => $data->product->id,
-                    'product_name' => $data->product->getTranslation('name'),
-                    'mat_id' => $data->product->mat_id,
+                    'product_id' => $data->product?->id ?? $data->product_id,
+                    'product_name' => $data->product?->getTranslation('name') ?? '',
+                    'mat_id' => $data->product?->mat_id,
                     'variation' => $data->variation,
                     'variation_quantities' => $transformedData,
                     'price' => format_price($data->price),

@@ -130,6 +130,6 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->dontFlash(['current_password', 'password', 'password_confirmation', 'new_password', 'confirm_password']);
 
         $exceptions->shouldRenderJsonWhen(
-            fn (Request $request) => $request->is('api/*') || $request->expectsJson(),
+            fn (Request $request) => $request->is('api/*', '*/api/*') || $request->expectsJson(),
         );
     })->create();

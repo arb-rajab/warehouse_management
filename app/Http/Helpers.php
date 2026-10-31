@@ -110,7 +110,7 @@ if (!function_exists('filter_products')) {
                     });
                 });
         } else {
-            return $products->where('auction_product', 0)->where('published', true)->where('added_by', 'admin');
+            return $products->where('auction_product', 0)->where('published', true)->where('approved', 1)->where('added_by', 'admin');
         }
     }
 }

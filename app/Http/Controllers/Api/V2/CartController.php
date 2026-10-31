@@ -54,7 +54,12 @@ class CartController extends Controller
         foreach ($items as $cartItem) {
             $item_sum = 0.00;
 
-            $price = $cartItem->rep_price ? $cartItem->rep_price : $cartItem->price;
+            // carts.price is not kept in step with the catalogue; GET /carts
+            // prices each line live, so the summary must as well.
+            $product = Product::find($cartItem->product_id);
+            $price = $cartItem->rep_price
+                ? $cartItem->rep_price
+                : ($product ? cart_product_price($cartItem, $product, false, false) : $cartItem->price);
 
             // $item_sum += ($cartItem->price + $cartItem->tax) * $cartItem->quantity;
             $item_sum += $price * $cartItem->quantity;
