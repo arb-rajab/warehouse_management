@@ -72,9 +72,10 @@ class CartController extends Controller
 
         $delivery_cost = 0;
 
-        if ($subtotal < get_setting('minimum_order_amount')) {
-            $default_specific_product = Product::where('mat_id', get_setting('default_specific_product'))->first();
-            $delivery_cost = $default_specific_product->unit_price;
+        // The delivery line order/store adds: only when the store checks a minimum
+        // order, and only if its delivery product still exists.
+        if (get_setting('minimum_order_amount_check') == 1 && $subtotal < get_setting('minimum_order_amount')) {
+            $delivery_cost = Product::where('mat_id', get_setting('default_specific_product'))->value('unit_price') ?? 0;
         }
 
         return response()->json([

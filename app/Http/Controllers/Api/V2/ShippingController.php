@@ -83,10 +83,11 @@ class ShippingController extends Controller
         $owner_ids = Cart::where('user_id', auth()->user()->id)->select('owner_id')->groupBy('owner_id')->pluck('owner_id')->toArray();
         $currency_symbol = currency_symbol();
         $shops = [];
-        $subtotal = 0;
         if (!empty($owner_ids)) {
             foreach ($owner_ids as $owner_id) {
                 $shop = [];
+                // Per seller: the minimum order is checked against each seller's own lines.
+                $subtotal = 0;
                 $shop_items_raw_data = Cart::where('user_id', auth()->user()->id)->where('owner_id', $owner_id)->get()->toArray();
                 $shop_items_data = [];
                 if (!empty($shop_items_raw_data)) {

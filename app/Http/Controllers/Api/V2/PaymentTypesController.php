@@ -114,6 +114,10 @@ class PaymentTypesController
                 $carts = auth()->user()->carts()->with('product:id,digital,cash_on_delivery')->get();
 
                 foreach ($carts as $key => $cart) {
+                    // A line whose product is gone is dropped at checkout; it decides nothing.
+                    if ($cart->product === null) {
+                        continue;
+                    }
                     $haveDigitalProduct =  $cart->product->digital == 1;
                     $cash_on_delivery =  $cart->product->cash_on_delivery == 0;
                     if ($haveDigitalProduct || $cash_on_delivery) {

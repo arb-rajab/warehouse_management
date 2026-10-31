@@ -108,8 +108,10 @@ class OrderController extends Controller
                 $product = Product::find($cartItem['product_id']);
                 $subtotal += cart_product_price($cartItem, $product, false, false) * $cartItem['quantity'];
             }
-            if ($subtotal < get_setting('minimum_order_amount')) {
-                $default_specific_product = Product::where('mat_id', get_setting('default_specific_product'))->first();
+            $default_specific_product = $subtotal < get_setting('minimum_order_amount')
+                ? Product::where('mat_id', get_setting('default_specific_product'))->first()
+                : null;
+            if ($default_specific_product) {
                 $delivery_cart = Cart::where('user_id', auth()->user()->id)->where('product_id', $default_specific_product->id)->first();;
 
                 if (!$delivery_cart) {
