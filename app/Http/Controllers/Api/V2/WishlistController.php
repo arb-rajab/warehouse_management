@@ -15,7 +15,7 @@ class WishlistController extends Controller
         $product_ids = Wishlist::where('user_id', auth()->user()->id)->pluck("product_id")->toArray();
         $existing_product_ids = Product::whereIn('id', $product_ids)->pluck("id")->toArray();
 
-        $query = Wishlist::query();
+        $query = Wishlist::with('product.taxes');
         $query->where('user_id', auth()->user()->id)->whereIn("product_id", $existing_product_ids);
 
         return new WishlistCollection($query->latest()->get());

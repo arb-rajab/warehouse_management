@@ -33,7 +33,7 @@ class ConversationController extends Controller
             //     ->orderBy('max_created_at', 'DESC')
             //     ->groupBy('sender_id')
             //     ->get();
-            $conversations = Conversation::where('receiver_id', auth()->user()->id)
+            $conversations = Conversation::with(['sender', 'receiver'])->where('receiver_id', auth()->user()->id)
                 ->orderBy('created_at', 'desc')
                 ->get();
             return  ConversationResource::collection($conversations);
@@ -83,7 +83,7 @@ class ConversationController extends Controller
     {
         $conversation = Conversation::findOrFail($id);
         if ($conversation->receiver_id == auth()->user()->id) {
-            $messages = Message::where("conversation_id",$id)->orderBy('created_at', 'DESC')->get();
+            $messages = Message::with('user')->where("conversation_id",$id)->orderBy('created_at', 'DESC')->get();
 
             return new MessageCollection($messages);
         } else {

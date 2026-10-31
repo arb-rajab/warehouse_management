@@ -116,6 +116,16 @@ class Product extends Model
     ];
 
     /**
+     * Eager loads for the store API's product lists. ProductMiniCollection
+     * prices each product through its taxes, shows its stock photos and
+     * quantity, offer, rating collection and translated name, so a list built
+     * without them trips the lazy-loading guard in local/testing.
+     *
+     * @var list<string>
+     */
+    public const array WITH_STORE_LIST = ['stocks', 'taxes', 'offers', 'collection', 'product_translations'];
+
+    /**
      * The columns a product search matches, in the order the FULLTEXT index
      * declares them — `MATCH` only resolves against an index covering exactly
      * this column list, so the two must stay in step with

@@ -21,7 +21,7 @@ class CouponResource extends JsonResource
         if($this->type == 'product_base') {
 
             $decoded_product = Arr::pluck(json_decode($this->details, true), 'product_id');
-            $products = filter_products(Product::whereIn('id', $decoded_product))->get();
+            $products = filter_products(Product::with(['category', 'stocks'])->whereIn('id', $decoded_product))->get();
 
         }
 

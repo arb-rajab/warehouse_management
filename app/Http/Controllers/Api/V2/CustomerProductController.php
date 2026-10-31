@@ -15,14 +15,14 @@ class CustomerProductController extends Controller
 
     public function all()
     {
-        $products = CustomerProduct::where('status', '1')->where('published', '1')->paginate(10);
+        $products = CustomerProduct::with('category')->where('status', '1')->where('published', '1')->paginate(10);
         return new ClassifiedProductMiniCollection($products);
     }
 
 
     public function ownProducts()
     {
-        $products = CustomerProduct::where('user_id', auth()->user()->id)->paginate(20);
+        $products = CustomerProduct::with('category')->where('user_id', auth()->user()->id)->paginate(20);
         return new ClassifiedProductMiniCollection($products);
     }
 
@@ -30,7 +30,7 @@ class CustomerProductController extends Controller
     public function relatedProducts($id)
     {
         $product =   CustomerProduct::where('id', $id)->first();
-        $products =   CustomerProduct::where('category_id', $product->category_id)->where('id', '!=', $product->id)->where('status', '1')->where('published', '1')->paginate(10);
+        $products =   CustomerProduct::with('category')->where('category_id', $product->category_id)->where('id', '!=', $product->id)->where('status', '1')->where('published', '1')->paginate(10);
         return new ClassifiedProductMiniCollection($products);
     }
 

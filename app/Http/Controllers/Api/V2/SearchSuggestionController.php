@@ -23,7 +23,7 @@ class SearchSuggestionController extends Controller
         // $searches = $search_query->orderBy('count', 'desc')->limit(10)->get();
 
         if ($type == "product") {
-            $product_query = Product::query();
+            $product_query = Product::with('product_translations');
 
 
 

@@ -6,6 +6,14 @@ use Illuminate\Database\Eloquent\Model;
 
 class RefundRequest extends Model
 {
+    /**
+     * Eager loads for RefundRequestCollection: the order's code and the
+     * refunded product's translated name.
+     *
+     * @var list<string>
+     */
+    public const array WITH_LISTED = ['order', 'orderDetail.product.product_translations'];
+
     public function orderDetail()
     {
         return $this->belongsTo(OrderDetail::class);

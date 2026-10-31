@@ -287,7 +287,7 @@ class StoreUser extends Authenticatable implements MustVerifyEmail
     {
         $cart = $this->carts->first();
 
-        return $cart ? $cart->belongsTo(StoreUser::class, 'for_customer', 'id') : $this->belongsTo(StoreUser::class, 'for_customer', 'id')->where('id', '=', null);
+        return $cart ? $cart->belongsTo(StoreUser::class, 'for_customer', 'id') : (new Cart)->belongsTo(StoreUser::class, 'for_customer', 'id');
     }
 
     public function product_bids()

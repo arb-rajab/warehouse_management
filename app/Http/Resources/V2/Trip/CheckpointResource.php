@@ -43,9 +43,9 @@ class   CheckpointResource extends JsonResource
             'status' => $this->status,
             'arrived_at' => $this->arrived_at,
             'address' => [
-            'country' => $this->country == [] ? null : $this->country,
-            'city' => $this->city == [] ? null : $this->city,
-            'state' => $this->state == [] ? null : $this->state,
+            'country' => null,
+            'city' => null,
+            'state' => null,
             'address' => $this->address == [] ? null : $this->address,
         ],
             'shipping_address' => $this->getCustomerForCheckpoint()?->shipping_address,

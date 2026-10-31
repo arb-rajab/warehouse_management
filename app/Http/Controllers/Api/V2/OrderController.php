@@ -111,6 +111,7 @@ class OrderController extends Controller
         }
 
         if (auth()->user()->is_rep) {
+            $cartItems->loadMissing(['product.collection', 'rep_customer']);
             $profits = 0;
             $total_price = 0;
             foreach ($cartItems as $cartItem) {

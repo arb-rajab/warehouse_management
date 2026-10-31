@@ -161,7 +161,7 @@ class OfferService
 
         $user = Auth::user();
         $cart_to_delete = Cart::find($cart_id);
-        $carts = Cart::where('user_id', $user->id)->get()->load('product', 'product.offers');
+        $carts = Cart::where('user_id', $user->id)->get()->load('product', 'product.offers.base_product', 'product.offers.offer_products');
         foreach($carts as $cart){
             $offer_of_cart_product = $cart->product->offers?->first();
             if($cart_to_delete && $cart_to_delete->product_id == $offer_of_cart_product?->base_product?->product_id){
@@ -181,10 +181,11 @@ class OfferService
     {
         $user = Auth::user();
         $carts = Cart::where('user_id', $user->id)->get();
-        $brand_offers = Offer::where('offer_type', 'brand_offer')->active()->get();
+        $brand_offers = Offer::with(['base_product', 'offer_products.product.taxes'])->where('offer_type', 'brand_offer')->active()->get();
         $brandTotals = []; // Initialize an associative array to store brand totals
 
         if($brand_offers->count() > 0){
+            $carts->load('product.brand');
             foreach ($carts as $cart) {
                 $brand = $cart->product->brand;
                 if ($brand) {

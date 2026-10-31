@@ -14,6 +14,7 @@ use App\Http\Resources\V2\Trip\TripResource;
 use App\Models\Checkpoint;
 use App\Models\Order;
 use App\Models\StoreUser;
+use App\Models\Trip;
 use App\Models\Truck;
 use App\Services\DriverService;
 use App\Services\TripService;
@@ -38,7 +39,7 @@ class DriverController extends Controller
 
     public function getTripsHistory()
     {
-        $trips = Auth::user()->trips()->where('status', TripStatus::Closed)->get();
+        $trips = Auth::user()->trips()->with(Trip::resourceRelations())->where('status', TripStatus::Closed)->get();
 
         return response()->json([
             'data' => TripResource::collection($trips)

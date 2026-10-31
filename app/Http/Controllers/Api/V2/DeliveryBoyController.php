@@ -82,7 +82,7 @@ class DeliveryBoyController extends Controller
 //        $order_query->where('delivery_status', 'pending');
 //        $order_query->where('cancel_request', '0');
 
-        $order_query = Order::query();
+        $order_query = Order::with('shop');
         $order_query->where('assign_delivery_boy', $id);
         $order_query->where(function ($order_query) {
             $order_query->where('delivery_status', 'pending')
@@ -105,7 +105,7 @@ class DeliveryBoyController extends Controller
     public function picked_up_delivery($id)
     {
         $this->ownDeliveryBoy($id);
-        $order_query = Order::query();
+        $order_query = Order::with('shop');
         $order_query->where('delivery_status', 'picked_up');
         $order_query->where('cancel_request', '0');
 
@@ -121,7 +121,7 @@ class DeliveryBoyController extends Controller
     public function on_the_way_delivery($id)
     {
         $this->ownDeliveryBoy($id);
-        $order_query = Order::query();
+        $order_query = Order::with('shop');
         $order_query->where('delivery_status', 'on_the_way');
         $order_query->where('cancel_request', '0');
 
@@ -137,7 +137,7 @@ class DeliveryBoyController extends Controller
     public function completed_delivery($id)
     {
         $this->ownDeliveryBoy($id);
-        $order_query = Order::query();
+        $order_query = Order::with('shop');
         $order_query->where('delivery_status', 'delivered');
 
         //dd(request()->date_range);
@@ -180,7 +180,7 @@ class DeliveryBoyController extends Controller
     public function pending_delivery($id)
     {
         $this->ownDeliveryBoy($id);
-        $order_query = Order::query();
+        $order_query = Order::with('shop');
         $order_query->where('delivery_status', '!=', 'delivered');
         $order_query->where('delivery_status', '!=', 'cancelled');
         $order_query->where('cancel_request', '0');
@@ -197,7 +197,7 @@ class DeliveryBoyController extends Controller
     public function cancelled_delivery($id)
     {
         $this->ownDeliveryBoy($id);
-        $order_query = Order::query();
+        $order_query = Order::with('user');
         $order_query->where('delivery_status', 'cancelled');
 
         if (request()->has('date_range') && request()->date_range != null &&  request()->date_range != "") {
@@ -238,7 +238,7 @@ class DeliveryBoyController extends Controller
     public function collection($id)
     {
         $this->ownDeliveryBoy($id);
-        $collection_query = DeliveryHistory::query();
+        $collection_query = DeliveryHistory::with('order');
         $collection_query->where('delivery_status', 'delivered');
         $collection_query->where('payment_type', 'cash_on_delivery');
 
@@ -248,7 +248,7 @@ class DeliveryBoyController extends Controller
     public function earning($id)
     {
         $this->ownDeliveryBoy($id);
-        $collection_query = DeliveryHistory::query();
+        $collection_query = DeliveryHistory::with('order');
         $collection_query->where('delivery_status', 'delivered');
 
         return new DeliveryHistoryCollection($collection_query->where('delivery_boy_id', $id)->latest()->paginate(10));
@@ -435,7 +435,7 @@ class DeliveryBoyController extends Controller
     public function items($id)
     {
         $order_id = Order::select('id')->where('id', $id)->where('assign_delivery_boy', auth()->user()->id)->firstOrFail();
-        $order_query = OrderDetail::where('order_id', $order_id->id);
+        $order_query = OrderDetail::with(OrderDetail::WITH_ITEM_DETAILS)->where('order_id', $order_id->id);
         return new PurchaseHistoryItemsCollection($order_query->get());
     }
 }

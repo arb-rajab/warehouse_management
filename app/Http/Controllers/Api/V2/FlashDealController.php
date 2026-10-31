@@ -6,7 +6,6 @@ use App\Http\Resources\V2\FlashDealCollection;
 use App\Http\Resources\V2\ProductCollection;
 use App\Http\Resources\V2\ProductMiniCollection;
 use App\Models\FlashDeal;
-use App\Models\Product;
 
 class FlashDealController extends Controller
 {
@@ -23,12 +22,7 @@ class FlashDealController extends Controller
     public function products($id)
     {
         $flash_deal = FlashDeal::find($id);
-        $products = collect();
-        foreach ($flash_deal->flash_deal_products as $key => $flash_deal_product) {
-            if (Product::find($flash_deal_product->product_id) != null) {
-                $products->push(Product::find($flash_deal_product->product_id));
-            }
-        }
+        $products = $flash_deal->flash_deal_products()->withListedProduct()->get()->pluck('product')->filter()->values();
         return new ProductMiniCollection($products);
     }
 }

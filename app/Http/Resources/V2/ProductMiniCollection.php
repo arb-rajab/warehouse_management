@@ -3,6 +3,7 @@
 namespace App\Http\Resources\V2;
 
 use App\Models\Cart;
+use App\Models\Offer;
 use App\Models\ProductVariation;
 use App\Models\StoreUser;
 use Illuminate\Http\Resources\Json\ResourceCollection;
@@ -82,10 +83,8 @@ class ProductMiniCollection extends ResourceCollection
                     $user = getUserByToken();
                     $offer = $data->offers->toQuery()->active()->forAuthUser($user)->productsOffers()->first();
                     if($offer){
+                        $offer->loadMissing(Offer::WITH_OFFERED_PRODUCTS);
                         $offer_array = [];
-                        if ($offer->image != null && $offer->image != "") {
-                            $offer_array['banner'] = uploaded_asset($offer->banner);
-                        }
                         $offer_array['title'] = $offer->title;
                         $offer_array['multiple_usage'] = $offer->multiple_usage;
                         $offer_array['is_repeatable'] = $offer->is_repeatable;

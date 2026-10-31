@@ -9,6 +9,6 @@ class SubCategoryController extends Controller
 {
     public function index($id)
     {
-        return new CategoryCollection(Category::where('parent_id', $id)->get());
+        return new CategoryCollection(Category::with('category_translations')->where('parent_id', $id)->get());
     }
 }

@@ -38,14 +38,14 @@ class OrderController extends Controller
 
     public function getOrderDetails($id)
     {
-        $order_detail = Order::where('id', $id)->where('seller_id', auth()->user()->id)->get();
+        $order_detail = Order::with('orderDetails.product')->where('id', $id)->where('seller_id', auth()->user()->id)->get();
         return  OrderDetailResource::collection($order_detail);
     }
 
     public function getOrderItems($id)
     {
         $order_id = Order::select('id')->where('id', $id)->where('seller_id', auth()->user()->id)->first();
-        $order_query = OrderDetail::where('order_id', $order_id->id);
+        $order_query = OrderDetail::with('product')->where('order_id', $order_id->id);
 
         return  OrderItemResource::collection($order_query->get());
         // return new PurchaseHistoryItemsCollection($order_query->get());
