@@ -16,24 +16,6 @@ use Illuminate\Support\Facades\Schema;
  */
 function createDeliveryBoyTables(): void
 {
-    Schema::create('delivery_boys', function (Blueprint $table) {
-        $table->id();
-        $table->unsignedBigInteger('user_id');
-        $table->double('total_earning')->default(0);
-        $table->double('total_collection')->default(0);
-        $table->timestamps();
-    });
-    Schema::create('delivery_histories', function (Blueprint $table) {
-        $table->id();
-        $table->unsignedBigInteger('order_id');
-        $table->unsignedBigInteger('delivery_boy_id');
-        $table->string('delivery_status')->nullable();
-        $table->string('payment_type')->nullable();
-        $table->double('earning')->default(0);
-        $table->double('collection')->default(0);
-        $table->timestamps();
-    });
-
     foreach ([
         'assign_delivery_boy' => fn (Blueprint $table) => $table->unsignedBigInteger('assign_delivery_boy')->nullable(),
         'cancel_request' => fn (Blueprint $table) => $table->tinyInteger('cancel_request')->default(0),

@@ -4,9 +4,7 @@ use App\Models\Cart;
 use App\Models\ClubPoint;
 use App\Models\Order;
 use App\Models\StoreUser;
-use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 
 /**
  * Four mobile-API endpoints found a record by an id from the request and acted
@@ -17,30 +15,13 @@ use Illuminate\Support\Facades\Schema;
  */
 function createClubPointTables(): void
 {
-    Schema::create('club_points', function (Blueprint $table) {
-        $table->id();
-        $table->unsignedBigInteger('user_id');
-        $table->unsignedBigInteger('order_id')->nullable();
-        $table->double('points')->default(0);
-        $table->tinyInteger('convert_status')->default(0);
-        $table->timestamps();
-    });
-    Schema::create('club_point_details', function (Blueprint $table) {
-        $table->id();
-        $table->unsignedBigInteger('club_point_id');
-        $table->unsignedBigInteger('product_id')->nullable();
-        $table->double('point')->default(0);
-        $table->double('converted_amount')->default(0);
-        $table->tinyInteger('refunded')->default(0);
-        $table->timestamps();
-    });
     DB::table('business_settings')->insert(['type' => 'club_point_convert_rate', 'value' => '10']);
 }
 
 function clubPointFor(StoreUser $customer, float $point): ClubPoint
 {
     $clubPoint = new ClubPoint;
-    $clubPoint->forceFill(['user_id' => $customer->id, 'points' => $point])->save();
+    $clubPoint->forceFill(['user_id' => $customer->id, 'order_id' => createStoreOrder($customer)->id, 'points' => $point])->save();
     DB::table('club_point_details')->insert(['club_point_id' => $clubPoint->id, 'point' => $point, 'refunded' => 0]);
 
     return $clubPoint;

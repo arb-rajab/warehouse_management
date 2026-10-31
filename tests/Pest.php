@@ -1011,50 +1011,6 @@ function catalogueImportFile(array $rows): UploadedFile
  */
 function strictApiCreateLegacyTables(): void
 {
-    if (! Schema::hasTable('refund_requests')) {
-        Schema::create('refund_requests', function (Blueprint $table) {
-            $table->id();
-            $table->integer('user_id');
-            $table->integer('seller_id')->nullable();
-            $table->integer('order_id');
-            $table->integer('order_detail_id');
-            $table->text('reason')->nullable();
-            $table->text('reject_reason')->nullable();
-            $table->integer('seller_approval')->default(0);
-            $table->integer('refund_status')->default(0);
-            $table->timestamps();
-        });
-    }
-    if (! Schema::hasTable('club_points')) {
-        Schema::create('club_points', function (Blueprint $table) {
-            $table->id();
-            $table->integer('user_id');
-            $table->integer('order_id');
-            $table->decimal('points', 10, 2)->default(0);
-            $table->integer('convert_status')->default(0);
-            $table->timestamps();
-        });
-        Schema::create('club_point_details', function (Blueprint $table) {
-            $table->id();
-            $table->integer('club_point_id');
-            $table->decimal('point', 10, 2)->default(0);
-            $table->integer('refunded')->default(0);
-            $table->timestamps();
-        });
-    }
-    if (! Schema::hasTable('delivery_histories')) {
-        Schema::create('delivery_histories', function (Blueprint $table) {
-            $table->id();
-            $table->integer('delivery_boy_id');
-            $table->integer('order_id');
-            $table->string('delivery_status')->nullable();
-            $table->string('payment_type')->nullable();
-            $table->decimal('earning', 10, 2)->default(0);
-            $table->decimal('collection', 10, 2)->default(0);
-            $table->integer('created_at')->nullable();
-            $table->integer('updated_at')->nullable();
-        });
-    }
     foreach (['orders' => ['assign_delivery_boy' => 'integer', 'delivery_history_date' => 'string', 'cancel_request' => 'integer', 'manual_payment' => 'integer', 'manual_payment_data' => 'text'], 'wallets' => ['offline_payment' => 'integer', 'approval' => 'integer']] as $table => $columns) {
         foreach ($columns as $column => $type) {
             if (! Schema::hasColumn($table, $column)) {
