@@ -112,8 +112,11 @@ class ProductDetailCollection extends ResourceCollection
 
                 $whole_sale = [];
                 if (addon_is_activated('wholesale')) {
-                    $whole_sale =  ProductWholesaleResource::collection($data->stocks->first()->wholesalePrices);
+                    $whole_sale = $data->stocks->first() ? ProductWholesaleResource::collection($data->stocks->first()->wholesalePrices) : [];
                 }
+
+                // An admin product, or one whose owner row is gone, shows as in-house.
+                $inHouse = $data->added_by == 'admin' || $data->user?->shop === null;
 
                 $productVariation = ProductVariation::where('product_id', $data->id)->get();
                 $productVariation = countVariationInCart($data->id, $productVariation);
@@ -123,10 +126,10 @@ class ProductDetailCollection extends ResourceCollection
                     'id' => (int)$data->id,
                     'name' => $data->getTranslation('name'),
                     'added_by' => $data->added_by,
-                    'seller_id' => $data->user->id,
-                    'shop_id' => $data->added_by == 'admin' ? 0 : $data->user->shop->id,
-                    'shop_name' => $data->added_by == 'admin' ? __('api_resources.shop.in_house_product') : $data->user->shop->name,
-                    'shop_logo' => $data->added_by == 'admin' ? uploaded_asset(get_setting('header_logo')) : uploaded_asset($data->user->shop->logo) ?? "",
+                    'seller_id' => (int) $data->user?->id,
+                    'shop_id' => $inHouse ? 0 : (int) $data->user->shop->id,
+                    'shop_name' => $inHouse ? __('api_resources.shop.in_house_product') : $data->user->shop->name,
+                    'shop_logo' => $inHouse ? uploaded_asset(get_setting('header_logo')) : uploaded_asset($data->user->shop->logo) ?? "",
                     'photos' => $photos,
                     'thumbnail_image' => uploaded_asset($data->thumbnail_img),
                     'tags' => explode(',', $data->tags),
