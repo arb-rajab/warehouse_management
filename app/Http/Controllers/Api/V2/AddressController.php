@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V2;
 
 use App\Http\Requests\Api\V2\SaveShippingAddressRequest;
+use App\Http\Requests\Api\V2\UpdateShippingAddressRequest;
 use App\Http\Resources\V2\AddressCollection;
 use App\Http\Resources\V2\CitiesCollection;
 use App\Http\Resources\V2\CountriesCollection;
@@ -64,7 +65,7 @@ class AddressController extends Controller
         ]);
     }
 
-    public function updateShippingAddress(SaveShippingAddressRequest $request)
+    public function updateShippingAddress(UpdateShippingAddressRequest $request)
     {
         $address = $this->manageableAddress($request->id);
         $address->address = $request->address;

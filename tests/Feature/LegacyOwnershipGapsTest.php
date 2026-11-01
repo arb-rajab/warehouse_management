@@ -248,7 +248,7 @@ describe('app API addresses', function () {
         $cart = cartLine($me, createStoreUser('seller'), 1);
         $api = gapApi($me);
 
-        $api->postJson('/temp/api/v2/user/shipping/update', ['id' => $first, 'address' => 'Changed 2', 'phone' => '1', 'state_id' => 1])->assertJsonPath('result', true);
+        $api->postJson('/temp/api/v2/user/shipping/update', ['id' => $first, 'address' => 'Changed 2', 'phone' => '1', 'country_id' => Address::find($first)->country_id])->assertJsonPath('result', true);
         $api->postJson('/temp/api/v2/user/shipping/make_default', ['id' => $second])->assertJsonPath('result', true);
         $api->postJson('/temp/api/v2/update-address-in-cart', ['address_id' => $first])->assertJsonPath('result', true);
 
@@ -274,7 +274,7 @@ describe('app API addresses', function () {
         $api = gapApi($rep->fresh());
 
         $api->postJson('/temp/api/v2/user/shipping/update', ['id' => $strangersAddress, 'address' => 'Hijacked 1', 'phone' => '1', 'state_id' => 1])->assertForbidden();
-        $api->postJson('/temp/api/v2/user/shipping/update', ['id' => $customersAddress, 'address' => 'Changed 2', 'phone' => '1', 'state_id' => 1])->assertJsonPath('result', true);
+        $api->postJson('/temp/api/v2/user/shipping/update', ['id' => $customersAddress, 'address' => 'Changed 2', 'phone' => '1', 'country_id' => Address::find($customersAddress)->country_id])->assertJsonPath('result', true);
 
         expect(Address::find($strangersAddress)->address)->toBe('Damrak 1')
             ->and(Address::find($customersAddress)->address)->toBe('Changed 2');
