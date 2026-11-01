@@ -50,7 +50,7 @@ test('the product reviews API pages, and leaves out other products and hidden re
     $review('Hidden review', 7, 0, 1);
 
     assertPagesWithoutOverlap(
-        fn (int $page) => $this->getJson("/temp/api/v1/reviews/product/7?page=$page"),
+        fn (int $page) => $this->getJson("/api/v1/store/reviews/product/7?page=$page"),
         fn ($response) => $response->json('data.*.comment'),
         total: 13,
         perPage: 10,
@@ -70,7 +70,7 @@ test("the purchase history API pages, and lists only the signed-in customer's or
     $this->withToken(storeApiToken($customer));
 
     assertPagesWithoutOverlap(
-        fn (int $page) => $this->getJson("/temp/api/v1/purchase-history?page=$page"),
+        fn (int $page) => $this->getJson("/api/v1/store/purchase-history?page=$page"),
         fn ($response) => $response->json('data.*.code'),
         total: 18,
         perPage: 15,
@@ -102,7 +102,7 @@ test("the wallet history API pages, and lists only the signed-in customer's rech
     $this->withToken(storeApiToken($customer));
 
     assertPagesWithoutOverlap(
-        fn (int $page) => $this->getJson("/temp/api/v1/wallet/history?page=$page"),
+        fn (int $page) => $this->getJson("/api/v1/store/wallet/history?page=$page"),
         fn ($response) => $response->json('data.*.amount'),
         total: 13,
         perPage: 10,
@@ -120,7 +120,7 @@ test('the product list API pages, and leaves out unpublished and unapproved prod
     $unapproved = createStoreProduct(['approved' => 0]);
 
     assertPagesWithoutOverlap(
-        fn (int $page) => $this->getJson("/temp/api/v1/products?page=$page"),
+        fn (int $page) => $this->getJson("/api/v1/store/products?page=$page"),
         fn ($response) => $response->json('data.*.id'),
         total: 13,
         perPage: 10,
@@ -140,7 +140,7 @@ test('the shop list API pages, and leaves out shops that are not verified', func
     $unverifiedShopId = $shop('Unverified shop', 0);
 
     assertPagesWithoutOverlap(
-        fn (int $page) => $this->getJson("/temp/api/v1/shops?page=$page"),
+        fn (int $page) => $this->getJson("/api/v1/store/shops?page=$page"),
         fn ($response) => $response->json('data.*.id'),
         total: 13,
         perPage: 10,
@@ -161,7 +161,7 @@ test("the seller order list API pages, and lists only the signed-in seller's ord
     $this->withToken(storeApiToken($seller));
 
     assertPagesWithoutOverlap(
-        fn (int $page) => $this->getJson("/temp/api/v1/seller/orders?page=$page"),
+        fn (int $page) => $this->getJson("/api/v1/store/seller/orders?page=$page"),
         fn ($response) => $response->json('data.*.id'),
         total: 13,
         perPage: 10,
@@ -175,7 +175,7 @@ test("the seller product list API pages, and lists only the signed-in seller's p
     $this->withToken($token);
 
     assertPagesWithoutOverlap(
-        fn (int $page) => $this->getJson("/temp/api/v1/seller/products/all?page=$page"),
+        fn (int $page) => $this->getJson("/api/v1/store/seller/products/all?page=$page"),
         fn ($response) => $response->json('data.*.id'),
         total: 13,
         perPage: 10,
@@ -189,7 +189,7 @@ test("the seller coupon product search API pages, and searches only the signed-i
     $this->withToken($token);
 
     assertPagesWithoutOverlap(
-        fn (int $page) => $this->getJson("/temp/api/v1/seller/coupon/for-product?coupon_type=product_base&page=$page"),
+        fn (int $page) => $this->getJson("/api/v1/store/seller/coupon/for-product?coupon_type=product_base&page=$page"),
         fn ($response) => $response->json('data.*.id'),
         total: 13,
         perPage: 10,

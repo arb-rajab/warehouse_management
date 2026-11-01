@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Middleware\EnsureSystemKey;
 use Illuminate\Support\Facades\Route;
 
-Route::group(['prefix' => 'v1/auth', 'middleware' => ['app_language']], function () {
+Route::group(['prefix' => 'v1/store/auth', 'middleware' => ['app_language']], function () {
     Route::post('login', 'App\Http\Controllers\Api\V1\StoreAuthController@login')->middleware('throttle:store-auth');
     Route::post('signup', 'App\Http\Controllers\Api\V1\StoreAuthController@signup')->middleware('throttle:store-signup');
     Route::post('social-login', 'App\Http\Controllers\Api\V1\StoreAuthController@socialLogin')->middleware('throttle:store-auth');
@@ -24,7 +24,7 @@ Route::group(['prefix' => 'v1/auth', 'middleware' => ['app_language']], function
 });
 
 
-Route::group(['prefix' => 'v1', 'middleware' => ['app_language']], function () {
+Route::group(['prefix' => 'v1/store', 'middleware' => ['app_language']], function () {
 
     Route::get('dynamic-popups', 'App\Http\Controllers\Api\V1\DynamicPopupController@index')->middleware('auth:store_api');
     Route::post('dynamic-popups/ignore/{id}', 'App\Http\Controllers\Api\V1\DynamicPopupController@ignore')->middleware('auth:store_api');
@@ -339,11 +339,13 @@ Route::group(['prefix' => 'v1', 'middleware' => ['app_language']], function () {
     // test
 });
 
-Route::fallback(function () {
+// Scoped to the store's own prefix: a bare Route::fallback() under `api` would
+// also answer the warehouse API's unknown paths with the store's envelope.
+Route::get('v1/store/{fallbackPlaceholder}', function () {
     return response()->json([
         'data' => [],
         'success' => false,
         'status' => 404,
         'message' => __('api.common.invalid_route')
     ], 404);
-});
+})->where('fallbackPlaceholder', '.*')->fallback();

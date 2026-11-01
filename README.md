@@ -65,26 +65,26 @@ Full request/response schemas are auto-generated from the code — browse them a
 
 ## API documentation
 
-Warehouse and Store APIs share one Scramble reference at `/docs/api` and one OpenAPI document at `/docs/api.json`. The document uses the application root as its server URL and preserves full endpoint paths: `/api/v1/*` for warehouse mobile clients and `/temp/api/*` for Store clients. Documentation is available locally; other environments require the `viewApiDocs` gate. Web and back-office pages are excluded.
+Warehouse and Store APIs share one Scramble reference at `/docs/api` and one OpenAPI document at `/docs/api.json`. The document uses the application root as its server URL and preserves full endpoint paths: `/api/v1/*` for warehouse mobile clients and `/api/v1/store/*` for Store clients. Documentation is available locally; other environments require the `viewApiDocs` gate. Web and back-office pages are excluded.
 
 The reference includes warehouse mobile, customer/catalogue, seller, representative, delivery, driver/trip, and warehouse integration endpoints. Request validation and response schemas are inferred from the implementation, preserving each API's resource envelope. Legacy dynamic payloads may have incomplete inferred schemas.
 
 Each endpoint has one area-and-feature tag. Warehouse groups cover Authentication, Inventory, Pallets, and Audit logs. Store groups cover Authentication, Catalogue, Orders, Customers, Sellers, Delivery & Trips, and Warehouse integration. The Warehouse groups appear first in the shared reference; endpoint paths and authentication requirements are unchanged.
 
-- Send `Accept: application/json`. Sign in with `POST /temp/api/v1/auth/login`, using `login_by`, `email` (also used for phone login), and `password`. Send the returned `access_token` as `Authorization: Bearer <access_token>` on protected routes. Warehouse mobile tokens are separate from store tokens.
+- Send `Accept: application/json`. Sign in with `POST /api/v1/store/auth/login`, using `login_by`, `email` (also used for phone login), and `password`. Send the returned `access_token` as `Authorization: Bearer <access_token>` on protected routes. Warehouse mobile tokens are separate from store tokens.
 - Seller and driver endpoints also enforce their corresponding roles; public catalogue endpoints need no token.
-- `/temp/api/v1/warehouse/*` uses `private-token: <configured WMS token>`, documented separately from bearer authentication. The middleware reports an invalid token as a JSON business failure with `status: 401` and HTTP 200.
+- `/api/v1/store/warehouse/*` uses `private-token: <configured WMS token>`, documented separately from bearer authentication. The middleware reports an invalid token as a JSON business failure with `status: 401` and HTTP 200.
 - Check `result`, `success`, and `status` where present: some legacy validation/business failures use HTTP 200. Disabled payment gateways return 404. Throttled routes can return 429.
 
 For example, sign in to the Store and use the returned token:
 
 ```bash
-curl --request POST "$APP_URL/temp/api/v1/auth/login" \
+curl --request POST "$APP_URL/api/v1/store/auth/login" \
   --header 'Accept: application/json' \
   --header 'Content-Type: application/json' \
   --data '{"login_by":"email","email":"customer@example.com","password":"your-password"}'
 
-curl "$APP_URL/temp/api/v1/auth/user" \
+curl "$APP_URL/api/v1/store/auth/user" \
   --header 'Accept: application/json' \
   --header "Authorization: Bearer $STORE_ACCESS_TOKEN"
 ```
@@ -96,7 +96,7 @@ php artisan scramble:export --path=api.json
 php artisan scramble:analyze
 ```
 
-Every registered `/temp/api` route points at an existing controller action, so Scramble documents them all; `OpenApiDocumentationTest` fails if a route is added without one.
+Every registered store `/api/v1/store` route points at an existing controller action, so Scramble documents them all; `OpenApiDocumentationTest` fails if a route is added without one.
 
 ## Localization
 

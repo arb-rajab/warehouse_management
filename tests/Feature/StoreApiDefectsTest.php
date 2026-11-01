@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 
 /**
- * Defects the strict-mode sweep of /temp/api/v1 turned up that are not lazy
+ * Defects the strict-mode sweep of /api/v1/store turned up that are not lazy
  * loads: routes with no action behind them, a model that was never written, a
  * query only MySQL could run and a handful of null dereferences.
  */
@@ -23,7 +23,7 @@ function strictApiAs($test, $user)
 test('the in-house list has the admin products and none of the sellers', function () {
     $store = strictApiStore();
 
-    $names = collect(strictApiAs($this, $store['customer'])->getJson('/temp/api/v1/products/inhouse')->assertOk()->json('data'))->pluck('name')->all();
+    $names = collect(strictApiAs($this, $store['customer'])->getJson('/api/v1/store/products/inhouse')->assertOk()->json('data'))->pluck('name')->all();
 
     // Two in-house priced products; the seller's third one is the noise (the digital ones are in-house too).
     expect($names)->toContain('Prod 1', 'Prod 2')->not->toContain('Prod 3');
@@ -34,16 +34,16 @@ test('the sub-category routes list a category with its children, like the catego
     $category = $store['categories'][0];
     $client = strictApiAs($this, $store['customer']);
 
-    $expected = $client->getJson("/temp/api/v1/products/category/$category")->assertOk()->json('data');
+    $expected = $client->getJson("/api/v1/store/products/category/$category")->assertOk()->json('data');
 
     expect($expected)->not->toBeEmpty()
-        ->and($client->getJson("/temp/api/v1/products/$path/$category")->assertOk()->json('data'))->toBe($expected);
+        ->and($client->getJson("/api/v1/store/products/$path/$category")->assertOk()->json('data'))->toBe($expected);
 })->with(['sub-category', 'sub-sub-category']);
 
 test('no API route points at an action that does not exist', function () {
     $missing = [];
     foreach (Route::getRoutes() as $route) {
-        if (str_starts_with($route->uri(), 'temp/api/') && ! $route->isFallback && ! method_exists($route->getControllerClass(), $route->getActionMethod())) {
+        if (str_starts_with($route->uri(), 'api/') && ! $route->isFallback && ! method_exists($route->getControllerClass(), $route->getActionMethod())) {
             $missing[] = $route->uri();
         }
     }
@@ -54,13 +54,13 @@ test('no API route points at an action that does not exist', function () {
 test('the driver notifications are reachable under the trips prefix as well', function () {
     $store = strictApiStore();
 
-    $this->withToken(storeApiToken($store['driver']))->getJson('/temp/api/v1/trips/notifications')->assertOk();
+    $this->withToken(storeApiToken($store['driver']))->getJson('/api/v1/store/trips/notifications')->assertOk();
 });
 
 test('the banners list is empty, not an error, while no banner is configured', function () {
     $store = strictApiStore();
 
-    strictApiAs($this, $store['customer'])->getJson('/temp/api/v1/banners')->assertOk()->assertJsonPath('data', []);
+    strictApiAs($this, $store['customer'])->getJson('/api/v1/store/banners')->assertOk()->assertJsonPath('data', []);
 });
 
 test('the home categories list names each pinned category once', function () {
@@ -69,7 +69,7 @@ test('the home categories list names each pinned category once', function () {
         DB::table('home_categories')->insert(['category_id' => $category, 'status' => 1]);
     }
 
-    $response = strictApiAs($this, $store['customer'])->getJson('/temp/api/v1/home-categories')->assertOk();
+    $response = strictApiAs($this, $store['customer'])->getJson('/api/v1/store/home-categories')->assertOk();
 
     expect(collect($response->json('data'))->pluck('name')->all())->toBe(['Snacks', 'Drinks']);
 });
@@ -77,18 +77,18 @@ test('the home categories list names each pinned category once', function () {
 test('the delivery address of a cart is empty while the cart has none', function () {
     $store = strictApiStore();
 
-    strictApiAs($this, $store['customer'])->getJson('/temp/api/v1/get-home-delivery-address')->assertOk()->assertJsonPath('data', []);
+    strictApiAs($this, $store['customer'])->getJson('/api/v1/store/get-home-delivery-address')->assertOk()->assertJsonPath('data', []);
 
     $address = addStoreAddress($store['customer']->id);
     Cart::where('user_id', $store['customer']->id)->update(['address_id' => $address]);
 
-    expect(strictApiAs($this, $store['customer'])->getJson('/temp/api/v1/get-home-delivery-address')->assertOk()->json('data'))->toHaveCount(1);
+    expect(strictApiAs($this, $store['customer'])->getJson('/api/v1/store/get-home-delivery-address')->assertOk()->json('data'))->toHaveCount(1);
 });
 
 test('a seller without a package or without a shop has no package info to read', function () {
     $store = strictApiStore();
 
-    strictApiAs($this, $store['seller'])->getJson('/temp/api/v1/seller/package/info')
+    strictApiAs($this, $store['seller'])->getJson('/api/v1/store/seller/package/info')
         ->assertOk()
         ->assertJsonPath('package_name', null)
         ->assertJsonPath('package_img', null);
@@ -96,13 +96,13 @@ test('a seller without a package or without a shop has no package info to read',
     DB::table('shops')->where('user_id', $store['seller']->id)->delete();
     app('auth')->forgetGuards();
 
-    strictApiAs($this, $store['seller'])->getJson('/temp/api/v1/seller/package/info')->assertNotFound();
+    strictApiAs($this, $store['seller'])->getJson('/api/v1/store/seller/package/info')->assertNotFound();
 });
 
 test('related classified ads of an unknown ad are a 404', function () {
     $store = strictApiStore();
 
-    strictApiAs($this, $store['customer'])->getJson('/temp/api/v1/classified/related-products/99999')->assertNotFound();
+    strictApiAs($this, $store['customer'])->getJson('/api/v1/store/classified/related-products/99999')->assertNotFound();
 });
 
 test('the purchased digital list holds only the digital lines of the paid orders', function () {
@@ -115,7 +115,7 @@ test('the purchased digital list holds only the digital lines of the paid orders
     }
 
     // The fixture's own paid orders hold three physical lines each, which must not be listed.
-    $listed = strictApiAs($this, $store['customer'])->getJson('/temp/api/v1/digital/purchased-list')->assertOk()->json('data');
+    $listed = strictApiAs($this, $store['customer'])->getJson('/api/v1/store/digital/purchased-list')->assertOk()->json('data');
 
     expect($listed)->toHaveCount(2);
 });
@@ -125,7 +125,7 @@ test('the seller sales stat sums the delivered orders of each of the last days',
     backdate($store['orders'][4], now()->subDay()->toDateTimeString());
     $yesterday = now()->subDay()->format('M-d');
 
-    $stat = strictApiAs($this, $store['seller'])->getJson('/temp/api/v1/seller/dashboard/sales-stat')->assertOk()->json();
+    $stat = strictApiAs($this, $store['seller'])->getJson('/api/v1/store/seller/dashboard/sales-stat')->assertOk()->json();
 
     expect($stat)->toHaveCount(7)
         ->and((float) collect($stat)->firstWhere('date', $yesterday)['total'])->toBe(5.0)
@@ -135,7 +135,7 @@ test('the seller sales stat sums the delivered orders of each of the last days',
 test('the seller product reviews are listed with their product and reviewer', function () {
     $store = strictApiStore();
 
-    $response = strictApiAs($this, $store['seller'])->getJson('/temp/api/v1/seller/products/reviews')->assertOk();
+    $response = strictApiAs($this, $store['seller'])->getJson('/api/v1/store/seller/products/reviews')->assertOk();
 
     expect($response->json('data'))->toHaveCount(1)
         ->and($response->json('data.0.product_name'))->toBe('Prod 3');
@@ -157,7 +157,7 @@ test('an order is placed when only one of the cart brands has a brand offer', fu
     }
     $before = Order::count();
 
-    strictApiAs($this, $user)->postJson('/temp/api/v1/payments/pay/cod', ['payment_type' => 'cash_on_delivery'])->assertOk()->assertJsonPath('result', true);
+    strictApiAs($this, $user)->postJson('/api/v1/store/payments/pay/cod', ['payment_type' => 'cash_on_delivery'])->assertOk()->assertJsonPath('result', true);
 
     expect(Order::count() - $before)->toBe(2);
 });

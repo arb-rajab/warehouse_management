@@ -280,7 +280,7 @@ test('WMS authentication grants no category action and no store writes', functio
 test('category migration retains public seller and mobile contracts and removes only the unused show', function () {
     expect(Route::has('categories.show'))->toBeFalse();
     $child = Category::forceCreate(['name' => 'Child', 'parent_id' => $this->category->id, 'level' => 1]);
-    $this->getJson('/temp/api/v1/categories')->assertOk()->assertJsonPath('success', true)->assertJsonPath('status', 200)
+    $this->getJson('/api/v1/store/categories')->assertOk()->assertJsonPath('success', true)->assertJsonPath('status', 200)
         ->assertJsonPath('data.0', ['id' => $this->category->id, 'name' => 'Food', 'banner' => uploaded_asset(null), 'icon' => uploaded_asset(null), 'number_of_children' => 1,
             'links' => ['products' => route('api.products.category', $this->category->id), 'sub_categories' => route('subCategories.index', $this->category->id)]]);
     expect(view()->exists('shop.categories.child_category'))->toBeTrue()->and(view()->exists('shop.backend.downloads.category'))->toBeTrue();

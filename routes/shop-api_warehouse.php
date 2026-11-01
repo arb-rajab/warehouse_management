@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\Route;
 // middleware at all, exposing customer PII and orders — see
 // .ai/rules/legacy-albaraka-holland.md section 0.3. The throttle comes first so
 // requests with a bad token are limited too (AppServiceProvider's `wms`).
-Route::prefix('v1/warehouse')->middleware(['throttle:wms', 'wms.auth'])->group(function () {
+Route::prefix('v1/store/warehouse')->middleware(['throttle:wms', 'wms.auth'])->group(function () {
 
     // Customers Section
     Route::controller(CustomerController::class)->group(function () {

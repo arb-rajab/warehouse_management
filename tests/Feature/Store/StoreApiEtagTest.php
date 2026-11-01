@@ -18,9 +18,9 @@ test('public store lookups answer a repeat request that already holds the curren
 
     $this->getJson($path, ['If-None-Match' => $etag])->assertNotModified();
 })->with([
-    'languages' => '/temp/api/v1/languages',
-    'banners' => '/temp/api/v1/banners',
-    'business settings' => '/temp/api/v1/business-settings',
-    'colors' => '/temp/api/v1/colors',
-    'currencies' => '/temp/api/v1/currencies',
+    'languages' => '/api/v1/store/languages',
+    'banners' => '/api/v1/store/banners',
+    'business settings' => '/api/v1/store/business-settings',
+    'colors' => '/api/v1/store/colors',
+    'currencies' => '/api/v1/store/currencies',
 ]);

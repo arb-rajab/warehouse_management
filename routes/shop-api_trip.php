@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use Illuminate\Support\Facades\Route;
 
-Route::group(['prefix' => 'v1/trips/', 'middleware' => ['app_language']], function () {
+Route::group(['prefix' => 'v1/store/trips/', 'middleware' => ['app_language']], function () {
 
     Route::middleware(['auth:store_api', 'driver'])->group(function () {
         Route::get('get-trips-history', 'App\Http\Controllers\Api\V1\Trip\DriverController@getTripsHistory');
@@ -19,7 +19,7 @@ Route::group(['prefix' => 'v1/trips/', 'middleware' => ['app_language']], functi
     });
 });
 
-Route::group(['prefix' => 'v1/driver/', 'middleware' => ['app_language']], function () {
+Route::group(['prefix' => 'v1/store/driver/', 'middleware' => ['app_language']], function () {
 
     Route::middleware('auth:store_api', 'driver')->group(function () {
         Route::get('notifications', 'App\Http\Controllers\Api\V1\Trip\DriverNotificationController@getAllNotification');
@@ -28,11 +28,13 @@ Route::group(['prefix' => 'v1/driver/', 'middleware' => ['app_language']], funct
 
 Route::get('/get-user-coordinates/{id}', 'App\Http\Controllers\Api\V1\Trip\DriverController@getLongLatitude')->name('test')->middleware(['auth:store_api', 'driver']);
 
-Route::fallback(function () {
+// Scoped to the store's own prefix: a bare Route::fallback() under `api` would
+// also answer the warehouse API's unknown paths with the store's envelope.
+Route::get('v1/store/{fallbackPlaceholder}', function () {
     return response()->json([
         'data' => [],
         'success' => false,
         'status' => 404,
         'message' => __('api.common.invalid_route')
     ], 404);
-});
+})->where('fallbackPlaceholder', '.*')->fallback();

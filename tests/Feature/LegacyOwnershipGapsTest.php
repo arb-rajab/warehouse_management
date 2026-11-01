@@ -94,7 +94,7 @@ test('a banned seller is refused on the seller app API', function () {
     $seller = createStoreUser('seller');
     $seller->forceFill(['banned' => 1])->save();
 
-    gapApi($seller)->getJson('/temp/api/v1/seller/orders')->assertNotFound();
+    gapApi($seller)->getJson('/api/v1/store/seller/orders')->assertNotFound();
 });
 
 describe('seller coupons', function () {
@@ -206,7 +206,7 @@ describe('seller conversations', function () {
         $receiver = createStoreUser('seller');
         $conversationId = gapConversation(createStoreUser('customer'), $receiver);
         $noiseId = gapConversation(createStoreUser('customer'), createStoreUser('seller'));
-        $uri = '/temp/api/v1/seller/conversations/message/store';
+        $uri = '/api/v1/store/seller/conversations/message/store';
 
         gapApi(createStoreUser('seller'))->postJson($uri, ['conversation_id' => $conversationId, 'message' => 'intruder'])->assertJsonPath('result', false);
         gapApi($receiver)->postJson($uri, ['conversation_id' => 999999, 'message' => 'lost'])->assertJsonPath('result', false);
@@ -229,11 +229,11 @@ describe('app API addresses', function () {
         $cart = cartLine($me, createStoreUser('seller'), 1);
         $api = gapApi($me);
 
-        $api->postJson('/temp/api/v1/user/shipping/update', ['id' => $theirs, 'address' => 'Hijacked 1', 'phone' => '1', 'state_id' => 1])->assertForbidden();
-        $api->postJson('/temp/api/v1/user/shipping/update-location', ['id' => $theirs, 'latitude' => 1, 'longitude' => 2])->assertForbidden();
-        $api->postJson('/temp/api/v1/user/shipping/make_default', ['id' => $theirs])->assertForbidden();
-        $api->getJson("/temp/api/v1/user/shipping/delete/{$theirs}")->assertJsonPath('result', false);
-        $api->postJson('/temp/api/v1/update-address-in-cart', ['address_id' => $theirs])->assertForbidden();
+        $api->postJson('/api/v1/store/user/shipping/update', ['id' => $theirs, 'address' => 'Hijacked 1', 'phone' => '1', 'state_id' => 1])->assertForbidden();
+        $api->postJson('/api/v1/store/user/shipping/update-location', ['id' => $theirs, 'latitude' => 1, 'longitude' => 2])->assertForbidden();
+        $api->postJson('/api/v1/store/user/shipping/make_default', ['id' => $theirs])->assertForbidden();
+        $api->getJson("/api/v1/store/user/shipping/delete/{$theirs}")->assertJsonPath('result', false);
+        $api->postJson('/api/v1/store/update-address-in-cart', ['address_id' => $theirs])->assertForbidden();
 
         expect(Address::find($theirs)->only(['address', 'latitude', 'set_default']))->toEqual(['address' => 'Damrak 1', 'latitude' => null, 'set_default' => 1])
             ->and(Address::find($mine)->set_default)->toBe(1)
@@ -248,9 +248,9 @@ describe('app API addresses', function () {
         $cart = cartLine($me, createStoreUser('seller'), 1);
         $api = gapApi($me);
 
-        $api->postJson('/temp/api/v1/user/shipping/update', ['id' => $first, 'address' => 'Changed 2', 'phone' => '1', 'country_id' => Address::find($first)->country_id])->assertJsonPath('result', true);
-        $api->postJson('/temp/api/v1/user/shipping/make_default', ['id' => $second])->assertJsonPath('result', true);
-        $api->postJson('/temp/api/v1/update-address-in-cart', ['address_id' => $first])->assertJsonPath('result', true);
+        $api->postJson('/api/v1/store/user/shipping/update', ['id' => $first, 'address' => 'Changed 2', 'phone' => '1', 'country_id' => Address::find($first)->country_id])->assertJsonPath('result', true);
+        $api->postJson('/api/v1/store/user/shipping/make_default', ['id' => $second])->assertJsonPath('result', true);
+        $api->postJson('/api/v1/store/update-address-in-cart', ['address_id' => $first])->assertJsonPath('result', true);
 
         expect(Address::find($first)->address)->toBe('Changed 2')
             ->and(Address::find($first)->set_default)->toBe(0)
@@ -258,7 +258,7 @@ describe('app API addresses', function () {
             ->and(Address::find($noise)->set_default)->toBe(1)
             ->and($cart->fresh()->address_id)->toBe($first);
 
-        $api->getJson("/temp/api/v1/user/shipping/delete/{$first}")->assertJsonPath('result', true);
+        $api->getJson("/api/v1/store/user/shipping/delete/{$first}")->assertJsonPath('result', true);
 
         expect(Address::find($first))->toBeNull()->and(Address::find($noise))->not->toBeNull();
     });
@@ -273,8 +273,8 @@ describe('app API addresses', function () {
         $cart->forceFill(['for_customer' => $customer->id])->save();
         $api = gapApi($rep->fresh());
 
-        $api->postJson('/temp/api/v1/user/shipping/update', ['id' => $strangersAddress, 'address' => 'Hijacked 1', 'phone' => '1', 'state_id' => 1])->assertForbidden();
-        $api->postJson('/temp/api/v1/user/shipping/update', ['id' => $customersAddress, 'address' => 'Changed 2', 'phone' => '1', 'country_id' => Address::find($customersAddress)->country_id])->assertJsonPath('result', true);
+        $api->postJson('/api/v1/store/user/shipping/update', ['id' => $strangersAddress, 'address' => 'Hijacked 1', 'phone' => '1', 'state_id' => 1])->assertForbidden();
+        $api->postJson('/api/v1/store/user/shipping/update', ['id' => $customersAddress, 'address' => 'Changed 2', 'phone' => '1', 'country_id' => Address::find($customersAddress)->country_id])->assertJsonPath('result', true);
 
         expect(Address::find($strangersAddress)->address)->toBe('Damrak 1')
             ->and(Address::find($customersAddress)->address)->toBe('Changed 2');
@@ -284,11 +284,11 @@ describe('app API addresses', function () {
         $address = addStoreAddress(createStoreUser('customer')->id);
         $api = gapGuestApi();
 
-        $api->postJson('/temp/api/v1/user/shipping/update', ['id' => $address, 'address' => 'Hijacked 1'])->assertUnauthorized();
-        $api->postJson('/temp/api/v1/user/shipping/update-location', ['id' => $address, 'latitude' => 1])->assertUnauthorized();
-        $api->postJson('/temp/api/v1/user/shipping/make_default', ['id' => $address])->assertUnauthorized();
-        $api->getJson("/temp/api/v1/user/shipping/delete/{$address}")->assertUnauthorized();
-        $api->postJson('/temp/api/v1/update-address-in-cart', ['address_id' => $address])->assertUnauthorized();
+        $api->postJson('/api/v1/store/user/shipping/update', ['id' => $address, 'address' => 'Hijacked 1'])->assertUnauthorized();
+        $api->postJson('/api/v1/store/user/shipping/update-location', ['id' => $address, 'latitude' => 1])->assertUnauthorized();
+        $api->postJson('/api/v1/store/user/shipping/make_default', ['id' => $address])->assertUnauthorized();
+        $api->getJson("/api/v1/store/user/shipping/delete/{$address}")->assertUnauthorized();
+        $api->postJson('/api/v1/store/update-address-in-cart', ['address_id' => $address])->assertUnauthorized();
 
         expect(Address::find($address)->address)->toBe('Damrak 1');
     });
@@ -296,8 +296,8 @@ describe('app API addresses', function () {
     test('changing an address that does not exist returns 404', function () {
         $api = gapApi(createStoreUser('customer'));
 
-        $api->postJson('/temp/api/v1/user/shipping/update', ['id' => 999999, 'address' => 'x'])->assertNotFound();
-        $api->postJson('/temp/api/v1/user/shipping/make_default', ['id' => 999999])->assertNotFound();
+        $api->postJson('/api/v1/store/user/shipping/update', ['id' => 999999, 'address' => 'x'])->assertNotFound();
+        $api->postJson('/api/v1/store/user/shipping/make_default', ['id' => 999999])->assertNotFound();
     });
 });
 
@@ -342,9 +342,9 @@ describe('app API refund requests', function () {
         $undelivered = gapOrderDetail($me, $detailState);
         $api = gapApi($me);
 
-        $api->postJson('/temp/api/v1/refund-request/send', ['id' => $theirs->id, 'reason' => 'x'])->assertNotFound();
-        $api->postJson('/temp/api/v1/refund-request/send', ['id' => $undelivered->id, 'reason' => 'x'])->assertNotFound();
-        $api->postJson('/temp/api/v1/refund-request/send', ['id' => 999999, 'reason' => 'x'])->assertNotFound();
+        $api->postJson('/api/v1/store/refund-request/send', ['id' => $theirs->id, 'reason' => 'x'])->assertNotFound();
+        $api->postJson('/api/v1/store/refund-request/send', ['id' => $undelivered->id, 'reason' => 'x'])->assertNotFound();
+        $api->postJson('/api/v1/store/refund-request/send', ['id' => 999999, 'reason' => 'x'])->assertNotFound();
 
         expect(DB::table('refund_requests')->count())->toBe(0);
     })->with([
@@ -357,7 +357,7 @@ describe('app API refund requests', function () {
         $detail = gapOrderDetail($me);
         $noise = gapOrderDetail($me);
         $api = gapApi($me);
-        $uri = '/temp/api/v1/refund-request/send';
+        $uri = '/api/v1/store/refund-request/send';
 
         $api->postJson($uri, ['id' => $detail->id, 'reason' => 'broken'])->assertOk()->assertJsonPath('success', true);
         $api->postJson($uri, ['id' => $detail->id, 'reason' => 'again'])->assertUnprocessable()->assertJsonPath('success', false);
@@ -384,12 +384,12 @@ describe('app API refund requests', function () {
         $noise = gapOrderDetail(createStoreUser('customer'));
         $api = gapApi($me);
 
-        $api->getJson("/temp/api/v1/purchase-history-items/{$detail->order_id}")->assertOk()
+        $api->getJson("/api/v1/store/purchase-history-items/{$detail->order_id}")->assertOk()
             ->assertJsonPath('data.0.refund_request_status', 99);
 
-        $api->postJson('/temp/api/v1/refund-request/send', ['id' => $detail->id, 'reason' => 'broken'])->assertOk();
+        $api->postJson('/api/v1/store/refund-request/send', ['id' => $detail->id, 'reason' => 'broken'])->assertOk();
 
-        $api->getJson("/temp/api/v1/purchase-history-items/{$detail->order_id}")->assertOk()
+        $api->getJson("/api/v1/store/purchase-history-items/{$detail->order_id}")->assertOk()
             ->assertJsonCount(1, 'data')
             ->assertJsonPath('data.0.refund_request_status', 0)
             ->assertJsonPath('data.0.refund_label', __('storefront.status.pending'));
@@ -400,7 +400,7 @@ describe('app API refund requests', function () {
     test('a guest is refused', function () {
         $detail = gapOrderDetail(createStoreUser('customer'));
 
-        gapGuestApi()->postJson('/temp/api/v1/refund-request/send', ['id' => $detail->id, 'reason' => 'x'])->assertUnauthorized();
+        gapGuestApi()->postJson('/api/v1/store/refund-request/send', ['id' => $detail->id, 'reason' => 'x'])->assertUnauthorized();
 
         expect(DB::table('refund_requests')->count())->toBe(0);
     });
@@ -415,9 +415,9 @@ describe('app API files', function () {
 
         $ids = fn ($response) => collect($response->json('data'))->pluck('id')->all();
 
-        expect($ids(gapApi($customer)->getJson('/temp/api/v1/file-all')->assertOk()))->toBe([$own->id])
-            ->and($ids(gapApi($seller)->getJson('/temp/api/v1/file-all')->assertOk()))->toBe([$sellers->id])
-            ->and($ids(gapApi(createStoreAdmin())->getJson('/temp/api/v1/file-all')->assertOk()))->toEqualCanonicalizing([$own->id, $sellers->id]);
+        expect($ids(gapApi($customer)->getJson('/api/v1/store/file-all')->assertOk()))->toBe([$own->id])
+            ->and($ids(gapApi($seller)->getJson('/api/v1/store/file-all')->assertOk()))->toBe([$sellers->id])
+            ->and($ids(gapApi(createStoreAdmin())->getJson('/api/v1/store/file-all')->assertOk()))->toEqualCanonicalizing([$own->id, $sellers->id]);
     });
 
     test('the file library paginates', function () {
@@ -426,11 +426,11 @@ describe('app API files', function () {
             Upload::create(['file_name' => "f{$n}.png", 'user_id' => $customer->id]);
         }
 
-        gapApi($customer)->getJson('/temp/api/v1/file-all')->assertOk()->assertJsonCount(20, 'data');
+        gapApi($customer)->getJson('/api/v1/store/file-all')->assertOk()->assertJsonCount(20, 'data');
     });
 
     test('a guest is refused the file library', function () {
-        gapGuestApi()->getJson('/temp/api/v1/file-all')->assertUnauthorized();
+        gapGuestApi()->getJson('/api/v1/store/file-all')->assertUnauthorized();
     });
 
     test("a seller cannot delete another seller's upload, and can delete their own", function () {
@@ -441,12 +441,12 @@ describe('app API files', function () {
             $upload = Upload::create(['file_name' => 'uploads/all/mine.png', 'user_id' => $owner->id]);
             $noise = Upload::create(['file_name' => 'uploads/all/noise.png', 'user_id' => createStoreUser('seller')->id]);
 
-            gapApi(createStoreUser('seller'))->getJson("/temp/api/v1/seller/file/delete/{$upload->id}")->assertJsonPath('result', false);
+            gapApi(createStoreUser('seller'))->getJson("/api/v1/store/seller/file/delete/{$upload->id}")->assertJsonPath('result', false);
 
             expect(Upload::find($upload->id))->not->toBeNull()
                 ->and(file_exists("$publicPath/uploads/all/mine.png"))->toBeTrue();
 
-            gapApi($owner)->getJson("/temp/api/v1/seller/file/delete/{$upload->id}")->assertJsonPath('result', true);
+            gapApi($owner)->getJson("/api/v1/store/seller/file/delete/{$upload->id}")->assertJsonPath('result', true);
 
             expect(Upload::find($upload->id))->toBeNull()
                 ->and(file_exists("$publicPath/uploads/all/mine.png"))->toBeFalse()
@@ -461,8 +461,8 @@ describe('app API files', function () {
             file_put_contents("$publicPath/uploads/all/mine.png", 'x');
             $upload = Upload::create(['file_name' => 'uploads/all/mine.png', 'user_id' => $customer->id]);
 
-            gapApi($customer)->getJson("/temp/api/v1/seller/file/delete/{$upload->id}")->assertNotFound();
-            gapGuestApi()->getJson("/temp/api/v1/seller/file/delete/{$upload->id}")->assertUnauthorized();
+            gapApi($customer)->getJson("/api/v1/store/seller/file/delete/{$upload->id}")->assertNotFound();
+            gapGuestApi()->getJson("/api/v1/store/seller/file/delete/{$upload->id}")->assertUnauthorized();
 
             expect(Upload::find($upload->id))->not->toBeNull()
                 ->and(file_exists("$publicPath/uploads/all/mine.png"))->toBeTrue();

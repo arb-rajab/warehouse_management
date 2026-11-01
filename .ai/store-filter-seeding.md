@@ -66,7 +66,7 @@ English source translations are topped up with meaningful delivery, order and cu
 - Upload fixtures contain metadata with null URLs, without downloadable media files.
 - No email, SMS, push, payment, webhook or external sync operation is dispatched by seeding. Most inserts bypass events; product writes use the guarded model with events disabled. Financial/stock rows represent fixture states rather than real settlement or stock-debit operations.
 - Three read-query eager-loading changes were needed to render multi-row fixtures under strict lazy-loading protection: storefront search, API product search and representative-payment API. Their filter predicates and authorization rules are unchanged.
-- Existing representative-payment API related-name search has ungrouped OR clauses around lines 31–37 of `app/Http/Controllers/Api/V2/RepresentativePaymentController.php`, which can return another representative's receipts. This pre-existing ownership bug was not changed as part of data seeding. Tests prove the intended receipt-code search and representative fixture path, not security of every search branch.
+- Existing representative-payment API related-name search has ungrouped OR clauses around lines 31–37 of `app/Http/Controllers/Api/V1/RepresentativePaymentController.php`, which can return another representative's receipts. This pre-existing ownership bug was not changed as part of data seeding. Tests prove the intended receipt-code search and representative fixture path, not security of every search branch.
 - Verification uses SQLite and an isolated MySQL 8.4 test database. Development/staging databases and their current data remain untouched.
 
 ## Verification

@@ -15,7 +15,7 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 /**
- * The store's mobile-app API under /temp/api/v1 (routes/shop-api.php),
+ * The store's mobile-app API under /api/v1/store (routes/shop-api.php),
  * which nothing had exercised before. Driving it end to end found:
  *
  * - every resource collection came out as {"data":{"data":[...]}}: this app
@@ -35,43 +35,43 @@ use Illuminate\Support\Str;
 test('an app login returns a token that signs the customer in, and logging out revokes it', function () {
     $customer = createStoreUser('customer', 'app@example.com', 'correct-password');
 
-    $token = $this->postJson('/temp/api/v1/auth/login', ['email' => 'app@example.com', 'password' => 'correct-password', 'login_by' => 'email'])
+    $token = $this->postJson('/api/v1/store/auth/login', ['email' => 'app@example.com', 'password' => 'correct-password', 'login_by' => 'email'])
         ->assertOk()
         ->assertJsonPath('user.id', $customer->id)
         ->json('access_token');
 
-    $this->withToken($token)->getJson('/temp/api/v1/auth/user')
+    $this->withToken($token)->getJson('/api/v1/store/auth/user')
         ->assertOk()
         ->assertJsonPath('id', $customer->id);
 
-    $this->withToken($token)->getJson('/temp/api/v1/auth/logout')->assertOk();
+    $this->withToken($token)->getJson('/api/v1/store/auth/logout')->assertOk();
     app('auth')->forgetGuards();
 
-    $this->withToken($token)->getJson('/temp/api/v1/auth/user')->assertUnauthorized();
+    $this->withToken($token)->getJson('/api/v1/store/auth/user')->assertUnauthorized();
 });
 
 test('an app login with the wrong password gets no token', function () {
     createStoreUser('customer', 'app@example.com', 'correct-password');
 
-    $this->postJson('/temp/api/v1/auth/login', ['email' => 'app@example.com', 'password' => 'wrong-password', 'login_by' => 'email'])
+    $this->postJson('/api/v1/store/auth/login', ['email' => 'app@example.com', 'password' => 'wrong-password', 'login_by' => 'email'])
         ->assertUnauthorized()
         ->assertJsonMissingPath('access_token');
 });
 
 test('the app API turns away a request with no token', function () {
-    $this->getJson('/temp/api/v1/auth/user')->assertUnauthorized();
-    $this->getJson('/temp/api/v1/purchase-history')->assertUnauthorized();
+    $this->getJson('/api/v1/store/auth/user')->assertUnauthorized();
+    $this->getJson('/api/v1/store/purchase-history')->assertUnauthorized();
 });
 
 test('the app restores a customer from their stored token', function () {
     $customer = createStoreUser('customer');
 
-    $this->postJson('/temp/api/v1/get-user-by-access_token', ['access_token' => storeApiToken($customer)])
+    $this->postJson('/api/v1/store/get-user-by-access_token', ['access_token' => storeApiToken($customer)])
         ->assertOk()
         ->assertJsonPath('result', true)
         ->assertJsonPath('id', $customer->id);
 
-    $this->postJson('/temp/api/v1/get-user-by-access_token', ['access_token' => 'not-a-token'])
+    $this->postJson('/api/v1/store/get-user-by-access_token', ['access_token' => 'not-a-token'])
         ->assertJsonPath('result', false);
 });
 
@@ -83,13 +83,13 @@ test('catalogue lists come back in the shape the app reads, from the cache as fr
     $this->withToken(storeApiToken(createStoreUser('customer')));
 
     foreach (['first', 'cached'] as $request) {
-        $this->getJson('/temp/api/v1/products/todays-deal')
+        $this->getJson('/api/v1/store/products/todays-deal')
             ->assertOk()
             ->assertJsonPath('success', true)
             ->assertJsonPath('status', 200)
             ->assertJsonPath('data.0.id', $product->id);
 
-        $this->getJson('/temp/api/v1/categories/featured')
+        $this->getJson('/api/v1/store/categories/featured')
             ->assertOk()
             ->assertJsonPath('success', true)
             ->assertJsonPath('data.0.id', $categoryId);
@@ -102,15 +102,15 @@ test("a product list answers each customer's favourites for that customer, cache
     $fan = createStoreUser('customer');
     Wishlist::create(['user_id' => $fan->id, 'product_id' => $product->id]);
 
-    $this->withToken(storeApiToken($fan))->getJson('/temp/api/v1/products/todays-deal')
+    $this->withToken(storeApiToken($fan))->getJson('/api/v1/store/products/todays-deal')
         ->assertJsonPath('data.0.is_favorite', true);
 
-    $this->withToken(storeApiToken(createStoreUser('customer')))->getJson('/temp/api/v1/products/todays-deal')
+    $this->withToken(storeApiToken(createStoreUser('customer')))->getJson('/api/v1/store/products/todays-deal')
         ->assertJsonPath('data.0.is_favorite', false);
 });
 
 test("the store API leaves this app's own resources unwrapped", function () {
-    $this->getJson('/temp/api/v1/filter/brands')
+    $this->getJson('/api/v1/store/filter/brands')
         ->assertOk()
         ->assertJsonPath('success', true);
 
@@ -123,7 +123,7 @@ test("a shop's product list links each product's other listings", function () {
     $shopId = DB::table('shops')->insertGetId(['user_id' => $seller->id, 'name' => 'Seller Shop', 'slug' => 'seller-shop']);
     $product = createStoreProduct(['user_id' => $seller->id, 'added_by' => 'seller']);
 
-    $this->getJson("/temp/api/v1/shops/products/all/{$shopId}")
+    $this->getJson("/api/v1/store/shops/products/all/{$shopId}")
         ->assertOk()
         ->assertJsonPath('data.0.id', $product->id)
         ->assertJsonPath('data.0.links.top_from_seller', route('products.topFromSeller', $product->id));
@@ -137,13 +137,13 @@ test('a customer can place a cash-on-delivery order from the app', function () {
     $addressId = addStoreAddress($customer->id);
     $this->withToken(storeApiToken($customer));
 
-    $this->postJson('/temp/api/v1/carts/add', ['id' => $product->id, 'quantity' => 2, 'variant' => ''])
+    $this->postJson('/api/v1/store/carts/add', ['id' => $product->id, 'quantity' => 2, 'variant' => ''])
         ->assertOk()
         ->assertJsonPath('result', true);
-    $this->getJson('/temp/api/v1/cart-summary')->assertOk()->assertJsonPath('grand_total_value', 5);
-    $this->postJson('/temp/api/v1/update-address-in-cart', ['address_id' => $addressId])->assertOk();
+    $this->getJson('/api/v1/store/cart-summary')->assertOk()->assertJsonPath('grand_total_value', 5);
+    $this->postJson('/api/v1/store/update-address-in-cart', ['address_id' => $addressId])->assertOk();
 
-    $this->postJson('/temp/api/v1/payments/pay/cod', ['payment_type' => 'cash_on_delivery'])
+    $this->postJson('/api/v1/store/payments/pay/cod', ['payment_type' => 'cash_on_delivery'])
         ->assertOk()
         ->assertJsonPath('result', true);
 
@@ -168,13 +168,13 @@ test("a customer's purchase history opens their own order and not another custom
     $otherOrder = createStoreOrder(createStoreUser('customer'));
     $this->withToken(storeApiToken($customer));
 
-    $this->getJson("/temp/api/v1/purchase-history-details/{$order->id}")
+    $this->getJson("/api/v1/store/purchase-history-details/{$order->id}")
         ->assertOk()
         ->assertJsonPath('data.0.id', $order->id);
-    $this->getJson("/temp/api/v1/purchase-history-items/{$order->id}")->assertOk();
+    $this->getJson("/api/v1/store/purchase-history-items/{$order->id}")->assertOk();
 
-    $this->getJson("/temp/api/v1/purchase-history-details/{$otherOrder->id}")->assertForbidden();
-    $this->getJson("/temp/api/v1/purchase-history-items/{$otherOrder->id}")->assertForbidden();
+    $this->getJson("/api/v1/store/purchase-history-details/{$otherOrder->id}")->assertForbidden();
+    $this->getJson("/api/v1/store/purchase-history-items/{$otherOrder->id}")->assertForbidden();
 });
 
 test('an order a representative placed opens in the purchase history of the customer it was for', function () {
@@ -183,7 +183,7 @@ test('an order a representative placed opens in the purchase history of the cust
     $order = createStoreOrder(createStoreUser('customer'), ['by_rep' => 1, 'for_customer' => $customer->id]);
 
     $this->withToken(storeApiToken($customer))
-        ->getJson("/temp/api/v1/purchase-history-details/{$order->id}")
+        ->getJson("/api/v1/store/purchase-history-details/{$order->id}")
         ->assertOk()
         ->assertJsonPath('data.0.id', $order->id);
 });
@@ -195,8 +195,8 @@ test("a customer can remove their own cart item and not another customer's", fun
     $mine = Cart::create(['user_id' => $customer->id, 'product_id' => $product->id, 'quantity' => 1]);
     $this->withToken(storeApiToken($customer));
 
-    $this->deleteJson("/temp/api/v1/carts/{$theirs->id}")->assertNotFound();
-    $this->deleteJson("/temp/api/v1/carts/{$mine->id}")->assertOk();
+    $this->deleteJson("/api/v1/store/carts/{$theirs->id}")->assertNotFound();
+    $this->deleteJson("/api/v1/store/carts/{$mine->id}")->assertOk();
 
     expect(Cart::find($theirs->id))->not->toBeNull()
         ->and(Cart::find($mine->id))->toBeNull();
@@ -209,8 +209,8 @@ test("a customer can remove their own wishlist item and not another customer's",
     $mine = Wishlist::create(['user_id' => $customer->id, 'product_id' => $product->id]);
     $this->withToken(storeApiToken($customer));
 
-    $this->deleteJson("/temp/api/v1/wishlists/{$theirs->id}")->assertNotFound();
-    $this->deleteJson("/temp/api/v1/wishlists/{$mine->id}")->assertOk();
+    $this->deleteJson("/api/v1/store/wishlists/{$theirs->id}")->assertNotFound();
+    $this->deleteJson("/api/v1/store/wishlists/{$mine->id}")->assertOk();
 
     expect(Wishlist::whereKey($theirs->id)->exists())->toBeTrue()
         ->and(Wishlist::whereKey($mine->id)->exists())->toBeFalse();
@@ -223,19 +223,19 @@ test("a customer can read and write their own conversation and not someone else'
     Message::forceCreate(['conversation_id' => $conversation->id, 'user_id' => $customer->id, 'message' => 'Is this in stock?']);
 
     $this->withToken(storeApiToken(createStoreUser('customer')));
-    $this->getJson("/temp/api/v1/chat/messages/{$conversation->id}")->assertForbidden();
-    $this->getJson("/temp/api/v1/chat/get-new-messages/{$conversation->id}/0")->assertForbidden();
-    $this->postJson('/temp/api/v1/chat/insert-message', ['conversation_id' => $conversation->id, 'message' => 'Buy from me instead'])->assertForbidden();
+    $this->getJson("/api/v1/store/chat/messages/{$conversation->id}")->assertForbidden();
+    $this->getJson("/api/v1/store/chat/get-new-messages/{$conversation->id}/0")->assertForbidden();
+    $this->postJson('/api/v1/store/chat/insert-message', ['conversation_id' => $conversation->id, 'message' => 'Buy from me instead'])->assertForbidden();
 
     expect(Message::where('message', 'Buy from me instead')->exists())->toBeFalse();
 
     // The sanctum guard keeps the user it resolved for the rest of the test.
     app('auth')->forgetGuards();
     $this->withToken(storeApiToken($customer));
-    $this->getJson("/temp/api/v1/chat/messages/{$conversation->id}")
+    $this->getJson("/api/v1/store/chat/messages/{$conversation->id}")
         ->assertOk()
         ->assertJsonPath('data.0.message', 'Is this in stock?');
-    $this->postJson('/temp/api/v1/chat/insert-message', ['conversation_id' => $conversation->id, 'message' => 'And in blue?', 'user_id' => $customer->id])
+    $this->postJson('/api/v1/store/chat/insert-message', ['conversation_id' => $conversation->id, 'message' => 'And in blue?', 'user_id' => $customer->id])
         ->assertOk();
 
     expect(Message::where('message', 'And in blue?')->exists())->toBeTrue();
@@ -275,7 +275,7 @@ test("no one downloads a digital product's file through the app API without a pa
         foreach ([createStoreUser('customer'), $unpaidBuyer, createStoreUser('seller')] as $caller) {
             app('auth')->forgetGuards();
             $this->withToken(storeApiToken($caller))
-                ->getJson("/temp/api/v1/purchased-products/download/{$product->id}")
+                ->getJson("/api/v1/store/purchased-products/download/{$product->id}")
                 ->assertForbidden();
         }
     } finally {
@@ -291,7 +291,7 @@ test("a customer with a paid order downloads the digital product's file through 
 
     try {
         $response = $this->withToken(storeApiToken($buyer))
-            ->get("/temp/api/v1/purchased-products/download/{$product->id}")
+            ->get("/api/v1/store/purchased-products/download/{$product->id}")
             ->assertOk()
             ->assertDownload('guide.txt');
 
@@ -303,6 +303,6 @@ test("a customer with a paid order downloads the digital product's file through 
     // The file gone from disk is a 404, where it used to be an empty 200.
     app('auth')->forgetGuards();
     $this->withToken(storeApiToken($buyer))
-        ->getJson("/temp/api/v1/purchased-products/download/{$product->id}")
+        ->getJson("/api/v1/store/purchased-products/download/{$product->id}")
         ->assertNotFound();
 });

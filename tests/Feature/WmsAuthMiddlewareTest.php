@@ -121,17 +121,17 @@ test('every routes/shop-api_warehouse.php route rejects a request with no privat
         'message' => 'invalid token, who are you?',
     ]);
 })->with([
-    'GET /customers' => ['GET', '/temp/api/v1/warehouse/customers'],
-    'GET /reps' => ['GET', '/temp/api/v1/warehouse/reps'],
-    'GET /customer/{id}' => ['GET', '/temp/api/v1/warehouse/customer/1'],
-    'POST /customer/update/{id}' => ['POST', '/temp/api/v1/warehouse/customer/update/1'],
-    'GET /orders' => ['GET', '/temp/api/v1/warehouse/orders'],
-    'GET /order/{id}' => ['GET', '/temp/api/v1/warehouse/order/1'],
-    'GET /order_items/{id}' => ['GET', '/temp/api/v1/warehouse/order_items/1'],
-    'POST /update_order' => ['POST', '/temp/api/v1/warehouse/update_order'],
-    'POST /order/update-customer' => ['POST', '/temp/api/v1/warehouse/order/update-customer'],
-    'GET /products' => ['GET', '/temp/api/v1/warehouse/products'],
-    'GET /categories' => ['GET', '/temp/api/v1/warehouse/categories'],
+    'GET /customers' => ['GET', '/api/v1/store/warehouse/customers'],
+    'GET /reps' => ['GET', '/api/v1/store/warehouse/reps'],
+    'GET /customer/{id}' => ['GET', '/api/v1/store/warehouse/customer/1'],
+    'POST /customer/update/{id}' => ['POST', '/api/v1/store/warehouse/customer/update/1'],
+    'GET /orders' => ['GET', '/api/v1/store/warehouse/orders'],
+    'GET /order/{id}' => ['GET', '/api/v1/store/warehouse/order/1'],
+    'GET /order_items/{id}' => ['GET', '/api/v1/store/warehouse/order_items/1'],
+    'POST /update_order' => ['POST', '/api/v1/store/warehouse/update_order'],
+    'POST /order/update-customer' => ['POST', '/api/v1/store/warehouse/order/update-customer'],
+    'GET /products' => ['GET', '/api/v1/store/warehouse/products'],
+    'GET /categories' => ['GET', '/api/v1/store/warehouse/categories'],
 ]);
 
 test('an unauthenticated customer update request does not change the customer', function () {
@@ -146,7 +146,7 @@ test('an unauthenticated customer update request does not change the customer', 
         'phone' => '0000000000',
     ]);
 
-    $this->postJson("/temp/api/v1/warehouse/customer/update/{$customer->id}", [
+    $this->postJson("/api/v1/store/warehouse/customer/update/{$customer->id}", [
         'name' => 'Attacker-Supplied Name',
         'phone' => '9999999999',
     ]);

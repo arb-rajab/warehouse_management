@@ -97,7 +97,7 @@ test('each Store resource emits the exact original absolute product URL or fallb
 
 test('the authenticated mobile product endpoint emits the original absolute URL or fallback', function (?string $slug) {
     $product = finalResourceProduct($slug);
-    $response = $this->withToken(storeApiToken(createStoreUser()))->getJson('/temp/api/v1/products/'.$product->id)
+    $response = $this->withToken(storeApiToken(createStoreUser()))->getJson('/api/v1/store/products/'.$product->id)
         ->assertOk()->assertJsonPath('data.0.link', finalResourceUrl($product->id, $slug))
         ->assertJsonPath('data.0.name', 'Final product')->assertJsonPath('success', true)->assertJsonPath('status', 200);
     if ($slug === 'd15-final') {
@@ -113,7 +113,7 @@ test('the authenticated mobile classified endpoint preserves its historical ordi
         'description' => 'Description', 'unit_price' => 2.5,
     ]);
     StoreUser::query()->whereKey($product->user_id)->update(['phone' => '1234567890']);
-    $response = $this->withToken(storeApiToken(createStoreUser()))->getJson('/temp/api/v1/classified/product-details/'.$product->id)
+    $response = $this->withToken(storeApiToken(createStoreUser()))->getJson('/api/v1/store/classified/product-details/'.$product->id)
         ->assertOk()->assertJsonPath('data.0.link', finalResourceUrl($product->id, $slug))
         ->assertJsonPath('data.0.name', 'Classified product')->assertJsonPath('success', true)->assertJsonPath('status', 200);
     if ($slug === 'd15-final') {
@@ -137,7 +137,7 @@ test('the authenticated auction endpoint emits the original absolute URL or fall
     Event::listen('eloquent.retrieved: '.Product::class, function (Product $record): void {
         $record->setAttribute('auction_end_date', 0)->setAttribute('starting_bid', 5)->setRelation('bids', collect());
     });
-    $response = $this->withToken(storeApiToken(createStoreUser()))->getJson('/temp/api/v1/auction/products/'.$product->id)
+    $response = $this->withToken(storeApiToken(createStoreUser()))->getJson('/api/v1/store/auction/products/'.$product->id)
         ->assertOk()->assertJsonPath('data.0.link', finalResourceUrl($product->id, $slug))
         ->assertJsonPath('data.0.name', 'Final product')->assertJsonPath('success', true)->assertJsonPath('status', 200);
     if ($slug === 'd15-final') {

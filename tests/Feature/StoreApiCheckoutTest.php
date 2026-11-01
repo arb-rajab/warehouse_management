@@ -41,10 +41,10 @@ test('the cart summary totals the lines the cart lists, for a product with a box
     Cart::create(['user_id' => $noise->id, 'owner_id' => 0, 'product_id' => boxedProduct(99), 'quantity' => 5, 'variation' => '', 'price' => 99]);
     $this->withToken(storeApiToken($customer));
 
-    $this->postJson('/temp/api/v1/carts/add', ['id' => boxedProduct(22), 'variant' => '', 'quantity' => 2])->assertOk()->assertJsonPath('result', true);
+    $this->postJson('/api/v1/store/carts/add', ['id' => boxedProduct(22), 'variant' => '', 'quantity' => 2])->assertOk()->assertJsonPath('result', true);
 
-    $this->postJson('/temp/api/v1/carts', [])->assertOk()->assertJsonPath('0.cart_items.0.price', 22)->assertJsonPath('0.cart_items.0.quantity', 2);
-    $this->getJson('/temp/api/v1/cart-summary')->assertOk()->assertJson([
+    $this->postJson('/api/v1/store/carts', [])->assertOk()->assertJsonPath('0.cart_items.0.price', 22)->assertJsonPath('0.cart_items.0.quantity', 2);
+    $this->getJson('/api/v1/store/cart-summary')->assertOk()->assertJson([
         'sub_total' => '44.00€',
         'grand_total' => '44.00€',
         'grand_total_value' => 44,
@@ -59,10 +59,10 @@ test('a stock row with no price does not make an unvaried cart line free', funct
     DB::table('product_stocks')->where('product_id', $product)->update(['price' => 0]);
     $this->withToken(storeApiToken($customer));
 
-    $this->postJson('/temp/api/v1/carts/add', ['id' => $product, 'variant' => '', 'quantity' => 2])->assertOk();
+    $this->postJson('/api/v1/store/carts/add', ['id' => $product, 'variant' => '', 'quantity' => 2])->assertOk();
 
-    $this->getJson('/temp/api/v1/cart-summary')->assertOk()->assertJsonPath('grand_total_value', 44);
-    $this->getJson('/temp/api/v1/delivery-info')->assertOk()->assertJsonPath('0.subtotal', 44);
+    $this->getJson('/api/v1/store/cart-summary')->assertOk()->assertJsonPath('grand_total_value', 44);
+    $this->getJson('/api/v1/store/delivery-info')->assertOk()->assertJsonPath('0.subtotal', 44);
 });
 
 test('the delivery cost is charged only when the store checks a minimum order and its delivery product exists', function () {
@@ -75,13 +75,13 @@ test('the delivery cost is charged only when the store checks a minimum order an
     $this->withToken(storeApiToken($customer));
 
     storeSetting('minimum_order_amount_check', 0);
-    $this->getJson('/temp/api/v1/cart-summary')->assertOk()->assertJsonPath('delivery_cost', '0.00€');
+    $this->getJson('/api/v1/store/cart-summary')->assertOk()->assertJsonPath('delivery_cost', '0.00€');
 
     storeSetting('minimum_order_amount_check', 1);
-    $this->getJson('/temp/api/v1/cart-summary')->assertOk()->assertJsonPath('delivery_cost', '7.50€');
+    $this->getJson('/api/v1/store/cart-summary')->assertOk()->assertJsonPath('delivery_cost', '7.50€');
 
     $delivery->delete();
-    $this->getJson('/temp/api/v1/cart-summary')->assertOk()->assertJsonPath('delivery_cost', '0.00€');
+    $this->getJson('/api/v1/store/cart-summary')->assertOk()->assertJsonPath('delivery_cost', '0.00€');
 });
 
 test('the delivery info totals each seller\'s own lines', function () {
@@ -92,7 +92,7 @@ test('the delivery info totals each seller\'s own lines', function () {
     Cart::create(['user_id' => $customer->id, 'owner_id' => $first->id, 'product_id' => createStoreProduct(['user_id' => $first->id, 'unit_price' => 10])->id, 'quantity' => 2, 'variation' => '', 'price' => 10]);
     Cart::create(['user_id' => $customer->id, 'owner_id' => $second->id, 'product_id' => createStoreProduct(['user_id' => $second->id, 'unit_price' => 3])->id, 'quantity' => 1, 'variation' => '', 'price' => 3]);
 
-    $shops = $this->withToken(storeApiToken($customer))->getJson('/temp/api/v1/delivery-info')->assertOk()->json();
+    $shops = $this->withToken(storeApiToken($customer))->getJson('/api/v1/store/delivery-info')->assertOk()->json();
 
     expect(collect($shops)->pluck('subtotal', 'owner_id')->all())->toEqual([$first->id => 20, $second->id => 3]);
 });
@@ -105,7 +105,7 @@ test('the payment types skip a cart line whose product is gone', function () {
     Cart::create(['user_id' => $customer->id, 'owner_id' => 0, 'product_id' => $orderable->id, 'quantity' => 1, 'variation' => '', 'price' => 1]);
     Cart::create(['user_id' => $customer->id, 'owner_id' => 0, 'product_id' => 999999, 'quantity' => 1, 'variation' => '', 'price' => 1]);
 
-    $this->withToken(storeApiToken($customer))->getJson('/temp/api/v1/payment-types')->assertOk()->assertJsonPath('payment_types.0.payment_type_key', 'cash_on_delivery');
+    $this->withToken(storeApiToken($customer))->getJson('/api/v1/store/payment-types')->assertOk()->assertJsonPath('payment_types.0.payment_type_key', 'cash_on_delivery');
 });
 
 test('a representative who picked a customer works on the customer\'s addresses before adding a product', function () {
@@ -119,29 +119,29 @@ test('a representative who picked a customer works on the customer\'s addresses 
     $otherAddress = addStoreAddress($other->id);
     $this->withToken(storeApiToken($rep));
 
-    expect($this->getJson('/temp/api/v1/user/shipping/address')->assertOk()->json('data.*.id'))->toBe([$repAddress]);
+    expect($this->getJson('/api/v1/store/user/shipping/address')->assertOk()->json('data.*.id'))->toBe([$repAddress]);
 
     // The guard keeps its user, and the user its loaded relations, between the
     // requests of one test; a real request starts clean.
     app('auth')->forgetGuards();
-    $this->postJson('/temp/api/v1/representatives/pick-customer', ['id' => $customer->id, 'latitude' => 52.37, 'longitude' => 4.89])->assertOk()->assertJsonPath('result', true);
+    $this->postJson('/api/v1/store/representatives/pick-customer', ['id' => $customer->id, 'latitude' => 52.37, 'longitude' => 4.89])->assertOk()->assertJsonPath('result', true);
 
     app('auth')->forgetGuards();
-    expect($this->getJson('/temp/api/v1/user/shipping/address')->assertOk()->json('data.*.id'))->toBe([$customerAddress]);
+    expect($this->getJson('/api/v1/store/user/shipping/address')->assertOk()->json('data.*.id'))->toBe([$customerAddress]);
     app('auth')->forgetGuards();
-    expect($this->getJson('/temp/api/v1/representatives/current-customer')->assertOk()->json('data.id'))->toBe($customer->id);
+    expect($this->getJson('/api/v1/store/representatives/current-customer')->assertOk()->json('data.id'))->toBe($customer->id);
 
     app('auth')->forgetGuards();
-    $this->postJson('/temp/api/v1/user/shipping/create', ['address' => 'Prinsengracht 2', 'country_id' => DB::table('countries')->where('code', 'NL')->value('id'), 'phone' => '0612345678'])->assertOk();
+    $this->postJson('/api/v1/store/user/shipping/create', ['address' => 'Prinsengracht 2', 'country_id' => DB::table('countries')->where('code', 'NL')->value('id'), 'phone' => '0612345678'])->assertOk();
 
     expect(Address::where('address', 'Prinsengracht 2')->value('user_id'))->toBe($customer->id)
         ->and(Address::where('user_id', $rep->id)->count())->toBe(1)
         ->and(Address::where('user_id', $other->id)->count())->toBe(1);
 
     app('auth')->forgetGuards();
-    $this->postJson('/temp/api/v1/update-address-in-cart', ['address_id' => $customerAddress])->assertOk()->assertJsonPath('result', true);
+    $this->postJson('/api/v1/store/update-address-in-cart', ['address_id' => $customerAddress])->assertOk()->assertJsonPath('result', true);
     app('auth')->forgetGuards();
-    $this->postJson('/temp/api/v1/update-address-in-cart', ['address_id' => $otherAddress])->assertForbidden();
+    $this->postJson('/api/v1/store/update-address-in-cart', ['address_id' => $otherAddress])->assertForbidden();
 });
 
 test('a representative with no open visit and no cart stays on their own addresses', function () {
@@ -156,7 +156,7 @@ test('a representative with no open visit and no cart stays on their own address
     $old = Visit::create(['rep_id' => $rep->id, 'customer_id' => $customer->id, 'visit_date' => now()->subDays(2)]);
     DB::table('visits')->where('id', $old->id)->update(['created_at' => now()->subDays(2)]);
 
-    $this->withToken(storeApiToken($rep))->getJson('/temp/api/v1/user/shipping/address')->assertOk()->assertJsonPath('data.*.id', [$repAddress]);
+    $this->withToken(storeApiToken($rep))->getJson('/api/v1/store/user/shipping/address')->assertOk()->assertJsonPath('data.*.id', [$repAddress]);
 });
 
 test('order/store tells the customer why the payment type is refused', function () {
@@ -166,7 +166,7 @@ test('order/store tells the customer why the payment type is refused', function 
     Cart::create(['user_id' => $customer->id, 'owner_id' => 0, 'product_id' => $product->id, 'quantity' => 1, 'variation' => '', 'price' => 1]);
     $message = function (array $body) use ($customer) {
         app('auth')->forgetGuards();
-        $response = $this->withToken(storeApiToken($customer))->postJson('/temp/api/v1/order/store', $body)
+        $response = $this->withToken(storeApiToken($customer))->postJson('/api/v1/store/order/store', $body)
             ->assertUnprocessable()->assertJsonPath('result', false)->assertJsonPath('combined_order_id', 0);
         expect(array_keys($response->json()))->toEqual(['combined_order_id', 'result', 'message']);
 
@@ -204,7 +204,7 @@ test('the app saves an address under the storefront\'s rules, reading 0 as no st
     $save = function (string $path, array $body) use ($customer) {
         app('auth')->forgetGuards();
 
-        return $this->withToken(storeApiToken($customer))->postJson("/temp/api/v1/user/shipping/$path", $body);
+        return $this->withToken(storeApiToken($customer))->postJson("/api/v1/store/user/shipping/$path", $body);
     };
 
     $save('create', [...$valid, 'state_id' => 0, 'city_id' => 0])->assertOk()->assertJsonPath('result', true);
@@ -250,9 +250,9 @@ test('the cart summary prices a line whose unset rep_price comes back as the str
     Cart::retrieved(fn (Cart $cart) => $cart->setRawAttributes([...$cart->getAttributes(), 'rep_price' => number_format((float) $cart->rep_price, 2, '.', '')], true));
 
     try {
-        $this->withToken(storeApiToken($customer))->getJson('/temp/api/v1/cart-summary')->assertOk()->assertJsonPath('grand_total_value', 44);
+        $this->withToken(storeApiToken($customer))->getJson('/api/v1/store/cart-summary')->assertOk()->assertJsonPath('grand_total_value', 44);
         app('auth')->forgetGuards();
-        $this->withToken(storeApiToken($changed))->getJson('/temp/api/v1/cart-summary')->assertOk()->assertJsonPath('grand_total_value', 60);
+        $this->withToken(storeApiToken($changed))->getJson('/api/v1/store/cart-summary')->assertOk()->assertJsonPath('grand_total_value', 60);
     } finally {
         Cart::flushEventListeners();
     }
@@ -266,7 +266,7 @@ test('the payment types say when nothing is available, and why cash is not offer
     $types = function () use ($customer) {
         app('auth')->forgetGuards();
 
-        return $this->withToken(storeApiToken($customer))->getJson('/temp/api/v1/payment-types')->assertOk()->json();
+        return $this->withToken(storeApiToken($customer))->getJson('/api/v1/store/payment-types')->assertOk()->json();
     };
 
     // Cash payment off: nothing to offer, and no cash entry to explain.
@@ -303,7 +303,7 @@ test('the cart summary tells the app, before the payment step, what can be paid 
     $summary = function () use ($customer) {
         app('auth')->forgetGuards();
 
-        $json = $this->withToken(storeApiToken($customer))->getJson('/temp/api/v1/cart-summary')->assertOk()->json();
+        $json = $this->withToken(storeApiToken($customer))->getJson('/api/v1/store/cart-summary')->assertOk()->json();
 
         return [$json['payment_available'], $json['cash_on_delivery_available'], $json['cash_on_delivery_message'], $json['cash_on_delivery_blocked_products']];
     };
@@ -337,7 +337,7 @@ test('the cash on delivery message names at most five products and the list give
         Cart::create(['user_id' => $customer->id, 'owner_id' => 0, 'product_id' => $product->id, 'quantity' => 1, 'variation' => '', 'price' => 1]);
     }
 
-    $json = $this->withToken(storeApiToken($customer))->getJson('/temp/api/v1/cart-summary')->assertOk()->json();
+    $json = $this->withToken(storeApiToken($customer))->getJson('/api/v1/store/cart-summary')->assertOk()->json();
 
     expect($json['cash_on_delivery_blocked_products'])->toHaveCount(7)
         ->and(collect($json['cash_on_delivery_blocked_products'])->pluck('product_id')->all())->toBe($products->pluck('id')->all())

@@ -8,12 +8,12 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 /**
- * The warehouse (WMS client) API under /temp/api/v1/warehouse. Its routes are
+ * The warehouse (WMS client) API under /api/v1/store/warehouse. Its routes are
  * guarded by WmsAuthMiddlewareTest; these cover what they do once through.
  * Errors there are reported in the body of an HTTP 200, which the client
  * parses, so the tests pin that envelope rather than a status code.
  */
-const WAREHOUSE_URL = '/temp/api/v1/warehouse';
+const WAREHOUSE_URL = '/api/v1/store/warehouse';
 
 beforeEach(function () {
     config(['app.wms_token' => 'wms-secret']);

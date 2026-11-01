@@ -41,7 +41,7 @@ function fakeSocialProvider(string $driver, SocialiteUser $profile): void
 
 function socialLogin(array $data = []): TestResponse
 {
-    return test()->postJson('/temp/api/v1/auth/social-login', $data + ['social_provider' => 'google', 'access_token' => 'client-token']);
+    return test()->postJson('/api/v1/store/auth/social-login', $data + ['social_provider' => 'google', 'access_token' => 'client-token']);
 }
 
 test('a first social login creates a verified customer from what the provider returned', function () {

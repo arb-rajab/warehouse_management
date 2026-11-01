@@ -68,40 +68,40 @@ test('the API reference covers implemented routes with their actual authenticati
         'get /api/v1/cell-logs' => 'Warehouse · Audit logs',
         'get /api/v1/cell-verification-rounds' => 'Warehouse · Audit logs',
         'post /api/v1/cell-verification-reports' => 'Warehouse · Audit logs',
-        'post /temp/api/v1/auth/login' => 'Store · Authentication',
-        'post /temp/api/v1/auth/password/forget_request' => 'Store · Authentication',
-        'post /temp/api/v1/get-user-by-access_token' => 'Store · Authentication',
-        'get /temp/api/v1/products' => 'Store · Catalogue',
-        'get /temp/api/v1/categories' => 'Store · Catalogue',
-        'get /temp/api/v1/shops' => 'Store · Catalogue',
-        'post /temp/api/v1/order/store' => 'Store · Orders',
-        'post /temp/api/v1/carts/add' => 'Store · Orders',
-        'get /temp/api/v1/purchase-history' => 'Store · Orders',
-        'post /temp/api/v1/payments/pay/cod' => 'Store · Orders',
-        'get /temp/api/v1/wallet/balance' => 'Store · Orders',
-        'get /temp/api/v1/user/shipping/address' => 'Store · Customers',
-        'get /temp/api/v1/customer/info' => 'Store · Customers',
-        'post /temp/api/v1/profile/update' => 'Store · Customers',
-        'get /temp/api/v1/representatives/get-customers' => 'Store · Customers',
-        'get /temp/api/v1/seller/products/all' => 'Store · Sellers',
-        'get /temp/api/v1/seller/orders' => 'Store · Sellers',
-        'get /temp/api/v1/trips/get-active-trip' => 'Store · Delivery & Trips',
-        'get /temp/api/v1/driver/notifications' => 'Store · Delivery & Trips',
-        'get /temp/api/v1/delivery-boy/dashboard-summary/{id}' => 'Store · Delivery & Trips',
-        'get /temp/api/get-user-coordinates/{id}' => 'Store · Delivery & Trips',
-        'get /temp/api/v1/warehouse/products' => 'Store · Warehouse integration',
-        'get /temp/api/v1/warehouse/orders' => 'Store · Warehouse integration',
+        'post /api/v1/store/auth/login' => 'Store · Authentication',
+        'post /api/v1/store/auth/password/forget_request' => 'Store · Authentication',
+        'post /api/v1/store/get-user-by-access_token' => 'Store · Authentication',
+        'get /api/v1/store/products' => 'Store · Catalogue',
+        'get /api/v1/store/categories' => 'Store · Catalogue',
+        'get /api/v1/store/shops' => 'Store · Catalogue',
+        'post /api/v1/store/order/store' => 'Store · Orders',
+        'post /api/v1/store/carts/add' => 'Store · Orders',
+        'get /api/v1/store/purchase-history' => 'Store · Orders',
+        'post /api/v1/store/payments/pay/cod' => 'Store · Orders',
+        'get /api/v1/store/wallet/balance' => 'Store · Orders',
+        'get /api/v1/store/user/shipping/address' => 'Store · Customers',
+        'get /api/v1/store/customer/info' => 'Store · Customers',
+        'post /api/v1/store/profile/update' => 'Store · Customers',
+        'get /api/v1/store/representatives/get-customers' => 'Store · Customers',
+        'get /api/v1/store/seller/products/all' => 'Store · Sellers',
+        'get /api/v1/store/seller/orders' => 'Store · Sellers',
+        'get /api/v1/store/trips/get-active-trip' => 'Store · Delivery & Trips',
+        'get /api/v1/store/driver/notifications' => 'Store · Delivery & Trips',
+        'get /api/v1/store/delivery-boy/dashboard-summary/{id}' => 'Store · Delivery & Trips',
+        'get /api/get-user-coordinates/{id}' => 'Store · Delivery & Trips',
+        'get /api/v1/store/warehouse/products' => 'Store · Warehouse integration',
+        'get /api/v1/store/warehouse/orders' => 'Store · Warehouse integration',
     ] as $endpoint => $tag) {
         expect($operations[$normalizePath($endpoint)]['tags'])->toBe([$tag]);
     }
 
     $missingMethods = [];
     foreach (Route::getRoutes() as $route) {
-        if ((! str_starts_with($route->uri(), 'temp/api/') && ! str_starts_with($route->uri(), 'api/')) || $route->isFallback) {
+        if (! str_starts_with($route->uri(), 'api/') || $route->isFallback) {
             continue;
         }
 
-        $path = substr($route->uri(), strlen('temp/api'));
+        $path = substr($route->uri(), strlen('api'));
         if (! method_exists($route->getControllerClass(), $route->getActionMethod())) {
             $missingMethods[] = $path;
 
@@ -124,12 +124,12 @@ test('the API reference covers implemented routes with their actual authenticati
     expect($operations)->toBeEmpty();
     expect($missingMethods)->toBe([]);
     expect(parse_url($document['servers'][0]['url'], PHP_URL_PATH) ?: '/')->toBe('/');
-    expect($document['paths'])->toHaveKey('/api/v1/dashboard')->not->toHaveKey('/temp/api/{fallbackPlaceholder}');
+    expect($document['paths'])->toHaveKey('/api/v1/dashboard')->not->toHaveKey('/api/v1/store/{fallbackPlaceholder}');
     expect($document['components']['securitySchemes']['privateToken'])->toBe([
         'type' => 'apiKey', 'in' => 'header', 'name' => 'private-token',
     ]);
 
-    $login = $document['paths']['/temp/api/v1/auth/login']['post']['requestBody']['content']['application/json']['schema'];
+    $login = $document['paths']['/api/v1/store/auth/login']['post']['requestBody']['content']['application/json']['schema'];
     expect($login['properties']['email']['type'])->toBe('string');
     expect($login['properties']['email'])->not->toHaveKey('format');
     expect($login['required'])->toEqualCanonicalizing(['email', 'password', 'login_by']);
@@ -145,7 +145,7 @@ test('the API reference covers implemented routes with their actual authenticati
 
         return $schema;
     };
-    $products = $resolveSchema($document['paths']['/temp/api/v1/products']['get']['responses']['200']['content']['application/json']['schema']);
+    $products = $resolveSchema($document['paths']['/api/v1/store/products']['get']['responses']['200']['content']['application/json']['schema']);
     expect($products['properties'])->toHaveKeys(['data', 'links', 'meta', 'success', 'status']);
     expect($products['properties']['data']['type'])->toBe('array');
     expect(JsonResource::$wrap)->toBeNull();

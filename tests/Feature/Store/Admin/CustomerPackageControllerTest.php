@@ -243,13 +243,13 @@ test('paid packages still refuse unsupported payment options without crediting a
 });
 
 test('the unchanged public mobile package resource preserves its exact free and paid payload', function () {
-    $this->getJson('/temp/api/v1/customer-packages')->assertOk()->assertJsonPath('data.0', [
+    $this->getJson('/api/v1/store/customer-packages')->assertOk()->assertJsonPath('data.0', [
         'id' => $this->package->id, 'name' => 'Gold', 'logo' => uploaded_asset(null), 'product_upload_limit' => 10,
         'amount' => single_price(12.5), 'price' => 12.5,
     ]);
     $this->package->amount = 0;
     $this->package->save();
-    $this->getJson('/temp/api/v1/customer-packages')->assertOk()->assertJsonPath('data.0', [
+    $this->getJson('/api/v1/store/customer-packages')->assertOk()->assertJsonPath('data.0', [
         'id' => $this->package->id, 'name' => 'Gold', 'logo' => uploaded_asset(null), 'product_upload_limit' => 10,
         'amount' => translate('Free'), 'price' => 0,
     ]);

@@ -19,7 +19,7 @@ return [
      * Multiple includes or wildcards → server defaults to / and paths stay full (/api/users).
      * Override with `servers`, or use Scramble::registerApi() for separate bases.
      */
-    'api_path' => ['include' => ['api', 'temp/api']],
+    'api_path' => ['include' => ['api']],
 
     /*
      * Your API domain. By default, app domain is used. This is also a part of the default API routes
@@ -52,9 +52,9 @@ return [
          * Description rendered on the home page of the API documentation (`/docs/api`).
          */
         'description' => 'Warehouse mobile and Store APIs in one reference. Paths include their full prefixes: '
-            .'/api/v1 for warehouse mobile clients and /temp/api for the Store. Send Accept: application/json. '
+            .'/api/v1 for warehouse mobile clients and /api/v1/store for the Store. Send Accept: application/json. '
             .'Warehouse mobile clients sign in at /api/v1/login and use the returned token as a bearer token. '
-            .'Store clients sign in at /temp/api/v1/auth/login and use the returned access_token as a bearer token. '
+            .'Store clients sign in at /api/v1/store/auth/login and use the returned access_token as a bearer token. '
             .'Tokens are specific to their respective user accounts. Seller and driver routes also require their roles. '
             .'Store warehouse integration routes use the private-token header. Public routes require no token. '
             .'Disabled payment gateways return 404. Schemas are inferred from controllers, validators and resources; '

@@ -145,7 +145,7 @@ test('no GET route of the storefront trips Eloquent strict mode for any kind of 
     $this->withoutMiddleware(ThrottleRequests::class);
     $this->withoutExceptionHandling();
     $store = strictApiStore();
-    $skipped = '#logout|account-deletion|/delete|wishlists/remove|duplicate|sslcommerz|bkash|nagad|iyzico|^temp/api#';
+    $skipped = '#logout|account-deletion|/delete|wishlists/remove|duplicate|sslcommerz|bkash|nagad|iyzico#';
     $callers = ['guest' => null, 'customer' => $store['customer'], 'rep' => $store['rep'], 'seller' => $store['seller'], 'admin' => createStoreAdmin(true)];
     $violations = [];
 

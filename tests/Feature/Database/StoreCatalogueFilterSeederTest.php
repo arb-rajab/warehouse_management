@@ -82,11 +82,11 @@ test('classified fixtures match condition category brand and every sort option',
 test('catalogue fixtures return results through real API search sorts ranges and barcode lookup', function () {
     $this->seed(StoreCatalogueFilterSeeder::class);
     foreach (['price_low_to_high', 'price_high_to_low', 'new_arrival', 'popularity', 'top_rated'] as $sort) {
-        $this->getJson('/temp/api/v1/products/search?'.http_build_query(['sort_key' => $sort, 'min' => 20, 'max' => 30, 'page' => 2]))
+        $this->getJson('/api/v1/store/products/search?'.http_build_query(['sort_key' => $sort, 'min' => 20, 'max' => 30, 'page' => 2]))
             ->assertOk()->assertJson(fn ($json) => $json->has('data')->where('success', true)->etc());
-        expect($this->getJson('/temp/api/v1/products/search?'.http_build_query(['sort_key' => $sort]))->json('data'))->not->toBeEmpty();
+        expect($this->getJson('/api/v1/store/products/search?'.http_build_query(['sort_key' => $sort]))->json('data'))->not->toBeEmpty();
     }
-    $this->postJson('/temp/api/v1/products/search-barcode', ['barcode' => '2000000000015'])
+    $this->postJson('/api/v1/store/products/search-barcode', ['barcode' => '2000000000015'])
         ->assertOk()->assertJson(fn ($json) => $json->has('data', 1)->etc());
 });
 

@@ -52,7 +52,7 @@ test('duplicated store route names resolve to the route the legacy app gave them
 });
 
 test('the routes that lost a duplicated name are still registered', function () {
-    $apiBrands = Route::getRoutes()->match(Request::create('/temp/api/v1/brands'));
+    $apiBrands = Route::getRoutes()->match(Request::create('/api/v1/store/brands'));
 
     expect($apiBrands->getActionName())->toBe(ApiBrandController::class.'@index')
         ->and($apiBrands->getName())->toBeNull();

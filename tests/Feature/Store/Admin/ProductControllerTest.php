@@ -657,7 +657,7 @@ test('the list migration keeps storefront, seller and app product contracts', fu
         ->and(view()->exists('shop.backend.product.products.choice_options_script'))->toBeFalse()
         ->and(Route::getRoutes()->getByName('seller.products')->getActionName())->toBe(SellerProductController::class.'@index')
         ->and(Route::getRoutes()->getByName('seller.products.published')->getActionName())->toBe(SellerProductController::class.'@updatePublished')
-        ->and(Route::getRoutes()->match(Request::create('/temp/api/v1/products/'.$this->product->id))->getActionName())
+        ->and(Route::getRoutes()->match(Request::create('/api/v1/store/products/'.$this->product->id))->getActionName())
         ->toBe(ApiProductController::class.'@show');
     $this->get(route('product', 'olive-oil'))->assertOk()->assertSee('Olive oil');
 });

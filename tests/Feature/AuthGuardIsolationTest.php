@@ -115,10 +115,10 @@ test('a warehouse token is refused by the store api, which accepts a store token
     $storeToken = storeApiToken($customer);
     $warehouseToken = User::factory()->mobileUser()->create()->createToken('mobile')->plainTextToken;
 
-    $this->withToken($warehouseToken)->getJson('/temp/api/v1/auth/user')->assertUnauthorized();
+    $this->withToken($warehouseToken)->getJson('/api/v1/store/auth/user')->assertUnauthorized();
     Auth::forgetGuards();
 
-    $this->withToken($storeToken)->getJson('/temp/api/v1/auth/user')
+    $this->withToken($storeToken)->getJson('/api/v1/store/auth/user')
         ->assertOk()
         ->assertJsonPath('id', $customer->id);
 });

@@ -14,7 +14,7 @@ function withdrawRequestCount(): int
 
 function postApiWithdrawRequest(object $test, string $token, array $body)
 {
-    return $test->withToken($token)->postJson('/temp/api/v1/seller/withdraw-request/store', $body);
+    return $test->withToken($token)->postJson('/api/v1/store/seller/withdraw-request/store', $body);
 }
 
 test('a seller can request up to what the shop is owed', function () {
@@ -84,7 +84,7 @@ test('an account without a shop cannot open a withdraw request', function () {
 });
 
 test('a guest cannot open a withdraw request through the API', function () {
-    $this->postJson('/temp/api/v1/seller/withdraw-request/store', ['amount' => 10])->assertUnauthorized();
+    $this->postJson('/api/v1/store/seller/withdraw-request/store', ['amount' => 10])->assertUnauthorized();
 
     expect(withdrawRequestCount())->toBe(0);
 });

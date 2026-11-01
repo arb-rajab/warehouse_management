@@ -27,7 +27,7 @@ test('store headers select UI and content separately and restore the surrounding
     app()->setLocale('sa');
     app('translator')->setLocale('ar');
     app('translator')->setFallback('en');
-    $request = Request::create('/temp/api/v1/auth/info');
+    $request = Request::create('/api/v1/store/auth/info');
     $request->headers->set('Accept-Language', 'ar');
     if ($header !== null) {
         $request->headers->set('App-Language', $header);
@@ -105,7 +105,7 @@ test('nested API locale scopes restore all state after an exception and consecut
         ->and(app('translator')->getFallback())->toBe('en');
 
     foreach (['ar', null, 'en', null] as $header) {
-        $request = Request::create('/temp/api/v1/auth/info');
+        $request = Request::create('/api/v1/store/auth/info');
         if ($header !== null) {
             $request->headers->set('App-Language', $header);
         }
@@ -124,7 +124,7 @@ test('API ban messages use files and preserve the refusal and token revocation c
     expect(DB::table('translations')->count())->toBe(0);
     startStorefrontTranslationQueryLog();
 
-    $this->withToken($token)->getJson('/temp/api/v1/wallet/history', ['App-Language' => $locale])
+    $this->withToken($token)->getJson('/api/v1/store/wallet/history', ['App-Language' => $locale])
         ->assertForbidden()->assertExactJson(['result' => false, 'result_key' => 'banned', 'message' => $message]);
 
     expectNoStorefrontTranslationQueries();
@@ -150,7 +150,7 @@ test('delivery and driver API gates localize only the human refusal', function (
 
 test('warehouse token refusals preserve the legacy HTTP status and numeric body status', function (string $locale, string $message) {
     config(['app.wms_token' => 'expected-test-token']);
-    $request = Request::create('/temp/api/v1/warehouse/orders');
+    $request = Request::create('/api/v1/store/warehouse/orders');
     $request->headers->set('private-token', 'wrong-test-token');
     startStorefrontTranslationQueryLog();
     $response = StoreLocale::withLocale($locale, $locale, fn () => (new WmsAuthMiddleware)->handle($request, fn () => response('unexpected')));
@@ -165,7 +165,7 @@ test('warehouse token refusals preserve the legacy HTTP status and numeric body 
 
 test('the existing API fallback keeps its envelope and 404 status with file text', function (string $locale, string $message) {
     startStorefrontTranslationQueryLog();
-    $this->getJson('/temp/api/localization-missing-route', ['Accept-Language' => $locale])
+    $this->getJson('/api/v1/store/localization-missing-route', ['Accept-Language' => $locale])
         ->assertNotFound()->assertExactJson(['data' => [], 'success' => false, 'status' => 404, 'message' => $message]);
     expectNoStorefrontTranslationQueries();
 })->with([['en', 'Invalid Route'], ['ar', 'المسار غير صالح']]);
