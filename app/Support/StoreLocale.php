@@ -9,6 +9,35 @@ use Illuminate\Support\Facades\Lang;
 
 class StoreLocale
 {
+    /** The UI locales the storefront header toggle offers. */
+    public const array TOGGLE_LOCALES = ['ar', 'en'];
+
+    /** Long-lived cookie holding the storefront's explicit language choice. */
+    public const string COOKIE = 'store_locale';
+
+    /**
+     * Store content code for a toggle locale: an active language row whose code
+     * is the locale itself, else one mapped to it (the legacy Arabic row is `sa`
+     * with app_lang_code `ar`), else the bare locale, which Locale supports.
+     */
+    public static function contentCodeFor(string $uiLocale): string
+    {
+        $code = Language::query()
+            ->where('status', 1)
+            ->where(fn ($query) => $query->where('code', $uiLocale)->orWhere('app_lang_code', $uiLocale))
+            ->orderByRaw('CASE WHEN code = ? THEN 0 ELSE 1 END', [$uiLocale])
+            ->orderBy('id')
+            ->value('code');
+
+        return is_string($code) ? $code : $uiLocale;
+    }
+
+    /** The toggle offers whichever of Arabic and English is not active. */
+    public static function toggleTarget(): string
+    {
+        return self::uiLocale() === 'ar' ? 'en' : 'ar';
+    }
+
     /**
      * Keep content and UI locales separate and restore both after a request.
      *

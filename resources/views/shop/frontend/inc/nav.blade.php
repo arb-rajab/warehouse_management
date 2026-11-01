@@ -18,27 +18,10 @@
         <div class="row">
             <div class="col-lg-6 col">
                 <ul class="list-inline d-flex justify-content-between justify-content-lg-start mb-0">
-                    <!-- Language switcher -->
+                    <!-- Language toggle (Arabic/English) -->
                     @if(get_setting('show_language_switcher') == 'on')
-                    <li class="list-inline-item dropdown mr-4" id="lang-change">
-                        @php
-                            $locale = app()->getLocale();
-                            $uiLocale = \App\Support\StoreLocale::uiLocale();
-                            $currentLanguage = \App\Models\Language::query()->where('code', $locale)->orWhere('app_lang_code', $uiLocale)->first(['name', 'code']);
-                        @endphp
-                        <a href="javascript:void(0)" class="dropdown-toggle text-secondary fs-12 py-2" data-toggle="dropdown" data-display="static">
-                            <span class="">{{ $currentLanguage?->name ?? strtoupper($uiLocale) }}</span>
-                        </a>
-                        <ul class="dropdown-menu dropdown-menu-left">
-                            @foreach (\App\Models\Language::where('status', 1)->get() as $key => $language)
-                                <li>
-                                    <a href="javascript:void(0)" data-flag="{{ $language->code }}" class="dropdown-item @if($currentLanguage?->code == $language->code) active @endif">
-                                        <img src="{{ static_asset('assets/img/placeholder.jpg') }}" data-src="{{ static_asset('assets/img/flags/'.$language->code.'.png') }}" class="mr-1 lazyload" alt="{{ $language->name }}" height="11">
-                                        <span class="language">{{ $language->name }}</span>
-                                    </a>
-                                </li>
-                            @endforeach
-                        </ul>
+                    <li class="list-inline-item mr-4 d-none d-lg-inline-block">
+                        @include('shop.frontend.partials.language_toggle', ['class' => 'd-inline-block py-2'])
                     </li>
                     @endif
 
@@ -511,6 +494,11 @@
                 <a href="{{ route('user.registration') }}" class="text-reset opacity-60 hov-opacity-100 hov-text-primary fs-12 d-inline-block py-2 pl-2">{{ __('storefront.auth.registration')}}</a>
             </span>
         @endauth
+        @if(get_setting('show_language_switcher') == 'on')
+            <div class="px-4 pt-3">
+                @include('shop.frontend.partials.language_toggle', ['class' => 'd-block', 'buttonClass' => 'btn btn-link p-0 fs-13 fw-700 text-dark'])
+            </div>
+        @endif
         <hr>
         <ul class="mb-0 pl-3 pb-3 h-100">
             @foreach (json_decode( get_setting('header_menu_labels', '[]'), true) as $key => $value)
