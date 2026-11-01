@@ -2,7 +2,11 @@
 import { Head, Link } from '@inertiajs/vue3';
 import { PackageSearch, TriangleAlert } from '@lucide/vue';
 import { computed } from 'vue';
-import { smtp } from '@/actions/App/Http/Controllers/Store/Admin/SettingsController';
+import { all as allProducts } from '@/actions/App/Http/Controllers/Store/Admin/ProductController';
+import {
+    payments,
+    smtp,
+} from '@/actions/App/Http/Controllers/Store/Admin/SettingsController';
 import PageHeader from '@/components/PageHeader.vue';
 import StoreDashboardChart from '@/components/StoreDashboardChart.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
@@ -12,6 +16,27 @@ import type { StoreDashboardProps } from '@/types/store';
 
 const props = defineProps<StoreDashboardProps>();
 const access = useStoreAccess();
+// Settings the store cannot take orders without, each with the page that sets it.
+const setupLinks = {
+    noPaymentMethod: payments,
+    cashOnDeliveryProducts: allProducts,
+};
+const alerts = computed(() => [
+    ...(props.showSmtpAlert && access.value.can('smtp_settings')
+        ? [
+              {
+                  key: 'smtp',
+                  message: t('store.dashboard.smtpWarning'),
+                  href: smtp(),
+              },
+          ]
+        : []),
+    ...props.setupAlerts.map((key) => ({
+        key,
+        message: t(`store.dashboard.setup.${key}`),
+        href: setupLinks[key](),
+    })),
+]);
 const charts = computed(() => [
     {
         key: 'products',
@@ -60,14 +85,15 @@ const charts = computed(() => [
         <PageHeader :title="t('store.dashboard.title')" />
         <div v-if="access.can('admin_dashboard')" class="space-y-6">
             <div
-                v-if="showSmtpAlert && access.can('smtp_settings')"
+                v-for="alert in alerts"
+                :key="alert.key"
                 role="alert"
                 class="flex items-center gap-3 rounded-lg border border-red-300 bg-red-50 p-4 text-red-900 dark:border-red-700 dark:bg-red-950 dark:text-red-100"
             >
                 <TriangleAlert class="size-5 shrink-0" />
                 <span
-                    >{{ t('store.dashboard.smtpWarning') }}
-                    <Link :href="smtp()" class="font-semibold underline">{{
+                    >{{ alert.message }}
+                    <Link :href="alert.href" class="font-semibold underline">{{
                         t('store.dashboard.configureNow')
                     }}</Link></span
                 >

@@ -283,6 +283,12 @@ if (!function_exists('cart_product_price')) {
             if ($product_stock) {
                 $price = $product_stock->price;
             }
+            // A line with no variant is priced at the product's unit price when
+            // added (CartController::add), so a stock row with no price must not
+            // turn it into a free one: the cart, its totals and the order read 0.
+            if ($str === '' && $price <= 0 && $product->unit_price > 0) {
+                $price = $product->unit_price;
+            }
 
 
             //discount calculation

@@ -259,11 +259,32 @@ test('the app refuses an order whose payment type is not listed, or that has no 
     storeSetting('cash_payment', 0);
     app('auth')->forgetGuards();
     $this->withToken(storeApiToken($other))->postJson('/temp/api/v2/order/store', ['payment_type' => 'cash_on_delivery'])
-        ->assertStatus(422)->assertJsonPath('result', false);
+        ->assertStatus(422)->assertJsonPath('result', false)->assertJsonPath('message', __('api.order.payment_type_cash_disabled'));
 
     storeSetting('cash_payment', 1);
     $line->update(['address_id' => 0]);
     app('auth')->forgetGuards();
     $this->withToken(storeApiToken($other))->postJson('/temp/api/v2/order/store', ['payment_type' => 'cash_on_delivery'])
         ->assertStatus(422)->assertJsonPath('result', false);
+});
+
+test('the app orders to an address without a state or city, but not to one without a country', function () {
+    seedStoreCurrency();
+    createStoreUser('admin');
+    $customer = createStoreUser('customer');
+    $line = orderableCartLine($customer, createStoreUser('seller'), 1, stock: 5);
+
+    $line->address_id = DB::table('addresses')->insertGetId(['user_id' => $customer->id, 'address' => 'Damrak 1', 'country_id' => null, 'state_id' => 0, 'city_id' => 0]);
+    $line->save();
+    placeApiOrder($this, storeApiToken($customer))->assertUnprocessable()->assertExactJson([
+        'combined_order_id' => 0,
+        'result' => false,
+        'message' => __('api.order.address_country_required'),
+    ]);
+    expect(Order::where('user_id', $customer->id)->count())->toBe(0);
+
+    $line->address_id = addStoreAddress($customer->id);
+    $line->save();
+    placeApiOrder($this, storeApiToken($customer))->assertOk()->assertJsonPath('result', true);
+    expect(Order::where('user_id', $customer->id)->count())->toBe(1);
 });

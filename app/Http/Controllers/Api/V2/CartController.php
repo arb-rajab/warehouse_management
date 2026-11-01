@@ -45,6 +45,7 @@ class CartController extends Controller
                 'coupon_code' => "",
                 'coupon_applied' => false,
                 'delivery_cost' => 0,
+                ...$this->paymentAvailability(),
             ]);
         }
 
@@ -54,10 +55,12 @@ class CartController extends Controller
         foreach ($items as $cartItem) {
             $item_sum = 0.00;
 
-            // carts.price is not kept in step with the catalogue; GET /carts
-            // prices each line live, so the summary must as well.
+            // GET /carts prices each line live, so the summary must as well. A
+            // representative's own price counts only when the line says it was
+            // changed: MySQL hands back an unset rep_price as the string "0.00",
+            // which PHP reads as true and priced every ordinary line at nothing.
             $product = Product::find($cartItem->product_id);
-            $price = $cartItem->rep_price
+            $price = $cartItem->is_price_changed
                 ? $cartItem->rep_price
                 : ($product ? cart_product_price($cartItem, $product, false, false) : $cartItem->price);
 
@@ -72,9 +75,10 @@ class CartController extends Controller
 
         $delivery_cost = 0;
 
-        if ($subtotal < get_setting('minimum_order_amount')) {
-            $default_specific_product = Product::where('mat_id', get_setting('default_specific_product'))->first();
-            $delivery_cost = $default_specific_product->unit_price;
+        // The delivery line order/store adds: only when the store checks a minimum
+        // order, and only if its delivery product still exists.
+        if (get_setting('minimum_order_amount_check') == 1 && $subtotal < get_setting('minimum_order_amount')) {
+            $delivery_cost = Product::where('mat_id', get_setting('default_specific_product'))->value('unit_price') ?? 0;
         }
 
         return response()->json([
@@ -87,7 +91,30 @@ class CartController extends Controller
             'coupon_code' => $items[0]->coupon_code,
             'coupon_applied' => $items[0]->coupon_applied == 1,
             'delivery_cost' => format_price($delivery_cost),
+            ...$this->paymentAvailability(),
         ]);
+    }
+
+    /**
+     * What the app needs to know before the payment step, so it can disable an
+     * option or warn at the cart: whether anything can be paid with, and whether
+     * cash on delivery can be for this cart (with the reason when it cannot).
+     * Decided by PaymentTypesController, like GET /payment-types and order/store.
+     *
+     * @return array{payment_available: bool, cash_on_delivery_available: bool, cash_on_delivery_message: string|null, cash_on_delivery_blocked_products: list<array{cart_id: int, product_id: int}>}
+     */
+    private function paymentAvailability(): array
+    {
+        $payments = app(PaymentTypesController::class);
+        $cash = $payments->cashAvailability();
+
+        return [
+            'payment_available' => $payments->options(new Request(['mode' => 'order']))['payment_types'] !== [],
+            'cash_on_delivery_available' => $cash['message'] === null,
+            'cash_on_delivery_message' => $cash['message'],
+            // The cart lines to remove for cash on delivery to be offered.
+            'cash_on_delivery_blocked_products' => $cash['products'],
+        ];
     }
 
 

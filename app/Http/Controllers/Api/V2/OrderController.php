@@ -76,22 +76,36 @@ class OrderController extends Controller
         }
 
         // pay/cod, pay/manual and pay/wallet name their own method; order/store takes it from the caller.
-        if ($request->is('*/order/store') && ! $this->isListedPaymentType((string) $request->payment_type)) {
+        if ($request->is('*/order/store') && ($refusal = $this->paymentTypeRefusal((string) $request->payment_type)) !== null) {
             return response()->json([
                 'combined_order_id' => 0,
                 'result' => false,
-                'message' => __('api.order.payment_type_invalid'),
+                'message' => $refusal,
             ], 422);
         }
 
         $cartItems = Cart::where('user_id', auth()->user()->id)->get();
 
-        if ($cartItems->isNotEmpty() && ! Address::where('id', $cartItems->first()->address_id)->whereNotNull('address')->where('address', '!=', '')->exists()) {
-            return response()->json([
-                'combined_order_id' => 0,
-                'result' => false,
-                'message' => __('api.order.address_required'),
-            ], 422);
+        if ($cartItems->isNotEmpty()) {
+            // The carrier zone, the delivery and the invoice read the address's
+            // country; a state or city is optional, as on the storefront's form.
+            $address = Address::with('country:id')->find($cartItems->first()->address_id);
+
+            if ($address === null || trim((string) $address->address) === '') {
+                return response()->json([
+                    'combined_order_id' => 0,
+                    'result' => false,
+                    'message' => __('api.order.address_required'),
+                ], 422);
+            }
+
+            if ($address->country === null) {
+                return response()->json([
+                    'combined_order_id' => 0,
+                    'result' => false,
+                    'message' => __('api.order.address_country_required'),
+                ], 422);
+            }
         }
 
         if ($cartItems->isEmpty()) {
@@ -108,8 +122,10 @@ class OrderController extends Controller
                 $product = Product::find($cartItem['product_id']);
                 $subtotal += cart_product_price($cartItem, $product, false, false) * $cartItem['quantity'];
             }
-            if ($subtotal < get_setting('minimum_order_amount')) {
-                $default_specific_product = Product::where('mat_id', get_setting('default_specific_product'))->first();
+            $default_specific_product = $subtotal < get_setting('minimum_order_amount')
+                ? Product::where('mat_id', get_setting('default_specific_product'))->first()
+                : null;
+            if ($default_specific_product) {
                 $delivery_cart = Cart::where('user_id', auth()->user()->id)->where('product_id', $default_specific_product->id)->first();;
 
                 if (!$delivery_cart) {
@@ -166,20 +182,27 @@ class OrderController extends Controller
     }
 
     /**
-     * Whether GET /payment-types offers this option to the caller.
+     * The message to show when GET /payment-types does not offer this option to
+     * the caller, saying which reason applies where the customer can act on it
+     * (cash on delivery switched off, or not allowed for a product or a digital
+     * product in the cart). Null when the option is listed.
      */
-    private function isListedPaymentType(string $paymentType): bool
+    private function paymentTypeRefusal(string $paymentType): ?string
     {
         if ($paymentType === '') {
-            return false;
+            return __('storefront.checkout.select_payment_option');
         }
 
-        $listed = json_decode(
-            app(PaymentTypesController::class)->getList(new Request(['mode' => 'order']))->getContent(),
-            true,
-        ) ?: [];
+        $payments = app(PaymentTypesController::class);
+        $listed = $payments->options(new Request(['mode' => 'order']))['payment_types'];
 
-        return collect($listed)->flatMap(fn (array $type) => [$type['payment_type'] ?? null, $type['payment_type_key'] ?? null])->contains($paymentType);
+        if (collect($listed)->flatMap(fn (array $type) => [$type['payment_type'] ?? null, $type['payment_type_key'] ?? null])->contains($paymentType)) {
+            return null;
+        }
+
+        $cash = in_array($paymentType, ['cash_on_delivery', 'cash_payment'], true);
+
+        return ($cash ? $payments->cashRefusal() : null) ?? __('api.order.payment_type_invalid');
     }
 
     /**

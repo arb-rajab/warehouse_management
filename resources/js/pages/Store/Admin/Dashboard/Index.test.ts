@@ -1,7 +1,11 @@
 import { Link } from '@inertiajs/vue3';
 import { mount } from '@vue/test-utils';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
-import { smtp } from '@/actions/App/Http/Controllers/Store/Admin/SettingsController';
+import { all as allProducts } from '@/actions/App/Http/Controllers/Store/Admin/ProductController';
+import {
+    payments,
+    smtp,
+} from '@/actions/App/Http/Controllers/Store/Admin/SettingsController';
 import StoreDashboardChart from '@/components/StoreDashboardChart.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
 import { i18n, t } from '@/lib/i18n';
@@ -148,6 +152,28 @@ it.each(['en', 'ar'] as const)(
         wrapper.unmount();
     },
 );
+it('shows each setup alert with the page that fixes it, beside the SMTP one', () => {
+    const wrapper = mount(Index, {
+        props: {
+            ...storeDashboardProps(),
+            setupAlerts: ['noPaymentMethod', 'cashOnDeliveryProducts'],
+        },
+    });
+    const alerts = wrapper.findAll('[role="alert"]');
+    expect(alerts.map((alert) => alert.text())).toEqual([
+        expect.stringContaining(t('store.dashboard.smtpWarning')),
+        expect.stringContaining(t('store.dashboard.setup.noPaymentMethod')),
+        expect.stringContaining(
+            t('store.dashboard.setup.cashOnDeliveryProducts'),
+        ),
+    ]);
+    const hrefs = wrapper
+        .findAllComponents(Link)
+        .map((link) => JSON.stringify(link.props('href')));
+    expect(hrefs).toContain(JSON.stringify(payments()));
+    expect(hrefs).toContain(JSON.stringify(allProducts()));
+    wrapper.unmount();
+});
 it('hides SMTP without its flag or permission and renders the empty product state', () => {
     permissions.value = ['admin_dashboard'];
     const wrapper = mount(Index, {

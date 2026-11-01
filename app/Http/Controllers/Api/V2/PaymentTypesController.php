@@ -3,13 +3,27 @@
 
 namespace App\Http\Controllers\Api\V2;
 
+use App\Models\Cart;
 use App\Models\ManualPaymentMethod;
 use Illuminate\Http\Request;
 
 class PaymentTypesController
 {
+    /** How many product names the cash on delivery message lists before it trails off. */
+    private const NAMED_PRODUCTS = 5;
+
 
     public function getList(Request $request)
+    {
+        return response()->json($this->options($request));
+    }
+
+    /**
+     * What GET /payment-types answers, for the signed-in customer's cart.
+     *
+     * @return array{result: true, payment_types: list<array<string, mixed>>, unavailable: list<array{payment_type_key: string, message: string, products: list<array{cart_id: int, product_id: int}>}>, message: string|null}
+     */
+    public function options(Request $request): array
     {
         $mode = "order";
 
@@ -23,6 +37,7 @@ class PaymentTypesController
         }
 
         $payment_types = [];
+        $unavailable = [];
 
         if ($list == "online" || $list == "both") {
             if (get_setting('iyzico') == 1) {
@@ -107,23 +122,9 @@ class PaymentTypesController
                 $payment_types[] = $payment_type;
             }
 
-            $haveDigitalProduct = false;
-            $cash_on_delivery = false;
+            $cash = $this->cashAvailability($mode == "order");
 
-            if ($mode == "order") {
-                $carts = auth()->user()->carts()->with('product:id,digital,cash_on_delivery')->get();
-
-                foreach ($carts as $key => $cart) {
-                    $haveDigitalProduct =  $cart->product->digital == 1;
-                    $cash_on_delivery =  $cart->product->cash_on_delivery == 0;
-                    if ($haveDigitalProduct || $cash_on_delivery) {
-                        break;
-                    }
-
-                }
-            }
-
-            if (get_setting('cash_payment') == 1  && !$haveDigitalProduct && !$cash_on_delivery) {
+            if ($cash['message'] === null) {
                 $payment_type = [];
                 $payment_type['payment_type'] = 'cash_payment';
                 $payment_type['payment_type_key'] = 'cash_on_delivery';
@@ -134,6 +135,10 @@ class PaymentTypesController
                 $payment_type['details'] = "";
 
                 $payment_types[] = $payment_type;
+            } elseif (get_setting('cash_payment') == 1) {
+                // The store takes cash, but not for this cart: say why, so the app can
+                // show the option as unavailable instead of leaving it out unexplained.
+                $unavailable[] = ['payment_type_key' => 'cash_on_delivery', 'message' => $cash['message'], 'products' => $cash['products']];
             }
         }
 
@@ -168,6 +173,59 @@ class PaymentTypesController
 
 
 
-        return response()->json($payment_types);
+        return [
+            'result' => true,
+            'payment_types' => $payment_types,
+            'unavailable' => $unavailable,
+            'message' => $payment_types === [] ? __('api.payment.none_available') : null,
+        ];
+    }
+
+    /**
+     * Whether cash on delivery is offered, and when it is not, why: a message for
+     * the customer and the cart lines in the way. It is offered when the store's
+     * cash payment is on and, for an order, no product in the signed-in
+     * customer's cart is digital or has cash on delivery off; the message then
+     * names those products, so the customer can remove them from the cart. The
+     * lines come back as ids only: the app has each line's product name from the
+     * cart itself.
+     *
+     * @return array{message: string|null, products: list<array{cart_id: int, product_id: int}>}
+     */
+    public function cashAvailability(bool $checkCart = true): array
+    {
+        if (get_setting('cash_payment') != 1) {
+            return ['message' => __('api.order.payment_type_cash_disabled'), 'products' => []];
+        }
+
+        if (! $checkCart) {
+            return ['message' => null, 'products' => []];
+        }
+
+        $lines = auth()->user()->carts()
+            ->with(['product:id,name,digital,cash_on_delivery', 'product.product_translations:id,product_id,lang,name'])
+            ->get()
+            ->filter(fn (Cart $cart): bool => $cart->product !== null && ($cart->product->digital == 1 || $cart->product->cash_on_delivery == 0))
+            ->values();
+
+        if ($lines->isEmpty()) {
+            return ['message' => null, 'products' => []];
+        }
+
+        $names = $lines->map(fn (Cart $cart): string => (string) $cart->product->getTranslation('name'))->unique();
+        $listed = $names->take(self::NAMED_PRODUCTS)->implode(', ').($names->count() > self::NAMED_PRODUCTS ? ' …' : '');
+
+        return [
+            'message' => __('api.order.payment_type_cash_products', ['products' => $listed]),
+            'products' => $lines->map(fn (Cart $cart): array => ['cart_id' => (int) $cart->id, 'product_id' => (int) $cart->product_id])->all(),
+        ];
+    }
+
+    /**
+     * Why cash on delivery is not offered, or null when it is.
+     */
+    public function cashRefusal(bool $checkCart = true): ?string
+    {
+        return $this->cashAvailability($checkCart)['message'];
     }
 }
