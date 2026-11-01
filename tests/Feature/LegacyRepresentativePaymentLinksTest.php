@@ -124,7 +124,7 @@ test('a representative can record a payment through the API and gets its signed 
 
     foreach ([['customer_id' => $customer->id], ['customer_otajer_id' => 4321]] as $customerKey) {
         $this->withToken(storeApiToken($rep))
-            ->postJson('/temp/api/v2/representatives/payments/store', $customerKey + ['amount' => 25])
+            ->postJson('/api/v1/store/representatives/payments/store', $customerKey + ['amount' => 25])
             ->assertOk()->assertJsonPath('result', true)->assertJsonStructure(['pdf_link', 'qr']);
     }
 

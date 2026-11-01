@@ -355,10 +355,10 @@ test('update-address-in-cart refuses an address that order/store would refuse, a
     Cart::forceCreate(['user_id' => $customer->id, 'owner_id' => 1, 'product_id' => $product->id, 'quantity' => 1, 'address_id' => $good]);
     $headers = ['Authorization' => 'Bearer '.storeApiToken($customer)];
 
-    $this->withHeaders($headers)->postJson('/temp/api/v2/update-address-in-cart', ['address_id' => $blank])
+    $this->withHeaders($headers)->postJson('/api/v1/store/update-address-in-cart', ['address_id' => $blank])
         ->assertUnprocessable()->assertJsonPath('result', false)->assertJsonPath('message', __('api.order.address_required'));
     app('auth')->forgetGuards();
-    $this->withHeaders($headers)->postJson('/temp/api/v2/update-address-in-cart', ['address_id' => $noCountry])
+    $this->withHeaders($headers)->postJson('/api/v1/store/update-address-in-cart', ['address_id' => $noCountry])
         ->assertUnprocessable()->assertJsonPath('message', __('api.order.address_country_required'));
 
     expect(Cart::where('user_id', $customer->id)->value('address_id'))->toBe($good);
