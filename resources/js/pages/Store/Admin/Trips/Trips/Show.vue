@@ -13,6 +13,7 @@ import {
 import { edit as tripsEdit } from '@/actions/App/Http/Controllers/Store/Admin/TripController';
 import { edit as truckEdit } from '@/actions/App/Http/Controllers/Store/Admin/TruckController';
 import ActionErrorBanner from '@/components/ActionErrorBanner.vue';
+import AddressMapLink from '@/components/AddressMapLink.vue';
 import DataTable from '@/components/DataTable.vue';
 import FieldError from '@/components/FieldError.vue';
 import PageHeader from '@/components/PageHeader.vue';
@@ -333,7 +334,10 @@ const hasRequiredFields = provideRequiredFields();
                     {{ checkpoint.representative?.name ?? '-' }}
                 </td>
                 <td class="px-4 py-2">
-                    {{ checkpoint.customer?.address || '-' }}
+                    <AddressMapLink
+                        :address="checkpoint.customer?.address"
+                        placeholder="-"
+                    />
                 </td>
                 <td class="px-4 py-2 whitespace-nowrap">
                     <template

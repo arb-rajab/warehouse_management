@@ -231,6 +231,7 @@ final class StorePermissions
             'manage_zones',
             'payment_methods_configurations',
             'pickup_point_setup',
+            'product_field_sources',
             'shipping_configuration',
             'shipping_country_setting',
             'smtp_settings',

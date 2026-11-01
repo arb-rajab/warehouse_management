@@ -18,6 +18,7 @@ import type {
     StoreProductEditListType,
     StoreProductForm,
     StoreProductFormSections,
+    StoreProductSyncedField,
     StoreProductVariantState,
     StoreReferenceOption,
     StoreUpload,
@@ -28,10 +29,14 @@ import type {
  * list (`products.admin.edit`) or the Blade seller list
  * (`products.seller.edit`); its language tabs stay on the route it was
  * opened from. Only the in-house list is an Inertia page to cancel back to.
+ * `readOnlyFields` are the Otajer-owned synced fields of a feed-origin
+ * product (Setup > Product data sources), shown read-only.
  */
 const props = defineProps<{
     product: StoreProductForm;
     name: string;
+    arName: string;
+    readOnlyFields: StoreProductSyncedField[];
     unit: string;
     description: string;
     lang: string;
@@ -76,6 +81,8 @@ const editRoute = props.listType === 'seller' ? sellerEdit : edit;
             :sections="sections"
             :product="product"
             :name="name"
+            :ar-name="arName"
+            :read-only-fields="readOnlyFields"
             :unit="unit"
             :description="description"
             :variants="variants"

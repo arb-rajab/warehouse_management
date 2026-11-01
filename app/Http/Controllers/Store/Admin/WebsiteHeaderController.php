@@ -13,7 +13,7 @@ use Inertia\Response;
 
 class WebsiteHeaderController extends Controller implements HasMiddleware
 {
-    public const SWITCHES = ['show_language_switcher', 'show_currency_switcher', 'header_stikcy'];
+    public const SWITCHES = ['show_currency_switcher', 'header_stikcy'];
 
     public const ARRAYS = ['header_menu_labels', 'header_menu_links'];
 

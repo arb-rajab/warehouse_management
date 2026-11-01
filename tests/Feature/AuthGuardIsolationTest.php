@@ -39,7 +39,7 @@ function authMiddlewareOf(RoutingRoute $route): array
 
 function isStoreRoute(RoutingRoute $route): bool
 {
-    return $route->uri() === 'temp' || str_starts_with($route->uri(), 'temp/');
+    return $route->uri() === 'temp' || str_starts_with($route->uri(), 'temp/') || str_starts_with($route->uri(), 'api/v1/store/');
 }
 
 test('a store session does not sign anyone into the admin panel, even for a matching id', function () {
@@ -115,10 +115,10 @@ test('a warehouse token is refused by the store api, which accepts a store token
     $storeToken = storeApiToken($customer);
     $warehouseToken = User::factory()->mobileUser()->create()->createToken('mobile')->plainTextToken;
 
-    $this->withToken($warehouseToken)->getJson('/temp/api/v2/auth/user')->assertUnauthorized();
+    $this->withToken($warehouseToken)->getJson('/api/v1/store/auth/user')->assertUnauthorized();
     Auth::forgetGuards();
 
-    $this->withToken($storeToken)->getJson('/temp/api/v2/auth/user')
+    $this->withToken($storeToken)->getJson('/api/v1/store/auth/user')
         ->assertOk()
         ->assertJsonPath('id', $customer->id);
 });

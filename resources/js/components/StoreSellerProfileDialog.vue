@@ -4,6 +4,7 @@ import { LoaderCircle } from '@lucide/vue';
 import { onBeforeUnmount, ref, watch } from 'vue';
 import { profile } from '@/actions/App/Http/Controllers/Store/Admin/SellerController';
 import ActionErrorBanner from '@/components/ActionErrorBanner.vue';
+import AddressMapLink from '@/components/AddressMapLink.vue';
 import FilterDialog from '@/components/FilterDialog.vue';
 import { t } from '@/lib/i18n';
 import type { StoreSellerProfile } from '@/types/store';
@@ -78,7 +79,7 @@ const fields = [
                 class="h-20 w-20 rounded-full object-cover"
             />
             <h3 class="font-semibold">{{ details.name }}</h3>
-            <p>{{ details.address }}</p>
+            <p><AddressMapLink :address="details.address" /></p>
             <p>{{ details.phone }}</p>
             <a
                 v-if="details.shop_url"

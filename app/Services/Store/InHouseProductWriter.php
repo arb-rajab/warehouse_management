@@ -7,6 +7,7 @@ use App\Models\ProductStock;
 use App\Models\ProductVariation;
 use App\Models\StoreProductBarcode;
 use App\Models\StoreUser;
+use App\Services\ProductFieldSourceService;
 use App\Services\ProductFlashDealService;
 use App\Services\ProductTaxService;
 use Illuminate\Support\Str;
@@ -32,6 +33,8 @@ use Illuminate\Support\Str;
  * ar_name and published on feed-origin rows. Product's assignment and builder
  * guards enforce that boundary here too; model inserts always have null
  * synced_at, including duplicates. The owner decision is recorded in §52.
+ * Which synced fields are Otajer-owned is the admin's per-field choice
+ * (ProductFieldSourceService); update() ignores a posted read-only one.
  * The caller wraps each write in one transaction.
  */
 class InHouseProductWriter extends PhysicalProductWriter
@@ -39,6 +42,7 @@ class InHouseProductWriter extends PhysicalProductWriter
     public function __construct(
         ProductTaxService $taxes,
         private ProductFlashDealService $flashDeals,
+        private ProductFieldSourceService $fieldSources,
     ) {
         parent::__construct($taxes);
     }
@@ -83,7 +87,8 @@ class InHouseProductWriter extends PhysicalProductWriter
      * and description change only in the default language, and the edited
      * language's translation is written; every other field is shared by the
      * languages and written whatever the language. Owner, approval and
-     * publication are left as they are. A field whose business setting hides
+     * publication are left as they are. The Arabic name (`ar_name`) is shared
+     * by the languages too, written when posted. A field whose business setting hides
      * it (the shipping section, cash on delivery, flash deals, taxes) keeps
      * its stored value instead of being reset.
      *
@@ -99,7 +104,17 @@ class InHouseProductWriter extends PhysicalProductWriter
     public function update(Product $product, array $data, array $variantNames, array $colorCodes, bool $cashPaymentShown, bool $productWiseShippingShown): Product
     {
         app(ProductVariantCombinations::class)->assertLegacyStocksRetained($product, $variantNames);
+        // Read on the locked row: an Otajer-owned field of a feed-origin
+        // product keeps its synced value whatever was posted, and the
+        // default-language translation mirrors that name.
+        $readOnly = $this->fieldSources->readOnlyFieldsFor($product);
+        if (in_array('name', $readOnly, true) && $data['lang'] === config('app.default_language')) {
+            $data['name'] = (string) $product->name;
+        }
         $columns = $this->postedColumns($data);
+        if (array_key_exists('ar_name', $data) && ! in_array('ar_name', $readOnly, true)) {
+            $columns['ar_name'] = (string) ($data['ar_name'] ?? '');
+        }
         if ($data['lang'] !== config('app.default_language')) {
             unset($columns['name'], $columns['unit'], $columns['description']);
         }

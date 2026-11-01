@@ -110,7 +110,6 @@ function storeWebGetRoutes(): array
     return array_values(array_filter(
         Route::getRoutes()->getRoutes(),
         fn (RoutingRoute $route) => str_starts_with($route->uri(), 'temp')
-            && ! str_starts_with($route->uri(), 'temp/api')
             && in_array('GET', $route->methods(), true),
     ));
 }

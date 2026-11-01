@@ -137,7 +137,7 @@ test('the warehouse rep list carries no password and skips customers who are not
     $rep = createRep();
     $customer = createUserWithSecrets();
 
-    $response = $this->withHeaders(['private-token' => 'wms-secret'])->getJson('/temp/api/v2/warehouse/reps')->assertOk();
+    $response = $this->withHeaders(['private-token' => 'wms-secret'])->getJson('/api/v1/store/warehouse/reps')->assertOk();
 
     $ids = collect($response->json('data'))->pluck('id');
     expect($ids->all())->toBe([$rep->id])->and($ids)->not->toContain($customer->id);
@@ -170,7 +170,7 @@ function createPublicShop(array $attributes = []): int
 test('a visitor reads a verified shop without payout, bank, sales or contact details', function () {
     $shopId = createPublicShop();
 
-    $response = $this->getJson("/temp/api/v2/shops/details/{$shopId}")
+    $response = $this->getJson("/api/v1/store/shops/details/{$shopId}")
         ->assertOk()
         ->assertJsonPath('data.name', 'Public Shop');
 
@@ -183,9 +183,9 @@ test('a visitor gets a 404 for a shop that is not verified or does not exist', f
     $unverified = createPublicShop(['verification_status' => 0]);
     $verified = createPublicShop();
 
-    $this->getJson("/temp/api/v2/shops/details/{$unverified}")->assertNotFound();
-    $this->getJson('/temp/api/v2/shops/details/99999999')->assertNotFound();
-    $this->getJson("/temp/api/v2/shops/details/{$verified}")->assertOk();
+    $this->getJson("/api/v1/store/shops/details/{$unverified}")->assertNotFound();
+    $this->getJson('/api/v1/store/shops/details/99999999')->assertNotFound();
+    $this->getJson("/api/v1/store/shops/details/{$verified}")->assertOk();
 });
 
 test('the shop counts only published products', function () {
@@ -194,7 +194,7 @@ test('the shop counts only published products', function () {
     createStoreProduct(['user_id' => $sellerId, 'added_by' => 'seller']);
     createStoreProduct(['user_id' => $sellerId, 'added_by' => 'seller', 'published' => false]);
 
-    $this->getJson("/temp/api/v2/shops/details/{$shopId}")->assertJsonPath('data.products', 1);
+    $this->getJson("/api/v1/store/shops/details/{$shopId}")->assertJsonPath('data.products', 1);
 });
 
 // business settings
@@ -207,7 +207,7 @@ test('the public business settings list only allow-listed keys', function () {
         ['type' => 'google_map_api_key', 'value' => 'map-secret'],
     ]);
 
-    $response = $this->getJson('/temp/api/v2/business-settings')->assertOk();
+    $response = $this->getJson('/api/v1/store/business-settings')->assertOk();
 
     $types = collect($response->json('data'))->pluck('type');
     expect($types->all())->toBe(['site_name'])
@@ -227,20 +227,20 @@ test('the trip lookups turn away a guest, a customer and a seller', function (st
     expect($response->status())->toBe($userType === null ? 401 : 403);
     expect($response->getContent())->not->toContain('latitude', 'Customer Tester');
 })->with([
-    'coordinates, guest' => ['GET', '/temp/api/get-user-coordinates/{id}', null],
-    'coordinates, customer' => ['GET', '/temp/api/get-user-coordinates/{id}', 'customer'],
-    'coordinates, seller' => ['GET', '/temp/api/get-user-coordinates/{id}', 'seller'],
-    'vehicles, guest' => ['GET', '/temp/api/v2/trips/get-available-vehicles', null],
-    'vehicles, customer' => ['GET', '/temp/api/v2/trips/get-available-vehicles', 'customer'],
-    'vehicles, seller' => ['GET', '/temp/api/v2/trips/get-available-vehicles', 'seller'],
+    'coordinates, guest' => ['GET', '/api/v1/store/get-user-coordinates/{id}', null],
+    'coordinates, customer' => ['GET', '/api/v1/store/get-user-coordinates/{id}', 'customer'],
+    'coordinates, seller' => ['GET', '/api/v1/store/get-user-coordinates/{id}', 'seller'],
+    'vehicles, guest' => ['GET', '/api/v1/store/trips/get-available-vehicles', null],
+    'vehicles, customer' => ['GET', '/api/v1/store/trips/get-available-vehicles', 'customer'],
+    'vehicles, seller' => ['GET', '/api/v1/store/trips/get-available-vehicles', 'seller'],
 ]);
 
 test('a driver reads the trip lookups', function () {
     $driver = createStoreUser('driver');
     $customer = createStoreUser('customer');
 
-    $this->withToken(storeApiToken($driver))->getJson('/temp/api/v2/trips/get-available-vehicles?date='.now()->toDateString())->assertOk();
-    $this->withToken(storeApiToken($driver))->getJson("/temp/api/get-user-coordinates/{$customer->id}")->assertOk();
+    $this->withToken(storeApiToken($driver))->getJson('/api/v1/store/trips/get-available-vehicles?date='.now()->toDateString())->assertOk();
+    $this->withToken(storeApiToken($driver))->getJson("/api/v1/store/get-user-coordinates/{$customer->id}")->assertOk();
 });
 
 test('the admin trip forms look up vehicles and coordinates with the admin session, and nobody else may', function () {
@@ -269,8 +269,8 @@ test('the customer profile and verification routes turn away a guest', function 
 
     $this->getJson(str_replace('{id}', (string) $customer->id, $uri))->assertUnauthorized();
 })->with([
-    'customers.show' => '/temp/api/v2/customers/{id}',
-    'check_user_verified' => '/temp/api/v2/check_user_verified/{id}',
+    'customers.show' => '/api/v1/store/customers/{id}',
+    'check_user_verified' => '/api/v1/store/check_user_verified/{id}',
 ]);
 
 test('a signed-in customer reads their own profile and no one else', function () {
@@ -278,7 +278,7 @@ test('a signed-in customer reads their own profile and no one else', function ()
     $customer = createUserWithSecrets();
     $other = createUserWithSecrets();
 
-    $response = $this->withToken(storeApiToken($customer))->getJson("/temp/api/v2/customers/{$customer->id}")->assertOk();
+    $response = $this->withToken(storeApiToken($customer))->getJson("/api/v1/store/customers/{$customer->id}")->assertOk();
 
     expect($response->getContent())->toContain((string) $customer->email)
         ->and($response->getContent())->not->toContain((string) $other->email);
@@ -287,7 +287,7 @@ test('a signed-in customer reads their own profile and no one else', function ()
 test('a signed-in user can ask whether an account is verified', function () {
     $customer = createStoreUser('customer');
 
-    $this->withToken(storeApiToken($customer))->getJson("/temp/api/v2/check_user_verified/{$customer->id}")
+    $this->withToken(storeApiToken($customer))->getJson("/api/v1/store/check_user_verified/{$customer->id}")
         ->assertOk()
         ->assertJsonPath('verified_by_admin', false);
 });
@@ -302,12 +302,12 @@ test('the product list leaves out unpublished and unapproved products and is pag
         createStoreProduct();
     }
 
-    $response = $this->getJson('/temp/api/v2/products')->assertOk();
+    $response = $this->getJson('/api/v1/store/products')->assertOk();
 
     $ids = collect($response->json('data'))->pluck('id');
     expect($ids)->toHaveCount(10)
         ->and($ids)->not->toContain($unpublished->id, $unapproved->id);
-    expect(collect($this->getJson('/temp/api/v2/products?page=2')->json('data'))->pluck('id'))
+    expect(collect($this->getJson('/api/v1/store/products?page=2')->json('data'))->pluck('id'))
         ->toHaveCount(1)
         ->not->toContain($unpublished->id, $unapproved->id);
 });
@@ -319,7 +319,7 @@ test('the new-products list leaves out unpublished products', function () {
     $unpublished = createStoreProduct(['isNewProduct' => true, 'published' => false]);
     $plain = createStoreProduct();
 
-    $ids = collect($this->getJson('/temp/api/v2/products/new_products')->assertOk()->json('data'))->pluck('id');
+    $ids = collect($this->getJson('/api/v1/store/products/new_products')->assertOk()->json('data'))->pluck('id');
 
     expect($ids->all())->toContain($new->id, $offer->id)
         ->and($ids->all())->not->toContain($unpublished->id, $plain->id);
@@ -331,9 +331,9 @@ test('a product that is unpublished or unapproved is a 404 by id and a published
     $unpublished = createStoreProduct(['published' => false]);
     $unapproved = createStoreProduct(['approved' => 0]);
 
-    $this->getJson("/temp/api/v2/products/{$unpublished->id}")->assertNotFound();
-    $this->getJson("/temp/api/v2/products/{$unapproved->id}")->assertNotFound();
-    $this->getJson("/temp/api/v2/products/{$published->id}")->assertSuccessful();
+    $this->getJson("/api/v1/store/products/{$unpublished->id}")->assertNotFound();
+    $this->getJson("/api/v1/store/products/{$unapproved->id}")->assertNotFound();
+    $this->getJson("/api/v1/store/products/{$published->id}")->assertSuccessful();
 });
 
 test('filter_products leaves out unpublished products when vendors are active', function () {
@@ -342,7 +342,7 @@ test('filter_products leaves out unpublished products when vendors are active', 
     $published = createStoreProduct(['todays_deal' => 1, 'added_by' => 'admin']);
     $unpublished = createStoreProduct(['todays_deal' => 1, 'added_by' => 'admin', 'published' => false]);
 
-    $ids = collect($this->getJson('/temp/api/v2/products/todays-deal')->assertOk()->json('data'))->pluck('id');
+    $ids = collect($this->getJson('/api/v1/store/products/todays-deal')->assertOk()->json('data'))->pluck('id');
 
     expect($ids->all())->toBe([$published->id])->and($ids)->not->toContain($unpublished->id);
 });

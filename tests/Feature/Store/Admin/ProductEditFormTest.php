@@ -83,14 +83,21 @@ function productEditSnapshot(): array
         ->mapWithKeys(fn (string $table) => [$table => DB::table($table)->orderBy('id')->get()->toArray()])->all();
 }
 
-test('the in-house writer refuses a feed name change before touching related rows', function () {
+test('the in-house writer keeps an Otajer-owned feed name and its translations when only the name is changed', function () {
+    // Otajer owns the name by default: the posted rename is ignored on a
+    // feed-origin product (ProductFieldSourceService), not refused. The save
+    // itself rewrites taxes, variations and barcodes as every edit does.
     actingAsStoreUser(createStoreStaff('product_edit'));
     DB::table('products')->where('id', $this->product->id)->update(['synced_at' => now()]);
     $before = productEditSnapshot();
 
-    $this->post(route('products.update', $this->product), productEditForm(['name' => 'Store rename']))->assertSessionHasErrors('name');
+    $this->travel(5)->seconds();
+    $this->post(route('products.update', $this->product), productEditForm(['name' => 'Store rename']))->assertSessionHasNoErrors();
 
-    expect(productEditSnapshot())->toEqual($before);
+    $after = productEditSnapshot();
+    expect(DB::table('products')->where('id', $this->product->id)->value('name'))->toBe('Olive oil')
+        ->and($after['products'])->toEqual($before['products'])
+        ->and($after['product_translations'])->toEqual($before['product_translations']);
 });
 
 /**

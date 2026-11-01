@@ -26,6 +26,7 @@ import { index as offersIndex } from '@/actions/App/Http/Controllers/Store/Admin
 import { all_orders } from '@/actions/App/Http/Controllers/Store/Admin/OrderController';
 import { create as featureOrderCreate } from '@/actions/App/Http/Controllers/Store/Admin/OrderEntryController';
 import { index as bulkIndex } from '@/actions/App/Http/Controllers/Store/Admin/ProductBulkUploadController';
+import { edit as productFieldSourcesEdit } from '@/actions/App/Http/Controllers/Store/Admin/ProductFieldSourceController';
 import { index as productQueriesIndex } from '@/actions/App/Http/Controllers/Store/Admin/ProductQueryController';
 import {
     in_house_sale_report,
@@ -220,6 +221,7 @@ describe('storeAdminMenu', () => {
                 firebase.url(),
                 payments.url(),
                 filesystem.url(),
+                productFieldSourcesEdit.url(),
             ].sort(),
         );
     });
@@ -309,6 +311,28 @@ describe('visibleStoreMenu', () => {
         expect(keys).toContain('store.nav.featuresActivation');
         expect(keys).toContain('store.nav.paymentMethods');
         expect(keys).toContain('store.nav.google');
+    });
+
+    it('shows product data sources only to holders of its permission', () => {
+        const keysFor = (permissions: string[]) =>
+            labelKeys(
+                visibleStoreMenu(
+                    storeAdminMenu,
+                    storeAccess(
+                        storeSharedProps({
+                            permissions,
+                            settings: { Setup_configuration_section: true },
+                        }),
+                    ),
+                ),
+            );
+
+        expect(keysFor(['product_field_sources'])).toContain(
+            'store.nav.productFieldSources',
+        );
+        expect(keysFor(['general_settings'])).not.toContain(
+            'store.nav.productFieldSources',
+        );
     });
 
     it('shows every entry to a Super Admin with every setting on', () => {

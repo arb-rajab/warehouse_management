@@ -3,6 +3,7 @@
 use App\Http\Controllers\BusinessSettingsController;
 use App\Http\Controllers\Store\Admin\ClassifiedProductController;
 use App\Http\Controllers\ProductController;
+use App\Http\Controllers\Store\Admin\ProductFieldSourceController;
 use App\Http\Controllers\Store\Admin\SellerController;
 use App\Http\Controllers\Store\Admin\SellerCommissionController;
 use App\Http\Controllers\Store\Admin\SellerVerificationFormController;
@@ -300,8 +301,8 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
 
         // The trip forms' lookups: the driver API's own handlers, reached with
         // the admin's session instead of an app token.
-        Route::get('/available-vehicles', 'App\Http\Controllers\Api\V2\Trip\DriverController@getAvailableVehicles')->name('trips.available-vehicles')->middleware('permission:add_trip|edit_trip');
-        Route::get('/user-coordinates/{id}', 'App\Http\Controllers\Api\V2\Trip\DriverController@getLongLatitude')->name('trips.user-coordinates')->middleware('permission:add_trip|edit_trip');
+        Route::get('/available-vehicles', 'App\Http\Controllers\Api\V1\Trip\DriverController@getAvailableVehicles')->name('trips.available-vehicles')->middleware('permission:add_trip|edit_trip');
+        Route::get('/user-coordinates/{id}', 'App\Http\Controllers\Api\V1\Trip\DriverController@getLongLatitude')->name('trips.user-coordinates')->middleware('permission:add_trip|edit_trip');
 
         Route::get('/drivers/index', [DriverController::class, 'index'])->name('drivers.index');
         Route::get('/drivers/create', [DriverController::class, 'create'])->name('drivers.create');
@@ -364,6 +365,10 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
     // General settings: a typed writer for the form's own keys only.
     Route::get('/general-setting', [GeneralSettingsController::class, 'edit'])->name('general_setting.index');
     Route::post('/general-setting', [GeneralSettingsController::class, 'update'])->name('general_setting.update');
+
+    // Product data sources: who owns each Otajer-synced product field.
+    Route::get('/product-data-sources', [ProductFieldSourceController::class, 'edit'])->name('product_field_sources.index');
+    Route::post('/product-data-sources', [ProductFieldSourceController::class, 'update'])->name('product_field_sources.update');
 
     // Migrated plain settings: each write has its page permission and keys.
     Route::get('/activation', [SettingsController::class, 'activation'])->name('activation.index');

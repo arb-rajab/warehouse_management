@@ -325,7 +325,7 @@ describe('Store trip orders list', () => {
             t('store.trips.orders.printCmr'),
         ]);
         expect(rows[0].get('a[target="_blank"]').attributes()).toMatchObject({
-            href: 'https://www.google.com/maps?q=Main%20street%205',
+            href: 'https://www.google.com/maps/search/?api=1&query=Main%20street%205',
             rel: 'noopener noreferrer',
         });
         expect(

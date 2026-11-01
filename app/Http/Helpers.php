@@ -3,7 +3,7 @@
 use App\Http\Controllers\AffiliateController;
 use App\Http\Controllers\ClubPointController;
 use App\Http\Controllers\CommissionController;
-use App\Http\Resources\V2\CarrierCollection;
+use App\Http\Resources\V1\CarrierCollection;
 use App\Models\Addon;
 use App\Models\Address;
 use App\Models\BusinessSetting;

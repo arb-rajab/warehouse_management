@@ -12,6 +12,7 @@ import {
 import { edit } from '@/actions/App/Http/Controllers/Store/Admin/OrderEntryController';
 import ActionErrorBanner from '@/components/ActionErrorBanner.vue';
 import AddResourceLink from '@/components/AddResourceLink.vue';
+import AddressMapLink from '@/components/AddressMapLink.vue';
 import DataTable from '@/components/DataTable.vue';
 import FormField from '@/components/FormField.vue';
 import PageHeader from '@/components/PageHeader.vue';
@@ -19,6 +20,7 @@ import RequiredLegend from '@/components/RequiredLegend.vue';
 import RequiredMark from '@/components/RequiredMark.vue';
 import SubmitButton from '@/components/SubmitButton.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
+import { joinAddressParts } from '@/lib/address';
 import { fieldLabelClass, plainFieldInputClass } from '@/lib/filters';
 import { t } from '@/lib/i18n';
 import { firstError } from '@/lib/pageErrors';
@@ -96,7 +98,9 @@ const hasRequiredFields = provideRequiredFields();
             <dd class="whitespace-pre-wrap">{{ additionalInfo }}</dd>
             <dt>{{ t('store.orders.address') }}</dt>
             <dd>
-                {{ Object.values(shippingAddress).filter(Boolean).join(', ') }}
+                <AddressMapLink
+                    :address="joinAddressParts(Object.values(shippingAddress))"
+                />
             </dd>
             <dt>{{ t('store.orders.total') }}</dt>
             <dd>{{ order.grand_total.toFixed(2) }}</dd>

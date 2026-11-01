@@ -19,7 +19,7 @@ class ApiResourceResponse extends ResourceResponseTypeToSchema
     {
         return parent::shouldHandle($type)
             && ($resource = $type->templateTypes[0] ?? null) instanceof ObjectType
-            && str_starts_with($resource->name, 'App\\Http\\Resources\\V2\\');
+            && str_starts_with($resource->name, 'App\\Http\\Resources\\V1\\');
     }
 
     public function toResponse(Type $type): Response

@@ -22,6 +22,7 @@ import {
 import { edit as truckEdit } from '@/actions/App/Http/Controllers/Store/Admin/TruckController';
 import ActionErrorBanner from '@/components/ActionErrorBanner.vue';
 import AddResourceLink from '@/components/AddResourceLink.vue';
+import AddressMapLink from '@/components/AddressMapLink.vue';
 import DataTable from '@/components/DataTable.vue';
 import FieldError from '@/components/FieldError.vue';
 import FormField from '@/components/FormField.vue';
@@ -113,9 +114,6 @@ function photoUrls(order: StoreTripOrder): string[] {
     return (order.checkpoint?.photos ?? [])
         .map((id) => props.photos.find((photo) => photo.id === id)?.url)
         .filter((url): url is string => typeof url === 'string');
-}
-function mapUrl(address: string): string {
-    return `https://www.google.com/maps?q=${encodeURIComponent(address)}`;
 }
 function onPerPageChange(perPage: number): void {
     router.get(
@@ -414,15 +412,7 @@ function onPerPageChange(perPage: number): void {
                     }}</template>
                 </td>
                 <td class="px-4 py-2">
-                    <a
-                        v-if="order.address"
-                        :href="mapUrl(order.address)"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        class="underline"
-                        >{{ order.address }}</a
-                    >
-                    <template v-else>-</template>
+                    <AddressMapLink :address="order.address" placeholder="-" />
                 </td>
                 <td class="px-4 py-2">{{ order.country ?? '-' }}</td>
                 <td class="px-4 py-2 whitespace-nowrap">

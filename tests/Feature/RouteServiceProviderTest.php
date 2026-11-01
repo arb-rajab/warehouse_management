@@ -1,6 +1,6 @@
 <?php
 
-use App\Http\Controllers\Api\V2\BrandController as ApiBrandController;
+use App\Http\Controllers\Api\V1\BrandController as ApiBrandController;
 use App\Http\Controllers\Store\Admin\DashboardController;
 use App\Providers\RouteServiceProvider;
 use Illuminate\Http\Request;
@@ -34,7 +34,7 @@ test('keepLastRegisteredRouteNames keeps the last route registered with a duplic
 /**
  * The legacy app's own RouteNameResolutionTest pinned these, one per kind of
  * duplicate. Which registration keeps a duplicated name depends on the order
- * RouteServiceProvider::map() loads the route files in: with the api/v2 files
+ * RouteServiceProvider::map() loads the route files in: with the api/v1 files
  * loaded after the admin one, every admin link to a name the API also
  * registers (brands.index, categories.index, customers.edit, ...) pointed at
  * the JSON API instead.
@@ -52,7 +52,7 @@ test('duplicated store route names resolve to the route the legacy app gave them
 });
 
 test('the routes that lost a duplicated name are still registered', function () {
-    $apiBrands = Route::getRoutes()->match(Request::create('/temp/api/v2/brands'));
+    $apiBrands = Route::getRoutes()->match(Request::create('/api/v1/store/brands'));
 
     expect($apiBrands->getActionName())->toBe(ApiBrandController::class.'@index')
         ->and($apiBrands->getName())->toBeNull();
@@ -92,6 +92,23 @@ test('the store admin dashboard is not swallowed by the storefront catch-all', f
     $route = Route::getRoutes()->match(Request::create('/temp/admin'));
 
     expect($route->getActionName())->toBe(DashboardController::class.'@index');
+});
+
+test("the store API's JSON fallback answers only unknown /api/v1/store paths", function () {
+    // The warehouse API keeps the framework's own 404, not the store envelope.
+    $this->getJson('/api/v1/no-such-route')->assertNotFound()->assertJsonMissingPath('success');
+    $this->getJson('/api/no-such-route')->assertNotFound()->assertJsonMissingPath('success');
+
+    $this->getJson('/api/v1/store/no-such-route')->assertNotFound()->assertExactJson([
+        'data' => [],
+        'success' => false,
+        'status' => 404,
+        'message' => __('api.common.invalid_route'),
+    ]);
+
+    // A real route under either prefix is matched before the fallback.
+    expect(Route::getRoutes()->match(Request::create('/api/v1/store/products'))->isFallback)->toBeFalse()
+        ->and(Route::getRoutes()->match(Request::create('/api/v1/products'))->getName())->toBe('api.v1.products.index');
 });
 
 test("the store's route provider does not register this app's own routes a second time", function () {

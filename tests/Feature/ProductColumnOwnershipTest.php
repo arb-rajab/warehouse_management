@@ -5,7 +5,9 @@ use App\Models\Language;
 use App\Models\Product;
 use App\Models\ProductBuilder;
 use App\Models\Upload;
+use App\Services\ProductFieldSourceService;
 use App\Support\ProductColumnOwnership;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Validation\ValidationException;
 use PhpParser\Node;
@@ -51,7 +53,7 @@ test('store product write paths cannot bypass the ownership builder', function (
 
 test('all store model writes use the guarded product builder', function () {
     expect(Product::query())->toBeInstanceOf(ProductBuilder::class)
-        ->and(ProductColumnOwnership::SYNC_COLUMNS)->toBe(['name', 'ar_name', 'published']);
+        ->and(ProductColumnOwnership::syncColumns())->toBe(['name', 'ar_name', 'published']);
 });
 
 test('store assignments cannot change feed-owned columns even from a partial or stale model', function (string $column, mixed $value) {
@@ -156,3 +158,41 @@ test('the existing seller physical and digital writers refuse feed names before 
     expect($product->fresh()->getRawOriginal())->toBe($before)
         ->and($product->stocks()->get()->toJson())->toBe($stocks);
 })->with(['physical' => false, 'digital' => true]);
+
+test('an admin-owned synced column is the store\'s to write even on a feed-origin row', function (string $column, mixed $value) {
+    app(ProductFieldSourceService::class)->update([$column => 'admin']);
+    $feed = Product::factory()->feedOrigin()->create();
+
+    $feed->forceFill([$column => $value])->save();
+
+    expect($feed->fresh()->getAttribute($column))->toEqual($value)
+        ->and($feed->fresh()->getAttribute('synced_at'))->not->toBeNull();
+})->with(['name' => ['name', 'Admin name'], 'ar_name' => ['ar_name', 'اسم الإدارة'], 'published' => ['published', false]]);
+
+test('making one field admin-owned leaves the other Otajer-owned fields guarded', function () {
+    app(ProductFieldSourceService::class)->update(['name' => 'admin']);
+    $feed = Product::factory()->feedOrigin()->create(['ar_name' => 'قديم', 'published' => true]);
+
+    expect(fn () => $feed->forceFill(['ar_name' => 'جديد'])->save())->toThrow(ValidationException::class);
+    expect(fn () => Product::query()->whereKey($feed->id)->update(['published' => false]))->toThrow(ValidationException::class);
+    expect($feed->fresh())->ar_name->toBe('قديم')->published->toBeTrue();
+});
+
+test('a bulk write of an admin-owned column passes on a mixed-origin set', function () {
+    app(ProductFieldSourceService::class)->update(['name' => 'admin']);
+    $feed = Product::factory()->feedOrigin()->create(['name' => 'Feed']);
+    $store = Product::factory()->create(['name' => 'Store']);
+    $noise = Product::factory()->feedOrigin()->create(['name' => 'Noise']);
+
+    Product::query()->whereKey([$feed->id, $store->id])->update(['name' => 'Renamed']);
+
+    expect($feed->fresh()->name)->toBe('Renamed')->and($store->fresh()->name)->toBe('Renamed')
+        ->and($noise->fresh()->name)->toBe('Noise');
+});
+
+test('an unreadable increment column stays refused whatever the field owners are', function () {
+    app(ProductFieldSourceService::class)->update(['name' => 'admin', 'ar_name' => 'admin', 'published' => 'admin']);
+    $product = Product::factory()->feedOrigin()->create();
+
+    expect(fn () => Product::query()->whereKey($product->id)->increment(DB::raw('num_of_sale')))->toThrow(ValidationException::class);
+});

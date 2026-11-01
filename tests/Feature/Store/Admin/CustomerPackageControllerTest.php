@@ -213,7 +213,7 @@ test('WMS authentication grants no customer package action and cannot change sto
 test('customer package migration preserves purchase and mobile registrations and drops only empty show', function () {
     expect(Route::has('customer_packages.show'))->toBeFalse();
     expect(Route::getRoutes()->getByName('customer_packages.purchase')->getActionName())->toBe('App\\Http\\Controllers\\CustomerPackageController@purchase_package');
-    $api = collect(Route::getRoutes()->getRoutes())->filter(fn ($route) => str_contains($route->getActionName(), 'Api\\V2\\CustomerPackageController'));
+    $api = collect(Route::getRoutes()->getRoutes())->filter(fn ($route) => str_contains($route->getActionName(), 'Api\\V1\\CustomerPackageController'));
     expect($api->map(fn ($route) => class_basename($route->getActionName()))->values()->all())->toEqual([
         'CustomerPackageController@purchase_package_offline', 'CustomerPackageController@purchase_package_free', 'CustomerPackageController@customer_packages_list',
     ]);
@@ -243,13 +243,13 @@ test('paid packages still refuse unsupported payment options without crediting a
 });
 
 test('the unchanged public mobile package resource preserves its exact free and paid payload', function () {
-    $this->getJson('/temp/api/v2/customer-packages')->assertOk()->assertJsonPath('data.0', [
+    $this->getJson('/api/v1/store/customer-packages')->assertOk()->assertJsonPath('data.0', [
         'id' => $this->package->id, 'name' => 'Gold', 'logo' => uploaded_asset(null), 'product_upload_limit' => 10,
         'amount' => single_price(12.5), 'price' => 12.5,
     ]);
     $this->package->amount = 0;
     $this->package->save();
-    $this->getJson('/temp/api/v2/customer-packages')->assertOk()->assertJsonPath('data.0', [
+    $this->getJson('/api/v1/store/customer-packages')->assertOk()->assertJsonPath('data.0', [
         'id' => $this->package->id, 'name' => 'Gold', 'logo' => uploaded_asset(null), 'product_upload_limit' => 10,
         'amount' => translate('Free'), 'price' => 0,
     ]);

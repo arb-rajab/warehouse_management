@@ -23,8 +23,9 @@ the same catalog. Auth verification email actions and messages composed during
 customer requests also use files. Laravel's existing auth, password, pagination
 and validation catalogs remain authoritative for their messages.
 
-`Language` resolves a valid explicit session choice before `config('app.locale')`
-(APP_LOCALE). It does not persist an automatic default. The application locale
+`Language` resolves a valid explicit session choice, then the storefront toggle's
+`store_locale` cookie ([storefront locale rule](rules/storefront-locale.md)), before
+`config('app.locale')` (APP_LOCALE). It does not persist an automatic default. The application locale
 keeps the selected content code; the Laravel translator uses
 `StoreLocale::uiLocale()`. This maps the legacy Arabic store code `sa` to `ar`
 without changing its language row, product/category/CMS lookups, or the
@@ -82,7 +83,7 @@ resolution and must not be removed by a blanket helper rewrite.
 
 Shared-service audit: `ProductVariantCombinations` is used by the admin and
 seller product writers; only its stock-reconciliation message changed.
-`SellerWithdrawService` is also used by API/V2: exception types, validation keys,
+`SellerWithdrawService` is also used by API/V1: exception types, validation keys,
 locking, balance arithmetic and response envelopes are preserved; its two shared
 messages now use files. `ProductsImport` keeps its `notify` switch, spreadsheet
 binding, data/persistence behavior and validation. Seller-created support email
@@ -149,7 +150,7 @@ translation records were changed by this stage.
 
 ## API/mobile stage completed
 
-- Repository-owned API/V2 static responses now use matching English/Arabic
+- Repository-owned API/V1 static responses now use matching English/Arabic
   `lang/{en,ar}/api.php`, reusing storefront, seller and Laravel validation keys.
   Covered paths include authentication/recovery, accounts/representatives/visits,
   addresses, cart/checkout/coupons/wishlist, payments/wallet/packages/refunds,
@@ -164,7 +165,7 @@ translation records were changed by this stage.
   unchanged. Validation fields, rules, authorization, ownership, provider-supplied
   errors, calculations, response nesting/types/statuses and deliberately empty
   response messages are preserved.
-- V2 resources use file labels for Free, Verified/Non-Verified seller, In House
+- V1 store resources use file labels for Free, Verified/Non-Verified seller, In House
   Product, payment/delivery/shipping display statuses, refund/approval labels,
   missing-user/order placeholders, transaction captions and price ranges. New
   resource-specific labels live in `api_resources.php`; known status vocabulary
@@ -211,7 +212,7 @@ locale capture/restoration remains intact.
 ### Mobile language/catalog and ARB boundary
 
 The only repository-owned public language endpoint is
-`GET /temp/api/v2/languages` (`Api/V2/LanguageController::getList`). It returns
+`GET /api/v1/store/languages` (`Api/V1/LanguageController::getList`). It returns
 language records, **not a translation catalog**. Its `data` fields remain
 `id`, `name`, `code`, `mobile_app_code`, `rtl`, `is_default`, `image`, plus
 `success`/`status`. Configured language names are content; stored codes, app codes,
@@ -278,7 +279,7 @@ completed file migration.
 | --- | --- | --- |
 | `app/Support/StorePermissions.php::{displayName,displaySection}` | 2 | Custom permission/section content only; canonical identifiers use files. `Store/Admin/RoleController` consumes the display methods. |
 | `app/Support/StoreLocale.php::paymentMethod` | 1 | Custom payment-method content; invoice, seller order detail and `Store/VisitDetailResource` consume it. Known methods use files. |
-| `app/Http/Resources/V2/LanguageCollection.php` | 1 | Configured language-name content, returned by `Api/V2/LanguageController::getList` at `/temp/api/v2/languages`; metadata, not a mobile translation catalog. |
+| `app/Http/Resources/V1/LanguageCollection.php` | 1 | Configured language-name content, returned by `Api/V1/LanguageController::getList` at `/api/v1/store/languages`; metadata, not a mobile translation catalog. |
 | `resources/views/shop/seller/product_query/index.blade.php` | 4 | Customer name, product name, truncated question and reply, rendered by seller product-query index; preserve user/product content. |
 | `resources/views/shop/frontend/index.blade.php` | 2 | Configured `cupon_title` / `cupon_subtitle`. |
 | `resources/views/shop/frontend/inc/nav.blade.php` | 2 | Configured desktop/mobile `header_menu_labels` values. |

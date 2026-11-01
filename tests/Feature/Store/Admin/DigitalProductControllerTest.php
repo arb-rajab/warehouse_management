@@ -1,6 +1,6 @@
 <?php
 
-use App\Http\Controllers\Api\V2\DigitalProductController as ApiDigitalProductController;
+use App\Http\Controllers\Api\V1\DigitalProductController as ApiDigitalProductController;
 use App\Http\Controllers\PurchaseHistoryController;
 use App\Http\Controllers\Seller\DigitalProductController as SellerDigitalProductController;
 use App\Http\Controllers\Store\Admin\DigitalProductController;
@@ -385,7 +385,7 @@ test('the migration drops only the unused resource routes and the admin views, k
         ->and(route('seller.digitalproducts.download', 'token', false))->toBe('/temp/seller/digitalproducts/download/token')
         ->and(Route::getRoutes()->getByName('seller.digitalproducts.destroy')->methods())->toBe(['POST'])
         ->and(Route::getRoutes()->getByName('digital-products.download')->getActionName())->toBe(PurchaseHistoryController::class.'@download')
-        ->and(Route::getRoutes()->match(Request::create('/temp/api/v2/purchased-products/download/5'))->getActionName())
+        ->and(Route::getRoutes()->match(Request::create('/api/v1/store/purchased-products/download/5'))->getActionName())
         ->toBe(ApiDigitalProductController::class.'@download');
     actingAsStoreUser(createStoreStaff('show_digital_products', 'edit_digital_product'));
     $this->get("/temp/admin/digitalproducts/{$this->product->id}")->assertMethodNotAllowed();

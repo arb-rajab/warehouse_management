@@ -120,8 +120,9 @@ notifications; cache clearing stays narrowly scoped.
 
 Use Inertia links only for Inertia destinations. `StoreAdminNavLink` uses a
 plain anchor for Blade destinations; build URLs through Wayfinder. The shared
-layout helpers are `SkipToContentLink`, `isActiveNavUrl`, `LogoutLink.href` and
-`ResourceFormPage`'s layout/width support. Avoid merging the otherwise distinct
+layout helpers are `SkipToContentLink`, `LogoutLink.href` and
+`ResourceFormPage`'s layout/width support. The store sidebar's active state
+comes only from `findActiveStoreMenuLink` (`store-admin-menu-highlighting.md`). Avoid merging the otherwise distinct
 WMS and store layouts.
 
 ### 2.3 Translations
@@ -349,7 +350,9 @@ Run a fresh scoped route/consumer inventory before changing a handler.
 
 [shared-database.md](shared-database.md) is canonical for Option A and its
 reclassification procedure. The sync owns exactly `name`, `ar_name`, `published`
-on feed-origin rows (non-null `synced_at`); the store owns other columns and may
+on feed-origin rows (non-null `synced_at`) while each is Otajer-owned, the default;
+Setup > Product data sources can hand any of them to the admin panel
+([product-field-sources.md](product-field-sources.md)). The store owns other columns and may
 write those three on store-origin rows. Null pre-marker rows were originally
 unclassified; the owner's later Otajer-origin confirmation led to a one-time
 classification migration. Do not reapply the earlier pending-classification

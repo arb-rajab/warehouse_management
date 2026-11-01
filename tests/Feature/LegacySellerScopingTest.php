@@ -46,9 +46,9 @@ test('a seller cannot change another seller\'s order, on the web or through the 
 
     app('auth')->forgetGuards();
     $token = storeApiToken($rival);
-    $this->withToken($token)->postJson('/temp/api/v2/seller/orders/update-delivery-status', ['order_id' => $order->id, 'status' => 'cancelled'])->assertNotFound();
+    $this->withToken($token)->postJson('/api/v1/store/seller/orders/update-delivery-status', ['order_id' => $order->id, 'status' => 'cancelled'])->assertNotFound();
     app('auth')->forgetGuards();
-    $this->withToken($token)->postJson('/temp/api/v2/seller/orders/update-payment-status', ['order_id' => $order->id, 'status' => 'unpaid'])->assertNotFound();
+    $this->withToken($token)->postJson('/api/v1/store/seller/orders/update-payment-status', ['order_id' => $order->id, 'status' => 'unpaid'])->assertNotFound();
 
     expect($order->fresh()->only(['delivery_status', 'payment_status']))->toBe(['delivery_status' => 'pending', 'payment_status' => 'paid'])
         ->and((float) $customer->fresh()->balance)->toBe(0.0)
@@ -65,7 +65,7 @@ test('cancelling an order twice refunds and restocks once, whoever cancels it', 
             // A token's user is cached on the guard for the rest of the test.
             app('auth')->forgetGuards();
 
-            return test()->withToken(storeApiToken($seller))->postJson('/temp/api/v2/seller/orders/update-delivery-status', ['order_id' => $order->id, 'status' => 'cancelled']);
+            return test()->withToken(storeApiToken($seller))->postJson('/api/v1/store/seller/orders/update-delivery-status', ['order_id' => $order->id, 'status' => 'cancelled']);
         }
 
         return test()->post('/temp/seller/orders/update_delivery_status', ['order_id' => $order->id, 'status' => 'cancelled']);
@@ -94,7 +94,7 @@ test('a seller\'s status change leaves another seller\'s lines of a shared order
         'quantity' => 1, 'variation' => '', 'payment_status' => 'paid', 'delivery_status' => 'pending',
     ]);
 
-    $this->withToken(storeApiToken($mine))->postJson('/temp/api/v2/seller/orders/update-delivery-status', ['order_id' => $order->id, 'status' => 'cancelled'])->assertOk();
+    $this->withToken(storeApiToken($mine))->postJson('/api/v1/store/seller/orders/update-delivery-status', ['order_id' => $order->id, 'status' => 'cancelled'])->assertOk();
 
     expect($theirLine->fresh()->delivery_status)->toBe('pending')
         ->and(stockOf($theirProduct))->toBe(50);
@@ -138,7 +138,7 @@ test('a status outside the delivery statuses is rejected and the order is unchan
     $noise = walletOrderOf($seller, $customer, $product);
 
     $this->withToken(storeApiToken($seller))
-        ->postJson('/temp/api/v2/seller/orders/update-delivery-status', ['order_id' => $order->id, 'status' => 'shipped-to-mars'])
+        ->postJson('/api/v1/store/seller/orders/update-delivery-status', ['order_id' => $order->id, 'status' => 'shipped-to-mars'])
         ->assertUnprocessable();
 
     expect($order->fresh()->delivery_status)->toBe('pending')
@@ -154,7 +154,7 @@ test('a customer\'s token cannot cancel or mark paid an order through the seller
     $order = walletOrderOf($seller, $customer, $product);
 
     $this->withToken(storeApiToken($customer))
-        ->postJson("/temp/api/v2/seller/orders/{$endpoint}", ['order_id' => $order->id, 'status' => $status])
+        ->postJson("/api/v1/store/seller/orders/{$endpoint}", ['order_id' => $order->id, 'status' => $status])
         ->assertNotFound();
 
     expect($order->fresh()->only(['delivery_status', 'payment_status']))->toBe(['delivery_status' => 'pending', 'payment_status' => 'paid'])

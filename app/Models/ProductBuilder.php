@@ -24,7 +24,7 @@ class ProductBuilder extends Builder
     public function increment($column, $amount = 1, array $extra = []): int
     {
         if (! is_string($column)) {
-            ProductColumnOwnership::refuse(ProductColumnOwnership::SYNC_COLUMNS);
+            ProductColumnOwnership::refuse(ProductColumnOwnership::syncColumns());
         }
 
         return $this->storeWrite([$column => $amount, ...$extra], fn (): int => parent::increment($column, $amount, $extra));
@@ -33,7 +33,7 @@ class ProductBuilder extends Builder
     public function decrement($column, $amount = 1, array $extra = []): int
     {
         if (! is_string($column)) {
-            ProductColumnOwnership::refuse(ProductColumnOwnership::SYNC_COLUMNS);
+            ProductColumnOwnership::refuse(ProductColumnOwnership::syncColumns());
         }
 
         return $this->storeWrite([$column => $amount, ...$extra], fn (): int => parent::decrement($column, $amount, $extra));
@@ -71,7 +71,7 @@ class ProductBuilder extends Builder
         if (in_array('synced_at', $columns, true)) {
             ProductColumnOwnership::refuse(['synced_at']);
         }
-        $protected = array_values(array_intersect($columns, ProductColumnOwnership::SYNC_COLUMNS));
+        $protected = ProductColumnOwnership::protectedColumns($columns);
         if ($protected === []) {
             return $write();
         }

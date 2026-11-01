@@ -142,8 +142,8 @@ test('the admin pages, both back offices and the API send X-Robots-Tag: noindex,
     $this->get('/temp/admin')->assertRedirect()->assertHeader('X-Robots-Tag', 'noindex, nofollow');
     // The API groups: success, validation failure and rejection
     $this->postJson('/api/v1/login', [])->assertUnprocessable()->assertHeader('X-Robots-Tag', 'noindex, nofollow');
-    $this->getJson('/temp/api/v2/auth/user')->assertUnauthorized()->assertHeader('X-Robots-Tag', 'noindex, nofollow');
-    $this->getJson('/temp/api/v2/currencies')->assertHeader('X-Robots-Tag', 'noindex, nofollow');
+    $this->getJson('/api/v1/store/auth/user')->assertUnauthorized()->assertHeader('X-Robots-Tag', 'noindex, nofollow');
+    $this->getJson('/api/v1/store/currencies')->assertHeader('X-Robots-Tag', 'noindex, nofollow');
     // The seller area
     $this->get('/temp/seller/dashboard')->assertNotFound()->assertHeader('X-Robots-Tag', 'noindex, nofollow');
 });
@@ -180,7 +180,6 @@ test('robots.txt keeps the storefront open, disallows the private areas and name
         ->toContain('Disallow: /temp/dashboard')
         ->toContain('Disallow: /temp/wishlists')
         ->toContain('Disallow: /temp/seller/')
-        ->toContain('Disallow: /temp/api/')
         ->toContain('Disallow: /api/')
         ->toContain('Sitemap: https://shop.example.test/temp/sitemap.xml')
         // The storefront, the policy pages (/seller-policy shares a prefix with

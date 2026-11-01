@@ -154,7 +154,7 @@ class AppServiceProvider extends ServiceProvider
         Scramble::registerExtension(ApiResourceResponse::class);
 
         Scramble::configure()
-            ->routes(fn (Route $route): bool => (str_starts_with($route->uri(), 'api/') || str_starts_with($route->uri(), 'temp/api/')) && ! $route->isFallback)
+            ->routes(fn (Route $route): bool => str_starts_with($route->uri(), 'api/') && ! $route->isFallback)
             ->withDocumentTransformers(function (OpenApi $openApi): void {
                 $openApi->components->addSecurityScheme('privateToken', SecurityScheme::apiKey('header', 'private-token'));
                 $openApi->tags = array_map(fn (string $name): Tag => new Tag($name), array_values(self::API_DOCUMENTATION_TAGS));
@@ -162,7 +162,7 @@ class AppServiceProvider extends ServiceProvider
             ->withOperationTransformers(function (Operation $operation, RouteInfo $routeInfo): void {
                 $uri = $routeInfo->route->uri();
                 $controller = class_basename($routeInfo->route->getControllerClass() ?? '');
-                $warehouse = str_starts_with($uri, 'api/');
+                $warehouse = str_starts_with($uri, 'api/') && ! str_starts_with($uri, 'api/v1/store/');
                 $tag = match (true) {
                     $warehouse => match ($controller) {
                         'AuthController' => 'warehouse.auth',
@@ -170,13 +170,13 @@ class AppServiceProvider extends ServiceProvider
                         'CellStatusLogController', 'CellVerificationReportController', 'CellVerificationRoundController' => 'warehouse.audit',
                         default => 'warehouse.inventory',
                     },
-                    str_starts_with($uri, 'temp/api/v2/warehouse/') => 'store.warehouse',
-                    str_starts_with($uri, 'temp/api/v2/seller/') => 'store.sellers',
-                    str_starts_with($uri, 'temp/api/v2/trips/'),
-                    str_starts_with($uri, 'temp/api/v2/driver/'),
-                    str_starts_with($uri, 'temp/api/v2/delivery-boy/'),
-                    str_starts_with($uri, 'temp/api/get-user-coordinates/') => 'store.delivery',
-                    str_starts_with($uri, 'temp/api/v2/auth/'), $controller === 'UserController' => 'store.auth',
+                    str_starts_with($uri, 'api/v1/store/warehouse/') => 'store.warehouse',
+                    str_starts_with($uri, 'api/v1/store/seller/') => 'store.sellers',
+                    str_starts_with($uri, 'api/v1/store/trips/'),
+                    str_starts_with($uri, 'api/v1/store/driver/'),
+                    str_starts_with($uri, 'api/v1/store/delivery-boy/'),
+                    str_starts_with($uri, 'api/v1/store/get-user-coordinates/') => 'store.delivery',
+                    str_starts_with($uri, 'api/v1/store/auth/'), $controller === 'UserController' => 'store.auth',
                     in_array($controller, [
                         'CartController', 'CheckoutController', 'OrderController', 'PurchaseHistoryController',
                         'DigitalProductController', 'ShippingController', 'CarrierController', 'PaymentController',

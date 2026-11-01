@@ -5,6 +5,7 @@ import {
     reject,
     index as sellersIndex,
 } from '@/actions/App/Http/Controllers/Store/Admin/SellerController';
+import AddressMapLink from '@/components/AddressMapLink.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
@@ -44,7 +45,7 @@ const access = useStoreAccess();
                 </dl>
                 <h2 class="font-semibold">{{ t('store.sellers.shopInfo') }}</h2>
                 <p>{{ seller.name }}</p>
-                <p>{{ seller.address }}</p>
+                <p><AddressMapLink :address="seller.address" /></p>
             </section>
             <section class="space-y-3">
                 <h2 class="font-semibold">

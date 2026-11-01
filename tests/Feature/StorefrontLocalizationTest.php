@@ -216,8 +216,10 @@ test('auth verification messages and email actions use files without creating tr
 
 test('the legacy language switcher and Vue admin agree on the Arabic UI locale', function () {
     DB::table('languages')->insert(['name' => 'العربية', 'code' => 'sa', 'app_lang_code' => 'ar', 'rtl' => 1, 'status' => 1]);
-    DB::table('business_settings')->insert(['type' => 'show_language_switcher', 'value' => 'on']);
-    $this->get('/temp/users/login')->assertOk()->assertSee('العربية');
+    // The header toggle names the other language: English while Arabic is the UI default.
+    $this->get('/temp/users/login')->assertOk()
+        ->assertSee('<input type="hidden" name="locale" value="en">', false)
+        ->assertSee('<span lang="en" dir="ltr">English</span>', false);
     actingAsStoreUser(createStoreStaff('view_all_staffs'));
     $this->withSession(['locale' => 'sa'])->get('/temp/admin/staffs')->assertOk()
         ->assertSee('lang="ar" dir="rtl"', false)

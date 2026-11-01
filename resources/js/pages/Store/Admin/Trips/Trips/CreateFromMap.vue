@@ -14,6 +14,7 @@ import { destroy } from '@/actions/App/Http/Controllers/Store/Admin/TripControll
 import { store as storeFromMap } from '@/actions/App/Http/Controllers/Store/Admin/TripMapController';
 import { markDelivered } from '@/actions/App/Http/Controllers/Store/Admin/TripOrderController';
 import ActionErrorBanner from '@/components/ActionErrorBanner.vue';
+import AddressMapLink from '@/components/AddressMapLink.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import StoreTripMap from '@/components/StoreTripMap.vue';
 import type { StoreTripMapPoint } from '@/components/StoreTripMap.vue';
@@ -247,7 +248,12 @@ function hasStops(truck: StoreTripMapTruck): boolean {
                             <dt class="text-gray-500 dark:text-neutral-400">
                                 {{ t('store.trips.map.address') }}
                             </dt>
-                            <dd>{{ order.address || '-' }}</dd>
+                            <dd>
+                                <AddressMapLink
+                                    :address="order.address"
+                                    placeholder="-"
+                                />
+                            </dd>
                             <dt class="text-gray-500 dark:text-neutral-400">
                                 {{ t('store.trips.map.accountingId') }}
                             </dt>

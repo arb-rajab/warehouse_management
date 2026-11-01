@@ -23,7 +23,7 @@ test('mobile credential validation uses files and preserves its HTTP 200 refusal
     expect(DB::table('translations')->count())->toBe(0);
     startStorefrontTranslationQueryLog();
 
-    $this->withHeader('App-Language', $locale)->postJson('/temp/api/v2/auth/login', [])
+    $this->withHeader('App-Language', $locale)->postJson('/api/v1/store/auth/login', [])
         ->assertOk()->assertExactJson(['result' => false, 'message' => $message]);
 
     expectNoStorefrontTranslationQueries();
@@ -36,7 +36,7 @@ test('mobile credential validation uses files and preserves its HTTP 200 refusal
 test('mobile reset validation keeps its error fields types and HTTP status in both languages', function (string $locale, string $message, string $error) {
     startStorefrontTranslationQueryLog();
 
-    $this->withHeader('App-Language', $locale)->postJson('/temp/api/v2/auth/password/confirm_reset', [])
+    $this->withHeader('App-Language', $locale)->postJson('/api/v1/store/auth/password/confirm_reset', [])
         ->assertUnprocessable()->assertExactJson([
             'result' => false,
             'message' => $message,
@@ -56,23 +56,23 @@ test('wishlist messages use files while ownership identifiers booleans and creat
     $other = Wishlist::create(['user_id' => createStoreUser('customer')->id, 'product_id' => $product->id]);
     startStorefrontTranslationQueryLog();
 
-    $this->withHeader('App-Language', $locale)->postJson('/temp/api/v2/wishlists', ['product_id' => $product->id])->assertUnauthorized();
+    $this->withHeader('App-Language', $locale)->postJson('/api/v1/store/wishlists', ['product_id' => $product->id])->assertUnauthorized();
     expect(Wishlist::count())->toBe(1);
 
-    $this->withToken(storeApiToken($customer))->postJson('/temp/api/v2/wishlists', ['product_id' => $product->id])
+    $this->withToken(storeApiToken($customer))->postJson('/api/v1/store/wishlists', ['product_id' => $product->id])
         ->assertCreated()->assertExactJson(['message' => $added]);
     $mine = Wishlist::where('user_id', $customer->id)->firstOrFail();
 
-    $this->getJson('/temp/api/v2/wishlists-add-product?product_id='.$product->id)
+    $this->getJson('/api/v1/store/wishlists-add-product?product_id='.$product->id)
         ->assertOk()->assertExactJson([
             'message' => $present,
             'is_in_wishlist' => true,
             'product_id' => $product->id,
             'wishlist_id' => $mine->id,
         ]);
-    $this->deleteJson('/temp/api/v2/wishlists/'.$other->id)
+    $this->deleteJson('/api/v1/store/wishlists/'.$other->id)
         ->assertNotFound()->assertExactJson(['result' => false, 'message' => $missing]);
-    $this->deleteJson('/temp/api/v2/wishlists/'.$mine->id)
+    $this->deleteJson('/api/v1/store/wishlists/'.$mine->id)
         ->assertOk()->assertExactJson(['result' => true, 'message' => $removed]);
 
     expectNoStorefrontTranslationQueries();
@@ -92,7 +92,7 @@ test('cart quantity refusals interpolate the original content name without chang
     startStorefrontTranslationQueryLog();
 
     $this->withToken(storeApiToken($customer))->withHeader('App-Language', $locale)
-        ->postJson('/temp/api/v2/carts/process', ['cart_ids' => (string) $cart->id, 'cart_quantities' => '2'])
+        ->postJson('/api/v1/store/carts/process', ['cart_ids' => (string) $cart->id, 'cart_quantities' => '2'])
         ->assertOk()->assertExactJson(['result' => false, 'message' => $prefix.$name.'.']);
 
     expectNoStorefrontTranslationQueries();
@@ -113,7 +113,7 @@ test('cart availability refusals preserve stock count and variant content', func
     startStorefrontTranslationQueryLog();
 
     $this->withToken(storeApiToken($customer))->withHeader('App-Language', $locale)
-        ->postJson('/temp/api/v2/carts/process', ['cart_ids' => (string) $cart->id, 'cart_quantities' => '4'])
+        ->postJson('/api/v1/store/carts/process', ['cart_ids' => (string) $cart->id, 'cart_quantities' => '4'])
         ->assertOk()->assertExactJson(['result' => false, 'message' => $prefix.'Tea ('.$variant.').']);
 
     expectNoStorefrontTranslationQueries();
@@ -129,7 +129,7 @@ test('database static overrides cannot replace a mobile API message', function (
     $before = DB::table('translations')->get()->toJson();
     startStorefrontTranslationQueryLog();
 
-    $this->withHeader('App-Language', 'ar')->postJson('/temp/api/v2/auth/login', [])
+    $this->withHeader('App-Language', 'ar')->postJson('/api/v1/store/auth/login', [])
         ->assertOk()->assertExactJson(['result' => false, 'message' => 'البريد الإلكتروني وكلمة المرور مطلوبان!']);
 
     expectNoStorefrontTranslationQueries();
@@ -145,7 +145,7 @@ test('a successful current-visit response retains its deliberately empty message
     startStorefrontTranslationQueryLog();
 
     $response = $this->withToken(storeApiToken($representative))->withHeader('App-Language', $locale)
-        ->getJson('/temp/api/v2/representatives/current-visit')->assertOk()
+        ->getJson('/api/v1/store/representatives/current-visit')->assertOk()
         ->assertJsonPath('message', '')
         ->assertJsonPath('result', true)
         ->assertJsonPath('data.id', $visit->id)
@@ -159,7 +159,7 @@ test('a successful current-visit response retains its deliberately empty message
 test('mobile signup validation uses the shared translated attributes and keeps validation field names', function (string $locale, string $name, string $password) {
     startStorefrontTranslationQueryLog();
 
-    $this->withHeader('App-Language', $locale)->postJson('/temp/api/v2/auth/signup', ['register_by' => 'email'])
+    $this->withHeader('App-Language', $locale)->postJson('/api/v1/store/auth/signup', ['register_by' => 'email'])
         ->assertOk()->assertJsonPath('result', false)
         ->assertJsonPath('errors.name.0', $name)
         ->assertJsonPath('errors.password.0', $password)
@@ -177,7 +177,7 @@ test('seller product validation keeps its array message envelope while translati
     startStorefrontTranslationQueryLog();
 
     $this->withToken(storeApiToken($seller))->withHeader('App-Language', $locale)
-        ->postJson('/temp/api/v2/seller/products/add', [])
+        ->postJson('/api/v1/store/seller/products/add', [])
         ->assertUnprocessable()->assertExactJson(['message' => $messages, 'result' => false]);
 
     expectNoStorefrontTranslationQueries();
@@ -192,7 +192,7 @@ test('warehouse validation retains HTTP 200 and machine status identifiers while
     startStorefrontTranslationQueryLog();
 
     $this->withHeaders(['private-token' => 'localization-warehouse-token', 'Accept-Language' => $locale])
-        ->postJson('/temp/api/v2/warehouse/update_order', ['status' => 'shipped'])
+        ->postJson('/api/v1/store/warehouse/update_order', ['status' => 'shipped'])
         ->assertOk()->assertExactJson(['result' => false, 'message' => $message, 'status' => 200]);
 
     expectNoStorefrontTranslationQueries();
@@ -231,7 +231,7 @@ test('API catalogs have matching keys and placeholders and controllers no longer
         expect($ar)->toBe($en);
     }
 
-    foreach (File::allFiles(app_path('Http/Controllers/Api/V2')) as $file) {
+    foreach (File::allFiles(app_path('Http/Controllers/Api/V1')) as $file) {
         expect(file_get_contents($file->getPathname()))->not->toMatch('/\btranslate\s*\(/');
     }
     expect(file_get_contents(app_path('Utility/NotificationUtility.php')))->not->toMatch('/\btranslate\s*\(/');
