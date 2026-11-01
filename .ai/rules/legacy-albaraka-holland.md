@@ -1636,14 +1636,15 @@ middleware, and `auth:store_api` calls `shouldUse('store_api')` on success. A
 blanket `Auth::guard('store')` would break every token-authenticated `/api/v1/store`
 controller (the session guard has no user there), and `store_api` would break
 the web ones. `tests/Feature/AuthGuardIsolationTest.php` enforces the
-route-level guarantee instead: every `temp/*` route with `auth` middleware is
+route-level guarantee instead: every store route (`temp/*` and `api/v1/store/*`)
+with `auth` middleware is
 either behind `UseStoreAuthGuard` or on `auth:store_api`, and no other route
 carries either. Code that runs with no request (queue jobs, console) gets the
 default `web` guard, so anything there must name `store` itself.
 
 **WMS untouched.** `LoginController`, `LoginRequest` and the `admin/login`
 routes are unchanged. `role:admin` (45 routes) and `RestrictToAllowedIps` are on
-no `temp/*` route, and `UseStoreAuthGuard` is on no other. Both are asserted in
+no store route (`temp/*` or `api/v1/store/*`), and `UseStoreAuthGuard` is on no other. Both are asserted in
 the same test file.
 
 **Manual trace** (booted app on a migrated sqlite DB, real requests and models):

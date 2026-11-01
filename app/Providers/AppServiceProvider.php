@@ -162,7 +162,7 @@ class AppServiceProvider extends ServiceProvider
             ->withOperationTransformers(function (Operation $operation, RouteInfo $routeInfo): void {
                 $uri = $routeInfo->route->uri();
                 $controller = class_basename($routeInfo->route->getControllerClass() ?? '');
-                $warehouse = str_starts_with($uri, 'api/');
+                $warehouse = str_starts_with($uri, 'api/') && ! str_starts_with($uri, 'api/v1/store/');
                 $tag = match (true) {
                     $warehouse => match ($controller) {
                         'AuthController' => 'warehouse.auth',
@@ -175,7 +175,7 @@ class AppServiceProvider extends ServiceProvider
                     str_starts_with($uri, 'api/v1/store/trips/'),
                     str_starts_with($uri, 'api/v1/store/driver/'),
                     str_starts_with($uri, 'api/v1/store/delivery-boy/'),
-                    str_starts_with($uri, 'api/get-user-coordinates/') => 'store.delivery',
+                    str_starts_with($uri, 'api/v1/store/get-user-coordinates/') => 'store.delivery',
                     str_starts_with($uri, 'api/v1/store/auth/'), $controller === 'UserController' => 'store.auth',
                     in_array($controller, [
                         'CartController', 'CheckoutController', 'OrderController', 'PurchaseHistoryController',

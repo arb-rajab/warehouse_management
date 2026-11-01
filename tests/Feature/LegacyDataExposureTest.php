@@ -227,9 +227,9 @@ test('the trip lookups turn away a guest, a customer and a seller', function (st
     expect($response->status())->toBe($userType === null ? 401 : 403);
     expect($response->getContent())->not->toContain('latitude', 'Customer Tester');
 })->with([
-    'coordinates, guest' => ['GET', '/api/get-user-coordinates/{id}', null],
-    'coordinates, customer' => ['GET', '/api/get-user-coordinates/{id}', 'customer'],
-    'coordinates, seller' => ['GET', '/api/get-user-coordinates/{id}', 'seller'],
+    'coordinates, guest' => ['GET', '/api/v1/store/get-user-coordinates/{id}', null],
+    'coordinates, customer' => ['GET', '/api/v1/store/get-user-coordinates/{id}', 'customer'],
+    'coordinates, seller' => ['GET', '/api/v1/store/get-user-coordinates/{id}', 'seller'],
     'vehicles, guest' => ['GET', '/api/v1/store/trips/get-available-vehicles', null],
     'vehicles, customer' => ['GET', '/api/v1/store/trips/get-available-vehicles', 'customer'],
     'vehicles, seller' => ['GET', '/api/v1/store/trips/get-available-vehicles', 'seller'],
@@ -240,7 +240,7 @@ test('a driver reads the trip lookups', function () {
     $customer = createStoreUser('customer');
 
     $this->withToken(storeApiToken($driver))->getJson('/api/v1/store/trips/get-available-vehicles?date='.now()->toDateString())->assertOk();
-    $this->withToken(storeApiToken($driver))->getJson("/api/get-user-coordinates/{$customer->id}")->assertOk();
+    $this->withToken(storeApiToken($driver))->getJson("/api/v1/store/get-user-coordinates/{$customer->id}")->assertOk();
 });
 
 test('the admin trip forms look up vehicles and coordinates with the admin session, and nobody else may', function () {

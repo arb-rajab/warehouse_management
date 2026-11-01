@@ -39,7 +39,7 @@ function authMiddlewareOf(RoutingRoute $route): array
 
 function isStoreRoute(RoutingRoute $route): bool
 {
-    return $route->uri() === 'temp' || str_starts_with($route->uri(), 'temp/');
+    return $route->uri() === 'temp' || str_starts_with($route->uri(), 'temp/') || str_starts_with($route->uri(), 'api/v1/store/');
 }
 
 test('a store session does not sign anyone into the admin panel, even for a matching id', function () {

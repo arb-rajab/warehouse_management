@@ -1,6 +1,7 @@
 import { Form, Head } from '@inertiajs/vue3';
 import { mount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { nextTick } from 'vue';
 import { update } from '@/actions/App/Http/Controllers/Store/Admin/ProductFieldSourceController';
 import FieldError from '@/components/FieldError.vue';
 import RequiredMark from '@/components/RequiredMark.vue';
@@ -166,8 +167,11 @@ describe('product data sources page', () => {
         ).toEqual([['sources[name]', 'otajer']]);
     });
 
-    it('marks every field required on its legend and every radio, with the legend', () => {
+    it('marks every field required on its legend and every radio, with the legend', async () => {
         const wrapper = page();
+        // The marks register during setup; the form shows the legend on the
+        // next render.
+        await nextTick();
 
         const legends = wrapper.findAll('legend');
         expect(legends).toHaveLength(3);

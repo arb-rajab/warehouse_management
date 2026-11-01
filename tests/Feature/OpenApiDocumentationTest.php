@@ -53,7 +53,7 @@ test('the API reference covers implemented routes with their actual authenticati
         foreach ($methods as $method => $operation) {
             expect($operation['tags'])->toHaveCount(1);
             expect($tags)->toContain($operation['tags'][0]);
-            expect($operation['tags'][0])->toStartWith(str_starts_with($path, '/api/') ? 'Warehouse · ' : 'Store · ');
+            expect($operation['tags'][0])->toStartWith(str_starts_with($path, '/api/v1/store/') ? 'Store · ' : 'Warehouse · ');
             $operations[$method.' '.$normalizePath($path)] = $operation;
         }
     }
@@ -88,7 +88,7 @@ test('the API reference covers implemented routes with their actual authenticati
         'get /api/v1/store/trips/get-active-trip' => 'Store · Delivery & Trips',
         'get /api/v1/store/driver/notifications' => 'Store · Delivery & Trips',
         'get /api/v1/store/delivery-boy/dashboard-summary/{id}' => 'Store · Delivery & Trips',
-        'get /api/get-user-coordinates/{id}' => 'Store · Delivery & Trips',
+        'get /api/v1/store/get-user-coordinates/{id}' => 'Store · Delivery & Trips',
         'get /api/v1/store/warehouse/products' => 'Store · Warehouse integration',
         'get /api/v1/store/warehouse/orders' => 'Store · Warehouse integration',
     ] as $endpoint => $tag) {

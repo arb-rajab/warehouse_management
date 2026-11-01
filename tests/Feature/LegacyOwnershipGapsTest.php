@@ -65,7 +65,7 @@ function gapSellerApiRoutes(): array
 {
     return array_values(array_filter(
         Route::getRoutes()->getRoutes(),
-        fn (RoutingRoute $route) => str_contains($route->uri(), 'api/v1/seller/'),
+        fn (RoutingRoute $route) => str_starts_with($route->uri(), 'api/v1/store/seller/'),
     ));
 }
 

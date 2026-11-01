@@ -2,6 +2,7 @@ import { flushPromises, mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { profile } from '@/actions/App/Http/Controllers/Store/Admin/SellerController';
 import FilterDialog from '@/components/FilterDialog.vue';
+import { googleMapsUrl } from '@/lib/address';
 import { t } from '@/lib/i18n';
 import { storeSellerProfile } from '@/testing/factories';
 import StoreSellerProfileDialog from './StoreSellerProfileDialog.vue';
@@ -88,7 +89,11 @@ describe('seller profile dialog', () => {
         expect(wrapper.text()).toContain('<script>bad</script>');
         expect(wrapper.find('script').exists()).toBe(false);
         expect(wrapper.find('img').exists()).toBe(false);
-        expect(wrapper.find('a').exists()).toBe(false);
+        // Only the address's Google Maps link (AddressMapLink) remains: no
+        // shop or social link without a URL.
+        expect(
+            wrapper.findAll('a').map((link) => link.attributes('href')),
+        ).toEqual([googleMapsUrl('Shop street')]);
     });
     it('announces loading while the request is in flight', () => {
         processingMock.mockReturnValueOnce(true);

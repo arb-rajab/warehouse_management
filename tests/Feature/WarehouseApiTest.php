@@ -338,7 +338,7 @@ test('update-customer validates its ids and answers 404 for unknown ones', funct
 
 test('the warehouse routes are throttled and token checked by one group', function () {
     $middleware = collect(app('router')->getRoutes()->getRoutes())
-        ->filter(fn ($route) => str_contains($route->uri(), 'api/v1/warehouse'))
+        ->filter(fn ($route) => str_starts_with($route->uri(), 'api/v1/store/warehouse/'))
         ->map(fn ($route) => $route->gatherMiddleware());
 
     expect($middleware)->toHaveCount(11)

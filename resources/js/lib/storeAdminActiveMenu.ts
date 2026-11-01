@@ -68,6 +68,8 @@ function linkBases(link: StoreMenuLink): string[] {
 interface Candidate {
     base: string;
     link: StoreMenuLink | null;
+    /** Matches `base` itself only, never the pages below it. */
+    exact: boolean;
 }
 
 /**
@@ -103,7 +105,11 @@ export function findActiveStoreMenuLink(
     const path = normalizeStorePath(currentUrl);
     const links = flatten(menu);
     const candidates: Candidate[] = links.flatMap((link) =>
-        linkBases(link).map((base) => ({ base, link })),
+        linkBases(link).map((base) => ({
+            base,
+            link,
+            exact: link.exact === true,
+        })),
     );
 
     for (const { page, parent } of parents) {
@@ -116,14 +122,22 @@ export function findActiveStoreMenuLink(
                           storeRoutePrefix(parent),
                   ) ?? null);
 
-        candidates.push({ base: storeRoutePrefix(page), link: target });
+        candidates.push({
+            base: storeRoutePrefix(page),
+            link: target,
+            exact: false,
+        });
     }
 
     let best: Candidate | null = null;
 
     for (const candidate of candidates) {
+        const matches = candidate.exact
+            ? path === candidate.base
+            : pathIsWithin(path, candidate.base);
+
         if (
-            pathIsWithin(path, candidate.base) &&
+            matches &&
             (best === null || candidate.base.length > best.base.length)
         ) {
             best = candidate;

@@ -94,6 +94,23 @@ test('the store admin dashboard is not swallowed by the storefront catch-all', f
     expect($route->getActionName())->toBe(DashboardController::class.'@index');
 });
 
+test("the store API's JSON fallback answers only unknown /api/v1/store paths", function () {
+    // The warehouse API keeps the framework's own 404, not the store envelope.
+    $this->getJson('/api/v1/no-such-route')->assertNotFound()->assertJsonMissingPath('success');
+    $this->getJson('/api/no-such-route')->assertNotFound()->assertJsonMissingPath('success');
+
+    $this->getJson('/api/v1/store/no-such-route')->assertNotFound()->assertExactJson([
+        'data' => [],
+        'success' => false,
+        'status' => 404,
+        'message' => __('api.common.invalid_route'),
+    ]);
+
+    // A real route under either prefix is matched before the fallback.
+    expect(Route::getRoutes()->match(Request::create('/api/v1/store/products'))->isFallback)->toBeFalse()
+        ->and(Route::getRoutes()->match(Request::create('/api/v1/products'))->getName())->toBe('api.v1.products.index');
+});
+
 test("the store's route provider does not register this app's own routes a second time", function () {
     $ownLogin = Route::getRoutes()->match(Request::create('/admin/login'));
 

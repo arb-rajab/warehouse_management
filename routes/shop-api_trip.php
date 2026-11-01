@@ -26,7 +26,7 @@ Route::group(['prefix' => 'v1/store/driver/', 'middleware' => ['app_language']],
     });
 });
 
-Route::get('/get-user-coordinates/{id}', 'App\Http\Controllers\Api\V1\Trip\DriverController@getLongLatitude')->name('test')->middleware(['auth:store_api', 'driver']);
+Route::get('v1/store/get-user-coordinates/{id}', 'App\Http\Controllers\Api\V1\Trip\DriverController@getLongLatitude')->name('test')->middleware(['auth:store_api', 'driver']);
 
 // Scoped to the store's own prefix: a bare Route::fallback() under `api` would
 // also answer the warehouse API's unknown paths with the store's envelope.

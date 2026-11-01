@@ -5,7 +5,7 @@ use Illuminate\Support\Facades\Route;
 
 test('every mobile API route is named api.v1.{resource}.{action}', function () {
     $mobileRoutes = collect(Route::getRoutes()->getRoutes())
-        ->filter(fn (RoutingRoute $route) => str_starts_with($route->uri(), 'api/v1/'));
+        ->filter(fn (RoutingRoute $route) => str_starts_with($route->uri(), 'api/v1/') && ! str_starts_with($route->uri(), 'api/v1/store/'));
 
     expect($mobileRoutes)->not->toBeEmpty();
 

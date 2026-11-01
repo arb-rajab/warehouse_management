@@ -26,6 +26,7 @@ import { index as offersIndex } from '@/actions/App/Http/Controllers/Store/Admin
 import { all_orders } from '@/actions/App/Http/Controllers/Store/Admin/OrderController';
 import { create as featureOrderCreate } from '@/actions/App/Http/Controllers/Store/Admin/OrderEntryController';
 import { index as bulkIndex } from '@/actions/App/Http/Controllers/Store/Admin/ProductBulkUploadController';
+import { edit as productFieldSourcesEdit } from '@/actions/App/Http/Controllers/Store/Admin/ProductFieldSourceController';
 import { index as productQueriesIndex } from '@/actions/App/Http/Controllers/Store/Admin/ProductQueryController';
 import {
     in_house_sale_report,
@@ -220,6 +221,7 @@ describe('storeAdminMenu', () => {
                 firebase.url(),
                 payments.url(),
                 filesystem.url(),
+                productFieldSourcesEdit.url(),
             ].sort(),
         );
     });
