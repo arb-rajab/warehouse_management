@@ -177,13 +177,18 @@ test('order/store tells the customer why the payment type is refused', function 
         ->and($message(['payment_type' => 'bogus']))->toBe(__('api.order.payment_type_invalid'))
         ->and($message(['payment_type' => 'cash_on_delivery']))->toBe(__('api.order.payment_type_cash_disabled'));
 
+    // The message names the product to remove; a product that allows cash is not named.
     storeSetting('cash_payment', 1);
-    expect($message(['payment_type' => 'cash_on_delivery']))->toBe(__('api.order.payment_type_cash_product'));
+    $fine = createStoreProduct(['cash_on_delivery' => 1]);
+    Cart::create(['user_id' => $customer->id, 'owner_id' => 0, 'product_id' => $fine->id, 'quantity' => 1, 'variation' => '', 'price' => 1]);
+    $blocked = $message(['payment_type' => 'cash_on_delivery']);
+    expect($blocked)->toBe(__('api.order.payment_type_cash_products', ['products' => $product->name]))
+        ->and($blocked)->not->toContain($fine->name);
 
-    DB::table('products')->where('id', $product->id)->update(['digital' => 1, 'cash_on_delivery' => 1]);
-    expect($message(['payment_type' => 'cash_on_delivery']))->toBe(__('api.order.payment_type_cash_digital'));
-
-    expect(collect([__('api.order.payment_type_cash_disabled'), __('api.order.payment_type_cash_product'), __('api.order.payment_type_cash_digital')])->unique())->toHaveCount(3);
+    // A digital product is named too.
+    DB::table('products')->where('id', $product->id)->update(['cash_on_delivery' => 1]);
+    DB::table('products')->where('id', $fine->id)->update(['digital' => 1]);
+    expect($message(['payment_type' => 'cash_on_delivery']))->toBe(__('api.order.payment_type_cash_products', ['products' => $fine->name]));
 });
 
 test('the app saves an address under the storefront\'s rules, reading 0 as no state or city', function () {
@@ -272,7 +277,11 @@ test('the payment types say when nothing is available, and why cash is not offer
     expect($types())->toBe([
         'result' => true,
         'payment_types' => [],
-        'unavailable' => [['payment_type_key' => 'cash_on_delivery', 'message' => __('api.order.payment_type_cash_product')]],
+        'unavailable' => [[
+            'payment_type_key' => 'cash_on_delivery',
+            'message' => __('api.order.payment_type_cash_products', ['products' => $off->name]),
+            'products' => [['cart_id' => Cart::where('user_id', $customer->id)->value('id'), 'product_id' => $off->id, 'name' => $off->name]],
+        ]],
         'message' => __('api.payment.none_available'),
     ]);
 
@@ -283,9 +292,9 @@ test('the payment types say when nothing is available, and why cash is not offer
         ->and($listed['unavailable'])->toBe([])
         ->and($listed['message'])->toBeNull();
 
-    // A digital product takes cash away again, with its own reason.
+    // A digital product takes cash away again, and is the one named.
     DB::table('products')->where('id', $off->id)->update(['digital' => 1]);
-    expect($types()['unavailable'][0]['message'])->toBe(__('api.order.payment_type_cash_digital'));
+    expect($types()['unavailable'][0]['products'])->toHaveCount(1)->and($types()['unavailable'][0]['products'][0]['product_id'])->toBe($off->id);
 });
 
 test('the cart summary tells the app, before the payment step, what can be paid with', function () {
@@ -296,21 +305,41 @@ test('the cart summary tells the app, before the payment step, what can be paid 
 
         $json = $this->withToken(storeApiToken($customer))->getJson('/temp/api/v2/cart-summary')->assertOk()->json();
 
-        return [$json['payment_available'], $json['cash_on_delivery_available'], $json['cash_on_delivery_message']];
+        return [$json['payment_available'], $json['cash_on_delivery_available'], $json['cash_on_delivery_message'], $json['cash_on_delivery_blocked_products']];
     };
 
     // An empty cart, cash payment off: nothing to pay with.
-    expect($summary())->toBe([false, false, __('api.order.payment_type_cash_disabled')]);
+    expect($summary())->toBe([false, false, __('api.order.payment_type_cash_disabled'), []]);
 
     $product = createStoreProduct(['cash_on_delivery' => 0]);
-    Cart::create(['user_id' => $customer->id, 'owner_id' => 0, 'product_id' => $product->id, 'quantity' => 1, 'variation' => '', 'price' => 1]);
+    $line = Cart::create(['user_id' => $customer->id, 'owner_id' => 0, 'product_id' => $product->id, 'quantity' => 1, 'variation' => '', 'price' => 1]);
+    $blocked = [['cart_id' => $line->id, 'product_id' => $product->id, 'name' => $product->name]];
+    $message = __('api.order.payment_type_cash_products', ['products' => $product->name]);
     storeSetting('cash_payment', 1);
-    expect($summary())->toBe([false, false, __('api.order.payment_type_cash_product')]);
+    expect($summary())->toBe([false, false, $message, $blocked]);
 
     // Another payment method is on, so the customer can still pay; cash stays off.
     storeSetting('wallet_system', 1);
-    expect($summary())->toBe([true, false, __('api.order.payment_type_cash_product')]);
+    expect($summary())->toBe([true, false, $message, $blocked]);
 
     DB::table('products')->update(['cash_on_delivery' => 1]);
-    expect($summary())->toBe([true, true, null]);
+    expect($summary())->toBe([true, true, null, []]);
+});
+
+test('the cash on delivery message names at most five products and the list gives them all', function () {
+    checkoutStore();
+    storeSetting('cash_payment', 1);
+    $customer = createStoreUser('customer');
+    $products = collect(range(1, 7))->map(fn (int $number) => createStoreProduct(['name' => "Blocked product $number", 'cash_on_delivery' => 0]));
+    $other = createStoreUser('customer');
+    Cart::create(['user_id' => $other->id, 'owner_id' => 0, 'product_id' => createStoreProduct(['name' => 'Someone else\'s', 'cash_on_delivery' => 0])->id, 'quantity' => 1, 'variation' => '', 'price' => 1]);
+    foreach ($products as $product) {
+        Cart::create(['user_id' => $customer->id, 'owner_id' => 0, 'product_id' => $product->id, 'quantity' => 1, 'variation' => '', 'price' => 1]);
+    }
+
+    $json = $this->withToken(storeApiToken($customer))->getJson('/temp/api/v2/cart-summary')->assertOk()->json();
+
+    expect($json['cash_on_delivery_blocked_products'])->toHaveCount(7)
+        ->and(collect($json['cash_on_delivery_blocked_products'])->pluck('name')->all())->toBe($products->pluck('name')->all())
+        ->and($json['cash_on_delivery_message'])->toContain('Blocked product 5')->not->toContain('Blocked product 6')->toContain('…')->not->toContain("Someone else's");
 });

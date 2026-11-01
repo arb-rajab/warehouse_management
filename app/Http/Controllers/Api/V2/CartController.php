@@ -101,17 +101,19 @@ class CartController extends Controller
      * cash on delivery can be for this cart (with the reason when it cannot).
      * Decided by PaymentTypesController, like GET /payment-types and order/store.
      *
-     * @return array{payment_available: bool, cash_on_delivery_available: bool, cash_on_delivery_message: string|null}
+     * @return array{payment_available: bool, cash_on_delivery_available: bool, cash_on_delivery_message: string|null, cash_on_delivery_blocked_products: list<array{cart_id: int, product_id: int, name: string}>}
      */
     private function paymentAvailability(): array
     {
         $payments = app(PaymentTypesController::class);
-        $cashRefusal = $payments->cashRefusal();
+        $cash = $payments->cashAvailability();
 
         return [
             'payment_available' => $payments->options(new Request(['mode' => 'order']))['payment_types'] !== [],
-            'cash_on_delivery_available' => $cashRefusal === null,
-            'cash_on_delivery_message' => $cashRefusal,
+            'cash_on_delivery_available' => $cash['message'] === null,
+            'cash_on_delivery_message' => $cash['message'],
+            // The cart lines to remove for cash on delivery to be offered.
+            'cash_on_delivery_blocked_products' => $cash['products'],
         ];
     }
 
