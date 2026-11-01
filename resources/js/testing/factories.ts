@@ -1584,6 +1584,7 @@ export function storeDashboardProps(): StoreDashboardProps {
             visits: { labels: ['SY'], values: [25] },
         },
         showSmtpAlert: true,
+        setupAlerts: [],
         topProducts: [
             {
                 id: 1,

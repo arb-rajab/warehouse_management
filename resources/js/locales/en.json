@@ -2551,6 +2551,10 @@
             "category": "Category / country",
             "emptyProducts": "No products yet.",
             "smtpWarning": "Please configure SMTP settings for email sending to work.",
+            "setup": {
+                "noPaymentMethod": "Payments are not set up: no payment method is switched on, so customers cannot place an order in the app.",
+                "cashOnDeliveryProducts": "Cash payment is on, but no product allows cash on delivery, so the app does not offer it. Tick \"Cash on delivery\" on the products that take cash."
+            },
             "configureNow": "Configure now",
             "charts": {
                 "products": "Products",

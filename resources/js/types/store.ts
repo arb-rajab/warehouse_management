@@ -1026,7 +1026,10 @@ export interface StoreDashboardProps {
     };
     topProducts: StoreDashboardProduct[];
     showSmtpAlert: boolean;
+    setupAlerts: StoreSetupAlert[];
 }
+
+export type StoreSetupAlert = 'noPaymentMethod' | 'cashOnDeliveryProducts';
 
 export interface StoreSeller {
     id: number;
