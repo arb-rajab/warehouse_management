@@ -400,12 +400,11 @@ function wrongCode(string $code): string
  * A store admin with the store's `Super Admin` role, which
  * AuthServiceProvider's Gate::before() grants every ability.
  */
-function createStoreAdmin(bool $raizerAdmin = false): StoreUser
+function createStoreAdmin(): StoreUser
 {
     Role::findOrCreate('Super Admin', 'store');
 
     $admin = createStoreUser('admin');
-    $admin->forceFill(['raizer_admin' => $raizerAdmin ?: null])->save();
     $admin->assignRole('Super Admin');
 
     return $admin;

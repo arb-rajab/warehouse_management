@@ -16,7 +16,7 @@ use Inertia\Testing\AssertableInertia as Assert;
  *   every signed-in store admin back to the login page;
  * - every page gated by spatie's `permission:` middleware (198 routes) failed
  *   on the alias bootstrap/app.php never registered;
- * - the layout read `users.raizer_admin`, a column the store's `users` table
+ * - the layout read a `users` column the store's table
  *   lacked, and `Language::first()->rtl` with no language row;
  * - the dashboard iterated a `total_visits` setting nothing here creates.
  */

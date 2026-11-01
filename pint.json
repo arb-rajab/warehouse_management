@@ -178,7 +178,6 @@
         "app/Http/Middleware/IsUser.php",
         "app/Http/Middleware/Language.php",
         "app/Http/Middleware/LogRequestTime.php",
-        "app/Http/Middleware/RaizerSuperAdmin.php",
         "app/Http/Middleware/VerifyCsrfToken.php",
         "app/Http/Middleware/WmsAuthMiddleware.php",
         "app/Http/Requests/AttributeValueRequest.php",

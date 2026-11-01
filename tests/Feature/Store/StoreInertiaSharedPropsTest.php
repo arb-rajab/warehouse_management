@@ -28,7 +28,6 @@ test('a store page shares the store user, narrowly, with their permissions and t
                 ->where('rtl', false)
                 ->where('permissions', ['add_staff', 'view_all_staffs'])
                 ->where('isSuperAdmin', false)
-                ->where('isRaizerAdmin', false)
                 ->has('settings', count(HandleInertiaRequests::STORE_MENU_SETTINGS))
                 ->where('settings.Staffs_section', true)
                 ->where('settings.Blog_Section', false)
@@ -37,15 +36,15 @@ test('a store page shares the store user, narrowly, with their permissions and t
     );
 });
 
-test("a Super Admin is flagged whatever permissions they hold, and so is the vendor's own account", function () {
-    $admin = createStoreAdmin(raizerAdmin: true);
+test('a Super Admin is flagged whatever permissions they hold', function () {
+    $admin = createStoreAdmin();
     actingAsStoreUser($admin);
 
     $this->get('/temp/admin/staffs')->assertOk()->assertInertia(
         fn (Assert $page) => $page
             ->where('store.permissions', [])
             ->where('store.isSuperAdmin', true)
-            ->where('store.isRaizerAdmin', true)
+            ->missing('store.isRaizerAdmin')
     );
 });
 

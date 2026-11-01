@@ -128,10 +128,20 @@ class AddressController extends Controller
 
     public function updateAddressInCart(Request $request)
     {
-        $this->manageableAddress($request->address_id);
+        $address = $this->manageableAddress($request->address_id);
+
+        // The same two checks POST /order/store makes, so a customer hears about
+        // an unusable address now instead of when placing the order.
+        if (trim((string) $address->address) === '') {
+            return response()->json(['result' => false, 'message' => __('api.order.address_required')], 422);
+        }
+
+        if ($address->country_id === null || ! $address->country()->exists()) {
+            return response()->json(['result' => false, 'message' => __('api.order.address_country_required')], 422);
+        }
 
         try {
-            Cart::where('user_id', auth()->user()->id)->update(['address_id' => $request->address_id]);
+            Cart::where('user_id', auth()->user()->id)->update(['address_id' => $address->id]);
 
         } catch (\Exception $e) {
             return response()->json([

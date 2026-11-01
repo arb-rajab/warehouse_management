@@ -18,7 +18,7 @@ beforeEach(function () {
     config(['app.default_language' => 'en']);
     Language::forceCreate(['code' => 'en', 'name' => 'English', 'rtl' => 0]);
     Language::forceCreate(['code' => 'ar', 'name' => 'Arabic', 'rtl' => 1]);
-    createStoreAdmin(raizerAdmin: true);
+    createStoreAdmin();
     $this->category = Category::forceCreate(['name' => 'Pantry', 'parent_id' => 0, 'level' => 0, 'slug' => 'pantry', 'digital' => 0]);
     $this->feed = fieldSourceEditProduct(['name' => 'Feed oil', 'ar_name' => 'زيت التغذية'], feedOrigin: true);
     $this->store = fieldSourceEditProduct(['name' => 'Store oil', 'ar_name' => 'زيت المتجر'], feedOrigin: false);

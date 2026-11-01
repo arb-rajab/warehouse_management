@@ -57,7 +57,7 @@ class ProductService
                 $approved = 0;
             }
         } else {
-            $user_id = StoreUser::where('user_type', 'admin')->where('raizer_admin', null)->first()->id;
+            $user_id = StoreUser::where('user_type', 'admin')->orderBy('id')->firstOrFail()->id;
         }
         $tags = [];
         if ($collection['tags'][0] != null) {

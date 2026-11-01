@@ -345,7 +345,7 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
 
     // Business Settings
     Route::controller(BusinessSettingsController::class)->group(function () {
-        Route::post('/business-settings/update/seller-commission-activation', 'updateSellerCommissionActivation')->name('business_settings.seller_commission.activation')->middleware('RaizerSuperAdmin');
+        Route::post('/business-settings/update/seller-commission-activation', 'updateSellerCommissionActivation')->name('business_settings.seller_commission.activation');
 
         Route::get('/google-map', [GoogleMapController::class, 'index'])->name('google-map.index');
 
@@ -685,7 +685,7 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
 
     Route::get('/all-notification', [NotificationController::class, 'index'])->name('admin.all-notification');
 
-    Route::post('/clear-cache', [DashboardController::class, 'clearCache'])->name('cache.clear')->middleware('RaizerSuperAdmin');
+    Route::post('/clear-cache', [DashboardController::class, 'clearCache'])->name('cache.clear')->middleware('permission:file_system_&_cache_configuration');
 
     Route::get('/notifications', [CustomerNotificationController::class, 'index'])->name('admin.notifications.all');
     Route::get('/notifications/create', [CustomerNotificationController::class, 'create'])->name('admin.notifications.create');

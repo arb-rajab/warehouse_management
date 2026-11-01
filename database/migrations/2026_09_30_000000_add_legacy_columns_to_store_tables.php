@@ -22,17 +22,11 @@ return new class extends Migration
      * MySQL honours. The legacy migrations that only backfilled rows are not
      * repeated: there are no legacy rows here.
      *
-     * Two columns are not a straight copy:
+     * One column is not a straight copy:
      *
      * - `users.company_name` was added NOT NULL with no default. MySQL fills
      *   existing rows with '' when it does that; sqlite refuses to add a NOT
      *   NULL column without a default at all, so '' is written out here.
-     * - `users.raizer_admin` is in no legacy migration, `shop.sql` or
-     *   sqlupdates file. It exists only in production, where it marks the
-     *   vendor's own super-admin account: the store owner's admin is the row
-     *   `where('raizer_admin', null)` finds, and the `RaizerSuperAdmin`
-     *   middleware and the admin panel's cache-clear button check
-     *   `raizer_admin == true`. A nullable boolean is what those reads imply.
      *
      * `products` is WMS-owned now (see .ai/rules/shared-database.md), but
      * production's table is the store's, with all of its columns, while
@@ -143,7 +137,6 @@ return new class extends Migration
                 'activity_status' => fn (Blueprint $table) => $table->enum('activity_status', ['new_user', 'has_been_contacted'])->default('new_user'),
                 'profits' => fn (Blueprint $table) => $table->double('profits')->default(0),
                 'device_key' => fn (Blueprint $table) => $table->string('device_key')->nullable(),
-                'raizer_admin' => fn (Blueprint $table) => $table->boolean('raizer_admin')->nullable(),
             ],
             'categories' => [
                 'serial' => fn (Blueprint $table) => $table->string('serial')->nullable(),

@@ -62,11 +62,7 @@ const action = computed(() =>
         ? actions[props.section as keyof typeof actions]()
         : null,
 );
-const canWrite = computed(
-    () =>
-        access.value.can(permissions[props.section]) &&
-        (props.section !== 'activation' || access.value.isRaizerAdmin),
-);
+const canWrite = computed(() => access.value.can(permissions[props.section]));
 </script>
 <template>
     <div>

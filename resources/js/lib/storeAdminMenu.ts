@@ -156,10 +156,8 @@ import type { StoreMenuParent } from '@/lib/storeAdminActiveMenu';
 interface StoreMenuGate {
     /** Any one of these permissions (`@can`/`@canany`). */
     permission?: string | string[];
-    /** A business setting that switches the section on; the vendor's own account sees it regardless. */
+    /** A business setting that switches the section on. */
     setting?: string;
-    /** Only the vendor's own account (`raizer_admin`). */
-    raizerAdmin?: boolean;
 }
 
 export interface StoreMenuLink extends StoreMenuGate {
@@ -768,7 +766,6 @@ export const storeAdminMenu: StoreMenuItem[] = [
                 href: activation(),
                 inertia: true,
                 permission: 'features_activation',
-                raizerAdmin: true,
             },
             {
                 labelKey: 'store.nav.languages',
@@ -810,14 +807,12 @@ export const storeAdminMenu: StoreMenuItem[] = [
                 href: payments(),
                 inertia: true,
                 permission: 'payment_methods_configurations',
-                raizerAdmin: true,
             },
             {
                 labelKey: 'store.nav.fileSystem',
                 href: filesystem(),
                 inertia: true,
                 permission: 'file_system_&_cache_configuration',
-                raizerAdmin: true,
             },
             {
                 labelKey: 'store.nav.socialLogins',
@@ -846,7 +841,6 @@ export const storeAdminMenu: StoreMenuItem[] = [
             },
             {
                 labelKey: 'store.nav.google',
-                raizerAdmin: true,
                 children: [
                     {
                         labelKey: 'store.nav.analyticsTools',
@@ -970,15 +964,7 @@ export const storeAdminPageParents: StoreMenuParent[] = [
 ];
 
 function passesGate(item: StoreMenuGate, access: StoreAccess): boolean {
-    if (item.raizerAdmin && !access.isRaizerAdmin) {
-        return false;
-    }
-
-    if (
-        item.setting &&
-        !access.isRaizerAdmin &&
-        !access.setting(item.setting)
-    ) {
+    if (item.setting && !access.setting(item.setting)) {
         return false;
     }
 

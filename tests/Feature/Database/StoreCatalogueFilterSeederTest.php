@@ -108,3 +108,16 @@ test('catalogue reruns preserve existing products and users and do not duplicate
     $data = app(StoreFilterSeedData::class);
     expect(StoreUser::query()->find($data->find('users', 'seller')))->not->toBeNull();
 });
+
+test('catalogue fixtures add a category tree once, with children under their roots', function () {
+    $this->seed(StoreCatalogueFilterSeeder::class);
+    $count = DB::table('categories')->count();
+    $root = DB::table('categories')->where('name', 'Oils & Vinegars')->first();
+
+    expect($count)->toBeGreaterThan(30)
+        ->and($root->level)->toBe(0)->and($root->parent_id)->toBe(0)
+        ->and(DB::table('categories')->where('parent_id', $root->id)->where('level', 1)->pluck('name')->sort()->values()->all())->toBe(['Olive Oil', 'Sunflower Oil', 'Vinegars']);
+
+    $this->seed(StoreCatalogueFilterSeeder::class);
+    expect(DB::table('categories')->count())->toBe($count);
+});

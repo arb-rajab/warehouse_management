@@ -344,3 +344,22 @@ test('the cash on delivery message names at most five products and the list give
         ->and(array_keys($json['cash_on_delivery_blocked_products'][0]))->toBe(['cart_id', 'product_id'])
         ->and($json['cash_on_delivery_message'])->toContain('Blocked product 5')->not->toContain('Blocked product 6')->toContain('…')->not->toContain("Someone else's");
 });
+
+test('update-address-in-cart refuses an address that order/store would refuse, and leaves the cart alone', function () {
+    seedStoreCurrency();
+    $customer = createStoreUser('customer');
+    $good = addStoreAddress($customer->id);
+    $blank = DB::table('addresses')->insertGetId(['user_id' => $customer->id, 'address' => null, 'country_id' => DB::table('addresses')->where('id', $good)->value('country_id')]);
+    $noCountry = DB::table('addresses')->insertGetId(['user_id' => $customer->id, 'address' => 'Damrak 1', 'country_id' => null]);
+    $product = createStoreProduct();
+    Cart::forceCreate(['user_id' => $customer->id, 'owner_id' => 1, 'product_id' => $product->id, 'quantity' => 1, 'address_id' => $good]);
+    $headers = ['Authorization' => 'Bearer '.storeApiToken($customer)];
+
+    $this->withHeaders($headers)->postJson('/api/v1/store/update-address-in-cart', ['address_id' => $blank])
+        ->assertUnprocessable()->assertJsonPath('result', false)->assertJsonPath('message', __('api.order.address_required'));
+    app('auth')->forgetGuards();
+    $this->withHeaders($headers)->postJson('/api/v1/store/update-address-in-cart', ['address_id' => $noCountry])
+        ->assertUnprocessable()->assertJsonPath('message', __('api.order.address_country_required'));
+
+    expect(Cart::where('user_id', $customer->id)->value('address_id'))->toBe($good);
+});

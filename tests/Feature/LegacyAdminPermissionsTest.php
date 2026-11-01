@@ -86,7 +86,7 @@ function storeAdminRoutes(?bool $writes = null): array
 function isPermissionGated(RoutingRoute $route): bool
 {
     foreach ($route->gatherMiddleware() as $middleware) {
-        if (is_string($middleware) && (str_contains($middleware, 'permission:') || str_contains($middleware, 'RaizerSuperAdmin'))) {
+        if (is_string($middleware) && (str_contains($middleware, 'permission:'))) {
             return true;
         }
     }

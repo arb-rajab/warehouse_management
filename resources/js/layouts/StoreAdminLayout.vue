@@ -302,7 +302,7 @@ function toggle(item: StoreMenuItem): void {
             <div class="mx-auto max-w-6xl">
                 <div class="mb-5 flex items-center justify-end gap-3">
                     <Form
-                        v-if="access.isRaizerAdmin"
+                        v-if="access.can('file_system_&_cache_configuration')"
                         :action="clearCache()"
                         #default="{ processing }"
                     >

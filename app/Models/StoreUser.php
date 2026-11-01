@@ -39,7 +39,6 @@ use Spatie\Permission\Traits\HasRoles;
  * @property-read Shop|null $shop
  * @property-read RepresentativePackage|null $representativePackage
  * @property bool $is_rep
- * @property bool|null $raizer_admin
  * @property int|null $AccSysID
  * @property string|null $device_key
  * @property-read StoreUser|null $current_customer

@@ -86,7 +86,7 @@ class AllProductsCommand extends Command
             $response = Http::timeout(30)->throw()->get($endpoint)->body();
             $allProducts = json_decode($response, true);
             $products_count += count($allProducts['Products']);
-            $admin_id = StoreUser::where('user_type', 'admin')->where('raizer_admin', null)->value('id');
+            $admin_id = StoreUser::where('user_type', 'admin')->orderBy('id')->value('id');
 
             if(! Attribute::where('name', 'Variations')->first()){
                 Attribute::create([

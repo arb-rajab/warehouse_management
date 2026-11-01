@@ -22,15 +22,13 @@ describe('storeAccess', () => {
         expect(access.can('delete_staff')).toBe(true);
     });
 
-    it('reads the raizer admin flag and the section settings', () => {
+    it('reads the section settings', () => {
         const access = storeAccess(
             storeSharedProps({
-                isRaizerAdmin: true,
                 settings: { Staffs_section: true, Blog_Section: false },
             }),
         );
 
-        expect(access.isRaizerAdmin).toBe(true);
         expect(access.setting('Staffs_section')).toBe(true);
         expect(access.setting('Blog_Section')).toBe(false);
         expect(access.setting('Unknown_section')).toBe(false);
@@ -40,7 +38,6 @@ describe('storeAccess', () => {
         const access = storeAccess(undefined);
 
         expect(access.can('view_all_staffs')).toBe(false);
-        expect(access.isRaizerAdmin).toBe(false);
         expect(access.setting('Staffs_section')).toBe(false);
     });
 });

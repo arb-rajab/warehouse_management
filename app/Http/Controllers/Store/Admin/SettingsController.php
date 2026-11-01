@@ -115,7 +115,6 @@ class SettingsController extends Controller implements HasMiddleware
             new Middleware('permission:google_firebase_setting', only: ['firebase', 'updateFirebase']),
             new Middleware('permission:payment_methods_configurations', only: ['payments', 'updatePayments']),
             new Middleware('permission:file_system_&_cache_configuration', only: ['filesystem']),
-            new Middleware('RaizerSuperAdmin', only: ['activation', 'updateActivation']),
             new Middleware('permission:send_newsletter', only: ['testSmtp']),
         ];
     }

@@ -103,7 +103,7 @@ test('the server status page is gone: its route is unregistered and a super admi
         ->and(collect(Route::getRoutes()->getRoutes())->map->uri()->filter(fn (string $uri): bool => str_contains($uri, 'server-status')))->toBeEmpty()
         ->and(base_path('resources/views/shop/backend/system'))->not->toBeDirectory();
 
-    actingAsStoreUser(createStoreAdmin(raizerAdmin: true));
+    actingAsStoreUser(createStoreAdmin());
 
     $this->get('/temp/admin/system/server-status')->assertNotFound();
 });

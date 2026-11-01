@@ -138,7 +138,6 @@ class HandleInertiaRequests extends Middleware
                 'rtl' => StoreLocale::isRtl(),
                 'permissions' => $request->user('store')?->getAllPermissions()->pluck('name')->sort()->values()->all() ?? [],
                 'isSuperAdmin' => (bool) $request->user('store')?->hasRole(Role::SUPER_ADMIN, 'store'),
-                'isRaizerAdmin' => (bool) $request->user('store')?->raizer_admin,
                 'settings' => $this->storeMenuSettings(),
                 'counts' => $this->storeCounts($request),
                 'notifications' => $this->storeNotifications($request),
