@@ -193,26 +193,16 @@ class OrderController extends Controller
             return __('storefront.checkout.select_payment_option');
         }
 
-        $listed = json_decode(
-            app(PaymentTypesController::class)->getList(new Request(['mode' => 'order']))->getContent(),
-            true,
-        ) ?: [];
+        $payments = app(PaymentTypesController::class);
+        $listed = json_decode($payments->getList(new Request(['mode' => 'order']))->getContent(), true)['payment_types'] ?? [];
 
         if (collect($listed)->flatMap(fn (array $type) => [$type['payment_type'] ?? null, $type['payment_type_key'] ?? null])->contains($paymentType)) {
             return null;
         }
 
-        if (! in_array($paymentType, ['cash_on_delivery', 'cash_payment'], true)) {
-            return __('api.order.payment_type_invalid');
-        }
+        $cash = in_array($paymentType, ['cash_on_delivery', 'cash_payment'], true);
 
-        if (get_setting('cash_payment') != 1) {
-            return __('api.order.payment_type_cash_disabled');
-        }
-
-        $products = auth()->user()->carts()->with('product:id,digital,cash_on_delivery')->get()->pluck('product')->filter();
-
-        return $products->contains('digital', 1) ? __('api.order.payment_type_cash_digital') : __('api.order.payment_type_cash_product');
+        return ($cash ? $payments->cashRefusal() : null) ?? __('api.order.payment_type_invalid');
     }
 
     /**

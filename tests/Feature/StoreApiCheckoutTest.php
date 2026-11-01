@@ -105,7 +105,7 @@ test('the payment types skip a cart line whose product is gone', function () {
     Cart::create(['user_id' => $customer->id, 'owner_id' => 0, 'product_id' => $orderable->id, 'quantity' => 1, 'variation' => '', 'price' => 1]);
     Cart::create(['user_id' => $customer->id, 'owner_id' => 0, 'product_id' => 999999, 'quantity' => 1, 'variation' => '', 'price' => 1]);
 
-    $this->withToken(storeApiToken($customer))->getJson('/temp/api/v2/payment-types')->assertOk()->assertJsonPath('0.payment_type_key', 'cash_on_delivery');
+    $this->withToken(storeApiToken($customer))->getJson('/temp/api/v2/payment-types')->assertOk()->assertJsonPath('payment_types.0.payment_type_key', 'cash_on_delivery');
 });
 
 test('a representative who picked a customer works on the customer\'s addresses before adding a product', function () {
@@ -251,4 +251,39 @@ test('the cart summary prices a line whose unset rep_price comes back as the str
     } finally {
         Cart::flushEventListeners();
     }
+});
+
+test('the payment types say when nothing is available, and why cash is not offered for this cart', function () {
+    checkoutStore();
+    $customer = createStoreUser('customer');
+    $off = createStoreProduct(['cash_on_delivery' => 0]);
+    Cart::create(['user_id' => $customer->id, 'owner_id' => 0, 'product_id' => $off->id, 'quantity' => 1, 'variation' => '', 'price' => 1]);
+    $types = function () use ($customer) {
+        app('auth')->forgetGuards();
+
+        return $this->withToken(storeApiToken($customer))->getJson('/temp/api/v2/payment-types')->assertOk()->json();
+    };
+
+    // Cash payment off: nothing to offer, and no cash entry to explain.
+    expect($types())->toBe(['result' => true, 'payment_types' => [], 'unavailable' => [], 'message' => __('api.payment.none_available')]);
+
+    // Cash payment on, but not for this cart: still nothing, with the reason for cash.
+    storeSetting('cash_payment', 1);
+    expect($types())->toBe([
+        'result' => true,
+        'payment_types' => [],
+        'unavailable' => [['payment_type_key' => 'cash_on_delivery', 'message' => __('api.order.payment_type_cash_product')]],
+        'message' => __('api.payment.none_available'),
+    ]);
+
+    // Every product allows it: cash is listed and nothing is said.
+    DB::table('products')->update(['cash_on_delivery' => 1]);
+    $listed = $types();
+    expect(collect($listed['payment_types'])->pluck('payment_type_key')->all())->toBe(['cash_on_delivery'])
+        ->and($listed['unavailable'])->toBe([])
+        ->and($listed['message'])->toBeNull();
+
+    // A digital product takes cash away again, with its own reason.
+    DB::table('products')->where('id', $off->id)->update(['digital' => 1]);
+    expect($types()['unavailable'][0]['message'])->toBe(__('api.order.payment_type_cash_digital'));
 });

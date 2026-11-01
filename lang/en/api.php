@@ -135,6 +135,7 @@ return [
         'connectivity_issue' => 'There is a connectivity issue. Please contact your SSLCommerz manager.',
         'invalid_credentials' => 'Invalid credentials!',
         'link_failed' => 'Could not generate payment link',
+        'none_available' => 'No payment method is available right now. Please try again later.',
         'nothing_due' => 'Nothing to pay',
         'page_found' => 'Payment page found',
         'redirect_found' => 'Redirect URL found',
