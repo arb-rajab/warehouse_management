@@ -31,6 +31,7 @@ use App\Models\FlashDeal;
 use App\Models\Product;
 use App\Models\ProductStock;
 use App\Models\StoreUser;
+use App\Services\ProductFieldSourceService;
 use App\Services\ProductStockService;
 use App\Services\ProductTaxService;
 use App\Services\Store\InHouseProductWriter;
@@ -524,7 +525,8 @@ class ProductController extends Controller implements HasMiddleware
     /**
      * The edit form in the requested language (the default without one):
      * the form's options, the product's fields, the edited language's name,
-     * unit and cleaned description, the stored variant choices with their
+     * unit and cleaned description, the Arabic name, the synced fields that
+     * are read-only on this product (ProductFieldSourceService), the stored variant choices with their
      * rows, and the previews of its stored uploads the caller may see.
      */
     private function renderEdit(EditReferenceTranslationRequest $request, Product $product, string $listType): Response|RedirectResponse
@@ -535,7 +537,7 @@ class ProductController extends Controller implements HasMiddleware
         $lang = $request->validated('lang') ?? config('app.default_language');
         $product = Product::query()->physical()
             ->select([
-                'id', 'name', 'added_by', 'category_id', 'brand_id', 'unit', 'weight', 'max_qty', 'min_qty', 'tags', 'photos', 'old_photo',
+                'id', 'name', 'ar_name', 'synced_at', 'added_by', 'category_id', 'brand_id', 'unit', 'weight', 'max_qty', 'min_qty', 'tags', 'photos', 'old_photo',
                 'thumbnail_img', 'video_provider', 'video_link', 'pdf', 'unit_price', 'discount', 'discount_type', 'discount_start_date',
                 'discount_end_date', 'external_link', 'external_link_btn', 'description', 'meta_title', 'meta_description', 'meta_img', 'slug',
                 'shipping_type', 'shipping_cost', 'is_quantity_multiplied', 'est_shipping_days', 'low_stock_quantity', 'stock_visibility_state',
@@ -550,6 +552,12 @@ class ProductController extends Controller implements HasMiddleware
             ])
             ->findOrFail($product->id);
         $options = $this->formOptions($product);
+        // The base name is the default language's only; other languages edit
+        // a translation the sync never writes.
+        $readOnlyFields = array_values(array_filter(
+            app(ProductFieldSourceService::class)->readOnlyFieldsFor($product),
+            fn (string $field): bool => $field !== 'name' || $lang === config('app.default_language'),
+        ));
         $flashDealId = $product->flash_deal_product?->getAttribute('flash_deal_id');
         $variants = $this->storedVariantChoices($product, $options['colors'], $options['attributes']);
         $names = $variants['choice_options'] !== [] && collect($variants['choice_options'])->contains(fn (array $choice): bool => $choice['values'] === [])
@@ -559,7 +567,11 @@ class ProductController extends Controller implements HasMiddleware
         return Inertia::render('Store/Admin/Product/Products/Edit', [
             ...$options,
             'product' => new ProductFormResource($product, in_array($flashDealId, array_column($options['flashDeals'], 'id'), true) ? (int) $flashDealId : null),
-            'name' => (string) $product->getTranslation('name', $lang),
+            // A read-only name shows the synced column, which a stale
+            // default-language translation could otherwise hide.
+            'name' => in_array('name', $readOnlyFields, true) ? $product->name : (string) $product->getTranslation('name', $lang),
+            'arName' => $product->ar_name,
+            'readOnlyFields' => $readOnlyFields,
             'unit' => (string) $product->getTranslation('unit', $lang),
             'description' => clean_html((string) $product->getTranslation('description', $lang)),
             'lang' => $lang,
