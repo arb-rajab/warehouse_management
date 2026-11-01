@@ -51,7 +51,7 @@ test('store product write paths cannot bypass the ownership builder', function (
 
 test('all store model writes use the guarded product builder', function () {
     expect(Product::query())->toBeInstanceOf(ProductBuilder::class)
-        ->and(ProductColumnOwnership::SYNC_COLUMNS)->toBe(['name', 'ar_name', 'published']);
+        ->and(ProductColumnOwnership::syncColumns())->toBe(['name', 'ar_name', 'published']);
 });
 
 test('store assignments cannot change feed-owned columns even from a partial or stale model', function (string $column, mixed $value) {
