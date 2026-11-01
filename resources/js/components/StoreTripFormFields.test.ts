@@ -1,6 +1,6 @@
 import { flushPromises, mount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { getAvailableVehicles } from '@/actions/App/Http/Controllers/Api/V2/Trip/DriverController';
+import { getAvailableVehicles } from '@/actions/App/Http/Controllers/Api/V1/Trip/DriverController';
 import FieldError from '@/components/FieldError.vue';
 import FormField from '@/components/FormField.vue';
 import { i18n, t } from '@/lib/i18n';

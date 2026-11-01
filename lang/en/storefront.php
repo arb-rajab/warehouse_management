@@ -630,6 +630,7 @@ return [
         'see_all' => 'See All',
         'sign_out' => 'Sign Out',
         'subscribe' => 'Subscribe',
+        'switch_language' => 'Switch the store language to :language',
         'terms_conditions' => 'Terms & conditions',
         'view_all_notifications' => 'View All Notifications',
         'withdraw_request_history' => 'Withdraw request history',

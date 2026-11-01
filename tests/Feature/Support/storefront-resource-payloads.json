@@ -59,7 +59,7 @@
             "email": "d15@example.test"
         }
     },
-    "v2-auction": {
+    "v1-auction": {
         "data": [
             {
                 "id": 0,
@@ -97,7 +97,7 @@
         "success": true,
         "status": 200
     },
-    "v2-classified": {
+    "v1-classified": {
         "data": [
             {
                 "id": 0,
@@ -130,7 +130,7 @@
         "success": true,
         "status": 200
     },
-    "v2-digital": {
+    "v1-digital": {
         "id": 0,
         "name": "Final product",
         "added_by": "admin",
@@ -159,7 +159,7 @@
         "video_link": "",
         "link": "<app-url>/temp/product/d15-final"
     },
-    "v2-product": {
+    "v1-product": {
         "data": [
             {
                 "id": 0,

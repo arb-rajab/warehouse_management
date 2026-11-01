@@ -36,9 +36,7 @@ class RobotsController extends Controller
         // match the public /seller-policy page.
         $paths[] = dirname(route('seller.dashboard', [], false)).'/';
 
-        // The API groups sit beside the storefront (`<prefix>/api`) and at the root (`/api`).
-        $storefront = rtrim(route('home', [], false), '/');
-        $paths[] = $storefront.'/api/';
+        // Every API group (warehouse and store) sits at the root, under `/api`.
         $paths[] = '/api/';
 
         $lines = ['User-agent: *'];

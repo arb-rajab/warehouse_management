@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
+import { Info } from '@lucide/vue';
 import { ref } from 'vue';
 import { activation } from '@/actions/App/Http/Controllers/Store/Admin/SettingsController';
 import { index as shippingConfigurationIndex } from '@/actions/App/Http/Controllers/Store/Admin/ShippingConfigurationController';
@@ -20,6 +21,7 @@ import type {
     StoreProductColor,
     StoreProductForm,
     StoreProductFormSections,
+    StoreProductSyncedField,
     StoreProductVariantState,
     StoreReferenceOption,
     StoreUpload,
@@ -34,7 +36,10 @@ import type {
  * `description` the edited language's, `variants` the stored colours,
  * choices and rows (regenerated through `variantsUrl`) and `initialFiles`
  * the previews of the stored uploads; the slug and the Otajer image show only
- * there, as on the Blade edit form.
+ * there, as on the Blade edit form. The edit form also gets the Arabic name
+ * (`arName`, a field only it shows) and `readOnlyFields`: the Otajer-owned
+ * synced fields of a feed-origin product, rendered read-only with a note
+ * (the server ignores what is posted for them).
  */
 const props = defineProps<{
     categories: StoreReferenceOption[];
@@ -46,6 +51,8 @@ const props = defineProps<{
     sections: StoreProductFormSections;
     product?: StoreProductForm;
     name?: string;
+    arName?: string;
+    readOnlyFields?: StoreProductSyncedField[];
     unit?: string;
     description?: string;
     variants?: StoreProductVariantState;
@@ -54,6 +61,8 @@ const props = defineProps<{
     errors: Record<string, string>;
 }>();
 const int = '2147483647';
+const readOnly = (field: StoreProductSyncedField): boolean =>
+    props.readOnlyFields?.includes(field) ?? false;
 const stored = props.product;
 const categoryId = ref(
     stored?.category_id == null ? '' : String(stored.category_id),
@@ -93,14 +102,66 @@ const linkClass =
             <legend :class="legendClass">
                 {{ t('store.products.form.information') }}
             </legend>
-            <FormField
-                id="name"
-                :label="t('store.products.form.name')"
-                :value="name ?? ''"
-                :error="errors.name"
-                maxlength="200"
-                required
-            />
+            <p
+                v-if="readOnlyFields?.length"
+                id="otajer-synced-fields"
+                class="flex items-start gap-2 rounded-md bg-blue-50 p-3 text-sm text-blue-900 lg:col-span-2 dark:bg-blue-950 dark:text-blue-100"
+            >
+                <Info class="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+                {{
+                    t('store.products.form.otajerSyncedFields', {
+                        fields: readOnlyFields
+                            .map((field) =>
+                                t(`store.productFieldSources.fields.${field}`),
+                            )
+                            .join(', '),
+                    })
+                }}
+            </p>
+            <div>
+                <FormField
+                    id="name"
+                    :label="t('store.products.form.name')"
+                    :value="name ?? ''"
+                    :error="errors.name"
+                    maxlength="200"
+                    required
+                    :readonly="readOnly('name')"
+                    :aria-describedby="
+                        readOnly('name') ? 'name-otajer-synced' : undefined
+                    "
+                />
+                <p
+                    v-if="readOnly('name')"
+                    id="name-otajer-synced"
+                    :class="helpClass"
+                >
+                    {{ t('store.products.form.otajerSynced') }}
+                </p>
+            </div>
+            <div v-if="arName !== undefined">
+                <FormField
+                    id="ar_name"
+                    :label="t('store.products.form.arName')"
+                    :value="arName"
+                    :error="errors.ar_name"
+                    maxlength="191"
+                    dir="auto"
+                    :readonly="readOnly('ar_name')"
+                    :aria-describedby="
+                        readOnly('ar_name')
+                            ? 'ar_name-otajer-synced'
+                            : undefined
+                    "
+                />
+                <p
+                    v-if="readOnly('ar_name')"
+                    id="ar_name-otajer-synced"
+                    :class="helpClass"
+                >
+                    {{ t('store.products.form.otajerSynced') }}
+                </p>
+            </div>
             <div>
                 <label for="category_id" :class="fieldLabelClass"
                     >{{ t('store.products.form.category') }}<RequiredMark

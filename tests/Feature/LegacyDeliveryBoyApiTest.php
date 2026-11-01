@@ -51,12 +51,12 @@ test('the delivery-boy routes need a delivery boy', function () {
     $boy = deliveryBoy();
     $customer = createStoreUser('customer');
 
-    $this->getJson("/temp/api/v2/delivery-boy/collection/{$boy->id}")->assertUnauthorized();
+    $this->getJson("/api/v1/store/delivery-boy/collection/{$boy->id}")->assertUnauthorized();
 
     $token = storeApiToken($customer);
-    $this->withToken($token)->getJson("/temp/api/v2/delivery-boy/collection/{$boy->id}")->assertForbidden();
+    $this->withToken($token)->getJson("/api/v1/store/delivery-boy/collection/{$boy->id}")->assertForbidden();
     app('auth')->forgetGuards();
-    $this->withToken($token)->postJson('/temp/api/v2/delivery-boy/change-delivery-status', ['order_id' => 1, 'status' => 'delivered'])->assertForbidden();
+    $this->withToken($token)->postJson('/api/v1/store/delivery-boy/change-delivery-status', ['order_id' => 1, 'status' => 'delivered'])->assertForbidden();
 });
 
 test('a delivery boy reads their own figures and no one else\'s', function () {
@@ -65,11 +65,11 @@ test('a delivery boy reads their own figures and no one else\'s', function () {
     $other = deliveryBoy();
     $token = storeApiToken($boy);
 
-    $this->withToken($token)->getJson("/temp/api/v2/delivery-boy/earning/{$other->id}")->assertForbidden();
+    $this->withToken($token)->getJson("/api/v1/store/delivery-boy/earning/{$other->id}")->assertForbidden();
     app('auth')->forgetGuards();
-    $this->withToken($token)->getJson("/temp/api/v2/delivery-boy/earning-summary/{$other->id}")->assertForbidden();
+    $this->withToken($token)->getJson("/api/v1/store/delivery-boy/earning-summary/{$other->id}")->assertForbidden();
     app('auth')->forgetGuards();
-    expect($this->withToken($token)->getJson("/temp/api/v2/delivery-boy/collection/{$boy->id}")->getStatusCode())->toBe(200);
+    expect($this->withToken($token)->getJson("/api/v1/store/delivery-boy/collection/{$boy->id}")->getStatusCode())->toBe(200);
 });
 
 test('a delivery boy changes the status of their own assigned orders only', function () {
@@ -80,17 +80,17 @@ test('a delivery boy changes the status of their own assigned orders only', func
     $theirs = assignedOrder($rival);
     $token = storeApiToken($boy);
 
-    $this->withToken($token)->postJson('/temp/api/v2/delivery-boy/change-delivery-status', ['order_id' => $theirs->id, 'status' => 'delivered', 'delivery_boy_id' => $boy->id])->assertNotFound();
+    $this->withToken($token)->postJson('/api/v1/store/delivery-boy/change-delivery-status', ['order_id' => $theirs->id, 'status' => 'delivered', 'delivery_boy_id' => $boy->id])->assertNotFound();
     expect($theirs->fresh()->delivery_status)->not->toBe('delivered')
         ->and((float) DB::table('delivery_boys')->where('user_id', $boy->id)->value('total_earning'))->toBe(0.0);
 
     app('auth')->forgetGuards();
-    $this->withToken($token)->postJson('/temp/api/v2/delivery-boy/change-delivery-status', ['order_id' => $mine->id, 'status' => 'shipped-to-mars'])->assertUnprocessable();
+    $this->withToken($token)->postJson('/api/v1/store/delivery-boy/change-delivery-status', ['order_id' => $mine->id, 'status' => 'shipped-to-mars'])->assertUnprocessable();
 
     app('auth')->forgetGuards();
-    $this->withToken($token)->postJson('/temp/api/v2/delivery-boy/change-delivery-status', ['order_id' => $mine->id, 'status' => 'delivered', 'delivery_boy_id' => $rival->id])->assertOk();
+    $this->withToken($token)->postJson('/api/v1/store/delivery-boy/change-delivery-status', ['order_id' => $mine->id, 'status' => 'delivered', 'delivery_boy_id' => $rival->id])->assertOk();
     app('auth')->forgetGuards();
-    $this->withToken($token)->postJson('/temp/api/v2/delivery-boy/change-delivery-status', ['order_id' => $mine->id, 'status' => 'delivered'])->assertOk();
+    $this->withToken($token)->postJson('/api/v1/store/delivery-boy/change-delivery-status', ['order_id' => $mine->id, 'status' => 'delivered'])->assertOk();
 
     // Credited to the signed-in delivery boy, once.
     expect($mine->fresh()->delivery_status)->toBe('delivered')
@@ -105,10 +105,10 @@ test('a cancellation request is put in for an assigned order only', function () 
     $theirs = assignedOrder(deliveryBoy());
     $token = storeApiToken($boy);
 
-    $this->withToken($token)->getJson("/temp/api/v2/delivery-boy/cancel-request/{$theirs->id}")->assertNotFound();
+    $this->withToken($token)->getJson("/api/v1/store/delivery-boy/cancel-request/{$theirs->id}")->assertNotFound();
     expect((int) $theirs->fresh()->cancel_request)->toBe(0);
 
     app('auth')->forgetGuards();
-    $this->withToken($token)->getJson("/temp/api/v2/delivery-boy/cancel-request/{$mine->id}")->assertOk();
+    $this->withToken($token)->getJson("/api/v1/store/delivery-boy/cancel-request/{$mine->id}")->assertOk();
     expect((int) $mine->fresh()->cancel_request)->toBe(1);
 });

@@ -103,7 +103,7 @@ test('all base64 API image endpoints enforce dimensions on direct uploads', func
     $owner = createStoreUser('customer');
     $file = UploadedFile::fake()->image('large.jpg', 2400, 1600);
     withScratchPublicPath(function (string $publicPath) use ($owner, $file, $endpoint) {
-        $this->withToken(storeApiToken($owner))->postJson('/temp/api/v2/'.$endpoint, [
+        $this->withToken(storeApiToken($owner))->postJson('/api/v1/store/'.$endpoint, [
             'image' => base64_encode($file->getContent()), 'filename' => 'large.jpg',
         ])->assertOk()->assertJsonPath('result', true);
         $upload = Upload::sole();

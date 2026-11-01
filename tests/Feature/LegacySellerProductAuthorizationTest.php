@@ -67,12 +67,12 @@ test("a seller cannot change another seller's product through the app API", func
     $product = sellerProduct(createStoreUser('seller'));
     $this->withToken(storeApiToken(createStoreUser('seller')));
 
-    $this->postJson("/temp/api/v2/seller/products/update/{$product->id}", sellerProductForm())
+    $this->postJson("/api/v1/store/seller/products/update/{$product->id}", sellerProductForm())
         ->assertOk()
         ->assertJsonPath('result', false);
-    $this->getJson("/temp/api/v2/seller/products/edit/{$product->id}")->assertJsonPath('result', false);
-    $this->getJson("/temp/api/v2/seller/product/duplicate/{$product->id}")->assertJsonPath('result', false);
-    $this->getJson("/temp/api/v2/seller/product/delete/{$product->id}")->assertJsonPath('result', false);
+    $this->getJson("/api/v1/store/seller/products/edit/{$product->id}")->assertJsonPath('result', false);
+    $this->getJson("/api/v1/store/seller/product/duplicate/{$product->id}")->assertJsonPath('result', false);
+    $this->getJson("/api/v1/store/seller/product/delete/{$product->id}")->assertJsonPath('result', false);
 
     expect(Product::count())->toBe(1)
         ->and($product->fresh()->only(['name', 'unit_price']))->toEqual(['name' => $product->name, 'unit_price' => 2.5]);
@@ -83,7 +83,7 @@ test('a seller can open their own product for editing through the app API', func
     $product = sellerProduct($seller);
 
     $this->withToken(storeApiToken($seller))
-        ->getJson("/temp/api/v2/seller/products/edit/{$product->id}")
+        ->getJson("/api/v1/store/seller/products/edit/{$product->id}")
         ->assertOk()
         ->assertJsonPath('data.id', $product->id);
 });
@@ -97,7 +97,7 @@ test("a seller can update their own coupon through the app API and not another s
     ];
 
     $this->withToken(storeApiToken(createStoreUser('seller')))
-        ->postJson("/temp/api/v2/seller/coupon/update/{$coupon->id}", $form)
+        ->postJson("/api/v1/store/seller/coupon/update/{$coupon->id}", $form)
         ->assertJsonPath('result', false);
 
     expect($coupon->fresh()->code)->toBe('SAVE5');
@@ -106,7 +106,7 @@ test("a seller can update their own coupon through the app API and not another s
     app('auth')->forgetGuards();
 
     $this->withToken(storeApiToken($seller))
-        ->postJson("/temp/api/v2/seller/coupon/update/{$coupon->id}", $form)
+        ->postJson("/api/v1/store/seller/coupon/update/{$coupon->id}", $form)
         ->assertOk()
         ->assertJsonPath('result', true);
 

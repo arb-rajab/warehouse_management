@@ -10,7 +10,7 @@ class UpdateWebsiteHeaderRequest extends FormRequest
 {
     use ValidatesWebsiteSettings;
 
-    public const KEYS = ['header_logo', 'show_language_switcher', 'show_currency_switcher', 'header_stikcy', 'topbar_banner', 'topbar_banner_medium', 'topbar_banner_small', 'topbar_banner_link', 'helpline_number', 'header_menu_labels', 'header_menu_links'];
+    public const KEYS = ['header_logo', 'show_currency_switcher', 'header_stikcy', 'topbar_banner', 'topbar_banner_medium', 'topbar_banner_small', 'topbar_banner_link', 'helpline_number', 'header_menu_labels', 'header_menu_links'];
 
     /** @return array<string, mixed> */
     public function rules(): array
@@ -24,7 +24,6 @@ class UpdateWebsiteHeaderRequest extends FormRequest
             'settings.topbar_banner' => $image,
             'settings.topbar_banner_medium' => $image,
             'settings.topbar_banner_small' => $image,
-            'settings.show_language_switcher' => ['required', 'boolean'],
             'settings.show_currency_switcher' => ['required', 'boolean'],
             'settings.header_stikcy' => ['required', 'boolean'],
             'settings.topbar_banner_link' => ['present', ...$link],

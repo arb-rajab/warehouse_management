@@ -125,7 +125,7 @@ test('repository static PHP and Blade text cannot acquire database translation d
         'app/Support/StoreLocale.php' => [
             "helper:translate(ucfirst(str_replace('_',' ',(string)\$value)))" => 1, // Custom payment names only.
         ],
-        'app/Http/Resources/V2/LanguageCollection.php' => [
+        'app/Http/Resources/V1/LanguageCollection.php' => [
             'helper:translate($data->name)' => 1, // Configured language names, not mobile catalog keys.
         ],
         'resources/views/shop/seller/product_query/index.blade.php' => [

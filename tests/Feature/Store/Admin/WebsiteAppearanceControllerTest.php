@@ -332,7 +332,7 @@ test('a saved appearance still renders on the storefront in its stored represent
         ->assertSee('--primary: #123456;', false)
         ->assertSee('content="Groceries delivered"', false)
         ->assertSee('<p>We use <strong>cookies</strong></p>', false);
-    $this->getJson('/temp/api/v2/business-settings')->assertOk()->assertJsonFragment(['type' => 'site_icon']);
+    $this->getJson('/api/v1/store/business-settings')->assertOk()->assertJsonFragment(['type' => 'site_icon']);
 });
 
 test('the appearance routes keep their names and the Blade screen is gone', function () {

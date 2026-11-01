@@ -79,7 +79,6 @@ describe('StoreWebsiteHeaderFormFields', () => {
             'bannerLarge',
             'bannerMedium',
             'bannerSmall',
-            'languageSwitcher',
             'currencySwitcher',
             'sticky',
             'bannerLink',

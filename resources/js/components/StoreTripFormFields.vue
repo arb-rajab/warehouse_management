@@ -2,7 +2,7 @@
 import { useHttp } from '@inertiajs/vue3';
 import { ArrowDown, ArrowUp, Plus, Trash2 } from '@lucide/vue';
 import { onMounted, ref } from 'vue';
-import { getAvailableVehicles } from '@/actions/App/Http/Controllers/Api/V2/Trip/DriverController';
+import { getAvailableVehicles } from '@/actions/App/Http/Controllers/Api/V1/Trip/DriverController';
 import FieldError from '@/components/FieldError.vue';
 import FormField from '@/components/FormField.vue';
 import RequiredMark from '@/components/RequiredMark.vue';

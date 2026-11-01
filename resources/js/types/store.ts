@@ -178,7 +178,6 @@ export interface StoreBrandForm {
 
 export interface StoreWebsiteHeaderSettings {
     header_logo: string;
-    show_language_switcher: boolean;
     show_currency_switcher: boolean;
     header_stikcy: boolean;
     topbar_banner: string;
@@ -194,6 +193,19 @@ export type StoreGeneralSettingsImage =
     'system_logo_white' | 'system_logo_black' | 'admin_login_background';
 
 /** Upload ids are the stored strings; timezone is config('app.timezone'). */
+/** A product field the Otajer sync writes (config/product_field_sources.php). */
+export type StoreProductSyncedField = 'name' | 'ar_name' | 'published';
+
+/** Who owns a synced product field: the Otajer sync or the admin panel. */
+export type StoreProductFieldSource = 'otajer' | 'admin';
+
+/** One row of Setup > Product data sources. */
+export type StoreProductFieldSourceRow = {
+    key: StoreProductSyncedField;
+    source: StoreProductFieldSource;
+    default: StoreProductFieldSource;
+};
+
 export type StoreGeneralSettings = Record<StoreGeneralSettingsImage, string> & {
     site_name: string;
     timezone: string;

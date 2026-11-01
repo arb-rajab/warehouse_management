@@ -27,6 +27,7 @@ import {
     storeUpload,
 } from '@/testing/factories';
 import { defaultAuthProps } from '@/testing/inertiaPageMocks';
+import type { StoreProductSyncedField } from '@/types/store';
 import Edit from './Edit.vue';
 
 const { usePageMock, formSlotPropsMock } = vi.hoisted(() => ({
@@ -67,6 +68,8 @@ const initialFiles = {
 const props = {
     product,
     name: 'زيت زيتون',
+    arName: 'زيت زيتون بكر',
+    readOnlyFields: [] as StoreProductSyncedField[],
     unit: 'زجاجة',
     description: '<p><strong>Fresh</strong> oil</p>',
     lang: 'ar',
@@ -226,6 +229,8 @@ describe('Store/Admin/Product/Products/Edit', () => {
             sections: props.sections,
             product,
             name: 'زيت زيتون',
+            arName: 'زيت زيتون بكر',
+            readOnlyFields: [],
             unit: 'زجاجة',
             description: '<p><strong>Fresh</strong> oil</p>',
             variants,
@@ -393,4 +398,48 @@ describe('Store/Admin/Product/Products/Edit', () => {
             expect(choose).toHaveLength(buttons);
         },
     );
+    it('shows the Otajer-owned fields of a synced product read-only, with a note', () => {
+        const wrapper = editPage({
+            lang: 'en',
+            name: 'Olive oil',
+            readOnlyFields: ['name', 'ar_name', 'published'],
+        });
+
+        expect(
+            wrapper
+                .getComponent(StoreProductFormFields)
+                .props('readOnlyFields'),
+        ).toEqual(['name', 'ar_name', 'published']);
+        expect(wrapper.get('#name').attributes('readonly')).toBeDefined();
+        expect(inputValue(wrapper, '#name')).toBe('Olive oil');
+        expect(wrapper.get('#ar_name').attributes('readonly')).toBeDefined();
+        expect(inputValue(wrapper, '#ar_name')).toBe('زيت زيتون بكر');
+        expect(wrapper.get('#name-otajer-synced').text()).toBe(
+            t('store.products.form.otajerSynced'),
+        );
+        expect(wrapper.get('#otajer-synced-fields').text()).toBe(
+            t('store.products.form.otajerSyncedFields', {
+                fields: [
+                    t('store.productFieldSources.fields.name'),
+                    t('store.productFieldSources.fields.ar_name'),
+                    t('store.productFieldSources.fields.published'),
+                ].join(', '),
+            }),
+        );
+    });
+
+    it('keeps every field editable when nothing is read-only', () => {
+        const wrapper = editPage();
+
+        expect(wrapper.get('#name').attributes('readonly')).toBeUndefined();
+        expect(wrapper.get('#ar_name').attributes('readonly')).toBeUndefined();
+        expect(wrapper.get('#ar_name').attributes('name')).toBe('ar_name');
+        expect(wrapper.get('label[for="ar_name"]').text()).toBe(
+            t('store.products.form.arName'),
+        );
+        expect(wrapper.get('#ar_name').attributes('maxlength')).toBe('191');
+        expect(wrapper.get('#ar_name').attributes('required')).toBeUndefined();
+        expect(wrapper.find('#otajer-synced-fields').exists()).toBe(false);
+        expect(wrapper.find('#name-otajer-synced').exists()).toBe(false);
+    });
 });

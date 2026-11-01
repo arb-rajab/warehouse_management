@@ -7,6 +7,7 @@ import {
 } from '@/actions/App/Http/Controllers/Store/Admin/SellerController';
 import TableActionLink from '@/components/TableActionLink.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
+import { googleMapsUrl } from '@/lib/address';
 import { t } from '@/lib/i18n';
 import { storeSellerVerification, storeSharedProps } from '@/testing/factories';
 import { defaultAuthProps } from '@/testing/inertiaPageMocks';
@@ -70,12 +71,22 @@ describe('seller verification', () => {
             expect(wrapper.text()).toContain(value);
         }
 
+        // The shop address opens Google Maps (AddressMapLink); the document
+        // link is the other new-tab link.
         expect(
-            wrapper.get('main a[target="_blank"]').attributes(),
-        ).toMatchObject({
-            href: '/temp/admin/sellers/verification-file/certificate.pdf',
-            rel: 'noopener',
-        });
+            wrapper
+                .findAll('main a[target="_blank"]')
+                .map((link) => link.attributes()),
+        ).toMatchObject([
+            {
+                href: googleMapsUrl('Shop street'),
+                rel: 'noopener noreferrer',
+            },
+            {
+                href: '/temp/admin/sellers/verification-file/certificate.pdf',
+                rel: 'noopener',
+            },
+        ]);
         const links = wrapper
             .findAllComponents(TableActionLink)
             .map((link) => link.props('href'));
