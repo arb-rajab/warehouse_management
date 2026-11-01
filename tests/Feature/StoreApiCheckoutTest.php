@@ -158,3 +158,30 @@ test('a representative with no open visit and no cart stays on their own address
 
     $this->withToken(storeApiToken($rep))->getJson('/temp/api/v2/user/shipping/address')->assertOk()->assertJsonPath('data.*.id', [$repAddress]);
 });
+
+test('order/store tells the customer why the payment type is refused', function () {
+    checkoutStore();
+    $customer = createStoreUser('customer');
+    $product = createStoreProduct(['cash_on_delivery' => 0]);
+    Cart::create(['user_id' => $customer->id, 'owner_id' => 0, 'product_id' => $product->id, 'quantity' => 1, 'variation' => '', 'price' => 1]);
+    $message = function (array $body) use ($customer) {
+        app('auth')->forgetGuards();
+        $response = $this->withToken(storeApiToken($customer))->postJson('/temp/api/v2/order/store', $body)
+            ->assertUnprocessable()->assertJsonPath('result', false)->assertJsonPath('combined_order_id', 0);
+        expect(array_keys($response->json()))->toEqual(['combined_order_id', 'result', 'message']);
+
+        return $response->json('message');
+    };
+
+    expect($message([]))->toBe(__('storefront.checkout.select_payment_option'))
+        ->and($message(['payment_type' => 'bogus']))->toBe(__('api.order.payment_type_invalid'))
+        ->and($message(['payment_type' => 'cash_on_delivery']))->toBe(__('api.order.payment_type_cash_disabled'));
+
+    storeSetting('cash_payment', 1);
+    expect($message(['payment_type' => 'cash_on_delivery']))->toBe(__('api.order.payment_type_cash_product'));
+
+    DB::table('products')->where('id', $product->id)->update(['digital' => 1, 'cash_on_delivery' => 1]);
+    expect($message(['payment_type' => 'cash_on_delivery']))->toBe(__('api.order.payment_type_cash_digital'));
+
+    expect(collect([__('api.order.payment_type_cash_disabled'), __('api.order.payment_type_cash_product'), __('api.order.payment_type_cash_digital')])->unique())->toHaveCount(3);
+});

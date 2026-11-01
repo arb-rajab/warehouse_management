@@ -76,11 +76,11 @@ class OrderController extends Controller
         }
 
         // pay/cod, pay/manual and pay/wallet name their own method; order/store takes it from the caller.
-        if ($request->is('*/order/store') && ! $this->isListedPaymentType((string) $request->payment_type)) {
+        if ($request->is('*/order/store') && ($refusal = $this->paymentTypeRefusal((string) $request->payment_type)) !== null) {
             return response()->json([
                 'combined_order_id' => 0,
                 'result' => false,
-                'message' => __('api.order.payment_type_invalid'),
+                'message' => $refusal,
             ], 422);
         }
 
@@ -168,12 +168,15 @@ class OrderController extends Controller
     }
 
     /**
-     * Whether GET /payment-types offers this option to the caller.
+     * The message to show when GET /payment-types does not offer this option to
+     * the caller, saying which reason applies where the customer can act on it
+     * (cash on delivery switched off, or not allowed for a product or a digital
+     * product in the cart). Null when the option is listed.
      */
-    private function isListedPaymentType(string $paymentType): bool
+    private function paymentTypeRefusal(string $paymentType): ?string
     {
         if ($paymentType === '') {
-            return false;
+            return __('storefront.checkout.select_payment_option');
         }
 
         $listed = json_decode(
@@ -181,7 +184,21 @@ class OrderController extends Controller
             true,
         ) ?: [];
 
-        return collect($listed)->flatMap(fn (array $type) => [$type['payment_type'] ?? null, $type['payment_type_key'] ?? null])->contains($paymentType);
+        if (collect($listed)->flatMap(fn (array $type) => [$type['payment_type'] ?? null, $type['payment_type_key'] ?? null])->contains($paymentType)) {
+            return null;
+        }
+
+        if (! in_array($paymentType, ['cash_on_delivery', 'cash_payment'], true)) {
+            return __('api.order.payment_type_invalid');
+        }
+
+        if (get_setting('cash_payment') != 1) {
+            return __('api.order.payment_type_cash_disabled');
+        }
+
+        $products = auth()->user()->carts()->with('product:id,digital,cash_on_delivery')->get()->pluck('product')->filter();
+
+        return $products->contains('digital', 1) ? __('api.order.payment_type_cash_digital') : __('api.order.payment_type_cash_product');
     }
 
     /**

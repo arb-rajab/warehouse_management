@@ -113,6 +113,9 @@ return [
     'order' => [
         'address_required' => 'A delivery address with a street address is required to place an order.',
         'payment_type_invalid' => 'The payment type is not available.',
+        'payment_type_cash_disabled' => 'Cash on delivery is not available at the moment. Please choose another payment method.',
+        'payment_type_cash_digital' => 'Cash on delivery is not available for digital products in your cart.',
+        'payment_type_cash_product' => 'Cash on delivery is not available for one or more products in your cart.',
         'customer_required' => 'You did not choose a user for your cart. Please choose a user first.',
         'customer_updated' => 'Order customer updated successfully',
         'not_found' => 'Order not found',
