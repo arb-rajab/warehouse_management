@@ -194,7 +194,7 @@ class OrderController extends Controller
         }
 
         $payments = app(PaymentTypesController::class);
-        $listed = json_decode($payments->getList(new Request(['mode' => 'order']))->getContent(), true)['payment_types'] ?? [];
+        $listed = $payments->options(new Request(['mode' => 'order']))['payment_types'];
 
         if (collect($listed)->flatMap(fn (array $type) => [$type['payment_type'] ?? null, $type['payment_type_key'] ?? null])->contains($paymentType)) {
             return null;

@@ -287,3 +287,30 @@ test('the payment types say when nothing is available, and why cash is not offer
     DB::table('products')->where('id', $off->id)->update(['digital' => 1]);
     expect($types()['unavailable'][0]['message'])->toBe(__('api.order.payment_type_cash_digital'));
 });
+
+test('the cart summary tells the app, before the payment step, what can be paid with', function () {
+    checkoutStore();
+    $customer = createStoreUser('customer');
+    $summary = function () use ($customer) {
+        app('auth')->forgetGuards();
+
+        $json = $this->withToken(storeApiToken($customer))->getJson('/temp/api/v2/cart-summary')->assertOk()->json();
+
+        return [$json['payment_available'], $json['cash_on_delivery_available'], $json['cash_on_delivery_message']];
+    };
+
+    // An empty cart, cash payment off: nothing to pay with.
+    expect($summary())->toBe([false, false, __('api.order.payment_type_cash_disabled')]);
+
+    $product = createStoreProduct(['cash_on_delivery' => 0]);
+    Cart::create(['user_id' => $customer->id, 'owner_id' => 0, 'product_id' => $product->id, 'quantity' => 1, 'variation' => '', 'price' => 1]);
+    storeSetting('cash_payment', 1);
+    expect($summary())->toBe([false, false, __('api.order.payment_type_cash_product')]);
+
+    // Another payment method is on, so the customer can still pay; cash stays off.
+    storeSetting('wallet_system', 1);
+    expect($summary())->toBe([true, false, __('api.order.payment_type_cash_product')]);
+
+    DB::table('products')->update(['cash_on_delivery' => 1]);
+    expect($summary())->toBe([true, true, null]);
+});

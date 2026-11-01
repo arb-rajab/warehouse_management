@@ -11,6 +11,16 @@ class PaymentTypesController
 
     public function getList(Request $request)
     {
+        return response()->json($this->options($request));
+    }
+
+    /**
+     * What GET /payment-types answers, for the signed-in customer's cart.
+     *
+     * @return array{result: true, payment_types: list<array<string, mixed>>, unavailable: list<array{payment_type_key: string, message: string}>, message: string|null}
+     */
+    public function options(Request $request): array
+    {
         $mode = "order";
 
         if ($request->has('mode')) {
@@ -159,12 +169,12 @@ class PaymentTypesController
 
 
 
-        return response()->json([
+        return [
             'result' => true,
             'payment_types' => $payment_types,
             'unavailable' => $unavailable,
             'message' => $payment_types === [] ? __('api.payment.none_available') : null,
-        ]);
+        ];
     }
 
     /**

@@ -45,6 +45,7 @@ class CartController extends Controller
                 'coupon_code' => "",
                 'coupon_applied' => false,
                 'delivery_cost' => 0,
+                ...$this->paymentAvailability(),
             ]);
         }
 
@@ -90,7 +91,28 @@ class CartController extends Controller
             'coupon_code' => $items[0]->coupon_code,
             'coupon_applied' => $items[0]->coupon_applied == 1,
             'delivery_cost' => format_price($delivery_cost),
+            ...$this->paymentAvailability(),
         ]);
+    }
+
+    /**
+     * What the app needs to know before the payment step, so it can disable an
+     * option or warn at the cart: whether anything can be paid with, and whether
+     * cash on delivery can be for this cart (with the reason when it cannot).
+     * Decided by PaymentTypesController, like GET /payment-types and order/store.
+     *
+     * @return array{payment_available: bool, cash_on_delivery_available: bool, cash_on_delivery_message: string|null}
+     */
+    private function paymentAvailability(): array
+    {
+        $payments = app(PaymentTypesController::class);
+        $cashRefusal = $payments->cashRefusal();
+
+        return [
+            'payment_available' => $payments->options(new Request(['mode' => 'order']))['payment_types'] !== [],
+            'cash_on_delivery_available' => $cashRefusal === null,
+            'cash_on_delivery_message' => $cashRefusal,
+        ];
     }
 
 
