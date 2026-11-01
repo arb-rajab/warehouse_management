@@ -178,7 +178,6 @@ export interface StoreBrandForm {
 
 export interface StoreWebsiteHeaderSettings {
     header_logo: string;
-    show_language_switcher: boolean;
     show_currency_switcher: boolean;
     header_stikcy: boolean;
     topbar_banner: string;

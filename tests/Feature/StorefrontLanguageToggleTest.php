@@ -13,11 +13,6 @@ beforeEach(function () {
     config(['app.locale' => 'ar', 'app.ui_default_locale' => 'ar', 'app.fallback_locale' => 'en', 'app.default_language' => 'en']);
 });
 
-function showStorefrontLanguageToggle(): void
-{
-    DB::table('business_settings')->insert(['type' => 'show_language_switcher', 'value' => 'on']);
-}
-
 test('the toggle route is a POST inside the web group, so CSRF verification applies', function () {
     $route = Route::getRoutes()->getByName('language.toggle');
 
@@ -144,8 +139,6 @@ test('the store api default ignores the storefront cookie', function () {
 });
 
 test('the header shows the toggle for English on Arabic pages, on desktop and in the mobile menu', function () {
-    showStorefrontLanguageToggle();
-
     $html = $this->get('/temp/users/login')->assertOk()
         ->assertSee('action="'.route('language.toggle').'"', false)
         ->assertSee('<input type="hidden" name="locale" value="en">', false)
@@ -160,8 +153,6 @@ test('the header shows the toggle for English on Arabic pages, on desktop and in
 });
 
 test('the header shows the toggle for Arabic on English pages', function () {
-    showStorefrontLanguageToggle();
-
     $html = $this->withSession(['locale' => 'en'])->get('/temp/users/login')->assertOk()
         ->assertSee('<input type="hidden" name="locale" value="ar">', false)
         ->assertSee('<span lang="ar" dir="rtl">العربية</span>', false)
@@ -171,13 +162,17 @@ test('the header shows the toggle for Arabic on English pages', function () {
     expect(substr_count($html, 'data-language-toggle'))->toBe(2);
 });
 
-test('the header hides the toggle while the language switcher setting is off', function () {
-    $this->get('/temp/users/login')->assertOk()->assertDontSee('data-language-toggle', false);
-});
+test('the header always shows the toggle, whatever the retired switcher setting holds', function (?string $setting) {
+    if ($setting !== null) {
+        DB::table('business_settings')->insert(['type' => 'show_language_switcher', 'value' => $setting]);
+    }
+
+    $html = $this->get('/temp/users/login')->assertOk()->getContent();
+
+    expect(substr_count($html, 'data-language-toggle'))->toBe(2);
+})->with(['no setting row' => [null], 'switched off' => ['off'], 'switched on' => ['on']]);
 
 test('choosing English with the toggle renders the next page in English', function () {
-    showStorefrontLanguageToggle();
-
     $this->post('/temp/language/toggle', ['locale' => 'en', 'redirect' => '/temp/users/login'])
         ->assertRedirect(url('/temp/users/login'));
 

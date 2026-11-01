@@ -20,9 +20,10 @@ Neither fallback is written back to the session. `AppLanguage` (API,
 ## The header toggle
 `shop/frontend/partials/language_toggle.blade.php` is the only storefront
 language control, included twice in `inc/nav.blade.php` (desktop top bar,
-mobile sidebar) behind the existing `show_language_switcher` setting. It is a
-plain CSRF form POST to `language.toggle`, no theme JavaScript, naming the
-other language natively ("العربية" / "English").
+mobile sidebar) and always shown: the theme's `show_language_switcher` setting
+and its switch in the admin Website → Header form were retired with it (a
+leftover `business_settings` row is ignored). It is a plain CSRF form POST to
+`language.toggle`, no theme JavaScript, naming the other language natively ("العربية" / "English").
 
 `LanguageController::toggleLanguage` accepts only `StoreLocale::TOGGLE_LOCALES`
 (`ar`, `en`; not the content code `sa`), stores

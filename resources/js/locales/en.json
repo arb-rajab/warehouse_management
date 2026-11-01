@@ -1736,7 +1736,6 @@
                 "bannerLarge": "Topbar banner large",
                 "bannerMedium": "Topbar banner medium",
                 "bannerSmall": "Topbar banner small",
-                "languageSwitcher": "Show language switcher",
                 "currencySwitcher": "Show currency switcher",
                 "sticky": "Enable sticky header",
                 "bannerLink": "Topbar banner link",
