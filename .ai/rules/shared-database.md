@@ -15,6 +15,7 @@ paths:
   - 'app/Console/Commands/SyncProductsCommand.php'
   - 'config/store.php'
   - 'app/Support/ProductColumnOwnership.php'
+  - 'config/product_field_sources.php'
   - 'app/Models/ProductBuilder.php'
   - 'app/Services/Store/*ProductWriter.php'
   - 'app/Http/Requests/Seller/*Product*Request.php'
@@ -398,7 +399,11 @@ writers) owns every other column. It may write those three columns
 Deletion and foreign-key rules are unchanged; this decision does not add a
 soft-delete or a new refusal policy for deletion.
 
-`App\Support\ProductColumnOwnership::SYNC_COLUMNS` is the one ownership list.
+The syncable columns are the registry in `config/product_field_sources.php`
+(`ProductColumnOwnership::syncColumns()`); since 2026-11-01 the admin chooses
+per field whether the sync or the admin panel owns each one, and the guard
+protects only the Otajer-owned subset (`protectedColumns()`). Defaults keep the
+three columns Otajer-owned. See [product-field-sources.md](product-field-sources.md).
 The seller physical panel uses explicit `SellerProductWriter` assignments through
 `PhysicalProductWriter` (§53 of the migration guide); never widen Product Fillable
 to make a legacy service appear to save fields. Its transaction owns stock and

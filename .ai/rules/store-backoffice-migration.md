@@ -347,7 +347,9 @@ Run a fresh scoped route/consumer inventory before changing a handler.
 
 [shared-database.md](shared-database.md) is canonical for Option A and its
 reclassification procedure. The sync owns exactly `name`, `ar_name`, `published`
-on feed-origin rows (non-null `synced_at`); the store owns other columns and may
+on feed-origin rows (non-null `synced_at`) while each is Otajer-owned, the default;
+Setup > Product data sources can hand any of them to the admin panel
+([product-field-sources.md](product-field-sources.md)). The store owns other columns and may
 write those three on store-origin rows. Null pre-marker rows were originally
 unclassified; the owner's later Otajer-origin confirmation led to a one-time
 classification migration. Do not reapply the earlier pending-classification

@@ -559,4 +559,57 @@ describe('StoreProductFormFields', () => {
             expect(wrapper.text()).toContain(message);
         }
     });
+    it('has no Arabic name field or synced-field note on the create form', () => {
+        const wrapper = mountFields();
+
+        expect(wrapper.find('#ar_name').exists()).toBe(false);
+        expect(wrapper.find('#otajer-synced-fields').exists()).toBe(false);
+        expect(wrapper.get('#name').attributes('readonly')).toBeUndefined();
+    });
+
+    it('renders the Arabic name as an optional edit field and read-only fields with their notes', () => {
+        const editable = mountFields({ arName: 'زيت', name: 'Oil' });
+        expect(editable.get('#ar_name').attributes('name')).toBe('ar_name');
+        expect(editable.get('#ar_name').attributes('dir')).toBe('auto');
+        expect(editable.get('#ar_name').attributes('readonly')).toBeUndefined();
+        expect(editable.get('#ar_name').attributes('required')).toBeUndefined();
+
+        const locked = mountFields({
+            arName: 'زيت',
+            name: 'Oil',
+            readOnlyFields: ['name', 'ar_name'],
+        });
+
+        for (const id of ['name', 'ar_name']) {
+            const input = locked.get(`#${id}`);
+            expect(input.attributes('readonly')).toBeDefined();
+            expect(input.attributes('aria-describedby')).toBe(
+                `${id}-otajer-synced`,
+            );
+            expect(locked.get(`#${id}-otajer-synced`).text()).toBe(
+                t('store.products.form.otajerSynced'),
+            );
+        }
+
+        // The name stays required (the server requires it), read-only or not.
+        expect(locked.get('#name').attributes('required')).toBeDefined();
+        expect(locked.get('#otajer-synced-fields').text()).toContain(
+            t('store.productFieldSources.fields.ar_name'),
+        );
+    });
+
+    it('lists an Otajer-owned active status in the note even though it has no field here', () => {
+        const wrapper = mountFields({
+            arName: '',
+            readOnlyFields: ['published'],
+        });
+
+        expect(wrapper.get('#otajer-synced-fields').text()).toBe(
+            t('store.products.form.otajerSyncedFields', {
+                fields: t('store.productFieldSources.fields.published'),
+            }),
+        );
+        expect(wrapper.get('#name').attributes('readonly')).toBeUndefined();
+        expect(wrapper.get('#ar_name').attributes('readonly')).toBeUndefined();
+    });
 });
