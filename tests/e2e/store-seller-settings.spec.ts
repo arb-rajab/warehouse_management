@@ -157,7 +157,6 @@ test('commission settings retain numeric boundaries and the two compatibility sw
 }) => {
     seedStoreFixtures(String.raw`
         App\Models\Product::query()->update(['thumbnail_img' => null]);
-        App\Models\StoreUser::query()->where('email', 'store-admin@example.com')->update(['raizer_admin' => 1]);
         foreach (['vendor_commission' => '5', 'minimum_seller_amount_withdraw' => '10', 'vendor_commission_activation' => '0', 'category_wise_commission' => '0', 'vendor_system_activation' => '1', 'Seller_Commission_Section' => '1', 'Seller_Verify_Form_Section' => '1'] as $type => $value) {
             Illuminate\Support\Facades\DB::table('business_settings')->updateOrInsert(['type' => $type], ['value' => $value]);
         }

@@ -56,7 +56,7 @@ class InHouseProductWriter extends PhysicalProductWriter
             ...$this->variantColumns($data, $variantNames, $colorCodes),
             ...$this->derivedColumns($data),
             'added_by' => 'admin',
-            'user_id' => StoreUser::query()->where('user_type', 'admin')->whereNull('raizer_admin')->orderBy('id')->firstOrFail()->id,
+            'user_id' => StoreUser::query()->where('user_type', 'admin')->orderBy('id')->firstOrFail()->id,
             'approved' => 1,
             'shipping_cost' => ($data['shipping_type'] ?? null) === 'flat_rate' ? $data['flat_shipping_cost'] : 0,
             'slug' => $this->numberedSlug(Str::slug($data['name']), null),

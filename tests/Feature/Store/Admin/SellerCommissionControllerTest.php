@@ -103,7 +103,7 @@ test('commission routes keep their names URIs and gates and the replaced view an
 });
 
 test('the retained seller activation form has an exact two-key contract', function () {
-    actingAsStoreUser(createStoreAdmin(raizerAdmin: true));
+    actingAsStoreUser(createStoreAdmin());
     foreach (['vendor_commission_activation', 'category_wise_commission'] as $key) {
         $this->post(route('business_settings.seller_commission.activation'), ['type' => $key, 'value' => 1])->assertOk()->assertContent('1');
         $this->assertDatabaseHas('business_settings', ['type' => $key, 'value' => '1']);
@@ -130,7 +130,7 @@ test('activation compatibility refuses every ordinary caller without touching DB
 })->with('refused store admin callers');
 
 test('activation requires the features activation permission and leaves unrelated caches alone', function () {
-    actingAsStoreUser(createStoreAdmin(raizerAdmin: true));
+    actingAsStoreUser(createStoreAdmin());
     Cache::put('business_settings', collect());
     Cache::put('wms-sentinel', 'keep');
     $this->post(route('business_settings.seller_commission.activation'), ['type' => 'vendor_commission_activation', 'value' => 0])->assertOk()->assertContent('1');

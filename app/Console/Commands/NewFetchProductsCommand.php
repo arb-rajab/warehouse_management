@@ -129,7 +129,7 @@ class NewFetchProductsCommand extends Command
             $response = Http::get($endpoint);
             $allProducts = json_decode($response, true);
             $products_count += count($allProducts['Products']);
-            $admin_id = StoreUser::where('user_type', 'admin')->where('raizer_admin', null)->value('id');
+            $admin_id = StoreUser::where('user_type', 'admin')->orderBy('id')->value('id');
 
             // if(! Attribute::where('name', 'Variations')->first()){
             //     Attribute::create([

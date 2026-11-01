@@ -110,10 +110,10 @@ pages and the existing Arabic-locale rule for WMS.
 
 `StoreAdminLayout.vue` and `storeAdminMenu.ts` are the only admin shell/sidebar.
 Preserve each entry's any-of permission gate and business-setting gate. There
-is no vendor-only (`raizer_admin`) gate any more: the owner's admin reaches
-Features activation, Payment methods and the cache button through the page
-permissions. Keep the `users.raizer_admin` column: services find the owner's
-admin with `raizer_admin IS NULL`. Empty groups disappear.
+is no vendor-only gate and no `users.raizer_admin` column any more (dropped by
+`2026_11_01_120000`): the owner's admin reaches Features activation, Payment
+methods and the cache button through the page permissions, and "the shop's own
+admin" is the lowest-id `user_type = 'admin'` row. Empty groups disappear.
 Button gates use the same permission names as their action middleware. The
 account block uses the store logout route and the current actor's profile and
 notifications; cache clearing stays narrowly scoped.

@@ -22,8 +22,6 @@ beforeEach(function () {
     config(['app.default_language' => 'en']);
     Language::forceCreate(['code' => 'en', 'name' => 'English', 'rtl' => 0]);
     Language::forceCreate(['code' => 'ar', 'name' => 'Arabic', 'rtl' => 1]);
-    // The vendor's own account comes first and must not own the product.
-    createStoreAdmin(raizerAdmin: true);
     $this->owner = createStoreAdmin();
     $this->root = Category::forceCreate(['name' => 'Pantry', 'parent_id' => 0, 'level' => 0, 'slug' => 'pantry', 'digital' => 0]);
     $this->child = Category::forceCreate(['name' => 'Oils', 'parent_id' => $this->root->id, 'level' => 1, 'slug' => 'oils', 'digital' => 0]);

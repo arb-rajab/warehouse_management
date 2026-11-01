@@ -49,8 +49,8 @@ class NotificationUtility
 
     public static function sendNotification($order, $order_status)
     {
-        // The shop's own admin (not the vendor's super-admin): none exists on a fresh database.
-        $adminId = StoreUser::where('user_type', 'admin')->where('raizer_admin', null)->value('id');
+        // The shop's own admin (the first one): none exists on a fresh database.
+        $adminId = StoreUser::where('user_type', 'admin')->orderBy('id')->value('id');
 
         if ($order->seller_id == $adminId) {
             $users = StoreUser::findMany([$order->user->id, $order->seller_id]);

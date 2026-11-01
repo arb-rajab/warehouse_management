@@ -16,7 +16,6 @@ test('every column the legacy store added after shop.sql exists', function () {
         'company_address', 'shipping_address', 'trade_license', 'bank_account_number', 'is_rep', 'from_api',
         'member_serial', 'synched_with_otajer', 'AccSysID', 'registration_completed', 'rep_serial', 'rep_id',
         'rep_package_id', 'rep_discount_percentage', 'admin_notes', 'activity_status', 'profits', 'device_key',
-        'raizer_admin',
     ]))->toBeTrue()
         ->and(Schema::hasColumns('categories', ['serial', 'cover_image']))->toBeTrue()
         ->and(Schema::hasColumn('reviews', 'photos'))->toBeTrue()
@@ -53,14 +52,13 @@ test('every column the legacy store added after shop.sql exists', function () {
 test('a store user row gets the legacy defaults', function () {
     DB::table('users')->insert(['name' => 'Jane Doe']);
 
-    expect((array) DB::table('users')->where('name', 'Jane Doe')->first(['company_name', 'is_important', 'is_rep', 'synched_with_otajer', 'activity_status', 'profits', 'raizer_admin']))->toBe([
+    expect((array) DB::table('users')->where('name', 'Jane Doe')->first(['company_name', 'is_important', 'is_rep', 'synched_with_otajer', 'activity_status', 'profits']))->toBe([
         'company_name' => '',
         'is_important' => 1,
         'is_rep' => 0,
         'synched_with_otajer' => 0,
         'activity_status' => 'new_user',
         'profits' => 0.0,
-        'raizer_admin' => null,
     ]);
 });
 
@@ -155,14 +153,11 @@ test('a product stock may leave its variant empty', function () {
  * The production case: the store's own database already has every column.
  */
 test('running the migration again leaves the columns, and their data, alone', function () {
-    DB::table('users')->insert(['name' => 'Jane Doe', 'company_name' => 'Acme', 'raizer_admin' => true]);
+    DB::table('users')->insert(['name' => 'Jane Doe', 'company_name' => 'Acme']);
 
     loadAddLegacyColumnsToStoreTablesMigration()->up();
 
-    expect((array) DB::table('users')->where('name', 'Jane Doe')->first(['company_name', 'raizer_admin']))->toBe([
-        'company_name' => 'Acme',
-        'raizer_admin' => 1,
-    ]);
+    expect((array) DB::table('users')->where('name', 'Jane Doe')->first(['company_name']))->toBe(['company_name' => 'Acme']);
 });
 
 test("rolling the migration back in production leaves the store's columns and their data alone", function () {
@@ -172,7 +167,7 @@ test("rolling the migration back in production leaves the store's columns and th
     loadAddLegacyColumnsToStoreTablesMigration()->down();
     app()->instance('env', 'testing');
 
-    expect(Schema::hasColumns('users', ['company_name', 'raizer_admin']))->toBeTrue()
+    expect(Schema::hasColumn('users', 'company_name'))->toBeTrue()
         ->and(DB::table('users')->where('name', 'Jane Doe')->value('company_name'))->toBe('Acme');
 });
 
@@ -181,7 +176,7 @@ test('rolling the migration back removes the added columns and restores the chan
 
     $migration->down();
 
-    expect(Schema::hasColumn('users', 'raizer_admin'))->toBeFalse()
+    expect(Schema::hasColumn('users', 'company_name'))->toBeFalse()
         ->and(Schema::hasColumn('carts', 'deleted_at'))->toBeFalse()
         ->and(Schema::hasColumn('order_details', 'profits'))->toBeFalse()
         ->and(fn () => DB::table('addresses')->insert(['user_id' => 1, 'address' => 'Street 1', 'state_id' => null]))
@@ -189,5 +184,5 @@ test('rolling the migration back removes the added columns and restores the chan
 
     $migration->up();
 
-    expect(Schema::hasColumn('users', 'raizer_admin'))->toBeTrue();
+    expect(Schema::hasColumn('users', 'company_name'))->toBeTrue();
 });
