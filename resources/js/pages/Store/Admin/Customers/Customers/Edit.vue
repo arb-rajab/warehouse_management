@@ -16,6 +16,7 @@ import {
     sendAgreement,
     downloadTradeLicense,
 } from '@/actions/App/Http/Controllers/Store/Admin/CustomerController';
+import AddressMapLink from '@/components/AddressMapLink.vue';
 import FieldError from '@/components/FieldError.vue';
 import FilterDialog from '@/components/FilterDialog.vue';
 import FormField from '@/components/FormField.vue';
@@ -145,7 +146,8 @@ function editAddress(address?: CustomerAddress): void {
                         class="mt-3 rounded border border-gray-300 p-4 dark:border-neutral-700"
                     >
                         <p>
-                            {{ address.address }} · {{ address.postal_code }} ·
+                            <AddressMapLink :address="address.address" /> ·
+                            {{ address.postal_code }} ·
                             {{ address.phone }}
                         </p>
                         <span v-if="address.set_default">{{

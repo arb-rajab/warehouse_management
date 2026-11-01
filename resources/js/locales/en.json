@@ -28,6 +28,7 @@
             "tooLarge": "The image exceeds the 40-megapixel limit."
         },
         "confirmDelete": "Delete {label}? This cannot be undone.",
+        "openInMaps": "Open {address} in Google Maps",
         "cancel": "Cancel",
         "close": "Close",
         "filters": {
