@@ -165,3 +165,29 @@ test('upgrading earlier fixtures replaces placeholder labels without changing th
         ->and(DB::table('cities')->where('id', $city)->value('name'))->toBe('Amsterdam')
         ->and($unrelated->fresh()->getAttributes())->toBe($before);
 });
+
+test('account fixtures give every customer a usable address, fill only blanks, and change nothing on a second run', function () {
+    seedStoreCurrency();
+    $nl = DB::table('countries')->insertGetId(['code' => 'NL', 'name' => 'Netherlands', 'status' => 1]);
+    $blank = createStoreUser('customer');
+    $kept = createStoreUser('customer');
+    $none = createStoreUser('customer');
+    $blankAddress = DB::table('addresses')->insertGetId(['user_id' => $blank->id, 'address' => null, 'country_id' => null, 'state_id' => 0]);
+    $keptAddress = DB::table('addresses')->insertGetId(['user_id' => $kept->id, 'address' => 'Real Street 9', 'country_id' => $nl, 'state_id' => 0, 'phone' => '0612', 'postal_code' => '9999ZZ']);
+
+    (new StoreAccountFilterSeeder)->run();
+
+    $filled = DB::table('addresses')->find($blankAddress);
+    expect(trim((string) $filled->address))->not->toBe('')->and($filled->country_id)->toBe($nl)->and($filled->set_default)->toBe(1)
+        ->and((array) DB::table('addresses')->find($keptAddress))->toMatchArray(['address' => 'Real Street 9', 'phone' => '0612', 'postal_code' => '9999ZZ'])
+        ->and(DB::table('addresses')->where('user_id', $none->id)->count())->toBe(1);
+
+    foreach (DB::table('users')->where('user_type', 'customer')->pluck('id') as $customer) {
+        $usable = DB::table('addresses')->where('user_id', $customer)->whereNotNull('country_id')->whereNotNull('address')->where('address', '!=', '')->where('set_default', 1)->count();
+        expect($usable)->toBe(1);
+    }
+
+    $before = DB::table('addresses')->orderBy('id')->get()->toJson();
+    (new StoreAccountFilterSeeder)->run();
+    expect(DB::table('addresses')->orderBy('id')->get()->toJson())->toBe($before);
+});
