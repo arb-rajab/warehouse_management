@@ -37,6 +37,16 @@ class SyncProductsCommand extends Command
     private const UPSERT_CHUNK_SIZE = 500;
 
     /**
+     * The syncable columns mapProducts() fills. Only these may reach the
+     * upsert's raw update expressions: a field registered in
+     * config/product_field_sources.php needs a mapping here before the sync
+     * can write it.
+     *
+     * @var list<literal-string>
+     */
+    private const array MAPPED_COLUMNS = ['name', 'ar_name', 'published'];
+
+    /**
      * Execute the console command.
      */
     public function handle(ProductFieldSourceService $fieldSources): int
@@ -77,8 +87,8 @@ class SyncProductsCommand extends Command
         }
 
         // Read once per run, so every chunk applies the same ownership.
-        $adminOwned = $fieldSources->adminOwnedFields();
-        $otajerOwned = $fieldSources->otajerOwnedFields();
+        $adminOwned = array_values(array_intersect(self::MAPPED_COLUMNS, $fieldSources->adminOwnedFields()));
+        $otajerOwned = array_values(array_intersect(self::MAPPED_COLUMNS, $fieldSources->otajerOwnedFields()));
         $insertValues = array_combine($adminOwned, array_map($fieldSources->insertValueFor(...), $adminOwned));
         if ($adminOwned !== []) {
             $this->components->info('Admin-owned field(s) left to the admin panel: '.implode(', ', $adminOwned).'.');
@@ -106,7 +116,7 @@ class SyncProductsCommand extends Command
      * row keeps its value, and takes `$insertValues` on insert.
      *
      * @param  list<array{id: int, name: string, ar_name: string, published: int}>  $chunk
-     * @param  list<string>  $otajerOwned  the syncable columns the feed may update
+     * @param  list<literal-string>  $otajerOwned  the syncable columns the feed may update
      * @param  array<string, string|int>  $insertValues  admin-owned column => value written on insert
      */
     private function syncChunk(array $chunk, array $otajerOwned, array $insertValues): int

@@ -24,7 +24,9 @@ class UpdateProductFieldSourcesRequest extends FormRequest
     public function rules(): array
     {
         $fields = app(ProductFieldSourceService::class)->fields();
-        $rules = ['sources' => ['required', 'array:'.implode(',', $fields)]];
+        // Each field is required below, so a missing or empty `sources` is
+        // refused field by field; the array rule itself only shapes it.
+        $rules = ['sources' => ['array:'.implode(',', $fields)]];
         foreach ($fields as $field) {
             $rules['sources.'.$field] = ['required', 'string', Rule::enum(ProductFieldSource::class)];
         }
