@@ -279,12 +279,15 @@ describe('StoreAdminLayout', () => {
         wrapper.unmount();
     });
 
-    it('renders vendor cache POST action and sidebar badges from shared props', async () => {
+    it('renders cache POST action and sidebar badges from shared props', async () => {
         const wrapper = mountLayout(
             admin_dashboard.url(),
             storeSharedProps({
                 isSuperAdmin: true,
-                isRaizerAdmin: true,
+                settings: {
+                    vendor_system_activation: true,
+                    Support_Section: true,
+                },
                 counts: { sellers: 3, tickets: 4, conversations: 5 },
             }),
         );

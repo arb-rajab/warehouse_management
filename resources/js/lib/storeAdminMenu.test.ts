@@ -281,7 +281,7 @@ describe('visibleStoreMenu', () => {
         ]);
     });
 
-    it('drops a group whose section setting is off, unless the user is the vendor', () => {
+    it('drops a group whose section setting is off', () => {
         const props = storeSharedProps({
             permissions: ['view_all_staffs'],
             settings: { Staffs_section: false },
@@ -290,17 +290,9 @@ describe('visibleStoreMenu', () => {
         expect(
             labelKeys(visibleStoreMenu(storeAdminMenu, storeAccess(props))),
         ).not.toContain('store.nav.staff');
-        expect(
-            labelKeys(
-                visibleStoreMenu(
-                    storeAdminMenu,
-                    storeAccess({ ...props, isRaizerAdmin: true }),
-                ),
-            ),
-        ).toContain('store.nav.allStaff');
     });
 
-    it("keeps the vendor's own entries from a Super Admin who is not the vendor", () => {
+    it('shows the configuration entries to a Super Admin', () => {
         const keys = labelKeys(
             visibleStoreMenu(
                 storeAdminMenu,
@@ -314,19 +306,18 @@ describe('visibleStoreMenu', () => {
         );
 
         expect(keys).toContain('store.nav.generalSettings');
-        expect(keys).not.toContain('store.nav.featuresActivation');
-        expect(keys).not.toContain('store.nav.paymentMethods');
-        expect(keys).not.toContain('store.nav.google');
+        expect(keys).toContain('store.nav.featuresActivation');
+        expect(keys).toContain('store.nav.paymentMethods');
+        expect(keys).toContain('store.nav.google');
     });
 
-    it('shows every entry to the vendor holding every permission', () => {
+    it('shows every entry to a Super Admin with every setting on', () => {
         const keys = labelKeys(
             visibleStoreMenu(
                 storeAdminMenu,
                 storeAccess(
                     storeSharedProps({
                         isSuperAdmin: true,
-                        isRaizerAdmin: true,
                         settings: everySetting,
                     }),
                 ),

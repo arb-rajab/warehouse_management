@@ -10,8 +10,6 @@ import type { StoreSharedProps } from '@/types/store';
 export interface StoreAccess {
     /** Holds the permission, or is a Super Admin (Gate::before()). */
     can: (permission: string) => boolean;
-    /** The vendor's own account (`users.raizer_admin`). */
-    isRaizerAdmin: boolean;
     /** The business setting that switches a section on is on. */
     setting: (key: string) => boolean;
 }
@@ -21,7 +19,6 @@ export function storeAccess(props?: StoreSharedProps): StoreAccess {
         can: (permission) =>
             props !== undefined &&
             (props.isSuperAdmin || props.permissions.includes(permission)),
-        isRaizerAdmin: props?.isRaizerAdmin ?? false,
         setting: (key) => props?.settings[key] ?? false,
     };
 }

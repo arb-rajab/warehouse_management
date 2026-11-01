@@ -160,12 +160,11 @@ const actions = {
 function mountPage(
     section: Section,
     permissions = [pages[section].permission],
-    isRaizerAdmin = true,
 ) {
     usePageMock.mockReturnValue({
         url: '/temp/admin/settings',
         props: defaultAuthProps({
-            store: storeSharedProps({ permissions, isRaizerAdmin }),
+            store: storeSharedProps({ permissions }),
         }),
     });
 
@@ -247,10 +246,10 @@ describe('Store settings', () => {
             expect(pageForms(mountPage(section, []))).toHaveLength(0);
         },
     );
-    it('keeps activation vendor-only', () => {
+    it('lets an admin holding the permission write activation', () => {
         expect(
-            pageForms(mountPage('activation', ['features_activation'], false)),
-        ).toHaveLength(0);
+            pageForms(mountPage('activation', ['features_activation'])),
+        ).toHaveLength(1);
     });
     it('renders SMTP testing only with both permissions and mirrors recipient validation', () => {
         const wrapper = mountPage('smtp', ['smtp_settings', 'send_newsletter']);

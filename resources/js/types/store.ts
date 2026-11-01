@@ -10,8 +10,6 @@ export interface StoreSharedProps {
     permissions: string[];
     /** Gate::before() grants a Super Admin every permission. */
     isSuperAdmin: boolean;
-    /** The vendor's own account, which sees every switched-off section. */
-    isRaizerAdmin: boolean;
     /** The business settings that switch sidebar sections on or off. */
     settings: Record<string, boolean>;
     counts: { sellers: number; tickets: number; conversations: number };

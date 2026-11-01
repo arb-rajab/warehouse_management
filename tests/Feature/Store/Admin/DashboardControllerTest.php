@@ -188,11 +188,6 @@ test('dashboard shell exposes the current account and only its notifications', f
         ->where('store.notifications.items.0.order_code', 'ORD-MINE'));
 });
 
-test('dashboard shell identifies vendor cache clear access without granting it to ordinary admins', function (bool $vendor) {
-    actingAsStoreUser(createStoreAdmin(raizerAdmin: $vendor));
-    $this->get(route('shop.admin.dashboard'))->assertOk()->assertInertia(fn (Assert $p) => $p->where('store.isRaizerAdmin', $vendor));
-})->with([true, false]);
-
 test('published products without a storefront slug do not break the dashboard', function () {
     actingAsStoreUser(createStoreStaff('admin_dashboard'));
     $product = createStoreProduct(['name' => 'Warehouse product', 'slug' => null, 'added_by' => 'admin', 'thumbnail_img' => null]);

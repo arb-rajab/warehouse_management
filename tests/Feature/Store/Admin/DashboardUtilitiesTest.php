@@ -28,15 +28,15 @@ test('dashboard sidebar counts are permission filtered and notifications belong 
 });
 
 test('clear cache forgets only dashboard graph keys without invoking operational commands', function () {
-    actingAsStoreUser(createStoreAdmin(raizerAdmin: true));
+    actingAsStoreUser(createStoreAdmin());
     Cache::shouldReceive('forget')->once()->with(DashboardController::GRAPH_CACHE_KEY)->andReturnTrue();
     Cache::shouldReceive('forget')->once()->with('cached_graph_data')->andReturnTrue();
     Artisan::shouldReceive('call')->never();
     $this->post(route('cache.clear'))->assertRedirect(route('shop.admin.dashboard'));
 });
 
-test('clear cache rejects ordinary admins and GET requests without touching cache', function () {
-    actingAsStoreUser(createStoreAdmin());
+test('clear cache rejects staff without the cache permission and GET requests without touching cache', function () {
+    actingAsStoreUser(createStoreStaff('admin_dashboard'));
     Cache::shouldReceive('forget')->never();
     $this->post(route('cache.clear'))->assertForbidden();
     $this->get(route('cache.clear'))->assertMethodNotAllowed();

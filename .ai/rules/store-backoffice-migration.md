@@ -97,7 +97,7 @@ consumers, not unfinished admin screens; see [retained templates](#51-actual-ret
 `HandleInertiaRequests::share()` recognizes store requests from the route's
 `UseStoreAuthGuard` middleware, not the default guard, which changes later.
 Store props are `name`, `locale`, the narrow `auth.user` shape `{id,name,email}`,
-and `store` containing `rtl`, permission names, `isSuperAdmin`, `isRaizerAdmin`
+and `store` containing `rtl`, permission names, `isSuperAdmin`
 and booleans for `STORE_MENU_SETTINGS`. Everything except `name` is a closure
 because `Language` runs later. WMS pages do not receive `store` props.
 
@@ -109,8 +109,11 @@ pages and the existing Arabic-locale rule for WMS.
 ### 2.2 StoreAdminLayout and the sidebar
 
 `StoreAdminLayout.vue` and `storeAdminMenu.ts` are the only admin shell/sidebar.
-Preserve each entry's any-of permission gate, business-setting gate and
-vendor-only gate; `raizer_admin` bypasses setting gates. Empty groups disappear.
+Preserve each entry's any-of permission gate and business-setting gate. There
+is no vendor-only (`raizer_admin`) gate any more: the owner's admin reaches
+Features activation, Payment methods and the cache button through the page
+permissions. Keep the `users.raizer_admin` column: services find the owner's
+admin with `raizer_admin IS NULL`. Empty groups disappear.
 Button gates use the same permission names as their action middleware. The
 account block uses the store logout route and the current actor's profile and
 notifications; cache clearing stays narrowly scoped.
