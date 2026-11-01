@@ -29,6 +29,15 @@ vi.mock('@inertiajs/vue3', async () => {
     };
 });
 const order = storeOrder();
+// The layout's Clear Cache form shows for a Super Admin; these tests are about the page's own forms.
+const pageForms = (wrapper: ReturnType<typeof mount>) =>
+    wrapper
+        .findAll('form')
+        .filter(
+            (form) =>
+                form.attributes('data-action-url') !==
+                '/temp/admin/clear-cache',
+        );
 beforeEach(() => {
     mocks.page.mockReturnValue({
         url: '/temp/admin/all_orders',
@@ -49,7 +58,9 @@ describe('Store order pages', () => {
                 props: { representativeOrder, submissionKey: 'token' },
             });
             expect(wrapper.findComponent(StoreAdminLayout).exists()).toBe(true);
-            expect(wrapper.get('form').attributes('data-action-url')).toContain(
+            expect(
+                pageForms(wrapper)[0].attributes('data-action-url'),
+            ).toContain(
                 representativeOrder
                     ? '/feat/order/store'
                     : '/feat/new/order/trip/store',
@@ -127,7 +138,16 @@ describe('Store order pages', () => {
         expect(
             wrapper.getComponent(StoreOrderEntryFields).props('order'),
         ).toEqual(order);
-        expect(wrapper.getComponent(Form).props('action')).toMatchObject({
+        expect(
+            wrapper
+                .findAllComponents(Form)
+                .find(
+                    (form) =>
+                        form.attributes('data-action-url') !==
+                        '/temp/admin/clear-cache',
+                )
+                ?.props('action'),
+        ).toMatchObject({
             method: 'put',
         });
         expect(wrapper.text()).toContain('20.00');
@@ -192,7 +212,7 @@ describe('Store order pages', () => {
         expect(wrapper.text()).toContain('<script>unsafe()</script>');
         expect(wrapper.find('script').exists()).toBe(false);
         expect(wrapper.text()).toContain('30.3');
-        expect(wrapper.findAllComponents(Form).length).toBe(5);
+        expect(pageForms(wrapper)).toHaveLength(5);
         await wrapper.setProps({
             order: {
                 ...order,
@@ -216,7 +236,7 @@ describe('Store order pages', () => {
             },
         });
         await wrapper.vm.$nextTick();
-        const form = wrapper.findAll('form')[1];
+        const form = pageForms(wrapper)[1];
         expect(form.findAll('[data-required-legend]')).toHaveLength(1);
         expect(form.find('legend [data-required-mark]').exists()).toBe(true);
         expect(form.findAll('input[required]')).toHaveLength(1);
@@ -227,7 +247,7 @@ describe('Store order pages', () => {
         await form.findAll('input[type="checkbox"]')[1].setValue(false);
         expect(form.findAll('input[required]')).toHaveLength(1);
         expect(
-            wrapper.findAll('form')[0].find('[data-required-legend]').exists(),
+            pageForms(wrapper)[0].find('[data-required-legend]').exists(),
         ).toBe(false);
     });
     it('marks required order actions with one legend per form and leaves notes and tracking optional', async () => {
@@ -241,7 +261,7 @@ describe('Store order pages', () => {
             },
         });
         await wrapper.vm.$nextTick();
-        const forms = wrapper.findAll('form');
+        const forms = pageForms(wrapper);
 
         for (const form of forms) {
             const required = form.find('[required]').exists();
