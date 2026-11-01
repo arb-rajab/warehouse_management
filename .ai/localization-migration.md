@@ -23,8 +23,9 @@ the same catalog. Auth verification email actions and messages composed during
 customer requests also use files. Laravel's existing auth, password, pagination
 and validation catalogs remain authoritative for their messages.
 
-`Language` resolves a valid explicit session choice before `config('app.locale')`
-(APP_LOCALE). It does not persist an automatic default. The application locale
+`Language` resolves a valid explicit session choice, then the storefront toggle's
+`store_locale` cookie ([storefront locale rule](rules/storefront-locale.md)), before
+`config('app.locale')` (APP_LOCALE). It does not persist an automatic default. The application locale
 keeps the selected content code; the Laravel translator uses
 `StoreLocale::uiLocale()`. This maps the legacy Arabic store code `sa` to `ar`
 without changing its language row, product/category/CMS lookups, or the
