@@ -993,6 +993,7 @@
             "appearance": "Appearance",
             "setup": "Setup & configurations",
             "generalSettings": "General settings",
+            "productFieldSources": "Product data sources",
             "featuresActivation": "Features activation",
             "languages": "Languages",
             "currency": "Currency",
@@ -1205,6 +1206,20 @@
             "loginBackground": "Admin login page background",
             "timezone": "System timezone",
             "timezoneHint": "Set in the server configuration. Saving a different timezone is refused."
+        },
+        "productFieldSources": {
+            "title": "Product data sources",
+            "intro": "Choose, for each product field the Otajer sync writes, who owns its data. A field has exactly one owner.",
+            "otajer": "Otajer synced",
+            "otajerHint": "The hourly Otajer sync writes this field. On synced products it is read-only in the admin panel.",
+            "admin": "Admin panel set",
+            "adminHint": "The admin panel writes this field. The Otajer sync never writes or overwrites it; new synced products start with it empty (unpublished for Active status).",
+            "default": "Default: {source}",
+            "fields": {
+                "name": "Product name",
+                "ar_name": "Arabic name",
+                "published": "Active status"
+            }
         },
         "settings": {
             "save": "Save",
@@ -2763,6 +2778,9 @@
                 "saving": "Saving…",
                 "information": "Product information",
                 "name": "Product name",
+                "arName": "Arabic name",
+                "otajerSynced": "Synced from Otajer. Change it in Otajer, or set the field to “Admin panel set” under Product data sources.",
+                "otajerSyncedFields": "Synced from Otajer and read-only here: {fields}.",
                 "category": "Category",
                 "selectCategory": "Select a category",
                 "brand": "Brand",

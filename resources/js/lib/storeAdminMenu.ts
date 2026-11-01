@@ -80,6 +80,7 @@ import {
     inHouse as inHouseProducts,
     seller as sellerProducts,
 } from '@/actions/App/Http/Controllers/Store/Admin/ProductController';
+import { edit as productFieldSourcesEdit } from '@/actions/App/Http/Controllers/Store/Admin/ProductFieldSourceController';
 import { index as productQueriesIndex } from '@/actions/App/Http/Controllers/Store/Admin/ProductQueryController';
 import { index as profileIndex } from '@/actions/App/Http/Controllers/Store/Admin/ProfileController';
 import {
@@ -755,6 +756,12 @@ export const storeAdminMenu: StoreMenuItem[] = [
                 href: generalSettingsEdit(),
                 inertia: true,
                 permission: 'general_settings',
+            },
+            {
+                labelKey: 'store.nav.productFieldSources',
+                href: productFieldSourcesEdit(),
+                inertia: true,
+                permission: 'product_field_sources',
             },
             {
                 labelKey: 'store.nav.featuresActivation',

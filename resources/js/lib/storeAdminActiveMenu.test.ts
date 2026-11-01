@@ -19,6 +19,7 @@ import {
     edit as productEdit,
     sellerEdit as sellerProductEdit,
 } from '@/actions/App/Http/Controllers/Store/Admin/ProductController';
+import { edit as productFieldSourcesEdit } from '@/actions/App/Http/Controllers/Store/Admin/ProductFieldSourceController';
 import { index as profileIndex } from '@/actions/App/Http/Controllers/Store/Admin/ProfileController';
 import { index as representativePackagesIndex } from '@/actions/App/Http/Controllers/Store/Admin/RepresentativePackageController';
 import { index as sellerPaymentsIndex } from '@/actions/App/Http/Controllers/Store/Admin/SellerPaymentController';
@@ -224,6 +225,29 @@ describe('findActiveStoreMenuLink (the real Store admin menu)', () => {
             ),
         ).toBe('store.nav.payoutRequests');
         expect(active(sellerPaymentsIndex.url())).toBe('store.nav.payouts');
+    });
+
+    it('highlights product data sources under Setup, apart from the product lists', () => {
+        expect(active(productFieldSourcesEdit.url())).toBe(
+            'store.nav.productFieldSources',
+        );
+        expect(active(`${productFieldSourcesEdit.url()}?saved=1`)).toBe(
+            'store.nav.productFieldSources',
+        );
+        const setup = storeAdminMenu.find(
+            (item) => item.labelKey === 'store.nav.setup',
+        );
+        expect(setup).toBeDefined();
+        expect(
+            storeMenuItemContains(
+                setup!,
+                findActiveStoreMenuLink(
+                    productFieldSourcesEdit.url(),
+                    storeAdminMenu,
+                    storeAdminPageParents,
+                ),
+            ),
+        ).toBe(true);
     });
 
     it('keeps the home banners entry apart from custom pages', () => {

@@ -319,6 +319,28 @@ describe('visibleStoreMenu', () => {
         expect(keys).not.toContain('store.nav.google');
     });
 
+    it('shows product data sources only to holders of its permission', () => {
+        const keysFor = (permissions: string[]) =>
+            labelKeys(
+                visibleStoreMenu(
+                    storeAdminMenu,
+                    storeAccess(
+                        storeSharedProps({
+                            permissions,
+                            settings: { Setup_configuration_section: true },
+                        }),
+                    ),
+                ),
+            );
+
+        expect(keysFor(['product_field_sources'])).toContain(
+            'store.nav.productFieldSources',
+        );
+        expect(keysFor(['general_settings'])).not.toContain(
+            'store.nav.productFieldSources',
+        );
+    });
+
     it('shows every entry to the vendor holding every permission', () => {
         const keys = labelKeys(
             visibleStoreMenu(

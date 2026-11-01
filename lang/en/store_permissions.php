@@ -191,6 +191,7 @@ return [
         'manage_zones' => 'Manage Zones',
         'payment_methods_configurations' => 'Payment Methods Configurations',
         'pickup_point_setup' => 'Pickup Point Setup',
+        'product_field_sources' => 'Product Data Sources',
         'shipping_configuration' => 'Shipping Configuration',
         'shipping_country_setting' => 'Shipping Country Setting',
         'smtp_settings' => 'Smtp Settings',
