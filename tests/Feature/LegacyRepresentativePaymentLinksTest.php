@@ -115,3 +115,19 @@ test('the mobile API changes the note of the representative own visit only', fun
     expect($visit->fresh()->note)->toBe('mine');
 
 });
+
+test('a representative can record a payment through the API and gets its signed links back', function () {
+    seedStoreCurrency();
+    $rep = repUser();
+    $customer = createStoreUser('customer');
+    $customer->forceFill(['AccSysID' => 4321])->save();
+
+    foreach ([['customer_id' => $customer->id], ['customer_otajer_id' => 4321]] as $customerKey) {
+        $this->withToken(storeApiToken($rep))
+            ->postJson('/temp/api/v2/representatives/payments/store', $customerKey + ['amount' => 25])
+            ->assertOk()->assertJsonPath('result', true)->assertJsonStructure(['pdf_link', 'qr']);
+    }
+
+    expect(DB::table('representative_payments')->where('rep_id', $rep->id)->count())->toBe(2)
+        ->and(DB::table('representative_payments')->where('rep_id', $rep->id)->where('customer_id', $customer->id)->where('status', 'pending')->count())->toBe(2);
+});
