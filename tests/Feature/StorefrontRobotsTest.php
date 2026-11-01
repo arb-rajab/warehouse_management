@@ -142,8 +142,8 @@ test('the admin pages, both back offices and the API send X-Robots-Tag: noindex,
     $this->get('/temp/admin')->assertRedirect()->assertHeader('X-Robots-Tag', 'noindex, nofollow');
     // The API groups: success, validation failure and rejection
     $this->postJson('/api/v1/login', [])->assertUnprocessable()->assertHeader('X-Robots-Tag', 'noindex, nofollow');
-    $this->getJson('/temp/api/v2/auth/user')->assertUnauthorized()->assertHeader('X-Robots-Tag', 'noindex, nofollow');
-    $this->getJson('/temp/api/v2/currencies')->assertHeader('X-Robots-Tag', 'noindex, nofollow');
+    $this->getJson('/temp/api/v1/auth/user')->assertUnauthorized()->assertHeader('X-Robots-Tag', 'noindex, nofollow');
+    $this->getJson('/temp/api/v1/currencies')->assertHeader('X-Robots-Tag', 'noindex, nofollow');
     // The seller area
     $this->get('/temp/seller/dashboard')->assertNotFound()->assertHeader('X-Robots-Tag', 'noindex, nofollow');
 });

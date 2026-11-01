@@ -1,6 +1,6 @@
 <?php
 
-use App\Http\Controllers\Api\V2\BrandController as ApiBrandController;
+use App\Http\Controllers\Api\V1\BrandController as ApiBrandController;
 use App\Http\Controllers\Store\Admin\DashboardController;
 use App\Providers\RouteServiceProvider;
 use Illuminate\Http\Request;
@@ -34,7 +34,7 @@ test('keepLastRegisteredRouteNames keeps the last route registered with a duplic
 /**
  * The legacy app's own RouteNameResolutionTest pinned these, one per kind of
  * duplicate. Which registration keeps a duplicated name depends on the order
- * RouteServiceProvider::map() loads the route files in: with the api/v2 files
+ * RouteServiceProvider::map() loads the route files in: with the api/v1 files
  * loaded after the admin one, every admin link to a name the API also
  * registers (brands.index, categories.index, customers.edit, ...) pointed at
  * the JSON API instead.
@@ -52,7 +52,7 @@ test('duplicated store route names resolve to the route the legacy app gave them
 });
 
 test('the routes that lost a duplicated name are still registered', function () {
-    $apiBrands = Route::getRoutes()->match(Request::create('/temp/api/v2/brands'));
+    $apiBrands = Route::getRoutes()->match(Request::create('/temp/api/v1/brands'));
 
     expect($apiBrands->getActionName())->toBe(ApiBrandController::class.'@index')
         ->and($apiBrands->getName())->toBeNull();

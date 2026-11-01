@@ -20,7 +20,7 @@ test('WmsAuthMiddleware rejects a request with no private-token header', functio
     $called = false;
 
     $response = (new WmsAuthMiddleware)->handle(
-        Request::create('/api/v2/warehouse/customers'),
+        Request::create('/api/v1/warehouse/customers'),
         function () use (&$called) {
             $called = true;
 
@@ -40,7 +40,7 @@ test('WmsAuthMiddleware rejects an incorrect private-token header', function () 
     config(['app.wms_token' => 'the-real-token']);
     $called = false;
 
-    $request = Request::create('/api/v2/warehouse/customers');
+    $request = Request::create('/api/v1/warehouse/customers');
     $request->headers->set('private-token', 'not-the-real-token');
 
     (new WmsAuthMiddleware)->handle($request, function () use (&$called) {
@@ -56,7 +56,7 @@ test('WmsAuthMiddleware admits the configured private-token and passes the reque
     config(['app.wms_token' => 'the-real-token']);
     $called = false;
 
-    $request = Request::create('/api/v2/warehouse/customers');
+    $request = Request::create('/api/v1/warehouse/customers');
     $request->headers->set('private-token', 'the-real-token');
 
     $response = (new WmsAuthMiddleware)->handle($request, function ($req) use (&$called) {
@@ -78,7 +78,7 @@ test('WmsAuthMiddleware rejects every request while no token is configured', fun
     config(['app.wms_token' => null]);
     $called = false;
 
-    $request = Request::create('/api/v2/warehouse/customers');
+    $request = Request::create('/api/v1/warehouse/customers');
     if ($sent !== null) {
         $request->headers->set('private-token', $sent);
     }
@@ -101,7 +101,7 @@ test('WmsAuthMiddleware compares the token exactly', function (string $sent) {
     config(['app.wms_token' => 'Secret-Token']);
     $called = false;
 
-    $request = Request::create('/api/v2/warehouse/customers');
+    $request = Request::create('/api/v1/warehouse/customers');
     $request->headers->set('private-token', $sent);
 
     (new WmsAuthMiddleware)->handle($request, function () use (&$called) {
@@ -121,17 +121,17 @@ test('every routes/shop-api_warehouse.php route rejects a request with no privat
         'message' => 'invalid token, who are you?',
     ]);
 })->with([
-    'GET /customers' => ['GET', '/temp/api/v2/warehouse/customers'],
-    'GET /reps' => ['GET', '/temp/api/v2/warehouse/reps'],
-    'GET /customer/{id}' => ['GET', '/temp/api/v2/warehouse/customer/1'],
-    'POST /customer/update/{id}' => ['POST', '/temp/api/v2/warehouse/customer/update/1'],
-    'GET /orders' => ['GET', '/temp/api/v2/warehouse/orders'],
-    'GET /order/{id}' => ['GET', '/temp/api/v2/warehouse/order/1'],
-    'GET /order_items/{id}' => ['GET', '/temp/api/v2/warehouse/order_items/1'],
-    'POST /update_order' => ['POST', '/temp/api/v2/warehouse/update_order'],
-    'POST /order/update-customer' => ['POST', '/temp/api/v2/warehouse/order/update-customer'],
-    'GET /products' => ['GET', '/temp/api/v2/warehouse/products'],
-    'GET /categories' => ['GET', '/temp/api/v2/warehouse/categories'],
+    'GET /customers' => ['GET', '/temp/api/v1/warehouse/customers'],
+    'GET /reps' => ['GET', '/temp/api/v1/warehouse/reps'],
+    'GET /customer/{id}' => ['GET', '/temp/api/v1/warehouse/customer/1'],
+    'POST /customer/update/{id}' => ['POST', '/temp/api/v1/warehouse/customer/update/1'],
+    'GET /orders' => ['GET', '/temp/api/v1/warehouse/orders'],
+    'GET /order/{id}' => ['GET', '/temp/api/v1/warehouse/order/1'],
+    'GET /order_items/{id}' => ['GET', '/temp/api/v1/warehouse/order_items/1'],
+    'POST /update_order' => ['POST', '/temp/api/v1/warehouse/update_order'],
+    'POST /order/update-customer' => ['POST', '/temp/api/v1/warehouse/order/update-customer'],
+    'GET /products' => ['GET', '/temp/api/v1/warehouse/products'],
+    'GET /categories' => ['GET', '/temp/api/v1/warehouse/categories'],
 ]);
 
 test('an unauthenticated customer update request does not change the customer', function () {
@@ -146,7 +146,7 @@ test('an unauthenticated customer update request does not change the customer', 
         'phone' => '0000000000',
     ]);
 
-    $this->postJson("/temp/api/v2/warehouse/customer/update/{$customer->id}", [
+    $this->postJson("/temp/api/v1/warehouse/customer/update/{$customer->id}", [
         'name' => 'Attacker-Supplied Name',
         'phone' => '9999999999',
     ]);

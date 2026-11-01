@@ -62,14 +62,14 @@ test('representatives see owned payments and current visits through their actual
     $data = app(StoreFilterSeedData::class);
     $rep = StoreUser::findOrFail($data->user('representative'));
     $token = storeApiToken($rep);
-    $response = $this->withToken($token)->getJson('/temp/api/v2/representatives/payments/index?search=RCPT&page=2')->assertOk();
+    $response = $this->withToken($token)->getJson('/temp/api/v1/representatives/payments/index?search=RCPT&page=2')->assertOk();
     expect($response->json('data'))->toHaveCount(10);
-    $this->getJson('/temp/api/v2/representatives/current-visit')->assertOk()->assertJsonPath('result', true);
+    $this->getJson('/temp/api/v1/representatives/current-visit')->assertOk()->assertJsonPath('result', true);
     $customer = StoreUser::findOrFail($data->user('customer'));
-    $this->getJson('/temp/api/v2/representatives/get-customers?'.http_build_query(['name' => $customer->name]))->assertOk()
+    $this->getJson('/temp/api/v1/representatives/get-customers?'.http_build_query(['name' => $customer->name]))->assertOk()
         ->assertJsonPath('data.0.id', $customer->id);
     foreach (['company_name' => $customer->company_name, 'otajer_id' => '987654321'] as $filter => $value) {
-        $this->getJson('/temp/api/v2/representatives/get-customers?'.http_build_query([$filter => $value]))->assertOk()->assertJsonPath('data.0.id', $customer->id);
+        $this->getJson('/temp/api/v1/representatives/get-customers?'.http_build_query([$filter => $value]))->assertOk()->assertJsonPath('data.0.id', $customer->id);
     }
     expect(DB::table('visits')->where('rep_id', $rep->id)->whereNull('order_id')->count())->toBe(1);
     Mail::assertNothingSent();

@@ -4,7 +4,7 @@ use App\Http\Resources\Store\DashboardProductResource;
 use App\Http\Resources\Store\DigitalProductResource;
 use App\Http\Resources\Store\ProductListResource;
 use App\Http\Resources\Store\ReviewResource;
-use App\Http\Resources\V2\DigitalProductDetailCollection;
+use App\Http\Resources\V1\DigitalProductDetailCollection;
 use App\Models\Category;
 use App\Models\CustomerProduct;
 use App\Models\Product;
@@ -97,11 +97,11 @@ test('each Store resource emits the exact original absolute product URL or fallb
 
 test('the authenticated mobile product endpoint emits the original absolute URL or fallback', function (?string $slug) {
     $product = finalResourceProduct($slug);
-    $response = $this->withToken(storeApiToken(createStoreUser()))->getJson('/temp/api/v2/products/'.$product->id)
+    $response = $this->withToken(storeApiToken(createStoreUser()))->getJson('/temp/api/v1/products/'.$product->id)
         ->assertOk()->assertJsonPath('data.0.link', finalResourceUrl($product->id, $slug))
         ->assertJsonPath('data.0.name', 'Final product')->assertJsonPath('success', true)->assertJsonPath('status', 200);
     if ($slug === 'd15-final') {
-        assertFinalResourcePayload('v2-product', $response->json(), $product);
+        assertFinalResourcePayload('v1-product', $response->json(), $product);
     }
 })->with('final storefront slugs');
 
@@ -113,11 +113,11 @@ test('the authenticated mobile classified endpoint preserves its historical ordi
         'description' => 'Description', 'unit_price' => 2.5,
     ]);
     StoreUser::query()->whereKey($product->user_id)->update(['phone' => '1234567890']);
-    $response = $this->withToken(storeApiToken(createStoreUser()))->getJson('/temp/api/v2/classified/product-details/'.$product->id)
+    $response = $this->withToken(storeApiToken(createStoreUser()))->getJson('/temp/api/v1/classified/product-details/'.$product->id)
         ->assertOk()->assertJsonPath('data.0.link', finalResourceUrl($product->id, $slug))
         ->assertJsonPath('data.0.name', 'Classified product')->assertJsonPath('success', true)->assertJsonPath('status', 200);
     if ($slug === 'd15-final') {
-        assertFinalResourcePayload('v2-classified', $response->json(), $product);
+        assertFinalResourcePayload('v1-classified', $response->json(), $product);
     }
 })->with('final storefront slugs');
 
@@ -127,7 +127,7 @@ test('the unrouted digital detail collection emits the original absolute URL or 
 
     expect($row['link'])->toBe(finalResourceUrl($product->id, $slug));
     if ($slug === 'd15-final') {
-        assertFinalResourcePayload('v2-digital', $row, $product);
+        assertFinalResourcePayload('v1-digital', $row, $product);
     }
 })->with('final storefront slugs');
 
@@ -137,11 +137,11 @@ test('the authenticated auction endpoint emits the original absolute URL or fall
     Event::listen('eloquent.retrieved: '.Product::class, function (Product $record): void {
         $record->setAttribute('auction_end_date', 0)->setAttribute('starting_bid', 5)->setRelation('bids', collect());
     });
-    $response = $this->withToken(storeApiToken(createStoreUser()))->getJson('/temp/api/v2/auction/products/'.$product->id)
+    $response = $this->withToken(storeApiToken(createStoreUser()))->getJson('/temp/api/v1/auction/products/'.$product->id)
         ->assertOk()->assertJsonPath('data.0.link', finalResourceUrl($product->id, $slug))
         ->assertJsonPath('data.0.name', 'Final product')->assertJsonPath('success', true)->assertJsonPath('status', 200);
     if ($slug === 'd15-final') {
-        assertFinalResourcePayload('v2-auction', $response->json(), $product);
+        assertFinalResourcePayload('v1-auction', $response->json(), $product);
     }
 })->with('final storefront slugs');
 

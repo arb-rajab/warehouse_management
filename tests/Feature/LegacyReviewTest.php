@@ -32,7 +32,7 @@ test('the app accepts a review from a customer who received the product, once, w
     $customer = createStoreUser('customer');
     $product = receivedProductFor($customer);
     $token = storeApiToken($customer);
-    $submit = fn (array $payload) => test()->withToken($token)->postJson('/temp/api/v2/reviews/submit', ['product_id' => $product->id, 'comment' => 'Good', ...$payload]);
+    $submit = fn (array $payload) => test()->withToken($token)->postJson('/temp/api/v1/reviews/submit', ['product_id' => $product->id, 'comment' => 'Good', ...$payload]);
 
     foreach ([0, 6, 100000, 'five', null] as $bad) {
         app('auth')->forgetGuards();
@@ -53,7 +53,7 @@ test('the app refuses a review of a product the customer did not receive', funct
     $product = createStoreProduct();
     orderStoreProduct($customer, $product); // ordered, not delivered
 
-    $this->withToken(storeApiToken($customer))->postJson('/temp/api/v2/reviews/submit', ['product_id' => $product->id, 'rating' => 5, 'comment' => 'x'])
+    $this->withToken(storeApiToken($customer))->postJson('/temp/api/v1/reviews/submit', ['product_id' => $product->id, 'rating' => 5, 'comment' => 'x'])
         ->assertOk()->assertJsonPath('result', false);
 
     expect(Review::count())->toBe(0);

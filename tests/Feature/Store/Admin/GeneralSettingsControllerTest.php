@@ -240,7 +240,7 @@ test('saved logos and site name reach the Inertia settings screen, the login pag
         ->where('settings.system_logo_black', (string) $black->id)
         ->where('initialFiles.system_logo_white.0.url', 'https://example.com/system-white.png')
         ->where('initialFiles.system_logo_black.0.url', 'https://example.com/system-black.png'));
-    $this->getJson('/temp/api/v2/business-settings')->assertOk()
+    $this->getJson('/temp/api/v1/business-settings')->assertOk()
         ->assertJsonFragment(['type' => 'site_name', 'value' => 'Holland Store']);
 
     auth('store')->logout();

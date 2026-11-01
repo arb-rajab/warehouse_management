@@ -230,8 +230,8 @@ foreach (['store', 'update', 'destroy'] as $action) {
 test('carrier routes have no broken show consumer and retain the API carrier action', function () {
     expect(Route::has('carriers.show'))->toBeFalse();
     $routes = Route::getRoutes();
-    $api = collect($routes->getRoutes())->first(fn ($route) => str_ends_with($route->uri(), '/carriers') && str_contains($route->getActionName(), 'Api\\V2\\CarrierController'));
-    expect($api?->getActionName())->toBe('App\\Http\\Controllers\\Api\\V2\\CarrierController@index');
+    $api = collect($routes->getRoutes())->first(fn ($route) => str_ends_with($route->uri(), '/carriers') && str_contains($route->getActionName(), 'Api\\V1\\CarrierController'));
+    expect($api?->getActionName())->toBe('App\\Http\\Controllers\\Api\\V1\\CarrierController@index');
 });
 
 test('carrier update preserves an existing foreign logo without allowing another foreign reference or malformed input', function () {

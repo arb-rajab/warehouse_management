@@ -1,9 +1,9 @@
 <?php
 
-use App\Http\Controllers\Api\V2\BkashController as ApiBkashController;
-use App\Http\Controllers\Api\V2\IyzicoController as ApiIyzicoController;
-use App\Http\Controllers\Api\V2\NagadController as ApiNagadController;
-use App\Http\Controllers\Api\V2\SslCommerzController as ApiSslCommerzController;
+use App\Http\Controllers\Api\V1\BkashController as ApiBkashController;
+use App\Http\Controllers\Api\V1\IyzicoController as ApiIyzicoController;
+use App\Http\Controllers\Api\V1\NagadController as ApiNagadController;
+use App\Http\Controllers\Api\V1\SslCommerzController as ApiSslCommerzController;
 use App\Http\Controllers\Payment\AamarpayController;
 use App\Http\Controllers\Payment\BkashController;
 use App\Http\Controllers\Payment\IyzicoController;

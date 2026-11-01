@@ -18,7 +18,7 @@ test('a valid image is stored under a server-chosen name and recorded', function
 
     withScratchPublicPath(function (string $publicPath) use ($customer) {
         $response = $this->withToken(storeApiToken($customer))
-            ->postJson('/temp/api/v2/file/image-upload', ['image' => base64_encode(tinyPng()), 'filename' => 'holiday photo.png'])
+            ->postJson('/temp/api/v1/file/image-upload', ['image' => base64_encode(tinyPng()), 'filename' => 'holiday photo.png'])
             ->assertOk()
             ->assertJsonPath('result', true);
 
@@ -38,7 +38,7 @@ test('a valid image is stored under a server-chosen name and recorded', function
 
 test('an upload with no token is refused and stores nothing', function () {
     withScratchPublicPath(function (string $publicPath) {
-        $this->postJson('/temp/api/v2/file/image-upload', ['image' => base64_encode(tinyPng()), 'filename' => 'a.png'])->assertUnauthorized();
+        $this->postJson('/temp/api/v1/file/image-upload', ['image' => base64_encode(tinyPng()), 'filename' => 'a.png'])->assertUnauthorized();
 
         expect(storedUploadFiles($publicPath))->toBe([])
             ->and(Upload::count())->toBe(0);
@@ -50,7 +50,7 @@ test('PHP source is refused whatever it is called, and nothing is written', func
 
     withScratchPublicPath(function (string $publicPath) use ($customer, $filename) {
         $this->withToken(storeApiToken($customer))
-            ->postJson('/temp/api/v2/file/image-upload', ['image' => base64_encode('<?php system($_GET[1]); ?>'), 'filename' => $filename])
+            ->postJson('/temp/api/v1/file/image-upload', ['image' => base64_encode('<?php system($_GET[1]); ?>'), 'filename' => $filename])
             ->assertOk()
             ->assertJsonPath('result', false);
 
@@ -64,7 +64,7 @@ test('an image with code appended to it is stored without the code', function ()
 
     withScratchPublicPath(function (string $publicPath) use ($customer) {
         $this->withToken(storeApiToken($customer))
-            ->postJson('/temp/api/v2/file/image-upload', ['image' => base64_encode(tinyPng().'<?php evil(); ?>'), 'filename' => 'a.png'])
+            ->postJson('/temp/api/v1/file/image-upload', ['image' => base64_encode(tinyPng().'<?php evil(); ?>'), 'filename' => 'a.png'])
             ->assertOk()
             ->assertJsonPath('result', true);
 
@@ -82,7 +82,7 @@ test('an svg is stored without its script', function () {
 
     withScratchPublicPath(function (string $publicPath) use ($customer, $svg) {
         $this->withToken(storeApiToken($customer))
-            ->postJson('/temp/api/v2/file/image-upload', ['image' => base64_encode($svg), 'filename' => 'logo.svg'])
+            ->postJson('/temp/api/v1/file/image-upload', ['image' => base64_encode($svg), 'filename' => 'logo.svg'])
             ->assertOk()
             ->assertJsonPath('result', true);
 
@@ -101,7 +101,7 @@ test('input that is not an image is refused with a message and stores nothing', 
 
     withScratchPublicPath(function (string $publicPath) use ($customer, $image, $message) {
         $this->withToken(storeApiToken($customer))
-            ->postJson('/temp/api/v2/file/image-upload', ['image' => $image, 'filename' => 'a.png'])
+            ->postJson('/temp/api/v1/file/image-upload', ['image' => $image, 'filename' => 'a.png'])
             ->assertOk()
             ->assertJsonPath('result', false)
             ->assertJsonPath('message', $message);
@@ -151,14 +151,14 @@ test('the profile image endpoints store through the same service', function () {
 
     withScratchPublicPath(function (string $publicPath) use ($customer, $token) {
         $avatar = $this->withToken($token)
-            ->postJson('/temp/api/v2/profile/update-image', ['image' => base64_encode(tinyPng()), 'filename' => 'avatar.png'])
+            ->postJson('/temp/api/v1/profile/update-image', ['image' => base64_encode(tinyPng()), 'filename' => 'avatar.png'])
             ->assertOk()
             ->assertJsonPath('result', true);
 
         Auth::forgetGuards();
 
         $other = $this->withToken($token)
-            ->postJson('/temp/api/v2/profile/image-upload', ['image' => base64_encode(tinyPng()), 'filename' => 'x.png'])
+            ->postJson('/temp/api/v1/profile/image-upload', ['image' => base64_encode(tinyPng()), 'filename' => 'x.png'])
             ->assertOk()
             ->assertJsonPath('result', true);
 

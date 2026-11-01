@@ -8,12 +8,12 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 /**
- * The warehouse (WMS client) API under /temp/api/v2/warehouse. Its routes are
+ * The warehouse (WMS client) API under /temp/api/v1/warehouse. Its routes are
  * guarded by WmsAuthMiddlewareTest; these cover what they do once through.
  * Errors there are reported in the body of an HTTP 200, which the client
  * parses, so the tests pin that envelope rather than a status code.
  */
-const WAREHOUSE_URL = '/temp/api/v2/warehouse';
+const WAREHOUSE_URL = '/temp/api/v1/warehouse';
 
 beforeEach(function () {
     config(['app.wms_token' => 'wms-secret']);
@@ -338,7 +338,7 @@ test('update-customer validates its ids and answers 404 for unknown ones', funct
 
 test('the warehouse routes are throttled and token checked by one group', function () {
     $middleware = collect(app('router')->getRoutes()->getRoutes())
-        ->filter(fn ($route) => str_contains($route->uri(), 'api/v2/warehouse'))
+        ->filter(fn ($route) => str_contains($route->uri(), 'api/v1/warehouse'))
         ->map(fn ($route) => $route->gatherMiddleware());
 
     expect($middleware)->toHaveCount(11)

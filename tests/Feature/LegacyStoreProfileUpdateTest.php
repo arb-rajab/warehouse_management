@@ -12,13 +12,13 @@ use Illuminate\Support\Facades\Notification;
  */
 function updateProfile(StoreUser $user, array $data)
 {
-    return test()->withToken(storeApiToken($user))->postJson('/temp/api/v2/profile/update', $data);
+    return test()->withToken(storeApiToken($user))->postJson('/temp/api/v1/profile/update', $data);
 }
 
 test('a profile update without a token is refused and changes nothing', function () {
     $user = createStoreUser('customer');
 
-    $this->postJson('/temp/api/v2/profile/update', ['name' => 'Hijacked'])->assertUnauthorized();
+    $this->postJson('/temp/api/v1/profile/update', ['name' => 'Hijacked'])->assertUnauthorized();
 
     expect($user->fresh()->name)->not->toBe('Hijacked');
 });

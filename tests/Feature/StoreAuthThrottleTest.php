@@ -10,9 +10,9 @@ use Illuminate\Support\Facades\RateLimiter;
  * had.
  */
 dataset('store auth entry points', [
-    'api social login' => ['post', '/temp/api/v2/auth/social-login'],
-    'api auth info' => ['post', '/temp/api/v2/auth/info'],
-    'api get user by access token' => ['post', '/temp/api/v2/get-user-by-access_token'],
+    'api social login' => ['post', '/temp/api/v1/auth/social-login'],
+    'api auth info' => ['post', '/temp/api/v1/auth/info'],
+    'api get user by access token' => ['post', '/temp/api/v1/get-user-by-access_token'],
     'web register' => ['post', '/temp/register'],
 ]);
 
@@ -34,15 +34,15 @@ test('one address being cut off does not cut off another', function (string $met
 
 test('the api sign-up allows five attempts per address in fifteen minutes', function () {
     foreach (range(1, 5) as $attempt) {
-        expect($this->postJson('/temp/api/v2/auth/signup', [])->status())->not->toBe(429);
+        expect($this->postJson('/temp/api/v1/auth/signup', [])->status())->not->toBe(429);
     }
 
-    $this->postJson('/temp/api/v2/auth/signup', [])->assertTooManyRequests();
-    expect($this->withServerVariables(['REMOTE_ADDR' => '10.7.0.2'])->postJson('/temp/api/v2/auth/signup', [])->status())->not->toBe(429);
+    $this->postJson('/temp/api/v1/auth/signup', [])->assertTooManyRequests();
+    expect($this->withServerVariables(['REMOTE_ADDR' => '10.7.0.2'])->postJson('/temp/api/v1/auth/signup', [])->status())->not->toBe(429);
 
     $this->travel(16)->minutes();
 
-    expect($this->postJson('/temp/api/v2/auth/signup', [])->status())->not->toBe(429);
+    expect($this->postJson('/temp/api/v1/auth/signup', [])->status())->not->toBe(429);
 });
 
 test('the sign-up limit is a named rate limiter and the hand-rolled middleware is gone', function () {

@@ -68,29 +68,29 @@ test('the API reference covers implemented routes with their actual authenticati
         'get /api/v1/cell-logs' => 'Warehouse · Audit logs',
         'get /api/v1/cell-verification-rounds' => 'Warehouse · Audit logs',
         'post /api/v1/cell-verification-reports' => 'Warehouse · Audit logs',
-        'post /temp/api/v2/auth/login' => 'Store · Authentication',
-        'post /temp/api/v2/auth/password/forget_request' => 'Store · Authentication',
-        'post /temp/api/v2/get-user-by-access_token' => 'Store · Authentication',
-        'get /temp/api/v2/products' => 'Store · Catalogue',
-        'get /temp/api/v2/categories' => 'Store · Catalogue',
-        'get /temp/api/v2/shops' => 'Store · Catalogue',
-        'post /temp/api/v2/order/store' => 'Store · Orders',
-        'post /temp/api/v2/carts/add' => 'Store · Orders',
-        'get /temp/api/v2/purchase-history' => 'Store · Orders',
-        'post /temp/api/v2/payments/pay/cod' => 'Store · Orders',
-        'get /temp/api/v2/wallet/balance' => 'Store · Orders',
-        'get /temp/api/v2/user/shipping/address' => 'Store · Customers',
-        'get /temp/api/v2/customer/info' => 'Store · Customers',
-        'post /temp/api/v2/profile/update' => 'Store · Customers',
-        'get /temp/api/v2/representatives/get-customers' => 'Store · Customers',
-        'get /temp/api/v2/seller/products/all' => 'Store · Sellers',
-        'get /temp/api/v2/seller/orders' => 'Store · Sellers',
-        'get /temp/api/v2/trips/get-active-trip' => 'Store · Delivery & Trips',
-        'get /temp/api/v2/driver/notifications' => 'Store · Delivery & Trips',
-        'get /temp/api/v2/delivery-boy/dashboard-summary/{id}' => 'Store · Delivery & Trips',
+        'post /temp/api/v1/auth/login' => 'Store · Authentication',
+        'post /temp/api/v1/auth/password/forget_request' => 'Store · Authentication',
+        'post /temp/api/v1/get-user-by-access_token' => 'Store · Authentication',
+        'get /temp/api/v1/products' => 'Store · Catalogue',
+        'get /temp/api/v1/categories' => 'Store · Catalogue',
+        'get /temp/api/v1/shops' => 'Store · Catalogue',
+        'post /temp/api/v1/order/store' => 'Store · Orders',
+        'post /temp/api/v1/carts/add' => 'Store · Orders',
+        'get /temp/api/v1/purchase-history' => 'Store · Orders',
+        'post /temp/api/v1/payments/pay/cod' => 'Store · Orders',
+        'get /temp/api/v1/wallet/balance' => 'Store · Orders',
+        'get /temp/api/v1/user/shipping/address' => 'Store · Customers',
+        'get /temp/api/v1/customer/info' => 'Store · Customers',
+        'post /temp/api/v1/profile/update' => 'Store · Customers',
+        'get /temp/api/v1/representatives/get-customers' => 'Store · Customers',
+        'get /temp/api/v1/seller/products/all' => 'Store · Sellers',
+        'get /temp/api/v1/seller/orders' => 'Store · Sellers',
+        'get /temp/api/v1/trips/get-active-trip' => 'Store · Delivery & Trips',
+        'get /temp/api/v1/driver/notifications' => 'Store · Delivery & Trips',
+        'get /temp/api/v1/delivery-boy/dashboard-summary/{id}' => 'Store · Delivery & Trips',
         'get /temp/api/get-user-coordinates/{id}' => 'Store · Delivery & Trips',
-        'get /temp/api/v2/warehouse/products' => 'Store · Warehouse integration',
-        'get /temp/api/v2/warehouse/orders' => 'Store · Warehouse integration',
+        'get /temp/api/v1/warehouse/products' => 'Store · Warehouse integration',
+        'get /temp/api/v1/warehouse/orders' => 'Store · Warehouse integration',
     ] as $endpoint => $tag) {
         expect($operations[$normalizePath($endpoint)]['tags'])->toBe([$tag]);
     }
@@ -129,7 +129,7 @@ test('the API reference covers implemented routes with their actual authenticati
         'type' => 'apiKey', 'in' => 'header', 'name' => 'private-token',
     ]);
 
-    $login = $document['paths']['/temp/api/v2/auth/login']['post']['requestBody']['content']['application/json']['schema'];
+    $login = $document['paths']['/temp/api/v1/auth/login']['post']['requestBody']['content']['application/json']['schema'];
     expect($login['properties']['email']['type'])->toBe('string');
     expect($login['properties']['email'])->not->toHaveKey('format');
     expect($login['required'])->toEqualCanonicalizing(['email', 'password', 'login_by']);
@@ -145,7 +145,7 @@ test('the API reference covers implemented routes with their actual authenticati
 
         return $schema;
     };
-    $products = $resolveSchema($document['paths']['/temp/api/v2/products']['get']['responses']['200']['content']['application/json']['schema']);
+    $products = $resolveSchema($document['paths']['/temp/api/v1/products']['get']['responses']['200']['content']['application/json']['schema']);
     expect($products['properties'])->toHaveKeys(['data', 'links', 'meta', 'success', 'status']);
     expect($products['properties']['data']['type'])->toBe('array');
     expect(JsonResource::$wrap)->toBeNull();

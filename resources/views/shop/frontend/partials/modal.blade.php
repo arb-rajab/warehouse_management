@@ -41,7 +41,7 @@
             </div>
             <div class="modal-body">
                 {{-- auction_product_bids.store was never wired up as a named
-                     web route in either app (see app/Http/Controllers/Api/V2/
+                     web route in either app (see app/Http/Controllers/Api/V1/
                      AuctionProductBidController -- the only backing route is
                      the JSON API's auction/place-bid, not this web form), so
                      route() here always threw and 500'd this always-included

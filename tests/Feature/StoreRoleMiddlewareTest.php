@@ -107,7 +107,7 @@ test('the app ban gate answers a banned user with a 403 and revokes the token th
     // Noise: another customer's token must survive.
     $bystanderToken = storeApiToken(createStoreUser('customer'));
 
-    $this->withToken($token)->getJson('/temp/api/v2/wallet/history')
+    $this->withToken($token)->getJson('/temp/api/v1/wallet/history')
         ->assertForbidden()
         ->assertJsonPath('result', false)
         ->assertJsonPath('result_key', 'banned');
@@ -117,12 +117,12 @@ test('the app ban gate answers a banned user with a 403 and revokes the token th
     // A real request is a fresh process; the test app would keep the guard's user.
     app('auth')->forgetGuards();
 
-    $this->withToken($token)->getJson('/temp/api/v2/wallet/history')->assertUnauthorized();
-    expect($this->withToken($bystanderToken)->getJson('/temp/api/v2/wallet/history')->status())->not->toBe(403);
+    $this->withToken($token)->getJson('/temp/api/v1/wallet/history')->assertUnauthorized();
+    expect($this->withToken($bystanderToken)->getJson('/temp/api/v1/wallet/history')->status())->not->toBe(403);
 });
 
 test('the app ban gate lets an unbanned user through', function () {
-    $response = $this->withToken(storeApiToken(createStoreUser('customer')))->getJson('/temp/api/v2/wallet/history');
+    $response = $this->withToken(storeApiToken(createStoreUser('customer')))->getJson('/temp/api/v1/wallet/history');
 
     expect($response->status())->not->toBe(403)
         ->and($response->json('result_key'))->toBeNull();

@@ -29,7 +29,7 @@ function storeUserWithCode(string $email, ?string $phone = null): array
 
 function confirmReset(array $data): TestResponse
 {
-    return test()->postJson('/temp/api/v2/auth/password/confirm_reset', $data + ['password' => 'hacked-password1']);
+    return test()->postJson('/temp/api/v1/auth/password/confirm_reset', $data + ['password' => 'hacked-password1']);
 }
 
 test('confirm_reset needs the account as well as the code', function () {
@@ -117,18 +117,18 @@ test('guessing a reset code is cut off across addresses too, and anonymous calle
 
     foreach (range(1, 10) as $address) {
         $this->withServerVariables(['REMOTE_ADDR' => "10.9.0.$address"])
-            ->postJson('/temp/api/v2/auth/password/confirm_reset', ['email_or_phone' => 'victim@example.com', 'verification_code' => wrongCode($code), 'password' => 'hacked-password1'])
+            ->postJson('/temp/api/v1/auth/password/confirm_reset', ['email_or_phone' => 'victim@example.com', 'verification_code' => wrongCode($code), 'password' => 'hacked-password1'])
             ->assertNotFound();
     }
 
     $this->withServerVariables(['REMOTE_ADDR' => '10.9.0.99'])
-        ->postJson('/temp/api/v2/auth/password/confirm_reset', ['email_or_phone' => 'victim@example.com', 'verification_code' => $code, 'password' => 'hacked-password1'])
+        ->postJson('/temp/api/v1/auth/password/confirm_reset', ['email_or_phone' => 'victim@example.com', 'verification_code' => $code, 'password' => 'hacked-password1'])
         ->assertTooManyRequests();
 
     // Requests naming no account share no per-account key: ten addresses, none limited.
     foreach (range(1, 10) as $address) {
         $this->withServerVariables(['REMOTE_ADDR' => "10.8.0.$address"])
-            ->postJson('/temp/api/v2/auth/password/confirm_reset', [])
+            ->postJson('/temp/api/v1/auth/password/confirm_reset', [])
             ->assertUnprocessable();
     }
 });

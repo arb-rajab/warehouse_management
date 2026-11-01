@@ -92,13 +92,13 @@ test('the app\'s receipt list carries signed links, and the QR endpoint needs it
     $rep = repUser();
     $id = receiptFor($rep);
 
-    $item = $this->withToken(storeApiToken($rep))->getJson('/temp/api/v2/representatives/payments/index')->assertOk()->json('data.0');
+    $item = $this->withToken(storeApiToken($rep))->getJson('/temp/api/v1/representatives/payments/index')->assertOk()->json('data.0');
 
     expect(URL::hasValidSignature(Request::create($item['pdf_url'])))->toBeTrue()
         ->and(URL::hasValidSignature(Request::create($item['qr'])))->toBeTrue();
 
     $this->get($item['qr'])->assertOk();
-    $this->get("/temp/api/v2/representatives/payments/generate-qr?id=$id")->assertForbidden();
+    $this->get("/temp/api/v1/representatives/payments/generate-qr?id=$id")->assertForbidden();
 });
 
 test('the mobile API changes the note of the representative own visit only', function () {
@@ -107,11 +107,11 @@ test('the mobile API changes the note of the representative own visit only', fun
     $customer = createStoreUser('customer');
     $visit = Visit::create(['rep_id' => $owner->id, 'customer_id' => $customer->id, 'note' => 'original']);
 
-    $this->withToken(storeApiToken($stranger))->postJson('/temp/api/v2/representatives/visit-note', ['visit_id' => $visit->id, 'note' => 'hijacked'])->assertNotFound();
+    $this->withToken(storeApiToken($stranger))->postJson('/temp/api/v1/representatives/visit-note', ['visit_id' => $visit->id, 'note' => 'hijacked'])->assertNotFound();
     expect($visit->fresh()->note)->toBe('original');
 
     app('auth')->forgetGuards();
-    $this->withToken(storeApiToken($owner))->postJson('/temp/api/v2/representatives/visit-note', ['visit_id' => $visit->id, 'note' => 'mine'])->assertOk();
+    $this->withToken(storeApiToken($owner))->postJson('/temp/api/v1/representatives/visit-note', ['visit_id' => $visit->id, 'note' => 'mine'])->assertOk();
     expect($visit->fresh()->note)->toBe('mine');
 
 });

@@ -1,0 +1,93 @@
+<?php
+
+namespace App\Http\Resources\V1;
+
+use App\Support\ApiResourceLabel;
+use Carbon\Carbon;
+use Illuminate\Http\Resources\Json\ResourceCollection;
+
+class PurchaseHistoryItemsCollection extends ResourceCollection
+{
+    public function toArray($request)
+    {
+        return [
+            'data' => $this->collection->map(function ($data) {
+
+                $refund_section = false;
+                $refund_button = false;
+                $refund_label = "";
+                $refund_request_status = 99;
+                if (addon_is_activated('refund_request')) {
+                    $refund_section = true;
+                    $no_of_max_day = get_setting('refund_request_time');
+                    $last_refund_date = ($data->created_at ?? Carbon::now())->copy()->addDays((int) $no_of_max_day);
+                    $today_date = Carbon::now();
+                    if ($data->product != null &&
+                        $data->product->refundable != 0 &&
+                        $data->refund_request == null &&
+                        $today_date <= $last_refund_date &&
+                        $data->payment_status == 'paid' &&
+                        $data->delivery_status == 'delivered') {
+                        $refund_button = true;
+                    } else if ($data->refund_request != null && $data->refund_request->refund_status == 0) {
+                        $refund_label = __('storefront.status.pending');
+                        $refund_request_status = $data->refund_request->refund_status;
+                    } else if ($data->refund_request != null && $data->refund_request->refund_status == 2) {
+                        $refund_label = __('storefront.common.rejected');
+                        $refund_request_status = $data->refund_request->refund_status;
+                    } else if ($data->refund_request != null && $data->refund_request->refund_status == 1) {
+                        $refund_label = __('storefront.common.approved');
+                        $refund_request_status = $data->refund_request->refund_status;
+                    } else if ($data->product?->refundable != 0) {
+                        $refund_label = __('api_resources.payment.not_applicable');
+                    } else {
+                        $refund_label = __('storefront.common.non_refundable');
+                    }
+                }
+
+                $decodedData = json_decode($data->variation_qty, true) ?? [];
+                        // convert to array of objects
+                        $transformedData = [];
+                        foreach ($decodedData as $name => $quantity) {
+                            $transformedData[] = [
+                                'name' => $name,
+                                'quantity' => $quantity, // Assuming you want to divide the quantity by 2, adjust as needed
+                            ];
+                        }
+
+                return [
+                    'id' => $data->id,
+                    'product_id' => $data->product?->id ?? $data->product_id,
+                    'product_name' => $data->product?->getTranslation('name') ?? '',
+                    'mat_id' => $data->product?->mat_id,
+                    'variation' => $data->variation,
+                    'variation_quantities' => $transformedData,
+                    'price' => format_price($data->price),
+                    'tax' => format_price($data->tax),
+                    'item_notes' => $data->item_notes,
+                    'shipping_cost' => format_price($data->shipping_cost),
+                    // order_details has no coupon_discount column: a coupon's
+                    // discount is recorded on the order.
+                    'coupon_discount' => format_price($data->coupon_discount ?? 0),
+                    'quantity' => (int)$data->quantity,
+                    'payment_status' => $data->payment_status,
+                    'payment_status_string' => ApiResourceLabel::status($data->payment_status),
+                    'delivery_status' => $data->delivery_status,
+                    'delivery_status_string' => ApiResourceLabel::deliveryStatus($data->delivery_status),
+                    'refund_section' => $refund_section,
+                    'refund_button' => $refund_button,
+                    'refund_label' => $refund_label,
+                    'refund_request_status' => $refund_request_status,
+                ];
+            }),
+        ];
+    }
+
+    public function with($request)
+    {
+        return [
+            'success' => true,
+            'status' => 200,
+        ];
+    }
+}

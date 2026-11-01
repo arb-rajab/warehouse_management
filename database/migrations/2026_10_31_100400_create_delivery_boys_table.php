@@ -9,7 +9,7 @@ return new class extends Migration
     /**
      * Run the migrations.
      *
-     * The delivery boy profile with running totals (`Api\V2\DeliveryBoyController`).
+     * The delivery boy profile with running totals (`Api\V1\DeliveryBoyController`).
      *
      * Skipped when the table exists: the store's own database already has it.
      * No earlier migration created it, so a database built from migrations

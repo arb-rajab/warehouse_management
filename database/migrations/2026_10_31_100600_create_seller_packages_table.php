@@ -9,7 +9,7 @@ return new class extends Migration
     /**
      * Run the migrations.
      *
-     * Seller subscription packages (`Api\V2\Seller\SellerPackageController`).
+     * Seller subscription packages (`Api\V1\Seller\SellerPackageController`).
      *
      * Skipped when the table exists: the store's own database already has it.
      * No earlier migration created it, so a database built from migrations

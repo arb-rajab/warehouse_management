@@ -19,7 +19,7 @@ use Illuminate\Support\Facades\Route;
  *
  * The first block pins the values the eager loads feed (prices through taxes,
  * translated names, offered products); the last test drives every GET route
- * of /temp/api/v2 as each kind of caller and fails on any strict-mode
+ * of /temp/api/v1 as each kind of caller and fails on any strict-mode
  * exception, so a route added later is covered without a test of its own.
  */
 
@@ -58,7 +58,7 @@ test('every store catalogue list builds for two or more products, from the cache
     $this->withToken(storeApiToken($store['customer']))->withHeader('App-Language', 'sa');
 
     foreach (['first', 'cached'] as $request) {
-        $response = $this->getJson("/temp/api/v2/$uri")->assertOk();
+        $response = $this->getJson("/temp/api/v1/$uri")->assertOk();
 
         expect($response->json('data'))->toHaveCount($count);
         $product = collect($response->json('data'))->firstWhere('id', $store['products'][1]->id);
@@ -75,7 +75,7 @@ test("a product's offer lists both offered products with their taxed, discounted
     $store = strictApiStore();
 
     $offer = $this->withToken(storeApiToken($store['customer']))->withHeader('App-Language', 'sa')
-        ->getJson('/temp/api/v2/products')->assertOk()
+        ->getJson('/temp/api/v1/products')->assertOk()
         ->collect('data')->firstWhere('id', $store['products'][0]->id)['offers'];
 
     expect($offer['title'])->toBe('Deal')
@@ -91,10 +91,10 @@ test("a product's offer sends its banner, from the list and from the detail", fu
     $upload = DB::table('uploads')->insertGetId(['file_name' => 'uploads/all/banner.png']);
     $request = $this->withToken(storeApiToken($store['customer']))->withHeader('App-Language', 'sa');
 
-    $without = $request->getJson('/temp/api/v2/products')->assertOk()->collect('data')->firstWhere('id', $productId)['offers'];
+    $without = $request->getJson('/temp/api/v1/products')->assertOk()->collect('data')->firstWhere('id', $productId)['offers'];
     DB::table('offers')->update(['banner' => (string) $upload]);
-    $list = $request->getJson('/temp/api/v2/products')->assertOk()->collect('data')->firstWhere('id', $productId)['offers'];
-    $detail = $request->getJson("/temp/api/v2/products/$productId")->assertOk()->json('data.0.offers');
+    $list = $request->getJson('/temp/api/v1/products')->assertOk()->collect('data')->firstWhere('id', $productId)['offers'];
+    $detail = $request->getJson("/temp/api/v1/products/$productId")->assertOk()->json('data.0.offers');
 
     expect($without)->not->toHaveKey('banner')
         ->and($list['banner'])->toBe(uploaded_asset($upload))->toContain('banner.png')
@@ -108,12 +108,12 @@ test('category, brand and sub-category lists carry their Arabic names, from the 
 
     foreach (['first', 'cached'] as $request) {
         foreach (['categories/featured', 'categories/home', 'categories/top', 'filter/categories'] as $path) {
-            expect($this->getJson("/temp/api/v2/$path")->assertOk()->json('data.*.name'))->toContain('Snacks ar', 'Drinks ar');
+            expect($this->getJson("/temp/api/v1/$path")->assertOk()->json('data.*.name'))->toContain('Snacks ar', 'Drinks ar');
         }
-        expect($this->getJson('/temp/api/v2/categories')->assertOk()->json('data.*.name'))->toContain('Snacks ar', 'Drinks ar')
-            ->and($this->getJson("/temp/api/v2/sub-categories/{$store['categories'][0]}")->assertOk()->json('data'))->toHaveCount(1);
+        expect($this->getJson('/temp/api/v1/categories')->assertOk()->json('data.*.name'))->toContain('Snacks ar', 'Drinks ar')
+            ->and($this->getJson("/temp/api/v1/sub-categories/{$store['categories'][0]}")->assertOk()->json('data'))->toHaveCount(1);
         foreach (['brands', 'brands/top', 'filter/brands'] as $path) {
-            expect($this->getJson("/temp/api/v2/$path")->assertOk()->json('data.*.name'))->toContain('Acme ar', 'Zed ar');
+            expect($this->getJson("/temp/api/v1/$path")->assertOk()->json('data.*.name'))->toContain('Acme ar', 'Zed ar');
         }
     }
 });
@@ -121,7 +121,7 @@ test('category, brand and sub-category lists carry their Arabic names, from the 
 test('flash deals list their first products with taxed prices', function () {
     $store = strictApiStore();
 
-    $deals = $this->getJson('/temp/api/v2/flash-deals')->assertOk()->json('data');
+    $deals = $this->getJson('/temp/api/v1/flash-deals')->assertOk()->json('data');
 
     expect($deals)->toHaveCount(2)
         ->and($deals[0]['products']['data'])->toHaveCount(5)
@@ -132,16 +132,16 @@ test("a customer's wishlist, addresses, purchase history and chats list every re
     $store = strictApiStore();
     $this->withToken(storeApiToken($store['customer']));
 
-    expect($this->getJson('/temp/api/v2/wishlists')->assertOk()->json('data'))->toHaveCount(5)
-        ->and($this->getJson('/temp/api/v2/user/shipping/address')->assertOk()->json('data.*.address'))->toBe(['A1', 'A2'])
-        ->and($this->getJson("/temp/api/v2/purchase-history-items/{$store['orders'][0]->id}")->assertOk()->json('data'))->toHaveCount(3)
-        ->and($this->getJson('/temp/api/v2/purchase-history')->assertOk()->json('data'))->toHaveCount(6)
-        ->and($this->getJson('/temp/api/v2/chat/conversations')->assertOk()->json('data'))->toHaveCount(2)
-        ->and($this->getJson('/temp/api/v2/refund-request/get-list')->assertOk()->json('data'))->toHaveCount(2)
-        ->and($this->getJson('/temp/api/v2/clubpoint/get-list')->assertOk()->json('data.*.convertible_club_point'))->toBe([5, 5]);
+    expect($this->getJson('/temp/api/v1/wishlists')->assertOk()->json('data'))->toHaveCount(5)
+        ->and($this->getJson('/temp/api/v1/user/shipping/address')->assertOk()->json('data.*.address'))->toBe(['A1', 'A2'])
+        ->and($this->getJson("/temp/api/v1/purchase-history-items/{$store['orders'][0]->id}")->assertOk()->json('data'))->toHaveCount(3)
+        ->and($this->getJson('/temp/api/v1/purchase-history')->assertOk()->json('data'))->toHaveCount(6)
+        ->and($this->getJson('/temp/api/v1/chat/conversations')->assertOk()->json('data'))->toHaveCount(2)
+        ->and($this->getJson('/temp/api/v1/refund-request/get-list')->assertOk()->json('data'))->toHaveCount(2)
+        ->and($this->getJson('/temp/api/v1/clubpoint/get-list')->assertOk()->json('data.*.convertible_club_point'))->toBe([5, 5]);
 
     $conversation = DB::table('conversations')->value('id');
-    expect($this->getJson("/temp/api/v2/chat/messages/$conversation")->assertOk()->json('data'))->toHaveCount(2);
+    expect($this->getJson("/temp/api/v1/chat/messages/$conversation")->assertOk()->json('data'))->toHaveCount(2);
 });
 
 test("a delivery boy's lists, earnings and order items carry every order", function () {
@@ -150,34 +150,34 @@ test("a delivery boy's lists, earnings and order items carry every order", funct
     $this->withToken(storeApiToken($store['deliveryBoy']));
 
     foreach (['assigned' => 2, 'picked_up' => 1, 'on_the_way' => 1, 'completed' => 1, 'cancelled' => 1] as $list => $count) {
-        expect($this->getJson("/temp/api/v2/delivery-boy/deliveries/$list/$id")->assertOk()->json('data'))->toHaveCount($count);
+        expect($this->getJson("/temp/api/v1/delivery-boy/deliveries/$list/$id")->assertOk()->json('data'))->toHaveCount($count);
     }
-    expect($this->getJson("/temp/api/v2/delivery-boy/earning/$id")->assertOk()->json('data'))->toHaveCount(6)
-        ->and($this->getJson("/temp/api/v2/delivery-boy/purchase-history-items/{$store['orders'][0]->id}")->assertOk()->json('data'))->toHaveCount(3);
+    expect($this->getJson("/temp/api/v1/delivery-boy/earning/$id")->assertOk()->json('data'))->toHaveCount(6)
+        ->and($this->getJson("/temp/api/v1/delivery-boy/purchase-history-items/{$store['orders'][0]->id}")->assertOk()->json('data'))->toHaveCount(3);
 });
 
 test("a seller's orders, coupons, products, commissions and conversations carry every record", function () {
     $store = strictApiStore();
     $this->withToken(storeApiToken($store['seller']));
 
-    expect($this->getJson("/temp/api/v2/seller/orders/details/{$store['orders'][0]->id}")->assertOk()->json('data.0.order_items'))->toHaveCount(3)
-        ->and($this->getJson('/temp/api/v2/seller/coupon/all')->assertOk()->json('data.0.details'))->toBeString()
-        ->and(json_decode($this->getJson('/temp/api/v2/seller/coupon/all')->json('data.0.details'), true)['data'])->toHaveCount(2)
-        ->and($this->getJson('/temp/api/v2/seller/commission-list')->assertOk()->json('data'))->toHaveCount(6)
-        ->and($this->getJson('/temp/api/v2/seller/dashboard/top-12-product')->assertOk()->json('data'))->toHaveCount(1)
-        ->and($this->getJson('/temp/api/v2/seller/conversations')->assertOk()->json('data'))->toHaveCount(1);
+    expect($this->getJson("/temp/api/v1/seller/orders/details/{$store['orders'][0]->id}")->assertOk()->json('data.0.order_items'))->toHaveCount(3)
+        ->and($this->getJson('/temp/api/v1/seller/coupon/all')->assertOk()->json('data.0.details'))->toBeString()
+        ->and(json_decode($this->getJson('/temp/api/v1/seller/coupon/all')->json('data.0.details'), true)['data'])->toHaveCount(2)
+        ->and($this->getJson('/temp/api/v1/seller/commission-list')->assertOk()->json('data'))->toHaveCount(6)
+        ->and($this->getJson('/temp/api/v1/seller/dashboard/top-12-product')->assertOk()->json('data'))->toHaveCount(1)
+        ->and($this->getJson('/temp/api/v1/seller/conversations')->assertOk()->json('data'))->toHaveCount(1);
 
-    $categories = $this->getJson('/temp/api/v2/seller/dashboard/category-wise-products')->assertOk()->json();
+    $categories = $this->getJson('/temp/api/v1/seller/dashboard/category-wise-products')->assertOk()->json();
     expect(collect($categories)->pluck('cnt_product', 'name')->all())->toBe(['Drinks' => 1])
-        ->and($this->getJson('/temp/api/v2/seller/refunds')->assertOk()->json('data'))->toHaveCount(2);
+        ->and($this->getJson('/temp/api/v1/seller/refunds')->assertOk()->json('data'))->toHaveCount(2);
 });
 
 test("a driver's active trip and history carry every checkpoint", function () {
     $store = strictApiStore();
     $this->withToken(storeApiToken($store['driver']));
 
-    $active = $this->getJson('/temp/api/v2/trips/get-active-trip')->assertOk()->json('data');
-    $history = $this->getJson('/temp/api/v2/trips/get-trips-history')->assertOk()->json('data');
+    $active = $this->getJson('/temp/api/v1/trips/get-active-trip')->assertOk()->json('data');
+    $history = $this->getJson('/temp/api/v1/trips/get-trips-history')->assertOk()->json('data');
 
     expect($active['checkpoints'])->toHaveCount(3)
         ->and(collect($active['checkpoints'])->pluck('order.order_details')->filter()->first())->toHaveCount(3)
@@ -209,9 +209,9 @@ test('an order of several cart lines is placed, brand offers included', function
     $before = Order::count();
     $this->withToken(storeApiToken($user));
 
-    $this->getJson('/temp/api/v2/payment-types')->assertOk();
-    $this->postJson('/temp/api/v2/carts')->assertOk();
-    $this->postJson('/temp/api/v2/payments/pay/cod', ['payment_type' => 'cash_on_delivery'])
+    $this->getJson('/temp/api/v1/payment-types')->assertOk();
+    $this->postJson('/temp/api/v1/carts')->assertOk();
+    $this->postJson('/temp/api/v1/payments/pay/cod', ['payment_type' => 'cash_on_delivery'])
         ->assertOk()
         ->assertJsonPath('result', true);
 
@@ -277,7 +277,7 @@ test('no GET route of the store API trips Eloquent strict mode for any kind of c
 
         foreach (Route::getRoutes() as $route) {
             $uri = $route->uri();
-            if (! str_starts_with($uri, 'temp/api/v2/') || ! in_array('GET', $route->methods(), true) || preg_match($skipped, $uri)) {
+            if (! str_starts_with($uri, 'temp/api/v1/') || ! in_array('GET', $route->methods(), true) || preg_match($skipped, $uri)) {
                 continue;
             }
             $id = str_contains($uri, 'delivery-boy/') ? $store['deliveryBoy']->id : 1;

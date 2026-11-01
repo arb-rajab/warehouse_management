@@ -579,7 +579,7 @@ test('API bKash: the unauthenticated process endpoint is gone', function () {
     $victim = gatewayCustomer(0);
 
     // No route takes a POST there any more (another route's path answers 405 for it).
-    expect($this->postJson('/temp/api/v2/bkash/api/process', ['payment_type' => 'wallet_payment', 'user_id' => $victim->id, 'amount' => 1000])->getStatusCode())->toBeIn([404, 405]);
+    expect($this->postJson('/temp/api/v1/bkash/api/process', ['payment_type' => 'wallet_payment', 'user_id' => $victim->id, 'amount' => 1000])->getStatusCode())->toBeIn([404, 405]);
 
     expect((float) $victim->fresh()->balance)->toBe(0.0);
 });
@@ -587,7 +587,7 @@ test('API bKash: the unauthenticated process endpoint is gone', function () {
 test('API bKash: reporting a payment needs a signed-in account', function () {
     $combined = unpaidGatewayOrder(gatewayCustomer(), 30);
 
-    $this->postJson('/temp/api/v2/bkash/api/success', ['payment_type' => 'cart_payment', 'combined_order_id' => $combined->id, 'payment_id' => 'PAY-1'])->assertUnauthorized();
+    $this->postJson('/temp/api/v1/bkash/api/success', ['payment_type' => 'cart_payment', 'combined_order_id' => $combined->id, 'payment_id' => 'PAY-1'])->assertUnauthorized();
 
     expectOrderUnpaid($combined);
 });
@@ -598,7 +598,7 @@ test('API bKash: a payment bKash has not completed pays nothing', function () {
     fakeBkash(['statusMessage' => 'Not executed', 'amount' => '30']);
 
     $this->withToken(storeApiToken($customer))
-        ->postJson('/temp/api/v2/bkash/api/success', ['payment_type' => 'cart_payment', 'combined_order_id' => $combined->id, 'payment_id' => 'PAY-1']);
+        ->postJson('/temp/api/v1/bkash/api/success', ['payment_type' => 'cart_payment', 'combined_order_id' => $combined->id, 'payment_id' => 'PAY-1']);
 
     expectOrderUnpaid($combined);
 });
@@ -608,7 +608,7 @@ test('API bKash: a completed payment reported for another account\'s order pays 
     fakeBkash(['statusCode' => '0000', 'transactionStatus' => 'Completed', 'amount' => '30']);
 
     $this->withToken(storeApiToken(gatewayCustomer()))
-        ->postJson('/temp/api/v2/bkash/api/success', ['payment_type' => 'cart_payment', 'combined_order_id' => $other->id, 'payment_id' => 'PAY-2', 'user_id' => $other->user_id]);
+        ->postJson('/temp/api/v1/bkash/api/success', ['payment_type' => 'cart_payment', 'combined_order_id' => $other->id, 'payment_id' => 'PAY-2', 'user_id' => $other->user_id]);
 
     expectOrderUnpaid($other);
 });
@@ -619,8 +619,8 @@ test('API bKash: a completed payment pays the signed-in customer\'s order once',
     fakeBkash(['statusCode' => '0000', 'transactionStatus' => 'Completed', 'amount' => '30']);
     $request = ['payment_type' => 'cart_payment', 'combined_order_id' => $combined->id, 'payment_id' => 'PAY-1'];
 
-    $this->withToken(storeApiToken($customer))->postJson('/temp/api/v2/bkash/api/success', $request)->assertJsonPath('result', true);
-    $this->withToken(storeApiToken($customer))->postJson('/temp/api/v2/bkash/api/success', $request);
+    $this->withToken(storeApiToken($customer))->postJson('/temp/api/v1/bkash/api/success', $request)->assertJsonPath('result', true);
+    $this->withToken(storeApiToken($customer))->postJson('/temp/api/v1/bkash/api/success', $request);
 
     expectOrderPaidOnce($combined);
 });
@@ -630,7 +630,7 @@ test('API bKash: begin prices the signed-in customer\'s own order, not someone e
     $other = unpaidGatewayOrder(gatewayCustomer(), 30);
 
     $this->withToken(storeApiToken($customer))
-        ->getJson('/temp/api/v2/bkash/begin?'.http_build_query(['payment_type' => 'cart_payment', 'combined_order_id' => $other->id]))
+        ->getJson('/temp/api/v1/bkash/begin?'.http_build_query(['payment_type' => 'cart_payment', 'combined_order_id' => $other->id]))
         ->assertJsonPath('result', false);
 });
 
@@ -640,7 +640,7 @@ test('API Nagad: the unauthenticated process endpoint is gone', function () {
     $combined = unpaidGatewayOrder(gatewayCustomer(), 30);
 
     // No route takes a POST there any more (another route's path answers 405 for it).
-    expect($this->postJson('/temp/api/v2/nagad/process', ['payment_type' => 'cart_payment', 'combined_order_id' => $combined->id])->getStatusCode())->toBeIn([404, 405]);
+    expect($this->postJson('/temp/api/v1/nagad/process', ['payment_type' => 'cart_payment', 'combined_order_id' => $combined->id])->getStatusCode())->toBeIn([404, 405]);
 
     expectOrderUnpaid($combined);
 });
@@ -649,7 +649,7 @@ test('API Nagad: begin records nothing for another account\'s order', function (
     $other = unpaidGatewayOrder(gatewayCustomer(), 30);
 
     $this->withToken(storeApiToken(gatewayCustomer()))
-        ->getJson('/temp/api/v2/nagad/begin?'.http_build_query(['payment_type' => 'cart_payment', 'combined_order_id' => $other->id]))
+        ->getJson('/temp/api/v1/nagad/begin?'.http_build_query(['payment_type' => 'cart_payment', 'combined_order_id' => $other->id]))
         ->assertJsonPath('result', false);
 
     expect(GatewayPayment::count())->toBe(0);
@@ -661,7 +661,7 @@ test('API Nagad: a payment for an order begin() did not record pays nothing', fu
     app(GatewayPaymentService::class)->begin('nagad', 'Inv-1', $customer->id, 'cart_payment', $combined->id, null, 30);
     fakeNagadVerify('Inv-UNKNOWN', 'NREF-1', '30');
 
-    $this->getJson('/temp/api/v2/nagad/verify/cart_payment?payment_ref_id=NREF-1')->assertJsonPath('result', false);
+    $this->getJson('/temp/api/v1/nagad/verify/cart_payment?payment_ref_id=NREF-1')->assertJsonPath('result', false);
 
     expectOrderUnpaid($combined);
 });
@@ -672,7 +672,7 @@ test('API Nagad: a payment for less than begin() recorded pays nothing', functio
     app(GatewayPaymentService::class)->begin('nagad', 'Inv-1', $customer->id, 'cart_payment', $combined->id, null, 30);
     fakeNagadVerify('Inv-1', 'NREF-1', '1');
 
-    $this->getJson('/temp/api/v2/nagad/verify/cart_payment?payment_ref_id=NREF-1')->assertJsonPath('result', false);
+    $this->getJson('/temp/api/v1/nagad/verify/cart_payment?payment_ref_id=NREF-1')->assertJsonPath('result', false);
 
     expectOrderUnpaid($combined);
 });
@@ -683,8 +683,8 @@ test('API Nagad: the payment begin() recorded is paid once', function () {
     app(GatewayPaymentService::class)->begin('nagad', 'Inv-1', $customer->id, 'cart_payment', $combined->id, null, 30);
     fakeNagadVerify('Inv-1', 'NREF-1', '30');
 
-    $this->getJson('/temp/api/v2/nagad/verify/cart_payment?payment_ref_id=NREF-1')->assertJsonPath('result', true);
-    $this->getJson('/temp/api/v2/nagad/verify/cart_payment?payment_ref_id=NREF-1')->assertJsonPath('result', false);
+    $this->getJson('/temp/api/v1/nagad/verify/cart_payment?payment_ref_id=NREF-1')->assertJsonPath('result', true);
+    $this->getJson('/temp/api/v1/nagad/verify/cart_payment?payment_ref_id=NREF-1')->assertJsonPath('result', false);
 
     expectOrderPaidOnce($combined);
 });
@@ -695,8 +695,8 @@ test('API SSLCommerz: begin needs a signed-in account and records nothing for an
     $other = unpaidGatewayOrder(gatewayCustomer(), 30);
     $query = '?'.http_build_query(['payment_type' => 'cart_payment', 'combined_order_id' => $other->id, 'user_id' => $other->user_id]);
 
-    $this->getJson('/temp/api/v2/sslcommerz/begin'.$query)->assertUnauthorized();
-    $this->withToken(storeApiToken(gatewayCustomer()))->getJson('/temp/api/v2/sslcommerz/begin'.$query)->assertJsonPath('result', false);
+    $this->getJson('/temp/api/v1/sslcommerz/begin'.$query)->assertUnauthorized();
+    $this->withToken(storeApiToken(gatewayCustomer()))->getJson('/temp/api/v1/sslcommerz/begin'.$query)->assertJsonPath('result', false);
 
     expect(GatewayPayment::count())->toBe(0);
 });
@@ -705,7 +705,7 @@ test('API SSLCommerz: a post for a transaction begin() did not record pays nothi
     $victim = gatewayCustomer(0);
     fakeSslcommerzValidation('AIZ-FORGED', '1000.00');
 
-    $this->post('/temp/api/v2/sslcommerz/success', sslcommerzPost('AIZ-FORGED', '1000.00', ['value_a' => (string) $victim->id, 'value_c' => 'wallet_payment', 'value_d' => '1000']))
+    $this->post('/temp/api/v1/sslcommerz/success', sslcommerzPost('AIZ-FORGED', '1000.00', ['value_a' => (string) $victim->id, 'value_c' => 'wallet_payment', 'value_d' => '1000']))
         ->assertJsonPath('result', false);
 
     expect((float) $victim->fresh()->balance)->toBe(0.0);
@@ -717,8 +717,8 @@ test('API SSLCommerz: a validated transaction pays what begin() recorded, once',
     app(GatewayPaymentService::class)->begin('sslcommerz', 'AIZ-1', $customer->id, 'cart_payment', $combined->id, null, 30);
     fakeSslcommerzValidation('AIZ-1', '30.00');
 
-    $this->post('/temp/api/v2/sslcommerz/success', sslcommerzPost('AIZ-1', '30.00'))->assertJsonPath('result', true);
-    $this->post('/temp/api/v2/sslcommerz/success', sslcommerzPost('AIZ-1', '30.00'))->assertJsonPath('result', false);
+    $this->post('/temp/api/v1/sslcommerz/success', sslcommerzPost('AIZ-1', '30.00'))->assertJsonPath('result', true);
+    $this->post('/temp/api/v1/sslcommerz/success', sslcommerzPost('AIZ-1', '30.00'))->assertJsonPath('result', false);
 
     expectOrderPaidOnce($combined);
 });
@@ -729,7 +729,7 @@ test('API SSLCommerz: a transaction the validation server does not confirm pays 
     app(GatewayPaymentService::class)->begin('sslcommerz', 'AIZ-1', $customer->id, 'cart_payment', $combined->id, null, 30);
     fakeSslcommerzValidation('AIZ-1', '30.00', 'FAILED');
 
-    $this->post('/temp/api/v2/sslcommerz/success', sslcommerzPost('AIZ-1', '30.00'))->assertJsonPath('result', false);
+    $this->post('/temp/api/v1/sslcommerz/success', sslcommerzPost('AIZ-1', '30.00'))->assertJsonPath('result', false);
 
     expectOrderUnpaid($combined);
 });
@@ -739,8 +739,8 @@ test('API SSLCommerz: a transaction the validation server does not confirm pays 
 test('API iyzico: starting and reporting a payment need a signed-in account', function () {
     $combined = unpaidGatewayOrder(gatewayCustomer(), 30);
 
-    $this->getJson('/temp/api/v2/iyzico/init?payment_type=cart_payment&combined_order_id='.$combined->id)->assertUnauthorized();
-    $this->postJson('/temp/api/v2/iyzico/success', ['payment_type' => 'cart_payment', 'combined_order_id' => $combined->id, 'token' => 'T'])->assertUnauthorized();
+    $this->getJson('/temp/api/v1/iyzico/init?payment_type=cart_payment&combined_order_id='.$combined->id)->assertUnauthorized();
+    $this->postJson('/temp/api/v1/iyzico/success', ['payment_type' => 'cart_payment', 'combined_order_id' => $combined->id, 'token' => 'T'])->assertUnauthorized();
 
     expectOrderUnpaid($combined);
 });
@@ -752,9 +752,9 @@ test('API iyzico: a payment iyzico reports for less, or for another account\'s o
     $token = storeApiToken($customer);
 
     fakeIyzico(['paid_price' => 1.0]);
-    $this->withToken($token)->postJson('/temp/api/v2/iyzico/success', ['payment_type' => 'cart_payment', 'combined_order_id' => $combined->id, 'token' => 'T-1'])
+    $this->withToken($token)->postJson('/temp/api/v1/iyzico/success', ['payment_type' => 'cart_payment', 'combined_order_id' => $combined->id, 'token' => 'T-1'])
         ->assertJsonPath('result', false);
-    $this->withToken($token)->postJson('/temp/api/v2/iyzico/success', ['payment_type' => 'cart_payment', 'combined_order_id' => $other->id, 'token' => 'T-2', 'user_id' => $other->user_id])
+    $this->withToken($token)->postJson('/temp/api/v1/iyzico/success', ['payment_type' => 'cart_payment', 'combined_order_id' => $other->id, 'token' => 'T-2', 'user_id' => $other->user_id])
         ->assertJsonPath('result', false);
 
     expectOrderUnpaid($combined);
@@ -767,8 +767,8 @@ test('API iyzico: a successful payment pays the signed-in customer\'s order once
     fakeIyzico(['paid_price' => 30.0]);
     $request = ['payment_type' => 'cart_payment', 'combined_order_id' => $combined->id, 'payment_details' => json_encode(['token' => 'T-1'])];
 
-    $this->withToken(storeApiToken($customer))->postJson('/temp/api/v2/iyzico/success', $request)->assertJsonPath('result', true);
-    $this->withToken(storeApiToken($customer))->postJson('/temp/api/v2/iyzico/success', $request)->assertJsonPath('result', false);
+    $this->withToken(storeApiToken($customer))->postJson('/temp/api/v1/iyzico/success', $request)->assertJsonPath('result', true);
+    $this->withToken(storeApiToken($customer))->postJson('/temp/api/v1/iyzico/success', $request)->assertJsonPath('result', false);
 
     expectOrderPaidOnce($combined);
 });
@@ -779,7 +779,7 @@ test('API iyzico: a package is priced from the database, not from the request', 
     fakeIyzico(['paid_price' => 1.0]);
 
     $this->withToken(storeApiToken($customer))
-        ->postJson('/temp/api/v2/iyzico/success', ['payment_type' => 'customer_package_payment', 'package_id' => $package->id, 'amount' => 1, 'token' => 'T-1'])
+        ->postJson('/temp/api/v1/iyzico/success', ['payment_type' => 'customer_package_payment', 'package_id' => $package->id, 'amount' => 1, 'token' => 'T-1'])
         ->assertJsonPath('result', false);
 
     expect($customer->fresh()->customer_package_id)->toBeNull();

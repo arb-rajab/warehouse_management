@@ -1,18 +1,18 @@
 <?php
 
 use App\Http\Middleware\WrapStoreApiResources;
-use App\Http\Resources\V2\ConversationCollection;
-use App\Http\Resources\V2\CustomerPackageResource;
-use App\Http\Resources\V2\DigitalProductDetailCollection;
-use App\Http\Resources\V2\PublicShopDetailsCollection;
-use App\Http\Resources\V2\PurchaseHistoryMiniCollection;
-use App\Http\Resources\V2\RefundRequestCollection;
-use App\Http\Resources\V2\Seller\CommissionHistoryResource;
-use App\Http\Resources\V2\Seller\SellerPackageResource;
-use App\Http\Resources\V2\Seller\SellerPaymentResource;
-use App\Http\Resources\V2\Seller\SellerWithdrawResource;
-use App\Http\Resources\V2\ShopDetailsCollection;
-use App\Http\Resources\V2\WalletCollection;
+use App\Http\Resources\V1\ConversationCollection;
+use App\Http\Resources\V1\CustomerPackageResource;
+use App\Http\Resources\V1\DigitalProductDetailCollection;
+use App\Http\Resources\V1\PublicShopDetailsCollection;
+use App\Http\Resources\V1\PurchaseHistoryMiniCollection;
+use App\Http\Resources\V1\RefundRequestCollection;
+use App\Http\Resources\V1\Seller\CommissionHistoryResource;
+use App\Http\Resources\V1\Seller\SellerPackageResource;
+use App\Http\Resources\V1\Seller\SellerPaymentResource;
+use App\Http\Resources\V1\Seller\SellerWithdrawResource;
+use App\Http\Resources\V1\ShopDetailsCollection;
+use App\Http\Resources\V1\WalletCollection;
 use App\Models\CustomerPackage;
 use App\Models\CustomerPackageTranslation;
 use App\Models\SellerPackage;
