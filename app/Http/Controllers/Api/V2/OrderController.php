@@ -86,12 +86,26 @@ class OrderController extends Controller
 
         $cartItems = Cart::where('user_id', auth()->user()->id)->get();
 
-        if ($cartItems->isNotEmpty() && ! Address::where('id', $cartItems->first()->address_id)->whereNotNull('address')->where('address', '!=', '')->exists()) {
-            return response()->json([
-                'combined_order_id' => 0,
-                'result' => false,
-                'message' => __('api.order.address_required'),
-            ], 422);
+        if ($cartItems->isNotEmpty()) {
+            // The carrier zone, the delivery and the invoice read the address's
+            // country; a state or city is optional, as on the storefront's form.
+            $address = Address::with('country:id')->find($cartItems->first()->address_id);
+
+            if ($address === null || trim((string) $address->address) === '') {
+                return response()->json([
+                    'combined_order_id' => 0,
+                    'result' => false,
+                    'message' => __('api.order.address_required'),
+                ], 422);
+            }
+
+            if ($address->country === null) {
+                return response()->json([
+                    'combined_order_id' => 0,
+                    'result' => false,
+                    'message' => __('api.order.address_country_required'),
+                ], 422);
+            }
         }
 
         if ($cartItems->isEmpty()) {

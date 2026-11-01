@@ -112,6 +112,7 @@ return [
     ],
     'order' => [
         'address_required' => 'A delivery address with a street address is required to place an order.',
+        'address_country_required' => 'The delivery address needs a country. Please edit the address and try again.',
         'payment_type_invalid' => 'The payment type is not available.',
         'payment_type_cash_disabled' => 'Cash on delivery is not available at the moment. Please choose another payment method.',
         'payment_type_cash_digital' => 'Cash on delivery is not available for digital products in your cart.',

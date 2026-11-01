@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V2;
 
+use App\Http\Requests\Api\V2\SaveShippingAddressRequest;
 use App\Http\Resources\V2\AddressCollection;
 use App\Http\Resources\V2\CitiesCollection;
 use App\Http\Resources\V2\CountriesCollection;
@@ -40,7 +41,7 @@ class AddressController extends Controller
         return new AddressCollection(Address::with(Address::WITH_PLACE)->where('user_id',auth()->user()->id)->get());
     }
 
-    public function createShippingAddress(Request $request)
+    public function createShippingAddress(SaveShippingAddressRequest $request)
     {
         $address = new Address;
         if(auth()->user()->is_rep){
@@ -63,7 +64,7 @@ class AddressController extends Controller
         ]);
     }
 
-    public function updateShippingAddress(Request $request)
+    public function updateShippingAddress(SaveShippingAddressRequest $request)
     {
         $address = $this->manageableAddress($request->id);
         $address->address = $request->address;

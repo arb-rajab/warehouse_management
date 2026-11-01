@@ -132,7 +132,7 @@ test('a representative who picked a customer works on the customer\'s addresses 
     expect($this->getJson('/temp/api/v2/representatives/current-customer')->assertOk()->json('data.id'))->toBe($customer->id);
 
     app('auth')->forgetGuards();
-    $this->postJson('/temp/api/v2/user/shipping/create', ['address' => 'Prinsengracht 2', 'country_id' => 1, 'state_id' => 2, 'city_id' => 3, 'phone' => '0612345678'])->assertOk();
+    $this->postJson('/temp/api/v2/user/shipping/create', ['address' => 'Prinsengracht 2', 'country_id' => DB::table('countries')->where('code', 'NL')->value('id'), 'phone' => '0612345678'])->assertOk();
 
     expect(Address::where('address', 'Prinsengracht 2')->value('user_id'))->toBe($customer->id)
         ->and(Address::where('user_id', $rep->id)->count())->toBe(1)
@@ -184,4 +184,48 @@ test('order/store tells the customer why the payment type is refused', function 
     expect($message(['payment_type' => 'cash_on_delivery']))->toBe(__('api.order.payment_type_cash_digital'));
 
     expect(collect([__('api.order.payment_type_cash_disabled'), __('api.order.payment_type_cash_product'), __('api.order.payment_type_cash_digital')])->unique())->toHaveCount(3);
+});
+
+test('the app saves an address under the storefront\'s rules, reading 0 as no state or city', function () {
+    checkoutStore();
+    $customer = createStoreUser('customer');
+    $other = createStoreUser('customer');
+    addStoreAddress($customer->id);
+    $country = DB::table('countries')->where('code', 'NL')->value('id');
+    $state = DB::table('states')->insertGetId(['country_id' => $country, 'name' => 'North Holland', 'status' => 1]);
+    $city = DB::table('cities')->insertGetId(['state_id' => $state, 'name' => 'Amsterdam', 'status' => 1]);
+    $otherState = DB::table('states')->insertGetId(['country_id' => $country, 'name' => 'Utrecht', 'status' => 1]);
+    $valid = ['address' => 'Prinsengracht 2', 'country_id' => $country, 'phone' => '0612345678'];
+    $save = function (string $path, array $body) use ($customer) {
+        app('auth')->forgetGuards();
+
+        return $this->withToken(storeApiToken($customer))->postJson("/temp/api/v2/user/shipping/$path", $body);
+    };
+
+    $save('create', [...$valid, 'state_id' => 0, 'city_id' => 0])->assertOk()->assertJsonPath('result', true);
+    $save('create', [...$valid, 'address' => 'Damrak 3', 'state_id' => $state, 'city_id' => $city])->assertOk();
+
+    expect(DB::table('addresses')->where('address', 'Prinsengracht 2')->first(['state_id', 'city_id']))->toHaveProperties(['state_id' => null, 'city_id' => null])
+        ->and(DB::table('addresses')->where('address', 'Damrak 3')->value('city_id'))->toBe($city);
+
+    $refused = [
+        'no phone' => [[...$valid, 'phone' => null], 'phone'],
+        'no street address' => [[...$valid, 'address' => ''], 'address'],
+        'no country' => [[...$valid, 'country_id' => null], 'country id'],
+        'a state that does not exist' => [[...$valid, 'state_id' => 999999], 'state id'],
+        'a city of another state' => [[...$valid, 'state_id' => $otherState, 'city_id' => $city], 'city id'],
+    ];
+    foreach ($refused as $case => [$body, $field]) {
+        $response = $save('create', $body)->assertUnprocessable()->assertJsonPath('result', false);
+        expect($response->json('message'))->not->toBeEmpty($case)->and($response->json('errors'))->toHaveKey(str_replace(' ', '_', $field));
+    }
+
+    $id = DB::table('addresses')->where('address', 'Damrak 3')->value('id');
+    $save('update', [...$valid, 'id' => $id, 'address' => 'Damrak 4', 'state_id' => 0])->assertOk();
+    $save('update', [...$valid, 'id' => $id, 'phone' => ''])->assertUnprocessable();
+    $save('update', [...$valid, 'id' => addStoreAddress($other->id), 'address' => 'Hijacked'])->assertForbidden();
+
+    expect(DB::table('addresses')->where('id', $id)->first(['address', 'state_id']))->toHaveProperties(['address' => 'Damrak 4', 'state_id' => null])
+        ->and(DB::table('addresses')->where('address', 'Hijacked')->count())->toBe(0)
+        ->and(DB::table('addresses')->where('user_id', $customer->id)->count())->toBe(3);
 });
