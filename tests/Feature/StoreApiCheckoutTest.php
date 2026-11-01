@@ -229,3 +229,26 @@ test('the app saves an address under the storefront\'s rules, reading 0 as no st
         ->and(DB::table('addresses')->where('address', 'Hijacked')->count())->toBe(0)
         ->and(DB::table('addresses')->where('user_id', $customer->id)->count())->toBe(3);
 });
+
+test('the cart summary prices a line whose unset rep_price comes back as the string "0.00", as MySQL returns it', function () {
+    checkoutStore();
+    $customer = createStoreUser('customer');
+    $changed = createStoreUser('customer');
+    $line = fn (int $userId, int $quantity, array $attributes = []) => Cart::create([
+        'user_id' => $userId, 'owner_id' => 0, 'product_id' => createStoreProduct(['unit_price' => 22])->id,
+        'quantity' => $quantity, 'variation' => '', 'price' => 22, ...$attributes,
+    ]);
+    $line($customer->id, 2);
+    $line($changed->id, 3, ['rep_price' => 20, 'is_price_changed' => true]);
+
+    // SQLite hands a decimal back as a number; MySQL as a string.
+    Cart::retrieved(fn (Cart $cart) => $cart->setRawAttributes([...$cart->getAttributes(), 'rep_price' => number_format((float) $cart->rep_price, 2, '.', '')], true));
+
+    try {
+        $this->withToken(storeApiToken($customer))->getJson('/temp/api/v2/cart-summary')->assertOk()->assertJsonPath('grand_total_value', 44);
+        app('auth')->forgetGuards();
+        $this->withToken(storeApiToken($changed))->getJson('/temp/api/v2/cart-summary')->assertOk()->assertJsonPath('grand_total_value', 60);
+    } finally {
+        Cart::flushEventListeners();
+    }
+});

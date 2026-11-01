@@ -54,10 +54,12 @@ class CartController extends Controller
         foreach ($items as $cartItem) {
             $item_sum = 0.00;
 
-            // carts.price is not kept in step with the catalogue; GET /carts
-            // prices each line live, so the summary must as well.
+            // GET /carts prices each line live, so the summary must as well. A
+            // representative's own price counts only when the line says it was
+            // changed: MySQL hands back an unset rep_price as the string "0.00",
+            // which PHP reads as true and priced every ordinary line at nothing.
             $product = Product::find($cartItem->product_id);
-            $price = $cartItem->rep_price
+            $price = $cartItem->is_price_changed
                 ? $cartItem->rep_price
                 : ($product ? cart_product_price($cartItem, $product, false, false) : $cartItem->price);
 
