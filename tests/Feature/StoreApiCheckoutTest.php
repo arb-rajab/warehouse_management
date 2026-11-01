@@ -280,7 +280,7 @@ test('the payment types say when nothing is available, and why cash is not offer
         'unavailable' => [[
             'payment_type_key' => 'cash_on_delivery',
             'message' => __('api.order.payment_type_cash_products', ['products' => $off->name]),
-            'products' => [['cart_id' => Cart::where('user_id', $customer->id)->value('id'), 'product_id' => $off->id, 'name' => $off->name]],
+            'products' => [['cart_id' => Cart::where('user_id', $customer->id)->value('id'), 'product_id' => $off->id]],
         ]],
         'message' => __('api.payment.none_available'),
     ]);
@@ -313,7 +313,7 @@ test('the cart summary tells the app, before the payment step, what can be paid 
 
     $product = createStoreProduct(['cash_on_delivery' => 0]);
     $line = Cart::create(['user_id' => $customer->id, 'owner_id' => 0, 'product_id' => $product->id, 'quantity' => 1, 'variation' => '', 'price' => 1]);
-    $blocked = [['cart_id' => $line->id, 'product_id' => $product->id, 'name' => $product->name]];
+    $blocked = [['cart_id' => $line->id, 'product_id' => $product->id]];
     $message = __('api.order.payment_type_cash_products', ['products' => $product->name]);
     storeSetting('cash_payment', 1);
     expect($summary())->toBe([false, false, $message, $blocked]);
@@ -326,7 +326,7 @@ test('the cart summary tells the app, before the payment step, what can be paid 
     expect($summary())->toBe([true, true, null, []]);
 });
 
-test('the cash on delivery message names at most five products and the list gives them all', function () {
+test('the cash on delivery message names at most five products and the list gives every line\'s ids', function () {
     checkoutStore();
     storeSetting('cash_payment', 1);
     $customer = createStoreUser('customer');
@@ -340,6 +340,7 @@ test('the cash on delivery message names at most five products and the list give
     $json = $this->withToken(storeApiToken($customer))->getJson('/temp/api/v2/cart-summary')->assertOk()->json();
 
     expect($json['cash_on_delivery_blocked_products'])->toHaveCount(7)
-        ->and(collect($json['cash_on_delivery_blocked_products'])->pluck('name')->all())->toBe($products->pluck('name')->all())
+        ->and(collect($json['cash_on_delivery_blocked_products'])->pluck('product_id')->all())->toBe($products->pluck('id')->all())
+        ->and(array_keys($json['cash_on_delivery_blocked_products'][0]))->toBe(['cart_id', 'product_id'])
         ->and($json['cash_on_delivery_message'])->toContain('Blocked product 5')->not->toContain('Blocked product 6')->toContain('…')->not->toContain("Someone else's");
 });

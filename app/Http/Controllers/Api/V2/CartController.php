@@ -101,7 +101,7 @@ class CartController extends Controller
      * cash on delivery can be for this cart (with the reason when it cannot).
      * Decided by PaymentTypesController, like GET /payment-types and order/store.
      *
-     * @return array{payment_available: bool, cash_on_delivery_available: bool, cash_on_delivery_message: string|null, cash_on_delivery_blocked_products: list<array{cart_id: int, product_id: int, name: string}>}
+     * @return array{payment_available: bool, cash_on_delivery_available: bool, cash_on_delivery_message: string|null, cash_on_delivery_blocked_products: list<array{cart_id: int, product_id: int}>}
      */
     private function paymentAvailability(): array
     {

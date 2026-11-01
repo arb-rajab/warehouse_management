@@ -21,7 +21,7 @@ class PaymentTypesController
     /**
      * What GET /payment-types answers, for the signed-in customer's cart.
      *
-     * @return array{result: true, payment_types: list<array<string, mixed>>, unavailable: list<array{payment_type_key: string, message: string, products: list<array{cart_id: int, product_id: int, name: string}>}>, message: string|null}
+     * @return array{result: true, payment_types: list<array<string, mixed>>, unavailable: list<array{payment_type_key: string, message: string, products: list<array{cart_id: int, product_id: int}>}>, message: string|null}
      */
     public function options(Request $request): array
     {
@@ -186,9 +186,11 @@ class PaymentTypesController
      * the customer and the cart lines in the way. It is offered when the store's
      * cash payment is on and, for an order, no product in the signed-in
      * customer's cart is digital or has cash on delivery off; the message then
-     * names those products, so the customer can remove them from the cart.
+     * names those products, so the customer can remove them from the cart. The
+     * lines come back as ids only: the app has each line's product name from the
+     * cart itself.
      *
-     * @return array{message: string|null, products: list<array{cart_id: int, product_id: int, name: string}>}
+     * @return array{message: string|null, products: list<array{cart_id: int, product_id: int}>}
      */
     public function cashAvailability(bool $checkCart = true): array
     {
@@ -200,25 +202,23 @@ class PaymentTypesController
             return ['message' => null, 'products' => []];
         }
 
-        $products = auth()->user()->carts()
+        $lines = auth()->user()->carts()
             ->with(['product:id,name,digital,cash_on_delivery', 'product.product_translations:id,product_id,lang,name'])
             ->get()
             ->filter(fn (Cart $cart): bool => $cart->product !== null && ($cart->product->digital == 1 || $cart->product->cash_on_delivery == 0))
-            ->map(fn (Cart $cart): array => [
-                'cart_id' => (int) $cart->id,
-                'product_id' => (int) $cart->product_id,
-                'name' => (string) $cart->product->getTranslation('name'),
-            ])
             ->values();
 
-        if ($products->isEmpty()) {
+        if ($lines->isEmpty()) {
             return ['message' => null, 'products' => []];
         }
 
-        $names = $products->pluck('name')->unique();
+        $names = $lines->map(fn (Cart $cart): string => (string) $cart->product->getTranslation('name'))->unique();
         $listed = $names->take(self::NAMED_PRODUCTS)->implode(', ').($names->count() > self::NAMED_PRODUCTS ? ' …' : '');
 
-        return ['message' => __('api.order.payment_type_cash_products', ['products' => $listed]), 'products' => $products->all()];
+        return [
+            'message' => __('api.order.payment_type_cash_products', ['products' => $listed]),
+            'products' => $lines->map(fn (Cart $cart): array => ['cart_id' => (int) $cart->id, 'product_id' => (int) $cart->product_id])->all(),
+        ];
     }
 
     /**
