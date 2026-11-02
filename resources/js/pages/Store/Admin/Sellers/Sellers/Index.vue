@@ -41,7 +41,6 @@ const props = defineProps<{
         approved_status: number | null;
     };
     payouts: boolean;
-    payment_links: boolean;
 }>();
 const access = useStoreAccess();
 const search = ref(props.filters.search);
@@ -265,7 +264,7 @@ function showProfile(seller: StoreSeller): void {
                             }}</a
                         >
                         <button
-                            v-if="payment_links && access.can('pay_to_seller')"
+                            v-if="payouts && access.can('pay_to_seller')"
                             type="button"
                             class="cursor-pointer text-blue-700 underline dark:text-blue-400"
                             @click="
@@ -277,7 +276,7 @@ function showProfile(seller: StoreSeller): void {
                         </button>
                         <Link
                             v-if="
-                                payment_links &&
+                                payouts &&
                                 access.can('seller_payment_history') &&
                                 row.payment_history_url
                             "

@@ -74,7 +74,6 @@ function mountPage(
             sellers: paginated([seller]),
             filters: { search: '', approved_status: null, per_page: 20 },
             payouts,
-            payment_links: payouts,
         },
     });
 }
