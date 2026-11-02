@@ -6,6 +6,7 @@ import { switchLocale } from './support/nav';
 import {
     ensureStoreRtlLanguage,
     seedStoreFixtures,
+    storedProduct,
 } from './support/storeFixtures';
 
 const NAMES = [
@@ -229,6 +230,9 @@ test('product lists keep RTL and dark contrast and open from the sidebar as Iner
         page.getByRole('heading', { name: 'جميع المنتجات', exact: true }),
     ).toBeVisible();
     const olive = row(page, 'Browser olive oil');
+    const oliveId = String(
+        storedProduct('Browser olive oil', '$product->id') as number,
+    );
     await expect(
         olive.getByRole('switch', { name: 'نشط', exact: true }),
     ).toHaveAttribute('aria-checked', 'true');
@@ -238,8 +242,10 @@ test('product lists keep RTL and dark contrast and open from the sidebar as Iner
 
     for (const target of [
         olive.getByText('Browser olive oil', { exact: true }),
-        page.getByRole('columnheader', { name: 'رقم المادة', exact: true }),
-        olive.getByRole('cell', { name: 'BR17', exact: true }),
+        page.getByRole('columnheader', { name: 'المعرّف', exact: true }),
+        // The ID column precedes the stock column, so .first() is the ID cell
+        // even when the id equals the seeded stock of 5.
+        olive.getByRole('cell', { name: oliveId, exact: true }).first(),
         page.locator('#product-presets').getByRole('link', {
             name: 'جميع النشطة',
             exact: true,
