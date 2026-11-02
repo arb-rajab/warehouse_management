@@ -14,7 +14,7 @@ Ask whatever questions you need and keep asking until you have no more. Research
 
 ## 2. Rough outline
 
-Give a short, provisional outline of the likely steps (one line each) so the user sees the direction. State clearly that it is not fixed: do not write, number, or commit to later prompts. Each later prompt is decided only after the previous one's response is reviewed, because its result may change or add to what comes next.
+Give a short, provisional outline of the likely steps (one line each), which sets the initial M (total prompts) so the user sees the direction. State clearly that it is not fixed: do not write, number, or commit to later prompts. Each later prompt is decided only after the previous one's response is reviewed, because its result may change or add to what comes next.
 
 ## 3. Draft PR
 
@@ -33,7 +33,7 @@ Each prompt must be self-contained for a session with no memory of this conversa
 
 Output format for each prompt, exactly:
 
-**Prompt N:**
+**Prompt N of M** (say whether M changed since the last prompt, and why):
 ```md
 <the prompt>
 ```
