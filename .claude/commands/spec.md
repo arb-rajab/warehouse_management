@@ -12,9 +12,9 @@ Work through these phases in order.
 
 Ask whatever questions you need and keep asking until you have no more. Research the codebase first (`.ai/rules`, `CLAUDE.md`, sibling files) so you only ask what the code cannot answer. Do not generate any prompt until the user confirms there is nothing left to clarify.
 
-## 2. Plan
+## 2. Rough outline
 
-Split the tasks into an ordered list of prompts, each independently completable in a fresh session. Show the list (one line per prompt, with model and effort) so the user can adjust it. Do not write the prompts yet.
+Give a short, provisional outline of the likely steps (one line each) so the user sees the direction. State clearly that it is not fixed: do not write, number, or commit to later prompts. Each later prompt is decided only after the previous one's response is reviewed, because its result may change or add to what comes next.
 
 ## 3. Draft PR
 
@@ -22,10 +22,10 @@ Before the first prompt, open one draft PR for the work (branch from the current
 
 ## 4. Prompts, one at a time
 
-Generate only the first prompt, then stop and wait. When the user pastes its response:
-- If something was not completed, generate a follow-up prompt meant to be pasted into the same session as the previous one.
-- Otherwise generate the next prompt (fresh session).
-Repeat until all prompts are done.
+Generate only the first prompt, then stop and wait. Never write a later prompt in advance. When the user pastes a response, review it against the task:
+- If something is incomplete or wrong, generate a follow-up prompt meant to be pasted into the same session as the previous one.
+- Only when nothing is outstanding, generate the next prompt (fresh session), adapting it to what the previous responses changed, and revise the outline if needed.
+Repeat until all tasks are done.
 
 Each prompt must be self-contained for a session with no memory of this conversation: what to build/fix and why, relevant paths, applicable constraints and conventions, the branch/draft PR to commit and push to, and what "done" looks like. Do not include triple-backtick fences inside the prompt text. In addition each prompt must say:
 - Do NOT run tests, type checks, or the pre-push script; they run once at the end. Commit and push the changes to the draft PR branch.
@@ -33,7 +33,7 @@ Each prompt must be self-contained for a session with no memory of this conversa
 
 Output format for each prompt, exactly:
 
-**Prompt N of M:**
+**Prompt N:**
 ```md
 <the prompt>
 ```
