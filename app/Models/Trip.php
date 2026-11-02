@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
 
 class Trip extends Model
 {
@@ -36,6 +37,24 @@ class Trip extends Model
         'distance' => 'decimal:2', // Two decimal places
         'duration' => 'decimal:2',
     ];
+
+    /**
+     * Eager loads for TripResource: the driver and truck, and for every
+     * checkpoint the order or customer it stops at, with an order's lines,
+     * their products and the customer the order is for.
+     *
+     * @return array<int|string, string|\Closure>
+     */
+    public static function resourceRelations(): array
+    {
+        return [
+            'driver',
+            'truck',
+            'checkpoints.relationable' => fn (MorphTo $relationable) => $relationable->morphWith([
+                Order::class => ['orderDetails.product', 'user', 'rep'],
+            ]),
+        ];
+    }
 
     /** @return BelongsTo<StoreUser, $this> */
     public function driver(): BelongsTo

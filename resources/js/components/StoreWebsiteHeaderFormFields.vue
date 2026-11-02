@@ -21,7 +21,6 @@ const images = [
     { key: 'topbar_banner_small', label: 'bannerSmall' },
 ] as const;
 const switches = [
-    { key: 'show_language_switcher', label: 'languageSwitcher' },
     { key: 'show_currency_switcher', label: 'currencySwitcher' },
     { key: 'header_stikcy', label: 'sticky' },
 ] as const;

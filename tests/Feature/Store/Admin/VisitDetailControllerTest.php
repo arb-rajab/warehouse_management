@@ -107,8 +107,7 @@ test('the Inertia shell shares the visit navigation permission for visit-only st
 
     $this->get(route('profile.index'))->assertOk()->assertInertia(fn (Assert $page) => $page
         ->where('store.permissions', $allowed ? ['view_representative_visits'] : [])
-        ->where('store.isSuperAdmin', false)
-        ->where('store.isRaizerAdmin', false));
+        ->where('store.isSuperAdmin', false));
 })->with([true, false]);
 
 test('the representative day screen scopes visits by owner and date and keeps their rank order', function () {

@@ -12,7 +12,7 @@ class InvoiceController extends Controller
     //download invoice
     public function invoice_download($id)
     {
-        $order = Order::findOrFail($id);
+        $order = Order::with('orderDetails.product')->findOrFail($id);
         Gate::authorize('downloadInvoice', $order);
 
         $documentLocale = StoreLocale::documentLocale();

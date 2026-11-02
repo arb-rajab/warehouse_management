@@ -1,16 +1,16 @@
 <?php
 
-use App\Http\Controllers\Api\V2\Seller\ConversationController;
-use App\Http\Controllers\Api\V2\Seller\CouponController;
-use App\Http\Controllers\Api\V2\Seller\OrderController;
-use App\Http\Controllers\Api\V2\Seller\ProductController;
-use App\Http\Controllers\Api\V2\Seller\RefundController;
-use App\Http\Controllers\Api\V2\Seller\SellerFileUploadController;
-use App\Http\Controllers\Api\V2\Seller\SellerPackageController;
-use App\Http\Controllers\Api\V2\Seller\ShopController;
-use App\Http\Controllers\Api\V2\Seller\WithdrawRequestController;
+use App\Http\Controllers\Api\V1\Seller\ConversationController;
+use App\Http\Controllers\Api\V1\Seller\CouponController;
+use App\Http\Controllers\Api\V1\Seller\OrderController;
+use App\Http\Controllers\Api\V1\Seller\ProductController;
+use App\Http\Controllers\Api\V1\Seller\RefundController;
+use App\Http\Controllers\Api\V1\Seller\SellerFileUploadController;
+use App\Http\Controllers\Api\V1\Seller\SellerPackageController;
+use App\Http\Controllers\Api\V1\Seller\ShopController;
+use App\Http\Controllers\Api\V1\Seller\WithdrawRequestController;
 
-Route::group(['prefix' => 'v2/seller', 'middleware' => ['app_language', 'auth:store_api', 'seller']], function () {
+Route::group(['prefix' => 'v1/store/seller', 'middleware' => ['app_language', 'auth:store_api', 'seller']], function () {
     //Order Section
     Route::controller(OrderController::class)->group(function () {
         Route::get('orders', 'getOrderList');
@@ -19,7 +19,7 @@ Route::group(['prefix' => 'v2/seller', 'middleware' => ['app_language', 'auth:st
         Route::post('orders/update-delivery-status', 'update_delivery_status');
         Route::post('orders/update-payment-status', 'update_payment_status');
 
-        // Route::apiResource('shops', 'App\Http\Controllers\Api\V2\ShopController')->only('index');
+        // Route::apiResource('shops', 'App\Http\Controllers\Api\V1\ShopController')->only('index');
     });
 
     //Shop Section
@@ -30,7 +30,6 @@ Route::group(['prefix' => 'v2/seller', 'middleware' => ['app_language', 'auth:st
         Route::get('dashboard/category-wise-products', 'category_wise_products');
         Route::get('dashboard/sales-stat', 'sales_stat');
         Route::get('dashboard/top-12-product', 'top_12_products');
-        Route::get('dashboard/dashboard-counters', 'app_dashboard_counters');
         Route::get('shop/info', 'info');
         Route::get('package/info', 'pacakge');
         Route::post('shop-update', 'update');
@@ -67,7 +66,6 @@ Route::group(['prefix' => 'v2/seller', 'middleware' => ['app_language', 'auth:st
 
         Route::get('products/reviews', 'product_reviews');
 
-        Route::get('products/search', 'search');
     });
 
     //Coupon Section

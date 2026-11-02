@@ -59,6 +59,7 @@ class OrderController extends Controller
     public function show($id)
     {
         $order = (new OrderService)->findForSeller(decrypt($id), Auth::user()->id);
+        $order->loadMissing('orderDetails.product.product_translations');
         $order_shipping_address = json_decode($order->shipping_address);
         $delivery_boys = StoreUser::where('city', $order_shipping_address->city)
             ->where('user_type', 'delivery_boy')

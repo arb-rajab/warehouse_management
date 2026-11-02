@@ -103,7 +103,7 @@ test('commission routes keep their names URIs and gates and the replaced view an
 });
 
 test('the retained seller activation form has an exact two-key contract', function () {
-    actingAsStoreUser(createStoreAdmin(raizerAdmin: true));
+    actingAsStoreUser(createStoreAdmin());
     foreach (['vendor_commission_activation', 'category_wise_commission'] as $key) {
         $this->post(route('business_settings.seller_commission.activation'), ['type' => $key, 'value' => 1])->assertOk()->assertContent('1');
         $this->assertDatabaseHas('business_settings', ['type' => $key, 'value' => '1']);
@@ -114,8 +114,8 @@ test('the retained seller activation form has an exact two-key contract', functi
     expect(DB::table('business_settings')->count())->toBe(2);
 });
 
-test('seller activation compatibility does not grant staff access', function () {
-    actingAsStoreUser(createStoreStaff('seller_commission_configuration', 'features_activation'));
+test('seller activation needs the features activation permission', function () {
+    actingAsStoreUser(createStoreStaff('seller_commission_configuration'));
     $this->post(route('business_settings.seller_commission.activation'), ['type' => 'category_wise_commission', 'value' => 1])->assertForbidden();
     expect(DB::table('business_settings')->count())->toBe(0);
 });
@@ -129,8 +129,8 @@ test('activation compatibility refuses every ordinary caller without touching DB
     expect(DB::table('business_settings')->get()->toJson())->toBe($before)->and(Cache::has('business_settings'))->toBeTrue();
 })->with('refused store admin callers');
 
-test('activation remains restricted to vendor admins with features activation and leaves unrelated caches alone', function () {
-    actingAsStoreUser(createStoreAdmin(raizerAdmin: true));
+test('activation requires the features activation permission and leaves unrelated caches alone', function () {
+    actingAsStoreUser(createStoreAdmin());
     Cache::put('business_settings', collect());
     Cache::put('wms-sentinel', 'keep');
     $this->post(route('business_settings.seller_commission.activation'), ['type' => 'vendor_commission_activation', 'value' => 0])->assertOk()->assertContent('1');
@@ -138,11 +138,8 @@ test('activation remains restricted to vendor admins with features activation an
     $this->assertDatabaseHas('business_settings', ['type' => 'vendor_commission_activation', 'value' => '0']);
     $before = DB::table('business_settings')->get()->toJson();
     $this->postJson(route('business_settings.seller_commission.activation'), ['type' => 'vendor_commission_activation', 'value' => 'bad'])->assertUnprocessable();
-    actingAsStoreUser(createStoreAdmin(raizerAdmin: false));
-    $this->post(route('business_settings.seller_commission.activation'), ['type' => 'vendor_commission_activation', 'value' => 1])->assertForbidden();
-    $vendorWithoutPermission = createStoreUser('admin');
-    $vendorWithoutPermission->forceFill(['raizer_admin' => true])->save();
-    actingAsStoreUser($vendorWithoutPermission);
+    $adminWithoutPermission = createStoreUser('admin');
+    actingAsStoreUser($adminWithoutPermission);
     $this->post(route('business_settings.seller_commission.activation'), ['type' => 'vendor_commission_activation', 'value' => 1])->assertForbidden();
     auth('store')->logout();
     auth()->shouldUse('web');

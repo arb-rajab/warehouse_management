@@ -17,7 +17,6 @@ use App\Http\Middleware\IsSeller;
 use App\Http\Middleware\IsUnbanned;
 use App\Http\Middleware\IsUser;
 use App\Http\Middleware\LogRequestTime;
-use App\Http\Middleware\RaizerSuperAdmin;
 use App\Http\Middleware\SendNoIndexHeader;
 use App\Http\Middleware\SendSecureHeaders;
 use App\Http\Middleware\SetLocale;
@@ -117,7 +116,6 @@ return Application::configure(basePath: dirname(__DIR__))
             'checkout' => CheckoutMiddleware::class,
             'permission' => PermissionMiddleware::class,
             'role_or_permission' => RoleOrPermissionMiddleware::class,
-            'RaizerSuperAdmin' => RaizerSuperAdmin::class,
             'wms.auth' => WmsAuthMiddleware::class,
             'log.request.time' => LogRequestTime::class,
             'driver' => IsDriver::class,
@@ -130,6 +128,6 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->dontFlash(['current_password', 'password', 'password_confirmation', 'new_password', 'confirm_password']);
 
         $exceptions->shouldRenderJsonWhen(
-            fn (Request $request) => $request->is('api/*') || $request->expectsJson(),
+            fn (Request $request) => $request->is('api/*', '*/api/*') || $request->expectsJson(),
         );
     })->create();

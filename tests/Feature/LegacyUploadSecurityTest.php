@@ -1,8 +1,8 @@
 <?php
 
 use App\Http\Controllers\AizUploadController;
-use App\Http\Controllers\Api\V2\AizUploadController as ApiAizUploadController;
-use App\Http\Controllers\Api\V2\Seller\SellerFileUploadController;
+use App\Http\Controllers\Api\V1\AizUploadController as ApiAizUploadController;
+use App\Http\Controllers\Api\V1\Seller\SellerFileUploadController;
 use App\Models\Page;
 use App\Models\Upload;
 use Illuminate\Database\Eloquent\ModelNotFoundException;

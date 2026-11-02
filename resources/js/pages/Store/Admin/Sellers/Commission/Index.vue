@@ -20,10 +20,7 @@ const canConfigure = computed(() =>
     access.value.can('seller_commission_configuration'),
 );
 const canActivate = computed(
-    () =>
-        canConfigure.value &&
-        access.value.isRaizerAdmin &&
-        access.value.can('features_activation'),
+    () => canConfigure.value && access.value.can('features_activation'),
 );
 const switches = [
     'vendor_commission_activation',

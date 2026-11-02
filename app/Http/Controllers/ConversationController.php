@@ -39,7 +39,7 @@ class ConversationController extends Controller implements HasMiddleware
     public function index()
     {
         if (BusinessSetting::where('type', 'conversation_system')->first()?->value == 1) {
-            $conversations = Conversation::where('sender_id', Auth::user()->id)->orWhere('receiver_id', Auth::user()->id)->orderBy('created_at', 'desc')->paginate(8);
+            $conversations = Conversation::with(['sender', 'receiver.shop', 'messages'])->where('sender_id', Auth::user()->id)->orWhere('receiver_id', Auth::user()->id)->orderBy('created_at', 'desc')->paginate(8);
             return view('shop.frontend.user.conversations.index', compact('conversations'));
         } else {
             flash(__('storefront.support.conversation_is_disabled_at_this_moment'))->warning();
@@ -119,7 +119,7 @@ class ConversationController extends Controller implements HasMiddleware
      */
     public function show($id)
     {
-        $conversation = Conversation::findOrFail(decrypt($id));
+        $conversation = Conversation::with('messages.user.shop')->findOrFail(decrypt($id));
         if ($conversation->sender_id == Auth::user()->id) {
             $conversation->sender_viewed = 1;
         } elseif ($conversation->receiver_id == Auth::user()->id) {
@@ -138,7 +138,7 @@ class ConversationController extends Controller implements HasMiddleware
      */
     public function refresh(Request $request)
     {
-        $conversation = Conversation::findOrFail(decrypt($request->id));
+        $conversation = Conversation::with('messages.user.shop')->findOrFail(decrypt($request->id));
         if ($conversation->sender_id == Auth::user()->id) {
             $conversation->sender_viewed = 1;
             $conversation->save();

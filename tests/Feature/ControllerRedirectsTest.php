@@ -50,7 +50,7 @@ test('no controller redirects with back(), other than locale switching and the r
         // stripped and Inertia treating every visit as XHR — doesn't apply
         // to them. notPath() (not notName()) because several of these
         // basenames collide with an unrelated, in-scope Inertia controller
-        // of the same name under Api/V2/ or Seller/ (e.g. CartController,
+        // of the same name under Api/V1/ or Seller/ (e.g. CartController,
         // CustomerController) — excluding by name alone would hide a real
         // violation in the wrong one.
         ->notPath([

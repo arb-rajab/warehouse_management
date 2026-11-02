@@ -8,6 +8,7 @@ import {
     create,
 } from '@/actions/App/Http/Controllers/Store/Admin/PickupPointController';
 import AddResourceLink from '@/components/AddResourceLink.vue';
+import AddressMapLink from '@/components/AddressMapLink.vue';
 import DataTable from '@/components/DataTable.vue';
 import FormField from '@/components/FormField.vue';
 import PageHeader from '@/components/PageHeader.vue';
@@ -86,7 +87,9 @@ function filter(event: Event): void {
         >
             <template #row="{ row }">
                 <td class="px-4 py-2">{{ row.name }}</td>
-                <td class="px-4 py-2">{{ row.address }}</td>
+                <td class="px-4 py-2">
+                    <AddressMapLink :address="row.address" />
+                </td>
                 <td class="px-4 py-2">{{ row.phone }}</td>
                 <td class="px-4 py-2">{{ row.staff?.name }}</td>
                 <td class="px-4 py-2">

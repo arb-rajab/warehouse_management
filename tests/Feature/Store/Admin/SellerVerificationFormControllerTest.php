@@ -85,7 +85,7 @@ test('seller verification screens still read nested options JSON and store answe
             ['type' => 'multi_select', 'label' => 'Markets', 'value' => '["Retail","Wholesale"]'], ['type' => 'select', 'label' => 'Registered', 'value' => 'Yes'],
             ['type' => 'file', 'label' => 'Licence', 'value' => $filename],
         ]);
-    $this->getJson('/temp/api/v2/business-settings')->assertOk()->assertJsonFragment(['type' => 'verification_form', 'value' => json_decode(sellerVerificationStoredJson(), true)]);
+    $this->getJson('/api/v1/store/business-settings')->assertOk()->assertJsonFragment(['type' => 'verification_form', 'value' => json_decode(sellerVerificationStoredJson(), true)]);
 });
 
 test('verification validation refuses bad types labels options and foreign keys without changing DB or cache', function (array $payload, string $error) {

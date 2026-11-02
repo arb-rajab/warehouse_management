@@ -131,6 +131,27 @@ test('SMTP warning keeps its exact permission and both empty credentials conditi
     ['user', null, true, false], [null, 'pass', true, false], ['user', 'pass', true, false],
 ]);
 
+test('the dashboard warns staff who can fix them about the settings orders need', function (array $settings, array $products, array $permissions, array $expected) {
+    foreach ($settings as $type => $value) {
+        storeSetting($type, $value);
+    }
+    foreach ($products as $cashOnDelivery) {
+        createStoreProduct(['cash_on_delivery' => $cashOnDelivery]);
+    }
+    actingAsStoreUser(createStoreStaff('admin_dashboard', ...$permissions));
+
+    $this->get(route('shop.admin.dashboard'))->assertOk()->assertInertia(fn (Assert $p) => $p->where('setupAlerts', $expected));
+})->with([
+    'nothing switched on' => [[], [], ['payment_methods_configurations', 'show_all_products'], ['noPaymentMethod']],
+    'nothing switched on, no permission' => [[], [], ['show_all_products'], []],
+    'a gateway is on' => [['bkash' => 1], [], ['payment_methods_configurations', 'show_all_products'], []],
+    'wallet is on' => [['wallet_system' => 1], [], ['payment_methods_configurations'], []],
+    'cash is on, no product allows it' => [['cash_payment' => 1], [0, 0], ['payment_methods_configurations', 'show_all_products'], ['cashOnDeliveryProducts']],
+    'cash is on, no product allows it, no permission' => [['cash_payment' => 1], [0], ['payment_methods_configurations'], []],
+    'cash is on and a product allows it' => [['cash_payment' => 1], [0, 1], ['payment_methods_configurations', 'show_all_products'], []],
+    'cash is off, products allow it' => [['cash_payment' => 0], [1], ['payment_methods_configurations', 'show_all_products'], ['noPaymentMethod']],
+]);
+
 test('dashboard refuses unauthorized callers without changing database rows', function (string $caller) {
     createStoreProduct(['name' => 'Retained inventory', 'published' => false, 'thumbnail_img' => null]);
     actingAsRefusedStoreCaller($caller);
@@ -166,11 +187,6 @@ test('dashboard shell exposes the current account and only its notifications', f
         ->where('auth.user.name', $admin->name)->has('store.notifications.items', 1)
         ->where('store.notifications.items.0.order_code', 'ORD-MINE'));
 });
-
-test('dashboard shell identifies vendor cache clear access without granting it to ordinary admins', function (bool $vendor) {
-    actingAsStoreUser(createStoreAdmin(raizerAdmin: $vendor));
-    $this->get(route('shop.admin.dashboard'))->assertOk()->assertInertia(fn (Assert $p) => $p->where('store.isRaizerAdmin', $vendor));
-})->with([true, false]);
 
 test('published products without a storefront slug do not break the dashboard', function () {
     actingAsStoreUser(createStoreStaff('admin_dashboard'));

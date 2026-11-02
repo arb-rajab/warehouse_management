@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Product;
 use App\Models\Wishlist;
 use Auth;
 use Illuminate\Http\Request;
@@ -16,7 +17,7 @@ class WishlistController extends Controller
      */
     public function index()
     {
-        $wishlists = Wishlist::where('user_id', Auth::user()->id)->paginate(15);
+        $wishlists = Wishlist::with(['product' => fn ($product) => $product->with(Product::WITH_STORE_LIST)])->where('user_id', Auth::user()->id)->paginate(15);
         return view('shop.frontend.user.view_wishlist', compact('wishlists'));
     }
 

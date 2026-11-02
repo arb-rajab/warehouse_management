@@ -416,20 +416,6 @@
                 });
             });
 
-            if ($('#lang-change').length > 0) {
-                $('#lang-change .dropdown-menu a').each(function() {
-                    $(this).on('click', function(e){
-                        e.preventDefault();
-                        var $this = $(this);
-                        var locale = $this.data('flag');
-                        $.post('{{ route('language.change') }}',{_token: AIZ.data.csrf, locale:locale}, function(data){
-                            location.reload();
-                        });
-
-                    });
-                });
-            }
-
             if ($('#currency-change').length > 0) {
                 $('#currency-change .dropdown-menu a').each(function() {
                     $(this).on('click', function(e){

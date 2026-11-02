@@ -129,7 +129,7 @@ class SupportTicketController extends Controller
      */
     public function show($id)
     {
-        $ticket = Ticket::where('user_id', Auth::user()->id)->findOrFail(decrypt($id));
+        $ticket = Ticket::with('ticketreplies.user')->where('user_id', Auth::user()->id)->findOrFail(decrypt($id));
         $ticket->client_viewed = 1;
         $ticket->save();
         $ticket_replies = $ticket->ticketreplies;

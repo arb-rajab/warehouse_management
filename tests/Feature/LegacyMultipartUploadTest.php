@@ -19,7 +19,7 @@ test('an image is stored under a random name with the extension its content has,
 
     withScratchPublicPath(function (string $publicPath) use ($customer) {
         $this->withToken(storeApiToken($customer))
-            ->postJson('/temp/api/v2/file/upload', ['aiz_file' => uploadedFile('holiday photo.PNG', tinyPng())])
+            ->postJson('/api/v1/store/file/upload', ['aiz_file' => uploadedFile('holiday photo.PNG', tinyPng())])
             ->assertOk();
 
         $stored = storedUploadFiles($publicPath);
@@ -41,7 +41,7 @@ test('markup a browser would run is refused whatever the file is called', functi
 
     withScratchPublicPath(function (string $publicPath) use ($customer, $filename, $contents) {
         $this->withToken(storeApiToken($customer))
-            ->postJson('/temp/api/v2/file/upload', ['aiz_file' => uploadedFile($filename, $contents)])
+            ->postJson('/api/v1/store/file/upload', ['aiz_file' => uploadedFile($filename, $contents)])
             ->assertUnprocessable()
             ->assertJsonPath('result', false);
 
@@ -65,7 +65,7 @@ test('PHP source that gets through the allowlist is never stored with a PHP exte
 
     withScratchPublicPath(function (string $publicPath) use ($customer, $filename) {
         $status = $this->withToken(storeApiToken($customer))
-            ->postJson('/temp/api/v2/file/upload', ['aiz_file' => uploadedFile($filename, '<?php system($_GET[1]); ?>')])
+            ->postJson('/api/v1/store/file/upload', ['aiz_file' => uploadedFile($filename, '<?php system($_GET[1]); ?>')])
             ->status();
 
         expect($status)->toBeIn([200, 422]);
@@ -84,7 +84,7 @@ test('an svg is sanitised wherever it turns up, including under another name and
 
     withScratchPublicPath(function (string $publicPath) use ($customer, $filename, $svg) {
         $this->withToken(storeApiToken($customer))
-            ->postJson('/temp/api/v2/file/upload', ['aiz_file' => uploadedFile($filename, $svg)])
+            ->postJson('/api/v1/store/file/upload', ['aiz_file' => uploadedFile($filename, $svg)])
             ->assertOk();
 
         $stored = storedUploadFiles($publicPath);
@@ -104,7 +104,7 @@ test('a document keeps its allowlisted extension and kind', function () {
 
     withScratchPublicPath(function (string $publicPath) use ($customer) {
         $this->withToken(storeApiToken($customer))
-            ->postJson('/temp/api/v2/file/upload', ['aiz_file' => uploadedFile('price list.CSV', "sku,price\nA1,10\n")])
+            ->postJson('/api/v1/store/file/upload', ['aiz_file' => uploadedFile('price list.CSV', "sku,price\nA1,10\n")])
             ->assertOk();
 
         $stored = storedUploadFiles($publicPath);
@@ -235,14 +235,14 @@ test('the seller API answers a refused file with a 422 and an accepted one with 
 
     withScratchPublicPath(function (string $publicPath) use ($seller) {
         $this->withToken(storeApiToken($seller))
-            ->postJson('/temp/api/v2/seller/file/upload', ['aiz_file' => uploadedFile('a.png', '<html><script>alert(1)</script></html>')])
+            ->postJson('/api/v1/store/seller/file/upload', ['aiz_file' => uploadedFile('a.png', '<html><script>alert(1)</script></html>')])
             ->assertUnprocessable()
             ->assertJsonPath('result', false);
 
         expect(storedUploadFiles($publicPath))->toBe([]);
 
         $this->withToken(storeApiToken($seller))
-            ->postJson('/temp/api/v2/seller/file/upload', ['aiz_file' => uploadedFile('ok.png', tinyPng())])
+            ->postJson('/api/v1/store/seller/file/upload', ['aiz_file' => uploadedFile('ok.png', tinyPng())])
             ->assertOk()
             ->assertJsonPath('result', true);
 

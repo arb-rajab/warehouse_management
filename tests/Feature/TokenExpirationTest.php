@@ -31,24 +31,24 @@ test('a store token works until it is thirty days old and not after', function (
     $token = storeApiToken(createStoreUser('customer'));
 
     $this->travel(29)->days();
-    $this->withToken($token)->getJson('/temp/api/v2/auth/user')->assertOk();
+    $this->withToken($token)->getJson('/api/v1/store/auth/user')->assertOk();
 
     app('auth')->forgetGuards();
     $this->travel(2)->days();
-    $this->withToken($token)->getJson('/temp/api/v2/auth/user')->assertUnauthorized();
+    $this->withToken($token)->getJson('/api/v1/store/auth/user')->assertUnauthorized();
 });
 
 test('the store\'s token lookup endpoints refuse an expired token', function () {
     $customer = createStoreUser('customer');
     $token = storeApiToken($customer);
 
-    $this->postJson('/temp/api/v2/auth/info', ['access_token' => $token])->assertJsonPath('result', true);
-    $this->postJson('/temp/api/v2/get-user-by-access_token', ['access_token' => $token])->assertJsonPath('result', true);
+    $this->postJson('/api/v1/store/auth/info', ['access_token' => $token])->assertJsonPath('result', true);
+    $this->postJson('/api/v1/store/get-user-by-access_token', ['access_token' => $token])->assertJsonPath('result', true);
 
     $this->travel(31)->days();
 
-    $this->postJson('/temp/api/v2/auth/info', ['access_token' => $token])->assertJsonPath('result', false);
-    $this->postJson('/temp/api/v2/get-user-by-access_token', ['access_token' => $token])->assertJsonPath('result', false);
+    $this->postJson('/api/v1/store/auth/info', ['access_token' => $token])->assertJsonPath('result', false);
+    $this->postJson('/api/v1/store/get-user-by-access_token', ['access_token' => $token])->assertJsonPath('result', false);
 });
 
 test('a token past its own expires_at is expired whatever the configured lifetime', function () {

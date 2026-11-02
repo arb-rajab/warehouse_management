@@ -97,7 +97,7 @@ consumers, not unfinished admin screens; see [retained templates](#51-actual-ret
 `HandleInertiaRequests::share()` recognizes store requests from the route's
 `UseStoreAuthGuard` middleware, not the default guard, which changes later.
 Store props are `name`, `locale`, the narrow `auth.user` shape `{id,name,email}`,
-and `store` containing `rtl`, permission names, `isSuperAdmin`, `isRaizerAdmin`
+and `store` containing `rtl`, permission names, `isSuperAdmin`
 and booleans for `STORE_MENU_SETTINGS`. Everything except `name` is a closure
 because `Language` runs later. WMS pages do not receive `store` props.
 
@@ -109,16 +109,20 @@ pages and the existing Arabic-locale rule for WMS.
 ### 2.2 StoreAdminLayout and the sidebar
 
 `StoreAdminLayout.vue` and `storeAdminMenu.ts` are the only admin shell/sidebar.
-Preserve each entry's any-of permission gate, business-setting gate and
-vendor-only gate; `raizer_admin` bypasses setting gates. Empty groups disappear.
+Preserve each entry's any-of permission gate and business-setting gate. There
+is no vendor-only gate and no `users.raizer_admin` column any more (dropped by
+`2026_11_01_120000`): the owner's admin reaches Features activation, Payment
+methods and the cache button through the page permissions, and "the shop's own
+admin" is the lowest-id `user_type = 'admin'` row. Empty groups disappear.
 Button gates use the same permission names as their action middleware. The
 account block uses the store logout route and the current actor's profile and
 notifications; cache clearing stays narrowly scoped.
 
 Use Inertia links only for Inertia destinations. `StoreAdminNavLink` uses a
 plain anchor for Blade destinations; build URLs through Wayfinder. The shared
-layout helpers are `SkipToContentLink`, `isActiveNavUrl`, `LogoutLink.href` and
-`ResourceFormPage`'s layout/width support. Avoid merging the otherwise distinct
+layout helpers are `SkipToContentLink`, `LogoutLink.href` and
+`ResourceFormPage`'s layout/width support. The store sidebar's active state
+comes only from `findActiveStoreMenuLink` (`store-admin-menu-highlighting.md`). Avoid merging the otherwise distinct
 WMS and store layouts.
 
 ### 2.3 Translations
@@ -346,7 +350,9 @@ Run a fresh scoped route/consumer inventory before changing a handler.
 
 [shared-database.md](shared-database.md) is canonical for Option A and its
 reclassification procedure. The sync owns exactly `name`, `ar_name`, `published`
-on feed-origin rows (non-null `synced_at`); the store owns other columns and may
+on feed-origin rows (non-null `synced_at`) while each is Otajer-owned, the default;
+Setup > Product data sources can hand any of them to the admin panel
+([product-field-sources.md](product-field-sources.md)). The store owns other columns and may
 write those three on store-origin rows. Null pre-marker rows were originally
 unclassified; the owner's later Otajer-origin confirmation led to a one-time
 classification migration. Do not reapply the earlier pending-classification

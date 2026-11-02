@@ -8,12 +8,12 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 /**
- * The warehouse (WMS client) API under /temp/api/v2/warehouse. Its routes are
+ * The warehouse (WMS client) API under /api/v1/store/warehouse. Its routes are
  * guarded by WmsAuthMiddlewareTest; these cover what they do once through.
  * Errors there are reported in the body of an HTTP 200, which the client
  * parses, so the tests pin that envelope rather than a status code.
  */
-const WAREHOUSE_URL = '/temp/api/v2/warehouse';
+const WAREHOUSE_URL = '/api/v1/store/warehouse';
 
 beforeEach(function () {
     config(['app.wms_token' => 'wms-secret']);
@@ -163,6 +163,19 @@ test('the orders list resolves every rep serial in one query however many rep or
     expect($userQueries)->toHaveCount(1)
         ->and($byId[$direct->id]['rep_serial'])->toBeNull()
         ->and(collect($response->json('data'))->where('by_rep', true)->pluck('rep_serial')->unique()->all())->toBe(['REP-7']);
+});
+
+test("the order detail carries a rep order's rep serial and has none for a direct order", function () {
+    $rep = createStoreUser('customer');
+    $rep->forceFill(['is_rep' => true, 'rep_serial' => 'REP-7'])->save();
+    $other = createStoreUser('customer');
+    $other->forceFill(['is_rep' => true, 'rep_serial' => 'REP-9'])->save();
+    $repOrder = createStoreOrder($rep, ['by_rep' => 1, 'for_customer' => createStoreUser('customer')->id]);
+    createStoreOrder($other, ['by_rep' => 1, 'for_customer' => createStoreUser('customer')->id]);
+    $direct = createStoreOrder($other);
+
+    warehouse()->getJson(WAREHOUSE_URL."/order/{$repOrder->id}")->assertOk()->assertJsonPath('data.rep_serial', 'REP-7');
+    warehouse()->getJson(WAREHOUSE_URL."/order/{$direct->id}")->assertOk()->assertJsonPath('data.rep_serial', null);
 });
 
 test('the products list returns the first page only', function () {
@@ -325,7 +338,7 @@ test('update-customer validates its ids and answers 404 for unknown ones', funct
 
 test('the warehouse routes are throttled and token checked by one group', function () {
     $middleware = collect(app('router')->getRoutes()->getRoutes())
-        ->filter(fn ($route) => str_contains($route->uri(), 'api/v2/warehouse'))
+        ->filter(fn ($route) => str_starts_with($route->uri(), 'api/v1/store/warehouse/'))
         ->map(fn ($route) => $route->gatherMiddleware());
 
     expect($middleware)->toHaveCount(11)

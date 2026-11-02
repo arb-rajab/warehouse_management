@@ -14,6 +14,11 @@ use Illuminate\Foundation\Http\FormRequest;
  * Otajer image the edit form alone shows. Stored upload references
  * round-trip whoever owns them, and the product's own store barcodes may be
  * posted again.
+ *
+ * `ar_name` is the products column the Otajer sync can write. While a synced
+ * field is Otajer-owned on a feed-origin product, the form shows it read-only
+ * and InHouseProductWriter ignores what is posted for it (the stored value
+ * stays): see ProductFieldSourceService and .ai/rules/product-field-sources.md.
  */
 class UpdateProductRequest extends FormRequest
 {
@@ -22,7 +27,7 @@ class UpdateProductRequest extends FormRequest
 
     /**
      * The slug is MEDIUMTEXT, so it has no length rule; once normalised it
-     * must be free. The Otajer image holds comma-separated image ids in
+     * must be free. `ar_name` is VARCHAR(191) NOT NULL; empty stores ''. The Otajer image holds comma-separated image ids in
      * VARCHAR(2000), as the legacy uploader stored them.
      *
      * @return array<string, mixed>
@@ -37,6 +42,7 @@ class UpdateProductRequest extends FormRequest
             ...$this->productRules($product),
             ...$this->languageRules('required'),
             'slug' => ['nullable', 'string', $this->freeSlugRule($product)],
+            'ar_name' => ['sometimes', 'nullable', 'string', 'max:191'],
             'old_photo' => ['nullable', 'string', 'max:2000', $this->retainableImageUploadIdsRule($product->getAttribute('old_photo'))],
         ];
     }

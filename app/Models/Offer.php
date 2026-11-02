@@ -11,6 +11,16 @@ class Offer extends Model
     //use hasFactory;
     protected $guarded = [];
 
+    /**
+     * Eager loads for the offer block of a product payload: the quantity the
+     * base product must reach and, for every offered product, what its name,
+     * photos and discounted price read. Without them the offered products of
+     * an offer with two or more trip the lazy-loading guard in local/testing.
+     *
+     * @var list<string>
+     */
+    public const array WITH_OFFERED_PRODUCTS = ['base_product', 'offer_products.product.taxes', 'offer_products.product.product_translations'];
+
     public function base_product()
     {
         return $this->hasOne(OfferProduct::class)->where('is_base_product', 1);

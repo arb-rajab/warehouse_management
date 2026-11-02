@@ -88,7 +88,7 @@ class OrderController extends Controller implements HasMiddleware
      */
     private function placeOrder(Request $request, StoreUser $user): void
     {
-        $carts = Cart::where('user_id', $user->id)
+        $carts = Cart::with('rep_customer')->where('user_id', $user->id)
             ->lockForUpdate()
             ->get();
 

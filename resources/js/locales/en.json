@@ -28,6 +28,7 @@
             "tooLarge": "The image exceeds the 40-megapixel limit."
         },
         "confirmDelete": "Delete {label}? This cannot be undone.",
+        "openInMaps": "Open {address} in Google Maps",
         "cancel": "Cancel",
         "close": "Close",
         "filters": {
@@ -992,6 +993,7 @@
             "appearance": "Appearance",
             "setup": "Setup & configurations",
             "generalSettings": "General settings",
+            "productFieldSources": "Product data sources",
             "featuresActivation": "Features activation",
             "languages": "Languages",
             "currency": "Currency",
@@ -1204,6 +1206,20 @@
             "loginBackground": "Admin login page background",
             "timezone": "System timezone",
             "timezoneHint": "Set in the server configuration. Saving a different timezone is refused."
+        },
+        "productFieldSources": {
+            "title": "Product data sources",
+            "intro": "Choose, for each product field the Otajer sync writes, who owns its data. A field has exactly one owner.",
+            "otajer": "Otajer synced",
+            "otajerHint": "The hourly Otajer sync writes this field. On synced products it is read-only in the admin panel.",
+            "admin": "Admin panel set",
+            "adminHint": "The admin panel writes this field. The Otajer sync never writes or overwrites it; new synced products start with it empty (unpublished for Active status).",
+            "default": "Default: {source}",
+            "fields": {
+                "name": "Product name",
+                "ar_name": "Arabic name",
+                "published": "Active status"
+            }
         },
         "settings": {
             "save": "Save",
@@ -1735,7 +1751,6 @@
                 "bannerLarge": "Topbar banner large",
                 "bannerMedium": "Topbar banner medium",
                 "bannerSmall": "Topbar banner small",
-                "languageSwitcher": "Show language switcher",
                 "currencySwitcher": "Show currency switcher",
                 "sticky": "Enable sticky header",
                 "bannerLink": "Topbar banner link",
@@ -2551,6 +2566,10 @@
             "category": "Category / country",
             "emptyProducts": "No products yet.",
             "smtpWarning": "Please configure SMTP settings for email sending to work.",
+            "setup": {
+                "noPaymentMethod": "Payments are not set up: no payment method is switched on, so customers cannot place an order in the app.",
+                "cashOnDeliveryProducts": "Cash payment is on, but no product allows cash on delivery, so the app does not offer it. Tick \"Cash on delivery\" on the products that take cash."
+            },
             "configureNow": "Configure now",
             "charts": {
                 "products": "Products",
@@ -2759,6 +2778,9 @@
                 "saving": "Saving…",
                 "information": "Product information",
                 "name": "Product name",
+                "arName": "Arabic name",
+                "otajerSynced": "Synced from Otajer. Change it in Otajer, or set the field to “Admin panel set” under Product data sources.",
+                "otajerSyncedFields": "Synced from Otajer and read-only here: {fields}.",
                 "category": "Category",
                 "selectCategory": "Select a category",
                 "brand": "Brand",
@@ -3100,7 +3122,7 @@
     "store.sellers.categoryCommissionNote": "If category based commission is enabled, set the seller commission percentage to 0.",
     "store.sellers.vendor_commission_activation": "Seller commission activation",
     "store.sellers.category_wise_commission": "Category based commission",
-    "store.sellers.activationRestricted": "Activation changes require the vendor administrator and feature activation permission.",
+    "store.sellers.activationRestricted": "Activation changes require the feature activation permission.",
     "store.sellers.activationError": "The activation setting could not be saved.",
     "store.sellers.activationSaved": "Activation setting saved.",
     "store.sellers.verificationFormTitle": "Seller verification form",

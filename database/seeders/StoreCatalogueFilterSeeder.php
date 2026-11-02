@@ -8,6 +8,7 @@ use Database\Seeders\Support\StoreSeedExamples;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use RuntimeException;
 
 /** Fills catalogue filter gaps without changing any pre-existing catalogue row. */
@@ -46,6 +47,7 @@ class StoreCatalogueFilterSeeder extends Seeder
             if (! DB::table('categories')->exists() || $data->find('categories', 'catalogue-category') !== null) {
                 $data->row('categories', 'catalogue-category', ['name' => 'Mediterranean Pantry', 'slug' => StoreSeedExamples::code('pantry', 'catalogue-reference'), 'parent_id' => 0, 'level' => 0]);
             }
+            $this->seedCategories($data);
             if (! DB::table('brands')->exists() || $data->find('brands', 'catalogue-brand') !== null) {
                 $data->row('brands', 'catalogue-brand', ['name' => 'Mediterranean Pantry', 'slug' => StoreSeedExamples::code('pantry', 'catalogue-reference')]);
             }
@@ -141,6 +143,40 @@ class StoreCatalogueFilterSeeder extends Seeder
             }
             Cache::forget('verified_sellers_id');
         });
+    }
+
+    /**
+     * A store-like category tree on top of the single category above: root
+     * categories with three children each. Rows are keyed, so a second run
+     * updates them in place instead of adding more.
+     */
+    private function seedCategories(StoreFilterSeedData $data): void
+    {
+        $tree = [
+            'Oils & Vinegars' => ['Olive Oil', 'Sunflower Oil', 'Vinegars'],
+            'Rice & Grains' => ['Basmati Rice', 'Bulgur & Freekeh', 'Couscous'],
+            'Legumes & Pulses' => ['Chickpeas', 'Lentils', 'Beans'],
+            'Spices & Herbs' => ['Ground Spices', 'Spice Blends', 'Dried Herbs'],
+            'Nuts & Dried Fruit' => ['Dates', 'Pistachios & Nuts', 'Dried Apricots'],
+            'Sweets & Halva' => ['Halva', 'Turkish Delight', 'Baklava'],
+            'Tea & Coffee' => ['Turkish Coffee', 'Mint Tea', 'Herbal Infusions'],
+            'Canned & Jarred' => ['Olives', 'Tomato Products', 'Pickles'],
+        ];
+
+        $order = 1;
+        foreach ($tree as $root => $children) {
+            $rootId = (int) $data->row('categories', 'catalogue-tree-'.Str::slug($root), [
+                'name' => $root, 'slug' => Str::slug($root), 'parent_id' => 0, 'level' => 0,
+                'order_level' => $order, 'featured' => $order <= 4 ? 1 : 0, 'top' => $order <= 6 ? 1 : 0, 'digital' => 0,
+            ]);
+            foreach ($children as $child) {
+                $data->row('categories', 'catalogue-tree-'.Str::slug($root.' '.$child), [
+                    'name' => $child, 'slug' => Str::slug($child), 'parent_id' => $rootId, 'level' => 1,
+                    'order_level' => 0, 'featured' => 0, 'top' => 0, 'digital' => 0,
+                ]);
+            }
+            $order++;
+        }
     }
 
     /** @param array<string, mixed> $conditions */

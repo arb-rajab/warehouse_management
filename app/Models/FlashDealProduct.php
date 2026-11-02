@@ -12,4 +12,12 @@ class FlashDealProduct extends Model
     {
         return $this->belongsTo(Product::class);
     }
+
+    /**
+     * Load each deal product with what ProductMiniCollection reads off it.
+     */
+    public function scopeWithListedProduct($query)
+    {
+        $query->with(['product' => fn ($product) => $product->with(Product::WITH_STORE_LIST)]);
+    }
 }

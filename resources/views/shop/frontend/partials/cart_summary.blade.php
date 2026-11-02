@@ -20,7 +20,7 @@
 
                 @foreach ($carts as $key => $cartItem)
                     @php
-                        $product = \App\Models\Product::find($cartItem['product_id']);
+                        $product = $cartItem->product;
                     @endphp
                     @if ($cartItem->coupon_applied == 1)
                         @php
@@ -107,9 +107,6 @@
                         $shipping += $product_shipping_cost;
 
                         $product_name_with_choice = $product->getTranslation('name');
-                        if ($cartItem['variant'] != null) {
-                            $product_name_with_choice = $product->getTranslation('name') . ' - ' . $cartItem['variant'];
-                        }
                     @endphp
                     <tr class="cart_item">
                         <td class="product-name pl-0 fs-14 text-dark fw-400 border-top-0 border-bottom">
@@ -120,7 +117,7 @@
                         </td>
                         <td class="product-total text-right pr-0 fs-14 text-primary fw-600 border-top-0 border-bottom">
                             <span
-                                class="pl-4 pr-0">{{ single_price(cart_product_price($cartItem, $cartItem->product, false, false) * $cartItem['quantity']) }}</span>
+                                class="pl-4 pr-0">{{ single_price(cart_product_price($cartItem, $product, false, false) * $cartItem['quantity']) }}</span>
                         </td>
                     </tr>
                 @endforeach

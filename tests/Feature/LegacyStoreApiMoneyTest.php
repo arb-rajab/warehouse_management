@@ -4,9 +4,7 @@ use App\Models\Cart;
 use App\Models\ClubPoint;
 use App\Models\Order;
 use App\Models\StoreUser;
-use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 
 /**
  * Four mobile-API endpoints found a record by an id from the request and acted
@@ -17,30 +15,13 @@ use Illuminate\Support\Facades\Schema;
  */
 function createClubPointTables(): void
 {
-    Schema::create('club_points', function (Blueprint $table) {
-        $table->id();
-        $table->unsignedBigInteger('user_id');
-        $table->unsignedBigInteger('order_id')->nullable();
-        $table->double('points')->default(0);
-        $table->tinyInteger('convert_status')->default(0);
-        $table->timestamps();
-    });
-    Schema::create('club_point_details', function (Blueprint $table) {
-        $table->id();
-        $table->unsignedBigInteger('club_point_id');
-        $table->unsignedBigInteger('product_id')->nullable();
-        $table->double('point')->default(0);
-        $table->double('converted_amount')->default(0);
-        $table->tinyInteger('refunded')->default(0);
-        $table->timestamps();
-    });
     DB::table('business_settings')->insert(['type' => 'club_point_convert_rate', 'value' => '10']);
 }
 
 function clubPointFor(StoreUser $customer, float $point): ClubPoint
 {
     $clubPoint = new ClubPoint;
-    $clubPoint->forceFill(['user_id' => $customer->id, 'points' => $point])->save();
+    $clubPoint->forceFill(['user_id' => $customer->id, 'order_id' => createStoreOrder($customer)->id, 'points' => $point])->save();
     DB::table('club_point_details')->insert(['club_point_id' => $clubPoint->id, 'point' => $point, 'refunded' => 0]);
 
     return $clubPoint;
@@ -53,10 +34,10 @@ test('club points convert into the wallet of the account that owns them, once', 
     $clubPoint = clubPointFor($owner, 100);
     $token = storeApiToken($owner);
 
-    $this->withToken($token)->postJson('/temp/api/v2/clubpoint/convert-into-wallet', ['id' => $clubPoint->id])
+    $this->withToken($token)->postJson('/api/v1/store/clubpoint/convert-into-wallet', ['id' => $clubPoint->id])
         ->assertOk()->assertJsonPath('success', true);
     app('auth')->forgetGuards();
-    $this->withToken($token)->postJson('/temp/api/v2/clubpoint/convert-into-wallet', ['id' => $clubPoint->id])
+    $this->withToken($token)->postJson('/api/v1/store/clubpoint/convert-into-wallet', ['id' => $clubPoint->id])
         ->assertOk()->assertJsonPath('success', false);
 
     expect((float) $owner->fresh()->balance)->toBe(10.0)
@@ -70,7 +51,7 @@ test('another account\'s club points cannot be converted into your wallet', func
     $thief = createStoreUser('customer');
     $clubPoint = clubPointFor($victim, 100);
 
-    $this->withToken(storeApiToken($thief))->postJson('/temp/api/v2/clubpoint/convert-into-wallet', ['id' => $clubPoint->id])
+    $this->withToken(storeApiToken($thief))->postJson('/api/v1/store/clubpoint/convert-into-wallet', ['id' => $clubPoint->id])
         ->assertOk()->assertJsonPath('success', false);
 
     expect((float) $thief->fresh()->balance)->toBe(0.0)
@@ -87,16 +68,16 @@ test('an offline payment is submitted for your own unpaid order only', function 
     $paid = createStoreOrder($owner, ['payment_status' => 'paid']);
     $payload = fn (Order $order) => ['order_id' => $order->id, 'name' => 'A', 'amount' => 5, 'trx_id' => 'T1', 'payment_option' => 'manual_payment_1'];
 
-    $this->postJson('/temp/api/v2/offline/payment/submit', $payload($unpaid))->assertUnauthorized();
-    $this->withToken(storeApiToken($stranger))->postJson('/temp/api/v2/offline/payment/submit', $payload($unpaid))->assertJsonPath('result', false);
+    $this->postJson('/api/v1/store/offline/payment/submit', $payload($unpaid))->assertUnauthorized();
+    $this->withToken(storeApiToken($stranger))->postJson('/api/v1/store/offline/payment/submit', $payload($unpaid))->assertJsonPath('result', false);
     expect($unpaid->fresh()->payment_status)->toBe('unpaid');
 
     app('auth')->forgetGuards();
-    $this->withToken(storeApiToken($owner))->postJson('/temp/api/v2/offline/payment/submit', $payload($paid))->assertJsonPath('result', false);
+    $this->withToken(storeApiToken($owner))->postJson('/api/v1/store/offline/payment/submit', $payload($paid))->assertJsonPath('result', false);
     expect($paid->fresh()->payment_status)->toBe('paid');
 
     app('auth')->forgetGuards();
-    $this->withToken(storeApiToken($owner))->postJson('/temp/api/v2/offline/payment/submit', $payload($unpaid))->assertJsonPath('result', true);
+    $this->withToken(storeApiToken($owner))->postJson('/api/v1/store/offline/payment/submit', $payload($unpaid))->assertJsonPath('result', true);
     expect($unpaid->fresh()->payment_status)->toBe('Submitted')
         ->and(Order::where('payment_status', 'Submitted')->count())->toBe(1);
 });
@@ -108,19 +89,19 @@ test('a cart line changes quantity for its owner only, and only to a whole numbe
     $line = Cart::create(['user_id' => $owner->id, 'product_id' => $product->id, 'quantity' => 2, 'variation' => '']);
     $token = storeApiToken($owner);
 
-    $this->withToken(storeApiToken($stranger))->postJson('/temp/api/v2/carts/change-quantity', ['id' => $line->id, 'quantity' => 7])
+    $this->withToken(storeApiToken($stranger))->postJson('/api/v1/store/carts/change-quantity', ['id' => $line->id, 'quantity' => 7])
         ->assertJsonPath('result', false);
     expect($line->fresh()->quantity)->toBe(2);
 
     foreach ([-3, 0, 'many', 1.5] as $bad) {
         app('auth')->forgetGuards();
-        $this->withToken($token)->postJson('/temp/api/v2/carts/change-quantity', ['id' => $line->id, 'quantity' => $bad])
+        $this->withToken($token)->postJson('/api/v1/store/carts/change-quantity', ['id' => $line->id, 'quantity' => $bad])
             ->assertJsonPath('result', false);
         expect($line->fresh()->quantity)->toBe(2);
     }
 
     app('auth')->forgetGuards();
-    $this->withToken($token)->postJson('/temp/api/v2/carts/change-quantity', ['id' => $line->id, 'quantity' => 4])
+    $this->withToken($token)->postJson('/api/v1/store/carts/change-quantity', ['id' => $line->id, 'quantity' => 4])
         ->assertJsonPath('result', true);
     expect($line->fresh()->quantity)->toBe(4);
 });
@@ -131,11 +112,11 @@ test('processing the cart skips lines that are not yours and refuses a bad quant
     $product = createStoreProduct();
     $theirs = Cart::create(['user_id' => $owner->id, 'product_id' => $product->id, 'quantity' => 2, 'variation' => '']);
 
-    $this->withToken(storeApiToken($stranger))->postJson('/temp/api/v2/carts/process', ['cart_ids' => (string) $theirs->id, 'cart_quantities' => '9']);
+    $this->withToken(storeApiToken($stranger))->postJson('/api/v1/store/carts/process', ['cart_ids' => (string) $theirs->id, 'cart_quantities' => '9']);
     expect($theirs->fresh()->quantity)->toBe(2);
 
     app('auth')->forgetGuards();
-    $this->withToken(storeApiToken($owner))->postJson('/temp/api/v2/carts/process', ['cart_ids' => (string) $theirs->id, 'cart_quantities' => '-5'])
+    $this->withToken(storeApiToken($owner))->postJson('/api/v1/store/carts/process', ['cart_ids' => (string) $theirs->id, 'cart_quantities' => '-5'])
         ->assertJsonPath('result', false);
     expect($theirs->fresh()->quantity)->toBe(2);
 });
@@ -144,7 +125,7 @@ test('adding to the cart refuses a quantity below one', function () {
     $customer = createStoreUser('customer');
     $product = createStoreProduct(['min_qty' => 0]);
 
-    $this->withToken(storeApiToken($customer))->postJson('/temp/api/v2/carts/add', ['id' => $product->id, 'quantity' => -4, 'variant' => ''])
+    $this->withToken(storeApiToken($customer))->postJson('/api/v1/store/carts/add', ['id' => $product->id, 'quantity' => -4, 'variant' => ''])
         ->assertJsonPath('result', false);
 
     expect(Cart::where('user_id', $customer->id)->count())->toBe(0);
@@ -163,17 +144,17 @@ test('an offline payment needs an amount, a transaction id and clean proof, and 
         ['photo' => '<img src=x>'], ['payment_option' => null], ['order_id' => 'abc'],
     ] as $forged) {
         app('auth')->forgetGuards();
-        $this->withToken($token)->postJson('/temp/api/v2/offline/payment/submit', [...$valid, ...$forged])->assertUnprocessable();
+        $this->withToken($token)->postJson('/api/v1/store/offline/payment/submit', [...$valid, ...$forged])->assertUnprocessable();
     }
     expect($order->fresh()->payment_status)->toBe('unpaid');
 
     app('auth')->forgetGuards();
-    $this->withToken($token)->postJson('/temp/api/v2/offline/payment/submit', [...$valid, 'photo' => '42'])->assertJsonPath('result', true);
+    $this->withToken($token)->postJson('/api/v1/store/offline/payment/submit', [...$valid, 'photo' => '42'])->assertJsonPath('result', true);
     expect(json_decode($order->fresh()->manual_payment_data, true))->toBe(['name' => 'A', 'amount' => 5, 'trx_id' => 'T1', 'photo' => '42']);
 
     // A second submission would overwrite the first one's proof.
     app('auth')->forgetGuards();
-    $this->withToken($token)->postJson('/temp/api/v2/offline/payment/submit', [...$valid, 'trx_id' => 'T2'])->assertJsonPath('result', false);
+    $this->withToken($token)->postJson('/api/v1/store/offline/payment/submit', [...$valid, 'trx_id' => 'T2'])->assertJsonPath('result', false);
 
     expect(json_decode($order->fresh()->manual_payment_data, true)['trx_id'])->toBe('T1')
         ->and($noise->fresh()->payment_status)->toBe('unpaid');

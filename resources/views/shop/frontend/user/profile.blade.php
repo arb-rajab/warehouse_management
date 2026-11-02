@@ -146,7 +146,7 @@
             <h5 class="mb-0 fs-18 fw-700 text-dark">{{ __('storefront.checkout.shipping_address')}}</h5>
         </div>
         <div class="card-body">
-            @foreach (Auth::user()->addresses as $key => $address)
+            @foreach (Auth::user()->addresses()->with(\App\Models\Address::WITH_PLACE)->get() as $key => $address)
                 <div class="">
                     <div class="border p-4 mb-4 position-relative">
                         <div class="row fs-14 mb-2 mb-md-0">

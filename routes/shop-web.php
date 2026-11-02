@@ -177,6 +177,8 @@ Route::controller(HomeController::class)->group(function () {
 
 // Language Switch
 Route::post('/language', [LanguageController::class, 'changeLanguage'])->name('language.change');
+// The storefront header's Arabic/English toggle (form POST, same-origin redirect back).
+Route::post('/language/toggle', [LanguageController::class, 'toggleLanguage'])->name('language.toggle');
 Route::get('translation-check/{check}', [LanguageController::class, 'getTranslation']);
 
 // Currency Switch

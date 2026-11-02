@@ -9,7 +9,7 @@ import {
     Store,
     X,
 } from '@lucide/vue';
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { logout } from '@/actions/App/Http/Controllers/Auth/LoginController';
 import { index as storefrontHome } from '@/actions/App/Http/Controllers/HomeController';
 import { clearCache } from '@/actions/App/Http/Controllers/Store/Admin/DashboardController';
@@ -23,15 +23,19 @@ import StoreAdminNavLink from '@/components/StoreAdminNavLink.vue';
 import SubmitButton from '@/components/SubmitButton.vue';
 import { formatDateTime } from '@/lib/date';
 import { t } from '@/lib/i18n';
-import { isActiveNavUrl } from '@/lib/navigation';
 import { useStoreAccess } from '@/lib/storeAccess';
+import {
+    findActiveStoreMenuLink,
+    storeMenuItemContains,
+} from '@/lib/storeAdminActiveMenu';
 import {
     isStoreMenuGroup,
     storeAdminMenu,
+    storeAdminPageParents,
     storeMenuLinks,
     visibleStoreMenu,
 } from '@/lib/storeAdminMenu';
-import type { StoreMenuItem } from '@/lib/storeAdminMenu';
+import type { StoreMenuItem, StoreMenuLink } from '@/lib/storeAdminMenu';
 import { useDismissibleListbox } from '@/lib/useDismissibleListbox';
 
 /**
@@ -81,39 +85,50 @@ function badge(item: StoreMenuItem): number {
         ? (page.props.store?.counts?.[item.badgeKey] ?? 0)
         : 0;
 }
-const menuUrls = computed(() =>
-    storeMenuLinks(menu.value).map((link) => link.href.url),
+/**
+ * The active link comes from the whole menu, never the filtered copy shown,
+ * so who is looking and what they typed in the search box cannot move it
+ * (.ai/rules/store-admin-menu-highlighting.md).
+ */
+const activeLink = computed(() =>
+    findActiveStoreMenuLink(page.url, storeAdminMenu, storeAdminPageParents),
 );
 
-function isActive(url: string): boolean {
-    return isActiveNavUrl(page.url, url, menuUrls.value);
+function isActive(link: StoreMenuLink): boolean {
+    return link === activeLink.value;
 }
 
 function containsActive(item: StoreMenuItem): boolean {
-    return storeMenuLinks([item]).some((link) => isActive(link.href.url));
+    return storeMenuItemContains(item, activeLink.value);
 }
 
 /**
- * The groups the visitor has flipped. A group holding the current page
- * starts open and every other one closed; a click flips it from there.
+ * Groups the visitor has opened or closed by hand. A group holding the
+ * current page is open and every other one closed until a click says
+ * otherwise; going to another page forgets the clicks, so the group holding
+ * the new page is open again.
  */
-const toggledGroups = ref(new Set<string>());
+const manualGroups = ref(new Map<string, boolean>());
+
+watch(
+    () => page.url,
+    () => {
+        manualGroups.value = new Map();
+    },
+);
 
 function isOpen(item: StoreMenuItem): boolean {
     return (
         !!menuQuery.value ||
-        containsActive(item) !== toggledGroups.value.has(item.labelKey)
+        (manualGroups.value.get(item.labelKey) ?? containsActive(item))
     );
 }
 
-function toggle(labelKey: string): void {
-    const next = new Set(toggledGroups.value);
+function toggle(item: StoreMenuItem): void {
+    const next = new Map(manualGroups.value);
 
-    if (!next.delete(labelKey)) {
-        next.add(labelKey);
-    }
-
-    toggledGroups.value = next;
+    next.set(item.labelKey, !isOpen(item));
+    manualGroups.value = next;
 }
 </script>
 
@@ -180,7 +195,8 @@ function toggle(labelKey: string): void {
                                         : 'text-gray-600 hover:text-gray-900 dark:text-neutral-400 dark:hover:text-white'
                                 "
                                 :aria-expanded="isOpen(item)"
-                                @click="toggle(item.labelKey)"
+                                :data-active="containsActive(item)"
+                                @click="toggle(item)"
                             >
                                 <component
                                     :is="item.icon"
@@ -205,7 +221,13 @@ function toggle(labelKey: string): void {
                                 >
                                     <template v-if="isStoreMenuGroup(child)">
                                         <p
-                                            class="px-3 pt-2 pb-1 text-xs font-semibold tracking-wide text-gray-400 uppercase dark:text-neutral-500"
+                                            class="px-3 pt-2 pb-1 text-xs font-semibold tracking-wide uppercase"
+                                            :class="
+                                                containsActive(child)
+                                                    ? 'text-gray-900 dark:text-white'
+                                                    : 'text-gray-400 dark:text-neutral-500'
+                                            "
+                                            :data-active="containsActive(child)"
                                         >
                                             {{ t(child.labelKey) }}
                                         </p>
@@ -219,9 +241,7 @@ function toggle(labelKey: string): void {
                                                 <StoreAdminNavLink
                                                     :item="link"
                                                     :count="badge(link)"
-                                                    :active="
-                                                        isActive(link.href.url)
-                                                    "
+                                                    :active="isActive(link)"
                                                     @click="
                                                         isSidebarOpen = false
                                                     "
@@ -233,7 +253,7 @@ function toggle(labelKey: string): void {
                                         v-else
                                         :item="child"
                                         :count="badge(child)"
-                                        :active="isActive(child.href.url)"
+                                        :active="isActive(child)"
                                         @click="isSidebarOpen = false"
                                     />
                                 </li>
@@ -243,7 +263,7 @@ function toggle(labelKey: string): void {
                             v-else
                             :item="item"
                             :count="badge(item)"
-                            :active="isActive(item.href.url)"
+                            :active="isActive(item)"
                             @click="isSidebarOpen = false"
                         />
                     </li>
@@ -282,7 +302,7 @@ function toggle(labelKey: string): void {
             <div class="mx-auto max-w-6xl">
                 <div class="mb-5 flex items-center justify-end gap-3">
                     <Form
-                        v-if="access.isRaizerAdmin"
+                        v-if="access.can('file_system_&_cache_configuration')"
                         :action="clearCache()"
                         #default="{ processing }"
                     >

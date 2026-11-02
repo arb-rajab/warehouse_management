@@ -76,6 +76,8 @@ class NewFetchProductsCommand extends Command
      */
     public function handle()
     {
+        // Otajer-synced fields the admin owns are never written by this import.
+        $fieldSources = app(\App\Services\ProductFieldSourceService::class);
 
         // if there is already a running fetching-products-by-admin  command, exit to prevent duplicates products
         $cron_job_exists = CronJobs::where(function ($query) {
@@ -129,7 +131,7 @@ class NewFetchProductsCommand extends Command
             $response = Http::get($endpoint);
             $allProducts = json_decode($response, true);
             $products_count += count($allProducts['Products']);
-            $admin_id = StoreUser::where('user_type', 'admin')->where('raizer_admin', null)->value('id');
+            $admin_id = StoreUser::where('user_type', 'admin')->orderBy('id')->value('id');
 
             // if(! Attribute::where('name', 'Variations')->first()){
             //     Attribute::create([
@@ -214,7 +216,7 @@ class NewFetchProductsCommand extends Command
 
                     //Begin: Updating the product
                     //
-                    $selectedProduct->update([
+                    $selectedProduct->update($fieldSources->withoutAdminOwned([
                         'serial' => $product['Serial'],
                         'name' => $product['enName'],
                         'ar_name' => $product['arName'],
@@ -244,7 +246,7 @@ class NewFetchProductsCommand extends Command
                         'stock_visibility_state' => 'text',
                         'cash_on_delivery' => 1
                         //      'sku' => $product['enName'] . '-' . $product['Unit_Equal'] . '-' . uniqid(),
-                    ]);
+                    ]));
                     //End: Updating the product
 
 
@@ -331,17 +333,17 @@ class NewFetchProductsCommand extends Command
                     // $productTax->update([
                     //     'tax' => $product['TaxPercent']
                     // ]);
-                    $productArabicTranslation->update([ // arabic
+                    $productArabicTranslation->update($fieldSources->translationValues('ar_name', [
                         'name' => $product['arName'],
                         'unit' => $product['UnitArName'],
                         'description' => $product['Desc']
-                    ]);
+                    ], false));
 
-                    $productEnglishTranslation->update([ // english
+                    $productEnglishTranslation->update($fieldSources->translationValues('name', [
                         'name' => $product['enName'],
                         'unit' => $product['UnitEnName'],
                         'description' => $product['Desc']
-                    ]);
+                    ], false));
                     //End: Updating Product Taxes and Translations
 
 
@@ -416,7 +418,7 @@ class NewFetchProductsCommand extends Command
                     }
 
                     //Begin: Product Creation
-                    $productId =  Product::create([
+                    $productId =  Product::create($fieldSources->withInsertValues([
                         'serial' => $productDetails['Serial'],
                         'name' => $productDetails['enName'],
                         'ar_name' => $productDetails['arName'],
@@ -454,7 +456,7 @@ class NewFetchProductsCommand extends Command
                             'discount_type' => 'amount',
                             'low_stock_quantity' => 1*/
 
-                    ]);
+                    ]));
                     //End: Product Creation
 
 
@@ -507,21 +509,21 @@ class NewFetchProductsCommand extends Command
 
 
                     //Begin: Translation
-                    ProductTranslation::create([
+                    ProductTranslation::create($fieldSources->translationValues('ar_name', [
                         'lang' => 'sa',
                         'name' => $productDetails['arName'],
                         'unit' => $productDetails['UnitArName'],
                         'description' => $productId->description,
                         'product_id' => $productId?->id
-                    ]);
+                    ], true));
 
-                    ProductTranslation::create([
+                    ProductTranslation::create($fieldSources->translationValues('name', [
                         'lang' => 'en',
                         'name' => $productDetails['enName'],
                         'unit' => $productDetails['UnitEnName'],
                         'description' => $productId->description,
                         'product_id' => $productId?->id
-                    ]);
+                    ], true));
                     //End: Translation
 
 

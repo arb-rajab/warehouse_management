@@ -27,7 +27,7 @@ dataset('plain settings pages', array_map(fn (string $section, array $page): arr
 dataset('writable settings pages', writableSettingsPages());
 
 test('each settings page can be rendered before any settings rows exist', function (string $section, string $route, string $permission) {
-    actingAsStoreUser($section === 'activation' ? createStoreAdmin(raizerAdmin: true) : createStoreStaff($permission));
+    actingAsStoreUser(createStoreStaff($permission));
     $this->get(route($route))->assertOk()->assertInertia(fn (Assert $page) => $page->component('Store/Admin/Settings/Index'));
 })->with('plain settings pages');
 
@@ -43,7 +43,7 @@ test('WMS authentication alone never grants settings writes', function (string $
 })->with('writable settings pages');
 
 test('each settings page renders with only its boolean settings and no environment credentials', function (string $section, string $route, string $permission) {
-    actingAsStoreUser($section === 'activation' ? createStoreAdmin(raizerAdmin: true) : createStoreStaff($permission));
+    actingAsStoreUser(createStoreStaff($permission));
     config(['mail.mailers.smtp.password' => 'smtp-secret', 'services.facebook.client_secret' => 'social-secret', 'filesystems.disks.s3.secret' => 'storage-secret', 'services.fcm.server_key' => 'firebase-secret']);
     DB::table('business_settings')->insert(['type' => 'unrelated_secret', 'value' => 'private-setting']);
     foreach (SettingsController::PAGES[$section]['keys'] as $key) {
@@ -55,13 +55,26 @@ test('each settings page renders with only its boolean settings and no environme
         ->assertDontSee('smtp-secret')->assertDontSee('social-secret')->assertDontSee('storage-secret')->assertDontSee('firebase-secret')->assertDontSee('private-setting');
 })->with('plain settings pages');
 
+test('the activation page passes on only a highlight key it holds', function () {
+    actingAsStoreUser(createStoreAdmin());
+
+    $this->get(route('activation.index', ['highlight' => 'cash_payment']))->assertOk()
+        ->assertInertia(fn (Assert $page) => $page->where('highlight', 'cash_payment'));
+    $this->get(route('activation.index', ['highlight' => 'smtp_password']))->assertOk()
+        ->assertInertia(fn (Assert $page) => $page->where('highlight', null));
+    $this->get(route('activation.index', ['highlight' => ['cash_payment']]))->assertOk()
+        ->assertInertia(fn (Assert $page) => $page->where('highlight', null));
+    $this->get(route('activation.index'))->assertOk()
+        ->assertInertia(fn (Assert $page) => $page->where('highlight', null));
+});
+
 test('each settings page refuses unauthorized callers', function (string $section, string $route, string $permission, string $caller) {
     actingAsRefusedStoreCaller($caller);
     assertStoreCallerRefused($this->get(route($route)), $caller);
 })->with('plain settings pages')->with('refused store admin callers');
 
 test('each settings endpoint accepts only its allowed keys, saves both boolean states, and redirects explicitly', function (string $section, string $route, string $permission) {
-    actingAsStoreUser($section === 'activation' ? createStoreAdmin(raizerAdmin: true) : createStoreStaff($permission));
+    actingAsStoreUser(createStoreStaff($permission));
     Artisan::spy();
     Cache::put('wms-sentinel', 'keep');
     DB::table('business_settings')->insert(['type' => 'noise', 'value' => 'unchanged']);
@@ -77,7 +90,7 @@ test('each settings endpoint accepts only its allowed keys, saves both boolean s
 })->with('writable settings pages');
 
 test('each settings endpoint rejects foreign keys atomically', function (string $section, string $route, string $permission, string $badKey) {
-    actingAsStoreUser($section === 'activation' ? createStoreAdmin(raizerAdmin: true) : createStoreStaff($permission));
+    actingAsStoreUser(createStoreStaff($permission));
     $key = SettingsController::PAGES[$section]['keys'][0];
     DB::table('business_settings')->insert(['type' => $key, 'value' => '0']);
     $this->postJson(route($route), ['settings' => [$key => 1, $badKey => 1]])->assertUnprocessable()->assertJsonValidationErrors('settings');
@@ -86,7 +99,7 @@ test('each settings endpoint rejects foreign keys atomically', function (string 
 })->with('writable settings pages')->with(['header_script', 'APP_KEY', 'maintenance_mode', 'FORCE_HTTPS', 'FILESYSTEM_DRIVER', 'seller_wholesale_product', 'proxypay']);
 
 test('even valid migrated keys are refused on another settings page', function (string $section, string $route, string $permission) {
-    actingAsStoreUser($section === 'activation' ? createStoreAdmin(raizerAdmin: true) : createStoreStaff($permission));
+    actingAsStoreUser(createStoreStaff($permission));
     $keys = SettingsController::PAGES[$section]['keys'];
     $otherKey = $section === 'activation' ? 'facebook_chat' : 'coupon_system';
     $this->postJson(route($route), ['settings' => [$keys[0] => 1, $otherKey => 1]])->assertUnprocessable()->assertJsonValidationErrors('settings');
@@ -108,7 +121,7 @@ test('a different settings permission never grants a migrated write', function (
 })->with('writable settings pages');
 
 test('settings writes validate values, empty payloads, and old environment payloads', function (string $section, string $route, string $permission) {
-    actingAsStoreUser($section === 'activation' ? createStoreAdmin(raizerAdmin: true) : createStoreStaff($permission));
+    actingAsStoreUser(createStoreStaff($permission));
     $key = SettingsController::PAGES[$section]['keys'][0];
     foreach ([['settings' => [$key => 'invalid']], ['settings' => []], ['types' => ['APP_KEY'], 'APP_KEY' => 'secret'], ['settings' => [$key => 1], 'MAIL_PASSWORD' => 'secret']] as $payload) {
         $this->postJson(route($route), $payload)->assertUnprocessable();
@@ -123,11 +136,16 @@ test('the retired generic settings endpoint cannot bypass migrated permissions o
     expect(DB::table('business_settings')->count())->toBe(0);
 })->with(array_values(array_unique(array_merge(...array_column(SettingsController::PAGES, 'keys')))));
 
-test('activation refuses a non-vendor super admin', function () {
+test('activation is open to the store admin and refused to staff without the permission', function () {
     actingAsStoreUser(createStoreAdmin());
+    $this->get(route('activation.index'))->assertOk();
+    $this->post(route('business_settings.update.activation'), ['settings' => ['cash_payment' => 1]])->assertRedirect(route('activation.index'));
+    $this->assertDatabaseHas('business_settings', ['type' => 'cash_payment', 'value' => '1']);
+
+    actingAsStoreUser(createStoreStaff('smtp_settings'));
     $this->get(route('activation.index'))->assertForbidden();
-    $this->post(route('business_settings.update.activation'), ['settings' => ['coupon_system' => 1]])->assertForbidden();
-    expect(DB::table('business_settings')->count())->toBe(0);
+    $this->post(route('business_settings.update.activation'), ['settings' => ['cash_payment' => 0]])->assertForbidden();
+    $this->assertDatabaseHas('business_settings', ['type' => 'cash_payment', 'value' => '1']);
 });
 
 test('SMTP testing requires both permissions and validates the recipient', function () {

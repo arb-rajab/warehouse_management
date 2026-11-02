@@ -630,6 +630,7 @@ return [
         'see_all' => 'عرض الكل',
         'sign_out' => 'تسجيل الخروج',
         'subscribe' => 'اشتراك',
+        'switch_language' => 'تغيير لغة المتجر إلى :language',
         'terms_conditions' => 'الشروط والأحكام',
         'view_all_notifications' => 'عرض جميع الإشعارات',
         'withdraw_request_history' => 'سجل طلبات السحب',

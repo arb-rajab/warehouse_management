@@ -11,7 +11,7 @@ use Inertia\Testing\AssertableInertia as Assert;
 function websiteHeaderPayload(array $overrides = []): array
 {
     return array_replace([
-        'header_logo' => '', 'show_language_switcher' => true, 'show_currency_switcher' => false,
+        'header_logo' => '', 'show_currency_switcher' => false,
         'header_stikcy' => true, 'topbar_banner' => '', 'topbar_banner_medium' => '', 'topbar_banner_small' => '',
         'topbar_banner_link' => '/offers', 'helpline_number' => '12345',
         'header_menu_labels' => ['Offers'], 'header_menu_links' => ['/offers'],
@@ -23,7 +23,7 @@ function headerSetting(string $key, ?string $value, ?string $lang = null): Busin
     return BusinessSetting::forceCreate(['type' => $key, 'value' => $value, 'lang' => $lang]);
 }
 
-test('the header sends only its own eleven settings in the storefront representation', function () {
+test('the header sends only its own ten settings in the storefront representation', function () {
     actingAsStoreUser(createStoreStaff('header_setup'));
     headerSetting('header_logo', '17');
     headerSetting('header_stikcy', 'on');
@@ -36,7 +36,7 @@ test('the header sends only its own eleven settings in the storefront representa
         ->component('Store/Admin/Website/Header')
         ->has('settings', count(UpdateWebsiteHeaderRequest::KEYS))
         ->where('settings', websiteHeaderPayload([
-            'header_logo' => '17', 'show_language_switcher' => false, 'topbar_banner_link' => '', 'helpline_number' => '',
+            'header_logo' => '17', 'topbar_banner_link' => '', 'helpline_number' => '',
         ])));
 });
 
@@ -55,7 +55,6 @@ test('a header save keeps the legacy keys and values without clearing the shared
     $this->put(route('website.header.update'), ['settings' => $payload])->assertRedirect(route('website.header'));
 
     expect(get_setting('header_logo'))->toBe((string) $image->id)
-        ->and(get_setting('show_language_switcher'))->toBe('on')
         ->and(get_setting('show_currency_switcher'))->toBeNull()
         ->and(get_setting('header_stikcy'))->toBeNull()
         ->and(get_setting('header_menu_labels'))->toBe('["Offers"]')

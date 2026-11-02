@@ -3,7 +3,7 @@
 use App\Http\Controllers\AffiliateController;
 use App\Http\Controllers\ClubPointController;
 use App\Http\Controllers\CommissionController;
-use App\Http\Resources\V2\CarrierCollection;
+use App\Http\Resources\V1\CarrierCollection;
 use App\Models\Addon;
 use App\Models\Address;
 use App\Models\BusinessSetting;
@@ -110,7 +110,7 @@ if (!function_exists('filter_products')) {
                     });
                 });
         } else {
-            return $products->where('auction_product', 0)->where('published', true)->where('added_by', 'admin');
+            return $products->where('auction_product', 0)->where('published', true)->where('approved', 1)->where('added_by', 'admin');
         }
     }
 }
@@ -126,14 +126,20 @@ if (!function_exists('remember_models')) {
      * array store tests use doesn't). The models' attribute arrays are cached
      * instead and hydrated back on every read, cache hit or miss alike.
      *
+     * Hydrated models carry no relations, and a list of two or more trips the
+     * lazy-loading guard in local/testing on the first one a resource reads,
+     * so `$with` names the relations to eager-load onto them. They are queried
+     * on every read, since only the attributes are cached.
+     *
      * @param  class-string<\Illuminate\Database\Eloquent\Model>  $model
      * @param  \DateTimeInterface|\DateInterval|int|null  $ttl  null caches forever
      * @param  \Closure(): \Illuminate\Support\Collection  $query
+     * @param  list<string>  $with
      * @return \Illuminate\Database\Eloquent\Collection
      */
-    function remember_models(string $model, string $key, $ttl, Closure $query)
+    function remember_models(string $model, string $key, $ttl, Closure $query, array $with = [])
     {
-        return $model::hydrate(Cache::remember($key, $ttl, fn () => $query()->map->getAttributes()->all()));
+        return $model::hydrate(Cache::remember($key, $ttl, fn () => $query()->map->getAttributes()->all()))->load($with);
     }
 }
 
@@ -158,11 +164,11 @@ if (!function_exists('get_cached_products')) {
                 $category_ids = CategoryUtility::children_ids($category_id);
                 $category_ids[] = $category_id;
                 return $products->whereIn('category_id', $category_ids)->orderBy('featured', 'desc')->take(12)->get();
-            });
+            }, Product::WITH_STORE_LIST);
         } else {
             return remember_models(Product::class, 'products', 86400, function () use ($products) {
                 return $products->latest()->take(12)->get();
-            });
+            }, Product::WITH_STORE_LIST);
         }
     }
 }
@@ -277,6 +283,12 @@ if (!function_exists('cart_product_price')) {
             if ($product_stock) {
                 $price = $product_stock->price;
             }
+            // A line with no variant is priced at the product's unit price when
+            // added (CartController::add), so a stock row with no price must not
+            // turn it into a free one: the cart, its totals and the order read 0.
+            if ($str === '' && $price <= 0 && $product->unit_price > 0) {
+                $price = $product->unit_price;
+            }
 
 
             //discount calculation
@@ -356,6 +368,7 @@ if (!function_exists('cart_product_tax')) {
 
         //calculation of taxes
         $tax = 0;
+        $product->loadMissing('taxes');
         foreach ($product->taxes as $product_tax) {
             if ($product_tax->tax_type == 'percent') {
                 $tax += ($price * $product_tax->tax) / 100;
@@ -379,6 +392,7 @@ if (!function_exists('cart_product_discount')) {
         if ($cart_product['variation'] != null) {
             $str = $cart_product['variation'];
         }
+        $product->loadMissing('stocks');
         $product_stock = $product->stocks->where('variant', $str)->first();
         $price = $product_stock->price;
 
@@ -543,6 +557,7 @@ if (!function_exists('home_price')) {
         $highest_price = $product->unit_price;
 
         if ($product->variant_product) {
+            $product->loadMissing('stocks');
             foreach ($product->stocks as $key => $stock) {
                 if ($lowest_price > $stock->price) {
                     $lowest_price = $stock->price;
@@ -553,6 +568,7 @@ if (!function_exists('home_price')) {
             }
         }
 
+        $product->loadMissing('taxes');
         foreach ($product->taxes as $product_tax) {
             if ($product_tax->tax_type == 'percent') {
                 $lowest_price += ($lowest_price * $product_tax->tax) / 100;
@@ -583,6 +599,7 @@ if (!function_exists('home_discounted_price')) {
         $highest_price = $product->unit_price;
 
         if ($product->variant_product) {
+            $product->loadMissing('stocks');
             foreach ($product->stocks as $key => $stock) {
                 if ($lowest_price > $stock->price) {
                     $lowest_price = $stock->price;
@@ -614,6 +631,7 @@ if (!function_exists('home_discounted_price')) {
             }
         }
 
+        $product->loadMissing('taxes');
         foreach ($product->taxes as $product_tax) {
             if ($product_tax->tax_type == 'percent') {
                 $lowest_price += ($lowest_price * $product_tax->tax) / 100;
@@ -661,6 +679,7 @@ if (!function_exists('home_base_price')) {
         $price = $product->unit_price;
         $tax = 0;
 
+        $product->loadMissing('taxes');
         foreach ($product->taxes as $product_tax) {
             if ($product_tax->tax_type == 'percent') {
                 $tax += ($price * $product_tax->tax) / 100;
@@ -701,6 +720,7 @@ if (!function_exists('home_discounted_base_price_by_stock_id')) {
             }
         }
 
+        $product->loadMissing('taxes');
         foreach ($product->taxes as $product_tax) {
             if ($product_tax->tax_type == 'percent') {
                 $tax += ($price * $product_tax->tax) / 100;
@@ -740,6 +760,7 @@ if (!function_exists('home_discounted_base_price')) {
             }
         }
 
+        $product->loadMissing('taxes');
         foreach ($product->taxes as $product_tax) {
             if ($product_tax->tax_type == 'percent') {
                 $tax += ($price * $product_tax->tax) / 100;
@@ -772,6 +793,7 @@ if (!function_exists('offer_discount')) {
 
         $tax = 0;
 
+        $product->loadMissing('taxes');
         foreach ($product->taxes as $product_tax) {
             if ($product_tax->tax_type == 'percent') {
                 $tax += ($price * $product_tax->tax) / 100;
@@ -984,7 +1006,7 @@ if (!function_exists('seller_base_carrier_list')) {
     function seller_base_carrier_list($owner_id)
     {
         $carrier_list = [];
-        $carts = Cart::where('user_id', auth()->user()->id)->get();
+        $carts = Cart::with('address')->where('user_id', auth()->user()->id)->get();
         if (count($carts) > 0) {
             $zone = $carts[0]['address'] ? Country::where('id', $carts[0]['address']['country_id'])->first()->zone_id : null;
             $carrier_query = Carrier::query();

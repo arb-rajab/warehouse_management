@@ -108,7 +108,7 @@ prefix. That is the single point every storefront asset URL goes through.
 - `routes/api_warehouse.php` is mounted with **no middleware group**
   (`RouteServiceProvider::mapApiWareHouseRoutes`). These routes are
   **unauthenticated** and expose customer PII and orders:
-  - `GET api/v2/warehouse/customers`
+  - `GET api/v1/store/warehouse/customers`
   - `/reps`
   - `/customer/{id}`
   - `/orders`
@@ -182,7 +182,7 @@ prefix. That is the single point every storefront asset URL goes through.
   dead ones; they need a permission, and the ones that change state are POST
   now (see the state-changing GET bullet below). Phase 5's role import is where the
   owner can say which existing staff roles should get which permission.
-- The store API's base64 image uploads (`POST api/v2/file/image-upload`,
+- The store API's base64 image uploads (`POST api/v1/store/file/image-upload`,
   `profile/update-image`, `profile/image-upload`; `auth:store_api`, so any
   self-registered customer) wrote the decoded bytes to
   `public/uploads/all/<filename>` with the filename taken from the request, and
@@ -194,7 +194,7 @@ prefix. That is the single point every storefront asset URL goes through.
   re-encodes raster images with GD (dropping anything appended to or hidden in
   them), sanitises SVG, and writes one file under a random server-chosen name and
   extension; the client's filename is kept only as a display name. The three live
-  handlers use it, and the unrouted copy (`Api\V2\FileUploadController`) is gone.
+  handlers use it, and the unrouted copy (`Api\V1\FileUploadController`) is gone.
   `LegacyStoreImageUploadTest` covers each case against a scratch public path. The
   same endpoints could not have worked against this app's `uploads` stand-in
   (no `file_original_name`, `extension`, `type` or `file_size`), so a guarded
@@ -392,7 +392,7 @@ prefix. That is the single point every storefront asset URL goes through.
   no longer crashes on a missing file. Tests: `LegacyShopVerificationTest`.
   Documents submitted before this are on the private disk under their old
   `uploads/verification_form/` names and are found by those.
-- The mobile API's wallet payment (`POST api/v2/payments/pay/wallet`) took the
+- The mobile API's wallet payment (`POST api/v1/store/payments/pay/wallet`) took the
   payer (`user_id`) and the amount from the request, while the order was priced
   from the cart and marked paid: any signed-in customer could spend another
   account's balance, or send `amount=0` and pay nothing, and the check-then-deduct
@@ -478,7 +478,7 @@ prefix. That is the single point every storefront asset URL goes through.
   percentage capped by `max_discount`), and both endpoints use it and touch only
   the coupon owner's lines. The app's product coupons now count quantities, as the
   storefront's always did. Tests: `LegacyCouponTest`.
-- **Delivery-boy API** (`api/v2/delivery-boy/*`, the legacy delivery-boy addon).
+- **Delivery-boy API** (`api/v1/store/delivery-boy/*`, the legacy delivery-boy addon).
   The routes needed any signed-in account, took the delivery boy's id from the
   URL or the request and the order from the request: a customer could read any
   delivery boy's earnings and collections, mark *any* order delivered (a cash on
@@ -635,7 +635,7 @@ These came out of the upgrade and need a business answer, not a code one:
 - **The gateways removed in `62dc3f9` were removed on the 2023 dump's
   toggles, before the phase 0b production check.** Stripe, PayPal, Razorpay,
   Paystack, Instamojo, Payku, Authorize.Net and Mercado Pago lost their web
-  controllers. The Flutter app's `api/v2` Stripe, PayPal, Razorpay, Paystack,
+  controllers. The Flutter app's `api/v1/store` Stripe, PayPal, Razorpay, Paystack,
   Flutterwave and Paytm endpoints are gone too. If 0b shows any of them in
   use, restoring one means a current SDK, not a revert:
   - `unicodeveloper/laravel-paystack`: last release 1.2.0 (2024-04), max L11,
@@ -654,7 +654,7 @@ These came out of the upgrade and need a business answer, not a code one:
     checkout calls would need re-testing.
 - **Checkout options for the removed gateways are gone** on the upgrade
   branch (`1d01ab7`): the wallet and package modals,
-  `Api\V2\PaymentTypesController`, and the admin toggles and credential
+  `Api\V1\PaymentTypesController`, and the admin toggles and credential
   forms. `main` still offers them whenever their toggle is on, and checkout's
   `payment_option` dispatch then falls through to the manual-payment branch.
   Keep those toggles off until the branch merges.
@@ -747,7 +747,7 @@ SELECT payment_type, COUNT(*) FROM orders GROUP BY payment_type;
 | spatie/db-dumper | 2.21.1 (exact pin) | 0 | remove | the pin conflicts with WMS's 4.1.1 (via laravel-backup) |
 | laravel/ui | ^3.0 | 11 (5 auth traits) | keep→^4.6.3 | not removable as-is: the 5 `Auth\*Controller`s use its `Illuminate\Foundation\Auth\*` traits and `web.php` calls its `Auth::routes(['verify'=>true])` macro. Re-authoring those controllers is the only way to drop it |
 | laravel/socialite | ^5.0 | 3 | keep→^5.31 | `google_login`/`facebook_login` = 0 in dump, verify |
-| genealabs/laravel-socialiter | * | 2 | keep→^13.0 | Apple sign-in in `Api\V2\AuthController:316` |
+| genealabs/laravel-socialiter | * | 2 | keep→^13.0 | Apple sign-in in `Api\V1\StoreAuthController:316` |
 | genealabs/laravel-sign-in-with-apple | * | 0 direct | keep→^13.0 | driver `sign-in-with-apple`. Remove both genealabs packages if Apple login is unused |
 | lcobucci/jwt | ^3.4.5 | 0 | remove | a transitive pin for Apple sign-in, 3.x needs PHP 7 |
 | giggsey/libphonenumber-for-php | * | 3 | keep→^9.0 | rep payments, customers |
@@ -1009,7 +1009,7 @@ Fold these into `bootstrap/app.php`/`bootstrap/providers.php`, don't port them:
 These don't clash in the autoloader. They matter only for `use` aliasing and
 grep-ability:
 
-| Short name | Legacy | WMS |
+| Short name | Legacy (namespaces as the legacy repo named them: `Api\V2` is now `Api\V1` here, and its `AuthController` and `ProductController` are `StoreAuthController` and `StoreProductController`) | WMS |
 | --- | --- | --- |
 | `ProductController` | `Http\Controllers\ProductController`, `Seller\`, `Api\V2\`, `Api\V2\Seller\`, `Api\V2\Warehouse\` | `Admin\`, `Api\V1\` |
 | `DashboardController` | `Seller\` | `Admin\`, `Api\V1\` |
@@ -1233,7 +1233,7 @@ Decide these deliberately in phase 5 or 6:
 - `trucks.max_pallets_number`, `trips` and `checkpoints` (the legacy delivery
   module) vs WMS pallets.
 - `orders.wms_status` ("Sent to WMS"/"Sent to Otajer") and the whole
-  `api/v2/warehouse/*` API. It was built for an external WMS, and after the
+  `api/v1/store/warehouse/*` API. It was built for an external WMS, and after the
   merge it becomes an in-process call. WMS itself never calls it.
 
 ### Legacy models whose tables exist nowhere
@@ -1250,11 +1250,11 @@ These are uninstalled-addon dead code, so delete them with their controllers.
 - **Kept, because live code paths still reach them:**
   - `ProductStock::wholesalePrices` from the cart
   - `club_point` from checkout
-  - `OrderDetail::refund_request` from the `api/v2` purchase-history
+  - `OrderDetail::refund_request` from the `api/v1/store` purchase-history
     resources
   - `SellerPackage*` from `Helpers.php` and six payment controllers
   - `SmsTemplate`, `ManualPaymentMethod`, `DeliveryBoy` and
-    `DeliveryHistory` from order and `api/v2` controllers
+    `DeliveryHistory` from order and `api/v1/store` controllers
   - `Customer` from `CustomerController` and `CustomersImport`
   - `AffiliateUser`, `AffiliateOption`, `AffiliateConfig`,
     `AffiliatePayment`, `AuctionProductBid`, `ClubPoint`, `ClubPointDetail`
@@ -1448,10 +1448,10 @@ Here is what that means for each piece:
 These silently alter legacy code:
 
 - `JsonResource::withoutWrapping()`. Legacy has 25 `JsonResource` and 62
-  `ResourceCollection` classes serving the Flutter store app on `api/v2`.
+  `ResourceCollection` classes serving the Flutter store app on `api/v1/store`.
   Unwrapping changes their JSON shape. Scope it, or add `$wrap` back on the
   legacy resources. **Scoped** (2026-09-30): the four store API route files
-  under `/temp/api` run `WrapStoreApiResources`, which puts the `data` wrapper
+  under `/api/v1/store` run `WrapStoreApiResources`, which puts the `data` wrapper
   back for the request and restores the previous one afterwards. Without it
   every collection came out as `{"data":{"data":[...]}}`.
 - `Date::use(CarbonImmutable::class)`. There are 165 Carbon/`now()` uses in 62
@@ -1506,7 +1506,7 @@ routes. The WMS route table from `route:list` has 129.
   registered twice:
   - mostly `Route::resource()` followed by an explicit override like
     `Route::get('/brands/destroy/{id}')->name('brands.destroy')`
-  - plus `api/v2` resources that share a name with an admin page, e.g.
+  - plus `api/v1/store` resources that share a name with an admin page, e.g.
     `brands.index`, `categories.index`, `customers.show`
 
   Up to L11 the last registration won. From L12 the first one does, and
@@ -1517,7 +1517,7 @@ routes. The WMS route table from `route:list` has 129.
   - run the same step over the store route group, or
   - rename the losing routes at the source, e.g.
     `Route::resource(...)->except(['edit', 'destroy'])` and `api.`-prefixed
-    names for the `api/v2` resources.
+    names for the `api/v1/store` resources.
 
   Without one of those, admin links would point at the JSON API and every
   GET delete link at a DELETE route.
@@ -1633,17 +1633,18 @@ task asked for the store's ~680 `Auth::user()`/`auth()->user()` calls to name th
 guard. They already resolve to the right one: store web routes run
 `UseStoreAuthGuard` (`Auth::shouldUse('store')`) before any `auth`/role
 middleware, and `auth:store_api` calls `shouldUse('store_api')` on success. A
-blanket `Auth::guard('store')` would break every token-authenticated `/temp/api`
+blanket `Auth::guard('store')` would break every token-authenticated `/api/v1/store`
 controller (the session guard has no user there), and `store_api` would break
 the web ones. `tests/Feature/AuthGuardIsolationTest.php` enforces the
-route-level guarantee instead: every `temp/*` route with `auth` middleware is
+route-level guarantee instead: every store route (`temp/*` and `api/v1/store/*`)
+with `auth` middleware is
 either behind `UseStoreAuthGuard` or on `auth:store_api`, and no other route
 carries either. Code that runs with no request (queue jobs, console) gets the
 default `web` guard, so anything there must name `store` itself.
 
 **WMS untouched.** `LoginController`, `LoginRequest` and the `admin/login`
 routes are unchanged. `role:admin` (45 routes) and `RestrictToAllowedIps` are on
-no `temp/*` route, and `UseStoreAuthGuard` is on no other. Both are asserted in
+no store route (`temp/*` or `api/v1/store/*`), and `UseStoreAuthGuard` is on no other. Both are asserted in
 the same test file.
 
 **Manual trace** (booted app on a migrated sqlite DB, real requests and models):
@@ -1656,7 +1657,7 @@ the same test file.
 - `GET /admin`: `web` → `Authenticate` (default `web`, reads `login_web_*`) →
   `role:admin`. A store session has no `login_web_*`, so it redirects to
   `login`. No store middleware runs.
-- `/temp/api/v2/auth/user` with a warehouse token: 401. With a store token: 200.
+- `/api/v1/store/auth/user` with a warehouse token: 401. With a store token: 200.
   `/api/v1/products` with a store token: 401, with a warehouse token: 200. The
   two users had the same id.
 
@@ -1687,9 +1688,9 @@ changes:**
 
 | # | Phase | Scope | Estimate |
 | --- | --- | --- | --- |
-| 0a | Incident response (owner, outside the repo) | §0.1–0.3: rotate secrets, clean the server, disable the addon installer, lock down `api/v2/warehouse`, move the docroot to `public/` | ops, not code |
+| 0a | Incident response (owner, outside the repo) | §0.1–0.3: rotate secrets, clean the server, disable the addon installer, lock down `api/v1/store/warehouse`, move the docroot to `public/` | ops, not code |
 | 0b | Capture production truth | `mysqldump --no-data` of prod, `business_settings` toggles, `addons` rows, `orders.payment_type` histogram, role and user_type lists, `FILESYSTEM_DRIVER`, and whether WMS product ids ⊆ store product ids | 1 short session |
-| 1 | Prune legacy (in the legacy repo) | Delete: the 12 addon route files (228 routes), about 30 table-less models, the gateway controllers/views/utilities for each gateway §1 removes (about 40 files across `Payment/`, `Api/V2/`, `Utility/`, views), `AddonController`, the install/update flows, the malicious files, `webpack.mix.js`/`package.json`. Strip the 47 licence-check calls. Replace the laracon21 helpers. **Done on the upgrade branch:** the laracon21 helpers; every SDK-backed gateway's controllers, routes, views, checkout options and admin toggles; the malicious files and the addon installer, updater and installer (§0.1); the 12 addon route files (1379 → 1130 routes); the licence-check package (its 52 calls were already commented out); the Mix pipeline; `DemoController`; and the unreachable table-less models (§3). **Left:** the table-less models still reached from live code (§3), the ~150 `addon_is_activated()` branches (inert while `addons` is empty), the hand-rolled gateways (bKash, Nagad, SSLCommerz, Aamarpay, VoguePay, PayHere, N-Genius, ProxyPay, ToyyibPay) pending phase 0b, and 19 references to classes that were never in the repo (`OTPVerificationController`, `SellerPackageController`, `AffiliateController`, `ClubPointController`, `SmsUtility`, `PayfastUtility`, `Recaptcha` and others) | ~150 files deleted, ~40 edited. Medium |
+| 1 | Prune legacy (in the legacy repo) | Delete: the 12 addon route files (228 routes), about 30 table-less models, the gateway controllers/views/utilities for each gateway §1 removes (about 40 files across `Payment/`, `Api/V1/`, `Utility/`, views), `AddonController`, the install/update flows, the malicious files, `webpack.mix.js`/`package.json`. Strip the 47 licence-check calls. Replace the laracon21 helpers. **Done on the upgrade branch:** the laracon21 helpers; every SDK-backed gateway's controllers, routes, views, checkout options and admin toggles; the malicious files and the addon installer, updater and installer (§0.1); the 12 addon route files (1379 → 1130 routes); the licence-check package (its 52 calls were already commented out); the Mix pipeline; `DemoController`; and the unreachable table-less models (§3). **Left:** the table-less models still reached from live code (§3), the ~150 `addon_is_activated()` branches (inert while `addons` is empty), the hand-rolled gateways (bKash, Nagad, SSLCommerz, Aamarpay, VoguePay, PayHere, N-Genius, ProxyPay, ToyyibPay) pending phase 0b, and 19 references to classes that were never in the repo (`OTPVerificationController`, `SellerPackageController`, `AffiliateController`, `ClubPointController`, `SmsUtility`, `PayfastUtility`, `Recaptcha` and others) | ~150 files deleted, ~40 edited. Medium |
 | 2 | Upgrade legacy L8 → L13 **in the L13 skeleton shape** | Build `bootstrap/app.php`/`providers.php` from the Kernels and providers. Recreate the exception handling. Apply the surviving package bumps (§1). Rewrite intervention/image (6 files), laravel-pdf→dompdf (7), `Spatie\Permission\Middlewares`. Fix `env()` outside config (450 sites / 170 files). Fix PHP 8.x deprecations: `DB::raw` string casts (12). The `${var}` count was JS template literals, see §0.9. Needs PHP ≥ 8.4.1 to match WMS's lock. **Done:** the L8 → L13 version chain one major at a time, the spatie `Middleware` rename, PHP 8.2–8.5 deprecations, and Carbon 3 `diffIn*()` fixes (§0.7). **Left:** the skeleton shape (deferred to phase 6), intervention/image v3, laravel-pdf → dompdf, and `env()` outside config. Deploy it standalone against the prod DB only as a safety gate if the owner wants one | Large: the bulk of the effort |
 | 3 | Namespace and model remediation | **`User` → `StoreUser` rename done** (§2.1: 139 files, not 151 — the estimate undercounted the bare-reference files a plain FQCN grep misses; the morph-type data plan is written but not run, no DB in scope). **Still open:** merge `Product` and `Upload` into single models, merge `Controller` and `AppServiceProvider`, replace the hardcoded role-id-1 lookups | ~180 files touched, mostly mechanical. Medium |
 | 4 | Composer merge | **Done** (2026-09-28). Merged 17 legacy `require` packages (`enshrined/svg-sanitize`, both `genealabs/*`, `giggsey/libphonenumber-for-php`, `google/apiclient`, `guzzlehttp/guzzle`, `intervention/image`, `iyzico/iyzipay-php`, `laracasts/flash`, `laravel/socialite`, `laravel/ui`, `league/flysystem-aws-s3-v3`, `maatwebsite/excel`, `niklasravnsborg/laravel-pdf`, `setasign/fpdf`, `setasign/fpdi`, `tecnickcom/tcpdf`) into this repo's `require`, keeping `sort-packages` order. Every overlapping package (`php`, `laravel/framework`, `laravel/sanctum`, `spatie/laravel-permission`, `laravel/tinker`) already matched exactly per §0.7; `simplesoftwareio/simple-qrcode` was tightened from this app's `*` to the legacy `^4.2` since both already lock 4.2.0. `require-dev` needed no changes: every legacy dev package already matches, and `phpunit/phpunit` was deliberately left out (Pest replaces it, per §1). **No psr-4 addition was needed.** §2.1 already found that a full-tree legacy namespace rename (e.g. to `App\Shop\`) was considered and declined; the legacy `main` branch's `composer.json` confirms it still maps `App\` → `app/` and `Database\Factories\` → `database/factories/`, identical to this app's own mapping, and the only actual rename (`User` → `StoreUser`) stayed inside the shared `App\Models\` namespace. Both `App\` trees are meant to physically merge into one `app/` directory at phase 6, so a second psr-4 entry would be wrong, not just unneeded. The legacy `autoload.files: [app/Http/Helpers.php]` entry (§1's "Net result" note) was **not** added yet either, since that file doesn't exist in this repo until phase 6 moves it. `composer validate` passes (schema-valid; the only warnings are pre-existing unbound `*` constraints and the expected stale-lock warnings for the 16 newly-added packages, since `composer.lock` can't regenerate in this sandbox). `composer.lock` was regenerated via a one-off `workflow_dispatch` job on a real GitHub Actions runner (deleted after use) since neither the sandbox nor `composer install` — which never updates a stale lock, only `composer update` does — could do it. That surfaced one real regression `composer validate` couldn't catch: `genealabs/laravel-socialiter`'s service provider auto-discovers and its migration creates a bare `social_credentials` table the moment the package is required, well before phase 5 (DB merge) or phase 7 (auth) actually decide whether Apple/social login ships at all. `SharedDatabaseTableNamesTest` caught it immediately (that's exactly the "package upgrade shipping a new default" case its own docblock warns about), and the same migration failing partway through `migrate:fresh --seed --force` is almost certainly why the Playwright webServer never came up either (`php artisan serve` never runs if the `&&`-chained migrate step errors first). Fixed by adding `genealabs/laravel-socialiter` to `extra.laravel.dont-discover` in `composer.json` — the package stays a locked dependency per §1's list, but its provider (and migration) stays inert until phase 7 deliberately wires it in.
@@ -1698,7 +1699,7 @@ That fix alone got `SharedDatabaseTableNamesTest` and the Playwright webServer b
 | 5 | DB merge | Target the **store's MySQL DB as the physical host**: it holds the live, larger data set. Import WMS's `wms_*` and domain tables into it. Add a guarded baseline migration for the store schema, following the `create_uploads_table` `hasTable()` pattern, generated from the 0b dump. It must also build on sqlite for CI. Move the legacy spatie and Sanctum rows into `wms_*` with id offsets and morph rewrites. Add `wms_permissions.section`. Pick the single products writer. Extend `SharedDatabaseTableNamesTest`'s inventory with every store table | Large and risky: needs a rehearsal on a prod copy |
 | 6 | Files, routes, config and assets | Move `app/` (non-colliding), `Helpers.php` (autoload `files`), views, `public/assets`, and the surviving commands. Add store routes under `Route::domain()` in `routes/store/*.php`. Port config per §4. Add the `uploads` disk. Scope CSP, `api`-group middleware, `withoutWrapping` and CarbonImmutable per §6.1 | Large (moves are mechanical, the scoping is not) |
 | 7 | Auth and session | Add the `store` guard and provider, the second password broker, Sanctum guard list, cookie names, and `APP_PREVIOUS_KEYS`. Session cutover plan | Medium |
-| 8 | Tests | Pest feature tests per store route group. That covers auth, the role-gated admin/seller/staff areas, and the unauthorized-rejection cases CLAUDE.md requires for every gated action. It also covers the Flutter `api/v2` contract, especially the JSON wrapping shape. The legacy suite gives nothing to port (3 trivial tests). `RootRedirectTest` must pass untouched at every phase | Large: 1411 → roughly 1100 live routes to cover |
+| 8 | Tests | Pest feature tests per store route group. That covers auth, the role-gated admin/seller/staff areas, and the unauthorized-rejection cases CLAUDE.md requires for every gated action. It also covers the Flutter `api/v1/store` contract, especially the JSON wrapping shape. The legacy suite gives nothing to port (3 trivial tests). `RootRedirectTest` must pass untouched at every phase | Large: 1411 → roughly 1100 live routes to cover |
 
 Estimate for phase 2 in more detail: ~210 controllers, 86 resources and 24
 middleware exist today. After phase 1 roughly 400 PHP files remain to touch.
@@ -1732,11 +1733,11 @@ and 5). Each item says where its answer comes from.
   `delete_offer_deal`, `add_notification`, `delete_notification`). A missing row
   means 403 for everyone but Super Admin.
 - [ ] **The mobile API's GET routes that change data** (bearer token, so not
-  CSRF-exposed, but the app calls them as GET): `GET api/v2/user/shipping/delete/{address_id}`,
-  `GET api/v2/seller/product/delete/{id}`, `GET api/v2/seller/product/duplicate/{id}`,
-  `GET api/v2/seller/coupon/delete/{id}`, `GET api/v2/seller/file/delete/{id}`,
-  also `GET api/v2/wishlists-remove-product` and
-  `GET api/v2/delivery-boy/cancel-request/{id}`. Find what the app really calls by
+  CSRF-exposed, but the app calls them as GET): `GET api/v1/store/user/shipping/delete/{address_id}`,
+  `GET api/v1/store/seller/product/delete/{id}`, `GET api/v1/store/seller/product/duplicate/{id}`,
+  `GET api/v1/store/seller/coupon/delete/{id}`, `GET api/v1/store/seller/file/delete/{id}`,
+  also `GET api/v1/store/wishlists-remove-product` and
+  `GET api/v1/store/delivery-boy/cancel-request/{id}`. Find what the app really calls by
   searching the mobile app's source for those paths, and the production access
   log for them. Change the app and the routes together: add the POST/DELETE
   routes first, ship the app, then remove the GET ones.
@@ -1765,7 +1766,7 @@ and 5). Each item says where its answer comes from.
 - [ ] **Legacy roles' guard** (`web` → `store`) and the pivots' `model_type`
   (→ `StoreUser`): the SQL check is in §6.7.1.
 - [ ] **Delivery-boy addon:** if the shop does not run delivery boys, remove the
-  `api/v2/delivery-boy/*` routes instead of keeping them guarded.
+  `api/v1/store/delivery-boy/*` routes instead of keeping them guarded.
 
 ## 8. One name for the merged half: "store"
 

@@ -1,0 +1,112 @@
+<?php
+
+namespace App\Http\Controllers\Api\V1;
+
+use App\Http\Resources\V1\WishlistCollection;
+use App\Models\Product;
+use App\Models\Wishlist;
+use Illuminate\Http\Request;
+
+class WishlistController extends Controller
+{
+
+    public function index()
+    {
+        $product_ids = Wishlist::where('user_id', auth()->user()->id)->pluck("product_id")->toArray();
+        $existing_product_ids = Product::whereIn('id', $product_ids)->pluck("id")->toArray();
+
+        $query = Wishlist::with('product.taxes');
+        $query->where('user_id', auth()->user()->id)->whereIn("product_id", $existing_product_ids);
+
+        return new WishlistCollection($query->latest()->get());
+    }
+
+    public function store(Request $request)
+    {
+        $wish = Wishlist::updateOrCreate(
+            ['user_id' => auth()->user()->id, 'product_id' => $request->product_id]
+        );
+        return response()->json(['message' => __('api.wishlist.added')], 201);
+    }
+
+    public function destroy($id)
+    {
+        try {
+            // The customer's own wishlist item only: this deleted any by id.
+            if (! Wishlist::where('id', $id)->where('user_id', auth()->user()->id)->delete()) {
+                return response()->json(['result' => false, 'message' => __('api.wishlist.not_found')], 404);
+            }
+
+            return response()->json(['result' => true, 'message' => __('api.wishlist.removed')], 200);
+        } catch (\Exception $e) {
+            return response()->json(['result' => false, 'message' => $e->getMessage()], 200);
+        }
+
+    }
+
+    public function add(Request $request)
+    {
+        $product = Wishlist::where(['product_id' => $request->product_id, 'user_id' => auth()->user()->id])->count();
+        if ($product > 0) {
+            return response()->json([
+                'message' => __('api.wishlist.present'),
+                'is_in_wishlist' => true,
+                'product_id' => (int)$request->product_id,
+                'wishlist_id' => (int)Wishlist::where(['product_id' => $request->product_id, 'user_id' => auth()->user()->id])->first()->id
+            ], 200);
+        } else {
+            Wishlist::create(
+                ['user_id' =>auth()->user()->id, 'product_id' => $request->product_id]
+            );
+
+            return response()->json([
+                'message' => __('api.wishlist.added'),
+                'is_in_wishlist' => true,
+                'product_id' => (int)$request->product_id,
+                'wishlist_id' => (int)Wishlist::where(['product_id' => $request->product_id, 'user_id' => auth()->user()->id])->first()->id
+            ], 200);
+        }
+
+    }
+
+    public function remove(Request $request)
+    {
+        $product = Wishlist::where(['product_id' => $request->product_id, 'user_id' =>  auth()->user()->id])->count();
+        if ($product == 0) {
+            return response()->json([
+                'message' => __('api.wishlist.absent'),
+                'is_in_wishlist' => false,
+                'product_id' => (int)$request->product_id,
+                'wishlist_id' => 0
+            ], 200);
+        } else {
+            Wishlist::where(['product_id' => $request->product_id, 'user_id' => auth()->user()->id])->delete();
+
+            return response()->json([
+                'message' => __('api.wishlist.removed'),
+                'is_in_wishlist' => false,
+                'product_id' => (int)$request->product_id,
+                'wishlist_id' => 0
+            ], 200);
+        }
+    }
+
+    public function isProductInWishlist(Request $request)
+    {
+        $product = Wishlist::where(['product_id' => $request->product_id, 'user_id' => auth()->user()->id])->count();
+        if ($product > 0)
+            return response()->json([
+                'message' => __('api.wishlist.present'),
+                'is_in_wishlist' => true,
+                'product_id' => (int)$request->product_id,
+                'wishlist_id' => (int)Wishlist::where(['product_id' => $request->product_id, 'user_id' => auth()->user()->id])->first()->id
+            ], 200);
+
+        return response()->json([
+            'message' => __('api.wishlist.absent'),
+            'is_in_wishlist' => false,
+            'product_id' => (int)$request->product_id,
+            'wishlist_id' => 0
+        ], 200);
+    }
+}

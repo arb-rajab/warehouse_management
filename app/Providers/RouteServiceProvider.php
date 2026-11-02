@@ -43,7 +43,7 @@ class RouteServiceProvider extends ServiceProvider
      *   dashboard itself, rendered PageController::show_custom_page()'s 404.
      * - keepLastRegisteredRouteNames() hands each duplicated name to its
      *   last registration, so the order decides which route wins. The
-     *   api/v2 resources share names with admin pages (`brands.index`,
+     *   api/v1 resources share names with admin pages (`brands.index`,
      *   `categories.index`, `customers.show`, ...); only with the API loaded
      *   first do the admin pages keep them, instead of every admin link
      *   pointing at the JSON API.
@@ -52,12 +52,23 @@ class RouteServiceProvider extends ServiceProvider
      */
     public function map()
     {
-        Route::prefix('temp')->group(function () {
-            // WrapStoreApiResources on all four store API files: see its
-            // docblock for the JSON shape they would lose without it.
-            Route::prefix('api')->middleware(['api', WrapStoreApiResources::class])->group(base_path('routes/shop-api.php'));
-            Route::prefix('api')->middleware(['api', WrapStoreApiResources::class])->group(base_path('routes/shop-api_seller.php'));
+        // The store API answers at /api/v1/..., beside this app's own /api/v1
+        // routes, not under /temp. It registers first (see the name note above).
+        // WrapStoreApiResources on all four store API files: see its
+        // docblock for the JSON shape they would lose without it.
+        Route::prefix('api')->middleware(['api', WrapStoreApiResources::class])->group(base_path('routes/shop-api.php'));
+        Route::prefix('api')->middleware(['api', WrapStoreApiResources::class])->group(base_path('routes/shop-api_seller.php'));
 
+        // No outer `api` group, matching the legacy app's own
+        // mapApiWareHouseRoutes()/mapApiTripRoutes(): each route in these
+        // two files carries its own middleware (routes/shop-api_warehouse.php
+        // one group of throttle:wms + wms.auth, the trip routes auth:store_api
+        // and driver). WrapStoreApiResources is this app's own
+        // addition, as above.
+        Route::prefix('api')->middleware([SendNoIndexHeader::class.':always', SetLocaleFromHeader::class, WrapStoreApiResources::class])->group(base_path('routes/shop-api_warehouse.php'));
+        Route::prefix('api')->middleware([SendNoIndexHeader::class.':always', SetLocaleFromHeader::class, WrapStoreApiResources::class])->group(base_path('routes/shop-api_trip.php'));
+
+        Route::prefix('temp')->group(function () {
             // UseStoreAuthGuard first, before Language/HttpsProtocol or any
             // route-level auth/role middleware runs — see that class's own
             // docblock for why every one of these three route files needs it.
@@ -71,15 +82,6 @@ class RouteServiceProvider extends ServiceProvider
 
             Route::middleware([SendNoIndexHeader::class.':always', 'web', UseStoreAuthGuard::class, Language::class, HttpsProtocol::class, HandleStoreBladePages::class])
                 ->group(base_path('routes/shop-seller.php'));
-
-            // No outer `api` group, matching the legacy app's own
-            // mapApiWareHouseRoutes()/mapApiTripRoutes(): each route in these
-            // two files carries its own middleware (routes/shop-api_warehouse.php
-            // one group of throttle:wms + wms.auth, the trip routes auth:store_api
-            // and driver). WrapStoreApiResources is this app's own
-            // addition, as above.
-            Route::prefix('api')->middleware([SendNoIndexHeader::class.':always', SetLocaleFromHeader::class, WrapStoreApiResources::class])->group(base_path('routes/shop-api_warehouse.php'));
-            Route::prefix('api')->middleware([SendNoIndexHeader::class.':always', SetLocaleFromHeader::class, WrapStoreApiResources::class])->group(base_path('routes/shop-api_trip.php'));
 
             Route::middleware(['web', UseStoreAuthGuard::class, Language::class, HttpsProtocol::class, HandleStoreBladePages::class])
                 ->group(base_path('routes/shop-web.php'));
@@ -140,7 +142,7 @@ class RouteServiceProvider extends ServiceProvider
      *
      * 58 names are registered twice, mostly a Route::resource() followed by an
      * explicit override such as Route::post('/sellers/destroy/{id}')->name('sellers.destroy'),
-     * or an api/v2 resource sharing a name with an admin page. Up to Laravel 11 the
+     * or an api/v1 resource sharing a name with an admin page. Up to Laravel 11 the
      * last registration won; from Laravel 12 the first one does, which would point
      * route('brands.index') at the JSON API and every GET delete link at a DELETE
      * route. Removing the name from the earlier routes keeps the old targets, and

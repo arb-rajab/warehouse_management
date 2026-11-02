@@ -6,6 +6,14 @@ use Illuminate\Database\Eloquent\Model;
 
 class OrderDetail extends Model
 {
+    /**
+     * Eager loads for PurchaseHistoryItemsCollection: the product's translated
+     * name and refundability, and the line's refund request.
+     *
+     * @var list<string>
+     */
+    public const array WITH_ITEM_DETAILS = ['product.product_translations', 'refund_request'];
+
     protected $fillable = [
         'order_id',
         'seller_id',

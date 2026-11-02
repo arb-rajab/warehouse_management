@@ -3,6 +3,7 @@
 use App\Http\Controllers\BusinessSettingsController;
 use App\Http\Controllers\Store\Admin\ClassifiedProductController;
 use App\Http\Controllers\ProductController;
+use App\Http\Controllers\Store\Admin\ProductFieldSourceController;
 use App\Http\Controllers\Store\Admin\SellerController;
 use App\Http\Controllers\Store\Admin\SellerCommissionController;
 use App\Http\Controllers\Store\Admin\SellerVerificationFormController;
@@ -300,8 +301,8 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
 
         // The trip forms' lookups: the driver API's own handlers, reached with
         // the admin's session instead of an app token.
-        Route::get('/available-vehicles', 'App\Http\Controllers\Api\V2\Trip\DriverController@getAvailableVehicles')->name('trips.available-vehicles')->middleware('permission:add_trip|edit_trip');
-        Route::get('/user-coordinates/{id}', 'App\Http\Controllers\Api\V2\Trip\DriverController@getLongLatitude')->name('trips.user-coordinates')->middleware('permission:add_trip|edit_trip');
+        Route::get('/available-vehicles', 'App\Http\Controllers\Api\V1\Trip\DriverController@getAvailableVehicles')->name('trips.available-vehicles')->middleware('permission:add_trip|edit_trip');
+        Route::get('/user-coordinates/{id}', 'App\Http\Controllers\Api\V1\Trip\DriverController@getLongLatitude')->name('trips.user-coordinates')->middleware('permission:add_trip|edit_trip');
 
         Route::get('/drivers/index', [DriverController::class, 'index'])->name('drivers.index');
         Route::get('/drivers/create', [DriverController::class, 'create'])->name('drivers.create');
@@ -344,7 +345,7 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
 
     // Business Settings
     Route::controller(BusinessSettingsController::class)->group(function () {
-        Route::post('/business-settings/update/seller-commission-activation', 'updateSellerCommissionActivation')->name('business_settings.seller_commission.activation')->middleware('RaizerSuperAdmin');
+        Route::post('/business-settings/update/seller-commission-activation', 'updateSellerCommissionActivation')->name('business_settings.seller_commission.activation');
 
         Route::get('/google-map', [GoogleMapController::class, 'index'])->name('google-map.index');
 
@@ -364,6 +365,10 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
     // General settings: a typed writer for the form's own keys only.
     Route::get('/general-setting', [GeneralSettingsController::class, 'edit'])->name('general_setting.index');
     Route::post('/general-setting', [GeneralSettingsController::class, 'update'])->name('general_setting.update');
+
+    // Product data sources: who owns each Otajer-synced product field.
+    Route::get('/product-data-sources', [ProductFieldSourceController::class, 'edit'])->name('product_field_sources.index');
+    Route::post('/product-data-sources', [ProductFieldSourceController::class, 'update'])->name('product_field_sources.update');
 
     // Migrated plain settings: each write has its page permission and keys.
     Route::get('/activation', [SettingsController::class, 'activation'])->name('activation.index');
@@ -680,7 +685,7 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
 
     Route::get('/all-notification', [NotificationController::class, 'index'])->name('admin.all-notification');
 
-    Route::post('/clear-cache', [DashboardController::class, 'clearCache'])->name('cache.clear')->middleware('RaizerSuperAdmin');
+    Route::post('/clear-cache', [DashboardController::class, 'clearCache'])->name('cache.clear')->middleware('permission:file_system_&_cache_configuration');
 
     Route::get('/notifications', [CustomerNotificationController::class, 'index'])->name('admin.notifications.all');
     Route::get('/notifications/create', [CustomerNotificationController::class, 'create'])->name('admin.notifications.create');

@@ -3,7 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Models\Product;
-use App\Support\ProductColumnOwnership;
+use App\Services\ProductFieldSourceService;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
@@ -20,6 +20,11 @@ use Throwable;
  * The feed owns those columns only on feed-origin rows. A null synced_at marks
  * a store-created or unclassified row and is never overwritten, even when a
  * store insert races this command. See .ai/rules/shared-database.md.
+ *
+ * Only the Otajer-owned columns are written (ProductFieldSourceService): an
+ * admin-owned column is never updated, and a product this command creates
+ * gets that column's configured insert value instead of the feed's. See
+ * .ai/rules/product-field-sources.md.
  */
 #[Signature('products:sync')]
 #[Description("Sync product name, Arabic name, and active status from the store's API into the products table")]
@@ -32,9 +37,19 @@ class SyncProductsCommand extends Command
     private const UPSERT_CHUNK_SIZE = 500;
 
     /**
+     * The syncable columns mapProducts() fills. Only these may reach the
+     * upsert's raw update expressions: a field registered in
+     * config/product_field_sources.php needs a mapping here before the sync
+     * can write it.
+     *
+     * @var list<literal-string>
+     */
+    private const array MAPPED_COLUMNS = ['name', 'ar_name', 'published'];
+
+    /**
      * Execute the console command.
      */
-    public function handle(): int
+    public function handle(ProductFieldSourceService $fieldSources): int
     {
         $url = config('store.products_sync_url');
 
@@ -71,9 +86,17 @@ class SyncProductsCommand extends Command
             return self::SUCCESS;
         }
 
+        // Read once per run, so every chunk applies the same ownership.
+        $adminOwned = array_values(array_intersect(self::MAPPED_COLUMNS, $fieldSources->adminOwnedFields()));
+        $otajerOwned = array_values(array_intersect(self::MAPPED_COLUMNS, $fieldSources->otajerOwnedFields()));
+        $insertValues = array_combine($adminOwned, array_map($fieldSources->insertValueFor(...), $adminOwned));
+        if ($adminOwned !== []) {
+            $this->components->info('Admin-owned field(s) left to the admin panel: '.implode(', ', $adminOwned).'.');
+        }
+
         $conflicts = 0;
         foreach (array_chunk($rows, self::UPSERT_CHUNK_SIZE) as $chunk) {
-            $conflicts += $this->syncChunk($chunk);
+            $conflicts += $this->syncChunk($chunk, $otajerOwned, $insertValues);
         }
 
         $this->components->info((count($rows) - $conflicts).' product(s) synced.');
@@ -89,22 +112,27 @@ class SyncProductsCommand extends Command
      * upsert would still overwrite a store row inserted between those queries.
      * The marker is assigned last because MySQL evaluates assignments in order.
      *
+     * An admin-owned column is left out of the update list, so an existing
+     * row keeps its value, and takes `$insertValues` on insert.
+     *
      * @param  list<array{id: int, name: string, ar_name: string, published: int}>  $chunk
+     * @param  list<literal-string>  $otajerOwned  the syncable columns the feed may update
+     * @param  array<string, string|int>  $insertValues  admin-owned column => value written on insert
      */
-    private function syncChunk(array $chunk): int
+    private function syncChunk(array $chunk, array $otajerOwned, array $insertValues): int
     {
         $connection = DB::connection();
         $table = (new Product)->getTable();
         $mysql = in_array($connection->getDriverName(), ['mysql', 'mariadb'], true);
         $updates = [];
-        foreach ([...ProductColumnOwnership::SYNC_COLUMNS, 'synced_at'] as $column) {
+        foreach ([...$otajerOwned, 'synced_at'] as $column) {
             $incoming = $mysql && ! $connection->getConfig('use_upsert_alias')
                 ? 'values('.$column.')'
                 : ($mysql ? 'laravel_upsert_alias.' : 'excluded.').$column;
             $updates[$column] = new Expression('CASE WHEN products.synced_at IS NOT NULL THEN '.$incoming.' ELSE products.'.$column.' END');
         }
         $now = now()->toDateTimeString();
-        $rows = array_map(fn (array $row): array => [...$row, 'synced_at' => $now, 'created_at' => $now, 'updated_at' => $now], $chunk);
+        $rows = array_map(fn (array $row): array => [...$row, ...$insertValues, 'synced_at' => $now, 'created_at' => $now, 'updated_at' => $now], $chunk);
 
         $ids = $connection->transaction(function () use ($connection, $table, $chunk, $rows, $updates): array {
             $connection->table($table)->upsert($rows, ['id'], $updates);

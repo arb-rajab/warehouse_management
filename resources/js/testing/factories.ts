@@ -317,7 +317,6 @@ export function storeSharedProps(
         rtl: false,
         permissions: [],
         isSuperAdmin: false,
-        isRaizerAdmin: false,
         settings: {},
         counts: { sellers: 0, tickets: 0, conversations: 0 },
         notifications: { unread_count: 0, items: [] },
@@ -764,7 +763,6 @@ export function storeWebsiteHeaderSettings(
 ): StoreWebsiteHeaderSettings {
     return {
         header_logo: '',
-        show_language_switcher: true,
         show_currency_switcher: false,
         header_stikcy: true,
         topbar_banner: '',
@@ -1584,6 +1582,7 @@ export function storeDashboardProps(): StoreDashboardProps {
             visits: { labels: ['SY'], values: [25] },
         },
         showSmtpAlert: true,
+        setupAlerts: [],
         topProducts: [
             {
                 id: 1,

@@ -21,6 +21,7 @@ import {
 } from '@lucide/vue';
 import type { Component } from 'vue';
 import { index as attributesIndex } from '@/actions/App/Http/Controllers/Store/Admin/AttributeController';
+import { edit as attributeValueEdit } from '@/actions/App/Http/Controllers/Store/Admin/AttributeValueController';
 import { index as blogCategoriesIndex } from '@/actions/App/Http/Controllers/Store/Admin/BlogCategoryController';
 import { index as blogIndex } from '@/actions/App/Http/Controllers/Store/Admin/BlogController';
 import { index as brandsIndex } from '@/actions/App/Http/Controllers/Store/Admin/BrandController';
@@ -38,6 +39,7 @@ import {
     archive as customersArchive,
     create as customersCreate,
     index as customersIndex,
+    pageViews as customerPageViews,
     repIndex as representativesIndex,
 } from '@/actions/App/Http/Controllers/Store/Admin/CustomerController';
 import { index as customerNotificationsIndex } from '@/actions/App/Http/Controllers/Store/Admin/CustomerNotificationController';
@@ -54,11 +56,19 @@ import { edit as generalSettingsEdit } from '@/actions/App/Http/Controllers/Stor
 import { index as googleMapIndex } from '@/actions/App/Http/Controllers/Store/Admin/GoogleMapController';
 import { index as languagesIndex } from '@/actions/App/Http/Controllers/Store/Admin/LanguageController';
 import { index as newslettersIndex } from '@/actions/App/Http/Controllers/Store/Admin/NewsletterController';
+import { index as allNotificationsIndex } from '@/actions/App/Http/Controllers/Store/Admin/NotificationController';
 import { index as offerDealsIndex } from '@/actions/App/Http/Controllers/Store/Admin/OfferController';
 import { index as offersCatalogIndex } from '@/actions/App/Http/Controllers/Store/Admin/OffersCatalogController';
 import { index as order_configuration } from '@/actions/App/Http/Controllers/Store/Admin/OrderConfigurationController';
-import { all_orders } from '@/actions/App/Http/Controllers/Store/Admin/OrderController';
-import { create as featureOrderCreate } from '@/actions/App/Http/Controllers/Store/Admin/OrderEntryController';
+import {
+    all_orders,
+    show as orderShow,
+} from '@/actions/App/Http/Controllers/Store/Admin/OrderController';
+import {
+    create as featureOrderCreate,
+    edit as featureOrderEdit,
+    shippingCreate as featureOrderTripCreate,
+} from '@/actions/App/Http/Controllers/Store/Admin/OrderEntryController';
 import { index as pickupPointsIndex } from '@/actions/App/Http/Controllers/Store/Admin/PickupPointController';
 import {
     exportMethod as productBulkExport,
@@ -70,7 +80,9 @@ import {
     inHouse as inHouseProducts,
     seller as sellerProducts,
 } from '@/actions/App/Http/Controllers/Store/Admin/ProductController';
+import { edit as productFieldSourcesEdit } from '@/actions/App/Http/Controllers/Store/Admin/ProductFieldSourceController';
 import { index as productQueriesIndex } from '@/actions/App/Http/Controllers/Store/Admin/ProductQueryController';
+import { index as profileIndex } from '@/actions/App/Http/Controllers/Store/Admin/ProfileController';
 import {
     commission_history,
     in_house_sale_report,
@@ -88,7 +100,10 @@ import { index as sellerCommissionIndex } from '@/actions/App/Http/Controllers/S
 import { index as sellersIndex } from '@/actions/App/Http/Controllers/Store/Admin/SellerController';
 import { index as sellerPaymentsIndex } from '@/actions/App/Http/Controllers/Store/Admin/SellerPaymentController';
 import { index as sellerVerificationFormIndex } from '@/actions/App/Http/Controllers/Store/Admin/SellerVerificationFormController';
-import { index as withdrawRequestsIndex } from '@/actions/App/Http/Controllers/Store/Admin/SellerWithdrawRequestController';
+import {
+    index as withdrawRequestsIndex,
+    show as withdrawRequestShow,
+} from '@/actions/App/Http/Controllers/Store/Admin/SellerWithdrawRequestController';
 import {
     activation,
     smtp,
@@ -124,9 +139,14 @@ import { edit as appearance } from '@/actions/App/Http/Controllers/Store/Admin/W
 import { edit as footer } from '@/actions/App/Http/Controllers/Store/Admin/WebsiteFooterController';
 import { edit as header } from '@/actions/App/Http/Controllers/Store/Admin/WebsiteHeaderController';
 import { edit as homeEdit } from '@/actions/App/Http/Controllers/Store/Admin/WebsiteHomeController';
-import { index as pages } from '@/actions/App/Http/Controllers/Store/Admin/WebsitePageController';
+import {
+    create as websitePageCreate,
+    edit as websitePageEdit,
+    index as pages,
+} from '@/actions/App/Http/Controllers/Store/Admin/WebsitePageController';
 import { index as zonesIndex } from '@/actions/App/Http/Controllers/Store/Admin/ZoneController';
 import type { StoreAccess } from '@/lib/storeAccess';
+import type { StoreMenuParent } from '@/lib/storeAdminActiveMenu';
 
 /**
  * When a sidebar entry shows, mirroring the Blade sidebar's conditions
@@ -136,10 +156,8 @@ import type { StoreAccess } from '@/lib/storeAccess';
 interface StoreMenuGate {
     /** Any one of these permissions (`@can`/`@canany`). */
     permission?: string | string[];
-    /** A business setting that switches the section on; the vendor's own account sees it regardless. */
+    /** A business setting that switches the section on; a Super Admin sees the section regardless. */
     setting?: string;
-    /** Only the vendor's own account (`raizer_admin`). */
-    raizerAdmin?: boolean;
 }
 
 export interface StoreMenuLink extends StoreMenuGate {
@@ -154,6 +172,11 @@ export interface StoreMenuLink extends StoreMenuGate {
      * is converted.
      */
     inertia?: boolean;
+    /**
+     * Active on its own path only, not on pages below it. For the one link
+     * whose path prefixes every other page (the dashboard).
+     */
+    exact?: boolean;
 }
 
 export interface StoreMenuGroup extends StoreMenuGate {
@@ -180,6 +203,7 @@ export const storeAdminMenu: StoreMenuItem[] = [
         labelKey: 'store.nav.dashboard',
         href: admin_dashboard(),
         inertia: true,
+        exact: true,
         icon: LayoutDashboard,
         permission: 'admin_dashboard',
     },
@@ -732,11 +756,16 @@ export const storeAdminMenu: StoreMenuItem[] = [
                 permission: 'general_settings',
             },
             {
+                labelKey: 'store.nav.productFieldSources',
+                href: productFieldSourcesEdit(),
+                inertia: true,
+                permission: 'product_field_sources',
+            },
+            {
                 labelKey: 'store.nav.featuresActivation',
                 href: activation(),
                 inertia: true,
                 permission: 'features_activation',
-                raizerAdmin: true,
             },
             {
                 labelKey: 'store.nav.languages',
@@ -778,14 +807,12 @@ export const storeAdminMenu: StoreMenuItem[] = [
                 href: payments(),
                 inertia: true,
                 permission: 'payment_methods_configurations',
-                raizerAdmin: true,
             },
             {
                 labelKey: 'store.nav.fileSystem',
                 href: filesystem(),
                 inertia: true,
                 permission: 'file_system_&_cache_configuration',
-                raizerAdmin: true,
             },
             {
                 labelKey: 'store.nav.socialLogins',
@@ -814,7 +841,6 @@ export const storeAdminMenu: StoreMenuItem[] = [
             },
             {
                 labelKey: 'store.nav.google',
-                raizerAdmin: true,
                 children: [
                     {
                         labelKey: 'store.nav.analyticsTools',
@@ -907,16 +933,40 @@ export const storeAdminMenu: StoreMenuItem[] = [
     },
 ];
 
-function passesGate(item: StoreMenuGate, access: StoreAccess): boolean {
-    if (item.raizerAdmin && !access.isRaizerAdmin) {
-        return false;
-    }
+/**
+ * Store admin pages that live outside any menu entry's own URL, each mapped
+ * to the entry it belongs to (or to `null` when it is reached from outside the
+ * menu and nothing should be highlighted). Pages under an entry's URL, and
+ * `/index` entries' detail pages, need no row here; see
+ * lib/storeAdminActiveMenu.ts and .ai/rules/store-admin-menu-highlighting.md.
+ */
+export const storeAdminPageParents: StoreMenuParent[] = [
+    { page: customerPageViews, parent: customersIndex },
+    { page: attributeValueEdit, parent: attributesIndex },
+    {
+        page: orderShow['/temp/admin/orders/{order}'],
+        parent: all_orders['/temp/admin/all_orders'],
+    },
+    {
+        page: all_orders['/temp/admin/inhouse-orders'],
+        parent: all_orders['/temp/admin/all_orders'],
+    },
+    { page: featureOrderEdit, parent: all_orders['/temp/admin/all_orders'] },
+    { page: featureOrderTripCreate, parent: featureOrderCreate },
+    {
+        page: withdrawRequestShow,
+        parent: withdrawRequestsIndex['/temp/admin/withdraw_requests_all'],
+    },
+    { page: websitePageCreate, parent: pages },
+    { page: websitePageEdit, parent: pages },
+    { page: profileIndex, parent: null },
+    { page: allNotificationsIndex, parent: null },
+];
 
-    if (
-        item.setting &&
-        !access.isRaizerAdmin &&
-        !access.setting(item.setting)
-    ) {
+function passesGate(item: StoreMenuGate, access: StoreAccess): boolean {
+    // A Super Admin sees every section, switched on or not, so the pages that
+    // switch sections on (Features activation) can always be reached.
+    if (item.setting && !access.isSuperAdmin && !access.setting(item.setting)) {
         return false;
     }
 

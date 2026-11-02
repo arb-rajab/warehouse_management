@@ -47,12 +47,11 @@ vi.mock('@inertiajs/vue3', async () => {
 });
 function access(
     permissions = ['seller_commission_configuration', 'features_activation'],
-    vendor = true,
 ) {
     usePageMock.mockReturnValue({
         url: '/temp/admin/vendor_commission',
         props: defaultAuthProps({
-            store: storeSharedProps({ permissions, isRaizerAdmin: vendor }),
+            store: storeSharedProps({ permissions }),
         }),
     });
 }
@@ -127,6 +126,7 @@ it.each(['en', 'ar'] as const)(
                 error: undefined,
                 disabled: false,
                 required: true,
+                highlighted: false,
             },
             {
                 name: 'category_wise_commission',
@@ -135,6 +135,7 @@ it.each(['en', 'ar'] as const)(
                 error: undefined,
                 disabled: false,
                 required: true,
+                highlighted: false,
             },
         ]);
 
@@ -191,26 +192,16 @@ it.each(['vendor_commission_activation', 'category_wise_commission'])(
         expect(http.cancel).toHaveBeenCalled();
     },
 );
-it.each([false, true])(
-    'keeps switches disabled when the vendor or activation gate is absent (%s)',
-    (vendor) => {
-        access(
-            vendor
-                ? ['seller_commission_configuration']
-                : ['seller_commission_configuration', 'features_activation'],
-            vendor,
-        );
-        const wrapper = mountPage();
-        expect(
-            wrapper
-                .findAll('select')
-                .every((item) => item.attributes('disabled') !== undefined),
-        ).toBe(true);
-        expect(wrapper.text()).toContain(
-            t('store.sellers.activationRestricted'),
-        );
-    },
-);
+it('keeps switches disabled when the activation permission is absent', () => {
+    access(['seller_commission_configuration']);
+    const wrapper = mountPage();
+    expect(
+        wrapper
+            .findAll('select')
+            .every((item) => item.attributes('disabled') !== undefined),
+    ).toBe(true);
+    expect(wrapper.text()).toContain(t('store.sellers.activationRestricted'));
+});
 it('rolls a refused switch back and displays failure instead of claiming it saved', async () => {
     http.post.mockResolvedValue(undefined);
     const wrapper = mountPage();

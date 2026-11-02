@@ -27,9 +27,11 @@ use Illuminate\Support\Facades\Storage;
 /**
  * A row in this app's `products` table.
  *
- * Option A: products:sync owns name, ar_name and published on feed-origin
- * rows (synced_at is non-null). Store writers own the remaining columns and
- * may change those three only on store-origin rows (synced_at is null).
+ * Option A: products:sync owns the Otajer-owned syncable columns (name,
+ * ar_name and published by default; see ProductFieldSourceService) on
+ * feed-origin rows (synced_at is non-null). Store writers own the remaining
+ * columns, including any syncable column the admin owns, and may change the
+ * Otajer-owned ones only on store-origin rows (synced_at is null).
  * ProductColumnOwnership and ProductBuilder enforce this for assignments,
  * model saves and bulk updates. Every model insert, including a duplicate,
  * starts with a null marker; only the sync sets it. Pre-marker rows remain
@@ -77,7 +79,7 @@ class Product extends Model
      */
     public function setAttribute($key, $value): static
     {
-        if ($this->exists && in_array($key, ProductColumnOwnership::SYNC_COLUMNS, true)
+        if ($this->exists && in_array($key, ProductColumnOwnership::syncColumns(), true)
             && (string) ($this->attributes[$key] ?? '') !== (string) $value) {
             ProductColumnOwnership::assertStoreWrite($this, [$key]);
         }
@@ -114,6 +116,16 @@ class Product extends Model
         'thumbnailUpload:id,file_name,external_link',
         'setting:product_id,boxes_count,minimum_pallets',
     ];
+
+    /**
+     * Eager loads for the store API's product lists. ProductMiniCollection
+     * prices each product through its taxes, shows its stock photos and
+     * quantity, offer, rating collection and translated name, so a list built
+     * without them trips the lazy-loading guard in local/testing.
+     *
+     * @var list<string>
+     */
+    public const array WITH_STORE_LIST = ['stocks', 'taxes', 'offers', 'collection', 'product_translations'];
 
     /**
      * The columns a product search matches, in the order the FULLTEXT index
@@ -907,6 +919,20 @@ class Product extends Model
     protected function physical(EloquentBuilder $query): void
     {
         $query->where('digital', 0);
+    }
+
+    /**
+     * Products the store API can list and open: published, approved and
+     * carrying at least one stock row. A product without one has no price or
+     * quantity to show (it reads "0€", stock 0), and imported catalogue rows
+     * like that must not reach a list or a detail page.
+     *
+     * @param  EloquentBuilder<Product>  $query
+     */
+    #[Scope]
+    protected function storeOpenable(EloquentBuilder $query): void
+    {
+        $query->where('published', 1)->where('approved', 1)->has('stocks');
     }
 
     /**

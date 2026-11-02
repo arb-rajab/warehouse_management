@@ -76,6 +76,8 @@ class AllProductsCommand extends Command
      */
     public function handle(): int
     {
+        // Otajer-synced fields the admin owns are never written by this import.
+        $fieldSources = app(\App\Services\ProductFieldSourceService::class);
         try {
             $start_time = Carbon::now();
             $products_count = 0;
@@ -84,7 +86,7 @@ class AllProductsCommand extends Command
             $response = Http::timeout(30)->throw()->get($endpoint)->body();
             $allProducts = json_decode($response, true);
             $products_count += count($allProducts['Products']);
-            $admin_id = StoreUser::where('user_type', 'admin')->where('raizer_admin', null)->value('id');
+            $admin_id = StoreUser::where('user_type', 'admin')->orderBy('id')->value('id');
 
             if(! Attribute::where('name', 'Variations')->first()){
                 Attribute::create([
@@ -181,7 +183,7 @@ class AllProductsCommand extends Command
 
                 $attributes = json_encode(["$types_of_sale->id"]);
             }
-                    $selectedProduct->update([
+                    $selectedProduct->update($fieldSources->withoutAdminOwned([
                         'serial' => $product['Serial'],
                         'name' => $product['enName'],
                         'ar_name' => $product['arName'],
@@ -205,7 +207,7 @@ class AllProductsCommand extends Command
                         'colors' => '[]',
                         'cash_on_delivery' => 1
                   //      'sku' => $product['enName'] . '-' . $product['Unit_Equal'] . '-' . uniqid(),
-                    ]);
+                    ]));
 
                     // update the product stocks, tax, and product translations
                     $productStocks = ProductStock::where('product_id', $selectedProduct->id)->get();
@@ -241,17 +243,17 @@ class AllProductsCommand extends Command
                     //     'tax' => $product['TaxPercent']
                     // ]);
 
-                    $productArabicTranslation->update([
+                    $productArabicTranslation->update($fieldSources->translationValues('ar_name', [
                         'name' => $product['arName'],
                         'unit' => $product['UnitArName'],
                         'description' => $product['Desc']
-                    ]);
+                    ], false));
 
-                    $productEnglishTranslation->update([
+                    $productEnglishTranslation->update($fieldSources->translationValues('name', [
                         'name' => $product['enName'],
                         'unit' => $product['UnitEnName'],
                         'description' => $product['Desc']
-                    ]);
+                    ], false));
                         }
 
                 else { // if the product does not exist
@@ -332,7 +334,7 @@ class AllProductsCommand extends Command
 
                     $attributes = json_encode(["$types_of_sale->id"]);
                     }
-                      $productId =  Product::create([
+                      $productId =  Product::create($fieldSources->withInsertValues([
                             'serial' => $productDetails['Serial'],
                             'name' => $productDetails['enName'],
                             'ar_name' => $productDetails['arName'],
@@ -365,7 +367,7 @@ class AllProductsCommand extends Command
                             'discount_type' => 'amount',
                             'low_stock_quantity' => 1*/
 
-                        ]); //
+                        ])); //
 
                         if($productDetails['variations'] != null){
                             foreach ($productDetails['variations'] as $variation) {
@@ -421,21 +423,21 @@ class AllProductsCommand extends Command
                         // $product_tax->save();
 
 
-                        ProductTranslation::create([
+                        ProductTranslation::create($fieldSources->translationValues('ar_name', [
                             'lang' => 'sa',
                             'name' => $productDetails['arName'],
                             'unit' => $productDetails['UnitArName'],
                             'description' => $productId->description,
                             'product_id' => $productId->id
-                        ]);
+                        ], true));
 
-                        ProductTranslation::create([
+                        ProductTranslation::create($fieldSources->translationValues('name', [
                             'lang' => 'en',
                             'name' => $productDetails['enName'],
                             'unit' => $productDetails['UnitEnName'],
                             'description' => $productId->description,
                             'product_id' => $productId->id
-                           ]);
+                           ], true));
                 }
 
             }

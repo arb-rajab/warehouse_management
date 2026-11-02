@@ -26,6 +26,7 @@ import { index as offersIndex } from '@/actions/App/Http/Controllers/Store/Admin
 import { all_orders } from '@/actions/App/Http/Controllers/Store/Admin/OrderController';
 import { create as featureOrderCreate } from '@/actions/App/Http/Controllers/Store/Admin/OrderEntryController';
 import { index as bulkIndex } from '@/actions/App/Http/Controllers/Store/Admin/ProductBulkUploadController';
+import { edit as productFieldSourcesEdit } from '@/actions/App/Http/Controllers/Store/Admin/ProductFieldSourceController';
 import { index as productQueriesIndex } from '@/actions/App/Http/Controllers/Store/Admin/ProductQueryController';
 import {
     in_house_sale_report,
@@ -220,6 +221,7 @@ describe('storeAdminMenu', () => {
                 firebase.url(),
                 payments.url(),
                 filesystem.url(),
+                productFieldSourcesEdit.url(),
             ].sort(),
         );
     });
@@ -281,7 +283,7 @@ describe('visibleStoreMenu', () => {
         ]);
     });
 
-    it('drops a group whose section setting is off, unless the user is the vendor', () => {
+    it('drops a group whose section setting is off', () => {
         const props = storeSharedProps({
             permissions: ['view_all_staffs'],
             settings: { Staffs_section: false },
@@ -290,43 +292,58 @@ describe('visibleStoreMenu', () => {
         expect(
             labelKeys(visibleStoreMenu(storeAdminMenu, storeAccess(props))),
         ).not.toContain('store.nav.staff');
-        expect(
-            labelKeys(
-                visibleStoreMenu(
-                    storeAdminMenu,
-                    storeAccess({ ...props, isRaizerAdmin: true }),
-                ),
-            ),
-        ).toContain('store.nav.allStaff');
     });
 
-    it("keeps the vendor's own entries from a Super Admin who is not the vendor", () => {
+    it('shows the configuration entries, including Shipping, to a Super Admin whatever the section settings', () => {
         const keys = labelKeys(
             visibleStoreMenu(
                 storeAdminMenu,
                 storeAccess(
                     storeSharedProps({
                         isSuperAdmin: true,
-                        settings: { Setup_configuration_section: true },
+                        settings: {},
                     }),
                 ),
             ),
         );
 
         expect(keys).toContain('store.nav.generalSettings');
-        expect(keys).not.toContain('store.nav.featuresActivation');
-        expect(keys).not.toContain('store.nav.paymentMethods');
-        expect(keys).not.toContain('store.nav.google');
+        expect(keys).toContain('store.nav.featuresActivation');
+        expect(keys).toContain('store.nav.paymentMethods');
+        expect(keys).toContain('store.nav.google');
+        expect(keys).toContain('store.nav.shipping');
+        expect(keys).toContain('store.nav.shippingConfiguration');
     });
 
-    it('shows every entry to the vendor holding every permission', () => {
+    it('shows product data sources only to holders of its permission', () => {
+        const keysFor = (permissions: string[]) =>
+            labelKeys(
+                visibleStoreMenu(
+                    storeAdminMenu,
+                    storeAccess(
+                        storeSharedProps({
+                            permissions,
+                            settings: { Setup_configuration_section: true },
+                        }),
+                    ),
+                ),
+            );
+
+        expect(keysFor(['product_field_sources'])).toContain(
+            'store.nav.productFieldSources',
+        );
+        expect(keysFor(['general_settings'])).not.toContain(
+            'store.nav.productFieldSources',
+        );
+    });
+
+    it('shows every entry to a Super Admin with every setting on', () => {
         const keys = labelKeys(
             visibleStoreMenu(
                 storeAdminMenu,
                 storeAccess(
                     storeSharedProps({
                         isSuperAdmin: true,
-                        isRaizerAdmin: true,
                         settings: everySetting,
                     }),
                 ),

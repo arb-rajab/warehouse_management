@@ -63,7 +63,7 @@ test('naming a funded account in the request does not borrow its balance', funct
     $victim = fundedCustomer(100);
 
     $this->withToken(storeApiToken($attacker))
-        ->postJson('/temp/api/v2/payments/pay/wallet', ['user_id' => $victim->id, 'amount' => 10, 'payment_type' => 'wallet'])
+        ->postJson('/api/v1/store/payments/pay/wallet', ['user_id' => $victim->id, 'amount' => 10, 'payment_type' => 'wallet'])
         ->assertOk()
         ->assertJsonPath('result', false)
         ->assertJsonPath('message', 'Insufficient wallet balance');
@@ -75,7 +75,7 @@ test('naming a funded account in the request does not borrow its balance', funct
 test('the wallet payment needs a signed-in account', function () {
     $victim = fundedCustomer(100);
 
-    $this->postJson('/temp/api/v2/payments/pay/wallet', ['user_id' => $victim->id, 'amount' => 10])->assertUnauthorized();
+    $this->postJson('/api/v1/store/payments/pay/wallet', ['user_id' => $victim->id, 'amount' => 10])->assertUnauthorized();
 
     expect((float) $victim->fresh()->balance)->toBe(100.0);
 });

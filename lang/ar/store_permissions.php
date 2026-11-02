@@ -191,6 +191,7 @@ return [
         'manage_zones' => 'إدارة النطاقات',
         'payment_methods_configurations' => 'تهيئة طرق الدفع',
         'pickup_point_setup' => 'إعداد نقاط الاستلام',
+        'product_field_sources' => 'مصادر بيانات المنتجات',
         'shipping_configuration' => 'تهيئة الشحن',
         'shipping_country_setting' => 'إعداد دول الشحن',
         'smtp_settings' => 'إعداد خادم البريد SMTP',

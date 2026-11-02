@@ -10,6 +10,7 @@ import {
     edit as staffEdit,
     index as staffIndex,
 } from '@/actions/App/Http/Controllers/Store/Admin/StaffController';
+import { edit as tripEdit } from '@/actions/App/Http/Controllers/Store/Admin/TripController';
 import LanguageSwitcher from '@/components/LanguageSwitcher.vue';
 import LogoutLink from '@/components/LogoutLink.vue';
 import SkipToContentLink from '@/components/SkipToContentLink.vue';
@@ -279,12 +280,15 @@ describe('StoreAdminLayout', () => {
         wrapper.unmount();
     });
 
-    it('renders vendor cache POST action and sidebar badges from shared props', async () => {
+    it('renders cache POST action and sidebar badges from shared props', async () => {
         const wrapper = mountLayout(
             admin_dashboard.url(),
             storeSharedProps({
                 isSuperAdmin: true,
-                isRaizerAdmin: true,
+                settings: {
+                    vendor_system_activation: true,
+                    Support_Section: true,
+                },
                 counts: { sellers: 3, tickets: 4, conversations: 5 },
             }),
         );
@@ -306,5 +310,60 @@ describe('StoreAdminLayout', () => {
 
         expect(wrapper.findComponent(SkipToContentLink).exists()).toBe(true);
         expect(wrapper.get('main#main').text()).toContain('Page content');
+    });
+
+    it('highlights nothing on a page that is not in the menu', () => {
+        const wrapper = mountLayout(profileIndex.url());
+
+        expect(wrapper.findAll('a[aria-current="page"]')).toHaveLength(0);
+        expect(navLink(wrapper, 'store.nav.dashboard')?.props('active')).toBe(
+            false,
+        );
+    });
+
+    it('ignores the query string and keeps the highlight while searching', async () => {
+        const wrapper = mountLayout(`${staffIndex.url()}?page=2`);
+
+        expect(navLink(wrapper, 'store.nav.allStaff')?.props('active')).toBe(
+            true,
+        );
+
+        await wrapper.get('#store-menu-search').setValue('staff');
+
+        expect(navLink(wrapper, 'store.nav.allStaff')?.props('active')).toBe(
+            true,
+        );
+        expect(wrapper.findAll('a[aria-current="page"]')).toHaveLength(1);
+    });
+
+    it('highlights a group header and its nested heading for a child page', () => {
+        const wrapper = mountLayout(
+            tripEdit.url({ trip: 8 }),
+            storeSharedProps({ permissions: ['view_all_trips'] }),
+        );
+
+        const header = groupButton(wrapper, t('store.nav.trips'));
+
+        expect(header?.attributes('aria-expanded')).toBe('true');
+        expect(header?.attributes('data-active')).toBe('true');
+        expect(wrapper.get(`p[data-active="true"]`).text()).toBe(
+            t('store.nav.tripsGroup'),
+        );
+        expect(navLink(wrapper, 'store.nav.allTrips')?.props('active')).toBe(
+            true,
+        );
+    });
+
+    it('does not mark other group headers active', () => {
+        const wrapper = mountLayout(staffIndex.url());
+
+        expect(
+            groupButton(wrapper, t('store.nav.staff'))?.attributes(
+                'data-active',
+            ),
+        ).toBe('true');
+        expect(wrapper.findAll('nav button[data-active="true"]')).toHaveLength(
+            1,
+        );
     });
 });

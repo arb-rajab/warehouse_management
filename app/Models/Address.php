@@ -11,6 +11,14 @@ class Address extends Model
     protected $fillable = ['set_default', 'address', 'country_id', 'city_id', 'state_id', 'postal_code', 'phone', 'longitude', 'latitude'];
 
     /**
+     * Eager loads for AddressCollection, which names each address's country,
+     * state and city.
+     *
+     * @var list<string>
+     */
+    public const array WITH_PLACE = ['country', 'state', 'city'];
+
+    /**
      * Writes what the storefront's and the seller panel's address forms send
      * (ValidatesAddress), as those forms always have: a column the form left
      * out (state and city on the storefront, the postal code in the seller

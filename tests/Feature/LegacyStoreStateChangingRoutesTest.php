@@ -110,7 +110,6 @@ function storeWebGetRoutes(): array
     return array_values(array_filter(
         Route::getRoutes()->getRoutes(),
         fn (RoutingRoute $route) => str_starts_with($route->uri(), 'temp')
-            && ! str_starts_with($route->uri(), 'temp/api')
             && in_array('GET', $route->methods(), true),
     ));
 }
@@ -174,7 +173,7 @@ test('a visitor who is not signed in cannot delete through the DELETE route eith
 });
 
 test('a signed-in admin\'s GET to a state-changing route is refused (405, or 404 where a one-segment path falls to the CMS page route)', function () {
-    actingAsStoreUser(createStoreAdmin(raizerAdmin: true));
+    actingAsStoreUser(createStoreAdmin());
     $notRefused = [];
 
     foreach (STATE_CHANGING_STORE_ROUTES as $name) {

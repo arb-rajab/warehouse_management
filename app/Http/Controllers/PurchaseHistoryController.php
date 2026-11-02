@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Order;
+use App\Models\OrderDetail;
 use App\Models\Product;
 use App\Models\Upload;
 use Auth;
@@ -43,7 +44,7 @@ class PurchaseHistoryController extends Controller
 
     public function purchase_history_details($id)
     {
-        $order = Order::findOrFail(decrypt($id));
+        $order = Order::with(['orderDetails' => fn ($details) => $details->with(OrderDetail::WITH_ITEM_DETAILS)])->findOrFail(decrypt($id));
         $order->delivery_viewed = 1;
         $order->payment_status_viewed = 1;
         $order->save();
@@ -53,15 +54,10 @@ class PurchaseHistoryController extends Controller
     public function download(Request $request)
     {
         $product = Product::findOrFail(decrypt($request->id));
-        $downloadable = false;
-        foreach (Auth::user()->orders as $key => $order) {
-            foreach ($order->orderDetails as $key => $orderDetail) {
-                if ($orderDetail->product_id == $product->id && $orderDetail->payment_status == 'paid') {
-                    $downloadable = true;
-                    break;
-                }
-            }
-        }
+        $downloadable = OrderDetail::where('product_id', $product->id)
+            ->where('payment_status', 'paid')
+            ->whereHas('order', fn ($order) => $order->where('user_id', Auth::id()))
+            ->exists();
         if ($downloadable) {
             $upload = Upload::findOrFail($product->file_name);
             if (config('filesystems.default') == "s3") {

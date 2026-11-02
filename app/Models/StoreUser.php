@@ -39,7 +39,6 @@ use Spatie\Permission\Traits\HasRoles;
  * @property-read Shop|null $shop
  * @property-read RepresentativePackage|null $representativePackage
  * @property bool $is_rep
- * @property bool|null $raizer_admin
  * @property int|null $AccSysID
  * @property string|null $device_key
  * @property-read StoreUser|null $current_customer
@@ -283,11 +282,19 @@ class StoreUser extends Authenticatable implements MustVerifyEmail
         return $this->hasMany(Address::class);
     }
 
+    /**
+     * The customer a representative is ordering for: the one on their cart
+     * lines or, before the first line is added, the one they picked (the
+     * open visit POST /representatives/pick-customer creates). Picking only
+     * opens a visit, so reading the cart alone left the address list and the
+     * address actions on the representative's own account until a product was
+     * added.
+     */
     public function current_customer()
     {
-        $cart = $this->carts->first();
+        $customerId = $this->carts->first()?->for_customer ?? $this->rep_last_open_visit()?->customer_id;
 
-        return $cart ? $cart->belongsTo(StoreUser::class, 'for_customer', 'id') : $this->belongsTo(StoreUser::class, 'for_customer', 'id')->where('id', '=', null);
+        return (new Cart(['for_customer' => $customerId]))->belongsTo(StoreUser::class, 'for_customer', 'id');
     }
 
     public function product_bids()
@@ -350,6 +357,7 @@ class StoreUser extends Authenticatable implements MustVerifyEmail
             ->whereNull('order_id')
             ->where('created_at', '>', now()->subHours(24))
             ->orderByDesc('created_at')
+            ->orderByDesc('id')
             ->first();
     }
 

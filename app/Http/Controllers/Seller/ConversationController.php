@@ -38,7 +38,7 @@ class ConversationController extends Controller
      */
     public function show($id)
     {
-        $conversation = Conversation::findOrFail(decrypt($id));
+        $conversation = Conversation::with('messages.user.shop')->findOrFail(decrypt($id));
         Gate::authorize('participate', $conversation);
         if ($conversation->sender_id == Auth::user()->id) {
             $conversation->sender_viewed = 1;
@@ -57,7 +57,7 @@ class ConversationController extends Controller
      */
     public function refresh(Request $request)
     {
-        $conversation = Conversation::findOrFail(decrypt($request->id));
+        $conversation = Conversation::with('messages.user.shop')->findOrFail(decrypt($request->id));
         Gate::authorize('participate', $conversation);
         if ($conversation->sender_id == Auth::user()->id) {
             $conversation->sender_viewed = 1;

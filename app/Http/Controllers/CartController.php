@@ -43,10 +43,10 @@ class CartController extends Controller
 
                 Session::forget('temp_user_id');
             }
-            $carts = Cart::where('user_id', $user_id)->get();
+            $carts = Cart::with('product')->where('user_id', $user_id)->get();
         } else {
             $temp_user_id = $request->session()->get('temp_user_id');
-            $carts = ($temp_user_id != null) ? Cart::where('temp_user_id', $temp_user_id)->get() : [];
+            $carts = ($temp_user_id != null) ? Cart::with('product')->where('temp_user_id', $temp_user_id)->get() : [];
         }
 
         $cartResults = [];
@@ -99,7 +99,7 @@ class CartController extends Controller
         if (auth()->user() != null) {
             $user_id = Auth::user()->id;
             $data['user_id'] = $user_id;
-            $carts = Cart::where('user_id', $user_id)->get();
+            $carts = Cart::with('product')->where('user_id', $user_id)->get();
         } else {
             if ($request->session()->get('temp_user_id')) {
                 $temp_user_id = $request->session()->get('temp_user_id');
@@ -108,7 +108,7 @@ class CartController extends Controller
                 $request->session()->put('temp_user_id', $temp_user_id);
             }
             $data['temp_user_id'] = $temp_user_id;
-            $carts = Cart::where('temp_user_id', $temp_user_id)->get();
+            $carts = Cart::with('product')->where('temp_user_id', $temp_user_id)->get();
         }
 
         $data['product_id'] = $product->id;
@@ -310,10 +310,10 @@ class CartController extends Controller
 
             if (auth()->user() != null) {
                 $user_id = Auth::user()->id;
-                $carts = Cart::where('user_id', $user_id)->get();
+                $carts = Cart::with('product')->where('user_id', $user_id)->get();
             } else {
                 $temp_user_id = $request->session()->get('temp_user_id');
-                $carts = Cart::where('temp_user_id', $temp_user_id)->get();
+                $carts = Cart::with('product')->where('temp_user_id', $temp_user_id)->get();
             }
 
             $offer_message = $this->offerService()->processOffer($product, $data, $product_quantity_in_cart ?? $request->quantity, $request);
@@ -352,10 +352,10 @@ class CartController extends Controller
             }
             if (auth()->user() != null) {
                 $user_id = Auth::user()->id;
-                $carts = Cart::where('user_id', $user_id)->get();
+                $carts = Cart::with('product')->where('user_id', $user_id)->get();
             } else {
                 $temp_user_id = $request->session()->get('temp_user_id');
-                $carts = Cart::where('temp_user_id', $temp_user_id)->get();
+                $carts = Cart::with('product')->where('temp_user_id', $temp_user_id)->get();
             }
             return [
                 'status' => 1,
@@ -376,10 +376,10 @@ class CartController extends Controller
         $cart->delete();
         if (auth()->user() != null) {
             $user_id = Auth::user()->id;
-            $carts = Cart::where('user_id', $user_id)->get();
+            $carts = Cart::with('product')->where('user_id', $user_id)->get();
         } else {
             $temp_user_id = $request->session()->get('temp_user_id');
-            $carts = Cart::where('temp_user_id', $temp_user_id)->get();
+            $carts = Cart::with('product')->where('temp_user_id', $temp_user_id)->get();
         }
 
         return redirect()->back()->with([
@@ -444,10 +444,10 @@ class CartController extends Controller
 
         if (auth()->user() != null) {
             $user_id = Auth::user()->id;
-            $carts = Cart::where('user_id', $user_id)->get();
+            $carts = Cart::with('product')->where('user_id', $user_id)->get();
         } else {
             $temp_user_id = $request->session()->get('temp_user_id');
-            $carts = Cart::where('temp_user_id', $temp_user_id)->get();
+            $carts = Cart::with('product')->where('temp_user_id', $temp_user_id)->get();
         }
 
         return [

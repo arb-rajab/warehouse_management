@@ -27,7 +27,7 @@ class VerifyCsrfToken extends Middleware
          '/iyzico*',
          '/payfast*',
          '/bkash*',
-         'api/v2/bkash*',
+         'api/v1/store/bkash*',
          '/aamarpay*',
          '/mock_payments',
          '/apple-callback',

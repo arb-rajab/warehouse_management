@@ -18,7 +18,7 @@ class RepresentativePaymentController extends Controller
 {
     public function index(Request $request)
     {
-        $payments = RepresentativePayment::where('rep_id', auth()->user()->id)
+        $payments = RepresentativePayment::with(['customer', 'admin'])->where('rep_id', auth()->user()->id)
             ->orderBy('created_at', 'desc')
             ->paginate(10);
         return view('shop.frontend.user.rep-payments', compact('payments'));

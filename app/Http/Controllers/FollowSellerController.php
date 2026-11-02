@@ -16,7 +16,7 @@ class FollowSellerController extends Controller
      */
     public function index()
     {
-        $followed_sellers = FollowSeller::where('user_id', Auth::user()->id)->orderBy('shop_id', 'asc')->paginate(10);
+        $followed_sellers = FollowSeller::with('shop')->where('user_id', Auth::user()->id)->orderBy('shop_id', 'asc')->paginate(10);
         return view('shop.frontend.user.customer.followed_sellers', compact('followed_sellers'));
     }
 
