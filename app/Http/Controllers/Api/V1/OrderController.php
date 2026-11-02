@@ -163,7 +163,7 @@ class OrderController extends Controller
                     'combined_order_id' => 0,
                     'result' => false,
                     'message' => __('api.order.profit_too_low')
-                ]);
+                ], 422);
             }
         }
 
