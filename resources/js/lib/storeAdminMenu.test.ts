@@ -294,14 +294,14 @@ describe('visibleStoreMenu', () => {
         ).not.toContain('store.nav.staff');
     });
 
-    it('shows the configuration entries to a Super Admin', () => {
+    it('shows the configuration entries, including Shipping, to a Super Admin whatever the section settings', () => {
         const keys = labelKeys(
             visibleStoreMenu(
                 storeAdminMenu,
                 storeAccess(
                     storeSharedProps({
                         isSuperAdmin: true,
-                        settings: { Setup_configuration_section: true },
+                        settings: {},
                     }),
                 ),
             ),
@@ -311,6 +311,8 @@ describe('visibleStoreMenu', () => {
         expect(keys).toContain('store.nav.featuresActivation');
         expect(keys).toContain('store.nav.paymentMethods');
         expect(keys).toContain('store.nav.google');
+        expect(keys).toContain('store.nav.shipping');
+        expect(keys).toContain('store.nav.shippingConfiguration');
     });
 
     it('shows product data sources only to holders of its permission', () => {

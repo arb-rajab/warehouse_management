@@ -156,7 +156,7 @@ import type { StoreMenuParent } from '@/lib/storeAdminActiveMenu';
 interface StoreMenuGate {
     /** Any one of these permissions (`@can`/`@canany`). */
     permission?: string | string[];
-    /** A business setting that switches the section on. */
+    /** A business setting that switches the section on; a Super Admin sees the section regardless. */
     setting?: string;
 }
 
@@ -964,7 +964,9 @@ export const storeAdminPageParents: StoreMenuParent[] = [
 ];
 
 function passesGate(item: StoreMenuGate, access: StoreAccess): boolean {
-    if (item.setting && !access.setting(item.setting)) {
+    // A Super Admin sees every section, switched on or not, so the pages that
+    // switch sections on (Features activation) can always be reached.
+    if (item.setting && !access.isSuperAdmin && !access.setting(item.setting)) {
         return false;
     }
 
