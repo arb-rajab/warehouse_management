@@ -23,12 +23,13 @@ function storedFieldSourceRows(): array
 }
 
 test('the registry lists exactly the columns products:sync writes, each Otajer-owned by default', function () {
-    expect(fieldSources()->fields())->toBe(['name', 'ar_name', 'published'])
+    expect(fieldSources()->fields())->toBe(['name', 'ar_name', 'published', 'collection_id'])
         ->and(array_map(fn (string $field) => fieldSources()->defaultFor($field), fieldSources()->fields()))
-        ->toBe([ProductFieldSource::Otajer, ProductFieldSource::Otajer, ProductFieldSource::Otajer])
+        ->toBe([ProductFieldSource::Otajer, ProductFieldSource::Otajer, ProductFieldSource::Otajer, ProductFieldSource::Otajer])
         ->and(fieldSources()->insertValueFor('name'))->toBe('')
         ->and(fieldSources()->insertValueFor('ar_name'))->toBe('')
-        ->and(fieldSources()->insertValueFor('published'))->toBe(0);
+        ->and(fieldSources()->insertValueFor('published'))->toBe(0)
+        ->and(fieldSources()->insertValueFor('collection_id'))->toBe(0);
 });
 
 test('every setting key fits the business_settings type column', function () {
@@ -42,10 +43,11 @@ test('with nothing stored every field reports its default owner, preserving the 
         'name' => ProductFieldSource::Otajer,
         'ar_name' => ProductFieldSource::Otajer,
         'published' => ProductFieldSource::Otajer,
+        'collection_id' => ProductFieldSource::Otajer,
     ])
         ->and(fieldSources()->isOtajerOwned('name'))->toBeTrue()
         ->and(fieldSources()->isAdminOwned('name'))->toBeFalse()
-        ->and(fieldSources()->otajerOwnedFields())->toBe(['name', 'ar_name', 'published'])
+        ->and(fieldSources()->otajerOwnedFields())->toBe(['name', 'ar_name', 'published', 'collection_id'])
         ->and(fieldSources()->adminOwnedFields())->toBe([]);
 });
 
@@ -62,7 +64,7 @@ test('a stored choice wins over the default, and an unreadable stored value fall
         ->and(fieldSources()->sourceFor('ar_name'))->toBe(ProductFieldSource::Otajer)
         ->and(fieldSources()->sourceFor('published'))->toBe(ProductFieldSource::Otajer)
         ->and(fieldSources()->adminOwnedFields())->toBe(['name'])
-        ->and(fieldSources()->otajerOwnedFields())->toBe(['ar_name', 'published']);
+        ->and(fieldSources()->otajerOwnedFields())->toBe(['ar_name', 'published', 'collection_id']);
 });
 
 test('the oldest of duplicate rows decides, so a field never reports two owners', function () {
@@ -95,6 +97,7 @@ test('update stores one row per field and switching a field replaces its single 
             'name' => ProductFieldSource::Otajer,
             'ar_name' => ProductFieldSource::Otajer,
             'published' => ProductFieldSource::Admin,
+            'collection_id' => ProductFieldSource::Otajer,
         ]);
 });
 
@@ -129,12 +132,12 @@ test('only a feed-origin product has read-only fields, and only the Otajer-owned
     $feed = Product::factory()->feedOrigin()->create();
     $store = Product::factory()->create();
 
-    expect(fieldSources()->readOnlyFieldsFor($feed))->toBe(['name', 'ar_name', 'published'])
+    expect(fieldSources()->readOnlyFieldsFor($feed))->toBe(['name', 'ar_name', 'published', 'collection_id'])
         ->and(fieldSources()->readOnlyFieldsFor($store->fresh()))->toBe([]);
 
     fieldSources()->update(['name' => 'admin', 'published' => 'admin']);
 
-    expect(fieldSources()->readOnlyFieldsFor($feed->fresh()))->toBe(['ar_name'])
+    expect(fieldSources()->readOnlyFieldsFor($feed->fresh()))->toBe(['ar_name', 'collection_id'])
         ->and(fieldSources()->readOnlyFieldsFor($store->fresh()))->toBe([]);
 });
 

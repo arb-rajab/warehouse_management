@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Product;
+use App\Models\ProductCollection;
 use App\Services\ProductFieldSourceService;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\DB;
@@ -280,4 +281,41 @@ test('an admin-owned field keeps its value when every field is admin-owned, whil
 
     expect($product->fresh())->name->toBe('Admin')->ar_name->toBe('إدارة')->published->toBeTrue()
         ->and($product->fresh()->getRawOriginal('synced_at'))->toBe(now()->toDateTimeString());
+});
+
+test('the sync links a product to the collection whose serial is its Mat_Class2_ID, and keeps the current one when none matches', function () {
+    $five = ProductCollection::create(['name' => 'Margin 5%', 'serial' => '6', 'amount' => 5]);
+    $kept = ProductCollection::create(['name' => 'Margin 3%', 'serial' => '9', 'amount' => 3]);
+    $relinked = Product::factory()->feedOrigin()->create(['id' => 100041, 'collection_id' => $kept->id]);
+    $unmatched = Product::factory()->feedOrigin()->create(['id' => 100042, 'collection_id' => $kept->id]);
+    $store = Product::factory()->create(['id' => 100043, 'collection_id' => $kept->id]);
+    fakeOtajerFeed([
+        ['Mat_ID' => '100040', 'enName' => 'New', 'Active' => 1, 'Mat_Class2_ID' => 6],
+        ['Mat_ID' => '100041', 'enName' => 'Relinked', 'Active' => 1, 'Mat_Class2_ID' => 6],
+        ['Mat_ID' => '100042', 'enName' => 'Unmatched', 'Active' => 1, 'Mat_Class2_ID' => 99],
+    ]);
+
+    $this->artisan('products:sync')->assertSuccessful();
+
+    expect(Product::find(100040)->collection_id)->toBe($five->id)
+        ->and($relinked->fresh()->collection_id)->toBe($five->id)
+        ->and($unmatched->fresh()->collection_id)->toBe($kept->id)
+        ->and($store->fresh()->collection_id)->toBe($kept->id);
+});
+
+test('an admin-owned collection is never written by the sync', function () {
+    app(ProductFieldSourceService::class)->update(['collection_id' => 'admin']);
+    $five = ProductCollection::create(['name' => 'Margin 5%', 'serial' => '6', 'amount' => 5]);
+    $kept = ProductCollection::create(['name' => 'Margin 3%', 'serial' => '9', 'amount' => 3]);
+    $product = Product::factory()->feedOrigin()->create(['id' => 100051, 'collection_id' => $kept->id]);
+    fakeOtajerFeed([
+        ['Mat_ID' => '100051', 'enName' => 'Existing', 'Active' => 1, 'Mat_Class2_ID' => 6],
+        ['Mat_ID' => '100052', 'enName' => 'Created', 'Active' => 1, 'Mat_Class2_ID' => 6],
+    ]);
+
+    $this->artisan('products:sync')->assertSuccessful();
+
+    expect($product->fresh()->collection_id)->toBe($kept->id)
+        ->and(Product::find(100052)->collection_id)->toBe(0)
+        ->and($five->id)->not->toBe(0);
 });

@@ -197,6 +197,14 @@ class CustomerController extends Controller
         ], 200);
     }
 
+    /**
+     * Create a customer for the signed-in representative.
+     *
+     * `country` is the country's name ("Netherlands") or its id (155). An
+     * `address` (street) is optional: with one the customer gets a default
+     * delivery address, without one no address is created, so there is no blank
+     * default to block an order. Add one later with POST /user/shipping/create.
+     */
     public function create_customer(Request $request)
     {
         $messages = [
@@ -209,6 +217,9 @@ class CustomerController extends Controller
             'password.confirmed' => __('validation.confirmed', ['attribute' => __('validation.attributes.password')]),
             'password.min' => __('validation.min.string', ['attribute' => __('validation.attributes.password'), 'min' => 6]),
         ];
+        if (is_int($request->input('country'))) {
+            $request->merge(['country' => (string) $request->input('country')]);
+        }
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
             'company_name' => 'required|string|max:255',
@@ -216,6 +227,7 @@ class CustomerController extends Controller
             'email_or_phone' => 'required|email|unique:users,email',
             'country' => 'required|string',
             'phone' => 'required|string',
+            'address' => 'nullable|string|max:255',
 
         ], $messages);
 
@@ -234,7 +246,10 @@ class CustomerController extends Controller
         //$user->shipping_address = $request->shipping_address;
         //$user->tax_number = $request->tax_number;
         //$user->bank_account_number =  $request->bank_account_number;
-        $user->country = $request->country;
+        $country = is_numeric($request->country)
+            ? Country::find((int) $request->country)
+            : Country::where('name', $request->country)->first();
+        $user->country = $country?->name ?? $request->country;
         if ($request->register_by == 'email') {
 
             $user->email = $request->email_or_phone;
@@ -261,15 +276,17 @@ class CustomerController extends Controller
 
         $this->userService()->createCustomerOnOtajer($user); // to create an account for the user in otajer store.
 
-        // Automatically create an address for the user
-        $country_id = Country::where('name', $request->country)->value('id');
-        $address = new Address;
-        $address->user_id       = $user->id;
-        //$address->address       = $request->shipping_address;
-        $address->country_id    = $country_id;
-        $address->phone         = $request->phone;
-        $address->set_default   = 1;
-        $address->save();
+        // Only a usable address (one with a street) is created, and it is the
+        // default; a blank one would be the default and block every order.
+        if (trim((string) $request->address) !== '') {
+            $address = new Address;
+            $address->user_id       = $user->id;
+            $address->address       = trim((string) $request->address);
+            $address->country_id    = $country?->id;
+            $address->phone         = $request->phone;
+            $address->set_default   = 1;
+            $address->save();
+        }
 
         return response()->json([
             'result' => true,

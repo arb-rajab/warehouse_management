@@ -31,6 +31,9 @@ return [
         'name' => ['default' => 'otajer', 'insert_value' => ''],
         'ar_name' => ['default' => 'otajer', 'insert_value' => ''],
         'published' => ['default' => 'otajer', 'insert_value' => 0],
+        // The margin collection (product_collections.serial = the feed's
+        // Mat_Class2_ID). 0 points at no collection.
+        'collection_id' => ['default' => 'otajer', 'insert_value' => 0],
     ],
 
 ];

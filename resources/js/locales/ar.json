@@ -1218,7 +1218,8 @@
             "fields": {
                 "name": "اسم المنتج",
                 "ar_name": "الاسم العربي",
-                "published": "حالة التفعيل"
+                "published": "حالة التفعيل",
+                "collection_id": "مجموعة الهامش"
             }
         },
         "settings": {

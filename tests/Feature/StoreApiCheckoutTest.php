@@ -2,6 +2,7 @@
 
 use App\Models\Address;
 use App\Models\Cart;
+use App\Models\StoreUser;
 use App\Models\Visit;
 use Illuminate\Support\Facades\DB;
 
@@ -362,4 +363,50 @@ test('update-address-in-cart refuses an address that order/store would refuse, a
         ->assertUnprocessable()->assertJsonPath('message', __('api.order.address_country_required'));
 
     expect(Cart::where('user_id', $customer->id)->value('address_id'))->toBe($good);
+});
+
+test('a representative whose order earns no profit is refused with a 422', function () {
+    checkoutStore();
+    storeSetting('cash_payment', 1);
+    $rep = createStoreUser('customer');
+    $rep->forceFill(['is_rep' => true])->save();
+    $customer = createStoreUser('customer');
+    $address = addStoreAddress($customer->id);
+    $product = createStoreProduct(['cash_on_delivery' => 1, 'collection_id' => null]);
+    Cart::create(['user_id' => $rep->id, 'owner_id' => 0, 'product_id' => $product->id, 'quantity' => 1, 'variation' => '', 'price' => 2.5, 'for_customer' => $customer->id, 'address_id' => $address]);
+
+    $this->withToken(storeApiToken($rep))->postJson('/api/v1/store/order/store', ['payment_type' => 'cash_on_delivery'])
+        ->assertStatus(422)
+        ->assertJson(['result' => false, 'message' => __('api.order.profit_too_low')]);
+});
+
+test('a customer a representative creates gets no blank address, and the first address with a street is the default', function () {
+    checkoutStore();
+    $rep = createStoreUser('customer');
+    $rep->forceFill(['is_rep' => true])->save();
+    addStoreAddress($rep->id);
+    $nl = DB::table('countries')->where('code', 'NL')->first();
+    $this->withToken(storeApiToken($rep));
+
+    $payload = fn (string $email, array $extra = []) => [
+        'name' => 'New Customer', 'company_name' => 'Acme BV', 'password' => 'secret12', 'password_confirmation' => 'secret12',
+        'email_or_phone' => $email, 'register_by' => 'email', 'phone' => '0612345678', ...$extra,
+    ];
+
+    // The country is a name or an id.
+    $this->postJson('/api/v1/store/representatives/create-customer', $payload('a@example.com', ['country' => $nl->name]))->assertOk()->assertJsonPath('result', true);
+    $this->postJson('/api/v1/store/representatives/create-customer', $payload('b@example.com', ['country' => (int) $nl->id, 'address' => 'Prinsengracht 2']))->assertOk()->assertJsonPath('result', true);
+
+    $a = DB::table('users')->where('email', 'a@example.com')->value('id');
+    $b = DB::table('users')->where('email', 'b@example.com')->value('id');
+    expect(Address::where('user_id', $a)->count())->toBe(0)
+        ->and(Address::where('user_id', $b)->pluck('address', 'set_default')->all())->toBe([1 => 'Prinsengracht 2'])
+        ->and(DB::table('users')->where('id', $b)->value('country'))->toBe($nl->name);
+
+    // The customer without an address gets a default from the first one added.
+    $customer = StoreUser::findOrFail($a);
+    $this->postJson('/api/v1/store/representatives/pick-customer', ['id' => $a, 'latitude' => 52.37, 'longitude' => 4.89])->assertOk();
+    app('auth')->forgetGuards();
+    $this->postJson('/api/v1/store/user/shipping/create', ['address' => 'Damrak 1', 'country_id' => $nl->id, 'phone' => '0612345678'])->assertOk();
+    expect(Address::where('user_id', $customer->id)->where('set_default', 1)->value('address'))->toBe('Damrak 1');
 });
