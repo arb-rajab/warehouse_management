@@ -23,7 +23,7 @@ class OfferService
             $offer_order_details->order_id = $order->id;
             $offer_order_details->seller_id = $offer_product->product->user_id;
             $offer_order_details->product_serial = $offer_product->product->serial;
-            $offer_order_details->product_matId = $offer_product->product->mat_id;
+            $offer_order_details->product_matId = (string) $offer_product->product->id;
             $offer_order_details->product_name = $offer_product->product->ar_name;
             $offer_order_details->product_id = $offer_product->product->id;
             $offer_order_details->variation = 'PerBox';
@@ -230,7 +230,7 @@ class OfferService
             $offer_order_details->order_id = $order->id;
             $offer_order_details->seller_id = $product->user_id;
             $offer_order_details->product_serial = $product->serial;
-            $offer_order_details->product_matId = $product->mat_id;
+            $offer_order_details->product_matId = (string) $product->id;
             $offer_order_details->product_name = $product->ar_name;
             $offer_order_details->product_id = $product->id;
             $offer_order_details->variation = $product_variation;

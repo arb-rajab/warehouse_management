@@ -1472,7 +1472,7 @@ export function storeProductListRow(
         name: 'Olive oil 1L',
         ar_name: 'زيت زيتون',
         thumbnail_url: '/assets/img/placeholder.jpg',
-        mat_id: '100027',
+        mat_id: '41',
         unit: 'Box(12)',
         num_of_sale: 7,
         base_price: '€12.50',

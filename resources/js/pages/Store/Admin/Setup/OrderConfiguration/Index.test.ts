@@ -39,11 +39,11 @@ vi.mock('@inertiajs/vue3', async () => {
 const settings = {
     minimum_order_amount_check: true,
     minimum_order_amount: '25.50',
-    default_specific_product: 'MAT-42',
+    default_specific_product: '42',
     default_representative_check: false,
     default_representative_id: 7,
 };
-const selectedProduct = { id: 42, name: 'Special product', mat_id: 'MAT-42' };
+const selectedProduct = { id: 42, name: 'Special product', mat_id: '42' };
 function mountPage(permissions = ['order_configuration']) {
     usePageMock.mockReturnValue({
         url: index.url(),
@@ -101,7 +101,7 @@ describe('Order configuration', () => {
         );
         expect(wrapper.get('#default_specific_product').element).toHaveProperty(
             'value',
-            'MAT-42',
+            '42',
         );
         wrapper.unmount();
     });
@@ -150,11 +150,11 @@ describe('Order configuration', () => {
         ).toBe(true);
         wrapper.unmount();
     });
-    it('waits for four characters, debounces search and safely selects a MAT id', async () => {
+    it('waits for four characters, debounces search and safely selects a product id', async () => {
         const malicious = {
             id: 55,
             name: '<img src=x onerror=alert(1)>',
-            mat_id: 'MAT-55',
+            mat_id: '55',
         };
         getMock.mockResolvedValue([malicious]);
         const wrapper = mountPage();
@@ -178,7 +178,7 @@ describe('Order configuration', () => {
             .find((button) => button.text().includes(malicious.name));
         expect(button).toBeDefined();
         await button!.trigger('click');
-        expect(input.element).toHaveProperty('value', 'MAT-55');
+        expect(input.element).toHaveProperty('value', '55');
         expect(wrapper.text()).toContain(
             t('store.orderConfiguration.selected', { name: malicious.name }),
         );
@@ -195,14 +195,14 @@ describe('Order configuration', () => {
                     }),
             )
             .mockResolvedValueOnce([
-                { id: 2, name: 'Current result', mat_id: 'NEW' },
+                { id: 2, name: 'Current result', mat_id: '2' },
             ]);
         const wrapper = mountPage();
         await wrapper.get('#default_specific_product').setValue('older');
         await vi.advanceTimersByTimeAsync(300);
         await wrapper.get('#default_specific_product').setValue('newer');
         await vi.advanceTimersByTimeAsync(300);
-        finish([{ id: 1, name: 'Stale result', mat_id: 'OLD' }]);
+        finish([{ id: 1, name: 'Stale result', mat_id: '1' }]);
         await flushPromises();
         expect(wrapper.text()).toContain('Current result');
         expect(wrapper.text()).not.toContain('Stale result');

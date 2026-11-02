@@ -55,7 +55,8 @@ Setup > Product data sources (`product_field_sources.index`, permission
   the box price by it. The scalar fields after `collection_id` were added
   2026-11-02.
 - **Deliberately not synced** (other tables, files or computation): `Mat_ID`
-  (it is the id key), `Barcodes`, `Variations` (and the `variations`,
+  (it is the id key; the `products.mat_id` column was dropped on 2026-11-02 and the
+  `mat_id` payload keys are aliases of `id`, see shared-database.md), `Barcodes`, `Variations` (and the `variations`,
   `choice_options` columns), `Image`, `enCatName`/`arCatName` (category
   relation), `Mat_Class4_ID` (`brand_id` needs `import:brands`, which is not
   scheduled), `UnitArName` (a translation), and constants the legacy imports set

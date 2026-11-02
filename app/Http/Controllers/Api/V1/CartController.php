@@ -78,7 +78,7 @@ class CartController extends Controller
         // The delivery line order/store adds: only when the store checks a minimum
         // order, and only if its delivery product still exists.
         if (get_setting('minimum_order_amount_check') == 1 && $subtotal < get_setting('minimum_order_amount')) {
-            $delivery_cost = Product::where('mat_id', get_setting('default_specific_product'))->value('unit_price') ?? 0;
+            $delivery_cost = Product::where('id', get_setting('default_specific_product'))->value('unit_price') ?? 0;
         }
 
         return response()->json([
@@ -175,7 +175,7 @@ class CartController extends Controller
                         $shop_items_data_item["quantity"] = intval($shop_items_raw_data_item["quantity"]);
                         $shop_items_data_item["variation_qty"] = $transformedData;
                         $shop_items_data_item["tax"] = $product->tax;
-                        $shop_items_data_item["mat_id"] = $product->mat_id;
+                        $shop_items_data_item["mat_id"] = (string) $product->id;
                         $shop_items_data_item["item_notes"] = $shop_items_raw_data_item["item_notes"];
                         $shop_items_data_item["rep_price"] = (float) $shop_items_raw_data_item["rep_price"];
                         $shop_items_data_item["is_price_changed"] = $shop_items_raw_data_item["is_price_changed"];
@@ -215,7 +215,7 @@ class CartController extends Controller
                             }
                         }
                         $cart_offered->variation_qty = $transformedData ?? null;
-                        $cart_offered->mat_id = $product->mat_id;
+                        $cart_offered->mat_id = (string) $product->id;
                         $cart_offered->rep_price = null;
                         $cart_offered->is_price_changed = null;
                         $cart_offered->offer_cart = true;

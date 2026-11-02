@@ -138,7 +138,7 @@ class ProductMiniCollection extends ResourceCollection
                     'unit' => $data->unit ?? "",
                     'unit_equal' => (int) $data->unit_equal,
                     'serial' => $data->serial,
-                    'mat_id' => $data->mat_id,
+                    'mat_id' => (string) $data->id,
                     'tax' => (float) $data->tax,
                     'tax_type' => $data->tax_type,
                     'is_wholesale' => $wholesale_product,

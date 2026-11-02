@@ -57,7 +57,6 @@ use Illuminate\Support\Facades\Storage;
  * @property string|null $meta_description
  * @property string|null $meta_img
  * @property string|null $photos
- * @property string|null $mat_id
  * @property int $digital
  * @property int $variant_product
  * @property-read string|null $image_url

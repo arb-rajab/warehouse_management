@@ -86,7 +86,7 @@ class OrderEntryController extends Controller implements HasMiddleware
 
             return response()->json($this->paginated(JsonResource::collection($users->through(fn (StoreUser $user) => $user->only(['id', 'name', 'AccSysID', 'member_serial', 'rep_discount_percentage'])))));
         }
-        $products = Product::query()->select(['id', 'name', 'ar_name', 'serial', 'mat_id', 'unit_price', 'unit_equal', 'tax', 'digital'])
+        $products = Product::query()->select(['id', 'name', 'ar_name', 'serial', 'unit_price', 'unit_equal', 'tax', 'digital'])
             ->where('published', 1)->where('approved', 1)
             ->when($q !== '', fn (Builder $query) => $query->where(fn (Builder $names) => $names->where('name', 'like', '%'.$q.'%')->orWhere('ar_name', 'like', '%'.$q.'%')->orWhere('serial', 'like', '%'.$q.'%')))
             ->with(['stocks' => fn ($query) => $query->select(['id', 'product_id', 'variant', 'price', 'qty'])->orderBy('id')])
@@ -94,7 +94,7 @@ class OrderEntryController extends Controller implements HasMiddleware
 
         return response()->json($this->paginated(JsonResource::collection($products->through(fn (Product $product) => [
             'id' => $product->id, 'name' => app()->getLocale() === 'ar' ? ($product->ar_name ?: $product->name) : $product->name,
-            'serial' => $product->getAttribute('serial'), 'mat_id' => $product->getAttribute('mat_id'),
+            'serial' => $product->getAttribute('serial'), 'mat_id' => (string) $product->id,
             'unit_price' => (float) $product->getAttribute('unit_price'), 'unit_equal' => (float) $product->getAttribute('unit_equal'),
             'tax' => (float) $product->getAttribute('tax'), 'digital' => (bool) $product->getAttribute('digital'),
             'stocks' => $product->stocks->map(fn (ProductStock $stock) => ['variant' => $stock->variant, 'price' => (float) $stock->price, 'qty' => (int) $stock->qty])->all(),

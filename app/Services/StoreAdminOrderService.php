@@ -175,7 +175,7 @@ class StoreAdminOrderService
         $line = $existing ?? new OrderDetail;
         $line->forceFill([
             'order_id' => $order->id, 'seller_id' => $product->user_id, 'product_id' => $product->id,
-            'product_serial' => $product->getAttribute('serial'), 'product_matId' => $product->getAttribute('mat_id'),
+            'product_serial' => $product->getAttribute('serial'), 'product_matId' => (string) $product->id,
             'product_name' => $product->ar_name ?: $product->name,
             'variation' => $variant, 'entry_unit' => $data['unit'],
             'variation_qty' => $sameProduct ? $existing->getAttribute('variation_qty') : '[]',

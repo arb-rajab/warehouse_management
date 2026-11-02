@@ -381,7 +381,7 @@
                             <div class="pt-3 px-4 fs-14">
                                 <label class="">
                                     @php
-                                        $default_delivery_fees = \App\Models\Product::where('mat_id', get_setting('default_specific_product'))->first();
+                                        $default_delivery_fees = \App\Models\Product::where('id', get_setting('default_specific_product'))->first();
                                         if($default_delivery_fees){
                                             $default_delivery_fees =  $default_delivery_fees->unit_price;
                                         }

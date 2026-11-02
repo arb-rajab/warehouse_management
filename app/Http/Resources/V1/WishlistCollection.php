@@ -19,7 +19,7 @@ class WishlistCollection extends ResourceCollection
                         'id' => $data->product->id,
                         'name' => $data->product->name,
                         'unit_equal' => $data->product->unit_equal,
-                        'mat_id'    => $data->product->mat_id,
+                        'mat_id'    => (string) $data->product->id,
                         'tax'       => $data->product->tax,
                         'variation' => $productVariation,
                         'thumbnail_image' => uploaded_asset($data->product->thumbnail_img),

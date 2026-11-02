@@ -38,7 +38,7 @@ function seedProducts(): void {
             $seller = $addedBy === 'seller';
             $product = App\Models\Product::forceCreate([
                 'name'=>$name,'ar_name'=>'','slug'=>Illuminate\Support\Str::slug($name),'added_by'=>$addedBy,'digital'=>0,
-                'unit_price'=>12.5,'published'=>$seller ? 0 : 1,'for_sale'=>$seller ? 0 : 1,'featured'=>0,'mat_id'=>'BR'.strlen($name),
+                'unit_price'=>12.5,'published'=>$seller ? 0 : 1,'for_sale'=>$seller ? 0 : 1,'featured'=>0,
                 'colors'=>'[]','attributes'=>'[]','choice_options'=>'[]','tags'=>'','created_at'=>$created,
             ]);
             App\Models\ProductTranslation::create(['product_id'=>$product->id,'lang'=>'en','name'=>$name]);

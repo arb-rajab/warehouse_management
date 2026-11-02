@@ -158,7 +158,7 @@ class ProductDetailCollection extends ResourceCollection
                     'brand' => $brand,
                     'category' => $category,
                     'serial' => $data->serial,
-                    'mat_id' => $data->mat_id,
+                    'mat_id' => (string) $data->id,
                     'max_qty' => $data->max_qty,
                     'link' => StorefrontUrl::to($data),
                     'wholesale' => $whole_sale,

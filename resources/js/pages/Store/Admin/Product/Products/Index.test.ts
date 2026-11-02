@@ -269,7 +269,7 @@ describe('Store product lists Index', () => {
                     [
                         'select',
                         'name',
-                        'materialId',
+                        'id',
                         'unit',
                         'info',
                         'totalStock',
@@ -337,7 +337,7 @@ describe('Store product lists Index', () => {
         expect(cells[1].text()).toContain('Olive oil 1L');
         expect(cells[1].get('[dir="auto"]').text()).toBe('زيت زيتون');
         expect(cells[1].find('.text-red-700').exists()).toBe(false);
-        expect(cells[2].text()).toBe('100027');
+        expect(cells[2].text()).toBe('41');
         expect(cells[3].text()).toBe('Box(12)');
         expect(cells[5].text()).toBe('40');
         expect(cells[6].text()).toBe('Oils');
@@ -347,6 +347,7 @@ describe('Store product lists Index', () => {
         expect(second.findAll('img')).toHaveLength(1);
         expect(secondCells[1].find('[dir="auto"]').exists()).toBe(false);
         expect(secondCells[1].find('.text-red-700').exists()).toBe(true);
+        expect(secondCells[2].text()).toBe('42');
         expect(
             secondCells[5].findAll('span').map((span) => span.text()),
         ).toEqual(['Small - 2', 'Large - 5']);

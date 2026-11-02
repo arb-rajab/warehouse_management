@@ -106,7 +106,7 @@ class ProductController extends Controller implements HasMiddleware
 
     /**
      * The all-products list keeps its legacy filters: the owner, every word
-     * of the search over the names, material id and barcodes, one preset or
+     * of the search over the names, id and barcodes, one preset or
      * the four state switches matched exactly, the category and the
      * optional legacy sort. With none of those, products the Otajer sync
      * retired stay hidden. It had no order of its own, so rows keep their
@@ -125,7 +125,7 @@ class ProductController extends Controller implements HasMiddleware
                 foreach (array_filter(explode(' ', trim($search)), fn (string $word) => $word !== '') as $word) {
                     $words->where(function (Builder $match) use ($word): void {
                         $this->matchSearchTerm($match, $word);
-                        $match->orWhere('mat_id', 'like', '%'.$word.'%');
+                        $match->orWhere('id', 'like', '%'.$word.'%');
                     });
                 }
             }));
@@ -459,7 +459,7 @@ class ProductController extends Controller implements HasMiddleware
     {
         $perPage = $this->resolvePerPage($request, 20);
         $products = $query
-            ->select(['id', 'name', 'ar_name', 'thumbnail_img', 'mat_id', 'api_unit_name', 'unit_equal', 'num_of_sale', 'unit_price', 'collection_id', 'variant_product', 'low_stock_quantity', 'category_id', 'for_sale', 'published', 'featured', 'approved', 'todays_deal', 'deleted_from_api', 'slug'])
+            ->select(['id', 'name', 'ar_name', 'thumbnail_img', 'api_unit_name', 'unit_equal', 'num_of_sale', 'unit_price', 'collection_id', 'variant_product', 'low_stock_quantity', 'category_id', 'for_sale', 'published', 'featured', 'approved', 'todays_deal', 'deleted_from_api', 'slug'])
             ->with([
                 'stocks' => fn ($stocks) => $stocks->select(['id', 'product_id', 'variant', 'qty'])->orderBy('id'),
                 'category:id,name',

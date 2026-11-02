@@ -2759,7 +2759,7 @@
             "empty": "No products found.",
             "name": "Name",
             "photo": "Photo",
-            "materialId": "Material ID",
+            "id": "ID",
             "unit": "Unit",
             "info": "Info",
             "salesCount": "Number of sales: {count}",

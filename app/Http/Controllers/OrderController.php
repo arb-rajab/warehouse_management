@@ -226,7 +226,7 @@ class OrderController extends Controller implements HasMiddleware
                 $order_detail->order_id = $order->id;
                 $order_detail->seller_id = $product->user_id;
                 $order_detail->product_serial = $product->serial;
-                $order_detail->product_matId = $product->mat_id;
+                $order_detail->product_matId = (string) $product->id;
                 $order_detail->product_name = $product->ar_name;
                 $order_detail->product_id = $product->id;
                 $order_detail->variation = $product_variation;

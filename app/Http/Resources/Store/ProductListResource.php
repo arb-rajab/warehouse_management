@@ -20,7 +20,6 @@ use Illuminate\Http\Resources\Json\JsonResource;
  * @property-read string $name
  * @property-read string $ar_name
  * @property-read int|null $thumbnail_img
- * @property-read string|null $mat_id
  * @property-read string|null $api_unit_name
  * @property-read int|null $unit_equal
  * @property-read int $num_of_sale
@@ -53,7 +52,7 @@ class ProductListResource extends JsonResource
             'name' => $this->name,
             'ar_name' => $this->ar_name,
             'thumbnail_url' => uploaded_asset($this->thumbnail_img),
-            'mat_id' => $this->mat_id,
+            'mat_id' => (string) $this->id,
             'unit' => $this->api_unit_name.'('.$this->unit_equal.')',
             'num_of_sale' => (int) $this->num_of_sale,
             'base_price' => single_price($this->unit_price),

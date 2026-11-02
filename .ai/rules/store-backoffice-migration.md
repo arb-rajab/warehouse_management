@@ -376,6 +376,18 @@ be explicitly reconciled; never guess option permutations or discard stock
 implicitly. Keep original normal variant-removal behavior. Seller panel repairs
 do not establish parity or repaired persistence for every mobile API path.
 
+## `mat_id` is an alias of the product id
+
+The `products.mat_id` column was dropped on 2026-11-02 (it always equalled
+`products.id`; `products:sync` maps the feed's `Mat_ID` to `id`). Store code reads
+`products.id`: the products search matches ids, the default delivery product
+setting holds a product id and is validated with `exists:products,id`, and the
+admin products list shows an ID column from `product.id`. The JSON payload key
+`mat_id` is kept for mobile, external and admin clients, with the id cast to a
+string as the old column was. `order_details.product_matId` is a separate column
+on another table and still receives the product id. Details are in
+[shared-database.md](shared-database.md).
+
 ## Payout accounting
 
 Under the existing transaction, lock the shop then pending withdrawal. Cash/bank

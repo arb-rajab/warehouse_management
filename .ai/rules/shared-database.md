@@ -89,6 +89,28 @@ Keep warehouse queries scoped to the columns their consumers need. Store forms
 and writers use additional inherited product columns; that does not justify
 unrestricted selects in warehouse catalogue queries.
 
+### `products.mat_id` was dropped on 2026-11-02; `mat_id` is an alias of `id`
+
+`products:sync` maps the feed's `Mat_ID` to `products.id`, so the store's
+`products.mat_id` column only ever held a copy of the primary key. Migration
+`2026_11_02_100000_drop_mat_id_from_products_table` drops it (guarded by
+`Schema::hasColumn()`; `down()` restores a nullable string column and refills it
+from `id`). Nothing reads or writes the column any more: search, the default
+delivery product setting (`default_specific_product` now holds a product id),
+Blade, the admin list and the seeders all use `products.id`, and the admin
+products list renders its ID column from `product.id`.
+
+The payload key `mat_id` stays, as an alias of `id` cast to a string, wherever a
+mobile or external client or an admin payload already carried it
+(`Api/V1` product, cart, wishlist and purchase-history resources, the warehouse
+`GET /products` list, `Store\ProductListResource`, `ProductSearchResource` and
+the order-entry product options). `order_details.product_matId` is a separate
+real column on another table: it snapshots the product id on the order line and
+is still written (as a string of the id) by the order writers. Do not add the
+column back or read `$product->mat_id`; the feed key `Mat_ID` is unrelated and
+stays. The earlier `add_legacy_columns_to_store_tables` migration still adds the
+column on a database built from scratch, and the drop migration removes it.
+
 ### `ar_name`: searched in both locales, rendered in Arabic by the frontend
 
 Two separate decisions, deliberately different from each other.
@@ -450,7 +472,7 @@ write itself, including a store insert racing the sync; pre-filtering alone
 would not. The marker assignment is last for MySQL's ordered SET evaluation.
 
 **Existing rows: conservative default, no inferred provenance.** The column
-migration leaves all pre-marker rows null. A matching name/Arabic name/publication, `from_api`, `mat_id`
+migration leaves all pre-marker rows null. A matching name/Arabic name/publication, `from_api`
 or old `updated_at` cannot prove origin; that migration does not backfill origin. Consequently
 existing feed rows stop receiving those three updates until explicitly reviewed.
 The owner must compare an authoritative feed/creation inventory, approve exact IDs,

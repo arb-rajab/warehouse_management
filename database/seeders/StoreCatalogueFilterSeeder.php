@@ -33,7 +33,6 @@ class StoreCatalogueFilterSeeder extends Seeder
                             'name' => StoreSeedExamples::product($record['seed_key']), 'ar_name' => '',
                             'slug' => StoreSeedExamples::code('pantry', $record['seed_key']),
                             'serial' => StoreSeedExamples::code('SKU', $record['seed_key']),
-                            'mat_id' => StoreSeedExamples::code('MAT', $record['seed_key']),
                             'tags' => 'pantry,groceries,mediterranean',
                         ]);
                     }
@@ -236,7 +235,7 @@ class StoreCatalogueFilterSeeder extends Seeder
             $id = (int) $data->row('products', $ownedKey, [
                 'name' => StoreSeedExamples::product($ownedKey), 'ar_name' => '',
                 'slug' => StoreSeedExamples::code('pantry', $ownedKey),
-                'serial' => StoreSeedExamples::code('SKU', $ownedKey), 'mat_id' => StoreSeedExamples::code('MAT', $ownedKey),
+                'serial' => StoreSeedExamples::code('SKU', $ownedKey),
                 'unit_price' => StoreSeedExamples::price($ownedKey), 'current_stock' => 20, 'unit' => 'box', 'unit_equal' => 1,
                 'description' => 'Wholesale pantry essential supplied in sealed packs. Store in a cool, dry place and check the pack for ingredient and allergen information.',
                 'discount' => 0, 'discount_type' => 'amount', 'tags' => 'pantry,groceries,mediterranean',

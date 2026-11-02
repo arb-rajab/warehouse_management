@@ -131,7 +131,7 @@
             </div>
         @endif
     </div>
-    <p class="my-3 fs-14 fw-700">Material ID: {{ $detailedProduct->mat_id }}</p>
+    <p class="my-3 fs-14 fw-700">Material ID: {{ $detailedProduct->id }}</p>
 
     <!-- Profits Stars -->
     @auth

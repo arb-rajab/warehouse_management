@@ -455,7 +455,7 @@ async function requestFetch(): Promise<void> {
                     ? [t('store.products.select')]
                     : []),
                 t('store.products.name'),
-                t('store.products.materialId'),
+                t('store.products.id'),
                 t('store.products.unit'),
                 t('store.products.info'),
                 t('store.products.totalStock'),
@@ -507,7 +507,7 @@ async function requestFetch(): Promise<void> {
                         </div>
                     </div>
                 </td>
-                <td class="px-4 py-2">{{ product.mat_id }}</td>
+                <td class="px-4 py-2">{{ product.id }}</td>
                 <td class="px-4 py-2">{{ product.unit }}</td>
                 <td class="px-4 py-2 whitespace-nowrap">
                     <span class="block">{{

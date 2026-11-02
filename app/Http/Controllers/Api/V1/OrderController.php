@@ -123,7 +123,7 @@ class OrderController extends Controller
                 $subtotal += cart_product_price($cartItem, $product, false, false) * $cartItem['quantity'];
             }
             $default_specific_product = $subtotal < get_setting('minimum_order_amount')
-                ? Product::where('mat_id', get_setting('default_specific_product'))->first()
+                ? Product::where('id', get_setting('default_specific_product'))->first()
                 : null;
             if ($default_specific_product) {
                 $delivery_cart = Cart::where('user_id', auth()->user()->id)->where('product_id', $default_specific_product->id)->first();;
@@ -342,7 +342,7 @@ class OrderController extends Controller
                 $order_detail->seller_id = $product->user_id;
                 $order_detail->product_id = $product->id;
                 $order_detail->product_serial = $product->serial;
-                $order_detail->product_matId = $product->mat_id;
+                $order_detail->product_matId = (string) $product->id;
                 $order_detail->product_name = $product->ar_name;
                 $order_detail->variation = $product_variation;
                 if ($cartItem["is_price_changed"] == true) {
