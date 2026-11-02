@@ -3122,7 +3122,7 @@
     "store.sellers.categoryCommissionNote": "عند تفعيل العمولة حسب الفئة، اضبط نسبة عمولة البائع على 0.",
     "store.sellers.vendor_commission_activation": "تفعيل عمولة البائع",
     "store.sellers.category_wise_commission": "العمولة حسب الفئة",
-    "store.sellers.activationRestricted": "يتطلب تغيير التفعيل حساب مدير المورّد وصلاحية تفعيل الميزات.",
+    "store.sellers.activationRestricted": "يتطلب تغيير التفعيل صلاحية تفعيل الميزات.",
     "store.sellers.activationError": "تعذر حفظ إعداد التفعيل.",
     "store.sellers.activationSaved": "تم حفظ إعداد التفعيل.",
     "store.sellers.verificationFormTitle": "نموذج التحقق من البائع",

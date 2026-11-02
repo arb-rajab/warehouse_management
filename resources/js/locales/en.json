@@ -3122,7 +3122,7 @@
     "store.sellers.categoryCommissionNote": "If category based commission is enabled, set the seller commission percentage to 0.",
     "store.sellers.vendor_commission_activation": "Seller commission activation",
     "store.sellers.category_wise_commission": "Category based commission",
-    "store.sellers.activationRestricted": "Activation changes require the vendor administrator and feature activation permission.",
+    "store.sellers.activationRestricted": "Activation changes require the feature activation permission.",
     "store.sellers.activationError": "The activation setting could not be saved.",
     "store.sellers.activationSaved": "Activation setting saved.",
     "store.sellers.verificationFormTitle": "Seller verification form",

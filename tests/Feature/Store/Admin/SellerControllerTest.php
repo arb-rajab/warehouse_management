@@ -50,7 +50,7 @@ test('the seller list returns the complete narrow payload and filters out orphan
     $this->get(route('sellers.index'))->assertOk()->assertInertia(fn (Assert $page) => $page
         ->has('sellers.data', 1)
         ->where('filters', ['per_page' => 20, 'search' => '', 'approved_status' => null])
-        ->where('payouts', false)->where('payment_links', false)
+        ->where('payouts', false)->missing('payment_links')
         ->has('sellers.data.0', fn (Assert $row) => $row
             ->where('id', $shop->id)->where('user_id', $shop->user_id)->where('name', 'Seller shop')
             ->where('account_name', 'Seller Person')->where('email', $shop->user->email)->where('phone', '123')
