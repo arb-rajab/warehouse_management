@@ -1,5 +1,5 @@
 import { mount } from '@vue/test-utils';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { t } from '@/lib/i18n';
 import StoreBooleanField from './StoreBooleanField.vue';
 
@@ -44,5 +44,36 @@ describe('StoreBooleanField', () => {
             },
         });
         expect(wrapper.get('select').attributes('disabled')).toBeDefined();
+    });
+
+    it('marks, scrolls to and focuses the option it is asked to highlight', async () => {
+        const scrollIntoView = vi.fn();
+        HTMLElement.prototype.scrollIntoView = scrollIntoView;
+        const wrapper = mount(StoreBooleanField, {
+            attachTo: document.body,
+            props: {
+                name: 'settings[cash_payment]',
+                label: 'Cash payment',
+                value: false,
+                highlighted: true,
+            },
+        });
+        await wrapper.vm.$nextTick();
+        await wrapper.vm.$nextTick();
+        expect(wrapper.attributes('data-highlighted')).toBeDefined();
+        expect(scrollIntoView).toHaveBeenCalled();
+        expect(document.activeElement).toBe(wrapper.get('select').element);
+        wrapper.unmount();
+    });
+
+    it('leaves an ordinary option unmarked and unfocused', async () => {
+        const wrapper = mount(StoreBooleanField, {
+            attachTo: document.body,
+            props: { name: 'settings[x]', label: 'X', value: true },
+        });
+        await wrapper.vm.$nextTick();
+        expect(wrapper.attributes('data-highlighted')).toBeUndefined();
+        expect(document.activeElement).not.toBe(wrapper.get('select').element);
+        wrapper.unmount();
     });
 });

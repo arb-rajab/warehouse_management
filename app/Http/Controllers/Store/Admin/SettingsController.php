@@ -9,6 +9,7 @@ use App\Mail\EmailManager;
 use App\Models\BusinessSetting;
 use App\Support\StoreLocale;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
 use Illuminate\Support\Facades\Cache;
@@ -119,9 +120,9 @@ class SettingsController extends Controller implements HasMiddleware
         ];
     }
 
-    public function activation(): Response
+    public function activation(Request $request): Response
     {
-        return $this->page('activation');
+        return $this->page('activation', $request);
     }
 
     public function updateActivation(UpdateStoreSettingsRequest $request): RedirectResponse
@@ -189,9 +190,9 @@ class SettingsController extends Controller implements HasMiddleware
         return $this->save($request, 'firebase');
     }
 
-    public function payments(): Response
+    public function payments(Request $request): Response
     {
-        return $this->page('payments');
+        return $this->page('payments', $request);
     }
 
     public function updatePayments(UpdateStoreSettingsRequest $request): RedirectResponse
@@ -217,13 +218,22 @@ class SettingsController extends Controller implements HasMiddleware
         return redirect()->route('smtp_settings.index');
     }
 
-    private function page(string $page): Response
+    /**
+     * `?highlight=<setting key>` makes the page scroll to that option and mark it,
+     * so a button that sends an admin here to change one option lands on it. Only
+     * a key this page holds is passed on; anything else is ignored.
+     */
+    private function page(string $page, ?Request $request = null): Response
     {
+        $highlight = $request?->query('highlight');
+        $highlight = is_string($highlight) && in_array($highlight, self::PAGES[$page]['keys'], true) ? $highlight : null;
+
         $settings = BusinessSetting::query()->whereIn('type', self::PAGES[$page]['keys'])
             ->select(['type', 'value'])->pluck('value', 'type');
 
         return Inertia::render('Store/Admin/Settings/Index', [
             'section' => $page,
+            'highlight' => $highlight,
             'settings' => collect(self::PAGES[$page]['keys'])->mapWithKeys(
                 fn (string $key): array => [$key => (string) $settings->get($key, '0') === '1']
             )->all(),

@@ -246,6 +246,34 @@ describe('Store settings', () => {
             expect(pageForms(mountPage(section, []))).toHaveLength(0);
         },
     );
+    it('highlights the option the admin was sent to change, and no other', () => {
+        const wrapper = mountPage('activation', ['features_activation']);
+        expect(wrapper.findAll('[data-highlighted]')).toHaveLength(0);
+        wrapper.unmount();
+        usePageMock.mockReturnValue({
+            url: '/temp/admin/activation?highlight=cash_payment',
+            props: defaultAuthProps({
+                store: storeSharedProps({
+                    permissions: ['features_activation'],
+                }),
+            }),
+        });
+        const highlighted = mount(Index, {
+            props: {
+                section: 'activation',
+                highlight: 'cash_payment',
+                settings: Object.fromEntries(
+                    pages.activation.keys.map((key) => [key, false]),
+                ),
+            },
+        });
+        const marked = highlighted.findAll('[data-highlighted]');
+        expect(marked).toHaveLength(1);
+        expect(marked[0].find('select').attributes('name')).toBe(
+            'settings[cash_payment]',
+        );
+        highlighted.unmount();
+    });
     it('lets an admin holding the permission write activation', () => {
         expect(
             pageForms(mountPage('activation', ['features_activation'])),

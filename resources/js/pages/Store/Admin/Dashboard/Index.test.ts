@@ -3,6 +3,7 @@ import { mount } from '@vue/test-utils';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { all as allProducts } from '@/actions/App/Http/Controllers/Store/Admin/ProductController';
 import {
+    activation,
     payments,
     smtp,
 } from '@/actions/App/Http/Controllers/Store/Admin/SettingsController';
@@ -153,6 +154,7 @@ it.each(['en', 'ar'] as const)(
     },
 );
 it('shows each setup alert with the page that fixes it, beside the SMTP one', () => {
+    permissions.value = ['admin_dashboard', 'smtp_settings'];
     const wrapper = mount(Index, {
         props: {
             ...storeDashboardProps(),
@@ -172,6 +174,20 @@ it('shows each setup alert with the page that fixes it, beside the SMTP one', ()
         .map((link) => JSON.stringify(link.props('href')));
     expect(hrefs).toContain(JSON.stringify(payments()));
     expect(hrefs).toContain(JSON.stringify(allProducts()));
+    wrapper.unmount();
+});
+it('sends the no-payment alert to the Cash payment option in Features activation when the admin may open it', () => {
+    permissions.value = ['admin_dashboard', 'features_activation'];
+    const wrapper = mount(Index, {
+        props: { ...storeDashboardProps(), setupAlerts: ['noPaymentMethod'] },
+    });
+    const hrefs = wrapper
+        .findAllComponents(Link)
+        .map((link) => JSON.stringify(link.props('href')));
+    expect(hrefs).toContain(
+        JSON.stringify(activation({ query: { highlight: 'cash_payment' } })),
+    );
+    expect(hrefs).not.toContain(JSON.stringify(payments()));
     wrapper.unmount();
 });
 it('hides SMTP without its flag or permission and renders the empty product state', () => {
