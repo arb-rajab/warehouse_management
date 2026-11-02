@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Models\Product;
+use App\Models\ProductCollection;
 use App\Services\ProductFieldSourceService;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
@@ -15,7 +16,7 @@ use Throwable;
 
 /**
  * Pulls the Otajer store's product feed and upserts a bounded subset of
- * columns (`name`, `ar_name`, `published`) into this app's `products` table.
+ * columns (`name`, `ar_name`, `published`, `collection_id`) into this app's `products` table.
  *
  * The feed owns those columns only on feed-origin rows. A null synced_at marks
  * a store-created or unclassified row and is never overwritten, even when a
@@ -27,7 +28,7 @@ use Throwable;
  * .ai/rules/product-field-sources.md.
  */
 #[Signature('products:sync')]
-#[Description("Sync product name, Arabic name, and active status from the store's API into the products table")]
+#[Description("Sync product name, Arabic name, active status and margin collection from the store's API into the products table")]
 class SyncProductsCommand extends Command
 {
     /**
@@ -44,7 +45,7 @@ class SyncProductsCommand extends Command
      *
      * @var list<literal-string>
      */
-    private const array MAPPED_COLUMNS = ['name', 'ar_name', 'published'];
+    private const array MAPPED_COLUMNS = ['name', 'ar_name', 'published', 'collection_id'];
 
     /**
      * Execute the console command.
@@ -78,7 +79,7 @@ class SyncProductsCommand extends Command
             return self::FAILURE;
         }
 
-        $rows = $this->mapProducts($response->json('Products', []));
+        $rows = $this->mapProducts($response->json('Products', []), $this->collectionIdsBySerial());
 
         if ($rows === []) {
             $this->components->info('No products to sync.');
@@ -115,7 +116,7 @@ class SyncProductsCommand extends Command
      * An admin-owned column is left out of the update list, so an existing
      * row keeps its value, and takes `$insertValues` on insert.
      *
-     * @param  list<array{id: int, name: string, ar_name: string, published: int}>  $chunk
+     * @param  list<array{id: int, name: string, ar_name: string, published: int, collection_id: int|null}>  $chunk
      * @param  list<literal-string>  $otajerOwned  the syncable columns the feed may update
      * @param  array<string, string|int>  $insertValues  admin-owned column => value written on insert
      */
@@ -129,6 +130,9 @@ class SyncProductsCommand extends Command
             $incoming = $mysql && ! $connection->getConfig('use_upsert_alias')
                 ? 'values('.$column.')'
                 : ($mysql ? 'laravel_upsert_alias.' : 'excluded.').$column;
+            // A product whose collection the feed names but this app does not
+            // have (yet) keeps the collection it has.
+            $incoming = $column === 'collection_id' ? 'COALESCE('.$incoming.', products.collection_id)' : $incoming;
             $updates[$column] = new Expression('CASE WHEN products.synced_at IS NOT NULL THEN '.$incoming.' ELSE products.'.$column.' END');
         }
         $now = now()->toDateTimeString();
@@ -148,6 +152,14 @@ class SyncProductsCommand extends Command
     }
 
     /**
+     * @return array<string, int>
+     */
+    private function collectionIdsBySerial(): array
+    {
+        return ProductCollection::query()->pluck('id', 'serial')->map(fn (mixed $id): int => (int) $id)->all();
+    }
+
+    /**
      * Maps the feed's rows onto the columns this app writes.
      *
      * `Mat_ID` is assumed to be the store's own `products.id` — both systems
@@ -158,9 +170,15 @@ class SyncProductsCommand extends Command
      * missing a usable `Mat_ID` or `enName` is skipped rather than written
      * with a guessed value.
      *
-     * @return list<array{id: int, name: string, ar_name: string, published: int}>
+     * `Mat_Class2_ID` names the product's margin collection, which
+     * `import:collections` stores as `product_collections.serial`; one this
+     * app has no collection for maps to null, and the update keeps the
+     * product's current collection.
+     *
+     * @param  array<string, int>  $collectionIds  collection id by serial
+     * @return list<array{id: int, name: string, ar_name: string, published: int, collection_id: int|null}>
      */
-    private function mapProducts(mixed $products): array
+    private function mapProducts(mixed $products, array $collectionIds = []): array
     {
         if (! is_array($products)) {
             return [];
@@ -185,6 +203,7 @@ class SyncProductsCommand extends Command
                 'name' => mb_substr((string) $name, 0, 200),
                 'ar_name' => mb_substr((string) ($product['arName'] ?? ''), 0, 191),
                 'published' => empty($product['Active']) ? 0 : 1,
+                'collection_id' => is_scalar($product['Mat_Class2_ID'] ?? null) ? ($collectionIds[(string) $product['Mat_Class2_ID']] ?? null) : null,
             ];
         }
 

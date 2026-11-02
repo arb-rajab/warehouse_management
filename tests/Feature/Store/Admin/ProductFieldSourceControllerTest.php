@@ -24,7 +24,7 @@ function productFieldSourceSettingsSnapshot(): array
 /** @return array<string, string> */
 function productFieldSourcesPayload(array $overrides = []): array
 {
-    return array_replace(['name' => 'otajer', 'ar_name' => 'otajer', 'published' => 'otajer'], $overrides);
+    return array_replace(['name' => 'otajer', 'ar_name' => 'otajer', 'published' => 'otajer', 'collection_id' => 'otajer'], $overrides);
 }
 
 test('the page renders every synced field with its default owner when nothing is stored', function () {
@@ -32,10 +32,11 @@ test('the page renders every synced field with its default owner when nothing is
 
     $this->get(route('product_field_sources.index'))->assertOk()->assertInertia(fn (Assert $page) => $page
         ->component('Store/Admin/Setup/ProductFieldSources/Index')
-        ->has('fields', 3)
+        ->has('fields', 4)
         ->has('fields.0', fn (Assert $field) => $field->where('key', 'name')->where('source', 'otajer')->where('default', 'otajer'))
         ->has('fields.1', fn (Assert $field) => $field->where('key', 'ar_name')->where('source', 'otajer')->where('default', 'otajer'))
-        ->has('fields.2', fn (Assert $field) => $field->where('key', 'published')->where('source', 'otajer')->where('default', 'otajer')));
+        ->has('fields.2', fn (Assert $field) => $field->where('key', 'published')->where('source', 'otajer')->where('default', 'otajer'))
+        ->has('fields.3', fn (Assert $field) => $field->where('key', 'collection_id')->where('source', 'otajer')->where('default', 'otajer')));
 });
 
 test('the page shows the stored owner of each field beside its default', function () {
@@ -47,6 +48,7 @@ test('the page shows the stored owner of each field beside its default', functio
             ['key' => 'name', 'source' => 'admin', 'default' => 'otajer'],
             ['key' => 'ar_name', 'source' => 'otajer', 'default' => 'otajer'],
             ['key' => 'published', 'source' => 'admin', 'default' => 'otajer'],
+            ['key' => 'collection_id', 'source' => 'otajer', 'default' => 'otajer'],
         ]));
 });
 
@@ -61,9 +63,11 @@ test('saving stores exactly one owner per field and returns to the page', functi
         'name' => ProductFieldSource::Admin,
         'ar_name' => ProductFieldSource::Otajer,
         'published' => ProductFieldSource::Otajer,
+        'collection_id' => ProductFieldSource::Otajer,
     ])
         ->and(DB::table('business_settings')->where('type', 'like', 'product_source_%')->orderBy('type')->pluck('value', 'type')->all())->toBe([
             'product_source_ar_name' => 'otajer',
+            'product_source_collection_id' => 'otajer',
             'product_source_name' => 'admin',
             'product_source_published' => 'otajer',
         ])

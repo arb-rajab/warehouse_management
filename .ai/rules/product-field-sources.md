@@ -31,8 +31,12 @@ Setup > Product data sources (`product_field_sources.index`, permission
 
 - `config/product_field_sources.php` is the registry: each syncable field
   with its `default` owner and its `insert_value`. Today: `name`, `ar_name`,
-  `published`, all defaulting to `otajer` (the behaviour before the setting
-  existed), inserted as `''`, `''`, `0` while admin-owned.
+  `published`, `collection_id`, all defaulting to `otajer`, inserted as `''`,
+  `''`, `0`, `0` while admin-owned. `collection_id` is the product's margin
+  collection (the rep-order profit check): the sync maps the feed's
+  `Mat_Class2_ID` to `product_collections.serial` (filled hourly by
+  `import:collections`), and a product whose class has no collection keeps its
+  current `collection_id` instead of being cleared. Added 2026-11-02.
 - **A column the sync starts writing must be registered there in the same
   change**, and mapped in `SyncProductsCommand::mapProducts()` and its
   `MAPPED_COLUMNS` (only those literal names reach the upsert's raw update

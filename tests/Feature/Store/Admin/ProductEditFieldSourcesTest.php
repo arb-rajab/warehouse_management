@@ -67,14 +67,14 @@ function fieldSourceEditForm(array $overrides = []): array
 test('a feed-origin product shows every Otajer-owned field read-only, with the synced name', function () {
     $this->get(route('products.admin.edit', $this->feed))->assertOk()->assertInertia(fn (Assert $page) => $page
         ->component('Store/Admin/Product/Products/Edit')
-        ->where('readOnlyFields', ['name', 'ar_name', 'published'])
+        ->where('readOnlyFields', ['name', 'ar_name', 'published', 'collection_id'])
         ->where('name', 'Feed oil')
         ->where('arName', 'زيت التغذية'));
 });
 
 test('another language keeps its translated name editable, while the other synced fields stay read-only', function () {
     $this->get(route('products.admin.edit', [$this->feed, 'lang' => 'ar']))->assertOk()->assertInertia(fn (Assert $page) => $page
-        ->where('readOnlyFields', ['ar_name', 'published'])
+        ->where('readOnlyFields', ['ar_name', 'published', 'collection_id'])
         ->where('name', 'ترجمة')
         ->where('arName', 'زيت التغذية'));
 });
@@ -83,7 +83,7 @@ test('an admin-owned field is editable on a feed-origin product', function () {
     app(ProductFieldSourceService::class)->update(['name' => 'admin', 'ar_name' => 'admin']);
 
     $this->get(route('products.admin.edit', $this->feed))->assertOk()->assertInertia(fn (Assert $page) => $page
-        ->where('readOnlyFields', ['published'])
+        ->where('readOnlyFields', ['published', 'collection_id'])
         // Editable again, the name comes from the translation as before.
         ->where('name', 'Old feed oil'));
 });

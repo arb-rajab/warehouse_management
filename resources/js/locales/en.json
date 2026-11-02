@@ -1218,7 +1218,8 @@
             "fields": {
                 "name": "Product name",
                 "ar_name": "Arabic name",
-                "published": "Active status"
+                "published": "Active status",
+                "collection_id": "Margin collection"
             }
         },
         "settings": {
