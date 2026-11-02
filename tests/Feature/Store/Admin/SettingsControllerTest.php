@@ -55,6 +55,19 @@ test('each settings page renders with only its boolean settings and no environme
         ->assertDontSee('smtp-secret')->assertDontSee('social-secret')->assertDontSee('storage-secret')->assertDontSee('firebase-secret')->assertDontSee('private-setting');
 })->with('plain settings pages');
 
+test('the activation page passes on only a highlight key it holds', function () {
+    actingAsStoreUser(createStoreAdmin());
+
+    $this->get(route('activation.index', ['highlight' => 'cash_payment']))->assertOk()
+        ->assertInertia(fn (Assert $page) => $page->where('highlight', 'cash_payment'));
+    $this->get(route('activation.index', ['highlight' => 'smtp_password']))->assertOk()
+        ->assertInertia(fn (Assert $page) => $page->where('highlight', null));
+    $this->get(route('activation.index', ['highlight' => ['cash_payment']]))->assertOk()
+        ->assertInertia(fn (Assert $page) => $page->where('highlight', null));
+    $this->get(route('activation.index'))->assertOk()
+        ->assertInertia(fn (Assert $page) => $page->where('highlight', null));
+});
+
 test('each settings page refuses unauthorized callers', function (string $section, string $route, string $permission, string $caller) {
     actingAsRefusedStoreCaller($caller);
     assertStoreCallerRefused($this->get(route($route)), $caller);

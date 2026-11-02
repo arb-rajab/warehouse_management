@@ -4,6 +4,7 @@ import { PackageSearch, TriangleAlert } from '@lucide/vue';
 import { computed } from 'vue';
 import { all as allProducts } from '@/actions/App/Http/Controllers/Store/Admin/ProductController';
 import {
+    activation,
     payments,
     smtp,
 } from '@/actions/App/Http/Controllers/Store/Admin/SettingsController';
@@ -17,8 +18,12 @@ import type { StoreDashboardProps } from '@/types/store';
 const props = defineProps<StoreDashboardProps>();
 const access = useStoreAccess();
 // Settings the store cannot take orders without, each with the page that sets it.
+// Cash payment is switched on in Features activation, and the link lands on that option.
 const setupLinks = {
-    noPaymentMethod: payments,
+    noPaymentMethod: () =>
+        access.value.can('features_activation')
+            ? activation({ query: { highlight: 'cash_payment' } })
+            : payments(),
     cashOnDeliveryProducts: allProducts,
 };
 const alerts = computed(() => [

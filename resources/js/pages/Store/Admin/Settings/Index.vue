@@ -34,6 +34,8 @@ const props = defineProps<{
         | 'payments'
         | 'filesystem';
     settings: Record<string, boolean>;
+    /** The option a button sent the admin here to change, if any. */
+    highlight?: string | null;
 }>();
 const access = useStoreAccess();
 const actions = {
@@ -92,6 +94,7 @@ const canWrite = computed(() => access.value.can(permissions[props.section]));
                     :name="`settings[${key}]`"
                     :label="t(`store.settings.keys.${key}`)"
                     :value="value"
+                    :highlighted="key === highlight"
                     :error="errors[`settings.${key}`]"
                 />
             </div>
