@@ -510,7 +510,7 @@ owner authorization for the existing catalog, not an origin inference rule.
 feed (`store.products_sync_url` / `STORE_PRODUCTS_SYNC_URL`; never log the URL's
 embedded API key), remains hourly with the existing overlap lock, chunks by 500
 (16 bindings per row), truncates or casts every value to its column (names
-200/191, serial and unit ids 255, unit 20, amounts DECIMAL(20,2), unit
+200/191, serial, unit id and unit name 191, unit 20, amounts DECIMAL(20,2), unit
 conversion INT, description cleaned with `clean_html()`), drops unmapped feed
 fields and skips unusable IDs/names. A missing, blank or unusable feed value
 for `collection_id`, `serial`, `unit_price`, `unit`, `api_unitId`,

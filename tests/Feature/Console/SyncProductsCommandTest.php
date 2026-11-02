@@ -357,8 +357,16 @@ test('the sync writes every plain scalar property of the feed on create and on u
             ->and($row->synced_at)->not->toBeNull();
     }
     expect(rawProduct(100061))->serial->toBe('SER-100061')->api_unitId->toBe('7')->unit_equal->toBe(12)
-        ->and(rawProduct(100062))->serial->toBe(str_repeat('s', 255))->api_unitId->toBe(str_repeat('9', 255))->unit_equal->toBe(6)
+        ->and(rawProduct(100062))->serial->toBe(str_repeat('s', 191))->api_unitId->toBe(str_repeat('9', 191))->unit_equal->toBe(6)
         ->and(rawProduct(100069))->toEqual($noiseBefore);
+});
+
+test('the unit name is cut to its 191-character column and the unit to 20', function () {
+    fakeOtajerFeed([fullFeedRow(100063, ['UnitEnName' => str_repeat('u', 300)])]);
+
+    $this->artisan('products:sync')->assertSuccessful();
+
+    expect(rawProduct(100063))->api_unit_name->toBe(str_repeat('u', 191))->unit->toBe(str_repeat('u', 20));
 });
 
 test('a missing, blank or unusable feed value keeps the current value of an existing product', function () {
