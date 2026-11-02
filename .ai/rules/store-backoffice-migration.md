@@ -349,11 +349,13 @@ Run a fresh scoped route/consumer inventory before changing a handler.
 ## Product ownership and seller persistence
 
 [shared-database.md](shared-database.md) is canonical for Option A and its
-reclassification procedure. The sync owns exactly `name`, `ar_name`, `published`
+reclassification procedure. The sync owns the registered synced columns (`name`,
+`ar_name`, `published`, `collection_id`, `serial`, `unit_price`, `unit`,
+`api_unitId`, `api_unit_name`, `tax`, `description`, `unit_equal`)
 on feed-origin rows (non-null `synced_at`) while each is Otajer-owned, the default;
 Setup > Product data sources can hand any of them to the admin panel
 ([product-field-sources.md](product-field-sources.md)). The store owns other columns and may
-write those three on store-origin rows. Null pre-marker rows were originally
+write the synced ones on store-origin rows. Null pre-marker rows were originally
 unclassified; the owner's later Otajer-origin confirmation led to a one-time
 classification migration. Do not reapply the earlier pending-classification
 snapshot as current guidance. Future store-created rows remain null-origin and

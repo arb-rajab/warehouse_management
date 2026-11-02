@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\CellState;
 use App\Support\ProductColumnOwnership;
+use App\Support\ProductFormNumber;
 use Database\Factories\ProductFactory;
 use Illuminate\Database\Connection;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -27,8 +28,8 @@ use Illuminate\Support\Facades\Storage;
 /**
  * A row in this app's `products` table.
  *
- * Option A: products:sync owns the Otajer-owned syncable columns (name,
- * ar_name and published by default; see ProductFieldSourceService) on
+ * Option A: products:sync owns the Otajer-owned syncable columns (all of
+ * config/product_field_sources.php by default; see ProductFieldSourceService) on
  * feed-origin rows (synced_at is non-null). Store writers own the remaining
  * columns, including any syncable column the admin owns, and may change the
  * Otajer-owned ones only on store-origin rows (synced_at is null).
@@ -80,7 +81,7 @@ class Product extends Model
     public function setAttribute($key, $value): static
     {
         if ($this->exists && in_array($key, ProductColumnOwnership::syncColumns(), true)
-            && (string) ($this->attributes[$key] ?? '') !== (string) $value) {
+            && self::differsFromStored($key, $this->attributes[$key] ?? '', $value)) {
             ProductColumnOwnership::assertStoreWrite($this, [$key]);
         }
         if ($key === 'synced_at' && $value !== null) {
@@ -88,6 +89,20 @@ class Product extends Model
         }
 
         return parent::setAttribute($key, $value);
+    }
+
+    /**
+     * Whether assigning `$value` changes the stored attribute. The numeric
+     * synced columns compare as numbers, so a price re-posted as `12.5` over a
+     * stored `12.50` is no change; text columns compare as strings.
+     */
+    private static function differsFromStored(string $key, mixed $stored, mixed $value): bool
+    {
+        if (in_array($key, ['unit_price', 'tax', 'unit_equal', 'collection_id'], true) && is_numeric($stored) && is_numeric($value)) {
+            return ProductFormNumber::format($stored) !== ProductFormNumber::format($value);
+        }
+
+        return (string) $stored !== (string) $value;
     }
 
     /** Every model-created row, including a replicated feed row, is store-origin. */

@@ -78,6 +78,8 @@ class NewFetchProductsCommand extends Command
     {
         // Otajer-synced fields the admin owns are never written by this import.
         $fieldSources = app(\App\Services\ProductFieldSourceService::class);
+        // An admin-owned unit price also leaves the existing stock prices alone.
+        $repriceStocks = ! $fieldSources->isAdminOwned('unit_price');
 
         // if there is already a running fetching-products-by-admin  command, exit to prevent duplicates products
         $cron_job_exists = CronJobs::where(function ($query) {
@@ -286,13 +288,13 @@ class NewFetchProductsCommand extends Command
                             }
                             if (Str::contains($productStock->variant, 'PerBox')) {
                                 $productStock->update([
-                                    'price' => $product['Price'],
+                                    ...($repriceStocks ? ['price' => $product['Price']] : []),
                                     'qty' => $quantity,
                                     //'sku' => $product['enName'] . '-' . $product['Unit_Equal'] . '-' . uniqid(),
                                 ]);
                             } else { // update the PerPiece
                                 $productStock->update([
-                                    'price' => ($product['Price'] / $product['Unit_Equal']),
+                                    ...($repriceStocks ? ['price' => ($product['Price'] / $product['Unit_Equal'])] : []),
                                     'qty' => $quantity,
                                     //'sku' => $product['enName'] . '-' . $product['Unit_Equal'] . '-' . uniqid(),
                                 ]);

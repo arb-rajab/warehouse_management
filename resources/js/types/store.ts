@@ -192,7 +192,19 @@ export type StoreGeneralSettingsImage =
 
 /** Upload ids are the stored strings; timezone is config('app.timezone'). */
 /** A product field the Otajer sync writes (config/product_field_sources.php). */
-export type StoreProductSyncedField = 'name' | 'ar_name' | 'published';
+export type StoreProductSyncedField =
+    | 'name'
+    | 'ar_name'
+    | 'published'
+    | 'collection_id'
+    | 'serial'
+    | 'unit_price'
+    | 'unit'
+    | 'api_unitId'
+    | 'api_unit_name'
+    | 'tax'
+    | 'description'
+    | 'unit_equal';
 
 /** Who owns a synced product field: the Otajer sync or the admin panel. */
 export type StoreProductFieldSource = 'otajer' | 'admin';

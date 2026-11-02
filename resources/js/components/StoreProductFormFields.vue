@@ -12,6 +12,7 @@ import StoreProductListField from '@/components/StoreProductListField.vue';
 import StoreProductTaxFields from '@/components/StoreProductTaxFields.vue';
 import StoreProductVariantFields from '@/components/StoreProductVariantFields.vue';
 import StoreRichTextField from '@/components/StoreRichTextField.vue';
+import StoreSanitizedHtml from '@/components/StoreSanitizedHtml.vue';
 import StoreUploadField from '@/components/StoreUploadField.vue';
 import { fieldLabelClass, plainFieldInputClass } from '@/lib/filters';
 import { t } from '@/lib/i18n';
@@ -39,7 +40,9 @@ import type {
  * there, as on the Blade edit form. The edit form also gets the Arabic name
  * (`arName`, a field only it shows) and `readOnlyFields`: the Otajer-owned
  * synced fields of a feed-origin product, rendered read-only with a note
- * (the server ignores what is posted for them).
+ * (the server ignores what is posted for them). Only the name, Arabic name,
+ * unit, unit price and description have a field here; a synced description
+ * shows as a locked block with a hidden input that posts it unchanged.
  */
 const props = defineProps<{
     categories: StoreReferenceOption[];
@@ -209,15 +212,28 @@ const linkClass =
                 </select>
                 <FieldError :message="errors.brand_id" />
             </div>
-            <FormField
-                id="unit"
-                :label="t('store.products.form.unit')"
-                :value="unit ?? ''"
-                :error="errors.unit"
-                :placeholder="t('store.products.form.unitPlaceholder')"
-                maxlength="20"
-                required
-            />
+            <div>
+                <FormField
+                    id="unit"
+                    :label="t('store.products.form.unit')"
+                    :value="unit ?? ''"
+                    :error="errors.unit"
+                    :placeholder="t('store.products.form.unitPlaceholder')"
+                    maxlength="20"
+                    required
+                    :readonly="readOnly('unit')"
+                    :aria-describedby="
+                        readOnly('unit') ? 'unit-otajer-synced' : undefined
+                    "
+                />
+                <p
+                    v-if="readOnly('unit')"
+                    id="unit-otajer-synced"
+                    :class="helpClass"
+                >
+                    {{ t('store.products.form.otajerSynced') }}
+                </p>
+            </div>
             <FormField
                 id="weight"
                 type="number"
@@ -409,10 +425,23 @@ const linkClass =
                     :max="productAmountMax"
                     step="0.01"
                     required
+                    :readonly="readOnly('unit_price')"
+                    :aria-describedby="
+                        readOnly('unit_price')
+                            ? 'unit_price-otajer-synced'
+                            : undefined
+                    "
                     @input="
                         unitPrice = ($event.target as HTMLInputElement).value
                     "
                 />
+                <p
+                    v-if="readOnly('unit_price')"
+                    id="unit_price-otajer-synced"
+                    :class="helpClass"
+                >
+                    {{ t('store.products.form.otajerSynced') }}
+                </p>
                 <FieldError :message="errors.unit_price" />
             </div>
             <StoreProductDiscountFields
@@ -477,7 +506,31 @@ const linkClass =
             <legend :class="legendClass">
                 {{ t('store.products.form.descriptionSection') }}
             </legend>
+            <!-- A synced description cannot be edited: the server-cleaned
+                 HTML shows as content and posts back unchanged. -->
+            <div v-if="readOnly('description')" class="lg:col-span-2">
+                <p id="description-label" :class="fieldLabelClass">
+                    {{ t('store.products.form.description') }}
+                </p>
+                <StoreSanitizedHtml
+                    id="description"
+                    :html="description ?? ''"
+                    aria-labelledby="description-label"
+                    aria-describedby="description-otajer-synced"
+                    class="rounded-md border border-gray-300 bg-gray-100 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-neutral-900"
+                />
+                <input
+                    type="hidden"
+                    name="description"
+                    :value="description ?? ''"
+                />
+                <p id="description-otajer-synced" :class="helpClass">
+                    {{ t('store.products.form.otajerSynced') }}
+                </p>
+                <FieldError :message="errors.description" />
+            </div>
             <StoreRichTextField
+                v-else
                 id="description"
                 v-model="content"
                 name="description"

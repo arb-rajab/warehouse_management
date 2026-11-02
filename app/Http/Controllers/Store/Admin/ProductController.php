@@ -525,7 +525,7 @@ class ProductController extends Controller implements HasMiddleware
     /**
      * The edit form in the requested language (the default without one):
      * the form's options, the product's fields, the edited language's name,
-     * unit and cleaned description, the Arabic name, the synced fields that
+     * unit and cleaned description (the synced column while it is read-only), the Arabic name, the synced fields that
      * are read-only on this product (ProductFieldSourceService), the stored variant choices with their
      * rows, and the previews of its stored uploads the caller may see.
      */
@@ -552,11 +552,11 @@ class ProductController extends Controller implements HasMiddleware
             ])
             ->findOrFail($product->id);
         $options = $this->formOptions($product);
-        // The base name is the default language's only; other languages edit
-        // a translation the sync never writes.
+        // The base name, unit and description are the default language's
+        // only; other languages edit a translation the sync never writes.
         $readOnlyFields = array_values(array_filter(
             app(ProductFieldSourceService::class)->readOnlyFieldsFor($product),
-            fn (string $field): bool => $field !== 'name' || $lang === config('app.default_language'),
+            fn (string $field): bool => ! in_array($field, ['name', 'unit', 'description'], true) || $lang === config('app.default_language'),
         ));
         $flashDealId = $product->flash_deal_product?->getAttribute('flash_deal_id');
         $variants = $this->storedVariantChoices($product, $options['colors'], $options['attributes']);
@@ -572,8 +572,9 @@ class ProductController extends Controller implements HasMiddleware
             'name' => in_array('name', $readOnlyFields, true) ? $product->name : (string) $product->getTranslation('name', $lang),
             'arName' => $product->ar_name,
             'readOnlyFields' => $readOnlyFields,
-            'unit' => (string) $product->getTranslation('unit', $lang),
-            'description' => clean_html((string) $product->getTranslation('description', $lang)),
+            // A read-only unit or description shows the synced column too.
+            'unit' => in_array('unit', $readOnlyFields, true) ? (string) $product->unit : (string) $product->getTranslation('unit', $lang),
+            'description' => clean_html(in_array('description', $readOnlyFields, true) ? (string) $product->description : (string) $product->getTranslation('description', $lang)),
             'lang' => $lang,
             'languages' => $this->languageOptions(),
             'listType' => $listType,

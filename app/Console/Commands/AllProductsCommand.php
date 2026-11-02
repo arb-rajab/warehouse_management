@@ -78,6 +78,8 @@ class AllProductsCommand extends Command
     {
         // Otajer-synced fields the admin owns are never written by this import.
         $fieldSources = app(\App\Services\ProductFieldSourceService::class);
+        // An admin-owned unit price also leaves the existing stock prices alone.
+        $repriceStocks = ! $fieldSources->isAdminOwned('unit_price');
         try {
             $start_time = Carbon::now();
             $products_count = 0;
@@ -214,14 +216,14 @@ class AllProductsCommand extends Command
                     foreach($productStocks as $productStock){
                         if(Str::contains($productStock->variant, 'PerBox')){
                                 $productStock->update([
-                                    'price' => $product['Price'],
+                                    ...($repriceStocks ? ['price' => $product['Price']] : []),
                                     'qty' => $product['enCatName'] ? 1000 : 0,
                                     //'sku' => $product['enName'] . '-' . $product['Unit_Equal'] . '-' . uniqid(),
                             ]);
                             }
                         else{
                                 $productStock->update([
-                                    'price' => ($product['Price'] / $product['Unit_Equal']),
+                                    ...($repriceStocks ? ['price' => ($product['Price'] / $product['Unit_Equal'])] : []),
                                     'qty' => $product['enCatName'] ? 1000 : 0,
                                     //'sku' => $product['enName'] . '-' . $product['Unit_Equal'] . '-' . uniqid(),
                                 ]);

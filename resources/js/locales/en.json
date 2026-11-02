@@ -1213,13 +1213,21 @@
             "otajer": "Otajer synced",
             "otajerHint": "The hourly Otajer sync writes this field. On synced products it is read-only in the admin panel.",
             "admin": "Admin panel set",
-            "adminHint": "The admin panel writes this field. The Otajer sync never writes or overwrites it; new synced products start with it empty (unpublished for Active status).",
+            "adminHint": "The admin panel writes this field. The Otajer sync never writes or overwrites it; new synced products start with it empty or zero (unpublished for Active status).",
             "default": "Default: {source}",
             "fields": {
                 "name": "Product name",
                 "ar_name": "Arabic name",
                 "published": "Active status",
-                "collection_id": "Margin collection"
+                "collection_id": "Margin collection",
+                "serial": "Serial number",
+                "unit_price": "Unit price",
+                "unit": "Unit",
+                "api_unitId": "Otajer unit ID",
+                "api_unit_name": "Otajer unit name",
+                "tax": "Tax percent",
+                "description": "Description",
+                "unit_equal": "Units per box"
             }
         },
         "settings": {
