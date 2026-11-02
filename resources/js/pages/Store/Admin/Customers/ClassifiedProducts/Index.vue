@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Form, Head, router } from '@inertiajs/vue3';
+import { Head, router } from '@inertiajs/vue3';
 import { Trash2 } from '@lucide/vue';
 import {
     customer_product_index as classifiedProductsIndex,
@@ -7,9 +7,9 @@ import {
     updatePublished,
 } from '@/actions/App/Http/Controllers/Store/Admin/ClassifiedProductController';
 import DataTable from '@/components/DataTable.vue';
-import FieldError from '@/components/FieldError.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import Pagination from '@/components/Pagination.vue';
+import StoreStatusSwitch from '@/components/StoreStatusSwitch.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
 import { confirmDelete } from '@/lib/confirm';
@@ -88,53 +88,22 @@ function onPerPageChange(perPage: number): void {
                     >
                 </td>
                 <td class="px-4 py-2">
-                    <Form
+                    <StoreStatusSwitch
                         v-if="access.can('publish_classified_product')"
-                        v-slot="{ processing, errors }"
                         :action="updatePublished(row, { mergeQuery: {} })"
-                        :options="{ preserveScroll: true }"
-                    >
-                        <input
-                            type="hidden"
-                            name="status"
-                            :value="row.published ? 0 : 1"
-                        />
-                        <button
-                            type="submit"
-                            role="switch"
-                            :aria-checked="row.published"
-                            :aria-label="
-                                t('store.classifiedProducts.toggle', {
-                                    name: row.name,
-                                })
-                            "
-                            :disabled="processing"
-                            class="flex cursor-pointer items-center gap-2 rounded px-2 py-1 text-gray-900 disabled:cursor-not-allowed disabled:opacity-50 dark:text-white"
-                        >
-                            <span
-                                aria-hidden="true"
-                                class="relative h-6 w-11 rounded-full"
-                                :class="
-                                    row.published
-                                        ? 'bg-green-700 dark:bg-green-600'
-                                        : 'bg-gray-500 dark:bg-neutral-600'
-                                "
-                                ><span
-                                    class="absolute top-1 h-4 w-4 rounded-full bg-white"
-                                    :class="
-                                        row.published ? 'end-1' : 'start-1'
-                                    "
-                            /></span>
-                            {{
-                                t(
-                                    row.published
-                                        ? 'store.classifiedProducts.unpublish'
-                                        : 'store.classifiedProducts.publish',
-                                )
-                            }}
-                        </button>
-                        <FieldError :message="errors.status" />
-                    </Form>
+                        :checked="row.published"
+                        :label="
+                            t('store.classifiedProducts.toggle', {
+                                name: row.name,
+                            })
+                        "
+                        :state-labels="{
+                            on: t('store.classifiedProducts.statusPublished'),
+                            off: t(
+                                'store.classifiedProducts.statusUnpublished',
+                            ),
+                        }"
+                    />
                     <button
                         v-else
                         type="button"

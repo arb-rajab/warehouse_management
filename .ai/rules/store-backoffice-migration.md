@@ -298,7 +298,8 @@ is an owner decision; removing one's own held permissions can still lock one out
   document those implementations and do not authorize new packages. Preserve the
   seller dashboard's retained `AIZ.plugins.chart` assets.
 - `StoreBooleanField` has one `name`/`value`/`disabled` contract. Product list flags
-  share `UpdatesStoreProductFlags`, scoped to the list's products. Keep downloads,
+  share `UpdatesStoreProductFlags`, scoped to the list's products. A flag toggled
+  from a list row is a `StoreStatusSwitch` ([status-switches.md](status-switches.md)). Keep downloads,
   PDFs, bounded translated product search, shared-session logout and departure ID
   9 behavior. Do not invent missing-data business policy.
 - Order entry retains raw tax metadata and line-price-only grand total. Percentage

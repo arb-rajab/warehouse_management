@@ -13,7 +13,7 @@ import DataTable from '@/components/DataTable.vue';
 import FormField from '@/components/FormField.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import Pagination from '@/components/Pagination.vue';
-import StoreStatusButton from '@/components/StoreStatusButton.vue';
+import StoreStatusSwitch from '@/components/StoreStatusSwitch.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
 import TableLink from '@/components/TableLink.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
@@ -117,14 +117,14 @@ function search(event: Event): void {
                     <span v-else>—</span>
                 </td>
                 <td class="px-4 py-2">
-                    <StoreStatusButton
+                    <StoreStatusSwitch
                         v-if="access.can('edit_product_category')"
                         :action="updateFeatured({ mergeQuery: {} })"
-                        :active="item.featured"
+                        :checked="item.featured"
                         :label="t('store.categories.featured')"
                     >
                         <input type="hidden" name="id" :value="item.id" />
-                    </StoreStatusButton>
+                    </StoreStatusSwitch>
                     <span v-else>{{
                         t(
                             item.featured

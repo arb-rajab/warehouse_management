@@ -31,7 +31,7 @@ import FieldError from '@/components/FieldError.vue';
 import FormField from '@/components/FormField.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import Pagination from '@/components/Pagination.vue';
-import StoreStatusButton from '@/components/StoreStatusButton.vue';
+import StoreStatusSwitch from '@/components/StoreStatusSwitch.vue';
 import SubmitButton from '@/components/SubmitButton.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
@@ -155,6 +155,14 @@ const switches = computed(
                 : []),
         ] as const,
 );
+/**
+ * Active on a feed-origin row while Otajer owns `published`: the guard
+ * refuses the write, so the switch shows why instead of offering it.
+ */
+const publishedLock = computed(() => ({
+    reason: t('store.products.otajerLocked'),
+    hint: t('store.products.form.otajerSynced'),
+}));
 const selected = ref<number[]>([]);
 const allSelected = computed(
     () =>
@@ -548,12 +556,18 @@ async function requestFetch(): Promise<void> {
                     :key="item.field"
                     class="px-4 py-2"
                 >
-                    <StoreStatusButton
+                    <StoreStatusSwitch
                         v-if="access.can('product_edit')"
                         :action="item.action(product, listQuery)"
-                        :active="product[item.field]"
+                        :checked="product[item.field]"
                         :label="t(item.label)"
                         :input-name="item.inputName"
+                        :locked="
+                            item.field === 'published' &&
+                            product.published_locked
+                                ? publishedLock
+                                : undefined
+                        "
                     />
                     <span v-else>{{
                         t(

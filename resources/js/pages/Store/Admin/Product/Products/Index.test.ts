@@ -28,7 +28,7 @@ import AddResourceLink from '@/components/AddResourceLink.vue';
 import FieldError from '@/components/FieldError.vue';
 import FormField from '@/components/FormField.vue';
 import Pagination from '@/components/Pagination.vue';
-import StoreStatusButton from '@/components/StoreStatusButton.vue';
+import StoreStatusSwitch from '@/components/StoreStatusSwitch.vue';
 import SubmitButton from '@/components/SubmitButton.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
@@ -415,22 +415,22 @@ describe('Store product lists Index', () => {
             expect(remove.getComponent(Link).props('as')).toBe('button');
             expect(
                 wrapper
-                    .findAllComponents(StoreStatusButton)
+                    .findAllComponents(StoreStatusSwitch)
                     .map((button) => button.props()),
             ).toMatchObject([
                 {
                     action: updateForSale(product, query),
-                    active: true,
+                    checked: true,
                     label: t('store.products.forSale'),
                 },
                 {
                     action: updatePublished(product, query),
-                    active: true,
+                    checked: true,
                     label: t('store.products.active'),
                 },
                 {
                     action: updateFeatured(product, query),
-                    active: false,
+                    checked: false,
                     label: t('store.products.featured'),
                 },
             ]);
@@ -460,8 +460,47 @@ describe('Store product lists Index', () => {
         });
         const wrapper = mountPage();
         expect(
-            wrapper.findAllComponents(StoreStatusButton)[1].text(),
+            wrapper.findAllComponents(StoreStatusSwitch)[1].text(),
         ).toContain('Package limit reached');
+    });
+
+    it('renders the switches as real switches and locks only an Otajer-owned Active', () => {
+        const wrapper = mountPage({
+            products: [
+                storeProductListRow({ published_locked: true }),
+                storeProductListRow({ id: 42, featured: true }),
+            ],
+        });
+        const switches = wrapper.findAllComponents(StoreStatusSwitch);
+        expect(switches).toHaveLength(6);
+        expect(switches.map((item) => item.props('locked'))).toEqual([
+            undefined,
+            {
+                reason: t('store.products.otajerLocked'),
+                hint: t('store.products.form.otajerSynced'),
+            },
+            undefined,
+            undefined,
+            undefined,
+            undefined,
+        ]);
+        const locked = switches[1].get('[role="switch"]');
+        expect(locked.attributes()).toMatchObject({
+            type: 'button',
+            'aria-checked': 'true',
+            'aria-disabled': 'true',
+            'aria-label': t('store.products.active'),
+            title: t('store.products.form.otajerSynced'),
+        });
+        expect(switches[1].text()).toContain(t('store.products.otajerLocked'));
+        expect(switches[1].findComponent(Form).exists()).toBe(false);
+        expect(
+            switches[4].get('[role="switch"]').attributes('aria-checked'),
+        ).toBe('true');
+        expect(switches[4].get('[role="switch"]').attributes('type')).toBe(
+            'submit',
+        );
+        expect(i18n.global.te('store.products.otajerLocked', 'ar')).toBe(true);
     });
 
     it('hides every action without its own permission and shows switch states read-only', () => {
@@ -473,7 +512,7 @@ describe('Store product lists Index', () => {
         expect(wrapper.find('h1 + div button').exists()).toBe(false);
         expect(wrapper.find('#product-presets').exists()).toBe(false);
         expect(forms(wrapper)).toHaveLength(1);
-        expect(wrapper.findAllComponents(StoreStatusButton)).toHaveLength(0);
+        expect(wrapper.findAllComponents(StoreStatusSwitch)).toHaveLength(0);
         expect(
             wrapper
                 .findAllComponents(TableActionLink)
@@ -504,7 +543,7 @@ describe('Store product lists Index', () => {
             only('show_all_products').find('#product-presets').exists(),
         ).toBe(true);
         expect(
-            only('product_edit').findAllComponents(StoreStatusButton),
+            only('product_edit').findAllComponents(StoreStatusSwitch),
         ).toHaveLength(3);
         expect(
             only('product_edit')
@@ -755,22 +794,22 @@ describe('seller product list', () => {
         const query = { mergeQuery: { list: 'seller' } };
         expect(
             wrapper
-                .findAllComponents(StoreStatusButton)
+                .findAllComponents(StoreStatusSwitch)
                 .map((button) => button.props()),
         ).toMatchObject([
             {
                 action: updateSaleStatus(product, query),
-                active: true,
+                checked: true,
                 inputName: 'status',
             },
-            { action: sellerPublished(product, query), active: true },
+            { action: sellerPublished(product, query), checked: true },
             {
                 action: updateProductApproval(product, query),
-                active: true,
+                checked: true,
                 inputName: 'approved',
             },
-            { action: sellerFeatured(product, query), active: false },
-            { action: updateTodaysDeal(product, query), active: false },
+            { action: sellerFeatured(product, query), checked: false },
+            { action: updateTodaysDeal(product, query), checked: false },
         ]);
         const actions = wrapper.findAllComponents(TableActionLink);
         expect(
@@ -811,7 +850,7 @@ describe('seller product list', () => {
             permissions: ['show_seller_products'],
         });
         expect(wrapper.find('#approved').exists()).toBe(false);
-        expect(wrapper.findAllComponents(StoreStatusButton)).toHaveLength(0);
+        expect(wrapper.findAllComponents(StoreStatusSwitch)).toHaveLength(0);
         expect(wrapper.findAllComponents(TableActionLink)).toHaveLength(1);
         expect(forms(wrapper)).toHaveLength(1);
     });
@@ -820,7 +859,7 @@ describe('seller product list', () => {
         expect(wrapper.find('#approved').exists()).toBe(false);
         expect(
             wrapper
-                .findAllComponents(StoreStatusButton)
+                .findAllComponents(StoreStatusSwitch)
                 .map((button) => button.props('label')),
         ).toEqual([
             t('store.products.forSale'),

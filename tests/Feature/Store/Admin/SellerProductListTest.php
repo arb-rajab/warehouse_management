@@ -183,7 +183,7 @@ test('seller rows expose the full shared payload and exclude every other product
         ->where('num_of_sale', 3)->where('base_price', single_price(2.5))->where('profit', single_price(0))
         ->where('variant_stocks', null)->where('stock_quantity', 7)->where('low_stock', true)->where('category', null)
         ->where('for_sale', true)->where('published', true)->where('featured', true)->where('approved', false)->where('todays_deal', true)
-        ->where('deleted_from_api', false)->where('public_url', route('product', 'seller-oil'))));
+        ->where('published_locked', false)->where('deleted_from_api', false)->where('public_url', route('product', 'seller-oil'))));
 });
 
 test('seller filters retain exact state matching and name phrase search with owner category approval and sort', function () {

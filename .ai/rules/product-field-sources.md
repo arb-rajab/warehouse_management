@@ -134,14 +134,20 @@ Setup > Product data sources (`product_field_sources.index`, permission
   only: other languages edit a translation the sync never writes. The Arabic name is an edit-form
   field (`ar_name`, nullable, max 191) so an admin-owned value can be set.
   Active status has no edit-form field; the list switch is refused by the
-  guard while it is Otajer-owned on a feed-origin row.
+  guard while it is Otajer-owned on a feed-origin row, and the products list
+  shows it locked beforehand: `ProductListResource` sends `published_locked`
+  (feed-origin row and Otajer owns `published`, the owner read once per
+  request) and the Active `StoreStatusSwitch` renders `locked` with
+  `store.products.otajerLocked` and the `otajerSynced` hint
+  ([status-switches.md](status-switches.md)).
 
 ## Tests
 
 `ProductFieldSourceServiceTest`, `ProductColumnOwnershipTest`,
 `Console/SyncProductsCommandTest`, `Store/Admin/ProductFieldSourceControllerTest`,
-`Store/Admin/ProductEditFieldSourcesTest`, and the Vitest files of the settings
-page, `Products/Edit.vue` and `StoreProductFormFields.vue`. A new syncable field
+`Store/Admin/ProductEditFieldSourcesTest`, `Store/Admin/ProductControllerTest`
+(`published_locked`), and the Vitest files of the settings page,
+`Products/Edit.vue`, `Products/Index.vue` and `StoreProductFormFields.vue`. A new syncable field
 extends each of them. Keep the settings form free of required-fields scanner
 findings: the per-field rules carry the requirement, so the `sources` array
 itself is not `required` (a required parent array with runtime-named controls

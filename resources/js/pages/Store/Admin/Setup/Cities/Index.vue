@@ -14,7 +14,7 @@ import PageHeader from '@/components/PageHeader.vue';
 import Pagination from '@/components/Pagination.vue';
 import StoreCityFormFields from '@/components/StoreCityFormFields.vue';
 import StoreSelectField from '@/components/StoreSelectField.vue';
-import StoreStatusButton from '@/components/StoreStatusButton.vue';
+import StoreStatusSwitch from '@/components/StoreStatusSwitch.vue';
 import SubmitButton from '@/components/SubmitButton.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
@@ -96,10 +96,10 @@ function filter(event: Event): void {
                 <td class="px-4 py-2">{{ row.state?.name }}</td>
                 <td class="px-4 py-2">{{ row.cost }}</td>
                 <td class="px-4 py-2">
-                    <StoreStatusButton
+                    <StoreStatusSwitch
                         v-if="access.can('manage_shipping_cities')"
                         :action="updateStatus(row, { mergeQuery: {} })"
-                        :active="row.status"
+                        :checked="row.status"
                         :label="row.name"
                     />
                 </td>

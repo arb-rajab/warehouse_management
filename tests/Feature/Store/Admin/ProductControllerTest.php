@@ -15,6 +15,7 @@ use App\Models\ProductCollection;
 use App\Models\ProductTranslation;
 use App\Models\Upload;
 use App\Models\User;
+use App\Services\ProductFieldSourceService;
 use App\Support\StorefrontUrl;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
@@ -120,6 +121,23 @@ test('each list asks for its own permission only', function () {
     $this->get(route('products.admin'))->assertForbidden();
 });
 
+test('the list locks the Active switch only on a feed row while Otajer owns published', function () {
+    actingAsStoreUser(createStoreStaff('show_in_house_products'));
+    $feed = createStoreProduct(['name' => 'Feed oil', 'added_by' => 'admin', 'digital' => 0, 'thumbnail_img' => null, 'published' => true, 'featured' => 0]);
+    DB::table('products')->where('id', $feed->id)->update(['synced_at' => now(), 'for_sale' => 1, 'deleted_from_api' => 0]);
+    $locks = fn (): array => array_column(
+        $this->get(route('products.admin', ['active' => 1, 'for_sale' => 1]))->assertOk()->inertiaProps('products.data'),
+        'published_locked',
+        'id',
+    );
+
+    expect(app(ProductFieldSourceService::class)->isOtajerOwned('published'))->toBeTrue()
+        ->and($locks())->toEqual([$this->product->id => false, $feed->id => true]);
+
+    app(ProductFieldSourceService::class)->update(['published' => 'admin']);
+    expect($locks())->toEqual([$this->product->id => false, $feed->id => false]);
+});
+
 test('the in-house list exposes the full narrow row for in-house physical products only', function () {
     actingAsStoreUser(createStoreStaff('show_in_house_products'));
     $noise = productListNoise();
@@ -143,14 +161,14 @@ test('the in-house list exposes the full narrow row for in-house physical produc
             ->where('num_of_sale', 7)->where('base_price', single_price(12.5))->where('profit', single_price(1.25))
             ->where('variant_stocks', null)->where('stock_quantity', 40)->where('low_stock', false)
             ->where('category', 'Oils')->where('for_sale', true)->where('published', true)->where('featured', false)->where('approved', true)->where('todays_deal', false)
-            ->where('deleted_from_api', false)->where('public_url', route('product', 'olive-oil')))
+            ->where('published_locked', false)->where('deleted_from_api', false)->where('public_url', route('product', 'olive-oil')))
         ->has('products.data.1', fn (Assert $row) => $row
             ->where('id', $variant->id)->where('name', 'Variant oil')->where('ar_name', '')
             ->where('thumbnail_url', static_asset('assets/img/placeholder.jpg'))->where('mat_id', (string) $variant->id)->where('unit', '()')
             ->where('num_of_sale', 0)->where('base_price', single_price(2.5))->where('profit', single_price(0))
             ->where('variant_stocks', [['variant' => 'Small', 'qty' => 2], ['variant' => 'Large', 'qty' => 5]])
             ->where('stock_quantity', 7)->where('low_stock', true)->where('category', null)
-            ->where('for_sale', true)->where('published', true)->where('featured', false)->where('approved', true)->where('todays_deal', false)->where('deleted_from_api', false)
+            ->where('for_sale', true)->where('published', true)->where('featured', false)->where('approved', true)->where('todays_deal', false)->where('published_locked', false)->where('deleted_from_api', false)
             ->where('public_url', StorefrontUrl::to($variant)))
         ->where('filters', ['search' => null, 'category_id' => null, 'type' => null, 'active' => true, 'for_sale' => true, 'featured' => false, 'per_page' => 20])
         ->where('categories', [['id' => $this->category->id, 'name' => 'Oils']])

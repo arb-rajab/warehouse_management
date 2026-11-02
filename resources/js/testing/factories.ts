@@ -1486,6 +1486,7 @@ export function storeProductListRow(
         featured: false,
         approved: true,
         todays_deal: false,
+        published_locked: false,
         deleted_from_api: false,
         public_url: '/temp/product/olive-oil-1l',
         ...overrides,

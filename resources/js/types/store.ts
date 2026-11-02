@@ -981,6 +981,11 @@ export interface StoreProductListRow {
     featured: boolean;
     approved: boolean;
     todays_deal: boolean;
+    /**
+     * Active cannot change here: the row came from the feed and Otajer owns
+     * `published` (Setup > Product data sources).
+     */
+    published_locked: boolean;
     deleted_from_api: boolean;
     public_url: string | null;
 }

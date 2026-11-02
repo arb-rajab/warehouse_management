@@ -10,6 +10,7 @@ import {
 import { search } from '@/actions/App/Http/Controllers/Store/Admin/ProductSearchController';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
 import { t } from '@/lib/i18n';
+import ar from '@/locales/ar.json';
 import { storeSharedProps } from '@/testing/factories';
 import { defaultAuthProps } from '@/testing/inertiaPageMocks';
 import type { OrderConfigurationProduct } from '@/types/store';
@@ -96,6 +97,17 @@ describe('Order configuration', () => {
             );
         }
 
+        expect(wrapper.text()).toContain('Default product ID');
+        expect(wrapper.text()).toContain(
+            'Enter at least 4 characters to search by product ID.',
+        );
+        expect(wrapper.text()).not.toContain('MAT');
+        expect(ar.store.orderConfiguration.product).toBe(
+            'معرّف المنتج الافتراضي',
+        );
+        expect(ar.store.orderConfiguration.searchHint).toBe(
+            'أدخل 4 أحرف على الأقل للبحث بمعرّف المنتج.',
+        );
         expect(wrapper.text()).toContain(
             t('store.orderConfiguration.selected', { name: 'Special product' }),
         );

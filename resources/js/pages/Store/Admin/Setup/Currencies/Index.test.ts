@@ -11,7 +11,7 @@ import AddResourceLink from '@/components/AddResourceLink.vue';
 import Pagination from '@/components/Pagination.vue';
 import RequiredMark from '@/components/RequiredMark.vue';
 import StoreCurrencyDialog from '@/components/StoreCurrencyDialog.vue';
-import StoreStatusButton from '@/components/StoreStatusButton.vue';
+import StoreStatusSwitch from '@/components/StoreStatusSwitch.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
 import { i18n, t } from '@/lib/i18n';
@@ -121,7 +121,7 @@ describe('Store Currencies Index', () => {
         const wrapper = mountPage([]);
         expect(wrapper.findAllComponents(TableActionLink)).toHaveLength(0);
         expect(wrapper.findComponent(AddResourceLink).exists()).toBe(false);
-        expect(wrapper.findComponent(StoreStatusButton).exists()).toBe(false);
+        expect(wrapper.findComponent(StoreStatusSwitch).exists()).toBe(false);
         expect(wrapper.findComponent(Form).exists()).toBe(false);
     });
     it('submits the filter with the selected page size', async () => {
@@ -135,10 +135,10 @@ describe('Store Currencies Index', () => {
         );
     });
     it('posts the desired status using the bound route and current query', () => {
-        const button = mountPage().getComponent(StoreStatusButton);
+        const button = mountPage().getComponent(StoreStatusSwitch);
         expect(button.props()).toMatchObject({
             action: updateStatus(storeCurrency(), { mergeQuery: {} }),
-            active: true,
+            checked: true,
             label: storeCurrency().name,
         });
     });
@@ -185,9 +185,15 @@ describe('Store Currencies Index', () => {
             expect(wrapper.text()).toContain(t(`store.currencies.${key}`));
         }
 
-        expect(wrapper.getComponent(StoreStatusButton).props('locked')).toBe(
-            true,
+        expect(wrapper.getComponent(StoreStatusSwitch).props('locked')).toEqual(
+            { reason: t('store.currencies.defaultCurrency') },
         );
+        expect(
+            wrapper
+                .getComponent(StoreStatusSwitch)
+                .get('[role="switch"]')
+                .attributes('aria-disabled'),
+        ).toBe('true');
         expect(
             wrapper.findAllComponents(Form).map((form) => form.props('action')),
         ).toEqual([configure(), configure()]);
@@ -210,9 +216,9 @@ describe('Store Currencies Index', () => {
             ['currency_setup'],
             [storeCurrency({ status: false })],
         );
-        expect(wrapper.getComponent(StoreStatusButton).props('locked')).toBe(
-            false,
-        );
+        expect(
+            wrapper.getComponent(StoreStatusSwitch).props('locked'),
+        ).toBeUndefined();
     });
     it('keeps each settings form legend local and follows symbol_format for decimal requirements', async () => {
         const wrapper = mountPage();

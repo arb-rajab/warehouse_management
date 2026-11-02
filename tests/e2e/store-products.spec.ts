@@ -64,33 +64,27 @@ test('product list switches, native single and bulk delete confirmations, an Ine
     const kept = row(page, 'Browser kept oil');
     await expect(row(page, 'Browser seller oil')).toBeVisible();
 
-    await olive
-        .getByRole('button', { name: 'Enable Featured', exact: true })
-        .click();
+    await olive.getByRole('switch', { name: 'Featured', exact: true }).click();
     await expect(
-        olive.getByRole('button', { name: 'Disable Featured', exact: true }),
-    ).toBeVisible();
-    await olive
-        .getByRole('button', { name: 'Disable For sale', exact: true })
-        .click();
+        olive.getByRole('switch', { name: 'Featured', exact: true }),
+    ).toHaveAttribute('aria-checked', 'true');
+    await olive.getByRole('switch', { name: 'For sale', exact: true }).click();
     await expect(
-        olive.getByRole('button', { name: 'Enable For sale', exact: true }),
-    ).toBeVisible();
+        olive.getByRole('switch', { name: 'For sale', exact: true }),
+    ).toHaveAttribute('aria-checked', 'false');
     await expect(
-        olive.getByRole('button', { name: 'Enable Featured', exact: true }),
-    ).toBeVisible();
-    await olive
-        .getByRole('button', { name: 'Disable Active', exact: true })
-        .click();
+        olive.getByRole('switch', { name: 'Featured', exact: true }),
+    ).toHaveAttribute('aria-checked', 'false');
+    await olive.getByRole('switch', { name: 'Active', exact: true }).click();
     await expect(
-        olive.getByRole('button', { name: 'Enable Active', exact: true }),
-    ).toBeVisible();
+        olive.getByRole('switch', { name: 'Active', exact: true }),
+    ).toHaveAttribute('aria-checked', 'false');
     await expect(page).toHaveURL(
         /\/temp\/admin\/products\/all\?search=Browser$/,
     );
     await expect(
-        kept.getByRole('button', { name: 'Disable Active', exact: true }),
-    ).toBeVisible();
+        kept.getByRole('switch', { name: 'Active', exact: true }),
+    ).toHaveAttribute('aria-checked', 'true');
     seedStoreFixtures(String.raw`
         $product = App\Models\Product::where('name','Browser olive oil')->firstOrFail();
         if ($product->published || $product->for_sale != 0 || $product->featured != 0) {throw new RuntimeException('Switch writes were not persisted');}
@@ -236,8 +230,8 @@ test('product lists keep RTL and dark contrast and open from the sidebar as Iner
     ).toBeVisible();
     const olive = row(page, 'Browser olive oil');
     await expect(
-        olive.getByRole('button', { name: 'تعطيل نشط', exact: true }),
-    ).toBeVisible();
+        olive.getByRole('switch', { name: 'نشط', exact: true }),
+    ).toHaveAttribute('aria-checked', 'true');
     await expect(
         olive.getByRole('link', { name: 'تعديل', exact: true }),
     ).toBeVisible();

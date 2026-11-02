@@ -17,7 +17,7 @@ import DataTable from '@/components/DataTable.vue';
 import FormField from '@/components/FormField.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import Pagination from '@/components/Pagination.vue';
-import StoreStatusButton from '@/components/StoreStatusButton.vue';
+import StoreStatusSwitch from '@/components/StoreStatusSwitch.vue';
 import SubmitButton from '@/components/SubmitButton.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
@@ -128,10 +128,10 @@ function onPerPageChange(perPage: number): void {
                     :key="item.field"
                     class="px-4 py-2"
                 >
-                    <StoreStatusButton
+                    <StoreStatusSwitch
                         v-if="access.can('product_edit')"
                         :action="item.action(product, { mergeQuery: {} })"
-                        :active="product[item.field]"
+                        :checked="product[item.field]"
                         :label="t(`store.digitalProducts.${item.label}`)"
                     />
                     <span v-else>{{

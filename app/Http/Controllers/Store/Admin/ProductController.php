@@ -459,7 +459,7 @@ class ProductController extends Controller implements HasMiddleware
     {
         $perPage = $this->resolvePerPage($request, 20);
         $products = $query
-            ->select(['id', 'name', 'ar_name', 'thumbnail_img', 'api_unit_name', 'unit_equal', 'num_of_sale', 'unit_price', 'collection_id', 'variant_product', 'low_stock_quantity', 'category_id', 'for_sale', 'published', 'featured', 'approved', 'todays_deal', 'deleted_from_api', 'slug'])
+            ->select(['id', 'name', 'ar_name', 'thumbnail_img', 'api_unit_name', 'unit_equal', 'num_of_sale', 'unit_price', 'collection_id', 'variant_product', 'low_stock_quantity', 'category_id', 'for_sale', 'published', 'featured', 'approved', 'todays_deal', 'deleted_from_api', 'slug', 'synced_at'])
             ->with([
                 'stocks' => fn ($stocks) => $stocks->select(['id', 'product_id', 'variant', 'qty'])->orderBy('id'),
                 'category:id,name',

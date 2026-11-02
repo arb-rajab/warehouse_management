@@ -16,6 +16,7 @@ import DataTable from '@/components/DataTable.vue';
 import FormField from '@/components/FormField.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import Pagination from '@/components/Pagination.vue';
+import StoreStatusSwitch from '@/components/StoreStatusSwitch.vue';
 import SubmitButton from '@/components/SubmitButton.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
@@ -85,96 +86,66 @@ function perPage(value: number) {
                 <td class="px-4 py-2">{{ row.start_date }}</td>
                 <td class="px-4 py-2">{{ row.end_date }}</td>
                 <td class="px-4 py-2">
-                    <Form
+                    <StoreStatusSwitch
                         v-if="access.can('edit_offer_deal')"
                         :action="update_status(row, { mergeQuery: {} })"
-                        #default="{ processing }"
-                        ><input
-                            type="hidden"
-                            name="value"
-                            :value="row.is_active ? '0' : '1'" /><SubmitButton
-                            :label="
-                                t(
-                                    row.is_active
-                                        ? 'store.campaigns.disable'
-                                        : 'store.campaigns.enable',
-                                )
-                            "
-                            :processing-label="t('store.campaigns.saving')"
-                            :processing="processing"
-                            :aria-label="
-                                t('store.campaigns.toggle', {
-                                    field: t('store.campaigns.fields.active'),
-                                    title: row.title,
-                                })
-                            " /></Form
-                    ><span v-else
-                        >{t(row.is_active?'store.campaigns.enabled':'store.campaigns.disabled')}</span
-                    >
+                        :checked="row.is_active"
+                        input-name="value"
+                        :label="
+                            t('store.campaigns.toggle', {
+                                field: t('store.campaigns.fields.active'),
+                                title: row.title,
+                            })
+                        "
+                    /><span v-else>{{
+                        t(
+                            row.is_active
+                                ? 'store.campaigns.enabled'
+                                : 'store.campaigns.disabled',
+                        )
+                    }}</span>
                 </td>
                 <td class="px-4 py-2">
-                    <Form
+                    <StoreStatusSwitch
                         v-if="access.can('edit_offer_deal')"
                         :action="update_repeatable(row, { mergeQuery: {} })"
-                        #default="{ processing }"
-                        ><input
-                            type="hidden"
-                            name="value"
-                            :value="
-                                row.is_repeatable ? '0' : '1'
-                            " /><SubmitButton
-                            :label="
-                                t(
-                                    row.is_repeatable
-                                        ? 'store.campaigns.disable'
-                                        : 'store.campaigns.enable',
-                                )
-                            "
-                            :processing-label="t('store.campaigns.saving')"
-                            :processing="processing"
-                            :aria-label="
-                                t('store.campaigns.toggle', {
-                                    field: t(
-                                        'store.campaigns.fields.repeatable',
-                                    ),
-                                    title: row.title,
-                                })
-                            " /></Form
-                    ><span v-else
-                        >{t(row.is_repeatable?'store.campaigns.enabled':'store.campaigns.disabled')}</span
-                    >
+                        :checked="row.is_repeatable"
+                        input-name="value"
+                        :label="
+                            t('store.campaigns.toggle', {
+                                field: t('store.campaigns.fields.repeatable'),
+                                title: row.title,
+                            })
+                        "
+                    /><span v-else>{{
+                        t(
+                            row.is_repeatable
+                                ? 'store.campaigns.enabled'
+                                : 'store.campaigns.disabled',
+                        )
+                    }}</span>
                 </td>
                 <td class="px-4 py-2">
-                    <Form
+                    <StoreStatusSwitch
                         v-if="access.can('edit_offer_deal')"
                         :action="update_multiple_usage(row, { mergeQuery: {} })"
-                        #default="{ processing }"
-                        ><input
-                            type="hidden"
-                            name="value"
-                            :value="
-                                row.multiple_usage ? '0' : '1'
-                            " /><SubmitButton
-                            :label="
-                                t(
-                                    row.multiple_usage
-                                        ? 'store.campaigns.disable'
-                                        : 'store.campaigns.enable',
-                                )
-                            "
-                            :processing-label="t('store.campaigns.saving')"
-                            :processing="processing"
-                            :aria-label="
-                                t('store.campaigns.toggle', {
-                                    field: t(
-                                        'store.campaigns.fields.multipleUsage',
-                                    ),
-                                    title: row.title,
-                                })
-                            " /></Form
-                    ><span v-else
-                        >{t(row.multiple_usage?'store.campaigns.enabled':'store.campaigns.disabled')}</span
-                    >
+                        :checked="row.multiple_usage"
+                        input-name="value"
+                        :label="
+                            t('store.campaigns.toggle', {
+                                field: t(
+                                    'store.campaigns.fields.multipleUsage',
+                                ),
+                                title: row.title,
+                            })
+                        "
+                    /><span v-else>{{
+                        t(
+                            row.multiple_usage
+                                ? 'store.campaigns.enabled'
+                                : 'store.campaigns.disabled',
+                        )
+                    }}</span>
                 </td>
                 <td class="px-4 py-2">
                     <div class="flex flex-wrap items-center gap-2">

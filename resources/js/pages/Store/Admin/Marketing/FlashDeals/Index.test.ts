@@ -5,9 +5,12 @@ import {
     index as campaignIndex,
     edit,
     destroy,
+    update_featured,
+    update_status,
 } from '@/actions/App/Http/Controllers/Store/Admin/FlashDealController';
 import AddResourceLink from '@/components/AddResourceLink.vue';
 import Pagination from '@/components/Pagination.vue';
+import StoreStatusSwitch from '@/components/StoreStatusSwitch.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
 import { t } from '@/lib/i18n';
 import {
@@ -85,6 +88,58 @@ it('renders every label, gates each write action and passes full route objects w
     expect(mountPage([], true).text()).toContain(
         t('store.campaigns.fields.empty'),
     );
+});
+it('shows the active and featured flags as switches posting the inverse value', () => {
+    const wrapper = mountPage();
+    const switches = wrapper.findAllComponents(StoreStatusSwitch);
+    expect(switches.map((item) => item.props())).toMatchObject([
+        {
+            action: update_status(record, { mergeQuery: {} }),
+            checked: record.status,
+            inputName: 'value',
+            label: t('store.campaigns.toggle', {
+                field: t('store.campaigns.fields.active'),
+                title: record.title,
+            }),
+        },
+        {
+            action: update_featured(record, { mergeQuery: {} }),
+            checked: record.featured,
+            inputName: 'value',
+            label: t('store.campaigns.toggle', {
+                field: t('store.campaigns.fields.featured'),
+                title: record.title,
+            }),
+        },
+    ]);
+    expect(switches[0].get('[role="switch"]').attributes('aria-checked')).toBe(
+        String(record.status),
+    );
+    expect(switches[0].get('input[name=value]').attributes('value')).toBe(
+        record.status ? '0' : '1',
+    );
+    const editOnly = mountPage(['edit_flash_deal']);
+    expect(editOnly.findAllComponents(StoreStatusSwitch)).toHaveLength(1);
+});
+it('shows each flag as translated text without its permission', () => {
+    const wrapper = mountPage([]);
+    const cells = wrapper.findAll('tbody td');
+    expect(wrapper.findComponent(StoreStatusSwitch).exists()).toBe(false);
+    expect(cells[3].text()).toBe(
+        t(
+            record.status
+                ? 'store.campaigns.enabled'
+                : 'store.campaigns.disabled',
+        ),
+    );
+    expect(cells[4].text()).toBe(
+        t(
+            record.featured
+                ? 'store.campaigns.enabled'
+                : 'store.campaigns.disabled',
+        ),
+    );
+    expect(wrapper.text()).not.toContain('{t(');
 });
 it('preserves search when paging and keeps public navigation a plain link', () => {
     const wrapper = mountPage();
