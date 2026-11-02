@@ -250,19 +250,18 @@ class SyncProductsCommand extends Command
         $feedProduct = fn (Builder $query): Builder => $query->select(DB::raw('1'))->from($table)
             ->whereColumn($table.'.id', $stocks.'.product_id')->whereNotNull($table.'.synced_at');
 
+        $perBox = fn (Builder $query): Builder => $query->selectRaw('unit_price')->from($table)
+            ->whereColumn($table.'.id', $stocks.'.product_id');
+        // `* 1.0` keeps SQLite from dividing whole numbers as integers.
+        $perPiece = fn (Builder $query): Builder => $query->selectRaw('ROUND(unit_price * 1.0 / unit_equal, 2)')->from($table)
+            ->whereColumn($table.'.id', $stocks.'.product_id');
+
         $connection->table($stocks)->whereIn('product_id', $ids)->where('variant', 'like', '%PerBox%')
             ->whereExists($feedProduct)
-            ->update([
-                'price' => new Expression('(SELECT '.$table.'.unit_price FROM '.$table.' WHERE '.$table.'.id = '.$stocks.'.product_id)'),
-                'updated_at' => $now,
-            ]);
-        // `* 1.0` keeps SQLite from dividing whole numbers as integers.
+            ->update(['price' => $perBox($connection->query()), 'updated_at' => $now]);
         $connection->table($stocks)->whereIn('product_id', $ids)->where('variant', 'like', '%PerPiece%')
             ->whereExists(fn (Builder $query): Builder => $feedProduct($query)->where($table.'.unit_equal', '>', 0))
-            ->update([
-                'price' => new Expression('(SELECT ROUND('.$table.'.unit_price * 1.0 / '.$table.'.unit_equal, 2) FROM '.$table.' WHERE '.$table.'.id = '.$stocks.'.product_id)'),
-                'updated_at' => $now,
-            ]);
+            ->update(['price' => $perPiece($connection->query()), 'updated_at' => $now]);
     }
 
     /**

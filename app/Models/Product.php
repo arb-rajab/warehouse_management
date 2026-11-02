@@ -54,6 +54,7 @@ use Illuminate\Support\Facades\Storage;
  * @property bool $published
  * @property int|null $user_id
  * @property string|null $description
+ * @property string|null $unit
  * @property string|null $meta_description
  * @property string|null $meta_img
  * @property string|null $photos
