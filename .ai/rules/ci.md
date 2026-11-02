@@ -127,7 +127,10 @@ before planning). Its docstring is the rule list. The constraints behind it:
   malformed, stale or partial attestations fail before any expensive job starts.
   This also applies to release PRs; a previous successful run does not replace
   the required trailer. Update the branch and attest again if the base adds
-  content. Require `Plan CI jobs` in branch protection; repository code alone
+  content. A `develop` head that is a GitHub merge commit (a merged PR) is
+  already pushed and carries no trailer, so before opening `develop` -> `staging`
+  add a commit on top of it, attest that commit, then push (a merge commit
+  cannot be attested after the fact). Require `Plan CI jobs` in branch protection; repository code alone
   cannot configure that merge requirement.
 - Docs-only PRs need no trailer. Changes under `.github/` ignore it and run
   everything. `workflow_dispatch` and deployment workflow calls run everything
