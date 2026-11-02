@@ -442,7 +442,7 @@ describe('Store/Admin/Product/Products/Edit', () => {
         expect(wrapper.get('#unit-otajer-synced').text()).toBe(
             t('store.products.form.otajerSynced'),
         );
-        expect(wrapper.get('#unit_price-otajer-synced').exists()).toBe(true);
+        expect(wrapper.find('#unit_price-otajer-synced').exists()).toBe(true);
         expect(wrapper.get('#description').text()).toBe('Synced text');
         expect(
             (
@@ -478,8 +478,11 @@ describe('Store/Admin/Product/Products/Edit', () => {
         expect(
             wrapper.get('#unit_price').attributes('readonly'),
         ).toBeUndefined();
+        // The editable editor posts description through its own hidden input,
+        // so the locked block is told apart by its Otajer note instead.
+        expect(wrapper.find('#description-otajer-synced').exists()).toBe(false);
         expect(
-            wrapper.find('input[type="hidden"][name="description"]').exists(),
-        ).toBe(false);
+            wrapper.findAll('input[type="hidden"][name="description"]'),
+        ).toHaveLength(1);
     });
 });

@@ -691,9 +691,18 @@ describe('StoreProductFormFields', () => {
 
         expect(wrapper.findComponent(StoreRichTextField).exists()).toBe(true);
         expect(wrapper.find('#description-otajer-synced').exists()).toBe(false);
+        // The only hidden description input is the editor's own, not the
+        // locked block's.
+        const hidden = wrapper.findAll(
+            'input[type="hidden"][name="description"]',
+        );
+        expect(hidden).toHaveLength(1);
         expect(
-            wrapper.find('input[type="hidden"][name="description"]').exists(),
-        ).toBe(false);
+            wrapper
+                .findComponent(StoreRichTextField)
+                .find('input[type="hidden"][name="description"]')
+                .exists(),
+        ).toBe(true);
     });
 
     it('lists the synced fields that have no input here in the note', () => {
