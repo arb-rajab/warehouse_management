@@ -184,6 +184,29 @@ test('an admin-owned synced column is the store\'s to write even on a feed-origi
     'api_unit_name' => ['api_unit_name', 'Case'], 'tax' => ['tax', 9], 'description' => ['description', 'Admin text'], 'unit_equal' => ['unit_equal', 12],
 ]);
 
+test('a numeric feed column re-assigned the number it holds, however spelled, is no change on a feed row', function (string $column, mixed $stored, mixed $posted) {
+    $feed = Product::factory()->feedOrigin()->create([$column => $stored]);
+    $noise = Product::factory()->feedOrigin()->create([$column => $stored]);
+    $before = $feed->fresh()->getRawOriginal($column);
+
+    $feed->forceFill([$column => $posted, 'weight' => 3])->save();
+
+    expect($feed->fresh()->getRawOriginal($column))->toBe($before)
+        ->and((float) $feed->fresh()->getAttribute('weight'))->toBe(3.0)
+        ->and($noise->fresh()->getRawOriginal($column))->toBe($before);
+})->with([
+    'unit_price 12.5 as 12.50' => ['unit_price', 12.5, '12.50'],
+    'unit_price 12.50 as 12.5' => ['unit_price', '12.50', 12.5],
+    'tax 5 as 5.00' => ['tax', 5, '5.00'],
+]);
+
+test('a different number on a feed row is still refused after the same-number allowance', function () {
+    $feed = Product::factory()->feedOrigin()->create(['unit_price' => 12.5]);
+
+    expect(fn () => $feed->forceFill(['unit_price' => '12.51'])->save())->toThrow(ValidationException::class);
+    expect((float) $feed->fresh()->getAttribute('unit_price'))->toBe(12.5);
+});
+
 test('the synced price, unit, tax and description are refused to bulk writes on a feed row while Otajer-owned', function () {
     $feed = Product::factory()->feedOrigin()->create();
     $store = Product::factory()->create();

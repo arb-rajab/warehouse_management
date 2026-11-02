@@ -79,9 +79,13 @@ class Product extends Model
      */
     public function setAttribute($key, $value): static
     {
-        if ($this->exists && in_array($key, ProductColumnOwnership::syncColumns(), true)
-            && self::differsFromStored($key, $this->attributes[$key] ?? '', $value)) {
-            ProductColumnOwnership::assertStoreWrite($this, [$key]);
+        if ($this->exists && in_array($key, ProductColumnOwnership::syncColumns(), true)) {
+            if (self::isSameNumber($key, $this->attributes[$key] ?? null, $value)) {
+                return $this;
+            }
+            if ((string) ($this->attributes[$key] ?? '') !== (string) $value) {
+                ProductColumnOwnership::assertStoreWrite($this, [$key]);
+            }
         }
         if ($key === 'synced_at' && $value !== null) {
             ProductColumnOwnership::refuse(['synced_at']);
@@ -91,17 +95,16 @@ class Product extends Model
     }
 
     /**
-     * Whether assigning `$value` changes the stored attribute. The numeric
-     * synced columns compare as numbers, so a price re-posted as `12.5` over a
-     * stored `12.50` is no change; text columns compare as strings.
+     * Whether a numeric synced column is assigned the number it already holds
+     * in another spelling (`12.5` over a stored `12.50`). Eloquent compares such
+     * values as strings and would call the row dirty, so the assignment is
+     * dropped: it is no change, and must not trip the feed-column guard at save.
      */
-    private static function differsFromStored(string $key, mixed $stored, mixed $value): bool
+    private static function isSameNumber(string $key, mixed $stored, mixed $value): bool
     {
-        if (in_array($key, ['unit_price', 'tax', 'unit_equal', 'collection_id'], true) && is_numeric($stored) && is_numeric($value)) {
-            return ProductFormNumber::format($stored) !== ProductFormNumber::format($value);
-        }
-
-        return (string) $stored !== (string) $value;
+        return in_array($key, ['unit_price', 'tax', 'unit_equal', 'collection_id'], true)
+            && is_numeric($stored) && is_numeric($value)
+            && ProductFormNumber::format($stored) === ProductFormNumber::format($value);
     }
 
     /** Every model-created row, including a replicated feed row, is store-origin. */
