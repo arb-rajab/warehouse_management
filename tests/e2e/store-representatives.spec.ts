@@ -86,6 +86,7 @@ test('payment decisions and selected visit deletion have native confirmations an
         await expect(payment).toContainText('Accepted');
         await page.goto('/temp/admin/representatives/visits/index');
         await page.emulateMedia({ colorScheme: 'dark' });
+        await page.getByRole('button', { name: /^Filters/ }).click();
         await expect(page.getByLabel('From date')).toHaveCSS(
             'color-scheme',
             'dark',
@@ -95,6 +96,11 @@ test('payment decisions and selected visit deletion have native confirmations an
             'min',
             '2026-10-01',
         );
+        await page
+            .getByRole('dialog', { name: 'Filters' })
+            .getByRole('button', { name: 'Close' })
+            .click();
+        await expect(page.getByRole('dialog')).toBeHidden();
         const visit = page.getByRole('row', { name: /Browser visit fixture/ });
         await visit.getByRole('checkbox').check();
         page.once('dialog', (dialog) => dialog.dismiss());
