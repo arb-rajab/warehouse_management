@@ -1023,7 +1023,12 @@
             "staffRoles": "صلاحيات الموظفين",
             "websiteScripts": "سكريبتات الموقع",
             "searchMenu": "البحث في القائمة",
-            "clearCache": "مسح ذاكرة التخزين المؤقت",
+            "clearCache": "مسح ذاكرة لوحة التحكم المؤقتة",
+            "notificationsUnread": "{count} غير مقروءة",
+            "clearCacheHelpLabel": "حول مسح ذاكرة لوحة التحكم المؤقتة",
+            "clearCacheHelp": "يمسح هذا الإجراء بيانات الرسوم البيانية المخزّنة مؤقتًا للوحة التحكم فقط، ولا يمسح ذاكرة التخزين المؤقت للتطبيق. تُعاد حساب الرسوم البيانية عند تحميل لوحة التحكم في المرة التالية.",
+            "clearCacheConfirmTitle": "مسح ذاكرة لوحة التحكم المؤقتة؟",
+            "clearCacheConfirm": "مسح الذاكرة المؤقتة",
             "noNotifications": "لا توجد إشعارات",
             "allNotifications": "عرض كل الإشعارات",
             "orderNotification": "الطلب {code}: {status}"

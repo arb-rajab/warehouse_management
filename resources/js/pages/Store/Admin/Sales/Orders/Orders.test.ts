@@ -29,7 +29,7 @@ vi.mock('@inertiajs/vue3', async () => {
     };
 });
 const order = storeOrder();
-// The layout's Clear Cache form shows for a Super Admin; these tests are about the page's own forms.
+// The layout's Clear dashboard cache form (in its confirm dialog) shows for a Super Admin; these tests are about the page's own forms.
 const pageForms = (wrapper: ReturnType<typeof mount>) =>
     wrapper
         .findAll('form')
