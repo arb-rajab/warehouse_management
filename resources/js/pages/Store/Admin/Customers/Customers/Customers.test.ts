@@ -219,13 +219,17 @@ it('representative index shows package dialog and its assignment contract', asyn
     expect(
         wrapper.get('#package_id').element.closest('form')?.textContent,
     ).toContain(t('common.requiredLegend'));
-    const form = wrapper.getComponent(Form);
-    expect(form.props('action')).toEqual(assign());
+    const form = wrapper
+        .findAllComponents(Form)
+        .find((item) =>
+            item.element.contains(wrapper.get('#package_id').element),
+        );
+    expect(form?.props('action')).toEqual(assign());
     expect(wrapper.get('input[name="user_id"]').attributes('value')).toBe('17');
     expect(
         wrapper.get('select[name="package_id"]').attributes('required'),
     ).toBeDefined();
-    form.vm.$emit('success');
+    form?.vm.$emit('success');
     await wrapper.vm.$nextTick();
     expect(wrapper.find('[role="dialog"]').exists()).toBe(false);
 });
@@ -332,7 +336,7 @@ it('the representatives list has a plain search and archived form without a dial
     expect(form.find('input[name="search"]').exists()).toBe(true);
     expect(form.find('input[name="archived"]').exists()).toBe(true);
     expect(form.get('input[name="per_page"]').attributes('value')).toBe('20');
-    expect(wrapper.find('select').exists()).toBe(false);
+    expect(form.find('select').exists()).toBe(false);
 });
 it('views page renders count labels and paginator contract', () => {
     const wrapper = mount(Views, {
