@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Models\StoreUser;
+use App\Support\CustomerTaxNumber;
 use Carbon\Carbon;
 use Exception;
 use Illuminate\Console\Command;
@@ -48,6 +49,7 @@ class fetchMemebers extends Command
             $members_count = 0;
             $created_accounts = 0;
             $updated_accounts = 0;
+            $tax_number_conflicts = 0;
 
 
             $endpoint = config('services.otajer.url') . '/api/rest/loadmembers/' . config('services.otajer.token');
@@ -63,11 +65,20 @@ class fetchMemebers extends Command
                     if (! $selectedUser) {
                         if(! StoreUser::where('AccSysID', $user['AccSystemID'])->exists())
                         {
+                            // The tax number is unique: a member whose number another
+                            // customer already holds is still imported, without it.
+                            $tax_number = CustomerTaxNumber::normalize($user['TaxNumber'] ?? null);
+                            $holder_id = $tax_number === null ? null : StoreUser::where('tax_number', $tax_number)->value('id');
+                            if ($holder_id !== null) {
+                                $this->warn('Member '.$user['Email'].' (AccSysID '.$user['AccSystemID'].') imported without tax number '.$tax_number.': customer #'.$holder_id.' already has it.');
+                                $tax_number = null;
+                                $tax_number_conflicts++;
+                            }
                             $newUser = new StoreUser([
                                 'name' => $user['FirstName'] . " " . $user['LastName'],
                                 'company_name' => $user['CompanyName'] ? $user['CompanyName'] : 'none',
                                 'email' => $user['Email'],
-                                'tax_number' => $user['TaxNumber'],
+                                'tax_number' => $tax_number,
                                 'country' => $country_name,
                                 'from_api'  => true,
                                 'member_serial' => $user['Serial'],
@@ -100,6 +111,9 @@ class fetchMemebers extends Command
             $end_time = Carbon::now();
             $time = (int) $end_time->diffInSeconds($start_time, true);
             $this->info($created_accounts . " members created " . $updated_accounts . " members updated successfully from " . $members_count . " fetched.  Process took " . $time . ' seconds');
+            if ($tax_number_conflicts > 0) {
+                $this->warn($tax_number_conflicts . ' member(s) imported without their tax number, which another customer already has.');
+            }
 
             return self::SUCCESS;
         } catch (Exception $e) {

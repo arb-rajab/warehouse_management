@@ -82,7 +82,7 @@ class CustomerController extends Controller implements HasMiddleware
         $request->boolean('archived') ? $query->where('is_delete', 1) : $query->whereNull('is_delete');
         if ($request->filled('search')) {
             $search = '%'.$request->string('search').'%';
-            $query->where(fn ($q) => $q->where('name', 'like', $search)->orWhere('email', 'like', $search)->orWhere('phone', 'like', $search)->orWhere('rep_serial', 'like', $search)->orWhere('AccSysID', 'like', $search));
+            $query->where(fn ($q) => $q->where('name', 'like', $search)->orWhere('email', 'like', $search)->orWhere('phone', 'like', $search)->orWhere('rep_serial', 'like', $search)->orWhere('AccSysID', 'like', $search)->orWhere('tax_number', 'like', $search));
         }
         foreach (['important' => 'is_important', 'verified' => 'admin_verified', 'from_api' => 'from_api', 'registration_completed' => 'registration_completed'] as $filter => $column) {
             if ($request->filled($filter)) {

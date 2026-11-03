@@ -188,6 +188,9 @@ return [
         'attribute-name' => [
             'rule-name' => 'custom-message',
         ],
+        'tax_number' => [
+            'unique' => 'This tax number is already registered to another customer.',
+        ],
     ],
 
     /*

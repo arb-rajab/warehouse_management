@@ -65,6 +65,38 @@ test('import:members updates an existing member and leaves a different one alone
         ->and($noise->fresh()->member_serial)->toBeNull();
 });
 
+test('import:members imports a member whose tax number another customer has without it, and warns', function () {
+    $holder = createStoreUser('customer', 'holder@example.com');
+    $holder->forceFill(['tax_number' => 'NL123'])->save();
+
+    Http::fake(['otajer.test/api/rest/loadmembers/*' => Http::response(['Members' => [
+        otajerMember(),
+        otajerMember(['Email' => 'second@example.com', 'AccSystemID' => 778, 'Serial' => 'M-2', 'TaxNumber' => 'NL456']),
+    ]])]);
+
+    $this->artisan('import:members')
+        ->expectsOutputToContain("customer #{$holder->id} already has it")
+        ->expectsOutputToContain('1 member(s) imported without their tax number')
+        ->assertSuccessful();
+
+    expect(StoreUser::where('email', 'new-member@example.com')->sole()->tax_number)->toBeNull()
+        ->and(StoreUser::where('email', 'second@example.com')->sole()->tax_number)->toBe('NL456')
+        ->and($holder->fresh()->tax_number)->toBe('NL123');
+});
+
+test('import:members stores a blank tax number as null and trims a padded one', function () {
+    Http::fake(['otajer.test/api/rest/loadmembers/*' => Http::response(['Members' => [
+        otajerMember(['TaxNumber' => '   ']),
+        otajerMember(['Email' => 'second@example.com', 'AccSystemID' => 778, 'Serial' => 'M-2', 'TaxNumber' => ' NL456 ']),
+        otajerMember(['Email' => 'third@example.com', 'AccSystemID' => 779, 'Serial' => 'M-3', 'TaxNumber' => '']),
+    ]])]);
+
+    $this->artisan('import:members')->doesntExpectOutputToContain('imported without')->assertSuccessful();
+
+    expect(StoreUser::whereIn('email', ['new-member@example.com', 'second@example.com', 'third@example.com'])->orderBy('email')->pluck('tax_number', 'email')->all())
+        ->toBe(['new-member@example.com' => null, 'second@example.com' => 'NL456', 'third@example.com' => null]);
+});
+
 test('import:agents creates a verified representative with a random password', function () {
     Http::fake(['otajer.test/api/rest/listagents/*' => Http::response(['Agents' => [
         ['ID' => 5, 'OSerial' => 'A-5', 'Name' => 'Agent Five'],

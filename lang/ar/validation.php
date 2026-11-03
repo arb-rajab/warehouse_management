@@ -166,6 +166,9 @@ return [
         'attribute-name' => [
             'rule-name' => 'custom-message',
         ],
+        'tax_number' => [
+            'unique' => 'هذا الرقم الضريبي مسجّل بالفعل لعميل آخر.',
+        ],
     ],
 
     'attributes' => [

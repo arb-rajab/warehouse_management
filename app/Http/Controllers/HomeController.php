@@ -7,6 +7,7 @@ use App\Http\Requests\ResetPasswordWithCodeRequest;
 use App\Mail\SecondEmailVerifyMailManager;
 use App\Services\StoreVerificationCodes;
 use App\Services\TradeLicenseStorage;
+use App\Support\CustomerTaxNumber;
 use App\Models\AffiliateConfig;
 use App\Models\Brand;
 use App\Models\Category;
@@ -170,6 +171,8 @@ class HomeController extends Controller
         }
 
         $user = Auth::user();
+        // The tax number is the customer's unique business identifier.
+        $request->validate(['tax_number' => CustomerTaxNumber::rules(ignoreCustomerId: $user->id)]);
         $user->name = $request->name;
         $user->company_name = $request->company_name;
         $user->address = $request->address;

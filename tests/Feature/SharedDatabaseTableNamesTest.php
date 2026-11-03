@@ -100,6 +100,7 @@ test('the only bare-named tables are this app\'s own domain tables plus the shar
         'customer_packages',
         'customer_product_translations',
         'customer_products',
+        'customer_tax_number_releases',
         'customers_notifications',
         'delivery_boys',
         'delivery_histories',

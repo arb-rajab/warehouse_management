@@ -229,3 +229,19 @@ describe('the limits', function () {
             ->and($attribute('trade_license', 'accept'))->toBe('.pdf,.doc,.docx,.png,.jpg,.jpeg');
     });
 });
+
+test('refuses a tax number another customer already has, shows the error under the field and creates nothing', function () {
+    actingAsRepresentative();
+    $holder = createStoreUser();
+    $holder->forceFill(['tax_number' => 'NL123456789B01'])->save();
+
+    $this->from('/temp/create_customer')->post('/temp/store_customer', createCustomerPayload());
+
+    $xpath = htmlXPath($this->get('/temp/create_customer')->assertOk());
+    $form = formPostingTo($xpath, '/temp/store_customer');
+
+    expect(trim($xpath->query('.//*[@name="tax_number"]/following-sibling::*[@role="alert"]', $form)->item(0)?->textContent ?? ''))
+        ->toBe('This tax number is already registered to another customer.')
+        ->and(StoreUser::where('email', 'new-customer@example.com')->exists())->toBeFalse()
+        ->and(StoreUser::where('tax_number', 'NL123456789B01')->pluck('id')->all())->toBe([$holder->id]);
+});

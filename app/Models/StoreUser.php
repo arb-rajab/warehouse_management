@@ -7,8 +7,10 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 use App\Models\Cart;
 use App\Notifications\EmailVerificationNotification;
 use App\Notifications\TermsAgreementNotification;
+use App\Support\CustomerTaxNumber;
 use Carbon\Carbon;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -163,6 +165,18 @@ class StoreUser extends Authenticatable implements MustVerifyEmail
             'synched_with_otajer' => 'boolean',
             'registration_completed' => 'boolean',
         ];
+    }
+
+    /**
+     * The tax number is the customer's unique business identifier, stored
+     * trimmed and NULL when blank, however it is written (a form, the app
+     * API, the Otajer member import or forceFill()); see CustomerTaxNumber.
+     *
+     * @return Attribute<string|null, mixed>
+     */
+    protected function taxNumber(): Attribute
+    {
+        return Attribute::make(set: fn (mixed $value): ?string => CustomerTaxNumber::normalize($value));
     }
 
     public function wishlists()

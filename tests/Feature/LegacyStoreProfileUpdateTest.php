@@ -114,3 +114,36 @@ test('a new email is unverified until the emailed code is used', function () {
     Notification::assertSentTo($user, AppEmailVerificationNotification::class);
     $this->assertDatabaseHas('wms_store_verification_codes', ['user_id' => $user->id]);
 });
+
+test('a tax number another customer already has is refused and nothing changes', function () {
+    $other = createStoreUser('customer');
+    $other->forceFill(['tax_number' => 'NL-TAKEN'])->save();
+    $user = createStoreUser('customer', 'owner@example.com');
+    $user->forceFill(['tax_number' => 'NL-OWN'])->save();
+
+    updateProfile($user, ['name' => 'Renamed', 'tax_number' => 'NL-TAKEN'])
+        ->assertUnprocessable()
+        ->assertJsonPath('result', false)
+        ->assertJsonPath('errors.tax_number.0', 'This tax number is already registered to another customer.');
+
+    expect($user->fresh())->tax_number->toBe('NL-OWN')->name->not->toBe('Renamed')
+        ->and($other->fresh()->tax_number)->toBe('NL-TAKEN');
+});
+
+test('a customer can resubmit their own tax number and change it to a free one, stored trimmed', function () {
+    $user = createStoreUser('customer', 'owner@example.com');
+    $user->forceFill(['tax_number' => 'NL-OWN'])->save();
+
+    updateProfile($user, ['tax_number' => 'NL-OWN', 'name' => 'Renamed'])->assertOk()->assertJsonPath('user.tax_number', 'NL-OWN');
+    updateProfile($user, ['tax_number' => '  NL-NEW  '])->assertOk()->assertJsonPath('user.tax_number', 'NL-NEW');
+
+    expect($user->fresh())->tax_number->toBe('NL-NEW')->name->toBe('Renamed');
+});
+
+test('a tax number sent as a JSON number is stored as text', function () {
+    $user = createStoreUser('customer', 'owner@example.com');
+
+    updateProfile($user, ['tax_number' => 123456789])->assertOk()->assertJsonPath('user.tax_number', '123456789');
+
+    expect($user->fresh()->tax_number)->toBe('123456789');
+});

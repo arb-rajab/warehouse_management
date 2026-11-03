@@ -366,3 +366,71 @@ test('customer edit retains a company name when it is not submitted', function (
     $this->post(route('customers.update', $customer), $payload)->assertSessionHasNoErrors()->assertRedirect(route('customers.index'));
     expect($customer->fresh()->company_name)->toBe('Retained Company');
 });
+
+test('customer and representative create refuse a tax number another customer already has', function (string $route) {
+    actingAsStoreUser(createStoreAdmin());
+    $holder = createStoreUser();
+    $holder->forceFill(['tax_number' => 'NL123'])->save();
+    $before = StoreUser::count();
+
+    $this->post(route($route), storeCustomerForm(['tax_number' => 'NL123']))
+        ->assertSessionHasErrors(['tax_number' => __('validation.custom.tax_number.unique')]);
+
+    expect(StoreUser::count())->toBe($before)
+        ->and(StoreUser::where('tax_number', 'NL123')->pluck('id')->all())->toBe([$holder->id]);
+})->with(['customers.store', 'representatives.store']);
+
+test('customer create stores a free tax number trimmed', function () {
+    actingAsStoreUser(createStoreStaff('edit_customer'));
+    $noise = createStoreUser();
+    $noise->forceFill(['tax_number' => 'NL999'])->save();
+
+    $this->post(route('customers.store'), storeCustomerForm(['tax_number' => '  NL123  ']))->assertSessionHasNoErrors()->assertRedirect(route('customers.index'));
+
+    expect(StoreUser::where('email', 'new-customer@example.com')->value('tax_number'))->toBe('NL123')
+        ->and($noise->fresh()->tax_number)->toBe('NL999');
+});
+
+test('customer edit keeps the customer\'s own tax number and refuses another customer\'s without changing anything', function () {
+    actingAsStoreUser(createStoreStaff('edit_customer'));
+    $customer = createStoreUser();
+    $customer->forceFill(['name' => 'Before', 'tax_number' => 'NL-OWN'])->save();
+    $other = createStoreUser();
+    $other->forceFill(['tax_number' => 'NL-OTHER'])->save();
+
+    $this->post(route('customers.update', $customer), storeCustomerForm(['tax_number' => 'NL-OTHER', 'trade_license' => null]))
+        ->assertSessionHasErrors(['tax_number' => __('validation.custom.tax_number.unique')]);
+    expect($customer->fresh())->name->toBe('Before')->tax_number->toBe('NL-OWN')
+        ->and($other->fresh()->tax_number)->toBe('NL-OTHER');
+
+    $this->post(route('customers.update', $customer), storeCustomerForm(['tax_number' => 'NL-OWN', 'trade_license' => null]))
+        ->assertSessionHasNoErrors()->assertRedirect(route('customers.index'));
+    expect($customer->fresh())->name->toBe('New Customer')->tax_number->toBe('NL-OWN');
+});
+
+test('two customers can both be left without a tax number', function () {
+    actingAsStoreUser(createStoreStaff('edit_customer'));
+    $first = createStoreUser();
+    $second = createStoreUser();
+    $first->forceFill(['tax_number' => 'NL-FIRST'])->save();
+    $second->forceFill(['tax_number' => 'NL-SECOND'])->save();
+
+    foreach ([$first, $second] as $index => $customer) {
+        $this->post(route('customers.update', $customer), storeCustomerForm(['tax_number' => null, 'trade_license' => null, 'email' => "blank-{$index}@example.com", 'phone' => "3160000010{$index}"]))
+            ->assertSessionHasNoErrors();
+    }
+
+    expect($first->fresh()->tax_number)->toBeNull()->and($second->fresh()->tax_number)->toBeNull();
+});
+
+test('the customer search finds a customer by tax number', function () {
+    actingAsStoreUser(createStoreStaff('view_all_customers'));
+    $customer = createStoreUser();
+    $customer->forceFill(['tax_number' => 'NL777888999B01'])->save();
+    $noise = createStoreUser();
+    $noise->forceFill(['tax_number' => 'BE0123456789'])->save();
+
+    $this->get(route('customers.index', ['search' => '777888']))->assertOk()->assertInertia(fn (Assert $page) => $page
+        ->has('customers.data', 1)
+        ->where('customers.data.0.id', $customer->id));
+});
