@@ -303,9 +303,11 @@ class CartController extends Controller
         }
 
 
-        if (isset($request->item_notes)) {
-            $item_notes = $request->item_notes;
-        }
+        // A note that is sent replaces the old one, and a blank one (empty,
+        // null or only spaces) clears it. A request without the key leaves the
+        // note as it is: `isset()` could not tell "clear it" from "not sent".
+        $note_sent = $request->exists('item_notes');
+        $item_notes = $note_sent ? $this->cleanNote($request->input('item_notes')) : null;
 
 
 
@@ -401,8 +403,8 @@ class CartController extends Controller
                 }
             }
 
-            if (isset($request->item_notes)) { // update
-                $cart_item->item_notes = $request->item_notes;
+            if ($note_sent) { // update
+                $cart_item->item_notes = $item_notes;
             }
 
 
@@ -443,7 +445,7 @@ class CartController extends Controller
             'price' => $price,
             'rep_price' => $rep_price ?? 0,
             'is_price_changed' => $is_price_changed ?? false,
-            'item_notes' => isset($item_notes) ? $item_notes : (isset($cart_item->item_notes) ? $cart_item->item_notes : null),
+            'item_notes' => $note_sent ? $item_notes : ($cart_item->item_notes ?? null),
             'tax' => $tax, // User Experience
             'shipping_cost' => 0,
             'quantity' => $request->quantity,
@@ -469,6 +471,44 @@ class CartController extends Controller
             'message' => __('api.cart.added'),
             'offer_message' => $offerMessage ?? null
         ]);
+    }
+
+    /**
+     * Change or clear the note on a cart line (an empty note clears it).
+     * Takes the cart line's own id, like change-quantity and DELETE /carts/{id}.
+     */
+    public function updateNote(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'id' => 'required|integer',
+            'item_notes' => 'present|nullable|string|max:1000',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'result' => false,
+                'message' => __('api.common.validation_error'),
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        $cart = Cart::where('id', $request->id)->where('user_id', auth()->user()->id)->first();
+
+        if ($cart === null) {
+            return response()->json(['result' => false, 'message' => __('api.cart.item_not_found')], 404);
+        }
+
+        $cart->update(['item_notes' => $this->cleanNote($request->input('item_notes'))]);
+
+        return response()->json(['result' => true, 'message' => __('api.cart.updated')]);
+    }
+
+    /** A note is trimmed, and one with nothing in it is no note (null). */
+    private function cleanNote(mixed $note): ?string
+    {
+        $note = is_string($note) ? trim($note) : '';
+
+        return $note === '' ? null : $note;
     }
 
     public function changeQuantity(Request $request)

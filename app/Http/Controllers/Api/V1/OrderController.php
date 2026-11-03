@@ -19,11 +19,16 @@ use App\Services\PaymentOptions;
 use App\Services\WalletPaymentService;
 use Auth;
 use Carbon\Carbon;
+use Carbon\CarbonImmutable;
+use DateTimeImmutable;
+use DateTimeZone;
 use DB;
 use DomainException;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 
 class OrderController extends Controller
 {
@@ -53,7 +58,55 @@ class OrderController extends Controller
      */
     public function store(Request $request, bool $payFromWallet = false)
     {
+        $key = $request->header('Idempotency-Key');
+
+        if (! is_string($key) || trim($key) === '') {
+            return $this->place($request, $payFromWallet);
+        }
+
+        if (strlen($key) > 128) {
+            return $this->validationRefusal('idempotency_key', __('api.order.idempotency_key_invalid'));
+        }
+
+        // The same key from the same account is the same order: a phone that
+        // timed out and sends again gets the first answer back instead of a
+        // second order. Only a placed order is remembered, so a refusal (an
+        // empty cart, a short stock) can be retried with the same key.
+        $cacheKey = 'store-order-idempotency:' . auth()->id() . ':' . sha1($key);
+
+        try {
+            return Cache::lock($cacheKey . ':lock', 120)->block(15, function () use ($request, $payFromWallet, $cacheKey) {
+                $saved = Cache::get($cacheKey);
+
+                if (is_array($saved)) {
+                    return response()->json($saved['body'], $saved['status'])->header('Idempotent-Replayed', 'true');
+                }
+
+                $response = $this->place($request, $payFromWallet);
+                $body = $response->getData(true);
+
+                if ($response->getStatusCode() === 200 && ($body['result'] ?? false) === true) {
+                    Cache::put($cacheKey, ['status' => 200, 'body' => $body], now()->addDay());
+                }
+
+                return $response;
+            });
+        } catch (LockTimeoutException) {
+            return response()->json([
+                'combined_order_id' => 0,
+                'result' => false,
+                'message' => __('api.order.in_progress'),
+            ], 409);
+        }
+    }
+
+    private function place(Request $request, bool $payFromWallet): JsonResponse
+    {
         set_time_limit(0);
+
+        if (($errors = $this->deliveryDateErrors($request)) !== []) {
+            return $this->validationRefusal('delivery_date', $errors[0]);
+        }
 
         if ($request->filled('payment_type') && ! app(PaymentOptions::class)->isAllowed((string) $request->payment_type)) {
             return $this->failed(__('storefront.checkout.select_payment_option'));
@@ -182,6 +235,72 @@ class OrderController extends Controller
     }
 
     /**
+     * Order refusals keep `combined_order_id` and `result` (the app reads them)
+     * and add `errors` in the shape every other validation answer uses.
+     */
+    private function validationRefusal(string $field, string $message): JsonResponse
+    {
+        return response()->json([
+            'combined_order_id' => 0,
+            'result' => false,
+            'message' => $message,
+            'errors' => [$field => [$message]],
+        ], 422);
+    }
+
+    /**
+     * The delivery date must be a real day, no earlier than today plus
+     * config('store.delivery.lead_days') and on one of the delivery weekdays
+     * (config/store.php). A blank date used to be stored as 1970-01-01. A valid
+     * date is written back to the request as YYYY-MM-DD, the one format stored.
+     *
+     * @return list<string> the messages to show, empty when the date is fine
+     */
+    private function deliveryDateErrors(Request $request): array
+    {
+        $raw = $request->input('delivery_date');
+
+        if (! is_string($raw) || trim($raw) === '') {
+            return [__('api.order.delivery_date_required')];
+        }
+
+        $timezone = config('store.delivery.timezone');
+        $date = null;
+
+        foreach (['Y-m-d', 'd-m-Y'] as $format) {
+            $parsed = DateTimeImmutable::createFromFormat('!' . $format, trim($raw), new DateTimeZone($timezone));
+
+            // createFromFormat rolls 2026-02-30 over to March: only a date that prints back as sent is real.
+            if ($parsed !== false && $parsed->format($format) === trim($raw)) {
+                $date = CarbonImmutable::instance($parsed);
+                break;
+            }
+        }
+
+        if ($date === null) {
+            return [__('api.order.delivery_date_invalid')];
+        }
+
+        $earliest = CarbonImmutable::now($timezone)->startOfDay()->addDays(config('store.delivery.lead_days'));
+
+        if ($date->lt($earliest)) {
+            return [__('api.order.delivery_date_too_soon', ['date' => $earliest->toDateString()])];
+        }
+
+        $weekdays = config('store.delivery.weekdays');
+
+        if (! in_array($date->dayOfWeekIso, $weekdays, true)) {
+            $names = collect($weekdays)->map(fn (int $day) => $date->startOfWeek()->addDays($day - 1)->locale(app()->getLocale())->dayName);
+
+            return [__('api.order.delivery_date_weekday', ['days' => $names->join(', ', ' / ')])];
+        }
+
+        $request->merge(['delivery_date' => $date->toDateString()]);
+
+        return [];
+    }
+
+    /**
      * The message to show when GET /payment-types does not offer this option to
      * the caller, saying which reason applies where the customer can act on it
      * (cash on delivery switched off, or not allowed for a product or a digital
@@ -215,10 +334,13 @@ class OrderController extends Controller
         $user = StoreUser::find(auth()->user()->id);
 
         $address = Address::where('id', $cartItems->first()->address_id)->first();
+        // A representative's order goes to the customer they picked: the name
+        // and email beside the street and phone are the customer's, not the rep's.
+        $recipient = $user->is_rep ? ($cartItems->first()->rep_customer ?? $user) : $user;
         $shippingAddress = [];
         if ($address != null) {
-            $shippingAddress['name']        = $user->name;
-            $shippingAddress['email']       = $user->email;
+            $shippingAddress['name']        = $recipient->name;
+            $shippingAddress['email']       = $recipient->email;
             $shippingAddress['address']     = $address->address;
             $shippingAddress['country']     = $address->country?->name;
             $shippingAddress['state']       = $address->state ? $address->state->name : null;

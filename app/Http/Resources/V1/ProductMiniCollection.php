@@ -115,7 +115,7 @@ class ProductMiniCollection extends ResourceCollection
                     'id' => $data->id,
                     'name' => $data->getTranslation('name'),
                     'photos' => $photos,
-                    'thumbnail_image' => uploaded_asset($data->thumbnail_img),
+                    'thumbnail_image' => thumbnail_asset($data->thumbnail_img),
                     'tags' => explode(',', $data->tags),
                     'has_discount' => home_base_price($data, false) != home_discounted_base_price($data, false),
                   //  'discount' => "-" . discount_in_percentage($data) . "%",

@@ -62,11 +62,38 @@ class CustomerController extends Controller
             $users->where('company_name', 'like', '%' . $request->company_name . '%');
         }
 
-        $data = [
-            'data' => $users->select('id', 'name', 'AccSysID as otajerID', 'company_name')->get(),
-        ];
+        $users->select('id', 'name', 'AccSysID as otajerID', 'company_name');
 
-        return $data;
+        // Without page or per_page the whole list comes back, as before: the
+        // legacy app reads it that way. The new app pages it.
+        if (! $request->hasAny(['page', 'per_page'])) {
+            return ['data' => $users->get()];
+        }
+
+        $validator = Validator::make($request->all(), [
+            'page' => 'nullable|integer|min:1',
+            'per_page' => 'nullable|integer|min:1|max:100',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'result' => false,
+                'message' => __('api.common.validation_error'),
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        $page = $users->paginate(perPage: (int) $request->input('per_page', 50), page: (int) $request->input('page', 1));
+
+        return [
+            'data' => $page->items(),
+            'meta' => [
+                'current_page' => $page->currentPage(),
+                'last_page' => $page->lastPage(),
+                'per_page' => $page->perPage(),
+                'total' => $page->total(),
+            ],
+        ];
     }
 
 

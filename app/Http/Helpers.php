@@ -1058,6 +1058,20 @@ if (!function_exists('uploaded_asset')) {
     }
 }
 
+if (!function_exists('thumbnail_asset')) {
+    /**
+     * The resized copy of an upload for lists (about 400 px wide), or the
+     * original's URL where it has none. See App\Services\ThumbnailService.
+     */
+    function thumbnail_asset($id, ?Upload $asset = null)
+    {
+        if (($asset ??= Upload::find($id)) != null) {
+            return app(\App\Services\ThumbnailService::class)->urlFor($asset) ?? uploaded_asset($id, $asset);
+        }
+        return static_asset('assets/img/placeholder.jpg');
+    }
+}
+
 if (!function_exists('my_asset')) {
     /**
      * Generate an asset path for the application.

@@ -19,6 +19,7 @@ use App\Models\Role as StoreRole;
 use App\Models\Staff;
 use App\Models\StoreUser;
 use App\Models\User;
+use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -383,6 +384,21 @@ function addStoreAddress(int $userId): int
 /**
  * A token for the store's mobile-app API, as its login hands out.
  */
+/**
+ * A delivery date order/store accepts: the next Monday to Friday at least two
+ * days ahead in the warehouse's timezone (config/store.php).
+ */
+function validDeliveryDate(): string
+{
+    $date = CarbonImmutable::now(config('store.delivery.timezone'))->startOfDay()->addDays(config('store.delivery.lead_days'));
+
+    while (! in_array($date->dayOfWeekIso, config('store.delivery.weekdays'), true)) {
+        $date = $date->addDay();
+    }
+
+    return $date->toDateString();
+}
+
 function storeApiToken(StoreUser $user): string
 {
     return $user->createToken('API Token')->plainTextToken;

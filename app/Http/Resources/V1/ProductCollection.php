@@ -18,7 +18,7 @@ class ProductCollection extends ResourceCollection
                     'id' => $data->id,
                     'name' => $data->getTranslation('name'),
                     'photos' => explode(',', $data->photos),
-                    'thumbnail_image' => uploaded_asset($data->thumbnail_img),
+                    'thumbnail_image' => thumbnail_asset($data->thumbnail_img),
                     'base_price' => (float) home_base_price($data, false),
                     'base_discounted_price' => (float) home_discounted_base_price($data, false),
                     'todays_deal' => (int) $data->todays_deal,

@@ -69,7 +69,7 @@ class StoreAuthController extends Controller
                 'result' => false,
                 'message' => __('api.common.validation_error'),
                 'errors' => $validator->errors()
-            ]);
+            ], 422);
         }
 
         $user = new StoreUser();
@@ -77,6 +77,7 @@ class StoreAuthController extends Controller
         $user->phone = $request->phone;
         $user->company_name = $request->company_name;
         $user->device_key = $request->device_key;
+        $user->device_token = $this->deviceToken($request);
         $user->registration_completed = false;
         // $user->company_address = $request->company_address;
         // $user->shipping_address = $request->shipping_address;
@@ -271,8 +272,8 @@ class StoreAuthController extends Controller
         if ($user != null) {
             if (!$user->banned) {
                 if (Hash::check($request->password, $user->password)) {
-                    if ($request->has('device_token')) {
-                        $user->device_token = $request->device_token;
+                    if ($this->hasDeviceToken($request)) {
+                        $user->device_token = $this->deviceToken($request);
                         $user->save();
                     }
                     if ($request->has('device_key')) {
@@ -294,9 +295,14 @@ class StoreAuthController extends Controller
         }
     }
 
+    /**
+     * The signed-in account, read-only: the same `user` object sign-in and
+     * POST /auth/info return, and no token is issued. It used to serialize the
+     * whole model, which sent every column not listed in `$hidden`.
+     */
     public function user(Request $request)
     {
-        return response()->json($request->user());
+        return response()->json($this->userPayload($request->user()));
     }
 
     public function logout(Request $request)
@@ -304,6 +310,9 @@ class StoreAuthController extends Controller
 
         $user = request()->user();
         $user->tokens()->where('id', $user->currentAccessToken()->id)->delete();
+
+        // The phone signed out: no push notification should still reach it.
+        $user->forceFill(['device_token' => null])->save();
 
         return response()->json([
             'result' => true,
@@ -375,6 +384,19 @@ class StoreAuthController extends Controller
         return $this->loginSuccess($user);
     }
 
+    /** The push token field: `device_token`, or `firebase_token` as the legacy app names it. */
+    private function hasDeviceToken(Request $request): bool
+    {
+        return $request->has('device_token') || $request->has('firebase_token');
+    }
+
+    private function deviceToken(Request $request): ?string
+    {
+        $token = $request->input('device_token', $request->input('firebase_token'));
+
+        return is_string($token) && trim($token) !== '' ? trim($token) : null;
+    }
+
     public function loginSuccess($user, $token = null)
     {
 
@@ -387,29 +409,40 @@ class StoreAuthController extends Controller
             'access_token' => $token,
             'token_type' => 'Bearer',
             'expires_at' => null,
-            'user' => [
-                'id' => $user->id,
-                'type' => $user->user_type,
-                'name' => $user->name,
-                'otajer_id' => $user->AccSysID,
-                'company_name' => $user->company_name,
-                'email' => $user->email,
-                'avatar' => $user->avatar,
-                'avatar_original' => uploaded_asset($user->avatar_original),
-                'phone' => $user->phone,
-                'is_rep' => $user->is_rep,
-                'rep_has_package' => (bool)$user->representativePackage,
-                'rep_discount_percentage' => $user->representativePackage ? $user->representativePackage->percentage : 0,
-                'company_address' => $user->company_address,
-                'shipping_address' => $user->shipping_address,
-                'tax_number'    => $user->tax_number,
-                'country' => $user->country,
-                'trade_license' => $user->trade_license,
-                'bank_account_number' => $user->bank_account_number,
-                'email_verified' => $user->email_verified_at != null,
-                'admin_verified' => $user->admin_verified ? 1 : 0,
-            ]
+            'user' => $this->userPayload($user),
         ]);
+    }
+
+    /**
+     * The fields a client needs about an account. Listed field by field so a
+     * column added to the table later is not sent until someone adds it here.
+     *
+     * @return array<string, mixed>
+     */
+    public function userPayload(StoreUser $user): array
+    {
+        return [
+            'id' => $user->id,
+            'type' => $user->user_type,
+            'name' => $user->name,
+            'otajer_id' => $user->AccSysID,
+            'company_name' => $user->company_name,
+            'email' => $user->email,
+            'avatar' => $user->avatar,
+            'avatar_original' => uploaded_asset($user->avatar_original),
+            'phone' => $user->phone,
+            'is_rep' => $user->is_rep,
+            'rep_has_package' => (bool)$user->representativePackage,
+            'rep_discount_percentage' => $user->representativePackage ? $user->representativePackage->percentage : 0,
+            'company_address' => $user->company_address,
+            'shipping_address' => $user->shipping_address,
+            'tax_number'    => $user->tax_number,
+            'country' => $user->country,
+            'trade_license' => $user->trade_license,
+            'bank_account_number' => $user->bank_account_number,
+            'email_verified' => $user->email_verified_at != null,
+            'admin_verified' => $user->admin_verified ? 1 : 0,
+        ];
     }
 
 
@@ -474,6 +507,10 @@ class StoreAuthController extends Controller
         }
         if ($request->has('device_key')) {
             $user->device_key = $request->device_key;
+            $user->save();
+        }
+        if ($this->hasDeviceToken($request)) {
+            $user->device_token = $this->deviceToken($request);
             $user->save();
         }
 

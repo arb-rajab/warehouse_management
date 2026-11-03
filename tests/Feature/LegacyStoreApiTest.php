@@ -143,7 +143,7 @@ test('a customer can place a cash-on-delivery order from the app', function () {
     $this->getJson('/api/v1/store/cart-summary')->assertOk()->assertJsonPath('grand_total_value', 5);
     $this->postJson('/api/v1/store/update-address-in-cart', ['address_id' => $addressId])->assertOk();
 
-    $this->postJson('/api/v1/store/payments/pay/cod', ['payment_type' => 'cash_on_delivery'])
+    $this->postJson('/api/v1/store/payments/pay/cod', ['payment_type' => 'cash_on_delivery', 'delivery_date' => validDeliveryDate()])
         ->assertOk()
         ->assertJsonPath('result', true);
 

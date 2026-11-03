@@ -122,6 +122,12 @@ return [
         'placed' => 'Your order has been placed successfully. All inactive products will be removed from the order.',
         'profit_too_low' => 'The order profit is less than 1% of the total amount of the order. Try to decrease the discount amount or add more products to the order',
         'updated' => 'Order Updated Successfully',
+        'delivery_date_required' => 'Choose a delivery date.',
+        'delivery_date_invalid' => 'The delivery date must be a real date written as YYYY-MM-DD.',
+        'delivery_date_too_soon' => 'The earliest delivery date is :date.',
+        'delivery_date_weekday' => 'We deliver on :days only.',
+        'in_progress' => 'This order is already being placed. Check your order history before trying again.',
+        'idempotency_key_invalid' => 'The Idempotency-Key header must be at most 128 characters.',
     ],
     'package' => [
         'offline_submitted' => 'Offline payment has been submitted. Please wait for a response.',

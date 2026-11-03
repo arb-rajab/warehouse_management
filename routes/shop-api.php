@@ -13,8 +13,11 @@ Route::group(['prefix' => 'v1/store/auth', 'middleware' => ['app_language']], fu
     Route::post('password/confirm_reset', 'App\Http\Controllers\Api\V1\PasswordResetController@confirmReset')->middleware('throttle:store-auth');
     Route::post('password/resend_code', 'App\Http\Controllers\Api\V1\PasswordResetController@resendCode')->middleware('throttle:store-auth');
     Route::middleware('auth:store_api')->group(function () {
-        Route::get('logout', 'App\Http\Controllers\Api\V1\StoreAuthController@logout');
-        Route::get('account-deletion', 'App\Http\Controllers\Api\V1\StoreAuthController@account_deletion');
+        // These change data, so they take POST (or DELETE). GET is accepted only for the legacy app,
+        // which sends GET, until it is retired; a new client must not use it. One route per action
+        // because Wayfinder cannot generate two routes bound to the same action.
+        Route::match(['GET', 'POST'], 'logout', 'App\Http\Controllers\Api\V1\StoreAuthController@logout');
+        Route::match(['GET', 'POST'], 'account-deletion', 'App\Http\Controllers\Api\V1\StoreAuthController@account_deletion');
         Route::get('user', 'App\Http\Controllers\Api\V1\StoreAuthController@user');
         Route::get('resend_code', 'App\Http\Controllers\Api\V1\StoreAuthController@resendCode')->middleware('throttle:store-auth');
         Route::post('confirm_code', 'App\Http\Controllers\Api\V1\StoreAuthController@confirmCode')->middleware('throttle:store-auth');
@@ -89,6 +92,7 @@ Route::group(['prefix' => 'v1/store', 'middleware' => ['app_language']], functio
         Route::get('cart-count', 'App\Http\Controllers\Api\V1\CartController@count')->middleware('auth:store_api');
         Route::post('carts/process', 'App\Http\Controllers\Api\V1\CartController@process')->middleware('auth:store_api');
         Route::post('carts/add', 'App\Http\Controllers\Api\V1\CartController@add')->middleware('auth:store_api');
+        Route::post('carts/update-note', 'App\Http\Controllers\Api\V1\CartController@updateNote')->middleware('auth:store_api');
         Route::post('carts/change-quantity', 'App\Http\Controllers\Api\V1\CartController@changeQuantity')->middleware('auth:store_api');
         Route::apiResource('carts', 'App\Http\Controllers\Api\V1\CartController')->only('destroy')->middleware('auth:store_api');
         Route::post('carts', 'App\Http\Controllers\Api\V1\CartController@getList')->middleware('auth:store_api');
@@ -115,8 +119,9 @@ Route::group(['prefix' => 'v1/store', 'middleware' => ['app_language']], functio
         Route::get('shop/user/{id}', 'App\Http\Controllers\Api\V1\ShopController@shopOfUser')->middleware('auth:store_api');
 
         Route::get('wishlists-check-product', 'App\Http\Controllers\Api\V1\WishlistController@isProductInWishlist')->middleware('auth:store_api');
-        Route::get('wishlists-add-product', 'App\Http\Controllers\Api\V1\WishlistController@add')->middleware('auth:store_api');
-        Route::get('wishlists-remove-product', 'App\Http\Controllers\Api\V1\WishlistController@remove')->middleware('auth:store_api');
+        // POST for a new client; GET is for the legacy app only (see auth/logout above).
+        Route::match(['GET', 'POST'], 'wishlists-add-product', 'App\Http\Controllers\Api\V1\WishlistController@add')->middleware('auth:store_api');
+        Route::match(['GET', 'POST'], 'wishlists-remove-product', 'App\Http\Controllers\Api\V1\WishlistController@remove')->middleware('auth:store_api');
         Route::get('wishlists', 'App\Http\Controllers\Api\V1\WishlistController@index')->middleware('auth:store_api');
         Route::apiResource('wishlists', 'App\Http\Controllers\Api\V1\WishlistController')->except(['index', 'update', 'show'])->middleware('auth:store_api');
 
@@ -125,7 +130,7 @@ Route::group(['prefix' => 'v1/store', 'middleware' => ['app_language']], functio
         Route::post('user/shipping/update', 'App\Http\Controllers\Api\V1\AddressController@updateShippingAddress')->middleware('auth:store_api');
         Route::post('user/shipping/update-location', 'App\Http\Controllers\Api\V1\AddressController@updateShippingAddressLocation')->middleware('auth:store_api');
         Route::post('user/shipping/make_default', 'App\Http\Controllers\Api\V1\AddressController@makeShippingAddressDefault')->middleware('auth:store_api');
-        Route::get('user/shipping/delete/{address_id}', 'App\Http\Controllers\Api\V1\AddressController@deleteShippingAddress')->middleware('auth:store_api');
+        Route::match(['GET', 'POST', 'DELETE'], 'user/shipping/delete/{address_id}', 'App\Http\Controllers\Api\V1\AddressController@deleteShippingAddress')->middleware('auth:store_api');
 
         Route::get('clubpoint/get-list', 'App\Http\Controllers\Api\V1\ClubpointController@get_list')->middleware('auth:store_api');
         Route::post('clubpoint/convert-into-wallet', 'App\Http\Controllers\Api\V1\ClubpointController@convert_into_wallet')->middleware('auth:store_api');
@@ -276,6 +281,8 @@ Route::group(['prefix' => 'v1/store', 'middleware' => ['app_language']], functio
     Route::get('policies/seller', 'App\Http\Controllers\Api\V1\PolicyController@sellerPolicy')->name('policies.seller');
     Route::get('policies/support', 'App\Http\Controllers\Api\V1\PolicyController@supportPolicy')->name('policies.support');
     Route::get('policies/return', 'App\Http\Controllers\Api\V1\PolicyController@returnPolicy')->name('policies.return');
+    Route::get('policies/terms', 'App\Http\Controllers\Api\V1\PolicyController@termsPolicy')->name('policies.terms');
+    Route::get('policies/privacy', 'App\Http\Controllers\Api\V1\PolicyController@privacyPolicy')->name('policies.privacy');
 
     // Route::get('user/info/{id}', 'App\Http\Controllers\Api\V1\UserController@info')->middleware('auth:store_api');
     // Route::post('user/info/update', 'App\Http\Controllers\Api\V1\UserController@updateName')->middleware('auth:store_api');

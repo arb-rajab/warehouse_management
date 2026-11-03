@@ -10,6 +10,7 @@ paths:
   - 'app/Models/User.php,app/Models/Product.php,app/Models/Upload.php,app/Models/PersonalAccessToken.php'
   - 'app/Models/StoreUser.php,app/Models/Role.php,app/Models/Permission.php,app/Providers/AuthServiceProvider.php,config/sanctum.php'
   - 'routes/shop-*.php,tests/Feature/StoreAuthGuardTest.php,tests/Feature/AuthGuardIsolationTest.php'
+  - 'app/Http/Controllers/Api/V1/{OrderController,CartController,PurchaseHistoryController,StoreAuthController,CustomerController,PolicyController,ProfileController}.php,app/Services/ThumbnailService.php,tests/Feature/StoreApiBackendRequestsTest.php,docs/backend-replies-*.md'
   - 'app/Models/Store/**,app/Http/Controllers/Store/**'
   - app/Http/Controllers/Controller.php
   - app/Http/Controllers/WelcomeController.php
@@ -1781,3 +1782,31 @@ The other seams between the two halves stay as they are until their phase:
 - the `Setting`/`BusinessSetting` and `ProductBarcode`/`StoreProductBarcode` duplicates (phase 5);
 - the three image pipelines and `uploaded_asset()` vs `Upload::url` (phases 2 and 6);
 - the generic middleware aliases `admin`/`seller`/`customer` in `bootstrap/app.php` (phase 6).
+
+## 9. The app API contract the new app depends on (2026-11-03)
+
+Replies to the new app's backend requests are in [docs/backend-replies-20261103.md](../../docs/backend-replies-20261103.md);
+the tests are `tests/Feature/StoreApiBackendRequestsTest.php`. Constraints that follow from them:
+
+- `POST order/store` and `payments/pay/*` (all through `Api\V1\OrderController::store`) require a `delivery_date`:
+  `YYYY-MM-DD` (or `DD-MM-YYYY`, stored as `YYYY-MM-DD`), at least `store.delivery.lead_days` after today in
+  `store.delivery.timezone`, on a `store.delivery.weekdays` day. A refusal is 422 with `errors.delivery_date`.
+  Tests that place an order send `validDeliveryDate()` (tests/Pest.php).
+- An `Idempotency-Key` header (at most 128 characters) makes a placed order replay its answer for 24 hours per
+  account; only a successful placement is remembered.
+- A rep's order has the **customer** on `shipping_address`; the purchase-history answers name `customer_id`
+  and `placed_by_id` apart (`user_id` stays the account that placed it). The list groups the placed-by and
+  placed-for test before the status filters.
+- The account object lives in one place, `StoreAuthController::userPayload()`: sign-in, `auth/info` and
+  `auth/user` all return it. Never `response()->json($request->user())` again.
+- State changes take POST or DELETE. GET on `auth/logout`, `auth/account-deletion`,
+  `wishlists-add-product`, `wishlists-remove-product` and `user/shipping/delete/{id}` is accepted only for the old
+  Flutter app: add no new GET that writes.
+- A cart note sent blank clears it, an absent key keeps it (`CartController::add`, `updateNote`).
+- `thumbnail_image` in product answers is a resized copy (`ThumbnailService`, `thumbnail_asset()`); the original
+  stays in `photos[].path`.
+- Validation is 422 `{result:false, message, errors}`. The paths that still answer 200 with `result:false`
+  are listed in the replies document; they serve the old app too, so change them together.
+- Open owner decisions: tax (included or added, and where it is stored), hiding prices from unverified
+  accounts, whether an unverified account may order, and moving the order pushes off Google's retired legacy FCM
+  endpoint.

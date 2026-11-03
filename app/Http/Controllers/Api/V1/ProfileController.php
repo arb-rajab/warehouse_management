@@ -173,9 +173,19 @@ class ProfileController extends Controller
             ]);
         }
 
-        $user->device_token = $request->device_token;
+        // The token is `device_token`, or `firebase_token` as the legacy app names it.
+        // An empty token clears it, which stops the pushes to this phone.
+        $token = $request->input('device_token', $request->input('firebase_token'));
 
+        if ($token !== null && (! is_string($token) || strlen($token) > 255)) {
+            return response()->json([
+                'result' => false,
+                'message' => __('api.common.validation_error'),
+                'errors' => ['device_token' => [__('validation.max.string', ['attribute' => 'device_token', 'max' => 255])]],
+            ], 422);
+        }
 
+        $user->device_token = is_string($token) && trim($token) !== '' ? trim($token) : null;
         $user->save();
 
         return response()->json([
