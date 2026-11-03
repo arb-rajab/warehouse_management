@@ -259,6 +259,7 @@ describe('Store/Admin/Product/Products/Edit', () => {
         await flushPromises();
 
         expect(inputValue(wrapper, '#name')).toBe('زيت زيتون');
+        expect(inputValue(wrapper, '#ar_name')).toBe('زيت زيتون بكر');
         expect(inputValue(wrapper, '#unit')).toBe('زجاجة');
         expect(inputValue(wrapper, '#category_id')).toBe('12');
         expect(inputValue(wrapper, '#brand_id')).toBe('5');

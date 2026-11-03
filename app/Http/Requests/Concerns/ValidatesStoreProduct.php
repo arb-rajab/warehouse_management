@@ -97,6 +97,7 @@ trait ValidatesStoreProduct
             'cash_on_delivery' => self::cashPaymentEnabled() ? ['nullable', 'boolean'] : ['exclude'],
             'featured' => ['nullable', 'boolean'],
             'todays_deal' => ['nullable', 'boolean'],
+            'can_expire' => ['sometimes', 'boolean'],
             'flash_deal_id' => self::flashDealsEnabled() ? ['nullable', 'integer', Rule::exists('flash_deals', 'id')->where('status', 1)] : ['exclude'],
             'flash_discount' => self::flashDealsEnabled() ? ['nullable', 'required_with:flash_deal_id', ...self::AMOUNT_RULES] : ['exclude'],
             'flash_discount_type' => self::flashDealsEnabled() ? ['nullable', 'required_with:flash_deal_id', 'string', Rule::in(['amount', 'percent'])] : ['exclude'],

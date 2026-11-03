@@ -241,6 +241,17 @@ test('creating a product writes every table together, clears the caches after co
         ->and(DB::table('flash_deal_products')->count())->toBe(0);
 });
 
+test('a new product cannot expire soon unless the flag is posted', function () {
+    actingAsStoreUser(createStoreStaff('add_new_product'));
+    Artisan::shouldReceive('call')->andReturn(0);
+    $this->post(route('products.store'), productCreateForm(['name' => 'Plain oil', 'product_barcodes' => []]))->assertSessionHasNoErrors();
+    $this->post(route('products.store'), productCreateForm(['name' => 'Fresh labneh', 'product_barcodes' => [], 'can_expire' => '1']))->assertSessionHasNoErrors();
+    $this->post(route('products.store'), productCreateForm(['name' => 'Bad labneh', 'product_barcodes' => [], 'can_expire' => 'maybe']))->assertSessionHasErrors('can_expire');
+
+    expect(Product::query()->whereIn('name', ['Plain oil', 'Fresh labneh', 'Bad labneh'])->orderBy('name')->get()->map(fn ($row) => [$row->name, $row->can_expire])->all())
+        ->toBe([['Fresh labneh', true], ['Plain oil', false]]);
+});
+
 test('a second product with the same name gets a numbered slug, and save and unpublish leaves it unpublished', function () {
     actingAsStoreUser(createStoreStaff('add_new_product'));
     Artisan::shouldReceive('call')->andReturn(0);

@@ -52,6 +52,7 @@ use Illuminate\Support\Facades\Storage;
  * @property string|null $warehouse_image_path
  * @property int|null $thumbnail_img
  * @property bool $published
+ * @property bool $can_expire
  * @property int|null $user_id
  * @property string|null $description
  * @property string|null $unit
@@ -205,6 +206,9 @@ class Product extends Model
             // The store declares this `int(11)` (0/1), not a real boolean
             // column type.
             'published' => 'boolean',
+            // A perishable product (Labneh) that can expire soon; NOT NULL,
+            // default false. Store-admin owned: the Otajer sync never writes it.
+            'can_expire' => 'boolean',
         ];
     }
 
