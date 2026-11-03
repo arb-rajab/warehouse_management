@@ -12,7 +12,7 @@ class SearchProductCollection extends ResourceCollection
             'data' => $this->collection->map(function($data) {
                 return [
                     'name' => $data->name,
-                    'thumbnail_image' => uploaded_asset($data->thumbnail_img),
+                    'thumbnail_image' => thumbnail_asset($data->thumbnail_img),
                     'base_price' => (float) home_base_price($data, false),
                     'base_discounted_price' => (float) home_discounted_base_price($data, false),
                     'rating' => (float) $data->rating,

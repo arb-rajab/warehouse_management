@@ -2,7 +2,6 @@
 
 namespace App\Http\Resources\V1;
 
-use App\Models\StoreUser;
 use App\Support\ApiResourceLabel;
 use Carbon\Carbon;
 use Illuminate\Http\Resources\Json\ResourceCollection;
@@ -13,25 +12,21 @@ class PurchaseHistoryMiniCollection extends ResourceCollection
     {
         return [
             'data' => $this->collection->map(function($data) {
-                if($data->for_customer){ // if order by a rep.
-                    $user = StoreUser::find($data->for_customer);
-                    if($user){
-                        $name = $user->name;
-                        $AccSysID = $user->AccSysID; /// aka. Otajer ID
-                    }
-                    else{
-                        $name = __('api_resources.account.user_not_found');
-                        $AccSysID = null;
-                    }
-                }
-                else{
-                    $name = $data->user ? $data->user->name : __('api_resources.account.user_not_found');
-                    $AccSysID = $data->user ? $data->user->AccSysID : null;
-                }
+                // `user_id` is who placed the order (the representative, for a
+                // representative's order); `customer_id` and `name` are who it
+                // is for. For an ordinary order the two are the same account.
+                $placedByRep = $data->for_customer !== null;
+                $customer = $placedByRep ? $data->rep : $data->user;
+                $name = $customer ? $customer->name : __('api_resources.account.user_not_found');
+                $AccSysID = $customer ? $customer->AccSysID : null; /// aka. Otajer ID
                 return [
                     'id' => $data->id,
                     'code' => $data->code,
                     'user_id' => intval($data->user_id),
+                    'customer_id' => intval($placedByRep ? $data->for_customer : $data->user_id),
+                    'placed_by_id' => intval($data->user_id),
+                    'placed_by_name' => $data->user?->name,
+                    'placed_by_rep' => $placedByRep,
                     'name' => $name,
                     'otajer_id' => $AccSysID,
                     'payment_type' => ucwords(str_replace('_', ' ', $data->payment_type)) ,

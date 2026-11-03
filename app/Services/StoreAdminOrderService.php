@@ -173,6 +173,10 @@ class StoreAdminOrderService
         $sameProduct = $existing !== null && $existing->product_id == $product->id;
         $original = round((float) $product->getAttribute('unit_price') / ($data['unit'] === 'PerPiece' ? max(1, (float) $product->getAttribute('unit_equal')) : 1) * $quantity, 2);
         $line = $existing ?? new OrderDetail;
+        $taxPercent = $sameProduct ? (float) $existing->tax : (float) ($product->getAttribute('tax') ?? 0);
+        // VAT is added on top of the line price. A line placed before VAT was recorded
+        // (tax_amount 0) keeps its total when an administrator edits the order.
+        $taxAmount = $existing === null || (float) $existing->getAttribute('tax_amount') > 0 ? round($price * $taxPercent / 100, 2) : 0;
         $line->forceFill([
             'order_id' => $order->id, 'seller_id' => $product->user_id, 'product_id' => $product->id,
             'product_serial' => $product->getAttribute('serial'), 'product_matId' => $product->getAttribute('mat_id'),
@@ -180,7 +184,7 @@ class StoreAdminOrderService
             'variation' => $variant, 'entry_unit' => $data['unit'],
             'variation_qty' => $sameProduct ? $existing->getAttribute('variation_qty') : '[]',
             'price' => $price, 'original_price' => $original, 'is_price_changed' => $price != $original,
-            'quantity' => $quantity, 'tax' => $sameProduct ? $existing->tax : (float) ($product->getAttribute('tax') ?? 0),
+            'quantity' => $quantity, 'tax' => $taxPercent, 'tax_amount' => $taxAmount,
             'shipping_cost' => $sameProduct ? $existing->shipping_cost : 0, 'shipping_type' => 'home_delivery',
             'item_notes' => $data['info'] ?? null,
             'profits' => round($price * (float) $product->collection?->getAttribute('amount') / 100, 2),
@@ -224,13 +228,14 @@ class StoreAdminOrderService
 
     public function recalculate(Order $order): void
     {
-        $lines = $order->orderDetails()->get(['id', 'order_id', 'price', 'original_price', 'tax', 'shipping_cost', 'profits']);
+        $lines = $order->orderDetails()->get(['id', 'order_id', 'price', 'original_price', 'tax', 'tax_amount', 'shipping_cost', 'profits']);
         $price = (float) $lines->sum('price');
+        $tax = (float) $lines->sum('tax_amount');
         $original = (float) $lines->sum('original_price');
         $profits = (float) $lines->sum('profits');
-        // Established administrative entry/price-edit totals sum stored line prices.
-        // Applying taxes, shipping or coupons here needs an explicit business decision.
-        $order->forceFill(['grand_total' => max(0, round($price, 2)),
+        // Administrative entry/price-edit totals are the stored line prices plus the VAT recorded on
+        // the lines (added on top). Shipping and coupons are still not applied here.
+        $order->forceFill(['grand_total' => max(0, round($price + $tax, 2)),
             'profits' => $profits, 'discount_percent' => $original > 0 ? round(100 - $price / $original * 100, 2) : 0,
             'indicator' => $price > 0 ? round($profits / $price * 100, 2) : 0])->save();
         $combined = CombinedOrder::query()->lockForUpdate()->find($order->combined_order_id);

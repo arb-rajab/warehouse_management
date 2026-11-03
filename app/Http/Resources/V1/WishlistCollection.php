@@ -22,7 +22,7 @@ class WishlistCollection extends ResourceCollection
                         'mat_id'    => $data->product->mat_id,
                         'tax'       => $data->product->tax,
                         'variation' => $productVariation,
-                        'thumbnail_image' => uploaded_asset($data->product->thumbnail_img),
+                        'thumbnail_image' => thumbnail_asset($data->product->thumbnail_img),
                         'base_price' => format_price(home_base_price($data->product, false)) ,
                         'rating' => (float) $data->product->rating,
                     ],

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use \App\Utility\NotificationUtility;
 use App\Http\Controllers\AffiliateController;
+use App\Http\Middleware\HidePricesFromUnverified;
 use App\Models\Address;
 use App\Models\BusinessSetting;
 use App\Models\Cart;
@@ -19,11 +20,16 @@ use App\Services\PaymentOptions;
 use App\Services\WalletPaymentService;
 use Auth;
 use Carbon\Carbon;
+use Carbon\CarbonImmutable;
+use DateTimeImmutable;
+use DateTimeZone;
 use DB;
 use DomainException;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 
 class OrderController extends Controller
 {
@@ -53,7 +59,65 @@ class OrderController extends Controller
      */
     public function store(Request $request, bool $payFromWallet = false)
     {
+        $key = $request->header('Idempotency-Key');
+
+        if (! is_string($key) || trim($key) === '') {
+            return $this->place($request, $payFromWallet);
+        }
+
+        if (strlen($key) > 128) {
+            return $this->validationRefusal('idempotency_key', __('api.order.idempotency_key_invalid'));
+        }
+
+        // The same key from the same account is the same order: a phone that
+        // timed out and sends again gets the first answer back instead of a
+        // second order. Only a placed order is remembered, so a refusal (an
+        // empty cart, a short stock) can be retried with the same key.
+        $cacheKey = 'store-order-idempotency:' . auth()->id() . ':' . sha1($key);
+
+        try {
+            return Cache::lock($cacheKey . ':lock', 120)->block(15, function () use ($request, $payFromWallet, $cacheKey) {
+                $saved = Cache::get($cacheKey);
+
+                if (is_array($saved)) {
+                    return response()->json($saved['body'], $saved['status'])->header('Idempotent-Replayed', 'true');
+                }
+
+                $response = $this->place($request, $payFromWallet);
+                $body = $response->getData(true);
+
+                if ($response->getStatusCode() === 200 && ($body['result'] ?? false) === true) {
+                    Cache::put($cacheKey, ['status' => 200, 'body' => $body], now()->addDay());
+                }
+
+                return $response;
+            });
+        } catch (LockTimeoutException) {
+            return response()->json([
+                'combined_order_id' => 0,
+                'result' => false,
+                'message' => __('api.order.in_progress'),
+            ], 409);
+        }
+    }
+
+    private function place(Request $request, bool $payFromWallet): JsonResponse
+    {
         set_time_limit(0);
+
+        // Prices are hidden from a guest and an unverified customer (HidePricesFromUnverified),
+        // so they are not asked to pay what they cannot see.
+        if (HidePricesFromUnverified::hidesPricesFrom(auth()->user())) {
+            return response()->json([
+                'combined_order_id' => 0,
+                'result' => false,
+                'message' => __('api.order.account_not_verified'),
+            ], 403);
+        }
+
+        if (($errors = $this->deliveryDateErrors($request)) !== []) {
+            return $this->validationRefusal('delivery_date', $errors[0]);
+        }
 
         if ($request->filled('payment_type') && ! app(PaymentOptions::class)->isAllowed((string) $request->payment_type)) {
             return $this->failed(__('storefront.checkout.select_payment_option'));
@@ -182,6 +246,72 @@ class OrderController extends Controller
     }
 
     /**
+     * Order refusals keep `combined_order_id` and `result` (the app reads them)
+     * and add `errors` in the shape every other validation answer uses.
+     */
+    private function validationRefusal(string $field, string $message): JsonResponse
+    {
+        return response()->json([
+            'combined_order_id' => 0,
+            'result' => false,
+            'message' => $message,
+            'errors' => [$field => [$message]],
+        ], 422);
+    }
+
+    /**
+     * The delivery date must be a real day, no earlier than today plus
+     * config('store.delivery.lead_days') and on one of the delivery weekdays
+     * (config/store.php). A blank date used to be stored as 1970-01-01. A valid
+     * date is written back to the request as YYYY-MM-DD, the one format stored.
+     *
+     * @return list<string> the messages to show, empty when the date is fine
+     */
+    private function deliveryDateErrors(Request $request): array
+    {
+        $raw = $request->input('delivery_date');
+
+        if (! is_string($raw) || trim($raw) === '') {
+            return [__('api.order.delivery_date_required')];
+        }
+
+        $timezone = config('store.delivery.timezone');
+        $date = null;
+
+        foreach (['Y-m-d', 'd-m-Y'] as $format) {
+            $parsed = DateTimeImmutable::createFromFormat('!' . $format, trim($raw), new DateTimeZone($timezone));
+
+            // createFromFormat rolls 2026-02-30 over to March: only a date that prints back as sent is real.
+            if ($parsed !== false && $parsed->format($format) === trim($raw)) {
+                $date = CarbonImmutable::instance($parsed);
+                break;
+            }
+        }
+
+        if ($date === null) {
+            return [__('api.order.delivery_date_invalid')];
+        }
+
+        $earliest = CarbonImmutable::now($timezone)->startOfDay()->addDays(config('store.delivery.lead_days'));
+
+        if ($date->lt($earliest)) {
+            return [__('api.order.delivery_date_too_soon', ['date' => $earliest->toDateString()])];
+        }
+
+        $weekdays = config('store.delivery.weekdays');
+
+        if (! in_array($date->dayOfWeekIso, $weekdays, true)) {
+            $names = collect($weekdays)->map(fn (int $day) => $date->startOfWeek()->addDays($day - 1)->locale(app()->getLocale())->dayName);
+
+            return [__('api.order.delivery_date_weekday', ['days' => $names->join(', ', ' / ')])];
+        }
+
+        $request->merge(['delivery_date' => $date->toDateString()]);
+
+        return [];
+    }
+
+    /**
      * The message to show when GET /payment-types does not offer this option to
      * the caller, saying which reason applies where the customer can act on it
      * (cash on delivery switched off, or not allowed for a product or a digital
@@ -215,10 +345,13 @@ class OrderController extends Controller
         $user = StoreUser::find(auth()->user()->id);
 
         $address = Address::where('id', $cartItems->first()->address_id)->first();
+        // A representative's order goes to the customer they picked: the name
+        // and email beside the street and phone are the customer's, not the rep's.
+        $recipient = $user->is_rep ? ($cartItems->first()->rep_customer ?? $user) : $user;
         $shippingAddress = [];
         if ($address != null) {
-            $shippingAddress['name']        = $user->name;
-            $shippingAddress['email']       = $user->email;
+            $shippingAddress['name']        = $recipient->name;
+            $shippingAddress['email']       = $recipient->email;
             $shippingAddress['address']     = $address->address;
             $shippingAddress['country']     = $address->country?->name;
             $shippingAddress['state']       = $address->state ? $address->state->name : null;
@@ -303,7 +436,6 @@ class OrderController extends Controller
             $order->save();
 
             $subtotal = 0;
-            $tax = 0;
             $shipping = 0;
             $coupon_discount = 0;
             $order_deleted_products_info = "";
@@ -331,8 +463,6 @@ class OrderController extends Controller
                     $subtotal += cart_product_price($cartItem, $product, false, false) * $cartItem['quantity'];
                 }
 
-                $tax += cart_product_tax($cartItem, $product, false) * $cartItem['quantity'];
-
                 $product_variation = $cartItem['variation'];
 
                 $this->orderPlacementService()->reserveStock($product, $product_variation, $cartItem['quantity']);
@@ -354,7 +484,6 @@ class OrderController extends Controller
                     $order_detail->original_price = cart_product_price($cartItem, $product, false, false) * $cartItem['quantity'];
                 }
 
-                $order_detail->tax = cart_product_tax($cartItem, $product, false) * $cartItem['quantity'];
                 $order_detail->shipping_type = $cartItem['shipping_type'];
                 $order_detail->variation_qty = $cartItem['variation_qty'];
                 $order_detail->product_referral_code = $cartItem['product_referral_code'];
@@ -362,8 +491,10 @@ class OrderController extends Controller
                 $order_detail->product_serial = $product->serial;
                 $order_detail->item_notes = $cartItem['item_notes'];
                 // order_details.tax is NOT NULL and products.tax nullable: see
-                // the web OrderController::store().
+                // the web OrderController::store(). It holds the VAT percent;
+                // the money added on top of the line is tax_amount.
                 $order_detail->tax = $product->tax ?? 0;
+                $order_detail->tax_amount = cart_line_tax($cartItem, $product, (float) $order_detail->price);
                 $order_detail->profits = (float)($order_detail->price * ($product->collection?->amount ?? 1)) / 100;
 
                 $shipping += $order_detail->shipping_cost;
@@ -424,6 +555,8 @@ class OrderController extends Controller
                 }
             }
 
+            // The VAT of every line, the offers' lines included (OfferService records theirs).
+            $tax = (float) $order->orderDetails()->sum('tax_amount');
             $order->grand_total = $subtotal + $tax + $shipping;
             $order->additional_info .= $order_deleted_products_info ? $order_deleted_products_info . 'تمت إزالتهم من سلة التسوق الخاصة بك، المنتجات غير النشطة' : null;
 

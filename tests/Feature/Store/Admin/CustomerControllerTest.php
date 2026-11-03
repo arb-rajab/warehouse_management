@@ -162,7 +162,7 @@ test('profile writes validate uniqueness password confirmation and persist safe 
 });
 test('customer status importance notes ban archive and restore actions preserve domain invariants', function () {
     actingAsStoreUser(createStoreAdmin());
-    $customer = createStoreUser();
+    $customer = createStoreUser(verified: false);
     $customer->forceFill(['last_order_at' => now()])->save();
     $this->post(route('customers.verify', $customer))->assertRedirect();
     expect($customer->fresh()->admin_verified)->toBeTrue()->and($customer->fresh()->admin_verified_at)->not->toBeNull();

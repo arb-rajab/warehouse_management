@@ -101,7 +101,7 @@
                     @php
                         $product = \App\Models\Product::find($cartItem['product_id']);
                         $subtotal += cart_product_price($cartItem, $product, false, false) * $cartItem['quantity'];
-                        $tax += cart_product_tax($cartItem, $product, false) * $cartItem['quantity'];
+                        $tax += cart_line_tax($cartItem, $product, (float) ($cartItem['is_price_changed'] ? $cartItem['rep_price'] : cart_product_price($cartItem, $product, false, false)) * $cartItem['quantity']);
                         $product_shipping_cost = $cartItem['shipping_cost'];
 
                         $shipping += $product_shipping_cost;

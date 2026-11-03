@@ -169,7 +169,7 @@ test('order/store tells the customer why the payment type is refused', function 
     Cart::create(['user_id' => $customer->id, 'owner_id' => 0, 'product_id' => $product->id, 'quantity' => 1, 'variation' => '', 'price' => 1]);
     $message = function (array $body) use ($customer) {
         app('auth')->forgetGuards();
-        $response = $this->withToken(storeApiToken($customer))->postJson('/api/v1/store/order/store', $body)
+        $response = $this->withToken(storeApiToken($customer))->postJson('/api/v1/store/order/store', ['delivery_date' => validDeliveryDate(), ...$body])
             ->assertUnprocessable()->assertJsonPath('result', false)->assertJsonPath('combined_order_id', 0);
         expect(array_keys($response->json()))->toEqual(['combined_order_id', 'result', 'message']);
 
@@ -178,20 +178,20 @@ test('order/store tells the customer why the payment type is refused', function 
 
     expect($message([]))->toBe(__('storefront.checkout.select_payment_option'))
         ->and($message(['payment_type' => 'bogus']))->toBe(__('api.order.payment_type_invalid'))
-        ->and($message(['payment_type' => 'cash_on_delivery']))->toBe(__('api.order.payment_type_cash_disabled'));
+        ->and($message(['payment_type' => 'cash_on_delivery', 'delivery_date' => validDeliveryDate()]))->toBe(__('api.order.payment_type_cash_disabled'));
 
     // The message names the product to remove; a product that allows cash is not named.
     storeSetting('cash_payment', 1);
     $fine = createStoreProduct(['cash_on_delivery' => 1]);
     Cart::create(['user_id' => $customer->id, 'owner_id' => 0, 'product_id' => $fine->id, 'quantity' => 1, 'variation' => '', 'price' => 1]);
-    $blocked = $message(['payment_type' => 'cash_on_delivery']);
+    $blocked = $message(['payment_type' => 'cash_on_delivery', 'delivery_date' => validDeliveryDate()]);
     expect($blocked)->toBe(__('api.order.payment_type_cash_products', ['products' => $product->name]))
         ->and($blocked)->not->toContain($fine->name);
 
     // A digital product is named too.
     DB::table('products')->where('id', $product->id)->update(['cash_on_delivery' => 1]);
     DB::table('products')->where('id', $fine->id)->update(['digital' => 1]);
-    expect($message(['payment_type' => 'cash_on_delivery']))->toBe(__('api.order.payment_type_cash_products', ['products' => $fine->name]));
+    expect($message(['payment_type' => 'cash_on_delivery', 'delivery_date' => validDeliveryDate()]))->toBe(__('api.order.payment_type_cash_products', ['products' => $fine->name]));
 });
 
 test('the app saves an address under the storefront\'s rules, reading 0 as no state or city', function () {
@@ -377,7 +377,7 @@ test('a representative whose order earns no profit is refused with a 422', funct
     $product = createStoreProduct(['cash_on_delivery' => 1, 'collection_id' => null]);
     Cart::create(['user_id' => $rep->id, 'owner_id' => 0, 'product_id' => $product->id, 'quantity' => 1, 'variation' => '', 'price' => 2.5, 'for_customer' => $customer->id, 'address_id' => $address]);
 
-    $this->withToken(storeApiToken($rep))->postJson('/api/v1/store/order/store', ['payment_type' => 'cash_on_delivery'])
+    $this->withToken(storeApiToken($rep))->postJson('/api/v1/store/order/store', ['payment_type' => 'cash_on_delivery', 'delivery_date' => validDeliveryDate()])
         ->assertStatus(422)
         ->assertJson(['result' => false, 'message' => __('api.order.profit_too_low')]);
 });
@@ -425,7 +425,7 @@ test('a representative places a profitable order for a customer, with or without
     $product = createStoreProduct(['cash_on_delivery' => 1, 'collection_id' => $collection->id]);
     Cart::create(['user_id' => $rep->id, 'owner_id' => 0, 'product_id' => $product->id, 'quantity' => 3, 'variation' => '', 'price' => 2.5, 'by_rep' => 1, 'for_customer' => $customer->id, 'address_id' => $address]);
 
-    $this->withToken(storeApiToken($rep))->postJson('/api/v1/store/order/store', ['payment_type' => 'cash_on_delivery', 'additional_info' => 'x', 'delivery_date' => ''])
+    $this->withToken(storeApiToken($rep))->postJson('/api/v1/store/order/store', ['payment_type' => 'cash_on_delivery', 'additional_info' => 'x', 'delivery_date' => validDeliveryDate()])
         ->assertOk()->assertJsonPath('result', true);
 
     $order = Order::latest('id')->first();
@@ -449,7 +449,7 @@ test('an order for a customer without a member serial goes to the otajer fallbac
     $product = createStoreProduct(['cash_on_delivery' => 1, 'collection_id' => ProductCollection::create(['name' => 'Margin', 'serial' => 'C1', 'amount' => 10])->id]);
     Cart::create(['user_id' => $rep->id, 'owner_id' => 0, 'product_id' => $product->id, 'quantity' => 3, 'variation' => '', 'price' => 2.5, 'by_rep' => 1, 'for_customer' => $customer->id, 'address_id' => $address]);
 
-    $this->withToken(storeApiToken($rep))->postJson('/api/v1/store/order/store', ['payment_type' => 'cash_on_delivery'])->assertOk()->assertJsonPath('result', true);
+    $this->withToken(storeApiToken($rep))->postJson('/api/v1/store/order/store', ['payment_type' => 'cash_on_delivery', 'delivery_date' => validDeliveryDate()])->assertOk()->assertJsonPath('result', true);
 
     expect(Order::latest('id')->first())->member_serial->toBe('OT-1')->and((int) Order::latest('id')->value('for_customer'))->toBe($fallback->id);
 });

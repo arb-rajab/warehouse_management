@@ -63,7 +63,10 @@ class PurchaseHistoryItemsCollection extends ResourceCollection
                     'variation' => $data->variation,
                     'variation_quantities' => $transformedData,
                     'price' => format_price($data->price),
-                    'tax' => format_price($data->tax),
+                    // VAT added on top of the line: the money, and the percent it was
+                    // worked out from. Lines placed before VAT was recorded show 0.
+                    'tax' => format_price($data->tax_amount),
+                    'tax_percent' => (float) $data->tax,
                     'item_notes' => $data->item_notes,
                     'shipping_cost' => format_price($data->shipping_cost),
                     // order_details has no coupon_discount column: a coupon's
