@@ -17,6 +17,7 @@ import Pagination from '@/components/Pagination.vue';
 import RequiredMark from '@/components/RequiredMark.vue';
 import ResourceFormPage from '@/components/ResourceFormPage.vue';
 import StoreCustomerFormFields from '@/components/StoreCustomerFormFields.vue';
+import StoreListFilters from '@/components/StoreListFilters.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
 import { t } from '@/lib/i18n';
@@ -228,15 +229,110 @@ it('representative index shows package dialog and its assignment contract', asyn
     await wrapper.vm.$nextTick();
     expect(wrapper.find('[role="dialog"]').exists()).toBe(false);
 });
-it('page size and search preserve list filters', async () => {
-    const wrapper = indexPage();
-    await wrapper.get('form input[type="search"]').setValue('Amy');
+it('page size keeps every applied filter and omits the unset ones', () => {
+    pagePermissions(['view_all_customers', 'delete_customer']);
+    const wrapper = mount(Index, {
+        props: {
+            customers: paginated([customer]),
+            filters: {
+                per_page: 20,
+                search: 'Amy',
+                archived: true,
+                important: false,
+                verified: true,
+                activity_status: 'new_user',
+            },
+            representatives: false,
+            packages: [],
+        },
+    });
     wrapper.getComponent(Pagination).vm.$emit('update:perPage', 10);
     expect(routerGetMock).toHaveBeenCalledWith(
         customersIndex().url,
-        { search: 'Amy', archived: 0, per_page: 10, important: '1' },
+        {
+            per_page: 10,
+            search: 'Amy',
+            activity_status: 'new_user',
+            archived: 1,
+            important: 0,
+            verified: 1,
+        },
         { preserveState: true, replace: true },
     );
+});
+it('keeps search and archived inline and puts the other filters in the dialog', () => {
+    const wrapper = indexPage();
+    const form = wrapper.getComponent(StoreListFilters);
+    expect(form.props('action')).toEqual(customersIndex());
+    const inline = wrapper.get('form#store-list-filters');
+    expect(inline.get('input[name="per_page"]').attributes('value')).toBe('20');
+    expect(inline.get('input[type="search"]').attributes('name')).toBe(
+        'search',
+    );
+    expect(inline.get('input[name="archived"]').attributes('value')).toBe('1');
+    const dialog = wrapper.get('[role="dialog"]');
+    expect(
+        dialog.findAll('select').map((select) => select.attributes('name')),
+    ).toEqual([
+        'important',
+        'verified',
+        'from_api',
+        'registration_completed',
+        'activity_status',
+    ]);
+    expect(dialog.find('input[name="archived"]').exists()).toBe(false);
+    expect(dialog.find('input[name="search"]').exists()).toBe(false);
+    // Important has no "all" option and defaults to Yes.
+    expect(
+        dialog.findAll('select[name="important"] option').map((o) => o.text()),
+    ).toEqual([t('store.customers.yes'), t('store.customers.no')]);
+    expect(
+        (dialog.get('select[name="important"]').element as HTMLSelectElement)
+            .value,
+    ).toBe('1');
+});
+it('counts only the applied dialog filters, and Important only when it is No', () => {
+    const badge = (filters: Record<string, unknown>) => {
+        pagePermissions(['view_all_customers']);
+
+        return mount(Index, {
+            props: {
+                customers: paginated([customer]),
+                filters: {
+                    per_page: 20,
+                    search: 'Amy',
+                    archived: true,
+                    ...filters,
+                },
+                representatives: false,
+                packages: [],
+            },
+        })
+            .get('form#store-list-filters > button[type="button"]')
+            .text();
+    };
+    expect(badge({ important: true })).not.toMatch(/\d/);
+    expect(badge({ important: false })).toContain('1');
+    expect(
+        badge({
+            important: false,
+            verified: false,
+            from_api: true,
+            registration_completed: true,
+            activity_status: 'new_user',
+        }),
+    ).toContain('5');
+});
+it('the representatives list has a plain search and archived form without a dialog', () => {
+    const wrapper = indexPage(['view_all_customers', 'delete_customer'], true);
+    expect(wrapper.findComponent(StoreListFilters).exists()).toBe(false);
+    expect(wrapper.find('[role="dialog"]').exists()).toBe(false);
+    const form = wrapper.getComponent(Form);
+    expect(form.props('action')).toEqual(repIndex());
+    expect(form.find('input[name="search"]').exists()).toBe(true);
+    expect(form.find('input[name="archived"]').exists()).toBe(true);
+    expect(form.get('input[name="per_page"]').attributes('value')).toBe('20');
+    expect(wrapper.find('select').exists()).toBe(false);
 });
 it('views page renders count labels and paginator contract', () => {
     const wrapper = mount(Views, {
