@@ -260,6 +260,10 @@ class OrderController extends Controller implements HasMiddleware
             $oldProfit = (float) $locked->getAttribute('profits');
             $margin = $item->price > 0 ? (float) $item->getAttribute('profits') / $item->price : (float) Product::query()->with('collection:id,amount')->whereKey($item->product_id)->first()?->collection?->getAttribute('amount') / 100;
             $item->forceFill(['price' => round((float) $request->validated('admin_price') * $item->quantity, 2), 'is_price_changed' => true]);
+            // The VAT added on top follows the new price; a line placed before VAT was recorded stays without it.
+            if ((float) $item->getAttribute('tax_amount') > 0) {
+                $item->setAttribute('tax_amount', round((float) $item->price * (float) $item->tax / 100, 2));
+            }
             $item->setAttribute('profits', round($item->price * $margin, 2))->save();
             $this->orders->recalculate($locked);
             foreach (array_unique(array_filter([$locked->user_id, $locked->by_rep ? $locked->for_customer : null])) as $id) {

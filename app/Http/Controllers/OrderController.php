@@ -215,7 +215,6 @@ class OrderController extends Controller implements HasMiddleware
                     $subtotal += cart_product_price($cartItem, $product, false, false) * $cartItem['quantity'];
                 }
 
-                //  $tax +=  cart_product_tax($cartItem, $product, false) * $cartItem['quantity'];
                 //  $coupon_discount += $cartItem['discount'];
 
                 $product_variation = $cartItem['variation'];
@@ -245,7 +244,6 @@ class OrderController extends Controller implements HasMiddleware
                     $original_price += cart_product_price($cartItem, $product, false, false);
                     $rep_price += cart_product_price($cartItem, $product, false, false);
                 }
-                $order_detail->tax = cart_product_tax($cartItem, $product, false) * $cartItem['quantity'];
                 $order_detail->shipping_type = $cartItem['shipping_type'];
                 $order_detail->product_referral_code = $cartItem['product_referral_code'];
                 $order_detail->shipping_cost = $cartItem['shipping_cost'];
@@ -254,6 +252,9 @@ class OrderController extends Controller implements HasMiddleware
                 // legacy app's non-strict MySQL stored 0 for a product with no
                 // tax, which this app's strict connection refuses to do for it.
                 $order_detail->tax = $product->tax ?? 0;
+                // VAT is added on top of the line price; the money is tax_amount, the percent is tax.
+                $order_detail->tax_amount = cart_line_tax($cartItem, $product, (float) $order_detail->price);
+                $tax += $order_detail->tax_amount;
                 $order_detail->item_notes = $cartItem['item_notes'];
                 $order_detail->profits = (float)($order_detail->price * $product->collection?->amount ?? 0) / 100;
 

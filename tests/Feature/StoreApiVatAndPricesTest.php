@@ -167,3 +167,41 @@ test('X-Status-Mode: http leaves successes and other statuses alone', function (
     app('auth')->forgetGuards();
     $this->withToken(storeApiToken($customer))->withHeader('X-Status-Mode', 'http')->postJson('/api/v1/store/carts/add', ['id' => 999999, 'variant' => '', 'quantity' => 1])->assertNotFound();
 });
+
+// ---- An unverified customer cannot order what it cannot see the price of -----------------------
+
+test('an unverified customer is refused with 403 and no order is placed', function () {
+    $customer = vatUnverifiedCustomer();
+    vatLine($customer, 1, 9);
+    $verified = vatVerifiedCustomer();
+    vatLine($verified, 1, 9);
+
+    $this->withToken(storeApiToken($customer))->postJson('/api/v1/store/order/store', ['payment_type' => 'cash_on_delivery', 'delivery_date' => validDeliveryDate()])
+        ->assertForbidden()->assertJsonPath('result', false)->assertJsonPath('message', __('api.order.account_not_verified'));
+
+    expect(Order::count())->toBe(0)->and(Cart::where('user_id', $customer->id)->count())->toBe(1);
+
+    app('auth')->forgetGuards();
+    $this->withToken(storeApiToken($verified))->postJson('/api/v1/store/order/store', ['payment_type' => 'cash_on_delivery', 'delivery_date' => validDeliveryDate()])
+        ->assertOk()->assertJsonPath('result', true);
+    expect(Order::count())->toBe(1);
+});
+
+// ---- VAT on top in the web checkout and the back office entry ----------------------------------
+
+test('the web checkout adds the VAT to the order total and records the amount', function () {
+    $customer = actingAsStoreUser(vatVerifiedCustomer());
+    $line = orderableCartLine($customer, createStoreUser('seller'), 2, stock: 5);
+    $line->product->forceFill(['tax' => 10])->save();
+    $noise = orderableCartLine(createStoreUser('customer'), createStoreUser('seller'), 1, stock: 5);
+
+    $this->post('/temp/checkout/payment', ['payment_option' => 'cash_on_delivery'])->assertRedirect(route('order_confirmed'));
+
+    $order = Order::where('user_id', $customer->id)->sole();
+    $detail = OrderDetail::where('order_id', $order->id)->sole();
+    expect((float) $order->grand_total)->toEqual(5.5) // 2 x 2.50 + 10 percent
+        ->and((float) $detail->tax)->toEqual(10.0)
+        ->and((float) $detail->tax_amount)->toEqual(0.5)
+        ->and(Order::count())->toBe(1)
+        ->and($noise->fresh())->not->toBeNull();
+});

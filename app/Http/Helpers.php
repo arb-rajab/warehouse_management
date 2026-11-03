@@ -504,7 +504,7 @@ if (!function_exists('carts_coupon_discount')) {
                         foreach ($carts as $key => $cartItem) {
                             $product = Product::find($cartItem['product_id']);
                             $subtotal += cart_product_price($cartItem, $product, false, false) * $cartItem['quantity'];
-                            $tax += cart_product_tax($cartItem, $product, false) * $cartItem['quantity'];
+                            $tax += cart_line_tax($cartItem, $product, (float) cart_product_price($cartItem, $product, false, false) * $cartItem['quantity']);
                             $shipping += $cartItem['shipping_cost'];
                         }
                         $sum = $subtotal + $tax + $shipping;

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use \App\Utility\NotificationUtility;
 use App\Http\Controllers\AffiliateController;
+use App\Http\Middleware\HidePricesFromUnverified;
 use App\Models\Address;
 use App\Models\BusinessSetting;
 use App\Models\Cart;
@@ -103,6 +104,16 @@ class OrderController extends Controller
     private function place(Request $request, bool $payFromWallet): JsonResponse
     {
         set_time_limit(0);
+
+        // Prices are hidden from a guest and an unverified customer (HidePricesFromUnverified),
+        // so they are not asked to pay what they cannot see.
+        if (HidePricesFromUnverified::hidesPricesFrom(auth()->user())) {
+            return response()->json([
+                'combined_order_id' => 0,
+                'result' => false,
+                'message' => __('api.order.account_not_verified'),
+            ], 403);
+        }
 
         if (($errors = $this->deliveryDateErrors($request)) !== []) {
             return $this->validationRefusal('delivery_date', $errors[0]);

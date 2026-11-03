@@ -11,10 +11,10 @@ here already behaves differently, the reply says so.
 
 | Order | ID | State |
 | :-: | :--- | :--- |
-| 1 | BR-20261103-A | A.1 and A.2 done; A.3 needs dev data (not code) |
+| 1 | BR-20261103-A | A.1 and A.2 done; A.3 has a command to run on dev |
 | 2 | BR-20261103-B | B.1 to B.4, B.6 done; B.5 answered; B.7 done as an opt-in header |
 | 3 | BR-20261102-B | B.1 to B.3 done; B.4 declined with an alternative; B.5 answered |
-| 4 | BR-20261102-D | D.2 and D.5 done; D.1, D.3, D.4 answered with a defect found |
+| 4 | BR-20261102-D | D.2 to D.5 done; D.1 needs one fact from the server |
 | 5 | BR-20261101-A | Point 1 done; point 2 answered, not built |
 | 6 | BR-20261103-C | C.1 and C.2 done |
 
@@ -61,13 +61,22 @@ are in English and Arabic.
 Older rows that hold `1970-01-01` are not rewritten. The details call now answers `delivery_date: null` for them
 instead of `01-01-1970`.
 
-**A.3 Carrier and minimum order on dev.** Open, and not a code change. `delivery-info` builds `carriers` from
-the active carriers that have a price range for the zone of the cart address's country (or free shipping), and
-`pickup_points` only when the `pickup_point` setting is on. `minimum_order_amount` and `default_delivery_fees`
-appear only when the setting `minimum_order_amount_check` is 1; the fee product is the one whose `mat_id` is
-`default_specific_product`. Someone with access to dev needs to create one carrier with a range price for
-the Netherlands zone, and set those settings. I cannot do it from this repository. Tell me when it is done and I
-will check the answer, or give me access to the dev database.
+**A.3 Carrier and minimum order on dev.** The cause is data: `delivery-info` builds `carriers` from the active
+carriers that have a price range for the zone of the cart address's country (or free shipping), and the minimum
+order appears only when the setting `minimum_order_amount_check` is 1. I cannot reach dev, so there is now a
+command to run there (it refuses production; use the back office, Setup, there):
+
+```bash
+php artisan store:setup-delivery --carrier="Test carrier" --price=6 --transit-days=2 \
+    --minimum=50 --fee-mat-id=<mat_id of the delivery fee product>
+```
+
+It puts the country (default Netherlands) in a zone if it has none, creates the carrier with a price for that
+zone, and sets the minimum order amount and the fee product. Running it again changes the price and adds nothing
+twice. After it, `GET /delivery-info` for a customer whose cart address is in the Netherlands lists the carrier and
+returns `minimum_order_amount` and `default_delivery_fees`. `--fee-mat-id` has to be a product that exists on
+dev. Without `--minimum` the order settings are not touched. The carrier's `transit_price` is 0 unless the shipping
+type is "carrier wise shipping" (back office, Setup, Shipping); the command warns when it is not.
 
 ---
 
@@ -126,9 +135,10 @@ gateway redirects and I left them.
 - `GET /purchase-history-details/{id}`: `tax` is the VAT money, `subtotal` is before VAT, `grand_total` is the
   sum. `GET /purchase-history-items/{id}`: per line `tax` (money) and `tax_percent`.
 
-Not changed: the web storefront checkout, the back office order entry and the offers still do not add VAT, and
-orders placed before this change show `tax` 0.00 because no amount was recorded. Say if the web checkout and the
-back office entry should follow; they are separate code paths with their own totals.
+The web storefront checkout, its cart summary, the coupon maths and the back office order entry follow the same
+rule: VAT on top, recorded in `order_details.tax_amount`. In the back office, editing an order's line price
+recomputes that line's VAT, and a line placed before VAT was recorded (amount 0) keeps its total when edited.
+Orders placed before this change show `tax` 0.00. The offers (`OfferService`) still record only the percent.
 
 **B.5 Minimum order.** `POST /order/store` does not refuse a small order. With `minimum_order_amount_check` on,
 a cart below `minimum_order_amount` gets the delivery-fee product (`default_specific_product`) added as a line, and
@@ -150,8 +160,10 @@ prices. The flag a client reads is `admin_verified` in the user object. Where:
 - Every such answer carries the header `X-Prices-Hidden: 1`, and an object answer also has `"price_hidden": true`.
   The product data (name, photos, stock, percent fields) is unchanged.
 
-Not done, on purpose: an unverified account can still add to the cart and order (B.5 (c) above). It now cannot
-see what it pays, so tell me if ordering should be refused with 403 for them. The hidden-key lists live in
+An unverified customer cannot place an order: `order/store` and `payments/pay/*` answer **403**
+`{"combined_order_id":0,"result":false,"message":"Your account has not been verified yet..."}` (they could not see
+what they would pay). They can still browse and fill a cart. This is also the answer to BR-20261102-B.5 (c).
+The hidden-key lists live in
 `HidePricesFromUnverified::KEYS`; a new money field in an answer has to be added there. The money fields of the
 offers that the cart adds, and the order and invoice answers, are shown to the account that owns the order.
 
@@ -199,17 +211,16 @@ on dev and read the code from `storage/logs/laravel.log`, or give me an inbox ad
 send the reset there.
 
 **B.5 Sign-up and verification.** (a) Yes: `admin_verified` in the user object. (b) The store back office,
-Customers, **Verify** (`POST customers/verify/{customer}`) toggles it. (c) The API does not check it: an unverified
-account can place orders today. Say if that should become a refusal.
+Customers, **Verify** (`POST customers/verify/{customer}`) toggles it. (c) No: an unverified customer's order is refused with 403 (see BR-20261103-B.6).
 
 ---
 
 ## BR-20261102-D
 
 **D.1 Firebase project.** The code sends with `FIREBASE_PROJECT` and the service-account file named in
-`FIREBASE_CREDENTIALS` (`config/services.php`, `fcm`); I cannot read the server's `.env`, so I cannot say which
-project it is. A v1 push to a token works if the token belongs to the **same Firebase project** as that
-credential; a Firebase project can hold several Android apps, so registering `com.newstore.app.dev`,
+`FIREBASE_CREDENTIALS` (`config/services.php`, `fcm`, default `albarakabv-store`); I cannot read the server's `.env`, so I cannot say which
+project it is: run `php artisan store:send-test-push <token>`, which prints it. A push to a token works if the
+token belongs to the **same Firebase project** as that credential; a Firebase project can hold several Android apps, so registering `com.newstore.app.dev`,
 `.staging` and the release id in "albarakabv-store" is enough, with no change on our side. Different project: the credential has to change.
 
 **D.2 Device token.** Field `device_token`. `POST /profile/update-device-token` body `{"device_token":"..."}`
@@ -217,17 +228,25 @@ credential; a Firebase project can hold several Android apps, so registering `co
 `/auth/signup` and `/auth/info` also store `device_token` (or `firebase_token`). `device_key` is a separate old-app
 field; the new app does not need it. One token per account: a second phone replaces the first.
 
-**D.3 Events and payload.** Defect found, and I did not change it. Pushes are sent for a delivery-status
-change and a payment-status change (both through `NotificationUtility::sendLocalizedOrderUpdate`), and as a push
-to a driver on assignment. The order and status pushes use Google's **legacy** endpoint
-(`fcm.googleapis.com/fcm/send` with a server key), which Google has shut down, so they cannot be delivered. Only the
-driver push uses the working v1 API. Also: an order placed through the API stores the in-app notification but sends **no** push (the push is
-only sent when the call passes the request, and the API's call does not). Payload today: `notification.title` and `notification.body` (localized per
-customer), `data.item_type` = `order`, `data.item_type_id` = the order id, `data.click_action`
-= `FLUTTER_NOTIFICATION_CLICK`. Moving the order pushes to the v1 API is a separate change that needs a working
-credential to test; say if you want it.
+**D.3 Events and payload.** Fixed. Every push now goes through one service on Firebase's **v1** API
+(`FcmPushService`). Before, the order and status pushes used Google's legacy endpoint (`fcm/send` with a server
+key), which Google has shut down, so none of them arrived, and an order placed through the API sent none at all.
+Events that push to the customer's `device_token`, when the business setting `google_firebase` is on:
 
-**D.4 Test push.** There is no endpoint for it. It needs the working v1 path above first.
+| Event | Title and body (language of the customer) | `data` |
+| :--- | :--- | :--- |
+| Order placed through the app (cash on delivery, wallet or manual payment) | "Order placed!" / "An order :code has been placed" | `item_type` = `order`, `item_type_id` = order id |
+| Delivery status changed (seller or back office) | "Order updated" / "Your order :code has been updated: :status" | same |
+| Payment status changed | same | same |
+
+Every push also carries `click_action` = `FLUTTER_NOTIFICATION_CLICK`. Drivers get a push when a trip is assigned
+or an order on their trip changes (`item_type` is not set; `link` when given). A token Firebase reports as unknown
+is cleared from its account so it is not tried again. The wording is in `lang/*/delivery.php` and `messages.php`.
+
+**D.4 Test push.** `php artisan store:send-test-push <device token> [--title=] [--body=]` on the server. It prints
+the Firebase project it sends with, and says whether the token was accepted, not known to that project, or the
+push could not be sent (the reason is in `storage/logs/laravel.log`). Send me a token from `com.newstore.app.dev`
+and, with access to the server, this is also the check for D.1.
 
 **D.5 Sign-out and deletion.** `POST /auth/logout` (and the old GET) now clears the stored token, so a signed-out
 phone gets no pushes. Deleting the account deletes the row with its token. `POST

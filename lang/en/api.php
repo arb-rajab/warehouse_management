@@ -111,6 +111,7 @@ return [
         'status_changed' => 'Delivery status changed to :status',
     ],
     'order' => [
+        'account_not_verified' => 'Your account has not been verified yet, so it cannot place orders. We will verify it shortly; contact us if it takes long.',
         'address_required' => 'A delivery address with a street address is required to place an order.',
         'address_country_required' => 'The delivery address needs a country. Please edit the address and try again.',
         'payment_type_invalid' => 'The payment type is not available.',
