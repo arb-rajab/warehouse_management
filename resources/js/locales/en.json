@@ -2399,8 +2399,6 @@
                 "allStatuses": "All",
                 "from": "From",
                 "to": "To",
-                "apply": "Apply",
-                "applying": "Applying…",
                 "select": "Select",
                 "selectOrder": "Select order {code}",
                 "selectAll": "Select all on this page",
