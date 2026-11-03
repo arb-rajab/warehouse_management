@@ -128,14 +128,14 @@ test('a guest sees no price or shipping amount, a verified customer sees the shi
 
     $this->get('/temp/product/fresh-labneh')->assertOk()
         ->assertSee('Flat shipping rate')
-        ->assertDontSee('7.35')
+        ->assertDontSee(single_price(7.35))
         ->assertDontSee('(per unit)');
 
     detailsVerifiedCustomer();
 
     $this->get('/temp/product/fresh-labneh')->assertOk()
         ->assertSee('Flat shipping rate')
-        ->assertSee('7.35')
+        ->assertSee(single_price(7.35))
         ->assertSee('(per unit)');
 });
 

@@ -82,7 +82,7 @@ class CustomerTaxNumber
             ->orderBy('normalized')
             ->pluck('normalized');
 
-        return $values->map(fn (mixed $value): array => [
+        return array_values($values->map(fn (mixed $value): array => [
             'tax_number' => (string) $value,
             'customers' => self::ranked(
                 DB::table('users')
@@ -90,7 +90,7 @@ class CustomerTaxNumber
                     ->whereRaw('TRIM(tax_number) = ?', [(string) $value])
                     ->get()
             ),
-        ])->values()->all();
+        ])->all());
     }
 
     /**
@@ -99,13 +99,12 @@ class CustomerTaxNumber
      */
     private static function ranked(Collection $customers): array
     {
-        return $customers
+        return array_values($customers
             ->sortBy(fn (stdClass $customer): array => [
                 ! $customer->banned && ! $customer->is_delete ? 0 : 1,
                 $customer->AccSysID !== null ? 0 : 1,
                 (int) $customer->id,
             ])
-            ->values()
-            ->all();
+            ->all());
     }
 }

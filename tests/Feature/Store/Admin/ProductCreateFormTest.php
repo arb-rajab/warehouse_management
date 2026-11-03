@@ -255,13 +255,13 @@ test('a new product cannot expire soon unless the flag is posted', function () {
 test('a new admin-created product saves the Arabic name, blank when absent, and refuses an over-long one', function () {
     actingAsStoreUser(createStoreStaff('add_new_product'));
     Artisan::shouldReceive('call')->andReturn(0);
-    $this->post(route('products.store'), productCreateForm(['name' => 'Olive oil', 'ar_name' => 'زيت زيتون', 'product_barcodes' => []]))->assertSessionHasNoErrors();
+    $this->post(route('products.store'), productCreateForm(['name' => 'Arabic oil', 'ar_name' => 'زيت زيتون', 'product_barcodes' => []]))->assertSessionHasNoErrors();
     $this->post(route('products.store'), productCreateForm(['name' => 'Plain oil', 'product_barcodes' => []]))->assertSessionHasNoErrors();
     $this->post(route('products.store'), productCreateForm(['name' => 'Blank oil', 'ar_name' => null, 'product_barcodes' => []]))->assertSessionHasNoErrors();
     $this->post(route('products.store'), productCreateForm(['name' => 'Long oil', 'ar_name' => str_repeat('ز', 192), 'product_barcodes' => []]))->assertSessionHasErrors('ar_name');
 
-    expect(Product::query()->whereIn('name', ['Olive oil', 'Plain oil', 'Blank oil', 'Long oil'])->orderBy('name')->get()->map(fn ($row) => [$row->name, $row->ar_name, $row->synced_at])->all())
-        ->toBe([['Blank oil', '', null], ['Olive oil', 'زيت زيتون', null], ['Plain oil', '', null]]);
+    expect(Product::query()->whereIn('name', ['Arabic oil', 'Plain oil', 'Blank oil', 'Long oil'])->orderBy('name')->get()->map(fn ($row) => [$row->name, $row->ar_name, $row->synced_at])->all())
+        ->toBe([['Arabic oil', 'زيت زيتون', null], ['Blank oil', '', null], ['Plain oil', '', null]]);
 });
 
 test('the unticked can expire box posts 0 and saves the flag off on create', function () {

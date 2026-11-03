@@ -589,7 +589,7 @@ describe('StoreProductFormFields', () => {
         expect(create.get('#can_expire_help').text()).toBe(
             t('store.products.form.canExpireHelp'),
         );
-        expect(box.element.closest('label')?.text()).toBe(
+        expect(box.element.closest('label')?.textContent?.trim()).toBe(
             t('store.products.form.canExpire'),
         );
         expect(

@@ -173,7 +173,11 @@ test("rolling the migration back in production leaves the store's columns and th
 
 test('rolling the migration back removes the added columns and restores the changed ones', function () {
     $migration = loadAddLegacyColumnsToStoreTablesMigration();
+    $taxNumberIndex = require database_path('migrations/2026_11_03_110000_add_unique_index_to_users_tax_number.php');
 
+    // Rolled back newest first, as `migrate:rollback` does: the unique index on
+    // users.tax_number has to go before the column it covers can.
+    $taxNumberIndex->down();
     $migration->down();
 
     expect(Schema::hasColumn('users', 'company_name'))->toBeFalse()

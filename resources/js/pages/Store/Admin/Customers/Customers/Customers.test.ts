@@ -21,13 +21,13 @@ import StoreListFilters from '@/components/StoreListFilters.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
 import { t } from '@/lib/i18n';
-import type { StoreCustomer } from '@/types/storeCustomers';
 import {
     paginated,
     storeSharedProps,
     storeCustomer,
 } from '@/testing/factories';
 import { defaultAuthProps } from '@/testing/inertiaPageMocks';
+import type { StoreCustomer } from '@/types/storeCustomers';
 import Create from './Create.vue';
 import Edit from './Edit.vue';
 import Index from './Index.vue';
@@ -236,7 +236,7 @@ it('representative index shows package dialog and its assignment contract', asyn
     ).toBeDefined();
     form?.vm.$emit('success');
     await wrapper.vm.$nextTick();
-    expect(wrapper.find('[role="dialog"]').exists()).toBe(false);
+    expect(wrapper.find('#package_id').exists()).toBe(false);
 });
 it('page size keeps every applied filter and omits the unset ones', () => {
     pagePermissions(['view_all_customers', 'delete_customer']);
@@ -366,6 +366,13 @@ function listPage(
         },
     });
 }
+/** The column chooser is one of several dialogs kept in the page; pick it by its title. */
+const columnsDialog = (wrapper: ReturnType<typeof listPage>) =>
+    wrapper
+        .findAll('[role="dialog"]')
+        .find((item) =>
+            item.text().includes(t('store.customers.columnsTitle')),
+        )!;
 const headers = (wrapper: ReturnType<typeof listPage>) =>
     wrapper.findAll('th').map((th) => th.text());
 const defaultHeaders = [
@@ -409,8 +416,8 @@ it('the column chooser toggles, remembers, shows all and resets columns', async 
         .findAll('button')
         .find((button) => button.text() === t('store.customers.columns'))!
         .trigger('click');
-    const dialog = wrapper.get('[role="dialog"]');
-    expect(dialog.text()).toContain(t('store.customers.columnsTitle'));
+    const dialog = columnsDialog(wrapper);
+    expect(dialog.exists()).toBe(true);
     const box = (label: string) =>
         dialog
             .findAll('label')
@@ -498,13 +505,14 @@ it('restricted columns are offered only to staff who may edit customers', async 
         .findAll('button')
         .find((button) => button.text() === t('store.customers.columns'))!
         .trigger('click');
-    const labels = wrapper
-        .get('[role="dialog"]')
+    const labels = columnsDialog(wrapper)
         .findAll('label')
         .map((item) => item.text());
+
     for (const key of ['tax_number', 'bank_account_number', 'balance']) {
         expect(labels).not.toContain(t(`store.customers.fields.${key}`));
     }
+
     expect(labels).not.toContain(t('store.customers.tradeLicense'));
     expect(labels).toContain(t('store.customers.fields.country'));
     expect(labels).not.toContain(
@@ -528,7 +536,7 @@ it('the representatives list shows the package column with its assign button and
         .findAll('button')
         .find((button) => button.text() === t('store.customers.columns'))!
         .trigger('click');
-    expect(wrapper.get('[role="dialog"]').text()).toContain(
+    expect(columnsDialog(wrapper).text()).toContain(
         t('store.customers.fields.rep_discount_percentage'),
     );
     wrapper.unmount();

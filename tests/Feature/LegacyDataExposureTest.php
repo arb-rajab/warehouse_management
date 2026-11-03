@@ -28,7 +28,7 @@ function createUserWithSecrets(string $userType = 'customer', array $attributes 
         'device_key' => 'device-key-secret',
         'bank_account_number' => 'NL00BANK0123456789',
         'provider_id' => 'provider-secret',
-        'tax_number' => 'TAX-SECRET',
+        'tax_number' => 'TAX-SECRET-'.$user->id,
         'admin_notes' => 'admin-only note',
         'company_name' => 'Company '.$user->id,
         ...$attributes,
