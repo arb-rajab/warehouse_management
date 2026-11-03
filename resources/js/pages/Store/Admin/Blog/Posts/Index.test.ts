@@ -10,6 +10,7 @@ import {
 } from '@/actions/App/Http/Controllers/Store/Admin/BlogController';
 import AddResourceLink from '@/components/AddResourceLink.vue';
 import Pagination from '@/components/Pagination.vue';
+import StoreStatusSwitch from '@/components/StoreStatusSwitch.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
 import { t } from '@/lib/i18n';
@@ -137,7 +138,15 @@ describe('Store blog posts Index', () => {
         expect(statusForm.get('button').attributes()).toMatchObject({
             type: 'submit',
             disabled: '',
-            'aria-pressed': 'true',
+            role: 'switch',
+            'aria-checked': 'true',
+            'aria-busy': 'true',
+            'aria-label': t('store.blogPosts.index.columnStatus'),
+        });
+        expect(wrapper.getComponent(StoreStatusSwitch).props()).toMatchObject({
+            action: changeStatus(blog, { mergeQuery: {} }),
+            checked: true,
+            label: t('store.blogPosts.index.columnStatus'),
         });
         expect(statusForm.text()).toContain('Invalid publication status');
         const unpublished = mountPage([{ ...blog, status: false }]);
@@ -147,6 +156,9 @@ describe('Store blog posts Index', () => {
                     .element as HTMLInputElement
             ).value,
         ).toBe('1');
+        expect(
+            unpublished.get('[role="switch"]').attributes('aria-checked'),
+        ).toBe('false');
     });
     it('hides every mutation affordance without its matching permission', () => {
         const wrapper = mountPage([blog], ['view_blogs']);
@@ -154,6 +166,7 @@ describe('Store blog posts Index', () => {
         expect(wrapper.findAllComponents(TableActionLink)).toHaveLength(0);
         expect(wrapper.find('input[name="status"]').exists()).toBe(false);
         expect(wrapper.findAllComponents(Form)).toHaveLength(1);
+        expect(wrapper.findComponent(StoreStatusSwitch).exists()).toBe(false);
     });
     it('confirms deletion using the stored title and honors cancellation', () => {
         const wrapper = mountPage();

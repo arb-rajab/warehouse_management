@@ -25,7 +25,7 @@
         "name": "Final product",
         "ar_name": "المنتج",
         "thumbnail_url": "<app-url>/assets/img/placeholder.jpg",
-        "mat_id": null,
+        "mat_id": "<product id>",
         "unit": "(1)",
         "num_of_sale": 0,
         "base_price": "3€",
@@ -39,6 +39,7 @@
         "featured": false,
         "approved": true,
         "todays_deal": false,
+        "published_locked": false,
         "deleted_from_api": false,
         "public_url": "<app-url>/temp/product/d15-final"
     },
@@ -208,7 +209,7 @@
                     "banner": ""
                 },
                 "serial": null,
-                "mat_id": null,
+                "mat_id": "<product id>",
                 "max_qty": 1000,
                 "link": "<app-url>/temp/product/d15-final",
                 "wholesale": [],

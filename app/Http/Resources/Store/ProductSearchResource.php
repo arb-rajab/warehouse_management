@@ -8,7 +8,6 @@ use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
  * @property-read int $id
- * @property-read string|null $mat_id
  * @property-read Product $resource
  */
 class ProductSearchResource extends JsonResource
@@ -19,7 +18,7 @@ class ProductSearchResource extends JsonResource
         return [
             'id' => $this->id,
             'name' => $this->resource->getTranslation('name'),
-            'mat_id' => $this->mat_id,
+            'mat_id' => (string) $this->id,
         ];
     }
 }

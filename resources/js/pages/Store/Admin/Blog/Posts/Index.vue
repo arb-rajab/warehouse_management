@@ -11,10 +11,10 @@ import {
 } from '@/actions/App/Http/Controllers/Store/Admin/BlogController';
 import AddResourceLink from '@/components/AddResourceLink.vue';
 import DataTable from '@/components/DataTable.vue';
-import FieldError from '@/components/FieldError.vue';
 import FormField from '@/components/FormField.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import Pagination from '@/components/Pagination.vue';
+import StoreStatusSwitch from '@/components/StoreStatusSwitch.vue';
 import SubmitButton from '@/components/SubmitButton.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
@@ -87,39 +87,12 @@ function onPerPageChange(perPage: number): void {
                     {{ blog.category?.category_name ?? '—' }}
                 </td>
                 <td class="px-4 py-2">
-                    <Form
+                    <StoreStatusSwitch
                         v-if="access.can('publish_blog')"
                         :action="changeStatus(blog, { mergeQuery: {} })"
-                        :options="{ preserveScroll: true }"
-                        #default="{ errors, processing }"
-                    >
-                        <input
-                            type="hidden"
-                            name="status"
-                            :value="blog.status ? '0' : '1'"
-                        />
-                        <button
-                            type="submit"
-                            :class="filterTriggerButtonClass"
-                            :disabled="processing"
-                            :aria-pressed="blog.status"
-                        >
-                            <Check v-if="blog.status" class="size-4" /><X
-                                v-else
-                                class="size-4"
-                            />
-                            {{
-                                t(
-                                    processing
-                                        ? 'store.blogPosts.index.updating'
-                                        : blog.status
-                                          ? 'store.blogPosts.index.unpublish'
-                                          : 'store.blogPosts.index.publish',
-                                )
-                            }}
-                        </button>
-                        <FieldError :message="errors.status" />
-                    </Form>
+                        :checked="blog.status"
+                        :label="t('store.blogPosts.index.columnStatus')"
+                    />
                     <Check
                         v-else-if="blog.status"
                         :aria-label="t('store.blogPosts.index.columnStatus')"

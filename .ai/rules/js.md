@@ -25,6 +25,7 @@ Alongside FormField / SubmitButton / DataTable, these are the single definitions
 - `components/AddResourceLink.vue` — the "Add X" header button; bakes in the Plus icon. Props: href, label.
 - `lib/confirm.ts` `confirmDelete(label)` — the only place the "Delete {label}? This cannot be undone." wording lives. Pass `` `row ${row.letter}` `` or a user's name.
 - `lib/location.ts` `formatSlot(rowLetter, cellNumber, flatNumber)` — the `A3·2` slot label. The `·` separator must not be re-typed; CellStatusLogs/Index and Rows/Show had drifted copies of this format.
+- `components/StoreStatusSwitch.vue` — the on/off switch for a status flag toggled straight from a list row (role `switch`, locked state, RTL-aware). Never an Enable/Disable button pair; see [status-switches.md](status-switches.md).
 
 ## lib/date.ts formats dates/durations locale-aware, not with the browser default
 

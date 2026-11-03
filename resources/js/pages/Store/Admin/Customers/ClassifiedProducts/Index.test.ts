@@ -10,6 +10,7 @@ import {
 import DataTable from '@/components/DataTable.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import Pagination from '@/components/Pagination.vue';
+import StoreStatusSwitch from '@/components/StoreStatusSwitch.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
 import { i18n, t } from '@/lib/i18n';
@@ -137,8 +138,6 @@ describe('classified products', () => {
                 'actions',
                 'statusPublished',
                 'statusUnpublished',
-                'publish',
-                'unpublish',
                 'show',
                 'delete',
             ]) {
@@ -199,6 +198,16 @@ describe('classified products', () => {
         );
         expect(form.get('[role="switch"]').attributes('aria-label')).toBe(
             t('store.classifiedProducts.toggle', { name: row.name }),
+        );
+        expect(wrapper.getComponent(StoreStatusSwitch).props()).toMatchObject({
+            checked: false,
+            stateLabels: {
+                on: t('store.classifiedProducts.statusPublished'),
+                off: t('store.classifiedProducts.statusUnpublished'),
+            },
+        });
+        expect(form.get('[role="switch"]').text()).toBe(
+            t('store.classifiedProducts.statusUnpublished'),
         );
         await wrapper.setProps({
             products: paginated([storeClassifiedProduct({ published: true })]),

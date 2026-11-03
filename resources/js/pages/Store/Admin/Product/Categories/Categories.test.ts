@@ -15,7 +15,7 @@ import Pagination from '@/components/Pagination.vue';
 import ResourceFormPage from '@/components/ResourceFormPage.vue';
 import StoreCategoryFormFields from '@/components/StoreCategoryFormFields.vue';
 import StoreLanguageTabs from '@/components/StoreLanguageTabs.vue';
-import StoreStatusButton from '@/components/StoreStatusButton.vue';
+import StoreStatusSwitch from '@/components/StoreStatusSwitch.vue';
 import SubmitButton from '@/components/SubmitButton.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
 import TableLink from '@/components/TableLink.vue';
@@ -179,10 +179,10 @@ describe('category pages', () => {
                 destroy(category, { mergeQuery: {} }),
             ]);
             expect(
-                wrapper.getComponent(StoreStatusButton).props(),
+                wrapper.getComponent(StoreStatusSwitch).props(),
             ).toMatchObject({
                 action: updateFeatured({ mergeQuery: {} }),
-                active: false,
+                checked: false,
                 label: t('store.categories.featured'),
             });
             expect(wrapper.get('form input[name=id]').attributes('value')).toBe(
@@ -196,7 +196,7 @@ describe('category pages', () => {
         const read = indexPage(['view_product_categories']);
         expect(read.findComponent(AddResourceLink).exists()).toBe(false);
         expect(read.findAllComponents(TableActionLink)).toHaveLength(0);
-        expect(read.findComponent(StoreStatusButton).exists()).toBe(false);
+        expect(read.findComponent(StoreStatusSwitch).exists()).toBe(false);
         expect(read.findComponent(TableLink).exists()).toBe(false);
         expect(read.get('tbody').text()).toContain(
             t('store.reference.disabled'),

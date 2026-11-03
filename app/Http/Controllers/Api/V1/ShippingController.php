@@ -149,7 +149,7 @@ class ShippingController extends Controller
                     $shop['pickup_points']  = PickupPointResource::collection($pickup_point_list);
                 }
                 if(get_setting('minimum_order_amount_check') == 1){
-                    $default_delivery_fees = Product::where('mat_id', get_setting('default_specific_product'))->first();
+                    $default_delivery_fees = Product::where('id', get_setting('default_specific_product'))->first();
                     if(isset($default_delivery_fees)){ // in case the `transport` product got deleted.
                         $default_delivery_fees =  $default_delivery_fees->unit_price;
                     }

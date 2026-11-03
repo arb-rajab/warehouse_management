@@ -59,7 +59,7 @@ class PurchaseHistoryItemsCollection extends ResourceCollection
                     'id' => $data->id,
                     'product_id' => $data->product?->id ?? $data->product_id,
                     'product_name' => $data->product?->getTranslation('name') ?? '',
-                    'mat_id' => $data->product?->mat_id,
+                    'mat_id' => $data->product === null ? null : (string) $data->product->id,
                     'variation' => $data->variation,
                     'variation_quantities' => $transformedData,
                     'price' => format_price($data->price),

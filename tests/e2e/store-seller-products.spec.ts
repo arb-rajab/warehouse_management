@@ -46,12 +46,10 @@ test('seller product native confirmation works in the Inertia list under RTL dar
     );
     const row = page.getByRole('row', { name: /Browser seller confirmation/ });
     await expect(row).toBeVisible();
-    await row
-        .getByRole('button', { name: 'Enable Approved', exact: true })
-        .click();
+    await row.getByRole('switch', { name: 'Approved', exact: true }).click();
     await expect(
-        row.getByRole('button', { name: 'Disable Approved', exact: true }),
-    ).toBeVisible();
+        row.getByRole('switch', { name: 'Approved', exact: true }),
+    ).toHaveAttribute('aria-checked', 'true');
     await expect(page).toHaveURL(/per_page=10/);
     page.once('dialog', (dialog) => dialog.dismiss());
     await row.getByRole('button', { name: 'Delete', exact: true }).click();

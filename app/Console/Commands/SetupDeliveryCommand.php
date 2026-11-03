@@ -22,7 +22,7 @@ use Illuminate\Support\Facades\DB;
     {--price=5 : The carrier price for that country}
     {--transit-days=2 : The carrier transit time in days}
     {--minimum= : The minimum order amount; switches the minimum order check on}
-    {--fee-mat-id= : The mat_id of the delivery fee product added to an order below the minimum}')]
+    {--fee-mat-id= : The product id of the delivery fee product added to an order below the minimum}')]
 #[Description('Give a development database one carrier for a country and, optionally, a minimum order amount (what GET delivery-info needs to be tested)')]
 class SetupDeliveryCommand extends Command
 {
@@ -44,8 +44,8 @@ class SetupDeliveryCommand extends Command
 
         $fee = $this->option('fee-mat-id');
 
-        if (filled($fee) && ! Product::query()->where('mat_id', $fee)->exists()) {
-            $this->components->error('There is no product with mat_id "'.$fee.'" for the delivery fee.');
+        if (filled($fee) && (! ctype_digit((string) $fee) || ! Product::query()->whereKey((int) $fee)->exists())) {
+            $this->components->error('There is no product with id "'.$fee.'" for the delivery fee.');
 
             return self::FAILURE;
         }

@@ -428,6 +428,39 @@ describe('Store/Admin/Product/Products/Edit', () => {
         );
     });
 
+    it('locks the synced unit, unit price and description of a synced product', () => {
+        const wrapper = editPage({
+            lang: 'en',
+            unit: 'bottle',
+            description: '<p>Synced text</p>',
+            readOnlyFields: ['unit', 'unit_price', 'description'],
+        });
+
+        expect(wrapper.get('#unit').attributes('readonly')).toBeDefined();
+        expect(inputValue(wrapper, '#unit')).toBe('bottle');
+        expect(wrapper.get('#unit_price').attributes('readonly')).toBeDefined();
+        expect(wrapper.get('#unit-otajer-synced').text()).toBe(
+            t('store.products.form.otajerSynced'),
+        );
+        expect(wrapper.find('#unit_price-otajer-synced').exists()).toBe(true);
+        expect(wrapper.get('#description').text()).toBe('Synced text');
+        expect(
+            (
+                wrapper.get('input[type="hidden"][name="description"]')
+                    .element as HTMLInputElement
+            ).value,
+        ).toBe('<p>Synced text</p>');
+        expect(wrapper.get('#otajer-synced-fields').text()).toBe(
+            t('store.products.form.otajerSyncedFields', {
+                fields: ['unit', 'unit_price', 'description']
+                    .map((field) =>
+                        t(`store.productFieldSources.fields.${field}`),
+                    )
+                    .join(', '),
+            }),
+        );
+    });
+
     it('keeps every field editable when nothing is read-only', () => {
         const wrapper = editPage();
 
@@ -441,5 +474,15 @@ describe('Store/Admin/Product/Products/Edit', () => {
         expect(wrapper.get('#ar_name').attributes('required')).toBeUndefined();
         expect(wrapper.find('#otajer-synced-fields').exists()).toBe(false);
         expect(wrapper.find('#name-otajer-synced').exists()).toBe(false);
+        expect(wrapper.get('#unit').attributes('readonly')).toBeUndefined();
+        expect(
+            wrapper.get('#unit_price').attributes('readonly'),
+        ).toBeUndefined();
+        // The editable editor posts description through its own hidden input,
+        // so the locked block is told apart by its Otajer note instead.
+        expect(wrapper.find('#description-otajer-synced').exists()).toBe(false);
+        expect(
+            wrapper.findAll('input[type="hidden"][name="description"]'),
+        ).toHaveLength(1);
     });
 });

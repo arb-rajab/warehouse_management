@@ -97,7 +97,7 @@ class ProductController extends Controller
     {
         $product = Product::findOrFail($id);
         return response()->json([
-            'mat_id' => $product->mat_id,
+            'mat_id' => (string) $product->id,
             'unit' => $product->unit,
             'unit_price' => $product->unit_price,
             'tax' => $product->tax

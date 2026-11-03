@@ -78,6 +78,8 @@ class NewFetchProductsCommand extends Command
     {
         // Otajer-synced fields the admin owns are never written by this import.
         $fieldSources = app(\App\Services\ProductFieldSourceService::class);
+        // An admin-owned unit price also leaves the existing stock prices alone.
+        $repriceStocks = ! $fieldSources->isAdminOwned('unit_price');
 
         // if there is already a running fetching-products-by-admin  command, exit to prevent duplicates products
         $cron_job_exists = CronJobs::where(function ($query) {
@@ -235,7 +237,6 @@ class NewFetchProductsCommand extends Command
                         'category_id' => $categoryId,
                         'brand_id' => $product['Mat_Class4_ID'] ? Brand::where('serial', $product['Mat_Class4_ID'])->first()?->id : null,
                         'collection_id' => $productCollectionId,
-                        'mat_id' => $product['Mat_ID'],
                         'variations' => json_encode($product['Variations'], JSON_UNESCAPED_UNICODE),
                         'from_api' => 1,
                         'published' => $product['Active'] ? (($product['enCatName'] || $product['arCatName']) ? true : false) : false,
@@ -286,13 +287,13 @@ class NewFetchProductsCommand extends Command
                             }
                             if (Str::contains($productStock->variant, 'PerBox')) {
                                 $productStock->update([
-                                    'price' => $product['Price'],
+                                    ...($repriceStocks ? ['price' => $product['Price']] : []),
                                     'qty' => $quantity,
                                     //'sku' => $product['enName'] . '-' . $product['Unit_Equal'] . '-' . uniqid(),
                                 ]);
                             } else { // update the PerPiece
                                 $productStock->update([
-                                    'price' => ($product['Price'] / $product['Unit_Equal']),
+                                    ...($repriceStocks ? ['price' => ($product['Price'] / $product['Unit_Equal'])] : []),
                                     'qty' => $quantity,
                                     //'sku' => $product['enName'] . '-' . $product['Unit_Equal'] . '-' . uniqid(),
                                 ]);
@@ -436,7 +437,6 @@ class NewFetchProductsCommand extends Command
                         'variant_product' => $variant_product,
                         'published' => $productDetails['Active'] ? ($productDetails['enCatName'] ? true : false) : false,
                         'for_sale' => $productDetails['enCatName'] ? 1 : 0,
-                        'mat_id' => $productDetails['Mat_ID'],
                         //    'mat_barcode_guid' => isset($productDetails['barcodes'][0]["Mat_BarCode_Guid"])? $productDetails['barcodes'][0]["Mat_BarCode_Guid"] : null,
                         'variations' => json_encode($productDetails['variations'], JSON_UNESCAPED_UNICODE),
                         'from_api' => 1,

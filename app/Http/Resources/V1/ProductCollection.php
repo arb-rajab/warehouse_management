@@ -25,7 +25,7 @@ class ProductCollection extends ResourceCollection
                     'featured' =>(int) $data->featured,
                     'unit' => $data->unit,
                     'serial' => $data->serial,
-                    'mat_id' => $data->mat_id,
+                    'mat_id' => (string) $data->id,
                     'discount' => (float) $data->discount,
                     'discount_type' => $data->discount_type,
                     'rating' => (float) $data->rating,

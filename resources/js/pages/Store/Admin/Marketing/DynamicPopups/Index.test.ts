@@ -11,6 +11,7 @@ import {
 } from '@/actions/App/Http/Controllers/Store/Admin/DynamicPopupController';
 import AddResourceLink from '@/components/AddResourceLink.vue';
 import Pagination from '@/components/Pagination.vue';
+import StoreStatusSwitch from '@/components/StoreStatusSwitch.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
 import { t } from '@/lib/i18n';
 import { paginated, storeSharedProps } from '@/testing/factories';
@@ -80,7 +81,6 @@ describe('Store popup Index', () => {
             'search',
             'deleteSelection',
             'hidden',
-            'publish',
             'edit',
             'delete',
             'selectAll',
@@ -103,6 +103,22 @@ describe('Store popup Index', () => {
             bulkDestroy({ mergeQuery: {} }),
             updateStatus({ mergeQuery: {} }),
         ]);
+        const publication = wrapper.getComponent(StoreStatusSwitch);
+        expect(publication.props()).toMatchObject({
+            action: updateStatus({ mergeQuery: {} }),
+            checked: false,
+            label: t('store.dynamicPopups.index.toggle', { title: 'Welcome' }),
+            stateLabels: {
+                on: t('store.dynamicPopups.index.published'),
+                off: t('store.dynamicPopups.index.hidden'),
+            },
+        });
+        expect(publication.get('input[name="id"]').attributes('value')).toBe(
+            '1',
+        );
+        expect(
+            publication.get('[role="switch"]').attributes('aria-checked'),
+        ).toBe('false');
     });
     it('asks before publishing or deleting and sends authoritative next status', () => {
         const wrapper = mountPage();
@@ -138,6 +154,10 @@ describe('Store popup Index', () => {
         expect(wrapper.findComponent(AddResourceLink).exists()).toBe(false);
         expect(wrapper.findAllComponents(TableActionLink)).toHaveLength(0);
         expect(wrapper.findAllComponents(Form)).toHaveLength(1);
+        expect(wrapper.findComponent(StoreStatusSwitch).exists()).toBe(false);
+        expect(wrapper.get('tbody').text()).toContain(
+            t('store.dynamicPopups.index.hidden'),
+        );
         wrapper.getComponent(Pagination).vm.$emit('update:perPage', 50);
         expect(routerGetMock).toHaveBeenCalledWith(
             popupsIndex.url(),

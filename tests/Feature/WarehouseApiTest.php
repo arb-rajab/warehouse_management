@@ -207,6 +207,18 @@ test('a list refuses a page size over the maximum', function (string $path) {
         ->assertJsonPath('result', false);
 })->with(['/customers', '/reps', '/orders', '/products', '/categories']);
 
+test('the products list keeps the mat_id key as the product id', function () {
+    $product = Product::factory()->create(['id' => 734251, 'serial' => 'SER-1']);
+    $noise = Product::factory()->create(['id' => 734252, 'serial' => 'SER-2']);
+
+    $rows = collect(warehouse()->getJson(WAREHOUSE_URL.'/products')->assertOk()->json('data'))->keyBy('id');
+
+    expect($rows->keys()->all())->toContain($product->id, $noise->id)
+        ->and($rows[$product->id])->toHaveKeys(['id', 'serial', 'name', 'unit_price', 'unit_equal', 'mat_id', 'photos', 'otajer_photo'])
+        ->and($rows[$product->id]['mat_id'])->toBe('734251')
+        ->and($rows[$noise->id]['mat_id'])->toBe('734252');
+});
+
 // Order items
 
 test('the order items endpoint loads the order and products once however many lines it has', function () {

@@ -43,29 +43,25 @@ test('digital product list switches, native delete confirmation and Inertia visi
     const kept = page.getByRole('row', { name: /Browser kept e-book/ });
 
     await row
-        .getByRole('button', { name: "Enable Today's deal", exact: true })
+        .getByRole('switch', { name: "Today's deal", exact: true })
         .click();
     await expect(
-        row.getByRole('button', { name: "Disable Today's deal", exact: true }),
-    ).toBeVisible();
-    await row
-        .getByRole('button', { name: 'Enable Featured', exact: true })
-        .click();
+        row.getByRole('switch', { name: "Today's deal", exact: true }),
+    ).toHaveAttribute('aria-checked', 'true');
+    await row.getByRole('switch', { name: 'Featured', exact: true }).click();
     await expect(
-        row.getByRole('button', { name: 'Disable Featured', exact: true }),
-    ).toBeVisible();
-    await row
-        .getByRole('button', { name: 'Disable Published', exact: true })
-        .click();
+        row.getByRole('switch', { name: 'Featured', exact: true }),
+    ).toHaveAttribute('aria-checked', 'true');
+    await row.getByRole('switch', { name: 'Published', exact: true }).click();
     await expect(
-        row.getByRole('button', { name: 'Enable Published', exact: true }),
-    ).toBeVisible();
+        row.getByRole('switch', { name: 'Published', exact: true }),
+    ).toHaveAttribute('aria-checked', 'false');
     await expect(
-        row.getByRole('button', { name: 'Enable Featured', exact: true }),
-    ).toBeVisible();
+        row.getByRole('switch', { name: 'Featured', exact: true }),
+    ).toHaveAttribute('aria-checked', 'false');
     await expect(
-        kept.getByRole('button', { name: 'Disable Published', exact: true }),
-    ).toBeVisible();
+        kept.getByRole('switch', { name: 'Published', exact: true }),
+    ).toHaveAttribute('aria-checked', 'true');
     seedStoreFixtures(String.raw`
         $product = App\Models\Product::where('name','Browser e-book')->firstOrFail();
         if ($product->published || $product->featured != 0 || $product->todays_deal != 1) {throw new RuntimeException('Switch writes were not persisted');}
@@ -164,8 +160,8 @@ test('digital product list keeps RTL and dark contrast and opens from the sideba
     ).toBeVisible();
     const row = page.getByRole('row', { name: /Browser e-book/ });
     await expect(
-        row.getByRole('button', { name: 'تعطيل منشور', exact: true }),
-    ).toBeVisible();
+        row.getByRole('switch', { name: 'منشور', exact: true }),
+    ).toHaveAttribute('aria-checked', 'true');
     await expect(
         row.getByRole('link', { name: 'تعديل', exact: true }),
     ).toBeVisible();

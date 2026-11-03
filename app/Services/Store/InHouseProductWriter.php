@@ -29,12 +29,14 @@ use Illuminate\Support\Str;
  * SellerProductWriter and shares the explicit computations in PhysicalProductWriter. Taxes and
  * flash deals still go through their services.
  *
- * Option A (shared-database.md): the store owns all columns except name,
- * ar_name and published on feed-origin rows. Product's assignment and builder
+ * Option A (shared-database.md): the store owns all columns except the
+ * Otajer-owned synced ones (product_field_sources.php) on feed-origin rows. Product's assignment and builder
  * guards enforce that boundary here too; model inserts always have null
  * synced_at, including duplicates. The owner decision is recorded in §52.
  * Which synced fields are Otajer-owned is the admin's per-field choice
- * (ProductFieldSourceService); update() ignores a posted read-only one.
+ * (ProductFieldSourceService); update() ignores a posted read-only one
+ * (name, ar_name, unit, unit_price and description are on the form; the
+ * others have no field there and only the guard protects them).
  * The caller wraps each write in one transaction.
  */
 class InHouseProductWriter extends PhysicalProductWriter
@@ -108,8 +110,17 @@ class InHouseProductWriter extends PhysicalProductWriter
         // product keeps its synced value whatever was posted, and the
         // default-language translation mirrors that name.
         $readOnly = $this->fieldSources->readOnlyFieldsFor($product);
-        if (in_array('name', $readOnly, true) && $data['lang'] === config('app.default_language')) {
-            $data['name'] = (string) $product->name;
+        // The name, unit and description are the default language's only;
+        // other languages edit a translation the sync never writes.
+        if ($data['lang'] === config('app.default_language')) {
+            foreach (array_intersect(['name', 'unit', 'description'], $readOnly) as $field) {
+                $data[$field] = $product->getAttribute($field);
+            }
+        }
+        // The unit price is shared by the languages; the stock row of a
+        // product with no variants is priced from it.
+        if (in_array('unit_price', $readOnly, true)) {
+            $data['unit_price'] = $product->getAttribute('unit_price');
         }
         $columns = $this->postedColumns($data);
         if (array_key_exists('ar_name', $data) && ! in_array('ar_name', $readOnly, true)) {

@@ -5,9 +5,13 @@ import {
     index as campaignIndex,
     edit,
     destroy,
+    update_multiple_usage,
+    update_repeatable,
+    update_status,
 } from '@/actions/App/Http/Controllers/Store/Admin/OfferController';
 import AddResourceLink from '@/components/AddResourceLink.vue';
 import Pagination from '@/components/Pagination.vue';
+import StoreStatusSwitch from '@/components/StoreStatusSwitch.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
 import { t } from '@/lib/i18n';
 import { storeOffer, paginated, storeSharedProps } from '@/testing/factories';
@@ -82,6 +86,63 @@ it('renders every label, gates each write action and passes full route objects w
     expect(mountPage([], true).text()).toContain(
         t('store.campaigns.fields.empty'),
     );
+});
+it('shows the three offer flags as switches posting the inverse value', () => {
+    const wrapper = mountPage();
+    const switches = wrapper.findAllComponents(StoreStatusSwitch);
+    const query = { mergeQuery: {} };
+    const expected = [
+        {
+            field: 'active',
+            action: update_status(record, query),
+            checked: record.is_active,
+        },
+        {
+            field: 'repeatable',
+            action: update_repeatable(record, query),
+            checked: record.is_repeatable,
+        },
+        {
+            field: 'multipleUsage',
+            action: update_multiple_usage(record, query),
+            checked: record.multiple_usage,
+        },
+    ];
+    expect(switches.map((item) => item.props())).toMatchObject(
+        expected.map(({ field, action, checked }) => ({
+            action,
+            checked,
+            inputName: 'value',
+            label: t('store.campaigns.toggle', {
+                field: t(`store.campaigns.fields.${field}`),
+                title: record.title,
+            }),
+        })),
+    );
+    expected.forEach(({ checked }, index) => {
+        expect(
+            switches[index].get('[role="switch"]').attributes('aria-checked'),
+        ).toBe(String(checked));
+        expect(
+            switches[index].get('input[name=value]').attributes('value'),
+        ).toBe(checked ? '0' : '1');
+    });
+});
+it('shows each flag as translated text without its permission', () => {
+    const wrapper = mountPage([]);
+    const cells = wrapper.findAll('tbody td');
+    expect(wrapper.findComponent(StoreStatusSwitch).exists()).toBe(false);
+    expect(cells.slice(3, 6).map((cell) => cell.text())).toEqual(
+        [record.is_active, record.is_repeatable, record.multiple_usage].map(
+            (value) =>
+                t(
+                    value
+                        ? 'store.campaigns.enabled'
+                        : 'store.campaigns.disabled',
+                ),
+        ),
+    );
+    expect(wrapper.text()).not.toContain('{t(');
 });
 it('preserves search when paging and keeps public navigation a plain link', () => {
     const wrapper = mountPage();

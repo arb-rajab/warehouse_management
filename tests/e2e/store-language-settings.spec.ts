@@ -51,20 +51,23 @@ test('RTL settings and translation inputs coexist with Blade and retain Arabic l
     await page.goto('/temp/admin/languages');
     const row = page.getByRole('row', { name: /^Arabic/ });
 
-    for (const value of ['0', '1']) {
-        await row.locator('select').first().selectOption(value);
+    const rtl = row.getByRole('switch', {
+        name: 'Right-to-left for Arabic',
+        exact: true,
+    });
+    await expect(rtl).toHaveAttribute('aria-checked', 'true');
+
+    for (const expected of ['false', 'true']) {
         const saved = page.waitForResponse(
             (response) =>
                 response.url().endsWith('/languages/update_rtl_status') &&
                 response.request().method() === 'POST',
         );
-        await row
-            .getByRole('button', { name: 'Save', exact: true })
-            .first()
-            .click();
+        await rtl.click();
         expect((await saved).status()).toBe(302);
+        await expect(rtl).toHaveAttribute('aria-checked', expected);
         await page.reload();
-        await expect(row.locator('select').first()).toHaveValue(value);
+        await expect(rtl).toHaveAttribute('aria-checked', expected);
     }
 
     await switchLocale(page, 'Arabic');

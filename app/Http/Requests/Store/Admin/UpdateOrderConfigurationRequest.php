@@ -15,6 +15,6 @@ class UpdateOrderConfigurationRequest extends FormRequest
      */
     public function rules(): array
     {
-        return ['minimum_order_amount_check' => ['required', 'boolean'], 'minimum_order_amount' => ['required', 'numeric', 'min:0'], 'default_specific_product' => ['required', 'string', 'max:255', Rule::exists('products', 'mat_id')]];
+        return ['minimum_order_amount_check' => ['required', 'boolean'], 'minimum_order_amount' => ['required', 'numeric', 'min:0'], 'default_specific_product' => ['required', 'string', 'regex:/^[0-9]+$/', 'max:10', Rule::exists('products', 'id')]];
     }
 }

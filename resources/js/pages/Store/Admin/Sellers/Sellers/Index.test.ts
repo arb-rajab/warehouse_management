@@ -17,6 +17,7 @@ import DataTable from '@/components/DataTable.vue';
 import Pagination from '@/components/Pagination.vue';
 import StoreSellerPaymentDialog from '@/components/StoreSellerPaymentDialog.vue';
 import StoreSellerProfileDialog from '@/components/StoreSellerProfileDialog.vue';
+import StoreStatusSwitch from '@/components/StoreStatusSwitch.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
 import { confirmDelete } from '@/lib/confirm';
@@ -138,6 +139,22 @@ describe('seller list', () => {
         ]);
         expect(wrapper.getComponent(Form).props('action')).toEqual(
             approved({ mergeQuery: {} }),
+        );
+        const approval = wrapper.getComponent(StoreStatusSwitch);
+        expect(approval.props()).toMatchObject({
+            action: approved({ mergeQuery: {} }),
+            checked: storeSeller().approved,
+            label: t('store.sellers.approvalFor', {
+                name: storeSeller().name ?? storeSeller().account_name,
+            }),
+            stateLabels: {
+                on: t('store.sellers.approved'),
+                off: t('store.sellers.unapproved'),
+            },
+        });
+        expect(approval.get('input[name=id]').attributes('value')).toBe('17');
+        expect(approval.get('input[name=status]').attributes('value')).toBe(
+            storeSeller().approved ? '0' : '1',
         );
         expect(
             wrapper.find(`a[href="${login.url({ id: 17 })}"]`).exists(),

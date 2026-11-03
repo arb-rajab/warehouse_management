@@ -78,6 +78,8 @@ class AllProductsCommand extends Command
     {
         // Otajer-synced fields the admin owns are never written by this import.
         $fieldSources = app(\App\Services\ProductFieldSourceService::class);
+        // An admin-owned unit price also leaves the existing stock prices alone.
+        $repriceStocks = ! $fieldSources->isAdminOwned('unit_price');
         try {
             $start_time = Carbon::now();
             $products_count = 0;
@@ -197,7 +199,6 @@ class AllProductsCommand extends Command
                         'description' => $product['Desc'],
                         'variant_product' => $variant_product,
                         'category_id' => $product['enCatName'] ? Category::where('name', $product['enCatName'])->first()->id : Category::where('name', 'Uncategorized')->first()->id,
-                        'mat_id' => $product['Mat_ID'],
                         'variations' => json_encode($product['Variations'], JSON_UNESCAPED_UNICODE),
                         'from_api' => 1,
                         'published' => $product['enCatName'] ? 1 : 0,
@@ -214,14 +215,14 @@ class AllProductsCommand extends Command
                     foreach($productStocks as $productStock){
                         if(Str::contains($productStock->variant, 'PerBox')){
                                 $productStock->update([
-                                    'price' => $product['Price'],
+                                    ...($repriceStocks ? ['price' => $product['Price']] : []),
                                     'qty' => $product['enCatName'] ? 1000 : 0,
                                     //'sku' => $product['enName'] . '-' . $product['Unit_Equal'] . '-' . uniqid(),
                             ]);
                             }
                         else{
                                 $productStock->update([
-                                    'price' => ($product['Price'] / $product['Unit_Equal']),
+                                    ...($repriceStocks ? ['price' => ($product['Price'] / $product['Unit_Equal'])] : []),
                                     'qty' => $product['enCatName'] ? 1000 : 0,
                                     //'sku' => $product['enName'] . '-' . $product['Unit_Equal'] . '-' . uniqid(),
                                 ]);
@@ -348,7 +349,6 @@ class AllProductsCommand extends Command
                             'description' => $productDetails['Desc'],
                             'variant_product' => $variant_product,
                             'published' => $productDetails['enCatName'] ? 1 : 0,
-                            'mat_id' => $productDetails['Mat_ID'],
                         //    'mat_barcode_guid' => isset($productDetails['barcodes'][0]["Mat_BarCode_Guid"])? $productDetails['barcodes'][0]["Mat_BarCode_Guid"] : null,
                             'variations' => json_encode($productDetails['variations'], JSON_UNESCAPED_UNICODE),
                             'from_api' => 1,

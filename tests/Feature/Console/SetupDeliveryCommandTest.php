@@ -53,12 +53,12 @@ test('running the command again changes the price and adds no second carrier', f
 
 test('the command sets the minimum order and the fee product that delivery-info reports', function () {
     $customer = dutchCustomerWithCart();
-    $fee = createStoreProduct(['mat_id' => 'TRANSPORT', 'unit_price' => 7]);
+    $fee = createStoreProduct(['unit_price' => 7]);
 
-    $this->artisan('store:setup-delivery', ['--minimum' => 50, '--fee-mat-id' => 'TRANSPORT'])->assertSuccessful();
+    $this->artisan('store:setup-delivery', ['--minimum' => 50, '--fee-mat-id' => (string) $fee->id])->assertSuccessful();
 
     $shop = $this->withToken(storeApiToken($customer))->getJson('/api/v1/store/delivery-info')->assertOk()->json('0');
-    expect($shop['minimum_order_amount'])->toBe(50)->and((float) $shop['default_delivery_fees'])->toBe(7.0)->and($fee->mat_id)->toBe('TRANSPORT');
+    expect($shop['minimum_order_amount'])->toBe(50)->and((float) $shop['default_delivery_fees'])->toBe(7.0)->and(DB::table('business_settings')->where('type', 'default_specific_product')->value('value'))->toBe((string) $fee->id);
 });
 
 test('the command refuses an unknown country, an unknown fee product and a bad minimum, and writes nothing', function (array $options, string $message) {
@@ -67,6 +67,6 @@ test('the command refuses an unknown country, an unknown fee product and a bad m
     expect(Carrier::count())->toBe(0)->and(DB::table('business_settings')->whereIn('type', ['minimum_order_amount_check', 'default_specific_product'])->count())->toBe(0);
 })->with([
     'unknown country' => [['--country' => 'Atlantis'], 'no country named'],
-    'unknown fee product' => [['--fee-mat-id' => 'NOPE'], 'no product with mat_id'],
+    'unknown fee product' => [['--fee-mat-id' => 'NOPE'], 'no product with id'],
     'bad minimum' => [['--minimum' => 'lots'], '--minimum must be a number'],
 ]);

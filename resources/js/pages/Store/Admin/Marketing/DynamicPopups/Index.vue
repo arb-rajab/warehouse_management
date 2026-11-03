@@ -16,6 +16,7 @@ import FieldError from '@/components/FieldError.vue';
 import FormField from '@/components/FormField.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import Pagination from '@/components/Pagination.vue';
+import StoreStatusSwitch from '@/components/StoreStatusSwitch.vue';
 import SubmitButton from '@/components/SubmitButton.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
@@ -166,39 +167,27 @@ function selectAll(checked: boolean): void {
                 <td class="px-4 py-2">{{ popup.title }}</td>
                 <td class="px-4 py-2 break-all">{{ popup.btn_link }}</td>
                 <td class="px-4 py-2">
-                    <span>{{
+                    <StoreStatusSwitch
+                        v-if="access.can('publish_dynamic_popups')"
+                        :action="updateStatus({ mergeQuery: {} })"
+                        :checked="popup.status"
+                        :label="
+                            t('store.dynamicPopups.index.toggle', {
+                                title: popup.title,
+                            })
+                        "
+                        :state-labels="{
+                            on: t('store.dynamicPopups.index.published'),
+                            off: t('store.dynamicPopups.index.hidden'),
+                        }"
+                        :on-before="() => confirmPublication(popup.status)"
+                        ><input type="hidden" name="id" :value="popup.id"
+                    /></StoreStatusSwitch>
+                    <span v-else>{{
                         popup.status
                             ? t('store.dynamicPopups.index.published')
                             : t('store.dynamicPopups.index.hidden')
                     }}</span>
-                    <Form
-                        v-if="access.can('publish_dynamic_popups')"
-                        :action="updateStatus({ mergeQuery: {} })"
-                        :on-before="() => confirmPublication(popup.status)"
-                        #default="{ errors, processing }"
-                        :options="{ preserveScroll: true }"
-                    >
-                        <input type="hidden" name="id" :value="popup.id" />
-                        <input
-                            type="hidden"
-                            name="status"
-                            :value="popup.status ? 0 : 1"
-                        />
-                        <SubmitButton
-                            :label="
-                                t(
-                                    popup.status
-                                        ? 'store.dynamicPopups.index.hide'
-                                        : 'store.dynamicPopups.index.publish',
-                                )
-                            "
-                            :processing-label="
-                                t('store.dynamicPopups.index.updating')
-                            "
-                            :processing="processing"
-                        />
-                        <FieldError :message="errors.status ?? errors.id" />
-                    </Form>
                 </td>
                 <td class="px-4 py-2">
                     <div class="flex gap-2">

@@ -166,7 +166,7 @@ test('seller filter options are narrow seller accounts and approval follows its 
 test('seller rows expose the full shared payload and exclude every other product kind', function () {
     actingAsStoreUser(createStoreStaff('show_seller_products'));
     DB::table('products')->where('id', $this->product->id)->update([
-        'mat_id' => 'S1', 'api_unit_name' => 'Box', 'unit_equal' => 12, 'num_of_sale' => 3,
+        'api_unit_name' => 'Box', 'unit_equal' => 12, 'num_of_sale' => 3,
         'low_stock_quantity' => 10, 'for_sale' => 1, 'approved' => 0, 'todays_deal' => 1,
     ]);
     foreach (['admin', 'customer'] as $owner) {
@@ -179,11 +179,11 @@ test('seller rows expose the full shared payload and exclude every other product
     $this->get(route('products.seller', ['active' => 1, 'for_sale' => 1, 'featured' => 1]))->assertOk()->assertInertia(fn (Assert $page) => $page
         ->has('products.data', 1)->has('products.data.0', fn (Assert $row) => $row
         ->where('id', $this->product->id)->where('name', 'Seller oil')->where('ar_name', 'زيت البائع')
-        ->where('thumbnail_url', static_asset('assets/img/placeholder.jpg'))->where('mat_id', 'S1')->where('unit', 'Box(12)')
+        ->where('thumbnail_url', static_asset('assets/img/placeholder.jpg'))->where('mat_id', (string) $this->product->id)->where('unit', 'Box(12)')
         ->where('num_of_sale', 3)->where('base_price', single_price(2.5))->where('profit', single_price(0))
         ->where('variant_stocks', null)->where('stock_quantity', 7)->where('low_stock', true)->where('category', null)
         ->where('for_sale', true)->where('published', true)->where('featured', true)->where('approved', false)->where('todays_deal', true)
-        ->where('deleted_from_api', false)->where('public_url', route('product', 'seller-oil'))));
+        ->where('published_locked', false)->where('deleted_from_api', false)->where('public_url', route('product', 'seller-oil'))));
 });
 
 test('seller filters retain exact state matching and name phrase search with owner category approval and sort', function () {

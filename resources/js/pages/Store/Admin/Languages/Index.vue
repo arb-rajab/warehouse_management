@@ -18,7 +18,7 @@ import FormField from '@/components/FormField.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import Pagination from '@/components/Pagination.vue';
 import RequiredLegend from '@/components/RequiredLegend.vue';
-import StoreBooleanField from '@/components/StoreBooleanField.vue';
+import StoreStatusSwitch from '@/components/StoreStatusSwitch.vue';
 import SubmitButton from '@/components/SubmitButton.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
@@ -77,79 +77,49 @@ const hasRequiredFields = provideRequiredFields();
                     <td class="px-4 py-2">{{ language.name }}</td>
                     <td class="px-4 py-2">{{ language.code }}</td>
                     <td class="px-4 py-2">
-                        <Form
+                        <StoreStatusSwitch
                             v-if="access.can('language_setup')"
                             :action="updateRtlStatus({ mergeQuery: {} })"
-                            :transform="
-                                (data) => ({
-                                    id: data.id,
-                                    status: data[`rtl-${language.id}`],
+                            :checked="language.rtl"
+                            :label="
+                                t('store.languages.rtlFor', {
+                                    name: language.name,
                                 })
                             "
-                            #default="{ errors, processing }"
-                        >
-                            <RequiredLegend v-if="hasRequiredFields" />
-                            <input
+                            ><input
                                 type="hidden"
                                 name="id"
                                 :value="language.id"
-                            />
-                            <StoreBooleanField
-                                :name="`rtl-${language.id}`"
-                                :label="t('store.languages.rtl')"
-                                :value="language.rtl"
-                                :error="errors.status"
-                            />
-                            <SubmitButton
-                                :label="t('store.settings.save')"
-                                :processing-label="t('store.settings.saving')"
-                                :processing="processing"
-                            />
-                        </Form>
+                        /></StoreStatusSwitch>
                     </td>
                     <td class="px-4 py-2">
-                        <Form
+                        <StoreStatusSwitch
                             v-if="access.can('language_setup')"
                             :action="updateStatus({ mergeQuery: {} })"
-                            :transform="
-                                (data) => ({
-                                    id: data.id,
-                                    status: language.is_default
-                                        ? 1
-                                        : data[`status-${language.id}`],
+                            :checked="language.status"
+                            :label="
+                                t('store.languages.statusFor', {
+                                    name: language.name,
                                 })
                             "
-                            #default="{ errors, processing }"
-                        >
-                            <RequiredLegend
-                                v-if="hasRequiredFields && !language.is_default"
-                            />
-                            <input
+                            :locked="
+                                language.is_default
+                                    ? {
+                                          reason: t(
+                                              'store.languages.defaultLocked',
+                                          ),
+                                          hint: t(
+                                              'store.languages.defaultReadOnly',
+                                              { code: defaultLanguage },
+                                          ),
+                                      }
+                                    : undefined
+                            "
+                            ><input
                                 type="hidden"
                                 name="id"
                                 :value="language.id"
-                            />
-                            <StoreBooleanField
-                                :required="!language.is_default"
-                                :name="`status-${language.id}`"
-                                :label="t('store.languages.status')"
-                                :value="language.status"
-                                :disabled="language.is_default"
-                                :error="errors.status"
-                            />
-                            <input
-                                v-if="language.is_default"
-                                type="hidden"
-                                name="status"
-                                value="1"
-                            />
-                            <SubmitButton
-                                v-if="!language.is_default"
-                                :label="t('store.settings.save')"
-                                :processing-label="t('store.settings.saving')"
-                                :processing="processing"
-                            />
-                        </Form>
+                        /></StoreStatusSwitch>
                     </td>
                     <td class="px-4 py-2">
                         <div

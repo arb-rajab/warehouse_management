@@ -8,7 +8,7 @@ import {
 } from '@/actions/App/Http/Controllers/Store/Admin/ReviewController';
 import DataTable from '@/components/DataTable.vue';
 import Pagination from '@/components/Pagination.vue';
-import SubmitButton from '@/components/SubmitButton.vue';
+import StoreStatusSwitch from '@/components/StoreStatusSwitch.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
 import { t } from '@/lib/i18n';
 import { paginated, storeReview, storeSharedProps } from '@/testing/factories';
@@ -103,7 +103,7 @@ describe('Store product reviews', () => {
             'newest',
             'highRating',
             'lowRating',
-            'unpublish',
+            'yes',
         ]) {
             expect(wrapper.text()).toContain(t(`store.reviews.${key}`));
         }
@@ -131,22 +131,35 @@ describe('Store product reviews', () => {
             '0',
         );
         expect(wrapper.text()).toContain('Invalid status');
-        expect(
-            wrapper.findAllComponents(SubmitButton).at(-1)?.props(),
-        ).toMatchObject({
-            label: t('store.reviews.unpublish'),
-            processingLabel: t('store.reviews.saving'),
-            processing: true,
+        const toggle = wrapper.getComponent(StoreStatusSwitch);
+        expect(toggle.props()).toMatchObject({
+            action: updatePublished(storeReview(), { mergeQuery: {} }),
+            checked: true,
+            label: t('store.reviews.published'),
+            stateLabels: {
+                on: t('store.reviews.yes'),
+                off: t('store.reviews.no'),
+            },
         });
+        const button = toggle.get('[role="switch"]');
+        expect(button.attributes('aria-checked')).toBe('true');
+        expect(button.attributes('aria-busy')).toBe('true');
+        expect(button.attributes('disabled')).toBeDefined();
     });
     it('offers publishing hidden reviews and omits write controls without permission', () => {
         const hidden = mountPage(undefined, false);
         expect(hidden.get('input[name="status"]').attributes('value')).toBe(
             '1',
         );
-        expect(hidden.text()).toContain(t('store.reviews.publish'));
+        expect(hidden.get('[role="switch"]').attributes('aria-checked')).toBe(
+            'false',
+        );
+        expect(hidden.get('[role="switch"]').text()).toBe(
+            t('store.reviews.no'),
+        );
         const readonly = mountPage(['view_product_reviews']);
         expect(readonly.findComponent(Form).exists()).toBe(false);
+        expect(readonly.findComponent(StoreStatusSwitch).exists()).toBe(false);
         expect(readonly.text()).toContain(t('store.reviews.yes'));
         expect(mountPage(['view_product_reviews'], false).text()).toContain(
             t('store.reviews.no'),

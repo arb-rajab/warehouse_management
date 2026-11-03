@@ -19,6 +19,7 @@ import PageHeader from '@/components/PageHeader.vue';
 import Pagination from '@/components/Pagination.vue';
 import StoreSellerPaymentDialog from '@/components/StoreSellerPaymentDialog.vue';
 import StoreSellerProfileDialog from '@/components/StoreSellerProfileDialog.vue';
+import StoreStatusSwitch from '@/components/StoreStatusSwitch.vue';
 import SubmitButton from '@/components/SubmitButton.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
@@ -199,35 +200,21 @@ function showProfile(seller: StoreSeller): void {
                     >
                 </td>
                 <td class="px-4 py-3">
-                    <Form
+                    <StoreStatusSwitch
                         v-if="access.can('edit_seller')"
                         :action="approved({ mergeQuery: {} })"
-                        #default="{ processing }"
-                        ><input type="hidden" name="id" :value="row.id" /><input
-                            type="hidden"
-                            name="status"
-                            :value="row.approved ? 0 : 1"
-                        /><button
-                            type="submit"
-                            role="switch"
-                            :aria-checked="row.approved"
-                            :aria-label="
-                                t('store.sellers.approvalFor', {
-                                    name: row.name ?? row.account_name,
-                                })
-                            "
-                            :disabled="processing"
-                            class="inline-flex cursor-pointer items-center gap-1 rounded border px-2 py-1 disabled:cursor-not-allowed disabled:opacity-50"
-                        >
-                            <Check v-if="row.approved" class="h-4 w-4" />{{
-                                t(
-                                    row.approved
-                                        ? 'store.sellers.approved'
-                                        : 'store.sellers.unapproved',
-                                )
-                            }}
-                        </button></Form
-                    >
+                        :checked="row.approved"
+                        :label="
+                            t('store.sellers.approvalFor', {
+                                name: row.name ?? row.account_name,
+                            })
+                        "
+                        :state-labels="{
+                            on: t('store.sellers.approved'),
+                            off: t('store.sellers.unapproved'),
+                        }"
+                        ><input type="hidden" name="id" :value="row.id"
+                    /></StoreStatusSwitch>
                     <span v-else>{{
                         t(
                             row.approved

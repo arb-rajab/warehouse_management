@@ -4,6 +4,7 @@ namespace App\Http\Resources\Store;
 
 use App\Models\Product;
 use App\Models\ProductStock;
+use App\Services\ProductFieldSourceService;
 use App\Support\StorefrontUrl;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -15,12 +16,14 @@ use Illuminate\Http\Resources\Json\JsonResource;
  * through `uploaded_asset()` (placeholder included) and the category name
  * through its translation. Stock is the first stock row's quantity, or each
  * variant's for a variant product, with the legacy "low" comparison.
+ * `published_locked` tells the Active switch the guard would refuse it: the
+ * row came from the feed and Otajer owns `published`
+ * (.ai/rules/product-field-sources.md). The owner is read once per request.
  *
  * @property-read int $id
  * @property-read string $name
  * @property-read string $ar_name
  * @property-read int|null $thumbnail_img
- * @property-read string|null $mat_id
  * @property-read string|null $api_unit_name
  * @property-read int|null $unit_equal
  * @property-read int $num_of_sale
@@ -33,12 +36,15 @@ use Illuminate\Http\Resources\Json\JsonResource;
  * @property-read int|bool $approved
  * @property-read int|bool $todays_deal
  * @property-read int|bool $deleted_from_api
+ * @property-read string|null $synced_at
  * @property-read string|null $slug
  *
  * @mixin Product
  */
 class ProductListResource extends JsonResource
 {
+    private const PUBLISHED_OTAJER_OWNED = 'store.product_list.published_otajer_owned';
+
     /** @return array<string, mixed> */
     public function toArray(Request $request): array
     {
@@ -53,7 +59,7 @@ class ProductListResource extends JsonResource
             'name' => $this->name,
             'ar_name' => $this->ar_name,
             'thumbnail_url' => uploaded_asset($this->thumbnail_img),
-            'mat_id' => $this->mat_id,
+            'mat_id' => (string) $this->id,
             'unit' => $this->api_unit_name.'('.$this->unit_equal.')',
             'num_of_sale' => (int) $this->num_of_sale,
             'base_price' => single_price($this->unit_price),
@@ -68,8 +74,19 @@ class ProductListResource extends JsonResource
             'featured' => (bool) $this->featured,
             'approved' => (bool) $this->approved,
             'todays_deal' => (bool) $this->todays_deal,
+            'published_locked' => $this->resource->getAttribute('synced_at') !== null && $this->publishedOtajerOwned($request),
             'deleted_from_api' => (bool) $this->deleted_from_api,
             'public_url' => StorefrontUrl::to($this->resource),
         ];
+    }
+
+    /** Whether Otajer owns `published`, memoized on the request for the whole list. */
+    private function publishedOtajerOwned(Request $request): bool
+    {
+        if (! $request->attributes->has(self::PUBLISHED_OTAJER_OWNED)) {
+            $request->attributes->set(self::PUBLISHED_OTAJER_OWNED, app(ProductFieldSourceService::class)->isOtajerOwned('published'));
+        }
+
+        return (bool) $request->attributes->get(self::PUBLISHED_OTAJER_OWNED);
     }
 }

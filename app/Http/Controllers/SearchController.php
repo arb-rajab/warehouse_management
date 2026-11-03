@@ -196,7 +196,7 @@ class SearchController extends Controller
                     $q->where(function($innerQ) use ($word){
                         $innerQ->where('name', 'like', '%' . $word . '%')
                         ->orWhere('ar_name', 'like', '%' . $word . '%')
-                        ->orWhere('mat_id', 'like', '%' . $word . '%')
+                        ->orWhere('id', 'like', '%' . $word . '%')
                         ->orWhereHas('barcodes', function ($barcodeQ) use ($word) {
                             $barcodeQ->where('barcode', 'like', '%' . $word . '%');
                         });

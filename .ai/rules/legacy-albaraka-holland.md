@@ -1053,8 +1053,14 @@ Both are the store's own tables, which WMS originally shared (see shared-databas
 
 | Table | Situation |
 | --- | --- |
-| `products` | In production the store's table has 72 columns and `id int(11)` signed. WMS's copy lives in its own DB, fed only by `products:sync` (name/ar_name/published from the Otajer feed). **Two writers after the merge:** legacy `import:all-products`, `import:all-products-v2`, `import:offer-new-products` and `fetch:otajer-photos` also write `products`/`uploads` from `stores.otajer.com`. Pick one writer before the DB merge. Also confirm that WMS's `products.id` set is a subset of the store's ids, since `pallets`, `cell_status_logs`, `cell_verification_reports` ×2 and `wms_product_settings` all FK to it. WMS's `add_fulltext_index_to_products_table` and `add_ar_name_to_products_stand_in` must then apply cleanly to the store's table. |
+| `products` | In production the store's table has 72 columns and `id int(11)` signed. WMS's copy lives in its own DB, fed only by `products:sync` (the synced scalar columns of `config/product_field_sources.php` from the Otajer feed). **Two writers after the merge:** legacy `import:all-products`, `import:all-products-v2`, `import:offer-new-products` and `fetch:otajer-photos` also write `products`/`uploads` from `stores.otajer.com`. Pick one writer before the DB merge. Also confirm that WMS's `products.id` set is a subset of the store's ids, since `pallets`, `cell_status_logs`, `cell_verification_reports` ×2 and `wms_product_settings` all FK to it. WMS's `add_fulltext_index_to_products_table` and `add_ar_name_to_products_stand_in` must then apply cleanly to the store's table. |
 | `uploads` | The store's table. WMS reads it only. After the merge it becomes live data in the same DB. `config('store.asset_base_url')` becomes this app's own URL. |
+
+`products.mat_id` (the store's copy of the Otajer material id) was dropped on
+2026-11-02: it always equalled `products.id`, and every legacy reader now uses
+`id`. The `mat_id` key in API and admin JSON payloads remains as an alias of
+`id`; see shared-database.md. Descriptions of the legacy schema in this file that
+list `mat_id` are historical.
 
 ### One-config-wins collisions
 

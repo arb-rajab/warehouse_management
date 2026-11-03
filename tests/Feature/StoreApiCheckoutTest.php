@@ -71,8 +71,8 @@ test('a stock row with no price does not make an unvaried cart line free', funct
 test('the delivery cost is charged only when the store checks a minimum order and its delivery product exists', function () {
     checkoutStore();
     $customer = createStoreUser('customer');
-    $delivery = createStoreProduct(['unit_price' => 7.5, 'mat_id' => 'TRANSPORT']);
-    storeSetting('default_specific_product', 'TRANSPORT');
+    $delivery = createStoreProduct(['unit_price' => 7.5]);
+    storeSetting('default_specific_product', (string) $delivery->id);
     storeSetting('minimum_order_amount', 100);
     Cart::create(['user_id' => $customer->id, 'owner_id' => 0, 'product_id' => createStoreProduct(['unit_price' => 10])->id, 'quantity' => 1, 'variation' => '', 'price' => 10]);
     $this->withToken(storeApiToken($customer));

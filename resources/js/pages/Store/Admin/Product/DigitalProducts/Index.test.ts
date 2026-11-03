@@ -14,7 +14,7 @@ import {
 import AddResourceLink from '@/components/AddResourceLink.vue';
 import FormField from '@/components/FormField.vue';
 import Pagination from '@/components/Pagination.vue';
-import StoreStatusButton from '@/components/StoreStatusButton.vue';
+import StoreStatusSwitch from '@/components/StoreStatusSwitch.vue';
 import SubmitButton from '@/components/SubmitButton.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
@@ -209,21 +209,21 @@ describe('Store digital products Index', () => {
             featured: true,
         });
         const wrapper = mountPage([product]);
-        const switches = wrapper.findAllComponents(StoreStatusButton);
+        const switches = wrapper.findAllComponents(StoreStatusSwitch);
         expect(switches.map((button) => button.props())).toMatchObject([
             {
                 action: updateTodaysDeal(product, { mergeQuery: {} }),
-                active: true,
+                checked: true,
                 label: t('store.digitalProducts.todaysDeal'),
             },
             {
                 action: updatePublished(product, { mergeQuery: {} }),
-                active: false,
+                checked: false,
                 label: t('store.digitalProducts.published'),
             },
             {
                 action: updateFeatured(product, { mergeQuery: {} }),
-                active: true,
+                checked: true,
                 label: t('store.digitalProducts.featured'),
             },
         ]);
@@ -244,7 +244,7 @@ describe('Store digital products Index', () => {
         });
         const wrapper = mountPage();
         expect(
-            wrapper.findAllComponents(StoreStatusButton)[1].text(),
+            wrapper.findAllComponents(StoreStatusSwitch)[1].text(),
         ).toContain('Package limit reached');
     });
     it('hides every action without its own permission and shows the switch state read-only', () => {
@@ -254,7 +254,7 @@ describe('Store digital products Index', () => {
         );
         expect(wrapper.findComponent(AddResourceLink).exists()).toBe(false);
         expect(wrapper.findAllComponents(TableActionLink)).toHaveLength(0);
-        expect(wrapper.findAllComponents(StoreStatusButton)).toHaveLength(0);
+        expect(wrapper.findAllComponents(StoreStatusSwitch)).toHaveLength(0);
         const cells = wrapper.findAll('tbody td');
         expect(cells[4].text()).toBe(t('store.reference.enabled'));
         expect(cells[5].text()).toBe(t('store.reference.enabled'));
@@ -283,7 +283,7 @@ describe('Store digital products Index', () => {
                 .map((link) => link.text()),
         ).toEqual([t('store.digitalProducts.delete')]);
         const switchesOnly = only('product_edit');
-        expect(switchesOnly.findAllComponents(StoreStatusButton)).toHaveLength(
+        expect(switchesOnly.findAllComponents(StoreStatusSwitch)).toHaveLength(
             3,
         );
         expect(switchesOnly.findAllComponents(TableActionLink)).toHaveLength(0);

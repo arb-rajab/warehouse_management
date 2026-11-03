@@ -1,14 +1,14 @@
 <script setup lang="ts">
-import { Form, Head, router } from '@inertiajs/vue3';
+import { Head, router } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 import {
     index as reviewsIndex,
     updatePublished,
 } from '@/actions/App/Http/Controllers/Store/Admin/ReviewController';
 import DataTable from '@/components/DataTable.vue';
-import FieldError from '@/components/FieldError.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import Pagination from '@/components/Pagination.vue';
+import StoreStatusSwitch from '@/components/StoreStatusSwitch.vue';
 import SubmitButton from '@/components/SubmitButton.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
 import { plainFieldInputClass } from '@/lib/filters';
@@ -93,30 +93,16 @@ function filter(perPage = currentPerPage.value): void {
                 <td class="px-4 py-2">{{ row.rating }}</td>
                 <td class="px-4 py-2 whitespace-pre-wrap">{{ row.comment }}</td>
                 <td class="px-4 py-2">
-                    <Form
+                    <StoreStatusSwitch
                         v-if="access.can('publish_product_review')"
-                        v-slot="{ processing, errors }"
                         :action="updatePublished(row, { mergeQuery: {} })"
-                        :options="{ preserveScroll: true }"
-                    >
-                        <input
-                            type="hidden"
-                            name="status"
-                            :value="row.published ? 0 : 1"
-                        />
-                        <SubmitButton
-                            :label="
-                                t(
-                                    row.published
-                                        ? 'store.reviews.unpublish'
-                                        : 'store.reviews.publish',
-                                )
-                            "
-                            :processing-label="t('store.reviews.saving')"
-                            :processing="processing"
-                        />
-                        <FieldError :message="errors.status" />
-                    </Form>
+                        :checked="row.published"
+                        :label="t('store.reviews.published')"
+                        :state-labels="{
+                            on: t('store.reviews.yes'),
+                            off: t('store.reviews.no'),
+                        }"
+                    />
                     <span v-else>{{
                         t(
                             row.published

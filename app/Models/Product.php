@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\CellState;
 use App\Support\ProductColumnOwnership;
+use App\Support\ProductFormNumber;
 use Database\Factories\ProductFactory;
 use Illuminate\Database\Connection;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -27,8 +28,8 @@ use Illuminate\Support\Facades\Storage;
 /**
  * A row in this app's `products` table.
  *
- * Option A: products:sync owns the Otajer-owned syncable columns (name,
- * ar_name and published by default; see ProductFieldSourceService) on
+ * Option A: products:sync owns the Otajer-owned syncable columns (all of
+ * config/product_field_sources.php by default; see ProductFieldSourceService) on
  * feed-origin rows (synced_at is non-null). Store writers own the remaining
  * columns, including any syncable column the admin owns, and may change the
  * Otajer-owned ones only on store-origin rows (synced_at is null).
@@ -53,10 +54,10 @@ use Illuminate\Support\Facades\Storage;
  * @property bool $published
  * @property int|null $user_id
  * @property string|null $description
+ * @property string|null $unit
  * @property string|null $meta_description
  * @property string|null $meta_img
  * @property string|null $photos
- * @property string|null $mat_id
  * @property int $digital
  * @property int $variant_product
  * @property-read string|null $image_url
@@ -79,15 +80,32 @@ class Product extends Model
      */
     public function setAttribute($key, $value): static
     {
-        if ($this->exists && in_array($key, ProductColumnOwnership::syncColumns(), true)
-            && (string) ($this->attributes[$key] ?? '') !== (string) $value) {
-            ProductColumnOwnership::assertStoreWrite($this, [$key]);
+        if ($this->exists && in_array($key, ProductColumnOwnership::syncColumns(), true)) {
+            if (self::isSameNumber($key, $this->attributes[$key] ?? null, $value)) {
+                return $this;
+            }
+            if ((string) ($this->attributes[$key] ?? '') !== (string) $value) {
+                ProductColumnOwnership::assertStoreWrite($this, [$key]);
+            }
         }
         if ($key === 'synced_at' && $value !== null) {
             ProductColumnOwnership::refuse(['synced_at']);
         }
 
         return parent::setAttribute($key, $value);
+    }
+
+    /**
+     * Whether a numeric synced column is assigned the number it already holds
+     * in another spelling (`12.5` over a stored `12.50`). Eloquent compares such
+     * values as strings and would call the row dirty, so the assignment is
+     * dropped: it is no change, and must not trip the feed-column guard at save.
+     */
+    private static function isSameNumber(string $key, mixed $stored, mixed $value): bool
+    {
+        return in_array($key, ['unit_price', 'tax', 'unit_equal', 'collection_id'], true)
+            && is_numeric($stored) && is_numeric($value)
+            && ProductFormNumber::format($stored) === ProductFormNumber::format($value);
     }
 
     /** Every model-created row, including a replicated feed row, is store-origin. */

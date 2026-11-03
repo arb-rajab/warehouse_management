@@ -8,25 +8,33 @@ use Illuminate\Support\Facades\DB;
 test('order product search returns bounded narrow translated JSON and excludes nonmatches', function () {
     actingAsStoreUser(createStoreStaff('order_configuration'));
     foreach (range(1, 23) as $number) {
-        $product = Product::factory()->create(['name' => "Product $number"]);
-        $product->forceFill(['mat_id' => "MAT-$number", 'description' => 'private description'])->save();
+        $product = Product::factory()->create(['id' => 100000 + $number, 'name' => "Product $number"]);
+        $product->forceFill(['description' => 'private description'])->save();
         DB::table('product_translations')->insert(['product_id' => $product->id, 'lang' => 'ar', 'name' => "منتج $number"]);
     }
-    $noise = Product::factory()->create();
-    $noise->forceFill(['mat_id' => 'OTHER'])->save();
+    $noise = Product::factory()->create(['id' => 200001]);
     $this->withSession(['locale' => 'ar']);
-    $response = $this->getJson(route('order_configuration.product-search', ['query' => 'MAT-']))->assertOk();
+    $response = $this->getJson(route('order_configuration.product-search', ['query' => '1000']))->assertOk();
     expect($response->json())->toHaveCount(20);
-    expect($response->json('0'))->toBe(['id' => Product::query()->orderBy('id')->first()->id, 'name' => 'منتج 1', 'mat_id' => 'MAT-1']);
-    expect(collect($response->json())->pluck('id')->all())->not->toContain($noise->id);
+    expect($response->json('0'))->toBe(['id' => 100001, 'name' => 'منتج 1', 'mat_id' => '100001']);
+    expect(collect($response->json())->pluck('id')->all())->not->toContain($noise->id)
+        ->and(collect($response->json())->every(fn (array $row): bool => $row['mat_id'] === (string) $row['id']))->toBeTrue();
+});
+
+test('product search finds a product by a part of its id', function () {
+    actingAsStoreUser(createStoreStaff('order_configuration'));
+    $product = Product::factory()->create(['id' => 734251, 'name' => 'Needle']);
+    Product::factory()->create(['id' => 100001, 'name' => 'Noise']);
+
+    expect($this->getJson(route('order_configuration.product-search', ['query' => '3425']))->assertOk()->json())
+        ->toBe([['id' => $product->id, 'name' => 'Needle', 'mat_id' => '734251']]);
 });
 
 test('product search returns markup as plain JSON data', function () {
     actingAsStoreUser(createStoreStaff('order_configuration'));
-    $product = Product::factory()->create(['name' => '<img src=x onerror=alert(1)>']);
-    $product->forceFill(['mat_id' => 'MAT-" onmouseover="alert(1)'])->save();
-    expect($this->getJson(route('order_configuration.product-search', ['query' => 'MAT-']))->assertOk()->json())
-        ->toBe([['id' => $product->id, 'name' => '<img src=x onerror=alert(1)>', 'mat_id' => 'MAT-" onmouseover="alert(1)']]);
+    $product = Product::factory()->create(['id' => 100500, 'name' => '<img src=x onerror=alert(1)>']);
+    expect($this->getJson(route('order_configuration.product-search', ['query' => '1005']))->assertOk()->json())
+        ->toBe([['id' => $product->id, 'name' => '<img src=x onerror=alert(1)>', 'mat_id' => '100500']]);
 });
 
 test('order product search validates missing short long and array terms', function (mixed $query) {
@@ -53,7 +61,7 @@ test('an unknown product attribute gives a field error rather than 404', functio
 
 test('order product search refuses an unauthorized caller', function (string $caller) {
     actingAsRefusedStoreCaller($caller);
-    assertStoreCallerRefused($this->get(route('order_configuration.product-search', ['query' => 'MAT-'])), $caller);
+    assertStoreCallerRefused($this->get(route('order_configuration.product-search', ['query' => '1000'])), $caller);
 })->with('refused store admin callers');
 
 test('attribute option lookup refuses an unauthorized caller without writes', function (string $caller) {

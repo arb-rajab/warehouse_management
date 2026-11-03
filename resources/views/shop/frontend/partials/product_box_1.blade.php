@@ -107,7 +107,7 @@
             <a href="{{ $product_url }}" class="d-block text-reset hov-text-primary" title="{{  $product->getTranslation('name')  }}">{{  $product->getTranslation('name')  }}</a>
         </h3>
         <p class="text-bold text-danger">
-      {{ $product->mat_id }}
+      {{ $product->id }}
         </p>
         <p class="d-flex justify-content-between">
         <span class="text-info">{{ " " . $product->unit_equal . " / " . $product->unit }}</span>

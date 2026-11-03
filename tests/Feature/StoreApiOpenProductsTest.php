@@ -59,3 +59,20 @@ test('the cart summary prices a line from the catalogue, not from the stored car
 
     expect($total)->toBeGreaterThan(0);
 });
+
+test('the product lists and detail keep the mat_id key as the product id', function () {
+    $store = strictApiStore();
+    $first = createStoreProduct(['published' => 1, 'approved' => 1, 'added_by' => 'admin', 'digital' => 0, 'user_id' => $store['admin']->id, 'name' => 'saffron one', 'num_of_sale' => 5]);
+    $second = createStoreProduct(['published' => 1, 'approved' => 1, 'added_by' => 'admin', 'digital' => 0, 'user_id' => $store['admin']->id, 'name' => 'saffron two', 'num_of_sale' => 4]);
+    $client = fn () => tap($this, fn () => app('auth')->forgetGuards())->withToken(storeApiToken($store['customer']));
+
+    foreach (['best-seller', 'search?name=saffron'] as $path) {
+        $rows = collect($client()->getJson("/api/v1/store/products/$path")->assertOk()->json('data'))->keyBy('id');
+
+        expect($rows->keys()->all())->toContain($first->id, $second->id)
+            ->and($rows[$first->id]['mat_id'])->toBe((string) $first->id)
+            ->and($rows[$second->id]['mat_id'])->toBe((string) $second->id);
+    }
+
+    $client()->getJson("/api/v1/store/products/{$first->id}")->assertOk()->assertJsonPath('data.0.mat_id', (string) $first->id);
+});

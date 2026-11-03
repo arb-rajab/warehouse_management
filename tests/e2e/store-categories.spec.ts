@@ -96,12 +96,10 @@ test('category forms round-trip hierarchy attributes uploads SEO translations an
         .click();
     await expect(page.locator('#name')).toHaveValue('Browser category');
     await page.goto('/temp/admin/categories');
-    await row
-        .getByRole('button', { name: 'Enable Featured', exact: true })
-        .click();
+    await row.getByRole('switch', { name: 'Featured', exact: true }).click();
     await expect(
-        row.getByRole('button', { name: 'Disable Featured', exact: true }),
-    ).toBeVisible();
+        row.getByRole('switch', { name: 'Featured', exact: true }),
+    ).toHaveAttribute('aria-checked', 'true');
     page.once('dialog', (dialog) => dialog.dismiss());
     await row.getByRole('button', { name: 'Delete', exact: true }).click();
     await expect(row).toBeVisible();

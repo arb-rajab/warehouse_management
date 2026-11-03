@@ -11,7 +11,7 @@ import {
 import DataTable from '@/components/DataTable.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import Pagination from '@/components/Pagination.vue';
-import StoreStatusButton from '@/components/StoreStatusButton.vue';
+import StoreStatusSwitch from '@/components/StoreStatusSwitch.vue';
 import StoreTaxFormFields from '@/components/StoreTaxFormFields.vue';
 import SubmitButton from '@/components/SubmitButton.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
@@ -51,10 +51,10 @@ function changePerPage(per_page: number): void {
             <template #row="{ row }">
                 <td class="px-4 py-2">{{ row.name }}</td>
                 <td class="px-4 py-2">
-                    <StoreStatusButton
+                    <StoreStatusSwitch
                         v-if="access.can('vat_&_tax_setup')"
                         :action="updateStatus(row, { mergeQuery: {} })"
-                        :active="row.tax_status"
+                        :checked="row.tax_status"
                         :label="row.name"
                     />
                 </td>
