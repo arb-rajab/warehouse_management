@@ -14,16 +14,22 @@ import {
 import ActionErrorBanner from '@/components/ActionErrorBanner.vue';
 import AddResourceLink from '@/components/AddResourceLink.vue';
 import DataTable from '@/components/DataTable.vue';
+import FieldError from '@/components/FieldError.vue';
 import FormField from '@/components/FormField.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import Pagination from '@/components/Pagination.vue';
 import RequiredLegend from '@/components/RequiredLegend.vue';
 import RequiredMark from '@/components/RequiredMark.vue';
+import StoreListFilters from '@/components/StoreListFilters.vue';
 import SubmitButton from '@/components/SubmitButton.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
 import { confirmDelete } from '@/lib/confirm';
-import { fieldLabelClass, plainFieldInputClass } from '@/lib/filters';
+import {
+    countActive,
+    fieldLabelClass,
+    plainFieldInputClass,
+} from '@/lib/filters';
 import { t } from '@/lib/i18n';
 import { usePageError } from '@/lib/pageErrors';
 import { provideRequiredFields } from '@/lib/requiredFields';
@@ -64,6 +70,25 @@ function changePerPage(perPage: number): void {
         }),
     );
 }
+const paymentStatuses = ['paid', 'unpaid'];
+const deliveryStatuses = [
+    'pending',
+    'confirmed',
+    'picked_up',
+    'on_the_way',
+    'on_delivery',
+    'ready_for_delivery',
+    'delivered',
+    'cancelled',
+];
+/** Dialog filters only: payment status and each date bound. */
+const activeFilterCount = computed(() =>
+    countActive([
+        Boolean(props.filters.payment_status),
+        Boolean(props.filters.from),
+        Boolean(props.filters.to),
+    ]),
+);
 const hasRequiredFields = provideRequiredFields();
 </script>
 <template>
@@ -80,88 +105,90 @@ const hasRequiredFields = provideRequiredFields();
                 /></div
         ></PageHeader>
         <ActionErrorBanner :message="error" />
-        <form
-            method="get"
-            :action="listAction.url()"
-            class="mb-5 grid gap-3 sm:grid-cols-3"
+        <StoreListFilters
+            :action="listAction()"
+            :active-count="activeFilterCount"
         >
-            <FormField
-                id="search"
-                :label="t('store.orders.search')"
-                :value="filters.search"
-                maxlength="100"
-            />
-            <div
-                v-for="filter in [
-                    {
-                        id: 'payment_status',
-                        label: 'paymentStatus',
-                        statuses: ['paid', 'unpaid'],
-                    },
-                    {
-                        id: 'delivery_status',
-                        label: 'deliveryStatus',
-                        statuses: [
-                            'pending',
-                            'confirmed',
-                            'picked_up',
-                            'on_the_way',
-                            'on_delivery',
-                            'ready_for_delivery',
-                            'delivered',
-                            'cancelled',
-                        ],
-                    },
-                ]"
-                :key="filter.id"
-            >
-                <label :for="filter.id" :class="fieldLabelClass">{{
-                    t(`store.orders.${filter.label}`)
-                }}</label>
-                <select
-                    :id="filter.id"
-                    :name="filter.id"
-                    :value="
-                        filter.id === 'payment_status'
-                            ? (filters.payment_status ?? '')
-                            : (filters.delivery_status ?? '')
-                    "
-                    :class="plainFieldInputClass"
-                >
-                    <option value="">
-                        {{ t('store.orders.allStatuses') }}
-                    </option>
-                    <option
-                        v-for="status in filter.statuses"
-                        :key="status"
-                        :value="status"
+            <template #default="{ errors }">
+                <input
+                    name="per_page"
+                    type="hidden"
+                    :value="filters.per_page"
+                />
+                <FormField
+                    id="search"
+                    :label="t('store.orders.search')"
+                    :value="filters.search"
+                    :error="errors.search"
+                    maxlength="100"
+                />
+                <div>
+                    <label for="delivery_status" :class="fieldLabelClass">{{
+                        t('store.orders.deliveryStatus')
+                    }}</label>
+                    <select
+                        id="delivery_status"
+                        name="delivery_status"
+                        :class="plainFieldInputClass"
                     >
-                        {{ t(`store.orders.status.${status}`) }}
-                    </option>
-                </select>
-            </div>
-            <FormField
-                id="from"
-                :label="t('store.orders.from')"
-                type="date"
-                :value="filters.from"
-                class="dark:[color-scheme:dark]"
-            />
-            <FormField
-                id="to"
-                :label="t('store.orders.to')"
-                type="date"
-                :value="filters.to"
-                :min="filters.from"
-                class="dark:[color-scheme:dark]"
-            />
-            <input name="per_page" type="hidden" :value="filters.per_page" />
-            <SubmitButton
-                :label="t('common.filters.apply')"
-                :processing-label="t('common.filters.apply')"
-                :processing="false"
-            />
-        </form>
+                        <option value="">
+                            {{ t('store.orders.allStatuses') }}
+                        </option>
+                        <option
+                            v-for="status in deliveryStatuses"
+                            :key="status"
+                            :value="status"
+                            :selected="filters.delivery_status === status"
+                        >
+                            {{ t(`store.orders.status.${status}`) }}
+                        </option>
+                    </select>
+                    <FieldError :message="errors.delivery_status" />
+                </div>
+            </template>
+            <template #filters="{ errors }">
+                <div>
+                    <label for="payment_status" :class="fieldLabelClass">{{
+                        t('store.orders.paymentStatus')
+                    }}</label>
+                    <select
+                        id="payment_status"
+                        name="payment_status"
+                        :class="plainFieldInputClass"
+                    >
+                        <option value="">
+                            {{ t('store.orders.allStatuses') }}
+                        </option>
+                        <option
+                            v-for="status in paymentStatuses"
+                            :key="status"
+                            :value="status"
+                            :selected="filters.payment_status === status"
+                        >
+                            {{ t(`store.orders.status.${status}`) }}
+                        </option>
+                    </select>
+                    <FieldError :message="errors.payment_status" />
+                </div>
+                <FormField
+                    id="from"
+                    :label="t('store.orders.from')"
+                    type="date"
+                    :value="filters.from"
+                    :error="errors.from"
+                    class="dark:[color-scheme:dark]"
+                />
+                <FormField
+                    id="to"
+                    :label="t('store.orders.to')"
+                    type="date"
+                    :value="filters.to"
+                    :min="filters.from"
+                    :error="errors.to"
+                    class="dark:[color-scheme:dark]"
+                />
+            </template>
+        </StoreListFilters>
         <Form
             :action="bulk_order_delete({ mergeQuery: {} })"
             :options="{ preserveScroll: true }"

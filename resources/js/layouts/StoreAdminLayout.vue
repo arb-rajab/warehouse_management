@@ -7,6 +7,7 @@ import {
     Globe,
     Menu,
     Store,
+    Trash2,
     X,
 } from '@lucide/vue';
 import { computed, ref, watch } from 'vue';
@@ -15,7 +16,9 @@ import { index as storefrontHome } from '@/actions/App/Http/Controllers/HomeCont
 import { clearCache } from '@/actions/App/Http/Controllers/Store/Admin/DashboardController';
 import { index as notificationsIndex } from '@/actions/App/Http/Controllers/Store/Admin/NotificationController';
 import { index as profileIndex } from '@/actions/App/Http/Controllers/Store/Admin/ProfileController';
+import FilterDialog from '@/components/FilterDialog.vue';
 import FormField from '@/components/FormField.vue';
+import HelpTooltip from '@/components/HelpTooltip.vue';
 import LanguageSwitcher from '@/components/LanguageSwitcher.vue';
 import LogoutLink from '@/components/LogoutLink.vue';
 import SkipToContentLink from '@/components/SkipToContentLink.vue';
@@ -49,6 +52,7 @@ const access = useStoreAccess();
 const isSidebarOpen = ref(false);
 
 const menuQuery = ref('');
+const clearCacheOpen = ref(false);
 const { open: notificationsOpen, containerRef: notificationsRef } =
     useDismissibleListbox(() => 0);
 const notifications = computed(
@@ -270,6 +274,78 @@ function toggle(item: StoreMenuItem): void {
                 </ul>
             </nav>
             <div
+                ref="notificationsRef"
+                class="relative border-t border-gray-200 px-2 py-2 dark:border-neutral-800"
+            >
+                <button
+                    type="button"
+                    class="flex w-full cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-sm text-gray-600 transition-colors hover:bg-gray-50 hover:text-gray-900 dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-white"
+                    :aria-expanded="notificationsOpen"
+                    aria-controls="store-notifications"
+                    @click="notificationsOpen = !notificationsOpen"
+                >
+                    <Bell class="h-4 w-4 shrink-0" />
+                    <span class="flex-1 text-start">{{
+                        t('store.nav.notifications')
+                    }}</span>
+                    <template v-if="notifications.unread_count">
+                        <span
+                            aria-hidden="true"
+                            class="ms-auto rounded-full bg-blue-100 px-2 text-xs text-blue-800 dark:bg-blue-900 dark:text-blue-100"
+                            >{{ notifications.unread_count }}</span
+                        >
+                        <span class="sr-only">{{
+                            t('store.nav.notificationsUnread', {
+                                count: notifications.unread_count,
+                            })
+                        }}</span>
+                    </template>
+                </button>
+                <div
+                    v-if="notificationsOpen"
+                    id="store-notifications"
+                    class="z-30 mt-2 max-h-96 overflow-y-auto rounded-md border border-gray-200 bg-white p-4 text-sm shadow-lg lg:absolute lg:start-full lg:bottom-0 lg:ms-2 lg:mt-0 lg:w-80 dark:border-neutral-700 dark:bg-neutral-900"
+                >
+                    <p v-if="!notifications.items.length">
+                        {{ t('store.nav.noNotifications') }}
+                    </p>
+                    <ul v-else class="space-y-3">
+                        <li
+                            v-for="notification in notifications.items"
+                            :key="notification.id"
+                        >
+                            <p v-if="notification.kind === 'order'">
+                                {{
+                                    t('store.nav.orderNotification', {
+                                        code: notification.order_code,
+                                        status: t(
+                                            `store.orders.status.${notification.status}`,
+                                        ),
+                                    })
+                                }}
+                            </p>
+                            <p v-else>
+                                {{ notification.user_name }}
+                                {{ notification.message }}
+                            </p>
+                            <time
+                                class="text-xs text-gray-500 dark:text-neutral-400"
+                                >{{
+                                    formatDateTime(
+                                        notification.created_at ?? '',
+                                    )
+                                }}</time
+                            >
+                        </li>
+                    </ul>
+                    <a
+                        :href="notificationsIndex.url()"
+                        class="mt-3 block text-blue-700 dark:text-blue-400"
+                        >{{ t('store.nav.allNotifications') }}</a
+                    >
+                </div>
+            </div>
+            <div
                 class="space-y-3 border-t border-gray-200 px-5 py-4 text-sm dark:border-neutral-800"
             >
                 <a
@@ -292,6 +368,54 @@ function toggle(item: StoreMenuItem): void {
                     }}</span>
                 </Link>
                 <LanguageSwitcher />
+                <div v-if="access.can('file_system_&_cache_configuration')">
+                    <div class="flex items-center gap-1.5">
+                        <button
+                            type="button"
+                            class="flex cursor-pointer items-center gap-1.5 text-gray-600 hover:text-gray-900 dark:text-neutral-400 dark:hover:text-white"
+                            @click="clearCacheOpen = true"
+                        >
+                            <Trash2 class="h-4 w-4 shrink-0" />
+                            {{ t('store.nav.clearCache') }}
+                        </button>
+                        <HelpTooltip
+                            :label="t('store.nav.clearCacheHelpLabel')"
+                            :text="t('store.nav.clearCacheHelp')"
+                        />
+                    </div>
+                    <FilterDialog
+                        v-model:open="clearCacheOpen"
+                        :title="t('store.nav.clearCacheConfirmTitle')"
+                        :close-label="t('common.close')"
+                    >
+                        <Form
+                            :action="clearCache()"
+                            class="pb-6"
+                            #default="{ processing }"
+                        >
+                            <p
+                                class="text-sm text-gray-700 dark:text-neutral-300"
+                            >
+                                {{ t('store.nav.clearCacheHelp') }}
+                            </p>
+                            <div class="mt-5 flex justify-end gap-2">
+                                <button
+                                    type="button"
+                                    class="cursor-pointer rounded-md border border-gray-300 px-3 py-2 text-sm hover:bg-gray-50 dark:border-neutral-700 dark:hover:bg-neutral-800"
+                                    @click="clearCacheOpen = false"
+                                >
+                                    {{ t('common.cancel') }}
+                                </button>
+                                <SubmitButton
+                                    class="!w-auto"
+                                    :label="t('store.nav.clearCacheConfirm')"
+                                    :processing-label="t('store.orders.saving')"
+                                    :processing="processing"
+                                />
+                            </div>
+                        </Form>
+                    </FilterDialog>
+                </div>
                 <LogoutLink
                     :href="logout.post()"
                     class="flex cursor-pointer items-center gap-1.5 text-gray-600 hover:text-gray-900 dark:text-neutral-400 dark:hover:text-white"
@@ -300,78 +424,6 @@ function toggle(item: StoreMenuItem): void {
         </aside>
         <main id="main" class="min-w-0 flex-1 px-4 py-8 sm:px-6">
             <div class="mx-auto max-w-6xl">
-                <div class="mb-5 flex items-center justify-end gap-3">
-                    <Form
-                        v-if="access.can('file_system_&_cache_configuration')"
-                        :action="clearCache()"
-                        #default="{ processing }"
-                    >
-                        <SubmitButton
-                            :label="t('store.nav.clearCache')"
-                            :processing-label="t('store.orders.saving')"
-                            :processing="processing"
-                        />
-                    </Form>
-                    <div ref="notificationsRef" class="relative">
-                        <button
-                            type="button"
-                            class="flex cursor-pointer items-center gap-2 rounded-md border border-gray-300 px-3 py-2 dark:border-neutral-700"
-                            :aria-expanded="notificationsOpen"
-                            aria-controls="store-notifications"
-                            @click="notificationsOpen = !notificationsOpen"
-                        >
-                            <Bell class="h-4 w-4" />{{
-                                t('store.nav.notifications')
-                            }}
-                            <span v-if="notifications.unread_count">{{
-                                notifications.unread_count
-                            }}</span>
-                        </button>
-                        <div
-                            v-if="notificationsOpen"
-                            id="store-notifications"
-                            class="absolute end-0 z-30 mt-2 max-h-96 w-80 overflow-y-auto rounded-md border border-gray-200 bg-white p-4 shadow-lg dark:border-neutral-700 dark:bg-neutral-900"
-                        >
-                            <p v-if="!notifications.items.length">
-                                {{ t('store.nav.noNotifications') }}
-                            </p>
-                            <ul v-else class="space-y-3">
-                                <li
-                                    v-for="notification in notifications.items"
-                                    :key="notification.id"
-                                >
-                                    <p v-if="notification.kind === 'order'">
-                                        {{
-                                            t('store.nav.orderNotification', {
-                                                code: notification.order_code,
-                                                status: t(
-                                                    `store.orders.status.${notification.status}`,
-                                                ),
-                                            })
-                                        }}
-                                    </p>
-                                    <p v-else>
-                                        {{ notification.user_name }}
-                                        {{ notification.message }}
-                                    </p>
-                                    <time
-                                        class="text-xs text-gray-500 dark:text-neutral-400"
-                                        >{{
-                                            formatDateTime(
-                                                notification.created_at ?? '',
-                                            )
-                                        }}</time
-                                    >
-                                </li>
-                            </ul>
-                            <a
-                                :href="notificationsIndex.url()"
-                                class="mt-3 block text-blue-700 dark:text-blue-400"
-                                >{{ t('store.nav.allNotifications') }}</a
-                            >
-                        </div>
-                    </div>
-                </div>
                 <slot />
             </div>
         </main>

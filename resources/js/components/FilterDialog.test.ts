@@ -272,4 +272,67 @@ describe('FilterDialog', () => {
 
         wrapper.unmount();
     });
+
+    describe('keepMounted', () => {
+        function mountKeptDialog(open: boolean) {
+            return mount(FilterDialog, {
+                attachTo: document.body,
+                props: {
+                    title: 'Filters',
+                    closeLabel: 'Close',
+                    keepMounted: true,
+                    open,
+                    'onUpdate:open': () => {},
+                },
+                slots: { default: '<input id="kept-field" name="kept" />' },
+            });
+        }
+
+        it('keeps the closed dialog and its fields in the DOM, hidden', () => {
+            const wrapper = mountKeptDialog(false);
+            const overlay = wrapper.get('.fixed.inset-0.z-50')
+                .element as HTMLElement;
+
+            expect(wrapper.find('#kept-field').exists()).toBe(true);
+            expect(overlay.style.display).toBe('none');
+
+            wrapper.unmount();
+        });
+
+        it('shows the dialog and focuses its first field when opened', async () => {
+            const wrapper = mountKeptDialog(false);
+
+            await wrapper.setProps({ open: true });
+            await nextTick();
+
+            expect(
+                (wrapper.get('.fixed.inset-0.z-50').element as HTMLElement)
+                    .style.display,
+            ).toBe('');
+            expect(document.activeElement?.id).toBe('kept-field');
+
+            wrapper.unmount();
+        });
+
+        it('neither traps Tab nor reacts to Escape while closed', async () => {
+            const wrapper = mountKeptDialog(false);
+            const field = document.getElementById('kept-field') as HTMLElement;
+
+            // The field is the dialog's last focusable element: an open
+            // dialog would wrap Tab from it back to the close button.
+            field.focus();
+            document.dispatchEvent(
+                new KeyboardEvent('keydown', { key: 'Tab' }),
+            );
+            document.dispatchEvent(
+                new KeyboardEvent('keydown', { key: 'Escape' }),
+            );
+            await nextTick();
+
+            expect(document.activeElement).toBe(field);
+            expect(wrapper.emitted('update:open')).toBeUndefined();
+
+            wrapper.unmount();
+        });
+    });
 });
