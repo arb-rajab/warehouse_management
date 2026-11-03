@@ -1806,7 +1806,12 @@ the tests are `tests/Feature/StoreApiBackendRequestsTest.php`. Constraints that 
 - `thumbnail_image` in product answers is a resized copy (`ThumbnailService`, `thumbnail_asset()`); the original
   stays in `photos[].path`.
 - Validation is 422 `{result:false, message, errors}`. The paths that still answer 200 with `result:false`
-  are listed in the replies document; they serve the old app too, so change them together.
-- Open owner decisions: tax (included or added, and where it is stored), hiding prices from unverified
-  accounts, whether an unverified account may order, and moving the order pushes off Google's retired legacy FCM
-  endpoint.
+  stay 200 for the old app; a client sending `X-Status-Mode: http` gets 422 for them (`StrictResultStatus`).
+  Do not remove the opt-in until the old app is retired.
+- VAT (owner decision 2026-11-03) is **added on top** in the app API: `cart_line_tax()` is the one place that
+  computes a line's VAT; `order_details.tax` stays the percent and `order_details.tax_amount` is the money.
+  The web checkout, the offers and the back office entry do not add VAT yet.
+- Prices are hidden from guests and unverified customers by `HidePricesFromUnverified` (`hide.prices:catalog`
+  or `:cart` on a route, key lists in the class). A new money field in a product or cart answer must be added there.
+- Open owner decisions: whether an unverified account may order, VAT in the web checkout and back office entry,
+  and moving the order pushes off Google's retired legacy FCM endpoint.

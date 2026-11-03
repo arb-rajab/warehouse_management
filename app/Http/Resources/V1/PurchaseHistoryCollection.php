@@ -50,7 +50,8 @@ class PurchaseHistoryCollection extends ResourceCollection
                     'coupon_discount' => format_price($data->coupon_discount),
                     'shipping_cost' => format_price($data->orderDetails->sum('shipping_cost')),
                     'subtotal' => format_price($data->orderDetails->sum('price')),
-                    'tax' => format_price($data->orderDetails->sum('tax')),
+                    // The VAT added on top of the lines (money): grand_total = subtotal + tax + shipping - coupon.
+                    'tax' => format_price($data->orderDetails->sum('tax_amount')),
                     'customer_notes' => $data->additional_info,
                     'date' => Carbon::createFromTimestamp($data->date)->format('d-m-Y'),
                     // Columns only the delivery boy and offline payment addons

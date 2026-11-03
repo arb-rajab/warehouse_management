@@ -12,7 +12,7 @@ here already behaves differently, the reply says so.
 | Order | ID | State |
 | :-: | :--- | :--- |
 | 1 | BR-20261103-A | A.1 and A.2 done; A.3 needs dev data (not code) |
-| 2 | BR-20261103-B | B.1, B.2, B.3 (new calls), B.5 answered; B.4 and B.6 wait for an owner decision; B.7 partly |
+| 2 | BR-20261103-B | B.1 to B.4, B.6 done; B.5 answered; B.7 done as an opt-in header |
 | 3 | BR-20261102-B | B.1 to B.3 done; B.4 declined with an alternative; B.5 answered |
 | 4 | BR-20261102-D | D.2 and D.5 done; D.1, D.3, D.4 answered with a defect found |
 | 5 | BR-20261101-A | Point 1 done; point 2 answered, not built |
@@ -112,19 +112,23 @@ still GET and writing, not used by the new app: `delivery-boy/cancel-request/{id
 (`bkash/*`, `nagad/*`, `sslcommerz/begin`, `iyzico/init`) start a gateway payment on GET or ANY; they are
 gateway redirects and I left them.
 
-**B.4 Tax.** Needs an owner decision; I changed nothing. What the code does today:
+**B.4 Tax.** Decided by the owner: **VAT is added on top** of the price. Done in the app API:
 
-- `GET /cart-summary`: `tax` is always 0 (the sum is commented out) and `grand_total` is the sum of the lines.
-- Cart lines (`POST /carts`): `tax` is the product's **percent** (9 or 21), not money.
-- `POST /order/store`: `grand_total = subtotal + tax + shipping`, where `tax` is computed from the
-  `product_taxes` table; the product sync does not fill that table (its tax lines are commented out), so it adds 0
-  in practice. So **tax is not added** today.
-- `order_details.tax` is written from `products.tax`, the percent. That is why an order of EUR 2.00 showed
-  `"tax":"9.00"`; the details call sums it.
+- Per line, VAT = line price (price x quantity, or the rep's own price) x the product's VAT percent
+  (`products.tax`, 9 or 21), rounded to cents. A product with explicit tax rows keeps using those.
+- `GET /cart-summary`: `tax` is the sum of the line VAT, and `grand_total` and `grand_total_value` include it
+  (`sub_total` stays the price before VAT).
+- `POST /carts` lines: `tax_percent` (9 or 21) and `tax_amount` (money for the whole line). `tax` stays the
+  percent for the legacy app; the new app should read the two new fields.
+- `POST /order/store`: `grand_total = subtotal + VAT + shipping - coupon`. The money is stored in the new column
+  `order_details.tax_amount` (migration `2026_11_03_090000`); `order_details.tax` keeps the percent, which every
+  other writer already puts there.
+- `GET /purchase-history-details/{id}`: `tax` is the VAT money, `subtotal` is before VAT, `grand_total` is the
+  sum. `GET /purchase-history-items/{id}`: per line `tax` (money) and `tax_percent`.
 
-So there is no field that is right to show or add up now. The business has to say whether the prices include
-VAT or VAT is added on top. When it does, the fix is small: one place computes the amount, `order_details.tax`
-stores that amount, and the cart and order answers carry both `tax_percent` and `tax_amount`.
+Not changed: the web storefront checkout, the back office order entry and the offers still do not add VAT, and
+orders placed before this change show `tax` 0.00 because no amount was recorded. Say if the web checkout and the
+back office entry should follow; they are separate code paths with their own totals.
 
 **B.5 Minimum order.** `POST /order/store` does not refuse a small order. With `minimum_order_amount_check` on,
 a cart below `minimum_order_amount` gets the delivery-fee product (`default_specific_product`) added as a line, and
@@ -132,12 +136,24 @@ the order is placed. `GET /delivery-info` reports `minimum_order_amount` and `de
 `GET /cart-summary` reports `delivery_cost`. Note that `delivery-info` compares each seller's own lines and
 `order/store` compares the whole cart. If you want a refusal instead of a fee, say so.
 
-**B.6 Prices for unverified accounts.** Not done. The flag is `admin_verified` in the user object (sign-in,
-`POST /auth/info`, and now `GET /auth/user`). Hiding prices on the server touches every product, search, wishlist and
-cart answer, and the product endpoints take no token today (a guest would need the optional-token guard). I need
-the rule confirmed first: hide for a guest, for `admin_verified` 0, or both; which fields (`stroked_price`,
-`main_price`, `calculable_price`, cart totals); and what a client reads in their place (null, or a
-`price_hidden: true` flag). Reply with those and I will build it.
+**B.6 Prices for unverified accounts.** Done, on my recommendation (you left the rule to me). Hidden from a
+**guest** and from a **customer whose `admin_verified` is false**; staff, sellers, drivers and representatives see
+prices. The flag a client reads is `admin_verified` in the user object. Where:
+
+- Catalogue answers (product lists, search, featured, detail, variants and variant price, offers inside
+  them, shop and flash-deal products, wishlist): `stroked_price`, `main_price`, `discounted_price`,
+  `discounted_value`, `base_price`, `base_discounted_price`, `price_per_piece`, `calculable_price`, `price`,
+  `unit_price` are `null`.
+- Cart answers (`cart-summary`, `POST /carts`, `delivery-info`): the money fields (`sub_total`, `tax`,
+  `tax_amount`, `shipping_cost`, `discount`, `grand_total`, `grand_total_value`, `delivery_cost`, `price`,
+  `rep_price`, `subtotal`, `default_delivery_fees`) are `null`.
+- Every such answer carries the header `X-Prices-Hidden: 1`, and an object answer also has `"price_hidden": true`.
+  The product data (name, photos, stock, percent fields) is unchanged.
+
+Not done, on purpose: an unverified account can still add to the cart and order (B.5 (c) above). It now cannot
+see what it pays, so tell me if ordering should be refused with 403 for them. The hidden-key lists live in
+`HidePricesFromUnverified::KEYS`; a new money field in an answer has to be added there. The money fields of the
+offers that the cart adds, and the order and invoice answers, are shown to the account that owns the order.
 
 **B.7 Error shapes.** Shapes today:
 
@@ -149,16 +165,17 @@ the rule confirmed first: hide for a guest, for `admin_verified` 0, or both; whi
 | Throttling | 429 | Laravel's `{"message":"Too many attempts."}` |
 | Version block | 426 | `{"message","error_code":"app_version_outdated","minimum_version":"x.y.z"}` |
 
-Changed now: `POST /auth/signup` answers 422 (it was 200). Still 200 with `result:false` on at least one path
+Changed now: `POST /auth/signup` answers 422 (it was 200), and **a client that sends the header
+`X-Status-Mode: http` gets 422 instead of 200 for every `result:false` answer below, with the same body**. Clients
+without the header (the legacy app) are unchanged, so nothing has to be moved together. 401, 403, 404, 426 and
+429 are untouched. The new app should send the header on every call. Without the header, 200 with `result:false`
+still happens on at least one path
 (found by scanning the controllers): `carts/add`, `change-quantity`, `process` and `update_item_price`;
 `order/store` for stock, coupon, wallet and empty-cart refusals; `auth/login`, `auth/confirm_code`, `social-login`;
 `coupon-apply`, `pick-customer`, `create-customer`, `wishlists` destroy, `profile/update` (its non-validation
 failures), `profile/update-image`, `profile/image-upload`, `file/image-upload`, `reviews/submit`, `address` calls
 (`deleteShippingAddress`, `updateAddressInCart`, `updateShippingTypeInCart`), `auction/place-bid`, the payment
-gateway starters and `representatives/payments/store`. I did not move them: the old Flutter app reads those as
-200, and the same endpoints serve both apps. Say which of them the new app needs as 4xx and when the old app
-can be dropped, and I will change them in one pass.
-
+gateway starters and `representatives/payments/store`.
 ---
 
 ## BR-20261102-B

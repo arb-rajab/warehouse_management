@@ -385,6 +385,21 @@ if (!function_exists('cart_product_tax')) {
     }
 }
 
+if (!function_exists('cart_line_tax')) {
+    /**
+     * The VAT added on top of one cart line, in money: `$linePrice` is the line's
+     * price for its whole quantity before tax (a representative's own price
+     * when the line has one). The product's explicit tax rows win; otherwise
+     * its VAT percent (`products.tax`, 9 or 21) applies to the line price.
+     */
+    function cart_line_tax($cart_product, $product, float $linePrice): float
+    {
+        $explicit = (float) cart_product_tax($cart_product, $product, false) * (int) $cart_product['quantity'];
+
+        return round($explicit > 0 ? $explicit : $linePrice * (float) ($product->tax ?? 0) / 100, 2);
+    }
+}
+
 if (!function_exists('cart_product_discount')) {
     function cart_product_discount($cart_product, $product, $formatted = false)
     {

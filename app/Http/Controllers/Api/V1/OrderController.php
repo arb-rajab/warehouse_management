@@ -453,8 +453,6 @@ class OrderController extends Controller
                     $subtotal += cart_product_price($cartItem, $product, false, false) * $cartItem['quantity'];
                 }
 
-                $tax += cart_product_tax($cartItem, $product, false) * $cartItem['quantity'];
-
                 $product_variation = $cartItem['variation'];
 
                 $this->orderPlacementService()->reserveStock($product, $product_variation, $cartItem['quantity']);
@@ -476,7 +474,6 @@ class OrderController extends Controller
                     $order_detail->original_price = cart_product_price($cartItem, $product, false, false) * $cartItem['quantity'];
                 }
 
-                $order_detail->tax = cart_product_tax($cartItem, $product, false) * $cartItem['quantity'];
                 $order_detail->shipping_type = $cartItem['shipping_type'];
                 $order_detail->variation_qty = $cartItem['variation_qty'];
                 $order_detail->product_referral_code = $cartItem['product_referral_code'];
@@ -484,8 +481,11 @@ class OrderController extends Controller
                 $order_detail->product_serial = $product->serial;
                 $order_detail->item_notes = $cartItem['item_notes'];
                 // order_details.tax is NOT NULL and products.tax nullable: see
-                // the web OrderController::store().
+                // the web OrderController::store(). It holds the VAT percent;
+                // the money added on top of the line is tax_amount.
                 $order_detail->tax = $product->tax ?? 0;
+                $order_detail->tax_amount = cart_line_tax($cartItem, $product, (float) $order_detail->price);
+                $tax += $order_detail->tax_amount;
                 $order_detail->profits = (float)($order_detail->price * ($product->collection?->amount ?? 1)) / 100;
 
                 $shipping += $order_detail->shipping_cost;

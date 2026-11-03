@@ -70,7 +70,13 @@ class CartController extends Controller
             $sum +=  $item_sum;   //// 'grand_total' => $request->g
 
             $subtotal += $price * $cartItem->quantity;
-            //$tax += $cartItem->tax * $cartItem->quantity;
+
+            // VAT is added on top of the line price, as order/store adds it.
+            if ($product) {
+                $lineTax = cart_line_tax($cartItem, $product, (float) $price * $cartItem->quantity);
+                $tax += $lineTax;
+                $sum += $lineTax;
+            }
         }
 
         $delivery_cost = 0;
@@ -174,7 +180,11 @@ class CartController extends Controller
                         $shop_items_data_item["shipping_cost"] = (float) $shop_items_raw_data_item["shipping_cost"];
                         $shop_items_data_item["quantity"] = intval($shop_items_raw_data_item["quantity"]);
                         $shop_items_data_item["variation_qty"] = $transformedData;
+                        // `tax` stays the VAT percent for the legacy app; the new app reads
+                        // tax_percent and tax_amount (money, added on top of price x quantity).
                         $shop_items_data_item["tax"] = $product->tax;
+                        $shop_items_data_item["tax_percent"] = (float) ($product->tax ?? 0);
+                        $shop_items_data_item["tax_amount"] = cart_line_tax($shop_items_raw_data_item, $product, (float) $shop_items_data_item["price"] * $shop_items_data_item["quantity"]);
                         $shop_items_data_item["mat_id"] = $product->mat_id;
                         $shop_items_data_item["item_notes"] = $shop_items_raw_data_item["item_notes"];
                         $shop_items_data_item["rep_price"] = (float) $shop_items_raw_data_item["rep_price"];

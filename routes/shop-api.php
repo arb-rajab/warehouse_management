@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Middleware\EnsureSystemKey;
 use Illuminate\Support\Facades\Route;
 
-Route::group(['prefix' => 'v1/store/auth', 'middleware' => ['app_language']], function () {
+Route::group(['prefix' => 'v1/store/auth', 'middleware' => ['app_language', 'strict.status']], function () {
     Route::post('login', 'App\Http\Controllers\Api\V1\StoreAuthController@login')->middleware('throttle:store-auth');
     Route::post('signup', 'App\Http\Controllers\Api\V1\StoreAuthController@signup')->middleware('throttle:store-signup');
     Route::post('social-login', 'App\Http\Controllers\Api\V1\StoreAuthController@socialLogin')->middleware('throttle:store-auth');
@@ -27,7 +27,7 @@ Route::group(['prefix' => 'v1/store/auth', 'middleware' => ['app_language']], fu
 });
 
 
-Route::group(['prefix' => 'v1/store', 'middleware' => ['app_language']], function () {
+Route::group(['prefix' => 'v1/store', 'middleware' => ['app_language', 'strict.status']], function () {
 
     Route::get('dynamic-popups', 'App\Http\Controllers\Api\V1\DynamicPopupController@index')->middleware('auth:store_api');
     Route::post('dynamic-popups/ignore/{id}', 'App\Http\Controllers\Api\V1\DynamicPopupController@ignore')->middleware('auth:store_api');
@@ -88,16 +88,16 @@ Route::group(['prefix' => 'v1/store', 'middleware' => ['app_language']], functio
         Route::get('customer/info', 'App\Http\Controllers\Api\V1\CustomerController@show')->middleware('auth:store_api');
 
 
-        Route::get('cart-summary', 'App\Http\Controllers\Api\V1\CartController@summary')->middleware('auth:store_api');
+        Route::get('cart-summary', 'App\Http\Controllers\Api\V1\CartController@summary')->middleware(['auth:store_api', 'hide.prices:cart']);
         Route::get('cart-count', 'App\Http\Controllers\Api\V1\CartController@count')->middleware('auth:store_api');
         Route::post('carts/process', 'App\Http\Controllers\Api\V1\CartController@process')->middleware('auth:store_api');
         Route::post('carts/add', 'App\Http\Controllers\Api\V1\CartController@add')->middleware('auth:store_api');
         Route::post('carts/update-note', 'App\Http\Controllers\Api\V1\CartController@updateNote')->middleware('auth:store_api');
         Route::post('carts/change-quantity', 'App\Http\Controllers\Api\V1\CartController@changeQuantity')->middleware('auth:store_api');
         Route::apiResource('carts', 'App\Http\Controllers\Api\V1\CartController')->only('destroy')->middleware('auth:store_api');
-        Route::post('carts', 'App\Http\Controllers\Api\V1\CartController@getList')->middleware('auth:store_api');
+        Route::post('carts', 'App\Http\Controllers\Api\V1\CartController@getList')->middleware(['auth:store_api', 'hide.prices:cart']);
         Route::post('cart/update_item_price', 'App\Http\Controllers\Api\V1\CartController@update_item_price')->middleware('auth:store_api');
-        Route::get('delivery-info', 'App\Http\Controllers\Api\V1\ShippingController@getDeliveryInfo')->middleware('auth:store_api');
+        Route::get('delivery-info', 'App\Http\Controllers\Api\V1\ShippingController@getDeliveryInfo')->middleware(['auth:store_api', 'hide.prices:cart']);
 
 
         Route::post('coupon-apply', 'App\Http\Controllers\Api\V1\CheckoutController@apply_coupon_code')->middleware('auth:store_api');
@@ -122,7 +122,7 @@ Route::group(['prefix' => 'v1/store', 'middleware' => ['app_language']], functio
         // POST for a new client; GET is for the legacy app only (see auth/logout above).
         Route::match(['GET', 'POST'], 'wishlists-add-product', 'App\Http\Controllers\Api\V1\WishlistController@add')->middleware('auth:store_api');
         Route::match(['GET', 'POST'], 'wishlists-remove-product', 'App\Http\Controllers\Api\V1\WishlistController@remove')->middleware('auth:store_api');
-        Route::get('wishlists', 'App\Http\Controllers\Api\V1\WishlistController@index')->middleware('auth:store_api');
+        Route::get('wishlists', 'App\Http\Controllers\Api\V1\WishlistController@index')->middleware(['auth:store_api', 'hide.prices:catalog']);
         Route::apiResource('wishlists', 'App\Http\Controllers\Api\V1\WishlistController')->except(['index', 'update', 'show'])->middleware('auth:store_api');
 
         Route::get('user/shipping/address', 'App\Http\Controllers\Api\V1\AddressController@addresses')->middleware('auth:store_api');
@@ -226,7 +226,7 @@ Route::group(['prefix' => 'v1/store', 'middleware' => ['app_language']], functio
     Route::get('filter/categories', 'App\Http\Controllers\Api\V1\FilterController@categories');
     Route::get('filter/brands', 'App\Http\Controllers\Api\V1\FilterController@brands');
 
-    Route::group(['middleware' => 'log.request.time'], function () {
+    Route::group(['middleware' => ['log.request.time', 'hide.prices:catalog']], function () {
 
         // Route::get('products/admin', 'App\Http\Controllers\Api\V1\StoreProductController@admin');
         Route::get('products/inhouse', 'App\Http\Controllers\Api\V1\StoreProductController@inhouse');
@@ -264,10 +264,10 @@ Route::group(['prefix' => 'v1/store', 'middleware' => ['app_language']], functio
 
 
     Route::get('shops/details/{id}', 'App\Http\Controllers\Api\V1\ShopController@info')->name('shops.info');
-    Route::get('shops/products/all/{id}', 'App\Http\Controllers\Api\V1\ShopController@allProducts')->name('shops.allProducts');
-    Route::get('shops/products/top/{id}', 'App\Http\Controllers\Api\V1\ShopController@topSellingProducts')->name('shops.topSellingProducts');
-    Route::get('shops/products/featured/{id}', 'App\Http\Controllers\Api\V1\ShopController@featuredProducts')->name('shops.featuredProducts');
-    Route::get('shops/products/new/{id}', 'App\Http\Controllers\Api\V1\ShopController@newProducts')->name('shops.newProducts');
+    Route::get('shops/products/all/{id}', 'App\Http\Controllers\Api\V1\ShopController@allProducts')->name('shops.allProducts')->middleware('hide.prices:catalog');
+    Route::get('shops/products/top/{id}', 'App\Http\Controllers\Api\V1\ShopController@topSellingProducts')->name('shops.topSellingProducts')->middleware('hide.prices:catalog');
+    Route::get('shops/products/featured/{id}', 'App\Http\Controllers\Api\V1\ShopController@featuredProducts')->name('shops.featuredProducts')->middleware('hide.prices:catalog');
+    Route::get('shops/products/new/{id}', 'App\Http\Controllers\Api\V1\ShopController@newProducts')->name('shops.newProducts')->middleware('hide.prices:catalog');
     Route::get('shops/brands/{id}', 'App\Http\Controllers\Api\V1\ShopController@brands')->name('shops.brands');
     Route::apiResource('shops', 'App\Http\Controllers\Api\V1\ShopController')->only('index');
 
@@ -328,7 +328,7 @@ Route::group(['prefix' => 'v1/store', 'middleware' => ['app_language']], functio
 
 
     Route::get('flash-deals', 'App\Http\Controllers\Api\V1\FlashDealController@index');
-    Route::get('flash-deal-products/{id}', 'App\Http\Controllers\Api\V1\FlashDealController@products');
+    Route::get('flash-deal-products/{id}', 'App\Http\Controllers\Api\V1\FlashDealController@products')->middleware('hide.prices:catalog');
 
     //Addon list
     Route::get('addon-list', 'App\Http\Controllers\Api\V1\ConfigController@addon_list');

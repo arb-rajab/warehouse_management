@@ -145,7 +145,7 @@ function actingAsMobilePanelUser(): User
  * request's authenticated user is: the store's views read columns this never
  * sets, which strict mode refuses to read off a model that doesn't have them.
  */
-function createStoreUser(string $userType = 'customer', ?string $email = null, string $password = 'correct-password'): StoreUser
+function createStoreUser(string $userType = 'customer', ?string $email = null, string $password = 'correct-password', bool $verified = true): StoreUser
 {
     $user = StoreUser::create([
         'name' => ucfirst($userType).' Tester',
@@ -153,7 +153,8 @@ function createStoreUser(string $userType = 'customer', ?string $email = null, s
         'phone' => (string) random_int(1000000000, 9999999999),
     ]);
     $user->password = $password;
-    $user->forceFill(['user_type' => $userType, 'email_verified_at' => now()])->save();
+    // Verified by the back office, like the shop's real customers: an unverified one sees no prices.
+    $user->forceFill(['user_type' => $userType, 'email_verified_at' => now(), 'admin_verified' => $verified])->save();
 
     return $user->fresh();
 }

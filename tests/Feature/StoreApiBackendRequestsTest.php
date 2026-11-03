@@ -78,7 +78,7 @@ test('GET auth/user returns the account object sign-in returns, and issues no to
         'trade_license' => null,
         'bank_account_number' => 'NL00BANK',
         'email_verified' => true,
-        'admin_verified' => 0,
+        'admin_verified' => 1,
     ])
         ->and($response->getContent())->not->toContain('verification_code')->not->toContain('provider_id')->not->toContain('refresh_token')
         ->and(DB::table('wms_personal_access_tokens')->count())->toBe($tokens + 1); // the one storeApiToken() made
