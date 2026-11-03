@@ -38,7 +38,8 @@ import type {
  * choices and rows (regenerated through `variantsUrl`) and `initialFiles`
  * the previews of the stored uploads; the slug and the Otajer image show only
  * there, as on the Blade edit form. The edit form also gets the Arabic name
- * (`arName`, a field only it shows) and `readOnlyFields`: the Otajer-owned
+ * (`arName`, blank on create, where the field is also shown) and
+ * `readOnlyFields`: the Otajer-owned
  * synced fields of a feed-origin product, rendered read-only with a note
  * (the server ignores what is posted for them). Only the name, Arabic name,
  * unit, unit price and description have a field here; a synced description
@@ -142,11 +143,11 @@ const linkClass =
                     {{ t('store.products.form.otajerSynced') }}
                 </p>
             </div>
-            <div v-if="arName !== undefined">
+            <div>
                 <FormField
                     id="ar_name"
                     :label="t('store.products.form.arName')"
-                    :value="arName"
+                    :value="arName ?? ''"
                     :error="errors.ar_name"
                     maxlength="191"
                     dir="auto"
@@ -765,6 +766,28 @@ const linkClass =
                     />
                     {{ t('store.products.form.todaysDeal') }}
                 </label>
+                <div>
+                    <label
+                        class="flex cursor-pointer items-center gap-2 text-sm"
+                    >
+                        <!-- Posts 0 when unticked: can_expire is
+                             sometimes|boolean, so an absent key would leave
+                             the stored flag unchanged. -->
+                        <input type="hidden" name="can_expire" value="0" />
+                        <input
+                            type="checkbox"
+                            name="can_expire"
+                            value="1"
+                            :checked="product?.can_expire ?? false"
+                            aria-describedby="can_expire_help"
+                            :class="checkboxClass"
+                        />
+                        {{ t('store.products.form.canExpire') }}
+                    </label>
+                    <p id="can_expire_help" :class="helpClass">
+                        {{ t('store.products.form.canExpireHelp') }}
+                    </p>
+                </div>
             </div>
         </fieldset>
 

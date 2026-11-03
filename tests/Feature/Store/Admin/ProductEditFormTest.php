@@ -545,6 +545,7 @@ test('the update validates every field and refuses rows that do not match the ch
     'malformed date range' => [['date_range' => '2026-11-01 to 2026-11-30'], 'date_range'],
     'unknown stock visibility' => [['stock_visibility_state' => 'blink'], 'stock_visibility_state'],
     'can expire not a boolean' => [['can_expire' => 'maybe'], 'can_expire'],
+    'Arabic name too long' => [['ar_name' => str_repeat('ز', 192)], 'ar_name'],
     'inactive tax' => [fn () => ['tax_id' => [test()->oldTax], 'tax' => ['1'], 'tax_type' => ['amount']], 'tax_id.0'],
     'rows missing' => [['variants' => null], 'variants'],
     'renamed row' => [fn () => ['variants' => [['variant' => 'S', 'price' => '1', 'qty' => '1'], ['variant' => 'L', 'price' => '1', 'qty' => '1']]], 'variants.1.variant'],

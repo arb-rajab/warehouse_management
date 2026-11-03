@@ -61,6 +61,7 @@ class InHouseProductWriter extends PhysicalProductWriter
             ...$this->postedColumns($data),
             ...$this->variantColumns($data, $variantNames, $colorCodes),
             ...$this->derivedColumns($data),
+            'ar_name' => (string) ($data['ar_name'] ?? ''),
             'added_by' => 'admin',
             'user_id' => StoreUser::query()->where('user_type', 'admin')->orderBy('id')->firstOrFail()->id,
             'approved' => 1,

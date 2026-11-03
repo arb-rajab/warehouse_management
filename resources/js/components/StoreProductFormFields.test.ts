@@ -102,6 +102,8 @@ const labelKeys = [
     'cashOnDelivery',
     'featured',
     'todaysDeal',
+    'canExpire',
+    'canExpireHelp',
     'flashDeal',
     'addToFlash',
     'chooseFlashDeal',
@@ -559,12 +561,50 @@ describe('StoreProductFormFields', () => {
             expect(wrapper.text()).toContain(message);
         }
     });
-    it('has no Arabic name field or synced-field note on the create form', () => {
+    it('shows an empty, optional Arabic name and no synced-field note on the create form', () => {
         const wrapper = mountFields();
 
-        expect(wrapper.find('#ar_name').exists()).toBe(false);
+        const arName = wrapper.get('#ar_name');
+        expect(arName.attributes('name')).toBe('ar_name');
+        expect(arName.attributes('dir')).toBe('auto');
+        expect(arName.attributes('maxlength')).toBe('191');
+        expect(arName.attributes('required')).toBeUndefined();
+        expect(arName.attributes('readonly')).toBeUndefined();
+        expect((arName.element as HTMLInputElement).value).toBe('');
+        expect(wrapper.find('#ar_name-otajer-synced').exists()).toBe(false);
         expect(wrapper.find('#otajer-synced-fields').exists()).toBe(false);
         expect(wrapper.get('#name').attributes('readonly')).toBeUndefined();
+    });
+
+    it('posts can_expire as a checkbox with a hidden 0 fallback, optional and unmarked', async () => {
+        const create = mountFields();
+        const [hidden, box] = create.findAll('input[name="can_expire"]');
+        expect(hidden.attributes('type')).toBe('hidden');
+        expect((hidden.element as HTMLInputElement).value).toBe('0');
+        expect(box.attributes('type')).toBe('checkbox');
+        expect((box.element as HTMLInputElement).value).toBe('1');
+        expect((box.element as HTMLInputElement).checked).toBe(false);
+        expect(box.attributes('required')).toBeUndefined();
+        expect(box.attributes('aria-describedby')).toBe('can_expire_help');
+        expect(create.get('#can_expire_help').text()).toBe(
+            t('store.products.form.canExpireHelp'),
+        );
+        expect(box.element.closest('label')?.text()).toBe(
+            t('store.products.form.canExpire'),
+        );
+        expect(
+            box.element.closest('label')?.querySelector('[aria-hidden]'),
+        ).toBeNull();
+
+        const edit = mountFields({
+            product: storeProductForm({ can_expire: true }),
+        });
+        expect(
+            (
+                edit.get('input[type="checkbox"][name="can_expire"]')
+                    .element as HTMLInputElement
+            ).checked,
+        ).toBe(true);
     });
 
     it('renders the Arabic name as an optional edit field and read-only fields with their notes', () => {

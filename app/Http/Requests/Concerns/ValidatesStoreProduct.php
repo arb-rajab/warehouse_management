@@ -50,6 +50,7 @@ trait ValidatesStoreProduct
 
         return [
             'name' => ['required', 'string', 'max:200'],
+            'ar_name' => ['sometimes', 'nullable', 'string', 'max:191'],
             'category_id' => ['required', 'integer', Rule::in(array_column(Category::treeOptions(fn ($roots) => $roots->where('digital', 0)), 'id'))],
             'brand_id' => ['nullable', 'integer', Rule::exists('brands', 'id')],
             'unit' => ['required', 'string', 'max:20'],

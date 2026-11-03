@@ -132,7 +132,11 @@ Setup > Product data sources (`product_field_sources.index`, permission
   fully store-owned whatever the choice; nothing on them is read-only.
 - The name, unit and description locks apply to the default-language tab
   only: other languages edit a translation the sync never writes. The Arabic name is an edit-form
-  field (`ar_name`, nullable, max 191) so an admin-owned value can be set.
+  field (`ar_name`, nullable, max 191, the one rule in `ValidatesStoreProduct`
+  shared by both forms) so an admin-owned value can be set. The Create form has
+  the same optional input (empty, `dir="auto"`) and `InHouseProductWriter::create()`
+  saves it into the column (`''` when blank); a new admin-created product is
+  store-origin, so nothing is read-only there.
   `ProductController::renderEdit()` prefills it from the column; while the
   column is blank and the field is editable it falls back to the product's
   Arabic translation (`ar` or `sa`) name, and saving the form writes that into
@@ -149,7 +153,10 @@ Setup > Product data sources (`product_field_sources.index`, permission
   product such as Labneh) is **not** a synced field: the sync never writes it,
   so it is not in the registry and nothing guards it. The product form posts it
   (`sometimes|boolean`) and `PhysicalProductWriter::postedColumns()` writes it
-  when present; `ProductFormResource` sends it as `can_expire`.
+  when present; `ProductFormResource` sends it as `can_expire`. Both forms show
+  it as an optional "Can expire soon" checkbox in Stock and shipping (after
+  Today's deal), posted with a hidden `0` so an unticked box clears the flag
+  (an absent key would leave it unchanged).
 
 ## Tests
 

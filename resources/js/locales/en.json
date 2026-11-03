@@ -2869,6 +2869,8 @@
                 "cashPaymentActivation": "Cash payment activation",
                 "featured": "Featured",
                 "todaysDeal": "Today's deal",
+                "canExpire": "Can expire soon",
+                "canExpireHelp": "Tick for perishable products, such as labneh.",
                 "flashDeal": "Flash deal",
                 "addToFlash": "Add to flash deal",
                 "chooseFlashDeal": "Choose a flash deal",

@@ -2869,6 +2869,8 @@
                 "cashPaymentActivation": "تفعيل الدفع النقدي",
                 "featured": "مميز",
                 "todaysDeal": "عرض اليوم",
+                "canExpire": "قابل لانتهاء الصلاحية قريبًا",
+                "canExpireHelp": "حدّد هذا الخيار للمنتجات سريعة التلف، مثل اللبنة.",
                 "flashDeal": "العرض الخاطف",
                 "addToFlash": "إضافة إلى عرض خاطف",
                 "chooseFlashDeal": "اختر عرضًا خاطفًا",
