@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Testing\TestResponse;
 use Inertia\Testing\AssertableInertia as Assert;
 
 beforeEach(function () {
@@ -67,7 +68,7 @@ test('customer list returns a narrow full record without representatives sellers
     $archived = createStoreUser();
     $archived->forceFill(['is_delete' => 1])->save();
     $this->get(route('customers.index'))->assertOk()->assertInertia(fn (Assert $page) => $page->has('customers.data', 1)->has('customers.data.0', fn (Assert $record) => $record
-        ->where('id', $customer->id)->where('name', 'Amy')->where('email', 'amy@example.com')->where('phone', '31611111111')->where('company_name', 'Amy Company')->where('is_rep', false)->where('archived', false)->where('banned', false)->where('verified', true)->where('important', true)->where('activity_status', 'new_user')->where('rep_id', null)->where('rep_serial', null)));
+        ->where('id', $customer->id)->where('name', 'Amy')->where('email', 'amy@example.com')->where('phone', '31611111111')->where('company_name', 'Amy Company')->where('is_rep', false)->where('archived', false)->where('banned', false)->where('verified', true)->where('important', true)->where('activity_status', 'new_user')->where('rep_id', null)->where('rep_serial', null)->etc()));
 });
 test('blank yes/no filters from the Filters dialog mean all and are not applied as No', function () {
     actingAsStoreUser(createStoreStaff('view_all_customers'));
@@ -434,3 +435,164 @@ test('the customer search finds a customer by tax number', function () {
         ->has('customers.data', 1)
         ->where('customers.data.0.id', $customer->id));
 });
+
+/**
+ * @return array{a: StoreUser, b: StoreUser, rep: StoreUser}
+ */
+function seedProfitRangeScenario(): array
+{
+    $a = createStoreUser('customer', 'range-a@example.com');
+    $b = createStoreUser('customer', 'range-b@example.com');
+    $rep = createStoreUser('customer', 'range-rep@example.com');
+    $a->forceFill(['profits' => 999, 'name' => 'Alpha'])->save();
+    $b->forceFill(['profits' => 1, 'name' => 'Bravo'])->save();
+    $rep->forceFill(['is_rep' => true, 'profits' => 20, 'name' => 'Rep Zed'])->save();
+    foreach ([
+        // At the lower bound: counted.
+        [$a, 10, '2026-11-01 12:00:00', []],
+        // Inside the last minute of the upper bound, and cancelled: still counted.
+        [$a, 5, '2026-11-02 12:00:30', ['delivery_status' => 'cancelled']],
+        // A minute past the upper bound, and long before the lower bound: not counted.
+        [$a, 1000, '2026-11-02 12:01:00', []],
+        [$a, 100, '2026-10-01 09:00:00', []],
+        // Placed by the representative for A: counts for both accounts.
+        [$rep, 7, '2026-11-01 13:00:00', ['by_rep' => 1, 'for_customer' => $a->id]],
+        // A's own order whose for_customer names B without by_rep: B gets nothing.
+        [$a, 50, '2026-11-01 14:00:00', ['for_customer' => $b->id]],
+        [$b, 3, '2026-11-01 12:30:00', []],
+    ] as [$owner, $profits, $createdAt, $extra]) {
+        createStoreOrder($owner, ['profits' => $profits, 'created_at' => $createdAt, ...$extra]);
+    }
+
+    return ['a' => $a, 'b' => $b, 'rep' => $rep];
+}
+
+/** @return array<int, float|int> */
+function listedProfits(TestResponse $response): array
+{
+    return collect($response->assertOk()->inertiaProps()['customers']['data'])->pluck('profits', 'id')->all();
+}
+
+test('the customers list shows every agreed property, never a secret', function () {
+    actingAsStoreUser(createStoreStaff('view_all_customers', 'edit_customer'));
+    $customer = createStoreUser('customer', 'columns@example.com');
+    $customer->forceFill(['company_name' => 'Acme', 'country' => 'Netherlands', 'tax_number' => 'VAT1', 'bank_account_number' => 'NL99', 'trade_license' => 'license.pdf', 'company_address' => 'Company Road', 'shipping_address' => 'Shipping Road', 'member_serial' => '42', 'AccSysID' => 7, 'admin_notes' => 'Call later', 'registration_completed' => 1, 'from_api' => 1, 'profits' => 12.5, 'balance' => 3.5, 'address' => 'Old street', 'state' => 'NH', 'city' => 'Haarlem', 'postal_code' => '2000', 'last_order_at' => '2026-10-30', 'admin_verified_at' => '2026-10-01', 'remember_token' => 'remember-secret', 'verification_code' => 'code-secret', 'device_token' => 'device-secret', 'device_key' => 'key-secret'])->save();
+    $record = $this->get(route('customers.index'))->assertOk()->inertiaProps()['customers']['data'][0];
+    expect($record)->toMatchArray([
+        'id' => $customer->id, 'company_name' => 'Acme', 'user_type' => 'customer', 'country' => 'Netherlands', 'tax_number' => 'VAT1', 'bank_account_number' => 'NL99', 'trade_license' => 'license.pdf',
+        'company_address' => 'Company Road', 'shipping_address' => 'Shipping Road', 'member_serial' => '42', 'AccSysID' => 7, 'admin_notes' => 'Call later', 'registration_completed' => true, 'from_api' => true,
+        'profits' => 12.5, 'address' => 'Old street', 'state' => 'NH', 'city' => 'Haarlem', 'postal_code' => '2000', 'last_order_at' => '2026-10-30', 'admin_verified_at' => '2026-10-01',
+    ])->and($record)->toHaveKeys(['email_verified_at', 'created_at', 'updated_at', 'balance', 'rep_discount_percentage', 'rep_id', 'rep_serial']);
+    expect(json_encode($record))->not->toContain('secret')->and(array_keys($record))->not->toContain('password')->not->toContain('remember_token')->not->toContain('verification_code')->not->toContain('device_token')->not->toContain('device_key');
+});
+
+test('tax number, bank account, trade licence and balance need the edit permission', function () {
+    $customer = createStoreUser('customer', 'restricted@example.com');
+    $customer->forceFill(['tax_number' => 'VAT1', 'bank_account_number' => 'NL99', 'trade_license' => 'license.pdf', 'balance' => 3.5, 'country' => 'Netherlands'])->save();
+    actingAsStoreUser(createStoreStaff('view_all_customers'));
+    $record = $this->get(route('customers.index'))->assertOk()->inertiaProps()['customers']['data'][0];
+    expect($record)->toHaveKey('country')->not->toHaveKeys(['tax_number', 'bank_account_number', 'trade_license', 'balance']);
+    expect(json_encode($record))->not->toContain('VAT1')->not->toContain('NL99')->not->toContain('license.pdf');
+});
+
+test('the profits column is the stored total without a range', function () {
+    actingAsStoreUser(createStoreStaff('view_all_customers'));
+    ['a' => $a, 'b' => $b] = seedProfitRangeScenario();
+    $profits = listedProfits($this->get(route('customers.index')));
+    expect($profits[$a->id])->toEqual(999.0)->and($profits[$b->id])->toEqual(1.0);
+    $this->get(route('customers.index', ['profit_from' => '', 'profit_to' => '']))->assertInertia(fn (Assert $page) => $page->missing('filters.profit_from')->missing('filters.profit_to'));
+});
+
+test('a profit range sums the orders created in it for the owner and the customer a representative ordered for', function () {
+    actingAsStoreUser(createStoreStaff('view_all_customers'));
+    ['a' => $a, 'b' => $b, 'rep' => $rep] = seedProfitRangeScenario();
+    $response = $this->get(route('customers.index', ['profit_from' => '2026-11-01T12:00', 'profit_to' => '2026-11-02T12:00']));
+    $profits = listedProfits($response);
+    // A: 10 + 5 (cancelled, last minute) + 7 (placed by the rep for A) + 50; never the 1000 or 100 outside the range.
+    expect($profits[$a->id])->toEqual(72.0)->and($profits[$b->id])->toEqual(3.0)->and($profits)->not->toHaveKey($rep->id);
+    $response->assertInertia(fn (Assert $page) => $page->where('filters.profit_from', '2026-11-01T12:00')->where('filters.profit_to', '2026-11-02T12:00')->where('customers.meta.total', 2));
+
+    $empty = createStoreUser('customer', 'range-empty@example.com');
+    $empty->forceFill(['profits' => 400])->save();
+    expect(listedProfits($this->get(route('customers.index', ['profit_from' => '2026-11-01T12:00', 'profit_to' => '2026-11-02T12:00'])))[$empty->id])->toEqual(0.0);
+});
+
+test('a profit range can be open at either end', function () {
+    actingAsStoreUser(createStoreStaff('view_all_customers'));
+    ['a' => $a] = seedProfitRangeScenario();
+    expect(listedProfits($this->get(route('customers.index', ['profit_from' => '2026-11-02T00:00'])))[$a->id])->toEqual(1005.0);
+    expect(listedProfits($this->get(route('customers.index', ['profit_to' => '2026-10-15T00:00'])))[$a->id])->toEqual(100.0);
+});
+
+test('the representatives and archived lists sum the range the same way', function () {
+    actingAsStoreUser(createStoreStaff('view_all_customers', 'delete_customer'));
+    ['a' => $a, 'rep' => $rep] = seedProfitRangeScenario();
+    $range = ['profit_from' => '2026-11-01T12:00', 'profit_to' => '2026-11-02T12:00'];
+    expect(listedProfits($this->get(route('representatives.index', $range))))->toEqual([$rep->id => 7.0]);
+    expect(listedProfits($this->get(route('representatives.index'))))->toEqual([$rep->id => 20.0]);
+    $a->forceFill(['is_delete' => 1])->save();
+    expect(listedProfits($this->get(route('customers.archive', $range))))->toEqual([$a->id => 72.0]);
+});
+
+test('the profit range stays on every page and with search and archive', function () {
+    actingAsStoreUser(createStoreStaff('view_all_customers', 'delete_customer'));
+    ['a' => $a] = seedProfitRangeScenario();
+    foreach (range(1, 24) as $number) {
+        createStoreUser();
+    }
+    $range = ['profit_from' => '2026-11-01T12:00', 'profit_to' => '2026-11-02T12:00'];
+    $first = $this->get(route('customers.index', $range))->assertOk()->inertiaProps()['customers'];
+    expect($first['data'])->toHaveCount(20)->and($first['meta']['total'])->toBe(26);
+    expect(collect($first['meta']['links'])->pluck('url')->filter()->every(fn (string $url) => str_contains($url, 'profit_from=2026-11-01T12%3A00') && str_contains($url, 'profit_to=2026-11-02T12%3A00')))->toBeTrue();
+    $this->get(route('customers.index', [...$range, 'page' => 2]))->assertInertia(fn (Assert $page) => $page->has('customers.data', 6)->where('filters.profit_from', '2026-11-01T12:00'));
+    $searched = $this->get(route('customers.index', [...$range, 'search' => 'Alpha']))->assertOk()->inertiaProps();
+    expect(collect($searched['customers']['data'])->pluck('profits', 'id')->all())->toEqual([$a->id => 72.0])->and($searched['filters']['search'])->toBe('Alpha');
+    $a->forceFill(['is_delete' => 1])->save();
+    expect(listedProfits($this->get(route('customers.index', [...$range, 'archived' => 1, 'search' => 'Alpha']))))->toEqual([$a->id => 72.0]);
+});
+
+test('the profit range is one grouped query however many customers are listed', function () {
+    actingAsStoreUser(createStoreStaff('view_all_customers'));
+    $queries = function (): int {
+        DB::flushQueryLog();
+        DB::enableQueryLog();
+        $this->get(route('customers.index', ['profit_from' => '2026-11-01T12:00', 'profit_to' => '2026-11-02T12:00']))->assertOk();
+        $count = count(DB::getQueryLog());
+        DB::disableQueryLog();
+
+        return $count;
+    };
+    $queries();
+    foreach (range(1, 2) as $number) {
+        createStoreOrder(createStoreUser(), ['profits' => 4, 'created_at' => '2026-11-01 13:00:00']);
+    }
+    $few = $queries();
+    foreach (range(1, 8) as $number) {
+        createStoreOrder(createStoreUser(), ['profits' => 4, 'created_at' => '2026-11-01 13:00:00']);
+    }
+    expect($queries())->toBe($few);
+});
+
+test('an invalid profit range is refused and never applied', function (array $query, string $field) {
+    actingAsStoreUser(createStoreStaff('view_all_customers'));
+    $this->get(route('customers.index', $query))->assertSessionHasErrors($field);
+})->with([
+    'from after to' => [['profit_from' => '2026-11-03T10:00', 'profit_to' => '2026-11-03T09:59'], 'profit_to'],
+    'date only' => [['profit_from' => '2026-11-03'], 'profit_from'],
+    'space instead of T' => [['profit_to' => '2026-11-03 10:00'], 'profit_to'],
+    'not a date' => [['profit_from' => 'yesterday'], 'profit_from'],
+    'impossible time' => [['profit_to' => '2026-11-03T25:00'], 'profit_to'],
+]);
+
+test('equal profit range bounds are accepted', function () {
+    actingAsStoreUser(createStoreStaff('view_all_customers'));
+    $this->get(route('customers.index', ['profit_from' => '2026-11-03T10:00', 'profit_to' => '2026-11-03T10:00']))->assertOk()->assertSessionHasNoErrors();
+});
+
+foreach (['customers.index', 'representatives.index'] as $route) {
+    test($route.' refuses unauthorized callers who send a profit range', function (string $caller) use ($route) {
+        seedProfitRangeScenario();
+        actingAsRefusedStoreCaller($caller);
+        assertStoreCallerRefused($this->get(route($route, ['profit_from' => '2026-11-01T12:00', 'profit_to' => '2026-11-02T12:00'])), $caller);
+    })->with('refused store admin callers');
+}

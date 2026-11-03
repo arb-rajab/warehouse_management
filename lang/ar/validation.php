@@ -172,6 +172,8 @@ return [
     ],
 
     'attributes' => [
+        'profit_from' => 'الأرباح من',
+        'profit_to' => 'الأرباح حتى',
         'category_id' => 'الفئة',
         'brand_id' => 'العلامة التجارية',
         'shop_name' => 'اسم المتجر',

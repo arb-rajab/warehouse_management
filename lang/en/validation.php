@@ -205,6 +205,8 @@ return [
     */
 
     'attributes' => [
+        'profit_from' => 'profits from',
+        'profit_to' => 'profits to',
         'category_id' => 'category',
         'brand_id' => 'brand',
         'shop_name' => 'shop name',
