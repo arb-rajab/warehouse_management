@@ -419,7 +419,9 @@ class OrderController extends Controller
 
             if ($order_new_data_array['is_down']) {
                 $order->member_serial = $order_new_data_array['member_serial'];
-                $order->by_rep == 1 ? $order->for_customer = $order_new_data_array['for_customer'] : null;
+                if ($order->by_rep == 1 && $order_new_data_array['for_customer'] !== null) {
+                    $order->for_customer = $order_new_data_array['for_customer'];
+                }
             }
 
             $order->grand_total = $subtotal + $tax + $shipping;
