@@ -2925,6 +2925,10 @@
             "longitude": "خط الطول",
             "mapLabel": "اختيار الموقع الافتراضي",
             "hint": "انقر على الخريطة أو اسحب العلامة أو أدخل الإحداثيات."
+        },
+        "listFilters": {
+            "applying": "جارٍ التطبيق…",
+            "activeCount": "الفلاتر المفعّلة: {count}"
         }
     },
     "store.attributes.index.title": "خصائص المنتجات",

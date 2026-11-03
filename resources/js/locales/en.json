@@ -2925,6 +2925,10 @@
             "longitude": "Longitude",
             "mapLabel": "Choose the default location",
             "hint": "Click the map, drag the marker, or enter coordinates."
+        },
+        "listFilters": {
+            "applying": "Applying…",
+            "activeCount": "Active filters: {count}"
         }
     },
     "store.attributes.index.title": "Product attributes",

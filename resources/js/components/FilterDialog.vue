@@ -5,6 +5,12 @@ import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 defineProps<{
     title: string;
     closeLabel: string;
+    /**
+     * Keep the dialog (and its slot) in the DOM while closed, hidden with
+     * `v-show`, so the fields of a GET form wrapping it are still submitted
+     * when the form is sent from outside the dialog (StoreListFilters.vue).
+     */
+    keepMounted?: boolean;
 }>();
 
 const open = defineModel<boolean>('open', { required: true });
@@ -27,6 +33,12 @@ function focusableElements(): HTMLElement[] {
 }
 
 function onKeydown(event: KeyboardEvent): void {
+    // A kept-mounted dialog stays in the DOM while closed: it must not trap
+    // Tab (or react to Escape) until it is opened.
+    if (!open.value) {
+        return;
+    }
+
     if (event.key === 'Escape') {
         open.value = false;
 
@@ -84,7 +96,8 @@ onBeforeUnmount(() => {
 
 <template>
     <div
-        v-if="open"
+        v-if="open || keepMounted"
+        v-show="open"
         class="fixed inset-0 z-50 flex items-center justify-center p-4"
     >
         <div class="fixed inset-0 bg-black/50" @click="open = false"></div>
