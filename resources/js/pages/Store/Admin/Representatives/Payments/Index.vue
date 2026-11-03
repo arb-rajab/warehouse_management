@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Head, router } from '@inertiajs/vue3';
 import { Check, Clock, Download, X } from '@lucide/vue';
-import { ref } from 'vue';
+import { computed } from 'vue';
 import {
     accept,
     exportMethod,
@@ -9,12 +9,14 @@ import {
     reject,
 } from '@/actions/App/Http/Controllers/Store/Admin/RepresentativePaymentController';
 import DataTable from '@/components/DataTable.vue';
+import FieldError from '@/components/FieldError.vue';
 import FormField from '@/components/FormField.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import Pagination from '@/components/Pagination.vue';
-import SubmitButton from '@/components/SubmitButton.vue';
+import StoreListFilters from '@/components/StoreListFilters.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
+import { countActive, fieldLabelClass } from '@/lib/filters';
 import { t } from '@/lib/i18n';
 import { useStoreAccess } from '@/lib/storeAccess';
 import type { Paginated } from '@/types/admin';
@@ -34,18 +36,20 @@ const access = useStoreAccess();
 function confirmPayment(receipt: string): boolean {
     return confirm(t('store.representativePayments.confirm', { receipt }));
 }
-const search = ref(props.filters.search);
-const accepted = ref(props.filters.accepted);
-const rejected = ref(props.filters.rejected);
-const pending = ref(props.filters.pending);
-function applyFilters(perPage = props.filters.per_page): void {
+const statuses = ['pending', 'accepted', 'rejected'] as const;
+/** Dialog filters only: how many status boxes are ticked. */
+const activeFilterCount = computed(() =>
+    countActive(statuses.map((status) => props.filters[status])),
+);
+/** Change the page size, keeping the applied search and statuses. */
+function changePerPage(perPage: number): void {
     router.get(
         paymentsIndex().url,
         {
-            search: search.value,
-            accepted: accepted.value,
-            rejected: rejected.value,
-            pending: pending.value,
+            search: props.filters.search,
+            accepted: props.filters.accepted,
+            rejected: props.filters.rejected,
+            pending: props.filters.pending,
             per_page: perPage,
         },
         { preserveState: true, replace: true },
@@ -57,48 +61,53 @@ function applyFilters(perPage = props.filters.per_page): void {
     <Head :title="t('store.representativePayments.title')" />
     <StoreAdminLayout>
         <PageHeader :title="t('store.representativePayments.title')" />
-        <form
-            class="mb-4 flex flex-wrap items-end gap-3"
-            @submit.prevent="applyFilters()"
+        <StoreListFilters
+            :action="paymentsIndex()"
+            :active-count="activeFilterCount"
         >
-            <FormField
-                id="search"
-                :value="search"
-                @input="search = ($event.target as HTMLInputElement).value"
-                :label="t('store.representativePayments.search')"
-                maxlength="255"
-            />
-            <label
-                v-for="status in ['pending', 'accepted', 'rejected']"
-                :key="status"
-                class="flex items-center gap-2"
-            >
+            <template #default="{ errors }">
                 <input
-                    v-if="status === 'accepted'"
-                    v-model="accepted"
-                    type="checkbox"
-                    class="cursor-pointer"
+                    type="hidden"
+                    name="per_page"
+                    :value="filters.per_page"
                 />
-                <input
-                    v-else-if="status === 'rejected'"
-                    v-model="rejected"
-                    type="checkbox"
-                    class="cursor-pointer"
+                <FormField
+                    id="search"
+                    :value="filters.search"
+                    :error="errors.search"
+                    :label="t('store.representativePayments.search')"
+                    maxlength="255"
                 />
-                <input
-                    v-else
-                    v-model="pending"
-                    type="checkbox"
-                    class="cursor-pointer"
-                />
-                {{ t(`store.representativePayments.${status}`) }}
-            </label>
-            <SubmitButton
-                :label="t('common.filters.apply')"
-                :processing="false"
-                :processing-label="t('common.filters.apply')"
-            />
-        </form>
+            </template>
+            <template #filters="{ errors }">
+                <fieldset>
+                    <legend :class="fieldLabelClass">
+                        {{ t('store.representativePayments.status') }}
+                    </legend>
+                    <div class="flex flex-wrap gap-3">
+                        <label
+                            v-for="status in statuses"
+                            :key="status"
+                            class="flex cursor-pointer items-center gap-2 text-sm"
+                        >
+                            <input
+                                type="checkbox"
+                                :name="status"
+                                value="1"
+                                :checked="filters[status]"
+                                class="cursor-pointer"
+                            />
+                            {{ t(`store.representativePayments.${status}`) }}
+                        </label>
+                    </div>
+                    <FieldError
+                        :message="
+                            errors.pending ?? errors.accepted ?? errors.rejected
+                        "
+                    />
+                </fieldset>
+            </template>
+        </StoreListFilters>
         <DataTable
             :columns="[
                 t('store.representativePayments.id'),
@@ -186,7 +195,7 @@ function applyFilters(perPage = props.filters.per_page): void {
         <Pagination
             :links="payments.meta.links"
             :per-page="filters.per_page"
-            @update:per-page="applyFilters"
+            @update:per-page="changePerPage"
         />
     </StoreAdminLayout>
 </template>

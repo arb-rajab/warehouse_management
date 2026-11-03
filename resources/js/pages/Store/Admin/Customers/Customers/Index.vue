@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { Head, Form, router } from '@inertiajs/vue3';
-import { reactive, ref } from 'vue';
+import { Form, Head, router } from '@inertiajs/vue3';
+import { Check } from '@lucide/vue';
+import { computed, ref } from 'vue';
 import {
     create,
     repCreate,
@@ -26,11 +27,17 @@ import PageHeader from '@/components/PageHeader.vue';
 import Pagination from '@/components/Pagination.vue';
 import RequiredLegend from '@/components/RequiredLegend.vue';
 import RequiredMark from '@/components/RequiredMark.vue';
+import StoreListFilters from '@/components/StoreListFilters.vue';
 import SubmitButton from '@/components/SubmitButton.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
 import { confirmDelete } from '@/lib/confirm';
-import { plainFieldInputClass, fieldLabelClass } from '@/lib/filters';
+import {
+    countActive,
+    fieldLabelClass,
+    filterApplyButtonClass,
+    plainFieldInputClass,
+} from '@/lib/filters';
 import { t } from '@/lib/i18n';
 import { useStoreAccess } from '@/lib/storeAccess';
 import type { Paginated } from '@/types/admin';
@@ -51,57 +58,57 @@ const props = defineProps<{
     packages: { id: number; name: string; percentage: string }[];
 }>();
 const access = useStoreAccess();
-const search = ref(props.filters.search ?? '');
-const archived = ref(Boolean(props.filters.archived));
 const booleanFilters = [
     'important',
     'verified',
     'from_api',
     'registration_completed',
 ] as const;
-const flags = reactive<Record<(typeof booleanFilters)[number], string>>({
-    important: props.representatives
-        ? ''
-        : props.filters.important === false
-          ? '0'
-          : '1',
-    verified:
-        props.filters.verified === undefined
-            ? ''
-            : props.filters.verified
-              ? '1'
-              : '0',
-    from_api:
-        props.filters.from_api === undefined
-            ? ''
-            : props.filters.from_api
-              ? '1'
-              : '0',
-    registration_completed:
-        props.filters.registration_completed === undefined
-            ? ''
-            : props.filters.registration_completed
-              ? '1'
-              : '0',
-});
-const activity = ref(props.filters.activity_status ?? '');
+type BooleanFilter = (typeof booleanFilters)[number];
+/** A yes/no select's applied value; Important has no "all" and defaults to Yes. */
+function flagValue(filter: BooleanFilter): '' | '0' | '1' {
+    const value = props.filters[filter];
+
+    if (value === undefined) {
+        return filter === 'important' ? '1' : '';
+    }
+
+    return value ? '1' : '0';
+}
+/** Dialog filters only; Important counts only when it is "No" (its default is Yes). */
+const activeFilterCount = computed(() =>
+    countActive([
+        props.filters.important === false,
+        props.filters.verified !== undefined,
+        props.filters.from_api !== undefined,
+        props.filters.registration_completed !== undefined,
+        Boolean(props.filters.activity_status),
+    ]),
+);
 const selected = ref<number[]>([]);
 const packageCustomer = ref<StoreCustomer | null>(null);
 const packageOpen = ref(false);
-function apply(perPage = props.filters.per_page): void {
+/** Change the page size, keeping every applied filter. */
+function changePerPage(perPage: number): void {
+    const query: Record<string, string | number> = { per_page: perPage };
+
+    for (const key of ['search', 'activity_status'] as const) {
+        if (props.filters[key]) {
+            query[key] = props.filters[key];
+        }
+    }
+
+    for (const key of ['archived', ...booleanFilters] as const) {
+        const value = props.filters[key];
+
+        if (value !== undefined) {
+            query[key] = Number(value);
+        }
+    }
+
     router.get(
         (props.representatives ? repIndex() : customersIndex()).url,
-        {
-            search: search.value,
-            archived: archived.value ? 1 : 0,
-            per_page: perPage,
-            ...Object.fromEntries(
-                booleanFilters
-                    .filter((key) => flags[key] !== '')
-                    .map((key) => [key, flags[key]]),
-            ),
-            ...(activity.value ? { activity_status: activity.value } : {}),
-        },
+        query,
         { preserveState: true, replace: true },
     );
 }
@@ -134,51 +141,120 @@ function choosePackage(customer: StoreCustomer): void {
                 :href="representatives ? repCreate() : create()"
                 :label="t('store.customers.add')"
         /></PageHeader>
-        <form class="mb-4 flex flex-wrap gap-3" @submit.prevent="apply()">
+        <Form
+            v-if="representatives"
+            :action="repIndex()"
+            class="mb-4 flex flex-wrap items-end gap-3"
+        >
+            <input type="hidden" name="per_page" :value="filters.per_page" />
             <label :class="fieldLabelClass"
                 >{{ t('store.customers.search')
                 }}<input
-                    v-model="search"
                     type="search"
+                    name="search"
                     maxlength="255"
-                    :class="plainFieldInputClass" /></label
-            ><label
+                    :value="filters.search ?? ''"
+                    :class="plainFieldInputClass"
+            /></label>
+            <label
                 v-if="access.can('delete_customer')"
                 class="flex items-center gap-2"
-                ><input v-model="archived" type="checkbox" />{{
-                    t('store.customers.archived')
-                }}</label
-            ><button type="submit">{{ t('common.filters.apply') }}</button>
-        </form>
-        <div v-if="!representatives" class="mb-4 flex flex-wrap gap-3">
-            <label
-                v-for="filter in booleanFilters"
-                :key="filter"
-                :class="fieldLabelClass"
-                >{{ t(`store.customers.filterLabels.${filter}`)
-                }}<select v-model="flags[filter]" :class="plainFieldInputClass">
-                    <option v-if="filter !== 'important'" value="">
-                        {{ t('store.customers.all') }}
-                    </option>
-                    <option value="1">{{ t('store.customers.yes') }}</option>
-                    <option value="0">{{ t('store.customers.no') }}</option>
-                </select></label
+                ><input
+                    type="checkbox"
+                    name="archived"
+                    value="1"
+                    :checked="Boolean(filters.archived)"
+                />{{ t('store.customers.archived') }}</label
             >
-            <label :class="fieldLabelClass"
-                >{{ t('store.customers.activity')
-                }}<select v-model="activity" :class="plainFieldInputClass">
-                    <option value="">{{ t('store.customers.all') }}</option>
-                    <option value="new_user">
-                        {{ t('store.customers.newUser') }}
-                    </option>
-                    <option value="has_been_contacted">
-                        {{ t('store.customers.contacted') }}
-                    </option>
-                </select></label
-            >
-        </div>
+            <button type="submit" :class="filterApplyButtonClass">
+                <Check class="h-4 w-4 shrink-0" />{{
+                    t('common.filters.apply')
+                }}
+            </button>
+        </Form>
+        <StoreListFilters
+            v-else
+            :action="customersIndex()"
+            :active-count="activeFilterCount"
+        >
+            <template #default="{ errors }">
+                <input
+                    type="hidden"
+                    name="per_page"
+                    :value="filters.per_page"
+                />
+                <label :class="fieldLabelClass"
+                    >{{ t('store.customers.search')
+                    }}<input
+                        type="search"
+                        name="search"
+                        maxlength="255"
+                        :value="filters.search ?? ''"
+                        :class="plainFieldInputClass" /></label
+                ><FieldError :message="errors.search" /><label
+                    v-if="access.can('delete_customer')"
+                    class="flex items-center gap-2"
+                    ><input
+                        type="checkbox"
+                        name="archived"
+                        value="1"
+                        :checked="Boolean(filters.archived)"
+                    />{{ t('store.customers.archived') }}</label
+                >
+            </template>
+            <template #filters="{ errors }">
+                <div v-for="filter in booleanFilters" :key="filter">
+                    <label :for="filter" :class="fieldLabelClass">{{
+                        t(`store.customers.filterLabels.${filter}`)
+                    }}</label>
+                    <select
+                        :id="filter"
+                        :name="filter"
+                        :class="plainFieldInputClass"
+                    >
+                        <option v-if="filter !== 'important'" value="">
+                            {{ t('store.customers.all') }}
+                        </option>
+                        <option value="1" :selected="flagValue(filter) === '1'">
+                            {{ t('store.customers.yes') }}
+                        </option>
+                        <option value="0" :selected="flagValue(filter) === '0'">
+                            {{ t('store.customers.no') }}
+                        </option>
+                    </select>
+                    <FieldError :message="errors[filter]" />
+                </div>
+                <div>
+                    <label for="activity_status" :class="fieldLabelClass">{{
+                        t('store.customers.activity')
+                    }}</label>
+                    <select
+                        id="activity_status"
+                        name="activity_status"
+                        :class="plainFieldInputClass"
+                    >
+                        <option value="">{{ t('store.customers.all') }}</option>
+                        <option
+                            value="new_user"
+                            :selected="filters.activity_status === 'new_user'"
+                        >
+                            {{ t('store.customers.newUser') }}
+                        </option>
+                        <option
+                            value="has_been_contacted"
+                            :selected="
+                                filters.activity_status === 'has_been_contacted'
+                            "
+                        >
+                            {{ t('store.customers.contacted') }}
+                        </option>
+                    </select>
+                    <FieldError :message="errors.activity_status" />
+                </div>
+            </template>
+        </StoreListFilters>
         <Form
-            v-if="access.can('delete_customer') && !archived"
+            v-if="access.can('delete_customer') && !filters.archived"
             :action="bulkDestroy()"
             #default="{ processing, errors }"
             class="mb-4"
@@ -217,7 +293,9 @@ function choosePackage(customer: StoreCustomer): void {
             <template #row="{ row: customer }">
                 <td class="px-4 py-2">
                     <input
-                        v-if="access.can('delete_customer') && !archived"
+                        v-if="
+                            access.can('delete_customer') && !filters.archived
+                        "
                         v-model="selected"
                         type="checkbox"
                         :value="customer.id"
@@ -340,7 +418,7 @@ function choosePackage(customer: StoreCustomer): void {
         <Pagination
             :links="customers.meta.links"
             :per-page="filters.per_page"
-            @update:per-page="apply"
+            @update:per-page="changePerPage"
         />
         <FilterDialog
             v-model:open="packageOpen"

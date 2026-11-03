@@ -1,6 +1,7 @@
 import { Form, Link } from '@inertiajs/vue3';
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import StoreListFilters from '@/components/StoreListFilters.vue';
 import StoreOrderEntryFields from '@/components/StoreOrderEntryFields.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
@@ -29,7 +30,7 @@ vi.mock('@inertiajs/vue3', async () => {
     };
 });
 const order = storeOrder();
-// The layout's Clear Cache form shows for a Super Admin; these tests are about the page's own forms.
+// The layout's Clear dashboard cache form (in its confirm dialog) shows for a Super Admin; these tests are about the page's own forms.
 const pageForms = (wrapper: ReturnType<typeof mount>) =>
     wrapper
         .findAll('form')
@@ -224,6 +225,67 @@ describe('Store order pages', () => {
         expect(wrapper.find('input[name=admin_price]').exists()).toBe(false);
         expect(wrapper.find('select#delivery_status').exists()).toBe(false);
     });
+    it.each([
+        ['all_orders.index', '/temp/admin/all_orders'],
+        ['inhouse_orders.index', '/temp/admin/inhouse-orders'],
+        ['seller_orders.index', '/temp/admin/seller_orders'],
+        ['pick_up_point.index', '/temp/admin/orders_by_pickup_point'],
+    ])(
+        'keeps search and delivery status inline and the rest in the dialog for %s',
+        (listRoute, url) => {
+            const wrapper = mount(Index, {
+                props: {
+                    orders: paginated([order]),
+                    filters: {
+                        per_page: 50,
+                        search: 'ORD',
+                        delivery_status: 'delivered',
+                        payment_status: 'paid',
+                        from: '2026-01-01',
+                    },
+                    listRoute,
+                },
+            });
+            const form = wrapper.getComponent(StoreListFilters);
+            expect(form.props('action').url).toBe(url);
+            const inline = wrapper.get('form#store-list-filters');
+            expect(
+                inline.get('input[name="per_page"]').attributes('value'),
+            ).toBe('50');
+            expect(inline.get('input[name="search"]').element).toHaveProperty(
+                'value',
+                'ORD',
+            );
+            expect(
+                (
+                    inline.get('select[name="delivery_status"]')
+                        .element as HTMLSelectElement
+                ).value,
+            ).toBe('delivered');
+            const dialog = wrapper.get('[role="dialog"]');
+            expect(
+                dialog
+                    .findAll('select, input')
+                    .map((control) => control.attributes('name')),
+            ).toEqual(['payment_status', 'from', 'to']);
+            expect(dialog.find('select[name="delivery_status"]').exists()).toBe(
+                false,
+            );
+            expect(
+                (
+                    dialog.get('select[name="payment_status"]')
+                        .element as HTMLSelectElement
+                ).value,
+            ).toBe('paid');
+            // payment status and "from" are applied; "to" is not.
+            expect(form.props('activeCount')).toBe(2);
+            expect(
+                wrapper
+                    .get('form#store-list-filters > button[type="button"]')
+                    .text(),
+            ).toContain('2');
+        },
+    );
     it('requires any one order selection and marks the group without requiring every checkbox', async () => {
         const wrapper = mount(Index, {
             props: {

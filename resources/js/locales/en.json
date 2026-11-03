@@ -1023,7 +1023,12 @@
             "staffRoles": "Staff permissions",
             "websiteScripts": "Website scripts",
             "searchMenu": "Search menu",
-            "clearCache": "Clear Cache",
+            "clearCache": "Clear dashboard cache",
+            "notificationsUnread": "{count} unread",
+            "clearCacheHelpLabel": "About Clear dashboard cache",
+            "clearCacheHelp": "Clears only the cached dashboard chart data. It does not clear the application cache. The charts are recalculated the next time the dashboard loads.",
+            "clearCacheConfirmTitle": "Clear dashboard cache?",
+            "clearCacheConfirm": "Clear cache",
             "noNotifications": "No notifications found",
             "allNotifications": "View all notifications",
             "orderNotification": "Order {code}: {status}"
@@ -2394,8 +2399,6 @@
                 "allStatuses": "All",
                 "from": "From",
                 "to": "To",
-                "apply": "Apply",
-                "applying": "Applying…",
                 "select": "Select",
                 "selectOrder": "Select order {code}",
                 "selectAll": "Select all on this page",
@@ -2925,6 +2928,10 @@
             "longitude": "Longitude",
             "mapLabel": "Choose the default location",
             "hint": "Click the map, drag the marker, or enter coordinates."
+        },
+        "listFilters": {
+            "applying": "Applying…",
+            "activeCount": "Active filters: {count}"
         }
     },
     "store.attributes.index.title": "Product attributes",

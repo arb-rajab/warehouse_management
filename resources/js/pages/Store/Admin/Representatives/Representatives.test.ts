@@ -28,6 +28,7 @@ import DataTable from '@/components/DataTable.vue';
 import FieldError from '@/components/FieldError.vue';
 import Pagination from '@/components/Pagination.vue';
 import ResourceFormPage from '@/components/ResourceFormPage.vue';
+import StoreListFilters from '@/components/StoreListFilters.vue';
 import StoreRepresentativePackageFormFields from '@/components/StoreRepresentativePackageFormFields.vue';
 import SubmitButton from '@/components/SubmitButton.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
@@ -329,9 +330,11 @@ describe('representative payments index', () => {
         ).toEqual(['Search payments', 'Pending', 'Accepted', 'Rejected']);
         expect(wrapper.find('script').exists()).toBe(false);
         expect(wrapper.get('tbody').text()).toContain('<script>bad()</script>');
-        expect(wrapper.getComponent(SubmitButton).text()).toBe(
-            t('common.filters.apply'),
-        );
+        expect(
+            wrapper
+                .get('form#store-list-filters > button[type="submit"]')
+                .text(),
+        ).toBe(t('common.filters.apply'));
         const actions = wrapper.findAllComponents(TableActionLink);
         expect(actions.map((link) => link.text())).toEqual([
             'Accept',
@@ -379,23 +382,66 @@ describe('representative payments index', () => {
         );
     });
 
-    it('submits search status filters and page size', async () => {
-        const wrapper = paymentPage();
-        await wrapper.get('#search').setValue('MATCH');
-        await wrapper.findAll('input[type=checkbox]')[1].setValue(true);
-        await wrapper.get('form').trigger('submit');
-        expect(routerGetMock).toHaveBeenLastCalledWith(
-            paymentsIndex().url,
-            {
-                search: 'MATCH',
-                accepted: true,
-                rejected: false,
-                pending: false,
-                per_page: 20,
+    it('keeps search inline and the statuses in the dialog with a count badge', () => {
+        const wrapper = mount(PaymentsIndex, {
+            props: {
+                payments: paginated([representativePayment()]),
+                filters: {
+                    per_page: 20,
+                    search: 'MATCH',
+                    accepted: true,
+                    rejected: false,
+                    pending: true,
+                },
             },
-            { preserveState: true, replace: true },
+        });
+        const form = wrapper.getComponent(StoreListFilters);
+        expect(form.props('action')).toEqual(paymentsIndex());
+        expect(form.props('activeCount')).toBe(2);
+        const inline = wrapper.get('form#store-list-filters');
+        expect(inline.get('input[name="per_page"]').attributes('value')).toBe(
+            '20',
         );
-        await wrapper.getComponent(Pagination).vm.$emit('update:perPage', 10);
+        expect(inline.get<HTMLInputElement>('#search').element.value).toBe(
+            'MATCH',
+        );
+        expect(inline.get('#search').attributes('maxlength')).toBe('255');
+        const dialog = wrapper.get('[role="dialog"]');
+        expect(
+            dialog
+                .findAll<HTMLInputElement>('input')
+                .map((input) => [
+                    input.attributes('name'),
+                    input.attributes('value'),
+                    input.element.checked,
+                ]),
+        ).toEqual([
+            ['pending', '1', true],
+            ['accepted', '1', true],
+            ['rejected', '1', false],
+        ]);
+        expect(dialog.find('#search').exists()).toBe(false);
+        expect(
+            wrapper
+                .get('form#store-list-filters > button[type="button"]')
+                .text(),
+        ).toContain('2');
+    });
+
+    it('keeps the applied filters when the page size changes', () => {
+        const wrapper = mount(PaymentsIndex, {
+            props: {
+                payments: paginated([representativePayment()]),
+                filters: {
+                    per_page: 20,
+                    search: 'MATCH',
+                    accepted: true,
+                    rejected: false,
+                    pending: false,
+                },
+            },
+        });
+        wrapper.getComponent(Pagination).vm.$emit('update:perPage', 10);
         expect(routerGetMock).toHaveBeenLastCalledWith(
             paymentsIndex().url,
             {
@@ -407,7 +453,6 @@ describe('representative payments index', () => {
             },
             { preserveState: true, replace: true },
         );
-        expect(wrapper.get('#search').attributes('maxlength')).toBe('255');
     });
 });
 
@@ -545,24 +590,57 @@ describe('representative visits index', () => {
         ).toBeDefined();
     });
 
-    it('applies native date constraints search and pagination together', async () => {
-        const wrapper = visitPage();
-        await wrapper.get('#search').setValue('Rep');
-        await wrapper.get('#date_from').setValue('2026-10-01');
-        await wrapper.get('#date_to').setValue('2026-10-08');
-        expect(wrapper.get('#date_to').attributes('min')).toBe('2026-10-01');
-        await wrapper.get('form').trigger('submit');
-        expect(routerGetMock).toHaveBeenCalledWith(
-            visitsIndex().url,
-            {
-                search: 'Rep',
-                date_from: '2026-10-01',
-                date_to: '2026-10-08',
-                per_page: 20,
+    it('keeps search inline and the dates in the dialog with a count badge', async () => {
+        const wrapper = mount(VisitsIndex, {
+            props: {
+                visits: paginated([representativeVisit()]),
+                filters: {
+                    per_page: 20,
+                    search: 'Rep',
+                    date_from: '2026-10-01',
+                    date_to: '',
+                },
             },
-            { preserveState: true, replace: true },
+        });
+        const form = wrapper.getComponent(StoreListFilters);
+        expect(form.props('action')).toEqual(visitsIndex());
+        expect(form.props('activeCount')).toBe(1);
+        const inline = wrapper.get('form#store-list-filters');
+        expect(inline.get('input[name="per_page"]').attributes('value')).toBe(
+            '20',
         );
-        await wrapper.getComponent(Pagination).vm.$emit('update:perPage', 10);
+        expect(inline.get<HTMLInputElement>('#search').element.value).toBe(
+            'Rep',
+        );
+        const dialog = wrapper.get('[role="dialog"]');
+        expect(
+            dialog.findAll('input').map((input) => input.attributes('name')),
+        ).toEqual(['date_from', 'date_to']);
+        expect(dialog.find('#search').exists()).toBe(false);
+        expect(
+            wrapper
+                .get('form#store-list-filters > button[type="button"]')
+                .text(),
+        ).toContain('1');
+        // "to" cannot precede "from", also after the user edits "from".
+        expect(wrapper.get('#date_to').attributes('min')).toBe('2026-10-01');
+        await wrapper.get('#date_from').setValue('2026-10-05');
+        expect(wrapper.get('#date_to').attributes('min')).toBe('2026-10-05');
+    });
+
+    it('keeps the applied filters when the page size changes', () => {
+        const wrapper = mount(VisitsIndex, {
+            props: {
+                visits: paginated([representativeVisit()]),
+                filters: {
+                    per_page: 20,
+                    search: 'Rep',
+                    date_from: '2026-10-01',
+                    date_to: '2026-10-08',
+                },
+            },
+        });
+        wrapper.getComponent(Pagination).vm.$emit('update:perPage', 10);
         expect(routerGetMock).toHaveBeenLastCalledWith(
             visitsIndex().url,
             {

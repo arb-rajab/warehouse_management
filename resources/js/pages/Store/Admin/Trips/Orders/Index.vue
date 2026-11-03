@@ -28,12 +28,17 @@ import FieldError from '@/components/FieldError.vue';
 import FormField from '@/components/FormField.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import Pagination from '@/components/Pagination.vue';
+import StoreListFilters from '@/components/StoreListFilters.vue';
 import SubmitButton from '@/components/SubmitButton.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
 import TableLink from '@/components/TableLink.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
 import { confirmDelete, confirmDeliveryStatus } from '@/lib/confirm';
-import { fieldLabelClass, plainFieldInputClass } from '@/lib/filters';
+import {
+    countActive,
+    fieldLabelClass,
+    plainFieldInputClass,
+} from '@/lib/filters';
 import { t } from '@/lib/i18n';
 import { firstError, usePageError } from '@/lib/pageErrors';
 import { useStoreAccess } from '@/lib/storeAccess';
@@ -49,6 +54,10 @@ const props = defineProps<{
     bulkStatuses: string[];
 }>();
 const access = useStoreAccess();
+/** Dialog filters only: the two dates (search and delivery status stay inline). */
+const activeFilterCount = computed(() =>
+    countActive([Boolean(props.filters.from), Boolean(props.filters.to)]),
+);
 const tripError = usePageError('trip_id');
 const deliveryError = usePageError('delivery_status');
 const canSelect = computed(
@@ -148,73 +157,64 @@ function onPerPageChange(perPage: number): void {
         >
             {{ t('store.trips.orders.invoiceHelp') }}
         </p>
-        <Form
+        <StoreListFilters
             :action="tripOrders()"
-            #default="{ errors, processing }"
-            class="mb-4 flex flex-wrap items-end gap-3"
+            :active-count="activeFilterCount"
         >
-            <input type="hidden" name="per_page" :value="filters.per_page" />
-            <FormField
-                id="search"
-                :label="t('store.trips.orders.search')"
-                :value="filters.search"
-                :error="errors.search"
-                maxlength="100"
-            />
-            <fieldset>
-                <legend :class="fieldLabelClass">
-                    {{ t('store.trips.orders.statusFilter') }}
-                </legend>
-                <div class="flex flex-wrap gap-3">
-                    <label
-                        class="flex cursor-pointer items-center gap-1.5 text-sm"
-                    >
-                        <input
-                            type="radio"
-                            name="delivery_status"
-                            value=""
-                            :checked="filters.delivery_status === ''"
-                            class="cursor-pointer"
-                        />{{ t('store.trips.orders.allStatuses') }}
-                    </label>
-                    <label
-                        v-for="status in deliveryStatuses"
-                        :key="status"
-                        class="flex cursor-pointer items-center gap-1.5 text-sm"
-                    >
-                        <input
-                            type="radio"
-                            name="delivery_status"
-                            :value="status"
-                            :checked="filters.delivery_status === status"
-                            class="cursor-pointer"
-                        />{{ statusLabel(status) }}
-                    </label>
-                </div>
-                <FieldError :message="errors.delivery_status" />
-            </fieldset>
-            <FormField
-                id="from"
-                type="date"
-                :label="t('store.trips.orders.from')"
-                :value="filters.from"
-                :error="errors.from"
-            />
-            <FormField
-                id="to"
-                type="date"
-                :label="t('store.trips.orders.to')"
-                :value="filters.to"
-                :error="errors.to"
-            />
-            <div>
-                <SubmitButton
-                    :label="t('store.trips.orders.apply')"
-                    :processing-label="t('store.trips.orders.applying')"
-                    :processing="processing"
+            <template #default="{ errors }">
+                <input
+                    type="hidden"
+                    name="per_page"
+                    :value="filters.per_page"
                 />
-            </div>
-        </Form>
+                <FormField
+                    id="search"
+                    :label="t('store.trips.orders.search')"
+                    :value="filters.search"
+                    :error="errors.search"
+                    maxlength="100"
+                />
+                <div>
+                    <label for="delivery_status" :class="fieldLabelClass">{{
+                        t('store.trips.orders.statusFilter')
+                    }}</label>
+                    <select
+                        id="delivery_status"
+                        name="delivery_status"
+                        :class="plainFieldInputClass"
+                    >
+                        <option value="">
+                            {{ t('store.trips.orders.allStatuses') }}
+                        </option>
+                        <option
+                            v-for="status in deliveryStatuses"
+                            :key="status"
+                            :value="status"
+                            :selected="filters.delivery_status === status"
+                        >
+                            {{ statusLabel(status) }}
+                        </option>
+                    </select>
+                    <FieldError :message="errors.delivery_status" />
+                </div>
+            </template>
+            <template #filters="{ errors }">
+                <FormField
+                    id="from"
+                    type="date"
+                    :label="t('store.trips.orders.from')"
+                    :value="filters.from"
+                    :error="errors.from"
+                />
+                <FormField
+                    id="to"
+                    type="date"
+                    :label="t('store.trips.orders.to')"
+                    :value="filters.to"
+                    :error="errors.to"
+                />
+            </template>
+        </StoreListFilters>
         <div v-if="canSelect" class="mb-4 flex flex-wrap items-start gap-3">
             <template v-if="access.can('edit_trip')">
                 <Form
