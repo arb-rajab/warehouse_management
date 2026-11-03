@@ -436,7 +436,6 @@ class OrderController extends Controller
             $order->save();
 
             $subtotal = 0;
-            $tax = 0;
             $shipping = 0;
             $coupon_discount = 0;
             $order_deleted_products_info = "";
@@ -496,7 +495,6 @@ class OrderController extends Controller
                 // the money added on top of the line is tax_amount.
                 $order_detail->tax = $product->tax ?? 0;
                 $order_detail->tax_amount = cart_line_tax($cartItem, $product, (float) $order_detail->price);
-                $tax += $order_detail->tax_amount;
                 $order_detail->profits = (float)($order_detail->price * ($product->collection?->amount ?? 1)) / 100;
 
                 $shipping += $order_detail->shipping_cost;
@@ -557,6 +555,8 @@ class OrderController extends Controller
                 }
             }
 
+            // The VAT of every line, the offers' lines included (OfferService records theirs).
+            $tax = (float) $order->orderDetails()->sum('tax_amount');
             $order->grand_total = $subtotal + $tax + $shipping;
             $order->additional_info .= $order_deleted_products_info ? $order_deleted_products_info . 'تمت إزالتهم من سلة التسوق الخاصة بك، المنتجات غير النشطة' : null;
 

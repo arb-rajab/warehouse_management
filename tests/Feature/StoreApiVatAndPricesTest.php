@@ -205,3 +205,30 @@ test('the web checkout adds the VAT to the order total and records the amount', 
         ->and(Order::count())->toBe(1)
         ->and($noise->fresh())->not->toBeNull();
 });
+
+// ---- Offers: the offer line carries its own VAT -----------------------------------------------
+
+test('an offer line records and is charged its own VAT, not the VAT of the line it was copied from', function () {
+    $customer = vatVerifiedCustomer();
+    $ordered = vatLine($customer, 2, 9);
+    $offered = createStoreProduct(['unit_price' => 4, 'tax' => 21, 'cash_on_delivery' => 1]);
+    DB::table('carts_offered')->insert([
+        'user_id' => $customer->id, 'owner_id' => 0, 'address_id' => $ordered->address_id, 'product_id' => $offered->id,
+        'variation' => '', 'variation_qty' => '[]', 'price' => 4, 'quantity' => 1, 'is_postponed' => 0, 'created_at' => now(), 'updated_at' => now(),
+    ]);
+    $noise = vatVerifiedCustomer();
+    DB::table('carts_offered')->insert([
+        'user_id' => $noise->id, 'owner_id' => 0, 'address_id' => 1, 'product_id' => $offered->id,
+        'variation' => '', 'variation_qty' => '[]', 'price' => 4, 'quantity' => 1, 'is_postponed' => 0, 'created_at' => now(), 'updated_at' => now(),
+    ]);
+
+    $this->withToken(storeApiToken($customer))->postJson('/api/v1/store/order/store', ['payment_type' => 'cash_on_delivery', 'delivery_date' => validDeliveryDate()])
+        ->assertOk()->assertJsonPath('result', true);
+
+    $order = Order::sole();
+    $lines = OrderDetail::where('order_id', $order->id)->orderBy('id')->get()->keyBy('product_id');
+    expect((float) $lines[$ordered->product_id]->tax_amount)->toEqual(1.8)
+        ->and((float) $lines[$offered->id]->tax_amount)->toEqual(0.84) // 21 percent of 4, not the 1.80 of the ordered line
+        ->and((float) $order->grand_total)->toEqual(26.64) // 20 + 4 + 1.80 + 0.84
+        ->and(DB::table('carts_offered')->where('user_id', $noise->id)->count())->toBe(1);
+});

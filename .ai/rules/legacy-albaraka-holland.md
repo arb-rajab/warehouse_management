@@ -1811,10 +1811,10 @@ the tests are `tests/Feature/StoreApiBackendRequestsTest.php`. Constraints that 
 - VAT (owner decision 2026-11-03) is **added on top** in the app API: `cart_line_tax()` is the one place that
   computes a line's VAT; `order_details.tax` stays the percent and `order_details.tax_amount` is the money.
   The web checkout, its cart summary, the coupon maths and the back office entry use it too (the entry keeps a
-  line's total when its `tax_amount` is 0, so old orders do not jump when edited); the offers still record only the percent.
+  line's total when its `tax_amount` is 0, so old orders do not jump when edited); an offer line carries its own `tax_amount` (`OfferService`), and the order's VAT is the sum of its lines'.
 - An unverified customer's `order/store` is 403. Every push goes through `FcmPushService` (FCM v1; never the legacy
   `fcm/send`); `php artisan store:send-test-push` and `store:setup-delivery` (dev only) exist for the app team.
 - Prices are hidden from guests and unverified customers by `HidePricesFromUnverified` (`hide.prices:catalog`
   or `:cart` on a route, key lists in the class). A new money field in a product or cart answer must be added there.
-- Open: the offers (`OfferService`) do not record `tax_amount`; the Firebase project the server sends with is the
+- Open: the Firebase project the server sends with is the
   one in `.env` (`FIREBASE_PROJECT`), which nobody has confirmed against the new app's ids.

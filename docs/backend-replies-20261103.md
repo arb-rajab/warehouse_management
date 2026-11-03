@@ -138,7 +138,7 @@ gateway redirects and I left them.
 The web storefront checkout, its cart summary, the coupon maths and the back office order entry follow the same
 rule: VAT on top, recorded in `order_details.tax_amount`. In the back office, editing an order's line price
 recomputes that line's VAT, and a line placed before VAT was recorded (amount 0) keeps its total when edited.
-Orders placed before this change show `tax` 0.00. The offers (`OfferService`) still record only the percent.
+Orders placed before this change show `tax` 0.00. An offer line records and is charged its own VAT (on the price the offer adds to the order); a brand-offer line, which is not charged, carries none. The order's VAT is the sum of its lines' `tax_amount`.
 
 **B.5 Minimum order.** `POST /order/store` does not refuse a small order. With `minimum_order_amount_check` on,
 a cart below `minimum_order_amount` gets the delivery-fee product (`default_specific_product`) added as a line, and
