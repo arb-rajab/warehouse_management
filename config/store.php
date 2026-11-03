@@ -112,6 +112,26 @@ return [
     |
     */
 
+    /*
+    |--------------------------------------------------------------------------
+    | Delivery date rules for orders placed through the app API
+    |--------------------------------------------------------------------------
+    |
+    | POST api/v1/store/order/store (and payments/pay/*) refuse an order whose
+    | delivery_date is blank, unreadable, earlier than today plus `lead_days`
+    | (so with 2, today and tomorrow are skipped) or on a day not in `weekdays`
+    | (ISO numbers, 1 = Monday ... 7 = Sunday). The legacy app offered Monday to
+    | Friday from the day after tomorrow, which these defaults keep. "Today" is
+    | read in `timezone`, the warehouse's, not the server's UTC.
+    |
+    */
+
+    'delivery' => [
+        'timezone' => env('STORE_DELIVERY_TIMEZONE', 'Europe/Amsterdam'),
+        'lead_days' => (int) env('STORE_DELIVERY_LEAD_DAYS', 2),
+        'weekdays' => [1, 2, 3, 4, 5],
+    ],
+
     'blade_csp' => [
         'script-src' => [
             'self' => true,

@@ -7,6 +7,7 @@ use App\Http\Middleware\EnsureMinimumAppVersion;
 use App\Http\Middleware\EnsurePasswordHasBeenChanged;
 use App\Http\Middleware\EnsurePaymentGatewayEnabled;
 use App\Http\Middleware\HandleInertiaRequests;
+use App\Http\Middleware\HidePricesFromUnverified;
 use App\Http\Middleware\IsAdmin;
 use App\Http\Middleware\IsAppUserUnbanned;
 use App\Http\Middleware\IsCustomer;
@@ -22,6 +23,7 @@ use App\Http\Middleware\SendSecureHeaders;
 use App\Http\Middleware\SetLocale;
 use App\Http\Middleware\SetLocaleFromHeader;
 use App\Http\Middleware\StoreInertiaPreviousUrl;
+use App\Http\Middleware\StrictResultStatus;
 use App\Http\Middleware\UseStoreAuthGuard;
 use App\Http\Middleware\WmsAuthMiddleware;
 use Illuminate\Contracts\Auth\Middleware\AuthenticatesRequests;
@@ -118,6 +120,8 @@ return Application::configure(basePath: dirname(__DIR__))
             'role_or_permission' => RoleOrPermissionMiddleware::class,
             'wms.auth' => WmsAuthMiddleware::class,
             'log.request.time' => LogRequestTime::class,
+            'hide.prices' => HidePricesFromUnverified::class,
+            'strict.status' => StrictResultStatus::class,
             'driver' => IsDriver::class,
             'rep_or_admin' => IsRepresentativeOrAdmin::class,
             'delivery_boy' => IsDeliveryBoy::class,

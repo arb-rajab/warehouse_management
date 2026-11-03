@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Head, Link, router, useForm } from '@inertiajs/vue3';
 import { Eye, Trash2 } from '@lucide/vue';
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import {
     bulkDestroy,
     destroy,
@@ -11,14 +11,14 @@ import {
 } from '@/actions/App/Http/Controllers/Store/Admin/VisitController';
 import ActionErrorBanner from '@/components/ActionErrorBanner.vue';
 import DataTable from '@/components/DataTable.vue';
-import FilterDateField from '@/components/FilterDateField.vue';
 import FormField from '@/components/FormField.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import Pagination from '@/components/Pagination.vue';
-import SubmitButton from '@/components/SubmitButton.vue';
+import StoreListFilters from '@/components/StoreListFilters.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
 import { confirmDelete } from '@/lib/confirm';
+import { countActive } from '@/lib/filters';
 import { t } from '@/lib/i18n';
 import { firstError } from '@/lib/pageErrors';
 import { useStoreAccess } from '@/lib/storeAccess';
@@ -35,17 +35,24 @@ const props = defineProps<{
     };
 }>();
 const access = useStoreAccess();
-const search = ref(props.filters.search);
+/** The "to" date cannot precede the "from" date; both inputs stay uncontrolled. */
 const dateFrom = ref(props.filters.date_from);
-const dateTo = ref(props.filters.date_to);
+/** Dialog filters only: the two dates. */
+const activeFilterCount = computed(() =>
+    countActive([
+        Boolean(props.filters.date_from),
+        Boolean(props.filters.date_to),
+    ]),
+);
 const selection = useForm({ id: [] as number[] });
-function applyFilters(perPage = props.filters.per_page): void {
+/** Change the page size, keeping the applied search and dates. */
+function changePerPage(perPage: number): void {
     router.get(
         visitsIndex().url,
         {
-            search: search.value,
-            date_from: dateFrom.value,
-            date_to: dateTo.value,
+            search: props.filters.search,
+            date_from: props.filters.date_from,
+            date_to: props.filters.date_to,
             per_page: perPage,
         },
         { preserveState: true, replace: true },
@@ -68,34 +75,47 @@ function deleteSelection(): void {
     <Head :title="t('store.representativeVisits.title')" />
     <StoreAdminLayout>
         <PageHeader :title="t('store.representativeVisits.title')" />
-        <form
-            class="mb-4 flex flex-wrap items-end gap-3"
-            @submit.prevent="applyFilters()"
+        <StoreListFilters
+            :action="visitsIndex()"
+            :active-count="activeFilterCount"
         >
-            <FormField
-                id="search"
-                :value="search"
-                @input="search = ($event.target as HTMLInputElement).value"
-                :label="t('store.representativeVisits.search')"
-                maxlength="255"
-            />
-            <FilterDateField
-                id="date_from"
-                v-model="dateFrom"
-                :label="t('store.representativeVisits.dateFrom')"
-            />
-            <FilterDateField
-                id="date_to"
-                v-model="dateTo"
-                :label="t('store.representativeVisits.dateTo')"
-                :min="dateFrom"
-            />
-            <SubmitButton
-                :label="t('common.filters.apply')"
-                :processing="false"
-                :processing-label="t('common.filters.apply')"
-            />
-        </form>
+            <template #default="{ errors }">
+                <input
+                    type="hidden"
+                    name="per_page"
+                    :value="filters.per_page"
+                />
+                <FormField
+                    id="search"
+                    :value="filters.search"
+                    :error="errors.search"
+                    :label="t('store.representativeVisits.search')"
+                    maxlength="255"
+                />
+            </template>
+            <template #filters="{ errors }">
+                <FormField
+                    id="date_from"
+                    type="date"
+                    :value="filters.date_from"
+                    :error="errors.date_from"
+                    :label="t('store.representativeVisits.dateFrom')"
+                    input-class="dark:[color-scheme:dark]"
+                    @input="
+                        dateFrom = ($event.target as HTMLInputElement).value
+                    "
+                />
+                <FormField
+                    id="date_to"
+                    type="date"
+                    :value="filters.date_to"
+                    :error="errors.date_to"
+                    :label="t('store.representativeVisits.dateTo')"
+                    :min="dateFrom"
+                    input-class="dark:[color-scheme:dark]"
+                />
+            </template>
+        </StoreListFilters>
         <ActionErrorBanner :message="firstError(selection.errors)" />
         <form @submit.prevent="deleteSelection">
             <button
@@ -205,7 +225,7 @@ function deleteSelection(): void {
         <Pagination
             :links="visits.meta.links"
             :per-page="filters.per_page"
-            @update:per-page="applyFilters"
+            @update:per-page="changePerPage"
         />
     </StoreAdminLayout>
 </template>

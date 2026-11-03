@@ -160,7 +160,7 @@ test('mobile signup validation uses the shared translated attributes and keeps v
     startStorefrontTranslationQueryLog();
 
     $this->withHeader('App-Language', $locale)->postJson('/api/v1/store/auth/signup', ['register_by' => 'email'])
-        ->assertOk()->assertJsonPath('result', false)
+        ->assertUnprocessable()->assertJsonPath('result', false)
         ->assertJsonPath('errors.name.0', $name)
         ->assertJsonPath('errors.password.0', $password)
         ->assertJsonMissingPath('access_token');

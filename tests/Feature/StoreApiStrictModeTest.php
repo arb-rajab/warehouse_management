@@ -211,7 +211,7 @@ test('an order of several cart lines is placed, brand offers included', function
 
     $this->getJson('/api/v1/store/payment-types')->assertOk();
     $this->postJson('/api/v1/store/carts')->assertOk();
-    $this->postJson('/api/v1/store/payments/pay/cod', ['payment_type' => 'cash_on_delivery'])
+    $this->postJson('/api/v1/store/payments/pay/cod', ['payment_type' => 'cash_on_delivery', 'delivery_date' => validDeliveryDate()])
         ->assertOk()
         ->assertJsonPath('result', true);
 

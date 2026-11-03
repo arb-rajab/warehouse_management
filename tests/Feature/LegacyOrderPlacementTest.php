@@ -27,7 +27,7 @@ function placeApiOrder(object $test, string $token, array $body = ['payment_type
     storeSetting('cash_payment', 1);
     DB::table('products')->update(['cash_on_delivery' => 1]);
 
-    return $test->withToken($token)->postJson('/api/v1/store/order/store', $body);
+    return $test->withToken($token)->postJson('/api/v1/store/order/store', ['delivery_date' => validDeliveryDate(), ...$body]);
 }
 
 test('the storefront takes the stock of every line of an order it places', function () {
@@ -207,7 +207,7 @@ test('the app refuses a payment type that is not a payment option', function () 
 });
 
 test('the app needs a signed-in account to place an order', function () {
-    $this->postJson('/api/v1/store/order/store', ['payment_type' => 'cash_on_delivery'])->assertUnauthorized();
+    $this->postJson('/api/v1/store/order/store', ['payment_type' => 'cash_on_delivery', 'delivery_date' => validDeliveryDate()])->assertUnauthorized();
 
     expect(Order::count())->toBe(0);
 });
@@ -219,7 +219,7 @@ test('a wallet that cannot cover the order places no order and keeps the cart', 
     $customer = fundedCustomer(1);
     $line = orderableCartLine($customer, createStoreUser('seller'), 2, stock: 5);
 
-    $this->withToken(storeApiToken($customer))->postJson('/api/v1/store/payments/pay/wallet', ['payment_type' => 'wallet'])
+    $this->withToken(storeApiToken($customer))->postJson('/api/v1/store/payments/pay/wallet', ['payment_type' => 'wallet', 'delivery_date' => validDeliveryDate()])
         ->assertOk()
         ->assertJsonPath('result', false)
         ->assertJsonPath('message', 'Insufficient wallet balance');
@@ -238,7 +238,7 @@ test('the wallet payment through the payments route charges the order and emptie
     $customer = fundedCustomer(10);
     orderableCartLine($customer, createStoreUser('seller'), 2, stock: 5);
 
-    $this->withToken(storeApiToken($customer))->postJson('/api/v1/store/payments/pay/wallet', ['payment_type' => 'wallet'])
+    $this->withToken(storeApiToken($customer))->postJson('/api/v1/store/payments/pay/wallet', ['payment_type' => 'wallet', 'delivery_date' => validDeliveryDate()])
         ->assertOk()->assertJsonPath('result', true);
 
     expect((float) $customer->fresh()->balance)->toBe(5.0)
@@ -252,19 +252,19 @@ test('the app refuses an order whose payment type is not listed, or that has no 
     $customer = createStoreUser('customer');
     $line = orderableCartLine($customer, createStoreUser('seller'), 1, stock: 5);
 
-    placeApiOrder($this, storeApiToken($customer), ['payment_type' => 'cash_on_delivery'])->assertOk();
+    placeApiOrder($this, storeApiToken($customer), ['payment_type' => 'cash_on_delivery', 'delivery_date' => validDeliveryDate()])->assertOk();
 
     $other = createStoreUser('customer');
     $line = orderableCartLine($other, createStoreUser('seller'), 1, stock: 5);
     storeSetting('cash_payment', 0);
     app('auth')->forgetGuards();
-    $this->withToken(storeApiToken($other))->postJson('/api/v1/store/order/store', ['payment_type' => 'cash_on_delivery'])
+    $this->withToken(storeApiToken($other))->postJson('/api/v1/store/order/store', ['payment_type' => 'cash_on_delivery', 'delivery_date' => validDeliveryDate()])
         ->assertStatus(422)->assertJsonPath('result', false)->assertJsonPath('message', __('api.order.payment_type_cash_disabled'));
 
     storeSetting('cash_payment', 1);
     $line->update(['address_id' => 0]);
     app('auth')->forgetGuards();
-    $this->withToken(storeApiToken($other))->postJson('/api/v1/store/order/store', ['payment_type' => 'cash_on_delivery'])
+    $this->withToken(storeApiToken($other))->postJson('/api/v1/store/order/store', ['payment_type' => 'cash_on_delivery', 'delivery_date' => validDeliveryDate()])
         ->assertStatus(422)->assertJsonPath('result', false);
 });
 

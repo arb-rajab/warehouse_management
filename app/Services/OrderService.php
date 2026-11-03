@@ -183,13 +183,15 @@ class OrderService{
         return [
             'is_down' => true,
             'member_serial' => $otajer_is_down_user?->member_serial ?? '',
-            'for_customer' => $otajer_is_down_user?->id ?? '',
+            // orders.for_customer is an integer column: null (not '') when
+            // there is no fallback user, so strict MySQL accepts the row.
+            'for_customer' => $otajer_is_down_user?->id,
         ];
     } else {
         return [
             'is_down' => false,
             'member_serial' => '',
-            'for_customer' => '',
+            'for_customer' => null,
         ];
     }
 }

@@ -116,7 +116,7 @@ methods and the cache button through the page permissions, and "the shop's own
 admin" is the lowest-id `user_type = 'admin'` row. Empty groups disappear.
 Button gates use the same permission names as their action middleware. The
 account block uses the store logout route and the current actor's profile and
-notifications; cache clearing stays narrowly scoped.
+notifications; cache clearing stays narrowly scoped. Notifications is a sidebar item above the footer and Clear dashboard cache (dashboard graph keys only) sits in the footer with a tooltip and confirm dialog; there is no top strip.
 
 Use Inertia links only for Inertia destinations. `StoreAdminNavLink` uses a
 plain anchor for Blade destinations; build URLs through Wayfinder. The shared

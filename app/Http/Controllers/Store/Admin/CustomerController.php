@@ -85,7 +85,7 @@ class CustomerController extends Controller implements HasMiddleware
             $query->where(fn ($q) => $q->where('name', 'like', $search)->orWhere('email', 'like', $search)->orWhere('phone', 'like', $search)->orWhere('rep_serial', 'like', $search)->orWhere('AccSysID', 'like', $search));
         }
         foreach (['important' => 'is_important', 'verified' => 'admin_verified', 'from_api' => 'from_api', 'registration_completed' => 'registration_completed'] as $filter => $column) {
-            if ($request->has($filter)) {
+            if ($request->filled($filter)) {
                 $query->where($column, $request->boolean($filter));
             }
         }
@@ -98,7 +98,7 @@ class CustomerController extends Controller implements HasMiddleware
 
         return Inertia::render('Store/Admin/Customers/Customers/Index', [
             'customers' => $this->paginated(CustomerResource::collection($query->orderBy('id')->paginate($perPage)->withQueryString())),
-            'filters' => [...$request->only(['search', 'activity_status']), ...collect(['archived', 'important', 'verified', 'from_api', 'registration_completed'])->filter(fn ($filter) => $request->has($filter))->mapWithKeys(fn ($filter) => [$filter => $request->boolean($filter)])->all(), 'per_page' => $perPage],
+            'filters' => [...$request->only(['search', 'activity_status']), ...collect(['archived', 'important', 'verified', 'from_api', 'registration_completed'])->filter(fn ($filter) => $request->filled($filter))->mapWithKeys(fn ($filter) => [$filter => $request->boolean($filter)])->all(), 'per_page' => $perPage],
             'representatives' => $representatives,
             'packages' => $representatives && $request->user('store')->can('assign_representative_package') ? RepresentativePackage::query()->select(['id', 'name', 'percentage'])->orderBy('id')->get()->map(fn ($package) => ['id' => $package->id, 'name' => $package->name, 'percentage' => (string) $package->percentage])->all() : [],
         ]);

@@ -21,6 +21,13 @@ class PurchaseHistoryCollection extends ResourceCollection
                     'id' => $data->id,
                     'code' => $data->code,
                     'user_id' => (int) $data->user_id,
+                    // Who the order is for and who placed it: the same account
+                    // unless a representative placed it for a customer.
+                    'customer_id' => (int) ($data->for_customer ?? $data->user_id),
+                    'customer_name' => ($data->for_customer !== null ? $data->rep : $data->user)?->name,
+                    'placed_by_id' => (int) $data->user_id,
+                    'placed_by_name' => $data->user?->name,
+                    'placed_by_rep' => $data->for_customer !== null,
                     'shipping_address' => $data->shipping_address == '[]' ? null : json_decode($data->shipping_address) ,
                     'payment_type' => ucwords(str_replace('_', ' ', $data->payment_type)),
                     'pickup_point' => $pickup_point,
@@ -36,13 +43,15 @@ class PurchaseHistoryCollection extends ResourceCollection
                     'payment_status_string' => ApiResourceLabel::status($data->payment_status),
                     'delivery_status' => $data->delivery_status,
                     'delivery_status_string' => ApiResourceLabel::deliveryStatus($data->delivery_status),
-                    'delivery_date' =>  date('d-m-Y', strtotime($data->delivery_date) ),
+                    // Orders placed before the date was required hold 1970-01-01 for "no date": null for those.
+                    'delivery_date' => blank($data->delivery_date) || str_starts_with((string) $data->delivery_date, '1970-01-01') ? null : date('d-m-Y', strtotime($data->delivery_date)),
                     'grand_total' => format_price($data->grand_total),
                     'plane_grand_total' => $data->grand_total,
                     'coupon_discount' => format_price($data->coupon_discount),
                     'shipping_cost' => format_price($data->orderDetails->sum('shipping_cost')),
                     'subtotal' => format_price($data->orderDetails->sum('price')),
-                    'tax' => format_price($data->orderDetails->sum('tax')),
+                    // The VAT added on top of the lines (money): grand_total = subtotal + tax + shipping - coupon.
+                    'tax' => format_price($data->orderDetails->sum('tax_amount')),
                     'customer_notes' => $data->additional_info,
                     'date' => Carbon::createFromTimestamp($data->date)->format('d-m-Y'),
                     // Columns only the delivery boy and offline payment addons

@@ -22,4 +22,14 @@ class PolicyController extends Controller
     {
         return new PolicyCollection(Page::where('type', 'return_policy_page')->get());
     }
+
+    public function termsPolicy()
+    {
+        return new PolicyCollection(Page::where('type', 'terms_conditions_page')->get());
+    }
+
+    public function privacyPolicy()
+    {
+        return new PolicyCollection(Page::where('type', 'privacy_policy_page')->get());
+    }
 }

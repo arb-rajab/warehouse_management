@@ -9,13 +9,13 @@ use App\Models\Order;
 use App\Models\SmsTemplate;
 use App\Models\StoreUser;
 use App\Notifications\OrderNotification;
-use Google\Client as GoogleClient;
+use App\Services\FcmPushService;
 use Illuminate\Support\Facades\Notification;
 use Mail;
 
 class NotificationUtility
 {
-    public static function sendOrderPlacedNotification($order, $request = null)
+    public static function sendOrderPlacedNotification($order)
     {
         //sends email to customer with the invoice pdf attached
         $array['view'] = 'shop.emails.invoice';
@@ -41,7 +41,7 @@ class NotificationUtility
 
         //sends Notifications to user
         self::sendNotification($order, 'placed');
-        if ($request !=null && get_setting('google_firebase') == 1 && $order->user->device_token != null) {
+        if (get_setting('google_firebase') == 1 && $order->user->device_token != null) {
             $locale = \App\Support\StoreLocale::deliveryLocale($order->user);
             self::sendOrderFirebaseNotification($order, __('delivery.notifications.order_placed', [], $locale), __('delivery.notifications.order_placed_body', ['code' => $order->code], $locale));
         }
@@ -68,49 +68,33 @@ class NotificationUtility
         Notification::send($users, new OrderNotification($order_notification));
     }
 
-    public static function sendFirebaseNotification($req)
+    /**
+     * Push `$req->title` and `$req->text` to `$req->device_token` and keep a
+     * record of it. `type` and `id` (the order id) reach the app as the data
+     * keys `item_type` and `item_type_id`. A token Firebase no longer knows is
+     * cleared from the account, so the next order does not try it again.
+     */
+    public static function sendFirebaseNotification($req): string
     {
-        $url = 'https://fcm.googleapis.com/fcm/send';
+        $result = app(FcmPushService::class)->send((string) $req->device_token, (string) $req->title, (string) $req->text, [
+            'item_type' => $req->type,
+            'item_type_id' => $req->id,
+        ]);
 
-        $fields =
-        [
-            'to' => $req->device_token,
-            'notification' => [
-                'body' => $req->text,
-                'title' => $req->title,
-                'sound' => 'default' /*Default sound*/
-            ],
-            'data' => [
-                'item_type' => $req->type,
-                'item_type_id' => $req->id,
-                'click_action' => 'FLUTTER_NOTIFICATION_CLICK',
-            ],
-        ];
+        if ($result === FcmPushService::SENT) {
+            $firebase_notification = new FirebaseNotification;
+            $firebase_notification->title = $req->title;
+            $firebase_notification->text = $req->text;
+            $firebase_notification->item_type = $req->type;
+            $firebase_notification->item_type_id = $req->id;
+            $firebase_notification->receiver_id = $req->user_id;
 
-        //$fields = json_encode($arrayToSend);
-        $headers = [
-            'Authorization: key=' . config('services.fcm.server_key'),
-            'Content-Type: application/json',
-        ];
+            $firebase_notification->save();
+        } elseif ($result === FcmPushService::INVALID_TOKEN) {
+            StoreUser::where('device_token', $req->device_token)->update(['device_token' => null]);
+        }
 
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, $url);
-        curl_setopt($ch, CURLOPT_POST, true);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($fields));
-
-        $result = curl_exec($ch);
-
-        $firebase_notification = new FirebaseNotification;
-        $firebase_notification->title = $req->title;
-        $firebase_notification->text = $req->text;
-        $firebase_notification->item_type = $req->type;
-        $firebase_notification->item_type_id = $req->id;
-        $firebase_notification->receiver_id = $req->user_id;
-
-        $firebase_notification->save();
+        return $result;
     }
 
     // new Google firebase logic
@@ -139,50 +123,15 @@ class NotificationUtility
 
     public static function sendPushNotificationToUser($user, $title, $body, $link = null)
     {
-        $credentialsFilePath = storage_path(config('services.fcm.firebase_credentials'));
+        $result = app(FcmPushService::class)->send((string) $user->device_token, (string) $title, (string) $body, $link ? ['link' => $link] : []);
 
-        $client = new GoogleClient();
-        $client->setAuthConfig($credentialsFilePath);
-        $client->addScope('https://www.googleapis.com/auth/firebase.messaging');
-        $client->refreshTokenWithAssertion();
-
-        $token = $client->getAccessToken();
-
-        $access_token = $token['access_token'];
-        $apiurl = "https://fcm.googleapis.com/v1/projects/" . config('services.fcm.firebase_project') . "/messages:send";
-
-        $headers = [
-            "Authorization: Bearer $access_token",
-            'Content-Type: application/json',
-        ];
-
-        $fcmToken = $user->device_token;
-
-        $payload = [
-            'message' => [
-                'token' => $fcmToken,
-                'notification' => [
-                    'title' => $title,
-                    'body' => $body,
-                ],
-            ],
-        ];
-
-        $payload = json_encode($payload);
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, $apiurl);
-        curl_setopt($ch, CURLOPT_POST, true);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
-        curl_setopt($ch, CURLOPT_VERBOSE, true); // Enable verbose output for debugging
-
-        $response = curl_exec($ch);
+        if ($result === FcmPushService::INVALID_TOKEN) {
+            StoreUser::where('device_token', $user->device_token)->update(['device_token' => null]);
+        }
 
         return response()->json([
             'message' => __('api.common.notification_status'),
-            'response' => json_decode($response, true)
+            'response' => ['result' => $result],
         ]);
     }
 }

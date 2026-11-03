@@ -31,12 +31,14 @@ import FieldError from '@/components/FieldError.vue';
 import FormField from '@/components/FormField.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import Pagination from '@/components/Pagination.vue';
+import StoreListFilters from '@/components/StoreListFilters.vue';
 import StoreStatusSwitch from '@/components/StoreStatusSwitch.vue';
 import SubmitButton from '@/components/SubmitButton.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
 import { confirmDelete } from '@/lib/confirm';
 import {
+    countActive,
     fieldLabelClass,
     plainFieldInputClass,
     selectedToggleClass,
@@ -105,6 +107,24 @@ const stateFilters = computed(() => [
     { name: 'featured', label: 'featured' },
     ...(isAllList.value ? [{ name: 'deleted', label: 'deleted' }] : []),
 ]);
+/** Dialog filters only; search and the inline seller/category are not counted. */
+const activeFilterCount = computed(() =>
+    countActive([
+        isSellerList.value &&
+            props.approvalEnabled &&
+            props.filters.approved !== null &&
+            props.filters.approved !== undefined,
+        isSellerList.value &&
+            props.filters.category_id !== null &&
+            props.filters.category_id !== undefined,
+        Boolean(props.filters.type),
+        ...stateFilters.value.map(
+            (state) =>
+                props.filters[state.name as keyof StoreProductListFilters] ===
+                true,
+        ),
+    ]),
+);
 const presets: { name: StoreProductListPreset; label: string }[] = [
     { name: 'allProducts', label: 'presetAllProducts' },
     { name: 'allActive', label: 'presetAllActive' },
@@ -288,144 +308,172 @@ async function requestFetch(): Promise<void> {
                 >{{ t(`store.products.${preset.label}`) }}</Link
             >
         </nav>
-        <Form
+        <StoreListFilters
             :action="listIndex()"
-            #default="{ errors, processing }"
-            class="mb-4 flex flex-wrap items-end gap-3"
+            :active-count="activeFilterCount"
         >
-            <input type="hidden" name="per_page" :value="filters.per_page" />
-            <FormField
-                id="search"
-                :label="t('store.products.search')"
-                :value="filters.search ?? ''"
-                :error="errors.search"
-                maxlength="255"
-            />
-            <div v-if="isSellerList">
-                <label for="user_id" :class="fieldLabelClass">{{
-                    t('store.products.seller')
-                }}</label>
-                <select
-                    id="user_id"
-                    name="user_id"
-                    :class="plainFieldInputClass"
-                >
-                    <option value="">
-                        {{ t('store.products.allSellers') }}
-                    </option>
-                    <option
-                        v-for="seller in sellers"
-                        :key="seller.id"
-                        :value="seller.id"
-                        :selected="filters.user_id === seller.id"
+            <template #default="{ errors }">
+                <input
+                    type="hidden"
+                    name="per_page"
+                    :value="filters.per_page"
+                />
+                <FormField
+                    id="search"
+                    :label="t('store.products.search')"
+                    :value="filters.search ?? ''"
+                    :error="errors.search"
+                    maxlength="255"
+                />
+                <div v-if="isSellerList">
+                    <label for="user_id" :class="fieldLabelClass">{{
+                        t('store.products.seller')
+                    }}</label>
+                    <select
+                        id="user_id"
+                        name="user_id"
+                        :class="plainFieldInputClass"
                     >
-                        {{ seller.name }}
-                    </option>
-                </select>
-                <FieldError :message="errors.user_id" />
-            </div>
-            <div v-if="isSellerList && approvalEnabled">
-                <label for="approved" :class="fieldLabelClass">{{
-                    t('store.products.approvalStatus')
-                }}</label>
-                <select
-                    id="approved"
-                    name="approved"
-                    :class="plainFieldInputClass"
-                >
-                    <option value="">
-                        {{ t('store.products.allApprovals') }}
-                    </option>
-                    <option value="1" :selected="filters.approved === true">
-                        {{ t('store.products.approved') }}
-                    </option>
-                    <option value="0" :selected="filters.approved === false">
-                        {{ t('store.products.unapproved') }}
-                    </option>
-                </select>
-                <FieldError :message="errors.approved" />
-            </div>
-            <div>
-                <label for="category_id" :class="fieldLabelClass">{{
-                    t('store.products.category')
-                }}</label>
-                <select
-                    id="category_id"
-                    name="category_id"
-                    :class="plainFieldInputClass"
-                >
-                    <option value="">
-                        {{ t('store.products.allCategories') }}
-                    </option>
-                    <option
-                        v-for="category in categories"
-                        :key="category.id"
-                        :value="category.id"
-                        :selected="filters.category_id === category.id"
-                    >
-                        {{ category.name }}
-                    </option>
-                </select>
-                <FieldError :message="errors.category_id" />
-            </div>
-            <div>
-                <label for="type" :class="fieldLabelClass">{{
-                    t('store.products.sort')
-                }}</label>
-                <select id="type" name="type" :class="plainFieldInputClass">
-                    <option value="">
-                        {{ t('store.products.defaultOrder') }}
-                    </option>
-                    <option
-                        v-for="sort in sorts"
-                        :key="sort.value"
-                        :value="sort.value"
-                        :selected="filters.type === sort.value"
-                    >
-                        {{ t(`store.products.${sort.label}`) }}
-                    </option>
-                </select>
-                <FieldError :message="errors.type" />
-            </div>
-            <fieldset class="max-w-md">
-                <legend :class="fieldLabelClass">
-                    {{ t('store.products.stateFilters') }}
-                </legend>
-                <div class="flex flex-wrap gap-3">
-                    <label
-                        v-for="state in stateFilters"
-                        :key="state.name"
-                        class="flex cursor-pointer items-center gap-1.5 text-sm"
-                    >
-                        <input
-                            type="checkbox"
-                            :name="state.name"
-                            value="1"
-                            :checked="
-                                filters[
-                                    state.name as keyof StoreProductListFilters
-                                ] === true
-                            "
-                            class="cursor-pointer"
-                        />{{ t(`store.products.${state.label}`) }}
-                    </label>
+                        <option value="">
+                            {{ t('store.products.allSellers') }}
+                        </option>
+                        <option
+                            v-for="seller in sellers"
+                            :key="seller.id"
+                            :value="seller.id"
+                            :selected="filters.user_id === seller.id"
+                        >
+                            {{ seller.name }}
+                        </option>
+                    </select>
+                    <FieldError :message="errors.user_id" />
                 </div>
-                <p class="mt-1 text-xs text-gray-600 dark:text-neutral-400">
-                    {{
-                        t(
-                            isAllList
-                                ? 'store.products.allStateHint'
-                                : 'store.products.inHouseStateHint',
-                        )
-                    }}
-                </p>
-            </fieldset>
-            <SubmitButton
-                :label="t('store.products.apply')"
-                :processing-label="t('store.products.applying')"
-                :processing="processing"
-            />
-        </Form>
+                <div v-else>
+                    <label for="category_id" :class="fieldLabelClass">{{
+                        t('store.products.category')
+                    }}</label>
+                    <select
+                        id="category_id"
+                        name="category_id"
+                        :class="plainFieldInputClass"
+                    >
+                        <option value="">
+                            {{ t('store.products.allCategories') }}
+                        </option>
+                        <option
+                            v-for="category in categories"
+                            :key="category.id"
+                            :value="category.id"
+                            :selected="filters.category_id === category.id"
+                        >
+                            {{ category.name }}
+                        </option>
+                    </select>
+                    <FieldError :message="errors.category_id" />
+                </div>
+            </template>
+            <template #filters="{ errors }">
+                <div v-if="isSellerList && approvalEnabled">
+                    <label for="approved" :class="fieldLabelClass">{{
+                        t('store.products.approvalStatus')
+                    }}</label>
+                    <select
+                        id="approved"
+                        name="approved"
+                        :class="plainFieldInputClass"
+                    >
+                        <option value="">
+                            {{ t('store.products.allApprovals') }}
+                        </option>
+                        <option value="1" :selected="filters.approved === true">
+                            {{ t('store.products.approved') }}
+                        </option>
+                        <option
+                            value="0"
+                            :selected="filters.approved === false"
+                        >
+                            {{ t('store.products.unapproved') }}
+                        </option>
+                    </select>
+                    <FieldError :message="errors.approved" />
+                </div>
+                <div v-if="isSellerList">
+                    <label for="category_id" :class="fieldLabelClass">{{
+                        t('store.products.category')
+                    }}</label>
+                    <select
+                        id="category_id"
+                        name="category_id"
+                        :class="plainFieldInputClass"
+                    >
+                        <option value="">
+                            {{ t('store.products.allCategories') }}
+                        </option>
+                        <option
+                            v-for="category in categories"
+                            :key="category.id"
+                            :value="category.id"
+                            :selected="filters.category_id === category.id"
+                        >
+                            {{ category.name }}
+                        </option>
+                    </select>
+                    <FieldError :message="errors.category_id" />
+                </div>
+                <div>
+                    <label for="type" :class="fieldLabelClass">{{
+                        t('store.products.sort')
+                    }}</label>
+                    <select id="type" name="type" :class="plainFieldInputClass">
+                        <option value="">
+                            {{ t('store.products.defaultOrder') }}
+                        </option>
+                        <option
+                            v-for="sort in sorts"
+                            :key="sort.value"
+                            :value="sort.value"
+                            :selected="filters.type === sort.value"
+                        >
+                            {{ t(`store.products.${sort.label}`) }}
+                        </option>
+                    </select>
+                    <FieldError :message="errors.type" />
+                </div>
+                <fieldset class="sm:col-span-2">
+                    <legend :class="fieldLabelClass">
+                        {{ t('store.products.stateFilters') }}
+                    </legend>
+                    <div class="flex flex-wrap gap-3">
+                        <label
+                            v-for="state in stateFilters"
+                            :key="state.name"
+                            class="flex cursor-pointer items-center gap-1.5 text-sm"
+                        >
+                            <input
+                                type="checkbox"
+                                :name="state.name"
+                                value="1"
+                                :checked="
+                                    filters[
+                                        state.name as keyof StoreProductListFilters
+                                    ] === true
+                                "
+                                class="cursor-pointer"
+                            />{{ t(`store.products.${state.label}`) }}
+                        </label>
+                    </div>
+                    <p class="mt-1 text-xs text-gray-600 dark:text-neutral-400">
+                        {{
+                            t(
+                                isAllList
+                                    ? 'store.products.allStateHint'
+                                    : 'store.products.inHouseStateHint',
+                            )
+                        }}
+                    </p>
+                </fieldset>
+            </template>
+        </StoreListFilters>
         <Form
             v-if="access.can('product_delete')"
             :action="listActions.bulkDestroy(listQuery)"

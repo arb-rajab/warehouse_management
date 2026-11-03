@@ -69,6 +69,15 @@ test('customer list returns a narrow full record without representatives sellers
     $this->get(route('customers.index'))->assertOk()->assertInertia(fn (Assert $page) => $page->has('customers.data', 1)->has('customers.data.0', fn (Assert $record) => $record
         ->where('id', $customer->id)->where('name', 'Amy')->where('email', 'amy@example.com')->where('phone', '31611111111')->where('company_name', 'Amy Company')->where('is_rep', false)->where('archived', false)->where('banned', false)->where('verified', true)->where('important', true)->where('activity_status', 'new_user')->where('rep_id', null)->where('rep_serial', null)));
 });
+test('blank yes/no filters from the Filters dialog mean all and are not applied as No', function () {
+    actingAsStoreUser(createStoreStaff('view_all_customers'));
+    $customer = createStoreUser('customer', 'blank-filters@example.com');
+    $customer->forceFill(['is_important' => 1, 'admin_verified' => 0])->save();
+    $this->get(route('customers.index', ['important' => '1', 'verified' => '', 'from_api' => '', 'registration_completed' => '', 'activity_status' => '']))
+        ->assertOk()->assertInertia(fn (Assert $page) => $page->has('customers.data', 1)->where('filters.important', true)->missing('filters.verified')->missing('filters.from_api')->missing('filters.registration_completed'));
+    $this->get(route('customers.index', ['verified' => '0']))
+        ->assertInertia(fn (Assert $page) => $page->has('customers.data', 1)->where('filters.verified', false));
+});
 foreach (['customers.index', 'representatives.index', 'customers.archive'] as $route) {
     test($route.' paginates validates and filters', function () use ($route) {
         actingAsStoreUser(createStoreAdmin());
@@ -153,7 +162,7 @@ test('profile writes validate uniqueness password confirmation and persist safe 
 });
 test('customer status importance notes ban archive and restore actions preserve domain invariants', function () {
     actingAsStoreUser(createStoreAdmin());
-    $customer = createStoreUser();
+    $customer = createStoreUser(verified: false);
     $customer->forceFill(['last_order_at' => now()])->save();
     $this->post(route('customers.verify', $customer))->assertRedirect();
     expect($customer->fresh()->admin_verified)->toBeTrue()->and($customer->fresh()->admin_verified_at)->not->toBeNull();

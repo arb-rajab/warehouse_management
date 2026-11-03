@@ -285,7 +285,7 @@ test('a signed-in customer reads their own profile and no one else', function ()
 });
 
 test('a signed-in user can ask whether an account is verified', function () {
-    $customer = createStoreUser('customer');
+    $customer = createStoreUser('customer', verified: false);
 
     $this->withToken(storeApiToken($customer))->getJson("/api/v1/store/check_user_verified/{$customer->id}")
         ->assertOk()

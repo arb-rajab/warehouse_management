@@ -28,6 +28,7 @@ import AddResourceLink from '@/components/AddResourceLink.vue';
 import FieldError from '@/components/FieldError.vue';
 import FormField from '@/components/FormField.vue';
 import Pagination from '@/components/Pagination.vue';
+import StoreListFilters from '@/components/StoreListFilters.vue';
 import StoreStatusSwitch from '@/components/StoreStatusSwitch.vue';
 import SubmitButton from '@/components/SubmitButton.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
@@ -250,12 +251,12 @@ describe('Store product lists Index', () => {
                             : 'store.products.inHouseStateHint',
                     ),
                 );
+                expect(filterForm.get('button[type="submit"]').text()).toBe(
+                    t('common.filters.apply'),
+                );
                 expect(
-                    filterForm.getComponent(SubmitButton).props(),
-                ).toMatchObject({
-                    label: t('store.products.apply'),
-                    processingLabel: t('store.products.applying'),
-                });
+                    filterForm.get('button[type="button"]').text(),
+                ).toContain(t('common.filters.title'));
                 expect(
                     bulkForm.getComponent(SubmitButton).props(),
                 ).toMatchObject({
@@ -673,6 +674,21 @@ describe('Store product lists Index', () => {
             ['featured', '1', false],
             ['deleted', '1', true],
         ]);
+        // Category is the inline key filter here; sort and the state boxes are
+        // in the dialog and counted (sort, active, deleted).
+        expect(filterForm.findAll('#category_id').length).toBe(1);
+        expect(
+            wrapper
+                .get('[role="dialog"]')
+                .findAll('select, input')
+                .map((control) => control.attributes('name')),
+        ).toEqual(['type', 'active', 'for_sale', 'featured', 'deleted']);
+        expect(
+            wrapper.get('[role="dialog"]').find('#category_id').exists(),
+        ).toBe(false);
+        expect(
+            wrapper.getComponent(StoreListFilters).props('activeCount'),
+        ).toBe(3);
         const presetLinks = wrapper.findAll('#product-presets a');
         expect(presetLinks[3].classes()).toContain('bg-gray-900');
         expect(presetLinks[0].classes()).not.toContain('bg-gray-900');
@@ -785,6 +801,49 @@ describe('seller product list', () => {
             expect(wrapper.find('input[name=deleted]').exists()).toBe(false);
         },
     );
+    it('keeps the seller inline and puts category, approval and sort in the dialog', () => {
+        const wrapper = mountPage({
+            listType: 'seller',
+            approvalEnabled: true,
+            sellers: [{ id: 9, name: 'Seller' }],
+            filters: storeProductListFilters({
+                user_id: 9,
+                approved: false,
+                category_id: 3,
+                featured: true,
+            }),
+        });
+        const inline = wrapper.get('form#store-list-filters');
+        const dialog = wrapper.get('[role="dialog"]');
+        expect(inline.find('#user_id').exists()).toBe(true);
+        expect(dialog.find('#user_id').exists()).toBe(false);
+        expect(inline.find('#category_id').exists()).toBe(true);
+        expect(
+            dialog
+                .findAll('select, input')
+                .map((control) => control.attributes('name')),
+        ).toEqual([
+            'approved',
+            'category_id',
+            'type',
+            'active',
+            'for_sale',
+            'featured',
+        ]);
+        expect(
+            (dialog.get('#category_id').element as HTMLSelectElement).value,
+        ).toBe('3');
+        // approved, category and featured; the seller is not counted.
+        expect(
+            wrapper.getComponent(StoreListFilters).props('activeCount'),
+        ).toBe(3);
+        expect(
+            wrapper
+                .getComponent(StoreListFilters)
+                .get('input[name="per_page"]')
+                .attributes('value'),
+        ).toBe('20');
+    });
     it('uses the seller edit, switches, duplicate, DELETE and bulk routes with current query', () => {
         const product = storeProductListRow();
         const wrapper = mountPage({

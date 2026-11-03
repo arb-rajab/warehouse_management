@@ -129,7 +129,7 @@ Errors from a submitted `<Form>`/`useForm` are read from that form's `errors` (s
 
 ## Optional props are bare `?:`; withDefaults only for real defaults; shared Inertia test stubs
 
-Declare optional props `foo?: T` and leave them out of `withDefaults` — a `foo: undefined` entry is noise (and `x: T | undefined` becomes `x?: T`). withDefaults is only for a non-undefined default (`tone: 'default'`, `disabled: false`). In tests, mock `@inertiajs/vue3` with testing/inertiaStubs.ts: `createLinkStub()`, `createFormStub(getSlotProps)`, `createUseFormStub(submitMock)`; assert child props (`getComponent(Form).props('action')`, `getComponent(Link).props('href')`) and emit `success` via `getComponent(Form).vm.$emit('success')`, not text alone.
+Declare optional props `foo?: T` and leave them out of `withDefaults` — a `foo: undefined` entry is noise (and `x: T | undefined` becomes `x?: T`). withDefaults is only for a non-undefined default (`tone: 'default'`, `disabled: false`). In tests, mock `@inertiajs/vue3` with testing/inertiaStubs.ts: `createLinkStub()`, `createFormStub(getSlotProps, onSubmit?)` (`onSubmit` receives the form's `FormData` on a native submit or the `submit` slot prop), `createUseFormStub(submitMock)`; assert child props (`getComponent(Form).props('action')`, `getComponent(Link).props('href')`) and emit `success` via `getComponent(Form).vm.$emit('success')`, not text alone.
 
 ## Shared dialog and filter labels live under `common`
 
