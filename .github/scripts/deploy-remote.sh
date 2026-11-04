@@ -13,7 +13,8 @@
 # undo is restoring the snapshot taken moments earlier, which is what this does.
 #
 # Expects in the environment: DEPLOY_PATH, TARGET_BRANCH, TARGET_SHA,
-# PHP_BINARY, KEEP_RELEASES.
+# PHP_BINARY, KEEP_RELEASES. Optional: FETCH_ATTEMPTS (default 4) and
+# FETCH_RETRY_DELAY in seconds (default 10), which bound the git fetch retries.
 
 set -euo pipefail
 
@@ -45,6 +46,28 @@ log() {
 fail() {
     echo "ERROR: $*" >&2
     exit 1
+}
+
+# Fetching from GitHub over SSH from the shared host fails now and then with
+# "Permission denied (publickey)" although the deploy key is fine: a deploy has
+# been green on its second or fourth attempt with nothing changed. The fetch
+# runs before maintenance mode and before any database change, so repeating it
+# is safe. The wait grows with each attempt (delay, 2 x delay, ...) to ride out
+# a bad moment, and the last failure still fails the deploy.
+fetch_target_branch() {
+    local attempts="${FETCH_ATTEMPTS:-4}"
+    local delay="${FETCH_RETRY_DELAY:-10}"
+    local attempt=1
+
+    while ! git -C "$REPO_DIR" fetch --prune origin "$TARGET_BRANCH"; do
+        if [ "$attempt" -ge "$attempts" ]; then
+            fail "git fetch of $TARGET_BRANCH failed after $attempts attempts"
+        fi
+
+        log "git fetch failed (attempt $attempt of $attempts); retrying in $((delay * attempt))s"
+        sleep "$((delay * attempt))"
+        attempt=$((attempt + 1))
+    done
 }
 
 # Preserve the host's Composer wrapper support while selecting the app's PHP
@@ -198,7 +221,7 @@ mysql --defaults-extra-file="$mysql_defaults_file" "$db_database" -e 'SELECT 1;'
 # --------------------------------------------------------------------------
 
 log "Fetching $TARGET_BRANCH"
-git -C "$REPO_DIR" fetch --prune origin "$TARGET_BRANCH"
+fetch_target_branch
 
 log "Preparing release $release_id"
 mkdir -p "$RELEASE_DIR"
