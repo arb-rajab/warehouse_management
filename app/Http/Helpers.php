@@ -1252,10 +1252,9 @@ function hex2rgba($color, $opacity = false)
 if (!function_exists('isAdmin')) {
     function isAdmin()
     {
-        if (Auth::check() && (Auth::user()->user_type == 'admin' || Auth::user()->user_type == 'staff' || Auth::user()->user_type == 'accountant')) {
-            return true;
-        }
-        return false;
+        $user = Auth::user();
+
+        return $user instanceof StoreUser && $user->hasAdminAccess();
     }
 }
 

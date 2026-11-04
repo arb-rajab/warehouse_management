@@ -34,7 +34,6 @@ use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\Str;
-use Intervention\Image\Facades\Image;
 use Laravel\Socialite\Facades\Socialite;
 use Maatwebsite\Excel\Facades\Excel;
 use niklasravnsborg\LaravelPdf\Facades\Pdf;
@@ -269,7 +268,6 @@ return [
         'File' => File::class,
         'Gate' => Gate::class,
         'Hash' => Hash::class,
-        'Image' => Image::class,
         'Lang' => Lang::class,
         'Log' => Log::class,
         'Mail' => Mail::class,

@@ -839,7 +839,7 @@ The tables above are the original audit. This is what the legacy
 | giggsey/libphonenumber-for-php | ^9.0 | |
 | google/apiclient | ^2.18 | |
 | guzzlehttp/guzzle | ^7.8 | |
-| intervention/image | ^2.5 | v2 is end-of-life; the v3 rewrite (5 call sites) is still open |
+| intervention/image | ^4.3 | ported to the v4 API (2026-11-04): `ImageOptimizer` and `ThumbnailService` share the GD `ImageManager` singleton bound in `AppServiceProvider`; the `Image` alias and `config/image.php` are gone |
 | maatwebsite/excel | ^4.0 | |
 | laracasts/flash | ^3.2.5 | |
 | enshrined/svg-sanitize | ^0.22 | |

@@ -240,7 +240,7 @@ describe('StoreRichTextField', () => {
             '<blockquote><p>Quote</p></blockquote>',
             '<pre><code>code</code></pre>',
             '<table class="table table-bordered"',
-            '<td colspan="1" rowspan="1"><p>A</p></td>',
+            '<td><p>A</p></td>',
             '<a target="_blank" rel="noopener noreferrer nofollow" href="https://example.com/rice">Link</a>',
             '<img style="width: 50%;" src="https://example.com/uploads/all/legacy.png">',
             '<p dir="rtl" lang="ar">أرز edited</p>',
@@ -312,7 +312,8 @@ describe('StoreRichTextField', () => {
         editor.commands.setContent('<p>Hello</p>');
         await toolbarButton(wrapper, 'table').trigger('click');
         await settle();
-        expect(lastHtml(wrapper)).toContain('<th colspan="1" rowspan="1">');
+        expect(lastHtml(wrapper)).toContain('<th><p>');
+        expect(lastHtml(wrapper)).not.toMatch(/colspan="1"|rowspan="1"/);
         expect(toolbarButton(wrapper, 'table').attributes()).toHaveProperty(
             'disabled',
         );

@@ -466,10 +466,31 @@ test('a large upload gets a small thumbnail and the original is left alone', fun
         expect($url)->toContain('uploads/thumbs/'.$upload->id.'-400.')
             ->and(is_file($path))->toBeTrue()
             ->and(getimagesize($path)[0])->toBe(400)
+            ->and(getimagesize($path)[1])->toBe(300)
+            ->and(getimagesize($path)['mime'])->toBe(function_exists('imagewebp') ? 'image/webp' : 'image/jpeg')
             ->and(filesize($path))->toBeLessThan(filesize(public_path($name)) / 10)
             ->and(is_file(public_path($name)))->toBeTrue()
             ->and(thumbnail_asset($upload->id))->toBe($url)
             ->and(uploaded_asset($upload->id))->toContain($name);
+    } finally {
+        @unlink(public_path($name));
+        File::delete(File::glob(public_path('uploads/thumbs/'.$upload->id.'-*')));
+    }
+});
+
+test('a heavy upload narrower than a thumbnail is re-encoded at its own size, not enlarged', function () {
+    $directory = public_path('uploads/all');
+    File::ensureDirectoryExists($directory);
+    $name = 'uploads/all/thumb-narrow-'.uniqid().'.png';
+    $image = imagecreatetruecolor(300, 2000);
+    imagepng($image, public_path($name), 0);
+    $upload = Upload::forceCreate(['file_original_name' => 'narrow', 'file_name' => $name, 'extension' => 'png', 'type' => 'image', 'file_size' => filesize(public_path($name)), 'user_id' => 1]);
+
+    try {
+        expect(filesize(public_path($name)))->toBeGreaterThan(150 * 1024)
+            ->and(app(ThumbnailService::class)->urlFor($upload))->toContain('uploads/thumbs/'.$upload->id.'-400.');
+        $info = getimagesize(public_path('uploads/thumbs/'.$upload->id.'-400.'.(function_exists('imagewebp') ? 'webp' : 'jpg')));
+        expect([$info[0], $info[1]])->toBe([300, 2000]);
     } finally {
         @unlink(public_path($name));
         File::delete(File::glob(public_path('uploads/thumbs/'.$upload->id.'-*')));

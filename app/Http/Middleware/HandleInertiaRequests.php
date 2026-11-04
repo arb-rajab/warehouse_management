@@ -161,7 +161,7 @@ class HandleInertiaRequests extends Middleware
     private function storeNotifications(Request $request): array
     {
         $user = $request->user('store');
-        if (! $user instanceof StoreUser || ! in_array($user->user_type, ['admin', 'staff', 'accountant'], true)) {
+        if (! $user instanceof StoreUser || ! $user->hasAdminAccess()) {
             return ['unread_count' => 0, 'items' => []];
         }
 
