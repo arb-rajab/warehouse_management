@@ -67,7 +67,10 @@ case "$MODE" in
 
         if [ "${CLAUDE_CODE_REMOTE:-}" = "true" ] \
             && printf '%s' "$CMD" | grep -Eqi '^[[:space:]]*composer[[:space:]]+(install|update)\b' \
-            && ! printf '%s' "$CMD" | grep -Eq -- '--no-dev\b'; then
+            && ! printf '%s' "$CMD" | grep -Eq -- '--no-dev\b' \
+            && ! printf '%s' "$CMD" | grep -Eq -- '--no-install\b'; then
+            # `--no-install` only rewrites composer.lock from package metadata and
+            # downloads no dists, so the 403 on dev dists does not apply to it.
             deny_predictable_dev_install
         fi
 

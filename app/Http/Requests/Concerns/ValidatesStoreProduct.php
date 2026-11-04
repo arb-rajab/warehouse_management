@@ -50,6 +50,7 @@ trait ValidatesStoreProduct
 
         return [
             'name' => ['required', 'string', 'max:200'],
+            'ar_name' => ['sometimes', 'nullable', 'string', 'max:191'],
             'category_id' => ['required', 'integer', Rule::in(array_column(Category::treeOptions(fn ($roots) => $roots->where('digital', 0)), 'id'))],
             'brand_id' => ['nullable', 'integer', Rule::exists('brands', 'id')],
             'unit' => ['required', 'string', 'max:20'],
@@ -97,6 +98,7 @@ trait ValidatesStoreProduct
             'cash_on_delivery' => self::cashPaymentEnabled() ? ['nullable', 'boolean'] : ['exclude'],
             'featured' => ['nullable', 'boolean'],
             'todays_deal' => ['nullable', 'boolean'],
+            'can_expire' => ['sometimes', 'boolean'],
             'flash_deal_id' => self::flashDealsEnabled() ? ['nullable', 'integer', Rule::exists('flash_deals', 'id')->where('status', 1)] : ['exclude'],
             'flash_discount' => self::flashDealsEnabled() ? ['nullable', 'required_with:flash_deal_id', ...self::AMOUNT_RULES] : ['exclude'],
             'flash_discount_type' => self::flashDealsEnabled() ? ['nullable', 'required_with:flash_deal_id', 'string', Rule::in(['amount', 'percent'])] : ['exclude'],

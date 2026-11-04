@@ -26,6 +26,13 @@ Schedule::command('products:sync')->hourly()->withoutOverlapping(15)->onFailure(
     Log::error('Scheduled products:sync run failed.');
 });
 
+// Signed off by the business owner: the margin collections (the percentages a
+// representative's order profit is checked against) are refreshed from the ERP
+// just before the product sync. It only upserts `product_collections`.
+Schedule::command('import:collections')->hourlyAt(50)->withoutOverlapping(15)->onFailure(function (): void {
+    Log::error('Scheduled import:collections run failed.');
+});
+
 Schedule::command('health:check')->everyMinute()->withoutOverlapping(2);
 Schedule::command('health:schedule-check-heartbeat')->everyMinute()->withoutOverlapping(2);
 Schedule::command('health:queue-check-heartbeat')->everyFiveMinutes();
@@ -39,9 +46,10 @@ Schedule::command('model:prune', ['--model' => [HealthCheckResultHistoryItem::cl
 //   check:unordered-carts           notifies admins and flags carts untouched for 5 days
 //   check:customers                 unverifies customers with no order for 30 days (hides prices)
 //   import:members, import:agents   create and update store users from the otajer ERP
-//   import:brands, import:categories, import:collections,
+//   import:brands, import:categories,
 //   import:offer-new-products, import:all-products
 //                                   overwrite catalogue data from the otajer ERP
+//   (import:collections IS scheduled above, hourly.)
 //   sync:users                      creates accounts in the otajer ERP for store users
 //   fix:members                     bans duplicate members (preview with --dry-run)
 //   check:commands                  runs the product import once an admin queues it

@@ -142,7 +142,7 @@ test('the server side reads an inline validator behind a helper method, with the
             'password_confirmation' => 'required',
         ])
         ->and($form['fields']['password_confirmation']['derived'])->toBeTrue()
-        ->and($form['fields']['name']['file'].':'.$form['fields']['name']['line'])->toBe('app/Http/Controllers/Auth/RegisterController.php:104');
+        ->and($form['fields']['name']['file'].':'.$form['fields']['name']['line'])->toBe('app/Http/Controllers/Auth/RegisterController.php:105');
 });
 
 test('the server side calls a FormRequest\'s rules() with its route model and tells required from optional', function () {

@@ -5,12 +5,15 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { logout } from '@/actions/App/Http/Controllers/Auth/LoginController';
 import { index as storefrontHome } from '@/actions/App/Http/Controllers/HomeController';
 import { index as admin_dashboard } from '@/actions/App/Http/Controllers/Store/Admin/DashboardController';
+import { index as notificationsIndex } from '@/actions/App/Http/Controllers/Store/Admin/NotificationController';
 import { index as profileIndex } from '@/actions/App/Http/Controllers/Store/Admin/ProfileController';
 import {
     edit as staffEdit,
     index as staffIndex,
 } from '@/actions/App/Http/Controllers/Store/Admin/StaffController';
 import { edit as tripEdit } from '@/actions/App/Http/Controllers/Store/Admin/TripController';
+import FilterDialog from '@/components/FilterDialog.vue';
+import HelpTooltip from '@/components/HelpTooltip.vue';
 import LanguageSwitcher from '@/components/LanguageSwitcher.vue';
 import LogoutLink from '@/components/LogoutLink.vue';
 import SkipToContentLink from '@/components/SkipToContentLink.vue';
@@ -266,6 +269,8 @@ describe('StoreAdminLayout', () => {
         expect(wrapper.get('nav').text()).toContain('All staff');
         expect(wrapper.get('nav').text()).not.toContain('Dashboard');
         expect(wrapper.find('form').exists()).toBe(false);
+        expect(wrapper.findComponent(HelpTooltip).exists()).toBe(false);
+        expect(wrapper.text()).not.toContain(t('store.nav.clearCache'));
         const trigger = wrapper.get(
             'button[aria-controls="store-notifications"]',
         );
@@ -292,16 +297,118 @@ describe('StoreAdminLayout', () => {
                 counts: { sellers: 3, tickets: 4, conversations: 5 },
             }),
         );
-        expect(wrapper.get('form').attributes('data-action-url')).toBe(
-            '/temp/admin/clear-cache',
-        );
-        expect(wrapper.get('form').text()).toContain('Clear Cache');
+        expect(wrapper.find('form').exists()).toBe(false);
+        expect(wrapper.find('#store-notifications').exists()).toBe(false);
         await wrapper.get('#store-menu-search').setValue('Sellers');
         expect(navLink(wrapper, 'store.nav.allSellers')?.props('count')).toBe(
             3,
         );
         await wrapper.get('#store-menu-search').setValue('Support');
         expect(navLink(wrapper, 'store.nav.tickets')?.props('count')).toBe(4);
+        wrapper.unmount();
+    });
+
+    it('puts the unread badge on the Notifications sidebar item, not in a top strip', () => {
+        const wrapper = mountLayout(
+            staffIndex.url(),
+            storeSharedProps({
+                permissions: ['admin_dashboard'],
+                notifications: { unread_count: 3, items: [] },
+            }),
+        );
+        const trigger = wrapper.get(
+            'button[aria-controls="store-notifications"]',
+        );
+
+        expect(wrapper.get('aside').element.contains(trigger.element)).toBe(
+            true,
+        );
+        expect(wrapper.get('main').find('button').exists()).toBe(false);
+        expect(trigger.text()).toContain(t('store.nav.notifications'));
+        expect(trigger.text()).toContain('3');
+        expect(trigger.text()).toContain(
+            t('store.nav.notificationsUnread', { count: 3 }),
+        );
+    });
+
+    it('lists recent notifications of both kinds with a link to all of them', async () => {
+        const wrapper = mountLayout(
+            staffIndex.url(),
+            storeSharedProps({
+                permissions: ['admin_dashboard'],
+                notifications: {
+                    unread_count: 2,
+                    items: [
+                        {
+                            id: 'n1',
+                            kind: 'order',
+                            order_code: 'A-1042',
+                            status: 'confirmed',
+                            user_name: null,
+                            message: null,
+                            created_at: '2026-10-10T12:00:00Z',
+                        },
+                        {
+                            id: 'n2',
+                            kind: 'cart',
+                            order_code: null,
+                            status: null,
+                            user_name: 'Buyer',
+                            message: 'added an item',
+                            created_at: '2026-10-10T12:05:00Z',
+                        },
+                    ],
+                },
+            }),
+        );
+
+        await wrapper
+            .get('button[aria-controls="store-notifications"]')
+            .trigger('click');
+        const popover = wrapper.get('#store-notifications');
+
+        expect(popover.text()).toContain('A-1042');
+        expect(popover.text()).toContain('Buyer added an item');
+        expect(popover.findAll('time')).toHaveLength(2);
+        expect(popover.get('a').attributes('href')).toBe(
+            notificationsIndex.url(),
+        );
+        wrapper.unmount();
+    });
+
+    it('offers Clear dashboard cache in the sidebar footer with a help tooltip and asks before posting', async () => {
+        const wrapper = mountLayout(
+            admin_dashboard.url(),
+            storeSharedProps({
+                isSuperAdmin: true,
+                permissions: ['admin_dashboard'],
+            }),
+        );
+        const tooltip = wrapper.getComponent(HelpTooltip);
+
+        expect(wrapper.get('aside').element.contains(tooltip.element)).toBe(
+            true,
+        );
+        expect(tooltip.props('text')).toBe(t('store.nav.clearCacheHelp'));
+        expect(tooltip.props('text')).toContain('only');
+        expect(wrapper.find('form').exists()).toBe(false);
+        expect(wrapper.getComponent(FilterDialog).props('open')).toBe(false);
+
+        const trigger = wrapper
+            .findAll('aside button')
+            .find((b) => b.text() === t('store.nav.clearCache'));
+        await trigger?.trigger('click');
+
+        expect(wrapper.getComponent(FilterDialog).props('open')).toBe(true);
+        expect(wrapper.get('form').attributes('data-action-url')).toBe(
+            '/temp/admin/clear-cache',
+        );
+        expect(wrapper.get('[role="dialog"]').text()).toContain(
+            t('store.nav.clearCacheHelp'),
+        );
+        expect(wrapper.get('form').text()).toContain(
+            t('store.nav.clearCacheConfirm'),
+        );
         wrapper.unmount();
     });
 

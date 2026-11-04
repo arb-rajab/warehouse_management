@@ -26,11 +26,11 @@ class OrderConfigurationController extends Controller implements HasMiddleware
 
     public function index(): Response
     {
-        $matId = get_setting('default_specific_product', '');
+        $defaultProductId = get_setting('default_specific_product', '');
 
         return Inertia::render('Store/Admin/Setup/OrderConfiguration/Index', [
-            'settings' => ['minimum_order_amount_check' => (bool) get_setting('minimum_order_amount_check', false), 'minimum_order_amount' => get_setting('minimum_order_amount', 0), 'default_specific_product' => $matId, 'default_representative_check' => (bool) get_setting('default_representative_check', false), 'default_representative_id' => get_setting('default_representative_id')],
-            'selectedProduct' => Product::query()->select(['id', 'name', 'mat_id'])->where('mat_id', $matId)->first(),
+            'settings' => ['minimum_order_amount_check' => (bool) get_setting('minimum_order_amount_check', false), 'minimum_order_amount' => get_setting('minimum_order_amount', 0), 'default_specific_product' => $defaultProductId, 'default_representative_check' => (bool) get_setting('default_representative_check', false), 'default_representative_id' => get_setting('default_representative_id')],
+            'selectedProduct' => Product::query()->select(['id', 'name'])->where('id', $defaultProductId)->first(),
             'representatives' => StoreUser::query()->select(['id', 'name'])->where('is_rep', 1)->orderByDesc('id')->get(),
         ]);
     }

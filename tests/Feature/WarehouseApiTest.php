@@ -62,6 +62,31 @@ test('a customer update can clear a field by sending it empty', function () {
         ->and($customer->fresh()->name)->toBe($customer->name);
 });
 
+test('a customer update refuses a tax number another customer already has and changes nothing', function () {
+    $customer = createStoreUser('customer');
+    $customer->forceFill(['tax_number' => 'TAX-OWN'])->save();
+    $other = createStoreUser('customer');
+    $other->forceFill(['tax_number' => 'TAX-TAKEN'])->save();
+
+    warehouse()->postJson(WAREHOUSE_URL."/customer/update/{$customer->id}", ['name' => 'Renamed', 'tax_number' => 'TAX-TAKEN'])
+        ->assertOk()
+        ->assertJson(['result' => false, 'message' => ['This tax number is already registered to another customer.'], 'status' => 200]);
+
+    expect($customer->fresh())->tax_number->toBe('TAX-OWN')->name->toBe($customer->name)
+        ->and($other->fresh()->tax_number)->toBe('TAX-TAKEN');
+});
+
+test('a customer update accepts the customer\'s own tax number again', function () {
+    $customer = createStoreUser('customer');
+    $customer->forceFill(['tax_number' => 'TAX-OWN'])->save();
+
+    warehouse()->postJson(WAREHOUSE_URL."/customer/update/{$customer->id}", ['name' => 'Renamed', 'tax_number' => 'TAX-OWN'])
+        ->assertOk()
+        ->assertJsonPath('result', true);
+
+    expect($customer->fresh())->tax_number->toBe('TAX-OWN')->name->toBe('Renamed');
+});
+
 test('a customer update rejects over-long and non-string values and changes nothing', function (array $payload) {
     $customer = createStoreUser('customer');
 
@@ -206,6 +231,18 @@ test('a list refuses a page size over the maximum', function (string $path) {
         ->assertUnprocessable()
         ->assertJsonPath('result', false);
 })->with(['/customers', '/reps', '/orders', '/products', '/categories']);
+
+test('the products list keeps the mat_id key as the product id', function () {
+    $product = Product::factory()->create(['id' => 734251, 'serial' => 'SER-1']);
+    $noise = Product::factory()->create(['id' => 734252, 'serial' => 'SER-2']);
+
+    $rows = collect(warehouse()->getJson(WAREHOUSE_URL.'/products')->assertOk()->json('data'))->keyBy('id');
+
+    expect($rows->keys()->all())->toContain($product->id, $noise->id)
+        ->and($rows[$product->id])->toHaveKeys(['id', 'serial', 'name', 'unit_price', 'unit_equal', 'mat_id', 'photos', 'otajer_photo'])
+        ->and($rows[$product->id]['mat_id'])->toBe('734251')
+        ->and($rows[$noise->id]['mat_id'])->toBe('734252');
+});
 
 // Order items
 

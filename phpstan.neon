@@ -404,7 +404,6 @@ parameters:
         - app/Notifications/PasswordResetRequest.php
         - app/Notifications/TermsAgreementNotification.php
         - app/Notifications/UnorderedCartNotification.php
-        - app/Providers/AppServiceProvider.php
         - app/Providers/AuthServiceProvider.php
         - app/Providers/BroadcastServiceProvider.php
         - app/Providers/EventServiceProvider.php
@@ -436,7 +435,6 @@ parameters:
         - config/broadcasting.php
         - config/excel.php
         - config/hashing.php
-        - config/image.php
         - config/nagad.php
         - config/nexmo.php
         - config/pdf.php

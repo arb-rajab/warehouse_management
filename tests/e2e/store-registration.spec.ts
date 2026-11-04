@@ -12,6 +12,8 @@ for (const [url, businessFields] of [
         page,
     }, testInfo) => {
         const email = `registration-${Date.now()}@example.com`;
+        // Tax numbers are unique, so a retried run must not reuse one.
+        const taxNumber = `NL-BROWSER-${Date.now()}`;
         const license = '%PDF-1.4\n1 0 obj<</Type/Catalog>>endobj\n%%EOF\n';
         seedStoreFixtures(String.raw`
             Illuminate\Support\Facades\DB::table('countries')->updateOrInsert(
@@ -45,7 +47,7 @@ for (const [url, businessFields] of [
             );
             await page
                 .getByLabel('Tax Number (optional)', { exact: true })
-                .fill('NL-BROWSER');
+                .fill(taxNumber);
             await page
                 .getByLabel('Company Address (optional)', { exact: true })
                 .fill('Browser address');
@@ -79,7 +81,7 @@ for (const [url, businessFields] of [
             ]));
         `);
         expect(JSON.parse(readFileSync(result, 'utf8'))).toEqual({
-            tax_number: businessFields ? 'NL-BROWSER' : null,
+            tax_number: businessFields ? taxNumber : null,
             company_address: businessFields ? 'Browser address' : null,
             license: businessFields ? license : null,
             shipping_address: null,

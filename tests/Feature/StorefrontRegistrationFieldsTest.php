@@ -270,3 +270,32 @@ test('registration keeps optional values and shows field errors after a refusal'
         ->and($xpath->query('//input[@name="tax_number"]/following-sibling::*[@role="alert"]')->length)->toBe(1)
         ->and($xpath->query('//input[@name="trade_license"]')->item(0)->getAttribute('value'))->toBe('');
 });
+
+test('a tax number another customer already has returns 422 without changing anything', function () {
+    $before = registrationRows();
+
+    $this->postJson('/temp/register', registrationWithBusinessFields(['tax_number' => 'EXISTING']))
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['tax_number' => 'This tax number is already registered to another customer.']);
+
+    expect(registrationRows())->toBe($before)
+        ->and(Storage::disk('local')->allFiles())->toEqualCanonicalizing(['outside.txt', 'uploads/licenses/existing.pdf']);
+});
+
+test('on MySQL a tax number differing only in case is the same tax number', function () {
+    if (DB::connection()->getDriverName() !== 'mysql') {
+        $this->markTestSkipped('sqlite compares tax numbers exactly; MySQL\'s utf8mb4_unicode_ci collation ignores case.');
+    }
+
+    $this->postJson('/temp/register', registrationWithBusinessFields(['tax_number' => 'existing']))
+        ->assertUnprocessable()->assertJsonValidationErrors('tax_number');
+
+    expect(StoreUser::where('email', 'new-customer@example.com')->exists())->toBeFalse();
+});
+
+test('registration stores a blank tax number as null', function () {
+    $this->post('/temp/register', registrationWithBusinessFields(['tax_number' => '   ']))->assertSessionHasNoErrors();
+
+    expect(StoreUser::where('email', 'new-customer@example.com')->value('tax_number'))->toBeNull()
+        ->and(StoreUser::where('email', 'existing@example.com')->value('tax_number'))->toBe('EXISTING');
+});

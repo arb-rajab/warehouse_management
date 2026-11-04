@@ -12,6 +12,7 @@ import StoreProductListField from '@/components/StoreProductListField.vue';
 import StoreProductTaxFields from '@/components/StoreProductTaxFields.vue';
 import StoreProductVariantFields from '@/components/StoreProductVariantFields.vue';
 import StoreRichTextField from '@/components/StoreRichTextField.vue';
+import StoreSanitizedHtml from '@/components/StoreSanitizedHtml.vue';
 import StoreUploadField from '@/components/StoreUploadField.vue';
 import { fieldLabelClass, plainFieldInputClass } from '@/lib/filters';
 import { t } from '@/lib/i18n';
@@ -37,9 +38,12 @@ import type {
  * choices and rows (regenerated through `variantsUrl`) and `initialFiles`
  * the previews of the stored uploads; the slug and the Otajer image show only
  * there, as on the Blade edit form. The edit form also gets the Arabic name
- * (`arName`, a field only it shows) and `readOnlyFields`: the Otajer-owned
+ * (`arName`, blank on create, where the field is also shown) and
+ * `readOnlyFields`: the Otajer-owned
  * synced fields of a feed-origin product, rendered read-only with a note
- * (the server ignores what is posted for them).
+ * (the server ignores what is posted for them). Only the name, Arabic name,
+ * unit, unit price and description have a field here; a synced description
+ * shows as a locked block with a hidden input that posts it unchanged.
  */
 const props = defineProps<{
     categories: StoreReferenceOption[];
@@ -139,11 +143,11 @@ const linkClass =
                     {{ t('store.products.form.otajerSynced') }}
                 </p>
             </div>
-            <div v-if="arName !== undefined">
+            <div>
                 <FormField
                     id="ar_name"
                     :label="t('store.products.form.arName')"
-                    :value="arName"
+                    :value="arName ?? ''"
                     :error="errors.ar_name"
                     maxlength="191"
                     dir="auto"
@@ -209,15 +213,28 @@ const linkClass =
                 </select>
                 <FieldError :message="errors.brand_id" />
             </div>
-            <FormField
-                id="unit"
-                :label="t('store.products.form.unit')"
-                :value="unit ?? ''"
-                :error="errors.unit"
-                :placeholder="t('store.products.form.unitPlaceholder')"
-                maxlength="20"
-                required
-            />
+            <div>
+                <FormField
+                    id="unit"
+                    :label="t('store.products.form.unit')"
+                    :value="unit ?? ''"
+                    :error="errors.unit"
+                    :placeholder="t('store.products.form.unitPlaceholder')"
+                    maxlength="20"
+                    required
+                    :readonly="readOnly('unit')"
+                    :aria-describedby="
+                        readOnly('unit') ? 'unit-otajer-synced' : undefined
+                    "
+                />
+                <p
+                    v-if="readOnly('unit')"
+                    id="unit-otajer-synced"
+                    :class="helpClass"
+                >
+                    {{ t('store.products.form.otajerSynced') }}
+                </p>
+            </div>
             <FormField
                 id="weight"
                 type="number"
@@ -409,10 +426,23 @@ const linkClass =
                     :max="productAmountMax"
                     step="0.01"
                     required
+                    :readonly="readOnly('unit_price')"
+                    :aria-describedby="
+                        readOnly('unit_price')
+                            ? 'unit_price-otajer-synced'
+                            : undefined
+                    "
                     @input="
                         unitPrice = ($event.target as HTMLInputElement).value
                     "
                 />
+                <p
+                    v-if="readOnly('unit_price')"
+                    id="unit_price-otajer-synced"
+                    :class="helpClass"
+                >
+                    {{ t('store.products.form.otajerSynced') }}
+                </p>
                 <FieldError :message="errors.unit_price" />
             </div>
             <StoreProductDiscountFields
@@ -477,7 +507,31 @@ const linkClass =
             <legend :class="legendClass">
                 {{ t('store.products.form.descriptionSection') }}
             </legend>
+            <!-- A synced description cannot be edited: the server-cleaned
+                 HTML shows as content and posts back unchanged. -->
+            <div v-if="readOnly('description')" class="lg:col-span-2">
+                <p id="description-label" :class="fieldLabelClass">
+                    {{ t('store.products.form.description') }}
+                </p>
+                <StoreSanitizedHtml
+                    id="description"
+                    :html="description ?? ''"
+                    aria-labelledby="description-label"
+                    aria-describedby="description-otajer-synced"
+                    class="rounded-md border border-gray-300 bg-gray-100 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-neutral-900"
+                />
+                <input
+                    type="hidden"
+                    name="description"
+                    :value="description ?? ''"
+                />
+                <p id="description-otajer-synced" :class="helpClass">
+                    {{ t('store.products.form.otajerSynced') }}
+                </p>
+                <FieldError :message="errors.description" />
+            </div>
             <StoreRichTextField
+                v-else
                 id="description"
                 v-model="content"
                 name="description"
@@ -712,6 +766,28 @@ const linkClass =
                     />
                     {{ t('store.products.form.todaysDeal') }}
                 </label>
+                <div>
+                    <label
+                        class="flex cursor-pointer items-center gap-2 text-sm"
+                    >
+                        <!-- Posts 0 when unticked: can_expire is
+                             sometimes|boolean, so an absent key would leave
+                             the stored flag unchanged. -->
+                        <input type="hidden" name="can_expire" value="0" />
+                        <input
+                            type="checkbox"
+                            name="can_expire"
+                            value="1"
+                            :checked="product?.can_expire ?? false"
+                            aria-describedby="can_expire_help"
+                            :class="checkboxClass"
+                        />
+                        {{ t('store.products.form.canExpire') }}
+                    </label>
+                    <p id="can_expire_help" :class="helpClass">
+                        {{ t('store.products.form.canExpireHelp') }}
+                    </p>
+                </div>
             </div>
         </fieldset>
 

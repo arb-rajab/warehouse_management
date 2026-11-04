@@ -7,6 +7,7 @@ use App\Http\Requests\ResetPasswordWithCodeRequest;
 use App\Mail\SecondEmailVerifyMailManager;
 use App\Services\StoreVerificationCodes;
 use App\Services\TradeLicenseStorage;
+use App\Support\CustomerTaxNumber;
 use App\Models\AffiliateConfig;
 use App\Models\Brand;
 use App\Models\Category;
@@ -170,6 +171,8 @@ class HomeController extends Controller
         }
 
         $user = Auth::user();
+        // The tax number is the customer's unique business identifier.
+        $request->validate(['tax_number' => CustomerTaxNumber::rules(ignoreCustomerId: $user->id)]);
         $user->name = $request->name;
         $user->company_name = $request->company_name;
         $user->address = $request->address;
@@ -241,7 +244,7 @@ class HomeController extends Controller
     public function product(Request $request, $slug)
     {
         $detailedProduct = \App\Support\StorefrontUrl::resolve(
-            Product::with('reviews', 'brand', 'stocks', 'user', 'user.shop', 'barcodes')->where('auction_product', 0)->where('approved', 1),
+            Product::with('reviews', 'brand', 'stocks', 'user', 'user.shop', 'barcodes', 'storeBarcodes:id,product_id,barcode', 'category:id,name,slug,parent_id', 'category.category_translations:id,category_id,lang,name')->where('auction_product', 0)->where('approved', 1),
             $slug,
             $request
         )->first();

@@ -15,9 +15,10 @@ import {
 import AddResourceLink from '@/components/AddResourceLink.vue';
 import DataTable from '@/components/DataTable.vue';
 import Pagination from '@/components/Pagination.vue';
+import StoreStatusSwitch from '@/components/StoreStatusSwitch.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
 import { confirmDelete } from '@/lib/confirm';
-import { syncPageLocale, t } from '@/lib/i18n';
+import { i18n, syncPageLocale, t } from '@/lib/i18n';
 import {
     adminLanguage,
     paginated,
@@ -168,22 +169,54 @@ describe('Language Index', () => {
         before();
         expect(confirmDelete).toHaveBeenCalledWith(language.name);
     });
-    it('submits explicit boolean status and RTL controls to their actions and imports JSON', () => {
-        const forms = mountPage().findAllComponents(Form);
+    it('posts RTL and activation as switches with the inverse value and imports JSON', () => {
+        const wrapper = mountPage();
+        const forms = wrapper.findAllComponents(Form);
         expect(forms.map((form) => form.props('action'))).toEqual([
             updateRtlStatus({ mergeQuery: {} }),
             updateStatus({ mergeQuery: {} }),
             importAppTranslations(),
         ]);
-        expect(forms[0].props('transform')!({ id: '3', 'rtl-3': '0' })).toEqual(
+        const switches = wrapper.findAllComponents(StoreStatusSwitch);
+        expect(switches.map((item) => item.props())).toMatchObject([
             {
-                id: '3',
-                status: '0',
+                action: updateRtlStatus({ mergeQuery: {} }),
+                checked: true,
+                label: t('store.languages.rtlFor', { name: 'Arabic' }),
+                locked: undefined,
             },
-        );
+            {
+                action: updateStatus({ mergeQuery: {} }),
+                checked: true,
+                label: t('store.languages.statusFor', { name: 'Arabic' }),
+                locked: undefined,
+            },
+        ]);
+
+        for (const form of forms.slice(0, 2)) {
+            expect(form.get('input[name=id]').attributes('value')).toBe('3');
+            expect(form.get('input[name=status]').attributes('value')).toBe(
+                '0',
+            );
+            expect(form.get('[role="switch"]').attributes('aria-checked')).toBe(
+                'true',
+            );
+        }
+
+        const off = mount(Index, {
+            props: {
+                languages: paginated([
+                    adminLanguage({ rtl: false, status: false }),
+                ]),
+                filters: {},
+                defaultLanguage: 'en',
+            },
+        });
         expect(
-            forms[1].props('transform')!({ id: '3', 'status-3': '0' }),
-        ).toEqual({ id: '3', status: '0' });
+            off
+                .findAll('input[name=status]')
+                .map((input) => input.attributes('value')),
+        ).toEqual(['1', '1']);
     });
     it('hides every mutation and action without language permission', () => {
         const wrapper = mountPage([]);
@@ -202,9 +235,19 @@ describe('Language Index', () => {
             },
         });
         expect(wrapper.findAllComponents(TableActionLink)).toHaveLength(3);
-        expect(
-            wrapper.get('[name="status-3"]').attributes('disabled'),
-        ).toBeDefined();
+        const [rtl, status] = wrapper.findAllComponents(StoreStatusSwitch);
+        expect(rtl.props('locked')).toBeUndefined();
+        expect(status.props('locked')).toEqual({
+            reason: t('store.languages.defaultLocked'),
+            hint: t('store.languages.defaultReadOnly', { code: 'en' }),
+        });
+        expect(status.findComponent(Form).exists()).toBe(false);
+        expect(status.get('[role="switch"]').attributes()).toMatchObject({
+            'aria-checked': 'true',
+            'aria-disabled': 'true',
+        });
+        expect(status.text()).toContain(t('store.languages.defaultLocked'));
+        expect(wrapper.findAllComponents(Form)).toHaveLength(2);
     });
     it('changes page size through the languages route', () => {
         mountPage().getComponent(Pagination).vm.$emit('update:per-page', 10);
@@ -214,33 +257,26 @@ describe('Language Index', () => {
             { preserveState: true, replace: true },
         );
     });
-    it('gives each editable status and import form its own required legend, allowing false', async () => {
+    it('keeps the required legend on the import form only; the switches post fixed values', async () => {
         const wrapper = mountPage();
         await wrapper.vm.$nextTick();
         const forms = wrapper.findAll('form');
         expect(forms).toHaveLength(3);
 
-        for (const form of forms) {
-            expect(form.findAll('[data-required-legend]')).toHaveLength(1);
-            expect(form.findAll('[data-required-mark]')).toHaveLength(1);
-            expect(form.findAll('[required]')).toHaveLength(1);
+        for (const form of forms.slice(0, 2)) {
+            expect(form.find('[data-required-legend]').exists()).toBe(false);
+            expect(form.find('[data-required-mark]').exists()).toBe(false);
+            expect(form.find('[required]').exists()).toBe(false);
+            expect(form.find('select').exists()).toBe(false);
         }
 
-        await wrapper.get('[name="rtl-3"]').setValue('0');
-        expect(
-            wrapper
-                .get<HTMLSelectElement>('[name="rtl-3"]')
-                .element.checkValidity(),
-        ).toBe(true);
-        await wrapper.setProps({
-            languages: paginated([adminLanguage({ is_default: true })]),
-        });
-        await wrapper.vm.$nextTick();
-        expect(
-            wrapper.findAll('form')[1].find('[data-required-legend]').exists(),
-        ).toBe(false);
-        expect(
-            wrapper.findAll('form')[1].find('[data-required-mark]').exists(),
-        ).toBe(false);
+        expect(forms[2].findAll('[data-required-legend]')).toHaveLength(1);
+        expect(forms[2].findAll('[data-required-mark]')).toHaveLength(1);
+        expect(forms[2].findAll('[required]')).toHaveLength(1);
+        expect(i18n.global.te('store.languages.rtlFor', 'ar')).toBe(true);
+        expect(i18n.global.te('store.languages.statusFor', 'ar')).toBe(true);
+        expect(i18n.global.te('store.languages.defaultLocked', 'ar')).toBe(
+            true,
+        );
     });
 });

@@ -57,6 +57,13 @@ class AddressController extends Controller
         $address->city_id = $request->city_id;
         $address->postal_code = $request->postal_code;
         $address->phone = $request->phone;
+        // The first address with a street becomes the default.
+        $address->set_default = trim((string) $address->address) !== ''
+            && ! Address::where('user_id', $address->user_id)->where('set_default', 1)->where('address', '!=', '')->whereNotNull('address')->exists()
+            ? 1 : 0;
+        if ($address->set_default) {
+            Address::where('user_id', $address->user_id)->update(['set_default' => 0]);
+        }
         $address->save();
 
         return response()->json([

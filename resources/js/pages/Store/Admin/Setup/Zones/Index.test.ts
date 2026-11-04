@@ -9,7 +9,7 @@ import {
 } from '@/actions/App/Http/Controllers/Store/Admin/ZoneController';
 import AddResourceLink from '@/components/AddResourceLink.vue';
 import Pagination from '@/components/Pagination.vue';
-import StoreStatusButton from '@/components/StoreStatusButton.vue';
+import StoreStatusSwitch from '@/components/StoreStatusSwitch.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
 import { t } from '@/lib/i18n';
@@ -98,7 +98,7 @@ describe('Store Zones Index', () => {
         const wrapper = mountPage([]);
         expect(wrapper.findAllComponents(TableActionLink)).toHaveLength(0);
         expect(wrapper.findComponent(AddResourceLink).exists()).toBe(false);
-        expect(wrapper.findComponent(StoreStatusButton).exists()).toBe(false);
+        expect(wrapper.findComponent(StoreStatusSwitch).exists()).toBe(false);
         expect(wrapper.findComponent(Form).exists()).toBe(false);
     });
     it('links edit and confirms delete without losing the query', () => {

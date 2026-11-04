@@ -39,6 +39,10 @@ requested order, resolving behavior and consumers rather than choosing entire
 conflicting branches. A cherry-pick's presence does not mean all its changes
 were activated. The table and deferred paths below define actual scope.
 
+Note (2026-11-04): the source branches below were deleted from the remote in the branch
+cleanup; every tip is still reachable from `archive/branch-tips-2026-11-04`
+(see `branch-audit-2026-11-04.md`), so "remain available in Git" still holds.
+
 | Source branch | Exact source commit | Disposition | Initial integration commit / rationale |
 | --- | --- | --- | --- |
 | `codex/store-backoffice-foundation-verification-20261011` | `67b621635e0cd290ddfa7aa3f43889f4cf17cf6f` | Included, documentation reconciled | `3ff704ff1b09d6699f5e36f2c505c6a3ae4bff83`; foundation constraints retained, historical progress replaced by actual integrated inventory |

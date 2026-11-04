@@ -102,6 +102,8 @@ const labelKeys = [
     'cashOnDelivery',
     'featured',
     'todaysDeal',
+    'canExpire',
+    'canExpireHelp',
     'flashDeal',
     'addToFlash',
     'chooseFlashDeal',
@@ -559,12 +561,50 @@ describe('StoreProductFormFields', () => {
             expect(wrapper.text()).toContain(message);
         }
     });
-    it('has no Arabic name field or synced-field note on the create form', () => {
+    it('shows an empty, optional Arabic name and no synced-field note on the create form', () => {
         const wrapper = mountFields();
 
-        expect(wrapper.find('#ar_name').exists()).toBe(false);
+        const arName = wrapper.get('#ar_name');
+        expect(arName.attributes('name')).toBe('ar_name');
+        expect(arName.attributes('dir')).toBe('auto');
+        expect(arName.attributes('maxlength')).toBe('191');
+        expect(arName.attributes('required')).toBeUndefined();
+        expect(arName.attributes('readonly')).toBeUndefined();
+        expect((arName.element as HTMLInputElement).value).toBe('');
+        expect(wrapper.find('#ar_name-otajer-synced').exists()).toBe(false);
         expect(wrapper.find('#otajer-synced-fields').exists()).toBe(false);
         expect(wrapper.get('#name').attributes('readonly')).toBeUndefined();
+    });
+
+    it('posts can_expire as a checkbox with a hidden 0 fallback, optional and unmarked', async () => {
+        const create = mountFields();
+        const [hidden, box] = create.findAll('input[name="can_expire"]');
+        expect(hidden.attributes('type')).toBe('hidden');
+        expect((hidden.element as HTMLInputElement).value).toBe('0');
+        expect(box.attributes('type')).toBe('checkbox');
+        expect((box.element as HTMLInputElement).value).toBe('1');
+        expect((box.element as HTMLInputElement).checked).toBe(false);
+        expect(box.attributes('required')).toBeUndefined();
+        expect(box.attributes('aria-describedby')).toBe('can_expire_help');
+        expect(create.get('#can_expire_help').text()).toBe(
+            t('store.products.form.canExpireHelp'),
+        );
+        expect(box.element.closest('label')?.textContent?.trim()).toBe(
+            t('store.products.form.canExpire'),
+        );
+        expect(
+            box.element.closest('label')?.querySelector('[aria-hidden]'),
+        ).toBeNull();
+
+        const edit = mountFields({
+            product: storeProductForm({ can_expire: true }),
+        });
+        expect(
+            (
+                edit.get('input[type="checkbox"][name="can_expire"]')
+                    .element as HTMLInputElement
+            ).checked,
+        ).toBe(true);
     });
 
     it('renders the Arabic name as an optional edit field and read-only fields with their notes', () => {
@@ -611,5 +651,126 @@ describe('StoreProductFormFields', () => {
         );
         expect(wrapper.get('#name').attributes('readonly')).toBeUndefined();
         expect(wrapper.get('#ar_name').attributes('readonly')).toBeUndefined();
+    });
+    it('renders the synced unit and unit price read-only with their notes, still required', () => {
+        const wrapper = mountFields({
+            unit: 'bottle',
+            readOnlyFields: ['unit', 'unit_price'],
+        });
+
+        for (const id of ['unit', 'unit_price']) {
+            const input = wrapper.get(`#${id}`);
+            expect(input.attributes('readonly')).toBeDefined();
+            expect(input.attributes('required')).toBeDefined();
+            expect(input.attributes('aria-describedby')).toBe(
+                `${id}-otajer-synced`,
+            );
+            expect(wrapper.get(`#${id}-otajer-synced`).text()).toBe(
+                t('store.products.form.otajerSynced'),
+            );
+        }
+
+        expect(wrapper.get('#otajer-synced-fields').text()).toBe(
+            t('store.products.form.otajerSyncedFields', {
+                fields: [
+                    t('store.productFieldSources.fields.unit'),
+                    t('store.productFieldSources.fields.unit_price'),
+                ].join(', '),
+            }),
+        );
+        // Nothing else locks.
+        expect(wrapper.get('#name').attributes('readonly')).toBeUndefined();
+        expect(wrapper.find('#unit-otajer-synced').exists()).toBe(true);
+    });
+
+    it('keeps the unit and unit price editable when they are not read-only', () => {
+        const wrapper = mountFields({ readOnlyFields: ['name'] });
+
+        for (const id of ['unit', 'unit_price']) {
+            expect(
+                wrapper.get(`#${id}`).attributes('readonly'),
+            ).toBeUndefined();
+            expect(wrapper.find(`#${id}-otajer-synced`).exists()).toBe(false);
+        }
+    });
+
+    it('shows a synced description as a locked block that posts the stored HTML, and no editor', () => {
+        const wrapper = mountFields({
+            description: '<p>Synced <strong>text</strong></p>',
+            readOnlyFields: ['description'],
+        });
+
+        expect(wrapper.findComponent(StoreRichTextField).exists()).toBe(false);
+        expect(wrapper.get('#description').html()).toContain(
+            '<strong>text</strong>',
+        );
+        expect(wrapper.get('#description').attributes('aria-labelledby')).toBe(
+            'description-label',
+        );
+        expect(wrapper.get('#description-label').text()).toBe(
+            t('store.products.form.description'),
+        );
+        expect(wrapper.get('#description-otajer-synced').text()).toBe(
+            t('store.products.form.otajerSynced'),
+        );
+        const hidden = wrapper.get('input[type="hidden"][name="description"]');
+        expect((hidden.element as HTMLInputElement).value).toBe(
+            '<p>Synced <strong>text</strong></p>',
+        );
+        // Optional, so no required mark or attribute beside the label.
+        expect(
+            wrapper
+                .get('#description-label')
+                .find('[data-required-mark]')
+                .exists(),
+        ).toBe(false);
+    });
+
+    it('keeps the description editor when the description is not read-only', () => {
+        const wrapper = mountFields({ readOnlyFields: ['name'] });
+
+        expect(wrapper.findComponent(StoreRichTextField).exists()).toBe(true);
+        expect(wrapper.find('#description-otajer-synced').exists()).toBe(false);
+        // The only hidden description input is the editor's own, not the
+        // locked block's.
+        const hidden = wrapper.findAll(
+            'input[type="hidden"][name="description"]',
+        );
+        expect(hidden).toHaveLength(1);
+        expect(
+            wrapper
+                .findComponent(StoreRichTextField)
+                .find('input[type="hidden"][name="description"]')
+                .exists(),
+        ).toBe(true);
+    });
+
+    it('lists the synced fields that have no input here in the note', () => {
+        const wrapper = mountFields({
+            readOnlyFields: [
+                'serial',
+                'tax',
+                'unit_equal',
+                'api_unitId',
+                'api_unit_name',
+            ],
+        });
+
+        expect(wrapper.get('#otajer-synced-fields').text()).toBe(
+            t('store.products.form.otajerSyncedFields', {
+                fields: [
+                    'serial',
+                    'tax',
+                    'unit_equal',
+                    'api_unitId',
+                    'api_unit_name',
+                ]
+                    .map((field) =>
+                        t(`store.productFieldSources.fields.${field}`),
+                    )
+                    .join(', '),
+            }),
+        );
+        expect(wrapper.get('#unit').attributes('readonly')).toBeUndefined();
     });
 });

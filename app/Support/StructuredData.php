@@ -236,7 +236,7 @@ final class StructuredData
     {
         $sku = $product->stocks->pluck('sku')->first(fn ($candidate) => filled($candidate));
 
-        return $sku ?? (blank($product->mat_id) ? null : (string) $product->mat_id);
+        return $sku ?? (string) $product->id;
     }
 
     /** @return list<string> */

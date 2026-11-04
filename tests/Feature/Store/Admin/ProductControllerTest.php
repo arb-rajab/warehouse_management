@@ -15,6 +15,7 @@ use App\Models\ProductCollection;
 use App\Models\ProductTranslation;
 use App\Models\Upload;
 use App\Models\User;
+use App\Services\ProductFieldSourceService;
 use App\Support\StorefrontUrl;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
@@ -22,6 +23,7 @@ use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Testing\TestResponse;
 use Inertia\Testing\AssertableInertia as Assert;
 
@@ -36,7 +38,7 @@ beforeEach(function () {
         'thumbnail_img' => null, 'unit_price' => 12.5, 'current_stock' => 40, 'published' => true, 'featured' => 0,
     ]);
     DB::table('products')->where('id', $this->product->id)->update([
-        'for_sale' => 1, 'mat_id' => '100027', 'api_unit_name' => 'Box', 'unit_equal' => 12, 'num_of_sale' => 7,
+        'for_sale' => 1, 'api_unit_name' => 'Box', 'unit_equal' => 12, 'num_of_sale' => 7,
         'category_id' => $this->category->id, 'low_stock_quantity' => 5, 'deleted_from_api' => 0,
     ]);
 });
@@ -119,6 +121,23 @@ test('each list asks for its own permission only', function () {
     $this->get(route('products.admin'))->assertForbidden();
 });
 
+test('the list locks the Active switch only on a feed row while Otajer owns published', function () {
+    actingAsStoreUser(createStoreStaff('show_in_house_products'));
+    $feed = createStoreProduct(['name' => 'Feed oil', 'added_by' => 'admin', 'digital' => 0, 'thumbnail_img' => null, 'published' => true, 'featured' => 0]);
+    DB::table('products')->where('id', $feed->id)->update(['synced_at' => now(), 'for_sale' => 1, 'deleted_from_api' => 0]);
+    $locks = fn (): array => array_column(
+        $this->get(route('products.admin', ['active' => 1, 'for_sale' => 1]))->assertOk()->inertiaProps('products.data'),
+        'published_locked',
+        'id',
+    );
+
+    expect(app(ProductFieldSourceService::class)->isOtajerOwned('published'))->toBeTrue()
+        ->and($locks())->toEqual([$this->product->id => false, $feed->id => true]);
+
+    app(ProductFieldSourceService::class)->update(['published' => 'admin']);
+    expect($locks())->toEqual([$this->product->id => false, $feed->id => false]);
+});
+
 test('the in-house list exposes the full narrow row for in-house physical products only', function () {
     actingAsStoreUser(createStoreStaff('show_in_house_products'));
     $noise = productListNoise();
@@ -126,7 +145,7 @@ test('the in-house list exposes the full narrow row for in-house physical produc
     $thumbnail = Upload::factory()->create(['type' => 'image', 'external_link' => 'https://example.com/oil.png', 'file_name' => null]);
     DB::table('products')->where('id', $this->product->id)->update(['collection_id' => $collection->id, 'thumbnail_img' => $thumbnail->id]);
     $variant = createStoreProduct(['name' => 'Variant oil', 'ar_name' => '', 'slug' => null, 'thumbnail_img' => null, 'current_stock' => 2]);
-    DB::table('products')->where('id', $variant->id)->update(['variant_product' => 1, 'low_stock_quantity' => 10, 'mat_id' => null, 'api_unit_name' => null, 'unit_equal' => null, 'for_sale' => 1]);
+    DB::table('products')->where('id', $variant->id)->update(['variant_product' => 1, 'low_stock_quantity' => 10, 'api_unit_name' => null, 'unit_equal' => null, 'for_sale' => 1]);
     DB::table('product_stocks')->insert(['product_id' => $variant->id, 'variant' => 'Large', 'sku' => 'L', 'price' => 1, 'qty' => 5]);
     DB::table('product_stocks')->where('product_id', $variant->id)->where('variant', '')->update(['variant' => 'Small']);
     backdate($variant, '2026-01-01 00:00:00');
@@ -138,18 +157,18 @@ test('the in-house list exposes the full narrow row for in-house physical produc
         ->has('products.data', 2)
         ->has('products.data.0', fn (Assert $row) => $row
             ->where('id', $this->product->id)->where('name', 'Olive oil')->where('ar_name', 'زيت زيتون')
-            ->where('thumbnail_url', 'https://example.com/oil.png')->where('mat_id', '100027')->where('unit', 'Box(12)')
+            ->where('thumbnail_url', 'https://example.com/oil.png')->where('mat_id', (string) $this->product->id)->where('unit', 'Box(12)')
             ->where('num_of_sale', 7)->where('base_price', single_price(12.5))->where('profit', single_price(1.25))
             ->where('variant_stocks', null)->where('stock_quantity', 40)->where('low_stock', false)
             ->where('category', 'Oils')->where('for_sale', true)->where('published', true)->where('featured', false)->where('approved', true)->where('todays_deal', false)
-            ->where('deleted_from_api', false)->where('public_url', route('product', 'olive-oil')))
+            ->where('published_locked', false)->where('deleted_from_api', false)->where('public_url', route('product', 'olive-oil')))
         ->has('products.data.1', fn (Assert $row) => $row
             ->where('id', $variant->id)->where('name', 'Variant oil')->where('ar_name', '')
-            ->where('thumbnail_url', static_asset('assets/img/placeholder.jpg'))->where('mat_id', null)->where('unit', '()')
+            ->where('thumbnail_url', static_asset('assets/img/placeholder.jpg'))->where('mat_id', (string) $variant->id)->where('unit', '()')
             ->where('num_of_sale', 0)->where('base_price', single_price(2.5))->where('profit', single_price(0))
             ->where('variant_stocks', [['variant' => 'Small', 'qty' => 2], ['variant' => 'Large', 'qty' => 5]])
             ->where('stock_quantity', 7)->where('low_stock', true)->where('category', null)
-            ->where('for_sale', true)->where('published', true)->where('featured', false)->where('approved', true)->where('todays_deal', false)->where('deleted_from_api', false)
+            ->where('for_sale', true)->where('published', true)->where('featured', false)->where('approved', true)->where('todays_deal', false)->where('published_locked', false)->where('deleted_from_api', false)
             ->where('public_url', StorefrontUrl::to($variant)))
         ->where('filters', ['search' => null, 'category_id' => null, 'type' => null, 'active' => true, 'for_sale' => true, 'featured' => false, 'per_page' => 20])
         ->where('categories', [['id' => $this->category->id, 'name' => 'Oils']])
@@ -158,6 +177,19 @@ test('the in-house list exposes the full narrow row for in-house physical produc
     $this->withSession(['locale' => 'ar'])->get(route('products.admin', ['active' => 1, 'for_sale' => 1]))
         ->assertInertia(fn (Assert $page) => $page->where('products.data.0.category', 'زيوت')->where('categories.0.name', 'Oils'));
 });
+
+test('every list row carries the product id for the ID column and no mat_id column is read', function (string $list, string $permission) {
+    actingAsStoreUser(createStoreStaff($permission));
+    $second = createStoreProduct(['name' => 'Second oil', 'ar_name' => '', 'added_by' => 'admin', 'digital' => 0, 'thumbnail_img' => null, 'published' => true, 'featured' => 0]);
+    DB::table('products')->where('id', $second->id)->update(['for_sale' => 1, 'deleted_from_api' => 0]);
+    productListNoise();
+    expect(Schema::hasColumn('products', 'mat_id'))->toBeFalse();
+
+    $rows = $this->get(route($list, ['active' => 1, 'for_sale' => 1]))->assertOk()->inertiaProps('products.data');
+
+    expect(collect($rows)->pluck('id')->all())->toContain($this->product->id, $second->id)
+        ->and(collect($rows)->every(fn (array $row): bool => is_int($row['id']) && $row['mat_id'] === (string) $row['id']))->toBeTrue();
+})->with([['products.admin', 'show_in_house_products'], ['products.all', 'show_all_products']]);
 
 test('the in-house list matches its three state switches exactly, ticked or not, as the legacy list did', function () {
     actingAsStoreUser(createStoreStaff('show_in_house_products'));
@@ -226,17 +258,17 @@ test('the in-house search matches one phrase against both names and both barcode
     $this->getJson(route('products.admin', ['search' => ['x']]))->assertUnprocessable()->assertJsonValidationErrors('search');
 });
 
-test('the all-products search needs every word to match a name, the material id or a barcode', function () {
+test('the all-products search needs every word to match a name, the id or a barcode', function () {
     actingAsStoreUser(createStoreStaff('show_all_products'));
     $noise = productListNoise();
-    DB::table('products')->where('id', $noise['seller']->id)->update(['mat_id' => '555001']);
+    $byId = createStoreProduct(['id' => 555001, 'name' => 'Pantry staple', 'thumbnail_img' => null]);
     DB::table('product_barcodes')->insert(['product_id' => $noise['digital']->id, 'barcode' => '8700000000017']);
     ProductBarcode::factory()->create(['product_id' => $this->product->id, 'barcode' => '8799999999999']);
     $ids = fn (string $search) => productListIds($this->get(route('products.all', ['search' => $search])));
 
     expect($ids('oil Olive'))->toBe([$this->product->id])
         ->and($ids('oil'))->toBe([$this->product->id, $noise['seller']->id, $noise['digital']->id])
-        ->and($ids('555001'))->toBe([$noise['seller']->id])
+        ->and($ids('555001'))->toBe([$byId->id])
         ->and($ids('87000000 Oil'))->toBe([$noise['digital']->id])
         ->and($ids('879999 زيتون'))->toBe([$this->product->id])
         ->and($ids('Olive 555001'))->toBe([]);

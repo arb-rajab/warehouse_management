@@ -53,7 +53,10 @@ test('store product write paths cannot bypass the ownership builder', function (
 
 test('all store model writes use the guarded product builder', function () {
     expect(Product::query())->toBeInstanceOf(ProductBuilder::class)
-        ->and(ProductColumnOwnership::syncColumns())->toBe(['name', 'ar_name', 'published']);
+        ->and(ProductColumnOwnership::syncColumns())->toBe([
+            'name', 'ar_name', 'published', 'collection_id',
+            'serial', 'unit_price', 'unit', 'api_unitId', 'api_unit_name', 'tax', 'description', 'unit_equal',
+        ]);
 });
 
 test('store assignments cannot change feed-owned columns even from a partial or stale model', function (string $column, mixed $value) {
@@ -64,7 +67,11 @@ test('store assignments cannot change feed-owned columns even from a partial or 
 
     expect(fn () => $stale->forceFill([$column => $value])->saveQuietly())->toThrow(ValidationException::class);
     expect($product->fresh()->getRawOriginal())->toBe($before);
-})->with(['name' => ['name', 'Changed'], 'ar_name' => ['ar_name', 'جديد'], 'published' => ['published', false]]);
+})->with([
+    'name' => ['name', 'Changed'], 'ar_name' => ['ar_name', 'جديد'], 'published' => ['published', false],
+    'serial' => ['serial', 'S-9'], 'unit_price' => ['unit_price', 42], 'unit' => ['unit', 'case'], 'api_unitId' => ['api_unitId', '7'],
+    'api_unit_name' => ['api_unit_name', 'Case'], 'tax' => ['tax', 9], 'description' => ['description', 'Changed text'], 'unit_equal' => ['unit_equal', 12],
+]);
 
 test('bulk model writes refuse a mixed-origin set atomically', function () {
     $feed = Product::factory()->feedOrigin()->create(['name' => 'Feed']);
@@ -96,11 +103,15 @@ test('counter updates cannot bypass feed ownership', function (string $method, a
 test('store columns remain editable on feed rows and every column is editable on store rows', function () {
     $feed = Product::factory()->feedOrigin()->create();
     $store = Product::factory()->create();
-    $feed->forceFill(['unit_price' => 12.50, 'description' => 'Store description', 'approved' => 0])->save();
-    $store->forceFill(['name' => 'Own name', 'ar_name' => 'اسمي', 'published' => false])->save();
+    $feed->forceFill(['weight' => 12.50, 'tags' => 'store,tags', 'approved' => 0])->save();
+    $store->forceFill([
+        'name' => 'Own name', 'ar_name' => 'اسمي', 'published' => false, 'unit_price' => 7.25, 'description' => 'Own text', 'unit' => 'box', 'tax' => 5,
+    ])->save();
 
-    expect((float) $feed->fresh()->getAttribute('unit_price'))->toBe(12.50)
-        ->and($feed->fresh()->description)->toBe('Store description')
+    expect((float) $feed->fresh()->getAttribute('weight'))->toBe(12.50)
+        ->and($feed->fresh()->getAttribute('tags'))->toBe('store,tags')
+        ->and((float) $store->fresh()->getAttribute('unit_price'))->toBe(7.25)
+        ->and($store->fresh()->description)->toBe('Own text')
         ->and($store->fresh()->name)->toBe('Own name')->and($store->fresh()->published)->toBeFalse()
         ->and($store->fresh()->getAttribute('synced_at'))->toBeNull();
 });
@@ -167,7 +178,51 @@ test('an admin-owned synced column is the store\'s to write even on a feed-origi
 
     expect($feed->fresh()->getAttribute($column))->toEqual($value)
         ->and($feed->fresh()->getAttribute('synced_at'))->not->toBeNull();
-})->with(['name' => ['name', 'Admin name'], 'ar_name' => ['ar_name', 'اسم الإدارة'], 'published' => ['published', false]]);
+})->with([
+    'name' => ['name', 'Admin name'], 'ar_name' => ['ar_name', 'اسم الإدارة'], 'published' => ['published', false],
+    'serial' => ['serial', 'S-9'], 'unit_price' => ['unit_price', 42], 'unit' => ['unit', 'case'], 'api_unitId' => ['api_unitId', '7'],
+    'api_unit_name' => ['api_unit_name', 'Case'], 'tax' => ['tax', 9], 'description' => ['description', 'Admin text'], 'unit_equal' => ['unit_equal', 12],
+]);
+
+test('a numeric feed column re-assigned the number it holds, however spelled, is no change on a feed row', function (string $column, mixed $stored, mixed $posted) {
+    $feed = Product::factory()->feedOrigin()->create([$column => $stored]);
+    $noise = Product::factory()->feedOrigin()->create([$column => $stored]);
+    $before = $feed->fresh()->getRawOriginal($column);
+
+    $feed->forceFill([$column => $posted, 'weight' => 3])->save();
+
+    expect($feed->fresh()->getRawOriginal($column))->toBe($before)
+        ->and((float) $feed->fresh()->getAttribute('weight'))->toBe(3.0)
+        ->and($noise->fresh()->getRawOriginal($column))->toBe($before);
+})->with([
+    'unit_price 12.5 as 12.50' => ['unit_price', 12.5, '12.50'],
+    'unit_price 12.50 as 12.5' => ['unit_price', '12.50', 12.5],
+    'tax 5 as 5.00' => ['tax', 5, '5.00'],
+]);
+
+test('a different number on a feed row is still refused after the same-number allowance', function () {
+    $feed = Product::factory()->feedOrigin()->create(['unit_price' => 12.5]);
+
+    expect(fn () => $feed->forceFill(['unit_price' => '12.51'])->save())->toThrow(ValidationException::class);
+    expect((float) $feed->fresh()->getAttribute('unit_price'))->toBe(12.5);
+});
+
+test('the synced price, unit, tax and description are refused to bulk writes on a feed row while Otajer-owned', function () {
+    $feed = Product::factory()->feedOrigin()->create();
+    $store = Product::factory()->create();
+    $before = $feed->fresh();
+
+    foreach (['unit_price' => 5, 'tax' => 5, 'unit' => 'x', 'description' => 'y', 'serial' => 'z', 'unit_equal' => 3, 'api_unitId' => '1', 'api_unit_name' => 'n'] as $column => $value) {
+        expect(fn () => Product::query()->whereKey($feed->id)->update([$column => $value]), $column)->toThrow(ValidationException::class);
+    }
+    // A store-origin row takes the same write, and a feed row an unrelated column.
+    Product::query()->whereKey($store->id)->update(['unit_price' => 5, 'description' => 'y']);
+    Product::query()->whereKey($feed->id)->update(['weight' => 2]);
+
+    expect($feed->fresh())->unit_price->toEqual($before->unit_price)->tax->toEqual($before->tax)->description->toBe($before->description)
+        ->and((float) $feed->fresh()->getAttribute('weight'))->toBe(2.0)
+        ->and((float) $store->fresh()->getAttribute('unit_price'))->toBe(5.0);
+});
 
 test('making one field admin-owned leaves the other Otajer-owned fields guarded', function () {
     app(ProductFieldSourceService::class)->update(['name' => 'admin']);

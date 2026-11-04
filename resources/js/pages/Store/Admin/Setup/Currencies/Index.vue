@@ -17,7 +17,7 @@ import Pagination from '@/components/Pagination.vue';
 import RequiredLegend from '@/components/RequiredLegend.vue';
 import StoreCurrencyDialog from '@/components/StoreCurrencyDialog.vue';
 import StoreSelectField from '@/components/StoreSelectField.vue';
-import StoreStatusButton from '@/components/StoreStatusButton.vue';
+import StoreStatusSwitch from '@/components/StoreStatusSwitch.vue';
 import SubmitButton from '@/components/SubmitButton.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
@@ -129,14 +129,20 @@ function filter(event: Event): void {
                 <td class="px-4 py-2">{{ row.code }}</td>
                 <td class="px-4 py-2">{{ row.exchange_rate }}</td>
                 <td class="px-4 py-2">
-                    <StoreStatusButton
+                    <StoreStatusSwitch
                         v-if="access.can('currency_setup')"
                         :action="updateStatus(row, { mergeQuery: {} })"
-                        :active="row.status"
+                        :checked="row.status"
                         :label="row.name"
                         :locked="
                             row.status &&
                             row.id === settings.system_default_currency
+                                ? {
+                                      reason: t(
+                                          'store.currencies.defaultCurrency',
+                                      ),
+                                  }
+                                : undefined
                         "
                     />
                 </td>

@@ -192,7 +192,19 @@ export type StoreGeneralSettingsImage =
 
 /** Upload ids are the stored strings; timezone is config('app.timezone'). */
 /** A product field the Otajer sync writes (config/product_field_sources.php). */
-export type StoreProductSyncedField = 'name' | 'ar_name' | 'published';
+export type StoreProductSyncedField =
+    | 'name'
+    | 'ar_name'
+    | 'published'
+    | 'collection_id'
+    | 'serial'
+    | 'unit_price'
+    | 'unit'
+    | 'api_unitId'
+    | 'api_unit_name'
+    | 'tax'
+    | 'description'
+    | 'unit_equal';
 
 /** Who owns a synced product field: the Otajer sync or the admin panel. */
 export type StoreProductFieldSource = 'otajer' | 'admin';
@@ -929,6 +941,8 @@ export interface StoreProductForm {
     cash_on_delivery: boolean;
     featured: boolean;
     todays_deal: boolean;
+    /** A perishable product that can expire soon. */
+    can_expire: boolean;
     /** The product's flash deal, while the form lists it. */
     flash_deal_id: number | null;
     product_types: string[];
@@ -969,6 +983,11 @@ export interface StoreProductListRow {
     featured: boolean;
     approved: boolean;
     todays_deal: boolean;
+    /**
+     * Active cannot change here: the row came from the feed and Otajer owns
+     * `published` (Setup > Product data sources).
+     */
+    published_locked: boolean;
     deleted_from_api: boolean;
     public_url: string | null;
 }

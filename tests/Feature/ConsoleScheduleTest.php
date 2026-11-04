@@ -85,8 +85,23 @@ test('commands that modify data are not scheduled', function (string $command) {
     'carts:purge-old',
     'check:unordered-carts',
     'check:customers',
-    'import:',
+    'import:members',
+    'import:agents',
+    'import:brands',
+    'import:categories',
+    'import:offer-new-products',
+    'import:all-products',
     'sync:users',
     'fix:members',
     'check:commands',
 ]);
+
+test('the margin collections are imported hourly with a bounded mutex and a failure log', function () {
+    $event = collect(app(Schedule::class)->events())->first(fn ($event) => str_contains($event->command, 'import:collections'));
+
+    expect($event)->not->toBeNull()
+        ->and($event->expression)->toBe('50 * * * *')
+        ->and($event->withoutOverlapping)->toBeTrue()
+        ->and($event->expiresAt)->toBeLessThanOrEqual(30)
+        ->and((new ReflectionProperty($event, 'afterCallbacks'))->getValue($event))->not->toBeEmpty();
+});

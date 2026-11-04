@@ -28,7 +28,7 @@ function createUserWithSecrets(string $userType = 'customer', array $attributes 
         'device_key' => 'device-key-secret',
         'bank_account_number' => 'NL00BANK0123456789',
         'provider_id' => 'provider-secret',
-        'tax_number' => 'TAX-SECRET',
+        'tax_number' => 'TAX-SECRET-'.$user->id,
         'admin_notes' => 'admin-only note',
         'company_name' => 'Company '.$user->id,
         ...$attributes,
@@ -285,7 +285,7 @@ test('a signed-in customer reads their own profile and no one else', function ()
 });
 
 test('a signed-in user can ask whether an account is verified', function () {
-    $customer = createStoreUser('customer');
+    $customer = createStoreUser('customer', verified: false);
 
     $this->withToken(storeApiToken($customer))->getJson("/api/v1/store/check_user_verified/{$customer->id}")
         ->assertOk()

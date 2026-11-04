@@ -28,7 +28,7 @@ abstract class PhysicalProductWriter extends ProductWriter
         if (array_key_exists('weight', $posted)) {
             $posted['weight'] ??= 0;
         }
-        foreach (['featured', 'todays_deal', 'is_quantity_multiplied'] as $switch) {
+        foreach (['featured', 'todays_deal', 'is_quantity_multiplied', 'can_expire'] as $switch) {
             if (array_key_exists($switch, $data)) {
                 $posted[$switch] = (int) (bool) $data[$switch];
             }

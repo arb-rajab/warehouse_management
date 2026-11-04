@@ -45,6 +45,10 @@ function assertFinalResourcePayload(string $resource, array $payload, Product|Cu
     $row = isset($payload['data']) ? $payload['data'][0] : $payload;
     expect($row['id'])->toBe($resource === 'review' ? Review::sole()->id : $product->id);
     $row['id'] = 0;
+    if (array_key_exists('mat_id', $row)) {
+        expect($row['mat_id'])->toBe((string) $product->id);
+        $row['mat_id'] = '<product id>';
+    }
     if (isset($row['seller_id'])) {
         expect($row['seller_id'])->toBe($product->user_id);
         $row['seller_id'] = 0;

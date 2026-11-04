@@ -122,6 +122,7 @@ MYSQL_TESTS = [
     'tests/Feature/Database/SchemaIdentifierLengthTest.php',
     'tests/Feature/Database/AddFulltextIndexToProductsTableTest.php',
     'tests/Feature/Database/AddIndexesToStoreTablesTest.php',
+    'tests/Feature/Database/AddUniqueIndexToUsersTaxNumberTest.php',
     'tests/Feature/Database/LoadLegacyReferenceDataTest.php',
     'tests/Feature/Database/WidenMapLongitudeColumnsTest.php',
     'tests/Feature/Database/AddSyncedAtToProductsTableTest.php',

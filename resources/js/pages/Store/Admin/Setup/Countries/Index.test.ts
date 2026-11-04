@@ -7,7 +7,7 @@ import {
 } from '@/actions/App/Http/Controllers/Store/Admin/CountryController';
 import AddResourceLink from '@/components/AddResourceLink.vue';
 import Pagination from '@/components/Pagination.vue';
-import StoreStatusButton from '@/components/StoreStatusButton.vue';
+import StoreStatusSwitch from '@/components/StoreStatusSwitch.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
 import { t } from '@/lib/i18n';
@@ -99,7 +99,7 @@ describe('Store Countries Index', () => {
         const wrapper = mountPage([]);
         expect(wrapper.findAllComponents(TableActionLink)).toHaveLength(0);
         expect(wrapper.findComponent(AddResourceLink).exists()).toBe(false);
-        expect(wrapper.findComponent(StoreStatusButton).exists()).toBe(false);
+        expect(wrapper.findComponent(StoreStatusSwitch).exists()).toBe(false);
         expect(wrapper.findComponent(Form).exists()).toBe(false);
     });
     it('submits the filter with the selected page size', async () => {
@@ -113,10 +113,10 @@ describe('Store Countries Index', () => {
         );
     });
     it('posts the desired status using the bound route and current query', () => {
-        const button = mountPage().getComponent(StoreStatusButton);
+        const button = mountPage().getComponent(StoreStatusSwitch);
         expect(button.props()).toMatchObject({
             action: updateStatus(storeCountry(), { mergeQuery: {} }),
-            active: true,
+            checked: true,
             label: storeCountry().name,
         });
     });

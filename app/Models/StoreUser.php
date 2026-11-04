@@ -7,8 +7,10 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 use App\Models\Cart;
 use App\Notifications\EmailVerificationNotification;
 use App\Notifications\TermsAgreementNotification;
+use App\Support\CustomerTaxNumber;
 use Carbon\Carbon;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -67,6 +69,24 @@ class StoreUser extends Authenticatable implements MustVerifyEmail
      * `Auth::shouldUse()` made the default for the request. User's is `web`.
      */
     protected string $guard_name = 'store';
+
+    /**
+     * The `user_type` values that are the store's back-office staff. The role
+     * gates (IsAdmin, IsRepresentativeOrAdmin), the isAdmin() helper and the
+     * back-office notification feed all read this one list.
+     *
+     * @var list<string>
+     */
+    public const ADMIN_USER_TYPES = ['admin', 'staff', 'accountant'];
+
+    /**
+     * Whether this account is back-office staff (admin, staff or accountant),
+     * whether or not it is banned.
+     */
+    public function hasAdminAccess(): bool
+    {
+        return in_array($this->user_type, self::ADMIN_USER_TYPES, true);
+    }
 
     /**
      * Get the default foreign key name for the model.
@@ -163,6 +183,18 @@ class StoreUser extends Authenticatable implements MustVerifyEmail
             'synched_with_otajer' => 'boolean',
             'registration_completed' => 'boolean',
         ];
+    }
+
+    /**
+     * The tax number is the customer's unique business identifier, stored
+     * trimmed and NULL when blank, however it is written (a form, the app
+     * API, the Otajer member import or forceFill()); see CustomerTaxNumber.
+     *
+     * @return Attribute<string|null, mixed>
+     */
+    protected function taxNumber(): Attribute
+    {
+        return Attribute::make(set: fn (mixed $value): ?string => CustomerTaxNumber::normalize($value));
     }
 
     public function wishlists()

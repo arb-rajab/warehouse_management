@@ -6,10 +6,6 @@
     ],
     "findings": [
         {
-            "fingerprint": "A|resources/js/pages/Store/Admin/Languages/Index.vue|LanguageController@updateRtlStatus|status",
-            "reason": "Known on 2026-10-21 when the convention was introduced (.ai/archive/required-fields/required-fields-audit-20261021.md); to fix in phase 2 or 3."
-        },
-        {
             "fingerprint": "A|resources/js/pages/Store/Admin/Languages/Translations.vue|LanguageController@storeAppTranslations|translations",
             "reason": "Known on 2026-10-21 when the convention was introduced (.ai/archive/required-fields/required-fields-audit-20261021.md); to fix in phase 2 or 3."
         },

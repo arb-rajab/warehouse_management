@@ -106,7 +106,7 @@ class ProductController extends Controller implements HasMiddleware
 
     /**
      * The all-products list keeps its legacy filters: the owner, every word
-     * of the search over the names, material id and barcodes, one preset or
+     * of the search over the names, id and barcodes, one preset or
      * the four state switches matched exactly, the category and the
      * optional legacy sort. With none of those, products the Otajer sync
      * retired stay hidden. It had no order of its own, so rows keep their
@@ -125,7 +125,7 @@ class ProductController extends Controller implements HasMiddleware
                 foreach (array_filter(explode(' ', trim($search)), fn (string $word) => $word !== '') as $word) {
                     $words->where(function (Builder $match) use ($word): void {
                         $this->matchSearchTerm($match, $word);
-                        $match->orWhere('mat_id', 'like', '%'.$word.'%');
+                        $match->orWhere('id', 'like', '%'.$word.'%');
                     });
                 }
             }));
@@ -459,7 +459,7 @@ class ProductController extends Controller implements HasMiddleware
     {
         $perPage = $this->resolvePerPage($request, 20);
         $products = $query
-            ->select(['id', 'name', 'ar_name', 'thumbnail_img', 'mat_id', 'api_unit_name', 'unit_equal', 'num_of_sale', 'unit_price', 'collection_id', 'variant_product', 'low_stock_quantity', 'category_id', 'for_sale', 'published', 'featured', 'approved', 'todays_deal', 'deleted_from_api', 'slug'])
+            ->select(['id', 'name', 'ar_name', 'thumbnail_img', 'api_unit_name', 'unit_equal', 'num_of_sale', 'unit_price', 'collection_id', 'variant_product', 'low_stock_quantity', 'category_id', 'for_sale', 'published', 'featured', 'approved', 'todays_deal', 'deleted_from_api', 'slug', 'synced_at'])
             ->with([
                 'stocks' => fn ($stocks) => $stocks->select(['id', 'product_id', 'variant', 'qty'])->orderBy('id'),
                 'category:id,name',
@@ -525,7 +525,7 @@ class ProductController extends Controller implements HasMiddleware
     /**
      * The edit form in the requested language (the default without one):
      * the form's options, the product's fields, the edited language's name,
-     * unit and cleaned description, the Arabic name, the synced fields that
+     * unit and cleaned description (the synced column while it is read-only), the Arabic name, the synced fields that
      * are read-only on this product (ProductFieldSourceService), the stored variant choices with their
      * rows, and the previews of its stored uploads the caller may see.
      */
@@ -541,7 +541,7 @@ class ProductController extends Controller implements HasMiddleware
                 'thumbnail_img', 'video_provider', 'video_link', 'pdf', 'unit_price', 'discount', 'discount_type', 'discount_start_date',
                 'discount_end_date', 'external_link', 'external_link_btn', 'description', 'meta_title', 'meta_description', 'meta_img', 'slug',
                 'shipping_type', 'shipping_cost', 'is_quantity_multiplied', 'est_shipping_days', 'low_stock_quantity', 'stock_visibility_state',
-                'cash_on_delivery', 'featured', 'todays_deal', 'colors', 'choice_options',
+                'cash_on_delivery', 'featured', 'todays_deal', 'can_expire', 'colors', 'choice_options',
             ])
             ->with([
                 'product_translations:id,product_id,lang,name,unit,description',
@@ -552,11 +552,11 @@ class ProductController extends Controller implements HasMiddleware
             ])
             ->findOrFail($product->id);
         $options = $this->formOptions($product);
-        // The base name is the default language's only; other languages edit
-        // a translation the sync never writes.
+        // The base name, unit and description are the default language's
+        // only; other languages edit a translation the sync never writes.
         $readOnlyFields = array_values(array_filter(
             app(ProductFieldSourceService::class)->readOnlyFieldsFor($product),
-            fn (string $field): bool => $field !== 'name' || $lang === config('app.default_language'),
+            fn (string $field): bool => ! in_array($field, ['name', 'unit', 'description'], true) || $lang === config('app.default_language'),
         ));
         $flashDealId = $product->flash_deal_product?->getAttribute('flash_deal_id');
         $variants = $this->storedVariantChoices($product, $options['colors'], $options['attributes']);
@@ -570,10 +570,11 @@ class ProductController extends Controller implements HasMiddleware
             // A read-only name shows the synced column, which a stale
             // default-language translation could otherwise hide.
             'name' => in_array('name', $readOnlyFields, true) ? $product->name : (string) $product->getTranslation('name', $lang),
-            'arName' => $product->ar_name,
+            'arName' => $this->arabicName($product, in_array('ar_name', $readOnlyFields, true)),
             'readOnlyFields' => $readOnlyFields,
-            'unit' => (string) $product->getTranslation('unit', $lang),
-            'description' => clean_html((string) $product->getTranslation('description', $lang)),
+            // A read-only unit or description shows the synced column too.
+            'unit' => in_array('unit', $readOnlyFields, true) ? (string) $product->unit : (string) $product->getTranslation('unit', $lang),
+            'description' => clean_html(in_array('description', $readOnlyFields, true) ? (string) $product->description : (string) $product->getTranslation('description', $lang)),
             'lang' => $lang,
             'languages' => $this->languageOptions(),
             'listType' => $listType,
@@ -586,6 +587,29 @@ class ProductController extends Controller implements HasMiddleware
                 'meta_img' => $product->getAttribute('meta_img'),
             ]),
         ]);
+    }
+
+    /**
+     * The Arabic name the edit form prefills, always a string. The column
+     * `products.ar_name` is the Arabic name; a blank one (a product made on
+     * the create form, which has no such field, or by a legacy import that
+     * only wrote the Arabic translation) falls back to the name of the
+     * product's Arabic translation (`ar`, or `sa` as the imports store it), so
+     * a stored Arabic name is not shown as an empty field and is saved to the
+     * column with the form. While the field is read-only (Otajer-synced) the
+     * form shows the synced column alone, blank or not.
+     */
+    private function arabicName(Product $product, bool $readOnly): string
+    {
+        $stored = (string) $product->getAttribute('ar_name');
+        if ($readOnly || trim($stored) !== '') {
+            return $stored;
+        }
+
+        return (string) $product->product_translations
+            ->whereIn('lang', ['ar', 'sa'])
+            ->map(fn ($translation): string => (string) $translation->getAttribute('name'))
+            ->first(fn (string $name): bool => trim($name) !== '');
     }
 
     /**

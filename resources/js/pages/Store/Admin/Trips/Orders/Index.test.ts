@@ -25,6 +25,7 @@ import AddResourceLink from '@/components/AddResourceLink.vue';
 import DataTable from '@/components/DataTable.vue';
 import FieldError from '@/components/FieldError.vue';
 import Pagination from '@/components/Pagination.vue';
+import StoreListFilters from '@/components/StoreListFilters.vue';
 import SubmitButton from '@/components/SubmitButton.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
 import TableLink from '@/components/TableLink.vue';
@@ -194,13 +195,13 @@ describe('Store trip orders list', () => {
             expect(wrapper.get('label[for="to"]').text()).toBe(
                 t('store.trips.orders.to'),
             );
-            expect(wrapper.get('legend').text()).toBe(
+            expect(wrapper.get('label[for="delivery_status"]').text()).toBe(
                 t('store.trips.orders.statusFilter'),
             );
             expect(
                 wrapper
-                    .findAll('input[name="delivery_status"][type="radio"]')
-                    .map((input) => input.element.parentElement?.textContent),
+                    .findAll('select[name="delivery_status"] option')
+                    .map((option) => option.text()),
             ).toEqual([
                 t('store.trips.orders.allStatuses'),
                 ...deliveryStatuses.map(statusLabel),
@@ -213,10 +214,6 @@ describe('Store trip orders list', () => {
                         button.props('processingLabel'),
                     ]),
             ).toEqual([
-                [
-                    t('store.trips.orders.apply'),
-                    t('store.trips.orders.applying'),
-                ],
                 [
                     t('store.trips.orders.markSelection', {
                         status: statusLabel('confirmed'),
@@ -669,6 +666,7 @@ describe('Store trip orders list', () => {
             to: '2026-10-09',
         });
         const filter = forms(wrapper)[0];
+        const form = wrapper.getComponent(StoreListFilters);
         expect(filter.props('action')).toEqual(tripOrders());
         expect(filter.get('input[name="per_page"]').attributes('value')).toBe(
             '50',
@@ -677,6 +675,7 @@ describe('Store trip orders list', () => {
             'Alma',
         );
         expect(filter.get('#search').attributes('maxlength')).toBe('100');
+        expect(form.props('activeCount')).toBe(2);
         expect(filter.get('#from').attributes('type')).toBe('date');
         expect(filter.get<HTMLInputElement>('#from').element.value).toBe(
             '2026-10-01',
@@ -685,16 +684,13 @@ describe('Store trip orders list', () => {
             '2026-10-09',
         );
         expect(
-            filter
-                .findAll<HTMLInputElement>('input[name="delivery_status"]')
-                .map((input) => [input.element.value, input.element.checked]),
-        ).toEqual([
-            ['', false],
-            ['confirmed', false],
-            ['ready_for_delivery', false],
-            ['on_delivery', false],
-            ['delivered', true],
-        ]);
+            filter.get<HTMLSelectElement>('select[name="delivery_status"]')
+                .element.value,
+        ).toBe('delivered');
+        const dialog = wrapper.get('[role="dialog"]');
+        expect(
+            dialog.findAll('input').map((input) => input.attributes('name')),
+        ).toEqual(['from', 'to']);
 
         const pagination = wrapper.getComponent(Pagination);
         expect(pagination.props()).toMatchObject({ links: [], perPage: 50 });
@@ -713,9 +709,9 @@ describe('Store trip orders list', () => {
 
         const plain = mountPage();
         expect(
-            plain.get<HTMLInputElement>('input[name="delivery_status"]').element
-                .checked,
-        ).toBe(true);
+            plain.get<HTMLSelectElement>('select[name="delivery_status"]')
+                .element.value,
+        ).toBe('');
         plain.getComponent(Pagination).vm.$emit('update:perPage', 100);
         expect(routerGetMock).toHaveBeenLastCalledWith(
             tripOrders.url(),

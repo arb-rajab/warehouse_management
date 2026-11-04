@@ -32,11 +32,25 @@ vi.mock('@inertiajs/vue3', async () => {
     };
 });
 
-const fields: StoreProductFieldSourceRow[] = [
-    { key: 'name', source: 'admin', default: 'otajer' },
-    { key: 'ar_name', source: 'otajer', default: 'otajer' },
-    { key: 'published', source: 'otajer', default: 'otajer' },
+const keys: StoreProductFieldSourceRow['key'][] = [
+    'name',
+    'ar_name',
+    'published',
+    'collection_id',
+    'serial',
+    'unit_price',
+    'unit',
+    'api_unitId',
+    'api_unit_name',
+    'tax',
+    'description',
+    'unit_equal',
 ];
+const fields: StoreProductFieldSourceRow[] = keys.map((key) => ({
+    key,
+    source: key === 'name' || key === 'unit_price' ? 'admin' : 'otajer',
+    default: 'otajer',
+}));
 
 function page(rows: StoreProductFieldSourceRow[] = fields) {
     usePageMock.mockReturnValue({
@@ -103,9 +117,7 @@ describe('product data sources page', () => {
                 'otajerHint',
                 'admin',
                 'adminHint',
-                'fields.name',
-                'fields.ar_name',
-                'fields.published',
+                ...keys.map((key) => `fields.${key}`),
             ]) {
                 const label = t(`store.productFieldSources.${key}`);
                 expect(label).not.toBe(`store.productFieldSources.${key}`);
@@ -130,7 +142,7 @@ describe('product data sources page', () => {
             wrapper
                 .findAll('fieldset')
                 .map((fieldset) => fieldset.attributes('data-field')),
-        ).toEqual(['name', 'ar_name', 'published']);
+        ).toEqual(keys);
 
         for (const field of fields) {
             const radios = wrapper.findAll(
@@ -147,11 +159,9 @@ describe('product data sources page', () => {
             ]);
         }
 
-        expect(checked(wrapper)).toEqual([
-            ['sources[name]', 'admin'],
-            ['sources[ar_name]', 'otajer'],
-            ['sources[published]', 'otajer'],
-        ]);
+        expect(checked(wrapper)).toEqual(
+            fields.map((field) => [`sources[${field.key}]`, field.source]),
+        );
     });
 
     it('never leaves both options of a field checked', async () => {
@@ -174,13 +184,15 @@ describe('product data sources page', () => {
         await nextTick();
 
         const legends = wrapper.findAll('legend');
-        expect(legends).toHaveLength(3);
+        expect(legends).toHaveLength(keys.length);
 
         for (const legend of legends) {
             expect(legend.findComponent(RequiredMark).exists()).toBe(true);
         }
 
-        expect(wrapper.findAllComponents(RequiredMark)).toHaveLength(3);
+        expect(wrapper.findAllComponents(RequiredMark)).toHaveLength(
+            keys.length,
+        );
         expect(
             wrapper
                 .findAll('input[type="radio"]')

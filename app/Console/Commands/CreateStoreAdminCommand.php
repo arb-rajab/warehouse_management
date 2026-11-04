@@ -91,7 +91,7 @@ class CreateStoreAdminCommand extends Command
 
     private function promote(StoreUser $user): int
     {
-        if ($user->banned || ! in_array($user->user_type, ['admin', 'staff', 'accountant'], true)) {
+        if ($user->banned || ! $user->hasAdminAccess()) {
             $this->components->error('Store user '.$user->id.' cannot sign in to the back office (user_type '.$user->user_type.($user->banned ? ', banned' : '').'), so the Super Admin role would not help. Nothing was changed.');
 
             return self::FAILURE;

@@ -28,7 +28,8 @@ test('new shipping orders preserve established tax amounts, calculate line total
     $line = $order->orderDetails()->firstOrFail();
     expect((float) $line->price)->toBe(30.0)->and((float) $line->tax)->toBe(21.0)
         ->and((float) $line->getAttribute('original_price'))->toBe(36.0)
-        ->and((float) $order->grand_total)->toBe(30.0)
+        ->and((float) $line->getAttribute('tax_amount'))->toBe(6.3)
+        ->and((float) $order->grand_total)->toBe(36.3) // 30 + 21 percent VAT on top
         ->and((float) $order->getAttribute('profits'))->toBe(3.0)
         ->and((float) $order->getAttribute('discount_percent'))->toBe(16.67)
         ->and((float) $order->getAttribute('indicator'))->toBe(10.0);
@@ -51,7 +52,7 @@ test('seller groups share one combined total and an unavailable later line rolls
         ->and(DB::table('product_stocks')->where('product_id', $payload['products'][0]['product_id'])->value('qty'))->toBe(50);
     $payload['products'][1]['quantity'] = 1;
     $this->post(route('new.feat-order.trip.store'), $payload)->assertRedirect();
-    expect(Order::count())->toBe(2)->and((float) DB::table('combined_orders')->value('grand_total'))->toBe(34.0);
+    expect(Order::count())->toBe(2)->and((float) DB::table('combined_orders')->value('grand_total'))->toBe(40.3); // 30 + 4, and 21 percent VAT on the first line
 });
 
 test('representative entry requires a representative and piece originals use the box conversion', function () {
@@ -81,7 +82,7 @@ test('edits preserve stored tax shipping serials and variants, adjust stock, and
     $payload['products'][0]['id'] = $line->id;
     $payload['products'][0]['quantity'] = 2;
     $this->put(route('new.feat-order.trip.update', $order), $payload)->assertRedirect();
-    expect((float) $order->fresh()->grand_total)->toBe(20.0)
+    expect((float) $order->fresh()->grand_total)->toBe(24.2)
         ->and((float) $line->fresh()->tax)->toBe(21.0)
         ->and(json_decode($line->fresh()->getAttribute('variation_qty'), true, flags: JSON_THROW_ON_ERROR))->toBe(['boxes' => 3])
         ->and((float) $line->fresh()->shipping_cost)->toBe(4.0)
@@ -107,7 +108,7 @@ test('cancellation restocks legacy unit lines and refunds wallets once, then ref
     $this->post($url, ['order_id' => $order->id, 'status' => 'cancelled'])->assertRedirect();
     $this->post($url, ['order_id' => $order->id, 'status' => 'cancelled'])->assertRedirect();
     expect(DB::table('product_stocks')->where('product_id', $payload['products'][0]['product_id'])->value('qty'))->toBe(50)
-        ->and((float) StoreUser::findOrFail($payload['customer_id'])->balance)->toBe(30.0);
+        ->and((float) StoreUser::findOrFail($payload['customer_id'])->balance)->toBe(36.3);
     $this->postJson($url, ['order_id' => $order->id, 'status' => 'pending'])->assertUnprocessable();
     expect($order->fresh()->delivery_status)->toBe('cancelled');
 });
@@ -124,7 +125,7 @@ test('payment transitions calculate commission only once and block paid edits an
     $this->postJson($url, ['order_id' => $order->id, 'status' => 'unpaid'])->assertUnprocessable();
     $this->putJson(route('new.feat-order.trip.update', $order), $payload)->assertUnprocessable();
     $this->postJson(route('order.item.edit_price'), ['id' => $order->orderDetails()->value('id'), 'admin_price' => 1])->assertUnprocessable();
-    expect((float) $order->fresh()->grand_total)->toBe(30.0);
+    expect((float) $order->fresh()->grand_total)->toBe(36.3);
 });
 
 $writeRoutes = ['feat-order.store', 'new.feat-order.trip.store', 'new.feat-order.trip.update', 'orders.destroy', 'bulk-order-delete', 'orders.update_delivery_status', 'orders.update_payment_status', 'orders.update_tracking_code', 'orders.update_manager_notes', 'order.item.edit_price'];
@@ -195,7 +196,7 @@ test('authorized price tracking and notes writes preserve totals and enforce val
     $order = Order::firstOrFail();
     $line = $order->orderDetails()->firstOrFail();
     $this->post(route('order.item.edit_price'), ['id' => $line->id, 'admin_price' => 8])->assertRedirect();
-    expect((float) $order->fresh()->grand_total)->toBe(24.0)
+    expect((float) $order->fresh()->grand_total)->toBe(29.04) // 24 + 21 percent VAT on the new price
         ->and((float) $order->fresh()->getAttribute('profits'))->toBe(2.4)
         ->and((float) StoreUser::findOrFail($payload['customer_id'])->getAttribute('profits'))->toBe(2.4);
     $this->post(route('orders.update_tracking_code'), ['order_id' => $order->id, 'tracking_code' => 'TRACK'])->assertRedirect();
@@ -300,4 +301,17 @@ test('order pagination accepts documented sizes and rejects unbounded sizes', fu
     }
     $this->get(route('all_orders.index', ['per_page' => 10]))->assertOk()->assertInertia(fn (Assert $page) => $page->has('orders.data', 10)->where('orders.meta.total', 12)->where('filters.per_page', 10));
     $this->getJson(route('all_orders.index', ['per_page' => 100000]))->assertUnprocessable()->assertJsonValidationErrors('per_page');
+});
+
+test('an order line placed before VAT was recorded keeps its total when the price is edited', function () {
+    actingAsStoreUser(createStoreStaff('add_order', 'edit_order_price'));
+    $payload = adminOrderPayload();
+    $this->post(route('new.feat-order.trip.store'), $payload);
+    $order = Order::firstOrFail();
+    $line = $order->orderDetails()->firstOrFail();
+    $line->forceFill(['tax_amount' => 0])->save();
+
+    $this->post(route('order.item.edit_price'), ['id' => $line->id, 'admin_price' => 8])->assertRedirect();
+
+    expect((float) $order->fresh()->grand_total)->toBe(24.0)->and((float) $line->fresh()->getAttribute('tax_amount'))->toBe(0.0);
 });

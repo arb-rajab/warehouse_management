@@ -127,7 +127,7 @@ test('mobile order display strings are localized while status identifiers and cu
     $response = apiResourceResponseData(new PurchaseHistoryMiniCollection(collect([$order])));
     expect($response)->toBe([
         'data' => [[
-            'id' => 45, 'code' => 'ORDER-45', 'user_id' => 9, 'name' => 'Customer-authored name',
+            'id' => 45, 'code' => 'ORDER-45', 'user_id' => 9, 'customer_id' => 9, 'placed_by_id' => 9, 'placed_by_name' => 'Customer-authored name', 'placed_by_rep' => false, 'name' => 'Customer-authored name',
             'otajer_id' => 'ERP-9', 'payment_type' => 'Custom Transfer', 'payment_status' => 'unpaid',
             'payment_status_string' => $locale === 'en' ? 'Unpaid' : 'غير مدفوع', 'delivery_status' => 'pending',
             'delivery_status_string' => $locale === 'en' ? 'Order Placed' : 'تم تقديم الطلب',

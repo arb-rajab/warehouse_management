@@ -159,23 +159,32 @@ class ProductFieldSourceService
     }
 
     /**
-     * An Otajer writer's product translation values: the translation's `name`
-     * mirrors `$field` (`name` for English, `ar_name` for Arabic), so while
-     * the admin owns that field the import leaves an existing translation's
-     * name alone and gives a new one the field's insert value.
+     * An Otajer writer's product translation values. The translation's `name`
+     * mirrors `$field` (`name` for English, `ar_name` for Arabic) and its
+     * `description` mirrors the `description` field; the English translation's
+     * `unit` mirrors the `unit` field (the Arabic unit has no field). While
+     * the admin owns the mirrored field the import leaves an existing
+     * translation's value alone and gives a new one the field's insert value.
      *
      * @param  array<string, mixed>  $values
      * @return array<string, mixed>
      */
     public function translationValues(string $field, array $values, bool $creating): array
     {
-        if (! array_key_exists('name', $values) || ! $this->isAdminOwned($field)) {
-            return $values;
+        $mirrored = ['name' => $field, 'description' => 'description'];
+        if ($field === 'name') {
+            $mirrored['unit'] = 'unit';
         }
-        if ($creating) {
-            return [...$values, 'name' => (string) $this->insertValueFor($field)];
+        foreach ($mirrored as $key => $source) {
+            if (! array_key_exists($key, $values) || ! $this->isAdminOwned($source)) {
+                continue;
+            }
+            if ($creating) {
+                $values[$key] = (string) $this->insertValueFor($source);
+            } else {
+                unset($values[$key]);
+            }
         }
-        unset($values['name']);
 
         return $values;
     }

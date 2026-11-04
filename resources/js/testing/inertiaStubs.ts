@@ -1,4 +1,4 @@
-import { defineComponent, h, reactive } from 'vue';
+import { defineComponent, h, reactive, ref } from 'vue';
 
 /**
  * Shared `@inertiajs/vue3` component stubs for `vi.mock` factories across
@@ -39,11 +39,17 @@ export function createLinkStub() {
     });
 }
 
+/**
+ * `onSubmit`, when given, receives the form's `FormData` each time it is
+ * submitted, either natively (a submit button, `form="<id>"` included) or
+ * through the `submit` slot prop, like Inertia's `<Form>` reading its fields.
+ */
 export function createFormStub(
     getSlotProps: () => {
         errors: Record<string, string>;
         processing: boolean;
     },
+    onSubmit?: (data: FormData) => void,
 ) {
     return defineComponent({
         props: {
@@ -54,16 +60,29 @@ export function createFormStub(
             onBefore: { type: Function, default: undefined },
         },
         setup(props, { slots }) {
+            const formRef = ref<HTMLFormElement | null>(null);
+
+            function submit(): void {
+                if (formRef.value) {
+                    onSubmit?.(new FormData(formRef.value));
+                }
+            }
+
             return () =>
                 h(
                     'form',
                     {
+                        ref: formRef,
                         'data-action-url':
                             typeof props.action === 'string'
                                 ? props.action
                                 : props.action?.url,
+                        onSubmit: (event: Event) => {
+                            event.preventDefault();
+                            submit();
+                        },
                     },
-                    slots.default?.(getSlotProps()),
+                    slots.default?.({ ...getSlotProps(), submit }),
                 );
         },
     });

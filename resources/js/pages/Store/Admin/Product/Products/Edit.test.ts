@@ -259,6 +259,7 @@ describe('Store/Admin/Product/Products/Edit', () => {
         await flushPromises();
 
         expect(inputValue(wrapper, '#name')).toBe('زيت زيتون');
+        expect(inputValue(wrapper, '#ar_name')).toBe('زيت زيتون بكر');
         expect(inputValue(wrapper, '#unit')).toBe('زجاجة');
         expect(inputValue(wrapper, '#category_id')).toBe('12');
         expect(inputValue(wrapper, '#brand_id')).toBe('5');
@@ -428,6 +429,65 @@ describe('Store/Admin/Product/Products/Edit', () => {
         );
     });
 
+    it('locks the synced unit, unit price and description of a synced product', () => {
+        const wrapper = editPage({
+            lang: 'en',
+            unit: 'bottle',
+            description: '<p>Synced text</p>',
+            readOnlyFields: ['unit', 'unit_price', 'description'],
+        });
+
+        expect(wrapper.get('#unit').attributes('readonly')).toBeDefined();
+        expect(inputValue(wrapper, '#unit')).toBe('bottle');
+        expect(wrapper.get('#unit_price').attributes('readonly')).toBeDefined();
+        expect(wrapper.get('#unit-otajer-synced').text()).toBe(
+            t('store.products.form.otajerSynced'),
+        );
+        expect(wrapper.find('#unit_price-otajer-synced').exists()).toBe(true);
+        expect(wrapper.get('#description').text()).toBe('Synced text');
+        expect(
+            (
+                wrapper.get('input[type="hidden"][name="description"]')
+                    .element as HTMLInputElement
+            ).value,
+        ).toBe('<p>Synced text</p>');
+        expect(wrapper.get('#otajer-synced-fields').text()).toBe(
+            t('store.products.form.otajerSyncedFields', {
+                fields: ['unit', 'unit_price', 'description']
+                    .map((field) =>
+                        t(`store.productFieldSources.fields.${field}`),
+                    )
+                    .join(', '),
+            }),
+        );
+    });
+
+    it('shows the can-expire checkbox unticked, or ticked for a perishable product, with a hidden 0 fallback', () => {
+        const plain = editPage();
+        const plainBoxes = plain.findAll('input[name="can_expire"]');
+        expect(plainBoxes.map((input) => input.attributes('type'))).toEqual([
+            'hidden',
+            'checkbox',
+        ]);
+        expect((plainBoxes[0].element as HTMLInputElement).value).toBe('0');
+        expect((plainBoxes[1].element as HTMLInputElement).checked).toBe(false);
+
+        const perishable = editPage({
+            product: { ...product, can_expire: true },
+        });
+        const checkbox = perishable.get(
+            'input[type="checkbox"][name="can_expire"]',
+        );
+        expect((checkbox.element as HTMLInputElement).checked).toBe(true);
+        expect(checkbox.attributes('required')).toBeUndefined();
+        expect(perishable.text()).toContain(t('store.products.form.canExpire'));
+        expect(
+            perishable
+                .findAll('input[type="checkbox"][name][value="1"]:checked')
+                .map((input) => input.attributes('name')),
+        ).toContain('can_expire');
+    });
+
     it('keeps every field editable when nothing is read-only', () => {
         const wrapper = editPage();
 
@@ -441,5 +501,15 @@ describe('Store/Admin/Product/Products/Edit', () => {
         expect(wrapper.get('#ar_name').attributes('required')).toBeUndefined();
         expect(wrapper.find('#otajer-synced-fields').exists()).toBe(false);
         expect(wrapper.find('#name-otajer-synced').exists()).toBe(false);
+        expect(wrapper.get('#unit').attributes('readonly')).toBeUndefined();
+        expect(
+            wrapper.get('#unit_price').attributes('readonly'),
+        ).toBeUndefined();
+        // The editable editor posts description through its own hidden input,
+        // so the locked block is told apart by its Otajer note instead.
+        expect(wrapper.find('#description-otajer-synced').exists()).toBe(false);
+        expect(
+            wrapper.findAll('input[type="hidden"][name="description"]'),
+        ).toHaveLength(1);
     });
 });

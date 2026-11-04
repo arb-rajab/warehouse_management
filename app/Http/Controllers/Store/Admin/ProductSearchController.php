@@ -26,9 +26,9 @@ class ProductSearchController extends Controller implements HasMiddleware
     public function search(FilterProductSearchRequest $request): JsonResponse
     {
         $term = $request->validated('query');
-        $products = Product::query()->select(['id', 'name', 'mat_id'])
+        $products = Product::query()->select(['id', 'name'])
             ->with('product_translations:id,product_id,lang,name')
-            ->where('mat_id', 'like', '%'.$term.'%')->orderBy('id')->limit(20)->get();
+            ->where('id', 'like', '%'.$term.'%')->orderBy('id')->limit(20)->get();
 
         return response()->json(ProductSearchResource::collection($products)->resolve($request));
     }

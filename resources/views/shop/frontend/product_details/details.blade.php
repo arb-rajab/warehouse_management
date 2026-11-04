@@ -34,6 +34,12 @@
                 <span class="badge badge-md badge-inline badge-pill badge-success">{{ __('storefront.product.in_stock') }}</span>
             </div>
         @endif
+        <!-- Perishable -->
+        @if ($detailedProduct->can_expire)
+            <div class="col-12 mt-1">
+                <span class="badge badge-md badge-inline badge-pill badge-warning">{{ __('storefront.product.can_expire_soon') }}</span>
+            </div>
+        @endif
     </div>
     <div class="row align-items-center">
         <!-- Ask about this product -->
@@ -131,7 +137,7 @@
             </div>
         @endif
     </div>
-    <p class="my-3 fs-14 fw-700">Material ID: {{ $detailedProduct->mat_id }}</p>
+    <p class="my-3 fs-14 fw-700">{{ __('storefront.product.material_id') }}: {{ $detailedProduct->id }}</p>
 
     <!-- Profits Stars -->
     @auth
@@ -320,6 +326,21 @@
 
                     </div>
                 @endif
+
+                @if ($detailedProduct->tax)
+                    <div class="row no-gutters mb-3">
+                        <div class="col-sm-2">
+                            <div class="text-secondary fs-14 fw-400">{{ __('storefront.common.tax') }}</div>
+                        </div>
+                        <div class="col-sm-10">
+                            <div class="d-flex align-items-center">
+                                <strong class="fs-16 fw-700 text-primary">
+                                    {{ $detailedProduct->tax }}%
+                                </strong>
+                            </div>
+                        </div>
+                    </div>
+                @endif
             @else
                 {{--  if product has no discount --}}
                 @if (Auth::check() && Auth::user()->admin_verified)
@@ -420,6 +441,141 @@
                     </div>
                 @endif
             @endif
+        @endif
+    @endif
+
+    <!-- Product information -->
+    @if ($detailedProduct->auction_product != 1)
+        @php
+            $barcodeNumbers = $detailedProduct->barcodes->pluck('barcode')
+                ->merge($detailedProduct->storeBarcodes->pluck('barcode'))
+                ->push($detailedProduct->barcode)
+                ->filter(fn ($barcodeValue) => filled($barcodeValue))
+                ->map(fn ($barcodeValue) => ar_barcode_to_en($barcodeValue))
+                ->unique()
+                ->values();
+            $skuValue = $detailedProduct->variant_product ? null : $detailedProduct->stocks->first()?->sku;
+            $tagList = collect(explode(',', (string) $detailedProduct->tags))
+                ->map(fn ($tagValue) => trim($tagValue))
+                ->filter()
+                ->unique()
+                ->values();
+            $weightValue = (float) $detailedProduct->weight;
+            $showShippingAmount = Auth::check() && Auth::user()->admin_verified;
+            $flatShipping = $detailedProduct->shipping_type === 'flat_rate' && (float) $detailedProduct->shipping_cost > 0;
+        @endphp
+
+        @if ($detailedProduct->category)
+            <div class="row no-gutters mb-3">
+                <div class="col-sm-2">
+                    <div class="text-secondary fs-14 fw-400">{{ __('storefront.product.category') }}</div>
+                </div>
+                <div class="col-sm-10">
+                    <a href="{{ \App\Support\StorefrontUrl::to($detailedProduct->category) }}"
+                        class="text-reset hov-text-primary fs-14 fw-700">{{ $detailedProduct->category->getTranslation('name') }}</a>
+                </div>
+            </div>
+        @endif
+
+        @if (filled($detailedProduct->serial))
+            <div class="row no-gutters mb-3">
+                <div class="col-sm-2">
+                    <div class="text-secondary fs-14 fw-400">{{ __('storefront.product.serial') }}</div>
+                </div>
+                <div class="col-sm-10">
+                    <span class="fs-14 fw-500">{{ $detailedProduct->serial }}</span>
+                </div>
+            </div>
+        @endif
+
+        @if (filled($skuValue) && $skuValue !== $detailedProduct->serial)
+            <div class="row no-gutters mb-3">
+                <div class="col-sm-2">
+                    <div class="text-secondary fs-14 fw-400">{{ __('storefront.product.sku') }}</div>
+                </div>
+                <div class="col-sm-10">
+                    <span class="fs-14 fw-500">{{ $skuValue }}</span>
+                </div>
+            </div>
+        @endif
+
+        @if ($barcodeNumbers->isNotEmpty())
+            <div class="row no-gutters mb-3">
+                <div class="col-sm-2">
+                    <div class="text-secondary fs-14 fw-400">{{ __('storefront.product.barcodes') }}</div>
+                </div>
+                <div class="col-sm-10">
+                    <span class="fs-14 fw-500">{{ $barcodeNumbers->implode(', ') }}</span>
+                </div>
+            </div>
+        @endif
+
+        @if ($weightValue > 0)
+            <div class="row no-gutters mb-3">
+                <div class="col-sm-2">
+                    <div class="text-secondary fs-14 fw-400">{{ __('storefront.product.weight') }}</div>
+                </div>
+                <div class="col-sm-10">
+                    <span class="fs-14 fw-500">{{ __('storefront.product.weight_kg', ['weight' => rtrim(rtrim(number_format($weightValue, 2, '.', ''), '0'), '.')]) }}</span>
+                </div>
+            </div>
+        @endif
+
+        @if ((int) $detailedProduct->min_qty > 1)
+            <div class="row no-gutters mb-3">
+                <div class="col-sm-2">
+                    <div class="text-secondary fs-14 fw-400">{{ __('storefront.product.min_qty') }}</div>
+                </div>
+                <div class="col-sm-10">
+                    <span class="fs-14 fw-500">{{ $detailedProduct->min_qty }}</span>
+                </div>
+            </div>
+        @endif
+
+        @if ((int) $detailedProduct->max_qty > 0)
+            <div class="row no-gutters mb-3">
+                <div class="col-sm-2">
+                    <div class="text-secondary fs-14 fw-400">{{ __('storefront.product.max_qty') }}</div>
+                </div>
+                <div class="col-sm-10">
+                    <span class="fs-14 fw-500">{{ $detailedProduct->max_qty }}</span>
+                </div>
+            </div>
+        @endif
+
+        <div class="row no-gutters mb-3">
+            <div class="col-sm-2">
+                <div class="text-secondary fs-14 fw-400">{{ __('storefront.checkout.shipping') }}</div>
+            </div>
+            <div class="col-sm-10">
+                <span class="fs-14 fw-500">
+                    @if ($flatShipping)
+                        {{ __('storefront.checkout.flat_shipping_rate') }}
+                        @if ($showShippingAmount)
+                            {{ single_price($detailedProduct->shipping_cost) }}
+                            @if ($detailedProduct->is_quantity_multiplied)
+                                <span class="opacity-70">({{ __('storefront.product.shipping_per_unit') }})</span>
+                            @endif
+                        @endif
+                    @else
+                        {{ __('storefront.product.free_shipping') }}
+                    @endif
+                </span>
+            </div>
+        </div>
+
+        @if ($tagList->isNotEmpty())
+            <div class="row no-gutters mb-3">
+                <div class="col-sm-2">
+                    <div class="text-secondary fs-14 fw-400">{{ __('storefront.product.tags') }}</div>
+                </div>
+                <div class="col-sm-10">
+                    @foreach ($tagList as $tag)
+                        <a href="{{ route('search', ['q' => $tag]) }}"
+                            class="badge badge-inline badge-light mr-1">{{ $tag }}</a>
+                    @endforeach
+                </div>
+            </div>
         @endif
     @endif
 

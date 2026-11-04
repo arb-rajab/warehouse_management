@@ -188,6 +188,9 @@ return [
         'attribute-name' => [
             'rule-name' => 'custom-message',
         ],
+        'tax_number' => [
+            'unique' => 'This tax number is already registered to another customer.',
+        ],
     ],
 
     /*
@@ -202,6 +205,8 @@ return [
     */
 
     'attributes' => [
+        'profit_from' => 'profits from',
+        'profit_to' => 'profits to',
         'category_id' => 'category',
         'brand_id' => 'brand',
         'shop_name' => 'shop name',

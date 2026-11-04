@@ -173,7 +173,7 @@ test('a post is written, formatted by keyboard, saved and reloaded with a table 
     expect(body).toMatch(
         /<p style="text-align: center"><strong>Bold words<\/strong><\/p>/,
     );
-    expect(body).toMatch(/<th colspan="1" rowspan="1"><p>Head<\/p><\/th>/);
+    expect(body).toMatch(/<th><p>Head<\/p><\/th>/);
     expect(body).toMatch(
         /<p>Photo <img src="https:\/\/127\.0\.0\.1:8010\/uploads\/all\/[^"]+" alt="blog-photo"><\/p>/,
     );

@@ -19,6 +19,7 @@ use App\Models\Role as StoreRole;
 use App\Models\Staff;
 use App\Models\StoreUser;
 use App\Models\User;
+use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -144,7 +145,7 @@ function actingAsMobilePanelUser(): User
  * request's authenticated user is: the store's views read columns this never
  * sets, which strict mode refuses to read off a model that doesn't have them.
  */
-function createStoreUser(string $userType = 'customer', ?string $email = null, string $password = 'correct-password'): StoreUser
+function createStoreUser(string $userType = 'customer', ?string $email = null, string $password = 'correct-password', bool $verified = true): StoreUser
 {
     $user = StoreUser::create([
         'name' => ucfirst($userType).' Tester',
@@ -152,7 +153,8 @@ function createStoreUser(string $userType = 'customer', ?string $email = null, s
         'phone' => (string) random_int(1000000000, 9999999999),
     ]);
     $user->password = $password;
-    $user->forceFill(['user_type' => $userType, 'email_verified_at' => now()])->save();
+    // Verified by the back office, like the shop's real customers: an unverified one sees no prices.
+    $user->forceFill(['user_type' => $userType, 'email_verified_at' => now(), 'admin_verified' => $verified])->save();
 
     return $user->fresh();
 }
@@ -383,6 +385,21 @@ function addStoreAddress(int $userId): int
 /**
  * A token for the store's mobile-app API, as its login hands out.
  */
+/**
+ * A delivery date order/store accepts: the next Monday to Friday at least two
+ * days ahead in the warehouse's timezone (config/store.php).
+ */
+function validDeliveryDate(): string
+{
+    $date = CarbonImmutable::now(config('store.delivery.timezone'))->startOfDay()->addDays(config('store.delivery.lead_days'));
+
+    while (! in_array($date->dayOfWeekIso, config('store.delivery.weekdays'), true)) {
+        $date = $date->addDay();
+    }
+
+    return $date->toDateString();
+}
+
 function storeApiToken(StoreUser $user): string
 {
     return $user->createToken('API Token')->plainTextToken;

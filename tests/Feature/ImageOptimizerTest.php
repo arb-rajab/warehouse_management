@@ -20,6 +20,51 @@ test('the optimizer bounds dimensions and bytes without enlarging images', funct
     ['png', 2000, 2000, 1500, 1500], ['jpg', 80, 60, 80, 60],
 ]);
 
+test('a resized image keeps its aspect ratio and is encoded in the requested format', function (string $source, int $width, int $height, ?string $format, int $expectedWidth, int $expectedHeight) {
+    $file = UploadedFile::fake()->image('photo.'.$source, $width, $height);
+    [$bytes, $extension] = app(ImageOptimizer::class)->optimise($file->getContent(), $format);
+    $info = getimagesizefromstring($bytes);
+    $expected = $format === 'webp' && ! function_exists('imagewebp') ? $source : ($format ?? $source);
+    $mimes = ['jpg' => 'image/jpeg', 'png' => 'image/png', 'webp' => 'image/webp', 'gif' => 'image/gif'];
+    expect($extension)->toBe($expected)->and($info['mime'])->toBe($mimes[$expected])
+        ->and([$info[0], $info[1]])->toBe([$expectedWidth, $expectedHeight]);
+})->with([
+    'png to jpeg' => ['png', 2400, 1200, 'jpg', 1500, 750],
+    'jpeg to webp' => ['jpg', 1200, 2400, 'webp', 750, 1500],
+    'gif stays gif' => ['gif', 3000, 1500, null, 1500, 750],
+    'the short side is rounded, not truncated' => ['png', 1000, 3001, null, 500, 1500],
+]);
+
+test('every EXIF orientation is applied the way the tag describes', function (int $orientation, int $width, int $height, string $redCorner) {
+    $source = imagecreatetruecolor(80, 40);
+    imagefill($source, 0, 0, imagecolorallocate($source, 0, 0, 255));
+    imagefilledrectangle($source, 0, 0, 39, 19, imagecolorallocate($source, 255, 0, 0));
+    ob_start();
+    imagejpeg($source, null, 100);
+    $jpeg = (string) ob_get_clean();
+    $exif = "Exif\0\0II\x2a\0\x08\0\0\0\x01\0\x12\x01\x03\0\x01\0\0\0".chr($orientation)."\0\0\0\0\0\0\0";
+    $jpeg = substr($jpeg, 0, 2)."\xff\xe1".pack('n', strlen($exif) + 2).$exif.substr($jpeg, 2);
+
+    [$bytes, $format] = app(ImageOptimizer::class)->optimise($jpeg);
+    $result = imagecreatefromstring($bytes);
+    $corners = [
+        'top-left' => [$width / 4, $height / 4], 'top-right' => [$width * 3 / 4, $height / 4],
+        'bottom-right' => [$width * 3 / 4, $height * 3 / 4], 'bottom-left' => [$width / 4, $height * 3 / 4],
+    ];
+    $red = array_keys(array_filter($corners, fn (array $point): bool => ((imagecolorat($result, (int) $point[0], (int) $point[1]) >> 16) & 0xFF) > 200));
+    expect($format)->toBe('jpg')->and([imagesx($result), imagesy($result)])->toBe([$width, $height])
+        ->and($red)->toBe([$redCorner]);
+})->with([
+    'normal' => [1, 80, 40, 'top-left'],
+    'mirrored' => [2, 80, 40, 'top-right'],
+    'upside down' => [3, 80, 40, 'bottom-right'],
+    'mirrored upside down' => [4, 80, 40, 'bottom-left'],
+    'transposed' => [5, 40, 80, 'top-left'],
+    'turned clockwise' => [6, 40, 80, 'top-right'],
+    'transversed' => [7, 40, 80, 'bottom-right'],
+    'turned anticlockwise' => [8, 40, 80, 'bottom-left'],
+]);
+
 test('transparent images keep alpha and appended data is stripped', function (string $format) {
     $image = imagecreatetruecolor(30, 20);
     imagealphablending($image, false);

@@ -157,7 +157,7 @@ test('an order is placed when only one of the cart brands has a brand offer', fu
     }
     $before = Order::count();
 
-    strictApiAs($this, $user)->postJson('/api/v1/store/payments/pay/cod', ['payment_type' => 'cash_on_delivery'])->assertOk()->assertJsonPath('result', true);
+    strictApiAs($this, $user)->postJson('/api/v1/store/payments/pay/cod', ['payment_type' => 'cash_on_delivery', 'delivery_date' => validDeliveryDate()])->assertOk()->assertJsonPath('result', true);
 
     expect(Order::count() - $before)->toBe(2);
 });

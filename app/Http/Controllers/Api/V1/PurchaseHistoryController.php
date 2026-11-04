@@ -21,7 +21,11 @@ class PurchaseHistoryController extends Controller
 
     $user_id = auth()->user()->id;
 
-        $order_query = Order::with('user');
+        // The related accounts load only the columns the list reads.
+        $order_query = Order::with(['user:id,name,AccSysID', 'rep:id,name,AccSysID'])
+            // The orders the account placed and the ones a representative placed
+            // for it, grouped so the filters below apply to both.
+            ->where(fn ($query) => $query->where('user_id', $user_id)->orWhere('for_customer', $user_id));
         if ($request->payment_status != "" || $request->payment_status != null) {
             $order_query->where('payment_status', $request->payment_status);
         }
@@ -33,13 +37,14 @@ class PurchaseHistoryController extends Controller
                     ->where('delivery_status', $delivery_status);
             });
         }
-        return new PurchaseHistoryMiniCollection($order_query->where('user_id', $user_id)->orWhere('for_customer', $user_id)->latest()->paginate(15));
+        return new PurchaseHistoryMiniCollection($order_query->latest()->paginate(15));
     }
 
     public function details($id)
     {
         $order = Order::findOrFail($id);
         Gate::authorize('view', $order);
+        $order->load(['user:id,name', 'rep:id,name']);
 
         return new PurchaseHistoryCollection($order->newCollection([$order]));
     }

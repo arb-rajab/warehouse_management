@@ -40,7 +40,7 @@ test('every column the legacy store added after shop.sql exists', function () {
             'shipping_type', 'shipping_cost', 'is_quantity_multiplied', 'est_shipping_days', 'num_of_sale',
             'meta_title', 'meta_description', 'meta_img', 'pdf', 'slug', 'rating', 'barcode', 'digital',
             'auction_product', 'file_name', 'file_path', 'external_link', 'external_link_btn', 'wholesale_product',
-            'serial', 'from_api', 'mat_id', 'unit_equal', 'isNewProduct', 'isOfferProduct', 'for_sale', 'api_unitId',
+            'serial', 'from_api', 'unit_equal', 'isNewProduct', 'isOfferProduct', 'for_sale', 'api_unitId',
             'deleted_from_api', 'api_unit_name', 'collection_id',
         ]))->toBeTrue()
         ->and(Schema::hasColumns('order_details', [
@@ -173,7 +173,11 @@ test("rolling the migration back in production leaves the store's columns and th
 
 test('rolling the migration back removes the added columns and restores the changed ones', function () {
     $migration = loadAddLegacyColumnsToStoreTablesMigration();
+    $taxNumberIndex = require database_path('migrations/2026_11_03_110000_add_unique_index_to_users_tax_number.php');
 
+    // Rolled back newest first, as `migrate:rollback` does: the unique index on
+    // users.tax_number has to go before the column it covers can.
+    $taxNumberIndex->down();
     $migration->down();
 
     expect(Schema::hasColumn('users', 'company_name'))->toBeFalse()

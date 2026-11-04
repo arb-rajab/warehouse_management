@@ -21,10 +21,16 @@ function productFieldSourceSettingsSnapshot(): array
     return DB::table('business_settings')->orderBy('id')->get()->map(fn (object $row): array => (array) $row)->all();
 }
 
+/** Every field products:sync writes, in registry order. */
+const PRODUCT_SYNCED_FIELDS = [
+    'name', 'ar_name', 'published', 'collection_id',
+    'serial', 'unit_price', 'unit', 'api_unitId', 'api_unit_name', 'tax', 'description', 'unit_equal',
+];
+
 /** @return array<string, string> */
 function productFieldSourcesPayload(array $overrides = []): array
 {
-    return array_replace(['name' => 'otajer', 'ar_name' => 'otajer', 'published' => 'otajer'], $overrides);
+    return array_replace(array_fill_keys(PRODUCT_SYNCED_FIELDS, 'otajer'), $overrides);
 }
 
 test('the page renders every synced field with its default owner when nothing is stored', function () {
@@ -32,41 +38,34 @@ test('the page renders every synced field with its default owner when nothing is
 
     $this->get(route('product_field_sources.index'))->assertOk()->assertInertia(fn (Assert $page) => $page
         ->component('Store/Admin/Setup/ProductFieldSources/Index')
-        ->has('fields', 3)
-        ->has('fields.0', fn (Assert $field) => $field->where('key', 'name')->where('source', 'otajer')->where('default', 'otajer'))
-        ->has('fields.1', fn (Assert $field) => $field->where('key', 'ar_name')->where('source', 'otajer')->where('default', 'otajer'))
-        ->has('fields.2', fn (Assert $field) => $field->where('key', 'published')->where('source', 'otajer')->where('default', 'otajer')));
+        ->has('fields', 12)
+        ->where('fields', array_map(fn (string $key): array => ['key' => $key, 'source' => 'otajer', 'default' => 'otajer'], PRODUCT_SYNCED_FIELDS)));
 });
 
 test('the page shows the stored owner of each field beside its default', function () {
     actingAsStoreUser(createStoreAdmin());
-    app(ProductFieldSourceService::class)->update(['name' => 'admin', 'published' => 'admin']);
+    app(ProductFieldSourceService::class)->update(['name' => 'admin', 'published' => 'admin', 'unit_price' => 'admin']);
 
     $this->get(route('product_field_sources.index'))->assertOk()->assertInertia(fn (Assert $page) => $page
-        ->where('fields', [
-            ['key' => 'name', 'source' => 'admin', 'default' => 'otajer'],
-            ['key' => 'ar_name', 'source' => 'otajer', 'default' => 'otajer'],
-            ['key' => 'published', 'source' => 'admin', 'default' => 'otajer'],
-        ]));
+        ->where('fields', array_map(
+            fn (string $key): array => ['key' => $key, 'source' => in_array($key, ['name', 'published', 'unit_price'], true) ? 'admin' : 'otajer', 'default' => 'otajer'],
+            PRODUCT_SYNCED_FIELDS,
+        )));
 });
 
 test('saving stores exactly one owner per field and returns to the page', function () {
     actingAsStoreUser(createStoreStaff('product_field_sources'));
 
-    $this->post(route('product_field_sources.update'), ['sources' => productFieldSourcesPayload(['name' => 'admin'])])
+    $this->post(route('product_field_sources.update'), ['sources' => productFieldSourcesPayload(['name' => 'admin', 'description' => 'admin'])])
         ->assertRedirect(route('product_field_sources.index'))
         ->assertSessionHasNoErrors();
 
-    expect(app(ProductFieldSourceService::class)->sources())->toBe([
-        'name' => ProductFieldSource::Admin,
-        'ar_name' => ProductFieldSource::Otajer,
-        'published' => ProductFieldSource::Otajer,
-    ])
-        ->and(DB::table('business_settings')->where('type', 'like', 'product_source_%')->orderBy('type')->pluck('value', 'type')->all())->toBe([
-            'product_source_ar_name' => 'otajer',
-            'product_source_name' => 'admin',
-            'product_source_published' => 'otajer',
-        ])
+    $expected = array_map(fn (string $field): string => in_array($field, ['name', 'description'], true) ? 'admin' : 'otajer', array_combine(PRODUCT_SYNCED_FIELDS, PRODUCT_SYNCED_FIELDS));
+    $stored = array_combine(array_map(fn (string $field): string => 'product_source_'.$field, PRODUCT_SYNCED_FIELDS), array_values($expected));
+    ksort($stored);
+
+    expect(array_map(fn (ProductFieldSource $source): string => $source->value, app(ProductFieldSourceService::class)->sources()))->toBe($expected)
+        ->and(DB::table('business_settings')->where('type', 'like', 'product_source_%')->orderBy('type')->pluck('value', 'type')->all())->toBe($stored)
         ->and(DB::table('business_settings')->where('type', 'site_name')->value('value'))->toBe('Al Baraka');
 });
 
@@ -101,10 +100,11 @@ test('the request refuses unknown fields, unknown values and missing fields befo
 
     expect(productFieldSourceSettingsSnapshot())->toBe($before);
 })->with([
-    'a field the sync does not write' => [productFieldSourcesPayload(['unit_price' => 'admin']), 'sources'],
+    'a field the sync does not write' => [productFieldSourcesPayload(['mat_id' => 'admin']), 'sources'],
     'an unknown owner' => [productFieldSourcesPayload(['name' => 'both']), 'sources.name'],
     'an empty owner' => [productFieldSourcesPayload(['ar_name' => '']), 'sources.ar_name'],
     'a missing field' => [['name' => 'admin', 'ar_name' => 'admin'], 'sources.published'],
+    'a missing new field' => [array_diff_key(productFieldSourcesPayload(), ['unit_price' => 1]), 'sources.unit_price'],
 ]);
 
 test('a missing or empty sources array is refused field by field, a non-array as a whole', function (mixed $sources, array $errors) {

@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { Head, Form, router } from '@inertiajs/vue3';
-import { reactive, ref } from 'vue';
+import { Form, Head, Link, router } from '@inertiajs/vue3';
+import { Clock, Columns3, X } from '@lucide/vue';
+import { computed, ref, watch } from 'vue';
 import {
     create,
     repCreate,
@@ -22,17 +23,33 @@ import AddResourceLink from '@/components/AddResourceLink.vue';
 import DataTable from '@/components/DataTable.vue';
 import FieldError from '@/components/FieldError.vue';
 import FilterDialog from '@/components/FilterDialog.vue';
+import FormField from '@/components/FormField.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import Pagination from '@/components/Pagination.vue';
 import RequiredLegend from '@/components/RequiredLegend.vue';
 import RequiredMark from '@/components/RequiredMark.vue';
+import StoreListFilters from '@/components/StoreListFilters.vue';
 import SubmitButton from '@/components/SubmitButton.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
 import { confirmDelete } from '@/lib/confirm';
-import { plainFieldInputClass, fieldLabelClass } from '@/lib/filters';
+import {
+    countActive,
+    fieldLabelClass,
+    filterClearButtonClass,
+    filterTriggerButtonClass,
+    plainFieldInputClass,
+} from '@/lib/filters';
 import { t } from '@/lib/i18n';
 import { useStoreAccess } from '@/lib/storeAccess';
+import {
+    availableCustomerColumns,
+    customerCellText,
+    defaultColumnKeys,
+    formatProfit,
+    loadColumnKeys,
+    saveColumnKeys,
+} from '@/lib/storeCustomerColumns';
 import type { Paginated } from '@/types/admin';
 import type { StoreCustomer } from '@/types/storeCustomers';
 const props = defineProps<{
@@ -46,64 +63,150 @@ const props = defineProps<{
         from_api?: boolean;
         registration_completed?: boolean;
         activity_status?: string;
+        profit_from?: string;
+        profit_to?: string;
     };
     representatives: boolean;
     packages: { id: number; name: string; percentage: string }[];
 }>();
 const access = useStoreAccess();
-const search = ref(props.filters.search ?? '');
-const archived = ref(Boolean(props.filters.archived));
 const booleanFilters = [
     'important',
     'verified',
     'from_api',
     'registration_completed',
 ] as const;
-const flags = reactive<Record<(typeof booleanFilters)[number], string>>({
-    important: props.representatives
-        ? ''
-        : props.filters.important === false
-          ? '0'
-          : '1',
-    verified:
-        props.filters.verified === undefined
-            ? ''
-            : props.filters.verified
-              ? '1'
-              : '0',
-    from_api:
-        props.filters.from_api === undefined
-            ? ''
-            : props.filters.from_api
-              ? '1'
-              : '0',
-    registration_completed:
-        props.filters.registration_completed === undefined
-            ? ''
-            : props.filters.registration_completed
-              ? '1'
-              : '0',
+type BooleanFilter = (typeof booleanFilters)[number];
+/** A yes/no select's applied value; Important has no "all" and defaults to Yes. */
+function flagValue(filter: BooleanFilter): '' | '0' | '1' {
+    const value = props.filters[filter];
+
+    if (value === undefined) {
+        return filter === 'important' ? '1' : '';
+    }
+
+    return value ? '1' : '0';
+}
+/** The profit range (either bound) is set: Profits sums the orders created in it. */
+const profitRangeActive = computed(() =>
+    Boolean(props.filters.profit_from || props.filters.profit_to),
+);
+/** Dialog filters only; Important counts only when it is "No" (its default is Yes). */
+const activeFilterCount = computed(() =>
+    countActive([
+        ...(props.representatives
+            ? []
+            : [
+                  props.filters.important === false,
+                  props.filters.verified !== undefined,
+                  props.filters.from_api !== undefined,
+                  props.filters.registration_completed !== undefined,
+                  Boolean(props.filters.activity_status),
+              ]),
+        profitRangeActive.value,
+    ]),
+);
+const listRoute = computed(() =>
+    props.representatives ? repIndex : customersIndex,
+);
+/** "2026-11-01T14:00" read as "2026-11-01 14:00". */
+function shownMoment(value: string | undefined): string {
+    return (value ?? '').replace('T', ' ');
+}
+const profitRangeText = computed(() => {
+    const from = shownMoment(props.filters.profit_from);
+    const to = shownMoment(props.filters.profit_to);
+
+    if (from && to) {
+        return t('store.customers.profitRangeActive', { from, to });
+    }
+
+    return from
+        ? t('store.customers.profitRangeFromOnly', { from })
+        : t('store.customers.profitRangeToOnly', { to });
 });
-const activity = ref(props.filters.activity_status ?? '');
 const selected = ref<number[]>([]);
 const packageCustomer = ref<StoreCustomer | null>(null);
 const packageOpen = ref(false);
-function apply(perPage = props.filters.per_page): void {
-    router.get(
-        (props.representatives ? repIndex() : customersIndex()).url,
-        {
-            search: search.value,
-            archived: archived.value ? 1 : 0,
-            per_page: perPage,
-            ...Object.fromEntries(
-                booleanFilters
-                    .filter((key) => flags[key] !== '')
-                    .map((key) => [key, flags[key]]),
-            ),
-            ...(activity.value ? { activity_status: activity.value } : {}),
-        },
-        { preserveState: true, replace: true },
-    );
+const columnsOpen = ref(false);
+const columnStorageKey = `store.customers.columns.${
+    props.representatives ? 'representatives' : 'customers'
+}`;
+const availableColumns = computed(() =>
+    availableCustomerColumns(
+        props.representatives,
+        access.value.can('edit_customer'),
+    ),
+);
+const visibleKeys = ref<string[]>(
+    loadColumnKeys(columnStorageKey, availableColumns.value),
+);
+const visibleColumns = computed(() =>
+    availableColumns.value.filter((column) =>
+        visibleKeys.value.includes(column.key),
+    ),
+);
+watch(visibleKeys, (keys) => saveColumnKeys(columnStorageKey, keys));
+const tableColumns = computed(() => [
+    t('store.customers.select'),
+    ...visibleColumns.value.map((column) =>
+        t(
+            column.key === 'profits' && profitRangeActive.value
+                ? 'store.customers.profitsRange'
+                : column.label,
+        ),
+    ),
+    t('store.customers.actions'),
+]);
+/** Every applied filter as a query, so paging, resets and page size keep them. */
+function currentQuery(
+    overrides: Record<string, string | number> = {},
+    keepRange = true,
+): Record<string, string | number> {
+    const query: Record<string, string | number> = {
+        per_page: props.filters.per_page,
+    };
+
+    for (const key of ['search', 'activity_status'] as const) {
+        if (props.filters[key]) {
+            query[key] = props.filters[key];
+        }
+    }
+
+    for (const key of ['archived', ...booleanFilters] as const) {
+        const value = props.filters[key];
+
+        if (value !== undefined) {
+            query[key] = Number(value);
+        }
+    }
+
+    if (keepRange) {
+        for (const key of ['profit_from', 'profit_to'] as const) {
+            if (props.filters[key]) {
+                query[key] = props.filters[key];
+            }
+        }
+    }
+
+    return { ...query, ...overrides };
+}
+/** Change the page size, keeping every applied filter. */
+function changePerPage(perPage: number): void {
+    router.get(listRoute.value().url, currentQuery({ per_page: perPage }), {
+        preserveState: true,
+        replace: true,
+    });
+}
+/** The same list with every filter but the profit range. */
+const resetRangeHref = computed(() =>
+    listRoute.value({ query: currentQuery({}, false) }),
+);
+function showAllColumns(): void {
+    visibleKeys.value = availableColumns.value.map((column) => column.key);
+}
+function resetColumns(): void {
+    visibleKeys.value = defaultColumnKeys(availableColumns.value);
 }
 function choosePackage(customer: StoreCustomer): void {
     packageCustomer.value = customer;
@@ -134,90 +237,168 @@ function choosePackage(customer: StoreCustomer): void {
                 :href="representatives ? repCreate() : create()"
                 :label="t('store.customers.add')"
         /></PageHeader>
-        <form class="mb-4 flex flex-wrap gap-3" @submit.prevent="apply()">
-            <label :class="fieldLabelClass"
-                >{{ t('store.customers.search')
-                }}<input
-                    v-model="search"
-                    type="search"
-                    maxlength="255"
-                    :class="plainFieldInputClass" /></label
-            ><label
-                v-if="access.can('delete_customer')"
-                class="flex items-center gap-2"
-                ><input v-model="archived" type="checkbox" />{{
-                    t('store.customers.archived')
-                }}</label
-            ><button type="submit">{{ t('common.filters.apply') }}</button>
-        </form>
-        <div v-if="!representatives" class="mb-4 flex flex-wrap gap-3">
-            <label
-                v-for="filter in booleanFilters"
-                :key="filter"
-                :class="fieldLabelClass"
-                >{{ t(`store.customers.filterLabels.${filter}`)
-                }}<select v-model="flags[filter]" :class="plainFieldInputClass">
-                    <option v-if="filter !== 'important'" value="">
-                        {{ t('store.customers.all') }}
-                    </option>
-                    <option value="1">{{ t('store.customers.yes') }}</option>
-                    <option value="0">{{ t('store.customers.no') }}</option>
-                </select></label
-            >
-            <label :class="fieldLabelClass"
-                >{{ t('store.customers.activity')
-                }}<select v-model="activity" :class="plainFieldInputClass">
-                    <option value="">{{ t('store.customers.all') }}</option>
-                    <option value="new_user">
-                        {{ t('store.customers.newUser') }}
-                    </option>
-                    <option value="has_been_contacted">
-                        {{ t('store.customers.contacted') }}
-                    </option>
-                </select></label
+        <StoreListFilters
+            :action="listRoute()"
+            :active-count="activeFilterCount"
+        >
+            <template #default="{ errors }">
+                <input
+                    type="hidden"
+                    name="per_page"
+                    :value="filters.per_page"
+                />
+                <label :class="fieldLabelClass"
+                    >{{ t('store.customers.search')
+                    }}<input
+                        type="search"
+                        name="search"
+                        maxlength="255"
+                        :value="filters.search ?? ''"
+                        :class="plainFieldInputClass" /></label
+                ><FieldError :message="errors.search" /><label
+                    v-if="access.can('delete_customer')"
+                    class="flex items-center gap-2"
+                    ><input
+                        type="checkbox"
+                        name="archived"
+                        value="1"
+                        :checked="Boolean(filters.archived)"
+                    />{{ t('store.customers.archived') }}</label
+                >
+            </template>
+            <template #filters="{ errors }">
+                <div
+                    v-for="filter in representatives ? [] : booleanFilters"
+                    :key="filter"
+                >
+                    <label :for="filter" :class="fieldLabelClass">{{
+                        t(`store.customers.filterLabels.${filter}`)
+                    }}</label>
+                    <select
+                        :id="filter"
+                        :name="filter"
+                        :class="plainFieldInputClass"
+                    >
+                        <option v-if="filter !== 'important'" value="">
+                            {{ t('store.customers.all') }}
+                        </option>
+                        <option value="1" :selected="flagValue(filter) === '1'">
+                            {{ t('store.customers.yes') }}
+                        </option>
+                        <option value="0" :selected="flagValue(filter) === '0'">
+                            {{ t('store.customers.no') }}
+                        </option>
+                    </select>
+                    <FieldError :message="errors[filter]" />
+                </div>
+                <div v-if="!representatives">
+                    <label for="activity_status" :class="fieldLabelClass">{{
+                        t('store.customers.activity')
+                    }}</label>
+                    <select
+                        id="activity_status"
+                        name="activity_status"
+                        :class="plainFieldInputClass"
+                    >
+                        <option value="">{{ t('store.customers.all') }}</option>
+                        <option
+                            value="new_user"
+                            :selected="filters.activity_status === 'new_user'"
+                        >
+                            {{ t('store.customers.newUser') }}
+                        </option>
+                        <option
+                            value="has_been_contacted"
+                            :selected="
+                                filters.activity_status === 'has_been_contacted'
+                            "
+                        >
+                            {{ t('store.customers.contacted') }}
+                        </option>
+                    </select>
+                    <FieldError :message="errors.activity_status" />
+                </div>
+                <FormField
+                    id="profit_from"
+                    :label="t('store.customers.profitFrom')"
+                    type="datetime-local"
+                    :value="filters.profit_from"
+                    :max="filters.profit_to"
+                    :error="errors.profit_from"
+                    class="dark:[color-scheme:dark]"
+                />
+                <FormField
+                    id="profit_to"
+                    :label="t('store.customers.profitTo')"
+                    type="datetime-local"
+                    :value="filters.profit_to"
+                    :min="filters.profit_from"
+                    :error="errors.profit_to"
+                    class="dark:[color-scheme:dark]"
+                />
+                <p
+                    class="text-sm text-gray-500 sm:col-span-2 dark:text-neutral-400"
+                >
+                    {{ t('store.customers.profitRangeHint') }}
+                </p>
+            </template>
+        </StoreListFilters>
+        <div
+            v-if="profitRangeActive"
+            role="status"
+            class="mb-4 flex flex-wrap items-center gap-3 rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-900 dark:border-blue-900 dark:bg-blue-950 dark:text-blue-100"
+        >
+            <Clock class="h-4 w-4 shrink-0" />
+            <span>{{ profitRangeText }}</span>
+            <Link :href="resetRangeHref" :class="filterClearButtonClass"
+                ><X class="h-4 w-4 shrink-0" />{{
+                    t('store.customers.profitRangeReset')
+                }}</Link
             >
         </div>
-        <Form
-            v-if="access.can('delete_customer') && !archived"
-            :action="bulkDestroy()"
-            #default="{ processing, errors }"
-            class="mb-4"
-            ><input
-                v-for="id in selected"
-                :key="id"
-                type="hidden"
-                name="id[]"
-                :value="id"
-            /><FieldError :message="errors.id" /><button
-                type="submit"
-                :disabled="processing || !selected.length"
-                @click="
-                    (event: MouseEvent) => {
-                        if (!confirmDelete(t('store.customers.selected')))
-                            event.preventDefault();
-                    }
-                "
+        <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <Form
+                v-if="access.can('delete_customer') && !filters.archived"
+                :action="bulkDestroy()"
+                #default="{ processing, errors }"
+                ><input
+                    v-for="id in selected"
+                    :key="id"
+                    type="hidden"
+                    name="id[]"
+                    :value="id"
+                /><FieldError :message="errors.id" /><button
+                    type="submit"
+                    :disabled="processing || !selected.length"
+                    @click="
+                        (event: MouseEvent) => {
+                            if (!confirmDelete(t('store.customers.selected')))
+                                event.preventDefault();
+                        }
+                    "
+                >
+                    {{ t('store.customers.deleteSelected') }}
+                </button></Form
             >
-                {{ t('store.customers.deleteSelected') }}
-            </button></Form
-        >
+            <button
+                type="button"
+                :class="[filterTriggerButtonClass, 'ms-auto']"
+                @click="columnsOpen = true"
+            >
+                <Columns3 class="h-4 w-4" />{{ t('store.customers.columns') }}
+            </button>
+        </div>
         <DataTable
-            :columns="[
-                t('store.customers.select'),
-                t('store.customers.fields.name'),
-                t('store.customers.fields.email'),
-                t('store.customers.fields.phone'),
-                ...(representatives ? [t('store.customers.package')] : []),
-                t('store.customers.status'),
-                t('store.customers.actions'),
-            ]"
+            :columns="tableColumns"
             :rows="customers.data"
             :empty-message="t('store.customers.empty')"
         >
             <template #row="{ row: customer }">
                 <td class="px-4 py-2">
                     <input
-                        v-if="access.can('delete_customer') && !archived"
+                        v-if="
+                            access.can('delete_customer') && !filters.archived
+                        "
                         v-model="selected"
                         type="checkbox"
                         :value="customer.id"
@@ -228,37 +409,55 @@ function choosePackage(customer: StoreCustomer): void {
                         "
                     />
                 </td>
-                <td class="px-4 py-2">
-                    {{ customer.name }}
-                    <div>{{ customer.company_name }}</div>
-                </td>
-                <td class="px-4 py-2">{{ customer.email }}</td>
-                <td class="px-4 py-2">{{ customer.phone }}</td>
-                <td v-if="representatives" class="px-4 py-2">
-                    {{ customer.package?.name
-                    }}<button
-                        v-if="access.can('assign_representative_package')"
-                        type="button"
-                        @click="choosePackage(customer)"
+                <template v-for="column in visibleColumns" :key="column.key">
+                    <td v-if="column.key === 'package'" class="px-4 py-2">
+                        {{ customer.package?.name
+                        }}<button
+                            v-if="access.can('assign_representative_package')"
+                            type="button"
+                            @click="choosePackage(customer)"
+                        >
+                            {{ t('store.customers.assignPackage') }}
+                        </button>
+                    </td>
+                    <td
+                        v-else-if="column.key === 'profits'"
+                        class="px-4 py-2 text-end whitespace-nowrap tabular-nums"
                     >
-                        {{ t('store.customers.assignPackage') }}
-                    </button>
-                </td>
-                <td class="px-4 py-2">
-                    {{
-                        t(
-                            customer.verified
-                                ? 'store.customers.verified'
-                                : 'store.customers.unverified',
-                        )
-                    }}
-                    <div v-if="customer.banned">
-                        {{ t('store.customers.banned') }}
-                    </div>
-                    <div v-if="customer.important">
-                        {{ t('store.customers.important') }}
-                    </div>
-                </td>
+                        {{ formatProfit(customer.profits ?? 0) }}
+                    </td>
+                    <td v-else-if="column.key === 'status'" class="px-4 py-2">
+                        {{
+                            t(
+                                customer.verified
+                                    ? 'store.customers.verified'
+                                    : 'store.customers.unverified',
+                            )
+                        }}
+                        <div v-if="customer.banned">
+                            {{ t('store.customers.banned') }}
+                        </div>
+                        <div v-if="customer.important">
+                            {{ t('store.customers.important') }}
+                        </div>
+                    </td>
+                    <td
+                        v-else
+                        :class="[
+                            'px-4 py-2',
+                            column.longText
+                                ? 'max-w-xs truncate'
+                                : 'whitespace-nowrap',
+                        ]"
+                        :title="
+                            column.longText
+                                ? customerCellText(customer, column.key)
+                                : undefined
+                        "
+                    >
+                        {{ customerCellText(customer, column.key) }}
+                    </td>
+                </template>
                 <td class="px-4 py-2">
                     <div class="flex flex-wrap gap-2">
                         <TableActionLink
@@ -340,8 +539,42 @@ function choosePackage(customer: StoreCustomer): void {
         <Pagination
             :links="customers.meta.links"
             :per-page="filters.per_page"
-            @update:per-page="apply"
+            @update:per-page="changePerPage"
         />
+        <FilterDialog
+            v-model:open="columnsOpen"
+            :title="t('store.customers.columnsTitle')"
+            :close-label="t('common.close')"
+        >
+            <div class="grid grid-cols-1 gap-2 pb-4 sm:grid-cols-2">
+                <label
+                    v-for="column in availableColumns"
+                    :key="column.key"
+                    class="flex items-center gap-2 text-sm"
+                    ><input
+                        v-model="visibleKeys"
+                        type="checkbox"
+                        :value="column.key"
+                    />{{ t(column.label) }}</label
+                >
+            </div>
+            <div class="flex flex-wrap gap-2">
+                <button
+                    type="button"
+                    :class="filterClearButtonClass"
+                    @click="showAllColumns"
+                >
+                    {{ t('store.customers.showAllColumns') }}
+                </button>
+                <button
+                    type="button"
+                    :class="filterClearButtonClass"
+                    @click="resetColumns"
+                >
+                    {{ t('store.customers.resetColumns') }}
+                </button>
+            </div>
+        </FilterDialog>
         <FilterDialog
             v-model:open="packageOpen"
             :title="t('store.customers.assignPackage')"

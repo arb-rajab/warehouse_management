@@ -185,7 +185,7 @@ test('digital zero prices and complete discount are accepted and approval follow
 });
 
 test('digital translations and feed ownership are checked before related writes', function () {
-    $product = createStoreProduct(['user_id' => $this->seller->id, 'added_by' => 'seller', 'digital' => 1, 'name' => 'Feed title', 'description' => 'Base description', 'published' => 0, 'approved' => 0]);
+    $product = createStoreProduct(['user_id' => $this->seller->id, 'added_by' => 'seller', 'digital' => 1, 'name' => 'Feed title', 'description' => 'Base description', 'unit_price' => 12.5, 'published' => 0, 'approved' => 0]);
     DB::table('products')->where('id', $product->id)->update(['synced_at' => now()]);
     $before = sellerDigitalSnapshot();
     $this->post(route('seller.digitalproducts.update', $product), sellerDigitalInput(['lang' => 'en']))->assertSessionHasErrors('name');

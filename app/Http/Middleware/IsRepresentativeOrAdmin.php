@@ -22,7 +22,7 @@ class IsRepresentativeOrAdmin
     {
         $user = $request->user();
 
-        if ($this->isUnbannedStoreUserOfType($request, 'admin', 'staff', 'accountant')
+        if ($this->isUnbannedStoreUserOfType($request, ...StoreUser::ADMIN_USER_TYPES)
             || ($this->isUnbannedStoreUserOfType($request, 'customer') && $user instanceof StoreUser && $user->is_rep)) {
             return $next($request);
         }

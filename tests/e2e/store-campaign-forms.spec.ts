@@ -80,16 +80,16 @@ test('campaign dates keep seconds and picker selection, while native offer and p
     await page.getByRole('button', { name: 'Save popup', exact: true }).click();
     await expect(page).toHaveURL(/\/temp\/admin\/dynamic-popups$/);
     const popup = page.getByRole('row', { name: /Browser popup/ });
+    const publication = popup.getByRole('switch', { name: /^Publish / });
+    await expect(publication).toHaveAttribute('aria-checked', 'false');
     page.once('dialog', (d) => d.dismiss());
-    await popup.getByRole('button', { name: 'Publish', exact: true }).click();
-    await expect(
-        popup.getByRole('button', { name: 'Publish', exact: true }),
-    ).toBeVisible();
+    await publication.click();
+    await expect(publication).toHaveAttribute('aria-checked', 'false');
+    await expect(publication).toContainText('Hidden');
     page.once('dialog', (d) => d.accept());
-    await popup.getByRole('button', { name: 'Publish', exact: true }).click();
-    await expect(
-        popup.getByRole('button', { name: 'Hide', exact: true }),
-    ).toBeVisible();
+    await publication.click();
+    await expect(publication).toHaveAttribute('aria-checked', 'true');
+    await expect(publication).toContainText('Published');
 
     await page.goto('/temp/admin/offer_deals/index');
     page.once('dialog', (d) => d.dismiss());

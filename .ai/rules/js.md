@@ -25,6 +25,7 @@ Alongside FormField / SubmitButton / DataTable, these are the single definitions
 - `components/AddResourceLink.vue` — the "Add X" header button; bakes in the Plus icon. Props: href, label.
 - `lib/confirm.ts` `confirmDelete(label)` — the only place the "Delete {label}? This cannot be undone." wording lives. Pass `` `row ${row.letter}` `` or a user's name.
 - `lib/location.ts` `formatSlot(rowLetter, cellNumber, flatNumber)` — the `A3·2` slot label. The `·` separator must not be re-typed; CellStatusLogs/Index and Rows/Show had drifted copies of this format.
+- `components/StoreStatusSwitch.vue` — the on/off switch for a status flag toggled straight from a list row (role `switch`, locked state, RTL-aware). Never an Enable/Disable button pair; see [status-switches.md](status-switches.md).
 
 ## lib/date.ts formats dates/durations locale-aware, not with the browser default
 
@@ -128,7 +129,7 @@ Errors from a submitted `<Form>`/`useForm` are read from that form's `errors` (s
 
 ## Optional props are bare `?:`; withDefaults only for real defaults; shared Inertia test stubs
 
-Declare optional props `foo?: T` and leave them out of `withDefaults` — a `foo: undefined` entry is noise (and `x: T | undefined` becomes `x?: T`). withDefaults is only for a non-undefined default (`tone: 'default'`, `disabled: false`). In tests, mock `@inertiajs/vue3` with testing/inertiaStubs.ts: `createLinkStub()`, `createFormStub(getSlotProps)`, `createUseFormStub(submitMock)`; assert child props (`getComponent(Form).props('action')`, `getComponent(Link).props('href')`) and emit `success` via `getComponent(Form).vm.$emit('success')`, not text alone.
+Declare optional props `foo?: T` and leave them out of `withDefaults` — a `foo: undefined` entry is noise (and `x: T | undefined` becomes `x?: T`). withDefaults is only for a non-undefined default (`tone: 'default'`, `disabled: false`). In tests, mock `@inertiajs/vue3` with testing/inertiaStubs.ts: `createLinkStub()`, `createFormStub(getSlotProps, onSubmit?)` (`onSubmit` receives the form's `FormData` on a native submit or the `submit` slot prop), `createUseFormStub(submitMock)`; assert child props (`getComponent(Form).props('action')`, `getComponent(Link).props('href')`) and emit `success` via `getComponent(Form).vm.$emit('success')`, not text alone.
 
 ## Shared dialog and filter labels live under `common`
 

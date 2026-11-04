@@ -57,6 +57,7 @@ use Illuminate\Http\Resources\Json\JsonResource;
  * @property-read int|null $cash_on_delivery
  * @property-read int|null $featured
  * @property-read int|null $todays_deal
+ * @property-read bool $can_expire
  *
  * @mixin Product
  */
@@ -114,6 +115,7 @@ class ProductFormResource extends JsonResource
             'cash_on_delivery' => (bool) $this->cash_on_delivery,
             'featured' => (bool) $this->featured,
             'todays_deal' => (bool) $this->todays_deal,
+            'can_expire' => (bool) $this->can_expire,
             'flash_deal_id' => $this->flashDealId,
             'product_types' => $this->variations->map(fn (ProductVariation $variation): string => (string) $variation->getAttribute('name'))->values()->all(),
             'product_barcodes' => $this->storeBarcodes->map(fn (StoreProductBarcode $barcode): string => (string) $barcode->getAttribute('barcode'))->values()->all(),

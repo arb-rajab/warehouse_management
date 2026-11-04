@@ -116,7 +116,7 @@ methods and the cache button through the page permissions, and "the shop's own
 admin" is the lowest-id `user_type = 'admin'` row. Empty groups disappear.
 Button gates use the same permission names as their action middleware. The
 account block uses the store logout route and the current actor's profile and
-notifications; cache clearing stays narrowly scoped.
+notifications; cache clearing stays narrowly scoped. Notifications is a sidebar item above the footer and Clear dashboard cache (dashboard graph keys only) sits in the footer with a tooltip and confirm dialog; there is no top strip.
 
 Use Inertia links only for Inertia destinations. `StoreAdminNavLink` uses a
 plain anchor for Blade destinations; build URLs through Wayfinder. The shared
@@ -298,7 +298,8 @@ is an owner decision; removing one's own held permissions can still lock one out
   document those implementations and do not authorize new packages. Preserve the
   seller dashboard's retained `AIZ.plugins.chart` assets.
 - `StoreBooleanField` has one `name`/`value`/`disabled` contract. Product list flags
-  share `UpdatesStoreProductFlags`, scoped to the list's products. Keep downloads,
+  share `UpdatesStoreProductFlags`, scoped to the list's products. A flag toggled
+  from a list row is a `StoreStatusSwitch` ([status-switches.md](status-switches.md)). Keep downloads,
   PDFs, bounded translated product search, shared-session logout and departure ID
   9 behavior. Do not invent missing-data business policy.
 - Order entry retains raw tax metadata and line-price-only grand total. Percentage
@@ -349,11 +350,13 @@ Run a fresh scoped route/consumer inventory before changing a handler.
 ## Product ownership and seller persistence
 
 [shared-database.md](shared-database.md) is canonical for Option A and its
-reclassification procedure. The sync owns exactly `name`, `ar_name`, `published`
+reclassification procedure. The sync owns the registered synced columns (`name`,
+`ar_name`, `published`, `collection_id`, `serial`, `unit_price`, `unit`,
+`api_unitId`, `api_unit_name`, `tax`, `description`, `unit_equal`)
 on feed-origin rows (non-null `synced_at`) while each is Otajer-owned, the default;
 Setup > Product data sources can hand any of them to the admin panel
 ([product-field-sources.md](product-field-sources.md)). The store owns other columns and may
-write those three on store-origin rows. Null pre-marker rows were originally
+write the synced ones on store-origin rows. Null pre-marker rows were originally
 unclassified; the owner's later Otajer-origin confirmation led to a one-time
 classification migration. Do not reapply the earlier pending-classification
 snapshot as current guidance. Future store-created rows remain null-origin and
@@ -373,6 +376,18 @@ variant Cartesian limit 500 and gallery limit 50. Unmatched imported stocks must
 be explicitly reconciled; never guess option permutations or discard stock
 implicitly. Keep original normal variant-removal behavior. Seller panel repairs
 do not establish parity or repaired persistence for every mobile API path.
+
+## `mat_id` is an alias of the product id
+
+The `products.mat_id` column was dropped on 2026-11-02 (it always equalled
+`products.id`; `products:sync` maps the feed's `Mat_ID` to `id`). Store code reads
+`products.id`: the products search matches ids, the default delivery product
+setting holds a product id and is validated with `exists:products,id`, and the
+admin products list shows an ID column from `product.id`. The JSON payload key
+`mat_id` is kept for mobile, external and admin clients, with the id cast to a
+string as the old column was. `order_details.product_matId` is a separate column
+on another table and still receives the product id. Details are in
+[shared-database.md](shared-database.md).
 
 ## Payout accounting
 
@@ -418,6 +433,19 @@ address and country-code inputs were removed; default address remains country/
 phone-only. The representative's complete-customer workflow retains its required
 fields. Its separate shipping-address max255-versus-varchar191 mismatch remains
 unresolved; self-registration no longer asks for it.
+
+`users.tax_number` is the customer's unique business identifier (owner decision
+2026-11-03); `id` stays the primary key. A nullable unique index backs it, and
+every writer validates through `App\Support\CustomerTaxNumber::rules()` (the
+customer's own row ignored on update) with the generic
+`validation.custom.tax_number.unique` message; it never names the holder.
+`StoreUser`'s mutator stores it trimmed and blank as NULL. `import:members`
+imports a member whose number another customer has without it, and warns. The
+index migration released duplicates onto the account ranked first (not banned
+or archived, then `AccSysID`, then lowest id) and recorded the others in
+`customer_tax_number_releases`; `php artisan store:tax-number-duplicates`
+(read-only, `--json`, `--released`) reports both. Uniqueness follows the
+database collation: case-insensitive on MySQL, exact on sqlite.
 
 ## Storefront URLs and SEO
 

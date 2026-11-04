@@ -89,6 +89,28 @@ Keep warehouse queries scoped to the columns their consumers need. Store forms
 and writers use additional inherited product columns; that does not justify
 unrestricted selects in warehouse catalogue queries.
 
+### `products.mat_id` was dropped on 2026-11-02; `mat_id` is an alias of `id`
+
+`products:sync` maps the feed's `Mat_ID` to `products.id`, so the store's
+`products.mat_id` column only ever held a copy of the primary key. Migration
+`2026_11_02_100000_drop_mat_id_from_products_table` drops it (guarded by
+`Schema::hasColumn()`; `down()` restores a nullable string column and refills it
+from `id`). Nothing reads or writes the column any more: search, the default
+delivery product setting (`default_specific_product` now holds a product id),
+Blade, the admin list and the seeders all use `products.id`, and the admin
+products list renders its ID column from `product.id`.
+
+The payload key `mat_id` stays, as an alias of `id` cast to a string, wherever a
+mobile or external client or an admin payload already carried it
+(`Api/V1` product, cart, wishlist and purchase-history resources, the warehouse
+`GET /products` list, `Store\ProductListResource`, `ProductSearchResource` and
+the order-entry product options). `order_details.product_matId` is a separate
+real column on another table: it snapshots the product id on the order line and
+is still written (as a string of the id) by the order writers. Do not add the
+column back or read `$product->mat_id`; the feed key `Mat_ID` is unrelated and
+stays. The earlier `add_legacy_columns_to_store_tables` migration still adds the
+column on a database built from scratch, and the drop migration removes it.
+
 ### `ar_name`: searched in both locales, rendered in Arabic by the frontend
 
 Two separate decisions, deliberately different from each other.
@@ -393,17 +415,22 @@ In tests, `boxes_count` and `image_url` cannot be passed to
 
 **Owner decision, 2026-10-22 (guide §52; supersedes “only writer”).**
 `products:sync` owns exactly `name`, `ar_name` and `published` on feed-origin
-products. The integrated store (back office, seller panel/API and legacy import
-writers) owns every other column. It may write those three columns
-**only on products it created itself**. Existing approval authority is unchanged.
+products. Since 2026-11-02 it also writes `collection_id`, `serial`,
+`unit_price`, `unit`, `api_unitId`, `api_unit_name`, `tax`, `description` and
+`unit_equal` (the registry below; the plain scalar columns the feed carries).
+The integrated store (back office, seller panel/API and legacy import
+writers) owns every other column. It may write the synced columns
+**only on products it created itself** (or on a feed product for a field the
+admin owns). Existing approval authority is unchanged.
 Deletion and foreign-key rules are unchanged; this decision does not add a
 soft-delete or a new refusal policy for deletion.
 
 The syncable columns are the registry in `config/product_field_sources.php`
 (`ProductColumnOwnership::syncColumns()`); since 2026-11-01 the admin chooses
 per field whether the sync or the admin panel owns each one, and the guard
-protects only the Otajer-owned subset (`protectedColumns()`). Defaults keep the
-three columns Otajer-owned. See [product-field-sources.md](product-field-sources.md).
+protects only the Otajer-owned subset (`protectedColumns()`). Every field defaults
+to Otajer-owned, so the first sync after a field is added overwrites its value on
+feed-origin rows. See [product-field-sources.md](product-field-sources.md).
 The seller physical panel uses explicit `SellerProductWriter` assignments through
 `PhysicalProductWriter` (§53 of the migration guide); never widen Product Fillable
 to make a legacy service appear to save fields. Its transaction owns stock and
@@ -425,8 +452,10 @@ precedes every related-row mutation. Shared related-row operations live in
 `ProductWriter`; `PhysicalProductWriter` retains physical-only computations.
 `InHouseProductWriter`, admin digital writes, seller `ProductService`,
 publication switches and legacy imports all go through the guarded Product.
-Legacy imports attempting to rename or publish a feed-origin row now fail with
-an explicit validation error; they are not privileged sync writers. Store-owned
+Legacy imports attempting to rename, publish, reprice or re-describe a feed-origin
+row (any Otajer-owned synced column) now fail with an explicit validation error;
+they are not privileged sync writers, and no store writer skips these columns
+silently. Store-owned
 columns remain writable. Every model insert, including replication and quiet
 replication, resets the marker to null.
 
@@ -443,7 +472,7 @@ write itself, including a store insert racing the sync; pre-filtering alone
 would not. The marker assignment is last for MySQL's ordered SET evaluation.
 
 **Existing rows: conservative default, no inferred provenance.** The column
-migration leaves all pre-marker rows null. A matching name/Arabic name/publication, `from_api`, `mat_id`
+migration leaves all pre-marker rows null. A matching name/Arabic name/publication, `from_api`
 or old `updated_at` cannot prove origin; that migration does not backfill origin. Consequently
 existing feed rows stop receiving those three updates until explicitly reviewed.
 The owner must compare an authoritative feed/creation inventory, approve exact IDs,
@@ -479,14 +508,29 @@ owner authorization for the existing catalog, not an origin inference rule.
 
 **Other sync behavior retained.** `products:sync` polls the configured Otajer
 feed (`store.products_sync_url` / `STORE_PRODUCTS_SYNC_URL`; never log the URL's
-embedded API key), remains hourly with the existing overlap lock, chunks by 500,
-truncates names to 200/191 characters, drops unmapped feed fields and skips
-unusable IDs/names. The feed wins the three business columns on feed-origin rows,
-without comparing timestamps, and never prunes missing products. Existing request
+embedded API key), remains hourly with the existing overlap lock, chunks by 500
+(16 bindings per row), truncates or casts every value to its column (names
+200/191, serial, unit id and unit name 191, unit 20, amounts DECIMAL(20,2), unit
+conversion INT, description cleaned with `clean_html()`), drops unmapped feed
+fields and skips unusable IDs/names. A missing, blank or unusable feed value
+for `collection_id`, `serial`, `unit_price`, `unit`, `api_unitId`,
+`api_unit_name`, `tax`, `description` or `unit_equal` keeps the product's current
+value (`COALESCE` in the conditional update; a NOT NULL column such as
+`unit_price` is bound to its current value, or its insert value on a new
+product, because MySQL rejects an explicit NULL even for an existing row). The
+feed wins the Otajer-owned business columns on feed-origin rows,
+without comparing timestamps, and never prunes missing products. While
+`unit_price` is Otajer-owned, the same transaction re-prices the existing
+`product_stocks` rows named `PerBox` (the unit price) and `PerPiece` (the unit
+price divided by the product's `unit_equal`, rounded to cents, only when that is
+positive) of the feed-origin products it just wrote; each statement itself
+requires `products.synced_at IS NOT NULL`, so a store-origin product's stocks
+are never touched, and custom variants and quantities are left alone. Existing request
 failure handling remains. New feed rows keep their creation timestamps; an existing
 row's `updated_at` is store-owned and is no longer automatically changed by the sync.
-`synced_at` now records sync time instead. No prices, tax, stock,
-images, owner or approval values are imported by this command.
+`synced_at` now records sync time instead. Barcodes, variations, images,
+categories, brands, unit translations, stock quantities, owner and approval
+values are not imported by this command.
 
 ## Every other table is WMS-owned, under a `wms_` prefix
 

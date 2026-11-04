@@ -385,6 +385,21 @@ if (!function_exists('cart_product_tax')) {
     }
 }
 
+if (!function_exists('cart_line_tax')) {
+    /**
+     * The VAT added on top of one cart line, in money: `$linePrice` is the line's
+     * price for its whole quantity before tax (a representative's own price
+     * when the line has one). The product's explicit tax rows win; otherwise
+     * its VAT percent (`products.tax`, 9 or 21) applies to the line price.
+     */
+    function cart_line_tax($cart_product, $product, float $linePrice): float
+    {
+        $explicit = (float) cart_product_tax($cart_product, $product, false) * (int) $cart_product['quantity'];
+
+        return round($explicit > 0 ? $explicit : $linePrice * (float) ($product->tax ?? 0) / 100, 2);
+    }
+}
+
 if (!function_exists('cart_product_discount')) {
     function cart_product_discount($cart_product, $product, $formatted = false)
     {
@@ -489,7 +504,7 @@ if (!function_exists('carts_coupon_discount')) {
                         foreach ($carts as $key => $cartItem) {
                             $product = Product::find($cartItem['product_id']);
                             $subtotal += cart_product_price($cartItem, $product, false, false) * $cartItem['quantity'];
-                            $tax += cart_product_tax($cartItem, $product, false) * $cartItem['quantity'];
+                            $tax += cart_line_tax($cartItem, $product, (float) cart_product_price($cartItem, $product, false, false) * $cartItem['quantity']);
                             $shipping += $cartItem['shipping_cost'];
                         }
                         $sum = $subtotal + $tax + $shipping;
@@ -1058,6 +1073,20 @@ if (!function_exists('uploaded_asset')) {
     }
 }
 
+if (!function_exists('thumbnail_asset')) {
+    /**
+     * The resized copy of an upload for lists (about 400 px wide), or the
+     * original's URL where it has none. See App\Services\ThumbnailService.
+     */
+    function thumbnail_asset($id, ?Upload $asset = null)
+    {
+        if (($asset ??= Upload::find($id)) != null) {
+            return app(\App\Services\ThumbnailService::class)->urlFor($asset) ?? uploaded_asset($id, $asset);
+        }
+        return static_asset('assets/img/placeholder.jpg');
+    }
+}
+
 if (!function_exists('my_asset')) {
     /**
      * Generate an asset path for the application.
@@ -1223,10 +1252,9 @@ function hex2rgba($color, $opacity = false)
 if (!function_exists('isAdmin')) {
     function isAdmin()
     {
-        if (Auth::check() && (Auth::user()->user_type == 'admin' || Auth::user()->user_type == 'staff' || Auth::user()->user_type == 'accountant')) {
-            return true;
-        }
-        return false;
+        $user = Auth::user();
+
+        return $user instanceof StoreUser && $user->hasAdminAccess();
     }
 }
 

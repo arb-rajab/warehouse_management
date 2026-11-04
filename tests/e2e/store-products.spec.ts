@@ -6,6 +6,7 @@ import { switchLocale } from './support/nav';
 import {
     ensureStoreRtlLanguage,
     seedStoreFixtures,
+    storedProduct,
 } from './support/storeFixtures';
 
 const NAMES = [
@@ -38,7 +39,7 @@ function seedProducts(): void {
             $seller = $addedBy === 'seller';
             $product = App\Models\Product::forceCreate([
                 'name'=>$name,'ar_name'=>'','slug'=>Illuminate\Support\Str::slug($name),'added_by'=>$addedBy,'digital'=>0,
-                'unit_price'=>12.5,'published'=>$seller ? 0 : 1,'for_sale'=>$seller ? 0 : 1,'featured'=>0,'mat_id'=>'BR'.strlen($name),
+                'unit_price'=>12.5,'published'=>$seller ? 0 : 1,'for_sale'=>$seller ? 0 : 1,'featured'=>0,
                 'colors'=>'[]','attributes'=>'[]','choice_options'=>'[]','tags'=>'','created_at'=>$created,
             ]);
             App\Models\ProductTranslation::create(['product_id'=>$product->id,'lang'=>'en','name'=>$name]);
@@ -64,33 +65,27 @@ test('product list switches, native single and bulk delete confirmations, an Ine
     const kept = row(page, 'Browser kept oil');
     await expect(row(page, 'Browser seller oil')).toBeVisible();
 
-    await olive
-        .getByRole('button', { name: 'Enable Featured', exact: true })
-        .click();
+    await olive.getByRole('switch', { name: 'Featured', exact: true }).click();
     await expect(
-        olive.getByRole('button', { name: 'Disable Featured', exact: true }),
-    ).toBeVisible();
-    await olive
-        .getByRole('button', { name: 'Disable For sale', exact: true })
-        .click();
+        olive.getByRole('switch', { name: 'Featured', exact: true }),
+    ).toHaveAttribute('aria-checked', 'true');
+    await olive.getByRole('switch', { name: 'For sale', exact: true }).click();
     await expect(
-        olive.getByRole('button', { name: 'Enable For sale', exact: true }),
-    ).toBeVisible();
+        olive.getByRole('switch', { name: 'For sale', exact: true }),
+    ).toHaveAttribute('aria-checked', 'false');
     await expect(
-        olive.getByRole('button', { name: 'Enable Featured', exact: true }),
-    ).toBeVisible();
-    await olive
-        .getByRole('button', { name: 'Disable Active', exact: true })
-        .click();
+        olive.getByRole('switch', { name: 'Featured', exact: true }),
+    ).toHaveAttribute('aria-checked', 'false');
+    await olive.getByRole('switch', { name: 'Active', exact: true }).click();
     await expect(
-        olive.getByRole('button', { name: 'Enable Active', exact: true }),
-    ).toBeVisible();
+        olive.getByRole('switch', { name: 'Active', exact: true }),
+    ).toHaveAttribute('aria-checked', 'false');
     await expect(page).toHaveURL(
         /\/temp\/admin\/products\/all\?search=Browser$/,
     );
     await expect(
-        kept.getByRole('button', { name: 'Disable Active', exact: true }),
-    ).toBeVisible();
+        kept.getByRole('switch', { name: 'Active', exact: true }),
+    ).toHaveAttribute('aria-checked', 'true');
     seedStoreFixtures(String.raw`
         $product = App\Models\Product::where('name','Browser olive oil')->firstOrFail();
         if ($product->published || $product->for_sale != 0 || $product->featured != 0) {throw new RuntimeException('Switch writes were not persisted');}
@@ -235,17 +230,22 @@ test('product lists keep RTL and dark contrast and open from the sidebar as Iner
         page.getByRole('heading', { name: 'جميع المنتجات', exact: true }),
     ).toBeVisible();
     const olive = row(page, 'Browser olive oil');
+    const oliveId = String(
+        storedProduct('Browser olive oil', '$product->id') as number,
+    );
     await expect(
-        olive.getByRole('button', { name: 'تعطيل نشط', exact: true }),
-    ).toBeVisible();
+        olive.getByRole('switch', { name: 'نشط', exact: true }),
+    ).toHaveAttribute('aria-checked', 'true');
     await expect(
         olive.getByRole('link', { name: 'تعديل', exact: true }),
     ).toBeVisible();
 
     for (const target of [
         olive.getByText('Browser olive oil', { exact: true }),
-        page.getByRole('columnheader', { name: 'رقم المادة', exact: true }),
-        olive.getByRole('cell', { name: 'BR17', exact: true }),
+        page.getByRole('columnheader', { name: 'المعرّف', exact: true }),
+        // The ID column precedes the stock column, so .first() is the ID cell
+        // even when the id equals the seeded stock of 5.
+        olive.getByRole('cell', { name: oliveId, exact: true }).first(),
         page.locator('#product-presets').getByRole('link', {
             name: 'جميع النشطة',
             exact: true,

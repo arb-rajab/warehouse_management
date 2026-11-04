@@ -112,6 +112,22 @@ case "$1" in
 esac
 exit 0
 STUB
+    # Fails the first FAIL_FETCH_TIMES `git fetch` calls the way a refused SSH
+    # key does, then hands everything to the real git. FETCH_LOG counts them.
+    cat > "$WORK/bin/git" <<STUB
+#!/bin/bash
+for arg in "\$@"; do
+  if [ "\$arg" = fetch ]; then
+    echo fetch >> "\$FETCH_LOG"
+    if [ "\$(wc -l < "\$FETCH_LOG")" -le "\${FAIL_FETCH_TIMES:-0}" ]; then
+      echo "git@github.com: Permission denied (publickey)." >&2
+      exit 128
+    fi
+    break
+  fi
+done
+exec $(command -v git) "\$@"
+STUB
     chmod +x "$WORK/bin"/*
 
     (
@@ -136,7 +152,7 @@ commit_new_revision() {
 deploy() {
     env PATH="$WORK/bin:$PATH" \
         DBSTATE="$WORK/dbstate" MAINT="$WORK/maint" ARTISAN_LOG="$WORK/artisan.log" \
-        COMPOSER_LOG="$WORK/composer.log" \
+        COMPOSER_LOG="$WORK/composer.log" FETCH_LOG="$WORK/fetch.log" FETCH_RETRY_DELAY=0 \
         DEPLOY_PATH="$WORK/host" TARGET_BRANCH=develop TARGET_SHA="$1" \
         PHP_BINARY=php85 KEEP_RELEASES=2 \
         "${@:2}" \
@@ -366,6 +382,29 @@ deploy "$(commit_new_revision)" && rc=0 || rc=$?
 check "exits non-zero" "$rc" "1"
 check "migrations never ran" "$(tables)" "$before_tables"
 check "site is out of maintenance" "$(maintenance_state)" "off"
+
+fetch_count() { { cat "$WORK/fetch.log" 2>/dev/null || true; } | wc -l | tr -d ' '; }
+
+echo "a git fetch that fails twice is retried and the deploy still publishes"
+setup
+rm -f "$WORK/fetch.log"
+deploy "$(git -C "$WORK/origin" rev-parse HEAD)" FAIL_FETCH_TIMES=2 && rc=0 || rc=$?
+check "exits successfully" "$rc" "0"
+check "fetched three times" "$(fetch_count)" "3"
+check "current points at a release" "$([ -L "$WORK/host/current" ] && echo yes || echo no)" "yes"
+check "site is live" "$(maintenance_state)" "off"
+
+echo "a git fetch that keeps failing stops the deploy before anything changes"
+before_tables="$(tables)"
+before_release="$(published)"
+rm -f "$WORK/fetch.log"
+deploy "$(commit_new_revision)" FAIL_FETCH_TIMES=99 FETCH_ATTEMPTS=3 && rc=0 || rc=$?
+check "exits non-zero" "$rc" "1"
+check "fetched exactly the allowed attempts" "$(fetch_count)" "3"
+check "live release is unchanged" "$(published)" "$before_release"
+check "database is untouched" "$(tables)" "$before_tables"
+check "site is out of maintenance" "$(maintenance_state)" "off"
+check "no half-built release is left" "$(ls -1 "$WORK/host/releases" | wc -l | tr -d ' ')" "1"
 
 echo
 if [ "$failures" -eq 0 ]; then
