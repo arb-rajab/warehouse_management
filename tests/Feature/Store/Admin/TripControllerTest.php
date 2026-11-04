@@ -4,6 +4,7 @@ use App\Http\Controllers\Store\Admin\TripController;
 use App\Models\Checkpoint;
 use App\Models\Order;
 use App\Models\StoreUser;
+use App\Models\Translation;
 use App\Models\Trip;
 use App\Models\Truck;
 use App\Services\DriverService;
@@ -71,6 +72,18 @@ test('a trip can be created with a departure checkpoint and driver using the act
         ->and($trip->checkpoints()->pluck('relationable_id')->all())->toBe([9, 9])
         ->and($trip->checkpoints()->pluck('id')->all())->not->toContain(0)
         ->and($truck->fresh()->is_available)->toBeFalse();
+});
+
+test('the departure checkpoint note is the translate() text, registered for translation', function () {
+    actingAsStoreUser(createStoreStaff('add_trip'));
+    $truck = Truck::create(['name' => 'Available truck']);
+
+    $this->post(route('trips.store'), tripTestPayload($truck))->assertRedirect();
+
+    $notes = Trip::firstOrFail()->checkpoints()->pluck('notes')->sort()->values()->all();
+    expect($notes)->toBe(['Checkpoint note', 'Default starting checkpoint'])
+        ->and(Translation::where('lang', 'en')->where('lang_key', 'default_starting_checkpoint')->value('lang_value'))
+        ->toBe('Default starting checkpoint');
 });
 
 test('trip creation refuses callers and changes no rows', function (string $caller) {

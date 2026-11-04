@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Http\Middleware\Concerns\RequiresUnbannedStoreUser;
+use App\Models\StoreUser;
 use Closure;
 use Illuminate\Http\Request;
 
@@ -19,7 +20,7 @@ class IsAdmin
      */
     public function handle($request, Closure $next)
     {
-        if ($this->isUnbannedStoreUserOfType($request, 'admin', 'staff', 'accountant')) {
+        if ($this->isUnbannedStoreUserOfType($request, ...StoreUser::ADMIN_USER_TYPES)) {
             return $next($request);
         }
 

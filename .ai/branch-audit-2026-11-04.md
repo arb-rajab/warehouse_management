@@ -20,9 +20,9 @@ records how each branch was included.
 
 | Branch | Tip | PR | Classification | Evidence |
 | --- | --- | --- | --- | --- |
-| `ccr-0a36e700-97061b` | `35db967581` | none | KEEP_ASK | Small refactors still absent from develop, others moot; cherry-pick conflicts in 4 files (see below) |
+| `ccr-0a36e700-97061b` | `35db967581` | none | MERGED (re-applied by hand) | Still-useful parts re-applied on this PR; `getFileBaseURL()`, Trip edits and its exclusions test skipped (see below) |
 | `ccr-29ac9920-278u18` | `b36cf15561` | none | SAFE_DELETE | Adds `database/sql/delete_aaaaa_products.sql` then removes it; net diff against its merge base is empty |
-| `ccr-34c0aa9d-p4yimk` | `6b04fbd14c` | #519 merged at `afa4d38160` | MERGE | Post-merge commit adds "Keeping a session cheap"; not in develop, merges cleanly |
+| `ccr-34c0aa9d-p4yimk` | `6b04fbd14c` | #519 merged at `afa4d38160` | MERGED (cherry-picked) | `6b04fbd1` cherry-picked onto this PR with `-x`; applied cleanly |
 | `ccr-463ef82d-ek2dhm` | `f96fcf8d87` | none | SAFE_DELETE | Earlier uploads-to-Inertia attempt; superseded by `6c21e5a4` (codex uploads/profile, integrated via #377) |
 | `claude/legacy-albaraka-holland-setup-2q7c6h` | `7c445f331c` | none | SAFE_DELETE | Vendors the store under `legacy/`; develop chose one integrated app instead and never had `legacy/` |
 | `claude/min-pallet-threshold-u6gcmh` | `7757879d4e` | #282 merged at `ef664fe90d` | SAFE_DELETE | Post-merge commit is patch-identical to develop `592c98b6` (#283) |
@@ -94,6 +94,38 @@ One commit, `35db9675` "Tidy WMS/store seams" (12 files). Piece by piece:
   better re-applied by hand than cherry-picked, and un-excluding
   `AppServiceProvider` needs PHPStan and Pint to pass on its current content.
 - Question: re-apply the remaining refactors as a new change, or drop them?
+
+#### Outcome
+
+The unique work of this branch and of `ccr-34c0aa9d-p4yimk` is now on this PR; neither branch is deleted yet.
+
+- Cherry-picked `6b04fbd1` onto this PR (`git cherry-pick -x`); the new section's
+  anchor and the `AGENTS.md` link resolve, nothing duplicates existing wording.
+- Re-applied by hand against current develop (`35db9675` itself was not picked):
+  - `StoreUser::ADMIN_USER_TYPES` and `hasAdminAccess()`, used by `IsAdmin`,
+    `IsRepresentativeOrAdmin`, `isAdmin()`, `HandleInertiaRequests::storeNotifications()`
+    and `CreateStoreAdminCommand::promote()`. The commit knew of two literals;
+    develop has five, so all five now read the list. `isAdmin()` returns false
+    for anything but a `StoreUser`, as in the commit (a warehouse `User` has no
+    `user_type`). Test: `tests/Feature/StoreAdminAccessTest.php`.
+  - `app/Providers/AppServiceProvider.php` removed from `pint.json` `notPath` and
+    `phpstan.neon` `excludePaths` (the existing `StaticAnalysisExclusionsTest`
+    keeps the two lists equal). Pint reports it clean unchanged; PHPStan was
+    not run in this step, the file was read against level 7 and needed no edit.
+    The commit's other change, dropping `RateLimitMiddleware.php` from `notPath`,
+    is already done in develop.
+  - Shop text: the default checkpoint note in `Concerns/WritesTripCheckpoints.php`
+    now uses `translate()` (test added to `Store/Admin/TripControllerTest.php`).
+    The `Barcodes` heading in `product_details.blade.php` uses the existing
+    `storefront.product.barcodes` key instead of `translate()`: develop converted
+    the rest of that file to `lang/*/storefront.php` keys, the key exists in `en`
+    and `ar`, and the commit's rule reference (legacy guide section 5) is now the
+    asset pipeline. Asserted in `StorefrontProductDetailsFieldsTest.php`.
+- Skipped: `getFileBaseURL()` fix (no caller), `create-from-map.blade.php` and
+  `Trip/TripController.php` edits (files deleted), the commit's
+  `StaticAnalysisExclusionsTest` (develop's own is stricter), and the commit's
+  `ShopTextTranslationTest` and `LegacyAssetHelpersTest` (their subjects are gone
+  or replaced by the assertions above).
 
 ### KEEP_ASK: `claude/sqlite-mysql-migration-dvupgn`
 
