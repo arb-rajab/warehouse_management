@@ -19,11 +19,14 @@ class PurchaseHistoryItemsCollection extends ResourceCollection
                 $refund_request_status = 99;
                 if (addon_is_activated('refund_request')) {
                     $refund_section = true;
+                    // products has no `refundable` column in this schema: a product
+                    // without one is not refundable, as it read before.
+                    $refundable = (int) ($data->product?->getRawOriginal('refundable') ?? 0) !== 0;
                     $no_of_max_day = get_setting('refund_request_time');
                     $last_refund_date = ($data->created_at ?? Carbon::now())->copy()->addDays((int) $no_of_max_day);
                     $today_date = Carbon::now();
                     if ($data->product != null &&
-                        $data->product->refundable != 0 &&
+                        $refundable &&
                         $data->refund_request == null &&
                         $today_date <= $last_refund_date &&
                         $data->payment_status == 'paid' &&
@@ -38,7 +41,7 @@ class PurchaseHistoryItemsCollection extends ResourceCollection
                     } else if ($data->refund_request != null && $data->refund_request->refund_status == 1) {
                         $refund_label = __('storefront.common.approved');
                         $refund_request_status = $data->refund_request->refund_status;
-                    } else if ($data->product?->refundable != 0) {
+                    } else if ($refundable) {
                         $refund_label = __('api_resources.payment.not_applicable');
                     } else {
                         $refund_label = __('storefront.common.non_refundable');

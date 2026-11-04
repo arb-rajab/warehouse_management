@@ -1791,7 +1791,8 @@ The other seams between the two halves stay as they are until their phase:
 
 ## 9. The app API contract the new app depends on (2026-11-03)
 
-Replies to the new app's backend requests are in [docs/backend-replies-20261103.md](../../docs/backend-replies-20261103.md);
+Replies to the new app's backend requests are in [docs/backend-replies-20261103.md](../../docs/backend-replies-20261103.md)
+and [docs/backend-replies-20261104.md](../../docs/backend-replies-20261104.md);
 the tests are `tests/Feature/StoreApiBackendRequestsTest.php`. Constraints that follow from them:
 
 - `POST order/store` and `payments/pay/*` (all through `Api\V1\OrderController::store`) require a `delivery_date`:
@@ -1818,6 +1819,16 @@ the tests are `tests/Feature/StoreApiBackendRequestsTest.php`. Constraints that 
   computes a line's VAT; `order_details.tax` stays the percent and `order_details.tax_amount` is the money.
   The web checkout, its cart summary, the coupon maths and the back office entry use it too (the entry keeps a
   line's total when its `tax_amount` is 0, so old orders do not jump when edited); an offer line carries its own `tax_amount` (`OfferService`), and the order's VAT is the sum of its lines'.
+- One VAT percent: `product_vat_percent()` (the product's back office tax rows when it has any, else
+  `products.tax`). `cart_line_tax()`, `order_details.tax`, the cart's `tax_percent` and the product answers' `tax`
+  read it. Catalogue prices include VAT only for a product with tax rows; product answers say so in
+  `price_includes_tax`. Whether to make every catalogue price before VAT is an open owner question.
+- The minimum order goes through `MinimumOrderFee` (API order, web checkout, `cart-summary`): below
+  `minimum_order_amount` (before VAT, fee lines not counted) the fee line is added inside the order's
+  transaction, is placed even when unpublished and reserves no stock; with no fee product the API answers 422
+  `errors.minimum_order_amount`. Never rebuild a cart line from another line's `toArray()`: strict models refuse it.
+- `OrderDetail::product()` resolves by `product_id`, never by `product_serial`; a duplicated product gets no
+  `serial` and no stock `sku`.
 - An unverified customer's `order/store` is 403. Every push goes through `FcmPushService` (FCM v1; never the legacy
   `fcm/send`); `php artisan store:send-test-push` and `store:setup-delivery` (dev only) exist for the app team.
 - Prices are hidden from guests and unverified customers by `HidePricesFromUnverified` (`hide.prices:catalog`

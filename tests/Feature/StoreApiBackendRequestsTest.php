@@ -10,9 +10,11 @@ use App\Models\Upload;
 use App\Models\Wishlist;
 use App\Services\ThumbnailService;
 use Carbon\CarbonImmutable;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
+use Illuminate\Testing\TestResponse;
 
 /**
  * The store API changes asked for in BR-20261103-A/B/C, BR-20261102-B/D and
@@ -530,4 +532,228 @@ test('an order stored with no delivery date shows null, not 1970', function () {
     expect($this->withToken($token)->getJson('/api/v1/store/purchase-history-details/'.$blank->id)->assertOk()->json('data.0.delivery_date'))->toBeNull();
     app('auth')->forgetGuards();
     expect($this->withToken($token)->getJson('/api/v1/store/purchase-history-details/'.$dated->id)->assertOk()->json('data.0.delivery_date'))->toBe('04-03-2030');
+});
+
+// ---- BR-20261104-A.1: the minimum order and its fee line ----------------------------------------
+
+/**
+ * Turn on the minimum order of EUR 50 with a EUR 5 fee product (21 percent VAT)
+ * that is unpublished and has no stock, as a fee product usually is.
+ */
+function minimumOrderFee(?int $feeProductId = null): int
+{
+    $fee = $feeProductId ?? createStoreProduct(['unit_price' => 5, 'tax' => 21, 'published' => 0, 'current_stock' => 0, 'name' => 'Small order fee'])->id;
+    storeSetting('minimum_order_amount_check', 1);
+    storeSetting('minimum_order_amount', 50);
+    storeSetting('default_specific_product', (string) $fee);
+
+    return $fee;
+}
+
+/** A customer's cart of `$quantity` EUR 10 products with 9 percent VAT. */
+function smallCustomerCart(StoreUser $customer, int $quantity = 3): Cart
+{
+    $product = createStoreProduct(['unit_price' => 10, 'tax' => 9, 'cash_on_delivery' => 1]);
+
+    return Cart::create(['user_id' => $customer->id, 'owner_id' => 0, 'product_id' => $product->id, 'quantity' => $quantity, 'variation' => '', 'price' => 10, 'shipping_type' => 'home_delivery', 'address_id' => addStoreAddress($customer->id)]);
+}
+
+function placeStoreApiOrder(StoreUser $user): TestResponse
+{
+    return test()->withToken(storeApiToken($user))->postJson('/api/v1/store/order/store', ['payment_type' => 'cash_on_delivery', 'additional_info' => '', 'delivery_date' => validDeliveryDate()]);
+}
+
+test('an order below the minimum is placed with the fee line, which takes no stock and survives being unpublished', function () {
+    orderingStore();
+    $fee = minimumOrderFee();
+    $customer = createStoreUser('customer');
+    $line = smallCustomerCart($customer);
+    smallCustomerCart(createStoreUser('customer')); // another account's cart: untouched
+
+    placeStoreApiOrder($customer)->assertOk()->assertJsonPath('result', true);
+
+    $order = Order::sole();
+    $lines = $order->orderDetails()->orderBy('id')->get();
+    expect($lines->map(fn ($detail) => [$detail->product_id, (int) $detail->quantity, (float) $detail->price, (float) $detail->tax, (float) $detail->tax_amount])->all())
+        ->toEqual([[$line->product_id, 3, 30.0, 9.0, 2.7], [$fee, 1, 5.0, 21.0, 1.05]])
+        ->and((float) $order->grand_total)->toEqual(38.75) // 30 + 2.70 + 5 + 1.05
+        ->and($order->additional_info)->toBe('')
+        ->and(DB::table('product_stocks')->where('product_id', $fee)->value('qty'))->toBe(0)
+        ->and(Cart::where('user_id', $customer->id)->exists())->toBeFalse()
+        ->and(Cart::count())->toBe(1);
+});
+
+test('a representative\'s order below the minimum gets the fee line for the picked customer', function () {
+    orderingStore();
+    $fee = minimumOrderFee();
+    $customer = createStoreUser('customer');
+    $rep = repWithCartFor($customer);
+
+    placeStoreApiOrder($rep)->assertOk()->assertJsonPath('result', true);
+
+    $order = Order::sole();
+    expect($order->orderDetails()->pluck('product_id')->all())->toContain($fee)
+        ->and((int) $order->for_customer)->toBe($customer->id)
+        ->and(json_decode($order->shipping_address, true)['name'])->toBe($customer->name);
+});
+
+test('an order at or above the minimum gets no fee line', function () {
+    orderingStore();
+    minimumOrderFee();
+    $customer = createStoreUser('customer');
+    $line = smallCustomerCart($customer, 5); // EUR 50 before VAT
+
+    placeStoreApiOrder($customer)->assertOk()->assertJsonPath('result', true);
+
+    expect(Order::sole()->orderDetails()->pluck('product_id')->all())->toBe([$line->product_id]);
+});
+
+test('an order below the minimum with no fee product to add is refused with 422 and changes nothing', function () {
+    orderingStore();
+    minimumOrderFee(999999);
+    $customer = createStoreUser('customer');
+    smallCustomerCart($customer);
+
+    placeStoreApiOrder($customer)->assertUnprocessable()->assertExactJson([
+        'combined_order_id' => 0,
+        'result' => false,
+        'message' => __('api.order.below_minimum', ['amount' => format_price(50)]),
+        'errors' => ['minimum_order_amount' => [__('api.order.below_minimum', ['amount' => format_price(50)])]],
+    ]);
+
+    expect(Order::count())->toBe(0)->and(Cart::where('user_id', $customer->id)->count())->toBe(1);
+});
+
+test('a refused order below the minimum leaves no fee line in the cart', function () {
+    orderingStore();
+    minimumOrderFee();
+    $customer = createStoreUser('customer');
+    $line = smallCustomerCart($customer);
+    DB::table('product_stocks')->where('product_id', $line->product_id)->update(['qty' => 1]);
+
+    placeStoreApiOrder($customer)->assertOk()->assertJsonPath('result', false);
+
+    expect(Order::count())->toBe(0)->and(Cart::where('user_id', $customer->id)->pluck('product_id')->all())->toBe([$line->product_id]);
+});
+
+test('the cart summary counts the fee line in its total, as the order charges it', function () {
+    orderingStore();
+    minimumOrderFee();
+    $customer = createStoreUser('customer');
+    smallCustomerCart($customer);
+
+    $summary = $this->withToken(storeApiToken($customer))->getJson('/api/v1/store/cart-summary')->assertOk()->json();
+
+    expect(collect($summary)->only(['sub_total', 'tax', 'delivery_cost', 'grand_total', 'grand_total_value'])->all())->toEqual([
+        'sub_total' => format_price(30),
+        'tax' => format_price(3.75), // 2.70 on the products, 1.05 on the fee
+        'delivery_cost' => format_price(5),
+        'grand_total' => format_price(38.75),
+        'grand_total_value' => 38.75,
+    ]);
+
+    app('auth')->forgetGuards();
+    placeStoreApiOrder($customer)->assertOk();
+    expect((float) Order::sole()->grand_total)->toEqual(38.75);
+});
+
+test('the web checkout below the minimum also places the order with the fee line', function () {
+    orderingStore();
+    $fee = minimumOrderFee();
+    $customer = createStoreUser('customer');
+    smallCustomerCart($customer);
+    actingAsStoreUser($customer);
+
+    $this->post(route('payment.checkout'), ['payment_option' => 'cash_on_delivery', 'additional_info' => ''])->assertRedirect();
+
+    expect(Order::sole()->orderDetails()->pluck('product_id')->all())->toContain($fee);
+});
+
+// ---- BR-20261104-A.2: the VAT percent ----------------------------------------------------------
+
+test('a product taxed in the back office VAT section shows that percent in the cart, the product and the order', function () {
+    orderingStore();
+    $customer = createStoreUser('customer');
+    $line = smallCustomerCart($customer);
+    $product = $line->product;
+    $product->forceFill(['tax' => 0, 'published' => 1, 'approved' => 1])->save();
+    DB::table('product_taxes')->insert(['product_id' => $product->id, 'tax_id' => 1, 'tax' => 9, 'tax_type' => 'percent']);
+    $token = storeApiToken($customer);
+
+    $row = $this->withToken($token)->postJson('/api/v1/store/carts')->assertOk()->json('0.cart_items.0');
+    expect([$row['tax_percent'], $row['tax_amount'], $row['price']])->toEqual([9, 2.7, 10]);
+
+    app('auth')->forgetGuards();
+    $detail = $this->withToken($token)->getJson('/api/v1/store/products/'.$product->id)->assertOk()->json('data.0');
+    expect([$detail['tax'], $detail['tax_type'], $detail['price_includes_tax']])->toEqual([9, 'percent', true]);
+
+    app('auth')->forgetGuards();
+    $this->withToken($token)->postJson('/api/v1/store/order/store', ['payment_type' => 'cash_on_delivery', 'delivery_date' => validDeliveryDate()])->assertOk()->assertJsonPath('result', true);
+    $order = Order::sole();
+    expect($order->orderDetails()->get(['tax', 'tax_amount'])->map(fn ($detail) => [(float) $detail->tax, (float) $detail->tax_amount])->all())->toEqual([[9.0, 2.7]]);
+
+    app('auth')->forgetGuards();
+    $items = $this->withToken($token)->getJson('/api/v1/store/purchase-history-items/'.$order->id)->assertOk()->json('data');
+    expect([$items[0]['tax_percent'], $items[0]['tax']])->toEqual([9, format_price(2.7)]);
+});
+
+test('a product taxed by the Otajer feed shows its percent and says its prices are before VAT', function () {
+    orderingStore();
+    $product = createStoreProduct(['tax' => 21, 'published' => 1, 'approved' => 1]);
+
+    $detail = $this->withToken(storeApiToken(createStoreUser('customer')))->getJson('/api/v1/store/products/'.$product->id)->assertOk()->json('data.0');
+
+    expect([$detail['tax'], $detail['tax_type'], $detail['price_includes_tax']])->toEqual([21, 'percent', false]);
+});
+
+// ---- BR-20261104-A.3: an unknown variant -------------------------------------------------------
+
+test('carts/add refuses a variant the product does not have with 422 and adds nothing', function (bool $verified) {
+    orderingStore();
+    $customer = createStoreUser('customer', verified: true);
+    $customer->forceFill(['admin_verified' => $verified])->save();
+    $product = createStoreProduct(['published' => 1]);
+
+    $this->withToken(storeApiToken($customer))
+        ->postJson('/api/v1/store/carts/add', ['id' => $product->id, 'variant' => 'NoSuchVariant', 'quantity' => 1])
+        ->assertUnprocessable()
+        ->assertExactJson(['result' => false, 'message' => __('api.cart.variant_not_found'), 'errors' => ['variant' => [__('api.cart.variant_not_found')]]]);
+
+    expect(Cart::count())->toBe(0);
+})->with(['verified customer' => true, 'unverified customer' => false]);
+
+// ---- BR-20261104-A.4: an order line keeps its product ------------------------------------------
+
+test('an order line keeps naming its own product after the product is duplicated and the copy renamed', function () {
+    orderingStore();
+    $customer = createStoreUser('customer');
+    $product = createStoreProduct(['name' => 'VAT Test Chickpeas 400 g', 'serial' => 'MAT-1']);
+    $order = createStoreOrder($customer);
+    DB::table('order_details')->insert(['order_id' => $order->id, 'seller_id' => $product->user_id, 'product_id' => $product->id, 'product_serial' => 'MAT-1', 'price' => 10, 'tax' => 0, 'quantity' => 1]);
+    createStoreProduct(['name' => 'Small order fee', 'serial' => 'MAT-1']); // a copy made before duplicates lost the serial
+
+    $item = $this->withToken(storeApiToken($customer))->getJson('/api/v1/store/purchase-history-items/'.$order->id)->assertOk()->json('data.0');
+
+    expect([$item['product_id'], $item['product_name'], $item['mat_id']])->toBe([$product->id, 'VAT Test Chickpeas 400 g', (string) $product->id]);
+});
+
+// ---- BR-20261104-A.5: one shape for the cart summary -------------------------------------------
+
+test('the summary of an empty cart has the same types as a filled one', function () {
+    orderingStore();
+    $customer = createStoreUser('customer');
+    $token = storeApiToken($customer);
+
+    $empty = $this->withToken($token)->getJson('/api/v1/store/cart-summary')->assertOk()->json();
+    expect(collect($empty)->only(['sub_total', 'tax', 'shipping_cost', 'discount', 'grand_total', 'grand_total_value', 'coupon_code', 'coupon_applied', 'delivery_cost'])->all())->toEqual([
+        'sub_total' => format_price(0), 'tax' => format_price(0), 'shipping_cost' => format_price(0), 'discount' => format_price(0),
+        'grand_total' => format_price(0), 'grand_total_value' => 0, 'coupon_code' => null, 'coupon_applied' => false, 'delivery_cost' => format_price(0),
+    ]);
+
+    customerCartWithOneLine($customer);
+    app('auth')->forgetGuards();
+    $filled = $this->withToken($token)->getJson('/api/v1/store/cart-summary')->assertOk()->json();
+    // grand_total_value is a JSON number in both; a whole amount is written without its .0 either way.
+    expect(array_map(get_debug_type(...), Arr::except($filled, 'grand_total_value')))->toEqual(array_map(get_debug_type(...), Arr::except($empty, 'grand_total_value')))
+        ->and($filled['grand_total_value'])->toBeNumeric();
 });

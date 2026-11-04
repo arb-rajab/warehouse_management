@@ -13,12 +13,12 @@ use App\Models\Order;
 use App\Models\OrderDetail;
 use App\Models\Product;
 use App\Models\StoreUser;
+use App\Services\MinimumOrderFee;
 use App\Services\OfferService;
 use App\Services\OrderPlacementService;
 use App\Services\OrderService;
 use App\Services\PaymentOptions;
 use App\Services\WalletPaymentService;
-use Auth;
 use Carbon\Carbon;
 use Carbon\CarbonImmutable;
 use DateTimeImmutable;
@@ -46,6 +46,11 @@ class OrderController extends Controller
     }
 
     protected $orderService;
+
+    private function minimumOrderFee(): MinimumOrderFee
+    {
+        return app(MinimumOrderFee::class);
+    }
 
     protected function orderService()
     {
@@ -180,31 +185,12 @@ class OrderController extends Controller
             ]);
         }
 
-        if (get_setting('minimum_order_amount_check') == 1) {
-            $subtotal = 0;
-            foreach (Cart::where('user_id', auth()->user()->id)->get() as $key => $cartItem) {
-                $product = Product::find($cartItem['product_id']);
-                $subtotal += cart_product_price($cartItem, $product, false, false) * $cartItem['quantity'];
-            }
-            $default_specific_product = $subtotal < get_setting('minimum_order_amount')
-                ? Product::where('id', get_setting('default_specific_product'))->first()
-                : null;
-            if ($default_specific_product) {
-                $delivery_cart = Cart::where('user_id', auth()->user()->id)->where('product_id', $default_specific_product->id)->first();;
-
-                if (!$delivery_cart) {
-                    $user_first_cart = Cart::where('user_id', Auth::user()->id)->first();
-
-                    $newCartData = $user_first_cart->toArray();
-                    $newCartData['quantity'] = 1;
-                    $newCartData['variation_qty'] = null;
-                    $newCartData['price'] = $default_specific_product->unit_price;
-                    $newCartData['product_id'] = $default_specific_product->id;
-                    Cart::create($newCartData);
-                }
-
-                // return $this->failed("You order amount is less then the minimum order amount");
-            }
+        // Below the minimum order the fee line is added inside the transaction;
+        // with no fee product to add, the order is refused here.
+        try {
+            $this->minimumOrderFee()->productFor($cartItems);
+        } catch (DomainException $exception) {
+            return $this->validationRefusal('minimum_order_amount', $exception->getMessage());
         }
 
         if (auth()->user()->is_rep) {
@@ -235,7 +221,7 @@ class OrderController extends Controller
         // used, a wallet that cannot pay) takes the whole order back with it,
         // keeping the cart, instead of leaving half an order behind.
         try {
-            return DB::transaction(fn () => $this->placeOrder($request, $cartItems, $payFromWallet));
+            return DB::transaction(fn () => $this->placeOrder($request, $this->minimumOrderFee()->addTo($cartItems), $payFromWallet));
         } catch (DomainException $exception) {
             return response()->json([
                 'combined_order_id' => 0,
@@ -452,7 +438,9 @@ class OrderController extends Controller
                     continue;
                 }
 
-                if (0 == $product->published) {
+                $isFee = $this->minimumOrderFee()->isFeeLine($cartItem);
+
+                if (0 == $product->published && ! $isFee) {
                     $order_deleted_products_info .= ' -' . $product->ar_name . ', ';
                     $cartItem->delete();
                     continue;
@@ -465,7 +453,9 @@ class OrderController extends Controller
 
                 $product_variation = $cartItem['variation'];
 
-                $this->orderPlacementService()->reserveStock($product, $product_variation, $cartItem['quantity']);
+                if (! $isFee) {
+                    $this->orderPlacementService()->reserveStock($product, $product_variation, $cartItem['quantity']);
+                }
 
                 $order_detail = new OrderDetail;
                 $order_detail->order_id = $order->id;
@@ -493,7 +483,7 @@ class OrderController extends Controller
                 // order_details.tax is NOT NULL and products.tax nullable: see
                 // the web OrderController::store(). It holds the VAT percent;
                 // the money added on top of the line is tax_amount.
-                $order_detail->tax = $product->tax ?? 0;
+                $order_detail->tax = product_vat_percent($product);
                 $order_detail->tax_amount = cart_line_tax($cartItem, $product, (float) $order_detail->price);
                 $order_detail->profits = (float)($order_detail->price * ($product->collection?->amount ?? 1)) / 100;
 

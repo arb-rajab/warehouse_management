@@ -146,8 +146,12 @@ class ProductDetailCollection extends ResourceCollection
                     'current_stock' => (int)$productStocks,
                     'unit' => $data->unit ?? "",
                     'unit_equal' => (int) $data->unit_equal,
-                    'tax' => (float) $data->tax,
-                    'tax_type' => $data->tax_type,
+                    // The VAT percent charged (product_vat_percent()). The catalogue prices above
+                    // include it only for a product with tax rows from the back office's VAT
+                    // section; the cart and the order always add it on top of a price before VAT.
+                    'tax' => product_vat_percent($data),
+                    'tax_type' => 'percent',
+                    'price_includes_tax' => $data->taxes->isNotEmpty(),
                     'rating' => (float)$data->rating,
                     'rating_count' => (int)Review::where(['product_id' => $data->id])->count(),
                     // Only the club point addon adds products.earn_point, and this

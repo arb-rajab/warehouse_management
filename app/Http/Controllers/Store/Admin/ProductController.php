@@ -299,7 +299,9 @@ class ProductController extends Controller implements HasMiddleware
     /**
      * Copies the `products` row as ProductController::duplicate() does, with
      * a random suffix on its slug, and its stock and tax rows; translations,
-     * variations and barcodes are not copied, as before. This is a second
+     * variations and barcodes are not copied, as before. The copy gets no
+     * Otajer `serial` and its stock rows no `sku`: those name the source's
+     * article, and a copy is a product of its own. This is a second
      * writer of `products` beside `products:sync`; see the store migration
      * guide.
      */
@@ -309,6 +311,7 @@ class ProductController extends Controller implements HasMiddleware
             $source = $this->lockedProduct($this->listQuery($request->productList()), $product);
             $copy = $source->replicate();
             $copy->setAttribute('slug', ProductSlug::duplicate($source->slug));
+            $copy->setAttribute('serial', null);
             $copy->save();
             $stocks->product_duplicate_store($source->stocks()->orderBy('id')->get(), $copy);
             $taxes->product_duplicate_store($source->taxes()->orderBy('id')->get(), $copy);

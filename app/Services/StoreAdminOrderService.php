@@ -173,7 +173,7 @@ class StoreAdminOrderService
         $sameProduct = $existing !== null && $existing->product_id == $product->id;
         $original = round((float) $product->getAttribute('unit_price') / ($data['unit'] === 'PerPiece' ? max(1, (float) $product->getAttribute('unit_equal')) : 1) * $quantity, 2);
         $line = $existing ?? new OrderDetail;
-        $taxPercent = $sameProduct ? (float) $existing->tax : (float) ($product->getAttribute('tax') ?? 0);
+        $taxPercent = $sameProduct ? (float) $existing->tax : product_vat_percent($product);
         // VAT is added on top of the line price. A line placed before VAT was recorded
         // (tax_amount 0) keeps its total when an administrator edits the order.
         $taxAmount = $existing === null || (float) $existing->getAttribute('tax_amount') > 0 ? round($price * $taxPercent / 100, 2) : 0;

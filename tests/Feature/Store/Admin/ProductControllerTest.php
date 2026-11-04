@@ -397,6 +397,7 @@ foreach (['published', 'featured', 'for_sale'] as $flag) {
 
 test('duplicating copies the product row with a new slug and its stock and tax rows, and nothing else', function () {
     actingAsStoreUser(createStoreStaff('product_duplicate'));
+    DB::table('products')->where('id', $this->product->id)->update(['serial' => 'MAT-100027']);
     DB::table('product_taxes')->insert(['product_id' => $this->product->id, 'tax_id' => 3, 'tax' => 9, 'tax_type' => 'percent']);
     ProductTranslation::create(['product_id' => $this->product->id, 'lang' => 'ar', 'name' => 'زيت']);
     DB::table('product_variations')->insert(['product_id' => $this->product->id, 'name' => '1L']);
@@ -406,11 +407,16 @@ test('duplicating copies the product row with a new slug and its stock and tax r
     $copy = Product::query()->where('id', '!=', $this->product->id)->where('name', 'Olive oil')->sole();
     $source = DB::table('products')->where('id', $this->product->id)->first();
     $copied = DB::table('products')->where('id', $copy->id)->first();
+    // The copy is its own article: no Otajer serial and no stock SKU of the source's (BR-20261104-A.4).
     expect($copied->slug)->toMatch('/^olive-oil-[A-Za-z0-9]{5}$/')
-        ->and(collect((array) $copied)->except(['id', 'slug', 'created_at', 'updated_at'])->all())
-        ->toEqual(collect((array) $source)->except(['id', 'slug', 'created_at', 'updated_at'])->all())
-        ->and(DB::table('product_stocks')->where('product_id', $copy->id)->get(['variant', 'sku', 'price', 'qty'])->toArray())
-        ->toEqual(DB::table('product_stocks')->where('product_id', $this->product->id)->get(['variant', 'sku', 'price', 'qty'])->toArray())
+        ->and($source->serial)->toBe('MAT-100027')
+        ->and($copied->serial)->toBeNull()
+        ->and(collect((array) $copied)->except(['id', 'slug', 'serial', 'created_at', 'updated_at'])->all())
+        ->toEqual(collect((array) $source)->except(['id', 'slug', 'serial', 'created_at', 'updated_at'])->all())
+        ->and(DB::table('product_stocks')->where('product_id', $copy->id)->get(['variant', 'price', 'qty'])->toArray())
+        ->toEqual(DB::table('product_stocks')->where('product_id', $this->product->id)->get(['variant', 'price', 'qty'])->toArray())
+        ->and(DB::table('product_stocks')->where('product_id', $copy->id)->pluck('sku')->all())->toBe([null])
+        ->and(DB::table('product_stocks')->where('product_id', $this->product->id)->pluck('sku')->all())->toBe(['SKU-'.$this->product->id])
         ->and(DB::table('product_taxes')->where('product_id', $copy->id)->get(['tax_id', 'tax', 'tax_type'])->map(fn ($row) => (array) $row)->all())
         ->toEqual([['tax_id' => 3, 'tax' => 9, 'tax_type' => 'percent']]);
     foreach (['product_translations', 'product_variations', 'product_barcodes', 'wms_product_settings'] as $table) {
