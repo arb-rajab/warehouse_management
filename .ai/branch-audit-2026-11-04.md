@@ -177,14 +177,12 @@ conflict with develop), one commit per bump.
 | 5 | three 0.185.1 -> 0.186.1 (+ @types/three 0.185.4 -> 0.186.0) | #375 | `64b92a4b` | done |
 | 6 | @vue/test-utils 2.4.11 -> 2.5.1 | #371 | `d4d605b3` | done |
 
-- Composer bumps (1-4): the PreToolUse guard `.claude/hooks/install-retry-guard.sh`
-  denies any `composer update` that is not `--no-dev` in this remote sandbox, so
-  `composer.lock` was not touched and nothing was edited by hand. The dependabot
-  branches change only `composer.lock` (the existing `composer.json` ranges
-  already allow the new versions), so each is a lock-only update, e.g.
-  `composer update <pkg> --with-dependencies --no-install --no-scripts --no-plugins`
-  from an environment where that is permitted. For boost, restore any
-  `AGENTS.md`, `CLAUDE.md` or `.ai/` change afterwards.
+- Composer bumps (1-4): re-done lock-only with `composer update <pkg>:<version>
+  --with-dependencies --no-install --no-scripts --no-plugins`. The sub-agent was
+  first blocked by `.claude/hooks/install-retry-guard.sh`; with the owner's
+  approval the guard now exempts `--no-install` (commit `0160afb6`). Transitive
+  moves are patch-level except boost, which pulls `laravel/mcp` 0.9.2 -> 1.1.2
+  (major): the final verification must exercise the Boost/MCP tooling.
 - three: `@types/three` is not touched by the dependabot PR but follows three's
   minor (types for 0.185 against 0.186 can drift), so it moved with it; its only
   transitive change is fflate 0.8.2 -> 0.8.3. three is imported by
