@@ -29,6 +29,8 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Password;
+use Intervention\Image\Drivers\Gd\Driver as GdDriver;
+use Intervention\Image\ImageManager;
 use Laravel\Sanctum\Sanctum;
 use RuntimeException;
 
@@ -47,6 +49,22 @@ class AppServiceProvider extends ServiceProvider
         'store.delivery' => 'Store · Delivery & Trips',
         'store.warehouse' => 'Store · Warehouse integration',
     ];
+
+    /**
+     * Register any application services.
+     */
+    public function register(): void
+    {
+        // One GD-backed Intervention Image manager for ImageOptimizer and
+        // ThumbnailService. Both options keep the v2 behaviour: ImageOptimizer
+        // applies the EXIF orientation itself (it reads the tag without
+        // ext-exif), and a GIF decodes to its first frame only.
+        $this->app->singleton(ImageManager::class, fn (): ImageManager => new ImageManager(
+            new GdDriver,
+            autoOrientation: false,
+            decodeAnimation: false,
+        ));
+    }
 
     /**
      * Bootstrap any application services.

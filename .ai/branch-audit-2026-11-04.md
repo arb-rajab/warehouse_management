@@ -204,6 +204,7 @@ Not verified here: vitest, vue-tsc, the build and e2e run once at the end.
 | 1 | vue-tsc 2.2.12 -> 3.3.13 | #524 | `0f4da2b9` | done |
 | 2 | typescript 5.9.3 -> 7.0.2 | #373 | none | SKIPPED: typescript-eslint and vue-tsc do not support TypeScript 7 |
 | 3 | @tiptap/* 3.31.3 -> 3.32.0 (all eight, not only extension-table) | #523 | `a9cb2047` | done |
+| 4 | intervention/image 2.7.2 -> 4.3.4 (+ intervention/gif 5.0.1) | #374 | `0e63ca81` (lock), port in the next commit | done, tests not run here |
 
 - vue-tsc: 3.3.13 peers on `typescript >=5.0.0` and `@vue/language-core`
   3.3.13 needs `@vue/compiler-dom ^3.5.0`, so typescript 5.9.3 and vue 3.5.x
@@ -246,3 +247,44 @@ Not verified here: vitest, vue-tsc, the build and e2e run once at the end.
   validates inline `style` values (`isValidCSSStyleValue`); the existing
   colour, alignment, indent and image-width assertions should still match,
   but only the final run confirms it. PR #523 can be closed once this lands.
+- intervention/image 4.3.4: `composer update intervention/image:4.3.4
+  --with-dependencies --no-install --no-scripts --no-plugins`; the lock delta
+  equals the dependabot branch (only `intervention/gif` 5.0.1 is new; v4 needs
+  PHP ^8.3 and ext-mbstring, GD stays the driver, ext-exif is optional). The
+  API was read from the 4.3.4 tag (`b70df03b`), not guessed. v4 has no
+  `read()` or `toJpeg()`; the mapping used:
+  - `ImageManagerStatic::make()` -> `ImageManager::decodeBinary()` (optimizer)
+    and `decodePath()` (thumbnails), from one `ImageManager` singleton bound in
+    `AppServiceProvider::register()` and constructor-injected into both
+    services. It uses the GD `Driver` with `autoOrientation: false` (the
+    optimizer keeps its own EXIF parser, which works without ext-exif; v4's
+    default would rotate twice) and `decodeAnimation: false` (a GIF decodes
+    to its first frame through `imagecreatefromstring`, as in v2).
+  - `resize($w, $h, aspectRatio + upsize)` -> `scaleDown($w, $h)`, and
+    `resize($w, null, ...)` -> `scaleDown(width: $w)`; both round the short
+    side with `round()`, as v2 did. The shrink loop's plain `resize()` is
+    unchanged.
+  - `rotate()`: v2 turned anticlockwise, v4 turns clockwise, so orientations
+    5-8 swap 90/270. `flip()` still mirrors left to right.
+  - `encode($format, $q)` -> `encodeUsingFileExtension($format, quality: $q)
+    ->toString()`; v4 drops `quality` for PNG/GIF, which v2 ignored too. JPEG
+    stays baseline (not progressive), PNG uses zlib level -1, WebP the same
+    quality. `destroy()` is gone (GD images are freed with the object;
+    `imagedestroy()` is deprecated on PHP 8.5).
+  - Removed: the `Image` facade alias in `config/app.php` (the class no longer
+    exists; nothing used it) and `config/image.php` (only v2's Laravel
+    provider read it), plus its `pint.json`/`phpstan.neon` exclusions.
+  Behaviour notes: sizes, formats, qualities, the input/pixel/output guards,
+  animation refusal and the `InvalidArgumentException`/`false` returns on
+  unreadable input are unchanged. One difference: v4's JPEG encoder blends
+  transparency onto white, where v2 wrote the hidden colour of transparent
+  pixels (usually black). It only shows when a transparent PNG/WebP/GIF is
+  stored as JPEG (warehouse reference images, thumbnails on a host without
+  WebP). New tests: requested-format conversion with aspect ratio and
+  rounding, all eight EXIF orientations, thumbnail height/mime, and a narrow
+  heavy upload that must not be enlarged. Residual risk: GD pixel output can
+  differ slightly, since v4 resamples with alpha blending on (v2 had it off)
+  and copies onto a new canvas before encoding, so semi-transparent edges may
+  move by a few levels; the existing test only covers full transparency.
+  `vendor/` in this container still holds 2.7.2, so the final run needs a
+  `composer install` first. PR #374 can be closed once this lands.

@@ -3,7 +3,7 @@
 namespace App\Services;
 
 use App\Models\Upload;
-use Intervention\Image\ImageManagerStatic as Image;
+use Intervention\Image\ImageManager;
 use Throwable;
 
 /**
@@ -24,6 +24,8 @@ class ThumbnailService
 
     /** Resizing a file this big could exhaust memory: it keeps its original. */
     private const MAX_SOURCE_PIXELS = 40_000_000;
+
+    public function __construct(private readonly ImageManager $images) {}
 
     /**
      * The public URL of the upload's thumbnail, or null when it has none.
@@ -71,27 +73,23 @@ class ThumbnailService
             return false;
         }
 
-        $image = null;
-
         try {
             if (! is_dir(dirname($target)) && ! @mkdir(dirname($target), 0755, true) && ! is_dir(dirname($target))) {
                 return false;
             }
 
-            $image = Image::make($source)->resize($width, null, function ($constraint): void {
-                $constraint->aspectRatio();
-                $constraint->upsize();
-            });
+            // Never wider than $width, never enlarged, height kept in proportion.
+            $encoded = $this->images->decodePath($source)
+                ->scaleDown(width: $width)
+                ->encodeUsingFileExtension($format, quality: 80);
 
             // Written to a temporary name first: a request reading it meanwhile never sees half a file.
             $temporary = $target.'.'.getmypid().'.tmp';
-            file_put_contents($temporary, (string) $image->encode($format, 80));
+            file_put_contents($temporary, $encoded->toString());
 
             return rename($temporary, $target);
         } catch (Throwable) {
             return false;
-        } finally {
-            $image?->destroy();
         }
     }
 }

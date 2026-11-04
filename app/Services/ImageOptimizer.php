@@ -2,7 +2,7 @@
 
 namespace App\Services;
 
-use Intervention\Image\ImageManagerStatic as Image;
+use Intervention\Image\ImageManager;
 use InvalidArgumentException;
 use Throwable;
 
@@ -15,6 +15,8 @@ class ImageOptimizer
     public const MAX_OUTPUT_BYTES = 1024 * 1024;
 
     public const MAX_SVG_BYTES = 512 * 1024;
+
+    public function __construct(private readonly ImageManager $images) {}
 
     /**
      * Always re-encode untrusted images to strip metadata and appended content.
@@ -45,26 +47,24 @@ class ImageOptimizer
         if ($format === 'webp' && ! function_exists('imagewebp')) {
             $format = $formats[$info['mime']];
         }
-        $image = null;
         try {
-            $image = Image::make($contents);
+            $image = $this->images->decodeBinary($contents);
+            // rotate() turns clockwise, flip() mirrors left to right.
             match ($this->orientation($metadata['APP1'] ?? '')) {
                 2 => $image->flip(),
                 3 => $image->rotate(180),
                 4 => $image->rotate(180)->flip(),
-                5 => $image->rotate(270)->flip(),
-                6 => $image->rotate(270),
-                7 => $image->rotate(90)->flip(),
-                8 => $image->rotate(90),
+                5 => $image->rotate(90)->flip(),
+                6 => $image->rotate(90),
+                7 => $image->rotate(270)->flip(),
+                8 => $image->rotate(270),
                 default => null,
             };
-            $image->resize($maxDimension, $maxDimension, function ($constraint): void {
-                $constraint->aspectRatio();
-                $constraint->upsize();
-            });
+            $image->scaleDown($maxDimension, $maxDimension);
 
             for ($attempt = 0; $attempt < 10; $attempt++) {
-                $encoded = (string) $image->encode($format, 82);
+                // Quality is ignored by the PNG and GIF encoders, as it was in v2.
+                $encoded = $image->encodeUsingFileExtension($format, quality: 82)->toString();
                 if ($encoded !== '' && strlen($encoded) <= self::MAX_OUTPUT_BYTES) {
                     return [$encoded, $format];
                 }
@@ -72,8 +72,6 @@ class ImageOptimizer
             }
         } catch (Throwable $exception) {
             throw new InvalidArgumentException('The image could not be compressed.', previous: $exception);
-        } finally {
-            $image?->destroy();
         }
 
         throw new InvalidArgumentException('The image could not be compressed.');

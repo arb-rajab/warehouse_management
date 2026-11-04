@@ -435,7 +435,6 @@ parameters:
         - config/broadcasting.php
         - config/excel.php
         - config/hashing.php
-        - config/image.php
         - config/nagad.php
         - config/nexmo.php
         - config/pdf.php
