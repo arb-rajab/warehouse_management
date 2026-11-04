@@ -115,7 +115,11 @@ The unique work of this branch and of `ccr-34c0aa9d-p4yimk` is now on this PR; n
     The commit's other change, dropping `RateLimitMiddleware.php` from `notPath`,
     is already done in develop.
   - Shop text: the default checkpoint note in `Concerns/WritesTripCheckpoints.php`
-    now uses `translate()` (test added to `Store/Admin/TripControllerTest.php`).
+    briefly used `translate()`; the final verification run failed
+    `LocalizationBoundaryTest` on it (static file text must never call
+    `translate()`, `.ai/localization-migration.md`), so it is back to develop's
+    `__()`, and the test in `Store/Admin/TripControllerTest.php` now asserts the
+    note and that no database translation row is registered.
     The `Barcodes` heading in `product_details.blade.php` uses the existing
     `storefront.product.barcodes` key instead of `translate()`: develop converted
     the rest of that file to `lang/*/storefront.php` keys, the key exists in `en`

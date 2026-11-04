@@ -74,7 +74,7 @@ test('a trip can be created with a departure checkpoint and driver using the act
         ->and($truck->fresh()->is_available)->toBeFalse();
 });
 
-test('the departure checkpoint note is the translate() text, registered for translation', function () {
+test('the departure checkpoint note is static file text and registers no database translation', function () {
     actingAsStoreUser(createStoreStaff('add_trip'));
     $truck = Truck::create(['name' => 'Available truck']);
 
@@ -82,8 +82,7 @@ test('the departure checkpoint note is the translate() text, registered for tran
 
     $notes = Trip::firstOrFail()->checkpoints()->pluck('notes')->sort()->values()->all();
     expect($notes)->toBe(['Checkpoint note', 'Default starting checkpoint'])
-        ->and(Translation::where('lang', 'en')->where('lang_key', 'default_starting_checkpoint')->value('lang_value'))
-        ->toBe('Default starting checkpoint');
+        ->and(Translation::where('lang_key', 'default_starting_checkpoint')->exists())->toBeFalse();
 });
 
 test('trip creation refuses callers and changes no rows', function (string $caller) {
