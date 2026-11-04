@@ -332,3 +332,50 @@ and `npm ci`; no lockfile drift afterwards.
   @types/three), @vue/test-utils, the Tiptap set, intervention/image 4.
   REVERTED: vue-tsc 3.3.13 (#524 stays open). Not applied: typescript 7 (#373
   stays open).
+
+## Archive branch and deletions
+
+Tag pushes are refused by the git proxy (HTTP 403), so the owner chose one
+archive branch instead. `archive/branch-tips-2026-11-04` (head `149bf1a964`, tree identical
+to `origin/develop`) merges every tip below with `-s ours`; each merge message names the branch
+and full sha. Every tip was verified as an ancestor of the pushed branch. Restore one with
+`git branch <name> <sha>`.
+
+Deleting the remote branches was then attempted with `git push origin --delete` and the proxy
+also answered HTTP 403 (RPC failed) for the first branch tried; all 22 delete pushes failed, so
+**no branch has been deleted yet**. The owner must delete them (or allow branch deletes).
+
+| Branch | Tip sha | Deleted |
+| --- | --- | --- |
+| `ccr-29ac9920-278u18` | `b36cf15561f54cec31d61e5acc64bee2ef00e72e` | no |
+| `ccr-463ef82d-ek2dhm` | `f96fcf8d87eee991101f1a6405be965911c061a1` | no |
+| `ccr-34c0aa9d-p4yimk` | `6b04fbd14cad5e4c8435199bdfb6ae1feb81c73a` | no |
+| `ccr-0a36e700-97061b` | `35db967581870c32a8fea6cedf8bcc8f76f8954d` | no |
+| `claude/legacy-albaraka-holland-setup-2q7c6h` | `7c445f331c991977961cb9ba3b22ca6bd43a64b4` | no |
+| `claude/min-pallet-threshold-u6gcmh` | `7757879d4efb1a890d4a7c2fbb875ba041709de3` | no |
+| `claude/qr-codes-pdf-export-ddwy10` | `7b04bb21c5c9f779d959fa801d8db15da91759df` | no |
+| `claude/sqlite-mysql-migration-dvupgn` | `1ec47c558b309b8a597ac08fe81bfb551fa56c90` | no |
+| `claude/store-backoffice-trip-checkpoints-2ga29g` | `0523efb154ea6167ce473f37276844d0bebbb726` | no |
+| `claude/warehouse-test-coverage-gaps-c7afr6` | `3ee5ad96da3ec16c4557fbfeea6306bfbba5e733` | no |
+| `codex/seller-admin-prerequisite-review-20261011` | `1c005f6efdddee958ba8d739afd35eb0935007bd` | no |
+| `codex/store-backoffice-customers-representatives` | `218f05f15693a06f748b9d20b799cad5f8a75e81` | no |
+| `codex/store-backoffice-foundation-verification-20261011` | `67b621635e0cd290ddfa7aa3f43889f4cf17cf6f` | no |
+| `codex/store-backoffice-language-settings` | `465578796ff01c47276c24d5d8e504ce04198d36` | no |
+| `codex/store-backoffice-reference-config-2026-10-11` | `35ae3133e0cf6f1d6f938eda5e01fdebe695d98e` | no |
+| `codex/store-backoffice-reports-notifications-20261011` | `7970a407ce4c96384c9d572bcf7e3065bd19234a` | no |
+| `codex/store-backoffice-shipping-tax-batch-1` | `e552333810f4405de4c9ed2fcbd3d91df9083eb3` | no |
+| `codex/store-catalogue-admin-migration` | `143c5693ab03a6d3debd101cbb29b426f9ae9c76` | no |
+| `codex/store-logistics-partial-migration-2026-10-11` | `468d235ca125f157a0d854ecc1b4dfcce279c7ed` | no |
+| `codex/store-marketing-blog-migration` | `cf5ef305e905097e6b0950c85ec69b0aa8d54e3b` | no |
+| `codex/store-orders-dashboard-2026-10-11` | `7ab019263fb96d41c497174d0e9d450ff8062dff` | no |
+| `codex/store-uploads-profile-migration` | `944e2e1ed50fd50a0d01ac48029405be43879c5d` | no |
+
+### Branches deliberately kept
+
+- `main`, `staging`, `develop`: never touched.
+- `codex/store-website-support-migration-20261011`: its website-scripts feature
+  waits for go-live item R8 and this branch holds the only copy.
+- Dependabot branches (their PRs are closed by the owner after this PR lands):
+  - #368, #369, #370, #371, #372, #374, #375 and #523 are applied in PR #539
+    and can be closed once it lands.
+  - #524 (vue-tsc 3) and #373 (typescript 7) are NOT viable and stay open.
