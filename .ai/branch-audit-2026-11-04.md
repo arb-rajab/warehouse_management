@@ -387,3 +387,11 @@ reachable from the archive branch.
 CI-Verified attestation" because the head commit was already pushed. This commit
 is the fresh head; the attested run (`python3 .claude/scripts/pre_push_check.py`)
 amends it with the `CI-Verified` trailer before it is pushed.
+
+## Promotion to staging
+
+`develop` (`d080e8f8`, which includes everything above) was promoted to `staging` on
+2026-11-04. `develop`'s head was a merge commit and cannot carry a `CI-Verified`
+trailer, so the promotion PR is opened from a branch that adds this note on top of
+`develop` and is attested; staging therefore gains this one docs commit that
+`develop` does not have until the next sync.
