@@ -341,34 +341,35 @@ to `origin/develop`) merges every tip below with `-s ours`; each merge message n
 and full sha. Every tip was verified as an ancestor of the pushed branch. Restore one with
 `git branch <name> <sha>`.
 
-Deleting the remote branches was then attempted with `git push origin --delete` and the proxy
-also answered HTTP 403 (RPC failed) for the first branch tried; all 22 delete pushes failed, so
-**no branch has been deleted yet**. The owner must delete them (or allow branch deletes).
+Deleting the remote branches with `git push origin --delete` was refused by the proxy
+(HTTP 403), so the owner deleted all 22 by hand on the GitHub branches page on
+2026-11-04; the remote was checked afterwards and none of them exists. The tips stay
+reachable from the archive branch.
 
 | Branch | Tip sha | Deleted |
 | --- | --- | --- |
-| `ccr-29ac9920-278u18` | `b36cf15561f54cec31d61e5acc64bee2ef00e72e` | no |
-| `ccr-463ef82d-ek2dhm` | `f96fcf8d87eee991101f1a6405be965911c061a1` | no |
-| `ccr-34c0aa9d-p4yimk` | `6b04fbd14cad5e4c8435199bdfb6ae1feb81c73a` | no |
-| `ccr-0a36e700-97061b` | `35db967581870c32a8fea6cedf8bcc8f76f8954d` | no |
-| `claude/legacy-albaraka-holland-setup-2q7c6h` | `7c445f331c991977961cb9ba3b22ca6bd43a64b4` | no |
-| `claude/min-pallet-threshold-u6gcmh` | `7757879d4efb1a890d4a7c2fbb875ba041709de3` | no |
-| `claude/qr-codes-pdf-export-ddwy10` | `7b04bb21c5c9f779d959fa801d8db15da91759df` | no |
-| `claude/sqlite-mysql-migration-dvupgn` | `1ec47c558b309b8a597ac08fe81bfb551fa56c90` | no |
-| `claude/store-backoffice-trip-checkpoints-2ga29g` | `0523efb154ea6167ce473f37276844d0bebbb726` | no |
-| `claude/warehouse-test-coverage-gaps-c7afr6` | `3ee5ad96da3ec16c4557fbfeea6306bfbba5e733` | no |
-| `codex/seller-admin-prerequisite-review-20261011` | `1c005f6efdddee958ba8d739afd35eb0935007bd` | no |
-| `codex/store-backoffice-customers-representatives` | `218f05f15693a06f748b9d20b799cad5f8a75e81` | no |
-| `codex/store-backoffice-foundation-verification-20261011` | `67b621635e0cd290ddfa7aa3f43889f4cf17cf6f` | no |
-| `codex/store-backoffice-language-settings` | `465578796ff01c47276c24d5d8e504ce04198d36` | no |
-| `codex/store-backoffice-reference-config-2026-10-11` | `35ae3133e0cf6f1d6f938eda5e01fdebe695d98e` | no |
-| `codex/store-backoffice-reports-notifications-20261011` | `7970a407ce4c96384c9d572bcf7e3065bd19234a` | no |
-| `codex/store-backoffice-shipping-tax-batch-1` | `e552333810f4405de4c9ed2fcbd3d91df9083eb3` | no |
-| `codex/store-catalogue-admin-migration` | `143c5693ab03a6d3debd101cbb29b426f9ae9c76` | no |
-| `codex/store-logistics-partial-migration-2026-10-11` | `468d235ca125f157a0d854ecc1b4dfcce279c7ed` | no |
-| `codex/store-marketing-blog-migration` | `cf5ef305e905097e6b0950c85ec69b0aa8d54e3b` | no |
-| `codex/store-orders-dashboard-2026-10-11` | `7ab019263fb96d41c497174d0e9d450ff8062dff` | no |
-| `codex/store-uploads-profile-migration` | `944e2e1ed50fd50a0d01ac48029405be43879c5d` | no |
+| `ccr-29ac9920-278u18` | `b36cf15561f54cec31d61e5acc64bee2ef00e72e` | yes |
+| `ccr-463ef82d-ek2dhm` | `f96fcf8d87eee991101f1a6405be965911c061a1` | yes |
+| `ccr-34c0aa9d-p4yimk` | `6b04fbd14cad5e4c8435199bdfb6ae1feb81c73a` | yes |
+| `ccr-0a36e700-97061b` | `35db967581870c32a8fea6cedf8bcc8f76f8954d` | yes |
+| `claude/legacy-albaraka-holland-setup-2q7c6h` | `7c445f331c991977961cb9ba3b22ca6bd43a64b4` | yes |
+| `claude/min-pallet-threshold-u6gcmh` | `7757879d4efb1a890d4a7c2fbb875ba041709de3` | yes |
+| `claude/qr-codes-pdf-export-ddwy10` | `7b04bb21c5c9f779d959fa801d8db15da91759df` | yes |
+| `claude/sqlite-mysql-migration-dvupgn` | `1ec47c558b309b8a597ac08fe81bfb551fa56c90` | yes |
+| `claude/store-backoffice-trip-checkpoints-2ga29g` | `0523efb154ea6167ce473f37276844d0bebbb726` | yes |
+| `claude/warehouse-test-coverage-gaps-c7afr6` | `3ee5ad96da3ec16c4557fbfeea6306bfbba5e733` | yes |
+| `codex/seller-admin-prerequisite-review-20261011` | `1c005f6efdddee958ba8d739afd35eb0935007bd` | yes |
+| `codex/store-backoffice-customers-representatives` | `218f05f15693a06f748b9d20b799cad5f8a75e81` | yes |
+| `codex/store-backoffice-foundation-verification-20261011` | `67b621635e0cd290ddfa7aa3f43889f4cf17cf6f` | yes |
+| `codex/store-backoffice-language-settings` | `465578796ff01c47276c24d5d8e504ce04198d36` | yes |
+| `codex/store-backoffice-reference-config-2026-10-11` | `35ae3133e0cf6f1d6f938eda5e01fdebe695d98e` | yes |
+| `codex/store-backoffice-reports-notifications-20261011` | `7970a407ce4c96384c9d572bcf7e3065bd19234a` | yes |
+| `codex/store-backoffice-shipping-tax-batch-1` | `e552333810f4405de4c9ed2fcbd3d91df9083eb3` | yes |
+| `codex/store-catalogue-admin-migration` | `143c5693ab03a6d3debd101cbb29b426f9ae9c76` | yes |
+| `codex/store-logistics-partial-migration-2026-10-11` | `468d235ca125f157a0d854ecc1b4dfcce279c7ed` | yes |
+| `codex/store-marketing-blog-migration` | `cf5ef305e905097e6b0950c85ec69b0aa8d54e3b` | yes |
+| `codex/store-orders-dashboard-2026-10-11` | `7ab019263fb96d41c497174d0e9d450ff8062dff` | yes |
+| `codex/store-uploads-profile-migration` | `944e2e1ed50fd50a0d01ac48029405be43879c5d` | yes |
 
 ### Branches deliberately kept
 
