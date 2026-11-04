@@ -205,11 +205,23 @@ Not verified here: vitest, vue-tsc, the build and e2e run once at the end.
 
 | # | Bump | Dependabot PR | Commit | Status |
 | --- | --- | --- | --- | --- |
-| 1 | vue-tsc 2.2.12 -> 3.3.13 | #524 | `0f4da2b9` | done |
+| 1 | vue-tsc 2.2.12 -> 3.3.13 | #524 | `0f4da2b9`, reverted | REVERTED: `npm run types:check` fails on valid templates (vue-tsc 3.3.13 bug, see below); PR #524 stays open |
 | 2 | typescript 5.9.3 -> 7.0.2 | #373 | none | SKIPPED: typescript-eslint and vue-tsc do not support TypeScript 7 |
 | 3 | @tiptap/* 3.31.3 -> 3.32.0 (all eight, not only extension-table) | #523 | `a9cb2047` | done |
 | 4 | intervention/image 2.7.2 -> 4.3.4 (+ intervention/gif 5.0.1) | #374 | `0e63ca81` (lock), port in the next commit | done, tests not run here |
 
+- vue-tsc, final verification: REVERTED. With 3.3.13, `npm run types:check`
+  reported 16 errors, all in `StoreWebsiteFooterFormFields.vue` (TS2304 "Cannot
+  find name 'key'" and TS7053), on the `FormField v-for="key in appLinks"` and
+  `socialLinks` lists; develop's 2.2.12 reports none on the same file. Minimal
+  probes isolated it to `@vue/language-core` 3.3.13: inside a `v-for` on a
+  component, any attribute value containing `//` (`placeholder="https://"`,
+  `title="https://"`, even `:placeholder="'https://'"`) makes the loop variable
+  unresolved; a plain `<input>` or a non-`v-for` component is fine, and moving
+  the literal into a script constant avoids it. The template is valid, so the
+  bump was reverted rather than bending the code around the tool. 3.3.14
+  (2026-10-29) was not tried: it is under two weeks old. Re-check on a later
+  release with `npm run types:check`.
 - vue-tsc: 3.3.13 peers on `typescript >=5.0.0` and `@vue/language-core`
   3.3.13 needs `@vue/compiler-dom ^3.5.0`, so typescript 5.9.3 and vue 3.5.x
   stay. The lock delta equals the dependabot branch (the vue-tsc tree only:
