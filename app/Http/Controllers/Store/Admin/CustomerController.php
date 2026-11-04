@@ -11,6 +11,7 @@ use App\Http\Requests\Store\Admin\UpdateCustomerActivityRequest;
 use App\Http\Requests\Store\Admin\UpdateCustomerNotesRequest;
 use App\Http\Requests\Store\Admin\UpdateCustomerPasswordRequest;
 use App\Http\Requests\Store\Admin\UpdateCustomerRequest;
+use App\Http\Resources\Store\CustomerListResource;
 use App\Http\Resources\Store\CustomerPageViewResource;
 use App\Http\Resources\Store\CustomerResource;
 use App\Models\Address;
@@ -21,6 +22,8 @@ use App\Models\RepresentativePackage;
 use App\Models\StoreUser;
 use App\Services\TradeLicenseStorage;
 use App\Services\UserService;
+use Carbon\Carbon;
+use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -38,7 +41,10 @@ class CustomerController extends Controller implements HasMiddleware
 {
     use ChecksCustomerAccount;
 
-    private const array LIST_COLUMNS = ['id', 'name', 'email', 'phone', 'company_name', 'is_rep', 'is_delete', 'banned', 'admin_verified', 'is_important', 'activity_status', 'rep_id', 'rep_serial', 'rep_package_id'];
+    private const array LIST_COLUMNS = ['id', 'name', 'email', 'phone', 'company_name', 'is_rep', 'is_delete', 'banned', 'admin_verified', 'is_important', 'activity_status', 'rep_id', 'rep_serial', 'rep_package_id', 'profits', 'registration_completed', 'from_api', 'email_verified_at', 'created_at', 'updated_at', ...CustomerListResource::PLAIN_ATTRIBUTES];
+
+    /** The format of a datetime-local value, as the Filters dialog sends it. */
+    private const string PROFIT_RANGE_FORMAT = 'Y-m-d\TH:i';
 
     /** @return array<int, Middleware> */
     public static function middleware(): array
@@ -78,11 +84,19 @@ class CustomerController extends Controller implements HasMiddleware
             $request->merge(['important' => ! $request->has('not_important')]);
         }
         $perPage = $this->resolvePerPage($request, 20);
-        $query = StoreUser::query()->select(self::LIST_COLUMNS)->where('user_type', 'customer')->where('is_rep', $representatives);
+        $profitFrom = $this->profitBound($request, 'profit_from');
+        $profitTo = $this->profitBound($request, 'profit_to', true);
+        $rangeActive = $profitFrom !== null || $profitTo !== null;
+        $columns = [...self::LIST_COLUMNS, ...($request->user('store')->can('edit_customer') ? CustomerListResource::RESTRICTED_ATTRIBUTES : [])];
+        $query = StoreUser::query()->select(array_map(fn (string $column) => 'users.'.$column, $rangeActive ? array_diff($columns, ['profits']) : $columns))->where('user_type', 'customer')->where('is_rep', $representatives);
+        if ($rangeActive) {
+            $query->leftJoinSub($this->profitsInRange($profitFrom, $profitTo), 'range_profits', 'range_profits.owner_id', '=', 'users.id')
+                ->selectRaw('COALESCE(range_profits.total, 0) as profits');
+        }
         $request->boolean('archived') ? $query->where('is_delete', 1) : $query->whereNull('is_delete');
         if ($request->filled('search')) {
             $search = '%'.$request->string('search').'%';
-            $query->where(fn ($q) => $q->where('name', 'like', $search)->orWhere('email', 'like', $search)->orWhere('phone', 'like', $search)->orWhere('rep_serial', 'like', $search)->orWhere('AccSysID', 'like', $search));
+            $query->where(fn ($q) => $q->where('name', 'like', $search)->orWhere('email', 'like', $search)->orWhere('phone', 'like', $search)->orWhere('rep_serial', 'like', $search)->orWhere('AccSysID', 'like', $search)->orWhere('tax_number', 'like', $search));
         }
         foreach (['important' => 'is_important', 'verified' => 'admin_verified', 'from_api' => 'from_api', 'registration_completed' => 'registration_completed'] as $filter => $column) {
             if ($request->filled($filter)) {
@@ -97,11 +111,43 @@ class CustomerController extends Controller implements HasMiddleware
         }
 
         return Inertia::render('Store/Admin/Customers/Customers/Index', [
-            'customers' => $this->paginated(CustomerResource::collection($query->orderBy('id')->paginate($perPage)->withQueryString())),
-            'filters' => [...$request->only(['search', 'activity_status']), ...collect(['archived', 'important', 'verified', 'from_api', 'registration_completed'])->filter(fn ($filter) => $request->filled($filter))->mapWithKeys(fn ($filter) => [$filter => $request->boolean($filter)])->all(), 'per_page' => $perPage],
+            'customers' => $this->paginated(CustomerListResource::collection($query->orderBy('users.id')->paginate($perPage)->withQueryString())),
+            'filters' => [...$request->only(['search', 'activity_status']), ...collect(['archived', 'important', 'verified', 'from_api', 'registration_completed'])->filter(fn ($filter) => $request->filled($filter))->mapWithKeys(fn ($filter) => [$filter => $request->boolean($filter)])->all(), ...collect(['profit_from', 'profit_to'])->filter(fn ($filter) => $request->filled($filter))->mapWithKeys(fn ($filter) => [$filter => $request->string($filter)->toString()])->all(), 'per_page' => $perPage],
             'representatives' => $representatives,
             'packages' => $representatives && $request->user('store')->can('assign_representative_package') ? RepresentativePackage::query()->select(['id', 'name', 'percentage'])->orderBy('id')->get()->map(fn ($package) => ['id' => $package->id, 'name' => $package->name, 'percentage' => (string) $package->percentage])->all() : [],
         ]);
+    }
+
+    /**
+     * The start (or, with `$endOfMinute`, the last second) of a datetime-local filter value in the
+     * app time zone, or null when the filter is not set.
+     */
+    private function profitBound(FilterCustomersRequest $request, string $key, bool $endOfMinute = false): ?Carbon
+    {
+        if (! $request->filled($key)) {
+            return null;
+        }
+        $moment = Carbon::createFromFormat(self::PROFIT_RANGE_FORMAT, $request->string($key)->toString());
+
+        return $endOfMinute ? $moment->endOfMinute() : $moment->startOfMinute();
+    }
+
+    /**
+     * Profit per account of the orders created in the range, as one grouped subquery (`owner_id`,
+     * `total`). An order counts toward its `user_id` and, when a representative placed it
+     * (`by_rep`), toward `for_customer` as well: the two accounts `users.profits` is credited and
+     * debited for. Orders are counted whatever their delivery status, as the running total keeps
+     * cancelled ones; a deleted order is gone from both.
+     */
+    private function profitsInRange(?Carbon $from, ?Carbon $to): QueryBuilder
+    {
+        $inRange = fn (QueryBuilder $orders): QueryBuilder => $orders
+            ->when($from !== null, fn (QueryBuilder $orders) => $orders->where('created_at', '>=', $from))
+            ->when($to !== null, fn (QueryBuilder $orders) => $orders->where('created_at', '<=', $to));
+        $own = $inRange(DB::table('orders')->select(['user_id as owner_id', 'profits'])->whereNotNull('user_id'));
+        $forCustomer = $inRange(DB::table('orders')->select(['for_customer as owner_id', 'profits'])->where('by_rep', 1)->whereNotNull('for_customer')->whereColumn('for_customer', '!=', 'user_id'));
+
+        return DB::query()->fromSub($own->unionAll($forCustomer), 'range_orders')->selectRaw('owner_id, SUM(profits) as total')->groupBy('owner_id');
     }
 
     public function create(): Response

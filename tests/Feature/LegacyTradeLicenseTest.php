@@ -25,9 +25,10 @@ function uploadLicenseAs(StoreUser $customer, UploadedFile $file): TestResponse
     actingAsStoreUser($customer);
 
     // The profile form posts every field, and the controller writes each one.
+    // Tax numbers are unique, so each customer posts their own.
     return test()->post(route('user.profile.update'), [
         'name' => $customer->name, 'company_name' => 'Acme BV', 'address' => 'Damrak 1', 'country' => 'Netherlands',
-        'city' => 'Amsterdam', 'postal_code' => '1012', 'phone' => $customer->phone, 'tax_number' => 'NL123',
+        'city' => 'Amsterdam', 'postal_code' => '1012', 'phone' => $customer->phone, 'tax_number' => 'NL'.$customer->id,
         'bank_account_number' => 'NL00BANK0123456789', 'company_address' => 'Damrak 1', 'shipping_address' => 'Damrak 1',
         'trade_license' => $file,
     ]);

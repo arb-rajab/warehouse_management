@@ -941,6 +941,8 @@ export interface StoreProductForm {
     cash_on_delivery: boolean;
     featured: boolean;
     todays_deal: boolean;
+    /** A perishable product that can expire soon. */
+    can_expire: boolean;
     /** The product's flash deal, while the form lists it. */
     flash_deal_id: number | null;
     product_types: string[];

@@ -125,6 +125,40 @@ describe('Store/Admin/Product/Products/Create', () => {
         expect(wrapper.text()).toContain('Product name is required');
     });
 
+    it('offers an optional Arabic name after the name and an unticked can-expire checkbox', () => {
+        const wrapper = createPage();
+
+        const ids = wrapper
+            .findAll('#name, #ar_name')
+            .map((input) => input.attributes('id'));
+        expect(ids).toEqual(['name', 'ar_name']);
+        const arName = wrapper.get('#ar_name');
+        expect(arName.attributes()).toMatchObject({
+            name: 'ar_name',
+            maxlength: '191',
+            dir: 'auto',
+        });
+        expect(arName.attributes('required')).toBeUndefined();
+        expect((arName.element as HTMLInputElement).value).toBe('');
+        expect(wrapper.get('label[for="ar_name"]').text()).toBe(
+            t('store.products.form.arName'),
+        );
+
+        const canExpire = wrapper.findAll('input[name="can_expire"]');
+        expect(canExpire.map((input) => input.attributes('type'))).toEqual([
+            'hidden',
+            'checkbox',
+        ]);
+        expect((canExpire[0].element as HTMLInputElement).value).toBe('0');
+        expect((canExpire[1].element as HTMLInputElement).value).toBe('1');
+        expect((canExpire[1].element as HTMLInputElement).checked).toBe(false);
+        expect(canExpire[1].attributes('required')).toBeUndefined();
+        expect(wrapper.text()).toContain(t('store.products.form.canExpire'));
+        expect(wrapper.text()).toContain(
+            t('store.products.form.canExpireHelp'),
+        );
+    });
+
     it('submits the unpublish choice with the legacy button value; publishing sends none', () => {
         const wrapper = createPage();
         const unpublish = wrapper.get('button[name="button"]');

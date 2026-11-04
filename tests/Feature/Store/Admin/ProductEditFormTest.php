@@ -191,7 +191,7 @@ test('the edit form renders Inertia with the full payload in the requested langu
             'current_stock' => '4', 'sku' => 'OIL-S', 'external_link' => null, 'external_link_btn' => null, 'meta_title' => 'Olive oil',
             'meta_description' => 'Olive', 'meta_img' => null, 'slug' => 'olive-oil', 'shipping_type' => 'flat_rate', 'flat_shipping_cost' => '4.95',
             'is_quantity_multiplied' => true, 'est_shipping_days' => '3', 'low_stock_quantity' => '5', 'stock_visibility_state' => 'text',
-            'cash_on_delivery' => false, 'featured' => true, 'todays_deal' => false, 'flash_deal_id' => $this->flashDeal,
+            'cash_on_delivery' => false, 'featured' => true, 'todays_deal' => false, 'can_expire' => false, 'flash_deal_id' => $this->flashDeal,
             'product_types' => ['Cold pressed'], 'product_barcodes' => ['8710000000001'],
         ])
         ->where('name', 'زيت زيتون')
@@ -544,6 +544,8 @@ test('the update validates every field and refuses rows that do not match the ch
     'flat discount not below the price' => [['discount' => '12.5'], 'discount'],
     'malformed date range' => [['date_range' => '2026-11-01 to 2026-11-30'], 'date_range'],
     'unknown stock visibility' => [['stock_visibility_state' => 'blink'], 'stock_visibility_state'],
+    'can expire not a boolean' => [['can_expire' => 'maybe'], 'can_expire'],
+    'Arabic name too long' => [['ar_name' => str_repeat('ز', 192)], 'ar_name'],
     'inactive tax' => [fn () => ['tax_id' => [test()->oldTax], 'tax' => ['1'], 'tax_type' => ['amount']], 'tax_id.0'],
     'rows missing' => [['variants' => null], 'variants'],
     'renamed row' => [fn () => ['variants' => [['variant' => 'S', 'price' => '1', 'qty' => '1'], ['variant' => 'L', 'price' => '1', 'qty' => '1']]], 'variants.1.variant'],
@@ -551,6 +553,25 @@ test('the update validates every field and refuses rows that do not match the ch
     'value of another attribute' => [fn () => ['choice_options' => [['attribute_id' => test()->size, 'values' => ['Glass']]], 'variants' => [['variant' => 'Glass', 'price' => '1', 'qty' => '1']]], 'choice_options.0.values.0'],
     'attribute without a value' => [fn () => ['choice_options' => [['attribute_id' => test()->size, 'values' => []]], 'variants' => null], 'choice_options.0.values'],
 ]);
+
+test('the can expire flag is saved when posted, kept when absent, and sent to the form', function () {
+    actingAsStoreUser(createStoreStaff('product_edit'));
+    Artisan::shouldReceive('call')->andReturn(0);
+    $noise = DB::table('products')->where('id', $this->other->id)->value('can_expire');
+
+    $this->post(route('products.update', $this->product), productEditForm(['can_expire' => '1']))->assertSessionHasNoErrors();
+    expect((bool) DB::table('products')->where('id', $this->product->id)->value('can_expire'))->toBeTrue()
+        ->and(DB::table('products')->where('id', $this->other->id)->value('can_expire'))->toBe($noise);
+    $this->get(route('products.admin.edit', $this->product))->assertInertia(fn (Assert $page) => $page->where('product.can_expire', true));
+
+    $form = productEditForm();
+    unset($form['can_expire']);
+    $this->post(route('products.update', $this->product), $form)->assertSessionHasNoErrors();
+    expect((bool) DB::table('products')->where('id', $this->product->id)->value('can_expire'))->toBeTrue();
+
+    $this->post(route('products.update', $this->product), productEditForm(['can_expire' => '0']))->assertSessionHasNoErrors();
+    expect((bool) DB::table('products')->where('id', $this->product->id)->value('can_expire'))->toBeFalse();
+});
 
 test('a failed update rolls every table back and clears no cache', function () {
     actingAsStoreUser(createStoreStaff('product_edit'));

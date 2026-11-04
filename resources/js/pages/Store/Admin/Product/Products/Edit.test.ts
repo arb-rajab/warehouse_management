@@ -259,6 +259,7 @@ describe('Store/Admin/Product/Products/Edit', () => {
         await flushPromises();
 
         expect(inputValue(wrapper, '#name')).toBe('زيت زيتون');
+        expect(inputValue(wrapper, '#ar_name')).toBe('زيت زيتون بكر');
         expect(inputValue(wrapper, '#unit')).toBe('زجاجة');
         expect(inputValue(wrapper, '#category_id')).toBe('12');
         expect(inputValue(wrapper, '#brand_id')).toBe('5');
@@ -459,6 +460,32 @@ describe('Store/Admin/Product/Products/Edit', () => {
                     .join(', '),
             }),
         );
+    });
+
+    it('shows the can-expire checkbox unticked, or ticked for a perishable product, with a hidden 0 fallback', () => {
+        const plain = editPage();
+        const plainBoxes = plain.findAll('input[name="can_expire"]');
+        expect(plainBoxes.map((input) => input.attributes('type'))).toEqual([
+            'hidden',
+            'checkbox',
+        ]);
+        expect((plainBoxes[0].element as HTMLInputElement).value).toBe('0');
+        expect((plainBoxes[1].element as HTMLInputElement).checked).toBe(false);
+
+        const perishable = editPage({
+            product: { ...product, can_expire: true },
+        });
+        const checkbox = perishable.get(
+            'input[type="checkbox"][name="can_expire"]',
+        );
+        expect((checkbox.element as HTMLInputElement).checked).toBe(true);
+        expect(checkbox.attributes('required')).toBeUndefined();
+        expect(perishable.text()).toContain(t('store.products.form.canExpire'));
+        expect(
+            perishable
+                .findAll('input[type="checkbox"][name][value="1"]:checked')
+                .map((input) => input.attributes('name')),
+        ).toContain('can_expire');
     });
 
     it('keeps every field editable when nothing is read-only', () => {

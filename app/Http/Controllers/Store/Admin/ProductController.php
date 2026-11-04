@@ -541,7 +541,7 @@ class ProductController extends Controller implements HasMiddleware
                 'thumbnail_img', 'video_provider', 'video_link', 'pdf', 'unit_price', 'discount', 'discount_type', 'discount_start_date',
                 'discount_end_date', 'external_link', 'external_link_btn', 'description', 'meta_title', 'meta_description', 'meta_img', 'slug',
                 'shipping_type', 'shipping_cost', 'is_quantity_multiplied', 'est_shipping_days', 'low_stock_quantity', 'stock_visibility_state',
-                'cash_on_delivery', 'featured', 'todays_deal', 'colors', 'choice_options',
+                'cash_on_delivery', 'featured', 'todays_deal', 'can_expire', 'colors', 'choice_options',
             ])
             ->with([
                 'product_translations:id,product_id,lang,name,unit,description',
@@ -570,7 +570,7 @@ class ProductController extends Controller implements HasMiddleware
             // A read-only name shows the synced column, which a stale
             // default-language translation could otherwise hide.
             'name' => in_array('name', $readOnlyFields, true) ? $product->name : (string) $product->getTranslation('name', $lang),
-            'arName' => $product->ar_name,
+            'arName' => $this->arabicName($product, in_array('ar_name', $readOnlyFields, true)),
             'readOnlyFields' => $readOnlyFields,
             // A read-only unit or description shows the synced column too.
             'unit' => in_array('unit', $readOnlyFields, true) ? (string) $product->unit : (string) $product->getTranslation('unit', $lang),
@@ -587,6 +587,29 @@ class ProductController extends Controller implements HasMiddleware
                 'meta_img' => $product->getAttribute('meta_img'),
             ]),
         ]);
+    }
+
+    /**
+     * The Arabic name the edit form prefills, always a string. The column
+     * `products.ar_name` is the Arabic name; a blank one (a product made on
+     * the create form, which has no such field, or by a legacy import that
+     * only wrote the Arabic translation) falls back to the name of the
+     * product's Arabic translation (`ar`, or `sa` as the imports store it), so
+     * a stored Arabic name is not shown as an empty field and is saved to the
+     * column with the form. While the field is read-only (Otajer-synced) the
+     * form shows the synced column alone, blank or not.
+     */
+    private function arabicName(Product $product, bool $readOnly): string
+    {
+        $stored = (string) $product->getAttribute('ar_name');
+        if ($readOnly || trim($stored) !== '') {
+            return $stored;
+        }
+
+        return (string) $product->product_translations
+            ->whereIn('lang', ['ar', 'sa'])
+            ->map(fn ($translation): string => (string) $translation->getAttribute('name'))
+            ->first(fn (string $name): bool => trim($name) !== '');
     }
 
     /**

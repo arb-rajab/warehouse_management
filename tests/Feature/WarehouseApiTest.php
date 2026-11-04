@@ -62,6 +62,31 @@ test('a customer update can clear a field by sending it empty', function () {
         ->and($customer->fresh()->name)->toBe($customer->name);
 });
 
+test('a customer update refuses a tax number another customer already has and changes nothing', function () {
+    $customer = createStoreUser('customer');
+    $customer->forceFill(['tax_number' => 'TAX-OWN'])->save();
+    $other = createStoreUser('customer');
+    $other->forceFill(['tax_number' => 'TAX-TAKEN'])->save();
+
+    warehouse()->postJson(WAREHOUSE_URL."/customer/update/{$customer->id}", ['name' => 'Renamed', 'tax_number' => 'TAX-TAKEN'])
+        ->assertOk()
+        ->assertJson(['result' => false, 'message' => ['This tax number is already registered to another customer.'], 'status' => 200]);
+
+    expect($customer->fresh())->tax_number->toBe('TAX-OWN')->name->toBe($customer->name)
+        ->and($other->fresh()->tax_number)->toBe('TAX-TAKEN');
+});
+
+test('a customer update accepts the customer\'s own tax number again', function () {
+    $customer = createStoreUser('customer');
+    $customer->forceFill(['tax_number' => 'TAX-OWN'])->save();
+
+    warehouse()->postJson(WAREHOUSE_URL."/customer/update/{$customer->id}", ['name' => 'Renamed', 'tax_number' => 'TAX-OWN'])
+        ->assertOk()
+        ->assertJsonPath('result', true);
+
+    expect($customer->fresh())->tax_number->toBe('TAX-OWN')->name->toBe('Renamed');
+});
+
 test('a customer update rejects over-long and non-string values and changes nothing', function (array $payload) {
     $customer = createStoreUser('customer');
 

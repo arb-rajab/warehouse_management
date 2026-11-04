@@ -434,6 +434,19 @@ phone-only. The representative's complete-customer workflow retains its required
 fields. Its separate shipping-address max255-versus-varchar191 mismatch remains
 unresolved; self-registration no longer asks for it.
 
+`users.tax_number` is the customer's unique business identifier (owner decision
+2026-11-03); `id` stays the primary key. A nullable unique index backs it, and
+every writer validates through `App\Support\CustomerTaxNumber::rules()` (the
+customer's own row ignored on update) with the generic
+`validation.custom.tax_number.unique` message; it never names the holder.
+`StoreUser`'s mutator stores it trimmed and blank as NULL. `import:members`
+imports a member whose number another customer has without it, and warns. The
+index migration released duplicates onto the account ranked first (not banned
+or archived, then `AccSysID`, then lowest id) and recorded the others in
+`customer_tax_number_releases`; `php artisan store:tax-number-duplicates`
+(read-only, `--json`, `--released`) reports both. Uniqueness follows the
+database collation: case-insensitive on MySQL, exact on sqlite.
+
 ## Storefront URLs and SEO
 
 `StorefrontUrl` preserves nonempty slugs verbatim, including `"0"`; null/empty

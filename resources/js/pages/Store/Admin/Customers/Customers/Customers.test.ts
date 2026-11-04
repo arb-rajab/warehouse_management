@@ -27,6 +27,7 @@ import {
     storeCustomer,
 } from '@/testing/factories';
 import { defaultAuthProps } from '@/testing/inertiaPageMocks';
+import type { StoreCustomer } from '@/types/storeCustomers';
 import Create from './Create.vue';
 import Edit from './Edit.vue';
 import Index from './Index.vue';
@@ -84,6 +85,7 @@ function indexPage(
 }
 beforeEach(() => {
     vi.clearAllMocks();
+    window.localStorage.clear();
     pagePermissions(['view_all_customers', 'edit_customer']);
 });
 it('customer and representative create pages pass complete form contracts and labels', () => {
@@ -209,7 +211,10 @@ it('representative index shows package dialog and its assignment contract', asyn
         .findAll('button')
         .find((item) => item.text() === t('store.customers.assignPackage'));
     await button?.trigger('click');
-    expect(wrapper.get('[role="dialog"]').text()).toContain('Gold (10%)');
+    const packageDialog = wrapper
+        .findAll('[role="dialog"]')
+        .find((dialog) => dialog.find('#package_id').exists());
+    expect(packageDialog?.text()).toContain('Gold (10%)');
     expect(
         wrapper
             .get('label[for="package_id"]')
@@ -231,7 +236,7 @@ it('representative index shows package dialog and its assignment contract', asyn
     ).toBeDefined();
     form?.vm.$emit('success');
     await wrapper.vm.$nextTick();
-    expect(wrapper.find('[role="dialog"]').exists()).toBe(false);
+    expect(wrapper.find('#package_id').exists()).toBe(false);
 });
 it('page size keeps every applied filter and omits the unset ones', () => {
     pagePermissions(['view_all_customers', 'delete_customer']);
@@ -327,16 +332,319 @@ it('counts only the applied dialog filters, and Important only when it is No', (
         }),
     ).toContain('5');
 });
-it('the representatives list has a plain search and archived form without a dialog', () => {
+it('the representatives list uses the same filter bar with only the profit range in its dialog', () => {
     const wrapper = indexPage(['view_all_customers', 'delete_customer'], true);
-    expect(wrapper.findComponent(StoreListFilters).exists()).toBe(false);
-    expect(wrapper.find('[role="dialog"]').exists()).toBe(false);
-    const form = wrapper.getComponent(Form);
-    expect(form.props('action')).toEqual(repIndex());
+    expect(wrapper.getComponent(StoreListFilters).props('action')).toEqual(
+        repIndex(),
+    );
+    const form = wrapper.get('form#store-list-filters');
     expect(form.find('input[name="search"]').exists()).toBe(true);
     expect(form.find('input[name="archived"]').exists()).toBe(true);
     expect(form.get('input[name="per_page"]').attributes('value')).toBe('20');
-    expect(form.find('select').exists()).toBe(false);
+    expect(wrapper.get('[role="dialog"]').find('select').exists()).toBe(false);
+    expect(
+        wrapper
+            .get('[role="dialog"]')
+            .findAll('input')
+            .map((input) => input.attributes('name')),
+    ).toEqual(['profit_from', 'profit_to']);
+});
+function listPage(
+    filters: Record<string, unknown> = {},
+    rows: Partial<StoreCustomer>[] = [{}],
+    permissions: string[] = ['view_all_customers', 'edit_customer'],
+    representatives = false,
+) {
+    pagePermissions(permissions);
+
+    return mount(Index, {
+        props: {
+            customers: paginated(rows.map((row) => ({ ...customer, ...row }))),
+            filters: { per_page: 20, ...filters },
+            representatives,
+            packages: [],
+        },
+    });
+}
+/** The column chooser is one of several dialogs kept in the page; pick it by its title. */
+const columnsDialog = (wrapper: ReturnType<typeof listPage>) =>
+    wrapper
+        .findAll('[role="dialog"]')
+        .find((item) =>
+            item.text().includes(t('store.customers.columnsTitle')),
+        )!;
+const headers = (wrapper: ReturnType<typeof listPage>) =>
+    wrapper.findAll('th').map((th) => th.text());
+const defaultHeaders = [
+    t('store.customers.select'),
+    t('store.customers.fields.id'),
+    t('store.customers.fields.name'),
+    t('store.customers.fields.company_name'),
+    t('store.customers.fields.email'),
+    t('store.customers.fields.phone'),
+    t('store.customers.profits'),
+    t('store.customers.status'),
+    t('store.customers.actions'),
+];
+it('shows the default columns and keeps every other property out of the table', () => {
+    const wrapper = listPage({}, [{ profits: 1234.5, country: 'Netherlands' }]);
+    expect(headers(wrapper)).toEqual(defaultHeaders);
+    expect(wrapper.text()).toContain(t('store.customers.columns'));
+    expect(wrapper.text()).toContain('1,234.50');
+    expect(wrapper.text()).not.toContain('Netherlands');
+    // The company moved out of the name cell into its own column.
+    const cells = wrapper.findAll('tbody tr:first-child td');
+    expect(cells[1].text()).toBe('17');
+    expect(cells[2].text()).toBe('Amy');
+    expect(cells[3].text()).toBe('Company');
+});
+it('the column chooser toggles, remembers, shows all and resets columns', async () => {
+    const wrapper = listPage({}, [
+        {
+            profits: 5,
+            country: 'Netherlands',
+            tax_number: 'VAT',
+            balance: '9.00',
+            registration_completed: true,
+            activity_status: 'has_been_contacted',
+            created_at: '2026-11-01T12:00:00+00:00',
+            last_order_at: '2026-10-30',
+            company_address: 'Long Road 1',
+        },
+    ]);
+    await wrapper
+        .findAll('button')
+        .find((button) => button.text() === t('store.customers.columns'))!
+        .trigger('click');
+    const dialog = columnsDialog(wrapper);
+    expect(dialog.exists()).toBe(true);
+    const box = (label: string) =>
+        dialog
+            .findAll('label')
+            .find((item) => item.text() === label)!
+            .get('input');
+    expect(
+        (box(t('store.customers.fields.name')).element as HTMLInputElement)
+            .checked,
+    ).toBe(true);
+    expect(
+        (box(t('store.customers.fields.country')).element as HTMLInputElement)
+            .checked,
+    ).toBe(false);
+    await box(t('store.customers.fields.country')).setValue(true);
+    expect(headers(wrapper)).toContain(t('store.customers.fields.country'));
+    expect(wrapper.get('tbody').text()).toContain('Netherlands');
+    expect(
+        JSON.parse(
+            window.localStorage.getItem('store.customers.columns.customers')!,
+        ),
+    ).toContain('country');
+    await box(t('store.customers.fields.email')).setValue(false);
+    expect(headers(wrapper)).not.toContain(t('store.customers.fields.email'));
+
+    await dialog
+        .findAll('button')
+        .find(
+            (button) => button.text() === t('store.customers.showAllColumns'),
+        )!
+        .trigger('click');
+    expect(headers(wrapper)).toEqual(
+        expect.arrayContaining([
+            t('store.customers.fields.tax_number'),
+            t('store.customers.fields.balance'),
+            t('store.customers.fields.registration_completed'),
+            t('store.customers.fields.created_at'),
+        ]),
+    );
+    const body = wrapper.get('tbody').text();
+    expect(body).toContain('VAT');
+    expect(body).toContain('9.00');
+    expect(body).toContain(t('store.customers.yes'));
+    expect(body).toContain(t('store.customers.contacted'));
+    expect(body).toContain('Long Road 1');
+    expect(body).toContain('Nov 1, 2026');
+    expect(body).toContain('Oct 30, 2026');
+
+    await dialog
+        .findAll('button')
+        .find((button) => button.text() === t('store.customers.resetColumns'))!
+        .trigger('click');
+    expect(headers(wrapper)).toEqual(defaultHeaders);
+    wrapper.unmount();
+});
+it('restores a remembered column choice and survives unreadable storage', () => {
+    window.localStorage.setItem(
+        'store.customers.columns.customers',
+        JSON.stringify(['name', 'city', 'unknown']),
+    );
+    const wrapper = listPage();
+    expect(headers(wrapper)).toEqual([
+        t('store.customers.select'),
+        t('store.customers.fields.name'),
+        t('store.customers.fields.city'),
+        t('store.customers.actions'),
+    ]);
+    wrapper.unmount();
+    window.localStorage.setItem('store.customers.columns.customers', '{oops');
+    expect(headers(listPage())).toEqual(defaultHeaders);
+    const spy = vi
+        .spyOn(Storage.prototype, 'getItem')
+        .mockImplementation((key: string) => {
+            if (key.startsWith('store.customers.columns')) {
+                throw new Error('blocked');
+            }
+
+            return null;
+        });
+    expect(headers(listPage())).toEqual(defaultHeaders);
+    spy.mockRestore();
+});
+it('restricted columns are offered only to staff who may edit customers', async () => {
+    const wrapper = listPage({}, [{}], ['view_all_customers']);
+    await wrapper
+        .findAll('button')
+        .find((button) => button.text() === t('store.customers.columns'))!
+        .trigger('click');
+    const labels = columnsDialog(wrapper)
+        .findAll('label')
+        .map((item) => item.text());
+
+    for (const key of ['tax_number', 'bank_account_number', 'balance']) {
+        expect(labels).not.toContain(t(`store.customers.fields.${key}`));
+    }
+
+    expect(labels).not.toContain(t('store.customers.tradeLicense'));
+    expect(labels).toContain(t('store.customers.fields.country'));
+    expect(labels).not.toContain(
+        t('store.customers.fields.rep_discount_percentage'),
+    );
+    wrapper.unmount();
+});
+it('the representatives list shows the package column with its assign button and its own extra column', async () => {
+    const wrapper = listPage(
+        {},
+        [{ package: { id: 2, name: 'Gold', percentage: '10' } }],
+        ['view_all_customers', 'assign_representative_package'],
+        true,
+    );
+    expect(headers(wrapper)).toContain(t('store.customers.package'));
+    expect(wrapper.get('tbody').text()).toContain('Gold');
+    expect(wrapper.get('tbody').text()).toContain(
+        t('store.customers.assignPackage'),
+    );
+    await wrapper
+        .findAll('button')
+        .find((button) => button.text() === t('store.customers.columns'))!
+        .trigger('click');
+    expect(columnsDialog(wrapper).text()).toContain(
+        t('store.customers.fields.rep_discount_percentage'),
+    );
+    wrapper.unmount();
+});
+it('puts the profit range in the filters dialog as two optional datetime fields', () => {
+    const wrapper = listPage({
+        profit_from: '2026-11-01T14:00',
+        profit_to: '2026-11-03T09:30',
+    });
+    const dialog = wrapper.get('[role="dialog"]');
+    const from = dialog.get('input[name="profit_from"]');
+    const to = dialog.get('input[name="profit_to"]');
+    expect(from.attributes('type')).toBe('datetime-local');
+    expect(to.attributes('type')).toBe('datetime-local');
+    expect(from.attributes('value')).toBe('2026-11-01T14:00');
+    expect(to.attributes('value')).toBe('2026-11-03T09:30');
+    expect(from.attributes('max')).toBe('2026-11-03T09:30');
+    expect(to.attributes('min')).toBe('2026-11-01T14:00');
+    expect(from.attributes('required')).toBeUndefined();
+    expect(to.attributes('required')).toBeUndefined();
+    expect(dialog.findComponent(RequiredMark).exists()).toBe(false);
+    expect(dialog.text()).toContain(t('store.customers.profitFrom'));
+    expect(dialog.text()).toContain(t('store.customers.profitTo'));
+    expect(dialog.text()).toContain(t('store.customers.profitRangeHint'));
+    expect(
+        wrapper
+            .find('form#store-list-filters input[name="profit_from"]')
+            .exists(),
+    ).toBe(true);
+});
+it('counts the profit range once and shows its indicator, header and reset link', () => {
+    const badge = (wrapper: ReturnType<typeof listPage>) =>
+        wrapper.get('form#store-list-filters > button[type="button"]').text();
+    expect(badge(listPage())).not.toMatch(/\d/);
+    expect(badge(listPage({ profit_from: '2026-11-01T14:00' }))).toContain('1');
+    expect(
+        badge(
+            listPage({
+                important: false,
+                profit_from: '2026-11-01T14:00',
+                profit_to: '2026-11-03T09:00',
+            }),
+        ),
+    ).toContain('2');
+    expect(listPage().find('[role="status"]').exists()).toBe(false);
+    expect(headers(listPage())).toContain(t('store.customers.profits'));
+
+    const wrapper = listPage({
+        search: 'Amy',
+        archived: true,
+        verified: true,
+        profit_from: '2026-11-01T14:00',
+        profit_to: '2026-11-03T09:00',
+    });
+    const status = wrapper.get('[role="status"]');
+    expect(status.text()).toContain(
+        t('store.customers.profitRangeActive', {
+            from: '2026-11-01 14:00',
+            to: '2026-11-03 09:00',
+        }),
+    );
+    expect(headers(wrapper)).toContain(t('store.customers.profitsRange'));
+    expect(headers(wrapper)).not.toContain(t('store.customers.profits'));
+    expect(status.getComponent(Link).props('href')).toEqual(
+        customersIndex({
+            query: { per_page: 20, search: 'Amy', archived: 1, verified: 1 },
+        }),
+    );
+    expect(status.text()).toContain(t('store.customers.profitRangeReset'));
+    expect(
+        listPage({ profit_to: '2026-11-03T09:00' })
+            .get('[role="status"]')
+            .text(),
+    ).toContain(
+        t('store.customers.profitRangeToOnly', { to: '2026-11-03 09:00' }),
+    );
+    expect(
+        listPage({ profit_from: '2026-11-01T14:00' })
+            .get('[role="status"]')
+            .text(),
+    ).toContain(
+        t('store.customers.profitRangeFromOnly', { from: '2026-11-01 14:00' }),
+    );
+    const reps = listPage(
+        { profit_from: '2026-11-01T14:00' },
+        [{}],
+        ['view_all_customers'],
+        true,
+    );
+    expect(
+        reps.get('[role="status"]').getComponent(Link).props('href'),
+    ).toEqual(repIndex({ query: { per_page: 20 } }));
+});
+it('page size keeps the profit range', () => {
+    const wrapper = listPage({
+        profit_from: '2026-11-01T14:00',
+        profit_to: '2026-11-03T09:00',
+    });
+    wrapper.getComponent(Pagination).vm.$emit('update:perPage', 50);
+    expect(routerGetMock).toHaveBeenCalledWith(
+        customersIndex().url,
+        {
+            per_page: 50,
+            profit_from: '2026-11-01T14:00',
+            profit_to: '2026-11-03T09:00',
+        },
+        { preserveState: true, replace: true },
+    );
 });
 it('views page renders count labels and paginator contract', () => {
     const wrapper = mount(Views, {

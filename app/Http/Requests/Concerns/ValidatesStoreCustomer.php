@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Concerns;
 
+use App\Support\CustomerTaxNumber;
 use Illuminate\Validation\Rule;
 
 trait ValidatesStoreCustomer
@@ -16,7 +17,7 @@ trait ValidatesStoreCustomer
             'password' => [$creating ? 'required' : 'nullable', 'string', 'min:8', 'max:255', 'confirmed'],
             'company_name' => ['nullable', 'string', 'max:255'],
             'country' => ['nullable', 'string', Rule::exists('countries', 'name')->where('status', 1)],
-            'tax_number' => ['nullable', 'string', 'max:100'],
+            'tax_number' => CustomerTaxNumber::rules(ignoreCustomerId: $customerId),
             'bank_account_number' => ['nullable', 'string', 'max:100'],
             'company_address' => ['nullable', 'string', 'max:255'],
             'shipping_address' => ['nullable', 'string', 'max:255'],

@@ -106,6 +106,25 @@ test('a store-origin product has no read-only field whatever the owners are', fu
         ->where('arName', 'زيت المتجر'));
 });
 
+test('a blank Arabic name column prefills from the Arabic translation, except while it is read-only', function () {
+    DB::table('products')->whereIn('id', [$this->feed->id, $this->store->id])->update(['ar_name' => '']);
+    DB::table('product_translations')->insert([
+        ['product_id' => $this->store->id, 'lang' => 'sa', 'name' => 'زيت مترجم', 'unit' => null, 'description' => null],
+        // A non-Arabic translation of the same product is noise.
+        ['product_id' => $this->store->id, 'lang' => 'en', 'name' => 'English noise', 'unit' => null, 'description' => null],
+    ]);
+
+    $this->get(route('products.admin.edit', $this->store))->assertOk()->assertInertia(fn (Assert $page) => $page->where('arName', 'زيت مترجم'));
+    // Otajer-owned on a feed-origin product: the synced column alone, even if blank.
+    $this->get(route('products.admin.edit', $this->feed))->assertOk()->assertInertia(fn (Assert $page) => $page->where('arName', ''));
+
+    $this->post(route('products.update', $this->store), fieldSourceEditForm(['ar_name' => 'زيت مترجم']))->assertSessionHasNoErrors();
+    expect($this->store->fresh()->ar_name)->toBe('زيت مترجم');
+
+    DB::table('products')->where('id', $this->store->id)->update(['ar_name' => 'العمود']);
+    $this->get(route('products.admin.edit', $this->store))->assertInertia(fn (Assert $page) => $page->where('arName', 'العمود'));
+});
+
 test('saving a feed-origin product ignores posted Otajer-owned names but saves the other fields', function () {
     $this->post(route('products.update', $this->feed), fieldSourceEditForm())
         ->assertRedirect(route('products.admin.edit', ['product' => $this->feed->id, 'lang' => 'en']))

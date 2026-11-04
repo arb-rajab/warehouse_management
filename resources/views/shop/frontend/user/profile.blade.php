@@ -40,9 +40,14 @@
                 </div>
                 <!-- tax number -->
                 <div class="form-group row">
-                    <label class="col-md-2 col-form-label fs-14 fs-14">{{ __('storefront.common.tax_number') }}</label>
+                    <label for="profile_tax_number" class="col-md-2 col-form-label fs-14 fs-14">{{ __('storefront.common.tax_number') }}</label>
                     <div class="col-md-10">
-                        <input type="text" class="form-control rounded-0" placeholder="{{ __('storefront.common.tax_number') }}" name="tax_number" value="{{ Auth::user()->tax_number }}">
+                        <input type="text" id="profile_tax_number" class="form-control rounded-0{{ $errors->has('tax_number') ? ' is-invalid' : '' }}" placeholder="{{ __('storefront.common.tax_number') }}" name="tax_number" maxlength="100" value="{{ $errors->has('tax_number') ? old('tax_number') : Auth::user()->tax_number }}">
+                        @if ($errors->has('tax_number'))
+                            <span class="invalid-feedback" role="alert">
+                                <strong>{{ $errors->first('tax_number') }}</strong>
+                            </span>
+                        @endif
                     </div>
                 </div>
 

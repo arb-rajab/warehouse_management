@@ -13,6 +13,7 @@ use App\Notifications\EmailVerificationNotification;
 use App\Rules\Recaptcha;
 use App\Services\TradeLicenseStorage;
 use App\Services\UserService;
+use App\Support\CustomerTaxNumber;
 use Carbon\Carbon;
 use Cookie;
 use GuzzleHttp\Client as GuzzleClient;
@@ -107,7 +108,7 @@ class RegisterController extends Controller implements HasMiddleware
             'email' => ['required', 'string', 'email', 'max:191', Rule::unique(StoreUser::class, 'email')],
             'country' => 'required|string|max:30',
             'phone' => 'required|string|max:20',
-            'tax_number' => 'nullable|string|max:100',
+            'tax_number' => CustomerTaxNumber::rules(),
             'company_address' => 'nullable|string|max:191',
             'trade_license' => 'nullable|file|mimes:doc,docx,pdf,png,jpg,jpeg|max:20000',
             'g-recaptcha-response' => Recaptcha::rules(),

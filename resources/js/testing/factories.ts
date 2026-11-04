@@ -1412,6 +1412,7 @@ export function storeProductForm(
         cash_on_delivery: false,
         featured: true,
         todays_deal: false,
+        can_expire: false,
         flash_deal_id: 9,
         product_types: ['Cold pressed', 'Organic'],
         product_barcodes: ['8712345678906'],

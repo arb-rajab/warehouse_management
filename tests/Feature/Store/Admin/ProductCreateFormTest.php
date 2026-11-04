@@ -241,6 +241,37 @@ test('creating a product writes every table together, clears the caches after co
         ->and(DB::table('flash_deal_products')->count())->toBe(0);
 });
 
+test('a new product cannot expire soon unless the flag is posted', function () {
+    actingAsStoreUser(createStoreStaff('add_new_product'));
+    Artisan::shouldReceive('call')->andReturn(0);
+    $this->post(route('products.store'), productCreateForm(['name' => 'Plain oil', 'product_barcodes' => []]))->assertSessionHasNoErrors();
+    $this->post(route('products.store'), productCreateForm(['name' => 'Fresh labneh', 'product_barcodes' => [], 'can_expire' => '1']))->assertSessionHasNoErrors();
+    $this->post(route('products.store'), productCreateForm(['name' => 'Bad labneh', 'product_barcodes' => [], 'can_expire' => 'maybe']))->assertSessionHasErrors('can_expire');
+
+    expect(Product::query()->whereIn('name', ['Plain oil', 'Fresh labneh', 'Bad labneh'])->orderBy('name')->get()->map(fn ($row) => [$row->name, $row->can_expire])->all())
+        ->toBe([['Fresh labneh', true], ['Plain oil', false]]);
+});
+
+test('a new admin-created product saves the Arabic name, blank when absent, and refuses an over-long one', function () {
+    actingAsStoreUser(createStoreStaff('add_new_product'));
+    Artisan::shouldReceive('call')->andReturn(0);
+    $this->post(route('products.store'), productCreateForm(['name' => 'Arabic oil', 'ar_name' => 'زيت زيتون', 'product_barcodes' => []]))->assertSessionHasNoErrors();
+    $this->post(route('products.store'), productCreateForm(['name' => 'Plain oil', 'product_barcodes' => []]))->assertSessionHasNoErrors();
+    $this->post(route('products.store'), productCreateForm(['name' => 'Blank oil', 'ar_name' => null, 'product_barcodes' => []]))->assertSessionHasNoErrors();
+    $this->post(route('products.store'), productCreateForm(['name' => 'Long oil', 'ar_name' => str_repeat('ز', 192), 'product_barcodes' => []]))->assertSessionHasErrors('ar_name');
+
+    expect(Product::query()->whereIn('name', ['Arabic oil', 'Plain oil', 'Blank oil', 'Long oil'])->orderBy('name')->get()->map(fn ($row) => [$row->name, $row->ar_name, $row->synced_at])->all())
+        ->toBe([['Arabic oil', 'زيت زيتون', null], ['Blank oil', '', null], ['Plain oil', '', null]]);
+});
+
+test('the unticked can expire box posts 0 and saves the flag off on create', function () {
+    actingAsStoreUser(createStoreStaff('add_new_product'));
+    Artisan::shouldReceive('call')->andReturn(0);
+    $this->post(route('products.store'), productCreateForm(['name' => 'Off labneh', 'can_expire' => '0', 'product_barcodes' => []]))->assertSessionHasNoErrors();
+
+    expect(Product::query()->where('name', 'Off labneh')->value('can_expire'))->toBeFalse();
+});
+
 test('a second product with the same name gets a numbered slug, and save and unpublish leaves it unpublished', function () {
     actingAsStoreUser(createStoreStaff('add_new_product'));
     Artisan::shouldReceive('call')->andReturn(0);
