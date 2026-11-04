@@ -379,3 +379,10 @@ also answered HTTP 403 (RPC failed) for the first branch tried; all 22 delete pu
   - #368, #369, #370, #371, #372, #374, #375 and #523 are applied in PR #539
     and can be closed once it lands.
   - #524 (vue-tsc 3) and #373 (typescript 7) are NOT viable and stay open.
+
+## CI attestation
+
+`Plan CI jobs` failed on the first push of this PR with "Missing or stale
+CI-Verified attestation" because the head commit was already pushed. This commit
+is the fresh head; the attested run (`python3 .claude/scripts/pre_push_check.py`)
+amends it with the `CI-Verified` trailer before it is pushed.
