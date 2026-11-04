@@ -170,10 +170,10 @@ conflict with develop), one commit per bump.
 
 | # | Bump | Dependabot PR | Commit | Status |
 | --- | --- | --- | --- | --- |
-| 1 | dedoc/scramble 0.13.39 -> 0.13.47 | #372 | not done | blocked, see below |
-| 2 | laravel/telescope 5.22.1 -> 5.25.0 | #370 | not done | blocked, see below |
-| 3 | spatie/laravel-backup 10.3.1 -> 10.3.3 | #369 | not done | blocked, see below |
-| 4 | laravel/boost 2.5.3 -> 2.10.3 | #368 | not done | blocked, see below |
+| 1 | dedoc/scramble 0.13.39 -> 0.13.47 | #372 | `87fd47e2` | done |
+| 2 | laravel/telescope 5.22.1 -> 5.25.0 | #370 | `f62fa652` | done |
+| 3 | spatie/laravel-backup 10.3.1 -> 10.3.3 | #369 | `6f858cdb` | done |
+| 4 | laravel/boost 2.5.3 -> 2.10.3 | #368 | `ce566f9a` | done |
 | 5 | three 0.185.1 -> 0.186.1 (+ @types/three 0.185.4 -> 0.186.0) | #375 | `64b92a4b` | done |
 | 6 | @vue/test-utils 2.4.11 -> 2.5.1 | #371 | `d4d605b3` | done |
 
@@ -193,3 +193,56 @@ conflict with develop), one commit per bump.
   tree (glob 13, nopt 10, editorconfig 3, ...). Some of those require Node
   `^22.22.2 || ^24.15.0 || >=26`; CI uses Node 22 (resolves to the latest 22.x),
   and the sandbox runs 22.23.4. Affects tests only (283 files use test-utils).
+
+## Dependabot major/tooling bumps
+
+Re-done on this branch, one commit per bump, so each can be reverted alone.
+Not verified here: vitest, vue-tsc, the build and e2e run once at the end.
+
+| # | Bump | Dependabot PR | Commit | Status |
+| --- | --- | --- | --- | --- |
+| 1 | vue-tsc 2.2.12 -> 3.3.13 | #524 | `0f4da2b9` | done |
+| 2 | typescript 5.9.3 -> 7.0.2 | #373 | none | SKIPPED: typescript-eslint and vue-tsc do not support TypeScript 7 |
+| 3 | @tiptap/* 3.31.3 -> 3.32.0 (all eight, not only extension-table) | #523 | `a9cb2047` | done |
+
+- vue-tsc: 3.3.13 peers on `typescript >=5.0.0` and `@vue/language-core`
+  3.3.13 needs `@vue/compiler-dom ^3.5.0`, so typescript 5.9.3 and vue 3.5.x
+  stay. The lock delta equals the dependabot branch (the vue-tsc tree only:
+  `@volar/*` 2.4.28, `@vue/language-core` 3.3.13, `alien-signals` 3.2.1,
+  `vscode-uri` 3.2.0; the Vue 2 compiler is dropped). 3.3.14 (2026-10-29) is
+  under two weeks old. `tsconfig.json` has no `vueCompilerOptions`, so nothing
+  needed adapting; vue-tsc 3 checks templates more strictly, so the final
+  `npm run types:check` may report new errors.
+- typescript 7.0.2: not applied, PR #373 stays open. TypeScript 7 ships the Go
+  compiler behind a launcher: `require('typescript')` exports only `version`
+  and `versionMajorMinor`, and `lib/tsc.js` starts the native binary.
+  Blockers:
+  - `typescript-eslint` (and every `@typescript-eslint/*` package) 8.66.0, and
+    the latest 8.72.1, peer on `typescript >=4.8.4 <6.1.0`;
+    `npm install typescript@7.0.2 --dry-run` reports the ERESOLVE conflict.
+    The current canary (8.72.2-alpha.11) has the same range.
+  - vue-tsc 3.3.13 patches the JavaScript source of `typescript/lib/tsc`, which
+    TypeScript 7 no longer ships; its only escape hatch is aliasing
+    `typescript` to `@typescript/typescript6`. `@volar/typescript` 2.4.30 (the
+    newest) declares `typescript <7`.
+  - `@vue/eslint-config-typescript` (`>=4.8.4`) and `ts-api-utils`
+    (`>=4.8.4`) accept 7 on paper but use the JavaScript API. Nothing else in
+    `package.json` peers on typescript.
+  The newest version every consumer accepts is TypeScript 6.0.x (6.0.3,
+  2026-04-16); that is a separate decision, not done here.
+- Tiptap: develop pins the whole set to exactly 3.31.3 (`6d67230a`, owner
+  approved, kept in lockstep because each package peers on the exact same
+  `@tiptap/core`/`@tiptap/pm`). `@tiptap/extension-table` 3.32.0 peers on core
+  and pm exactly 3.32.0, so the dependabot PR's table-only bump breaks the
+  peers. All eight direct packages exist at 3.32.0 (2026-10-13, over two
+  weeks old), so they moved together, still exact (`--save-exact
+  --before=2026-10-21`). npm's in-place upgrade hit ERESOLVE on the exact
+  peer set, so the set was uninstalled and reinstalled; no `--force` or
+  `--legacy-peer-deps`. All 32 `@tiptap` lock entries are 3.32.0; the only
+  other move is `prosemirror-history` 1.5.0 -> 1.5.1, required by
+  `@tiptap/pm` 3.32.0. Since 3.31.4 table cells no longer render the default
+  `colspan="1"`/`rowspan="1"`, so `StoreRichTextField.test.ts` and
+  `store-blog-editor.spec.ts` now expect plain `<td>`/`<th>`. 3.31.4 also
+  validates inline `style` values (`isValidCSSStyleValue`); the existing
+  colour, alignment, indent and image-width assertions should still match,
+  but only the final run confirms it. PR #523 can be closed once this lands.
