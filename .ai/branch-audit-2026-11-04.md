@@ -162,3 +162,36 @@ The reconciliation ledger's source table cites the codex branch tips by full
 SHA and says the deferred changes "remain available in Git". Once a branch is
 deleted those commits are no longer reachable from any ref. If those citations
 must stay resolvable, push archive tags for the codex tips before deleting.
+
+## Dependabot minor bumps
+
+Re-done on this branch (not cherry-picked: the dependabot lockfile hunks
+conflict with develop), one commit per bump.
+
+| # | Bump | Dependabot PR | Commit | Status |
+| --- | --- | --- | --- | --- |
+| 1 | dedoc/scramble 0.13.39 -> 0.13.47 | #372 | not done | blocked, see below |
+| 2 | laravel/telescope 5.22.1 -> 5.25.0 | #370 | not done | blocked, see below |
+| 3 | spatie/laravel-backup 10.3.1 -> 10.3.3 | #369 | not done | blocked, see below |
+| 4 | laravel/boost 2.5.3 -> 2.10.3 | #368 | not done | blocked, see below |
+| 5 | three 0.185.1 -> 0.186.1 (+ @types/three 0.185.4 -> 0.186.0) | #375 | `64b92a4b` | done |
+| 6 | @vue/test-utils 2.4.11 -> 2.5.1 | #371 | `d4d605b3` | done |
+
+- Composer bumps (1-4): the PreToolUse guard `.claude/hooks/install-retry-guard.sh`
+  denies any `composer update` that is not `--no-dev` in this remote sandbox, so
+  `composer.lock` was not touched and nothing was edited by hand. The dependabot
+  branches change only `composer.lock` (the existing `composer.json` ranges
+  already allow the new versions), so each is a lock-only update, e.g.
+  `composer update <pkg> --with-dependencies --no-install --no-scripts --no-plugins`
+  from an environment where that is permitted. For boost, restore any
+  `AGENTS.md`, `CLAUDE.md` or `.ai/` change afterwards.
+- three: `@types/three` is not touched by the dependabot PR but follows three's
+  minor (types for 0.185 against 0.186 can drift), so it moved with it; its only
+  transitive change is fflate 0.8.2 -> 0.8.3. three is imported by
+  `resources/js/warehouse-map/scene3d/**`; three releases routinely deprecate or
+  remove APIs between minors, so rely on the vitest/types/build run (not run
+  here) to confirm.
+- @vue/test-utils: 2.5.1 depends on js-beautify ^2, which moves its transitive
+  tree (glob 13, nopt 10, editorconfig 3, ...). Some of those require Node
+  `^22.22.2 || ^24.15.0 || >=26`; CI uses Node 22 (resolves to the latest 22.x),
+  and the sandbox runs 22.23.4. Affects tests only (283 files use test-utils).
