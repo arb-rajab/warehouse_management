@@ -174,12 +174,12 @@ conflict with develop), one commit per bump.
 
 | # | Bump | Dependabot PR | Commit | Status |
 | --- | --- | --- | --- | --- |
-| 1 | dedoc/scramble 0.13.39 -> 0.13.47 | #372 | `87fd47e2` | done |
-| 2 | laravel/telescope 5.22.1 -> 5.25.0 | #370 | `f62fa652` | done |
-| 3 | spatie/laravel-backup 10.3.1 -> 10.3.3 | #369 | `6f858cdb` | done |
-| 4 | laravel/boost 2.5.3 -> 2.10.3 | #368 | `ce566f9a` | done |
-| 5 | three 0.185.1 -> 0.186.1 (+ @types/three 0.185.4 -> 0.186.0) | #375 | `64b92a4b` | done |
-| 6 | @vue/test-utils 2.4.11 -> 2.5.1 | #371 | `d4d605b3` | done |
+| 1 | dedoc/scramble 0.13.39 -> 0.13.47 | #372 | `87fd47e2` | KEPT: verified (see Final verification) |
+| 2 | laravel/telescope 5.22.1 -> 5.25.0 | #370 | `f62fa652` | KEPT: verified |
+| 3 | spatie/laravel-backup 10.3.1 -> 10.3.3 | #369 | `6f858cdb` | KEPT: verified |
+| 4 | laravel/boost 2.5.3 -> 2.10.3 (+ laravel/mcp 0.9.2 -> 1.1.2) | #368 | `ce566f9a` | KEPT: verified, `boost:mcp` answers over stdio |
+| 5 | three 0.185.1 -> 0.186.1 (+ @types/three 0.185.4 -> 0.186.0) | #375 | `64b92a4b` | KEPT: verified, incl. `warehouse-map.spec.ts` (3D) |
+| 6 | @vue/test-utils 2.4.11 -> 2.5.1 | #371 | `d4d605b3` | KEPT: verified (Vitest 2851/2851) |
 
 - Composer bumps (1-4): re-done lock-only with `composer update <pkg>:<version>
   --with-dependencies --no-install --no-scripts --no-plugins`. The sub-agent was
@@ -201,14 +201,14 @@ conflict with develop), one commit per bump.
 ## Dependabot major/tooling bumps
 
 Re-done on this branch, one commit per bump, so each can be reverted alone.
-Not verified here: vitest, vue-tsc, the build and e2e run once at the end.
+Verified once at the end; results under "Final verification" below.
 
 | # | Bump | Dependabot PR | Commit | Status |
 | --- | --- | --- | --- | --- |
 | 1 | vue-tsc 2.2.12 -> 3.3.13 | #524 | `0f4da2b9`, reverted | REVERTED: `npm run types:check` fails on valid templates (vue-tsc 3.3.13 bug, see below); PR #524 stays open |
 | 2 | typescript 5.9.3 -> 7.0.2 | #373 | none | SKIPPED: typescript-eslint and vue-tsc do not support TypeScript 7 |
-| 3 | @tiptap/* 3.31.3 -> 3.32.0 (all eight, not only extension-table) | #523 | `a9cb2047` | done |
-| 4 | intervention/image 2.7.2 -> 4.3.4 (+ intervention/gif 5.0.1) | #374 | `0e63ca81` (lock), port in the next commit | done, tests not run here |
+| 3 | @tiptap/* 3.31.3 -> 3.32.0 (all eight, not only extension-table) | #523 | `a9cb2047` | KEPT: verified, incl. `store-blog-editor.spec.ts` |
+| 4 | intervention/image 2.7.2 -> 4.3.4 (+ intervention/gif 5.0.1) | #374 | `0e63ca81` (lock), `3b182e4b` (port) | KEPT: verified, incl. `image-upload-compression.spec.ts` |
 
 - vue-tsc, final verification: REVERTED. With 3.3.13, `npm run types:check`
   reported 16 errors, all in `StoreWebsiteFooterFormFields.vue` (TS2304 "Cannot
@@ -302,5 +302,33 @@ Not verified here: vitest, vue-tsc, the build and e2e run once at the end.
   differ slightly, since v4 resamples with alpha blending on (v2 had it off)
   and copies onto a new canvas before encoding, so semi-transparent edges may
   move by a few levels; the existing test only covers full transparency.
-  `vendor/` in this container still holds 2.7.2, so the final run needs a
-  `composer install` first. PR #374 can be closed once this lands.
+  PR #374 can be closed once this lands.
+
+## Final verification
+
+One run for the whole branch, after `install_dev_tools.py` brought `vendor/` to
+the lock (intervention/image 4.3.4, laravel/mcp 1.1.2), `php artisan
+package:discover` (no intervention provider left in `bootstrap/cache/packages.php`)
+and `npm ci`; no lockfile drift afterwards.
+
+- Two failures, both fixed or reverted in their own commit: Pest failed
+  `LocalizationBoundaryTest` on the `translate()` checkpoint note (fixed, see the
+  `ccr-0a36e700-97061b` outcome above), and `npm run types:check` failed under
+  vue-tsc 3.3.13 (reverted, see above).
+- Passed: Pint (whole repo), PHPStan, Pest (8752 tests, 1 failure before the fix;
+  that file and `TripControllerTest` pass after it), Vitest (348 files, 2851
+  tests), vue-tsc 2.2.12, ESLint and Prettier on the changed frontend files, the
+  Vite build, Playwright (159/159, including `store-blog-editor`,
+  `image-upload-compression` and `warehouse-map`), `php artisan list`,
+  `route:list` (1195 routes) and `boost:mcp` (initialize, `tools/list` with 10
+  tools, an `application-info` call).
+- Audits: `composer audit --locked` finds no advisories (exit 2 only for the
+  abandoned `niklasravnsborg/laravel-pdf`, as on develop). `npm audit
+  --omit=dev` is clean on both. The full `npm audit` reports 23 moderate (develop
+  22): the extra entry is `@vue/test-utils` itself, now on the existing dev-only
+  glob/minimatch chain (GHSA-3g3m-2fjr-6pw4, GHSA-g3hv-75wg-m249) through
+  js-beautify 2; no new advisory.
+- KEPT: scramble, telescope, laravel-backup, boost (+ mcp 1.x), three (+
+  @types/three), @vue/test-utils, the Tiptap set, intervention/image 4.
+  REVERTED: vue-tsc 3.3.13 (#524 stays open). Not applied: typescript 7 (#373
+  stays open).
