@@ -179,22 +179,32 @@ describe('Store product lists Index', () => {
                 expect(
                     wrapper.getComponent(AddResourceLink).props('label'),
                 ).toBe(t('store.products.create'));
-                expect(
-                    wrapper.get('#product-presets').attributes('aria-label'),
-                ).toBe(t('store.products.presets'));
-                expect(
-                    wrapper
-                        .findAll('#product-presets a')
-                        .map((link) => link.text()),
-                ).toEqual(
-                    [
-                        'presetAllProducts',
-                        'presetAllActive',
-                        'presetAllForSale',
-                        'presetAllFeatured',
-                        'presetAllDeleted',
-                    ].map((key) => t(`store.products.${key}`)),
-                );
+                if (listType === 'all') {
+                    expect(
+                        wrapper
+                            .get('#product-presets')
+                            .attributes('aria-label'),
+                    ).toBe(t('store.products.presets'));
+                    expect(
+                        wrapper
+                            .findAll('#product-presets a')
+                            .map((link) => link.text()),
+                    ).toEqual(
+                        [
+                            'presetAllProducts',
+                            'presetAllActive',
+                            'presetAllForSale',
+                            'presetAllFeatured',
+                            'presetAllDeleted',
+                        ].map((key) => t(`store.products.${key}`)),
+                    );
+                } else {
+                    // The presets are the all list's status switch; the
+                    // other lists keep their state boxes in the dialog.
+                    expect(wrapper.find('#product-presets').exists()).toBe(
+                        false,
+                    );
+                }
                 const [filterForm, bulkForm] = forms(wrapper);
                 expect(filterForm.getComponent(FormField).props('label')).toBe(
                     t('store.products.search'),
@@ -229,28 +239,26 @@ describe('Store product lists Index', () => {
                         'sortPriceAsc',
                     ].map((key) => t(`store.products.${key}`)),
                 );
-                expect(filterForm.get('legend').text()).toBe(
-                    t('store.products.stateFilters'),
-                );
-                expect(
-                    filterForm
-                        .findAll('fieldset label')
-                        .map((label) => label.text()),
-                ).toEqual(
-                    [
-                        'active',
-                        'forSale',
-                        'featured',
-                        ...(listType === 'all' ? ['deleted'] : []),
-                    ].map((key) => t(`store.products.${key}`)),
-                );
-                expect(filterForm.get('fieldset p').text()).toBe(
-                    t(
-                        listType === 'all'
-                            ? 'store.products.allStateHint'
-                            : 'store.products.inHouseStateHint',
-                    ),
-                );
+                if (listType === 'all') {
+                    // Never in both places: the all list has no state boxes.
+                    expect(filterForm.find('fieldset').exists()).toBe(false);
+                } else {
+                    expect(filterForm.get('legend').text()).toBe(
+                        t('store.products.stateFilters'),
+                    );
+                    expect(
+                        filterForm
+                            .findAll('fieldset label')
+                            .map((label) => label.text()),
+                    ).toEqual(
+                        ['active', 'forSale', 'featured'].map((key) =>
+                            t(`store.products.${key}`),
+                        ),
+                    );
+                    expect(filterForm.get('fieldset p').text()).toBe(
+                        t('store.products.inHouseStateHint'),
+                    );
+                }
                 expect(filterForm.get('button[type="submit"]').text()).toBe(
                     t('common.filters.apply'),
                 );
@@ -438,11 +446,15 @@ describe('Store product lists Index', () => {
             expect(forms(wrapper)[1].props('action')).toEqual(
                 bulkDestroy(query),
             );
-            expect(
-                wrapper
-                    .findAll('#product-presets a')
-                    .map((link) => link.attributes('href')),
-            ).toEqual(
+            const presetLinks = wrapper.findAll('#product-presets a');
+
+            if (list !== 'all') {
+                expect(presetLinks).toHaveLength(0);
+
+                continue;
+            }
+
+            expect(presetLinks.map((link) => link.attributes('href'))).toEqual(
                 [
                     'allProducts',
                     'allActive',
@@ -540,9 +552,26 @@ describe('Store product lists Index', () => {
         expect(only('add_new_product').find('h1 + div button').exists()).toBe(
             true,
         );
+        // The presets belong to the all list only, and need the permission.
         expect(
             only('show_all_products').find('#product-presets').exists(),
+        ).toBe(false);
+        expect(
+            mountPage({
+                listType: 'all',
+                permissions: ['show_all_products'],
+            })
+                .find('#product-presets')
+                .exists(),
         ).toBe(true);
+        expect(
+            mountPage({
+                listType: 'all',
+                permissions: ['show_in_house_products'],
+            })
+                .find('#product-presets')
+                .exists(),
+        ).toBe(false);
         expect(
             only('product_edit').findAllComponents(StoreStatusSwitch),
         ).toHaveLength(3);
@@ -660,35 +689,23 @@ describe('Store product lists Index', () => {
         expect((wrapper.get('#type').element as HTMLSelectElement).value).toBe(
             'unit_price,desc',
         );
-        expect(
-            filterForm
-                .findAll('fieldset input')
-                .map((input) => [
-                    input.attributes('name'),
-                    input.attributes('value'),
-                    (input.element as HTMLInputElement).checked,
-                ]),
-        ).toEqual([
-            ['active', '1', true],
-            ['for_sale', '1', false],
-            ['featured', '1', false],
-            ['deleted', '1', true],
-        ]);
-        // Category is the inline key filter here; sort and the state boxes are
-        // in the dialog and counted (sort, active, deleted).
+        // Category is the inline key filter here; sort is the only dialog
+        // filter (counted). The preset links are the status switch, so the
+        // all list has no state boxes: a filter is never in both places.
         expect(filterForm.findAll('#category_id').length).toBe(1);
+        expect(filterForm.find('fieldset').exists()).toBe(false);
         expect(
             wrapper
                 .get('[role="dialog"]')
                 .findAll('select, input')
                 .map((control) => control.attributes('name')),
-        ).toEqual(['type', 'active', 'for_sale', 'featured', 'deleted']);
+        ).toEqual(['type']);
         expect(
             wrapper.get('[role="dialog"]').find('#category_id').exists(),
         ).toBe(false);
         expect(
             wrapper.getComponent(StoreListFilters).props('activeCount'),
-        ).toBe(3);
+        ).toBe(1);
         const presetLinks = wrapper.findAll('#product-presets a');
         expect(presetLinks[3].classes()).toContain('bg-gray-900');
         expect(presetLinks[0].classes()).not.toContain('bg-gray-900');

@@ -32,6 +32,10 @@ The application [README](../README.md) covers warehouse setup, APIs and deployme
   and [SQL](role-grants-audit-20261020.sql) evidence. Reviewing definitions never
   grants permissions or authorizes production changes.
 
+- The [store list filter audit](store-list-filter-audit-20261105.md) records which
+  back office lists render filters and where; the standing placement rule is
+  [store-list-filter-placement](rules/store-list-filter-placement.md).
+
 ## Documentation consumers
 
 Agents use AGENTS.md, its shared guidance, the rule index and rule `paths`

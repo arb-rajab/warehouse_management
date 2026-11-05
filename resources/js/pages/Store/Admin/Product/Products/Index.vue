@@ -101,12 +101,15 @@ const sorts = [
     { value: 'unit_price,desc', label: 'sortPriceDesc' },
     { value: 'unit_price,asc', label: 'sortPriceAsc' },
 ] as const;
-const stateFilters = computed(() => [
+/**
+ * The in-house and seller lists' state boxes. The all list has the preset
+ * links instead (store-list-filter-placement.md): a filter is never in both.
+ */
+const stateFilters = [
     { name: 'active', label: 'active' },
     { name: 'for_sale', label: 'forSale' },
     { name: 'featured', label: 'featured' },
-    ...(isAllList.value ? [{ name: 'deleted', label: 'deleted' }] : []),
-]);
+] as const;
 /** Dialog filters only; search and the inline seller/category are not counted. */
 const activeFilterCount = computed(() =>
     countActive([
@@ -118,11 +121,9 @@ const activeFilterCount = computed(() =>
             props.filters.category_id !== null &&
             props.filters.category_id !== undefined,
         Boolean(props.filters.type),
-        ...stateFilters.value.map(
-            (state) =>
-                props.filters[state.name as keyof StoreProductListFilters] ===
-                true,
-        ),
+        ...(isAllList.value
+            ? []
+            : stateFilters.map((state) => props.filters[state.name] === true)),
     ]),
 );
 const presets: { name: StoreProductListPreset; label: string }[] = [
@@ -207,7 +208,6 @@ function selectAll(checked: boolean): void {
 }
 /** The current filters as the list's own query string. */
 function currentQuery(perPage: number): Record<string, string | number> {
-    const flags = stateFilters.value.map((filter) => filter.name);
     const query: Record<string, string | number> = { per_page: perPage };
 
     for (const key of [
@@ -224,8 +224,12 @@ function currentQuery(perPage: number): Record<string, string | number> {
         }
     }
 
-    for (const flag of flags) {
-        if (props.filters[flag as keyof StoreProductListFilters] === true) {
+    // The all list may still carry the legacy state flags from a link.
+    for (const flag of [
+        ...stateFilters.map((s) => s.name),
+        'deleted',
+    ] as const) {
+        if (props.filters[flag] === true) {
             query[flag] = 1;
         }
     }
@@ -290,7 +294,7 @@ async function requestFetch(): Promise<void> {
             {{ t(`store.products.${fetchNotice}`) }}
         </p>
         <nav
-            v-if="access.can('show_all_products')"
+            v-if="isAllList && access.can('show_all_products')"
             id="product-presets"
             :aria-label="t('store.products.presets')"
             class="mb-4 flex flex-wrap gap-2"
@@ -439,7 +443,7 @@ async function requestFetch(): Promise<void> {
                     </select>
                     <FieldError :message="errors.type" />
                 </div>
-                <fieldset class="sm:col-span-2">
+                <fieldset v-if="!isAllList" class="sm:col-span-2">
                     <legend :class="fieldLabelClass">
                         {{ t('store.products.stateFilters') }}
                     </legend>
@@ -453,23 +457,13 @@ async function requestFetch(): Promise<void> {
                                 type="checkbox"
                                 :name="state.name"
                                 value="1"
-                                :checked="
-                                    filters[
-                                        state.name as keyof StoreProductListFilters
-                                    ] === true
-                                "
+                                :checked="filters[state.name] === true"
                                 class="cursor-pointer"
                             />{{ t(`store.products.${state.label}`) }}
                         </label>
                     </div>
                     <p class="mt-1 text-xs text-gray-600 dark:text-neutral-400">
-                        {{
-                            t(
-                                isAllList
-                                    ? 'store.products.allStateHint'
-                                    : 'store.products.inHouseStateHint',
-                            )
-                        }}
+                        {{ t('store.products.inHouseStateHint') }}
                     </p>
                 </fieldset>
             </template>
