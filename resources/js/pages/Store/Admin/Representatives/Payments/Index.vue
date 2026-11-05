@@ -14,6 +14,7 @@ import FieldError from '@/components/FieldError.vue';
 import FormField from '@/components/FormField.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import Pagination from '@/components/Pagination.vue';
+import StoreColumnPicker from '@/components/StoreColumnPicker.vue';
 import StoreListFilters from '@/components/StoreListFilters.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
 import TableObjectLink from '@/components/TableObjectLink.vue';
@@ -21,6 +22,7 @@ import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
 import { fieldLabelClass } from '@/lib/filters';
 import { t } from '@/lib/i18n';
 import { useStoreAccess } from '@/lib/storeAccess';
+import { useTableColumns } from '@/lib/useTableColumns';
 import type { Paginated } from '@/types/admin';
 import type { StoreFilterChip } from '@/types/store';
 import type { RepresentativePayment } from '@/types/storeRepresentatives';
@@ -65,6 +67,33 @@ function changePerPage(perPage: number): void {
         { preserveState: true, replace: true },
     );
 }
+const columns = useTableColumns({
+    listId: 'representatives.payments',
+    columns: [
+        { key: 'id', label: 'store.representativePayments.id' },
+        {
+            key: 'customer',
+            label: 'store.representativePayments.customer',
+            required: true,
+        },
+        { key: 'accountId', label: 'store.representativePayments.accountId' },
+        {
+            key: 'representative',
+            label: 'store.representativePayments.representative',
+        },
+        { key: 'receipt', label: 'store.representativePayments.receipt' },
+        { key: 'invoice', label: 'store.representativePayments.invoice' },
+        { key: 'amount', label: 'store.representativePayments.amount' },
+        { key: 'accountant', label: 'store.representativePayments.accountant' },
+        { key: 'notes', label: 'store.representativePayments.notes' },
+        { key: 'status', label: 'store.representativePayments.status' },
+    ],
+});
+const { shown, visibleColumns } = columns;
+const tableColumns = computed(() => [
+    ...visibleColumns.value.map((column) => t(column.label)),
+    t('store.representativePayments.actions'),
+]);
 </script>
 
 <template>
@@ -115,25 +144,14 @@ function changePerPage(perPage: number): void {
                 </fieldset>
             </template>
         </StoreListFilters>
+        <StoreColumnPicker :state="columns" />
         <DataTable
-            :columns="[
-                t('store.representativePayments.id'),
-                t('store.representativePayments.customer'),
-                t('store.representativePayments.accountId'),
-                t('store.representativePayments.representative'),
-                t('store.representativePayments.receipt'),
-                t('store.representativePayments.invoice'),
-                t('store.representativePayments.amount'),
-                t('store.representativePayments.accountant'),
-                t('store.representativePayments.notes'),
-                t('store.representativePayments.status'),
-                t('store.representativePayments.actions'),
-            ]"
+            :columns="tableColumns"
             :rows="payments.data"
             :empty-message="t('store.representativePayments.empty')"
         >
             <template #row="{ row: payment }">
-                <td class="px-4 py-2">{{ payment.id }}</td>
+                <td v-if="shown.id" class="px-4 py-2">{{ payment.id }}</td>
                 <td class="px-4 py-2">
                     <TableObjectLink
                         v-if="payment.customer_id !== null"
@@ -142,8 +160,10 @@ function changePerPage(perPage: number): void {
                         >{{ payment.customer_name }}</TableObjectLink
                     ><template v-else>{{ payment.customer_name }}</template>
                 </td>
-                <td class="px-4 py-2">{{ payment.account_id }}</td>
-                <td class="px-4 py-2">
+                <td v-if="shown.accountId" class="px-4 py-2">
+                    {{ payment.account_id }}
+                </td>
+                <td v-if="shown.representative" class="px-4 py-2">
                     <TableObjectLink
                         v-if="payment.representative"
                         :allowed="access.can('edit_customer')"
@@ -151,14 +171,26 @@ function changePerPage(perPage: number): void {
                         >{{ payment.representative.name }}</TableObjectLink
                     >
                 </td>
-                <td class="px-4 py-2">{{ payment.receipt_code }}</td>
-                <td class="px-4 py-2">{{ payment.invoice_code }}</td>
-                <td class="px-4 py-2">{{ payment.amount }}</td>
-                <td class="px-4 py-2">{{ payment.accountant?.name }}</td>
-                <td class="max-w-xs truncate px-4 py-2" :title="payment.notes">
+                <td v-if="shown.receipt" class="px-4 py-2">
+                    {{ payment.receipt_code }}
+                </td>
+                <td v-if="shown.invoice" class="px-4 py-2">
+                    {{ payment.invoice_code }}
+                </td>
+                <td v-if="shown.amount" class="px-4 py-2">
+                    {{ payment.amount }}
+                </td>
+                <td v-if="shown.accountant" class="px-4 py-2">
+                    {{ payment.accountant?.name }}
+                </td>
+                <td
+                    v-if="shown.notes"
+                    class="max-w-xs truncate px-4 py-2"
+                    :title="payment.notes"
+                >
                     {{ payment.notes }}
                 </td>
-                <td class="px-4 py-2">
+                <td v-if="shown.status" class="px-4 py-2">
                     <span class="inline-flex items-center gap-1"
                         ><Clock
                             v-if="payment.status === 'pending'"

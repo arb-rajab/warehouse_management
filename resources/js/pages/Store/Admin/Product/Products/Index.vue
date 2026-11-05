@@ -43,6 +43,7 @@ import FormField from '@/components/FormField.vue';
 import IconStat from '@/components/IconStat.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import Pagination from '@/components/Pagination.vue';
+import StoreColumnPicker from '@/components/StoreColumnPicker.vue';
 import StoreListFilters from '@/components/StoreListFilters.vue';
 import StoreStatusSwitch from '@/components/StoreStatusSwitch.vue';
 import SubmitButton from '@/components/SubmitButton.vue';
@@ -57,6 +58,7 @@ import {
 } from '@/lib/filters';
 import { t } from '@/lib/i18n';
 import { useStoreAccess } from '@/lib/storeAccess';
+import { useTableColumns } from '@/lib/useTableColumns';
 import type { Paginated } from '@/types/admin';
 import type {
     StoreFilterChip,
@@ -240,6 +242,32 @@ const publishedLock = computed(() => ({
     reason: t('store.products.otajerLocked'),
     hint: t('store.products.form.otajerSynced'),
 }));
+/** The cells below test `shown`; the header comes from `visibleColumns`. */
+const columns = useTableColumns({
+    listId: () => `product.products.${props.listType}`,
+    columns: () => [
+        { key: 'name', label: 'store.products.name', required: true },
+        { key: 'id', label: 'store.products.id' },
+        { key: 'unit', label: 'store.products.unit' },
+        { key: 'info', label: 'store.products.info' },
+        { key: 'stock', label: 'store.products.totalStock' },
+        { key: 'category', label: 'store.products.category' },
+        ...switches.value.map((item) => ({
+            key: item.field,
+            label: item.label,
+        })),
+        { key: 'deleted', label: 'store.products.deletedFromOtajer' },
+    ],
+});
+const { shown, visibleColumns } = columns;
+const visibleSwitches = computed(() =>
+    switches.value.filter((item) => shown.value[item.field]),
+);
+const tableColumns = computed(() => [
+    ...(access.value.can('product_delete') ? [t('store.products.select')] : []),
+    ...visibleColumns.value.map((column) => t(column.label)),
+    t('store.products.actions'),
+]);
 const selected = ref<number[]>([]);
 const allSelected = computed(
     () =>
@@ -521,52 +549,41 @@ async function requestFetch(): Promise<void> {
                 </fieldset>
             </template>
         </StoreListFilters>
-        <Form
-            v-if="access.can('product_delete')"
-            :action="listActions.bulkDestroy(listQuery)"
-            :on-before="
-                () =>
-                    selected.length > 0 &&
-                    confirmDelete(
-                        t('store.products.selection', {
-                            count: selected.length,
-                        }),
-                    )
-            "
-            #default="{ errors, processing }"
-            class="mb-4 max-w-sm"
-            @success="selected = []"
-        >
-            <input
-                v-for="id in selected"
-                :key="id"
-                type="hidden"
-                name="id[]"
-                :value="id"
-            />
-            <SubmitButton
-                :label="t('store.products.deleteSelection')"
-                :processing-label="t('store.products.deleting')"
-                :processing="processing"
-                :disabled="processing || selected.length === 0"
-            />
-            <FieldError :message="errors.id ?? errors.list" />
-        </Form>
+        <StoreColumnPicker :state="columns">
+            <Form
+                v-if="access.can('product_delete')"
+                :action="listActions.bulkDestroy(listQuery)"
+                :on-before="
+                    () =>
+                        selected.length > 0 &&
+                        confirmDelete(
+                            t('store.products.selection', {
+                                count: selected.length,
+                            }),
+                        )
+                "
+                #default="{ errors, processing }"
+                class="max-w-sm"
+                @success="selected = []"
+            >
+                <input
+                    v-for="id in selected"
+                    :key="id"
+                    type="hidden"
+                    name="id[]"
+                    :value="id"
+                />
+                <SubmitButton
+                    :label="t('store.products.deleteSelection')"
+                    :processing-label="t('store.products.deleting')"
+                    :processing="processing"
+                    :disabled="processing || selected.length === 0"
+                />
+                <FieldError :message="errors.id ?? errors.list" />
+            </Form>
+        </StoreColumnPicker>
         <DataTable
-            :columns="[
-                ...(access.can('product_delete')
-                    ? [t('store.products.select')]
-                    : []),
-                t('store.products.name'),
-                t('store.products.id'),
-                t('store.products.unit'),
-                t('store.products.info'),
-                t('store.products.totalStock'),
-                t('store.products.category'),
-                ...switches.map((item) => t(item.label)),
-                t('store.products.deletedFromOtajer'),
-                t('store.products.actions'),
-            ]"
+            :columns="tableColumns"
             :rows="products.data"
             :empty-message="t('store.products.empty')"
         >
@@ -610,9 +627,11 @@ async function requestFetch(): Promise<void> {
                         </div>
                     </div>
                 </td>
-                <td class="px-4 py-2 tabular-nums">{{ product.id }}</td>
-                <td class="px-4 py-2">{{ product.unit }}</td>
-                <td class="px-4 py-2">
+                <td v-if="shown.id" class="px-4 py-2 tabular-nums">
+                    {{ product.id }}
+                </td>
+                <td v-if="shown.unit" class="px-4 py-2">{{ product.unit }}</td>
+                <td v-if="shown.info" class="px-4 py-2">
                     <div class="flex items-center gap-4">
                         <IconStat
                             :icon="ShoppingCart"
@@ -644,7 +663,7 @@ async function requestFetch(): Promise<void> {
                         />
                     </div>
                 </td>
-                <td class="px-4 py-2">
+                <td v-if="shown.stock" class="px-4 py-2">
                     <template v-if="product.variant_stocks">
                         <span
                             v-for="stock in product.variant_stocks"
@@ -664,7 +683,7 @@ async function requestFetch(): Promise<void> {
                         }}</span
                     >
                 </td>
-                <td class="px-4 py-2">
+                <td v-if="shown.category" class="px-4 py-2">
                     <TableObjectLink
                         v-if="product.category && product.category_id !== null"
                         :allowed="access.can('edit_product_category')"
@@ -678,7 +697,7 @@ async function requestFetch(): Promise<void> {
                     <template v-else>{{ product.category }}</template>
                 </td>
                 <td
-                    v-for="item in switches"
+                    v-for="item in visibleSwitches"
                     :key="item.field"
                     class="px-4 py-2"
                 >
@@ -703,7 +722,7 @@ async function requestFetch(): Promise<void> {
                         )
                     }}</span>
                 </td>
-                <td class="px-4 py-2">
+                <td v-if="shown.deleted" class="px-4 py-2">
                     <span
                         v-if="product.deleted_from_api"
                         class="font-medium text-red-700 dark:text-red-400"

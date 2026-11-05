@@ -43,6 +43,10 @@ import {
     storeSharedProps,
 } from '@/testing/factories';
 import { defaultAuthProps } from '@/testing/inertiaPageMocks';
+import {
+    expectColumnCanBeHidden,
+    expectColumnLocked,
+} from '@/testing/tableColumns';
 import PackageCreate from './Packages/Create.vue';
 import PackageEdit from './Packages/Edit.vue';
 import PackagesIndex from './Packages/Index.vue';
@@ -722,4 +726,26 @@ describe('representative visits index', () => {
             expect(hrefs(visitPage())).not.toContain(customerEdit(11).url);
         });
     });
+});
+
+it('the payments list lets staff hide an optional column and keeps the customer', async () => {
+    window.localStorage.clear();
+    const wrapper = paymentPage();
+    await expectColumnCanBeHidden(wrapper, 'representatives.payments', {
+        key: 'accountId',
+        label: t('store.representativePayments.accountId'),
+    });
+    expectColumnLocked(wrapper, t('store.representativePayments.customer'));
+    window.localStorage.clear();
+});
+
+it('the visits list lets staff hide an optional column and keeps the representative', async () => {
+    window.localStorage.clear();
+    const wrapper = visitPage();
+    await expectColumnCanBeHidden(wrapper, 'representatives.visits', {
+        key: 'note',
+        label: t('store.representativeVisits.note'),
+    });
+    expectColumnLocked(wrapper, t('store.representativeVisits.representative'));
+    window.localStorage.clear();
 });

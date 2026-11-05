@@ -43,6 +43,15 @@ import {
     storeSharedProps,
 } from '@/testing/factories';
 import { defaultAuthProps } from '@/testing/inertiaPageMocks';
+import {
+    columnsDialog,
+    expectColumnCanBeHidden,
+    headerTexts,
+    offeredColumns,
+    openColumnPicker,
+    setColumnShown,
+    storedColumns,
+} from '@/testing/tableColumns';
 import type {
     StoreProductListFilters,
     StoreProductListRow,
@@ -1032,5 +1041,49 @@ describe('seller product list', () => {
             '€12.50',
             '€1.25',
         ]);
+    });
+
+    it('lets staff hide optional columns per list, keeps the name and remembers the choice', async () => {
+        window.localStorage.clear();
+        const wrapper = mountPage({
+            listType: 'seller',
+            approvalEnabled: true,
+        });
+        const switchCount = () =>
+            wrapper.get('tbody tr').findAllComponents(StoreStatusSwitch).length;
+        expect(switchCount()).toBe(5);
+        expect(wrapper.get('tbody').text()).toContain('Oils');
+
+        await expectColumnCanBeHidden(wrapper, 'product.products.seller', {
+            key: 'category',
+            label: t('store.products.category'),
+        });
+        expect(wrapper.get('tbody').text()).not.toContain('Oils');
+        await setColumnShown(wrapper, t('store.products.featured'), false);
+        expect(headerTexts(wrapper)).not.toContain(
+            t('store.products.featured'),
+        );
+        expect(switchCount()).toBe(4);
+        expect(storedColumns('product.products.seller')).not.toContain(
+            'featured',
+        );
+
+        // The name is the row's identifier: shown, locked, never stored away.
+        const name = columnsDialog(wrapper)
+            .findAll('label')
+            .find((item) => item.text() === t('store.products.name'))!
+            .get('input');
+        expect((name.element as HTMLInputElement).disabled).toBe(true);
+        expect(headerTexts(wrapper)).toContain(t('store.products.name'));
+        expect(offeredColumns(wrapper)).toContain(t('store.products.approved'));
+
+        // Another list type keeps its own choice (and its own switch columns).
+        const inHouse = mountPage({ listType: 'admin' });
+        expect(headerTexts(inHouse)).toContain(t('store.products.category'));
+        await openColumnPicker(inHouse);
+        expect(offeredColumns(inHouse)).not.toContain(
+            t('store.products.approved'),
+        );
+        window.localStorage.clear();
     });
 });

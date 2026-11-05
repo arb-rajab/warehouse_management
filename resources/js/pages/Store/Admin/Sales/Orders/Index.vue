@@ -21,6 +21,7 @@ import PageHeader from '@/components/PageHeader.vue';
 import Pagination from '@/components/Pagination.vue';
 import RequiredLegend from '@/components/RequiredLegend.vue';
 import RequiredMark from '@/components/RequiredMark.vue';
+import StoreColumnPicker from '@/components/StoreColumnPicker.vue';
 import StoreListFilters from '@/components/StoreListFilters.vue';
 import SubmitButton from '@/components/SubmitButton.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
@@ -32,6 +33,7 @@ import { t } from '@/lib/i18n';
 import { usePageError } from '@/lib/pageErrors';
 import { provideRequiredFields } from '@/lib/requiredFields';
 import { useStoreAccess } from '@/lib/storeAccess';
+import { useTableColumns } from '@/lib/useTableColumns';
 import type { Paginated } from '@/types/admin';
 import type { StoreFilterChip, StoreOrder } from '@/types/store';
 const props = defineProps<{
@@ -47,6 +49,22 @@ const props = defineProps<{
     listRoute: string;
 }>();
 const access = useStoreAccess();
+const columns = useTableColumns({
+    listId: 'sales.orders',
+    columns: [
+        { key: 'code', label: 'store.orders.code', required: true },
+        { key: 'customer', label: 'store.orders.customer' },
+        { key: 'total', label: 'store.orders.total' },
+        { key: 'deliveryStatus', label: 'store.orders.deliveryStatus' },
+        { key: 'paymentStatus', label: 'store.orders.paymentStatus' },
+    ],
+});
+const { shown, visibleColumns } = columns;
+const tableColumns = computed(() => [
+    t('store.orders.select'),
+    ...visibleColumns.value.map((column) => t(column.label)),
+    t('store.orders.actions'),
+]);
 const selected = ref<number[]>([]);
 const error = usePageError('action');
 const listAction = computed(
@@ -210,6 +228,7 @@ const hasRequiredFields = provideRequiredFields();
                 />
             </template>
         </StoreListFilters>
+        <StoreColumnPicker :state="columns" />
         <Form
             :action="bulk_order_delete({ mergeQuery: {} })"
             :options="{ preserveScroll: true }"
@@ -227,15 +246,7 @@ const hasRequiredFields = provideRequiredFields();
                     {{ t('store.orders.selectedOrders') }}<RequiredMark />
                 </legend>
                 <DataTable
-                    :columns="[
-                        t('store.orders.select'),
-                        t('store.orders.code'),
-                        t('store.orders.customer'),
-                        t('store.orders.total'),
-                        t('store.orders.deliveryStatus'),
-                        t('store.orders.paymentStatus'),
-                        t('store.orders.actions'),
-                    ]"
+                    :columns="tableColumns"
                     :rows="orders.data"
                     :empty-message="t('store.orders.empty')"
                 >
@@ -259,7 +270,7 @@ const hasRequiredFields = provideRequiredFields();
                             />
                         </td>
                         <td class="px-3 py-3">{{ row.code }}</td>
-                        <td class="px-3 py-3">
+                        <td v-if="shown.customer" class="px-3 py-3">
                             <TableObjectLink
                                 v-if="row.customer"
                                 :allowed="access.can('edit_customer')"
@@ -267,15 +278,15 @@ const hasRequiredFields = provideRequiredFields();
                                 >{{ row.customer.name }}</TableObjectLink
                             >
                         </td>
-                        <td class="px-3 py-3">
+                        <td v-if="shown.total" class="px-3 py-3">
                             {{ row.grand_total.toFixed(2) }}
                         </td>
-                        <td class="px-3 py-3">
+                        <td v-if="shown.deliveryStatus" class="px-3 py-3">
                             {{
                                 t(`store.orders.status.${row.delivery_status}`)
                             }}
                         </td>
-                        <td class="px-3 py-3">
+                        <td v-if="shown.paymentStatus" class="px-3 py-3">
                             {{ t(`store.orders.status.${row.payment_status}`) }}
                         </td>
                         <td class="space-x-2 px-3 py-3">

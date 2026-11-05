@@ -64,19 +64,38 @@ export function offeredColumns(wrapper: VueWrapper): string[] {
         .map((item) => item.text());
 }
 
-/** What the test user has stored for a list, parsed; `null` when nothing. */
-export function storedColumns(listId: string): string[] | null {
+/** The required column's checkbox is ticked and locked, and its header stays. */
+export function expectColumnLocked(wrapper: VueWrapper, label: string): void {
+    const box = columnsDialog(wrapper)
+        .findAll('label')
+        .find((item) => item.text() === label)!
+        .get('input').element as HTMLInputElement;
+
+    expect(box.checked).toBe(true);
+    expect(box.disabled).toBe(true);
+    expect(headerTexts(wrapper)).toContain(label);
+}
+
+/** What a store user (default: the test user) has stored for a list; `null` when nothing. */
+export function storedColumns(
+    listId: string,
+    userId = testUserId,
+): string[] | null {
     const raw = window.localStorage.getItem(
-        tableColumnsStorageKey(testUserId, listId),
+        tableColumnsStorageKey(userId, listId),
     );
 
     return raw === null ? null : (JSON.parse(raw) as string[]);
 }
 
 /** Remember a choice for a list as the test user (before mounting a page). */
-export function storeColumns(listId: string, keys: string[]): void {
+export function storeColumns(
+    listId: string,
+    keys: string[],
+    userId = testUserId,
+): void {
     window.localStorage.setItem(
-        tableColumnsStorageKey(testUserId, listId),
+        tableColumnsStorageKey(userId, listId),
         JSON.stringify(keys),
     );
 }
@@ -90,6 +109,7 @@ export async function expectColumnCanBeHidden(
     wrapper: VueWrapper,
     listId: string,
     column: { key: string; label: string },
+    userId = testUserId,
 ): Promise<void> {
     const before = headerTexts(wrapper);
 
@@ -103,5 +123,5 @@ export async function expectColumnCanBeHidden(
     expect(after).not.toContain(column.label);
     expect(after).toHaveLength(before.length - 1);
     expectHeadersMatchCells(wrapper);
-    expect(storedColumns(listId)).not.toContain(column.key);
+    expect(storedColumns(listId, userId)).not.toContain(column.key);
 }

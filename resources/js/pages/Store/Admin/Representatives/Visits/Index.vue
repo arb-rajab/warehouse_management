@@ -15,6 +15,7 @@ import DataTable from '@/components/DataTable.vue';
 import FormField from '@/components/FormField.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import Pagination from '@/components/Pagination.vue';
+import StoreColumnPicker from '@/components/StoreColumnPicker.vue';
 import StoreListFilters from '@/components/StoreListFilters.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
 import TableObjectLink from '@/components/TableObjectLink.vue';
@@ -23,6 +24,7 @@ import { confirmDelete } from '@/lib/confirm';
 import { t } from '@/lib/i18n';
 import { firstError } from '@/lib/pageErrors';
 import { useStoreAccess } from '@/lib/storeAccess';
+import { useTableColumns } from '@/lib/useTableColumns';
 import type { Paginated } from '@/types/admin';
 import type { StoreFilterChip } from '@/types/store';
 import type { RepresentativeVisit } from '@/types/storeRepresentatives';
@@ -80,6 +82,26 @@ function deleteSelection(): void {
         });
     }
 }
+const columns = useTableColumns({
+    listId: 'representatives.visits',
+    columns: [
+        {
+            key: 'representative',
+            label: 'store.representativeVisits.representative',
+            required: true,
+        },
+        { key: 'customer', label: 'store.representativeVisits.customer' },
+        { key: 'note', label: 'store.representativeVisits.note' },
+        { key: 'date', label: 'store.representativeVisits.date' },
+        { key: 'hasOrder', label: 'store.representativeVisits.hasOrder' },
+    ],
+});
+const { shown, visibleColumns } = columns;
+const tableColumns = computed(() => [
+    t('store.representativeVisits.select'),
+    ...visibleColumns.value.map((column) => t(column.label)),
+    t('store.representativeVisits.actions'),
+]);
 </script>
 
 <template>
@@ -125,6 +147,7 @@ function deleteSelection(): void {
             </template>
         </StoreListFilters>
         <ActionErrorBanner :message="firstError(selection.errors)" />
+        <StoreColumnPicker :state="columns" />
         <form @submit.prevent="deleteSelection">
             <button
                 v-if="access.can('delete_representative_visit')"
@@ -137,15 +160,7 @@ function deleteSelection(): void {
                 }}
             </button>
             <DataTable
-                :columns="[
-                    t('store.representativeVisits.select'),
-                    t('store.representativeVisits.representative'),
-                    t('store.representativeVisits.customer'),
-                    t('store.representativeVisits.note'),
-                    t('store.representativeVisits.date'),
-                    t('store.representativeVisits.hasOrder'),
-                    t('store.representativeVisits.actions'),
-                ]"
+                :columns="tableColumns"
                 :rows="visits.data"
                 :empty-message="t('store.representativeVisits.empty')"
             >
@@ -172,7 +187,7 @@ function deleteSelection(): void {
                             >{{ visit.representative.name }}</TableObjectLink
                         >
                     </td>
-                    <td class="px-4 py-2">
+                    <td v-if="shown.customer" class="px-4 py-2">
                         <TableObjectLink
                             v-if="visit.customer"
                             :allowed="access.can('edit_customer')"
@@ -180,11 +195,17 @@ function deleteSelection(): void {
                             >{{ visit.customer.name }}</TableObjectLink
                         >
                     </td>
-                    <td class="max-w-xs truncate px-4 py-2" :title="visit.note">
+                    <td
+                        v-if="shown.note"
+                        class="max-w-xs truncate px-4 py-2"
+                        :title="visit.note"
+                    >
                         {{ visit.note }}
                     </td>
-                    <td class="px-4 py-2">{{ visit.visit_date }}</td>
-                    <td class="px-4 py-2">
+                    <td v-if="shown.date" class="px-4 py-2">
+                        {{ visit.visit_date }}
+                    </td>
+                    <td v-if="shown.hasOrder" class="px-4 py-2">
                         {{
                             t(
                                 visit.has_order

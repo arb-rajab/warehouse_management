@@ -9,6 +9,7 @@ import TableActionLink from '@/components/TableActionLink.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
 import { t } from '@/lib/i18n';
 import { paginated, storeOrder, storeSharedProps } from '@/testing/factories';
+import { expectColumnCanBeHidden, headerTexts } from '@/testing/tableColumns';
 import Create from './Create.vue';
 import Edit from './Edit.vue';
 import Index from './Index.vue';
@@ -445,5 +446,35 @@ describe('Store order pages', () => {
         expect(
             staff.findAll('a').map((link) => link.attributes('href')),
         ).not.toContain(customerEdit(3).url);
+    });
+
+    it('lets staff hide optional order columns and keeps the code and the select cell', async () => {
+        window.localStorage.clear();
+        const wrapper = mount(Index, {
+            props: {
+                orders: paginated([order]),
+                filters: { per_page: 20 },
+                listRoute: 'all_orders.index',
+            },
+        });
+        expect(headerTexts(wrapper)).toEqual([
+            t('store.orders.select'),
+            t('store.orders.code'),
+            t('store.orders.customer'),
+            t('store.orders.total'),
+            t('store.orders.deliveryStatus'),
+            t('store.orders.paymentStatus'),
+            t('store.orders.actions'),
+        ]);
+        expect(wrapper.get('tbody').text()).toContain('Buyer');
+        await expectColumnCanBeHidden(
+            wrapper,
+            'sales.orders',
+            { key: 'customer', label: t('store.orders.customer') },
+            1,
+        );
+        expect(wrapper.get('tbody').text()).not.toContain('Buyer');
+        expect(headerTexts(wrapper)).toContain(t('store.orders.code'));
+        window.localStorage.clear();
     });
 });

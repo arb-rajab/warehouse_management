@@ -27,6 +27,10 @@ import {
     storeCustomer,
 } from '@/testing/factories';
 import { defaultAuthProps } from '@/testing/inertiaPageMocks';
+import {
+    expectColumnCanBeHidden,
+    expectColumnLocked,
+} from '@/testing/tableColumns';
 import type { StoreCustomer } from '@/types/storeCustomers';
 import Create from './Create.vue';
 import Edit from './Edit.vue';
@@ -818,4 +822,31 @@ it.each([
     });
     expect(wrapper.get('td a').attributes('href')).toBe(public_url);
     wrapper.unmount();
+});
+
+it('the views list lets staff hide an optional column and keeps the name', async () => {
+    window.localStorage.clear();
+    const wrapper = mount(Views, {
+        props: {
+            customer,
+            views: paginated([
+                {
+                    id: 5,
+                    kind: 'products',
+                    name: 'Olive oil',
+                    slug: null,
+                    public_url: '/temp/product/~id-5?catalog_id=5',
+                    view_count: 3,
+                    last_viewed_at: '2026-10-08 12:00:00',
+                },
+            ]),
+            filters: { kind: null, per_page: 20 },
+        },
+    });
+    await expectColumnCanBeHidden(wrapper, 'customers.views', {
+        key: 'viewCount',
+        label: t('store.customers.viewCount'),
+    });
+    expectColumnLocked(wrapper, t('store.customers.fields.name'));
+    window.localStorage.clear();
 });
