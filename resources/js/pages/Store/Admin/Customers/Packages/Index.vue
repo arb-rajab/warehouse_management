@@ -61,7 +61,7 @@ function onPerPageChange(perPage: number): void {
                     <img
                         :src="item.logo_url"
                         :alt="t('store.customerPackages.logo')"
-                        class="h-12 w-12 object-contain"
+                        class="h-8 w-8 object-contain"
                     />
                 </td>
                 <td class="px-4 py-2">{{ item.formatted_amount }}</td>

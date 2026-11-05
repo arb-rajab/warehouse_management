@@ -576,7 +576,7 @@ async function requestFetch(): Promise<void> {
                         <img
                             :src="product.thumbnail_url"
                             :alt="t('store.products.photo')"
-                            class="h-12 w-12 shrink-0 object-contain"
+                            class="h-8 w-8 shrink-0 object-contain"
                         />
                         <div
                             :class="
@@ -667,7 +667,7 @@ async function requestFetch(): Promise<void> {
                     >
                 </td>
                 <td class="px-4 py-2">
-                    <div class="flex flex-wrap items-center gap-2">
+                    <div class="flex flex-nowrap items-center gap-2">
                         <TableActionLink
                             v-if="product.public_url"
                             :href="product.public_url"

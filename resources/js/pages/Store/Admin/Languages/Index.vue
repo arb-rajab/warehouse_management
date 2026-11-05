@@ -124,7 +124,7 @@ const hasRequiredFields = provideRequiredFields();
                     <td class="px-4 py-2">
                         <div
                             v-if="access.can('language_setup')"
-                            class="flex flex-wrap gap-2"
+                            class="flex flex-nowrap gap-2"
                         >
                             <TableActionLink :href="edit(language)"
                                 ><Pencil class="h-3.5 w-3.5" />{{

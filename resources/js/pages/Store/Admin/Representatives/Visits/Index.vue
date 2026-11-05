@@ -164,7 +164,9 @@ function deleteSelection(): void {
                     </td>
                     <td class="px-4 py-2">{{ visit.representative?.name }}</td>
                     <td class="px-4 py-2">{{ visit.customer?.name }}</td>
-                    <td class="px-4 py-2">{{ visit.note }}</td>
+                    <td class="max-w-xs truncate px-4 py-2" :title="visit.note">
+                        {{ visit.note }}
+                    </td>
                     <td class="px-4 py-2">{{ visit.visit_date }}</td>
                     <td class="px-4 py-2">
                         {{
@@ -176,7 +178,7 @@ function deleteSelection(): void {
                         }}
                     </td>
                     <td class="px-4 py-2">
-                        <div class="flex flex-wrap items-center gap-2">
+                        <div class="flex flex-nowrap items-center gap-2">
                             <Link
                                 :href="show(visit)"
                                 class="inline-flex items-center gap-1 text-sm underline"

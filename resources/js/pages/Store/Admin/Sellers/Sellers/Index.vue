@@ -231,7 +231,7 @@ function showProfile(seller: StoreSeller): void {
                     >
                 </td>
                 <td class="px-4 py-3">
-                    <div class="flex flex-wrap items-center gap-2">
+                    <div class="flex flex-nowrap items-center gap-2">
                         <button
                             v-if="access.can('view_seller_profile')"
                             type="button"

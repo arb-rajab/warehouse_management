@@ -59,7 +59,9 @@ function apply(perPage: number): void {
                 </td>
                 <td class="px-4 py-3">{{ row.due }}</td>
                 <td class="px-4 py-3">{{ row.amount }}</td>
-                <td class="px-4 py-3 whitespace-pre-wrap">{{ row.message }}</td>
+                <td class="max-w-xs truncate px-4 py-3" :title="row.message">
+                    {{ row.message }}
+                </td>
                 <td class="px-4 py-3">
                     <span class="inline-flex items-center gap-1"
                         ><component
@@ -75,7 +77,7 @@ function apply(perPage: number): void {
                     >
                 </td>
                 <td class="px-4 py-3">
-                    <div class="flex flex-wrap gap-2">
+                    <div class="flex flex-nowrap gap-2">
                         <button
                             v-if="access.can('pay_to_seller')"
                             type="button"

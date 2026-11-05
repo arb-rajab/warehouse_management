@@ -53,7 +53,12 @@ function onPerPageChange(perPage: number): void {
             :empty-message="t('store.notifications.index.empty')"
         >
             <template #row="{ row: notification }">
-                <td class="px-4 py-2">{{ notification.title }}</td>
+                <td
+                    class="max-w-xs truncate px-4 py-2"
+                    :title="notification.title"
+                >
+                    {{ notification.title }}
+                </td>
                 <td class="px-4 py-2">
                     {{
                         notification.status === 'sent'

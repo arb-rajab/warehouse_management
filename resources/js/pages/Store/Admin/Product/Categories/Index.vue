@@ -112,7 +112,7 @@ function search(event: Event): void {
                         v-if="url"
                         :src="url"
                         :alt="t(`store.categories.${field}`)"
-                        class="h-12 w-12 object-contain"
+                        class="h-8 w-8 object-contain"
                     />
                     <span v-else>—</span>
                 </td>

@@ -164,7 +164,9 @@ function selectAll(checked: boolean): void {
                         class="size-16 rounded object-cover"
                     />
                 </td>
-                <td class="px-4 py-2">{{ popup.title }}</td>
+                <td class="max-w-xs truncate px-4 py-2" :title="popup.title">
+                    {{ popup.title }}
+                </td>
                 <td class="px-4 py-2 break-all">{{ popup.btn_link }}</td>
                 <td class="px-4 py-2">
                     <StoreStatusSwitch

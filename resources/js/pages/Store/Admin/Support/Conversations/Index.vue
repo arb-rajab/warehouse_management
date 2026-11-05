@@ -55,7 +55,9 @@ function onPerPageChange(perPage: number): void {
                 <td class="px-4 py-2">
                     {{ row.created_at ? formatDateTime(row.created_at) : '' }}
                 </td>
-                <td class="px-4 py-2">{{ row.title }}</td>
+                <td class="max-w-xs truncate px-4 py-2" :title="row.title">
+                    {{ row.title }}
+                </td>
                 <td class="px-4 py-2">
                     {{ row.sender?.name ?? t('store.support.missingUser')
                     }}<span v-if="row.sender && !row.receiver_viewed">

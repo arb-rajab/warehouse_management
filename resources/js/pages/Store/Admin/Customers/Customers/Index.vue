@@ -492,7 +492,7 @@ function choosePackage(customer: StoreCustomer): void {
                     </td>
                 </template>
                 <td class="px-4 py-2">
-                    <div class="flex flex-wrap gap-2">
+                    <div class="flex flex-nowrap gap-2">
                         <TableActionLink
                             v-if="access.can('edit_customer')"
                             :href="edit(customer)"

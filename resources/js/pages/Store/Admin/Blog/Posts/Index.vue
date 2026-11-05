@@ -101,7 +101,7 @@ function onPerPageChange(perPage: number): void {
                     <X v-else class="size-4" />
                 </td>
                 <td class="px-4 py-2">
-                    <div class="flex flex-wrap items-center gap-2">
+                    <div class="flex flex-nowrap items-center gap-2">
                         <a
                             :href="blog.public_url"
                             :class="filterTriggerButtonClass"

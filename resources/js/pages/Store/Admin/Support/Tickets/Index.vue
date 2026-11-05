@@ -78,7 +78,9 @@ function search(event: Event): void {
                         >· {{ t('store.support.new') }}</span
                     >
                 </td>
-                <td class="px-4 py-2">{{ row.subject }}</td>
+                <td class="max-w-xs truncate px-4 py-2" :title="row.subject">
+                    {{ row.subject }}
+                </td>
                 <td class="px-4 py-2">
                     {{ row.user?.name ?? t('store.support.missingUser') }}
                 </td>

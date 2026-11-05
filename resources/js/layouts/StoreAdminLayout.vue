@@ -423,7 +423,7 @@ function toggle(item: StoreMenuItem): void {
             </div>
         </aside>
         <main id="main" class="min-w-0 flex-1 px-4 py-8 sm:px-6">
-            <div class="mx-auto max-w-6xl">
+            <div class="mx-auto max-w-screen-2xl">
                 <slot />
             </div>
         </main>

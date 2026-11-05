@@ -119,7 +119,7 @@ function onPerPageChange(perPage: number): void {
                     <img
                         :src="product.thumbnail_url"
                         :alt="t('store.digitalProducts.photo')"
-                        class="h-12 w-12 object-contain"
+                        class="h-8 w-8 object-contain"
                     />
                 </td>
                 <td class="px-4 py-2">{{ product.unit_price }}</td>
@@ -143,7 +143,7 @@ function onPerPageChange(perPage: number): void {
                     }}</span>
                 </td>
                 <td class="px-4 py-2">
-                    <div class="flex flex-wrap items-center gap-2">
+                    <div class="flex flex-nowrap items-center gap-2">
                         <TableActionLink
                             v-if="access.can('edit_digital_product')"
                             :href="

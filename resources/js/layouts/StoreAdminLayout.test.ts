@@ -473,4 +473,12 @@ describe('StoreAdminLayout', () => {
             1,
         );
     });
+
+    it('lets the content grow to 2xl so wide lists scroll sideways less', () => {
+        const wrapper = mountLayout('/admin/staffs');
+        const container = wrapper.get('main > div');
+
+        expect(container.classes()).toContain('max-w-screen-2xl');
+        expect(container.classes()).not.toContain('max-w-6xl');
+    });
 });

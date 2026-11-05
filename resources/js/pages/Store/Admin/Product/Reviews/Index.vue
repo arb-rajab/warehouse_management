@@ -91,7 +91,9 @@ function filter(perPage = currentPerPage.value): void {
                     {{ row.customer.name }} ({{ row.customer.email }})
                 </td>
                 <td class="px-4 py-2">{{ row.rating }}</td>
-                <td class="px-4 py-2 whitespace-pre-wrap">{{ row.comment }}</td>
+                <td class="max-w-xs truncate px-4 py-2" :title="row.comment">
+                    {{ row.comment }}
+                </td>
                 <td class="px-4 py-2">
                     <StoreStatusSwitch
                         v-if="access.can('publish_product_review')"

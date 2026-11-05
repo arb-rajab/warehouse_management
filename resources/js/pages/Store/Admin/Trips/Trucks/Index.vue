@@ -83,7 +83,7 @@ function photoUrl(truck: StoreTruck): string | null {
                             v-if="photoUrl(truck)"
                             :src="photoUrl(truck) ?? ''"
                             alt=""
-                            class="h-12 w-12 rounded object-cover"
+                            class="h-8 w-8 rounded object-cover"
                         /><TableLink
                             v-if="
                                 truck.open_trip_id &&
@@ -97,7 +97,12 @@ function photoUrl(truck: StoreTruck): string | null {
                 <td class="px-4 py-2">{{ truck.id }}</td>
                 <td class="px-4 py-2">{{ truck.model }}</td>
                 <td class="px-4 py-2">{{ truck.max_pallets_number }}</td>
-                <td class="px-4 py-2">{{ truck.description }}</td>
+                <td
+                    class="max-w-xs truncate px-4 py-2"
+                    :title="truck.description"
+                >
+                    {{ truck.description }}
+                </td>
                 <td class="px-4 py-2">{{ truck.license_plate }}</td>
                 <td class="px-4 py-2">
                     <div class="flex items-center gap-2">

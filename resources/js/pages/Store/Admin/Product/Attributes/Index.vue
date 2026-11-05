@@ -68,7 +68,7 @@ function onPerPageChange(perPage: number): void {
                         >
                     </td>
                     <td class="px-4 py-2">
-                        <div class="flex flex-wrap items-center gap-2">
+                        <div class="flex flex-nowrap items-center gap-2">
                             <TableActionLink
                                 v-if="
                                     access.can('view_product_attribute_values')

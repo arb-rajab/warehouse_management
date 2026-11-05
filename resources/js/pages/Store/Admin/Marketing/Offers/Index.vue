@@ -82,7 +82,9 @@ function perPage(value: number) {
             :rows="offers.data"
             :empty-message="t('store.campaigns.fields.empty')"
             ><template #row="{ row }"
-                ><td class="px-4 py-2">{{ row.title }}</td>
+                ><td class="max-w-xs truncate px-4 py-2" :title="row.title">
+                    {{ row.title }}
+                </td>
                 <td class="px-4 py-2">{{ row.start_date }}</td>
                 <td class="px-4 py-2">{{ row.end_date }}</td>
                 <td class="px-4 py-2">
@@ -148,7 +150,7 @@ function perPage(value: number) {
                     }}</span>
                 </td>
                 <td class="px-4 py-2">
-                    <div class="flex flex-wrap items-center gap-2">
+                    <div class="flex flex-nowrap items-center gap-2">
                         <TableActionLink
                             v-if="access.can('edit_offer_deal')"
                             :href="edit(row)"

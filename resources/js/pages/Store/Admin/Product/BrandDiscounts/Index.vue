@@ -69,7 +69,7 @@ function filter(perPage = props.filters.per_page): void {
                         v-if="row.logo_url"
                         :src="row.logo_url"
                         :alt="row.name"
-                        class="h-10 w-10 object-contain"
+                        class="h-8 w-8 object-contain"
                     /><span v-else>—</span>
                 </td>
                 <td class="px-4 py-2">{{ row.name }}</td>

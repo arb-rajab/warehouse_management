@@ -66,7 +66,7 @@ function onPerPageChange(perPage: number): void {
                     <img
                         :src="row.thumbnail_url"
                         :alt="t('store.classifiedProducts.image')"
-                        class="h-12 w-12 object-contain"
+                        class="h-8 w-8 object-contain"
                     />
                 </td>
                 <td class="px-4 py-2">{{ row.added_by }}</td>

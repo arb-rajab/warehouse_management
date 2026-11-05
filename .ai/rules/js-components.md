@@ -7,6 +7,8 @@ paths:
 
 # Shared resource forms and table components
 
+Table sizing, nowrap cells and the sticky header are in [store-table-layout.md](store-table-layout.md).
+
 ## ResourceFormPage supports an optional cancelHref back to the resource's index
 ResourceFormPage.vue has an optional `cancelHref?: string | UrlMethodPair` prop; when given it renders a "Cancel" Link (t('common.cancel')) beside SubmitButton (wrapped together in `.flex.gap-3`, SubmitButton gets `class="flex-1"`). All four current Create/Edit pages (Rows, Users) pass their resource's `index()` action as `cancel-href`. Pass it on any new Create/Edit page using this component too, so users always have an in-app way back besides the browser back button.
 

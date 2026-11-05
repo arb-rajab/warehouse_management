@@ -139,7 +139,9 @@ function changePerPage(perPage: number): void {
                 <td class="px-4 py-2">{{ payment.invoice_code }}</td>
                 <td class="px-4 py-2">{{ payment.amount }}</td>
                 <td class="px-4 py-2">{{ payment.accountant?.name }}</td>
-                <td class="px-4 py-2">{{ payment.notes }}</td>
+                <td class="max-w-xs truncate px-4 py-2" :title="payment.notes">
+                    {{ payment.notes }}
+                </td>
                 <td class="px-4 py-2">
                     <span class="inline-flex items-center gap-1"
                         ><Clock
@@ -154,7 +156,7 @@ function changePerPage(perPage: number): void {
                     >
                 </td>
                 <td class="px-4 py-2">
-                    <div class="flex flex-wrap items-center gap-2">
+                    <div class="flex flex-nowrap items-center gap-2">
                         <template
                             v-if="
                                 payment.status === 'pending' &&
