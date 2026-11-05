@@ -978,6 +978,8 @@ export interface StoreProductListRow {
     stock_quantity: number | null;
     low_stock: boolean;
     category: string | null;
+    /** The category's id, for its back office link; null when unset. */
+    category_id: number | null;
     for_sale: boolean;
     published: boolean;
     featured: boolean;
@@ -1130,7 +1132,8 @@ export interface StoreSellerPayment {
 }
 export interface StoreSellerWithdrawal {
     id: number;
-    seller: StoreSellerPayment['seller'];
+    /** The seller's user, plus the shop id its edit page is keyed by. */
+    seller: StoreSellerPayment['seller'] & { shop_id: number | null };
     date: string | null;
     due: string;
     amount: string;

@@ -1,6 +1,7 @@
 import { mount } from '@vue/test-utils';
 import { beforeEach, expect, it, vi } from 'vitest';
 import type { ComponentPublicInstance } from 'vue';
+import { edit as productEdit } from '@/actions/App/Http/Controllers/Store/Admin/ProductController';
 import DataTable from '@/components/DataTable.vue';
 import StoreReportPage from '@/components/StoreReportPage.vue';
 import { t } from '@/lib/i18n';
@@ -94,4 +95,36 @@ it('escapes product names and renders the empty state', () => {
         props: { ...props, rows: paginated([]) },
     });
     expect(empty.text()).toContain(t('store.reports.empty'));
+
+    it('links each product name to its edit page only with product_edit', () => {
+        const mountReport = () =>
+            mount(StoreProductReport, {
+                props: {
+                    title: 'Stock',
+                    metricLabel: 'Stock',
+                    url: '/temp/admin/report',
+                    rows: paginated([storeProductReportRow({ id: 5 })]),
+                    options: [],
+                    filters: { per_page: 20 },
+                },
+            });
+
+        usePageMock.mockReturnValue({
+            url: '/temp/admin/report',
+            props: defaultAuthProps({
+                store: storeSharedProps({ permissions: ['product_edit'] }),
+            }),
+        });
+        expect(mountReport().get('tbody a').attributes('href')).toBe(
+            productEdit(5).url,
+        );
+
+        usePageMock.mockReturnValue({
+            url: '/temp/admin/report',
+            props: defaultAuthProps({
+                store: storeSharedProps({ permissions: [] }),
+            }),
+        });
+        expect(mountReport().find('tbody a').exists()).toBe(false);
+    });
 });

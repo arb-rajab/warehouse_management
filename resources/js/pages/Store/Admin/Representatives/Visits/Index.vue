@@ -2,6 +2,7 @@
 import { Head, Link, router, useForm } from '@inertiajs/vue3';
 import { Eye, Trash2 } from '@lucide/vue';
 import { computed, ref } from 'vue';
+import { edit as customerEdit } from '@/actions/App/Http/Controllers/Store/Admin/CustomerController';
 import {
     bulkDestroy,
     destroy,
@@ -16,6 +17,7 @@ import PageHeader from '@/components/PageHeader.vue';
 import Pagination from '@/components/Pagination.vue';
 import StoreListFilters from '@/components/StoreListFilters.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
+import TableObjectLink from '@/components/TableObjectLink.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
 import { confirmDelete } from '@/lib/confirm';
 import { t } from '@/lib/i18n';
@@ -162,8 +164,22 @@ function deleteSelection(): void {
                             class="cursor-pointer"
                         />
                     </td>
-                    <td class="px-4 py-2">{{ visit.representative?.name }}</td>
-                    <td class="px-4 py-2">{{ visit.customer?.name }}</td>
+                    <td class="px-4 py-2">
+                        <TableObjectLink
+                            v-if="visit.representative"
+                            :allowed="access.can('edit_customer')"
+                            :href="customerEdit(visit.representative)"
+                            >{{ visit.representative.name }}</TableObjectLink
+                        >
+                    </td>
+                    <td class="px-4 py-2">
+                        <TableObjectLink
+                            v-if="visit.customer"
+                            :allowed="access.can('edit_customer')"
+                            :href="customerEdit(visit.customer)"
+                            >{{ visit.customer.name }}</TableObjectLink
+                        >
+                    </td>
                     <td class="max-w-xs truncate px-4 py-2" :title="visit.note">
                         {{ visit.note }}
                     </td>

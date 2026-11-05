@@ -2,6 +2,7 @@ import { Head, Link } from '@inertiajs/vue3';
 import { ShieldCheck } from '@lucide/vue';
 import { mount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { edit as roleEdit } from '@/actions/App/Http/Controllers/Store/Admin/RoleController';
 import {
     create as staffCreate,
     destroy as staffDestroy,
@@ -215,5 +216,25 @@ describe('Store staff Index', () => {
             { per_page: 10 },
             { preserveState: true, replace: true },
         );
+    });
+
+    it('links the role to its edit page only for staff who may edit roles', () => {
+        const member = staffMember({ role: { id: 3, name: 'Clerk' } });
+        const roleCell = (wrapper: ReturnType<typeof mountPage>) =>
+            wrapper.get('tbody tr').findAll('td')[3];
+
+        const allowed = mountPage([member], {
+            permissions: ['view_all_staffs', 'edit_staff_role'],
+        });
+        expect(roleCell(allowed).get('a').attributes('href')).toBe(
+            roleEdit(member.role!).url,
+        );
+        expect(roleCell(allowed).text()).toBe('Clerk');
+
+        const denied = mountPage([member], {
+            permissions: ['view_all_staffs'],
+        });
+        expect(roleCell(denied).find('a').exists()).toBe(false);
+        expect(roleCell(denied).text()).toBe('Clerk');
     });
 });

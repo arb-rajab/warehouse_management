@@ -181,7 +181,7 @@ test('seller rows expose the full shared payload and exclude every other product
         ->where('id', $this->product->id)->where('name', 'Seller oil')->where('ar_name', 'زيت البائع')
         ->where('thumbnail_url', static_asset('assets/img/placeholder.jpg'))->where('mat_id', (string) $this->product->id)->where('unit', 'Box(12)')
         ->where('num_of_sale', 3)->where('base_price', single_price(2.5))->where('profit', single_price(0))
-        ->where('variant_stocks', null)->where('stock_quantity', 7)->where('low_stock', true)->where('category', null)
+        ->where('variant_stocks', null)->where('stock_quantity', 7)->where('low_stock', true)->where('category', null)->where('category_id', null)
         ->where('for_sale', true)->where('published', true)->where('featured', true)->where('approved', false)->where('todays_deal', true)
         ->where('published_locked', false)->where('deleted_from_api', false)->where('public_url', route('product', 'seller-oil'))));
 });

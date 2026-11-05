@@ -1,8 +1,19 @@
 <script setup lang="ts">
 import { Form, Head, Link, router, useHttp } from '@inertiajs/vue3';
-import { Copy, Eye, Pencil, RefreshCw, Trash2 } from '@lucide/vue';
+import {
+    Copy,
+    Eye,
+    Pencil,
+    RefreshCw,
+    ShoppingCart,
+    Tag,
+    Trash2,
+    TrendingUp,
+    TriangleAlert,
+} from '@lucide/vue';
 import { computed, ref, watch } from 'vue';
 import { fetch as fetchProducts } from '@/actions/App/Http/Controllers/ProductController';
+import { edit as categoryEdit } from '@/actions/App/Http/Controllers/Store/Admin/CategoryController';
 import {
     all as allProducts,
     bulkDestroy,
@@ -29,12 +40,14 @@ import AddResourceLink from '@/components/AddResourceLink.vue';
 import DataTable from '@/components/DataTable.vue';
 import FieldError from '@/components/FieldError.vue';
 import FormField from '@/components/FormField.vue';
+import IconStat from '@/components/IconStat.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import Pagination from '@/components/Pagination.vue';
 import StoreListFilters from '@/components/StoreListFilters.vue';
 import StoreStatusSwitch from '@/components/StoreStatusSwitch.vue';
 import SubmitButton from '@/components/SubmitButton.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
+import TableObjectLink from '@/components/TableObjectLink.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
 import { confirmDelete } from '@/lib/confirm';
 import {
@@ -591,28 +604,45 @@ async function requestFetch(): Promise<void> {
                             <span
                                 v-if="product.ar_name"
                                 dir="auto"
-                                class="block"
+                                class="block text-gray-600 dark:text-neutral-400"
                                 >{{ product.ar_name }}</span
                             >
                         </div>
                     </div>
                 </td>
-                <td class="px-4 py-2">{{ product.id }}</td>
+                <td class="px-4 py-2 tabular-nums">{{ product.id }}</td>
                 <td class="px-4 py-2">{{ product.unit }}</td>
-                <td class="px-4 py-2 whitespace-nowrap">
-                    <span class="block">{{
-                        t('store.products.salesCount', {
-                            count: product.num_of_sale,
-                        })
-                    }}</span>
-                    <span class="block">{{
-                        t('store.products.basePrice', {
-                            price: product.base_price,
-                        })
-                    }}</span>
-                    <span class="block">{{
-                        t('store.products.profit', { price: product.profit })
-                    }}</span>
+                <td class="px-4 py-2">
+                    <div class="flex items-center gap-4">
+                        <IconStat
+                            :icon="ShoppingCart"
+                            :value="product.num_of_sale"
+                            :label="
+                                t('store.products.salesCount', {
+                                    count: product.num_of_sale,
+                                })
+                            "
+                        />
+                        <IconStat
+                            :icon="Tag"
+                            :value="product.base_price"
+                            :label="
+                                t('store.products.basePrice', {
+                                    price: product.base_price,
+                                })
+                            "
+                        />
+                        <IconStat
+                            :icon="TrendingUp"
+                            :value="product.profit"
+                            tone="text-green-700 dark:text-green-400"
+                            :label="
+                                t('store.products.profit', {
+                                    price: product.profit,
+                                })
+                            "
+                        />
+                    </div>
                 </td>
                 <td class="px-4 py-2">
                     <template v-if="product.variant_stocks">
@@ -623,16 +653,30 @@ async function requestFetch(): Promise<void> {
                             >{{ stock.variant }} - {{ stock.qty }}</span
                         >
                     </template>
-                    <span v-else class="block">{{
+                    <span v-else class="tabular-nums">{{
                         product.stock_quantity
                     }}</span>
                     <span
                         v-if="product.low_stock"
-                        class="mt-1 inline-block rounded bg-red-100 px-1.5 text-xs font-medium text-red-800 dark:bg-red-950 dark:text-red-200"
-                        >{{ t('store.products.low') }}</span
+                        class="ms-2 inline-flex items-center gap-1 rounded bg-red-100 px-1.5 text-xs font-medium text-red-800 dark:bg-red-950 dark:text-red-200"
+                        ><TriangleAlert class="h-3 w-3 shrink-0" />{{
+                            t('store.products.low')
+                        }}</span
                     >
                 </td>
-                <td class="px-4 py-2">{{ product.category }}</td>
+                <td class="px-4 py-2">
+                    <TableObjectLink
+                        v-if="product.category && product.category_id !== null"
+                        :allowed="access.can('edit_product_category')"
+                        :href="
+                            categoryEdit(product.category_id, {
+                                query: { lang: defaultLanguage },
+                            })
+                        "
+                        >{{ product.category }}</TableObjectLink
+                    >
+                    <template v-else>{{ product.category }}</template>
+                </td>
                 <td
                     v-for="item in switches"
                     :key="item.field"

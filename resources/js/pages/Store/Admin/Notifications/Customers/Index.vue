@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Head, router } from '@inertiajs/vue3';
+import { edit as customerEdit } from '@/actions/App/Http/Controllers/Store/Admin/CustomerController';
 import {
     create,
     destroy,
@@ -10,6 +11,7 @@ import DataTable from '@/components/DataTable.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import Pagination from '@/components/Pagination.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
+import TableObjectLink from '@/components/TableObjectLink.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
 import { confirmDelete } from '@/lib/confirm';
 import { t } from '@/lib/i18n';
@@ -66,7 +68,14 @@ function onPerPageChange(perPage: number): void {
                             : notification.status
                     }}
                 </td>
-                <td class="px-4 py-2">{{ notification.customer?.name }}</td>
+                <td class="px-4 py-2">
+                    <TableObjectLink
+                        v-if="notification.customer"
+                        :allowed="access.can('edit_customer')"
+                        :href="customerEdit(notification.customer)"
+                        >{{ notification.customer.name }}</TableObjectLink
+                    >
+                </td>
                 <td class="px-4 py-2">
                     <TableActionLink
                         v-if="access.can('delete_notification')"

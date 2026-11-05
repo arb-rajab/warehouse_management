@@ -32,7 +32,7 @@ test('payments return a complete narrow payload including orphan customer fallba
         ->has('payments.data.0', fn (Assert $item) => $item
             ->where('id', (string) $payment->id)->where('amount', '125.5')->where('receipt_code', $payment->receipt_code)
             ->where('invoice_code', 123)->where('notes', '<script>alert(1)</script>')->where('status', 'pending')
-            ->where('date', '2026-10-08 10:00:00')->where('customer_name', 'External customer')->where('account_id', 42)
+            ->where('date', '2026-10-08 10:00:00')->where('customer_id', null)->where('customer_name', 'External customer')->where('account_id', 42)
             ->has('representative', fn (Assert $user) => $user->where('id', $rep->id)->where('name', $rep->name))->where('accountant', null)));
 });
 
@@ -144,7 +144,7 @@ test('payment customer and accountant summaries expose exactly the loaded names 
         ->has('payments.data.0', fn (Assert $item) => $item
             ->where('id', $payment->id)->where('amount', '125.5')->where('receipt_code', $payment->receipt_code)
             ->where('invoice_code', null)->where('notes', null)->where('status', 'accepted')
-            ->where('date', '2026-10-08 10:00:00')->where('customer_name', 'Customer Account')->where('account_id', 73)
+            ->where('date', '2026-10-08 10:00:00')->where('customer_id', $customer->id)->where('customer_name', 'Customer Account')->where('account_id', 73)
             ->has('representative', fn (Assert $user) => $user->where('id', $rep->id)->where('name', $rep->name))
             ->has('accountant', fn (Assert $user) => $user->where('id', $accountant->id)->where('name', $accountant->name))));
 });

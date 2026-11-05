@@ -136,7 +136,7 @@ test('history reports include both whole-day boundaries and exclude unrelated ac
         if ($model === Wallet::class) {
             $row->where('user_name', 'Owner')->where('amount', single_price(5.5))->where('payment_method', 'Bank transfer');
         } else {
-            $row->where('order_code', null)->where('admin_commission', '1.25')->where('seller_earning', '8.75');
+            $row->where('order_id', null)->where('order_code', null)->where('admin_commission', '1.25')->where('seller_earning', '8.75');
         }
     }));
     $selected = $model === Wallet::class ? 'user_ids' : 'seller_ids';
@@ -189,7 +189,7 @@ test('commission orders and filter options use only the required shape', functio
     $order = createStoreOrder(createStoreUser('customer'), ['code' => 'ORDER-1']);
     $commission = CommissionHistory::forceCreate(['order_id' => $order->id, 'order_detail_id' => 1, 'seller_id' => $seller->id, 'admin_commission' => 2.5, 'seller_earning' => 10, 'created_at' => '2026-01-10 12:00:00']);
     $this->get('/temp/admin/commission-log')->assertOk()->assertInertia(fn (Assert $page) => $page
-        ->has('rows.data.0', fn (Assert $row) => $row->where('id', $commission->id)->where('order_code', 'ORDER-1')->where('admin_commission', '2.5')->where('seller_earning', '10')->where('created_at', '2026-01-10T12:00:00+00:00'))
+        ->has('rows.data.0', fn (Assert $row) => $row->where('id', $commission->id)->where('order_id', $order->id)->where('order_code', 'ORDER-1')->where('admin_commission', '2.5')->where('seller_earning', '10')->where('created_at', '2026-01-10T12:00:00+00:00'))
         ->where('options', [['value' => (string) $seller->id, 'label' => 'Seller']]));
 });
 

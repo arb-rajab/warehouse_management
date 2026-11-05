@@ -2,6 +2,7 @@
 import { Form, Head, router } from '@inertiajs/vue3';
 import { ArrowUpRight, Check, Pencil, Trash2, X } from '@lucide/vue';
 import { computed } from 'vue';
+import { edit as blogCategoryEdit } from '@/actions/App/Http/Controllers/Store/Admin/BlogCategoryController';
 import {
     changeStatus,
     create,
@@ -17,6 +18,7 @@ import Pagination from '@/components/Pagination.vue';
 import StoreStatusSwitch from '@/components/StoreStatusSwitch.vue';
 import SubmitButton from '@/components/SubmitButton.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
+import TableObjectLink from '@/components/TableObjectLink.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
 import { confirmDelete } from '@/lib/confirm';
 import { filterTriggerButtonClass } from '@/lib/filters';
@@ -84,7 +86,13 @@ function onPerPageChange(perPage: number): void {
                     {{ blog.title }}
                 </td>
                 <td class="px-4 py-2">
-                    {{ blog.category?.category_name ?? '—' }}
+                    <TableObjectLink
+                        v-if="blog.category"
+                        :allowed="access.can('edit_blog_category')"
+                        :href="blogCategoryEdit(blog.category)"
+                        >{{ blog.category.category_name }}</TableObjectLink
+                    >
+                    <template v-else>—</template>
                 </td>
                 <td class="px-4 py-2">
                     <StoreStatusSwitch

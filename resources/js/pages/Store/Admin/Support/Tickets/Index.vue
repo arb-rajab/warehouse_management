@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Head, router } from '@inertiajs/vue3';
 import { Eye } from '@lucide/vue';
+import { edit as customerEdit } from '@/actions/App/Http/Controllers/Store/Admin/CustomerController';
 import { index as ticketsIndex } from '@/actions/App/Http/Controllers/Store/Admin/SupportTicketController';
 import { show } from '@/actions/App/Http/Controllers/Store/Admin/SupportTicketController';
 import DataTable from '@/components/DataTable.vue';
@@ -9,9 +10,11 @@ import PageHeader from '@/components/PageHeader.vue';
 import Pagination from '@/components/Pagination.vue';
 import SubmitButton from '@/components/SubmitButton.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
+import TableObjectLink from '@/components/TableObjectLink.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
 import { formatDateTime } from '@/lib/date';
 import { t } from '@/lib/i18n';
+import { useStoreAccess } from '@/lib/storeAccess';
 import { ticketStatusLabel } from '@/lib/storeSupportTicket';
 import type { Paginated, PerPageFilters } from '@/types/admin';
 import type { StoreSupportTicket } from '@/types/store';
@@ -37,6 +40,7 @@ function search(event: Event): void {
         { preserveState: true, replace: true },
     );
 }
+const access = useStoreAccess();
 </script>
 <template>
     <Head :title="t('store.support.tickets')" />
@@ -82,7 +86,15 @@ function search(event: Event): void {
                     {{ row.subject }}
                 </td>
                 <td class="px-4 py-2">
-                    {{ row.user?.name ?? t('store.support.missingUser') }}
+                    <TableObjectLink
+                        v-if="row.user"
+                        :allowed="access.can('edit_customer')"
+                        :href="customerEdit(row.user)"
+                        >{{ row.user.name }}</TableObjectLink
+                    >
+                    <template v-else>{{
+                        t('store.support.missingUser')
+                    }}</template>
                 </td>
                 <td class="px-4 py-2">{{ ticketStatusLabel(row.status) }}</td>
                 <td class="px-4 py-2">

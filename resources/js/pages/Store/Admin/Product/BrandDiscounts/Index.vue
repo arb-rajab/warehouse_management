@@ -2,6 +2,7 @@
 import { Form, Head, router } from '@inertiajs/vue3';
 import { Check, TriangleAlert } from '@lucide/vue';
 import { ref } from 'vue';
+import { edit as brandEdit } from '@/actions/App/Http/Controllers/Store/Admin/BrandController';
 import {
     index as brandDiscountsIndex,
     update,
@@ -14,6 +15,7 @@ import PageHeader from '@/components/PageHeader.vue';
 import Pagination from '@/components/Pagination.vue';
 import StoreBrandDiscountFormFields from '@/components/StoreBrandDiscountFormFields.vue';
 import SubmitButton from '@/components/SubmitButton.vue';
+import TableObjectLink from '@/components/TableObjectLink.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
 import { filterApplyButtonClass } from '@/lib/filters';
 import { t } from '@/lib/i18n';
@@ -72,7 +74,13 @@ function filter(perPage = props.filters.per_page): void {
                         class="h-8 w-8 object-contain"
                     /><span v-else>—</span>
                 </td>
-                <td class="px-4 py-2">{{ row.name }}</td>
+                <td class="px-4 py-2">
+                    <TableObjectLink
+                        :allowed="access.can('edit_brand')"
+                        :href="brandEdit(row)"
+                        >{{ row.name }}</TableObjectLink
+                    >
+                </td>
                 <td class="px-4 py-2">
                     <Form
                         v-if="access.can('product_edit')"

@@ -1,6 +1,7 @@
 import { Head } from '@inertiajs/vue3';
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { edit as customerEdit } from '@/actions/App/Http/Controllers/Store/Admin/CustomerController';
 import PageHeader from '@/components/PageHeader.vue';
 import Pagination from '@/components/Pagination.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
@@ -131,5 +132,35 @@ describe('Support ticket list', () => {
         expect(wrapper.text()).toContain(t('store.support.open'));
         expect(wrapper.text()).toContain(t('store.support.solved'));
         expect(wrapper.text()).not.toContain(`· ${t('store.support.new')}`);
+    });
+
+    it('links the ticket owner to their edit page only with edit_customer', () => {
+        const customerCell = (w: ReturnType<typeof mountPage>) =>
+            w.get('tbody tr').findAll('td')[3];
+
+        usePageMock.mockReturnValue({
+            url: '/temp/admin/x',
+            props: defaultAuthProps({
+                store: storeSharedProps({
+                    permissions: ['view_all_support_tickets', 'edit_customer'],
+                }),
+            }),
+        });
+        const allowed = mountPage();
+        expect(customerCell(allowed).get('a').attributes('href')).toBe(
+            customerEdit(8).url,
+        );
+
+        usePageMock.mockReturnValue({
+            url: '/temp/admin/x',
+            props: defaultAuthProps({
+                store: storeSharedProps({
+                    permissions: ['view_all_support_tickets'],
+                }),
+            }),
+        });
+        const denied = mountPage();
+        expect(customerCell(denied).find('a').exists()).toBe(false);
+        expect(customerCell(denied).text()).toBe('Customer');
     });
 });

@@ -8,6 +8,7 @@ import {
     destroy,
     store,
 } from '@/actions/App/Http/Controllers/Store/Admin/CityController';
+import { edit as stateEdit } from '@/actions/App/Http/Controllers/Store/Admin/StateController';
 import AddResourceLink from '@/components/AddResourceLink.vue';
 import Pagination from '@/components/Pagination.vue';
 import StoreStatusSwitch from '@/components/StoreStatusSwitch.vue';
@@ -160,5 +161,23 @@ describe('Store Cities Index', () => {
             resetOnSuccess: true,
         });
         expect(wrapper.text()).toContain('Name required');
+    });
+
+    it('links the state to its edit page only with manage_shipping_states', () => {
+        const cell = (wrapper: ReturnType<typeof mountPage>) =>
+            wrapper.get('tbody tr').findAll('td')[1];
+
+        const allowed = mountPage([
+            'manage_shipping_cities',
+            'manage_shipping_states',
+        ]);
+        expect(cell(allowed).get('a').attributes('href')).toBe(
+            stateEdit(12).url,
+        );
+        expect(cell(allowed).text()).toBe('North Holland');
+
+        const denied = mountPage(['manage_shipping_cities']);
+        expect(cell(denied).find('a').exists()).toBe(false);
+        expect(cell(denied).text()).toBe('North Holland');
     });
 });

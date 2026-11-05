@@ -2,6 +2,7 @@ import { Form, Head, Link } from '@inertiajs/vue3';
 import { flushPromises, mount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fetch as fetchProducts } from '@/actions/App/Http/Controllers/ProductController';
+import { edit as categoryEdit } from '@/actions/App/Http/Controllers/Store/Admin/CategoryController';
 import {
     all as allProducts,
     bulkDestroy,
@@ -27,6 +28,7 @@ import {
 import AddResourceLink from '@/components/AddResourceLink.vue';
 import FieldError from '@/components/FieldError.vue';
 import FormField from '@/components/FormField.vue';
+import IconStat from '@/components/IconStat.vue';
 import Pagination from '@/components/Pagination.vue';
 import StoreListFilters from '@/components/StoreListFilters.vue';
 import StoreStatusSwitch from '@/components/StoreStatusSwitch.vue';
@@ -126,6 +128,9 @@ function mountPage({
 
     return wrapper;
 }
+function categoryCell(wrapper: ReturnType<typeof mount>) {
+    return wrapper.findAll('tbody td').filter((td) => td.text() === 'Oils')[0];
+}
 function forms(wrapper: ReturnType<typeof mount>) {
     return wrapper.findAllComponents(Form);
 }
@@ -179,6 +184,7 @@ describe('Store product lists Index', () => {
                 expect(
                     wrapper.getComponent(AddResourceLink).props('label'),
                 ).toBe(t('store.products.create'));
+
                 if (listType === 'all') {
                     expect(
                         wrapper
@@ -205,6 +211,7 @@ describe('Store product lists Index', () => {
                         false,
                     );
                 }
+
                 const [filterForm, bulkForm] = forms(wrapper);
                 expect(filterForm.getComponent(FormField).props('label')).toBe(
                     t('store.products.search'),
@@ -239,6 +246,7 @@ describe('Store product lists Index', () => {
                         'sortPriceAsc',
                     ].map((key) => t(`store.products.${key}`)),
                 );
+
                 if (listType === 'all') {
                     // Never in both places: the all list has no state boxes.
                     expect(filterForm.find('fieldset').exists()).toBe(false);
@@ -259,6 +267,7 @@ describe('Store product lists Index', () => {
                         t('store.products.inHouseStateHint'),
                     );
                 }
+
                 expect(filterForm.get('button[type="submit"]').text()).toBe(
                     t('common.filters.apply'),
                 );
@@ -981,5 +990,47 @@ describe('seller product list', () => {
             { per_page: 10, approved: 0, user_id: 9, active: 1 },
             { preserveState: true, replace: true },
         );
+    });
+    it('links the category to its edit page for staff who may edit categories', () => {
+        const wrapper = mountPage({
+            products: [storeProductListRow({ category_id: 5 })],
+            permissions: ['edit_product_category'],
+        });
+        const link = categoryCell(wrapper).get('a');
+
+        expect(link.text()).toBe('Oils');
+        expect(link.attributes('href')).toBe(
+            categoryEdit(5, { query: { lang: 'en' } }).url,
+        );
+    });
+
+    it('keeps the category as plain text without that permission or without an id', () => {
+        const withoutAccess = mountPage({
+            products: [storeProductListRow({ category_id: 5 })],
+            permissions: [],
+        });
+        expect(categoryCell(withoutAccess).find('a').exists()).toBe(false);
+
+        const withoutId = mountPage({
+            products: [storeProductListRow({ category_id: null })],
+            permissions: ['edit_product_category'],
+        });
+        expect(categoryCell(withoutId).find('a').exists()).toBe(false);
+    });
+
+    it('shows sales, base price and profit as icon pairs that each explain their value', () => {
+        const wrapper = mountPage();
+        const stats = wrapper.get('tbody tr').findAllComponents(IconStat);
+
+        expect(stats.map((stat) => stat.props('label'))).toEqual([
+            t('store.products.salesCount', { count: 7 }),
+            t('store.products.basePrice', { price: '€12.50' }),
+            t('store.products.profit', { price: '€1.25' }),
+        ]);
+        expect(stats.map((stat) => stat.props('value'))).toEqual([
+            7,
+            '€12.50',
+            '€1.25',
+        ]);
     });
 });

@@ -2,6 +2,7 @@
 import { Head, router } from '@inertiajs/vue3';
 import { Banknote, Check, Clock, Eye } from '@lucide/vue';
 import { ref } from 'vue';
+import { edit as sellerEdit } from '@/actions/App/Http/Controllers/Store/Admin/SellerController';
 import { show } from '@/actions/App/Http/Controllers/Store/Admin/SellerPaymentController';
 import { index as withdrawalsIndex } from '@/actions/App/Http/Controllers/Store/Admin/SellerWithdrawRequestController';
 import DataTable from '@/components/DataTable.vue';
@@ -10,6 +11,7 @@ import Pagination from '@/components/Pagination.vue';
 import StoreSellerPaymentDialog from '@/components/StoreSellerPaymentDialog.vue';
 import StoreSellerWithdrawMessageDialog from '@/components/StoreSellerWithdrawMessageDialog.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
+import TableObjectLink from '@/components/TableObjectLink.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
 import { t } from '@/lib/i18n';
 import { useStoreAccess } from '@/lib/storeAccess';
@@ -55,7 +57,14 @@ function apply(perPage: number): void {
                 ><td class="px-4 py-3">{{ row.id }}</td>
                 <td class="px-4 py-3">{{ row.date }}</td>
                 <td class="px-4 py-3">
-                    {{ row.seller.name }} ({{ row.seller.shop_name }})
+                    <TableObjectLink
+                        v-if="row.seller.shop_id !== null"
+                        :allowed="access.can('edit_seller')"
+                        :href="sellerEdit(row.seller.shop_id)"
+                        >{{ row.seller.name }}</TableObjectLink
+                    ><template v-else>{{ row.seller.name }}</template> ({{
+                        row.seller.shop_name
+                    }})
                 </td>
                 <td class="px-4 py-3">{{ row.due }}</td>
                 <td class="px-4 py-3">{{ row.amount }}</td>

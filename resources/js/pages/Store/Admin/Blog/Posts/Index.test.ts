@@ -1,6 +1,7 @@
 import { Form, Link } from '@inertiajs/vue3';
 import { mount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { edit as blogCategoryEdit } from '@/actions/App/Http/Controllers/Store/Admin/BlogCategoryController';
 import {
     changeStatus,
     create,
@@ -192,5 +193,23 @@ describe('Store blog posts Index', () => {
             { per_page: 50, search: 'Rice' },
             { preserveState: true, replace: true },
         );
+    });
+
+    it('links the category to its blog category edit page only with edit_blog_category', () => {
+        const cell = (wrapper: ReturnType<typeof mountPage>) =>
+            wrapper.get('tbody tr').findAll('td')[1];
+
+        const allowed = mountPage(
+            [blog],
+            [...allPermissions, 'edit_blog_category'],
+        );
+        expect(cell(allowed).get('a').attributes('href')).toBe(
+            blogCategoryEdit(3).url,
+        );
+        expect(cell(allowed).text()).toBe('Recipes');
+
+        const denied = mountPage([blog], allPermissions);
+        expect(cell(denied).find('a').exists()).toBe(false);
+        expect(cell(denied).text()).toBe('Recipes');
     });
 });

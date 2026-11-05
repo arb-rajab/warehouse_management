@@ -2,6 +2,7 @@
 import { Head, router, usePage } from '@inertiajs/vue3';
 import { Pencil, ShieldCheck, Trash2 } from '@lucide/vue';
 import { computed } from 'vue';
+import { edit as roleEdit } from '@/actions/App/Http/Controllers/Store/Admin/RoleController';
 import {
     create,
     destroy,
@@ -13,6 +14,7 @@ import DataTable from '@/components/DataTable.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import Pagination from '@/components/Pagination.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
+import TableObjectLink from '@/components/TableObjectLink.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
 import { confirmDelete } from '@/lib/confirm';
 import { t } from '@/lib/i18n';
@@ -91,9 +93,12 @@ function onPerPageChange(perPage: number): void {
                         <ShieldCheck class="h-3.5 w-3.5 shrink-0" />
                         {{ t('store.staff.index.superAdmin') }}
                     </span>
-                    <template v-else-if="member.role">
-                        {{ member.role.name }}
-                    </template>
+                    <TableObjectLink
+                        v-else-if="member.role"
+                        :allowed="access.can('edit_staff_role')"
+                        :href="roleEdit(member.role)"
+                        >{{ member.role.name }}</TableObjectLink
+                    >
                     <span v-else class="text-gray-400 dark:text-neutral-500">
                         {{ t('store.staff.index.noRole') }}
                     </span>

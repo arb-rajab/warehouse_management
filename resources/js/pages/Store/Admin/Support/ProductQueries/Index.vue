@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { Head, router } from '@inertiajs/vue3';
 import { Eye } from '@lucide/vue';
+import { edit as customerEdit } from '@/actions/App/Http/Controllers/Store/Admin/CustomerController';
+import { edit as productEdit } from '@/actions/App/Http/Controllers/Store/Admin/ProductController';
 import {
     index as queriesIndex,
     show,
@@ -9,8 +11,10 @@ import DataTable from '@/components/DataTable.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import Pagination from '@/components/Pagination.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
+import TableObjectLink from '@/components/TableObjectLink.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
 import { t } from '@/lib/i18n';
+import { useStoreAccess } from '@/lib/storeAccess';
 import type { Paginated, PerPageFilters } from '@/types/admin';
 import type { StoreProductQuery } from '@/types/store';
 
@@ -25,6 +29,7 @@ function onPerPageChange(perPage: number): void {
         { preserveState: true, replace: true },
     );
 }
+const access = useStoreAccess();
 </script>
 
 <template>
@@ -45,10 +50,26 @@ function onPerPageChange(perPage: number): void {
         >
             <template #row="{ row }">
                 <td class="px-4 py-2">
-                    {{ row.user?.name ?? t('store.support.missingUser') }}
+                    <TableObjectLink
+                        v-if="row.user"
+                        :allowed="access.can('edit_customer')"
+                        :href="customerEdit(row.user)"
+                        >{{ row.user.name }}</TableObjectLink
+                    >
+                    <template v-else>{{
+                        t('store.support.missingUser')
+                    }}</template>
                 </td>
                 <td class="px-4 py-2">
-                    {{ row.product?.name ?? t('store.support.missingProduct') }}
+                    <TableObjectLink
+                        v-if="row.product"
+                        :allowed="access.can('product_edit')"
+                        :href="productEdit(row.product)"
+                        >{{ row.product.name }}</TableObjectLink
+                    >
+                    <template v-else>{{
+                        t('store.support.missingProduct')
+                    }}</template>
                 </td>
                 <td class="px-4 py-2">{{ row.question }}</td>
                 <td class="px-4 py-2">{{ row.reply }}</td>

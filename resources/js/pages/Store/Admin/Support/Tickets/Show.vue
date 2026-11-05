@@ -2,6 +2,7 @@
 import { Head, router } from '@inertiajs/vue3';
 import { Paperclip } from '@lucide/vue';
 import { computed } from 'vue';
+import { edit as customerEdit } from '@/actions/App/Http/Controllers/Store/Admin/CustomerController';
 import {
     index as ticketsIndex,
     show,
@@ -11,6 +12,7 @@ import Pagination from '@/components/Pagination.vue';
 import StoreSanitizedHtml from '@/components/StoreSanitizedHtml.vue';
 import StoreTicketReplyForm from '@/components/StoreTicketReplyForm.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
+import TableObjectLink from '@/components/TableObjectLink.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
 import { formatDateTime } from '@/lib/date';
 import { t } from '@/lib/i18n';
@@ -94,9 +96,16 @@ function onPerPageChange(perPage: number): void {
             }}</TableActionLink></PageHeader
         >
         <p class="mb-6 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
-            <span>{{
-                ticket.user?.name ?? t('store.support.missingUser')
-            }}</span>
+            <span
+                ><TableObjectLink
+                    v-if="ticket.user"
+                    :allowed="access.can('edit_customer')"
+                    :href="customerEdit(ticket.user)"
+                    >{{ ticket.user.name }}</TableObjectLink
+                ><template v-else>{{
+                    t('store.support.missingUser')
+                }}</template></span
+            >
             <span>{{ formatDateTime(ticket.created_at) }}</span>
             <span
                 class="rounded-full bg-gray-100 px-2 py-0.5 text-gray-800 dark:bg-neutral-800 dark:text-neutral-200"

@@ -2,6 +2,7 @@ import { Form, Head, Link } from '@inertiajs/vue3';
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ComponentPublicInstance } from 'vue';
+import { edit as customerEdit } from '@/actions/App/Http/Controllers/Store/Admin/CustomerController';
 import {
     create as createPackage,
     destroy as destroyPackage,
@@ -671,5 +672,54 @@ describe('representative visits index', () => {
             },
             { preserveState: true, replace: true },
         );
+    });
+
+    describe('representative reference links', () => {
+        it('links payment customer and representative to their edit pages only with edit_customer', () => {
+            const row = representativePayment({
+                customer_id: 31,
+                representative: { id: 10, name: 'Rep One' },
+            });
+            const hrefs = (wrapper: ReturnType<typeof mount>) =>
+                wrapper
+                    .findAll('tbody a')
+                    .map((link) => link.attributes('href'));
+
+            setAccess(['edit_customer']);
+            expect(hrefs(paymentPage([row]))).toEqual(
+                expect.arrayContaining([
+                    customerEdit(31).url,
+                    customerEdit(10).url,
+                ]),
+            );
+
+            const typedName = representativePayment({ customer_id: null });
+            expect(hrefs(paymentPage([typedName]))).not.toContain(
+                customerEdit(31).url,
+            );
+
+            setAccess([]);
+            expect(hrefs(paymentPage([row]))).not.toContain(
+                customerEdit(31).url,
+            );
+        });
+
+        it('links visit customer and representative to their edit pages only with edit_customer', () => {
+            const hrefs = (wrapper: ReturnType<typeof mount>) =>
+                wrapper
+                    .findAll('tbody a')
+                    .map((link) => link.attributes('href'));
+
+            setAccess(['edit_customer']);
+            expect(hrefs(visitPage())).toEqual(
+                expect.arrayContaining([
+                    customerEdit(10).url,
+                    customerEdit(11).url,
+                ]),
+            );
+
+            setAccess([]);
+            expect(hrefs(visitPage())).not.toContain(customerEdit(11).url);
+        });
     });
 });

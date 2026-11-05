@@ -2,6 +2,7 @@
 import { Head, router } from '@inertiajs/vue3';
 import { Check, Clock, Download, X } from '@lucide/vue';
 import { computed } from 'vue';
+import { edit as customerEdit } from '@/actions/App/Http/Controllers/Store/Admin/CustomerController';
 import {
     accept,
     exportMethod,
@@ -15,6 +16,7 @@ import PageHeader from '@/components/PageHeader.vue';
 import Pagination from '@/components/Pagination.vue';
 import StoreListFilters from '@/components/StoreListFilters.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
+import TableObjectLink from '@/components/TableObjectLink.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
 import { fieldLabelClass } from '@/lib/filters';
 import { t } from '@/lib/i18n';
@@ -132,9 +134,23 @@ function changePerPage(perPage: number): void {
         >
             <template #row="{ row: payment }">
                 <td class="px-4 py-2">{{ payment.id }}</td>
-                <td class="px-4 py-2">{{ payment.customer_name }}</td>
+                <td class="px-4 py-2">
+                    <TableObjectLink
+                        v-if="payment.customer_id !== null"
+                        :allowed="access.can('edit_customer')"
+                        :href="customerEdit(payment.customer_id)"
+                        >{{ payment.customer_name }}</TableObjectLink
+                    ><template v-else>{{ payment.customer_name }}</template>
+                </td>
                 <td class="px-4 py-2">{{ payment.account_id }}</td>
-                <td class="px-4 py-2">{{ payment.representative?.name }}</td>
+                <td class="px-4 py-2">
+                    <TableObjectLink
+                        v-if="payment.representative"
+                        :allowed="access.can('edit_customer')"
+                        :href="customerEdit(payment.representative)"
+                        >{{ payment.representative.name }}</TableObjectLink
+                    >
+                </td>
                 <td class="px-4 py-2">{{ payment.receipt_code }}</td>
                 <td class="px-4 py-2">{{ payment.invoice_code }}</td>
                 <td class="px-4 py-2">{{ payment.amount }}</td>

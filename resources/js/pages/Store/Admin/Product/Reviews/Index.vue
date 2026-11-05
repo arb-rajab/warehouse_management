@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Head, router } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
+import { edit as customerEdit } from '@/actions/App/Http/Controllers/Store/Admin/CustomerController';
 import {
     index as reviewsIndex,
     updatePublished,
@@ -10,6 +11,7 @@ import PageHeader from '@/components/PageHeader.vue';
 import Pagination from '@/components/Pagination.vue';
 import StoreStatusSwitch from '@/components/StoreStatusSwitch.vue';
 import SubmitButton from '@/components/SubmitButton.vue';
+import TableObjectLink from '@/components/TableObjectLink.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
 import { plainFieldInputClass } from '@/lib/filters';
 import { t } from '@/lib/i18n';
@@ -88,7 +90,12 @@ function filter(perPage = currentPerPage.value): void {
                 </td>
                 <td class="px-4 py-2">{{ row.product.owner }}</td>
                 <td class="px-4 py-2">
-                    {{ row.customer.name }} ({{ row.customer.email }})
+                    <TableObjectLink
+                        :allowed="access.can('edit_customer')"
+                        :href="customerEdit(row.customer)"
+                        >{{ row.customer.name }}</TableObjectLink
+                    >
+                    ({{ row.customer.email }})
                 </td>
                 <td class="px-4 py-2">{{ row.rating }}</td>
                 <td class="max-w-xs truncate px-4 py-2" :title="row.comment">

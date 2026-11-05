@@ -1,6 +1,8 @@
 import { Form, Link } from '@inertiajs/vue3';
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { edit as customerEdit } from '@/actions/App/Http/Controllers/Store/Admin/CustomerController';
+import { edit as productEdit } from '@/actions/App/Http/Controllers/Store/Admin/ProductController';
 import StoreListFilters from '@/components/StoreListFilters.vue';
 import StoreOrderEntryFields from '@/components/StoreOrderEntryFields.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
@@ -369,5 +371,79 @@ describe('Store order pages', () => {
                     .exists(),
             ).toBe(false);
         }
+    });
+
+    it('links the customer, representative and products to their edit pages by permission', () => {
+        const withRep = {
+            ...order,
+            representative: {
+                id: 4,
+                name: 'Rep',
+                rep_discount_percentage: null,
+            },
+        };
+        const props = {
+            order: withRep,
+            additionalInfo: '',
+            trackingCode: 'TRACK',
+            shippingAddress: { address: 'Street' },
+            couponDiscount: 0,
+        };
+        const hrefs = (wrapper: ReturnType<typeof mount>) =>
+            wrapper.findAll('a').map((link) => link.attributes('href'));
+
+        const admin = mount(Show, { props });
+        expect(hrefs(admin)).toEqual(
+            expect.arrayContaining([
+                customerEdit(3).url,
+                customerEdit(4).url,
+                productEdit(5).url,
+            ]),
+        );
+
+        mocks.page.mockReturnValue({
+            url: '/temp/admin/orders/7/show',
+            props: {
+                locale: 'en',
+                auth: { user: { id: 1, name: 'Staff' } },
+                store: storeSharedProps({
+                    permissions: ['view_order_details'],
+                }),
+                errors: {},
+            },
+        });
+        const staff = mount(Show, { props });
+        expect(hrefs(staff)).not.toContain(customerEdit(3).url);
+        expect(hrefs(staff)).not.toContain(customerEdit(4).url);
+        expect(hrefs(staff)).not.toContain(productEdit(5).url);
+        expect(staff.text()).toContain('Buyer');
+    });
+
+    it('links the order list customer to their edit page by permission', () => {
+        const props = {
+            orders: paginated([order]),
+            filters: { per_page: 20 },
+            listRoute: 'all_orders.index',
+        };
+        const admin = mount(Index, { props });
+        expect(
+            admin.findAll('a').map((link) => link.attributes('href')),
+        ).toContain(customerEdit(3).url);
+
+        mocks.page.mockReturnValue({
+            url: '/temp/admin/all_orders',
+            props: {
+                locale: 'en',
+                auth: { user: { id: 1, name: 'Staff' } },
+                store: storeSharedProps({
+                    permissions: ['view_order_details'],
+                }),
+                errors: {},
+            },
+        });
+        const staff = mount(Index, { props });
+        expect(
+            staff.findAll('a').map((link) => link.attributes('href')),
+        ).not.toContain(customerEdit(3).url);
     });
 });

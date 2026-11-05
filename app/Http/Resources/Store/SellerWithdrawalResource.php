@@ -22,7 +22,7 @@ class SellerWithdrawalResource extends JsonResource
     {
         return [
             'id' => $this->id,
-            'seller' => $this->whenLoaded('user', fn () => ['id' => $this->user->id, 'name' => $this->user->name, 'shop_name' => $this->user->shop?->name]),
+            'seller' => $this->whenLoaded('user', fn () => ['id' => $this->user->id, 'shop_id' => $this->user->shop?->id, 'name' => $this->user->name, 'shop_name' => $this->user->shop?->name]),
             'date' => $this->created_at?->toDateTimeString(),
             'due' => single_price($this->user->shop->admin_to_pay ?? 0),
             'amount' => single_price($this->amount),

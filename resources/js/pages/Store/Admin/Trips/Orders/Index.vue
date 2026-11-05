@@ -32,6 +32,7 @@ import StoreListFilters from '@/components/StoreListFilters.vue';
 import SubmitButton from '@/components/SubmitButton.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
 import TableLink from '@/components/TableLink.vue';
+import TableObjectLink from '@/components/TableObjectLink.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
 import { confirmDelete, confirmDeliveryStatus } from '@/lib/confirm';
 import { fieldLabelClass, plainFieldInputClass } from '@/lib/filters';
@@ -412,10 +413,17 @@ function onPerPageChange(perPage: number): void {
                     <template v-else>-</template>
                 </td>
                 <td class="px-4 py-2">
-                    <template v-if="order.by_rep">{{
-                        order.representative?.name ??
-                        t('store.trips.orders.deletedAccount')
-                    }}</template>
+                    <template v-if="order.by_rep">
+                        <TableObjectLink
+                            v-if="order.representative"
+                            :allowed="access.can('edit_customer')"
+                            :href="customerEdit(order.representative)"
+                            >{{ order.representative.name }}</TableObjectLink
+                        >
+                        <template v-else>{{
+                            t('store.trips.orders.deletedAccount')
+                        }}</template>
+                    </template>
                     <template v-else>{{
                         t('store.trips.orders.noRepresentative')
                     }}</template>

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Form, Head, router } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
+import { edit as customerEdit } from '@/actions/App/Http/Controllers/Store/Admin/CustomerController';
 import {
     all_orders,
     show,
@@ -23,6 +24,7 @@ import RequiredMark from '@/components/RequiredMark.vue';
 import StoreListFilters from '@/components/StoreListFilters.vue';
 import SubmitButton from '@/components/SubmitButton.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
+import TableObjectLink from '@/components/TableObjectLink.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
 import { confirmDelete } from '@/lib/confirm';
 import { fieldLabelClass, plainFieldInputClass } from '@/lib/filters';
@@ -257,7 +259,14 @@ const hasRequiredFields = provideRequiredFields();
                             />
                         </td>
                         <td class="px-3 py-3">{{ row.code }}</td>
-                        <td class="px-3 py-3">{{ row.customer?.name }}</td>
+                        <td class="px-3 py-3">
+                            <TableObjectLink
+                                v-if="row.customer"
+                                :allowed="access.can('edit_customer')"
+                                :href="customerEdit(row.customer)"
+                                >{{ row.customer.name }}</TableObjectLink
+                            >
+                        </td>
                         <td class="px-3 py-3">
                             {{ row.grand_total.toFixed(2) }}
                         </td>

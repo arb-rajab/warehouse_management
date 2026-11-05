@@ -7,6 +7,7 @@ import {
     destroy,
     create,
 } from '@/actions/App/Http/Controllers/Store/Admin/PickupPointController';
+import { edit as staffEdit } from '@/actions/App/Http/Controllers/Store/Admin/StaffController';
 import AddResourceLink from '@/components/AddResourceLink.vue';
 import AddressMapLink from '@/components/AddressMapLink.vue';
 import DataTable from '@/components/DataTable.vue';
@@ -15,6 +16,7 @@ import PageHeader from '@/components/PageHeader.vue';
 import Pagination from '@/components/Pagination.vue';
 import SubmitButton from '@/components/SubmitButton.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
+import TableObjectLink from '@/components/TableObjectLink.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
 import { confirmDelete } from '@/lib/confirm';
 import { t } from '@/lib/i18n';
@@ -91,7 +93,14 @@ function filter(event: Event): void {
                     <AddressMapLink :address="row.address" />
                 </td>
                 <td class="px-4 py-2">{{ row.phone }}</td>
-                <td class="px-4 py-2">{{ row.staff?.name }}</td>
+                <td class="px-4 py-2">
+                    <TableObjectLink
+                        v-if="row.staff"
+                        :allowed="access.can('edit_staff')"
+                        :href="staffEdit(row.staff)"
+                        >{{ row.staff.name }}</TableObjectLink
+                    >
+                </td>
                 <td class="px-4 py-2">
                     <span class="inline-flex items-center gap-1">
                         <CircleCheck

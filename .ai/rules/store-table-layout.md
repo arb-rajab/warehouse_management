@@ -2,6 +2,8 @@
 paths:
   - 'resources/js/components/DataTable.vue'
   - 'resources/js/components/DataTable.test.ts'
+  - 'resources/js/components/IconStat.vue'
+  - 'resources/js/components/IconStat.test.ts'
   - 'resources/js/pages/Store/Admin/**/Index.vue'
   - 'resources/js/layouts/StoreAdminLayout.vue'
 ---
@@ -17,6 +19,9 @@ A list table shows as many rows as the viewport allows. A wide table scrolls sid
 - Rows are compact: `[&_td]:py-1.5` on the table (it overrides a page's `py-2`/`py-3`). The empty-state cell keeps its own `py-6!` and `whitespace-normal`.
 - A cell that holds unbounded free text (message, note, description, comment, subject, title) opts out on the cell itself: `class="max-w-xs truncate"` plus `:title` with the full text. Do not use `whitespace-normal` or `whitespace-pre-wrap` on a list cell unless the text is short and bounded, because that is how a row grows tall again. A cell that deliberately stacks a few short lines (Info: sales/price/profit) is fine.
 - Row actions (`TableActionLink` groups) use `flex flex-nowrap items-center gap-2`, not `flex-wrap`. Thumbnails in a list are `h-8 w-8`.
+
+## Dense values use IconStat
+A cell that stacks several short labelled numbers (sales, price, profit) shows them as one line of `components/IconStat.vue` pairs: a decorative icon, the value, and the full wording as an `sr-only` label plus a real tooltip (hover, keyboard focus, tap; Escape, a scroll or a click elsewhere closes it). The bubble is teleported to `body` and fixed-positioned, because the table scroller below would clip an absolute one. Reuse the existing label strings (`store.products.salesCount` and the like) so en and ar stay in step.
 
 ## One vertical scroller on the page, plus the table's own sticky-header scroller
 The header must stay visible, and `position: sticky` sticks to the nearest scrolling ancestor. `overflow-x: auto` makes the wrapper a scroller in both axes (CSS turns `overflow-y: visible` into `auto`), so a header inside it can only stick if that wrapper is the vertical scroller too. `DataTable` therefore uses `data-table-scroller`: `max-h-[calc(100dvh-8rem)] overflow-auto`, with every `th` `sticky top-0 z-10` and its own background plus an inset bottom shadow (a border on a sticky cell would scroll away). That height keeps about 15-20 rows in view on a laptop; the page scrolls for everything below the table (pagination, selection controls).

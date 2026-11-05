@@ -388,6 +388,11 @@ describe('Store trip orders list', () => {
             [driverEdit(order.trip!.driver!), 'Sam Driver'],
             [truckEdit(order.trip!.truck!), 'Cargo truck'],
         ]);
+        expect(
+            wrapper
+                .findAllComponents(TableLink)
+                .map((link) => [link.props('href'), link.text()])[3],
+        ).toEqual([customerEdit(order.representative!), 'Rita Rep']);
         expect(wrapper.findAll('tbody tr')[1].findAll('td')[11].text()).toBe(
             t('store.trips.orders.deletedAccount'),
         );
@@ -400,7 +405,7 @@ describe('Store trip orders list', () => {
             customersOnly
                 .findAllComponents(TableLink)
                 .map((link) => link.text()),
-        ).toEqual(['Alma Customer']);
+        ).toEqual(['Alma Customer', 'Rita Rep']);
     });
 
     it('gates each control by its own permission', () => {

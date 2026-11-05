@@ -238,6 +238,7 @@ describe('Store trip detail', () => {
                 href: orderShow['/temp/admin/orders/{order}/show'](77),
             },
             { href: customerEdit({ id: 21 }) },
+            { href: customerEdit({ id: 22 }) },
         ]);
         expect(rows[0].findAll('img').map((img) => img.attributes())).toEqual([
             expect.objectContaining({
@@ -280,6 +281,7 @@ describe('Store trip detail', () => {
             { href: truckEdit({ id: 11 }) },
             { href: orderShow['/temp/admin/orders/{order}/show'](77) },
             { href: customerEdit({ id: 21 }) },
+            { href: customerEdit({ id: 22 }) },
             { href: customerEdit({ id: 23 }) },
         ]);
         expect(wrapper.getComponent(TableActionLink).props('href')).toEqual(

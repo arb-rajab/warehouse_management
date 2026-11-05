@@ -35,6 +35,10 @@ The application [README](../README.md) covers warehouse setup, APIs and deployme
 - The [store list filter audit](store-list-filter-audit-20261105.md) records which
   back office lists render filters and where; the standing placement rule is
   [store-list-filter-placement](rules/store-list-filter-placement.md).
+- The [store list links audit](store-list-links-audit-20261105.md) records, per column,
+  which object a store back office table or detail view names, where its link goes and
+  which permission gates it, plus the objects deliberately left as text; the standing
+  rule is [store-table-object-links](rules/store-table-object-links.md).
 
 ## Documentation consumers
 

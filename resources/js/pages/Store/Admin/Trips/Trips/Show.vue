@@ -21,6 +21,7 @@ import RequiredLegend from '@/components/RequiredLegend.vue';
 import RequiredMark from '@/components/RequiredMark.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
 import TableLink from '@/components/TableLink.vue';
+import TableObjectLink from '@/components/TableObjectLink.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
 import { pillLinkClass, primaryPillVariantClass } from '@/lib/actionLink';
 import { confirmDeliveryStatus } from '@/lib/confirm';
@@ -331,7 +332,13 @@ const hasRequiredFields = provideRequiredFields();
                     }}</template>
                 </td>
                 <td class="px-4 py-2">
-                    {{ checkpoint.representative?.name ?? '-' }}
+                    <TableObjectLink
+                        v-if="checkpoint.representative"
+                        :allowed="access.can('edit_customer')"
+                        :href="customerEdit(checkpoint.representative)"
+                        >{{ checkpoint.representative.name }}</TableObjectLink
+                    >
+                    <template v-else>-</template>
                 </td>
                 <td class="px-4 py-2">
                     <AddressMapLink

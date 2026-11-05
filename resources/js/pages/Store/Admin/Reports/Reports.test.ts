@@ -2,7 +2,9 @@ import { Head } from '@inertiajs/vue3';
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ComponentPublicInstance, DefineComponent } from 'vue';
+import { show as orderShow } from '@/actions/App/Http/Controllers/Store/Admin/OrderController';
 import * as actions from '@/actions/App/Http/Controllers/Store/Admin/ReportController';
+import { edit as sellerEdit } from '@/actions/App/Http/Controllers/Store/Admin/SellerController';
 import DataTable from '@/components/DataTable.vue';
 import FilterMultiSelect from '@/components/FilterMultiSelect.vue';
 import PageHeader from '@/components/PageHeader.vue';
@@ -266,5 +268,50 @@ describe('Store report screens', () => {
         expect(searches.find('tbody').text()).toContain(
             '<img src=x onerror=alert(1)>',
         );
+    });
+
+    it('links the seller and the commission order to their pages by permission', () => {
+        const sellerPage = () =>
+            mount(SellerSales, {
+                props: {
+                    rows: paginated([storeSellerReportRow({ id: 6 })]),
+                    filters: {},
+                    options: [],
+                },
+            });
+        const commissionPage = () =>
+            mount(CommissionHistory, {
+                props: {
+                    rows: paginated([storeCommissionReportRow()]),
+                    filters: {},
+                    options: [],
+                },
+            });
+        const orderUrl = orderShow['/temp/admin/orders/{order}/show'](77).url;
+
+        usePageMock.mockReturnValue({
+            url: '/temp/admin/report',
+            props: defaultAuthProps({
+                store: storeSharedProps({
+                    permissions: ['edit_seller', 'view_order_details'],
+                }),
+            }),
+        });
+        expect(sellerPage().get('tbody a').attributes('href')).toBe(
+            sellerEdit(6).url,
+        );
+        expect(commissionPage().get('tbody a').attributes('href')).toBe(
+            orderUrl,
+        );
+
+        usePageMock.mockReturnValue({
+            url: '/temp/admin/report',
+            props: defaultAuthProps({
+                store: storeSharedProps({ permissions: [] }),
+            }),
+        });
+        expect(sellerPage().find('tbody a').exists()).toBe(false);
+        expect(commissionPage().find('tbody a').exists()).toBe(false);
+        expect(commissionPage().text()).toContain('20261008-101');
     });
 });

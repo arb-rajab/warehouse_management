@@ -12,6 +12,8 @@ export interface RepresentativePayment {
     notes: string | null;
     status: 'pending' | 'accepted' | 'rejected';
     date: string;
+    /** The customer record, null when only a typed-in name exists. */
+    customer_id: number | null;
     customer_name: string | null;
     account_id: number | null;
     representative: { id: number; name: string } | null;

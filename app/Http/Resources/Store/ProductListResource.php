@@ -69,6 +69,7 @@ class ProductListResource extends JsonResource
             // The legacy view's own loose comparison, kept for its null cases.
             'low_stock' => $quantity <= $this->low_stock_quantity,
             'category' => $this->category?->getTranslation('name'),
+            'category_id' => $this->category_id === null ? null : (int) $this->category_id,
             'for_sale' => (bool) $this->for_sale,
             'published' => (bool) $this->published,
             'featured' => (bool) $this->featured,
