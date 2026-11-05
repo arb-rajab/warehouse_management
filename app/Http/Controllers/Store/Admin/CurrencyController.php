@@ -10,6 +10,7 @@ use App\Http\Requests\Store\Admin\UpdateCurrencyRequest;
 use App\Http\Requests\Store\Admin\UpdateCurrencySettingsRequest;
 use App\Http\Requests\Store\Admin\UpdateReferenceStatusRequest;
 use App\Http\Resources\Store\CurrencyResource;
+use App\Models\BusinessSetting;
 use App\Models\Currency;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -51,7 +52,7 @@ class CurrencyController extends Controller implements HasMiddleware
             'currencies' => $this->paginated(CurrencyResource::collection(Currency::query()->select(['id', 'name', 'symbol', 'code', 'exchange_rate', 'status'])->when($request->filled('search'), fn ($query) => $query->where('name', 'like', '%'.$request->validated('search').'%'))->orderByDesc('id')->paginate($perPage)->withQueryString())),
             'filters' => ['per_page' => $perPage, 'search' => $request->validated('search')],
             'activeCurrencies' => Currency::query()->select(['id', 'name'])->where('status', 1)->orderBy('name')->get(),
-            'settings' => ['system_default_currency' => (int) get_setting('system_default_currency', 0), 'symbol_format' => (int) get_setting('symbol_format', 1), 'decimal_separator' => (int) get_setting('decimal_separator', 1), 'no_of_decimals' => (int) get_setting('no_of_decimals', 2)],
+            'settings' => ['system_default_currency' => (int) get_setting('system_default_currency', 0), ...collect(BusinessSetting::CURRENCY_DEFAULTS)->map(fn (int $default, string $key): int => (int) (filled($value = get_setting($key)) ? $value : $default))->all()],
             'dialog' => $dialog, 'selectedCurrency' => $currency === null ? null : new CurrencyResource($currency),
         ]);
     }

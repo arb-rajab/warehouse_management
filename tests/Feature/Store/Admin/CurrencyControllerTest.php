@@ -12,6 +12,22 @@ test('the Currencies list can be rendered', function () {
     $this->get('/temp/admin/currency')->assertOk()->assertInertia(fn (Assert $page) => $page->component('Store/Admin/Setup/Currencies/Index'));
 });
 
+test('the Currencies page shows the defaults format_price uses for a missing or blank setting, and a stored one as stored', function () {
+    actingAsStoreUser(createStoreStaff('currency_setup'));
+    DB::table('business_settings')->insert([
+        ['type' => 'system_default_currency', 'value' => $this->refs['currency']],
+        ['type' => 'symbol_format', 'value' => ''], // blank: the default
+        ['type' => 'decimal_separator', 'value' => '2'], // stored
+    ]); // no_of_decimals: no row
+
+    $this->get('/temp/admin/currency')->assertOk()->assertInertia(fn (Assert $page) => $page->where('settings', [
+        'system_default_currency' => $this->refs['currency'], 'symbol_format' => 1, 'decimal_separator' => 2, 'no_of_decimals' => 2,
+    ]));
+
+    // What the page shows is what prices are printed with (BR-20261104-A, FYI): two decimals, symbol first.
+    expect(format_price(10.9))->toBe('€10.90');
+});
+
 test('the Currencies list exposes exactly the narrow record', function () {
     actingAsStoreUser(createStoreStaff('currency_setup'));
     $this->get('/temp/admin/currency')->assertOk()->assertInertia(fn (Assert $page) => $page->has('currencies.data', 1)->has('currencies.data.0', fn (Assert $row) => $row
