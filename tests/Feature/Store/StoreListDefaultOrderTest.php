@@ -12,7 +12,6 @@ use Illuminate\Support\Facades\File;
 /** Controllers that paginate but are deliberately not newest first: file => why. */
 const STORE_LIST_ORDER_EXCEPTIONS = [
     'CategoryController' => 'ordered by the display priority (order_level) staff maintain',
-    'OrderEntryController' => 'typeahead pickers for the order form, alphabetical by name',
 ];
 
 /** Lists inside controllers that otherwise use the helper: file => what stays as it is. */
@@ -63,4 +62,18 @@ test('the listed exceptions are real and every one is explained in the rule', fu
         expect($controllers[$name])->toContain('paginate(');
         expect($rule)->toContain($name);
     }
+});
+
+test('typeahead controllers use the shared SearchesOptions order and are named in the rule', function () {
+    $rule = File::get(base_path('.ai/rules/store-list-default-order.md'));
+    $typeahead = array_keys(array_filter(storeAdminListControllers(), fn (string $source) => str_contains($source, 'use SearchesOptions;')));
+
+    expect($typeahead)->toContain('OrderEntryController');
+    expect($rule)->toContain('SearchesOptions');
+    foreach ($typeahead as $name) {
+        expect($rule)->toContain($name);
+        expect(storeAdminListControllers()[$name])->not->toContain('NewestFirst::apply(');
+    }
+    // The shared trait is where the typeahead order lives: prefix matches, then name, then key.
+    expect(File::get(app_path('Http/Controllers/Store/Admin/Concerns/SearchesOptions.php')))->toContain('function orderByRelevance');
 });

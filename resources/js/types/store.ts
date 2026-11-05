@@ -729,12 +729,8 @@ export interface StoreNotification {
     message: string | null;
     created_at: string | null;
 }
-export interface StoreOrderOption {
-    id: number;
-    name: string;
-    AccSysID?: string | null;
-    member_serial?: string | null;
-    rep_discount_percentage?: number | null;
+/** What the order form's product search carries in `extra` (App\Support\SearchOption::orderProduct). */
+export type StoreOrderProductExtra = {
     serial?: string | null;
     mat_id?: string | null;
     unit_price?: number;
@@ -742,7 +738,11 @@ export interface StoreOrderOption {
     tax?: number;
     digital?: boolean;
     stocks?: { variant: string; price: number; qty: number }[];
-}
+};
+/** What a representative option carries in `extra`. */
+export type StoreOrderRepresentativeExtra = {
+    rep_discount_percentage?: number | null;
+};
 export interface StoreOrderLine {
     id: number;
     product_id: number;

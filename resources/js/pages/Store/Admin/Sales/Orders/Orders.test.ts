@@ -73,10 +73,27 @@ describe('Store order pages', () => {
             expect(
                 wrapper.get('input[name=submission_key]').attributes('value'),
             ).toBe('token');
-            expect(wrapper.get('#customer_id').attributes()).toHaveProperty(
-                'required',
-            );
+            // The customer is a search select: a combobox trigger marked
+            // required, a hidden input named as the form field, and the
+            // native required guard the browser validates.
+            expect(
+                wrapper.get('#customer_id').attributes('aria-required'),
+            ).toBe('true');
+            expect(
+                wrapper.get('input[type="hidden"][name="customer_id"]').element,
+            ).toHaveProperty('value', '');
+            expect(
+                wrapper.get('[data-testid="search-select-guard"]').attributes(),
+            ).toHaveProperty('required');
             expect(wrapper.find('#rep_id').exists()).toBe(representativeOrder);
+            expect(
+                wrapper.find('input[type="hidden"][name="rep_id"]').exists(),
+            ).toBe(representativeOrder);
+            expect(
+                wrapper
+                    .get('input[name="products[0][product_id]"]')
+                    .attributes('type'),
+            ).toBe('hidden');
             expect(wrapper.get('#quantity-1').attributes()).toMatchObject({
                 min: '1',
                 max: '100000',
@@ -158,6 +175,18 @@ describe('Store order pages', () => {
         expect(wrapper.text()).toContain('20.00');
         expect(wrapper.text()).toContain('6.30');
         expect(wrapper.text()).toContain('Invalid price');
+        // The selects start prefilled: their labels show before any search and
+        // their hidden inputs post the stored ids.
+        expect(
+            wrapper.get('input[name="customer_id"]').attributes('value'),
+        ).toBe('3');
+        expect(wrapper.get('#customer_id').text()).toContain('Buyer');
+        expect(
+            wrapper
+                .get('input[name="products[0][product_id]"]')
+                .attributes('value'),
+        ).toBe('5');
+        expect(wrapper.get('#product-1').text()).toContain('SER-5');
         expect(
             wrapper.get('input[name="products[0][id]"]').attributes('value'),
         ).toBe('1');

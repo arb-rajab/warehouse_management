@@ -2,6 +2,7 @@ import { expect, test } from '@playwright/test';
 import { loginAsStoreAdmin } from './support/auth';
 import { contrastRatio } from './support/contrast';
 import { switchLocale } from './support/nav';
+import { pickSearchOption } from './support/searchSelect';
 test('async order entry enforces native fields, calculates totals, retains server errors, edits and cancels', async ({
     page,
 }) => {
@@ -9,29 +10,32 @@ test('async order entry enforces native fields, calculates totals, retains serve
     await page.goto('/temp/admin/feat/new/order/trip/create');
     await page.getByRole('button', { name: 'Save order', exact: true }).click();
     await expect(page).toHaveURL(/\/create$/);
+    // The native required guard blocks the submit and hands focus to the trigger.
     expect(
         await page
-            .locator('#customer_id')
+            .locator('[data-testid="search-select-guard"]')
+            .first()
             .evaluate(
-                (element: HTMLSelectElement) => element.validity.valueMissing,
+                (element: HTMLInputElement) => element.validity.valueMissing,
             ),
     ).toBe(true);
-    await page.locator('#customer_id-search').fill('Browser Buyer');
-    await expect(
-        page
-            .locator('#customer_id option')
-            .filter({ hasText: 'Browser Buyer' }),
-    ).toHaveCount(1);
-    await page.locator('#customer_id').selectOption({ label: 'Browser Buyer' });
-    await page.locator('#product-1-search').fill('BROWSER-ORDER');
-    await expect(
-        page
-            .locator('#product-1 option')
-            .filter({ hasText: 'Browser Order Product' }),
-    ).toHaveCount(1);
-    await page
-        .locator('#product-1')
-        .selectOption({ label: 'Browser Order Product BROWSER-ORDER' });
+    await expect(page.locator('#customer_id')).toBeFocused();
+    await pickSearchOption(
+        page,
+        '#customer_id',
+        'Browser Buyer',
+        /Browser Buyer/,
+    );
+    await expect(page.locator('#customer_id')).toContainText('Browser Buyer');
+    await pickSearchOption(
+        page,
+        '#product-1',
+        'BROWSER-ORDER',
+        /Browser Order Product/,
+    );
+    await expect(page.locator('#product-1')).toContainText(
+        'Browser Order Product',
+    );
     await expect(page.locator('#price-1')).toHaveValue('12');
     await page.locator('#quantity-1').fill('2');
     await expect(
@@ -74,27 +78,26 @@ test('order fields remain readable in dark mode and the store layout follows Ara
     await page.emulateMedia({ colorScheme: 'dark' });
     await loginAsStoreAdmin(page);
     await page.goto('/temp/admin/feat/new/order/trip/create');
-    const styles = await page
-        .locator('#customer_id-search')
-        .evaluate((element) => {
-            const style = getComputedStyle(element);
-            const rgb = (color: string) => {
-                const canvas = document.createElement('canvas');
-                canvas.width = canvas.height = 1;
-                const context = canvas.getContext('2d')!;
-                context.fillStyle = color;
-                context.fillRect(0, 0, 1, 1);
+    const styles = await page.locator('#customer_id').evaluate((element) => {
+        // The trigger's placeholder text on the trigger's own background.
+        const style = getComputedStyle(element.firstElementChild!);
+        const rgb = (color: string) => {
+            const canvas = document.createElement('canvas');
+            canvas.width = canvas.height = 1;
+            const context = canvas.getContext('2d')!;
+            context.fillStyle = color;
+            context.fillRect(0, 0, 1, 1);
 
-                return Array.from(
-                    context.getImageData(0, 0, 1, 1).data.slice(0, 3),
-                );
-            };
+            return Array.from(
+                context.getImageData(0, 0, 1, 1).data.slice(0, 3),
+            );
+        };
 
-            return {
-                foreground: rgb(style.color),
-                background: rgb(style.backgroundColor),
-            };
-        });
+        return {
+            foreground: rgb(style.color),
+            background: rgb(getComputedStyle(element).backgroundColor),
+        };
+    });
     expect(
         contrastRatio(styles.foreground, styles.background),
     ).toBeGreaterThanOrEqual(4.5);
@@ -110,31 +113,24 @@ test('representative search applies the discount and piece conversion with the e
 }) => {
     await loginAsStoreAdmin(page);
     await page.goto('/temp/admin/feat/order/create');
-    await page.locator('#customer_id-search').fill('Browser Buyer');
-    await expect(
-        page
-            .locator('#customer_id option')
-            .filter({ hasText: 'Browser Buyer' }),
-    ).toHaveCount(1);
-    await page.locator('#customer_id').selectOption({ label: 'Browser Buyer' });
-    await page.locator('#rep_id-search').fill('Browser Representative');
-    await expect(
-        page
-            .locator('#rep_id option')
-            .filter({ hasText: 'Browser Representative' }),
-    ).toHaveCount(1);
-    await page
-        .locator('#rep_id')
-        .selectOption({ label: 'Browser Representative' });
-    await page.locator('#product-1-search').fill('BROWSER-ORDER');
-    await expect(
-        page
-            .locator('#product-1 option')
-            .filter({ hasText: 'Browser Order Product' }),
-    ).toHaveCount(1);
-    await page
-        .locator('#product-1')
-        .selectOption({ label: 'Browser Order Product BROWSER-ORDER' });
+    await pickSearchOption(
+        page,
+        '#customer_id',
+        'Browser Buyer',
+        /Browser Buyer/,
+    );
+    await pickSearchOption(
+        page,
+        '#rep_id',
+        'Browser Representative',
+        /Browser Representative/,
+    );
+    await pickSearchOption(
+        page,
+        '#product-1',
+        'BROWSER-ORDER',
+        /Browser Order Product/,
+    );
     await expect(page.locator('#price-1')).toHaveValue('10.8');
     await page.locator('#unit-1').selectOption('PerPiece');
     await expect(page.locator('#price-1')).toHaveValue('1.8');

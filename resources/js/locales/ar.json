@@ -52,6 +52,27 @@
         "optional": "(اختياري)",
         "formValidation": {
             "blocked": "بعض الحقول تحتاج إلى تصحيح. تم تحديد أولها."
+        },
+        "searchSelect": {
+            "placeholder": "اختر خيارًا",
+            "addMore": "إضافة…",
+            "searchPlaceholder": "بحث…",
+            "searching": "جارٍ البحث…",
+            "noResults": "لا توجد نتائج",
+            "noResultsFor": "لا شيء يطابق «{query}». تحقق من الإملاء أو جرّب كلمة أخرى.",
+            "minChars": "اكتب {count} أحرف على الأقل للبحث.",
+            "error": "فشل البحث. حاول مرة أخرى.",
+            "retry": "إعادة المحاولة",
+            "clear": "مسح الاختيار",
+            "clearAll": "مسح الكل",
+            "clearSearch": "مسح البحث",
+            "remove": "إزالة {label}",
+            "selectedCount": "{count} محدد",
+            "resultsCount": "{count} نتيجة",
+            "moreResults": "مرّر لعرض المزيد",
+            "panelLabel": "خيارات {label}",
+            "keyboardHint": "مفاتيح الأسهم للتنقل، Enter للاختيار، Esc للإغلاق",
+            "close": "إغلاق"
         }
     },
     "welcome": {
@@ -2517,12 +2538,6 @@
             "piece": "قطعة",
             "variant": "الخيار",
             "defaultVariant": "الخيار الافتراضي",
-            "choose": "حدد خياراً",
-            "searchFor": "البحث عن {label}",
-            "searchFailed": "فشل البحث. حاول مرة أخرى.",
-            "previous": "النتائج السابقة",
-            "next": "النتائج التالية",
-            "loading": "جار التحميل",
             "save": "حفظ الطلب",
             "saving": "جار الحفظ…",
             "noLines": "لا توجد بنود",
@@ -2566,7 +2581,13 @@
                 "unpaid": "غير مدفوع",
                 "placed": "تم الطلب"
             },
-            "allStatuses": "جميع الحالات"
+            "allStatuses": "جميع الحالات",
+            "chooseCustomer": "اختر عميلاً",
+            "searchCustomers": "ابحث عن عميل بالاسم أو الهاتف أو البريد أو الحساب…",
+            "chooseRepresentative": "اختر مندوبًا",
+            "searchRepresentatives": "ابحث عن مندوب بالاسم أو الهاتف أو البريد…",
+            "chooseProduct": "اختر منتجًا",
+            "searchProducts": "ابحث عن منتج بالاسم أو الرمز أو المعرّف…"
         },
         "dashboard": {
             "smtpMissing": "لم يتم إعداد SMTP.",

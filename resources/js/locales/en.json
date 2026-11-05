@@ -52,6 +52,27 @@
         "optional": "(optional)",
         "formValidation": {
             "blocked": "Some fields need correcting. The first one is selected."
+        },
+        "searchSelect": {
+            "placeholder": "Select an option",
+            "addMore": "Add…",
+            "searchPlaceholder": "Search…",
+            "searching": "Searching…",
+            "noResults": "No results found",
+            "noResultsFor": "Nothing matches “{query}”. Check the spelling or try another word.",
+            "minChars": "Type at least {count} characters to search.",
+            "error": "Search failed. Try again.",
+            "retry": "Retry",
+            "clear": "Clear selection",
+            "clearAll": "Clear all",
+            "clearSearch": "Clear search",
+            "remove": "Remove {label}",
+            "selectedCount": "{count} selected",
+            "resultsCount": "{count} results",
+            "moreResults": "scroll for more",
+            "panelLabel": "{label} options",
+            "keyboardHint": "Arrow keys to move, Enter to select, Esc to close",
+            "close": "Close"
         }
     },
     "welcome": {
@@ -2517,12 +2538,6 @@
             "piece": "Piece",
             "variant": "Variant",
             "defaultVariant": "Default variant",
-            "choose": "Select an option",
-            "searchFor": "Search {label}",
-            "searchFailed": "Search failed. Try again.",
-            "previous": "Previous results",
-            "next": "Next results",
-            "loading": "Loading",
             "save": "Save order",
             "saving": "Saving…",
             "noLines": "No order lines",
@@ -2566,7 +2581,13 @@
                 "unpaid": "Unpaid",
                 "placed": "Placed"
             },
-            "allStatuses": "All statuses"
+            "allStatuses": "All statuses",
+            "chooseCustomer": "Select a customer",
+            "searchCustomers": "Search customers by name, phone, email or account…",
+            "chooseRepresentative": "Select a representative",
+            "searchRepresentatives": "Search representatives by name, phone or email…",
+            "chooseProduct": "Select a product",
+            "searchProducts": "Search products by name, SKU or id…"
         },
         "dashboard": {
             "smtpMissing": "SMTP is not configured.",

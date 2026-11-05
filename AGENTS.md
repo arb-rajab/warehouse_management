@@ -22,6 +22,9 @@ Maintain shared instructions here and in the referenced `.ai/` files; keep
 7. Forms must follow [.ai/rules/client-side-validation.md](.ai/rules/client-side-validation.md):
    they validate in the browser first through the shared layer, from a copy of the
    server rules kept equal by a parity test; the backend stays authoritative.
+8. Any store back office select that searches another table (customer, product,
+   brand, city, ...) must be a `StoreSearchSelect` shaped like the product search,
+   with its row content defined per entity, per [.ai/rules/store-search-select.md](.ai/rules/store-search-select.md).
 
 Read this file and the rules index fully once per session. For
 `.ai/agent-framework.md` and `.ai/agent-conventions.md`, read the whole file for
