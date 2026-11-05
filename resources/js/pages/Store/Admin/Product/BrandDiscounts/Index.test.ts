@@ -16,6 +16,10 @@ import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
 import { t } from '@/lib/i18n';
 import { paginated, storeBrand, storeSharedProps } from '@/testing/factories';
 import { defaultAuthProps } from '@/testing/inertiaPageMocks';
+import {
+    expectColumnCanBeHidden,
+    expectColumnLocked,
+} from '@/testing/tableColumns';
 import type { StoreBrand } from '@/types/store';
 import Index from './Index.vue';
 
@@ -205,5 +209,16 @@ describe('Store brand discounts', () => {
         const denied = mountPage(['view_all_brands', 'product_edit']);
         expect(cell(denied).find('a').exists()).toBe(false);
         expect(cell(denied).text()).toBe('Dates brand');
+    });
+
+    it('lets staff hide an optional column from the header and every row, and keeps the identifier', async () => {
+        window.localStorage.clear();
+        const wrapper = mountPage();
+        await expectColumnCanBeHidden(wrapper, 'product.brandDiscounts', {
+            key: 'logo',
+            label: t('store.brandDiscount.logo'),
+        });
+        expectColumnLocked(wrapper, t('store.brandDiscount.name'));
+        window.localStorage.clear();
     });
 });

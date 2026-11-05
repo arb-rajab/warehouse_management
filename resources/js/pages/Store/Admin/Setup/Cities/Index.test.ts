@@ -17,6 +17,10 @@ import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
 import { t } from '@/lib/i18n';
 import { paginated, storeCity, storeSharedProps } from '@/testing/factories';
 import { defaultAuthProps, resetMocks } from '@/testing/inertiaPageMocks';
+import {
+    expectColumnCanBeHidden,
+    expectColumnLocked,
+} from '@/testing/tableColumns';
 import Index from './Index.vue';
 const {
     usePageMock,
@@ -179,5 +183,16 @@ describe('Store Cities Index', () => {
         const denied = mountPage(['manage_shipping_cities']);
         expect(cell(denied).find('a').exists()).toBe(false);
         expect(cell(denied).text()).toBe('North Holland');
+    });
+
+    it('lets staff hide an optional column from the header and every row, and keeps the identifier', async () => {
+        window.localStorage.clear();
+        const wrapper = mountPage();
+        await expectColumnCanBeHidden(wrapper, 'setup.cities', {
+            key: 'cost',
+            label: t('store.cities.cost'),
+        });
+        expectColumnLocked(wrapper, t('store.reference.name'));
+        window.localStorage.clear();
     });
 });

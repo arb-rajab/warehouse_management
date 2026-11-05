@@ -19,6 +19,10 @@ import {
     storeSharedProps,
 } from '@/testing/factories';
 import { defaultAuthProps } from '@/testing/inertiaPageMocks';
+import {
+    expectColumnCanBeHidden,
+    expectColumnLocked,
+} from '@/testing/tableColumns';
 import Index from './Index.vue';
 const { usePageMock, getMock, confirmMock } = vi.hoisted(() => ({
     usePageMock: vi.fn(),
@@ -154,4 +158,15 @@ it('preserves search when paging and keeps public navigation a plain link', () =
     expect(wrapper.find('a[href="/temp/flash-deal/flash-deal"]').exists()).toBe(
         true,
     );
+});
+
+it('lets staff hide an optional column from the header and every row, and keeps the identifier', async () => {
+    window.localStorage.clear();
+    const wrapper = mountPage();
+    await expectColumnCanBeHidden(wrapper, 'marketing.flashDeals', {
+        key: 'endDate',
+        label: t('store.campaigns.fields.endDate'),
+    });
+    expectColumnLocked(wrapper, t('store.campaigns.fields.title'));
+    window.localStorage.clear();
 });

@@ -24,6 +24,10 @@ import {
 } from '@/testing/factories';
 import { storeAttributeValue } from '@/testing/factories';
 import { defaultAuthProps, resetMocks } from '@/testing/inertiaPageMocks';
+import {
+    expectColumnCanBeHidden,
+    expectColumnLocked,
+} from '@/testing/tableColumns';
 import type { StoreAttribute } from '@/types/storeCatalogue';
 import Index from './Index.vue';
 
@@ -219,5 +223,16 @@ describe('Store Attributes Index', () => {
                 t('store.attributes.index.manageValues'),
             ),
         ).toBeUndefined();
+    });
+
+    it('lets staff hide an optional column from the header and every row, and keeps the identifier', async () => {
+        window.localStorage.clear();
+        const wrapper = mountPage([storeAttribute()]);
+        await expectColumnCanBeHidden(wrapper, 'product.attributes', {
+            key: 'values',
+            label: t('store.attributes.index.columnValues'),
+        });
+        expectColumnLocked(wrapper, t('store.attributes.index.columnName'));
+        window.localStorage.clear();
     });
 });

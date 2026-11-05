@@ -25,6 +25,10 @@ import {
     storeUpload,
 } from '@/testing/factories';
 import { defaultAuthProps } from '@/testing/inertiaPageMocks';
+import {
+    expectColumnCanBeHidden,
+    expectColumnLocked,
+} from '@/testing/tableColumns';
 import Edit from './Edit.vue';
 import Index from './Index.vue';
 const { usePageMock, routerGetMock, formSlotPropsMock, submitMock } =
@@ -273,5 +277,16 @@ describe('brand pages', () => {
                 true,
             );
         }
+    });
+
+    it('lets staff hide an optional column from the header and every row, and keeps the identifier', async () => {
+        window.localStorage.clear();
+        const wrapper = indexPage();
+        await expectColumnCanBeHidden(wrapper, 'product.brands', {
+            key: 'logo',
+            label: t('store.brands.logo'),
+        });
+        expectColumnLocked(wrapper, t('store.brands.name'));
+        window.localStorage.clear();
     });
 });

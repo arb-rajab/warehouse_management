@@ -17,6 +17,10 @@ import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
 import { t } from '@/lib/i18n';
 import { paginated, storeSharedProps } from '@/testing/factories';
 import { defaultAuthProps } from '@/testing/inertiaPageMocks';
+import {
+    expectColumnCanBeHidden,
+    expectColumnLocked,
+} from '@/testing/tableColumns';
 import type { StoreBlogSummary } from '@/types/store';
 import Index from './Index.vue';
 const { usePageMock, getMock, formStateMock } = vi.hoisted(() => ({
@@ -211,5 +215,16 @@ describe('Store blog posts Index', () => {
         const denied = mountPage([blog], allPermissions);
         expect(cell(denied).find('a').exists()).toBe(false);
         expect(cell(denied).text()).toBe('Recipes');
+    });
+
+    it('lets staff hide an optional column from the header and every row, and keeps the identifier', async () => {
+        window.localStorage.clear();
+        const wrapper = mountPage();
+        await expectColumnCanBeHidden(wrapper, 'blog.posts', {
+            key: 'status',
+            label: t('store.blogPosts.index.columnStatus'),
+        });
+        expectColumnLocked(wrapper, t('store.blogPosts.index.columnTitle'));
+        window.localStorage.clear();
     });
 });

@@ -17,6 +17,7 @@ import DataTable from '@/components/DataTable.vue';
 import FormField from '@/components/FormField.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import Pagination from '@/components/Pagination.vue';
+import StoreColumnPicker from '@/components/StoreColumnPicker.vue';
 import StoreStatusSwitch from '@/components/StoreStatusSwitch.vue';
 import SubmitButton from '@/components/SubmitButton.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
@@ -24,6 +25,7 @@ import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
 import { confirmDelete } from '@/lib/confirm';
 import { t } from '@/lib/i18n';
 import { useStoreAccess } from '@/lib/storeAccess';
+import { useTableColumns } from '@/lib/useTableColumns';
 import type { Paginated, PerPageFilters } from '@/types/admin';
 import type { StoreDigitalProduct } from '@/types/store';
 const props = defineProps<{
@@ -49,6 +51,26 @@ function onPerPageChange(perPage: number): void {
         { preserveState: true, replace: true },
     );
 }
+const columns = useTableColumns({
+    listId: 'product.digitalProducts',
+    columns: [
+        { key: 'name', label: 'store.digitalProducts.name', required: true },
+        { key: 'addedBy', label: 'store.digitalProducts.addedBy' },
+        { key: 'photo', label: 'store.digitalProducts.photo' },
+        { key: 'basePrice', label: 'store.digitalProducts.basePrice' },
+        { key: 'todays_deal', label: 'store.digitalProducts.todaysDeal' },
+        { key: 'published', label: 'store.digitalProducts.published' },
+        { key: 'featured', label: 'store.digitalProducts.featured' },
+    ],
+});
+const { shown, visibleColumns } = columns;
+const visibleSwitches = computed(() =>
+    switches.filter((item) => shown.value[item.field]),
+);
+const tableColumns = computed(() => [
+    ...visibleColumns.value.map((column) => t(column.label)),
+    t('store.digitalProducts.actions'),
+]);
 </script>
 <template>
     <Head :title="t('store.digitalProducts.title')" />
@@ -79,17 +101,9 @@ function onPerPageChange(perPage: number): void {
                 :processing="processing"
             />
         </Form>
+        <StoreColumnPicker :state="columns" />
         <DataTable
-            :columns="[
-                t('store.digitalProducts.name'),
-                t('store.digitalProducts.addedBy'),
-                t('store.digitalProducts.photo'),
-                t('store.digitalProducts.basePrice'),
-                t('store.digitalProducts.todaysDeal'),
-                t('store.digitalProducts.published'),
-                t('store.digitalProducts.featured'),
-                t('store.digitalProducts.actions'),
-            ]"
+            :columns="tableColumns"
             :rows="products.data"
             :empty-message="t('store.digitalProducts.empty')"
         >
@@ -108,23 +122,25 @@ function onPerPageChange(perPage: number): void {
                     /></a>
                     <span v-else>{{ product.name }}</span>
                 </td>
-                <td class="px-4 py-2">
+                <td v-if="shown.addedBy" class="px-4 py-2">
                     {{
                         product.added_by && addedByLabels[product.added_by]
                             ? t(addedByLabels[product.added_by])
                             : (product.added_by ?? '—')
                     }}
                 </td>
-                <td class="px-4 py-2">
+                <td v-if="shown.photo" class="px-4 py-2">
                     <img
                         :src="product.thumbnail_url"
                         :alt="t('store.digitalProducts.photo')"
                         class="h-8 w-8 object-contain"
                     />
                 </td>
-                <td class="px-4 py-2">{{ product.unit_price }}</td>
+                <td v-if="shown.basePrice" class="px-4 py-2">
+                    {{ product.unit_price }}
+                </td>
                 <td
-                    v-for="item in switches"
+                    v-for="item in visibleSwitches"
                     :key="item.field"
                     class="px-4 py-2"
                 >

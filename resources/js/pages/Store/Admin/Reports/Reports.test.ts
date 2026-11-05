@@ -23,6 +23,10 @@ import {
     storeSharedProps,
 } from '@/testing/factories';
 import { defaultAuthProps } from '@/testing/inertiaPageMocks';
+import {
+    expectColumnCanBeHidden,
+    expectColumnLocked,
+} from '@/testing/tableColumns';
 import CommissionHistory from './CommissionHistory.vue';
 import InHouseSales from './InHouseSales.vue';
 import Searches from './Searches.vue';
@@ -313,5 +317,69 @@ describe('Store report screens', () => {
         expect(sellerPage().find('tbody a').exists()).toBe(false);
         expect(commissionPage().find('tbody a').exists()).toBe(false);
         expect(commissionPage().text()).toContain('20261008-101');
+    });
+
+    it('commission history lets staff hide an optional column and keeps the order code', async () => {
+        window.localStorage.clear();
+        const wrapper = mount(CommissionHistory, {
+            props: {
+                rows: paginated([storeCommissionReportRow()]),
+                filters: {},
+                options: [],
+            },
+        });
+        await expectColumnCanBeHidden(wrapper, 'reports.commissionHistory', {
+            key: 'createdAt',
+            label: t('store.reports.createdAt'),
+        });
+        expectColumnLocked(wrapper, t('store.reports.orderCode'));
+        window.localStorage.clear();
+    });
+
+    it('wallet history lets staff hide an optional column and keeps the customer', async () => {
+        window.localStorage.clear();
+        const wrapper = mount(WalletHistory, {
+            props: {
+                rows: paginated([storeWalletReportRow()]),
+                filters: {},
+                options: [],
+            },
+        });
+        await expectColumnCanBeHidden(wrapper, 'reports.walletHistory', {
+            key: 'paymentMethod',
+            label: t('store.reports.paymentMethod'),
+        });
+        expectColumnLocked(wrapper, t('store.reports.customer'));
+        window.localStorage.clear();
+    });
+
+    it('seller sales lets staff hide an optional column and keeps the seller name', async () => {
+        window.localStorage.clear();
+        const wrapper = mount(SellerSales, {
+            props: {
+                rows: paginated([storeSellerReportRow({ id: 6 })]),
+                filters: {},
+                options: [],
+            },
+        });
+        await expectColumnCanBeHidden(wrapper, 'reports.sellerSales', {
+            key: 'orderAmount',
+            label: t('store.reports.orderAmount'),
+        });
+        expectColumnLocked(wrapper, t('store.reports.sellerName'));
+        window.localStorage.clear();
+    });
+
+    it('searches lets staff hide an optional column and keeps the search term', async () => {
+        window.localStorage.clear();
+        const wrapper = mount(Searches, {
+            props: { rows: paginated([storeSearchReportRow()]), filters: {} },
+        });
+        await expectColumnCanBeHidden(wrapper, 'reports.searches', {
+            key: 'searchCount',
+            label: t('store.reports.searchCount'),
+        });
+        expectColumnLocked(wrapper, t('store.reports.searchBy'));
+        window.localStorage.clear();
     });
 });

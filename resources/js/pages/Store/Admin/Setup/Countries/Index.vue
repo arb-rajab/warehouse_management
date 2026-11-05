@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Head, router } from '@inertiajs/vue3';
+import { computed } from 'vue';
 import {
     index as resourceIndex,
     updateStatus,
@@ -8,11 +9,13 @@ import DataTable from '@/components/DataTable.vue';
 import FormField from '@/components/FormField.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import Pagination from '@/components/Pagination.vue';
+import StoreColumnPicker from '@/components/StoreColumnPicker.vue';
 import StoreStatusSwitch from '@/components/StoreStatusSwitch.vue';
 import SubmitButton from '@/components/SubmitButton.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
 import { t } from '@/lib/i18n';
 import { useStoreAccess } from '@/lib/storeAccess';
+import { useTableColumns } from '@/lib/useTableColumns';
 import type { Paginated } from '@/types/admin';
 import type { StoreCountry } from '@/types/store';
 const props = defineProps<{
@@ -39,6 +42,18 @@ function filter(event: Event): void {
         { preserveState: true, replace: true },
     );
 }
+const columns = useTableColumns({
+    listId: 'setup.countries',
+    columns: [
+        { key: 'name', label: 'store.reference.name', required: true },
+        { key: 'code', label: 'store.countries.code' },
+        { key: 'status', label: 'store.reference.status' },
+    ],
+});
+const { shown, visibleColumns } = columns;
+const tableColumns = computed(() => [
+    ...visibleColumns.value.map((column) => t(column.label)),
+]);
 </script>
 
 <template>
@@ -61,19 +76,16 @@ function filter(event: Event): void {
                 :processing="false"
             />
         </form>
+        <StoreColumnPicker :state="columns" />
         <DataTable
             :rows="countries.data"
-            :columns="[
-                t('store.reference.name'),
-                t('store.countries.code'),
-                t('store.reference.status'),
-            ]"
+            :columns="tableColumns"
             :empty-message="t('store.reference.empty')"
         >
             <template #row="{ row }">
                 <td class="px-4 py-2">{{ row.name }}</td>
-                <td class="px-4 py-2">{{ row.code }}</td>
-                <td class="px-4 py-2">
+                <td v-if="shown.code" class="px-4 py-2">{{ row.code }}</td>
+                <td v-if="shown.status" class="px-4 py-2">
                     <StoreStatusSwitch
                         v-if="access.can('shipping_country_setting')"
                         :action="updateStatus(row, { mergeQuery: {} })"

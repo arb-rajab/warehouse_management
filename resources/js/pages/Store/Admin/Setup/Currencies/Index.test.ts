@@ -21,6 +21,10 @@ import {
     storeSharedProps,
 } from '@/testing/factories';
 import { defaultAuthProps, resetMocks } from '@/testing/inertiaPageMocks';
+import {
+    expectColumnCanBeHidden,
+    expectColumnLocked,
+} from '@/testing/tableColumns';
 import Index from './Index.vue';
 const {
     usePageMock,
@@ -281,5 +285,16 @@ describe('Store Currencies Index', () => {
             wrapper.getComponent(StoreCurrencyDialog).props('currency'),
         ).toEqual(storeCurrency());
         wrapper.unmount();
+    });
+
+    it('lets staff hide an optional column from the header and every row, and keeps the identifier', async () => {
+        window.localStorage.clear();
+        const wrapper = mountPage();
+        await expectColumnCanBeHidden(wrapper, 'setup.currencies', {
+            key: 'symbol',
+            label: t('store.currencies.symbol'),
+        });
+        expectColumnLocked(wrapper, t('store.reference.name'));
+        window.localStorage.clear();
     });
 });

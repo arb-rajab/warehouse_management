@@ -20,6 +20,10 @@ import {
     storeSharedProps,
 } from '@/testing/factories';
 import { defaultAuthProps, resetMocks } from '@/testing/inertiaPageMocks';
+import {
+    expectColumnCanBeHidden,
+    expectColumnLocked,
+} from '@/testing/tableColumns';
 import Index from './Index.vue';
 const {
     usePageMock,
@@ -159,5 +163,16 @@ describe('Store PickupPoints Index', () => {
         const denied = mountPage(['pickup_point_setup']);
         expect(cell(denied).find('a').exists()).toBe(false);
         expect(cell(denied).text()).toBe('Manager');
+    });
+
+    it('lets staff hide an optional column from the header and every row, and keeps the identifier', async () => {
+        window.localStorage.clear();
+        const wrapper = mountPage();
+        await expectColumnCanBeHidden(wrapper, 'setup.pickupPoints', {
+            key: 'manager',
+            label: t('store.pickupPoints.manager'),
+        });
+        expectColumnLocked(wrapper, t('store.reference.name'));
+        window.localStorage.clear();
     });
 });

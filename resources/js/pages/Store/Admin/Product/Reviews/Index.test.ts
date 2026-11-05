@@ -14,6 +14,10 @@ import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
 import { t } from '@/lib/i18n';
 import { paginated, storeReview, storeSharedProps } from '@/testing/factories';
 import { defaultAuthProps } from '@/testing/inertiaPageMocks';
+import {
+    expectColumnCanBeHidden,
+    expectColumnLocked,
+} from '@/testing/tableColumns';
 import type { StoreReview } from '@/types/store';
 import Index from './Index.vue';
 
@@ -200,5 +204,16 @@ describe('Store product reviews', () => {
         const denied = mountPage(['view_product_reviews']);
         expect(customerCell(denied).find('a').exists()).toBe(false);
         expect(customerCell(denied).text()).toContain('Customer');
+    });
+
+    it('lets staff hide an optional column from the header and every row, and keeps the identifier', async () => {
+        window.localStorage.clear();
+        const wrapper = mountPage();
+        await expectColumnCanBeHidden(wrapper, 'product.reviews', {
+            key: 'comment',
+            label: t('store.reviews.comment'),
+        });
+        expectColumnLocked(wrapper, t('store.reviews.product'));
+        window.localStorage.clear();
     });
 });

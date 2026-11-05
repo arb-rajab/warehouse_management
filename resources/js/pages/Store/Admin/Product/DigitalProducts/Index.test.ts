@@ -25,6 +25,10 @@ import {
     storeSharedProps,
 } from '@/testing/factories';
 import { defaultAuthProps } from '@/testing/inertiaPageMocks';
+import {
+    expectColumnCanBeHidden,
+    expectColumnLocked,
+} from '@/testing/tableColumns';
 import type { StoreDigitalProduct } from '@/types/store';
 import Index from './Index.vue';
 const { usePageMock, getMock, formStateMock } = vi.hoisted(() => ({
@@ -322,5 +326,16 @@ describe('Store digital products Index', () => {
             { per_page: 50, search: 'Recipe' },
             { preserveState: true, replace: true },
         );
+    });
+
+    it('lets staff hide an optional column from the header and every row, and keeps the identifier', async () => {
+        window.localStorage.clear();
+        const wrapper = mountPage();
+        await expectColumnCanBeHidden(wrapper, 'product.digitalProducts', {
+            key: 'featured',
+            label: t('store.digitalProducts.featured'),
+        });
+        expectColumnLocked(wrapper, t('store.digitalProducts.name'));
+        window.localStorage.clear();
     });
 });

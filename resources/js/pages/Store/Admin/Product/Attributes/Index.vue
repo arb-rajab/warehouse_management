@@ -14,12 +14,14 @@ import DataTable from '@/components/DataTable.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import Pagination from '@/components/Pagination.vue';
 import StoreAttributeFormFields from '@/components/StoreAttributeFormFields.vue';
+import StoreColumnPicker from '@/components/StoreColumnPicker.vue';
 import SubmitButton from '@/components/SubmitButton.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
 import { confirmDelete } from '@/lib/confirm';
 import { t } from '@/lib/i18n';
 import { useStoreAccess } from '@/lib/storeAccess';
+import { useTableColumns } from '@/lib/useTableColumns';
 import type { Paginated, PerPageFilters } from '@/types/admin';
 import type { StoreAttribute } from '@/types/storeCatalogue';
 
@@ -36,6 +38,22 @@ function onPerPageChange(perPage: number): void {
         { preserveState: true, replace: true },
     );
 }
+const columns = useTableColumns({
+    listId: 'product.attributes',
+    columns: [
+        {
+            key: 'name',
+            label: 'store.attributes.index.columnName',
+            required: true,
+        },
+        { key: 'values', label: 'store.attributes.index.columnValues' },
+    ],
+});
+const { shown, visibleColumns } = columns;
+const tableColumns = computed(() => [
+    ...visibleColumns.value.map((column) => t(column.label)),
+    t('store.attributes.index.columnActions'),
+]);
 </script>
 
 <template>
@@ -44,12 +62,9 @@ function onPerPageChange(perPage: number): void {
         <StoreAdminLayout>
             <PageHeader :title="t('store.attributes.index.title')" />
 
+            <StoreColumnPicker :state="columns" />
             <DataTable
-                :columns="[
-                    t('store.attributes.index.columnName'),
-                    t('store.attributes.index.columnValues'),
-                    t('store.attributes.index.columnActions'),
-                ]"
+                :columns="tableColumns"
                 :rows="attributes.data"
                 :empty-message="t('store.attributes.index.empty')"
             >
@@ -59,7 +74,7 @@ function onPerPageChange(perPage: number): void {
                     >
                         {{ row.name }}
                     </td>
-                    <td class="px-4 py-2">
+                    <td v-if="shown.values" class="px-4 py-2">
                         <span
                             v-for="value in row.values"
                             :key="value.id"

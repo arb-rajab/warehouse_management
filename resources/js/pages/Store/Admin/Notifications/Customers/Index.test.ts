@@ -20,6 +20,10 @@ import {
     storeSharedProps,
 } from '@/testing/factories';
 import { defaultAuthProps } from '@/testing/inertiaPageMocks';
+import {
+    expectColumnCanBeHidden,
+    expectColumnLocked,
+} from '@/testing/tableColumns';
 import type { CustomerNotification } from '@/types/storeNotifications';
 import Index from './Index.vue';
 
@@ -144,5 +148,16 @@ describe('customer notification index', () => {
         const denied = mountPage([row], []);
         expect(customerCell(denied).find('a').exists()).toBe(false);
         expect(customerCell(denied).text()).toBe('Customer');
+    });
+
+    it('lets staff hide an optional column from the header and every row, and keeps the identifier', async () => {
+        window.localStorage.clear();
+        const wrapper = mountPage();
+        await expectColumnCanBeHidden(wrapper, 'notifications.customers', {
+            key: 'customer',
+            label: t('store.notifications.fields.customer'),
+        });
+        expectColumnLocked(wrapper, t('store.notifications.fields.title'));
+        window.localStorage.clear();
     });
 });

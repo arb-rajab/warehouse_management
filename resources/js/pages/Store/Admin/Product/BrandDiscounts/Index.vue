@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Form, Head, router } from '@inertiajs/vue3';
 import { Check, TriangleAlert } from '@lucide/vue';
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import { edit as brandEdit } from '@/actions/App/Http/Controllers/Store/Admin/BrandController';
 import {
     index as brandDiscountsIndex,
@@ -14,12 +14,14 @@ import FormField from '@/components/FormField.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import Pagination from '@/components/Pagination.vue';
 import StoreBrandDiscountFormFields from '@/components/StoreBrandDiscountFormFields.vue';
+import StoreColumnPicker from '@/components/StoreColumnPicker.vue';
 import SubmitButton from '@/components/SubmitButton.vue';
 import TableObjectLink from '@/components/TableObjectLink.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
 import { filterApplyButtonClass } from '@/lib/filters';
 import { t } from '@/lib/i18n';
 import { useStoreAccess } from '@/lib/storeAccess';
+import { useTableColumns } from '@/lib/useTableColumns';
 import type { Paginated } from '@/types/admin';
 import type { StoreBrand } from '@/types/store';
 
@@ -37,6 +39,18 @@ function filter(perPage = props.filters.per_page): void {
         { preserveState: true, replace: true },
     );
 }
+const columns = useTableColumns({
+    listId: 'product.brandDiscounts',
+    columns: [
+        { key: 'logo', label: 'store.brandDiscount.logo' },
+        { key: 'name', label: 'store.brandDiscount.name', required: true },
+    ],
+});
+const { shown, visibleColumns } = columns;
+const tableColumns = computed(() => [
+    ...visibleColumns.value.map((column) => t(column.label)),
+    t('store.brandDiscount.action'),
+]);
 </script>
 <template>
     <Head :title="t('store.brandDiscount.title')" />
@@ -56,17 +70,14 @@ function filter(perPage = props.filters.per_page): void {
                 :processing="false"
             />
         </form>
+        <StoreColumnPicker :state="columns" />
         <DataTable
-            :columns="[
-                t('store.brandDiscount.logo'),
-                t('store.brandDiscount.name'),
-                t('store.brandDiscount.action'),
-            ]"
+            :columns="tableColumns"
             :rows="brands.data"
             :empty-message="t('store.brandDiscount.empty')"
         >
             <template #row="{ row }">
-                <td class="px-4 py-2">
+                <td v-if="shown.logo" class="px-4 py-2">
                     <img
                         v-if="row.logo_url"
                         :src="row.logo_url"

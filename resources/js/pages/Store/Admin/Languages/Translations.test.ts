@@ -18,6 +18,10 @@ import {
     storeSharedProps,
 } from '@/testing/factories';
 import { defaultAuthProps } from '@/testing/inertiaPageMocks';
+import {
+    expectColumnCanBeHidden,
+    expectColumnLocked,
+} from '@/testing/tableColumns';
 import type { StoreTranslation } from '@/types/store';
 import Translations from './Translations.vue';
 const { usePageMock, formSlotPropsMock, routerGetMock } = vi.hoisted(() => ({
@@ -247,4 +251,15 @@ describe('Language Translations', () => {
             ).toBe(translation.key);
         },
     );
+
+    it('lets staff hide an optional column from the header and every row, and keeps the identifier', async () => {
+        window.localStorage.clear();
+        const wrapper = mountPage();
+        await expectColumnCanBeHidden(wrapper, 'languages.translations', {
+            key: 'source',
+            label: t('store.languages.source'),
+        });
+        expectColumnLocked(wrapper, t('store.languages.key'));
+        window.localStorage.clear();
+    });
 });

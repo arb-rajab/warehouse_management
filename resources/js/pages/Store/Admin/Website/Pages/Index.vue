@@ -13,11 +13,13 @@ import AddResourceLink from '@/components/AddResourceLink.vue';
 import DataTable from '@/components/DataTable.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import Pagination from '@/components/Pagination.vue';
+import StoreColumnPicker from '@/components/StoreColumnPicker.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
 import { confirmDelete } from '@/lib/confirm';
 import { t } from '@/lib/i18n';
 import { useStoreAccess } from '@/lib/storeAccess';
+import { useTableColumns } from '@/lib/useTableColumns';
 import type { Paginated, PerPageFilters } from '@/types/admin';
 import type { StoreWebsitePage } from '@/types/store';
 
@@ -34,6 +36,18 @@ function onPerPageChange(perPage: number): void {
         { preserveState: true, replace: true },
     );
 }
+const columns = useTableColumns({
+    listId: 'website.pages',
+    columns: [
+        { key: 'name', label: 'store.website.pages.name', required: true },
+        { key: 'url', label: 'store.website.pages.url' },
+    ],
+});
+const { shown, visibleColumns } = columns;
+const tableColumns = computed(() => [
+    ...visibleColumns.value.map((column) => t(column.label)),
+    t('store.website.pages.actions'),
+]);
 </script>
 
 <template>
@@ -46,12 +60,9 @@ function onPerPageChange(perPage: number): void {
                 :label="t('store.website.pages.add')"
             />
         </PageHeader>
+        <StoreColumnPicker :state="columns" />
         <DataTable
-            :columns="[
-                t('store.website.pages.name'),
-                t('store.website.pages.url'),
-                t('store.website.pages.actions'),
-            ]"
+            :columns="tableColumns"
             :rows="pages.data"
             :empty-message="t('store.website.pages.empty')"
         >
@@ -69,7 +80,7 @@ function onPerPageChange(perPage: number): void {
                     /></a>
                     <template v-else>{{ page.title }}</template>
                 </td>
-                <td class="px-4 py-2 break-all" dir="ltr">
+                <td v-if="shown.url" class="px-4 py-2 break-all" dir="ltr">
                     {{ page.public_url ?? '—' }}
                 </td>
                 <td class="px-4 py-2">

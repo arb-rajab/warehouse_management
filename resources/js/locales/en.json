@@ -1366,6 +1366,7 @@
             "noTranslations": "No translation keys found."
         },
         "reports": {
+            "number": "#",
             "all": "All",
             "dateFrom": "From date",
             "dateTo": "To date",

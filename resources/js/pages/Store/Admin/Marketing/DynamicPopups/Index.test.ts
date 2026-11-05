@@ -16,6 +16,10 @@ import TableActionLink from '@/components/TableActionLink.vue';
 import { t } from '@/lib/i18n';
 import { paginated, storeSharedProps } from '@/testing/factories';
 import { defaultAuthProps } from '@/testing/inertiaPageMocks';
+import {
+    expectColumnCanBeHidden,
+    expectColumnLocked,
+} from '@/testing/tableColumns';
 import Page from './Index.vue';
 const { usePageMock, routerGetMock } = vi.hoisted(() => ({
     usePageMock: vi.fn(),
@@ -183,5 +187,16 @@ describe('Store popup Index', () => {
                 .find('input[name="id[]"]')
                 .exists(),
         ).toBe(false);
+    });
+
+    it('lets staff hide an optional column from the header and every row, and keeps the identifier', async () => {
+        window.localStorage.clear();
+        const wrapper = mountPage();
+        await expectColumnCanBeHidden(wrapper, 'marketing.dynamicPopups', {
+            key: 'link',
+            label: t('store.dynamicPopups.index.link'),
+        });
+        expectColumnLocked(wrapper, t('store.dynamicPopups.fields.title'));
+        window.localStorage.clear();
     });
 });

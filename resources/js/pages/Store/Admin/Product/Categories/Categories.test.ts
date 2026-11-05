@@ -29,6 +29,10 @@ import {
     storeUpload,
 } from '@/testing/factories';
 import { defaultAuthProps } from '@/testing/inertiaPageMocks';
+import {
+    expectColumnCanBeHidden,
+    expectColumnLocked,
+} from '@/testing/tableColumns';
 import Create from './Create.vue';
 import Edit from './Edit.vue';
 import Index from './Index.vue';
@@ -311,5 +315,16 @@ describe('category pages', () => {
                 true,
             );
         }
+    });
+
+    it('lets staff hide an optional column, including one of the image columns, and keeps the name', async () => {
+        window.localStorage.clear();
+        const wrapper = indexPage();
+        await expectColumnCanBeHidden(wrapper, 'product.categories', {
+            key: 'cover',
+            label: t('store.categories.cover'),
+        });
+        expectColumnLocked(wrapper, t('store.categories.name'));
+        window.localStorage.clear();
     });
 });

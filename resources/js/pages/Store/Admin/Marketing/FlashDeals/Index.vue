@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Form, Head, router } from '@inertiajs/vue3';
 import { Pencil, Trash2 } from '@lucide/vue';
+import { computed } from 'vue';
 import {
     index as campaignIndex,
     create,
@@ -14,6 +15,7 @@ import DataTable from '@/components/DataTable.vue';
 import FormField from '@/components/FormField.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import Pagination from '@/components/Pagination.vue';
+import StoreColumnPicker from '@/components/StoreColumnPicker.vue';
 import StoreStatusSwitch from '@/components/StoreStatusSwitch.vue';
 import SubmitButton from '@/components/SubmitButton.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
@@ -22,6 +24,7 @@ import { confirmDelete } from '@/lib/confirm';
 import { filterTriggerButtonClass } from '@/lib/filters';
 import { t } from '@/lib/i18n';
 import { useStoreAccess } from '@/lib/storeAccess';
+import { useTableColumns } from '@/lib/useTableColumns';
 import type { Paginated } from '@/types/admin';
 import type { StoreFlashDeal, StoreCampaignFilters } from '@/types/store';
 const props = defineProps<{
@@ -36,6 +39,21 @@ function perPage(value: number) {
         { preserveState: true, replace: true },
     );
 }
+const columns = useTableColumns({
+    listId: 'marketing.flashDeals',
+    columns: [
+        { key: 'title', label: 'store.campaigns.fields.title', required: true },
+        { key: 'startDate', label: 'store.campaigns.fields.startDate' },
+        { key: 'endDate', label: 'store.campaigns.fields.endDate' },
+        { key: 'active', label: 'store.campaigns.fields.active' },
+        { key: 'featured', label: 'store.campaigns.fields.featured' },
+    ],
+});
+const { shown, visibleColumns } = columns;
+const tableColumns = computed(() => [
+    ...visibleColumns.value.map((column) => t(column.label)),
+    t('store.campaigns.fields.actions'),
+]);
 </script>
 <template>
     <Head :title="t('store.flashDeals.index.title')" /><StoreAdminLayout
@@ -63,26 +81,22 @@ function perPage(value: number) {
                 :processing-label="t('store.campaigns.search')"
                 :processing="processing"
         /></Form>
+        <StoreColumnPicker :state="columns" />
         <DataTable
-            :columns="
-                [
-                    'title',
-                    'startDate',
-                    'endDate',
-                    'active',
-                    'featured',
-                    'actions',
-                ].map((k) => t(`store.campaigns.fields.${k}`))
-            "
+            :columns="tableColumns"
             :rows="deals.data"
             :empty-message="t('store.campaigns.fields.empty')"
             ><template #row="{ row }"
                 ><td class="max-w-xs truncate px-4 py-2" :title="row.title">
                     {{ row.title }}
                 </td>
-                <td class="px-4 py-2">{{ row.start_date }}</td>
-                <td class="px-4 py-2">{{ row.end_date }}</td>
-                <td class="px-4 py-2">
+                <td v-if="shown.startDate" class="px-4 py-2">
+                    {{ row.start_date }}
+                </td>
+                <td v-if="shown.endDate" class="px-4 py-2">
+                    {{ row.end_date }}
+                </td>
+                <td v-if="shown.active" class="px-4 py-2">
                     <StoreStatusSwitch
                         v-if="access.can('edit_flash_deal')"
                         :action="update_status(row, { mergeQuery: {} })"
@@ -102,7 +116,7 @@ function perPage(value: number) {
                         )
                     }}</span>
                 </td>
-                <td class="px-4 py-2">
+                <td v-if="shown.featured" class="px-4 py-2">
                     <StoreStatusSwitch
                         v-if="access.can('publish_flash_deal')"
                         :action="update_featured(row, { mergeQuery: {} })"

@@ -1366,6 +1366,7 @@
             "noTranslations": "لا توجد مفاتيح ترجمة."
         },
         "reports": {
+            "number": "#",
             "all": "الكل",
             "dateFrom": "من تاريخ",
             "dateTo": "إلى تاريخ",

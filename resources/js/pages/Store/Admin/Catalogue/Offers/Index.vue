@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Form, Head, router } from '@inertiajs/vue3';
 import { Download, Trash2 } from '@lucide/vue';
+import { computed } from 'vue';
 import {
     download,
     destroy,
@@ -12,6 +13,7 @@ import DataTable from '@/components/DataTable.vue';
 import FormField from '@/components/FormField.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import Pagination from '@/components/Pagination.vue';
+import StoreColumnPicker from '@/components/StoreColumnPicker.vue';
 import SubmitButton from '@/components/SubmitButton.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
@@ -21,6 +23,7 @@ import { validateFileSize } from '@/lib/fileValidation';
 import { t } from '@/lib/i18n';
 import { usePageError } from '@/lib/pageErrors';
 import { useStoreAccess } from '@/lib/storeAccess';
+import { useTableColumns } from '@/lib/useTableColumns';
 import type { Paginated, PerPageFilters } from '@/types/admin';
 import type { StoreOffersCatalog } from '@/types/store';
 
@@ -40,6 +43,18 @@ function onPerPageChange(perPage: number): void {
         { preserveState: true, replace: true },
     );
 }
+const columns = useTableColumns({
+    listId: 'catalogue.offers',
+    columns: [
+        { key: 'file', label: 'store.offersCatalog.file', required: true },
+        { key: 'createdAt', label: 'store.offersCatalog.createdAt' },
+    ],
+});
+const { shown, visibleColumns } = columns;
+const tableColumns = computed(() => [
+    ...visibleColumns.value.map((column) => t(column.label)),
+    t('store.offersCatalog.actions'),
+]);
 </script>
 
 <template>
@@ -81,12 +96,9 @@ function onPerPageChange(perPage: number): void {
                 :processing="processing"
             />
         </Form>
+        <StoreColumnPicker :state="columns" />
         <DataTable
-            :columns="[
-                t('store.offersCatalog.file'),
-                t('store.offersCatalog.createdAt'),
-                t('store.offersCatalog.actions'),
-            ]"
+            :columns="tableColumns"
             :rows="catalogs.data"
             :empty-message="t('store.offersCatalog.empty')"
         >
@@ -100,7 +112,7 @@ function onPerPageChange(perPage: number): void {
                         {{ t('store.offersCatalog.download') }}
                     </a>
                 </td>
-                <td class="px-4 py-2">
+                <td v-if="shown.createdAt" class="px-4 py-2">
                     {{
                         catalog.created_at
                             ? formatDateTime(catalog.created_at)

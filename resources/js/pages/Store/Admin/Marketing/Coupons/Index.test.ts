@@ -14,6 +14,10 @@ import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
 import { t } from '@/lib/i18n';
 import { paginated, storeCoupon, storeSharedProps } from '@/testing/factories';
 import { defaultAuthProps } from '@/testing/inertiaPageMocks';
+import {
+    expectColumnCanBeHidden,
+    expectColumnLocked,
+} from '@/testing/tableColumns';
 import Index from './Index.vue';
 
 const { usePageMock, routerGetMock, confirmMock } = vi.hoisted(() => ({
@@ -117,5 +121,16 @@ describe('Store coupon Index', () => {
             { per_page: 50 },
             { preserveState: true, replace: true },
         );
+    });
+
+    it('lets staff hide an optional column from the header and every row, and keeps the identifier', async () => {
+        window.localStorage.clear();
+        const wrapper = mountPage();
+        await expectColumnCanBeHidden(wrapper, 'marketing.coupons', {
+            key: 'endDate',
+            label: t('store.coupons.index.endDate'),
+        });
+        expectColumnLocked(wrapper, t('store.coupons.index.code'));
+        window.localStorage.clear();
     });
 });

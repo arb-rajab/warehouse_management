@@ -9,12 +9,14 @@ import {
 import DataTable from '@/components/DataTable.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import Pagination from '@/components/Pagination.vue';
+import StoreColumnPicker from '@/components/StoreColumnPicker.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
 import { confirmDelete } from '@/lib/confirm';
 import { formatDate } from '@/lib/date';
 import { t } from '@/lib/i18n';
 import { useStoreAccess } from '@/lib/storeAccess';
+import { useTableColumns } from '@/lib/useTableColumns';
 import type { Paginated, PerPageFilters } from '@/types/admin';
 import type { StoreSubscriber } from '@/types/store';
 
@@ -34,6 +36,22 @@ function onPerPageChange(perPage: number): void {
         { preserveState: true, replace: true },
     );
 }
+const columns = useTableColumns({
+    listId: 'marketing.subscribers',
+    columns: [
+        {
+            key: 'email',
+            label: 'store.subscribers.index.columnEmail',
+            required: true,
+        },
+        { key: 'date', label: 'store.subscribers.index.columnDate' },
+    ],
+});
+const { shown, visibleColumns } = columns;
+const tableColumns = computed(() => [
+    ...visibleColumns.value.map((column) => t(column.label)),
+    t('store.subscribers.index.columnActions'),
+]);
 </script>
 
 <template>
@@ -42,12 +60,9 @@ function onPerPageChange(perPage: number): void {
     <StoreAdminLayout>
         <PageHeader :title="t('store.subscribers.index.title')" />
 
+        <StoreColumnPicker :state="columns" />
         <DataTable
-            :columns="[
-                t('store.subscribers.index.columnEmail'),
-                t('store.subscribers.index.columnDate'),
-                t('store.subscribers.index.columnActions'),
-            ]"
+            :columns="tableColumns"
             :rows="subscribers.data"
             :empty-message="t('store.subscribers.index.empty')"
         >
@@ -57,7 +72,7 @@ function onPerPageChange(perPage: number): void {
                 >
                     {{ subscriber.email }}
                 </td>
-                <td class="px-4 py-2">
+                <td v-if="shown.date" class="px-4 py-2">
                     {{
                         subscriber.created_at
                             ? formatDate(subscriber.created_at)

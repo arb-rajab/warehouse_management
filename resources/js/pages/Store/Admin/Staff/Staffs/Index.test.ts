@@ -17,6 +17,10 @@ import { t } from '@/lib/i18n';
 import { rowCells } from '@/testing/dom';
 import { paginated, staffMember, storeSharedProps } from '@/testing/factories';
 import { defaultAuthProps, resetMocks } from '@/testing/inertiaPageMocks';
+import {
+    expectColumnCanBeHidden,
+    expectColumnLocked,
+} from '@/testing/tableColumns';
 import type { StaffMember } from '@/types/store';
 import Index from './Index.vue';
 
@@ -236,5 +240,16 @@ describe('Store staff Index', () => {
         });
         expect(roleCell(denied).find('a').exists()).toBe(false);
         expect(roleCell(denied).text()).toBe('Clerk');
+    });
+
+    it('lets staff hide an optional column from the header and every row, and keeps the identifier', async () => {
+        window.localStorage.clear();
+        const wrapper = mountPage([staffMember()]);
+        await expectColumnCanBeHidden(wrapper, 'staff.staffs', {
+            key: 'phone',
+            label: t('store.staff.index.columnPhone'),
+        });
+        expectColumnLocked(wrapper, t('store.staff.index.columnName'));
+        window.localStorage.clear();
     });
 });

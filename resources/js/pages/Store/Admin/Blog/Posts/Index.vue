@@ -15,6 +15,7 @@ import DataTable from '@/components/DataTable.vue';
 import FormField from '@/components/FormField.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import Pagination from '@/components/Pagination.vue';
+import StoreColumnPicker from '@/components/StoreColumnPicker.vue';
 import StoreStatusSwitch from '@/components/StoreStatusSwitch.vue';
 import SubmitButton from '@/components/SubmitButton.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
@@ -24,6 +25,7 @@ import { confirmDelete } from '@/lib/confirm';
 import { filterTriggerButtonClass } from '@/lib/filters';
 import { t } from '@/lib/i18n';
 import { useStoreAccess } from '@/lib/storeAccess';
+import { useTableColumns } from '@/lib/useTableColumns';
 import type { Paginated, PerPageFilters } from '@/types/admin';
 import type { StoreBlogSummary } from '@/types/store';
 const props = defineProps<{
@@ -39,6 +41,23 @@ function onPerPageChange(perPage: number): void {
         { preserveState: true, replace: true },
     );
 }
+const columns = useTableColumns({
+    listId: 'blog.posts',
+    columns: [
+        {
+            key: 'title',
+            label: 'store.blogPosts.index.columnTitle',
+            required: true,
+        },
+        { key: 'category', label: 'store.blogPosts.index.columnCategory' },
+        { key: 'status', label: 'store.blogPosts.index.columnStatus' },
+    ],
+});
+const { shown, visibleColumns } = columns;
+const tableColumns = computed(() => [
+    ...visibleColumns.value.map((column) => t(column.label)),
+    t('store.blogPosts.index.columnActions'),
+]);
 </script>
 <template>
     <Head :title="t('store.blogPosts.index.title')" />
@@ -69,13 +88,9 @@ function onPerPageChange(perPage: number): void {
                 :processing="processing"
             />
         </Form>
+        <StoreColumnPicker :state="columns" />
         <DataTable
-            :columns="[
-                t('store.blogPosts.index.columnTitle'),
-                t('store.blogPosts.index.columnCategory'),
-                t('store.blogPosts.index.columnStatus'),
-                t('store.blogPosts.index.columnActions'),
-            ]"
+            :columns="tableColumns"
             :rows="blogs.data"
             :empty-message="t('store.blogPosts.index.empty')"
         >
@@ -85,7 +100,7 @@ function onPerPageChange(perPage: number): void {
                 >
                     {{ blog.title }}
                 </td>
-                <td class="px-4 py-2">
+                <td v-if="shown.category" class="px-4 py-2">
                     <TableObjectLink
                         v-if="blog.category"
                         :allowed="access.can('edit_blog_category')"
@@ -94,7 +109,7 @@ function onPerPageChange(perPage: number): void {
                     >
                     <template v-else>—</template>
                 </td>
-                <td class="px-4 py-2">
+                <td v-if="shown.status" class="px-4 py-2">
                     <StoreStatusSwitch
                         v-if="access.can('publish_blog')"
                         :action="changeStatus(blog, { mergeQuery: {} })"

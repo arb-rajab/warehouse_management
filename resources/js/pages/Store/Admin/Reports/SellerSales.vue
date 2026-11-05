@@ -3,10 +3,12 @@ import { computed } from 'vue';
 import { seller_sale_report } from '@/actions/App/Http/Controllers/Store/Admin/ReportController';
 import { edit as sellerEdit } from '@/actions/App/Http/Controllers/Store/Admin/SellerController';
 import DataTable from '@/components/DataTable.vue';
+import StoreColumnPicker from '@/components/StoreColumnPicker.vue';
 import StoreReportPage from '@/components/StoreReportPage.vue';
 import TableObjectLink from '@/components/TableObjectLink.vue';
 import { t } from '@/lib/i18n';
 import { useStoreAccess } from '@/lib/storeAccess';
+import { useTableColumns } from '@/lib/useTableColumns';
 import type { Paginated } from '@/types/admin';
 import type {
     StoreSellerReportRow,
@@ -25,6 +27,23 @@ const verificationOptions = computed(() => [
     { value: '1', label: t('store.reports.approved') },
     { value: '0', label: t('store.reports.nonApproved') },
 ]);
+const columns = useTableColumns({
+    listId: 'reports.sellerSales',
+    columns: [
+        {
+            key: 'sellerName',
+            label: 'store.reports.sellerName',
+            required: true,
+        },
+        { key: 'shopName', label: 'store.reports.shopName' },
+        { key: 'sales', label: 'store.reports.sales' },
+        { key: 'orderAmount', label: 'store.reports.orderAmount' },
+    ],
+});
+const { shown, visibleColumns } = columns;
+const tableColumns = computed(() => [
+    ...visibleColumns.value.map((column) => t(column.label)),
+]);
 </script>
 <template>
     <StoreReportPage
@@ -36,13 +55,9 @@ const verificationOptions = computed(() => [
         :selection-label="t('store.reports.verification')"
         :options="verificationOptions"
     >
+        <StoreColumnPicker :state="columns" />
         <DataTable
-            :columns="[
-                t('store.reports.sellerName'),
-                t('store.reports.shopName'),
-                t('store.reports.sales'),
-                t('store.reports.orderAmount'),
-            ]"
+            :columns="tableColumns"
             :rows="rows.data"
             :empty-message="t('store.reports.empty')"
         >
@@ -58,9 +73,15 @@ const verificationOptions = computed(() => [
                         t('store.reports.userNotFound')
                     }}</template>
                 </td>
-                <td class="px-4 py-2">{{ row.shop_name ?? '—' }}</td>
-                <td class="px-4 py-2">{{ row.num_of_sale }}</td>
-                <td class="px-4 py-2">{{ row.order_amount }}</td>
+                <td v-if="shown.shopName" class="px-4 py-2">
+                    {{ row.shop_name ?? '—' }}
+                </td>
+                <td v-if="shown.sales" class="px-4 py-2">
+                    {{ row.num_of_sale }}
+                </td>
+                <td v-if="shown.orderAmount" class="px-4 py-2">
+                    {{ row.order_amount }}
+                </td>
             </template>
         </DataTable>
     </StoreReportPage>

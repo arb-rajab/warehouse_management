@@ -17,6 +17,10 @@ import {
     storeSharedProps,
 } from '@/testing/factories';
 import { defaultAuthProps, resetMocks } from '@/testing/inertiaPageMocks';
+import {
+    expectColumnCanBeHidden,
+    expectColumnLocked,
+} from '@/testing/tableColumns';
 import type { StoreSubscriber } from '@/types/store';
 import Index from './Index.vue';
 
@@ -146,5 +150,16 @@ describe('Store subscribers Index', () => {
             { per_page: 50 },
             { preserveState: true, replace: true },
         );
+    });
+
+    it('lets staff hide an optional column from the header and every row, and keeps the identifier', async () => {
+        window.localStorage.clear();
+        const wrapper = mountPage([storeSubscriber()]);
+        await expectColumnCanBeHidden(wrapper, 'marketing.subscribers', {
+            key: 'date',
+            label: t('store.subscribers.index.columnDate'),
+        });
+        expectColumnLocked(wrapper, t('store.subscribers.index.columnEmail'));
+        window.localStorage.clear();
     });
 });

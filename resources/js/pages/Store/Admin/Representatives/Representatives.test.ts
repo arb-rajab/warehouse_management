@@ -749,3 +749,19 @@ it('the visits list lets staff hide an optional column and keeps the representat
     expectColumnLocked(wrapper, t('store.representativeVisits.representative'));
     window.localStorage.clear();
 });
+
+it('the packages list lets staff hide an optional column and keeps the name', async () => {
+    window.localStorage.clear();
+    const wrapper = mount(PackagesIndex, {
+        props: {
+            packages: paginated([representativePackage()]),
+            filters: { per_page: 10 },
+        },
+    });
+    await expectColumnCanBeHidden(wrapper, 'representatives.packages', {
+        key: 'percentage',
+        label: t('store.representativePackages.percentage'),
+    });
+    expectColumnLocked(wrapper, t('store.representativePackages.name'));
+    window.localStorage.clear();
+});

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Form, Head, router } from '@inertiajs/vue3';
 import { Pencil, Trash2 } from '@lucide/vue';
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import {
     destroy,
     edit,
@@ -13,12 +13,14 @@ import FormField from '@/components/FormField.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import Pagination from '@/components/Pagination.vue';
 import StoreBrandFormFields from '@/components/StoreBrandFormFields.vue';
+import StoreColumnPicker from '@/components/StoreColumnPicker.vue';
 import SubmitButton from '@/components/SubmitButton.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
 import { confirmDelete } from '@/lib/confirm';
 import { t } from '@/lib/i18n';
 import { useStoreAccess } from '@/lib/storeAccess';
+import { useTableColumns } from '@/lib/useTableColumns';
 import type { Paginated, PerPageFilters } from '@/types/admin';
 import type { StoreBrand } from '@/types/store';
 const props = defineProps<{
@@ -46,6 +48,18 @@ function search(event: Event): void {
         { preserveState: true, replace: true },
     );
 }
+const columns = useTableColumns({
+    listId: 'product.brands',
+    columns: [
+        { key: 'name', label: 'store.brands.name', required: true },
+        { key: 'logo', label: 'store.brands.logo' },
+    ],
+});
+const { shown, visibleColumns } = columns;
+const tableColumns = computed(() => [
+    ...visibleColumns.value.map((column) => t(column.label)),
+    t('store.brands.actions'),
+]);
 </script>
 <template>
     <Head :title="t('store.brands.title')" />
@@ -59,12 +73,9 @@ function search(event: Event): void {
                 maxlength="255"
             />
         </form>
+        <StoreColumnPicker :state="columns" />
         <DataTable
-            :columns="[
-                t('store.brands.name'),
-                t('store.brands.logo'),
-                t('store.brands.actions'),
-            ]"
+            :columns="tableColumns"
             :rows="brands.data"
             :empty-message="t('store.brands.empty')"
         >
@@ -74,7 +85,7 @@ function search(event: Event): void {
                 >
                     {{ item.name }}
                 </td>
-                <td class="px-4 py-2">
+                <td v-if="shown.logo" class="px-4 py-2">
                     <img
                         v-if="item.logo_url"
                         :src="item.logo_url"

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Head, router } from '@inertiajs/vue3';
 import { Pencil, Trash2 } from '@lucide/vue';
+import { computed } from 'vue';
 import {
     create,
     destroy,
@@ -11,11 +12,13 @@ import AddResourceLink from '@/components/AddResourceLink.vue';
 import DataTable from '@/components/DataTable.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import Pagination from '@/components/Pagination.vue';
+import StoreColumnPicker from '@/components/StoreColumnPicker.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
 import { confirmDelete } from '@/lib/confirm';
 import { t } from '@/lib/i18n';
 import { useStoreAccess } from '@/lib/storeAccess';
+import { useTableColumns } from '@/lib/useTableColumns';
 import type { Paginated, PerPageFilters } from '@/types/admin';
 import type { RepresentativePackage } from '@/types/storeRepresentatives';
 
@@ -31,6 +34,22 @@ function onPerPageChange(perPage: number): void {
         { preserveState: true, replace: true },
     );
 }
+const columns = useTableColumns({
+    listId: 'representatives.packages',
+    columns: [
+        {
+            key: 'name',
+            label: 'store.representativePackages.name',
+            required: true,
+        },
+        { key: 'percentage', label: 'store.representativePackages.percentage' },
+    ],
+});
+const { shown, visibleColumns } = columns;
+const tableColumns = computed(() => [
+    ...visibleColumns.value.map((column) => t(column.label)),
+    t('store.representativePackages.actions'),
+]);
 </script>
 
 <template>
@@ -43,18 +62,17 @@ function onPerPageChange(perPage: number): void {
                 :label="t('store.representativePackages.create')"
             />
         </PageHeader>
+        <StoreColumnPicker :state="columns" />
         <DataTable
-            :columns="[
-                t('store.representativePackages.name'),
-                t('store.representativePackages.percentage'),
-                t('store.representativePackages.actions'),
-            ]"
+            :columns="tableColumns"
             :rows="packages.data"
             :empty-message="t('store.representativePackages.empty')"
         >
             <template #row="{ row: item }">
                 <td class="px-4 py-2">{{ item.name }}</td>
-                <td class="px-4 py-2">{{ item.percentage }}%</td>
+                <td v-if="shown.percentage" class="px-4 py-2">
+                    {{ item.percentage }}%
+                </td>
                 <td class="px-4 py-2">
                     <div class="flex items-center gap-2">
                         <TableActionLink

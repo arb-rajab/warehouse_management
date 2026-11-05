@@ -25,6 +25,10 @@ import {
     storeSharedProps,
 } from '@/testing/factories';
 import { defaultAuthProps } from '@/testing/inertiaPageMocks';
+import {
+    expectColumnCanBeHidden,
+    expectColumnLocked,
+} from '@/testing/tableColumns';
 import type { AdminLanguage } from '@/types/store';
 import Index from './Index.vue';
 const { usePageMock, formSlotPropsMock, routerGetMock } = vi.hoisted(() => ({
@@ -278,5 +282,16 @@ describe('Language Index', () => {
         expect(i18n.global.te('store.languages.defaultLocked', 'ar')).toBe(
             true,
         );
+    });
+
+    it('lets staff hide an optional column from the header and every row, and keeps the identifier', async () => {
+        window.localStorage.clear();
+        const wrapper = mountPage();
+        await expectColumnCanBeHidden(wrapper, 'languages.languages', {
+            key: 'code',
+            label: t('store.languages.code'),
+        });
+        expectColumnLocked(wrapper, t('store.languages.name'));
+        window.localStorage.clear();
     });
 });
