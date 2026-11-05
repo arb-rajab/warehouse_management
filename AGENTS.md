@@ -16,6 +16,9 @@ Maintain shared instructions here and in the referenced `.ai/` files; keep
 4. Check sibling files and the actual dependency versions before choosing APIs.
 5. Forms must follow [.ai/rules/form-required-fields.md](.ai/rules/form-required-fields.md):
    mark required fields, and keep the mark, `required` and the server rule in agreement.
+6. Store back office list tables must follow [.ai/rules/store-table-columns.md](.ai/rules/store-table-columns.md):
+   every list lets users show or hide optional columns through `useTableColumns` and
+   `StoreColumnPicker`; a new or changed list adopts it in the same change.
 
 Read this file and the rules index fully once per session. For
 `.ai/agent-framework.md` and `.ai/agent-conventions.md`, read the whole file for

@@ -10,6 +10,8 @@ paths:
 
 # Tables must not be wrapped in a way that grows their height
 
+Which columns a list shows (the Columns picker above the table) is in [store-table-columns.md](store-table-columns.md); it does not change this contract.
+
 A list table shows as many rows as the viewport allows. A wide table scrolls sideways inside its wrapper; it never gets taller to fit the width.
 
 ## The contract lives in DataTable.vue

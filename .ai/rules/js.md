@@ -80,7 +80,7 @@ tests/e2e (Playwright) exists only for behavior Vitest/jsdom cannot exercise —
 When adding or touching a page/component, give common affordances an icon instead of leaving them as plain text/color — warnings, errors, loading/processing states, empty states, status/role badges, clear/apply actions, and duration/time tags all get one. Reuse the icon already established for that concept elsewhere rather than picking a new one:
 
 - Add=Plus, Edit=Pencil, Delete=Trash2, View=Eye, external/related-record link=ArrowUpRight
-- Sort=ArrowUp/ArrowDown/ArrowUpDown, Close=X, Filter trigger=SlidersHorizontal, Clear=X, Apply/confirm=Check
+- Sort=ArrowUp/ArrowDown/ArrowUpDown, Close=X, Filter trigger=SlidersHorizontal, Clear=X, Apply/confirm=Check, Column picker=Columns3
 - Cell states (mirrored by hand in the Flutter app, see [cell-state visuals](cell-state-visuals.md)): empty=CircleDashed, full=Inbox, opened=PackageOpen; expiration=CalendarX, added-at/stored=CalendarPlus
 - Warning/disabled hint=TriangleAlert, field/form error=CircleAlert, admin/privileged role=ShieldCheck, signed-in user=CircleUser, processing/loading=LoaderCircle (with animate-spin), ongoing/duration=Clock, transfer=ArrowLeftRight, empty table state=PackageSearch, brand mark=Warehouse
 - Nav icons: LayoutDashboard, Rows3, Map, ArrowLeftRight, Users, LogOut, Languages
