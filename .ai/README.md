@@ -42,6 +42,9 @@ The application [README](../README.md) covers warehouse setup, APIs and deployme
 - The [store list order audit](store-list-order-audit-20261105.md) records, per list, the
   default order before and after newest-first and the exceptions with reasons; the
   standing rule is [store-list-default-order](rules/store-list-default-order.md).
+- The [store search select rule](rules/store-search-select.md) is the standing rule for
+  every store back office select that searches another table: the shared component, its
+  endpoint contract and the result row content per entity.
 
 ## Documentation consumers
 
