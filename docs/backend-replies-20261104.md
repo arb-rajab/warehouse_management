@@ -1,11 +1,17 @@
 # Backend replies (2026-11-04)
 
 Replies to **BR-20261104-A**. Every point is quoted by its number. Paths are under `/api/v1/store`.
-"Done" means changed in this branch and covered by `tests/Feature/StoreApiBackendRequestsTest.php`
+"Done" means changed and covered by `tests/Feature/StoreApiBackendRequestsTest.php`
 (A.4 also by `tests/Feature/Models/OrderRelationsTest.php` and `tests/Feature/Store/Admin/ProductControllerTest.php`).
 
-**Nothing here was checked against dev.** I reproduced A.1, A.3 and A.4 in tests from the steps you gave, not
-on dev. This branch has to be deployed before any "done" shows up there.
+**On dev since 2026-11-05 08:14 UTC** (`develop` at `d9e05a5e`). The first deploy of these changes, at 07:46,
+stopped before going live: Symfony security advisories published on 2026-11-04 failed the server's dependency
+audit, so dev kept the 2026-11-04 release. The Symfony update (#545) cleared it. If you tested between 07:46
+and 08:14, you were still on the old release. Staging and production do not have these changes yet; they
+arrive with the next promotion, which has to include #545 or it stops at the same audit.
+
+**I did not re-run your steps on dev**, because I cannot reach it. A.1, A.3 and A.4 were reproduced in tests from the
+steps you gave. Please re-test them; the orders and products you named are listed under each point.
 
 | Point | State |
 | :-: | :--- |
@@ -89,8 +95,8 @@ and adds nothing. The answer is the same for every account. A rep without an ope
 serial, so the newest copy won. Done:
 
 - Order lines resolve by `order_details.product_id`. That id is the Otajer `Mat_ID` the product sync keys on,
-  so it does not change. Orders 1838 and 1841 will show "VAT Test Chickpeas 400 g" again once this is
-  deployed. Nothing in the database needs to change.
+  so it does not change. On dev, orders 1838 and 1841 should show "VAT Test Chickpeas 400 g" again.
+  Nothing in the database needed to change.
 - "Duplicate" (back office, seller panel and seller API) no longer copies the product's `serial` or its stock
   rows' `sku`: the copy gets none. Copies made before this change keep the source's serial. With the first fix
   that no longer affects order lines, but you can clear it on 316704 and 316705 in the product form.
@@ -133,9 +139,9 @@ Nothing new since 2026-11-03, except the stars sort, which I found already exist
 [backend-replies-20261103.md](backend-replies-20261103.md):
 
 - **BR-20261103-D.3.** I have no record of a D.3 in that reply. On the idempotency key (BR-20261103-B.2): a
-  successful answer is remembered for **24 hours** per account and key. It is in this branch's code. Whether the
-  old server has it depends on what is deployed there, which I cannot see. After a deploy, it shows up as the
-  header `Idempotent-Replayed: true` on a repeat.
+  successful answer is remembered for **24 hours** per account and key. Dev runs it. Whether the old server has
+  it depends on what is deployed there, which I cannot see. You can check on any server: a repeat with the
+  same key answers with the header `Idempotent-Replayed: true`.
 - **BR-20261102-D (Firebase, test push).** Still waiting on the server: run `php artisan store:send-test-push
   <token from com.newstore.app.dev>` on dev. It prints the Firebase project it uses and whether the token was
   accepted (D.1 and D.4).
