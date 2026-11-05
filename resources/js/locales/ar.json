@@ -1725,10 +1725,6 @@
             "products": "المنتجات",
             "categories": "الفئات",
             "representativeAccount": "حساب مندوب",
-            "columns": "الأعمدة",
-            "columnsTitle": "اختيار الأعمدة",
-            "showAllColumns": "إظهار الكل",
-            "resetColumns": "الإعادة للافتراضي",
             "profits": "الأرباح",
             "profitsRange": "الأرباح (الفترة)",
             "tradeLicense": "الرخصة التجارية",
@@ -2963,6 +2959,13 @@
             "appliedFilters": "الفلاتر المطبّقة",
             "removeFilter": "إزالة الفلتر: {label}",
             "clearFilters": "مسح الفلاتر"
+        },
+        "table": {
+            "columns": "الأعمدة",
+            "columnsTitle": "اختيار الأعمدة",
+            "showAll": "إظهار الكل",
+            "reset": "الإعادة للافتراضي",
+            "alwaysShown": "يظهر دائمًا"
         }
     },
     "store.attributes.index.title": "خصائص المنتجات",

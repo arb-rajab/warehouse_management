@@ -1,19 +1,12 @@
-import { beforeEach, expect, it, vi } from 'vitest';
+import { expect, it } from 'vitest';
 import { t } from '@/lib/i18n';
 import {
     availableCustomerColumns,
     customerCellText,
     customerColumns,
-    defaultColumnKeys,
     formatProfit,
-    loadColumnKeys,
-    saveColumnKeys,
 } from '@/lib/storeCustomerColumns';
 import { storeCustomer } from '@/testing/factories';
-
-beforeEach(() => {
-    window.localStorage.clear();
-});
 
 it('lists each column once and never a secret', () => {
     const keys = customerColumns.map((column) => column.key);
@@ -54,8 +47,12 @@ it('limits the columns to the list and to what the viewer may see', () => {
     }
 });
 
-it('shows the core columns by default', () => {
-    expect(defaultColumnKeys(availableCustomerColumns(false, true))).toEqual([
+const defaultKeys = (representatives: boolean, restricted: boolean) =>
+    availableCustomerColumns(representatives, restricted)
+        .filter((column) => column.defaultVisible)
+        .map((column) => column.key);
+it('shows the core columns by default and always keeps the name', () => {
+    expect(defaultKeys(false, true)).toEqual([
         'id',
         'name',
         'company_name',
@@ -64,44 +61,10 @@ it('shows the core columns by default', () => {
         'profits',
         'status',
     ]);
-    expect(defaultColumnKeys(availableCustomerColumns(true, true))).toContain(
-        'package',
-    );
-});
-
-it('remembers a choice per list and ignores columns no longer available', () => {
-    const available = availableCustomerColumns(false, false);
-    saveColumnKeys('k', ['city', 'name', 'tax_number', 'nope']);
-    expect(loadColumnKeys('k', available)).toEqual(['name', 'city']);
-    expect(loadColumnKeys('other', available)).toEqual(
-        defaultColumnKeys(available),
-    );
-});
-
-it('falls back to the defaults for empty, junk or blocked storage', () => {
-    const available = availableCustomerColumns(false, false);
-    const defaults = defaultColumnKeys(available);
-    window.localStorage.setItem('k', '[]');
-    expect(loadColumnKeys('k', available)).toEqual(defaults);
-    window.localStorage.setItem('k', '{oops');
-    expect(loadColumnKeys('k', available)).toEqual(defaults);
-    window.localStorage.setItem('k', '"text"');
-    expect(loadColumnKeys('k', available)).toEqual(defaults);
-
-    const get = vi
-        .spyOn(Storage.prototype, 'getItem')
-        .mockImplementation(() => {
-            throw new Error('blocked');
-        });
-    const set = vi
-        .spyOn(Storage.prototype, 'setItem')
-        .mockImplementation(() => {
-            throw new Error('blocked');
-        });
-    expect(loadColumnKeys('k', available)).toEqual(defaults);
-    expect(() => saveColumnKeys('k', ['name'])).not.toThrow();
-    get.mockRestore();
-    set.mockRestore();
+    expect(defaultKeys(true, true)).toContain('package');
+    expect(customerColumns.filter((column) => column.required)).toEqual([
+        expect.objectContaining({ key: 'name' }),
+    ]);
 });
 
 it('formats profits with two decimals', () => {

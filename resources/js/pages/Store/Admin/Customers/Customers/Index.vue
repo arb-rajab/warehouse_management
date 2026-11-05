@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Form, Head, Link, router } from '@inertiajs/vue3';
-import { Clock, Columns3, X } from '@lucide/vue';
-import { computed, ref, watch } from 'vue';
+import { Clock, X } from '@lucide/vue';
+import { computed, ref } from 'vue';
 import {
     create,
     repCreate,
@@ -28,6 +28,7 @@ import PageHeader from '@/components/PageHeader.vue';
 import Pagination from '@/components/Pagination.vue';
 import RequiredLegend from '@/components/RequiredLegend.vue';
 import RequiredMark from '@/components/RequiredMark.vue';
+import StoreColumnPicker from '@/components/StoreColumnPicker.vue';
 import StoreListFilters from '@/components/StoreListFilters.vue';
 import SubmitButton from '@/components/SubmitButton.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
@@ -36,7 +37,6 @@ import { confirmDelete } from '@/lib/confirm';
 import {
     fieldLabelClass,
     filterClearButtonClass,
-    filterTriggerButtonClass,
     plainFieldInputClass,
 } from '@/lib/filters';
 import { t } from '@/lib/i18n';
@@ -44,11 +44,9 @@ import { useStoreAccess } from '@/lib/storeAccess';
 import {
     availableCustomerColumns,
     customerCellText,
-    defaultColumnKeys,
     formatProfit,
-    loadColumnKeys,
-    saveColumnKeys,
 } from '@/lib/storeCustomerColumns';
+import { useTableColumns } from '@/lib/useTableColumns';
 import type { Paginated } from '@/types/admin';
 import type { StoreFilterChip } from '@/types/store';
 import type { StoreCustomer } from '@/types/storeCustomers';
@@ -164,25 +162,19 @@ const profitRangeText = computed(() => {
 const selected = ref<number[]>([]);
 const packageCustomer = ref<StoreCustomer | null>(null);
 const packageOpen = ref(false);
-const columnsOpen = ref(false);
-const columnStorageKey = `store.customers.columns.${
-    props.representatives ? 'representatives' : 'customers'
-}`;
-const availableColumns = computed(() =>
-    availableCustomerColumns(
-        props.representatives,
-        access.value.can('edit_customer'),
-    ),
-);
-const visibleKeys = ref<string[]>(
-    loadColumnKeys(columnStorageKey, availableColumns.value),
-);
-const visibleColumns = computed(() =>
-    availableColumns.value.filter((column) =>
-        visibleKeys.value.includes(column.key),
-    ),
-);
-watch(visibleKeys, (keys) => saveColumnKeys(columnStorageKey, keys));
+const columns = useTableColumns({
+    listId: () =>
+        `customers.${props.representatives ? 'representatives' : 'customers'}`,
+    // The choice used to be stored under this key, per list but not per user.
+    legacyStorageKey: () =>
+        `store.customers.columns.${props.representatives ? 'representatives' : 'customers'}`,
+    columns: () =>
+        availableCustomerColumns(
+            props.representatives,
+            access.value.can('edit_customer'),
+        ),
+});
+const { visibleColumns } = columns;
 const tableColumns = computed(() => [
     t('store.customers.select'),
     ...visibleColumns.value.map((column) =>
@@ -238,12 +230,6 @@ function changePerPage(perPage: number): void {
 const resetRangeHref = computed(() =>
     listRoute.value({ query: currentQuery({}, false) }),
 );
-function showAllColumns(): void {
-    visibleKeys.value = availableColumns.value.map((column) => column.key);
-}
-function resetColumns(): void {
-    visibleKeys.value = defaultColumnKeys(availableColumns.value);
-}
 function choosePackage(customer: StoreCustomer): void {
     packageCustomer.value = customer;
     packageOpen.value = true;
@@ -389,7 +375,7 @@ function choosePackage(customer: StoreCustomer): void {
                 }}</Link
             >
         </div>
-        <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <StoreColumnPicker :state="columns">
             <Form
                 v-if="access.can('delete_customer') && !filters.archived"
                 :action="bulkDestroy()"
@@ -413,14 +399,7 @@ function choosePackage(customer: StoreCustomer): void {
                     {{ t('store.customers.deleteSelected') }}
                 </button></Form
             >
-            <button
-                type="button"
-                :class="[filterTriggerButtonClass, 'ms-auto']"
-                @click="columnsOpen = true"
-            >
-                <Columns3 class="h-4 w-4" />{{ t('store.customers.columns') }}
-            </button>
-        </div>
+        </StoreColumnPicker>
         <DataTable
             :columns="tableColumns"
             :rows="customers.data"
@@ -574,40 +553,6 @@ function choosePackage(customer: StoreCustomer): void {
             :per-page="filters.per_page"
             @update:per-page="changePerPage"
         />
-        <FilterDialog
-            v-model:open="columnsOpen"
-            :title="t('store.customers.columnsTitle')"
-            :close-label="t('common.close')"
-        >
-            <div class="grid grid-cols-1 gap-2 pb-4 sm:grid-cols-2">
-                <label
-                    v-for="column in availableColumns"
-                    :key="column.key"
-                    class="flex items-center gap-2 text-sm"
-                    ><input
-                        v-model="visibleKeys"
-                        type="checkbox"
-                        :value="column.key"
-                    />{{ t(column.label) }}</label
-                >
-            </div>
-            <div class="flex flex-wrap gap-2">
-                <button
-                    type="button"
-                    :class="filterClearButtonClass"
-                    @click="showAllColumns"
-                >
-                    {{ t('store.customers.showAllColumns') }}
-                </button>
-                <button
-                    type="button"
-                    :class="filterClearButtonClass"
-                    @click="resetColumns"
-                >
-                    {{ t('store.customers.resetColumns') }}
-                </button>
-            </div>
-        </FilterDialog>
         <FilterDialog
             v-model:open="packageOpen"
             :title="t('store.customers.assignPackage')"

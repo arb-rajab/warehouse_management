@@ -1725,10 +1725,6 @@
             "products": "Products",
             "categories": "Categories",
             "representativeAccount": "Representative account",
-            "columns": "Columns",
-            "columnsTitle": "Choose columns",
-            "showAllColumns": "Show all",
-            "resetColumns": "Reset to default",
             "profits": "Profits",
             "profitsRange": "Profits (range)",
             "tradeLicense": "Trade license",
@@ -2963,6 +2959,13 @@
             "appliedFilters": "Applied filters",
             "removeFilter": "Remove filter: {label}",
             "clearFilters": "Clear filters"
+        },
+        "table": {
+            "columns": "Columns",
+            "columnsTitle": "Choose columns",
+            "showAll": "Show all",
+            "reset": "Reset to default",
+            "alwaysShown": "Always shown"
         }
     },
     "store.attributes.index.title": "Product attributes",
