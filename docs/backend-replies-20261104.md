@@ -21,7 +21,7 @@ steps you gave. Please re-test them; the orders and products you named are liste
 | A.4 | Done: order lines resolve by their stored product id; "duplicate" no longer copies the serial or the SKU |
 | A.5 | `cart-summary` done; `admin_verified` answered, not changed |
 | A.6 | Answered, not changed: the owner has to decide |
-| FYI | Cause explained; the check to run on staging and production is below |
+| FYI | Cause found and fixed in code; on dev since 2026-11-05 |
 
 ---
 
@@ -120,20 +120,21 @@ blocking would also stop a rep ordering for a new customer until the back office
 recommendation: allow it, because the rep is accountable for the order, unless verification means more than
 "may see prices".
 
-**FYI, the currency.** The cause matches what you saw. Money is formatted from the settings
-`no_of_decimals` and `symbol_format`. When those rows are missing, it uses 0 decimals and the symbol after the
-number ("11€"). Saving the Currency page wrote them. I cannot reach staging or production. Run this on each:
+**FYI, the currency.** Your diagnosis was right: dev had no `no_of_decimals` or `symbol_format` rows. The
+Currency page fills a missing row with its own defaults (2 decimals, symbol first), but prices were formatted
+as if missing meant 0 decimals with the symbol after. That is why the page said 2 while the API printed "11€".
+Saving the page wrote the rows.
+
+**Fixed in code, on dev since 2026-11-05** (#546). A missing or blank setting now formats prices the way the
+Currency page shows them: 2 decimals, symbol first (`BusinessSetting::CURRENCY_DEFAULTS`). A stored value still
+wins, 0 decimals included. A server with missing rows prints "€10.90", not "11€". You don't need to check
+staging and production for this any more. If you want the stored values to be explicit there, run this, and
+save Back office, Setup, Currency once if a row is missing or blank:
 
 ```sql
 SELECT type, value FROM business_settings
 WHERE type IN ('no_of_decimals', 'symbol_format', 'decimal_separator', 'system_default_currency');
 ```
-
-If a row is missing or its value is blank, save Back office, Setup, Currency once there, as you did on dev.
-
-Since 2026-11-05 this can no longer happen. A missing or blank `no_of_decimals` or `symbol_format` now means
-2 decimals with the symbol first, the same values the Currency page shows (`BusinessSetting::CURRENCY_DEFAULTS`).
-Saving the page is still worth doing, so the stored values are explicit.
 
 ---
 
