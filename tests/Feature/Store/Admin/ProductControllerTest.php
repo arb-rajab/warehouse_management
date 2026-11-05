@@ -211,23 +211,24 @@ test('the all-products list shows every owner and digital product, hides retired
     $retired = createStoreProduct(['name' => 'Retired oil', 'thumbnail_img' => null]);
     DB::table('products')->where('id', $retired->id)->update(['deleted_from_api' => 1, 'for_sale' => 0]);
     $featured = createStoreProduct(['name' => 'Featured oil', 'featured' => 1, 'published' => false, 'thumbnail_img' => null]);
-    $visible = [$this->product->id, $noise['seller']->id, $noise['digital']->id, $featured->id];
-    $everything = [$this->product->id, $noise['seller']->id, $noise['digital']->id, $retired->id, $featured->id];
+    // Newest first: the reverse of the order the fixtures were created in.
+    $visible = [$featured->id, $noise['digital']->id, $noise['seller']->id, $this->product->id];
+    $everything = [$featured->id, $retired->id, $noise['digital']->id, $noise['seller']->id, $this->product->id];
     $ids = fn (array $query = []) => productListIds($this->get(route('products.all', $query)));
 
     expect($ids())->toBe($visible)
         ->and($ids(['allProducts' => 1]))->toBe($everything)
         ->and($ids(['allDeleted' => 1, 'allFeatured' => 1]))->toBe([$retired->id])
         // A preset ignores the retired flag, so retired products show again.
-        ->and($ids(['allActive' => 1]))->toBe([$this->product->id, $noise['seller']->id, $noise['digital']->id, $retired->id])
-        ->and($ids(['allForSale' => 'true']))->toBe([$this->product->id, $noise['seller']->id, $noise['digital']->id, $featured->id])
+        ->and($ids(['allActive' => 1]))->toBe([$retired->id, $noise['digital']->id, $noise['seller']->id, $this->product->id])
+        ->and($ids(['allForSale' => 'true']))->toBe([$featured->id, $noise['digital']->id, $noise['seller']->id, $this->product->id])
         ->and($ids(['allFeatured' => 1]))->toBe([$featured->id])
         ->and($ids(['allProducts' => 1, 'allFeatured' => 1, 'active' => 1]))->toBe($everything)
         // One ticked switch matches all four exactly, the unticked ones as off.
         ->and($ids(['deleted' => 1, 'active' => 1]))->toBe([$retired->id])
         ->and($ids(['deleted' => 1]))->toBe([])
         ->and($ids(['featured' => 1, 'for_sale' => 1]))->toBe([$featured->id])
-        ->and($ids(['active' => 1, 'for_sale' => 1]))->toBe([$this->product->id, $noise['seller']->id, $noise['digital']->id])
+        ->and($ids(['active' => 1, 'for_sale' => 1]))->toBe([$noise['digital']->id, $noise['seller']->id, $this->product->id])
         ->and($ids(['user_id' => $noise['seller']->user_id]))->toBe([$noise['seller']->id]);
     expect($ids())->not->toContain($noise['auction']->id, $noise['wholesale']->id);
     $this->get(route('products.all', ['allDeleted' => 1, 'user_id' => 5, 'deleted' => 1]))->assertInertia(fn (Assert $page) => $page
@@ -267,7 +268,7 @@ test('the all-products search needs every word to match a name, the id or a barc
     $ids = fn (string $search) => productListIds($this->get(route('products.all', ['search' => $search])));
 
     expect($ids('oil Olive'))->toBe([$this->product->id])
-        ->and($ids('oil'))->toBe([$this->product->id, $noise['seller']->id, $noise['digital']->id])
+        ->and($ids('oil'))->toBe([$noise['digital']->id, $noise['seller']->id, $this->product->id])
         ->and($ids('555001'))->toBe([$byId->id])
         ->and($ids('87000000 Oil'))->toBe([$noise['digital']->id])
         ->and($ids('879999 زيتون'))->toBe([$this->product->id])
@@ -287,9 +288,9 @@ test('both lists filter by category and sort only by the legacy allowlist, then 
     $all = fn (array $query = []) => productListIds($this->get(route('products.all', $query)));
 
     expect($inHouse())->toBe([$cheap->id, $dear->id, $this->product->id])
-        ->and($all())->toBe([$this->product->id, $cheap->id, $dear->id])
+        ->and($all())->toBe([$cheap->id, $dear->id, $this->product->id])
         ->and($inHouse(['category_id' => $this->category->id]))->toBe([$dear->id, $this->product->id])
-        ->and($all(['category_id' => $this->category->id]))->toBe([$this->product->id, $dear->id])
+        ->and($all(['category_id' => $this->category->id]))->toBe([$dear->id, $this->product->id])
         ->and($inHouse(['type' => 'unit_price,asc']))->toBe([$cheap->id, $this->product->id, $dear->id])
         ->and($all(['type' => 'unit_price,desc']))->toBe([$dear->id, $this->product->id, $cheap->id])
         ->and($inHouse(['type' => 'num_of_sale,desc']))->toBe([$cheap->id, $this->product->id, $dear->id])

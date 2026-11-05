@@ -32,7 +32,10 @@ test('the representative package index returns a narrow complete record and pagi
     $this->get('/temp/admin/representatives/packages/index')->assertOk()->assertInertia(fn (Assert $page) => $page
         ->has('packages.data', 20)->where('packages.meta.total', 22)
         ->where('filters', ['per_page' => 20])
-        ->has('packages.data.0', fn (Assert $item) => $item->where('id', $package->id)->where('name', 'Gold')->where('percentage', '12.5')));
+        ->where('packages.data.0.name', 'Package 21'));
+    $this->get('/temp/admin/representatives/packages/index?page=2')->assertOk()->assertInertia(fn (Assert $page) => $page
+        ->has('packages.data', 2)
+        ->has('packages.data.1', fn (Assert $item) => $item->where('id', $package->id)->where('name', 'Gold')->where('percentage', '12.5')));
     $this->get('/temp/admin/representatives/packages/index?per_page=10')->assertOk()->assertInertia(fn (Assert $page) => $page->has('packages.data', 10));
     $this->getJson('/temp/admin/representatives/packages/index?per_page=999')->assertUnprocessable()->assertJsonValidationErrors('per_page');
 });

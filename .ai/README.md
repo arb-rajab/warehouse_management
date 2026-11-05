@@ -39,6 +39,9 @@ The application [README](../README.md) covers warehouse setup, APIs and deployme
   which object a store back office table or detail view names, where its link goes and
   which permission gates it, plus the objects deliberately left as text; the standing
   rule is [store-table-object-links](rules/store-table-object-links.md).
+- The [store list order audit](store-list-order-audit-20261105.md) records, per list, the
+  default order before and after newest-first and the exceptions with reasons; the
+  standing rule is [store-list-default-order](rules/store-list-default-order.md).
 
 ## Documentation consumers
 

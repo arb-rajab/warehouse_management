@@ -12,6 +12,7 @@ use App\Models\OrderDetail;
 use App\Models\Product;
 use App\Models\StoreUser;
 use App\Services\StoreAdminOrderService;
+use App\Support\NewestFirst;
 use App\Support\StoreLocale;
 use App\Utility\NotificationUtility;
 use Illuminate\Contracts\Encryption\DecryptException;
@@ -93,7 +94,7 @@ class OrderController extends Controller implements HasMiddleware
         $perPage = $this->resolvePerPage($request, 20);
 
         return Inertia::render('Store/Admin/Sales/Orders/Index', [
-            'orders' => $this->paginated(OrderResource::collection($query->orderByDesc('id')->paginate($perPage)->withQueryString())),
+            'orders' => $this->paginated(OrderResource::collection($query->tap(NewestFirst::apply(...))->paginate($perPage)->withQueryString())),
             'filters' => [...$request->only(['search', 'payment_status', 'delivery_status', 'from', 'to']), 'per_page' => $perPage], 'listRoute' => $name,
         ]);
     }

@@ -12,6 +12,7 @@ use App\Http\Resources\Store\BlogResource;
 use App\Models\Blog;
 use App\Models\BlogCategory;
 use App\Models\Upload;
+use App\Support\NewestFirst;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -39,7 +40,7 @@ class BlogController extends Controller implements HasMiddleware
     {
         $perPage = $this->resolvePerPage($request, 20);
         $blogs = Blog::query()->select(['id', 'category_id', 'title', 'slug', 'status'])
-            ->with('category:id,category_name')->orderByDesc('created_at')->orderByDesc('id');
+            ->with('category:id,category_name')->tap(NewestFirst::apply(...));
         if ($request->filled('search')) {
             $blogs->where('title', 'like', '%'.$request->validated('search').'%');
         }

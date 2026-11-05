@@ -7,6 +7,7 @@ use App\Http\Requests\Store\Admin\FilterClassifiedProductRequest;
 use App\Http\Requests\Store\Admin\UpdateClassifiedProductPublishedRequest;
 use App\Http\Resources\Store\ClassifiedProductResource;
 use App\Models\CustomerProduct;
+use App\Support\NewestFirst;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -33,7 +34,7 @@ class ClassifiedProductController extends Controller implements HasMiddleware
         $products = CustomerProduct::query()
             ->select(['id', 'name', 'slug', 'thumbnail_img', 'added_by', 'status', 'published'])
             ->with(['customer_product_translations:id,customer_product_id,lang,name', 'thumbnailUpload:id,file_name,external_link'])
-            ->orderByDesc('created_at')->orderByDesc('id')
+            ->tap(NewestFirst::apply(...))
             ->paginate($perPage)->withQueryString();
 
         return Inertia::render('Store/Admin/Customers/ClassifiedProducts/Index', [

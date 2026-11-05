@@ -22,6 +22,7 @@ use App\Models\RepresentativePackage;
 use App\Models\StoreUser;
 use App\Services\TradeLicenseStorage;
 use App\Services\UserService;
+use App\Support\NewestFirst;
 use Carbon\Carbon;
 use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Http\RedirectResponse;
@@ -111,7 +112,7 @@ class CustomerController extends Controller implements HasMiddleware
         }
 
         return Inertia::render('Store/Admin/Customers/Customers/Index', [
-            'customers' => $this->paginated(CustomerListResource::collection($query->orderBy('users.id')->paginate($perPage)->withQueryString())),
+            'customers' => $this->paginated(CustomerListResource::collection($query->tap(NewestFirst::apply(...))->paginate($perPage)->withQueryString())),
             'filters' => [...$request->only(['search', 'activity_status']), ...collect(['archived', 'important', 'verified', 'from_api', 'registration_completed'])->filter(fn ($filter) => $request->filled($filter))->mapWithKeys(fn ($filter) => [$filter => $request->boolean($filter)])->all(), ...collect(['profit_from', 'profit_to'])->filter(fn ($filter) => $request->filled($filter))->mapWithKeys(fn ($filter) => [$filter => $request->string($filter)->toString()])->all(), 'per_page' => $perPage],
             'representatives' => $representatives,
             'packages' => $representatives && $request->user('store')->can('assign_representative_package') ? RepresentativePackage::query()->select(['id', 'name', 'percentage'])->orderBy('id')->get()->map(fn ($package) => ['id' => $package->id, 'name' => $package->name, 'percentage' => (string) $package->percentage])->all() : [],

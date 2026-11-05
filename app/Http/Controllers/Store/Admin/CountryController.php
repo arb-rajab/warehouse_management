@@ -7,6 +7,7 @@ use App\Http\Requests\Store\Admin\FilterCountriesRequest;
 use App\Http\Requests\Store\Admin\UpdateReferenceStatusRequest;
 use App\Http\Resources\Store\CountryResource;
 use App\Models\Country;
+use App\Support\NewestFirst;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
@@ -28,7 +29,7 @@ class CountryController extends Controller implements HasMiddleware
         $query->when($request->filled('sort_country'), fn ($query) => $query->where('name', 'like', '%'.$request->validated('sort_country').'%'));
 
         return Inertia::render('Store/Admin/Setup/Countries/Index', [
-            'countries' => $this->paginated(CountryResource::collection($query->orderByDesc('status')->orderBy('id')->paginate($perPage)->withQueryString())),
+            'countries' => $this->paginated(CountryResource::collection($query->tap(NewestFirst::apply(...))->paginate($perPage)->withQueryString())),
             'filters' => ['per_page' => $perPage, 'sort_country' => $request->validated('sort_country')],
         ]);
     }

@@ -10,6 +10,7 @@ use App\Http\Resources\Store\SellerPayoutResource;
 use App\Http\Resources\Store\SellerWithdrawalResource;
 use App\Models\SellerWithdrawRequest;
 use App\Models\StoreUser;
+use App\Support\NewestFirst;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -31,7 +32,7 @@ class SellerWithdrawRequestController extends Controller implements HasMiddlewar
         $perPage = $this->resolvePerPage($request, 20);
         $withdrawals = SellerWithdrawRequest::query()->select(['id', 'user_id', 'amount', 'message', 'status', 'created_at'])
             ->with(['user:id,name', 'user.shop:id,user_id,name,admin_to_pay'])
-            ->orderByDesc('created_at')->orderByDesc('id')->paginate($perPage)->withQueryString();
+            ->tap(NewestFirst::apply(...))->paginate($perPage)->withQueryString();
         $withdrawals->setCollection($withdrawals->getCollection()->filter(fn (SellerWithdrawRequest $withdrawal) => $withdrawal->user?->shop !== null)->values());
 
         return Inertia::render('Store/Admin/Sellers/Withdrawals/Index', [

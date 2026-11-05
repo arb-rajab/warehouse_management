@@ -36,6 +36,7 @@ use App\Services\ProductStockService;
 use App\Services\ProductTaxService;
 use App\Services\Store\InHouseProductWriter;
 use App\Services\Store\ProductVariantCombinations;
+use App\Support\NewestFirst;
 use App\Support\ProductFormNumber;
 use App\Support\ProductSlug;
 use Illuminate\Database\Eloquent\Builder;
@@ -97,7 +98,7 @@ class ProductController extends Controller implements HasMiddleware
             ->where('featured', $request->boolean('featured'));
         $this->applyCategoryAndSort($query, $request);
 
-        return $this->renderList(StoreProductList::InHouse, $request, $query->orderByDesc('created_at')->orderByDesc('id'), [
+        return $this->renderList(StoreProductList::InHouse, $request, $query->tap(NewestFirst::apply(...)), [
             'active' => $request->boolean('active'),
             'for_sale' => $request->boolean('for_sale'),
             'featured' => $request->boolean('featured'),
@@ -109,8 +110,8 @@ class ProductController extends Controller implements HasMiddleware
      * of the search over the names, id and barcodes, one preset or
      * the four state switches matched exactly, the category and the
      * optional legacy sort. With none of those, products the Otajer sync
-     * retired stay hidden. It had no order of its own, so rows keep their
-     * primary-key order.
+     * retired stay hidden. Without a legacy sort it lists newest first, like
+     * the other two lists.
      */
     public function all(FilterAllProductsRequest $request): Response
     {
@@ -140,7 +141,7 @@ class ProductController extends Controller implements HasMiddleware
         }
         $this->applyCategoryAndSort($query, $request);
 
-        return $this->renderList(StoreProductList::All, $request, $query->orderBy('id'), [
+        return $this->renderList(StoreProductList::All, $request, $query->tap(NewestFirst::apply(...)), [
             ...collect($flags)->keys()->mapWithKeys(fn (string $flag) => [$flag => $request->boolean($flag)])->all(),
             'user_id' => $userId === null ? null : (int) $userId,
             'preset' => $preset,
@@ -162,7 +163,7 @@ class ProductController extends Controller implements HasMiddleware
             ->where('featured', $request->boolean('featured'));
         $this->applyCategoryAndSort($query, $request);
 
-        return $this->renderList(StoreProductList::Seller, $request, $query->orderByDesc('created_at')->orderByDesc('id'), [
+        return $this->renderList(StoreProductList::Seller, $request, $query->tap(NewestFirst::apply(...)), [
             'active' => $request->boolean('active'),
             'for_sale' => $request->boolean('for_sale'),
             'featured' => $request->boolean('featured'),

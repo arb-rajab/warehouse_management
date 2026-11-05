@@ -12,6 +12,7 @@ use App\Models\Payment;
 use App\Models\SellerWithdrawRequest;
 use App\Models\Shop;
 use App\Models\StoreUser;
+use App\Support\NewestFirst;
 use Brick\Math\BigDecimal;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
@@ -52,7 +53,7 @@ class SellerPaymentController extends Controller implements HasMiddleware
         $payments = Payment::query()->select(['id', 'seller_id', 'amount', 'payment_method', 'txn_code', 'created_at'])
             ->with(['seller:id,name', 'seller.shop:id,user_id,name'])
             ->when($seller !== null, fn (Builder $query) => $query->where('seller_id', $seller->id))
-            ->orderByDesc('created_at')->orderByDesc('id')->paginate($perPage)->withQueryString();
+            ->tap(NewestFirst::apply(...))->paginate($perPage)->withQueryString();
         // Blade hid orphan rows after pagination. Keep the same total and window.
         $payments->setCollection($payments->getCollection()->filter(fn (Payment $payment) => $payment->seller?->shop !== null)->values());
 

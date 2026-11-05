@@ -9,6 +9,7 @@ use App\Http\Requests\Store\Admin\UpdateDriverRequest;
 use App\Http\Resources\Store\DriverResource;
 use App\Models\Country;
 use App\Models\StoreUser;
+use App\Support\NewestFirst;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -43,7 +44,7 @@ class DriverController extends Controller implements HasMiddleware
                     ->when(is_string($search) && $search !== '', fn (Builder $query) => $query->where(function (Builder $query) use ($search): void {
                         $query->where('name', 'like', '%'.$search.'%')->orWhere('email', 'like', '%'.$search.'%');
                     }))
-                    ->orderBy('id')->paginate($perPage)->withQueryString()
+                    ->tap(NewestFirst::apply(...))->paginate($perPage)->withQueryString()
             )),
             'filters' => ['per_page' => $perPage, 'search' => $search ?? ''],
         ]);

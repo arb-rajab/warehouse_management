@@ -14,6 +14,7 @@ use App\Http\Resources\Store\WebsitePageResource;
 use App\Models\Page;
 use App\Models\PageTranslation;
 use App\Models\Upload;
+use App\Support\NewestFirst;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -50,7 +51,7 @@ class WebsitePageController extends Controller implements HasMiddleware
         $perPage = $this->resolvePerPage($request, 20);
         $pages = Page::query()->select(['id', 'type', 'title', 'slug'])
             ->with(['page_translations' => fn (Relation $query) => $query->select(['id', 'page_id', 'lang', 'title'])->where('lang', app()->getLocale())])
-            ->orderBy('id')->paginate($perPage)->withQueryString();
+            ->tap(NewestFirst::apply(...))->paginate($perPage)->withQueryString();
 
         return Inertia::render('Store/Admin/Website/Pages/Index', [
             'pages' => $this->paginated(WebsitePageResource::collection($pages)),

@@ -34,15 +34,15 @@ test('the website page list renders with the full narrow row, translated titles 
     $this->get(route('website.pages'))->assertOk()->assertInertia(fn (Assert $page) => $page
         ->component('Store/Admin/Website/Pages/Index')
         ->has('pages.data', 4)
-        ->has('pages.data.0', fn (Assert $row) => $row->where('id', $this->page->id)->where('title', 'About us')->where('slug', 'about-us')->where('type', 'custom_page')->where('public_url', route('custom-pages.show_custom_page', 'about-us')))
-        ->where('pages.data.1.title', 'Return Policy')
-        ->where('pages.data.2.public_url', route('home'))
-        ->where('pages.data.2.id', $home->id)
-        ->where('pages.data.3.id', $slugless->id)
-        ->where('pages.data.3.public_url', null)
+        ->has('pages.data.3', fn (Assert $row) => $row->where('id', $this->page->id)->where('title', 'About us')->where('slug', 'about-us')->where('type', 'custom_page')->where('public_url', route('custom-pages.show_custom_page', 'about-us')))
+        ->where('pages.data.2.title', 'Return Policy')
+        ->where('pages.data.1.public_url', route('home'))
+        ->where('pages.data.1.id', $home->id)
+        ->where('pages.data.0.id', $slugless->id)
+        ->where('pages.data.0.public_url', null)
         ->where('filters', ['per_page' => 20]));
     $this->withSession(['locale' => 'ar'])->get(route('website.pages'))->assertInertia(fn (Assert $page) => $page
-        ->where('pages.data.0.title', 'من نحن')->where('pages.data.1.title', 'Return Policy'));
+        ->where('pages.data.3.title', 'من نحن')->where('pages.data.2.title', 'Return Policy'));
     foreach (range(1, 22) as $i) {
         Page::forceCreate(['type' => 'custom_page', 'title' => 'Noise '.$i, 'slug' => 'noise-'.$i]);
     }

@@ -24,6 +24,7 @@ use App\Models\Trip;
 use App\Models\Truck;
 use App\Services\DriverService;
 use App\Services\UserService;
+use App\Support\NewestFirst;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Http\RedirectResponse;
@@ -327,7 +328,7 @@ class TripController extends Controller implements HasMiddleware
         return Inertia::render('Store/Admin/Trips/Trips/Index', [
             'listType' => $list->value,
             'trips' => $this->paginated(TripResource::collection(
-                $trips->orderByDesc('created_at')->orderByDesc('id')->paginate($perPage)->withQueryString()
+                $trips->tap(NewestFirst::apply(...))->paginate($perPage)->withQueryString()
             )),
             'filters' => ['per_page' => $perPage, 'search' => $search ?? '', 'status' => $statuses],
             'statuses' => array_column(TripStatus::cases(), 'value'),

@@ -75,9 +75,9 @@ describe('index', function () {
         $this->get('/temp/admin/staffs')->assertOk()->assertInertia(
             fn (Assert $page) => $page
                 ->has('staff.data', 2)
-                ->where('staff.data.0.id', $superAdmin->id)
-                ->where('staff.data.0.is_super_admin', true)
-                ->where('staff.data.1.role.name', 'Shop clerk')
+                ->where('staff.data.1.id', $superAdmin->id)
+                ->where('staff.data.1.is_super_admin', true)
+                ->where('staff.data.0.role.name', 'Shop clerk')
                 ->where('staff.meta.total', 2)
         );
     });

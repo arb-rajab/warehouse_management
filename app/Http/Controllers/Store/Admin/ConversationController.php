@@ -9,6 +9,7 @@ use App\Http\Resources\Store\ConversationResource;
 use App\Http\Resources\Store\MessageResource;
 use App\Models\Conversation;
 use App\Models\Message;
+use App\Support\NewestFirst;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -40,7 +41,7 @@ class ConversationController extends Controller implements HasMiddleware
                     ->select(['id', 'title', 'sender_id', 'receiver_id', 'sender_viewed', 'receiver_viewed', 'created_at'])
                     ->with(['sender:id,name', 'receiver:id,name'])
                     ->when(! $enabled, fn ($query) => $query->whereRaw('1 = 0'))
-                    ->orderByDesc('created_at')->orderByDesc('id')
+                    ->tap(NewestFirst::apply(...))
                     ->paginate($perPage)->withQueryString()
             )),
             'filters' => ['per_page' => $perPage],

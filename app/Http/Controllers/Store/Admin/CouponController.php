@@ -11,6 +11,7 @@ use App\Http\Resources\Store\CouponResource;
 use App\Models\Coupon;
 use App\Models\Product;
 use App\Models\StoreUser;
+use App\Support\NewestFirst;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Http\JsonResponse;
@@ -43,7 +44,7 @@ class CouponController extends Controller implements HasMiddleware
             'coupons' => $this->paginated(CouponResource::collection(Coupon::query()
                 ->select(['id', 'type', 'code', 'details', 'discount', 'discount_type', 'start_date', 'end_date'])
                 ->where('user_id', $this->ownerId())
-                ->orderByDesc('id')
+                ->tap(NewestFirst::apply(...))
                 ->paginate($perPage)->withQueryString())),
             'filters' => ['per_page' => $perPage],
         ]);

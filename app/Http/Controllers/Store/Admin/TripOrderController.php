@@ -13,6 +13,7 @@ use App\Http\Resources\Store\TruckPhotoResource;
 use App\Models\Order;
 use App\Models\Trip;
 use App\Models\Upload;
+use App\Support\NewestFirst;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Http\RedirectResponse;
@@ -83,7 +84,7 @@ class TripOrderController extends Controller implements HasMiddleware
         if ($request->filled('to')) {
             $orders->whereDate('created_at', '<=', $request->validated('to'));
         }
-        $orders = $orders->orderByDesc('created_at')->orderByDesc('id')->paginate($perPage)->withQueryString();
+        $orders = $orders->tap(NewestFirst::apply(...))->paginate($perPage)->withQueryString();
         $photoIds = array_values($orders->getCollection()
             ->flatMap(fn (Order $order) => TripCheckpointResource::uploadIds($order->checkpoints->last()?->photos))
             ->unique()->all());

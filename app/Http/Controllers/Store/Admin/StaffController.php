@@ -11,6 +11,7 @@ use App\Http\Resources\Store\StaffResource;
 use App\Models\Role;
 use App\Models\Staff;
 use App\Models\StoreUser;
+use App\Support\NewestFirst;
 use App\Support\StaffPrivileges;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Relations\Relation;
@@ -53,7 +54,7 @@ class StaffController extends Controller implements HasMiddleware
                     ->select(['id', 'user_id', 'role_id'])
                     ->has('user')
                     ->with($this->staffRelations())
-                    ->orderBy('id')
+                    ->tap(NewestFirst::apply(...))
                     ->paginate($perPage)
                     ->withQueryString()
             )),

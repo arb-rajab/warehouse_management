@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Store\Admin;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Store\Admin\FilterNotificationsRequest;
 use App\Http\Resources\Store\AdminNotificationResource;
+use App\Support\NewestFirst;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
 use Inertia\Inertia;
@@ -22,8 +23,8 @@ class NotificationController extends Controller implements HasMiddleware
     {
         $perPage = $this->resolvePerPage($request, 20);
         $user = $request->user('store');
-        $notifications = $user->notifications()->select(['id', 'type', 'data', 'created_at'])
-            ->orderByDesc('id')->paginate($perPage)->withQueryString();
+        $notifications = $user->notifications()->getQuery()->select(['id', 'type', 'data', 'created_at'])
+            ->tap(NewestFirst::apply(...))->paginate($perPage)->withQueryString();
         $user->unreadNotifications()->update(['read_at' => now()]);
 
         return Inertia::render('Store/Admin/Notifications/Index', [

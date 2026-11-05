@@ -13,6 +13,7 @@ use App\Http\Resources\Store\CityResource;
 use App\Models\City;
 use App\Models\CityTranslation;
 use App\Models\State;
+use App\Support\NewestFirst;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -40,7 +41,7 @@ class CityController extends Controller implements HasMiddleware
         $query->when($request->filled('sort_state'), fn ($query) => $query->where('state_id', $request->integer('sort_state')));
 
         return Inertia::render('Store/Admin/Setup/Cities/Index', [
-            'cities' => $this->paginated(CityResource::collection($query->orderByDesc('status')->orderBy('id')->paginate($perPage)->withQueryString())),
+            'cities' => $this->paginated(CityResource::collection($query->tap(NewestFirst::apply(...))->paginate($perPage)->withQueryString())),
             'filters' => ['per_page' => $perPage, 'sort_city' => $request->validated('sort_city'), 'sort_state' => $request->validated('sort_state')],
             'states' => $this->stateOptions(),
         ]);

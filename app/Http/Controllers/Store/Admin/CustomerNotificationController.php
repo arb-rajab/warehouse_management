@@ -8,6 +8,7 @@ use App\Http\Requests\Store\Admin\StoreCustomerNotificationRequest;
 use App\Http\Resources\Store\CustomerNotificationResource;
 use App\Models\Notification;
 use App\Models\StoreUser;
+use App\Support\NewestFirst;
 use Google\Client as GoogleClient;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -36,7 +37,7 @@ class CustomerNotificationController extends Controller implements HasMiddleware
         return Inertia::render('Store/Admin/Notifications/Customers/Index', [
             'notifications' => $this->paginated(CustomerNotificationResource::collection(
                 Notification::query()->select(['id', 'user_id', 'title', 'status'])
-                    ->with('user:id,name')->orderBy('id')->paginate($perPage)->withQueryString()
+                    ->with('user:id,name')->tap(NewestFirst::apply(...))->paginate($perPage)->withQueryString()
             )),
             'filters' => ['per_page' => $perPage],
         ]);

@@ -13,6 +13,7 @@ use App\Models\Brand;
 use App\Models\Offer;
 use App\Models\OfferProduct;
 use App\Models\Product;
+use App\Support\NewestFirst;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -33,7 +34,7 @@ class OfferController extends Controller implements HasMiddleware
         $perPage = $this->resolvePerPage($request, 20);
         $search = $request->validated('search');
 
-        return Inertia::render('Store/Admin/Marketing/Offers/Index', ['offers' => $this->paginated(OfferResource::collection(Offer::query()->select(['id', 'title', 'offer_type', 'banner', 'brand_id', 'start_date', 'end_date', 'is_active', 'is_repeatable', 'multiple_usage'])->when($search, fn ($q) => $q->where('title', 'like', '%'.$search.'%'))->orderByDesc('id')->paginate($perPage)->withQueryString())), 'filters' => ['search' => $search, 'per_page' => $perPage]]);
+        return Inertia::render('Store/Admin/Marketing/Offers/Index', ['offers' => $this->paginated(OfferResource::collection(Offer::query()->select(['id', 'title', 'offer_type', 'banner', 'brand_id', 'start_date', 'end_date', 'is_active', 'is_repeatable', 'multiple_usage'])->when($search, fn ($q) => $q->where('title', 'like', '%'.$search.'%'))->tap(NewestFirst::apply(...))->paginate($perPage)->withQueryString())), 'filters' => ['search' => $search, 'per_page' => $perPage]]);
     }
 
     public function create(): Response

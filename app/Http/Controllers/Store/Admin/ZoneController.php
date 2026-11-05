@@ -9,6 +9,7 @@ use App\Http\Requests\Store\Admin\UpdateZoneRequest;
 use App\Http\Resources\Store\ZoneResource;
 use App\Models\Country;
 use App\Models\Zone;
+use App\Support\NewestFirst;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -32,7 +33,7 @@ class ZoneController extends Controller implements HasMiddleware
         $query = Zone::query()->select(['id', 'name', 'status']);
 
         return Inertia::render('Store/Admin/Setup/Zones/Index', [
-            'zones' => $this->paginated(ZoneResource::collection($query->orderByDesc('id')->paginate($perPage)->withQueryString())),
+            'zones' => $this->paginated(ZoneResource::collection($query->tap(NewestFirst::apply(...))->paginate($perPage)->withQueryString())),
             'filters' => ['per_page' => $perPage],
         ]);
     }

@@ -15,6 +15,7 @@ use App\Models\FlashDealProduct;
 use App\Models\FlashDealTranslation;
 use App\Models\Language;
 use App\Models\Product;
+use App\Support\NewestFirst;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -36,7 +37,7 @@ class FlashDealController extends Controller implements HasMiddleware
         $perPage = $this->resolvePerPage($request, 20);
         $search = $request->validated('search');
 
-        return Inertia::render('Store/Admin/Marketing/FlashDeals/Index', ['deals' => $this->paginated(FlashDealResource::collection(FlashDeal::query()->without('flash_deal_translations')->select(['id', 'title', 'slug', 'banner', 'start_date', 'end_date', 'background_color', 'text_color', 'status', 'featured'])->when($search, fn ($q) => $q->where('title', 'like', '%'.$search.'%'))->orderByDesc('id')->paginate($perPage)->withQueryString())), 'filters' => ['search' => $search, 'per_page' => $perPage]]);
+        return Inertia::render('Store/Admin/Marketing/FlashDeals/Index', ['deals' => $this->paginated(FlashDealResource::collection(FlashDeal::query()->without('flash_deal_translations')->select(['id', 'title', 'slug', 'banner', 'start_date', 'end_date', 'background_color', 'text_color', 'status', 'featured'])->when($search, fn ($q) => $q->where('title', 'like', '%'.$search.'%'))->tap(NewestFirst::apply(...))->paginate($perPage)->withQueryString())), 'filters' => ['search' => $search, 'per_page' => $perPage]]);
     }
 
     public function create(): Response
