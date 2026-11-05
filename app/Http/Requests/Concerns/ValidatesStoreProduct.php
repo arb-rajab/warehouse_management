@@ -4,6 +4,7 @@ namespace App\Http\Requests\Concerns;
 
 use App\Models\Category;
 use App\Models\Product;
+use App\Support\ProductFormNumber;
 use Closure;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Str;
@@ -70,9 +71,7 @@ trait ValidatesStoreProduct
             ...$this->productVariantRules(),
             'unit_price' => ['required', ...self::AMOUNT_RULES],
             'date_range' => $this->discountDateRangeRules(),
-            // The legacy rule: a flat discount below the unit price, a
-            // percentage below 100.
-            'discount' => ['required', ...self::AMOUNT_RULES, Rule::when($this->input('discount_type') === 'percent', 'lt:100', 'lt:unit_price')],
+            'discount' => ['required', ...self::AMOUNT_RULES, $this->discountLimitRule()],
             'discount_type' => ['required', 'string', Rule::in(['amount', 'percent'])],
             'current_stock' => ['required', ...$int, 'min:0'],
             'sku' => ['nullable', 'string', 'max:255'],
@@ -104,6 +103,34 @@ trait ValidatesStoreProduct
             'flash_discount_type' => self::flashDealsEnabled() ? ['nullable', 'required_with:flash_deal_id', 'string', Rule::in(['amount', 'percent'])] : ['exclude'],
             ...$taxes,
         ];
+    }
+
+    /**
+     * The legacy limit: a flat discount below the unit price, a percentage
+     * below 100. No discount (0) is always allowed, so a product priced 0
+     * (the form's default, or a free item) can be saved with the default
+     * discount of 0; `lt:unit_price` refused it as "less than 0". A unit
+     * price that is itself invalid is reported by its own rule, not here.
+     */
+    private function discountLimitRule(): Closure
+    {
+        return function (string $attribute, mixed $value, Closure $fail): void {
+            if (! is_numeric($value) || (float) $value <= 0) {
+                return;
+            }
+            $name = __('validation.attributes.discount');
+            if ($this->input('discount_type') === 'percent') {
+                if ((float) $value >= 100) {
+                    $fail(__('validation.discount_percent_limit', ['attribute' => $name]));
+                }
+
+                return;
+            }
+            $price = $this->input('unit_price');
+            if (is_numeric($price) && (float) $value >= (float) $price) {
+                $fail(__('validation.discount_below_price', ['attribute' => $name, 'price' => ProductFormNumber::format($price)]));
+            }
+        };
     }
 
     /**

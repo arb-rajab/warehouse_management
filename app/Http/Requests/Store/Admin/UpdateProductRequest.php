@@ -24,7 +24,11 @@ use Illuminate\Foundation\Http\FormRequest;
  * ignores what is posted for it (the stored value stays): see
  * ProductFieldSourceService and .ai/rules/product-field-sources.md. The
  * unit price is validated as stored, so the discount rule (below the unit
- * price) cannot be checked against a tampered value.
+ * price) cannot be checked against a tampered value. A read-only field is
+ * never validated as posted: the writer ignores it, and its stored value can
+ * be null or blank (a feed row the sync never filled), which must not block
+ * the save, so it only has to be absent or a string. A store-origin product
+ * has no read-only field at all.
  */
 class UpdateProductRequest extends FormRequest
 {
@@ -48,10 +52,46 @@ class UpdateProductRequest extends FormRequest
 
         return [
             ...$this->productRules($product),
+            ...$this->readOnlyFieldRules($product),
             ...$this->languageRules('required'),
             'slug' => ['nullable', 'string', $this->freeSlugRule($product)],
             'old_photo' => ['nullable', 'string', 'max:2000', $this->retainableImageUploadIdsRule($product->getAttribute('old_photo'))],
         ];
+    }
+
+    /**
+     * The fields the form shows read-only and the writer ignores: every
+     * Otajer-owned synced field of a feed-origin product (none on a
+     * store-origin one), except that the name, unit and description are the
+     * default language's only.
+     *
+     * @return list<string>
+     */
+    private function readOnlyFields(Product $product): array
+    {
+        $isDefaultLanguage = $this->input('lang') === config('app.default_language');
+
+        return array_values(array_filter(
+            app(ProductFieldSourceService::class)->readOnlyFieldsFor($product),
+            fn (string $field): bool => $isDefaultLanguage || ! in_array($field, ['name', 'unit', 'description'], true),
+        ));
+    }
+
+    /**
+     * A read-only field's posted value is discarded, so its stored value
+     * (possibly null) is not a reason to refuse the form: the shared rule,
+     * which may require it, is replaced by one that accepts it missing.
+     *
+     * @return array<string, array<int, string>>
+     */
+    private function readOnlyFieldRules(Product $product): array
+    {
+        $rules = [];
+        foreach (array_intersect($this->readOnlyFields($product), ['name', 'ar_name', 'unit', 'unit_price', 'description']) as $field) {
+            $rules[$field] = ['nullable'];
+        }
+
+        return $rules;
     }
 
     /** A read-only unit price is validated (and later written) as stored, whatever was posted. */
@@ -59,7 +99,7 @@ class UpdateProductRequest extends FormRequest
     {
         $this->prepareProductFields();
         $product = $this->route('product');
-        if ($product instanceof Product && in_array('unit_price', app(ProductFieldSourceService::class)->readOnlyFieldsFor($product), true)) {
+        if ($product instanceof Product && in_array('unit_price', $this->readOnlyFields($product), true)) {
             $this->merge(['unit_price' => ProductFormNumber::format($product->getAttribute('unit_price'))]);
         }
     }

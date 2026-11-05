@@ -161,6 +161,8 @@ return [
     'url' => 'يجب أن يكون حقل :attribute رابطًا صالحًا.',
     'ulid' => 'يجب أن يكون حقل :attribute ULID صالحًا.',
     'uuid' => 'يجب أن يكون حقل :attribute UUID صالحًا.',
+    'discount_below_price' => 'يجب أن يكون :attribute أقل من سعر الوحدة (:price).',
+    'discount_percent_limit' => 'يجب أن تكون نسبة :attribute أقل من 100.',
 
     'custom' => [
         'attribute-name' => [

@@ -572,7 +572,7 @@ class ProductController extends Controller implements HasMiddleware
             'product' => new ProductFormResource($product, in_array($flashDealId, array_column($options['flashDeals'], 'id'), true) ? (int) $flashDealId : null),
             // A read-only name shows the synced column, which a stale
             // default-language translation could otherwise hide.
-            'name' => in_array('name', $readOnlyFields, true) ? $product->name : (string) $product->getTranslation('name', $lang),
+            'name' => in_array('name', $readOnlyFields, true) ? (string) $product->name : (string) $product->getTranslation('name', $lang),
             'arName' => $this->arabicName($product, in_array('ar_name', $readOnlyFields, true)),
             'readOnlyFields' => $readOnlyFields,
             // A read-only unit or description shows the synced column too.

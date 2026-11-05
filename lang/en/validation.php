@@ -172,6 +172,8 @@ return [
     'url' => 'The :attribute field must be a valid URL.',
     'ulid' => 'The :attribute field must be a valid ULID.',
     'uuid' => 'The :attribute field must be a valid UUID.',
+    'discount_below_price' => 'The :attribute must be less than the unit price (:price).',
+    'discount_percent_limit' => 'The :attribute percentage must be less than 100.',
 
     /*
     |--------------------------------------------------------------------------
