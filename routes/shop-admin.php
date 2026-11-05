@@ -130,6 +130,7 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
     Route::post('/products/update/{product}', [StoreProductController::class, 'update'])->name('products.update');
     Route::post('/products/{product}/variant-combinations', [StoreProductController::class, 'editVariantCombinations'])->name('products.edit_variant_combinations');
     Route::get('/products/seller', [StoreProductController::class, 'seller'])->name('products.seller');
+    Route::get('/products/seller/options', [StoreProductController::class, 'sellerOptions'])->name('products.seller.options');
     Route::post('/products/seller/{product}/todays-deal', [StoreProductController::class, 'updateTodaysDeal'])->defaults('productList', 'seller')->name('products.todays_deal');
     Route::post('/products/seller/{product}/for-sale', [StoreProductController::class, 'updateSaleStatus'])->defaults('productList', 'seller')->name('products.update_sale');
     Route::post('/products/seller/{product}/featured', [StoreProductController::class, 'sellerFeatured'])->defaults('productList', 'seller')->name('products.featured');
@@ -275,6 +276,8 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
             Route::put('/{trip}/notes', 'updateNotes')->name('trips.update-notes');
             Route::delete('/{trip}', 'destroy')->name('trips.destroy');
             Route::post('/bulk-trips-delete', 'bulkDestroy')->name('trips.bulk-trip-delete');
+            Route::get('/order-options', 'orderOptions')->name('trips.order-options');
+            Route::get('/customer-options', 'customerOptions')->name('trips.customer-options');
         });
 
         // The trip orders list and its order actions (§26).
@@ -540,7 +543,9 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
     Route::get('/wish_report', [ReportController::class, 'wish_report'])->name('wish_report.index');
     Route::get('/user_search_report', [ReportController::class, 'user_search_report'])->name('user_search_report.index');
     Route::get('/commission-log', [ReportController::class, 'commission_history'])->name('commission-log.index');
+    Route::get('/commission-log/sellers', [ReportController::class, 'commissionSellers'])->name('commission-log.sellers');
     Route::get('/wallet-history', [ReportController::class, 'wallet_transaction_history'])->name('wallet-history.index');
+    Route::get('/wallet-history/users', [ReportController::class, 'walletUsers'])->name('wallet-history.users');
 
     // Blog Section
     Route::get('/blog-category', [BlogCategoryController::class, 'index'])->name('blog-category.index');

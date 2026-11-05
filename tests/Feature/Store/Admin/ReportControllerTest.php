@@ -190,8 +190,40 @@ test('commission orders and filter options use only the required shape', functio
     $commission = CommissionHistory::forceCreate(['order_id' => $order->id, 'order_detail_id' => 1, 'seller_id' => $seller->id, 'admin_commission' => 2.5, 'seller_earning' => 10, 'created_at' => '2026-01-10 12:00:00']);
     $this->get('/temp/admin/commission-log')->assertOk()->assertInertia(fn (Assert $page) => $page
         ->has('rows.data.0', fn (Assert $row) => $row->where('id', $commission->id)->where('order_id', $order->id)->where('order_code', 'ORDER-1')->where('admin_commission', '2.5')->where('seller_earning', '10')->where('created_at', '2026-01-10T12:00:00+00:00'))
-        ->where('options', [['value' => (string) $seller->id, 'label' => 'Seller']]));
+        // Only the sellers already selected in the filters are sent; the rest are searched on demand.
+        ->where('options', []));
+    $selected = $this->get('/temp/admin/commission-log?'.http_build_query(['seller_ids' => [$seller->id]]))->assertOk()->inertiaProps('options');
+    expect($selected)->toEqual([['id' => $seller->id, 'label' => 'Seller', 'description' => $seller->email, 'image' => null, 'icon' => 'user', 'badge' => null]]);
 });
+
+test('the commission seller and wallet user searches offer only sellers and users with a wallet entry, paged', function () {
+    actingAsStoreUser(createStoreStaff('commission_history_report', 'wallet_transaction_report'));
+    $seller = createStoreUser('seller');
+    $seller->forceFill(['name' => 'Alma Seller'])->save();
+    createStoreUser('seller')->forceFill(['name' => 'Other Seller'])->save();
+    $customer = createStoreUser('customer');
+    $customer->forceFill(['name' => 'Alma Customer'])->save();
+    createStoreUser('customer')->forceFill(['name' => 'Alma Without Wallet'])->save();
+    Wallet::forceCreate(['user_id' => $customer->id, 'amount' => 3]);
+
+    expect($this->getJson(route('commission-log.sellers', ['q' => 'alma']))->assertOk()->json('data'))->toEqual([
+        ['id' => $seller->id, 'label' => 'Alma Seller', 'description' => $seller->email, 'image' => null, 'icon' => 'user', 'badge' => null],
+    ]);
+    expect($this->getJson(route('wallet-history.users', ['q' => 'alma']))->assertOk()->json('data.*.label'))->toBe(['Alma Customer']);
+    foreach (range(1, 25) as $number) {
+        $user = createStoreUser('seller');
+        $user->forceFill(['name' => sprintf('Paged %02d', $number)])->save();
+    }
+    $first = $this->getJson(route('commission-log.sellers', ['q' => 'Paged']))->assertOk();
+    expect($first->json('data'))->toHaveCount(20)->and($first->json('meta.total'))->toBe(25)
+        ->and($this->getJson(route('commission-log.sellers', ['q' => 'Paged', 'page' => 2]))->json('data'))->toHaveCount(5);
+    $this->getJson(route('wallet-history.users', ['q' => str_repeat('x', 101)]))->assertUnprocessable()->assertJsonValidationErrors('q');
+});
+
+test('the commission seller and wallet user searches refuse unauthorized callers', function (string $caller, string $route) {
+    actingAsRefusedStoreCaller($caller);
+    assertStoreCallerRefused($this->get(route($route)), $caller);
+})->with('refused store admin callers')->with(['commission-log.sellers', 'wallet-history.users']);
 
 test('stock and wishlist default to zero without loading per-row collections', function (string $uri, string $permission, string $table) {
     actingAsStoreUser(createStoreStaff($permission));

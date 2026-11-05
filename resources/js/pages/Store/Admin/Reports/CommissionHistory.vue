@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { show as orderShow } from '@/actions/App/Http/Controllers/Store/Admin/OrderController';
-import { commission_history } from '@/actions/App/Http/Controllers/Store/Admin/ReportController';
+import {
+    commission_history,
+    commissionSellers,
+} from '@/actions/App/Http/Controllers/Store/Admin/ReportController';
 import DataTable from '@/components/DataTable.vue';
 import StoreColumnPicker from '@/components/StoreColumnPicker.vue';
 import StoreReportPage from '@/components/StoreReportPage.vue';
@@ -11,10 +14,10 @@ import { t } from '@/lib/i18n';
 import { useStoreAccess } from '@/lib/storeAccess';
 import { useTableColumns } from '@/lib/useTableColumns';
 import type { Paginated } from '@/types/admin';
+import type { SearchOption } from '@/types/searchSelect';
 import type {
     StoreCommissionReportRow,
     StoreReportFilters,
-    StoreReportOption,
 } from '@/types/storeReports';
 
 const access = useStoreAccess();
@@ -22,7 +25,8 @@ const access = useStoreAccess();
 defineProps<{
     rows: Paginated<StoreCommissionReportRow>;
     filters: StoreReportFilters;
-    options: StoreReportOption[];
+    /** The sellers selected in the filters; the rest are searched on demand. */
+    options: SearchOption[];
 }>();
 const columns = useTableColumns({
     listId: 'reports.commissionHistory',
@@ -47,7 +51,8 @@ const tableColumns = computed(() => [
         :links="rows.meta.links"
         selection="seller_ids"
         :selection-label="t('store.reports.seller')"
-        :options="options"
+        :selection-endpoint="commissionSellers"
+        :selected-options="options"
         dates
     >
         <StoreColumnPicker :state="columns" />

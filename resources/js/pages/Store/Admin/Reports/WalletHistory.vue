@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { wallet_transaction_history } from '@/actions/App/Http/Controllers/Store/Admin/ReportController';
+import {
+    wallet_transaction_history,
+    walletUsers,
+} from '@/actions/App/Http/Controllers/Store/Admin/ReportController';
 import DataTable from '@/components/DataTable.vue';
 import StoreColumnPicker from '@/components/StoreColumnPicker.vue';
 import StoreReportPage from '@/components/StoreReportPage.vue';
@@ -8,16 +11,17 @@ import { formatDate } from '@/lib/date';
 import { t } from '@/lib/i18n';
 import { useTableColumns } from '@/lib/useTableColumns';
 import type { Paginated } from '@/types/admin';
+import type { SearchOption } from '@/types/searchSelect';
 import type {
     StoreWalletReportRow,
     StoreReportFilters,
-    StoreReportOption,
 } from '@/types/storeReports';
 
 defineProps<{
     rows: Paginated<StoreWalletReportRow>;
     filters: StoreReportFilters;
-    options: StoreReportOption[];
+    /** The users selected in the filters; the rest are searched on demand. */
+    options: SearchOption[];
 }>();
 const columns = useTableColumns({
     listId: 'reports.walletHistory',
@@ -42,7 +46,8 @@ const tableColumns = computed(() => [
         :links="rows.meta.links"
         selection="user_ids"
         :selection-label="t('store.reports.user')"
-        :options="options"
+        :selection-endpoint="walletUsers"
+        :selected-options="options"
         dates
     >
         <StoreColumnPicker :state="columns" />

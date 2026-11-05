@@ -84,19 +84,21 @@ trait SearchesOptions
     }
 
     /**
-     * Names that start with the term first, then by name, then by key.
+     * Rows whose `$column` starts with the term first, then by `$column`, then by key
+     * (both descending for a `desc` direction, as order codes read newest first).
      *
      * @template TModel of Model
      *
      * @param  Builder<TModel>  $query
+     * @param  'asc'|'desc'  $direction
      */
-    protected function orderByRelevance(Builder $query, string $column, string $term): void
+    protected function orderByRelevance(Builder $query, string $column, string $term, string $direction = 'asc'): void
     {
         if ($term !== '') {
             $query->orderByRaw('case when '.$query->getQuery()->getGrammar()->wrap($column).' like ? escape ? then 0 else 1 end', [$this->likePattern($term, true), '\\']);
         }
 
-        $query->orderBy($column)->orderBy($query->getModel()->getQualifiedKeyName());
+        $query->orderBy($column, $direction)->orderBy($query->getModel()->getQualifiedKeyName(), $direction);
     }
 
     /** @return list<string> */

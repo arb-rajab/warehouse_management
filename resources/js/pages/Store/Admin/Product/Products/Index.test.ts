@@ -12,6 +12,7 @@ import {
     edit,
     inHouse as inHouseProducts,
     seller as sellerProducts,
+    sellerOptions,
     sellerEdit,
     sellerDuplicate,
     sellerDestroy,
@@ -31,6 +32,7 @@ import FormField from '@/components/FormField.vue';
 import IconStat from '@/components/IconStat.vue';
 import Pagination from '@/components/Pagination.vue';
 import StoreListFilters from '@/components/StoreListFilters.vue';
+import StoreSearchSelect from '@/components/StoreSearchSelect.vue';
 import StoreStatusSwitch from '@/components/StoreStatusSwitch.vue';
 import SubmitButton from '@/components/SubmitButton.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
@@ -52,6 +54,7 @@ import {
     setColumnShown,
     storedColumns,
 } from '@/testing/tableColumns';
+import type { SearchOption } from '@/types/searchSelect';
 import type {
     StoreProductListFilters,
     StoreProductListRow,
@@ -105,14 +108,14 @@ function mountPage({
     filters = storeProductListFilters(),
     permissions = allPermissions,
     approvalEnabled = false,
-    sellers = [],
+    selectedSeller = null,
 }: {
     listType?: StoreProductListType;
     products?: StoreProductListRow[];
     filters?: StoreProductListFilters;
     permissions?: string[];
     approvalEnabled?: boolean;
-    sellers?: { id: number; name: string }[];
+    selectedSeller?: SearchOption | null;
 } = {}) {
     usePageMock.mockReturnValue({
         url: {
@@ -130,7 +133,7 @@ function mountPage({
             categories,
             defaultLanguage: 'en',
             approvalEnabled,
-            sellers,
+            selectedSeller,
         },
     });
     wrappers.push(wrapper);
@@ -795,7 +798,7 @@ describe('seller product list', () => {
             const wrapper = mountPage({
                 listType: 'seller',
                 approvalEnabled: true,
-                sellers: [{ id: 9, name: '<b>Seller</b>' }],
+                selectedSeller: { id: 9, label: '<b>Seller</b>', icon: 'user' },
                 filters: storeProductListFilters({
                     user_id: 9,
                     approved: false,
@@ -813,7 +816,6 @@ describe('seller product list', () => {
 
             for (const key of [
                 'seller',
-                'allSellers',
                 'approvalStatus',
                 'allApprovals',
                 'approved',
@@ -828,10 +830,22 @@ describe('seller product list', () => {
             expect(wrapper.text()).toContain(
                 t('store.products.form.todaysDeal'),
             );
-            expect(wrapper.get('#user_id').element).toHaveProperty(
-                'value',
-                '9',
-            );
+            // The seller is a search select: the picked id posts as user_id and
+            // its label shows before any search.
+            expect(
+                wrapper
+                    .get('input[type="hidden"][name="user_id"]')
+                    .attributes('value'),
+            ).toBe('9');
+            expect(
+                wrapper.getComponent(StoreSearchSelect).props(),
+            ).toMatchObject({
+                id: 'user_id',
+                name: 'user_id',
+                endpoint: sellerOptions,
+                required: false,
+                modelValue: { id: 9, label: '<b>Seller</b>' },
+            });
             expect(wrapper.get('#approved').element).toHaveProperty(
                 'value',
                 '0',
@@ -841,11 +855,24 @@ describe('seller product list', () => {
             expect(wrapper.find('input[name=deleted]').exists()).toBe(false);
         },
     );
+    it('offers every seller from the search when none is selected', () => {
+        const wrapper = mountPage({ listType: 'seller' });
+
+        expect(wrapper.get('#user_id').text()).toBe(
+            t('store.products.allSellers'),
+        );
+        expect(
+            wrapper
+                .get('input[type="hidden"][name="user_id"]')
+                .attributes('value'),
+        ).toBe('');
+        expect(wrapper.text()).toContain(t('store.products.allSellers'));
+    });
     it('keeps the seller inline and puts category, approval and sort in the dialog', () => {
         const wrapper = mountPage({
             listType: 'seller',
             approvalEnabled: true,
-            sellers: [{ id: 9, name: 'Seller' }],
+            selectedSeller: { id: 9, label: 'Seller', icon: 'user' },
             filters: storeProductListFilters({
                 user_id: 9,
                 approved: false,

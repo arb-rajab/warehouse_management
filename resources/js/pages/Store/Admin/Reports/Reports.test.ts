@@ -10,6 +10,7 @@ import FilterMultiSelect from '@/components/FilterMultiSelect.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import Pagination from '@/components/Pagination.vue';
 import StoreReportPage from '@/components/StoreReportPage.vue';
+import StoreSearchSelect from '@/components/StoreSearchSelect.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
 import { formatDate, formatDateTime } from '@/lib/date';
 import { t } from '@/lib/i18n';
@@ -46,6 +47,7 @@ vi.mock('@inertiajs/vue3', async () => {
         Head: headStub,
         Link: createLinkStub(),
         usePage: usePageMock,
+        useHttp: () => ({ get: vi.fn() }),
         router: { get: getMock, post: vi.fn() },
     };
 });
@@ -120,6 +122,7 @@ const cases = [
         ],
         selection: 'seller_ids',
         label: 'seller',
+        search: 'commissionSellers',
     },
     {
         page: WalletHistory,
@@ -136,6 +139,7 @@ const cases = [
         ],
         selection: 'user_ids',
         label: 'user',
+        search: 'walletUsers',
     },
 ];
 
@@ -153,6 +157,9 @@ describe('Store report screens', () => {
             const rows = paginated([entry.row]);
             const filters = { per_page: 50 };
             const options = [{ value: '1', label: 'Selected option' }];
+            const picked = [
+                { id: 1, label: 'Selected option', icon: 'user' as const },
+            ];
             const wrapper = mount<
                 typeof entry.page,
                 DefineComponent<Record<string, unknown>>
@@ -160,7 +167,9 @@ describe('Store report screens', () => {
                 props: {
                     rows,
                     filters,
-                    ...(entry.selection ? { options } : {}),
+                    ...(entry.selection
+                        ? { options: 'search' in entry ? picked : options }
+                        : {}),
                 },
             });
             expect(wrapper.findComponent(StoreAdminLayout).exists()).toBe(true);
@@ -202,25 +211,42 @@ describe('Store report screens', () => {
                     .getComponent(PageHeader)
                     .get('button')
                     .trigger('click');
-                expect(
-                    wrapper.getComponent(FilterMultiSelect).props(),
-                ).toMatchObject({
-                    options:
-                        entry.selection === 'verification_statuses'
-                            ? [
-                                  {
-                                      value: '1',
-                                      label: t('store.reports.approved'),
-                                  },
-                                  {
-                                      value: '0',
-                                      label: t('store.reports.nonApproved'),
-                                  },
-                              ]
-                            : options,
-                    label: t(`store.reports.${entry.label}`),
-                    modelValue: [],
-                });
+
+                if ('search' in entry) {
+                    // The users and sellers are searched on demand; the filter
+                    // starts from the ones already selected.
+                    expect(
+                        wrapper.getComponent(StoreSearchSelect).props(),
+                    ).toMatchObject({
+                        multiple: true,
+                        endpoint: actions[entry.search as 'walletUsers'],
+                        label: t(`store.reports.${entry.label}`),
+                        items: picked,
+                    });
+                    expect(
+                        wrapper.findComponent(FilterMultiSelect).exists(),
+                    ).toBe(false);
+                } else {
+                    expect(
+                        wrapper.getComponent(FilterMultiSelect).props(),
+                    ).toMatchObject({
+                        options:
+                            entry.selection === 'verification_statuses'
+                                ? [
+                                      {
+                                          value: '1',
+                                          label: t('store.reports.approved'),
+                                      },
+                                      {
+                                          value: '0',
+                                          label: t('store.reports.nonApproved'),
+                                      },
+                                  ]
+                                : options,
+                        label: t(`store.reports.${entry.label}`),
+                        modelValue: [],
+                    });
+                }
             }
 
             await wrapper.setProps({ rows: paginated([]) });

@@ -16,7 +16,7 @@ paths:
   - 'app/Http/Controllers/Store/Admin/Concerns/SearchesOptions.php'
   - 'app/Http/Requests/Concerns/ValidatesSearchOptions.php'
   - 'app/Http/Requests/Store/Admin/Search*Request.php'
-  - 'app/Http/Controllers/Store/Admin/{OrderEntryController,CampaignProductController,CouponController,NewsletterController,ProductSearchController,AddressController,TripController,CustomerNotificationController,OrderConfigurationController,ReportController}.php'
+  - 'app/Http/Controllers/Store/Admin/{OrderEntryController,CampaignProductController,CouponController,NewsletterController,ProductSearchController,AddressController,TripController,CustomerNotificationController,OrderConfigurationController,ReportController,ProductController,CustomerController}.php'
 ---
 
 # Any select that searches another table is a StoreSearchSelect
@@ -103,9 +103,9 @@ Adding a select for a new entity adds its row here and a factory in
 | Brand | tag tile | name | none | none | none |
 | State | pin tile | name | country | none | `country_id` |
 | City | pin tile | name in the active language | state | none | `state_id` |
-| Trip checkpoint order | truck tile | `#code` | customer · lines · total | delivery status | none |
+| Trip checkpoint order | truck tile | `#code` | customer · total | none | none |
 | Newsletter recipient | mail tile | email (the posted value) | name | none | none |
-| Seller | initials | shop or user name | email | none | none |
+| Seller or report user | initials | name | email | none | none |
 
 ## Tests
 

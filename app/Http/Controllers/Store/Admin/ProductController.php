@@ -8,6 +8,7 @@ use App\Http\Controllers\Concerns\ProvidesStoreReferenceOptions;
 use App\Http\Controllers\Concerns\ProvidesStoreUploadPreviews;
 use App\Http\Controllers\Concerns\UpdatesStoreProductFlags;
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Store\Admin\Concerns\SearchesOptions;
 use App\Http\Requests\Store\Admin\BulkDeleteProductsRequest;
 use App\Http\Requests\Store\Admin\EditReferenceTranslationRequest;
 use App\Http\Requests\Store\Admin\FilterAllProductsRequest;
@@ -15,6 +16,7 @@ use App\Http\Requests\Store\Admin\FilterInHouseProductsRequest;
 use App\Http\Requests\Store\Admin\FilterSellerProductsRequest;
 use App\Http\Requests\Store\Admin\ProductListActionRequest;
 use App\Http\Requests\Store\Admin\ProductVariantCombinationsRequest;
+use App\Http\Requests\Store\Admin\SearchOptionsRequest;
 use App\Http\Requests\Store\Admin\StoreProductRequest;
 use App\Http\Requests\Store\Admin\UpdateProductApprovalRequest;
 use App\Http\Requests\Store\Admin\UpdateProductListFlagRequest;
@@ -39,6 +41,7 @@ use App\Services\Store\ProductVariantCombinations;
 use App\Support\NewestFirst;
 use App\Support\ProductFormNumber;
 use App\Support\ProductSlug;
+use App\Support\SearchOption;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -63,6 +66,7 @@ class ProductController extends Controller implements HasMiddleware
     use ProvidesStoreProductTaxes;
     use ProvidesStoreReferenceOptions;
     use ProvidesStoreUploadPreviews;
+    use SearchesOptions;
     use UpdatesStoreProductFlags;
 
     /** @return array<int, Middleware> */
@@ -74,7 +78,7 @@ class ProductController extends Controller implements HasMiddleware
             new Middleware('permission:product_edit', only: ['edit', 'sellerEdit', 'update', 'editVariantCombinations']),
             new Middleware('permission:show_in_house_products', only: ['inHouse']),
             new Middleware('permission:show_all_products', only: ['all']),
-            new Middleware('permission:show_seller_products', only: ['seller']),
+            new Middleware('permission:show_seller_products', only: ['seller', 'sellerOptions']),
             // The root ProductController's own gates for the same writes.
             new Middleware('permission:product_edit', only: ['updatePublished', 'updateFeatured', 'updateForSale', 'sellerPublished', 'sellerFeatured', 'updateSaleStatus', 'updateTodaysDeal', 'updateProductApproval']),
             new Middleware('permission:product_duplicate', only: ['duplicate', 'sellerDuplicate']),
@@ -486,10 +490,41 @@ class ProductController extends Controller implements HasMiddleware
             'categories' => Category::query()->without('category_translations')->select(['id', 'name'])->orderBy('id')->get()->map(fn (Category $category) => ['id' => $category->id, 'name' => $category->name])->all(),
             'defaultLanguage' => config('app.default_language'),
             'approvalEnabled' => $list === StoreProductList::Seller && (int) get_setting('product_approve_by_admin') === 1,
-            'sellers' => $list === StoreProductList::Seller
-                ? StoreUser::query()->select(['id', 'name'])->where('user_type', 'seller')->orderBy('name')->orderBy('id')->get()->map(fn (StoreUser $seller): array => ['id' => $seller->id, 'name' => $seller->name])->all()
-                : [],
+            'selectedSeller' => $this->selectedSeller($list, $listFilters['user_id'] ?? null),
         ]);
+    }
+
+    /**
+     * The typeahead behind the seller product list's seller filter (StoreSearchSelect):
+     * seller accounts by name or email.
+     */
+    public function sellerOptions(SearchOptionsRequest $request): JsonResponse
+    {
+        $term = $this->searchTerm($request);
+        $sellers = StoreUser::query()->select(['id', 'name', 'email'])->where('user_type', 'seller');
+        if ($term !== '') {
+            $this->whereWordsMatch($sellers, ['name', 'email'], $term);
+        }
+        $this->orderByRelevance($sellers, 'name', $term);
+
+        return $this->optionsPage($sellers, fn (StoreUser $seller): array => SearchOption::user($seller));
+    }
+
+    /**
+     * The seller the list is filtered by, as a search option, so the filter
+     * shows its name without listing every seller.
+     *
+     * @return array<string, mixed>|null
+     */
+    private function selectedSeller(StoreProductList $list, mixed $id): ?array
+    {
+        if ($list !== StoreProductList::Seller || $id === null) {
+            return null;
+        }
+
+        $seller = StoreUser::query()->select(['id', 'name', 'email'])->where('user_type', 'seller')->find($id);
+
+        return $seller === null ? null : SearchOption::user($seller);
     }
 
     /**

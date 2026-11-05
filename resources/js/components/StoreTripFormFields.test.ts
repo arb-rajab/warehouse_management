@@ -1,8 +1,13 @@
 import { flushPromises, mount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { getAvailableVehicles } from '@/actions/App/Http/Controllers/Api/V1/Trip/DriverController';
+import {
+    customerOptions,
+    orderOptions,
+} from '@/actions/App/Http/Controllers/Store/Admin/TripController';
 import FieldError from '@/components/FieldError.vue';
 import FormField from '@/components/FormField.vue';
+import StoreSearchSelect from '@/components/StoreSearchSelect.vue';
 import { i18n, t } from '@/lib/i18n';
 import { storeTripForm } from '@/testing/factories';
 import type { StoreTripForm, StoreTripVehicles } from '@/types/store';
@@ -13,14 +18,6 @@ vi.mock('@inertiajs/vue3', () => ({
     useHttp: () => ({ processing: false, get: getMock }),
 }));
 
-const orders = [
-    { id: 77, code: '20261013-0042', customer: 'Alma Customer' },
-    { id: 78, code: '20261013-0041', customer: null },
-];
-const customers = [
-    { id: 9, name: 'Warehouse' },
-    { id: 12, name: 'Bram Customer' },
-];
 const vehicles: StoreTripVehicles = {
     drivers: [
         { id: 31, name: 'Sam Driver' },
@@ -37,7 +34,7 @@ function mountFields(
     errors: Record<string, string> = {},
 ) {
     return mount(StoreTripFormFields, {
-        props: { trip, orders, customers, errors },
+        props: { trip, errors },
         attachTo: document.body,
     });
 }
@@ -137,10 +134,8 @@ describe('StoreTripFormFields', () => {
             ).toBeUndefined();
             expect(wrapper.get('#notes').attributes('maxlength')).toBe('255');
 
-            for (const select of wrapper.findAll(
-                'select[name$="[checkpoint_related_id]"]',
-            )) {
-                expect(select.attributes('required')).toBeDefined();
+            for (const select of wrapper.findAll('button[id$="-related"]')) {
+                expect(select.attributes('aria-required')).toBe('true');
             }
 
             for (const notes of wrapper.findAll(
@@ -308,7 +303,7 @@ describe('StoreTripFormFields', () => {
         expect(wrapper.find('input.sr-only').exists()).toBe(false);
     });
 
-    it('adds order and customer rows with their choices and labels an order without a customer', async () => {
+    it('adds order and customer rows as search selects posting the picked id', async () => {
         const wrapper = mountFields(storeTripForm({ checkpoints: [] }));
         const buttons = wrapper.findAll('button');
         await buttons
@@ -320,29 +315,48 @@ describe('StoreTripFormFields', () => {
             )!
             .trigger('click');
 
-        const selects = wrapper.findAll(
-            'select[name$="[checkpoint_related_id]"]',
-        );
-        expect(selects.map((select) => select.attributes('name'))).toEqual([
+        const selects = wrapper.findAllComponents(StoreSearchSelect);
+        expect(selects.map((select) => select.props('name'))).toEqual([
             'checkpoints_array[0][checkpoint_related_id]',
             'checkpoints_array[1][checkpoint_related_id]',
         ]);
-        expect(selects[0].findAll('option').map((o) => o.text())).toEqual([
-            t('store.trips.form.selectOrder'),
-            t('store.trips.form.orderOption', {
-                code: '20261013-0042',
-                customer: 'Alma Customer',
-            }),
-            t('store.trips.form.orderOption', {
-                code: '20261013-0041',
-                customer: t('store.trips.form.unknownCustomer'),
-            }),
-        ]);
-        expect(selects[1].findAll('option').map((o) => o.text())).toEqual([
-            t('store.trips.form.selectCustomer'),
-            'Warehouse',
-            'Bram Customer',
-        ]);
+        expect(selects[0].props()).toMatchObject({
+            endpoint: orderOptions,
+            label: t('store.trips.form.order'),
+            placeholder: t('store.trips.form.selectOrder'),
+            searchPlaceholder: t('store.trips.form.searchOrders'),
+            required: true,
+        });
+        expect(selects[1].props()).toMatchObject({
+            endpoint: customerOptions,
+            label: t('store.trips.form.customer'),
+            placeholder: t('store.trips.form.selectCustomer'),
+            searchPlaceholder: t('store.trips.form.searchCustomers'),
+            required: true,
+        });
+        // Nothing is fetched until a list is opened.
+        expect(getMock).not.toHaveBeenCalled();
+
+        selects[0].vm.$emit('update:modelValue', {
+            id: 77,
+            label: '#20261013-0042',
+            description: 'Alma Customer · 120.00',
+            icon: 'truck',
+        });
+        selects[1].vm.$emit('update:modelValue', {
+            id: 12,
+            label: 'Bram Customer',
+            icon: 'user',
+        });
+        await flushPromises();
+        expect(
+            wrapper
+                .findAll('input[name$="[checkpoint_related_id]"]')
+                .map((input) => input.attributes('value')),
+        ).toEqual(['77', '12']);
+        expect(wrapper.get('#checkpoint-0-related').text()).toContain(
+            '#20261013-0042',
+        );
         expect(
             wrapper
                 .findAll('input[name$="[id]"]')
@@ -472,10 +486,8 @@ describe('StoreTripFormFields', () => {
                 )!
                 .trigger('click');
 
-            for (const select of wrapper.findAll(
-                'select[name$="[checkpoint_related_id]"]',
-            )) {
-                expect(select.attributes('required')).toBeDefined();
+            for (const select of wrapper.findAll('button[id$="-related"]')) {
+                expect(select.attributes('aria-required')).toBe('true');
                 expect(
                     wrapper
                         .find(

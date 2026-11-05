@@ -33,15 +33,13 @@ vi.mock('@inertiajs/vue3', async () => {
         router: { post: vi.fn() },
     };
 });
-const orders = [{ id: 77, code: '20261013-0042', customer: 'Alma Customer' }];
-const customers = [{ id: 9, name: 'Warehouse' }];
 function mountPage() {
     usePageMock.mockReturnValue({
         url: create.url(),
         props: defaultAuthProps({ store: storeSharedProps() }),
     });
 
-    return mount(Create, { props: { orders, customers } });
+    return mount(Create);
 }
 
 describe('Store trip Create', () => {
@@ -85,7 +83,7 @@ describe('Store trip Create', () => {
                 ?.props('href'),
         ).toEqual(tripsIndex());
     });
-    it('passes the choices and errors to empty trip fields', () => {
+    it('passes the errors to empty trip fields', () => {
         formSlotPropsMock.mockReturnValue({
             errors: { truck_id: 'Truck taken' },
             processing: false,
@@ -93,8 +91,6 @@ describe('Store trip Create', () => {
         const fields = mountPage().getComponent(StoreTripFormFields);
         expect(fields.props()).toEqual({
             trip: undefined,
-            orders,
-            customers,
             errors: { truck_id: 'Truck taken' },
         });
         expect(getMock).not.toHaveBeenCalled();

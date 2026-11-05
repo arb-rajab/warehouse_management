@@ -575,13 +575,6 @@ export interface StoreTripMapTruck {
 /** A trip checkpoint's kind: an order's delivery or another stop at a customer. */
 export type StoreTripCheckpointType = 'delivery' | 'other';
 
-/** An order the trip forms offer for a new delivery checkpoint. */
-export interface StoreTripOrderOption {
-    id: number;
-    code: string;
-    customer: string | null;
-}
-
 /** A truck from the available-vehicles lookup. */
 export interface StoreTripTruckOption {
     id: number;

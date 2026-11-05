@@ -32,6 +32,7 @@ import {
     sellerDestroy,
     sellerBulkDestroy,
     sellerEdit,
+    sellerOptions,
     updateFeatured,
     updateForSale,
     updatePublished,
@@ -45,6 +46,7 @@ import PageHeader from '@/components/PageHeader.vue';
 import Pagination from '@/components/Pagination.vue';
 import StoreColumnPicker from '@/components/StoreColumnPicker.vue';
 import StoreListFilters from '@/components/StoreListFilters.vue';
+import StoreSearchSelect from '@/components/StoreSearchSelect.vue';
 import StoreStatusSwitch from '@/components/StoreStatusSwitch.vue';
 import SubmitButton from '@/components/SubmitButton.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
@@ -60,6 +62,7 @@ import { t } from '@/lib/i18n';
 import { useStoreAccess } from '@/lib/storeAccess';
 import { useTableColumns } from '@/lib/useTableColumns';
 import type { Paginated } from '@/types/admin';
+import type { SearchOption } from '@/types/searchSelect';
 import type {
     StoreFilterChip,
     StoreProductListFilters,
@@ -76,10 +79,12 @@ const props = withDefaults(
         categories: { id: number; name: string }[];
         defaultLanguage: string;
         approvalEnabled?: boolean;
-        sellers?: { id: number; name: string }[];
+        /** The seller the list is filtered by; the others are searched on demand. */
+        selectedSeller?: SearchOption | null;
     }>(),
-    { approvalEnabled: false, sellers: () => [] },
+    { approvalEnabled: false, selectedSeller: null },
 );
+const seller = ref<SearchOption | null>(props.selectedSeller);
 const access = useStoreAccess();
 const isAllList = computed(() => props.listType === 'all');
 const isSellerList = computed(() => props.listType === 'seller');
@@ -410,29 +415,18 @@ async function requestFetch(): Promise<void> {
                     :error="errors.search"
                     maxlength="255"
                 />
-                <div v-if="isSellerList">
-                    <label for="user_id" :class="fieldLabelClass">{{
-                        t('store.products.seller')
-                    }}</label>
-                    <select
-                        id="user_id"
-                        name="user_id"
-                        :class="plainFieldInputClass"
-                    >
-                        <option value="">
-                            {{ t('store.products.allSellers') }}
-                        </option>
-                        <option
-                            v-for="seller in sellers"
-                            :key="seller.id"
-                            :value="seller.id"
-                            :selected="filters.user_id === seller.id"
-                        >
-                            {{ seller.name }}
-                        </option>
-                    </select>
-                    <FieldError :message="errors.user_id" />
-                </div>
+                <StoreSearchSelect
+                    v-if="isSellerList"
+                    id="user_id"
+                    v-model="seller"
+                    name="user_id"
+                    class="min-w-56"
+                    :label="t('store.products.seller')"
+                    :endpoint="sellerOptions"
+                    :placeholder="t('store.products.allSellers')"
+                    :search-placeholder="t('store.products.searchSellers')"
+                    :error="errors.user_id"
+                />
                 <div v-else>
                     <label for="category_id" :class="fieldLabelClass">{{
                         t('store.products.category')

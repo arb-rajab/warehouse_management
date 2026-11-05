@@ -3,7 +3,10 @@
 namespace App\Support;
 
 use App\Models\Brand;
+use App\Models\City;
+use App\Models\Order;
 use App\Models\Product;
+use App\Models\State;
 use App\Models\StoreUser;
 use App\Models\Upload;
 
@@ -207,6 +210,54 @@ final class SearchOption
     public static function configurationProduct(Product $product): array
     {
         return self::make($product->id, (string) $product->getTranslation('name'), '#'.$product->id, self::imageUrl($product->thumbnailUpload), 'package', null, ['mat_id' => (string) $product->id]);
+    }
+
+    /**
+     * An order a trip's delivery checkpoint can visit: `#code` with the customer
+     * and the total. Select `id, code, by_rep, user_id, for_customer, grand_total`
+     * and load `user:id,name` and `rep:id,name`.
+     *
+     * @return Option
+     */
+    public static function tripOrder(Order $order): array
+    {
+        return self::make($order->id, '#'.$order->code, self::describe([$order->customer?->name, number_format((float) $order->grand_total, 2, '.', '')]), null, 'truck');
+    }
+
+    /**
+     * A state: its name, the country as the description. Select `id, name,
+     * country_id` and load `country:id,name`.
+     *
+     * @return Option
+     */
+    public static function state(State $state): array
+    {
+        return self::make($state->id, (string) $state->name, $state->country?->name, null, 'map-pin', null, ['country_id' => (int) $state->country_id]);
+    }
+
+    /**
+     * A city: its name in the active language, the state as the description.
+     * Select `id, name, state_id` and load `city_translations:id,city_id,lang,name`
+     * and `state:id,name`.
+     *
+     * @return Option
+     */
+    public static function city(City $city): array
+    {
+        $translation = $city->city_translations->firstWhere('lang', app()->getLocale());
+
+        return self::make($city->id, (string) ($translation->name ?? $city->name), $city->state?->name, null, 'map-pin', null, ['state_id' => (int) $city->state_id]);
+    }
+
+    /**
+     * A seller (or any user a report names): the name, the email as the description.
+     * Select `id, name, email`.
+     *
+     * @return Option
+     */
+    public static function user(StoreUser $user): array
+    {
+        return self::make($user->id, (string) $user->name, self::describe([$user->email]), null, 'user');
     }
 
     /** @return Badge */

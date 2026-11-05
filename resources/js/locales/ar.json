@@ -1426,7 +1426,8 @@
             "commissionHistoryTitle": "تقرير سجل العمولات",
             "walletHistoryTitle": "تقرير معاملات المحفظة",
             "approved": "معتمد",
-            "nonApproved": "غير معتمد"
+            "nonApproved": "غير معتمد",
+            "searchSelection": "ابحث بالاسم أو الهاتف أو البريد…"
         },
         "notifications": {
             "index": {
@@ -1737,7 +1738,13 @@
                 "last_order_at": "آخر طلب",
                 "created_at": "تاريخ الإنشاء",
                 "updated_at": "تاريخ التحديث",
-                "balance": "رصيد المحفظة"
+                "balance": "رصيد المحفظة",
+                "selectState": "اختر منطقة",
+                "selectCountryFirst": "اختر دولة أولاً",
+                "searchStates": "ابحث عن منطقة بالاسم…",
+                "selectCity": "اختر مدينة",
+                "selectStateFirst": "اختر منطقة أولاً",
+                "searchCities": "ابحث عن مدينة بالاسم…"
             },
             "all": "الكل",
             "yes": "نعم",
@@ -2433,14 +2440,16 @@
                 "customer": "العميل",
                 "selectOrder": "اختر طلبًا",
                 "selectCustomer": "اختر عميلًا",
-                "orderOption": "#{code} {customer}",
-                "unknownCustomer": "عميل غير معروف",
                 "checkpointNotes": "ملاحظات نقطة التوقف",
                 "moveUp": "نقل التوقف {position} للأعلى",
                 "moveDown": "نقل التوقف {position} للأسفل",
                 "remove": "إزالة التوقف {position}",
                 "addOrder": "إضافة نقطة توقف لطلب",
-                "addCustomer": "إضافة نقطة توقف لعميل"
+                "addCustomer": "إضافة نقطة توقف لعميل",
+                "searchOrders": "ابحث عن طلبات قيد التوصيل بالرمز أو اسم العميل…",
+                "searchCustomers": "ابحث عن عميل بالاسم أو الهاتف أو البريد…",
+                "orderOption": "#{code} {customer}",
+                "unknownCustomer": "عميل غير معروف"
             },
             "orders": {
                 "title": "طلبات الرحلات",
@@ -2928,7 +2937,8 @@
                 "flashDiscountHelp": "الخصم ونوعه مطلوبان عند اختيار عرض سريع.",
                 "flashDiscountType": "نوع خصم العرض الخاطف",
                 "chooseDiscountType": "اختر نوع الخصم"
-            }
+            },
+            "searchSellers": "ابحث عن بائع بالاسم أو البريد…"
         },
         "productForm": {
             "taxType": "نوع {tax}",

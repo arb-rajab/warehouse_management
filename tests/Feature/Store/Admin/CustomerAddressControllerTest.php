@@ -3,6 +3,7 @@
 use App\Models\Address;
 use App\Models\StoreUser;
 use Illuminate\Support\Facades\DB;
+use Inertia\Testing\AssertableInertia as Assert;
 
 /** @return array<string,mixed> */
 function adminCustomerAddressForm(array $overrides = []): array
@@ -124,18 +125,60 @@ foreach (['admin.addresses.states', 'admin.addresses.cities'] as $route) {
     })->with('refused store admin callers');
 }
 
-test('admin address options return narrow JSON filtered by parent and status', function () {
+test('admin address options return search options filtered by parent and status, matched, paged and with their parent as the description', function () {
     actingAsStoreUser(createStoreStaff('edit_customer'));
     $country = adminCustomerAddressForm()['country_id'];
     $otherCountry = adminCustomerAddressForm()['country_id'];
+    $countryName = DB::table('countries')->where('id', $country)->value('name');
     $state = DB::table('states')->insertGetId(['country_id' => $country, 'name' => '<State>', 'status' => 1]);
     $otherState = DB::table('states')->insertGetId(['country_id' => $otherCountry, 'name' => 'Noise', 'status' => 1]);
     DB::table('states')->insert(['country_id' => $country, 'name' => 'Disabled', 'status' => 0]);
     $city = DB::table('cities')->insertGetId(['state_id' => $state, 'name' => 'Amsterdam', 'status' => 1]);
     DB::table('cities')->insert(['state_id' => $otherState, 'name' => 'Noise', 'status' => 1]);
-    $this->getJson(route('admin.addresses.states', ['country_id' => $country]))->assertExactJson([['id' => $state, 'name' => '<State>']]);
-    $this->getJson(route('admin.addresses.cities', ['state_id' => $state]))->assertExactJson([['id' => $city, 'name' => 'Amsterdam']]);
+    DB::table('cities')->insert(['state_id' => $state, 'name' => 'Hidden', 'status' => 0]);
+    DB::table('city_translations')->insert(['city_id' => $city, 'lang' => 'ar', 'name' => 'أمستردام']);
+
+    expect($this->getJson(route('admin.addresses.states', ['country_id' => $country]))->assertOk()->json('data'))->toEqual([
+        ['id' => $state, 'label' => '<State>', 'description' => $countryName, 'image' => null, 'icon' => 'map-pin', 'badge' => null, 'extra' => ['country_id' => $country]],
+    ]);
+    expect($this->getJson(route('admin.addresses.cities', ['state_id' => $state]))->assertOk()->json('data'))->toEqual([
+        ['id' => $city, 'label' => 'Amsterdam', 'description' => '<State>', 'image' => null, 'icon' => 'map-pin', 'badge' => null, 'extra' => ['state_id' => $state]],
+    ]);
+    // A term matches the name or its translation in the active language, never another state's cities.
+    expect($this->getJson(route('admin.addresses.cities', ['state_id' => $state, 'q' => 'amster']))->json('data.*.id'))->toBe([$city])
+        ->and($this->getJson(route('admin.addresses.cities', ['state_id' => $state, 'q' => 'noise']))->json('data'))->toBe([]);
+    $this->withSession(['locale' => 'ar']);
+    expect($this->getJson(route('admin.addresses.cities', ['state_id' => $state, 'q' => 'أمست']))->json('data.0.label'))->toBe('أمستردام');
     $this->getJson(route('admin.addresses.states', ['country_id' => 999999]))->assertUnprocessable()->assertJsonValidationErrors('country_id');
+    $this->getJson(route('admin.addresses.cities', ['state_id' => $state, 'q' => str_repeat('x', 101)]))->assertUnprocessable()->assertJsonValidationErrors('q');
+});
+
+test('the address city search pages past twenty cities', function () {
+    actingAsStoreUser(createStoreStaff('edit_customer'));
+    $country = adminCustomerAddressForm()['country_id'];
+    $state = DB::table('states')->insertGetId(['country_id' => $country, 'name' => 'Big state', 'status' => 1]);
+    foreach (range(1, 25) as $number) {
+        DB::table('cities')->insert(['state_id' => $state, 'name' => sprintf('City %02d', $number), 'status' => 1]);
+    }
+
+    $first = $this->getJson(route('admin.addresses.cities', ['state_id' => $state]))->assertOk();
+    expect($first->json('data'))->toHaveCount(20)->and($first->json('meta.total'))->toBe(25)->and($first->json('data.0.label'))->toBe('City 01')
+        ->and($this->getJson(route('admin.addresses.cities', ['state_id' => $state, 'page' => 2]))->json('data'))->toHaveCount(5);
+});
+
+test('the customer edit page sends each address state and city as search options', function () {
+    actingAsStoreUser(createStoreStaff('edit_customer'));
+    $customer = createStoreUser();
+    $form = adminCustomerAddressForm();
+    $state = DB::table('states')->insertGetId(['country_id' => $form['country_id'], 'name' => 'North', 'status' => 1]);
+    $city = DB::table('cities')->insertGetId(['state_id' => $state, 'name' => 'Amsterdam', 'status' => 1]);
+    $this->post(route('admin.customers.addresses.store', $customer), [...$form, 'state_id' => $state, 'city_id' => $city])->assertRedirect();
+    $this->post(route('admin.customers.addresses.store', $customer), [...$form, 'address' => 'Without state'])->assertRedirect();
+
+    $this->get(route('customers.edit', $customer))->assertOk()->assertInertia(fn (Assert $page) => $page
+        ->where('addresses.0.state_option.id', $state)->where('addresses.0.state_option.label', 'North')->where('addresses.0.state_option.extra.country_id', $form['country_id'])
+        ->where('addresses.0.city_option.id', $city)->where('addresses.0.city_option.label', 'Amsterdam')->where('addresses.0.city_option.description', 'North')
+        ->where('addresses.1.state_option', null)->where('addresses.1.city_option', null));
 });
 
 test('public address creation preserves own addresses and refuses forged customer ownership', function () {

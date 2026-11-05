@@ -4,12 +4,14 @@ namespace App\Http\Controllers\Store\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\Store\Admin\Concerns\ChecksCustomerAccount;
+use App\Http\Controllers\Store\Admin\Concerns\SearchesOptions;
 use App\Http\Requests\Store\Admin\FilterAddressOptionsRequest;
 use App\Http\Requests\Store\Admin\StoreCustomerAddressRequest;
 use App\Models\Address;
 use App\Models\City;
 use App\Models\State;
 use App\Models\StoreUser;
+use App\Support\SearchOption;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -19,6 +21,7 @@ use Illuminate\Support\Facades\DB;
 class AddressController extends Controller implements HasMiddleware
 {
     use ChecksCustomerAccount;
+    use SearchesOptions;
 
     /** @return array<int, Middleware> */
     public static function middleware(): array
@@ -77,14 +80,32 @@ class AddressController extends Controller implements HasMiddleware
         return redirect()->route('customers.edit', $customer);
     }
 
+    /** The typeahead behind a customer address's state (StoreSearchSelect): the enabled states of a country. */
     public function states(FilterAddressOptionsRequest $request): JsonResponse
     {
-        return response()->json(State::query()->select(['id', 'name'])->where('status', 1)->where('country_id', $request->integer('country_id'))->orderBy('name')->get()->map(fn ($state) => ['id' => $state->id, 'name' => $state->name]));
+        $term = $this->searchTerm($request);
+        $states = State::query()->select(['id', 'name', 'country_id'])->with('country:id,name')
+            ->where('status', 1)->where('country_id', $request->integer('country_id'));
+        if ($term !== '') {
+            $this->whereWordsMatch($states, ['name'], $term);
+        }
+        $this->orderByRelevance($states, 'name', $term);
+
+        return $this->optionsPage($states, fn (State $state): array => SearchOption::state($state));
     }
 
+    /** The typeahead behind a customer address's city (StoreSearchSelect): the enabled cities of a state. */
     public function cities(FilterAddressOptionsRequest $request): JsonResponse
     {
-        return response()->json(City::query()->select(['id', 'name'])->where('status', 1)->where('state_id', $request->integer('state_id'))->with('city_translations:id,city_id,lang,name')->orderBy('name')->get()->map(fn ($city) => ['id' => $city->id, 'name' => $city->city_translations->firstWhere('lang', app()->getLocale())->name ?? $city->name]));
+        $term = $this->searchTerm($request);
+        $cities = City::query()->select(['id', 'name', 'state_id'])->with(['city_translations:id,city_id,lang,name', 'state:id,name'])
+            ->where('status', 1)->where('state_id', $request->integer('state_id'));
+        if ($term !== '') {
+            $this->whereTranslatedNameMatches($cities, 'city_translations', $term);
+        }
+        $this->orderByRelevance($cities, 'name', $term);
+
+        return $this->optionsPage($cities, fn (City $city): array => SearchOption::city($city));
     }
 
     /** A bound address belongs to its bound parent even for Super Admin. */

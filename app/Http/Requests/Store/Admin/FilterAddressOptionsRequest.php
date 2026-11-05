@@ -2,10 +2,13 @@
 
 namespace App\Http\Requests\Store\Admin;
 
+use App\Http\Requests\Concerns\ValidatesSearchOptions;
 use Illuminate\Foundation\Http\FormRequest;
 
 class FilterAddressOptionsRequest extends FormRequest
 {
+    use ValidatesSearchOptions;
+
     /**
      * Get the validation rules that apply to the request.
      *
@@ -13,6 +16,6 @@ class FilterAddressOptionsRequest extends FormRequest
      */
     public function rules(): array
     {
-        return ['country_id' => ['nullable', 'integer', 'exists:countries,id'], 'state_id' => ['nullable', 'integer', 'exists:states,id']];
+        return [...$this->searchOptionsRules(), 'country_id' => ['nullable', 'integer', 'exists:countries,id'], 'state_id' => ['nullable', 'integer', 'exists:states,id']];
     }
 }

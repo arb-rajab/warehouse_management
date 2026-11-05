@@ -1,15 +1,18 @@
 import { Head } from '@inertiajs/vue3';
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { commissionSellers } from '@/actions/App/Http/Controllers/Store/Admin/ReportController';
 import DateRangeFilterFields from '@/components/DateRangeFilterFields.vue';
 import FilterDialogFooter from '@/components/FilterDialogFooter.vue';
 import FilterMultiSelect from '@/components/FilterMultiSelect.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import Pagination from '@/components/Pagination.vue';
+import StoreSearchSelect from '@/components/StoreSearchSelect.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
 import { t } from '@/lib/i18n';
 import { storeSharedProps } from '@/testing/factories';
 import { defaultAuthProps } from '@/testing/inertiaPageMocks';
+import type { SearchOption } from '@/types/searchSelect';
 import type { StoreReportFilters } from '@/types/storeReports';
 import StoreReportPage from './StoreReportPage.vue';
 
@@ -24,6 +27,7 @@ vi.mock('@inertiajs/vue3', async () => {
         Head: headStub,
         Link: createLinkStub(),
         usePage: usePageMock,
+        useHttp: () => ({ get: vi.fn() }),
         router: { get: getMock, post: vi.fn() },
     };
 });
@@ -196,5 +200,97 @@ describe('StoreReportPage', () => {
             },
             { preserveState: true, replace: true },
         );
+    });
+
+    describe('with a selection searched on demand', () => {
+        const alma: SearchOption = {
+            id: 4,
+            label: 'Alma Seller',
+            description: 'alma@example.test',
+            icon: 'user',
+        };
+        const bram: SearchOption = {
+            id: 9,
+            label: 'Bram Seller',
+            icon: 'user',
+        };
+
+        function mountSearchable(filters: StoreReportFilters = {}) {
+            return mount(StoreReportPage, {
+                props: {
+                    title: 'Report',
+                    url: '/temp/admin/report',
+                    filters,
+                    links: [],
+                    selection: 'seller_ids',
+                    selectionLabel: t('store.reports.seller'),
+                    selectionEndpoint: commissionSellers,
+                    selectedOptions: [alma],
+                    dates: true,
+                },
+                slots: { default: '<p>Report table</p>' },
+            });
+        }
+
+        it('replaces the preloaded list with a search select starting from the selected options', async () => {
+            const wrapper = mountSearchable({ seller_ids: ['4'] });
+            await wrapper
+                .getComponent(PageHeader)
+                .get('button')
+                .trigger('click');
+
+            expect(wrapper.findComponent(FilterMultiSelect).exists()).toBe(
+                false,
+            );
+            expect(
+                wrapper.getComponent(StoreSearchSelect).props(),
+            ).toMatchObject({
+                id: 'report-selection',
+                multiple: true,
+                endpoint: commissionSellers,
+                label: t('store.reports.seller'),
+                items: [alma],
+                placeholder: t('store.reports.all'),
+            });
+        });
+
+        it('submits the ids of the picked options and clears them', async () => {
+            const wrapper = mountSearchable({
+                seller_ids: ['4'],
+                per_page: 25,
+            });
+            await wrapper
+                .getComponent(PageHeader)
+                .get('button')
+                .trigger('click');
+            wrapper
+                .getComponent(StoreSearchSelect)
+                .vm.$emit('update:items', [alma, bram]);
+            await wrapper.vm.$nextTick();
+            await wrapper.get('form').trigger('submit');
+
+            expect(getMock).toHaveBeenLastCalledWith(
+                '/temp/admin/report',
+                {
+                    seller_ids: ['4', '9'],
+                    date_from: '',
+                    date_to: '',
+                    created_within_days: '',
+                    per_page: 25,
+                },
+                { preserveState: true, replace: true },
+            );
+
+            await wrapper
+                .getComponent(PageHeader)
+                .get('button')
+                .trigger('click');
+            wrapper.getComponent(FilterDialogFooter).vm.$emit('clear');
+            expect(getMock).toHaveBeenLastCalledWith(
+                '/temp/admin/report',
+                expect.objectContaining({ seller_ids: [] }),
+                { preserveState: true, replace: true },
+            );
+        });
     });
 });

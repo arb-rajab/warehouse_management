@@ -147,21 +147,46 @@ test('the seller product list renders the shared Inertia page', function () {
     $this->get(route('products.seller'), inertiaHeaders())->assertOk()->assertHeader('X-Inertia', 'true');
 });
 
-test('seller filter options are narrow seller accounts and approval follows its existing setting', function () {
+test('the seller list sends the filtered seller as a search option, no seller list, and approval follows its existing setting', function () {
     actingAsStoreUser(createStoreStaff('show_seller_products'));
-    $this->seller->forceFill(['name' => 'Ada seller'])->save();
+    $this->seller->forceFill(['name' => 'Ada seller', 'email' => 'ada@example.test'])->save();
     StoreUser::query()->whereKey($this->other->user_id)->update(['name' => 'Zed seller']);
     createStoreUser('customer');
     foreach ([false, true] as $enabled) {
         DB::table('business_settings')->updateOrInsert(['type' => 'product_approve_by_admin'], ['value' => (string) (int) $enabled]);
         Cache::forget('business_settings');
         $this->get(route('products.seller'))->assertInertia(fn (Assert $page) => $page
-            ->where('approvalEnabled', $enabled)->where('sellers', [
-                ['id' => $this->seller->id, 'name' => 'Ada seller'],
-                ['id' => $this->other->user_id, 'name' => 'Zed seller'],
-            ]));
+            ->where('approvalEnabled', $enabled)->where('selectedSeller', null)->missing('sellers'));
     }
+    $this->get(route('products.seller', ['user_id' => $this->seller->id]))->assertInertia(fn (Assert $page) => $page
+        ->where('selectedSeller', ['id' => $this->seller->id, 'label' => 'Ada seller', 'description' => 'ada@example.test', 'image' => null, 'icon' => 'user', 'badge' => null]));
+    // A user who is not a seller is never offered as the filtered seller.
+    $this->get(route('products.seller', ['user_id' => createStoreUser('customer')->id]))->assertInertia(fn (Assert $page) => $page->where('selectedSeller', null));
 });
+
+test('the seller filter search offers only seller accounts, matched by name or email and paged', function () {
+    actingAsStoreUser(createStoreStaff('show_seller_products'));
+    $this->seller->forceFill(['name' => 'Ada seller', 'email' => 'ada@example.test'])->save();
+    StoreUser::query()->whereKey($this->other->user_id)->update(['name' => 'Zed seller']);
+    createStoreUser('customer')->forceFill(['name' => 'Ada customer'])->save();
+
+    expect($this->getJson(route('products.seller.options', ['q' => 'ada']))->assertOk()->json('data.*.label'))->toBe(['Ada seller'])
+        ->and($this->getJson(route('products.seller.options', ['q' => 'ada@example']))->json('data.*.id'))->toBe([$this->seller->id]);
+    foreach (range(1, 25) as $number) {
+        createStoreUser('seller')->forceFill(['name' => sprintf('Seller %02d', $number)])->save();
+    }
+    $first = $this->getJson(route('products.seller.options', ['q' => 'Seller 0']))->assertOk();
+    expect($first->json('data'))->toHaveCount(9)->and($first->json('data.0.label'))->toBe('Seller 01');
+    $all = $this->getJson(route('products.seller.options'))->assertOk();
+    expect($all->json('data'))->toHaveCount(20)->and($all->json('meta.total'))->toBe(27)
+        ->and($this->getJson(route('products.seller.options', ['page' => 2]))->json('data'))->toHaveCount(7);
+    $this->getJson(route('products.seller.options', ['q' => str_repeat('x', 101)]))->assertUnprocessable()->assertJsonValidationErrors('q');
+});
+
+test('the seller filter search refuses unauthorized callers', function (string $caller) {
+    actingAsRefusedStoreCaller($caller);
+    assertStoreCallerRefused($this->get(route('products.seller.options')), $caller);
+})->with('refused store admin callers');
 
 test('seller rows expose the full shared payload and exclude every other product kind', function () {
     actingAsStoreUser(createStoreStaff('show_seller_products'));
