@@ -9,7 +9,11 @@ import ResourceFormPage from '@/components/ResourceFormPage.vue';
 import StoreCouponFormFields from '@/components/StoreCouponFormFields.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
 import { t } from '@/lib/i18n';
-import { storeCoupon, storeSharedProps } from '@/testing/factories';
+import {
+    storeCampaignProduct,
+    storeCoupon,
+    storeSharedProps,
+} from '@/testing/factories';
 import { defaultAuthProps } from '@/testing/inertiaPageMocks';
 import Edit from './Edit.vue';
 
@@ -38,7 +42,7 @@ vi.mock('@inertiajs/vue3', async () => {
     };
 });
 const coupon = storeCoupon();
-const selectedProducts = [{ id: 12, name: 'Translated product' }];
+const selectedProducts = [storeCampaignProduct()];
 function mountPage() {
     return mount(Edit, { props: { coupon, selectedProducts } });
 }

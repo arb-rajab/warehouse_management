@@ -7,11 +7,12 @@ import ResourceFormPage from '@/components/ResourceFormPage.vue';
 import StoreOfferFormFields from '@/components/StoreOfferFormFields.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
 import { t } from '@/lib/i18n';
+import type { SearchOption } from '@/types/searchSelect';
 import type { StoreCampaignProduct, StoreOffer } from '@/types/store';
 defineProps<{
     offerType: StoreOffer['offer_type'];
     selectedProducts: StoreCampaignProduct[];
-    selectedBrand: { id: number; name: string } | null;
+    selectedBrand: SearchOption | null;
 }>();
 </script>
 <template>

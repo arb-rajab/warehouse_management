@@ -11,6 +11,7 @@ return [
     'search_option_discount' => ':percent% discount',
     'search_option_in_stock' => 'In stock :qty',
     'search_option_low_stock' => 'Low :qty',
+    'search_option_off' => ':value off',
     'search_option_out_of_stock' => 'Out of stock',
     'search_option_sku' => 'SKU :serial',
     'subscriber_has_been_deleted_successfully' => 'Subscriber has been deleted successfully',

@@ -100,7 +100,7 @@ Adding a select for a new entity adds its row here and a factory in
 | Product (order form) | thumbnail, else package tile | name in the active language | `SKU · #id · unit price` | stock: `In stock N` (success), `Low N` (< 10, warning), `Out of stock` (danger); none for digital | `serial`, `mat_id`, `unit_price`, `unit_equal`, `tax`, `digital`, `stocks[]` |
 | Campaign and coupon product | thumbnail, else package tile | name | `SKU · #id · price` | current discount (info) | `price`, `discount`, `discount_type` |
 | Order configuration product | thumbnail, else package tile | name | `#id` | none | `mat_id` |
-| Brand | logo, else tag tile | name | product count | none | none |
+| Brand | tag tile | name | none | none | none |
 | State | pin tile | name | country | none | `country_id` |
 | City | pin tile | name in the active language | state | none | `state_id` |
 | Trip checkpoint order | truck tile | `#code` | customer · lines · total | delivery status | none |

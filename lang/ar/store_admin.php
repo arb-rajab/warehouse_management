@@ -11,6 +11,7 @@ return [
     'search_option_discount' => 'خصم :percent%',
     'search_option_in_stock' => 'متوفر :qty',
     'search_option_low_stock' => 'منخفض :qty',
+    'search_option_off' => 'خصم :value',
     'search_option_out_of_stock' => 'غير متوفر',
     'search_option_sku' => 'رمز المنتج :serial',
     'subscriber_has_been_deleted_successfully' => 'تم حذف المشترك بنجاح',

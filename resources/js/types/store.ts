@@ -1,3 +1,5 @@
+import type { SearchOption } from '@/types/searchSelect';
+
 /**
  * The store back office's shared props (HandleInertiaRequests::storeProps()),
  * present on every page under /temp. They hide sidebar links and buttons
@@ -419,19 +421,14 @@ export interface StoreCoupon {
     max_discount: number | null;
 }
 
-export interface StoreCouponProductOption {
-    id: number;
-    name: string;
-}
-
 /** The kinds of file the store's uploader accepts (MultipartUploadService::KINDS). */
-export interface StoreCampaignProduct {
-    id: number;
-    name: string;
+/** What a campaign or coupon product option carries in `extra` (App\Support\SearchOption::campaignProduct). */
+export type StoreCampaignProductExtra = {
     price: number;
     discount: number;
     discount_type: 'amount' | 'percent';
-}
+};
+export type StoreCampaignProduct = SearchOption<StoreCampaignProductExtra>;
 export interface StoreCampaignRow {
     id: number;
     discount: number;

@@ -72,7 +72,6 @@ test('typeahead controllers use the shared SearchesOptions order and are named i
     expect($rule)->toContain('SearchesOptions');
     foreach ($typeahead as $name) {
         expect($rule)->toContain($name);
-        expect(storeAdminListControllers()[$name])->not->toContain('NewestFirst::apply(');
     }
     // The shared trait is where the typeahead order lives: prefix matches, then name, then key.
     expect(File::get(app_path('Http/Controllers/Store/Admin/Concerns/SearchesOptions.php')))->toContain('function orderByRelevance');

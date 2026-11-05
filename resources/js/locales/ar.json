@@ -2061,9 +2061,9 @@
                 "endDate": "تاريخ النهاية",
                 "minBuy": "الحد الأدنى للشراء",
                 "maxDiscount": "الحد الأقصى للخصم",
-                "searchProducts": "البحث عن المنتجات",
-                "searching": "جارٍ البحث…",
-                "products": "المنتجات"
+                "searchProducts": "ابحث عن منتجات بالاسم…",
+                "products": "المنتجات",
+                "chooseProducts": "اختر المنتجات"
             }
         },
         "campaigns": {
@@ -2072,9 +2072,8 @@
                 "banner": "البانر",
                 "startDate": "تاريخ البداية",
                 "endDate": "تاريخ النهاية",
-                "searchProducts": "البحث عن المنتجات الأساسية والمكافآت",
-                "searchBrands": "البحث عن العلامات التجارية",
-                "searching": "جارٍ البحث…",
+                "searchProducts": "ابحث عن منتجات بالاسم…",
+                "searchBrands": "ابحث عن علامات تجارية بالاسم…",
                 "products": "منتجات المكافأة",
                 "product": "المنتج",
                 "discount": "الخصم",
@@ -2090,7 +2089,6 @@
                 "baseProduct": "المنتج الأساسي",
                 "baseQuantity": "الكمية الأساسية المطلوبة",
                 "spendThreshold": "الإنفاق المطلوب على العلامة",
-                "choose": "اختر…",
                 "backgroundColor": "لون الخلفية",
                 "textColor": "لون النص",
                 "dark": "داكن",
@@ -2100,7 +2098,10 @@
                 "repeatable": "متكرر",
                 "multipleUsage": "استخدام متعدد",
                 "featured": "مميز",
-                "price": "السعر الأساسي"
+                "price": "السعر الأساسي",
+                "chooseProducts": "اختر منتجات المكافأة",
+                "chooseProduct": "اختر منتجًا",
+                "chooseBrand": "اختر علامة تجارية"
             },
             "saving": "جارٍ الحفظ…",
             "search": "بحث",

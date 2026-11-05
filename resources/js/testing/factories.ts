@@ -1009,10 +1009,12 @@ export function storeCampaignProduct(
 ): StoreCampaignProduct {
     return {
         id: 12,
-        name: 'Translated product',
-        price: 100,
-        discount: 10,
-        discount_type: 'amount',
+        label: 'Translated product',
+        description: 'SKU TP-12 · #12 · 100.00',
+        image: null,
+        icon: 'package',
+        badge: { text: '10 off', tone: 'info' },
+        extra: { price: 100, discount: 10, discount_type: 'amount' },
         ...overrides,
     };
 }

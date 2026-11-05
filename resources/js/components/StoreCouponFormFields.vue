@@ -1,18 +1,18 @@
 <script setup lang="ts">
-import { useHttp } from '@inertiajs/vue3';
-import { LoaderCircle } from '@lucide/vue';
-import { computed, onMounted, ref } from 'vue';
+import { ref } from 'vue';
 import { productOptions } from '@/actions/App/Http/Controllers/Store/Admin/CouponController';
 import FieldError from '@/components/FieldError.vue';
 import FormField from '@/components/FormField.vue';
 import RequiredMark from '@/components/RequiredMark.vue';
+import StoreSearchSelect from '@/components/StoreSearchSelect.vue';
 import { fieldLabelClass, plainFieldInputClass } from '@/lib/filters';
 import { t } from '@/lib/i18n';
-import type { StoreCoupon, StoreCouponProductOption } from '@/types/store';
+import type { SearchOption } from '@/types/searchSelect';
+import type { StoreCampaignProduct, StoreCoupon } from '@/types/store';
 
 const props = defineProps<{
     coupon?: StoreCoupon;
-    selectedProducts: StoreCouponProductOption[];
+    selectedProducts: StoreCampaignProduct[];
     errors: Record<string, string>;
 }>();
 
@@ -20,48 +20,7 @@ const type = ref(props.coupon?.type ?? 'cart_base');
 const discountType = ref(props.coupon?.discount_type ?? 'amount');
 const startDate = ref(props.coupon?.start_date ?? '');
 const endDate = ref(props.coupon?.end_date ?? '');
-const selectedIds = ref((props.coupon?.product_ids ?? []).map(String));
-const results = ref<StoreCouponProductOption[]>([]);
-const remembered = ref<StoreCouponProductOption[]>([...props.selectedProducts]);
-const query = ref('');
-const http = useHttp({ q: '' });
-let sequence = 0;
-const options = computed(() => {
-    const products = new Map(
-        remembered.value
-            .filter((product) => selectedIds.value.includes(String(product.id)))
-            .map((product) => [product.id, product]),
-    );
-
-    for (const product of results.value) {
-        products.set(product.id, product);
-    }
-
-    return [...products.values()];
-});
-
-function search(): void {
-    const current = ++sequence;
-    http.q = query.value;
-    http.get(productOptions.url(), {
-        onSuccess: (response: unknown) => {
-            if (current !== sequence) {
-                return;
-            }
-
-            results.value = response as StoreCouponProductOption[];
-            const products = new Map(
-                [...remembered.value, ...results.value].map((product) => [
-                    product.id,
-                    product,
-                ]),
-            );
-            remembered.value = [...products.values()];
-        },
-    });
-}
-
-onMounted(search);
+const products = ref<SearchOption[]>([...props.selectedProducts]);
 </script>
 
 <template>
@@ -170,46 +129,18 @@ onMounted(search);
             />
         </template>
         <div v-else class="space-y-2">
-            <FormField
-                id="product_search"
-                :label="t('store.coupons.fields.searchProducts')"
-                type="search"
-                maxlength="255"
-                :error="http.errors.q"
-                @input="
-                    query = ($event.target as HTMLInputElement).value;
-                    search();
-                "
-            />
-            <p
-                v-if="http.processing"
-                role="status"
-                class="flex items-center gap-2"
-            >
-                <LoaderCircle class="size-4 animate-spin" aria-hidden="true" />
-                {{ t('store.coupons.fields.searching') }}
-            </p>
-            <label for="product_ids" :class="fieldLabelClass"
-                >{{ t('store.coupons.fields.products') }}<RequiredMark
-            /></label>
-            <select
+            <StoreSearchSelect
                 id="product_ids"
-                v-model="selectedIds"
+                v-model:items="products"
                 name="product_ids[]"
                 multiple
+                :label="t('store.coupons.fields.products')"
+                :endpoint="productOptions"
+                :placeholder="t('store.coupons.fields.chooseProducts')"
+                :search-placeholder="t('store.coupons.fields.searchProducts')"
                 required
-                size="6"
-                :class="plainFieldInputClass"
-            >
-                <option
-                    v-for="product in options"
-                    :key="product.id"
-                    :value="String(product.id)"
-                >
-                    {{ product.name }}
-                </option>
-            </select>
-            <FieldError :message="errors.product_ids" />
+                :error="errors.product_ids"
+            />
             <FieldError
                 v-for="(message, key) in errors"
                 :key="key"

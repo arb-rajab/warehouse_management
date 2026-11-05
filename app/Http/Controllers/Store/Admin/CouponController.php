@@ -3,8 +3,9 @@
 namespace App\Http\Controllers\Store\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Store\Admin\Concerns\SearchesOptions;
 use App\Http\Requests\Store\Admin\FilterCouponRequest;
-use App\Http\Requests\Store\Admin\SearchCouponProductsRequest;
+use App\Http\Requests\Store\Admin\SearchOptionsRequest;
 use App\Http\Requests\Store\Admin\StoreCouponRequest;
 use App\Http\Requests\Store\Admin\UpdateCouponRequest;
 use App\Http\Resources\Store\CouponResource;
@@ -12,8 +13,8 @@ use App\Models\Coupon;
 use App\Models\Product;
 use App\Models\StoreUser;
 use App\Support\NewestFirst;
+use App\Support\SearchOption;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -24,6 +25,8 @@ use Inertia\Response;
 
 class CouponController extends Controller implements HasMiddleware
 {
+    use SearchesOptions;
+
     /** @return array<int, Middleware> */
     public static function middleware(): array
     {
@@ -72,7 +75,7 @@ class CouponController extends Controller implements HasMiddleware
 
         return Inertia::render('Store/Admin/Marketing/Coupons/Edit', [
             'coupon' => new CouponResource($coupon),
-            'selectedProducts' => $this->productOptionsFor(Product::query()->whereIn('id', $ids)),
+            'selectedProducts' => $this->selectedOptions($ids),
         ]);
     }
 
@@ -92,16 +95,17 @@ class CouponController extends Controller implements HasMiddleware
         return $this->redirectPreservingQuery('coupon.index', $request);
     }
 
-    public function productOptions(SearchCouponProductsRequest $request): JsonResponse
+    /** The typeahead behind the coupon's product picker (StoreSearchSelect). */
+    public function productOptions(SearchOptionsRequest $request): JsonResponse
     {
+        $term = $this->searchTerm($request);
         $query = $this->eligibleProducts();
-        if ($request->filled('q')) {
-            $search = '%'.$request->validated('q').'%';
-            $query->where(fn (Builder $query) => $query->where('name', 'like', $search)
-                ->orWhereHas('product_translations', fn (Builder $query) => $query->where('lang', app()->getLocale())->where('name', 'like', $search)));
+        if ($term !== '') {
+            $this->whereTranslatedNameMatches($query, 'product_translations', $term);
         }
+        $this->orderByRelevance($query, 'name', $term);
 
-        return response()->json($this->productOptionsFor($query->limit(30)));
+        return $this->optionsPage($query, fn (Product $product): array => SearchOption::campaignProduct($product));
     }
 
     private function ownerId(): ?int
@@ -119,19 +123,22 @@ class CouponController extends Controller implements HasMiddleware
     /** @return Builder<Product> */
     private function eligibleProducts(): Builder
     {
-        return filter_products(Product::query()->where('user_id', $this->ownerId()));
+        return filter_products(CampaignProductController::products()->where('user_id', $this->ownerId()));
     }
 
     /**
-     * @param  Builder<Product>  $query
-     * @return array<int, array{id: int, name: string}>
+     * The coupon's own products as search options, in the order the coupon lists them.
+     *
+     * @param  array<int, mixed>  $ids
+     * @return list<array<string, mixed>>
      */
-    private function productOptionsFor(Builder $query): array
+    private function selectedOptions(array $ids): array
     {
-        return $query->select(['id', 'name'])
-            ->with(['product_translations' => fn (Relation $query) => $query->select(['id', 'product_id', 'lang', 'name'])->where('lang', app()->getLocale())])
-            ->orderBy('name')->orderBy('id')->get()
-            ->map(fn (Product $product) => ['id' => $product->id, 'name' => (string) $product->getTranslation('name')])->all();
+        $order = array_flip(array_map('intval', $ids));
+
+        return CampaignProductController::products()->whereIn('id', $ids)->get()
+            ->sortBy(fn (Product $product): int => $order[$product->id] ?? PHP_INT_MAX)->values()
+            ->map(fn (Product $product): array => SearchOption::campaignProduct($product))->all();
     }
 
     /** @param array<string, mixed> $validated

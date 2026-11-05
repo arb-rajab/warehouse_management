@@ -7,11 +7,11 @@ import ResourceFormPage from '@/components/ResourceFormPage.vue';
 import StoreCouponFormFields from '@/components/StoreCouponFormFields.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
 import { t } from '@/lib/i18n';
-import type { StoreCoupon, StoreCouponProductOption } from '@/types/store';
+import type { StoreCoupon, StoreCampaignProduct } from '@/types/store';
 
 defineProps<{
     coupon: StoreCoupon;
-    selectedProducts: StoreCouponProductOption[];
+    selectedProducts: StoreCampaignProduct[];
 }>();
 </script>
 

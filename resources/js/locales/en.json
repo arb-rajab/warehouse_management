@@ -2061,9 +2061,9 @@
                 "endDate": "End date",
                 "minBuy": "Minimum purchase",
                 "maxDiscount": "Maximum discount",
-                "searchProducts": "Search products",
-                "searching": "Searching…",
-                "products": "Products"
+                "searchProducts": "Search products by name…",
+                "products": "Products",
+                "chooseProducts": "Select products"
             }
         },
         "campaigns": {
@@ -2072,9 +2072,8 @@
                 "banner": "Banner",
                 "startDate": "Start date",
                 "endDate": "End date",
-                "searchProducts": "Search products (base and rewards)",
-                "searchBrands": "Search brands",
-                "searching": "Searching…",
+                "searchProducts": "Search products by name…",
+                "searchBrands": "Search brands by name…",
                 "products": "Reward products",
                 "product": "Product",
                 "discount": "Discount",
@@ -2090,7 +2089,6 @@
                 "baseProduct": "Base product",
                 "baseQuantity": "Required base quantity",
                 "spendThreshold": "Required brand spend",
-                "choose": "Choose…",
                 "backgroundColor": "Background colour",
                 "textColor": "Text colour",
                 "dark": "Dark",
@@ -2100,7 +2098,10 @@
                 "repeatable": "Repeatable",
                 "multipleUsage": "Multiple usage",
                 "featured": "Featured",
-                "price": "Base price"
+                "price": "Base price",
+                "chooseProducts": "Select reward products",
+                "chooseProduct": "Select a product",
+                "chooseBrand": "Select a brand"
             },
             "saving": "Saving…",
             "search": "Search",

@@ -7,13 +7,13 @@ use App\Http\Requests\Store\Admin\FilterCampaignsRequest;
 use App\Http\Requests\Store\Admin\StoreOfferRequest;
 use App\Http\Requests\Store\Admin\ToggleCampaignRequest;
 use App\Http\Requests\Store\Admin\UpdateOfferRequest;
-use App\Http\Resources\Store\CampaignProductResource;
 use App\Http\Resources\Store\OfferResource;
 use App\Models\Brand;
 use App\Models\Offer;
 use App\Models\OfferProduct;
 use App\Models\Product;
 use App\Support\NewestFirst;
+use App\Support\SearchOption;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -57,7 +57,7 @@ class OfferController extends Controller implements HasMiddleware
         $rows = OfferProduct::query()->select(['product_id', 'is_base_product', 'quantity', 'discount', 'discount_type'])->where('offer_id', $offer->id)->orderBy('id')->get();
         $base = $rows->firstWhere('is_base_product', 1);
 
-        return Inertia::render('Store/Admin/Marketing/Offers/Edit', ['offer' => new OfferResource($offer), 'baseProductId' => $base?->product_id, 'baseQuantity' => (float) ($base->quantity ?? 1), 'products' => $rows->where('is_base_product', 0)->values()->map(fn ($row) => ['id' => (int) $row->product_id, 'quantity' => (int) $row->quantity, 'discount' => (float) $row->discount, 'discount_type' => $row->discount_type ?? 'amount'])->all(), 'selectedProducts' => CampaignProductResource::collection(CampaignProductController::products()->whereIn('id', $rows->pluck('product_id'))->get()), 'selectedBrand' => $offer->brand_id ? Brand::query()->without('brand_translations')->select(['id', 'name'])->find($offer->brand_id) : null]);
+        return Inertia::render('Store/Admin/Marketing/Offers/Edit', ['offer' => new OfferResource($offer), 'baseProductId' => $base?->product_id, 'baseQuantity' => (float) ($base->quantity ?? 1), 'products' => $rows->where('is_base_product', 0)->values()->map(fn ($row) => ['id' => (int) $row->product_id, 'quantity' => (int) $row->quantity, 'discount' => (float) $row->discount, 'discount_type' => $row->discount_type ?? 'amount'])->all(), 'selectedProducts' => CampaignProductController::products()->whereIn('id', $rows->pluck('product_id'))->get()->map(fn (Product $p): array => SearchOption::campaignProduct($p))->all(), 'selectedBrand' => ($brand = $offer->brand_id ? Brand::query()->without('brand_translations')->select(['id', 'name'])->find($offer->brand_id) : null) === null ? null : SearchOption::brand($brand)]);
     }
 
     public function store(StoreOfferRequest $request): RedirectResponse

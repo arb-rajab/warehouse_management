@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Models\Brand;
 use App\Models\Product;
 use App\Models\StoreUser;
 use App\Models\Upload;
@@ -101,7 +102,7 @@ final class SearchOption
             self::describe([$user->phone, $user->email]),
             null,
             'user',
-            $discount > 0 ? self::badge(__('store_admin.search_option_discount', ['percent' => rtrim(rtrim(number_format($discount, 2, '.', ''), '0'), '.')]), 'info') : null,
+            $discount > 0 ? self::badge(__('store_admin.search_option_discount', ['percent' => self::trimmed($discount)]), 'info') : null,
             ['rep_discount_percentage' => $discount],
         );
     }
@@ -140,6 +141,50 @@ final class SearchOption
                 'stocks' => $stocks,
             ],
         );
+    }
+
+    /**
+     * A product of the campaign and coupon pickers: thumbnail, name in the
+     * active language, `SKU · #id · price`, and the product's own discount as
+     * the badge. Select `id, name, serial, unit_price, discount, discount_type,
+     * thumbnail_img`, with `product_translations` for the language and
+     * `thumbnailUpload` (`id, file_name, external_link`) loaded.
+     *
+     * @return Option
+     */
+    public static function campaignProduct(Product $product): array
+    {
+        $price = (float) $product->getAttribute('unit_price');
+        $discount = (float) $product->getAttribute('discount');
+        $type = $product->getAttribute('discount_type') ?? 'amount';
+        $serial = $product->getAttribute('serial');
+
+        return self::make(
+            $product->id,
+            (string) $product->getTranslation('name'),
+            self::describe([$serial === null || $serial === '' ? null : __('store_admin.search_option_sku', ['serial' => $serial]), '#'.$product->id, number_format($price, 2, '.', '')]),
+            self::imageUrl($product->thumbnailUpload),
+            'package',
+            $discount > 0 ? self::badge(__('store_admin.search_option_off', ['value' => $type === 'percent' ? self::trimmed($discount).'%' : number_format($discount, 2, '.', '')]), 'info') : null,
+            ['price' => $price, 'discount' => $discount, 'discount_type' => $type],
+        );
+    }
+
+    /**
+     * A brand: its name, in a tag tile. Select `id, name` (the base name, so
+     * no translations are loaded per row).
+     *
+     * @return Option
+     */
+    public static function brand(Brand $brand): array
+    {
+        return self::make($brand->id, (string) $brand->name, null, null, 'tag');
+    }
+
+    /** 12.50 as "12.5", 10.00 as "10". */
+    private static function trimmed(float $value): string
+    {
+        return rtrim(rtrim(number_format($value, 2, '.', ''), '0'), '.');
     }
 
     /** @return Badge */

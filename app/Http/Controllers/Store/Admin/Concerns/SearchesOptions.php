@@ -47,16 +47,39 @@ trait SearchesOptions
      */
     protected function whereWordsMatch(Builder $query, array $columns, string $term): void
     {
-        $words = array_slice(preg_split('/\s+/', $term, -1, PREG_SPLIT_NO_EMPTY) ?: [], 0, self::MAX_SEARCH_WORDS);
         $grammar = $query->getQuery()->getGrammar();
 
-        foreach ($words as $word) {
+        foreach ($this->searchWords($term) as $word) {
             $pattern = $this->likePattern($word);
             $query->where(function (Builder $group) use ($columns, $grammar, $pattern): void {
                 foreach ($columns as $column) {
                     $group->orWhereRaw($grammar->wrap($column).' like ? escape ?', [$pattern, '\\']);
                 }
             });
+        }
+    }
+
+    /**
+     * Like {@see self::whereWordsMatch()} on the model's own `name`, where a word
+     * may instead be found in the name's translation into the active language.
+     *
+     * @template TModel of Model
+     *
+     * @param  Builder<TModel>  $query
+     */
+    protected function whereTranslatedNameMatches(Builder $query, string $relation, string $term): void
+    {
+        $grammar = $query->getQuery()->getGrammar();
+        $name = $grammar->wrap($query->getModel()->qualifyColumn('name'));
+        $translated = $grammar->wrap($query->getModel()->{$relation}()->getRelated()->qualifyColumn('name'));
+
+        foreach ($this->searchWords($term) as $word) {
+            $pattern = $this->likePattern($word);
+            $query->where(fn (Builder $group) => $group
+                ->whereRaw($name.' like ? escape ?', [$pattern, '\\'])
+                ->orWhereHas($relation, fn (Builder $translation) => $translation
+                    ->where('lang', app()->getLocale())
+                    ->whereRaw($translated.' like ? escape ?', [$pattern, '\\'])));
         }
     }
 
@@ -74,6 +97,12 @@ trait SearchesOptions
         }
 
         $query->orderBy($column)->orderBy($query->getModel()->getQualifiedKeyName());
+    }
+
+    /** @return list<string> */
+    private function searchWords(string $term): array
+    {
+        return array_slice(preg_split('/\s+/', $term, -1, PREG_SPLIT_NO_EMPTY) ?: [], 0, self::MAX_SEARCH_WORDS);
     }
 
     /**
