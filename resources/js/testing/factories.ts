@@ -91,7 +91,6 @@ import type {
 import type { CustomerDetails } from '@/types/storeCustomers';
 import type {
     CustomerNotification,
-    NotificationCustomer,
     AdminNotification,
 } from '@/types/storeNotifications';
 import type {
@@ -516,12 +515,6 @@ export function customerNotification(
         customer: { id: 21, name: 'Customer' },
         ...overrides,
     };
-}
-
-export function notificationCustomer(
-    overrides: Partial<NotificationCustomer> = {},
-): NotificationCustomer {
-    return { id: 21, name: 'Customer', account_id: 100, ...overrides };
 }
 
 export function adminNotification(

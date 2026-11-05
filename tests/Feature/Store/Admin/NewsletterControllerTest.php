@@ -52,18 +52,25 @@ test('WMS sessions cannot open or use the newsletter', function () {
 
 test('newsletter recipient searches are narrow bounded and isolated by recipient kind', function () {
     $user = createStoreUser('customer');
-    $user->forceFill(['email' => 'target@example.test'])->save();
+    $user->forceFill(['email' => 'target@example.test', 'name' => 'Target Reader'])->save();
     createStoreUser('customer');
     Subscriber::forceCreate(['email' => 'subscriber@example.test']);
     foreach (range(1, 35) as $number) {
         Subscriber::forceCreate(['email' => sprintf('reader%02d@example.test', $number)]);
     }
     actingAsStoreUser(createStoreStaff('send_newsletter'));
-    $this->getJson(route('newsletters.recipients', ['kind' => 'users', 'q' => 'target']))->assertOk()->assertExactJson(['target@example.test']);
-    $this->getJson(route('newsletters.recipients', ['kind' => 'subscribers', 'q' => 'subscriber']))->assertOk()->assertExactJson(['subscriber@example.test']);
-    expect($this->getJson(route('newsletters.recipients', ['kind' => 'subscribers']))->json())->toHaveCount(30);
+    $this->getJson(route('newsletters.recipients', ['kind' => 'users', 'q' => 'target']))->assertOk()->assertJsonPath('data', [
+        ['id' => 'target@example.test', 'label' => 'target@example.test', 'description' => 'Target Reader', 'image' => null, 'icon' => 'mail', 'badge' => null],
+    ]);
+    $this->getJson(route('newsletters.recipients', ['kind' => 'users', 'q' => 'reader target']))->assertOk()->assertJsonCount(1, 'data');
+    $this->getJson(route('newsletters.recipients', ['kind' => 'subscribers', 'q' => 'subscriber']))->assertOk()->assertJsonPath('data', [
+        ['id' => 'subscriber@example.test', 'label' => 'subscriber@example.test', 'description' => null, 'image' => null, 'icon' => 'mail', 'badge' => null],
+    ]);
+    $first = $this->getJson(route('newsletters.recipients', ['kind' => 'subscribers']))->assertOk();
+    expect($first->json('data'))->toHaveCount(20)->and($first->json('meta.total'))->toBe(36)->and($first->json('meta.last_page'))->toBe(2);
+    expect($this->getJson(route('newsletters.recipients', ['kind' => 'subscribers', 'page' => 2]))->json('data'))->toHaveCount(16);
     $this->getJson(route('newsletters.recipients', ['kind' => 'other']))->assertUnprocessable()->assertJsonValidationErrors('kind');
-    $this->getJson(route('newsletters.recipients', ['kind' => 'users', 'q' => str_repeat('x', 256)]))->assertUnprocessable()->assertJsonValidationErrors('q');
+    $this->getJson(route('newsletters.recipients', ['kind' => 'users', 'q' => str_repeat('x', 101)]))->assertUnprocessable()->assertJsonValidationErrors('q');
 });
 
 test('newsletters queue only selected persisted recipients once and sanitize HTML in the unchanged Blade email', function () {

@@ -7,9 +7,6 @@ import ResourceFormPage from '@/components/ResourceFormPage.vue';
 import StoreCustomerNotificationFormFields from '@/components/StoreCustomerNotificationFormFields.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
 import { t } from '@/lib/i18n';
-import type { NotificationCustomer } from '@/types/storeNotifications';
-
-defineProps<{ customers: NotificationCustomer[] }>();
 </script>
 
 <template>
@@ -22,9 +19,6 @@ defineProps<{ customers: NotificationCustomer[] }>();
         :layout="StoreAdminLayout"
         #default="{ errors }"
     >
-        <StoreCustomerNotificationFormFields
-            :customers="customers"
-            :errors="errors"
-        />
+        <StoreCustomerNotificationFormFields :errors="errors" />
     </ResourceFormPage>
 </template>

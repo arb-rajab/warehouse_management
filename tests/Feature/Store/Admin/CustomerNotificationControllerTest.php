@@ -53,20 +53,45 @@ test('customer notification list pages deterministically and validates page size
     $this->get(route('admin.notifications.all', ['per_page' => 7]))->assertSessionHasErrors('per_page');
 });
 
-test('customer notification create offers only customers with narrow recipient details in name order', function () {
+test('customer notification create sends no customer list and the customer search offers only customers', function () {
     actingAsStoreUser(createStoreStaff('add_notification'));
     $a = createStoreUser('customer');
-    $a->forceFill(['name' => 'Alpha', 'AccSysID' => 100])->save();
+    $a->forceFill(['name' => 'Alpha', 'AccSysID' => 100, 'phone' => '0611111111', 'email' => 'alpha@example.test'])->save();
     $z = createStoreUser('customer');
     $z->forceFill(['name' => 'Zulu', 'AccSysID' => null])->save();
-    createStoreUser('seller');
+    createStoreUser('seller')->forceFill(['name' => 'Alpha Seller'])->save();
+    createStoreUser('customer')->forceFill(['is_rep' => 1, 'name' => 'Alpha Rep'])->save();
 
     $this->get(route('admin.notifications.create'))->assertOk()->assertInertia(fn (Assert $page) => $page
-        ->component('Store/Admin/Notifications/Customers/Create')->where('customers', [
-            ['id' => $z->id, 'name' => 'Zulu', 'account_id' => null],
-            ['id' => $a->id, 'name' => 'Alpha', 'account_id' => 100],
-        ]));
+        ->component('Store/Admin/Notifications/Customers/Create')->missing('customers'));
+
+    $found = $this->getJson(route('admin.notifications.customers', ['q' => 'alpha']))->assertOk();
+    expect(collect($found->json('data'))->pluck('label')->all())->toBe(['Alpha', 'Alpha Rep'])
+        ->and($found->json('data.0'))->toEqual([
+            'id' => $a->id, 'label' => 'Alpha', 'description' => '0611111111 · alpha@example.test', 'image' => null, 'icon' => 'user',
+            'badge' => ['text' => 'Account 100', 'tone' => 'neutral'],
+            'extra' => ['account_id' => '100', 'member_serial' => null, 'rep_discount_percentage' => 0],
+        ]);
 });
+
+test('customer notification customer search pages past twenty customers', function () {
+    actingAsStoreUser(createStoreStaff('add_notification'));
+    foreach (range(1, 25) as $number) {
+        createStoreUser('customer')->forceFill(['name' => sprintf('Paged %02d', $number)])->save();
+    }
+    createStoreUser('seller')->forceFill(['name' => 'Paged Seller'])->save();
+
+    $first = $this->getJson(route('admin.notifications.customers', ['q' => 'Paged']))->assertOk();
+    $second = $this->getJson(route('admin.notifications.customers', ['q' => 'Paged', 'page' => 2]))->assertOk();
+
+    expect($first->json('data'))->toHaveCount(20)->and($first->json('meta.total'))->toBe(25)->and($second->json('data'))->toHaveCount(5);
+    $this->getJson(route('admin.notifications.customers', ['q' => str_repeat('x', 101)]))->assertUnprocessable()->assertJsonValidationErrors('q');
+});
+
+test('customer notification customer search refuses unauthorized callers', function (string $caller) {
+    actingAsRefusedStoreCaller($caller);
+    assertStoreCallerRefused($this->get(route('admin.notifications.customers')), $caller);
+})->with('refused store admin callers');
 
 test('customer notification send uses the selected customer device key and records a successful push', function () {
     actingAsStoreUser(createStoreStaff('add_notification'));

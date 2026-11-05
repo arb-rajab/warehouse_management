@@ -50,7 +50,7 @@ Keep their order; do not "fix" them to newest first.
 | Where | Order kept | Reason |
 |---|---|---|
 | `CategoryController::index` | `order_level` desc, id | the display priority staff maintain; the category tree reads by it |
-| Typeahead endpoints behind `StoreSearchSelect` (every controller that `use`s `SearchesOptions`: `OrderEntryController::search`, `CampaignProductController` (products and brands), `CouponController::productOptions`, ...) | names starting with the term first, then name, then id (`SearchesOptions::orderByRelevance`) | pickers inside forms, not tables; see [store-search-select.md](store-search-select.md) |
+| Typeahead endpoints behind `StoreSearchSelect` (every controller that `use`s `SearchesOptions`: `OrderEntryController::search`, `CampaignProductController` (products and brands), `CouponController::productOptions`, `NewsletterController::recipients`, `ProductSearchController::search`, `OrderConfigurationController::representatives`, `CustomerNotificationController::customers`, ...) | names starting with the term first, then name, then id (`SearchesOptions::orderByRelevance`) | pickers inside forms, not tables; see [store-search-select.md](store-search-select.md) |
 | `ReportController` in-house sales | `num_of_sale` desc, then newest | a ranking by sales |
 | `ReportController` searches | `count` desc, id desc | a ranking by search count |
 | `CustomerController::pageViews` | view count desc | a ranking by views |

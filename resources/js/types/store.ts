@@ -99,12 +99,6 @@ export interface StoreCurrency extends StoreReferenceOption {
     exchange_rate: string;
     status: boolean;
 }
-export interface OrderConfigurationProduct {
-    id: number;
-    name: string;
-    mat_id: string;
-}
-
 /** The narrow database language shape used by administration. */
 export interface AdminLanguage {
     id: number;

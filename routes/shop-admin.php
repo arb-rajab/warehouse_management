@@ -397,6 +397,7 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
     Route::get('/order-configuration', [OrderConfigurationController::class, 'index'])->name('order_configuration.index');
     Route::post('/order-configuration', [OrderConfigurationController::class, 'update'])->name('order_configuration.update');
     Route::post('/order-configuration/representative', [OrderConfigurationController::class, 'updateRepresentative'])->name('order_configuration.representative.update');
+    Route::get('/order-configuration/representatives', [OrderConfigurationController::class, 'representatives'])->name('order_configuration.representatives');
     Route::get('/product/search', [ProductSearchController::class, 'search'])->name('order_configuration.product-search');
 
     // Currency forms are Vue dialogs; create/edit URLs also support direct visits.
@@ -689,6 +690,7 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
 
     Route::get('/notifications', [CustomerNotificationController::class, 'index'])->name('admin.notifications.all');
     Route::get('/notifications/create', [CustomerNotificationController::class, 'create'])->name('admin.notifications.create');
+    Route::get('/notifications/customers', [CustomerNotificationController::class, 'customers'])->name('admin.notifications.customers');
     Route::post('/notifications/send', [CustomerNotificationController::class, 'store'])->name('admin.notifications.send');
     Route::delete('/notifications/{notification}', [CustomerNotificationController::class, 'destroy'])->name('admin.notifications.delete');
 });

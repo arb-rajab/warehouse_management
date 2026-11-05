@@ -1215,13 +1215,13 @@
             "minimumCheck": "Check minimum order amount",
             "amount": "Minimum order amount",
             "product": "Default product ID",
-            "selected": "Selected product: {name}",
-            "searchResults": "Search results",
             "searchHint": "Enter at least 4 characters to search by product ID.",
-            "searching": "Searching…",
-            "noResults": "No products found.",
             "representative": "Default representative",
-            "representativeCheck": "Use a default representative"
+            "representativeCheck": "Use a default representative",
+            "chooseProduct": "Select the default product",
+            "searchProducts": "Search by product ID…",
+            "chooseRepresentative": "Select the default representative",
+            "searchRepresentatives": "Search representatives by name, phone or email…"
         },
         "generalSettings": {
             "title": "General settings",
@@ -1442,7 +1442,8 @@
                 "title": "Title",
                 "body": "Description",
                 "customer": "Customer",
-                "customerPlaceholder": "Choose a customer"
+                "customerPlaceholder": "Choose a customer",
+                "searchCustomers": "Search customers by name, phone, email or account…"
             },
             "create": {
                 "title": "Send customer notification",
@@ -2196,16 +2197,18 @@
             "content": "Newsletter content",
             "smtpMissing": "Configure SMTP before sending newsletters.",
             "recipientHelp": "Choose at least one user or subscriber email. Search to find more recipients.",
-            "searching": "Searching…",
             "search": {
-                "users": "Search user emails",
-                "subscribers": "Search subscriber emails"
+                "users": "Search user emails or names…",
+                "subscribers": "Search subscriber emails…"
             },
             "recipients": {
                 "users": "User emails",
                 "subscribers": "Subscriber emails"
             },
-            "searchFailed": "Recipients could not be loaded. Try again."
+            "choose": {
+                "users": "Select user emails",
+                "subscribers": "Select subscriber emails"
+            }
         },
         "blogPosts": {
             "index": {

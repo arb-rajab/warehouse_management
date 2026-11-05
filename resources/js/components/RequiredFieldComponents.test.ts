@@ -9,7 +9,6 @@ import FormField from '@/components/FormField.vue';
 import ProductSelect from '@/components/ProductSelect.vue';
 import RequiredMark from '@/components/RequiredMark.vue';
 import StoreBooleanField from '@/components/StoreBooleanField.vue';
-import StoreNewsletterRecipients from '@/components/StoreNewsletterRecipients.vue';
 import StoreRichTextField from '@/components/StoreRichTextField.vue';
 import StoreSearchSelect from '@/components/StoreSearchSelect.vue';
 import StoreSelectField from '@/components/StoreSelectField.vue';
@@ -98,13 +97,6 @@ const requiredFieldComponents: {
             modelValue: null,
         },
         control: '#product-guard',
-    },
-    {
-        name: 'StoreNewsletterRecipients',
-        component: StoreNewsletterRecipients,
-        props: { kind: 'users', errors: {}, required: false },
-        control: 'select',
-        label: 'label[for="user_emails"]',
     },
     {
         name: 'StoreSearchSelect',

@@ -3,12 +3,13 @@
 namespace App\Http\Controllers\Store\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Store\Admin\Concerns\SearchesOptions;
 use App\Http\Requests\Store\Admin\SearchNewsletterRecipientsRequest;
 use App\Http\Requests\Store\Admin\SendNewsletterRequest;
 use App\Mail\EmailManager;
 use App\Models\StoreUser;
 use App\Models\Subscriber;
-use Illuminate\Database\Eloquent\Builder;
+use App\Support\SearchOption;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -20,6 +21,8 @@ use Inertia\Response;
 
 class NewsletterController extends Controller implements HasMiddleware
 {
+    use SearchesOptions;
+
     /** @return array<int, Middleware> */
     public static function middleware(): array
     {
@@ -38,14 +41,28 @@ class NewsletterController extends Controller implements HasMiddleware
         ]);
     }
 
+    /** The typeahead behind the recipient lists (StoreSearchSelect): the email is the id. */
     public function recipients(SearchNewsletterRecipientsRequest $request): JsonResponse
     {
-        $query = $request->validated('kind') === 'users' ? StoreUser::query() : Subscriber::query();
-        $search = $request->validated('q');
+        $term = $this->searchTerm($request);
 
-        return response()->json($query->select(['email'])->whereNotNull('email')->where('email', '!=', '')
-            ->when($search, fn (Builder $query) => $query->where('email', 'like', '%'.$search.'%'))
-            ->distinct()->orderBy('email')->limit(30)->pluck('email')->all());
+        if ($request->validated('kind') === 'users') {
+            $users = StoreUser::query()->select(['id', 'name', 'email'])->whereNotNull('email')->where('email', '!=', '');
+            if ($term !== '') {
+                $this->whereWordsMatch($users, ['email', 'name'], $term);
+            }
+            $this->orderByRelevance($users, 'email', $term);
+
+            return $this->optionsPage($users, fn (StoreUser $user): array => SearchOption::recipient((string) $user->email, $user->name));
+        }
+
+        $subscribers = Subscriber::query()->select(['id', 'email'])->whereNotNull('email')->where('email', '!=', '');
+        if ($term !== '') {
+            $this->whereWordsMatch($subscribers, ['email'], $term);
+        }
+        $this->orderByRelevance($subscribers, 'email', $term);
+
+        return $this->optionsPage($subscribers, fn (Subscriber $subscriber): array => SearchOption::recipient((string) $subscriber->email));
     }
 
     public function send(SendNewsletterRequest $request): RedirectResponse

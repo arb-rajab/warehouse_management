@@ -18,6 +18,7 @@ import {
     watchCsp,
 } from './support/editor';
 import { switchLocale } from './support/nav';
+import { pickSearchOptions } from './support/searchSelect';
 import {
     ensureStoreRtlLanguage,
     seedStoreFixtures,
@@ -141,41 +142,38 @@ test('a newsletter is composed with formatting, keeps its draft after a refused 
 
     // A recipient the search never offered is refused by the server, and
     // the draft survives the round trip.
-    const users = page.locator('#user_emails');
-    await users.evaluate(async (element) => {
-        const option = new Option(
-            'forged-recipient@example.test',
-            'forged-recipient@example.test',
-            true,
-            true,
-        );
-        element.appendChild(option);
-        element.dispatchEvent(new Event('change', { bubbles: true }));
-        await new Promise((resolve) => requestAnimationFrame(resolve));
-        option.remove();
+    const forged =
+        'input[name="user_emails[]"][value="forged-recipient@example.test"]';
+    await page.locator('#subject').evaluate((subject) => {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'user_emails[]';
+        input.value = 'forged-recipient@example.test';
+        subject.closest('form')!.appendChild(input);
     });
-    await users.selectOption('forged-recipient@example.test');
     await page.getByRole('button', { name: 'Send', exact: true }).click();
     await expect(
         page.getByText('The selected user_emails.0 is invalid.'),
     ).toBeVisible();
+    await page.locator(forged).evaluate((input) => input.remove());
     await expect(page.locator('#subject')).toHaveValue('Weekly offers');
     await expect(page.locator('#content strong')).toHaveText('Fresh dates');
 
     // Pick a real recipient through the bounded search.
-    await page.locator('#user_emails_search').fill('newsletter-reader');
-    await expect(
-        users.locator('option[value="newsletter-reader@example.test"]'),
-    ).toHaveCount(1);
-    await users.selectOption('newsletter-reader@example.test');
-    await page
-        .locator('#subscriber_emails_search')
-        .fill('newsletter-subscriber');
+    await pickSearchOptions(page, '#user_emails', 'newsletter-reader', [
+        /newsletter-reader@example.test/,
+    ]);
     await expect(
         page.locator(
-            '#subscriber_emails option[value="newsletter-subscriber@example.test"]',
+            'input[name="user_emails[]"][value="newsletter-reader@example.test"]',
         ),
     ).toHaveCount(1);
+    await pickSearchOptions(
+        page,
+        '#subscriber_emails',
+        'newsletter-subscriber',
+        [/newsletter-subscriber@example.test/],
+    );
     expect(await documentViolations(page)).toEqual([]);
 
     const sent = page.waitForResponse(

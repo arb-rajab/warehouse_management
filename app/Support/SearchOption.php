@@ -187,6 +187,28 @@ final class SearchOption
         return rtrim(rtrim(number_format($value, 2, '.', ''), '0'), '.');
     }
 
+    /**
+     * A newsletter recipient: the email is the posted value and the label, a
+     * user's name is the description. Select `id, email` (and `name` for a user).
+     *
+     * @return Option
+     */
+    public static function recipient(string $email, ?string $name = null): array
+    {
+        return self::make($email, $email, $name === null || trim($name) === '' ? null : trim($name), null, 'mail');
+    }
+
+    /**
+     * The order configuration's default product: thumbnail, name, `#id`. Select
+     * `id, name, thumbnail_img` with `product_translations` and `thumbnailUpload` loaded.
+     *
+     * @return Option
+     */
+    public static function configurationProduct(Product $product): array
+    {
+        return self::make($product->id, (string) $product->getTranslation('name'), '#'.$product->id, self::imageUrl($product->thumbnailUpload), 'package', null, ['mat_id' => (string) $product->id]);
+    }
+
     /** @return Badge */
     public static function stockBadge(int $quantity): array
     {

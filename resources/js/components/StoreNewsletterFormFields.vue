@@ -5,10 +5,11 @@ import FormField from '@/components/FormField.vue';
 import StoreNewsletterRecipients from '@/components/StoreNewsletterRecipients.vue';
 import StoreRichTextField from '@/components/StoreRichTextField.vue';
 import { t } from '@/lib/i18n';
+import type { SearchOption } from '@/types/searchSelect';
 
 defineProps<{ errors: Record<string, string> }>();
-const users = ref<string[]>([]);
-const subscribers = ref<string[]>([]);
+const users = ref<SearchOption[]>([]);
+const subscribers = ref<SearchOption[]>([]);
 const content = ref('');
 </script>
 

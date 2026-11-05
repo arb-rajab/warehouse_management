@@ -1,15 +1,15 @@
 <script setup lang="ts">
-import FieldError from '@/components/FieldError.vue';
+import { ref } from 'vue';
+import { customers } from '@/actions/App/Http/Controllers/Store/Admin/CustomerNotificationController';
 import FormField from '@/components/FormField.vue';
-import RequiredMark from '@/components/RequiredMark.vue';
-import { fieldLabelClass, plainFieldInputClass } from '@/lib/filters';
+import StoreSearchSelect from '@/components/StoreSearchSelect.vue';
 import { t } from '@/lib/i18n';
-import type { NotificationCustomer } from '@/types/storeNotifications';
+import type { SearchOption } from '@/types/searchSelect';
 
 defineProps<{
-    customers: NotificationCustomer[];
     errors: Partial<Record<'user_id' | 'title' | 'body', string>>;
 }>();
+const customer = ref<SearchOption | null>(null);
 </script>
 
 <template>
@@ -27,28 +27,18 @@ defineProps<{
             :error="errors.body"
             required
         />
-        <div>
-            <label for="user_id" :class="fieldLabelClass"
-                >{{ t('store.notifications.fields.customer') }}<RequiredMark
-            /></label>
-            <select
-                id="user_id"
-                name="user_id"
-                required
-                :class="plainFieldInputClass"
-            >
-                <option value="" disabled selected>
-                    {{ t('store.notifications.fields.customerPlaceholder') }}
-                </option>
-                <option
-                    v-for="customer in customers"
-                    :key="customer.id"
-                    :value="customer.id"
-                >
-                    {{ customer.name }} {{ customer.account_id ?? '' }}
-                </option>
-            </select>
-            <FieldError :message="errors.user_id" />
-        </div>
+        <StoreSearchSelect
+            id="user_id"
+            v-model="customer"
+            name="user_id"
+            :label="t('store.notifications.fields.customer')"
+            :endpoint="customers"
+            :placeholder="t('store.notifications.fields.customerPlaceholder')"
+            :search-placeholder="
+                t('store.notifications.fields.searchCustomers')
+            "
+            required
+            :error="errors.user_id"
+        />
     </div>
 </template>
