@@ -26,6 +26,10 @@ import {
     truckPhoto,
 } from '@/testing/factories';
 import { defaultAuthProps, resetMocks } from '@/testing/inertiaPageMocks';
+import {
+    expectColumnCanBeHidden,
+    expectColumnLocked,
+} from '@/testing/tableColumns';
 import type { StoreTripCheckpointRow } from '@/types/store';
 import Show from './Show.vue';
 
@@ -494,5 +498,16 @@ describe('Store trip detail', () => {
         expect(wrapper.find('textarea').exists()).toBe(false);
         expect(wrapper.find('select').exists()).toBe(false);
         expect(wrapper.text()).toContain(visit.notes ?? '');
+    });
+
+    it('lets staff hide an optional column from the header and every row, and keeps the identifier', async () => {
+        window.localStorage.clear();
+        const wrapper = mountPage([storeTripCheckpointRow()]);
+        await expectColumnCanBeHidden(wrapper, 'trips.checkpoints', {
+            key: 'eta',
+            label: t('store.trips.show.eta'),
+        });
+        expectColumnLocked(wrapper, t('store.trips.show.checkpoint'));
+        window.localStorage.clear();
     });
 });

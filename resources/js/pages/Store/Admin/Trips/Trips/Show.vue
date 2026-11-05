@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Head, useForm } from '@inertiajs/vue3';
 import { Pencil, Printer } from '@lucide/vue';
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import { edit as customerEdit } from '@/actions/App/Http/Controllers/Store/Admin/CustomerController';
 import { edit as driverEdit } from '@/actions/App/Http/Controllers/Store/Admin/DriverController';
 import { show as orderShow } from '@/actions/App/Http/Controllers/Store/Admin/OrderController';
@@ -19,6 +19,7 @@ import FieldError from '@/components/FieldError.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import RequiredLegend from '@/components/RequiredLegend.vue';
 import RequiredMark from '@/components/RequiredMark.vue';
+import StoreColumnPicker from '@/components/StoreColumnPicker.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
 import TableLink from '@/components/TableLink.vue';
 import TableObjectLink from '@/components/TableObjectLink.vue';
@@ -32,6 +33,7 @@ import { firstError, usePageError } from '@/lib/pageErrors';
 import { provideRequiredFields } from '@/lib/requiredFields';
 import { useStoreAccess } from '@/lib/storeAccess';
 import { tripCheckpointLabel } from '@/lib/storeTrip';
+import { useTableColumns } from '@/lib/useTableColumns';
 import type {
     StoreTrip,
     StoreTripCheckpointRow,
@@ -131,6 +133,35 @@ function print(): void {
     window.print();
 }
 const hasRequiredFields = provideRequiredFields();
+const columns = useTableColumns({
+    listId: 'trips.checkpoints',
+    columns: [
+        { key: 'position', label: 'store.trips.show.position' },
+        {
+            key: 'checkpoint',
+            label: 'store.trips.show.checkpoint',
+            required: true,
+        },
+        { key: 'customer', label: 'store.trips.show.customer' },
+        { key: 'representative', label: 'store.trips.show.representative' },
+        { key: 'address', label: 'store.trips.show.address' },
+        { key: 'status', label: 'store.trips.show.status' },
+        { key: 'arrivedAt', label: 'store.trips.show.arrivedAt' },
+        { key: 'eta', label: 'store.trips.show.eta' },
+        { key: 'notes', label: 'store.trips.show.notes' },
+        { key: 'phone', label: 'store.trips.show.phone' },
+        { key: 'products', label: 'store.trips.show.products' },
+        { key: 'company', label: 'store.trips.show.company' },
+        { key: 'amount', label: 'store.trips.show.amount' },
+        { key: 'invoiceNumber', label: 'store.trips.show.invoiceNumber' },
+        { key: 'photos', label: 'store.trips.show.photos' },
+        { key: 'cmr', label: 'store.trips.show.cmr' },
+    ],
+});
+const { shown, visibleColumns } = columns;
+const tableColumns = computed(() => [
+    ...visibleColumns.value.map((column) => t(column.label)),
+]);
 </script>
 
 <template>
@@ -264,30 +295,14 @@ const hasRequiredFields = provideRequiredFields();
             {{ t('store.trips.show.checkpoints') }}
         </h2>
         <RequiredLegend v-if="hasRequiredFields && access.can('edit_trip')" />
+        <StoreColumnPicker :state="columns" />
         <DataTable
-            :columns="[
-                t('store.trips.show.position'),
-                t('store.trips.show.checkpoint'),
-                t('store.trips.show.customer'),
-                t('store.trips.show.representative'),
-                t('store.trips.show.address'),
-                t('store.trips.show.status'),
-                t('store.trips.show.arrivedAt'),
-                t('store.trips.show.eta'),
-                t('store.trips.show.notes'),
-                t('store.trips.show.phone'),
-                t('store.trips.show.products'),
-                t('store.trips.show.company'),
-                t('store.trips.show.amount'),
-                t('store.trips.show.invoiceNumber'),
-                t('store.trips.show.photos'),
-                t('store.trips.show.cmr'),
-            ]"
+            :columns="tableColumns"
             :rows="checkpoints"
             :empty-message="t('store.trips.show.empty')"
         >
             <template #row="{ row: checkpoint }">
-                <td class="px-4 py-2 whitespace-nowrap">
+                <td v-if="shown.position" class="px-4 py-2 whitespace-nowrap">
                     {{ checkpoint.position ?? '-' }}
                 </td>
                 <td class="px-4 py-2">
@@ -316,7 +331,7 @@ const hasRequiredFields = provideRequiredFields();
                         )
                     }}</template>
                 </td>
-                <td class="px-4 py-2">
+                <td v-if="shown.customer" class="px-4 py-2">
                     <TableLink
                         v-if="
                             checkpoint.customer && access.can('edit_customer')
@@ -331,7 +346,7 @@ const hasRequiredFields = provideRequiredFields();
                         checkpoint.customer?.name ?? '-'
                     }}</template>
                 </td>
-                <td class="px-4 py-2">
+                <td v-if="shown.representative" class="px-4 py-2">
                     <TableObjectLink
                         v-if="checkpoint.representative"
                         :allowed="access.can('edit_customer')"
@@ -340,13 +355,13 @@ const hasRequiredFields = provideRequiredFields();
                     >
                     <template v-else>-</template>
                 </td>
-                <td class="px-4 py-2">
+                <td v-if="shown.address" class="px-4 py-2">
                     <AddressMapLink
                         :address="checkpoint.customer?.address"
                         placeholder="-"
                     />
                 </td>
-                <td class="px-4 py-2 whitespace-nowrap">
+                <td v-if="shown.status" class="px-4 py-2 whitespace-nowrap">
                     <template
                         v-if="
                             access.can('edit_trip') && trip.status !== 'closed'
@@ -385,21 +400,21 @@ const hasRequiredFields = provideRequiredFields();
                         statusLabel(checkpoint.status)
                     }}</template>
                 </td>
-                <td class="px-4 py-2 whitespace-nowrap">
+                <td v-if="shown.arrivedAt" class="px-4 py-2 whitespace-nowrap">
                     {{
                         checkpoint.arrived_at
                             ? formatDateTime(checkpoint.arrived_at)
                             : ''
                     }}
                 </td>
-                <td class="px-4 py-2 whitespace-nowrap">
+                <td v-if="shown.eta" class="px-4 py-2 whitespace-nowrap">
                     {{
                         checkpoint.eta === null
                             ? '-'
                             : formatDuration(checkpoint.eta)
                     }}
                 </td>
-                <td class="px-4 py-2">
+                <td v-if="shown.notes" class="px-4 py-2">
                     <template
                         v-if="
                             access.can('edit_trip') && trip.status !== 'closed'
@@ -435,26 +450,29 @@ const hasRequiredFields = provideRequiredFields();
                         checkpoint.notes
                     }}</span>
                 </td>
-                <td class="px-4 py-2 whitespace-nowrap">
+                <td v-if="shown.phone" class="px-4 py-2 whitespace-nowrap">
                     {{ checkpoint.customer?.phone || '-' }}
                 </td>
-                <td class="px-4 py-2 whitespace-nowrap">
+                <td v-if="shown.products" class="px-4 py-2 whitespace-nowrap">
                     {{ checkpoint.order ? checkpoint.order.products : '-' }}
                 </td>
-                <td class="px-4 py-2">
+                <td v-if="shown.company" class="px-4 py-2">
                     {{ checkpoint.customer?.company_name || '-' }}
                 </td>
-                <td class="px-4 py-2 whitespace-nowrap">
+                <td v-if="shown.amount" class="px-4 py-2 whitespace-nowrap">
                     {{ checkpoint.order?.amount ?? '-' }}
                 </td>
-                <td class="px-4 py-2 whitespace-nowrap">
+                <td
+                    v-if="shown.invoiceNumber"
+                    class="px-4 py-2 whitespace-nowrap"
+                >
                     {{
                         checkpoint.order
                             ? (checkpoint.order.invoice_number ?? '')
                             : '-'
                     }}
                 </td>
-                <td class="px-4 py-2">
+                <td v-if="shown.photos" class="px-4 py-2">
                     <div
                         v-if="photoUrls(checkpoint).length"
                         class="flex flex-wrap gap-1"
@@ -475,7 +493,7 @@ const hasRequiredFields = provideRequiredFields();
                     </div>
                     <template v-else>-</template>
                 </td>
-                <td class="px-4 py-2">
+                <td v-if="shown.cmr" class="px-4 py-2">
                     <TableActionLink
                         v-if="checkpoint.has_cmr"
                         :href="printCmr(checkpoint)"

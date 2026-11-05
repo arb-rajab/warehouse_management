@@ -24,6 +24,16 @@ import { confirmDelete } from '@/lib/confirm';
 import { t } from '@/lib/i18n';
 import { paginated, storeSeller, storeSharedProps } from '@/testing/factories';
 import { defaultAuthProps } from '@/testing/inertiaPageMocks';
+import {
+    expectColumnCanBeHidden,
+    expectColumnLocked,
+} from '@/testing/tableColumns';
+import {
+    expectHeadersMatchCells,
+    headerTexts,
+    offeredColumns,
+    openColumnPicker,
+} from '@/testing/tableColumns';
 import type { StoreSeller } from '@/types/store';
 import Index from './Index.vue';
 
@@ -289,5 +299,35 @@ describe('seller list', () => {
         expect(
             wrapper.get('button[role="switch"]').attributes('aria-checked'),
         ).toBe('true');
+    });
+
+    it('lets staff hide an optional column from the header and every row, and keeps the identifier', async () => {
+        window.localStorage.clear();
+        const wrapper = mountPage();
+        await expectColumnCanBeHidden(wrapper, 'sellers.sellers', {
+            key: 'phone',
+            label: t('store.sellers.phone'),
+        });
+        expectColumnLocked(wrapper, t('store.sellers.shopName'));
+        window.localStorage.clear();
+    });
+
+    it('offers the due column only on a list with payouts', async () => {
+        window.localStorage.clear();
+        const withPayouts = mountPage();
+        expect(headerTexts(withPayouts)).toContain(t('store.sellers.due'));
+        await openColumnPicker(withPayouts);
+        expect(offeredColumns(withPayouts)).toContain(t('store.sellers.due'));
+
+        const withoutPayouts = mountPage(permissions, storeSeller(), false);
+        expect(headerTexts(withoutPayouts)).not.toContain(
+            t('store.sellers.due'),
+        );
+        await openColumnPicker(withoutPayouts);
+        expect(offeredColumns(withoutPayouts)).not.toContain(
+            t('store.sellers.due'),
+        );
+        expectHeadersMatchCells(withoutPayouts);
+        window.localStorage.clear();
     });
 });

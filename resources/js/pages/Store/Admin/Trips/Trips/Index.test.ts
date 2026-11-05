@@ -28,6 +28,10 @@ import { formatDateTime, formatDuration } from '@/lib/date';
 import { i18n, t } from '@/lib/i18n';
 import { paginated, storeSharedProps, storeTrip } from '@/testing/factories';
 import { defaultAuthProps, resetMocks } from '@/testing/inertiaPageMocks';
+import {
+    expectColumnCanBeHidden,
+    expectColumnLocked,
+} from '@/testing/tableColumns';
 import type {
     StoreTrip,
     StoreTripFilters,
@@ -602,5 +606,16 @@ describe('Store trip lists', () => {
         expect(wrapper.get('tbody').text()).toContain(
             '<script>alert(1)</script>',
         );
+    });
+
+    it('lets staff hide an optional column from the header and every row, and keeps the identifier', async () => {
+        window.localStorage.clear();
+        const wrapper = mountPage([storeTrip()]);
+        await expectColumnCanBeHidden(wrapper, 'trips.trips', {
+            key: 'distance',
+            label: t('store.trips.index.distance'),
+        });
+        expectColumnLocked(wrapper, t('store.trips.index.code'));
+        window.localStorage.clear();
     });
 });

@@ -13,6 +13,10 @@ import {
     storeSharedProps,
 } from '@/testing/factories';
 import { defaultAuthProps, resetMocks } from '@/testing/inertiaPageMocks';
+import {
+    expectColumnCanBeHidden,
+    expectColumnLocked,
+} from '@/testing/tableColumns';
 import Index from './Index.vue';
 const { usePageMock, routerGetMock, routerPostMock } = vi.hoisted(() => ({
     usePageMock: vi.fn(),
@@ -162,5 +166,16 @@ describe('Support ticket list', () => {
         const denied = mountPage();
         expect(customerCell(denied).find('a').exists()).toBe(false);
         expect(customerCell(denied).text()).toBe('Customer');
+    });
+
+    it('lets staff hide an optional column from the header and every row, and keeps the identifier', async () => {
+        window.localStorage.clear();
+        const wrapper = mountPage();
+        await expectColumnCanBeHidden(wrapper, 'support.tickets', {
+            key: 'lastReply',
+            label: t('store.support.lastReply'),
+        });
+        expectColumnLocked(wrapper, t('store.support.ticketCode'));
+        window.localStorage.clear();
     });
 });

@@ -17,6 +17,10 @@ import {
     storeSharedProps,
 } from '@/testing/factories';
 import { defaultAuthProps } from '@/testing/inertiaPageMocks';
+import {
+    expectColumnCanBeHidden,
+    expectColumnLocked,
+} from '@/testing/tableColumns';
 import type { StoreSellerWithdrawal } from '@/types/store';
 import Index from './Index.vue';
 
@@ -166,5 +170,21 @@ describe('seller withdrawals page', () => {
         const denied = mount(Index, { props: props(9) });
         expect(sellerCell(denied).find('a').exists()).toBe(false);
         expect(sellerCell(denied).text()).toContain('Sam Seller');
+    });
+
+    it('lets staff hide an optional column from the header and every row, and keeps the identifier', async () => {
+        window.localStorage.clear();
+        const wrapper = mount(Index, {
+            props: {
+                withdrawals: paginated([storeSellerWithdrawal()]),
+                filters: { per_page: 20 },
+            },
+        });
+        await expectColumnCanBeHidden(wrapper, 'sellers.withdrawals', {
+            key: 'message',
+            label: t('store.sellers.message'),
+        });
+        expectColumnLocked(wrapper, t('store.sellers.seller'));
+        window.localStorage.clear();
     });
 });

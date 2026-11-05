@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Head, router } from '@inertiajs/vue3';
 import { Eye } from '@lucide/vue';
+import { computed } from 'vue';
 import { edit as customerEdit } from '@/actions/App/Http/Controllers/Store/Admin/CustomerController';
 import { index as ticketsIndex } from '@/actions/App/Http/Controllers/Store/Admin/SupportTicketController';
 import { show } from '@/actions/App/Http/Controllers/Store/Admin/SupportTicketController';
@@ -8,6 +9,7 @@ import DataTable from '@/components/DataTable.vue';
 import FormField from '@/components/FormField.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import Pagination from '@/components/Pagination.vue';
+import StoreColumnPicker from '@/components/StoreColumnPicker.vue';
 import SubmitButton from '@/components/SubmitButton.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
 import TableObjectLink from '@/components/TableObjectLink.vue';
@@ -16,6 +18,7 @@ import { formatDateTime } from '@/lib/date';
 import { t } from '@/lib/i18n';
 import { useStoreAccess } from '@/lib/storeAccess';
 import { ticketStatusLabel } from '@/lib/storeSupportTicket';
+import { useTableColumns } from '@/lib/useTableColumns';
 import type { Paginated, PerPageFilters } from '@/types/admin';
 import type { StoreSupportTicket } from '@/types/store';
 const props = defineProps<{
@@ -41,6 +44,26 @@ function search(event: Event): void {
     );
 }
 const access = useStoreAccess();
+const columns = useTableColumns({
+    listId: 'support.tickets',
+    columns: [
+        {
+            key: 'ticketCode',
+            label: 'store.support.ticketCode',
+            required: true,
+        },
+        { key: 'date', label: 'store.support.date' },
+        { key: 'subject', label: 'store.support.subject' },
+        { key: 'customer', label: 'store.support.customer' },
+        { key: 'status', label: 'store.support.status' },
+        { key: 'lastReply', label: 'store.support.lastReply' },
+    ],
+});
+const { shown, visibleColumns } = columns;
+const tableColumns = computed(() => [
+    ...visibleColumns.value.map((column) => t(column.label)),
+    t('store.support.actions'),
+]);
 </script>
 <template>
     <Head :title="t('store.support.tickets')" />
@@ -59,33 +82,28 @@ const access = useStoreAccess();
                 :processing="false"
             />
         </form>
+        <StoreColumnPicker :state="columns" />
         <DataTable
-            :columns="
-                [
-                    'ticketCode',
-                    'date',
-                    'subject',
-                    'customer',
-                    'status',
-                    'lastReply',
-                    'actions',
-                ].map((key) => t(`store.support.${key}`))
-            "
+            :columns="tableColumns"
             :rows="tickets.data"
             :empty-message="t('store.support.emptyTickets')"
         >
             <template #row="{ row }">
                 <td class="px-4 py-2">#{{ row.code }}</td>
-                <td class="px-4 py-2">
+                <td v-if="shown.date" class="px-4 py-2">
                     {{ row.created_at ? formatDateTime(row.created_at) : '' }}
                     <span v-if="!row.viewed"
                         >· {{ t('store.support.new') }}</span
                     >
                 </td>
-                <td class="max-w-xs truncate px-4 py-2" :title="row.subject">
+                <td
+                    v-if="shown.subject"
+                    class="max-w-xs truncate px-4 py-2"
+                    :title="row.subject"
+                >
                     {{ row.subject }}
                 </td>
-                <td class="px-4 py-2">
+                <td v-if="shown.customer" class="px-4 py-2">
                     <TableObjectLink
                         v-if="row.user"
                         :allowed="access.can('edit_customer')"
@@ -96,8 +114,10 @@ const access = useStoreAccess();
                         t('store.support.missingUser')
                     }}</template>
                 </td>
-                <td class="px-4 py-2">{{ ticketStatusLabel(row.status) }}</td>
-                <td class="px-4 py-2">
+                <td v-if="shown.status" class="px-4 py-2">
+                    {{ ticketStatusLabel(row.status) }}
+                </td>
+                <td v-if="shown.lastReply" class="px-4 py-2">
                     {{
                         row.last_reply_at
                             ? formatDateTime(row.last_reply_at)

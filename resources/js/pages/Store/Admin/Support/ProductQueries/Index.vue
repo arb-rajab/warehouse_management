@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Head, router } from '@inertiajs/vue3';
 import { Eye } from '@lucide/vue';
+import { computed } from 'vue';
 import { edit as customerEdit } from '@/actions/App/Http/Controllers/Store/Admin/CustomerController';
 import { edit as productEdit } from '@/actions/App/Http/Controllers/Store/Admin/ProductController';
 import {
@@ -10,11 +11,13 @@ import {
 import DataTable from '@/components/DataTable.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import Pagination from '@/components/Pagination.vue';
+import StoreColumnPicker from '@/components/StoreColumnPicker.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
 import TableObjectLink from '@/components/TableObjectLink.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
 import { t } from '@/lib/i18n';
 import { useStoreAccess } from '@/lib/storeAccess';
+import { useTableColumns } from '@/lib/useTableColumns';
 import type { Paginated, PerPageFilters } from '@/types/admin';
 import type { StoreProductQuery } from '@/types/store';
 
@@ -30,21 +33,30 @@ function onPerPageChange(perPage: number): void {
     );
 }
 const access = useStoreAccess();
+const columns = useTableColumns({
+    listId: 'support.productQueries',
+    columns: [
+        { key: 'customer', label: 'store.support.customer', required: true },
+        { key: 'product', label: 'store.support.product' },
+        { key: 'question', label: 'store.support.question' },
+        { key: 'reply', label: 'store.support.reply' },
+        { key: 'status', label: 'store.support.status' },
+    ],
+});
+const { shown, visibleColumns } = columns;
+const tableColumns = computed(() => [
+    ...visibleColumns.value.map((column) => t(column.label)),
+    t('store.support.actions'),
+]);
 </script>
 
 <template>
     <Head :title="t('store.support.queries')" />
     <StoreAdminLayout>
         <PageHeader :title="t('store.support.queries')" />
+        <StoreColumnPicker :state="columns" />
         <DataTable
-            :columns="[
-                t('store.support.customer'),
-                t('store.support.product'),
-                t('store.support.question'),
-                t('store.support.reply'),
-                t('store.support.status'),
-                t('store.support.actions'),
-            ]"
+            :columns="tableColumns"
             :rows="queries.data"
             :empty-message="t('store.support.emptyQueries')"
         >
@@ -60,7 +72,7 @@ const access = useStoreAccess();
                         t('store.support.missingUser')
                     }}</template>
                 </td>
-                <td class="px-4 py-2">
+                <td v-if="shown.product" class="px-4 py-2">
                     <TableObjectLink
                         v-if="row.product"
                         :allowed="access.can('product_edit')"
@@ -71,9 +83,11 @@ const access = useStoreAccess();
                         t('store.support.missingProduct')
                     }}</template>
                 </td>
-                <td class="px-4 py-2">{{ row.question }}</td>
-                <td class="px-4 py-2">{{ row.reply }}</td>
-                <td class="px-4 py-2">
+                <td v-if="shown.question" class="px-4 py-2">
+                    {{ row.question }}
+                </td>
+                <td v-if="shown.reply" class="px-4 py-2">{{ row.reply }}</td>
+                <td v-if="shown.status" class="px-4 py-2">
                     {{
                         row.reply === null
                             ? t('store.support.unanswered')

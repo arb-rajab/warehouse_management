@@ -37,6 +37,10 @@ import {
     storeTripOrder,
 } from '@/testing/factories';
 import { defaultAuthProps, resetMocks } from '@/testing/inertiaPageMocks';
+import {
+    expectColumnCanBeHidden,
+    expectColumnLocked,
+} from '@/testing/tableColumns';
 import type { StoreTripOrder, StoreTripOrderFilters } from '@/types/store';
 import Index from './Index.vue';
 
@@ -775,5 +779,16 @@ describe('Store trip orders list', () => {
         expect(wrapper.get('tbody').text()).toContain(
             '<script>alert(1)</script>',
         );
+    });
+
+    it('lets staff hide an optional column from the header and every row, and keeps the identifier', async () => {
+        window.localStorage.clear();
+        const wrapper = mountPage([storeTripOrder()]);
+        await expectColumnCanBeHidden(wrapper, 'trips.orders', {
+            key: 'managerNotes',
+            label: t('store.trips.orders.managerNotes'),
+        });
+        expectColumnLocked(wrapper, t('store.trips.orders.code'));
+        window.localStorage.clear();
     });
 });

@@ -12,6 +12,10 @@ import {
     storeSharedProps,
 } from '@/testing/factories';
 import { defaultAuthProps, resetMocks } from '@/testing/inertiaPageMocks';
+import {
+    expectColumnCanBeHidden,
+    expectColumnLocked,
+} from '@/testing/tableColumns';
 import Index from './Index.vue';
 const { usePageMock, routerGetMock, routerPostMock } = vi.hoisted(() => ({
     usePageMock: vi.fn(),
@@ -133,5 +137,16 @@ describe('Conversation index', () => {
             { per_page: 10 },
             { preserveState: true, replace: true },
         );
+    });
+
+    it('lets staff hide an optional column from the header and every row, and keeps the identifier', async () => {
+        window.localStorage.clear();
+        const wrapper = mountPage();
+        await expectColumnCanBeHidden(wrapper, 'support.conversations', {
+            key: 'receiver',
+            label: t('store.support.receiver'),
+        });
+        expectColumnLocked(wrapper, t('store.support.title'));
+        window.localStorage.clear();
     });
 });

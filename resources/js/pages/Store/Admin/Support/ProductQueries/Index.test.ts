@@ -14,6 +14,10 @@ import {
     storeSharedProps,
 } from '@/testing/factories';
 import { defaultAuthProps, resetMocks } from '@/testing/inertiaPageMocks';
+import {
+    expectColumnCanBeHidden,
+    expectColumnLocked,
+} from '@/testing/tableColumns';
 import Index from './Index.vue';
 const { usePageMock, routerGetMock, routerPostMock } = vi.hoisted(() => ({
     usePageMock: vi.fn(),
@@ -153,5 +157,16 @@ describe('Product query index', () => {
         expect(denied[1].find('a').exists()).toBe(false);
         expect(denied[0].text()).toBe('Customer');
         expect(denied[1].text()).toBe('Rice');
+    });
+
+    it('lets staff hide an optional column from the header and every row, and keeps the identifier', async () => {
+        window.localStorage.clear();
+        const wrapper = mountPage();
+        await expectColumnCanBeHidden(wrapper, 'support.productQueries', {
+            key: 'reply',
+            label: t('store.support.reply'),
+        });
+        expectColumnLocked(wrapper, t('store.support.customer'));
+        window.localStorage.clear();
     });
 });

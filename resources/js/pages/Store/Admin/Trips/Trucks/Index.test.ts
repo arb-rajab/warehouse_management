@@ -21,6 +21,10 @@ import {
     truckPhoto,
 } from '@/testing/factories';
 import { defaultAuthProps } from '@/testing/inertiaPageMocks';
+import {
+    expectColumnCanBeHidden,
+    expectColumnLocked,
+} from '@/testing/tableColumns';
 import Index from './Index.vue';
 
 const { usePageMock, routerGetMock } = vi.hoisted(() => ({
@@ -148,5 +152,16 @@ describe('truck list', () => {
             { search: 'Cargo', per_page: 50 },
             { preserveState: true, replace: true },
         );
+    });
+
+    it('lets staff hide an optional column from the header and every row, and keeps the identifier', async () => {
+        window.localStorage.clear();
+        const wrapper = mountPage();
+        await expectColumnCanBeHidden(wrapper, 'trips.trucks', {
+            key: 'plate',
+            label: t('store.trucks.fields.plate'),
+        });
+        expectColumnLocked(wrapper, t('store.trucks.fields.name'));
+        window.localStorage.clear();
     });
 });
