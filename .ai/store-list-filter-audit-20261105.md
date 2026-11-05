@@ -52,5 +52,9 @@ together, so it is not a duplicate.
 - Per-page changes still carry any legacy state flag present in the URL.
 - The now unused `store.products.allStateHint` and `store.products.deleted`
   locale keys were removed.
-- Active-filter chips were requested but are a separate, later change; the shared
-  `StoreListFilters` only shows a count badge today.
+- Active-filter chips were added afterwards: `StoreListFilters` takes a `chips`
+  prop and renders one removable chip per applied dialog filter plus a "Clear
+  filters" link; the six pages that use it (Products, Customers, Orders,
+  Trips/Orders, Representative Payments and Visits) pass one `appliedFilters`
+  list, and the badge counts it. `Trips/Trips` and `Sellers/Sellers` have no
+  dialog and no chips. The Customers profit-range banner stays beside its chip.

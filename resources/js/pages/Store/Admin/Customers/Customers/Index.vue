@@ -34,7 +34,6 @@ import TableActionLink from '@/components/TableActionLink.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
 import { confirmDelete } from '@/lib/confirm';
 import {
-    countActive,
     fieldLabelClass,
     filterClearButtonClass,
     filterTriggerButtonClass,
@@ -51,6 +50,7 @@ import {
     saveColumnKeys,
 } from '@/lib/storeCustomerColumns';
 import type { Paginated } from '@/types/admin';
+import type { StoreFilterChip } from '@/types/store';
 import type { StoreCustomer } from '@/types/storeCustomers';
 const props = defineProps<{
     customers: Paginated<StoreCustomer>;
@@ -91,21 +91,57 @@ function flagValue(filter: BooleanFilter): '' | '0' | '1' {
 const profitRangeActive = computed(() =>
     Boolean(props.filters.profit_from || props.filters.profit_to),
 );
-/** Dialog filters only; Important counts only when it is "No" (its default is Yes). */
-const activeFilterCount = computed(() =>
-    countActive([
-        ...(props.representatives
-            ? []
-            : [
-                  props.filters.important === false,
-                  props.filters.verified !== undefined,
-                  props.filters.from_api !== undefined,
-                  props.filters.registration_completed !== undefined,
-                  Boolean(props.filters.activity_status),
-              ]),
-        profitRangeActive.value,
-    ]),
-);
+/**
+ * Dialog filters only, one chip each; Important counts only when it is "No"
+ * (its default is Yes). The profit range is one chip for both bounds.
+ */
+const appliedFilters = computed<StoreFilterChip[]>(() => {
+    const chips: StoreFilterChip[] = [];
+
+    if (!props.representatives) {
+        booleanFilters
+            .filter((filter) =>
+                filter === 'important'
+                    ? props.filters.important === false
+                    : props.filters[filter] !== undefined,
+            )
+            .forEach((filter) =>
+                chips.push({
+                    key: filter,
+                    label: t(`store.customers.filterLabels.${filter}`),
+                    value: t(
+                        flagValue(filter) === '1'
+                            ? 'store.customers.yes'
+                            : 'store.customers.no',
+                    ),
+                    keys: [filter],
+                }),
+            );
+
+        if (props.filters.activity_status) {
+            chips.push({
+                key: 'activity_status',
+                label: t('store.customers.activity'),
+                value: t(
+                    props.filters.activity_status === 'new_user'
+                        ? 'store.customers.newUser'
+                        : 'store.customers.contacted',
+                ),
+                keys: ['activity_status'],
+            });
+        }
+    }
+
+    if (profitRangeActive.value) {
+        chips.push({
+            key: 'profit',
+            label: profitRangeText.value,
+            keys: ['profit_from', 'profit_to'],
+        });
+    }
+
+    return chips;
+});
 const listRoute = computed(() =>
     props.representatives ? repIndex : customersIndex,
 );
@@ -237,10 +273,7 @@ function choosePackage(customer: StoreCustomer): void {
                 :href="representatives ? repCreate() : create()"
                 :label="t('store.customers.add')"
         /></PageHeader>
-        <StoreListFilters
-            :action="listRoute()"
-            :active-count="activeFilterCount"
-        >
+        <StoreListFilters :action="listRoute()" :chips="appliedFilters">
             <template #default="{ errors }">
                 <input
                     type="hidden"

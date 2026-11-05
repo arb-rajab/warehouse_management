@@ -703,9 +703,14 @@ describe('Store product lists Index', () => {
         expect(
             wrapper.get('[role="dialog"]').find('#category_id').exists(),
         ).toBe(false);
-        expect(
-            wrapper.getComponent(StoreListFilters).props('activeCount'),
-        ).toBe(1);
+        expect(wrapper.getComponent(StoreListFilters).props('chips')).toEqual([
+            {
+                key: 'type',
+                label: t('store.products.sort'),
+                value: t('store.products.sortPriceDesc'),
+                keys: ['type'],
+            },
+        ]);
         const presetLinks = wrapper.findAll('#product-presets a');
         expect(presetLinks[3].classes()).toContain('bg-gray-900');
         expect(presetLinks[0].classes()).not.toContain('bg-gray-900');
@@ -851,9 +856,25 @@ describe('seller product list', () => {
             (dialog.get('#category_id').element as HTMLSelectElement).value,
         ).toBe('3');
         // approved, category and featured; the seller is not counted.
-        expect(
-            wrapper.getComponent(StoreListFilters).props('activeCount'),
-        ).toBe(3);
+        expect(wrapper.getComponent(StoreListFilters).props('chips')).toEqual([
+            {
+                key: 'approved',
+                label: t('store.products.approvalStatus'),
+                value: t('store.products.unapproved'),
+                keys: ['approved'],
+            },
+            {
+                key: 'category_id',
+                label: t('store.products.category'),
+                value: 'Oils',
+                keys: ['category_id'],
+            },
+            {
+                key: 'featured',
+                label: t('store.products.featured'),
+                keys: ['featured'],
+            },
+        ]);
         expect(
             wrapper
                 .getComponent(StoreListFilters)

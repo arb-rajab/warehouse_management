@@ -34,16 +34,16 @@ import TableActionLink from '@/components/TableActionLink.vue';
 import TableLink from '@/components/TableLink.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
 import { confirmDelete, confirmDeliveryStatus } from '@/lib/confirm';
-import {
-    countActive,
-    fieldLabelClass,
-    plainFieldInputClass,
-} from '@/lib/filters';
+import { fieldLabelClass, plainFieldInputClass } from '@/lib/filters';
 import { t } from '@/lib/i18n';
 import { firstError, usePageError } from '@/lib/pageErrors';
 import { useStoreAccess } from '@/lib/storeAccess';
 import type { Paginated } from '@/types/admin';
-import type { StoreTripOrder, StoreTripOrderFilters } from '@/types/store';
+import type {
+    StoreFilterChip,
+    StoreTripOrder,
+    StoreTripOrderFilters,
+} from '@/types/store';
 import type { TruckPhoto } from '@/types/storeTruck';
 
 const props = defineProps<{
@@ -54,9 +54,21 @@ const props = defineProps<{
     bulkStatuses: string[];
 }>();
 const access = useStoreAccess();
-/** Dialog filters only: the two dates (search and delivery status stay inline). */
-const activeFilterCount = computed(() =>
-    countActive([Boolean(props.filters.from), Boolean(props.filters.to)]),
+/** Dialog filters only, one chip per date bound (search and delivery status stay inline). */
+const appliedFilters = computed<StoreFilterChip[]>(() =>
+    (
+        [
+            ['from', 'store.trips.orders.from'],
+            ['to', 'store.trips.orders.to'],
+        ] as const
+    )
+        .filter(([key]) => Boolean(props.filters[key]))
+        .map(([key, label]) => ({
+            key,
+            label: t(label),
+            value: props.filters[key],
+            keys: [key],
+        })),
 );
 const tripError = usePageError('trip_id');
 const deliveryError = usePageError('delivery_status');
@@ -157,10 +169,7 @@ function onPerPageChange(perPage: number): void {
         >
             {{ t('store.trips.orders.invoiceHelp') }}
         </p>
-        <StoreListFilters
-            :action="tripOrders()"
-            :active-count="activeFilterCount"
-        >
+        <StoreListFilters :action="tripOrders()" :chips="appliedFilters">
             <template #default="{ errors }">
                 <input
                     type="hidden"

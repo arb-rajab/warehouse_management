@@ -2959,7 +2959,10 @@
         },
         "listFilters": {
             "applying": "جارٍ التطبيق…",
-            "activeCount": "الفلاتر المفعّلة: {count}"
+            "activeCount": "الفلاتر المفعّلة: {count}",
+            "appliedFilters": "الفلاتر المطبّقة",
+            "removeFilter": "إزالة الفلتر: {label}",
+            "clearFilters": "مسح الفلاتر"
         }
     },
     "store.attributes.index.title": "خصائص المنتجات",

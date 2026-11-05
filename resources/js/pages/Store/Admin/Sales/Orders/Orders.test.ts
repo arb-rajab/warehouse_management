@@ -5,6 +5,7 @@ import StoreListFilters from '@/components/StoreListFilters.vue';
 import StoreOrderEntryFields from '@/components/StoreOrderEntryFields.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
+import { t } from '@/lib/i18n';
 import { paginated, storeOrder, storeSharedProps } from '@/testing/factories';
 import Create from './Create.vue';
 import Edit from './Edit.vue';
@@ -278,7 +279,20 @@ describe('Store order pages', () => {
                 ).value,
             ).toBe('paid');
             // payment status and "from" are applied; "to" is not.
-            expect(form.props('activeCount')).toBe(2);
+            expect(form.props('chips')).toEqual([
+                {
+                    key: 'payment_status',
+                    label: t('store.orders.paymentStatus'),
+                    value: t('store.orders.status.paid'),
+                    keys: ['payment_status'],
+                },
+                {
+                    key: 'from',
+                    label: t('store.orders.from'),
+                    value: '2026-01-01',
+                    keys: ['from'],
+                },
+            ]);
             expect(
                 wrapper
                     .get('form#store-list-filters > button[type="button"]')

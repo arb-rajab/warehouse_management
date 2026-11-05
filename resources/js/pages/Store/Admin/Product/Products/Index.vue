@@ -38,7 +38,6 @@ import TableActionLink from '@/components/TableActionLink.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
 import { confirmDelete } from '@/lib/confirm';
 import {
-    countActive,
     fieldLabelClass,
     plainFieldInputClass,
     selectedToggleClass,
@@ -47,6 +46,7 @@ import { t } from '@/lib/i18n';
 import { useStoreAccess } from '@/lib/storeAccess';
 import type { Paginated } from '@/types/admin';
 import type {
+    StoreFilterChip,
     StoreProductListFilters,
     StoreProductListPreset,
     StoreProductListRow,
@@ -110,22 +110,65 @@ const stateFilters = [
     { name: 'for_sale', label: 'forSale' },
     { name: 'featured', label: 'featured' },
 ] as const;
-/** Dialog filters only; search and the inline seller/category are not counted. */
-const activeFilterCount = computed(() =>
-    countActive([
+/** Dialog filters only, one chip each; search and the inline seller/category have none. */
+const appliedFilters = computed<StoreFilterChip[]>(() => {
+    const chips: StoreFilterChip[] = [];
+    const { approved, category_id: categoryId, type } = props.filters;
+
+    if (
         isSellerList.value &&
-            props.approvalEnabled &&
-            props.filters.approved !== null &&
-            props.filters.approved !== undefined,
-        isSellerList.value &&
-            props.filters.category_id !== null &&
-            props.filters.category_id !== undefined,
-        Boolean(props.filters.type),
-        ...(isAllList.value
-            ? []
-            : stateFilters.map((state) => props.filters[state.name] === true)),
-    ]),
-);
+        props.approvalEnabled &&
+        approved !== null &&
+        approved !== undefined
+    ) {
+        chips.push({
+            key: 'approved',
+            label: t('store.products.approvalStatus'),
+            value: t(
+                approved
+                    ? 'store.products.approved'
+                    : 'store.products.unapproved',
+            ),
+            keys: ['approved'],
+        });
+    }
+
+    if (isSellerList.value && categoryId !== null && categoryId !== undefined) {
+        chips.push({
+            key: 'category_id',
+            label: t('store.products.category'),
+            value:
+                props.categories.find((category) => category.id === categoryId)
+                    ?.name ?? String(categoryId),
+            keys: ['category_id'],
+        });
+    }
+
+    const sort = sorts.find((option) => option.value === type);
+
+    if (type) {
+        chips.push({
+            key: 'type',
+            label: t('store.products.sort'),
+            value: sort ? t(`store.products.${sort.label}`) : type,
+            keys: ['type'],
+        });
+    }
+
+    if (!isAllList.value) {
+        stateFilters
+            .filter((state) => props.filters[state.name] === true)
+            .forEach((state) =>
+                chips.push({
+                    key: state.name,
+                    label: t(`store.products.${state.label}`),
+                    keys: [state.name],
+                }),
+            );
+    }
+
+    return chips;
+});
 const presets: { name: StoreProductListPreset; label: string }[] = [
     { name: 'allProducts', label: 'presetAllProducts' },
     { name: 'allActive', label: 'presetAllActive' },
@@ -312,10 +355,7 @@ async function requestFetch(): Promise<void> {
                 >{{ t(`store.products.${preset.label}`) }}</Link
             >
         </nav>
-        <StoreListFilters
-            :action="listIndex()"
-            :active-count="activeFilterCount"
-        >
+        <StoreListFilters :action="listIndex()" :chips="appliedFilters">
             <template #default="{ errors }">
                 <input
                     type="hidden"

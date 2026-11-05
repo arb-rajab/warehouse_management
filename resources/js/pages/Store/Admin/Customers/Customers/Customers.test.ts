@@ -581,6 +581,33 @@ it('counts the profit range once and shows its indicator, header and reset link'
             }),
         ),
     ).toContain('2');
+    const chipsOf = (wrapper: ReturnType<typeof listPage>) =>
+        wrapper.getComponent(StoreListFilters).props('chips');
+    expect(chipsOf(listPage())).toEqual([]);
+    expect(
+        chipsOf(
+            listPage({
+                important: false,
+                profit_from: '2026-11-01T14:00',
+                profit_to: '2026-11-03T09:00',
+            }),
+        ),
+    ).toEqual([
+        {
+            key: 'important',
+            label: t('store.customers.filterLabels.important'),
+            value: t('store.customers.no'),
+            keys: ['important'],
+        },
+        {
+            key: 'profit',
+            label: t('store.customers.profitRangeActive', {
+                from: '2026-11-01 14:00',
+                to: '2026-11-03 09:00',
+            }),
+            keys: ['profit_from', 'profit_to'],
+        },
+    ]);
     expect(listPage().find('[role="status"]').exists()).toBe(false);
     expect(headers(listPage())).toContain(t('store.customers.profits'));
 

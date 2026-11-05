@@ -397,7 +397,20 @@ describe('representative payments index', () => {
         });
         const form = wrapper.getComponent(StoreListFilters);
         expect(form.props('action')).toEqual(paymentsIndex());
-        expect(form.props('activeCount')).toBe(2);
+        expect(form.props('chips')).toEqual([
+            {
+                key: 'pending',
+                label: t('store.representativePayments.status'),
+                value: t('store.representativePayments.pending'),
+                keys: ['pending'],
+            },
+            {
+                key: 'accepted',
+                label: t('store.representativePayments.status'),
+                value: t('store.representativePayments.accepted'),
+                keys: ['accepted'],
+            },
+        ]);
         const inline = wrapper.get('form#store-list-filters');
         expect(inline.get('input[name="per_page"]').attributes('value')).toBe(
             '20',
@@ -604,7 +617,14 @@ describe('representative visits index', () => {
         });
         const form = wrapper.getComponent(StoreListFilters);
         expect(form.props('action')).toEqual(visitsIndex());
-        expect(form.props('activeCount')).toBe(1);
+        expect(form.props('chips')).toEqual([
+            {
+                key: 'date_from',
+                label: t('store.representativeVisits.dateFrom'),
+                value: '2026-10-01',
+                keys: ['date_from'],
+            },
+        ]);
         const inline = wrapper.get('form#store-list-filters');
         expect(inline.get('input[name="per_page"]').attributes('value')).toBe(
             '20',

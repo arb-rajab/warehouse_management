@@ -675,7 +675,20 @@ describe('Store trip orders list', () => {
             'Alma',
         );
         expect(filter.get('#search').attributes('maxlength')).toBe('100');
-        expect(form.props('activeCount')).toBe(2);
+        expect(form.props('chips')).toEqual([
+            {
+                key: 'from',
+                label: t('store.trips.orders.from'),
+                value: '2026-10-01',
+                keys: ['from'],
+            },
+            {
+                key: 'to',
+                label: t('store.trips.orders.to'),
+                value: '2026-10-09',
+                keys: ['to'],
+            },
+        ]);
         expect(filter.get('#from').attributes('type')).toBe('date');
         expect(filter.get<HTMLInputElement>('#from').element.value).toBe(
             '2026-10-01',

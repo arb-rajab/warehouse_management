@@ -16,10 +16,11 @@ import Pagination from '@/components/Pagination.vue';
 import StoreListFilters from '@/components/StoreListFilters.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
-import { countActive, fieldLabelClass } from '@/lib/filters';
+import { fieldLabelClass } from '@/lib/filters';
 import { t } from '@/lib/i18n';
 import { useStoreAccess } from '@/lib/storeAccess';
 import type { Paginated } from '@/types/admin';
+import type { StoreFilterChip } from '@/types/store';
 import type { RepresentativePayment } from '@/types/storeRepresentatives';
 
 const props = defineProps<{
@@ -37,9 +38,16 @@ function confirmPayment(receipt: string): boolean {
     return confirm(t('store.representativePayments.confirm', { receipt }));
 }
 const statuses = ['pending', 'accepted', 'rejected'] as const;
-/** Dialog filters only: how many status boxes are ticked. */
-const activeFilterCount = computed(() =>
-    countActive(statuses.map((status) => props.filters[status])),
+/** Dialog filters only: one chip per ticked status box. */
+const appliedFilters = computed<StoreFilterChip[]>(() =>
+    statuses
+        .filter((status) => props.filters[status])
+        .map((status) => ({
+            key: status,
+            label: t('store.representativePayments.status'),
+            value: t(`store.representativePayments.${status}`),
+            keys: [status],
+        })),
 );
 /** Change the page size, keeping the applied search and statuses. */
 function changePerPage(perPage: number): void {
@@ -61,10 +69,7 @@ function changePerPage(perPage: number): void {
     <Head :title="t('store.representativePayments.title')" />
     <StoreAdminLayout>
         <PageHeader :title="t('store.representativePayments.title')" />
-        <StoreListFilters
-            :action="paymentsIndex()"
-            :active-count="activeFilterCount"
-        >
+        <StoreListFilters :action="paymentsIndex()" :chips="appliedFilters">
             <template #default="{ errors }">
                 <input
                     type="hidden"

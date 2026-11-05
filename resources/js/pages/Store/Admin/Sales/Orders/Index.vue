@@ -25,17 +25,13 @@ import SubmitButton from '@/components/SubmitButton.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
 import { confirmDelete } from '@/lib/confirm';
-import {
-    countActive,
-    fieldLabelClass,
-    plainFieldInputClass,
-} from '@/lib/filters';
+import { fieldLabelClass, plainFieldInputClass } from '@/lib/filters';
 import { t } from '@/lib/i18n';
 import { usePageError } from '@/lib/pageErrors';
 import { provideRequiredFields } from '@/lib/requiredFields';
 import { useStoreAccess } from '@/lib/storeAccess';
 import type { Paginated } from '@/types/admin';
-import type { StoreOrder } from '@/types/store';
+import type { StoreFilterChip, StoreOrder } from '@/types/store';
 const props = defineProps<{
     orders: Paginated<StoreOrder>;
     filters: {
@@ -81,14 +77,40 @@ const deliveryStatuses = [
     'delivered',
     'cancelled',
 ];
-/** Dialog filters only: payment status and each date bound. */
-const activeFilterCount = computed(() =>
-    countActive([
-        Boolean(props.filters.payment_status),
-        Boolean(props.filters.from),
-        Boolean(props.filters.to),
-    ]),
-);
+/** Dialog filters only, one chip each: payment status and each date bound. */
+const appliedFilters = computed<StoreFilterChip[]>(() => {
+    const { payment_status: payment, from, to } = props.filters;
+    const chips: StoreFilterChip[] = [];
+
+    if (payment) {
+        chips.push({
+            key: 'payment_status',
+            label: t('store.orders.paymentStatus'),
+            value: t(`store.orders.status.${payment}`),
+            keys: ['payment_status'],
+        });
+    }
+
+    if (from) {
+        chips.push({
+            key: 'from',
+            label: t('store.orders.from'),
+            value: from,
+            keys: ['from'],
+        });
+    }
+
+    if (to) {
+        chips.push({
+            key: 'to',
+            label: t('store.orders.to'),
+            value: to,
+            keys: ['to'],
+        });
+    }
+
+    return chips;
+});
 const hasRequiredFields = provideRequiredFields();
 </script>
 <template>
@@ -105,10 +127,7 @@ const hasRequiredFields = provideRequiredFields();
                 /></div
         ></PageHeader>
         <ActionErrorBanner :message="error" />
-        <StoreListFilters
-            :action="listAction()"
-            :active-count="activeFilterCount"
-        >
+        <StoreListFilters :action="listAction()" :chips="appliedFilters">
             <template #default="{ errors }">
                 <input
                     name="per_page"

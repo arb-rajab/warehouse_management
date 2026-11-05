@@ -18,11 +18,11 @@ import StoreListFilters from '@/components/StoreListFilters.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
 import { confirmDelete } from '@/lib/confirm';
-import { countActive } from '@/lib/filters';
 import { t } from '@/lib/i18n';
 import { firstError } from '@/lib/pageErrors';
 import { useStoreAccess } from '@/lib/storeAccess';
 import type { Paginated } from '@/types/admin';
+import type { StoreFilterChip } from '@/types/store';
 import type { RepresentativeVisit } from '@/types/storeRepresentatives';
 
 const props = defineProps<{
@@ -37,12 +37,21 @@ const props = defineProps<{
 const access = useStoreAccess();
 /** The "to" date cannot precede the "from" date; both inputs stay uncontrolled. */
 const dateFrom = ref(props.filters.date_from);
-/** Dialog filters only: the two dates. */
-const activeFilterCount = computed(() =>
-    countActive([
-        Boolean(props.filters.date_from),
-        Boolean(props.filters.date_to),
-    ]),
+/** Dialog filters only: one chip per date bound. */
+const appliedFilters = computed<StoreFilterChip[]>(() =>
+    (
+        [
+            ['date_from', 'store.representativeVisits.dateFrom'],
+            ['date_to', 'store.representativeVisits.dateTo'],
+        ] as const
+    )
+        .filter(([key]) => Boolean(props.filters[key]))
+        .map(([key, label]) => ({
+            key,
+            label: t(label),
+            value: props.filters[key],
+            keys: [key],
+        })),
 );
 const selection = useForm({ id: [] as number[] });
 /** Change the page size, keeping the applied search and dates. */
@@ -75,10 +84,7 @@ function deleteSelection(): void {
     <Head :title="t('store.representativeVisits.title')" />
     <StoreAdminLayout>
         <PageHeader :title="t('store.representativeVisits.title')" />
-        <StoreListFilters
-            :action="visitsIndex()"
-            :active-count="activeFilterCount"
-        >
+        <StoreListFilters :action="visitsIndex()" :chips="appliedFilters">
             <template #default="{ errors }">
                 <input
                     type="hidden"

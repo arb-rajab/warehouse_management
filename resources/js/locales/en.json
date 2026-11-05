@@ -2959,7 +2959,10 @@
         },
         "listFilters": {
             "applying": "Applying…",
-            "activeCount": "Active filters: {count}"
+            "activeCount": "Active filters: {count}",
+            "appliedFilters": "Applied filters",
+            "removeFilter": "Remove filter: {label}",
+            "clearFilters": "Clear filters"
         }
     },
     "store.attributes.index.title": "Product attributes",

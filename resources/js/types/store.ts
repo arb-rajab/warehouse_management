@@ -991,6 +991,16 @@ export interface StoreProductListRow {
     deleted_from_api: boolean;
     public_url: string | null;
 }
+/** One applied Filters-dialog filter, shown as a removable chip. */
+export interface StoreFilterChip {
+    key: string;
+    label: string;
+    /** Shown after the label as "label: value"; omit for a plain flag. */
+    value?: string;
+    /** The query keys that removing the chip drops. */
+    keys: string[];
+}
+
 export interface StoreProductListFilters {
     search: string | null;
     category_id: number | null;
