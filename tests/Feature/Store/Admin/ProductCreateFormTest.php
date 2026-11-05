@@ -661,3 +661,15 @@ function productUtcTimestamp(string $dateTime): int
 {
     return (new DateTimeImmutable($dateTime, new DateTimeZone('UTC')))->getTimestamp();
 }
+
+test('the store refuses a minimum purchase quantity above the maximum, and accepts them equal', function () {
+    actingAsStoreUser(createStoreStaff('add_new_product'));
+    $before = productCreateSnapshot();
+
+    $this->post(route('products.store'), productCreateForm(['min_qty' => '25', 'max_qty' => '24']))
+        ->assertSessionHasErrors(['min_qty' => __('validation.lte.numeric', ['attribute' => __('validation.attributes.min_qty'), 'value' => '24'])]);
+    expect(productCreateSnapshot())->toEqual($before);
+
+    $this->post(route('products.store'), productCreateForm(['min_qty' => '24', 'max_qty' => '24']))->assertSessionHasNoErrors();
+    expect(Product::query()->where('name', 'Extra virgin olive oil')->value('min_qty'))->toEqual(24);
+});

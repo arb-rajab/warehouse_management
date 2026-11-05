@@ -19,6 +19,9 @@ Maintain shared instructions here and in the referenced `.ai/` files; keep
 6. Store back office list tables must follow [.ai/rules/store-table-columns.md](.ai/rules/store-table-columns.md):
    every list lets users show or hide optional columns through `useTableColumns` and
    `StoreColumnPicker`; a new or changed list adopts it in the same change.
+7. Forms must follow [.ai/rules/client-side-validation.md](.ai/rules/client-side-validation.md):
+   they validate in the browser first through the shared layer, from a copy of the
+   server rules kept equal by a parity test; the backend stays authoritative.
 
 Read this file and the rules index fully once per session. For
 `.ai/agent-framework.md` and `.ai/agent-conventions.md`, read the whole file for

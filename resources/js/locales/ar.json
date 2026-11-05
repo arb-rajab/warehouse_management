@@ -49,7 +49,10 @@
         },
         "required": "مطلوب",
         "requiredLegend": "حقول مطلوبة",
-        "optional": "(اختياري)"
+        "optional": "(اختياري)",
+        "formValidation": {
+            "blocked": "بعض الحقول تحتاج إلى تصحيح. تم تحديد أولها."
+        }
     },
     "welcome": {
         "brand": "إدارة المستودع",
@@ -3213,5 +3216,121 @@
         "upload": "رفع الصورة",
         "all": "الكل",
         "help": "قبل تخزين كل بليت مستلم، قارن المنتج بالصورة المرجعية واختر النتيجة. يمكنك إضافة ملاحظة اختيارية. في صفحة المنتجات، افتح التحقق من الصورة لعرض الملاحظات السابقة أو استبدال الصورة. استخدم مرشح التحقق من الصورة للعثور على الصور غير المطابقة أو المفقودة."
+    },
+    "validation": {
+        "messages": {
+            "required": "حقل :attribute مطلوب.",
+            "required_if": "حقل :attribute مطلوب عندما تكون قيمة :other هي :value.",
+            "required_with": "حقل :attribute مطلوب عندما تكون :values موجودة.",
+            "string": "يجب أن يكون حقل :attribute نصًا.",
+            "integer": "يجب أن يكون حقل :attribute عددًا صحيحًا.",
+            "numeric": "يجب أن يكون حقل :attribute رقمًا.",
+            "boolean": "يجب أن يكون حقل :attribute صحيحًا أو خاطئًا.",
+            "array": "يجب أن يكون حقل :attribute مصفوفة.",
+            "decimal": "يجب أن يحتوي حقل :attribute على :decimal أرقام عشرية.",
+            "in": ":attribute المحدد غير صالح.",
+            "url": "يجب أن يكون حقل :attribute رابطًا صالحًا.",
+            "regex": "صيغة حقل :attribute غير صالحة.",
+            "distinct": "حقل :attribute يحتوي على قيمة مكررة.",
+            "date_format": "يجب أن يطابق حقل :attribute الصيغة :format.",
+            "discount_below_price": "يجب أن يكون :attribute أقل من سعر الوحدة (:price).",
+            "discount_percent_limit": "يجب أن تكون نسبة :attribute أقل من 100.",
+            "min": {
+                "numeric": "يجب أن يكون حقل :attribute :min على الأقل.",
+                "string": "يجب أن يكون حقل :attribute :min حرفًا على الأقل.",
+                "array": "يجب أن يحتوي حقل :attribute على :min عناصر على الأقل."
+            },
+            "max": {
+                "numeric": "يجب ألا يكون حقل :attribute أكبر من :max.",
+                "string": "يجب ألا يكون حقل :attribute أكبر من :max حرفًا.",
+                "array": "يجب ألا يحتوي حقل :attribute على أكثر من :max عناصر."
+            },
+            "lt": {
+                "numeric": "يجب أن يكون حقل :attribute أقل من :value.",
+                "string": "يجب أن يكون حقل :attribute أقل من :value حرفًا.",
+                "array": "يجب أن يحتوي حقل :attribute على أقل من :value عناصر."
+            },
+            "lte": {
+                "numeric": "يجب أن يكون حقل :attribute أقل من أو يساوي :value.",
+                "string": "يجب أن يكون حقل :attribute أقل من أو يساوي :value حرفًا.",
+                "array": "يجب ألا يحتوي حقل :attribute على أكثر من :value عناصر."
+            },
+            "gt": {
+                "numeric": "يجب أن يكون حقل :attribute أكبر من :value.",
+                "string": "يجب أن يكون حقل :attribute أكبر من :value حرفًا.",
+                "array": "يجب أن يحتوي حقل :attribute على أكثر من :value عناصر."
+            },
+            "gte": {
+                "numeric": "يجب أن يكون حقل :attribute أكبر من أو يساوي :value.",
+                "string": "يجب أن يكون حقل :attribute أكبر من أو يساوي :value حرفًا.",
+                "array": "يجب أن يحتوي حقل :attribute على :value عناصر أو أكثر."
+            }
+        },
+        "attributes": {
+            "name": "الاسم",
+            "ar_name": "الاسم العربي",
+            "category_id": "الفئة",
+            "brand_id": "العلامة التجارية",
+            "unit": "الوحدة",
+            "weight": "الوزن",
+            "max_qty": "الحد الأقصى لكمية الشراء",
+            "min_qty": "الحد الأدنى لكمية الشراء",
+            "tags": "الوسوم",
+            "product_types": "أنواع المنتج",
+            "product_types.*": "نوع المنتج",
+            "product_barcodes": "الرموز الشريطية للمنتج",
+            "product_barcodes.*": "الرمز الشريطي للمنتج",
+            "photos": "صور المعرض",
+            "thumbnail_img": "الصورة المصغرة",
+            "video_provider": "منصة الفيديو",
+            "video_link": "رابط الفيديو",
+            "pdf": "مواصفات PDF",
+            "colors_active": "تفعيل الألوان",
+            "colors": "الألوان",
+            "colors.*": "اللون",
+            "choice_options": "خيارات التنويعات",
+            "unit_price": "سعر الوحدة",
+            "date_range": "الفترة الزمنية",
+            "discount": "الخصم",
+            "discount_type": "نوع الخصم",
+            "current_stock": "كمية المخزون",
+            "sku": "رمز المخزون",
+            "variants": "التنويعات",
+            "variants.*.variant": "التنويع",
+            "variants.*.price": "سعر التنويع",
+            "variants.*.sku": "رمز مخزون التنويع",
+            "variants.*.qty": "كمية التنويع",
+            "external_link": "الرابط الخارجي",
+            "external_link_btn": "نص زر الرابط الخارجي",
+            "description": "الوصف",
+            "meta_title": "العنوان التعريفي",
+            "meta_description": "الوصف التعريفي",
+            "meta_img": "الصورة التعريفية",
+            "shipping_type": "نوع الشحن",
+            "flat_shipping_cost": "تكلفة الشحن الثابتة",
+            "is_quantity_multiplied": "تكلفة الشحن لكل قطعة",
+            "est_shipping_days": "أيام الشحن المقدرة",
+            "low_stock_quantity": "كمية التنبيه لانخفاض المخزون",
+            "stock_visibility_state": "طريقة عرض المخزون",
+            "cash_on_delivery": "الدفع عند الاستلام",
+            "featured": "مميز",
+            "todays_deal": "عرض اليوم",
+            "can_expire": "قابل لانتهاء الصلاحية قريبًا",
+            "flash_deal_id": "العرض الخاطف",
+            "flash_discount": "خصم العرض الخاطف",
+            "flash_discount_type": "نوع خصم العرض الخاطف",
+            "tax_id": "الضريبة",
+            "tax_id.*": "الضريبة",
+            "tax": "الضريبة",
+            "tax.*": "الضريبة",
+            "tax_type": "نوع الضريبة",
+            "tax_type.*": "نوع الضريبة",
+            "button": "خيار النشر",
+            "lang": "لغة المحتوى",
+            "slug": "الرابط المختصر",
+            "old_photo": "صور أوتاجر",
+            "purchase_price": "سعر الشراء",
+            "file": "ملف المنتج"
+        }
     }
 }

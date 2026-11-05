@@ -49,7 +49,10 @@
         },
         "required": "required",
         "requiredLegend": "Required fields",
-        "optional": "(optional)"
+        "optional": "(optional)",
+        "formValidation": {
+            "blocked": "Some fields need correcting. The first one is selected."
+        }
     },
     "welcome": {
         "brand": "Warehouse Admin",
@@ -3213,5 +3216,121 @@
         "upload": "Upload image",
         "all": "All",
         "help": "Before storing each received pallet, compare its product with the reference image and choose a result. You can add an optional note. On the products page, open image verification to see earlier notes or replace the image. Use the Image verification filter to find mismatches or missing images."
+    },
+    "validation": {
+        "messages": {
+            "required": "The :attribute field is required.",
+            "required_if": "The :attribute field is required when :other is :value.",
+            "required_with": "The :attribute field is required when :values is present.",
+            "string": "The :attribute field must be a string.",
+            "integer": "The :attribute field must be an integer.",
+            "numeric": "The :attribute field must be a number.",
+            "boolean": "The :attribute field must be true or false.",
+            "array": "The :attribute field must be an array.",
+            "decimal": "The :attribute field must have :decimal decimal places.",
+            "in": "The selected :attribute is invalid.",
+            "url": "The :attribute field must be a valid URL.",
+            "regex": "The :attribute field format is invalid.",
+            "distinct": "The :attribute field has a duplicate value.",
+            "date_format": "The :attribute field must match the format :format.",
+            "discount_below_price": "The :attribute must be less than the unit price (:price).",
+            "discount_percent_limit": "The :attribute percentage must be less than 100.",
+            "min": {
+                "numeric": "The :attribute field must be at least :min.",
+                "string": "The :attribute field must be at least :min characters.",
+                "array": "The :attribute field must have at least :min items."
+            },
+            "max": {
+                "numeric": "The :attribute field must not be greater than :max.",
+                "string": "The :attribute field must not be greater than :max characters.",
+                "array": "The :attribute field must not have more than :max items."
+            },
+            "lt": {
+                "numeric": "The :attribute field must be less than :value.",
+                "string": "The :attribute field must be less than :value characters.",
+                "array": "The :attribute field must have less than :value items."
+            },
+            "lte": {
+                "numeric": "The :attribute field must be less than or equal to :value.",
+                "string": "The :attribute field must be less than or equal to :value characters.",
+                "array": "The :attribute field must not have more than :value items."
+            },
+            "gt": {
+                "numeric": "The :attribute field must be greater than :value.",
+                "string": "The :attribute field must be greater than :value characters.",
+                "array": "The :attribute field must have more than :value items."
+            },
+            "gte": {
+                "numeric": "The :attribute field must be greater than or equal to :value.",
+                "string": "The :attribute field must be greater than or equal to :value characters.",
+                "array": "The :attribute field must have :value items or more."
+            }
+        },
+        "attributes": {
+            "name": "name",
+            "ar_name": "Arabic name",
+            "category_id": "category",
+            "brand_id": "brand",
+            "unit": "unit",
+            "weight": "weight",
+            "max_qty": "maximum purchase quantity",
+            "min_qty": "minimum purchase quantity",
+            "tags": "tags",
+            "product_types": "product types",
+            "product_types.*": "product type",
+            "product_barcodes": "product barcodes",
+            "product_barcodes.*": "product barcode",
+            "photos": "gallery images",
+            "thumbnail_img": "thumbnail image",
+            "video_provider": "video provider",
+            "video_link": "video link",
+            "pdf": "PDF specification",
+            "colors_active": "enable colors",
+            "colors": "colors",
+            "colors.*": "color",
+            "choice_options": "variant choices",
+            "unit_price": "unit price",
+            "date_range": "date range",
+            "discount": "discount",
+            "discount_type": "discount type",
+            "current_stock": "stock quantity",
+            "sku": "SKU",
+            "variants": "variants",
+            "variants.*.variant": "variant",
+            "variants.*.price": "variant price",
+            "variants.*.sku": "variant SKU",
+            "variants.*.qty": "variant quantity",
+            "external_link": "external link",
+            "external_link_btn": "external link button text",
+            "description": "description",
+            "meta_title": "meta title",
+            "meta_description": "meta description",
+            "meta_img": "meta image",
+            "shipping_type": "shipping type",
+            "flat_shipping_cost": "flat shipping cost",
+            "is_quantity_multiplied": "shipping cost per item",
+            "est_shipping_days": "estimated shipping days",
+            "low_stock_quantity": "low stock warning quantity",
+            "stock_visibility_state": "stock visibility",
+            "cash_on_delivery": "cash on delivery",
+            "featured": "featured",
+            "todays_deal": "today's deal",
+            "can_expire": "can expire soon",
+            "flash_deal_id": "flash deal",
+            "flash_discount": "flash discount",
+            "flash_discount_type": "flash discount type",
+            "tax_id": "tax",
+            "tax_id.*": "tax",
+            "tax": "tax",
+            "tax.*": "tax",
+            "tax_type": "tax type",
+            "tax_type.*": "tax type",
+            "button": "publishing choice",
+            "lang": "content language",
+            "slug": "slug",
+            "old_photo": "Otajer images",
+            "purchase_price": "purchase price",
+            "file": "product file"
+        }
     }
 }

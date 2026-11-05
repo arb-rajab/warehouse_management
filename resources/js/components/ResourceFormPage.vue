@@ -1,15 +1,19 @@
 <script setup lang="ts">
 import type { FormDataConvertible, UrlMethodPair } from '@inertiajs/core';
 import { Form, Head, Link } from '@inertiajs/vue3';
-import type { Component } from 'vue';
+import { CircleAlert } from '@lucide/vue';
+import { ref } from 'vue';
+import type { Component, ComponentPublicInstance } from 'vue';
 import PageHeader from '@/components/PageHeader.vue';
 import RequiredLegend from '@/components/RequiredLegend.vue';
 import SubmitButton from '@/components/SubmitButton.vue';
 import AdminLayout from '@/layouts/AdminLayout.vue';
+import type { ValidationSchema } from '@/lib/formValidation';
 import { t } from '@/lib/i18n';
 import { provideRequiredFields } from '@/lib/requiredFields';
+import { useFormValidation } from '@/lib/useFormValidation';
 
-withDefaults(
+const props = withDefaults(
     defineProps<{
         title: string;
         action: string | UrlMethodPair;
@@ -40,6 +44,14 @@ withDefaults(
          * form that prints its own legend.
          */
         requiredLegend?: boolean;
+        /**
+         * The browser copy of the endpoint's rules (lib/formValidation.ts,
+         * .ai/rules/client-side-validation.md). With it the form checks each
+         * field as it is left or changed and every field on submit, sends
+         * nothing while one is invalid, and shows its messages where the
+         * server's appear; the native bubbles give way (`novalidate`).
+         */
+        validation?: ValidationSchema;
     }>(),
     {
         transform: (data: Record<string, FormDataConvertible>) => data,
@@ -50,6 +62,11 @@ withDefaults(
 );
 
 const hasRequiredFields = provideRequiredFields();
+const formComponent = ref<ComponentPublicInstance | null>(null);
+const validator = useFormValidation(
+    () => props.validation,
+    () => formComponent.value?.$el as HTMLFormElement | undefined,
+);
 </script>
 
 <template>
@@ -60,15 +77,38 @@ const hasRequiredFields = provideRequiredFields();
             <slot name="header-actions" />
         </PageHeader>
 
-        <div :class="wide ? 'max-w-none' : 'max-w-sm'">
+        <div
+            :class="wide ? 'max-w-none' : 'max-w-sm'"
+            @focusout="validator.onFocusOut"
+            @input="validator.onInput"
+            @change="validator.onChange"
+        >
             <Form
+                ref="formComponent"
                 :action="action"
                 :transform="transform"
+                :novalidate="validation ? true : undefined"
+                :on-before="validation ? validator.onBefore : undefined"
+                :on-start="validation ? validator.onStart : undefined"
                 #default="{ errors, processing }"
                 class="space-y-4"
             >
                 <RequiredLegend v-if="requiredLegend && hasRequiredFields" />
-                <slot :errors="errors" />
+                <slot
+                    :errors="validation ? validator.errorsFor(errors) : errors"
+                />
+
+                <p
+                    v-if="validation && validator.blocked.value"
+                    role="alert"
+                    class="flex items-center gap-1 text-sm text-red-600 dark:text-red-400"
+                >
+                    <CircleAlert
+                        class="h-3.5 w-3.5 shrink-0"
+                        aria-hidden="true"
+                    />
+                    {{ t('common.formValidation.blocked') }}
+                </p>
 
                 <div class="flex gap-3">
                     <Link

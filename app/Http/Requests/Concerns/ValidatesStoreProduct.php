@@ -57,7 +57,10 @@ trait ValidatesStoreProduct
             'unit' => ['required', 'string', 'max:20'],
             'weight' => ['nullable', 'numeric', 'min:0', 'max:999999.99', 'decimal:0,2'],
             'max_qty' => ['required', ...$int, 'min:1'],
-            'min_qty' => ['required', ...$int, 'min:1'],
+            // Never above the maximum. The client copy in
+            // resources/js/lib/storeProductRules.json mirrors every rule here;
+            // ProductClientValidationParityTest fails until it is updated.
+            'min_qty' => ['required', ...$int, 'min:1', 'lte:max_qty'],
             'tags' => ['nullable', 'string', 'max:500'],
             'product_types' => ['nullable', 'array', 'list', 'max:50'],
             'product_types.*' => ['nullable', 'string', 'max:255'],
