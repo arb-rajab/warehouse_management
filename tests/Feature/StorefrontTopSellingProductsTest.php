@@ -97,7 +97,7 @@ test('the widget prints a translated name and the prices to a verified customer 
     $html = topSellingWidget($displayed);
 
     expect($html)->toContain('Translated 1', 'Translated 2', 'Translated 3')
-        ->toContain('110€');
+        ->toContain('€110.00');
 });
 
 test('the widget runs the same number of queries for one top seller as for six', function () {

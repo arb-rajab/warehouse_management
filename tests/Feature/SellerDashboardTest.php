@@ -67,7 +67,7 @@ test('seller dashboard renders populated products categories and paid order line
     createStoreProduct(['category_id' => $otherCategory->id, 'user_id' => $otherSeller->id]);
 
     $this->get(route('seller.dashboard'))->assertOk()->assertSee('Pantry item')->assertSee('Drinks item')
-        ->assertDontSee('Another seller item')->assertDontSee('Other category')->assertSee('10€');
+        ->assertDontSee('Another seller item')->assertDontSee('Other category')->assertSee('€10.00');
 });
 
 test('seller dashboard refuses a customer', function () {

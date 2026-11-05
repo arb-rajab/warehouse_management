@@ -221,27 +221,34 @@ if (!function_exists('currency_symbol')) {
 if (!function_exists('format_price')) {
     function format_price($price, $isMinimize = false)
     {
-        $fomated_price = \App\Support\StoreLocale::number((float) $price, (int) get_setting('no_of_decimals'));
+        // A missing or blank row falls back to what the Currency page shows.
+        $defaults = \App\Models\BusinessSetting::CURRENCY_DEFAULTS;
+        $decimals = get_setting('no_of_decimals');
+        $decimals = (int) (filled($decimals) ? $decimals : $defaults['no_of_decimals']);
+        $symbolFormat = get_setting('symbol_format');
+        $symbolFormat = (int) (filled($symbolFormat) ? $symbolFormat : $defaults['symbol_format']);
+
+        $fomated_price = \App\Support\StoreLocale::number((float) $price, $decimals);
 
         // Minimize the price
         if ($isMinimize) {
-            $temp = number_format($price / 1000000000, get_setting('no_of_decimals'), ".", "");
+            $temp = number_format($price / 1000000000, $decimals, ".", "");
 
             if ($temp >= 1) {
                 $fomated_price = $temp . "B";
             } else {
-                $temp = number_format($price / 1000000, get_setting('no_of_decimals'), ".", "");
+                $temp = number_format($price / 1000000, $decimals, ".", "");
                 if ($temp >= 1) {
                     $fomated_price = $temp . "M";
                 }
             }
         }
 
-        if (get_setting('symbol_format') == 1) {
+        if ($symbolFormat == 1) {
             return currency_symbol() . $fomated_price;
-        } else if (get_setting('symbol_format') == 3) {
+        } else if ($symbolFormat == 3) {
             return currency_symbol() . ' ' . $fomated_price;
-        } else if (get_setting('symbol_format') == 4) {
+        } else if ($symbolFormat == 4) {
             return $fomated_price . ' ' . currency_symbol();
         }
         return $fomated_price . currency_symbol();

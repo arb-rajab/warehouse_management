@@ -131,6 +131,10 @@ WHERE type IN ('no_of_decimals', 'symbol_format', 'decimal_separator', 'system_d
 
 If a row is missing or its value is blank, save Back office, Setup, Currency once there, as you did on dev.
 
+Since 2026-11-05 this can no longer happen. A missing or blank `no_of_decimals` or `symbol_format` now means
+2 decimals with the symbol first, the same values the Currency page shows (`BusinessSetting::CURRENCY_DEFAULTS`).
+Saving the page is still worth doing, so the stored values are explicit.
+
 ---
 
 ## Open from earlier requests

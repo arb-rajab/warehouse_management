@@ -48,10 +48,10 @@ test('the cart summary totals the lines the cart lists, for a product with a box
 
     $this->postJson('/api/v1/store/carts', [])->assertOk()->assertJsonPath('0.cart_items.0.price', 22)->assertJsonPath('0.cart_items.0.quantity', 2);
     $this->getJson('/api/v1/store/cart-summary')->assertOk()->assertJson([
-        'sub_total' => '44.00€',
-        'grand_total' => '44.00€',
+        'sub_total' => '€44.00',
+        'grand_total' => '€44.00',
         'grand_total_value' => 44,
-        'delivery_cost' => '0.00€',
+        'delivery_cost' => '€0.00',
     ]);
 });
 
@@ -78,13 +78,13 @@ test('the delivery cost is charged only when the store checks a minimum order an
     $this->withToken(storeApiToken($customer));
 
     storeSetting('minimum_order_amount_check', 0);
-    $this->getJson('/api/v1/store/cart-summary')->assertOk()->assertJsonPath('delivery_cost', '0.00€');
+    $this->getJson('/api/v1/store/cart-summary')->assertOk()->assertJsonPath('delivery_cost', '€0.00');
 
     storeSetting('minimum_order_amount_check', 1);
-    $this->getJson('/api/v1/store/cart-summary')->assertOk()->assertJsonPath('delivery_cost', '7.50€');
+    $this->getJson('/api/v1/store/cart-summary')->assertOk()->assertJsonPath('delivery_cost', '€7.50');
 
     $delivery->delete();
-    $this->getJson('/api/v1/store/cart-summary')->assertOk()->assertJsonPath('delivery_cost', '0.00€');
+    $this->getJson('/api/v1/store/cart-summary')->assertOk()->assertJsonPath('delivery_cost', '€0.00');
 });
 
 test('the delivery info totals each seller\'s own lines', function () {
