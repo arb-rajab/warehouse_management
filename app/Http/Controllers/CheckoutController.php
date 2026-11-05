@@ -17,7 +17,6 @@ use App\Models\Country;
 use App\Models\Coupon;
 use App\Models\CouponUsage;
 use App\Models\Order;
-use App\Models\Product;
 use App\Models\StoreUser;
 use App\Models\Visit;
 use App\Utility\NotificationUtility;
@@ -36,34 +35,6 @@ class CheckoutController extends Controller
     //check the selected payment gateway and redirect to that controller accordingly
     public function checkout(Request $request)
     {
-        // Minumum order amount check
-        if (get_setting('minimum_order_amount_check') == 1) {
-            $subtotal = 0;
-            foreach (Cart::where('user_id', Auth::user()->id)->get() as $key => $cartItem) {
-                $product = Product::find($cartItem['product_id']);
-                $subtotal += cart_product_price($cartItem, $product, false, false) * $cartItem['quantity'];
-            }
-            if ($subtotal < get_setting('minimum_order_amount')) {
-                $default_specific_product = Product::where('id', get_setting('default_specific_product'))->first();
-                $delivery_cart = Cart::where('user_id', auth()->user()->id)->where('product_id', $default_specific_product->id)->first();
-
-                if (!$delivery_cart) {
-                    $user_first_cart = Cart::where('user_id', Auth::user()->id)->first();
-
-                    $newCartData = $user_first_cart->toArray();
-                    $newCartData['quantity'] = 1;
-                    $newCartData['variation_qty'] = null;
-                    $newCartData['price'] = $default_specific_product->unit_price;
-                    $newCartData['product_id'] = $default_specific_product->id;
-                    Cart::create($newCartData);
-                }
-
-                // flash(translate('You order amount is less then the minimum order amount'))->warning();
-                // return redirect()->route('home');
-            }
-        }
-        // Minumum order amount check end
-
         if ($request->payment_option != null) {
             if (! app(PaymentOptions::class)->isAllowed((string) $request->payment_option)) {
                 flash(__('storefront.checkout.select_payment_option'))->warning();

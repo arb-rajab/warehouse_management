@@ -9,9 +9,11 @@ use App\Models\ProductStock;
 use App\Models\Shop;
 use App\Models\StoreUser;
 use App\Services\CartService;
+use App\Services\MinimumOrderFee;
 use App\Services\OfferService;
 use App\Utility\NagadUtility;
 use Auth;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
@@ -28,6 +30,13 @@ class CartController extends Controller
         return app(CartService::class);
     }
 
+    private function variantRefusal(): JsonResponse
+    {
+        $message = __('api.cart.variant_not_found');
+
+        return response()->json(['result' => false, 'message' => $message, 'errors' => ['variant' => [$message]]], 422);
+    }
+
     public function summary()
     {
         set_time_limit(0);
@@ -42,9 +51,10 @@ class CartController extends Controller
                 'discount' => format_price(0.00),
                 'grand_total' => format_price(0.00),
                 'grand_total_value' => 0.00,
-                'coupon_code' => "",
+                // The same types as a filled cart's answer.
+                'coupon_code' => null,
                 'coupon_applied' => false,
-                'delivery_cost' => 0,
+                'delivery_cost' => format_price(0.00),
                 ...$this->paymentAvailability(),
             ]);
         }
@@ -79,12 +89,18 @@ class CartController extends Controller
             }
         }
 
-        $delivery_cost = 0;
+        // The fee line order/store adds below the minimum order (MinimumOrderFee),
+        // priced and taxed as that line will be, and counted in grand_total.
+        $delivery_cost = 0.00;
+        $fees = app(MinimumOrderFee::class);
+        $feeProduct = rescue(fn () => $fees->productFor($items), null, false);
 
-        // The delivery line order/store adds: only when the store checks a minimum
-        // order, and only if its delivery product still exists.
-        if (get_setting('minimum_order_amount_check') == 1 && $subtotal < get_setting('minimum_order_amount')) {
-            $delivery_cost = Product::where('id', get_setting('default_specific_product'))->value('unit_price') ?? 0;
+        if ($feeProduct !== null && ! $items->contains(fn (Cart $line): bool => $fees->isFeeLine($line))) {
+            $feeLine = new Cart(['variation' => '', 'quantity' => 1]);
+            $delivery_cost = (float) cart_product_price($feeLine, $feeProduct, false, false);
+            $feeTax = cart_line_tax($feeLine, $feeProduct, $delivery_cost);
+            $tax += $feeTax;
+            $sum += $delivery_cost + $feeTax;
         }
 
         return response()->json([
@@ -183,7 +199,7 @@ class CartController extends Controller
                         // `tax` stays the VAT percent for the legacy app; the new app reads
                         // tax_percent and tax_amount (money, added on top of price x quantity).
                         $shop_items_data_item["tax"] = $product->tax;
-                        $shop_items_data_item["tax_percent"] = (float) ($product->tax ?? 0);
+                        $shop_items_data_item["tax_percent"] = product_vat_percent($product);
                         $shop_items_data_item["tax_amount"] = cart_line_tax($shop_items_raw_data_item, $product, (float) $shop_items_data_item["price"] * $shop_items_data_item["quantity"]);
                         $shop_items_data_item["mat_id"] = (string) $product->id;
                         $shop_items_data_item["item_notes"] = $shop_items_raw_data_item["item_notes"];
@@ -286,12 +302,20 @@ class CartController extends Controller
         $variant = $request->variant;
         $tax = 0;
 
+        if ($variant !== null && ! is_string($variant)) {
+            return $this->variantRefusal();
+        }
+
         if ($variant == '')
             $price = $product->unit_price;
         else {
-
-            // dd ($product_stocks->where('variant', 'like', '%p%')->first());
             $product_stock = $product_stocks->where('variant', 'like', '%' . $variant . '%')->first();
+
+            // A variant the product does not have used to end in a 500.
+            if ($product_stock === null) {
+                return $this->variantRefusal();
+            }
+
             $price = $product_stock->price;
         }
 

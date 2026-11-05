@@ -385,18 +385,36 @@ if (!function_exists('cart_product_tax')) {
     }
 }
 
+if (!function_exists('product_vat_percent')) {
+    /**
+     * A product's VAT percent. Its tax rows from the back office's VAT section
+     * (`product_taxes`, percent type) win when it has any; otherwise the
+     * percent the Otajer feed sets (`products.tax`, 9 or 21). Every VAT answer
+     * and stored percent reads it, so the percent shown is the one charged.
+     */
+    function product_vat_percent($product): float
+    {
+        $product->loadMissing('taxes');
+
+        return $product->taxes->isNotEmpty()
+            ? (float) $product->taxes->where('tax_type', 'percent')->sum('tax')
+            : (float) ($product->tax ?? 0);
+    }
+}
+
 if (!function_exists('cart_line_tax')) {
     /**
      * The VAT added on top of one cart line, in money: `$linePrice` is the line's
      * price for its whole quantity before tax (a representative's own price
-     * when the line has one). The product's explicit tax rows win; otherwise
-     * its VAT percent (`products.tax`, 9 or 21) applies to the line price.
+     * when the line has one), times product_vat_percent(), plus any fixed
+     * amount the product's tax rows add per item.
      */
     function cart_line_tax($cart_product, $product, float $linePrice): float
     {
-        $explicit = (float) cart_product_tax($cart_product, $product, false) * (int) $cart_product['quantity'];
+        $product->loadMissing('taxes');
+        $fixed = (float) $product->taxes->where('tax_type', 'amount')->sum('tax') * (int) $cart_product['quantity'];
 
-        return round($explicit > 0 ? $explicit : $linePrice * (float) ($product->tax ?? 0) / 100, 2);
+        return round($linePrice * product_vat_percent($product) / 100 + $fixed, 2);
     }
 }
 

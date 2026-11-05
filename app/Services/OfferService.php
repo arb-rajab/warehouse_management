@@ -31,7 +31,7 @@ class OfferService
             $offer_order_details->price =  offer_discount($offer_product, false) * $offer_product->quantity;
             $offer_order_details->original_price =  $offer_order_details->price;
             $offer_order_details->product_serial = $offer_product->product->serial;
-            $offer_order_details->tax = $offer_product->product->tax;
+            $offer_order_details->tax = product_vat_percent($offer_product->product);
             // A brand offer's product is not charged for (its price is not in the order subtotal), so no VAT either.
             // The line is a copy of the ordered one: its amount must not be the copied line's.
             $offer_order_details->tax_amount = 0;
@@ -241,9 +241,9 @@ class OfferService
             $offer_order_details->price =  $cartItem->price * $cartItem->quantity;
             $offer_order_details->original_price =  $cartItem->price * $cartItem->quantity;
             $offer_order_details->product_serial = $product->serial;
-            $offer_order_details->tax = $product->tax;
+            $offer_order_details->tax = product_vat_percent($product);
             // VAT on top of what the offer line adds to the subtotal below (`$cartItem->price`), not the copied line's.
-            $offer_order_details->tax_amount = round((float) $cartItem->price * (float) ($product->tax ?? 0) / 100, 2);
+            $offer_order_details->tax_amount = round((float) $cartItem->price * (float) $offer_order_details->tax / 100, 2);
             $offer_order_details->item_notes = $cartItem->item_notes;
 
             $offer_order_details->quantity = $cartItem->quantity;

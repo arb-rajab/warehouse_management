@@ -15,6 +15,7 @@ use App\Models\ProductStock;
 use App\Models\ProductVariation;
 use App\Models\SmsTemplate;
 use App\Models\StoreUser;
+use App\Services\MinimumOrderFee;
 use App\Services\OfferService;
 use App\Services\OrderPlacementService;
 use App\Services\OrderService;
@@ -95,6 +96,10 @@ class OrderController extends Controller implements HasMiddleware
         if ($carts->isEmpty()) {
             throw new DomainException(__('storefront.cart.empty'));
         }
+
+        // Below the minimum order: the fee line, or a refusal when there is no fee product.
+        $fees = app(MinimumOrderFee::class);
+        $carts = $fees->addTo($carts);
 
         $address = Address::where('id', $carts[0]['address_id'])->first();
 
@@ -202,7 +207,9 @@ class OrderController extends Controller implements HasMiddleware
                     $cartItem->delete();
                     continue;
                 }
-                if (0 == $product->published) {
+                $isFee = $fees->isFeeLine($cartItem);
+
+                if (0 == $product->published && ! $isFee) {
                     $order_deleted_products_info .= ' -' . $product->ar_name . ', ';
                     $cartItem->delete();
                     $request->session()->put('delete_product', true);
@@ -218,7 +225,9 @@ class OrderController extends Controller implements HasMiddleware
 
                 $product_variation = $cartItem['variation'];
 
-                $this->orderPlacementService()->reserveStock($product, $product_variation, $cartItem['quantity']);
+                if (! $isFee) {
+                    $this->orderPlacementService()->reserveStock($product, $product_variation, $cartItem['quantity']);
+                }
 
                 $order_detail = new OrderDetail;
                 $order_detail->order_id = $order->id;
@@ -250,7 +259,7 @@ class OrderController extends Controller implements HasMiddleware
                 // order_details.tax is NOT NULL and products.tax nullable: the
                 // legacy app's non-strict MySQL stored 0 for a product with no
                 // tax, which this app's strict connection refuses to do for it.
-                $order_detail->tax = $product->tax ?? 0;
+                $order_detail->tax = product_vat_percent($product);
                 // VAT is added on top of the line price; the money is tax_amount, the percent is tax.
                 $order_detail->tax_amount = cart_line_tax($cartItem, $product, (float) $order_detail->price);
                 $order_detail->item_notes = $cartItem['item_notes'];

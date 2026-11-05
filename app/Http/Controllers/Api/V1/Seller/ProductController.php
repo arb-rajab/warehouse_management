@@ -244,6 +244,8 @@ class ProductController extends Controller
         if (auth()->user()->id == $product->user_id) {
             $product_new = $product->replicate();
             $product_new->slug = $product_new->slug . '-' . Str::random(5);
+            // A copy is not the source's Otajer article (see the admin duplicate).
+            $product_new->serial = null;
             $product_new->save();
 
             //Store in Product Stock Table
