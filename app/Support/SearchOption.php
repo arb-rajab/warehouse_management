@@ -34,15 +34,20 @@ final class SearchOption
      */
     public static function make(int|string $id, string $label, ?string $description = null, ?string $image = null, ?string $icon = null, ?array $badge = null, array $extra = []): array
     {
-        return [
+        $option = [
             'id' => $id,
             'label' => $label,
             'description' => $description,
             'image' => $image,
             'icon' => $icon,
             'badge' => $badge,
-            ...($extra === [] ? [] : ['extra' => $extra]),
         ];
+
+        if ($extra !== []) {
+            $option['extra'] = $extra;
+        }
+
+        return $option;
     }
 
     /** @return Badge */
@@ -130,7 +135,7 @@ final class SearchOption
         return self::make(
             $product->id,
             app()->getLocale() === 'ar' ? ((string) ($product->ar_name ?: $product->name)) : (string) $product->name,
-            self::describe([$serial === null || $serial === '' ? null : __('store_admin.search_option_sku', ['serial' => $serial]), '#'.$product->id, number_format($price, 2, '.', '')]),
+            self::describe([self::sku($serial), '#'.$product->id, number_format($price, 2, '.', '')]),
             self::imageUrl($product->thumbnailUpload),
             'package',
             $digital ? null : self::stockBadge($quantity),
@@ -165,7 +170,7 @@ final class SearchOption
         return self::make(
             $product->id,
             (string) $product->getTranslation('name'),
-            self::describe([$serial === null || $serial === '' ? null : __('store_admin.search_option_sku', ['serial' => $serial]), '#'.$product->id, number_format($price, 2, '.', '')]),
+            self::describe([self::sku($serial), '#'.$product->id, number_format($price, 2, '.', '')]),
             self::imageUrl($product->thumbnailUpload),
             'package',
             $discount > 0 ? self::badge(__('store_admin.search_option_off', ['value' => $type === 'percent' ? self::trimmed($discount).'%' : number_format($discount, 2, '.', '')]), 'info') : null,
@@ -182,6 +187,12 @@ final class SearchOption
     public static function brand(Brand $brand): array
     {
         return self::make($brand->id, (string) $brand->name, null, null, 'tag');
+    }
+
+    /** The `SKU xyz` part of a product's description, or null without a serial. */
+    private static function sku(mixed $serial): ?string
+    {
+        return $serial === null || $serial === '' ? null : (string) __('store_admin.search_option_sku', ['serial' => $serial]);
     }
 
     /** 12.50 as "12.5", 10.00 as "10". */

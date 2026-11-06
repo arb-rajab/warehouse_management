@@ -124,8 +124,8 @@ class ReportController extends Controller implements HasMiddleware
      * The users already selected in a report's filter, as search options, so the
      * filter shows their names without listing every user.
      *
-     * @param  list<string>|null  $ids
-     * @return list<array<string, mixed>>
+     * @param  array<int, string>|null  $ids
+     * @return array<int, array<string, mixed>>
      */
     private function selectedUsers(?array $ids, ?string $type = null): array
     {

@@ -522,7 +522,7 @@ class ProductController extends Controller implements HasMiddleware
             return null;
         }
 
-        $seller = StoreUser::query()->select(['id', 'name', 'email'])->where('user_type', 'seller')->find($id);
+        $seller = StoreUser::query()->select(['id', 'name', 'email'])->where('user_type', 'seller')->whereKey($id)->first();
 
         return $seller === null ? null : SearchOption::user($seller);
     }

@@ -130,7 +130,7 @@ class CouponController extends Controller implements HasMiddleware
      * The coupon's own products as search options, in the order the coupon lists them.
      *
      * @param  array<int, mixed>  $ids
-     * @return list<array<string, mixed>>
+     * @return array<int, array<string, mixed>>
      */
     private function selectedOptions(array $ids): array
     {

@@ -43,17 +43,15 @@ trait SearchesOptions
      * @template TModel of Model
      *
      * @param  Builder<TModel>  $query
-     * @param  list<string>  $columns
+     * @param  list<literal-string>  $columns  column names written in code, never taken from the request
      */
     protected function whereWordsMatch(Builder $query, array $columns, string $term): void
     {
-        $grammar = $query->getQuery()->getGrammar();
-
         foreach ($this->searchWords($term) as $word) {
             $pattern = $this->likePattern($word);
-            $query->where(function (Builder $group) use ($columns, $grammar, $pattern): void {
+            $query->where(function (Builder $group) use ($columns, $pattern): void {
                 foreach ($columns as $column) {
-                    $group->orWhereRaw($grammar->wrap($column).' like ? escape ?', [$pattern, '\\']);
+                    $group->orWhereRaw($column.' like ? escape ?', [$pattern, '\\']);
                 }
             });
         }
@@ -61,7 +59,8 @@ trait SearchesOptions
 
     /**
      * Like {@see self::whereWordsMatch()} on the model's own `name`, where a word
-     * may instead be found in the name's translation into the active language.
+     * may instead be found in the name's translation into the active language
+     * (inside the subquery, `name` is the translation table's own column).
      *
      * @template TModel of Model
      *
@@ -69,17 +68,13 @@ trait SearchesOptions
      */
     protected function whereTranslatedNameMatches(Builder $query, string $relation, string $term): void
     {
-        $grammar = $query->getQuery()->getGrammar();
-        $name = $grammar->wrap($query->getModel()->qualifyColumn('name'));
-        $translated = $grammar->wrap($query->getModel()->{$relation}()->getRelated()->qualifyColumn('name'));
-
         foreach ($this->searchWords($term) as $word) {
             $pattern = $this->likePattern($word);
             $query->where(fn (Builder $group) => $group
-                ->whereRaw($name.' like ? escape ?', [$pattern, '\\'])
+                ->whereRaw('name like ? escape ?', [$pattern, '\\'])
                 ->orWhereHas($relation, fn (Builder $translation) => $translation
                     ->where('lang', app()->getLocale())
-                    ->whereRaw($translated.' like ? escape ?', [$pattern, '\\'])));
+                    ->whereRaw('name like ? escape ?', [$pattern, '\\'])));
         }
     }
 
@@ -90,12 +85,13 @@ trait SearchesOptions
      * @template TModel of Model
      *
      * @param  Builder<TModel>  $query
+     * @param  literal-string  $column  a column name written in code, never taken from the request
      * @param  'asc'|'desc'  $direction
      */
     protected function orderByRelevance(Builder $query, string $column, string $term, string $direction = 'asc'): void
     {
         if ($term !== '') {
-            $query->orderByRaw('case when '.$query->getQuery()->getGrammar()->wrap($column).' like ? escape ? then 0 else 1 end', [$this->likePattern($term, true), '\\']);
+            $query->orderByRaw('case when '.$column.' like ? escape ? then 0 else 1 end', [$this->likePattern($term, true), '\\']);
         }
 
         $query->orderBy($column, $direction)->orderBy($query->getModel()->getQualifiedKeyName(), $direction);
