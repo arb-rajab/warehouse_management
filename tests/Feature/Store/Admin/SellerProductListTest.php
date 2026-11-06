@@ -167,16 +167,21 @@ test('the seller list sends the filtered seller as a search option, no seller li
 test('the seller filter search offers only seller accounts, matched by name or email and paged', function () {
     actingAsStoreUser(createStoreStaff('show_seller_products'));
     $this->seller->forceFill(['name' => 'Ada seller', 'email' => 'ada@example.test'])->save();
-    StoreUser::query()->whereKey($this->other->user_id)->update(['name' => 'Zed seller']);
+    StoreUser::query()->whereKey($this->other->user_id)->update(['name' => 'Zed seller', 'email' => 'zed@example.test']);
     createStoreUser('customer')->forceFill(['name' => 'Ada customer'])->save();
 
     expect($this->getJson(route('products.seller.options', ['q' => 'ada']))->assertOk()->json('data.*.label'))->toBe(['Ada seller'])
         ->and($this->getJson(route('products.seller.options', ['q' => 'ada@example']))->json('data.*.id'))->toBe([$this->seller->id]);
+    // Emails without digits, so a digit in the search can only match a name.
     foreach (range(1, 25) as $number) {
-        createStoreUser('seller')->forceFill(['name' => sprintf('Seller %02d', $number)])->save();
+        createStoreUser('seller')->forceFill(['name' => sprintf('Seller %02d', $number), 'email' => sprintf('seller.%s@example.test', chr(96 + $number))])->save();
     }
+    // Every word must be found in the name or the email, so "Seller 0" also finds
+    // "Seller 10" and "Seller 20"; names starting with the term come first.
     $first = $this->getJson(route('products.seller.options', ['q' => 'Seller 0']))->assertOk();
-    expect($first->json('data'))->toHaveCount(9)->and($first->json('data.0.label'))->toBe('Seller 01');
+    expect($first->json('data.*.label'))->toBe([
+        'Seller 01', 'Seller 02', 'Seller 03', 'Seller 04', 'Seller 05', 'Seller 06', 'Seller 07', 'Seller 08', 'Seller 09', 'Seller 10', 'Seller 20',
+    ]);
     $all = $this->getJson(route('products.seller.options'))->assertOk();
     expect($all->json('data'))->toHaveCount(20)->and($all->json('meta.total'))->toBe(27)
         ->and($this->getJson(route('products.seller.options', ['page' => 2]))->json('data'))->toHaveCount(7);

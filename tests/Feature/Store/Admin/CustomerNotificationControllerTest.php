@@ -43,7 +43,8 @@ test('customer notification list renders a narrow payload and scoped customer re
 test('customer notification list pages deterministically and validates page sizes', function () {
     actingAsStoreUser(createStoreStaff('add_notification'));
     $customer = createStoreUser('customer');
-    $ids = collect(range(1, 23))->map(fn () => customerNotification(['user_id' => $customer->id])->id);
+    // Newest first: the reverse of the order the notifications were created in.
+    $ids = collect(range(1, 23))->map(fn () => customerNotification(['user_id' => $customer->id])->id)->reverse()->values();
     $first = $this->get(route('admin.notifications.all'))->assertOk()->inertiaProps('notifications');
     $second = $this->get(route('admin.notifications.all', ['page' => 2]))->assertOk()->inertiaProps('notifications');
     expect(array_column($first['data'], 'id'))->toBe($ids->take(20)->all())

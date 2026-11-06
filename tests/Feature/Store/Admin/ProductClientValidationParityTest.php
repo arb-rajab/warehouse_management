@@ -231,7 +231,8 @@ test('the digital product forms\' client rules mirror the server rules', functio
 
 test('the client skips the read-only Otajer fields the server does not validate as posted', function () {
     $sections = productSections(true);
-    $product = storeOriginProduct(0)->forceFill(['synced_at' => now()]);
+    // A feed-origin row. `synced_at` is set raw: the model refuses the store assigning it, as only the sync stamps it.
+    $product = (new Product)->setRawAttributes(['digital' => 0, 'synced_at' => now()->toDateTimeString()]);
     $server = productRequestRules(UpdateProductRequest::class, $product, ['lang' => config('app.default_language')]);
     $swapped = array_keys(array_filter($server, fn (mixed $rules): bool => $rules === ['nullable']));
 

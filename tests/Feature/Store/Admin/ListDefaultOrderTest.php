@@ -88,6 +88,7 @@ test('the rating sort of the reviews list wins, and newest first breaks its ties
 });
 
 test('the all-products list defaults to newest first and the legacy sort still wins', function () {
+    seedStoreCurrency();
     actingAsStoreUser(createStoreStaff('show_all_products'));
     $old = createStoreProduct(['name' => 'Old oil', 'unit_price' => 1, 'thumbnail_img' => null]);
     $new = createStoreProduct(['name' => 'New oil', 'unit_price' => 5, 'thumbnail_img' => null]);

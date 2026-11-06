@@ -84,7 +84,8 @@ describe('index', function () {
 
     test('the staff list pages, twenty to a page by default', function () {
         actingAsStoreUser(createStoreStaff('view_all_staffs'));
-        $ids = collect(range(1, 23))->map(fn () => createStaffRow(createStoreUser('staff'))->id);
+        // Newest first: the reverse of the order the staff were created in.
+        $ids = collect(range(1, 23))->map(fn () => createStaffRow(createStoreUser('staff'))->id)->reverse()->values();
 
         $firstPage = $this->get('/temp/admin/staffs')->assertOk()->inertiaProps('staff');
         $secondPage = $this->get('/temp/admin/staffs?page=2')->assertOk()->inertiaProps('staff');

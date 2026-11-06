@@ -98,6 +98,16 @@ function backOfficeFieldsCells(TestResponse $page, string $label): DOMNodeList
     );
 }
 
+/**
+ * The visible "Estimate Shipping Time:" label, which the template prints only
+ * with est_shipping_days. The bare words are also in an HTML comment that is
+ * always rendered, so asserting on them alone proves nothing.
+ */
+function backOfficeFieldsEstimateLabel(): string
+{
+    return __('storefront.checkout.estimate_shipping_time').':';
+}
+
 /** The text beside a label, or null when the row is not printed. */
 function backOfficeFieldsRow(TestResponse $page, string $label): ?string
 {
@@ -135,7 +145,7 @@ test('a product saved on the back office form shows its barcodes, weight, quanti
         ->toContain(strip_tags(single_price(4.95)))
         ->toContain('('.__('storefront.product.shipping_per_unit').')')
         ->and(backOfficeFieldsTags($page, __('storefront.product.tags')))->toBe(['oil', 'olive']);
-    $page->assertSee(__('storefront.checkout.estimate_shipping_time'))
+    $page->assertSee(backOfficeFieldsEstimateLabel())
         ->assertSee('3 '.__('storefront.common.days'));
 });
 
@@ -170,6 +180,8 @@ test('editing the product on the back office form changes what the page shows', 
     $page = backOfficeFieldsPage($product);
     expect(backOfficeFieldsRow($page, __('storefront.product.barcodes')))->toContain('8712345678906');
 
+    // Reading the page signed in a customer; the edit is the admin's.
+    actingAsStoreUser(createStoreAdmin());
     $this->post(route('products.update', $product), [
         ...backOfficeFieldsForm([
             'weight' => '2',
@@ -222,7 +234,7 @@ test('a product with the form defaults prints only the rows that carry a value',
         ->and(backOfficeFieldsRow($page, __('storefront.checkout.shipping')))->toBe(__('storefront.product.free_shipping'))
         ->and(backOfficeFieldsRow($page, __('storefront.product.tags')))->toBeNull();
     $page->assertDontSee('noise-tag')->assertDontSee('4006381333931')
-        ->assertDontSee(__('storefront.checkout.estimate_shipping_time'));
+        ->assertDontSee(backOfficeFieldsEstimateLabel());
 });
 
 test('with the shipping menu off the form posts no shipping fields and the page says free shipping', function () {
@@ -236,7 +248,7 @@ test('with the shipping menu off the form posts no shipping fields and the page 
     $page = backOfficeFieldsPage($product, guest: true);
     expect(backOfficeFieldsRow($page, __('storefront.checkout.shipping')))->toBe(__('storefront.product.free_shipping'))
         ->and(backOfficeFieldsRow($page, __('storefront.product.weight')))->toBe('1.25 kg');
-    $page->assertDontSee(__('storefront.checkout.estimate_shipping_time'));
+    $page->assertDontSee(backOfficeFieldsEstimateLabel());
 });
 
 test('an unpublished product has no page, whatever its fields hold', function () {
