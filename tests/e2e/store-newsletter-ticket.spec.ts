@@ -144,18 +144,25 @@ test('a newsletter is composed with formatting, keeps its draft after a refused 
     // the draft survives the round trip.
     const forged =
         'input[name="user_emails[]"][value="forged-recipient@example.test"]';
+    // The empty lists carry a native `required` guard that would stop the submit
+    // in the browser; a forged request skips it, so the server is what refuses.
     await page.locator('#subject').evaluate((subject) => {
+        const form = subject.closest('form')!;
         const input = document.createElement('input');
         input.type = 'hidden';
         input.name = 'user_emails[]';
         input.value = 'forged-recipient@example.test';
-        subject.closest('form')!.appendChild(input);
+        form.noValidate = true;
+        form.appendChild(input);
     });
     await page.getByRole('button', { name: 'Send', exact: true }).click();
     await expect(
         page.getByText('The selected user_emails.0 is invalid.'),
     ).toBeVisible();
-    await page.locator(forged).evaluate((input) => input.remove());
+    await page.locator(forged).evaluate((input) => {
+        input.closest('form')!.noValidate = false;
+        input.remove();
+    });
     await expect(page.locator('#subject')).toHaveValue('Weekly offers');
     await expect(page.locator('#content strong')).toHaveText('Fresh dates');
 
@@ -404,9 +411,15 @@ test('both editors work in Arabic RTL with dark contrast and a keyboard-only too
 
     for (const selector of ['#content', '#user_emails', '#subject']) {
         const colors = await colorsOf(page, selector);
-        expect(Math.max(...colors.background)).toBeLessThan(60);
+        // A multiple search select's trigger button is transparent: the box
+        // around it is what the text sits on.
+        const background =
+            selector === '#user_emails'
+                ? (await colorsOf(page, 'div:has(> #user_emails)')).background
+                : colors.background;
+        expect(Math.max(...background)).toBeLessThan(60);
         expect(
-            contrastRatio(colors.foreground, colors.background),
+            contrastRatio(colors.foreground, background),
         ).toBeGreaterThanOrEqual(4.5);
     }
 

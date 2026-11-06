@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { loginAsStoreAdmin } from './support/auth';
+import { colorsOf } from './support/editor';
 import { switchLocale } from './support/nav';
 import { pickSearchOption } from './support/searchSelect';
 
@@ -83,6 +84,10 @@ test('the keyboard picks a row and returns focus to the field', async ({
     await expect(
         page.getByRole('option', { name: /Browser Buyer/ }),
     ).toBeVisible();
+    // The list of the empty query may still be on screen: wait for the filtered one.
+    await expect(
+        page.locator('[data-search-select-layer] [role="option"]'),
+    ).toHaveCount(1);
     await page.keyboard.press('ArrowDown');
     await expect(search).toHaveAttribute(
         'aria-activedescendant',
@@ -152,11 +157,11 @@ test('rows stay readable in dark mode', async ({ page }) => {
     const row = page.getByRole('option', { name: /Browser Buyer/ }).first();
     await expect(row).toBeVisible();
 
-    const panelBackground = await row.evaluate((element) => {
-        const panel = element.closest('[id$="-panel"]')!;
-
-        return getComputedStyle(panel).backgroundColor;
-    });
+    // The computed colour is an `oklch()` in current Chromium, so read it as rgb.
+    const panel = await colorsOf(
+        page,
+        '[data-search-select-layer] [id$="-panel"]',
+    );
     // neutral-800: a dark panel, not the white of light mode.
-    expect(panelBackground).toBe('rgb(38, 38, 38)');
+    expect(panel.background).toEqual([38, 38, 38]);
 });

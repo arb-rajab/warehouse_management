@@ -71,7 +71,9 @@ test('order configuration renders hostile search results as text', async ({
     await page.goto('/temp/admin/order-configuration');
     await page.locator('#default_specific_product').click();
     await page.locator('input[role="combobox"]').fill('MAT-');
-    const result = page.getByRole('option');
+    const result = page
+        .locator('[data-search-select-layer]')
+        .getByRole('option');
     await expect(result).toContainText(name);
     await expect(result.locator('img')).toHaveCount(0);
     await result.click();
