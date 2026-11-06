@@ -334,8 +334,9 @@ describe('StoreTripFormFields', () => {
             searchPlaceholder: t('store.trips.form.searchCustomers'),
             required: true,
         });
-        // Nothing is fetched until a list is opened.
-        expect(getMock).not.toHaveBeenCalled();
+        // No search runs until a list is opened: the only request so far is the
+        // form's own available-vehicles lookup for the trip date.
+        expect(getMock.mock.calls).toEqual([[vehiclesUrl('2026-10-14', 41)]]);
 
         selects[0].vm.$emit('update:modelValue', {
             id: 77,

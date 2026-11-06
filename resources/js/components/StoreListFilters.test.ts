@@ -327,7 +327,7 @@ describe('StoreListFilters', () => {
         );
         const current = mountFilters(0, chips);
 
-        await current.get('ul li button').trigger('click');
+        await current.findAll('ul li')[0].get('button').trigger('click');
 
         expect(routerGetMock).toHaveBeenCalledWith(
             '/temp/admin/products?search=milk&featured=1&per_page=50',

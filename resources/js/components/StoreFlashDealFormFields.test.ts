@@ -12,7 +12,7 @@ import StoreFlashDealFormFields from './StoreFlashDealFormFields.vue';
 const { getMock } = vi.hoisted(() => ({ getMock: vi.fn() }));
 vi.mock('@inertiajs/vue3', () => ({
     usePage: () => ({ props: { store: storeSharedProps() } }),
-    useHttp: () => ({ get: getMock }),
+    useHttp: () => ({ cancel: () => {}, get: getMock, processing: false }),
 }));
 beforeEach(() => {
     vi.clearAllMocks();

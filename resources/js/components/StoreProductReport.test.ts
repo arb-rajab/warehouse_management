@@ -110,39 +110,39 @@ it('escapes product names and renders the empty state', () => {
         props: { ...props, rows: paginated([]) },
     });
     expect(empty.text()).toContain(t('store.reports.empty'));
+});
 
-    it('links each product name to its edit page only with product_edit', () => {
-        const mountReport = () =>
-            mount(StoreProductReport, {
-                props: {
-                    title: 'Stock',
-                    metricKey: 'store.reports.stock',
-                    listId: 'reports.stock',
-                    url: '/temp/admin/report',
-                    rows: paginated([storeProductReportRow({ id: 5 })]),
-                    options: [],
-                    filters: { per_page: 20 },
-                },
-            });
-
-        usePageMock.mockReturnValue({
-            url: '/temp/admin/report',
-            props: defaultAuthProps({
-                store: storeSharedProps({ permissions: ['product_edit'] }),
-            }),
+it('links each product name to its edit page only with product_edit', () => {
+    const mountReport = () =>
+        mount(StoreProductReport, {
+            props: {
+                title: 'Stock',
+                metricKey: 'store.reports.stock',
+                listId: 'reports.stock',
+                url: '/temp/admin/report',
+                rows: paginated([storeProductReportRow({ id: 5 })]),
+                options: [],
+                filters: { per_page: 20 },
+            },
         });
-        expect(mountReport().get('tbody a').attributes('href')).toBe(
-            productEdit(5).url,
-        );
 
-        usePageMock.mockReturnValue({
-            url: '/temp/admin/report',
-            props: defaultAuthProps({
-                store: storeSharedProps({ permissions: [] }),
-            }),
-        });
-        expect(mountReport().find('tbody a').exists()).toBe(false);
+    usePageMock.mockReturnValue({
+        url: '/temp/admin/report',
+        props: defaultAuthProps({
+            store: storeSharedProps({ permissions: ['product_edit'] }),
+        }),
     });
+    expect(mountReport().get('tbody a').attributes('href')).toBe(
+        productEdit(5).url,
+    );
+
+    usePageMock.mockReturnValue({
+        url: '/temp/admin/report',
+        props: defaultAuthProps({
+            store: storeSharedProps({ permissions: [] }),
+        }),
+    });
+    expect(mountReport().find('tbody a').exists()).toBe(false);
 });
 
 it('lets staff hide the number and the metric column but never the product name', async () => {
