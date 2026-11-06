@@ -197,7 +197,7 @@ onBeforeUnmount(() => {
 <template>
     <div ref="outerRef" class="relative">
         <div
-            class="overflow-hidden rounded-lg border border-gray-200 dark:border-neutral-800"
+            class="relative overflow-hidden rounded-lg border border-gray-200 dark:border-neutral-800"
         >
             <!--
                 Layout contract (store-table-layout.md): the table is as wide

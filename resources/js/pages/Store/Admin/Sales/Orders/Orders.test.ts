@@ -347,6 +347,9 @@ describe('Store order pages', () => {
         const form = pageForms(wrapper)[1];
         expect(form.findAll('[data-required-legend]')).toHaveLength(1);
         expect(form.find('legend [data-required-mark]').exists()).toBe(true);
+        // A fieldset is as wide as its content by default; the table's own
+        // wrapper must be what scrolls on a phone, not the page.
+        expect(form.get('fieldset').classes()).toContain('min-w-0');
         expect(form.findAll('input[required]')).toHaveLength(1);
         expect((form.element as HTMLFormElement).checkValidity()).toBe(false);
         await form.findAll('input[type="checkbox"]')[1].setValue(true);

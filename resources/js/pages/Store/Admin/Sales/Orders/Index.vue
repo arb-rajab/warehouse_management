@@ -238,7 +238,7 @@ const hasRequiredFields = provideRequiredFields();
             <RequiredLegend
                 v-if="hasRequiredFields && access.can('delete_order')"
             />
-            <fieldset>
+            <fieldset class="min-w-0">
                 <legend
                     v-if="access.can('delete_order')"
                     :class="fieldLabelClass"

@@ -280,6 +280,17 @@ describe('DataTable', () => {
         );
     });
 
+    it('makes the clipping wrapper the containing block of the cells, so their absolutely positioned sr-only content never stretches the page', () => {
+        const wrapper = mountTable([{ id: 1, letter: 'A' }]);
+
+        const clippingWrapper =
+            wrapper.get('table').element.parentElement?.parentElement;
+        expect(clippingWrapper?.classList.contains('relative')).toBe(true);
+        expect(clippingWrapper?.classList.contains('overflow-hidden')).toBe(
+            true,
+        );
+    });
+
     it('sizes the table to its content and keeps cells on one line, so a wide table scrolls sideways instead of growing tall', () => {
         const wrapper = mountTable([{ id: 1, letter: 'A' }]);
 

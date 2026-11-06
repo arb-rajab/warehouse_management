@@ -2,7 +2,6 @@ import { expect, test } from '@playwright/test';
 import { loginAsStoreAdmin } from './support/auth';
 import { colorsOf } from './support/editor';
 import { switchLocale } from './support/nav';
-import { pickSearchOption } from './support/searchSelect';
 
 /**
  * Browser-only behaviour of StoreSearchSelect (jsdom has no layout): the open
@@ -137,12 +136,12 @@ test('on a phone the list is a top sheet over a backdrop and nothing overflows s
         ),
     ).toBe(true);
 
-    await pickSearchOption(
-        page,
-        page.locator('#customer_id'),
-        'Browser Buyer',
-        /Browser Buyer/,
-    );
+    // The list is already open (its backdrop covers the trigger): search and pick in it.
+    await page.locator('input[role="combobox"]').fill('Browser Buyer');
+    await page
+        .getByRole('option', { name: /Browser Buyer/ })
+        .first()
+        .click();
     await expect(
         page.locator('[data-testid="search-select-backdrop"]'),
     ).toHaveCount(0);
