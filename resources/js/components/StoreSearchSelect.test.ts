@@ -96,7 +96,7 @@ describe('StoreSearchSelect field', () => {
         const wrapper = mountSelect({ name: 'customer_id', required: true });
 
         expect(wrapper.get('label').text()).toContain('Customer');
-        expect(wrapper.get('label [data-required-mark]').exists()).toBe(true);
+        expect(wrapper.find('label [data-required-mark]').exists()).toBe(true);
         const trigger = wrapper.get('#customer_id');
         expect(trigger.attributes()).toMatchObject({
             type: 'button',
@@ -404,7 +404,9 @@ describe('StoreSearchSelect selection', () => {
 
         await wrapper.findAll('[role="option"]')[0].trigger('click');
         await wrapper.setProps({
-            modelValue: wrapper.emitted('update:modelValue')?.[0][0],
+            modelValue: wrapper.emitted(
+                'update:modelValue',
+            )?.[0][0] as SearchOption,
         });
 
         expect(

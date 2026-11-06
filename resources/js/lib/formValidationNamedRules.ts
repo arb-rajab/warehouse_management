@@ -9,6 +9,7 @@ export function formatProductNumber(value: string): string {
     if (!value.includes('.')) {
         return value;
     }
+
     const trimmed = value.replace(/0+$/, '').replace(/\.$/, '');
 
     return trimmed === '' || trimmed === '0' ? '0' : trimmed;
@@ -51,11 +52,13 @@ export const namedRules: Record<string, NamedRule> = {
             if (!isNumeric(value) || Number(value) <= 0) {
                 return null;
             }
+
             if (get('discount_type') === 'percent') {
                 return Number(value) >= 100
                     ? { message: 'discount_percent_limit' }
                     : null;
             }
+
             const price = get('unit_price');
 
             return isNumeric(price) && Number(value) >= Number(price)
@@ -94,6 +97,7 @@ export function resolveNamedRules(
             field,
             list.map((name) => {
                 const rule = namedRules[name];
+
                 if (rule === undefined) {
                     throw new Error(`Unknown client validation rule: ${name}`);
                 }

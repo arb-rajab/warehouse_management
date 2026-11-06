@@ -82,7 +82,7 @@ const tableColumns = computed(() => [
                 <td
                     v-if="shown.message"
                     class="max-w-xs truncate px-4 py-3"
-                    :title="row.message"
+                    :title="row.message ?? undefined"
                 >
                     {{ row.message }}
                 </td>

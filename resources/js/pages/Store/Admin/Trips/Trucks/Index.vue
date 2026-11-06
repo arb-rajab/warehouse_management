@@ -113,7 +113,7 @@ const tableColumns = computed(() => [
                 <td
                     v-if="shown.description"
                     class="max-w-xs truncate px-4 py-2"
-                    :title="truck.description"
+                    :title="truck.description ?? undefined"
                 >
                     {{ truck.description }}
                 </td>

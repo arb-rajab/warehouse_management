@@ -116,7 +116,9 @@ it('starts a flash deal row from the product discount and names an unknown produ
     });
     const wrapper = mount(StoreCampaignProductRows, {
         props: {
-            modelValue: [{ id: 99, discount: 1, discount_type: 'amount' }],
+            modelValue: [
+                { id: 99, discount: 1, discount_type: 'amount' as const },
+            ],
             selectedProducts: [],
             errors: {},
             'onUpdate:modelValue': (value) =>

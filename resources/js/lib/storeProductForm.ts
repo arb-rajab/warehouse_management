@@ -48,6 +48,7 @@ function productSchema(
     readOnlyFields: readonly string[] = [],
 ): ValidationSchema {
     const rules: Record<string, string[]> = {};
+
     for (const [field, entry] of Object.entries({
         ...spec.rules,
         ...spec[form],
@@ -58,6 +59,7 @@ function productSchema(
             rules[field] = entry.rules;
         }
     }
+
     for (const field of readOnlyFields) {
         if (spec.readOnlyNullable.includes(field)) {
             rules[field] = ['nullable'];

@@ -152,6 +152,7 @@ describe('physical product create form', () => {
         for (const id of ['name', 'unit', 'category_id', 'unit_price']) {
             expect(wrapper.get(`#${id}`).attributes('required')).toBeDefined();
         }
+
         expect(wrapper.get('#ar_name').attributes('required')).toBeUndefined();
     });
 

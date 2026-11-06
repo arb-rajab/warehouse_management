@@ -70,6 +70,7 @@ describe('physicalProductValidation', () => {
             'in:free,flat_rate',
         ]);
         expect(on.rules['tax.*']).toBeDefined();
+
         for (const field of [
             'shipping_type',
             'flat_shipping_cost',
@@ -197,12 +198,16 @@ describe('storeProductRules.json', () => {
             string | Record<string, string>
         >;
         const sized = ['min', 'max', 'lt', 'lte', 'gt', 'gte'];
+
         for (const token of everyToken()) {
             const [name] = parseToken(token);
+
             if (['bail', 'sometimes', 'nullable'].includes(name)) {
                 continue;
             }
+
             const line = messages[name];
+
             if (sized.includes(name)) {
                 expect(Object.keys(line as object)).toEqual([
                     'numeric',
@@ -213,6 +218,7 @@ describe('storeProductRules.json', () => {
                 expect(typeof line).toBe('string');
             }
         }
+
         for (const name of [
             'discount_below_price',
             'discount_percent_limit',

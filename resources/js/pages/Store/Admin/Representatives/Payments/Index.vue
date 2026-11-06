@@ -186,7 +186,7 @@ const tableColumns = computed(() => [
                 <td
                     v-if="shown.notes"
                     class="max-w-xs truncate px-4 py-2"
-                    :title="payment.notes"
+                    :title="payment.notes ?? undefined"
                 >
                     {{ payment.notes }}
                 </td>

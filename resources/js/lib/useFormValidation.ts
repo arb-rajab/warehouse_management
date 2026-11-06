@@ -33,6 +33,7 @@ export function useFormValidation(
         serverErrors: Record<string, string>,
     ): Record<string, string> {
         const merged: Record<string, string> = {};
+
         for (const [key, message] of Object.entries(serverErrors)) {
             if (!clearedServerErrors.has(key)) {
                 merged[key] = message;
@@ -57,9 +58,11 @@ export function useFormValidation(
         next: Record<string, string>,
     ): void {
         clientErrors.value = next;
+
         if (Object.keys(next).length === 0) {
             blocked.value = false;
         }
+
         markInvalid(snapshot);
     }
 
@@ -67,14 +70,18 @@ export function useFormValidation(
     function revalidate(keys: string[], includeDependents: boolean): void {
         const rules = schema();
         const element = form();
+
         if (!rules || !element) {
             return;
         }
+
         const snapshot = readForm(element);
         const targets = new Set(keys);
+
         if (includeDependents) {
             for (const key of keys) {
                 const field = patternFor(rules, key) ?? key;
+
                 for (const pattern of dependentPatterns(rules, field)) {
                     for (const dependent of keysFor(snapshot, pattern)) {
                         if (
@@ -88,21 +95,26 @@ export function useFormValidation(
                 }
             }
         }
+
         const next = { ...clientErrors.value };
+
         for (const key of targets) {
             const message = validateKey(snapshot, rules, key);
+
             if (message === undefined) {
                 delete next[key];
             } else {
                 next[key] = message;
             }
         }
+
         setErrors(snapshot, next);
     }
 
     function keyOf(event: Event): string | undefined {
         const target = event.target;
         const element = form();
+
         if (
             !schema() ||
             !element ||
@@ -118,10 +130,13 @@ export function useFormValidation(
     /** Typing: the field's server error goes, and a shown error follows the value. */
     function onInput(event: Event): void {
         const key = keyOf(event);
+
         if (key === undefined) {
             return;
         }
+
         clearedServerErrors.add(key);
+
         if (submitted || key in clientErrors.value) {
             revalidate([key], true);
         }
@@ -130,9 +145,11 @@ export function useFormValidation(
     /** A committed change (select, checkbox, radio, or a text field left). */
     function onChange(event: Event): void {
         const key = keyOf(event);
+
         if (key === undefined) {
             return;
         }
+
         clearedServerErrors.add(key);
         touched.add(key);
         revalidate([key], true);
@@ -141,9 +158,11 @@ export function useFormValidation(
     /** Leaving a field marks it touched and checks it. */
     function onFocusOut(event: Event): void {
         const key = keyOf(event);
+
         if (key === undefined) {
             return;
         }
+
         touched.add(key);
         revalidate([key], false);
     }
@@ -155,6 +174,7 @@ export function useFormValidation(
         ) {
             return false;
         }
+
         for (
             let node: Element | null = element;
             node && node !== root;
@@ -187,17 +207,21 @@ export function useFormValidation(
     function onBefore(): boolean {
         const rules = schema();
         const element = form();
+
         if (!rules || !element) {
             return true;
         }
+
         submitted = true;
         const snapshot = readForm(element);
         setErrors(snapshot, validateForm(snapshot, rules));
+
         if (Object.keys(clientErrors.value).length === 0) {
             blocked.value = false;
 
             return true;
         }
+
         blocked.value = true;
         focusFirstInvalid(element, snapshot);
 

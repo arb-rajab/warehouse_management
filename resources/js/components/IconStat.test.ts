@@ -1,9 +1,10 @@
 import { Tag } from '@lucide/vue';
 import { mount } from '@vue/test-utils';
+import type { VueWrapper } from '@vue/test-utils';
 import { afterEach, describe, expect, it } from 'vitest';
 import IconStat from './IconStat.vue';
 
-const wrappers: ReturnType<typeof mountStat>[] = [];
+const wrappers: VueWrapper[] = [];
 
 function mountStat(props: Record<string, unknown> = {}) {
     const wrapper = mount(IconStat, {

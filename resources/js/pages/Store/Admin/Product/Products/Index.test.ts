@@ -1,5 +1,6 @@
 import { Form, Head, Link } from '@inertiajs/vue3';
 import { flushPromises, mount } from '@vue/test-utils';
+import type { VueWrapper } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fetch as fetchProducts } from '@/actions/App/Http/Controllers/ProductController';
 import { edit as categoryEdit } from '@/actions/App/Http/Controllers/Store/Admin/CategoryController';
@@ -1056,7 +1057,9 @@ describe('seller product list', () => {
 
     it('shows sales, base price and profit as icon pairs that each explain their value', () => {
         const wrapper = mountPage();
-        const stats = wrapper.get('tbody tr').findAllComponents(IconStat);
+        const stats: VueWrapper<InstanceType<typeof IconStat>>[] = wrapper
+            .find('tbody tr')
+            .findAllComponents(IconStat);
 
         expect(stats.map((stat) => stat.props('label'))).toEqual([
             t('store.products.salesCount', { count: 7 }),

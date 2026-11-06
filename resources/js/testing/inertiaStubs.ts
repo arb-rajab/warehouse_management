@@ -69,6 +69,7 @@ export function createFormStub(
                 if (!formRef.value || props.onBefore?.() === false) {
                     return;
                 }
+
                 props.onStart?.();
                 onSubmit?.(new FormData(formRef.value));
             }

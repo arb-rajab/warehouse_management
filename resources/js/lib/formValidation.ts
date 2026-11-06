@@ -93,9 +93,11 @@ type ValidationLines = {
 /** `in:a,b` -> ['in', ['a', 'b']]; `regex` keeps its pattern whole. */
 export function parseToken(token: string): [string, string[]] {
     const at = token.indexOf(':');
+
     if (at === -1) {
         return [token, []];
     }
+
     const name = token.slice(0, at);
     const rest = token.slice(at + 1);
 
@@ -143,10 +145,12 @@ export function readForm(form: HTMLFormElement): FormSnapshot {
         ) {
             continue;
         }
+
         const segments = nameSegments(element.name);
         const autoAt = segments.indexOf('', 1);
         const fixed = segments.slice(0, autoAt === -1 ? undefined : autoAt);
         let posted: string[];
+
         if (
             element instanceof HTMLInputElement &&
             (element.type === 'checkbox' || element.type === 'radio')
@@ -157,17 +161,21 @@ export function readForm(form: HTMLFormElement): FormSnapshot {
         } else {
             posted = [element.value];
         }
+
         for (let depth = 1; depth <= fixed.length; depth++) {
             snapshot.known.add(fixed.slice(0, depth).join('.'));
         }
+
         if (!snapshot.elements.has(element)) {
             snapshot.elements.set(element, fixed.join('.'));
         }
+
         for (const value of posted) {
             const resolved = segments.map((segment, index) => {
                 if (index === 0 || segment !== '') {
                     return segment;
                 }
+
                 const prefix = segments.slice(0, index).join('.');
                 const next = counters.get(prefix) ?? 0;
                 counters.set(prefix, next + 1);
@@ -177,16 +185,20 @@ export function readForm(form: HTMLFormElement): FormSnapshot {
             const key = resolved.join('.');
             snapshot.values.set(key, normalise(value));
             snapshot.elements.set(element, key);
+
             for (let depth = 1; depth < resolved.length; depth++) {
                 const parent = resolved.slice(0, depth).join('.');
                 const child = resolved.slice(0, depth + 1).join('.');
                 snapshot.known.add(parent);
                 const list = snapshot.children.get(parent) ?? [];
+
                 if (!list.includes(child)) {
                     list.push(child);
                 }
+
                 snapshot.children.set(parent, list);
             }
+
             snapshot.known.add(key);
         }
     }
@@ -202,6 +214,7 @@ export function valueOf(
     if (snapshot.values.has(key)) {
         return snapshot.values.get(key) ?? null;
     }
+
     const rows = snapshot.children.get(key);
 
     return rows === undefined
@@ -236,6 +249,7 @@ export function keysFor(snapshot: FormSnapshot, pattern: string): string[] {
     if (!pattern.includes('*')) {
         return snapshot.known.has(pattern) ? [pattern] : [];
     }
+
     const regex = patternRegex(pattern);
 
     return [...snapshot.known].filter((key) => regex.test(key));
@@ -264,6 +278,7 @@ function looselyEqual(a: string, b: string): boolean {
 
 function sizeType(tokens: string[]): 'numeric' | 'array' | 'string' {
     const names = tokens.map((token) => parseToken(token)[0]);
+
     if (names.some((name) => numericTokens.has(name))) {
         return 'numeric';
     }
@@ -276,6 +291,7 @@ function sizeOf(value: FieldValue, type: string): number {
     if (type === 'numeric' && isNumeric(value)) {
         return Number(value);
     }
+
     if (Array.isArray(value)) {
         return value.length;
     }
@@ -287,6 +303,7 @@ function isUrl(value: string, protocols: string[]): boolean {
     if (/\s/.test(value)) {
         return false;
     }
+
     try {
         const url = new URL(value);
 
@@ -302,9 +319,11 @@ function isUrl(value: string, protocols: string[]): boolean {
 
 function phpRegex(pattern: string): RegExp | null {
     const match = pattern.match(/^(.)(.*)\1([a-zA-Z]*)$/s);
+
     if (!match) {
         return null;
     }
+
     try {
         return new RegExp(match[2], match[3].replace(/[^imsu]/g, ''));
     } catch {
@@ -315,9 +334,11 @@ function phpRegex(pattern: string): RegExp | null {
 /** Laravel's decimal rule: numeric, with min (to max) decimal places. */
 function hasDecimals(value: string, args: string[]): boolean {
     const match = value.match(/^[+-]?\d*\.?(\d*)$/);
+
     if (!isNumeric(value) || !match) {
         return false;
     }
+
     const places = match[1].length;
     const min = Number(args[0]);
     const max = args[1] === undefined ? min : Number(args[1]);
@@ -340,6 +361,7 @@ function check(
         params: Record<string, string> = {},
     ): RuleFailure => ({ message, params });
     const type = sizeType(tokens);
+
     switch (name) {
         case 'required':
             return filled(value) ? null : fail('required');
@@ -363,7 +385,9 @@ function check(
             return !applies || filled(value)
                 ? null
                 : fail('required_with', {
-                      values: args.map(attributeName).join(' / '),
+                      values: args
+                          .map((field) => attributeName(field))
+                          .join(' / '),
                   });
         }
         case 'string':
@@ -413,6 +437,7 @@ function check(
             if (typeof value !== 'string' || !pattern.includes('*')) {
                 return null;
             }
+
             const duplicate = keysFor(snapshot, pattern).some((other) => {
                 const otherValue = snapshot.values.get(other);
 
@@ -434,9 +459,11 @@ function check(
             const bound = isNumeric(args[0])
                 ? args[0]
                 : valueOf(snapshot, args[0]);
+
             if (type !== 'numeric' || !isNumeric(value) || !isNumeric(bound)) {
                 return null;
             }
+
             const [a, b] = [Number(value), Number(bound)];
             const passes = {
                 lt: a < b,
@@ -518,24 +545,30 @@ export function validateKey(
     key: string,
 ): string | undefined {
     const pattern = patternFor(schema, key);
+
     if (pattern === undefined) {
         return undefined;
     }
+
     const tokens = schema.rules[pattern];
     const names = tokens.map((token) => parseToken(token)[0]);
     const value = valueOf(snapshot, key);
     const present = value !== undefined;
+
     if (names.includes('sometimes') && !present) {
         return undefined;
     }
+
     const skipsOptional =
         !present || (value === null && names.includes('nullable'));
     const failure =
         tokens.reduce<RuleFailure | null>((found, token) => {
             const [name, args] = parseToken(token);
+
             if (found || flagTokens.has(name)) {
                 return found;
             }
+
             if (!implicitTokens.has(name) && skipsOptional) {
                 return null;
             }
@@ -552,6 +585,7 @@ export function validateKey(
                       ),
                   null,
               ));
+
     if (failure === null) {
         return undefined;
     }
@@ -568,9 +602,11 @@ export function validateForm(
     schema: ValidationSchema,
 ): Record<string, string> {
     const errors: Record<string, string> = {};
+
     for (const pattern of Object.keys(schema.rules)) {
         for (const key of keysFor(snapshot, pattern)) {
             const message = validateKey(snapshot, schema, key);
+
             if (message !== undefined) {
                 errors[key] = message;
             }

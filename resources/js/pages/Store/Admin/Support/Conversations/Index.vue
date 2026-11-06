@@ -67,7 +67,10 @@ const tableColumns = computed(() => [
                 <td v-if="shown.date" class="px-4 py-2">
                     {{ row.created_at ? formatDateTime(row.created_at) : '' }}
                 </td>
-                <td class="max-w-xs truncate px-4 py-2" :title="row.title">
+                <td
+                    class="max-w-xs truncate px-4 py-2"
+                    :title="row.title ?? undefined"
+                >
                     {{ row.title }}
                 </td>
                 <td v-if="shown.sender" class="px-4 py-2">
