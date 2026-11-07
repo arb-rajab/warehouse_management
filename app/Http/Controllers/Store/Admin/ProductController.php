@@ -33,7 +33,9 @@ use App\Models\Color;
 use App\Models\FlashDeal;
 use App\Models\Product;
 use App\Models\ProductStock;
+use App\Models\StoreProductBarcode;
 use App\Models\StoreUser;
+use App\Services\ProductBarcodeLabels;
 use App\Services\ProductFieldSourceService;
 use App\Services\ProductStockService;
 use App\Services\ProductTaxService;
@@ -47,6 +49,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
 use Illuminate\Support\Arr;
@@ -77,7 +80,7 @@ class ProductController extends Controller implements HasMiddleware
         return [
             new Middleware('permission:add_new_product', only: ['create', 'store', 'variantCombinations']),
             // The root ProductController's gate for the edit form it rendered.
-            new Middleware('permission:product_edit', only: ['edit', 'sellerEdit', 'update', 'editVariantCombinations']),
+            new Middleware('permission:product_edit', only: ['edit', 'sellerEdit', 'update', 'editVariantCombinations', 'storeBarcodeImage']),
             new Middleware('permission:show_in_house_products', only: ['inHouse']),
             new Middleware('permission:show_all_products', only: ['all']),
             new Middleware('permission:show_seller_products', only: ['seller', 'sellerOptions']),
@@ -641,7 +644,53 @@ class ProductController extends Controller implements HasMiddleware
                 'pdf' => $product->getAttribute('pdf'),
                 'meta_img' => $product->getAttribute('meta_img'),
             ]),
+            'barcodeImages' => $this->barcodeImages($product),
         ]);
+    }
+
+    /**
+     * The saved store barcodes the form's inputs edit, each with its id for
+     * its image route and whether Code 128 can encode it once its Arabic
+     * digits are converted (ProductBarcodeLabels). An input shows the image
+     * only while it still holds a saved value.
+     *
+     * @return list<array{id: int, barcode: string, printable: bool}>
+     */
+    private function barcodeImages(Product $product): array
+    {
+        $labels = app(ProductBarcodeLabels::class);
+
+        return $product->storeBarcodes->map(fn (StoreProductBarcode $barcode): array => [
+            'id' => (int) $barcode->getKey(),
+            'barcode' => (string) $barcode->getAttribute('barcode'),
+            'printable' => $labels->isPrintable($labels->normalize((string) $barcode->getAttribute('barcode'))),
+        ])->values()->all();
+    }
+
+    /**
+     * One of the product's store barcodes (`product_barcodes`) as the WMS
+     * barcode label, for the edit form's image. Scoped binding: a barcode of
+     * another product is a 404. The stored value is converted as the
+     * storefront shows it; a blank one is a 404 and one Code 128 cannot
+     * encode a 422, as in the WMS. Served like the WMS previews: inline SVG,
+     * `private, no-cache`, an ETag answered by a 304 before rendering.
+     */
+    public function storeBarcodeImage(Request $request, Product $product, StoreProductBarcode $storeBarcode, ProductBarcodeLabels $labels): HttpResponse
+    {
+        $value = $labels->normalize((string) $storeBarcode->getAttribute('barcode'));
+        abort_if($value === '', HttpResponse::HTTP_NOT_FOUND);
+        abort_unless($labels->isPrintable($value), HttpResponse::HTTP_UNPROCESSABLE_ENTITY, __('messages.barcode_not_printable', ['barcode' => $value]));
+        $etag = $labels->etag($product, $value);
+        $notModified = response('')->setEtag($etag)->header('Cache-Control', 'private, no-cache');
+        if ($notModified->isNotModified($request)) {
+            return $notModified;
+        }
+
+        return response($labels->barcodeSvg($product, $value))
+            ->header('Content-Type', 'image/svg+xml')
+            ->header('Content-Disposition', 'inline')
+            ->header('Cache-Control', 'private, no-cache')
+            ->setEtag($etag);
     }
 
     /**

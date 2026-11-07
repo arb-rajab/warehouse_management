@@ -4,10 +4,12 @@ use App\Http\Middleware\BlockMaliciousRequests;
 use App\Models\Category;
 use App\Models\Language;
 use App\Models\Product;
+use App\Models\ProductBarcode;
 use App\Models\ProductTranslation;
 use App\Models\StoreProductBarcode;
 use App\Models\Upload;
 use App\Models\User;
+use App\Services\ProductBarcodeLabels;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -226,7 +228,8 @@ test('the edit form renders Inertia with the full payload in the requested langu
                 ['variant' => 'ExtraLarge', 'price' => '15.25', 'sku' => '', 'qty' => '0', 'image' => null, 'files' => []],
             ],
         ])
-        ->where('initialFiles', ['photos' => [], 'thumbnail_img' => [], 'old_photo' => [], 'pdf' => [], 'meta_img' => []]));
+        ->where('initialFiles', ['photos' => [], 'thumbnail_img' => [], 'old_photo' => [], 'pdf' => [], 'meta_img' => []])
+        ->where('barcodeImages', [['id' => StoreProductBarcode::query()->where('product_id', $this->product->id)->value('id'), 'barcode' => '8710000000001', 'printable' => true]]));
     $this->get(route('products.admin.edit', ['product' => $this->product->id, 'lang' => 'ar']), inertiaHeaders())->assertOk()->assertHeader('X-Inertia', 'true');
 });
 
@@ -612,9 +615,59 @@ test('the WAF still refuses a script payload before anything is written, and the
         ->assertInertia(fn (Assert $page) => $page->where('description', '<p>Old</p>'));
 });
 
+test('the edit form sends each saved store barcode with its id and whether it can be shown as an image', function () {
+    actingAsStoreUser(createStoreStaff('product_edit'));
+    $arabic = StoreProductBarcode::query()->create(['product_id' => $this->product->id, 'barcode' => '٥٩٠١٢٣٤١٢٣٤٥٧']);
+    $word = StoreProductBarcode::query()->create(['product_id' => $this->product->id, 'barcode' => 'متجر']);
+    // The WMS table and the legacy column are not inputs of this form.
+    ProductBarcode::factory()->create(['product_id' => $this->product->id, 'barcode' => 'WMS-ONLY']);
+    DB::table('products')->where('id', $this->product->id)->update(['barcode' => 'LEGACY-1']);
+
+    $this->get(route('products.admin.edit', $this->product))->assertOk()->assertInertia(fn (Assert $page) => $page
+        ->where('product.product_barcodes', ['8710000000001', '٥٩٠١٢٣٤١٢٣٤٥٧', 'متجر'])
+        ->where('barcodeImages', [
+            ['id' => StoreProductBarcode::query()->where('barcode', '8710000000001')->value('id'), 'barcode' => '8710000000001', 'printable' => true],
+            ['id' => $arabic->id, 'barcode' => '٥٩٠١٢٣٤١٢٣٤٥٧', 'printable' => true],
+            ['id' => $word->id, 'barcode' => 'متجر', 'printable' => false],
+        ]));
+});
+
+test('a store barcode image is the WMS label of its converted value, served inline and answered with a 304 when unchanged', function () {
+    actingAsStoreUser(createStoreStaff('product_edit'));
+    $barcode = StoreProductBarcode::query()->create(['product_id' => $this->product->id, 'barcode' => '٥٩٠١٢٣٤١٢٣٤٥٧']);
+    $url = route('products.store_barcodes.image', ['product' => $this->product, 'storeBarcode' => $barcode]);
+    $labels = new ProductBarcodeLabels;
+    $product = Product::query()->findOrFail($this->product->id);
+
+    $response = $this->get($url)->assertOk()
+        ->assertHeader('Content-Type', 'image/svg+xml')
+        ->assertHeader('Content-Disposition', 'inline');
+    expect($response->headers->get('Cache-Control'))->toContain('private')->toContain('no-cache')
+        ->and($response->getContent())->toBe($labels->barcodeSvg($product, '5901234123457'))
+        ->and($response->getContent())->toContain('>5901234123457</text>')->toContain('>Olive oil</text>')
+        ->and($response->headers->get('ETag'))->toBe('"'.$labels->etag($product, '5901234123457').'"');
+    $this->get($url, ['If-None-Match' => $response->headers->get('ETag')])->assertNotModified();
+    expect(route('products.store_barcodes.image', ['product' => 5, 'storeBarcode' => 7], false))->toBe('/temp/admin/products/5/store-barcodes/7/image');
+});
+
+test('the store barcode image resolves only this product\'s barcodes and refuses blank or unencodable values', function () {
+    actingAsStoreUser(createStoreStaff('product_edit'));
+    $other = StoreProductBarcode::query()->where('product_id', $this->other->id)->sole();
+    $word = StoreProductBarcode::query()->create(['product_id' => $this->product->id, 'barcode' => 'متجر']);
+    $blank = StoreProductBarcode::query()->create(['product_id' => $this->product->id, 'barcode' => '  ']);
+
+    $this->get(route('products.store_barcodes.image', ['product' => $this->product, 'storeBarcode' => $other]))->assertNotFound();
+    $this->get(route('products.store_barcodes.image', ['product' => $this->product, 'storeBarcode' => 999999]))->assertNotFound();
+    $this->get(route('products.store_barcodes.image', ['product' => 999999, 'storeBarcode' => $word]))->assertNotFound();
+    $this->get(route('products.store_barcodes.image', ['product' => $this->product, 'storeBarcode' => $blank]))->assertNotFound();
+    $this->get(route('products.store_barcodes.image', ['product' => $this->product, 'storeBarcode' => $word]))->assertUnprocessable();
+});
+
 test('every edit route refuses unauthorized callers and writes nothing', function (string $caller) {
     actingAsRefusedStoreCaller($caller);
     $before = productEditSnapshot();
+    $barcode = StoreProductBarcode::query()->where('product_id', $this->product->id)->value('id');
+    assertStoreCallerRefused($this->get(route('products.store_barcodes.image', ['product' => $this->product, 'storeBarcode' => $barcode])), $caller);
     assertStoreCallerRefused($this->get(route('products.admin.edit', $this->product)), $caller);
     assertStoreCallerRefused($this->get(route('products.seller.edit', $this->product)), $caller);
     assertStoreCallerRefused($this->post(route('products.update', $this->product), productEditForm(['name' => 'Taken over'])), $caller);
@@ -629,6 +682,7 @@ test('only product_edit opens and saves the edit form', function () {
     $this->get(route('products.seller.edit', $this->product))->assertForbidden();
     $this->post(route('products.update', $this->product), productEditForm(['name' => 'Taken over']))->assertForbidden();
     $this->postJson(route('products.edit_variant_combinations', $this->product), [])->assertForbidden();
+    $this->get(route('products.store_barcodes.image', ['product' => $this->product, 'storeBarcode' => StoreProductBarcode::query()->where('product_id', $this->product->id)->value('id')]))->assertForbidden();
     expect(productEditSnapshot())->toEqual($before);
 });
 
@@ -638,6 +692,7 @@ test('WMS authentication opens no product edit form and writes nothing', functio
     $this->get(route('products.admin.edit', $this->product))->assertRedirect(route('shop.login'));
     $this->post(route('products.update', $this->product), productEditForm())->assertRedirect(route('shop.login'));
     $this->post(route('products.edit_variant_combinations', $this->product), [])->assertRedirect(route('shop.login'));
+    $this->get(route('products.store_barcodes.image', ['product' => $this->product, 'storeBarcode' => StoreProductBarcode::query()->where('product_id', $this->product->id)->value('id')]))->assertRedirect(route('shop.login'));
     expect(productEditSnapshot())->toEqual($before);
 });
 
