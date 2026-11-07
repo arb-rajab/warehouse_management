@@ -637,7 +637,7 @@ test('the create and edit forms are Inertia on the store controller with their r
         expect(Route::getRoutes()->getByName($name)->getActionName())->toBe(ProductController::class.'@'.$action);
     }
     expect(collect(ProductController::middleware())->map(fn ($entry) => [$entry->middleware, $entry->only]))
-        ->toContain(['permission:product_edit', ['edit', 'sellerEdit', 'update', 'editVariantCombinations']]);
+        ->toContain(['permission:product_edit', ['edit', 'sellerEdit', 'update', 'editVariantCombinations', 'storeBarcodeImage']]);
     foreach (['admin_product_edit', 'seller_product_edit', 'update', 'sku_combination_edit'] as $method) {
         expect(method_exists(LegacyProductController::class, $method))->toBeFalse();
     }
