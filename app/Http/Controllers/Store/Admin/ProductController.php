@@ -660,11 +660,17 @@ class ProductController extends Controller implements HasMiddleware
     {
         $labels = app(ProductBarcodeLabels::class);
 
-        return $product->storeBarcodes->map(fn (StoreProductBarcode $barcode): array => [
-            'id' => (int) $barcode->getKey(),
-            'barcode' => (string) $barcode->getAttribute('barcode'),
-            'printable' => $labels->isPrintable($labels->normalize((string) $barcode->getAttribute('barcode'))),
-        ])->values()->all();
+        $images = [];
+
+        foreach ($product->storeBarcodes as $barcode) {
+            $images[] = [
+                'id' => (int) $barcode->getKey(),
+                'barcode' => (string) $barcode->getAttribute('barcode'),
+                'printable' => $labels->isPrintable($labels->normalize((string) $barcode->getAttribute('barcode'))),
+            ];
+        }
+
+        return $images;
     }
 
     /**

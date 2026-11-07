@@ -295,6 +295,31 @@ final class ProductBarcodeLabels
      */
     public function merged(Product $product): Collection
     {
+        $merged = new Collection;
+        $seen = [];
+
+        foreach ($this->sourceEntries($product) as $entry) {
+            $value = $this->normalize($entry['value']);
+
+            if ($value === '' || isset($seen[$value])) {
+                continue;
+            }
+
+            $seen[$value] = true;
+            $merged->push($this->mergedEntry($value, $entry['source'], $entry['id']));
+        }
+
+        return $merged;
+    }
+
+    /**
+     * The raw entries of merged(), in source order: WMS barcodes, store
+     * barcodes, then the legacy column.
+     *
+     * @return list<array{value: string, source: 'wms'|'store'|'legacy', id: int|null}>
+     */
+    private function sourceEntries(Product $product): array
+    {
         $entries = [];
 
         foreach ($product->barcodes as $barcode) {
@@ -307,12 +332,19 @@ final class ProductBarcodeLabels
 
         $entries[] = ['value' => (string) $product->getAttribute('barcode'), 'source' => 'legacy', 'id' => null];
 
-        return collect($entries)
-            ->map(fn (array $entry): array => [...$entry, 'value' => $this->normalize($entry['value'])])
-            ->filter(fn (array $entry): bool => $entry['value'] !== '')
-            ->unique('value')
-            ->map(fn (array $entry): array => [...$entry, 'printable' => $this->isPrintable($entry['value'])])
-            ->values();
+        return $entries;
+    }
+
+    /**
+     * One entry of merged(): the normalized value with its source and whether
+     * Code 128 can encode it.
+     *
+     * @param  'wms'|'store'|'legacy'  $source
+     * @return array{value: string, source: 'wms'|'store'|'legacy', id: int|null, printable: bool}
+     */
+    private function mergedEntry(string $value, string $source, ?int $id): array
+    {
+        return ['value' => $value, 'source' => $source, 'id' => $id, 'printable' => $this->isPrintable($value)];
     }
 
     /**
