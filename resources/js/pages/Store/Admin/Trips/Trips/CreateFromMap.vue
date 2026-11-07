@@ -246,7 +246,9 @@ function hasStops(truck: StoreTripMapTruck): boolean {
                                 :value="order.customer.phone"
                             />
                             <DetailItem :label="t('store.trips.map.address')"
-                                ><AddressMapLink :address="order.address"
+                                ><AddressMapLink
+                                    :address="order.address"
+                                    placeholder="-"
                             /></DetailItem>
                             <DetailItem
                                 :label="t('store.trips.map.accountingId')"

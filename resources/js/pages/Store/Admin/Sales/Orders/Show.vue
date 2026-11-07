@@ -167,6 +167,7 @@ const hasRequiredFields = provideRequiredFields();
                         :address="
                             joinAddressParts(Object.values(shippingAddress))
                         "
+                        placeholder="-"
                 /></DetailItem>
             </DetailList>
         </div>

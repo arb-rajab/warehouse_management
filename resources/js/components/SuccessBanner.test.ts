@@ -120,11 +120,9 @@ describe('SuccessBanner', () => {
         }
 
         beforeEach(() => {
-            window.matchMedia = vi
-                .fn()
-                .mockReturnValue({
-                    matches: false,
-                }) as unknown as typeof window.matchMedia;
+            window.matchMedia = vi.fn().mockReturnValue({
+                matches: false,
+            }) as unknown as typeof window.matchMedia;
         });
 
         afterEach(() => {
@@ -164,11 +162,9 @@ describe('SuccessBanner', () => {
         });
 
         it('scrolls instantly when the user prefers reduced motion', async () => {
-            window.matchMedia = vi
-                .fn()
-                .mockReturnValue({
-                    matches: true,
-                }) as unknown as typeof window.matchMedia;
+            window.matchMedia = vi.fn().mockReturnValue({
+                matches: true,
+            }) as unknown as typeof window.matchMedia;
             const { wrapper, scrollIntoView } = mountWithRect(-200, -160);
 
             await flashAgain();
