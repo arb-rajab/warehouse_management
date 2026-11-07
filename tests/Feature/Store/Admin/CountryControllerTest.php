@@ -50,7 +50,8 @@ test('the Countries name filter excludes unrelated data and survives pagination'
 
 test('the Countries status saves the posted value and keeps pagination', function () {
     actingAsStoreUser(createStoreStaff('shipping_country_setting'));
-    $this->post('/temp/admin/countries/'.$this->refs['country'].'/status'.'?page=2', ['status' => 0])->assertRedirect(route('countries.index', ['page' => 2]));
+    $this->post('/temp/admin/countries/'.$this->refs['country'].'/status'.'?page=2', ['status' => 0])->assertRedirect(route('countries.index', ['page' => 2]))
+        ->assertInertiaFlash('success', 'Country status has been updated successfully');
     $this->assertDatabaseHas('countries', ['id' => $this->refs['country'], 'status' => 0]);
 });
 

@@ -86,7 +86,8 @@ test('brand creation writes the base row, default translation, logo and SEO fiel
     $staff = createStoreStaff('add_brand');
     actingAsStoreUser($staff);
     $image = Upload::factory()->create(['user_id' => $staff->id, 'type' => 'image']);
-    $this->post(route('brands.store'), [...$this->payload, 'logo' => $image->id, 'slug' => 'My New Slug', 'order_level' => 5, 'lang' => 'ar'])->assertRedirect(route('brands.index'));
+    $this->post(route('brands.store'), [...$this->payload, 'logo' => $image->id, 'slug' => 'My New Slug', 'order_level' => 5, 'lang' => 'ar'])->assertRedirect(route('brands.index'))
+        ->assertInertiaFlash('success', 'Brand has been created successfully');
     $new = Brand::query()->orderByDesc('id')->firstOrFail();
     expect($new->name)->toBe('Updated')->and($new->slug)->toBe('My-New-Slug')->and($new->logo)->toBe((string) $image->id)
         ->and($new->meta_title)->toBe('SEO title')->and($new->meta_description)->toBe('SEO description')->and($new->top)->toBe(0);
@@ -201,7 +202,8 @@ test('brand deletion keeps deleting that brand\'s products and translations, and
     $otherProduct = createStoreProduct(['brand_id' => $other->id]);
     $unbranded = createStoreProduct(['brand_id' => null]);
     $this->delete(route('brands.destroy', [$this->brand, 'page' => 2, 'per_page' => 10, 'search' => 'Dat']))
-        ->assertRedirect(route('brands.index', ['page' => 2, 'per_page' => 10, 'search' => 'Dat']));
+        ->assertRedirect(route('brands.index', ['page' => 2, 'per_page' => 10, 'search' => 'Dat']))
+        ->assertInertiaFlash('success', 'Brand has been deleted successfully');
     $this->assertDatabaseMissing('brands', ['id' => $this->brand->id]);
     $this->assertDatabaseMissing('brand_translations', ['brand_id' => $this->brand->id]);
     $this->assertDatabaseMissing('products', ['id' => $owned->id]);

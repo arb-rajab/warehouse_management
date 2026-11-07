@@ -224,7 +224,8 @@ test('a staff member granted the permission can delete every upload', function (
         file_put_contents("$publicPath/uploads/all/mine.png", tinyPng());
         actingAsStoreUser($staff);
 
-        $this->post('/temp/admin/all-file')->assertRedirect();
+        $this->post('/temp/admin/all-file')->assertRedirect()
+            ->assertInertiaFlash('success', 'All files have been deleted successfully');
 
         expect(Upload::count())->toBe(0)
             ->and(storedUploadFiles($publicPath))->toBe([]);

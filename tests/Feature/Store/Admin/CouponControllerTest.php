@@ -104,7 +104,8 @@ test('coupon product search is translated bounded and scoped to eligible shop pr
 test('storing coupon derives dates details and ownership and updating changes targeting', function () {
     actingAsStoreUser(createStoreStaff('add_coupon', 'edit_coupon'));
     $this->post(route('coupon.store'), storeCouponForm(['user_id' => 999, 'details' => 'forged', 'date_range' => 'forged']))
-        ->assertRedirect(route('coupon.index'));
+        ->assertRedirect(route('coupon.index'))
+        ->assertInertiaFlash('success', 'Coupon has been created successfully');
     $coupon = Coupon::firstOrFail();
     expect((int) $coupon->user_id)->toBe($this->couponOwner->id)
         ->and((int) $coupon->start_date)->toBe(strtotime('2026-10-01'))
@@ -112,7 +113,8 @@ test('storing coupon derives dates details and ownership and updating changes ta
         ->and(json_decode($coupon->details, true))->toBe(['min_buy' => 20, 'max_discount' => 5]);
     $product = createStoreProduct(['user_id' => $this->couponOwner->id, 'added_by' => 'admin', 'published' => 1]);
     $this->put(route('coupon.update', $coupon), storeCouponForm(['type' => 'product_base', 'product_ids' => [$product->id], 'discount_type' => 'amount', 'discount' => 2.5]))
-        ->assertRedirect(route('coupon.index'));
+        ->assertRedirect(route('coupon.index'))
+        ->assertInertiaFlash('success', 'Coupon has been updated successfully');
     expect($coupon->fresh()->type)->toBe('product_base')
         ->and((float) $coupon->fresh()->discount)->toBe(2.5)
         ->and(json_decode($coupon->fresh()->details, true))->toBe([['product_id' => $product->id]]);

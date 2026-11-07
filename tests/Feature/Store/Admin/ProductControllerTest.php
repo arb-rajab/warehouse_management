@@ -515,7 +515,8 @@ test('bulk deletion removes every selected product of the list and returns to it
     ProductTranslation::create(['product_id' => $second->id, 'lang' => 'en', 'name' => 'Second oil']);
     expectProductListCachesCleared();
     $this->post(route('products.list.bulk_destroy', ['list' => 'admin', 'search' => 'oil']), ['id' => [$this->product->id, $second->id]])
-        ->assertRedirect(route('products.admin', ['search' => 'oil']));
+        ->assertRedirect(route('products.admin', ['search' => 'oil']))
+        ->assertInertiaFlash('success', 'Products have been deleted successfully');
     $this->assertDatabaseMissing('products', ['id' => $this->product->id]);
     $this->assertDatabaseMissing('products', ['id' => $second->id]);
     $this->assertDatabaseMissing('product_translations', ['product_id' => $second->id]);

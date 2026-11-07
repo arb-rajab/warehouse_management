@@ -71,7 +71,8 @@ test('product query replies sanitize HTML and ignore forged ownership fields', f
     $noise = supportProductQuery();
     $staff = actingAsStoreUser(createStoreStaff('reply_to_product_queries'));
     $this->put(route('product_query.reply', $query), ['reply' => '<script>bad</script><b>Yes</b>', 'seller_id' => $staff->id, 'product_id' => $noise->product_id])
-        ->assertRedirect(route('product_query.index'));
+        ->assertRedirect(route('product_query.index'))
+        ->assertInertiaFlash('success', 'Reply has been sent successfully');
     expect($query->fresh()->reply)->toBe('<b>Yes</b>')->and($query->fresh()->seller_id)->toBe($query->seller_id)
         ->and($noise->fresh()->reply)->toBeNull();
 });

@@ -56,7 +56,8 @@ test('staff can update their own name, email, avatar and password', function () 
     $this->patch("/temp/admin/profile/{$staff->id}", $payload)
         ->assertRedirect(route('profile.index'))
         ->assertSessionHasNoErrors()
-        ->assertSessionMissing('flash_notification');
+        ->assertSessionMissing('flash_notification')
+        ->assertInertiaFlash('success', 'Profile has been updated successfully');
 
     $staff = $staff->fresh();
     expect($staff->name)->toBe('Renamed Staff')

@@ -24,7 +24,8 @@ test('order amount and default product ID configuration save without changing un
     actingAsStoreUser(createStoreStaff('order_configuration'));
     Cache::put('wms-sentinel', 'retained');
     Cache::put('business_settings', collect());
-    $this->post('/temp/admin/order-configuration', ['minimum_order_amount_check' => 0, 'minimum_order_amount' => '10.50', 'default_specific_product' => '123400', 'header_script' => 'Unrelated'])->assertRedirect(route('order_configuration.index'));
+    $this->post('/temp/admin/order-configuration', ['minimum_order_amount_check' => 0, 'minimum_order_amount' => '10.50', 'default_specific_product' => '123400', 'header_script' => 'Unrelated'])->assertRedirect(route('order_configuration.index'))
+        ->assertInertiaFlash('success', 'Order configuration has been updated successfully');
     $this->assertDatabaseHas('business_settings', ['type' => 'default_specific_product', 'value' => '123400']);
     $this->assertDatabaseHas('business_settings', ['type' => 'minimum_order_amount_check', 'value' => '0']);
     $this->assertDatabaseHas('business_settings', ['type' => 'minimum_order_amount', 'value' => '10.50']);
@@ -53,7 +54,8 @@ test('default representative saves independently and excludes non-representative
     $rep->forceFill(['is_rep' => 1])->save();
     $noise = createStoreUser('customer');
     actingAsStoreUser(createStoreStaff('order_configuration'));
-    $this->post('/temp/admin/order-configuration/representative', ['default_representative_check' => 1, 'default_representative_id' => $rep->id])->assertRedirect(route('order_configuration.index'));
+    $this->post('/temp/admin/order-configuration/representative', ['default_representative_check' => 1, 'default_representative_id' => $rep->id])->assertRedirect(route('order_configuration.index'))
+        ->assertInertiaFlash('success', 'Default representative has been updated successfully');
     $this->assertDatabaseHas('business_settings', ['type' => 'default_representative_id', 'value' => (string) $rep->id]);
     $this->postJson('/temp/admin/order-configuration/representative', ['default_representative_check' => 'invalid', 'default_representative_id' => $noise->id])->assertUnprocessable()->assertJsonValidationErrors(['default_representative_check', 'default_representative_id']);
     $this->assertDatabaseHas('business_settings', ['type' => 'default_representative_id', 'value' => (string) $rep->id]);

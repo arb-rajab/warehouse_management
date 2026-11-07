@@ -42,7 +42,8 @@ test('deleting a subscriber preserves filters and other subscribers', function (
     $other = Subscriber::forceCreate(['email' => 'other@example.com']);
     actingAsStoreUser(createStoreStaff('delete_subscriber'));
     $this->delete(route('subscriber.destroy', [$subscriber, 'page' => 2, 'per_page' => 10]))
-        ->assertRedirect(route('admin.subscribers.index', ['page' => 2, 'per_page' => 10]));
+        ->assertRedirect(route('admin.subscribers.index', ['page' => 2, 'per_page' => 10]))
+        ->assertInertiaFlash('success', 'Subscriber has been deleted successfully');
     $this->assertModelMissing($subscriber);
     $this->assertModelExists($other);
 });

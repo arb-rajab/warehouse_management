@@ -382,7 +382,8 @@ test('a current package permits approval both ways and publication without chang
     Cache::forget('addons');
     sellerListCaches(3);
     foreach ([0, 1] as $approved) {
-        $this->post(route('products.approved', $this->product), ['approved' => $approved])->assertRedirect(route('products.seller'));
+        $this->post(route('products.approved', $this->product), ['approved' => $approved])->assertRedirect(route('products.seller'))
+            ->assertInertiaFlash('success', 'Product approval status has been updated successfully');
         expect((int) $this->product->fresh()->getAttribute('approved'))->toBe($approved);
     }
     $this->post(route('products.published', $this->product), ['status' => 1])->assertRedirect(route('products.seller'));

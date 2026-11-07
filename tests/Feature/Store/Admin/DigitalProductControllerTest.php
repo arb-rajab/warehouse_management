@@ -128,7 +128,8 @@ test('digital product deletion keeps removing its translations, stock and produc
     $other = createStoreProduct(['name' => 'Other guide', 'digital' => 1]);
     ProductTranslation::create(['product_id' => $other->id, 'lang' => 'en', 'name' => 'Other guide']);
     $this->delete(route('digitalproducts.destroy', [$this->product, 'page' => 2, 'per_page' => 10, 'search' => 'Rec']))
-        ->assertRedirect(route('digitalproducts.index', ['page' => 2, 'per_page' => 10, 'search' => 'Rec']));
+        ->assertRedirect(route('digitalproducts.index', ['page' => 2, 'per_page' => 10, 'search' => 'Rec']))
+        ->assertInertiaFlash('success', 'Digital product has been deleted successfully');
     $this->assertDatabaseMissing('products', ['id' => $this->product->id]);
     $this->assertDatabaseMissing('product_translations', ['product_id' => $this->product->id]);
     $this->assertDatabaseMissing('product_stocks', ['product_id' => $this->product->id]);

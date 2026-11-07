@@ -181,7 +181,8 @@ test('creating a digital product writes the product, its stock, translation and 
     $before = Product::query()->max('id');
 
     $this->post(route('digitalproducts.store'), digitalProductForm(['photos' => (string) $photo->id, 'thumbnail_img' => $photo->id, 'meta_img' => $photo->id, 'file' => $file->id]))
-        ->assertSessionHasNoErrors()->assertRedirect(route('digitalproducts.index'));
+        ->assertSessionHasNoErrors()->assertRedirect(route('digitalproducts.index'))
+        ->assertInertiaFlash('success', 'Digital product has been created successfully');
 
     $product = Product::query()->where('id', '>', $before)->sole();
     expect($product->only(['name', 'added_by', 'user_id', 'category_id', 'digital', 'photos', 'thumbnail_img', 'tags', 'description', 'discount_type', 'meta_title', 'meta_description', 'meta_img', 'file_name']))->toEqual([

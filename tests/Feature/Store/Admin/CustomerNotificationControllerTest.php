@@ -105,7 +105,8 @@ test('customer notification send uses the selected customer device key and recor
     Http::fake(['fcm.googleapis.com/*' => Http::response(['name' => 'projects/test/messages/123'])]);
 
     $this->post(route('admin.notifications.send'), ['user_id' => $customer->id, 'title' => 'Hello', 'body' => 'Message body'])
-        ->assertRedirect(route('admin.notifications.all'));
+        ->assertRedirect(route('admin.notifications.all'))
+        ->assertInertiaFlash('success', 'Notification has been sent successfully');
     Http::assertSent(fn (Request $request): bool => $request->url() === 'https://fcm.googleapis.com/v1/projects/test-project/messages:send'
         && $request->hasHeader('Authorization', 'Bearer fake-secret-token')
         && $request->data() === ['message' => ['token' => 'recipient-key', 'notification' => ['title' => 'Hello', 'body' => 'Message body']]]);
@@ -154,7 +155,8 @@ test('customer notification delete preserves query and deletes only its bound re
     $notification = customerNotification();
     $noise = customerNotification();
     $this->delete(route('admin.notifications.delete', ['notification' => $notification->id, 'page' => 2, 'per_page' => 10]))
-        ->assertRedirect(route('admin.notifications.all', ['page' => 2, 'per_page' => 10]));
+        ->assertRedirect(route('admin.notifications.all', ['page' => 2, 'per_page' => 10]))
+        ->assertInertiaFlash('success', 'Notification has been deleted successfully');
     $this->assertModelMissing($notification);
     $this->assertModelExists($noise);
     $this->delete(route('admin.notifications.delete', 999999))->assertNotFound();

@@ -66,7 +66,8 @@ test('the States edit screen returns 404 for a missing id', function () {
 
 test('the States store saves validated values', function () {
     actingAsStoreUser(createStoreStaff('manage_shipping_states'));
-    $this->post('/temp/admin/states', ['name' => 'South Holland', 'country_id' => $this->refs['country']])->assertRedirect(route('states.index'));
+    $this->post('/temp/admin/states', ['name' => 'South Holland', 'country_id' => $this->refs['country']])->assertRedirect(route('states.index'))
+        ->assertInertiaFlash('success', 'State has been created successfully');
     $this->assertDatabaseHas('states', ['name' => 'South Holland']);
 });
 
@@ -84,7 +85,8 @@ test('the States store refuses writes', function (string $caller) {
 
 test('the States update saves validated values', function () {
     actingAsStoreUser(createStoreStaff('manage_shipping_states'));
-    $this->put('/temp/admin/states/'.$this->refs['state'], ['name' => 'South Holland', 'country_id' => $this->refs['country']])->assertRedirect(route('states.index'));
+    $this->put('/temp/admin/states/'.$this->refs['state'], ['name' => 'South Holland', 'country_id' => $this->refs['country']])->assertRedirect(route('states.index'))
+        ->assertInertiaFlash('success', 'State has been updated successfully');
     $this->assertDatabaseHas('states', ['id' => $this->refs['state'], 'name' => 'South Holland']);
 });
 

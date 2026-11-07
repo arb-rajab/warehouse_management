@@ -151,7 +151,8 @@ describe('store', function () {
         actingAsStoreUser(createStoreAdmin());
 
         $this->post('/temp/admin/roles', ['name' => 'Clerk', 'permissions' => [(string) $permission->id]])
-            ->assertRedirect(route('roles.index'));
+            ->assertRedirect(route('roles.index'))
+            ->assertInertiaFlash('success', 'Role has been created successfully');
 
         $role = Role::where('name', 'Clerk')->firstOrFail();
         expect($role->guard_name)->toBe('store')
@@ -258,7 +259,8 @@ describe('update', function () {
         actingAsStoreUser(createStoreAdmin());
 
         $this->put("/temp/admin/roles/{$role->id}", ['name' => 'Senior Clerk', 'lang' => 'en', 'permissions' => [$kept->id]])
-            ->assertRedirect(route('roles.index'));
+            ->assertRedirect(route('roles.index'))
+            ->assertInertiaFlash('success', 'Role has been updated successfully');
 
         $this->assertDatabaseHas('wms_roles', ['id' => $role->id, 'name' => 'Senior Clerk']);
         $this->assertDatabaseHas('role_translations', ['role_id' => $role->id, 'name' => 'Senior Clerk', 'lang' => 'en']);

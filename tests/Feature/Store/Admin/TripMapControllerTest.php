@@ -193,7 +193,8 @@ describe('map picker writer', function () {
         $second = mapPickerOrder();
 
         $this->post(route('trips.store-from-map'), ['truck_id' => $truck->id, 'markers' => [['order_id' => $second->id, 'latitude' => 99], ['order_id' => $first->id]]])
-            ->assertRedirect(route('trips.create-from-map'));
+            ->assertRedirect(route('trips.create-from-map'))
+            ->assertInertiaFlash('success', 'Trip has been created successfully');
 
         $trip = Trip::query()->sole();
         expect($trip->truck_id)->toBe($truck->id)->and($trip->driver_id)->toBeNull()->and($trip->status)->toBe('pending')

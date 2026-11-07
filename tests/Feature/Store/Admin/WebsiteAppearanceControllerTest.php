@@ -104,7 +104,8 @@ test('the appearance screen offers the seller and delivery boy login backgrounds
     $this->put(route('website.appearance.update'), ['settings' => websiteAppearancePayload([
         'seller_login_page_bg' => (string) $image->id,
         'delivery_boy_login_page_bg' => (string) $image->id,
-    ])])->assertRedirect(route('website.appearance'));
+    ])])->assertRedirect(route('website.appearance'))
+        ->assertInertiaFlash('success', 'Website appearance has been updated successfully');
     expect(get_setting('seller_login_page_bg'))->toBe((string) $image->id)
         ->and(get_setting('delivery_boy_login_page_bg'))->toBe((string) $image->id);
 });

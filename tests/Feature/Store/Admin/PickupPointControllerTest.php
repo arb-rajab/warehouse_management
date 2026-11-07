@@ -83,7 +83,8 @@ test('the PickupPoints edit screen returns 404 for a missing id', function () {
 
 test('the PickupPoints store saves validated values', function () {
     actingAsStoreUser(createStoreStaff('pickup_point_setup'));
-    $this->post('/temp/admin/pick_up_points', ['name' => 'Dock', 'address' => 'Dock Street', 'phone' => '0612222222', 'staff_id' => $this->refs['staff'], 'pick_up_status' => 0])->assertRedirect(route('pick_up_points.index'));
+    $this->post('/temp/admin/pick_up_points', ['name' => 'Dock', 'address' => 'Dock Street', 'phone' => '0612222222', 'staff_id' => $this->refs['staff'], 'pick_up_status' => 0])->assertRedirect(route('pick_up_points.index'))
+        ->assertInertiaFlash('success', 'Pickup point has been created successfully');
     $this->assertDatabaseHas('pickup_points', ['name' => 'Dock']);
 });
 
@@ -101,7 +102,8 @@ test('the PickupPoints store refuses writes', function (string $caller) {
 
 test('the PickupPoints update saves validated values', function () {
     actingAsStoreUser(createStoreStaff('pickup_point_setup'));
-    $this->put('/temp/admin/pick_up_points/'.$this->refs['pickup'], ['name' => 'Dock', 'address' => 'Dock Street', 'phone' => '0612222222', 'staff_id' => $this->refs['staff'], 'pick_up_status' => 0] + ['lang' => 'en'])->assertRedirect(route('pick_up_points.index'));
+    $this->put('/temp/admin/pick_up_points/'.$this->refs['pickup'], ['name' => 'Dock', 'address' => 'Dock Street', 'phone' => '0612222222', 'staff_id' => $this->refs['staff'], 'pick_up_status' => 0] + ['lang' => 'en'])->assertRedirect(route('pick_up_points.index'))
+        ->assertInertiaFlash('success', 'Pickup point has been updated successfully');
     $this->assertDatabaseHas('pickup_points', ['id' => $this->refs['pickup'], 'name' => 'Dock']);
 });
 

@@ -82,7 +82,8 @@ test('category creation writes default translation parent level ordering type at
     $staff = createStoreStaff('add_product_category');
     actingAsStoreUser($staff);
     $image = Upload::factory()->create(['user_id' => $staff->id, 'type' => 'image']);
-    $this->post(route('categories.store'), [...$this->payload, 'parent_id' => $this->category->id, 'banner' => $image->id, 'icon' => $image->id, 'cover_image' => $image->id, 'lang' => 'ar'])->assertRedirect(route('categories.index'));
+    $this->post(route('categories.store'), [...$this->payload, 'parent_id' => $this->category->id, 'banner' => $image->id, 'icon' => $image->id, 'cover_image' => $image->id, 'lang' => 'ar'])->assertRedirect(route('categories.index'))
+        ->assertInertiaFlash('success', 'Category has been created successfully');
     $new = Category::query()->orderByDesc('id')->firstOrFail();
     expect($new->parent_id)->toBe($this->category->id)->and($new->level)->toBe(1)->and($new->order_level)->toBe(8)
         ->and($new->digital)->toBe(1)->and($new->slug)->toBe('NEW-Slug')->and((float) $new->commision_rate)->toBe(9.25)
@@ -213,7 +214,8 @@ test('category deletion reparents children clears only direct products and remov
     $childProduct = createStoreProduct(['category_id' => $first->id]);
     $noise = createStoreProduct(['category_id' => $ancestor->id]);
     Cache::put('featured_categories', 'stale');
-    $this->delete(route('categories.destroy', [$this->category, 'page' => 2, 'per_page' => 10, 'search' => 'Food']))->assertRedirect(route('categories.index', ['page' => 2, 'per_page' => 10, 'search' => 'Food']));
+    $this->delete(route('categories.destroy', [$this->category, 'page' => 2, 'per_page' => 10, 'search' => 'Food']))->assertRedirect(route('categories.index', ['page' => 2, 'per_page' => 10, 'search' => 'Food']))
+        ->assertInertiaFlash('success', 'Category has been deleted successfully');
     $this->assertDatabaseMissing('categories', ['id' => $this->category->id]);
     $this->assertDatabaseMissing('category_translations', ['category_id' => $this->category->id]);
     $this->assertDatabaseMissing('attribute_category', ['category_id' => $this->category->id]);

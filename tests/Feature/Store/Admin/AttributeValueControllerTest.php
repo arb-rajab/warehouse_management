@@ -41,7 +41,8 @@ test('attribute values paginate and validate the page size', function () {
 test('attribute values preserve capitalization and validate attribute references', function () {
     $attribute = catalogueValueParent();
     actingAsStoreUser(createStoreStaff('edit_product_attribute_value'));
-    $this->post('/temp/admin/store-attribute-value', ['attribute_id' => $attribute->id, 'value' => 'large'])->assertRedirect(route('attributes.show', $attribute->id));
+    $this->post('/temp/admin/store-attribute-value', ['attribute_id' => $attribute->id, 'value' => 'large'])->assertRedirect(route('attributes.show', $attribute->id))
+        ->assertInertiaFlash('success', 'Attribute value has been created successfully');
     $this->assertDatabaseHas('attribute_values', ['attribute_id' => $attribute->id, 'value' => 'Large']);
     foreach ([['attribute_id' => 999999, 'value' => 'Small'], ['attribute_id' => $attribute->id, 'value' => ''], ['attribute_id' => $attribute->id, 'value' => str_repeat('x', 256)], ['value' => 'Small']] as $invalid) {
         $this->post('/temp/admin/store-attribute-value', $invalid)->assertSessionHasErrors();
@@ -76,7 +77,8 @@ test('attribute value deletes preserve parent and pagination', function () {
     $value = catalogueValue($attribute);
     $other = catalogueValue($attribute, 'Small');
     actingAsStoreUser(createStoreStaff('delete_product_attribute_value'));
-    $this->delete("/temp/admin/destroy-attribute-value/{$value->id}?page=2&per_page=10")->assertRedirect(route('attributes.show', ['attribute' => $attribute->id, 'page' => 2, 'per_page' => 10]));
+    $this->delete("/temp/admin/destroy-attribute-value/{$value->id}?page=2&per_page=10")->assertRedirect(route('attributes.show', ['attribute' => $attribute->id, 'page' => 2, 'per_page' => 10]))
+        ->assertInertiaFlash('success', 'Attribute value has been deleted successfully');
     $this->assertDatabaseMissing('attribute_values', ['id' => $value->id]);
     $this->assertDatabaseHas('attribute_values', ['id' => $other->id]);
     $this->assertDatabaseHas('attributes', ['id' => $attribute->id]);
