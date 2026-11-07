@@ -43,6 +43,10 @@ function resetProductForm(): void {
         foreach ($settings as $type => $value) {
             Illuminate\Support\Facades\DB::table('business_settings')->updateOrInsert(['type' => $type], ['value' => $value]);
         }
+        // Creating a product now lands on the unfiltered main list, which shows
+        // the seeded factory products: serve their external placeholder images from
+        // this origin, as the strict img-src policy blocks the external host.
+        App\Models\Upload::query()->where('external_link', 'like', 'https://via.placeholder.com/%')->update(['external_link' => '/assets/img/placeholder.jpg']);
         foreach (App\Models\Product::where('name', 'like', 'Browser % oil%')->whereIn('name', [${names.map(php).join(', ')}])->pluck('id') as $id) {
             foreach (['product_translations', 'product_stocks', 'product_taxes', 'product_variations', 'product_barcodes', 'flash_deal_products', 'wms_product_settings'] as $table) {
                 Illuminate\Support\Facades\DB::table($table)->where('product_id', $id)->delete();

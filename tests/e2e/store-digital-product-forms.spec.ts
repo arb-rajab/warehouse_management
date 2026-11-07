@@ -32,6 +32,10 @@ const names = ['Browser bread guide', 'Browser hostile guide'];
 /** A digital category tree, an active and an inactive tax, no old products. */
 function resetDigitalForms(products: Record<string, string> = {}): void {
     seedStoreFixtures(String.raw`
+        // Creating a product now lands on the unfiltered main list, which shows
+        // the seeded factory products: serve their external placeholder images
+        // from this origin, as the strict img-src policy blocks the external host.
+        App\Models\Upload::query()->where('external_link', 'like', 'https://via.placeholder.com/%')->update(['external_link' => '/assets/img/placeholder.jpg']);
         Illuminate\Support\Facades\DB::table('business_settings')->updateOrInsert(['type'=>'Digital_Products_Section'],['value'=>'1']);
         foreach (App\Models\Product::whereIn('name', [${names.map(php).join(', ')}])->pluck('id') as $id) {
             foreach (['product_translations', 'product_stocks', 'product_taxes', 'wms_product_settings'] as $table) {
@@ -179,7 +183,9 @@ test('a digital product is created with editor content, canonical uploads, taxes
     expect(String(product.photos)).toMatch(/^\d+,\d+$/);
     expect(String(product.file)).toMatch(/^\d+$/);
 
-    // The list downloads the picked file through the encrypted id.
+    // Creating lands on the main Products list; the digital list downloads
+    // the picked file through the encrypted id.
+    await page.goto('/temp/admin/digitalproducts');
     const row = page.getByRole('row', { name: /Browser bread guide/ });
     const download = page.waitForEvent('download');
     await row.getByRole('link', { name: 'Download', exact: true }).click();
