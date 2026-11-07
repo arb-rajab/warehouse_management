@@ -2880,6 +2880,8 @@
                 "addBarcode": "Add barcode",
                 "removeBarcode": "Remove barcode",
                 "barcodePlaceholder": "Barcode number",
+                "barcodeImageAfterSave": "The barcode image appears once the product is saved.",
+                "barcodeNotPrintable": "This barcode cannot be shown as an image.",
                 "variation": "Product variation",
                 "moveAttributeUp": "Move {attribute} up",
                 "moveAttributeDown": "Move {attribute} down",

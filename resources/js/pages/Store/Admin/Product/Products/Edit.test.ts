@@ -99,6 +99,7 @@ const props = {
     },
     variants,
     initialFiles,
+    barcodeImages: [{ id: 3, barcode: '8712345678906', printable: true }],
 };
 const wrappers: VueWrapper[] = [];
 
@@ -236,8 +237,12 @@ describe('Store/Admin/Product/Products/Edit', () => {
             variants,
             variantsUrl: editVariantCombinations.url(product),
             initialFiles,
+            barcodeImages: props.barcodeImages,
             errors: { slug: 'Slug taken' },
         });
+        expect(wrapper.get('img[alt="8712345678906"]').attributes('src')).toBe(
+            '/temp/admin/products/41/store-barcodes/3/image',
+        );
         expect(editVariantCombinations.url(product)).toBe(
             '/temp/admin/products/41/variant-combinations',
         );

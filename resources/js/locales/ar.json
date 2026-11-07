@@ -2880,6 +2880,8 @@
                 "addBarcode": "إضافة رمز شريطي",
                 "removeBarcode": "إزالة الرمز الشريطي",
                 "barcodePlaceholder": "رقم الرمز الشريطي",
+                "barcodeImageAfterSave": "تظهر صورة الرمز الشريطي بعد حفظ المنتج.",
+                "barcodeNotPrintable": "لا يمكن عرض هذا الرمز الشريطي كصورة.",
                 "variation": "تنويعات المنتج",
                 "moveAttributeUp": "نقل {attribute} لأعلى",
                 "moveAttributeDown": "نقل {attribute} لأسفل",

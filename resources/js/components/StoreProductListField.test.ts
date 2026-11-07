@@ -93,6 +93,36 @@ describe('StoreProductListField', () => {
         wrapper.unmount();
     });
 
+    it('renders the after-input slot below each row with its current value', async () => {
+        const wrapper = mount(StoreProductListField, {
+            props: {
+                id: 'product_barcodes',
+                name: 'product_barcodes',
+                label: 'Barcodes',
+                addLabel: 'Add barcode',
+                removeLabel: 'Remove barcode',
+                placeholder: 'Barcode number',
+                values: ['8712345678906'],
+                errors: {},
+            },
+            slots: {
+                'after-input': `<template #after-input="{ value, index }"><p class="below">{{ index }}:{{ value }}</p></template>`,
+            },
+            attachTo: document.body,
+        });
+        await addButton(wrapper).trigger('click');
+        await wrapper.findAll('input')[1].setValue('5901234123457');
+
+        expect(wrapper.findAll('p.below').map((p) => p.text())).toEqual([
+            '0:8712345678906',
+            '1:5901234123457',
+        ]);
+        expect(
+            wrapper.findAll('li').map((li) => li.find('p.below').exists()),
+        ).toEqual([true, true]);
+        wrapper.unmount();
+    });
+
     it('shows the error of each row and of the list', async () => {
         const wrapper = mountList({
             'product_barcodes.0': 'Taken',

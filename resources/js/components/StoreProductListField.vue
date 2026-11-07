@@ -8,7 +8,8 @@ import { plainFieldInputClass } from '@/lib/filters';
  * A list of free texts a product form adds row by row and posts as
  * `<name>[]`: the product types and the store barcodes, starting from the
  * stored `values` on the edit form. Empty rows are posted and skipped by the
- * server, as the legacy form's were.
+ * server, as the legacy form's were. The `after-input` slot renders below
+ * each row's input with its current `value` (the barcode images).
  */
 const props = defineProps<{
     id: string;
@@ -54,6 +55,11 @@ function remove(key: number): void {
                         :placeholder="placeholder"
                         :class="plainFieldInputClass"
                         maxlength="255"
+                    />
+                    <slot
+                        name="after-input"
+                        :value="row.value"
+                        :index="index"
                     />
                     <FieldError :message="errors[`${name}.${index}`]" />
                 </div>
