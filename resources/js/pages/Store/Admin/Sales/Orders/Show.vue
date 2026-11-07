@@ -16,6 +16,8 @@ import ActionErrorBanner from '@/components/ActionErrorBanner.vue';
 import AddResourceLink from '@/components/AddResourceLink.vue';
 import AddressMapLink from '@/components/AddressMapLink.vue';
 import DataTable from '@/components/DataTable.vue';
+import DetailItem from '@/components/DetailItem.vue';
+import DetailList from '@/components/DetailList.vue';
 import FormField from '@/components/FormField.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import RequiredLegend from '@/components/RequiredLegend.vue';
@@ -86,50 +88,88 @@ const hasRequiredFields = provideRequiredFields();
                 :href="edit(order)"
                 :label="t('store.orders.edit')"
         /></PageHeader>
-        <dl class="mb-5 grid grid-cols-2 gap-2 text-sm">
-            <dt>{{ t('store.orders.tracking') }}</dt>
-            <dd>{{ trackingCode }}</dd>
-            <dt>{{ t('store.orders.managerNotes') }}</dt>
-            <dd>{{ order.manager_notes }}</dd>
-            <dt>{{ t('store.orders.customer') }}</dt>
-            <dd>
-                <TableObjectLink
-                    v-if="order.customer"
-                    :allowed="access.can('edit_customer')"
-                    :href="customerEdit(order.customer)"
-                    >{{ order.customer.name }}</TableObjectLink
-                >
-            </dd>
-            <dt>{{ t('store.orders.representative') }}</dt>
-            <dd>
-                <TableObjectLink
-                    v-if="order.representative"
-                    :allowed="access.can('edit_customer')"
-                    :href="customerEdit(order.representative)"
-                    >{{ order.representative.name }}</TableObjectLink
-                >
-            </dd>
-            <dt>{{ t('store.orders.deliveryDate') }}</dt>
-            <dd>{{ order.delivery_date }}</dd>
-            <dt>{{ t('store.orders.notes') }}</dt>
-            <dd class="whitespace-pre-wrap">{{ additionalInfo }}</dd>
-            <dt>{{ t('store.orders.address') }}</dt>
-            <dd>
-                <AddressMapLink
-                    :address="joinAddressParts(Object.values(shippingAddress))"
+        <div class="mb-5 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            <DetailList :title="t('store.orders.groups.order')">
+                <DetailItem
+                    :label="t('store.orders.tracking')"
+                    :value="trackingCode"
                 />
-            </dd>
-            <dt>{{ t('store.orders.total') }}</dt>
-            <dd>{{ order.grand_total.toFixed(2) }}</dd>
-            <dt>{{ t('store.orders.couponDiscount') }}</dt>
-            <dd>{{ couponDiscount.toFixed(2) }}</dd>
-            <dt>{{ t('store.orders.profits') }}</dt>
-            <dd>{{ order.profits.toFixed(2) }}</dd>
-            <dt>{{ t('store.orders.discount') }}</dt>
-            <dd>{{ order.discount_percent }}%</dd>
-            <dt>{{ t('store.orders.indicator') }}</dt>
-            <dd>{{ order.indicator }}%</dd>
-        </dl>
+                <DetailItem
+                    :label="t('store.orders.deliveryDate')"
+                    :value="order.delivery_date"
+                />
+                <DetailItem
+                    :label="t('store.orders.indicator')"
+                    :value="`${order.indicator}%`"
+                />
+            </DetailList>
+            <DetailList :title="t('store.orders.groups.people')">
+                <DetailItem :label="t('store.orders.customer')"
+                    ><TableObjectLink
+                        v-if="order.customer"
+                        :allowed="access.can('edit_customer')"
+                        :href="customerEdit(order.customer)"
+                        >{{ order.customer.name }}</TableObjectLink
+                    ></DetailItem
+                >
+                <DetailItem :label="t('store.orders.representative')"
+                    ><TableObjectLink
+                        v-if="order.representative"
+                        :allowed="access.can('edit_customer')"
+                        :href="customerEdit(order.representative)"
+                        >{{ order.representative.name }}</TableObjectLink
+                    ></DetailItem
+                >
+            </DetailList>
+            <DetailList
+                :title="t('store.orders.groups.money')"
+                :columns="2"
+                keep-columns
+                class="md:col-span-2 lg:col-span-1"
+            >
+                <DetailItem
+                    amount
+                    :label="t('store.orders.total')"
+                    :value="order.grand_total.toFixed(2)"
+                />
+                <DetailItem
+                    amount
+                    :label="t('store.orders.couponDiscount')"
+                    :value="couponDiscount.toFixed(2)"
+                />
+                <DetailItem
+                    amount
+                    :label="t('store.orders.discount')"
+                    :value="`${order.discount_percent}%`"
+                />
+                <DetailItem
+                    amount
+                    :label="t('store.orders.profits')"
+                    :value="order.profits.toFixed(2)"
+                />
+            </DetailList>
+            <DetailList
+                :title="t('store.orders.groups.notes')"
+                :columns="2"
+                class="md:col-span-2 lg:col-span-3"
+            >
+                <DetailItem
+                    :label="t('store.orders.managerNotes')"
+                    :value="order.manager_notes"
+                />
+                <DetailItem
+                    preserve
+                    :label="t('store.orders.notes')"
+                    :value="additionalInfo"
+                />
+                <DetailItem full :label="t('store.orders.address')"
+                    ><AddressMapLink
+                        :address="
+                            joinAddressParts(Object.values(shippingAddress))
+                        "
+                /></DetailItem>
+            </DetailList>
+        </div>
         <a
             v-if="access.can('view_order_details')"
             :href="invoice_download.url(order.id)"

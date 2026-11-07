@@ -2580,6 +2580,12 @@
             "discount": "Discount",
             "indicator": "Profit margin",
             "invoice": "Download invoice",
+            "groups": {
+                "order": "Order",
+                "people": "People",
+                "money": "Money",
+                "notes": "Notes and address"
+            },
             "tracking": "Tracking code",
             "status": {
                 "pending": "Pending",

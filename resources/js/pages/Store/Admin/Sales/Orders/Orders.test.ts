@@ -406,6 +406,63 @@ describe('Store order pages', () => {
         }
     });
 
+    it('groups the details into four cards with stacked labels and "-" for empty values', () => {
+        const wrapper = mount(Show, {
+            props: {
+                order: storeOrder({
+                    delivery_date: null,
+                    manager_notes: null,
+                }),
+                additionalInfo: 'Line one\nLine two',
+                trackingCode: null,
+                shippingAddress: { address: 'Street 1', city: 'Town' },
+                couponDiscount: 2.5,
+            },
+        });
+        const cards = wrapper.findAll('section');
+        const card = (title: string) =>
+            cards.find((section) => section.find('h2').text() === title)!;
+        const pairs = (title: string) =>
+            card(title)
+                .findAll('dl > div')
+                .map((item) => [item.get('dt').text(), item.get('dd').text()]);
+
+        expect(cards.map((section) => section.get('h2').text())).toEqual([
+            t('store.orders.groups.order'),
+            t('store.orders.groups.people'),
+            t('store.orders.groups.money'),
+            t('store.orders.groups.notes'),
+        ]);
+        expect(pairs(t('store.orders.groups.order'))).toEqual([
+            [t('store.orders.tracking'), '-'],
+            [t('store.orders.deliveryDate'), '-'],
+            [t('store.orders.indicator'), '10%'],
+        ]);
+        expect(pairs(t('store.orders.groups.people'))).toEqual([
+            [t('store.orders.customer'), 'Buyer'],
+            [t('store.orders.representative'), '-'],
+        ]);
+        expect(pairs(t('store.orders.groups.money'))).toEqual([
+            [t('store.orders.total'), '30.30'],
+            [t('store.orders.couponDiscount'), '2.50'],
+            [t('store.orders.discount'), '16.67%'],
+            [t('store.orders.profits'), '2.00'],
+        ]);
+        expect(
+            card(t('store.orders.groups.money'))
+                .findAll('dd')
+                .every((dd) => dd.classes().includes('tabular-nums')),
+        ).toBe(true);
+        expect(pairs(t('store.orders.groups.notes'))).toEqual([
+            [t('store.orders.managerNotes'), '-'],
+            [t('store.orders.notes'), 'Line one\nLine two'],
+            [t('store.orders.address'), 'Street 1, Town'],
+        ]);
+        expect(
+            card(t('store.orders.groups.notes')).findAll('dd')[1].classes(),
+        ).toContain('whitespace-pre-wrap');
+    });
+
     it('links the customer, representative and products to their edit pages by permission', () => {
         const withRep = {
             ...order,
