@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Store\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Store\Admin\Concerns\FlashesSuccess;
 use App\Http\Requests\Store\Admin\FilterColorsRequest;
 use App\Http\Requests\Store\Admin\StoreColorRequest;
 use App\Http\Requests\Store\Admin\UpdateColorRequest;
@@ -19,6 +20,8 @@ use Inertia\Response;
 
 class ColorController extends Controller implements HasMiddleware
 {
+    use FlashesSuccess;
+
     /** @return array<int, Middleware> */
     public static function middleware(): array
     {
@@ -50,6 +53,7 @@ class ColorController extends Controller implements HasMiddleware
         $color->name = Str::replace(' ', '', $request->string('name')->toString());
         $color->code = $request->validated('code');
         $color->save();
+        $this->flashSuccess('color_has_been_created_successfully');
 
         return redirect()->route('colors');
     }
@@ -64,6 +68,7 @@ class ColorController extends Controller implements HasMiddleware
         $color->name = Str::replace(' ', '', $request->string('name')->toString());
         $color->code = $request->validated('code');
         $color->save();
+        $this->flashSuccess('color_has_been_updated_successfully');
 
         return redirect()->route('colors');
     }
@@ -71,6 +76,7 @@ class ColorController extends Controller implements HasMiddleware
     public function destroy(Request $request, Color $color): RedirectResponse
     {
         $color->delete();
+        $this->flashSuccess('color_has_been_deleted_successfully');
 
         return $this->redirectPreservingQuery('colors', $request);
     }

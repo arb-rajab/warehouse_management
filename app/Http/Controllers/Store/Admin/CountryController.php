@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Store\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Store\Admin\Concerns\FlashesSuccess;
 use App\Http\Requests\Store\Admin\FilterCountriesRequest;
 use App\Http\Requests\Store\Admin\UpdateReferenceStatusRequest;
 use App\Http\Resources\Store\CountryResource;
@@ -16,6 +17,8 @@ use Inertia\Response;
 
 class CountryController extends Controller implements HasMiddleware
 {
+    use FlashesSuccess;
+
     /** @return array<int, Middleware> */
     public static function middleware(): array
     {
@@ -38,6 +41,7 @@ class CountryController extends Controller implements HasMiddleware
     {
         $country->status = $request->boolean('status') ? 1 : 0;
         $country->save();
+        $this->flashSuccess('country_status_has_been_updated_successfully');
 
         return $this->redirectPreservingQuery('countries.index', $request);
     }

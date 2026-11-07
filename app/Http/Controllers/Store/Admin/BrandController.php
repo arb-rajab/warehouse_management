@@ -6,6 +6,7 @@ use App\Http\Controllers\Concerns\ProvidesStoreBrandLogos;
 use App\Http\Controllers\Concerns\ProvidesStoreReferenceOptions;
 use App\Http\Controllers\Concerns\ProvidesStoreUploadPreviews;
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Store\Admin\Concerns\FlashesSuccess;
 use App\Http\Requests\Store\Admin\EditReferenceTranslationRequest;
 use App\Http\Requests\Store\Admin\FilterBrandsRequest;
 use App\Http\Requests\Store\Admin\StoreBrandRequest;
@@ -28,6 +29,7 @@ use Inertia\Response;
 
 class BrandController extends Controller implements HasMiddleware
 {
+    use FlashesSuccess;
     use ProvidesStoreBrandLogos;
     use ProvidesStoreReferenceOptions;
     use ProvidesStoreUploadPreviews;
@@ -73,6 +75,7 @@ class BrandController extends Controller implements HasMiddleware
             $brand->save();
             $this->saveTranslation($brand, config('app.default_language'), $data['name']);
         });
+        $this->flashSuccess('brand_has_been_created_successfully');
 
         return redirect()->route('brands.index');
     }
@@ -108,6 +111,7 @@ class BrandController extends Controller implements HasMiddleware
             $brand->save();
             $this->saveTranslation($brand, $data['lang'], $data['name']);
         });
+        $this->flashSuccess('brand_has_been_updated_successfully');
 
         return redirect()->route('brands.edit', ['brand' => $brand->id, 'lang' => $data['lang']]);
     }
@@ -124,6 +128,7 @@ class BrandController extends Controller implements HasMiddleware
             $brand->brand_translations()->delete();
             $brand->delete();
         });
+        $this->flashSuccess('brand_has_been_deleted_successfully');
 
         return $this->redirectPreservingQuery('brands.index', $request);
     }

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Store\Admin;
 
 use App\Http\Controllers\Concerns\ProvidesStoreReferenceOptions;
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Store\Admin\Concerns\FlashesSuccess;
 use App\Http\Requests\Store\Admin\EditReferenceTranslationRequest;
 use App\Http\Requests\Store\Admin\FilterCitiesRequest;
 use App\Http\Requests\Store\Admin\StoreCityRequest;
@@ -25,6 +26,7 @@ use Inertia\Response;
 
 class CityController extends Controller implements HasMiddleware
 {
+    use FlashesSuccess;
     use ProvidesStoreReferenceOptions;
 
     /** @return array<int, Middleware> */
@@ -51,6 +53,7 @@ class CityController extends Controller implements HasMiddleware
     {
         $city->status = $request->boolean('status') ? 1 : 0;
         $city->save();
+        $this->flashSuccess('city_status_has_been_updated_successfully');
 
         return $this->redirectPreservingQuery('cities.index', $request);
     }
@@ -77,6 +80,7 @@ class CityController extends Controller implements HasMiddleware
             $city->cost = $request->validated('cost');
             $city->save();
         });
+        $this->flashSuccess('city_has_been_created_successfully');
 
         return redirect()->route('cities.index');
     }
@@ -92,6 +96,7 @@ class CityController extends Controller implements HasMiddleware
             $city->save();
             CityTranslation::query()->updateOrCreate(['city_id' => $city->id, 'lang' => $request->validated('lang')], $request->safe()->only(['name']));
         });
+        $this->flashSuccess('city_has_been_updated_successfully');
 
         return redirect()->route('cities.index');
     }
@@ -102,6 +107,7 @@ class CityController extends Controller implements HasMiddleware
             $city->city_translations()->delete();
             $city->delete();
         });
+        $this->flashSuccess('city_has_been_deleted_successfully');
 
         return $this->redirectPreservingQuery('cities.index', $request);
     }

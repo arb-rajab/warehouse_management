@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Store\Admin;
 
 use App\Http\Controllers\Concerns\ProvidesStoreUploadPreviews;
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Store\Admin\Concerns\FlashesSuccess;
 use App\Http\Requests\Store\Admin\FilterBlogsRequest;
 use App\Http\Requests\Store\Admin\StoreBlogRequest;
 use App\Http\Requests\Store\Admin\UpdateBlogRequest;
@@ -22,6 +23,7 @@ use Inertia\Response;
 
 class BlogController extends Controller implements HasMiddleware
 {
+    use FlashesSuccess;
     use ProvidesStoreUploadPreviews;
 
     /** @return array<int, Middleware> */
@@ -62,6 +64,7 @@ class BlogController extends Controller implements HasMiddleware
     {
         $blog = new Blog;
         $this->write($blog, $request->validated());
+        $this->flashSuccess('blog_post_has_been_created_successfully');
 
         return redirect()->route('blog.index');
     }
@@ -84,6 +87,7 @@ class BlogController extends Controller implements HasMiddleware
     public function update(UpdateBlogRequest $request, Blog $blog): RedirectResponse
     {
         $this->write($blog, $request->validated());
+        $this->flashSuccess('blog_post_has_been_updated_successfully');
 
         return redirect()->route('blog.index');
     }
@@ -91,6 +95,7 @@ class BlogController extends Controller implements HasMiddleware
     public function destroy(Request $request, Blog $blog): RedirectResponse
     {
         $blog->delete();
+        $this->flashSuccess('blog_post_has_been_deleted_successfully');
 
         return $this->redirectPreservingQuery('blog.index', $request);
     }
@@ -99,6 +104,7 @@ class BlogController extends Controller implements HasMiddleware
     {
         $blog->status = $request->boolean('status') ? 1 : 0;
         $blog->save();
+        $this->flashSuccess('blog_post_status_has_been_updated_successfully');
 
         return $this->redirectPreservingQuery('blog.index', $request);
     }

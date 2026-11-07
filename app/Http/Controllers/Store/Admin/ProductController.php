@@ -8,6 +8,7 @@ use App\Http\Controllers\Concerns\ProvidesStoreReferenceOptions;
 use App\Http\Controllers\Concerns\ProvidesStoreUploadPreviews;
 use App\Http\Controllers\Concerns\UpdatesStoreProductFlags;
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Store\Admin\Concerns\FlashesSuccess;
 use App\Http\Controllers\Store\Admin\Concerns\SearchesOptions;
 use App\Http\Requests\Store\Admin\BulkDeleteProductsRequest;
 use App\Http\Requests\Store\Admin\EditReferenceTranslationRequest;
@@ -63,6 +64,7 @@ use Inertia\Response;
  */
 class ProductController extends Controller implements HasMiddleware
 {
+    use FlashesSuccess;
     use ProvidesStoreProductTaxes;
     use ProvidesStoreReferenceOptions;
     use ProvidesStoreUploadPreviews;
@@ -197,7 +199,7 @@ class ProductController extends Controller implements HasMiddleware
         $data = $request->validated();
         DB::transaction(fn () => $writer->create($data, $request->variantNames(), $request->variantColorCodes(), StoreProductRequest::cashPaymentEnabled()));
         $this->clearStorefrontCaches();
-        Inertia::flash('success', __('store_admin.product_has_been_created_successfully'));
+        $this->flashSuccess('product_has_been_created_successfully');
 
         return redirect()->route('products.admin');
     }
@@ -257,7 +259,7 @@ class ProductController extends Controller implements HasMiddleware
             UpdateProductRequest::productWiseShippingEnabled(),
         ));
         $this->clearStorefrontCaches();
-        Inertia::flash('success', __('store_admin.product_has_been_updated_successfully'));
+        $this->flashSuccess('product_has_been_updated_successfully');
 
         return redirect()->route($product->getAttribute('added_by') === 'seller' ? 'products.seller.edit' : 'products.admin.edit', ['product' => $product->id, 'lang' => $data['lang']]);
     }

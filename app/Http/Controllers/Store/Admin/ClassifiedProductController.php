@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Store\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Store\Admin\Concerns\FlashesSuccess;
 use App\Http\Requests\Store\Admin\FilterClassifiedProductRequest;
 use App\Http\Requests\Store\Admin\UpdateClassifiedProductPublishedRequest;
 use App\Http\Resources\Store\ClassifiedProductResource;
@@ -18,6 +19,8 @@ use Inertia\Response;
 
 class ClassifiedProductController extends Controller implements HasMiddleware
 {
+    use FlashesSuccess;
+
     /** @return array<int, Middleware> */
     public static function middleware(): array
     {
@@ -46,6 +49,7 @@ class ClassifiedProductController extends Controller implements HasMiddleware
     public function updatePublished(UpdateClassifiedProductPublishedRequest $request, CustomerProduct $classifiedProduct): RedirectResponse
     {
         $classifiedProduct->setAttribute('published', (int) $request->boolean('status'))->save();
+        $this->flashSuccess('classified_product_published_status_has_been_updated_successfully');
 
         return $this->redirectPreservingQuery('classified_products', $request);
     }
@@ -56,6 +60,7 @@ class ClassifiedProductController extends Controller implements HasMiddleware
             $classifiedProduct->customer_product_translations()->delete();
             $classifiedProduct->delete();
         });
+        $this->flashSuccess('classified_product_has_been_deleted_successfully');
 
         return $this->redirectPreservingQuery('classified_products', $request);
     }

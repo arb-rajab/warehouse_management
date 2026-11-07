@@ -7,6 +7,7 @@ use App\Http\Controllers\Concerns\ProvidesStoreReferenceOptions;
 use App\Http\Controllers\Concerns\ProvidesStoreUploadPreviews;
 use App\Http\Controllers\Concerns\UpdatesStoreProductFlags;
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Store\Admin\Concerns\FlashesSuccess;
 use App\Http\Requests\Store\Admin\EditReferenceTranslationRequest;
 use App\Http\Requests\Store\Admin\FilterDigitalProductsRequest;
 use App\Http\Requests\Store\Admin\StoreDigitalProductRequest;
@@ -46,6 +47,7 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
  */
 class DigitalProductController extends Controller implements HasMiddleware
 {
+    use FlashesSuccess;
     use ProvidesStoreProductTaxes;
     use ProvidesStoreReferenceOptions;
     use ProvidesStoreUploadPreviews;
@@ -112,7 +114,7 @@ class DigitalProductController extends Controller implements HasMiddleware
             $this->saveStock($product, $data);
             $this->saveTranslation($product, config('app.default_language'), $data);
         });
-        Inertia::flash('success', __('store_admin.digital_product_has_been_created_successfully'));
+        $this->flashSuccess('digital_product_has_been_created_successfully');
 
         return redirect()->route('digitalproducts.index');
     }
@@ -169,7 +171,7 @@ class DigitalProductController extends Controller implements HasMiddleware
             $this->saveStock($product, $data);
             $this->saveTranslation($product, $data['lang'], $data);
         });
-        Inertia::flash('success', __('store_admin.digital_product_has_been_updated_successfully'));
+        $this->flashSuccess('digital_product_has_been_updated_successfully');
 
         return redirect()->route('digitalproducts.edit', ['product' => $product->id, 'lang' => $data['lang']]);
     }
