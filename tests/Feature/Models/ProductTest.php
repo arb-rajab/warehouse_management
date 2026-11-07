@@ -6,6 +6,7 @@ use App\Models\CellStatusLog;
 use App\Models\Pallet;
 use App\Models\Product;
 use App\Models\ProductBarcode;
+use App\Models\ProductCollection;
 use App\Models\Upload;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
@@ -762,4 +763,30 @@ test('warehouse reference images override imported thumbnails and produce versio
         ->and($product->imageReviewSource())->toBe('product-reference-images/new.jpg');
     $missing = Product::factory()->imageUrl(null)->create();
     expect($missing->imageReviewSource())->toBe('')->and($missing->image_url)->toBeNull();
+});
+
+test('orderedByStars puts the highest collection amount first, a product with no collection as 0, ties by name', function () {
+    $gold = ProductCollection::create(['name' => 'Gold', 'serial' => 'G', 'amount' => 5]);
+    $silver = ProductCollection::create(['name' => 'Silver', 'serial' => 'S', 'amount' => 3]);
+    $zero = ProductCollection::create(['name' => 'None', 'serial' => 'Z', 'amount' => 0]);
+    $names = ['Mid' => $silver->id, 'Top B' => $gold->id, 'Top A' => $gold->id, 'No collection' => null, 'Zero' => $zero->id];
+    foreach ($names as $name => $collection) {
+        createStoreProduct(['name' => $name, 'collection_id' => $collection]);
+    }
+
+    expect(Product::query()->orderedByStars()->pluck('name')->all())->toBe(['Top A', 'Top B', 'Mid', 'No collection', 'Zero']);
+});
+
+test('atLeastStars keeps the products graded at least that high, and everything for 0 or less', function () {
+    $gold = ProductCollection::create(['name' => 'Gold', 'serial' => 'G', 'amount' => 5]);
+    $silver = ProductCollection::create(['name' => 'Silver', 'serial' => 'S', 'amount' => 3]);
+    createStoreProduct(['name' => 'Gold one', 'collection_id' => $gold->id]);
+    createStoreProduct(['name' => 'Silver one', 'collection_id' => $silver->id]);
+    createStoreProduct(['name' => 'Ungraded', 'collection_id' => null]);
+
+    expect(Product::query()->atLeastStars(4)->pluck('name')->all())->toBe(['Gold one'])
+        ->and(Product::query()->atLeastStars(3)->orderBy('id')->pluck('name')->all())->toBe(['Gold one', 'Silver one'])
+        ->and(Product::query()->atLeastStars(5.5)->count())->toBe(0)
+        ->and(Product::query()->atLeastStars(0)->count())->toBe(3)
+        ->and(Product::query()->atLeastStars(-1)->count())->toBe(3);
 });

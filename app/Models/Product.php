@@ -958,6 +958,35 @@ class Product extends Model
     }
 
     /**
+     * Highest store grade first (the `stars` field of the store API: the
+     * `amount` of the product's collection, 0 for a product with none), ties
+     * by name. The tie-breakers keep a page boundary stable.
+     *
+     * @param  EloquentBuilder<Product>  $query
+     */
+    #[Scope]
+    protected function orderedByStars(EloquentBuilder $query): void
+    {
+        $query->orderByRaw('COALESCE((SELECT product_collections.amount FROM product_collections WHERE product_collections.id = products.collection_id LIMIT 1), 0) DESC')
+            ->orderBy('products.name')
+            ->orderBy('products.id');
+    }
+
+    /**
+     * Products whose `stars` are at least `$minimum`. A minimum of 0 or less
+     * keeps every product, since a product with no collection shows 0 stars.
+     *
+     * @param  EloquentBuilder<Product>  $query
+     */
+    #[Scope]
+    protected function atLeastStars(EloquentBuilder $query, float $minimum): void
+    {
+        if ($minimum > 0) {
+            $query->whereIn('products.collection_id', ProductCollection::query()->select('id')->where('amount', '>=', $minimum));
+        }
+    }
+
+    /**
      * @param  EloquentBuilder<Product>  $query
      */
     #[Scope]

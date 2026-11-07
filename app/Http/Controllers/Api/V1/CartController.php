@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Http\Middleware\HidePricesFromUnverified;
 use App\Models\Cart;
 use App\Models\CartOffered;
 use App\Models\Product;
@@ -41,10 +42,20 @@ class CartController extends Controller
     {
         set_time_limit(0);
 
+        return response()->json($this->summaryBody());
+    }
+
+    /**
+     * What GET /cart-summary answers, for the signed-in account's cart.
+     *
+     * @return array<string, mixed>
+     */
+    private function summaryBody(): array
+    {
         //$user = User::where('id', auth()->user()->id)->first();
         $items = auth()->user()->carts;
         if ($items->isEmpty()) {
-            return response()->json([
+            return [
                 'sub_total' => format_price(0.00),
                 'tax' => format_price(0.00),
                 'shipping_cost' => format_price(0.00),
@@ -56,7 +67,7 @@ class CartController extends Controller
                 'coupon_applied' => false,
                 'delivery_cost' => format_price(0.00),
                 ...$this->paymentAvailability(),
-            ]);
+            ];
         }
 
         $sum = 0.00;
@@ -103,7 +114,7 @@ class CartController extends Controller
             $sum += $delivery_cost + $feeTax;
         }
 
-        return response()->json([
+        return [
             'sub_total' => format_price($subtotal),
             'tax' => format_price($tax),
             'shipping_cost' => format_price($items->sum('shipping_cost')),
@@ -114,7 +125,47 @@ class CartController extends Controller
             'coupon_applied' => $items[0]->coupon_applied == 1,
             'delivery_cost' => format_price($delivery_cost),
             ...$this->paymentAvailability(),
-        ]);
+        ];
+    }
+
+    /**
+     * A cart change's answer, with the cart the change left behind when the
+     * app asked for it (`with_cart=1`): `cart` is what POST /carts answers and
+     * `summary` is what GET /cart-summary answers, so the app needs no second
+     * and third call. Without the parameter the answer is unchanged. Only a
+     * successful change carries them, and an account that may not see prices
+     * gets them blanked as those two routes would (HidePricesFromUnverified).
+     */
+    private function withCart(JsonResponse $response, Request $request): JsonResponse
+    {
+        if (! $request->boolean('with_cart') || ! $response->isSuccessful()) {
+            return $response;
+        }
+
+        $body = $response->getData(true);
+
+        if (($body['result'] ?? false) !== true) {
+            return $response;
+        }
+
+        $user = $request->user();
+        // This request changed the lines: read them again, not as loaded earlier in it.
+        $user->unsetRelation('carts')->unsetRelation('carts_offered');
+
+        $body['cart'] = $this->shopsFor($user);
+        $body['summary'] = $this->summaryBody();
+        $hidesPrices = HidePricesFromUnverified::hidesPricesFrom($user);
+
+        if ($hidesPrices) {
+            $body['cart'] = HidePricesFromUnverified::blankPrices($body['cart'], 'cart');
+            $body['summary'] = [...HidePricesFromUnverified::blankPrices($body['summary'], 'cart'), 'price_hidden' => true];
+        }
+
+        // A new answer rather than $response->setData(): Scramble (the API reference)
+        // cannot infer setData() on a response it did not build, and its export fails.
+        $answer = response()->json($body, $response->getStatusCode());
+
+        return $hidesPrices ? $answer->header('X-Prices-Hidden', '1') : $answer;
     }
 
     /**
@@ -159,13 +210,23 @@ class CartController extends Controller
     {
         set_time_limit(0);
 
-        $owner_ids = Cart::where('user_id', $request->user()->id)->select('owner_id')->groupBy('owner_id')->pluck('owner_id')->toArray();
+        return response()->json($this->shopsFor($request->user()));
+    }
+
+    /**
+     * What POST /carts answers: the account's cart lines, grouped by shop.
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function shopsFor(StoreUser $user): array
+    {
+        $owner_ids = Cart::where('user_id', $user->id)->select('owner_id')->groupBy('owner_id')->pluck('owner_id')->toArray();
         $currency_symbol = currency_symbol();
         $shops = [];
         if (!empty($owner_ids)) {
             foreach ($owner_ids as $owner_id) {
                 $shop = [];
-                $shop_items_raw_data = Cart::where('user_id', $request->user()->id)->where('owner_id', $owner_id)->get()->toArray();
+                $shop_items_raw_data = Cart::where('user_id', $user->id)->where('owner_id', $owner_id)->get()->toArray();
                 $shop_items_data = [];
                 if (!empty($shop_items_raw_data)) {
                     foreach ($shop_items_raw_data as $shop_items_raw_data_item) {
@@ -207,7 +268,7 @@ class CartController extends Controller
                         $shop_items_data_item["is_price_changed"] = $shop_items_raw_data_item["is_price_changed"];
 
 
-                        if ($request->user()->is_rep) {
+                        if ($user->is_rep) {
                             $shop_items_data_item["by_rep"] = $shop_items_raw_data_item["by_rep"];
                             $shop_items_data_item["for_customer"] = $shop_items_raw_data_item["for_customer"];
                         }
@@ -219,7 +280,7 @@ class CartController extends Controller
                     }
                 }
 
-                $carts_offered = CartOffered::where('user_id', $request->user()->id)->get();
+                $carts_offered = CartOffered::where('user_id', $user->id)->get();
 
                 if ($carts_offered->count() > 0) {
 
@@ -268,7 +329,7 @@ class CartController extends Controller
 
         //dd($shops);
 
-        return response()->json($shops);
+        return $shops;
     }
 
 
@@ -500,11 +561,11 @@ class CartController extends Controller
             return response()->json(['result' => false, 'message' => __('api.cart.cost_error')]);
         }
 
-        return response()->json([
+        return $this->withCart(response()->json([
             'result' => true,
             'message' => __('api.cart.added'),
             'offer_message' => $offerMessage ?? null
-        ]);
+        ]), $request);
     }
 
     /**
@@ -559,7 +620,7 @@ class CartController extends Controller
                     'quantity' => $request->quantity
                 ]);
 
-                return response()->json(['result' => true, 'message' => __('api.cart.updated')], 200);
+                return $this->withCart(response()->json(['result' => true, 'message' => __('api.cart.updated')], 200), $request);
             } else {
                 return response()->json(['result' => false, 'message' => __('api.cart.maximum_available')], 200);
             }
@@ -616,7 +677,7 @@ class CartController extends Controller
         }
     }
 
-    public function destroy($id)
+    public function destroy(Request $request, $id)
     {
         // The customer's own cart item only: this deleted any cart row by id.
         $cart = Cart::where('id', $id)->where('user_id', auth()->user()->id)->first();
@@ -629,7 +690,7 @@ class CartController extends Controller
 
         $cart->delete();
 
-        return response()->json(['result' => true, 'message' => __('api.cart.removed')], 200);
+        return $this->withCart(response()->json(['result' => true, 'message' => __('api.cart.removed')], 200), $request);
     }
     public function update_item_price(Request $request)
     {
@@ -658,7 +719,7 @@ class CartController extends Controller
                 $cart->rep_price = $discounted_price;
                 $cart->is_price_changed = true;
                 if ($cart->save()) {
-                    return response()->json(['result' => true, 'message' => __('api.cart.price_updated')], 200);
+                    return $this->withCart(response()->json(['result' => true, 'message' => __('api.cart.price_updated')], 200), $request);
                 } else {
                     return response()->json(['result' => false, 'message' => __('api.common.error')], 200);
                 }
