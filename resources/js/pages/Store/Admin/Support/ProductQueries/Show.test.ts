@@ -1,6 +1,7 @@
 import { Head } from '@inertiajs/vue3';
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { edit as customerEdit } from '@/actions/App/Http/Controllers/Store/Admin/CustomerController';
 import PageHeader from '@/components/PageHeader.vue';
 import StoreSupportReplyForm from '@/components/StoreSupportReplyForm.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
@@ -110,5 +111,34 @@ describe('Product query show', () => {
         expect(wrapper.text()).toContain(t('store.support.missingUser'));
         expect(wrapper.text()).toContain('<script>bad</script>');
         expect(wrapper.find('dd script').exists()).toBe(false);
+    });
+
+    it('links the customer to their edit page only with edit_customer', () => {
+        usePageMock.mockReturnValue({
+            url: '/temp/admin/x',
+            props: defaultAuthProps({
+                store: storeSharedProps({
+                    permissions: ['view_all_product_queries', 'edit_customer'],
+                }),
+            }),
+        });
+        const allowed = mountPage();
+        expect(allowed.find(`a[href="${customerEdit(8).url}"]`).exists()).toBe(
+            true,
+        );
+
+        usePageMock.mockReturnValue({
+            url: '/temp/admin/x',
+            props: defaultAuthProps({
+                store: storeSharedProps({
+                    permissions: ['view_all_product_queries'],
+                }),
+            }),
+        });
+        const denied = mountPage();
+        expect(denied.find(`a[href="${customerEdit(8).url}"]`).exists()).toBe(
+            false,
+        );
+        expect(denied.text()).toContain('Customer');
     });
 });

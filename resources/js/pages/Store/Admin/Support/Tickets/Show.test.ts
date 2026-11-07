@@ -1,6 +1,7 @@
 import { Head } from '@inertiajs/vue3';
 import { flushPromises, mount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { edit as customerEdit } from '@/actions/App/Http/Controllers/Store/Admin/CustomerController';
 import {
     index as ticketsIndex,
     show,
@@ -211,5 +212,19 @@ describe('Store support ticket Show', () => {
             { preserveState: true, replace: true },
         );
         wrapper.unmount();
+    });
+
+    it('links the ticket owner to their edit page only with edit_customer', () => {
+        grant(['view_all_support_tickets', 'edit_customer']);
+        const allowed = mountPage();
+        expect(allowed.find(`a[href="${customerEdit(8).url}"]`).exists()).toBe(
+            true,
+        );
+
+        grant(['view_all_support_tickets']);
+        const denied = mountPage();
+        expect(denied.find(`a[href="${customerEdit(8).url}"]`).exists()).toBe(
+            false,
+        );
     });
 });

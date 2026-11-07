@@ -21,6 +21,7 @@ import FieldError from '@/components/FieldError.vue';
 import FormField from '@/components/FormField.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import Pagination from '@/components/Pagination.vue';
+import StoreColumnPicker from '@/components/StoreColumnPicker.vue';
 import StoreTripStatusDialog from '@/components/StoreTripStatusDialog.vue';
 import SubmitButton from '@/components/SubmitButton.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
@@ -32,6 +33,7 @@ import { fieldLabelClass, plainFieldInputClass } from '@/lib/filters';
 import { t } from '@/lib/i18n';
 import { firstError } from '@/lib/pageErrors';
 import { useStoreAccess } from '@/lib/storeAccess';
+import { useTableColumns } from '@/lib/useTableColumns';
 import type { Paginated } from '@/types/admin';
 import type {
     StoreTrip,
@@ -125,6 +127,27 @@ function onPerPageChange(perPage: number): void {
         { preserveState: true, replace: true },
     );
 }
+const columns = useTableColumns({
+    listId: 'trips.trips',
+    columns: [
+        { key: 'code', label: 'store.trips.index.code', required: true },
+        { key: 'driver', label: 'store.trips.index.driver' },
+        { key: 'truck', label: 'store.trips.index.truck' },
+        { key: 'dueDate', label: 'store.trips.index.dueDate' },
+        { key: 'status', label: 'store.trips.index.status' },
+        { key: 'startedAt', label: 'store.trips.index.startedAt' },
+        { key: 'closedAt', label: 'store.trips.index.closedAt' },
+        { key: 'distance', label: 'store.trips.index.distance' },
+        { key: 'duration', label: 'store.trips.index.duration' },
+        { key: 'notes', label: 'store.trips.index.notes' },
+    ],
+});
+const { shown, visibleColumns } = columns;
+const tableColumns = computed(() => [
+    ...(access.value.can('delete_trip') ? [t('store.trips.index.select')] : []),
+    ...visibleColumns.value.map((column) => t(column.label)),
+    t('store.trips.index.actions'),
+]);
 </script>
 
 <template>
@@ -186,54 +209,41 @@ function onPerPageChange(perPage: number): void {
                 />
             </div>
         </Form>
-        <Form
-            v-if="access.can('delete_trip')"
-            :action="bulkDestroy(listQuery)"
-            :on-before="
-                () =>
-                    selected.length > 0 &&
-                    confirmDelete(
-                        t('store.trips.index.selection', {
-                            count: selected.length,
-                        }),
-                    )
-            "
-            #default="{ errors, processing }"
-            class="mb-4 max-w-sm"
-            @success="selected = []"
-        >
-            <input
-                v-for="id in selected"
-                :key="id"
-                type="hidden"
-                name="id[]"
-                :value="id"
-            />
-            <SubmitButton
-                :label="t('store.trips.index.deleteSelection')"
-                :processing-label="t('store.trips.index.deleting')"
-                :processing="processing"
-                :disabled="processing || selected.length === 0"
-            />
-            <FieldError :message="firstError(errors)" />
-        </Form>
+        <StoreColumnPicker :state="columns">
+            <Form
+                v-if="access.can('delete_trip')"
+                :action="bulkDestroy(listQuery)"
+                :on-before="
+                    () =>
+                        selected.length > 0 &&
+                        confirmDelete(
+                            t('store.trips.index.selection', {
+                                count: selected.length,
+                            }),
+                        )
+                "
+                #default="{ errors, processing }"
+                class="max-w-sm"
+                @success="selected = []"
+            >
+                <input
+                    v-for="id in selected"
+                    :key="id"
+                    type="hidden"
+                    name="id[]"
+                    :value="id"
+                />
+                <SubmitButton
+                    :label="t('store.trips.index.deleteSelection')"
+                    :processing-label="t('store.trips.index.deleting')"
+                    :processing="processing"
+                    :disabled="processing || selected.length === 0"
+                />
+                <FieldError :message="firstError(errors)" />
+            </Form>
+        </StoreColumnPicker>
         <DataTable
-            :columns="[
-                ...(access.can('delete_trip')
-                    ? [t('store.trips.index.select')]
-                    : []),
-                t('store.trips.index.code'),
-                t('store.trips.index.driver'),
-                t('store.trips.index.truck'),
-                t('store.trips.index.dueDate'),
-                t('store.trips.index.status'),
-                t('store.trips.index.startedAt'),
-                t('store.trips.index.closedAt'),
-                t('store.trips.index.distance'),
-                t('store.trips.index.duration'),
-                t('store.trips.index.notes'),
-                t('store.trips.index.actions'),
-            ]"
+            :columns="tableColumns"
             :rows="trips.data"
             :empty-message="t('store.trips.index.empty')"
         >
@@ -258,7 +268,7 @@ function onPerPageChange(perPage: number): void {
                         >{{ trip.code }}</Link
                     >
                 </td>
-                <td class="px-4 py-2">
+                <td v-if="shown.driver" class="px-4 py-2">
                     <TableLink
                         v-if="trip.driver && access.can('edit_driver')"
                         :href="driverEdit(trip.driver)"
@@ -268,7 +278,7 @@ function onPerPageChange(perPage: number): void {
                         trip.driver?.name ?? t('store.trips.index.notAvailable')
                     }}</template>
                 </td>
-                <td class="px-4 py-2">
+                <td v-if="shown.truck" class="px-4 py-2">
                     <TableLink
                         v-if="trip.truck && access.can('edit_truck')"
                         :href="truckEdit(trip.truck)"
@@ -288,8 +298,10 @@ function onPerPageChange(perPage: number): void {
                             : t('store.trips.index.notAvailable')
                     }}</template>
                 </td>
-                <td class="px-4 py-2 whitespace-nowrap">{{ trip.due_date }}</td>
-                <td class="px-4 py-2 whitespace-nowrap">
+                <td v-if="shown.dueDate" class="px-4 py-2 whitespace-nowrap">
+                    {{ trip.due_date }}
+                </td>
+                <td v-if="shown.status" class="px-4 py-2 whitespace-nowrap">
                     <div class="flex items-center gap-2">
                         <span>{{
                             t(`store.trips.status.${trip.status}`)
@@ -314,23 +326,23 @@ function onPerPageChange(perPage: number): void {
                         </button>
                     </div>
                 </td>
-                <td class="px-4 py-2 whitespace-nowrap">
+                <td v-if="shown.startedAt" class="px-4 py-2 whitespace-nowrap">
                     {{ trip.started_at ? formatDateTime(trip.started_at) : '' }}
                 </td>
-                <td class="px-4 py-2 whitespace-nowrap">
+                <td v-if="shown.closedAt" class="px-4 py-2 whitespace-nowrap">
                     {{ trip.closed_at ? formatDateTime(trip.closed_at) : '' }}
                 </td>
-                <td class="px-4 py-2 whitespace-nowrap">
+                <td v-if="shown.distance" class="px-4 py-2 whitespace-nowrap">
                     {{
                         t('store.trips.index.km', {
                             distance: kilometres(trip.distance),
                         })
                     }}
                 </td>
-                <td class="px-4 py-2 whitespace-nowrap">
+                <td v-if="shown.duration" class="px-4 py-2 whitespace-nowrap">
                     {{ formatDuration(trip.duration ?? 0) }}
                 </td>
-                <td class="px-4 py-2">
+                <td v-if="shown.notes" class="px-4 py-2">
                     <template v-if="access.can('edit_trip')">
                         <textarea
                             :id="`trip-notes-${trip.id}`"

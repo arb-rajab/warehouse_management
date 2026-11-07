@@ -37,7 +37,7 @@ test('both withdrawal lists render and paginate with complete narrow payloads', 
     foreach (['withdraw_requests.index', 'withdraw_requests_all'] as $route) {
         $this->get(route($route))->assertOk()->assertInertia(fn (Assert $p) => $p->component('Store/Admin/Sellers/Withdrawals/Index')->where('filters', ['per_page' => 20])->has('withdrawals.data.0', fn (Assert $row) => $row
             ->where('id', $id)->where('date', '2020-10-19 08:00:00')->where('due', single_price(100))->where('amount', single_price(40))->where('message', '<script>seller message</script>')->where('paid', false)
-            ->has('seller', fn (Assert $s) => $s->where('id', $seller->id)->where('name', 'Withdraw Seller')->where('shop_name', 'Withdrawal Shop'))));
+            ->has('seller', fn (Assert $s) => $s->where('id', $seller->id)->where('shop_id', $shop)->where('name', 'Withdraw Seller')->where('shop_name', 'Withdrawal Shop'))));
     }
     foreach (range(1, 22) as $i) {
         createWithdrawRequestFor($seller, $i, 1);

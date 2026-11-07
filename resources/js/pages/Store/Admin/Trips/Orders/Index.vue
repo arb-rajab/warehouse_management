@@ -28,22 +28,25 @@ import FieldError from '@/components/FieldError.vue';
 import FormField from '@/components/FormField.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import Pagination from '@/components/Pagination.vue';
+import StoreColumnPicker from '@/components/StoreColumnPicker.vue';
 import StoreListFilters from '@/components/StoreListFilters.vue';
 import SubmitButton from '@/components/SubmitButton.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
 import TableLink from '@/components/TableLink.vue';
+import TableObjectLink from '@/components/TableObjectLink.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
 import { confirmDelete, confirmDeliveryStatus } from '@/lib/confirm';
-import {
-    countActive,
-    fieldLabelClass,
-    plainFieldInputClass,
-} from '@/lib/filters';
+import { fieldLabelClass, plainFieldInputClass } from '@/lib/filters';
 import { t } from '@/lib/i18n';
 import { firstError, usePageError } from '@/lib/pageErrors';
 import { useStoreAccess } from '@/lib/storeAccess';
+import { useTableColumns } from '@/lib/useTableColumns';
 import type { Paginated } from '@/types/admin';
-import type { StoreTripOrder, StoreTripOrderFilters } from '@/types/store';
+import type {
+    StoreFilterChip,
+    StoreTripOrder,
+    StoreTripOrderFilters,
+} from '@/types/store';
 import type { TruckPhoto } from '@/types/storeTruck';
 
 const props = defineProps<{
@@ -54,9 +57,21 @@ const props = defineProps<{
     bulkStatuses: string[];
 }>();
 const access = useStoreAccess();
-/** Dialog filters only: the two dates (search and delivery status stay inline). */
-const activeFilterCount = computed(() =>
-    countActive([Boolean(props.filters.from), Boolean(props.filters.to)]),
+/** Dialog filters only, one chip per date bound (search and delivery status stay inline). */
+const appliedFilters = computed<StoreFilterChip[]>(() =>
+    (
+        [
+            ['from', 'store.trips.orders.from'],
+            ['to', 'store.trips.orders.to'],
+        ] as const
+    )
+        .filter(([key]) => Boolean(props.filters[key]))
+        .map(([key, label]) => ({
+            key,
+            label: t(label),
+            value: props.filters[key],
+            keys: [key],
+        })),
 );
 const tripError = usePageError('trip_id');
 const deliveryError = usePageError('delivery_status');
@@ -138,6 +153,39 @@ function onPerPageChange(perPage: number): void {
         { preserveState: true, replace: true },
     );
 }
+const columns = useTableColumns({
+    listId: 'trips.orders',
+    columns: [
+        { key: 'code', label: 'store.trips.orders.code', required: true },
+        { key: 'products', label: 'store.trips.orders.products' },
+        { key: 'otajerOrderId', label: 'store.trips.orders.otajerOrderId' },
+        { key: 'accountingId', label: 'store.trips.orders.accountingId' },
+        { key: 'companyName', label: 'store.trips.orders.companyName' },
+        { key: 'orderFrom', label: 'store.trips.orders.orderFrom' },
+        { key: 'wmsStatus', label: 'store.trips.orders.wmsStatus' },
+        { key: 'customer', label: 'store.trips.orders.customer' },
+        { key: 'tripCode', label: 'store.trips.orders.tripCode' },
+        { key: 'driver', label: 'store.trips.orders.driver' },
+        { key: 'truck', label: 'store.trips.orders.truck' },
+        { key: 'representative', label: 'store.trips.orders.representative' },
+        { key: 'address', label: 'store.trips.orders.address' },
+        { key: 'country', label: 'store.trips.orders.country' },
+        { key: 'phone', label: 'store.trips.orders.phone' },
+        { key: 'invoiceNumber', label: 'store.trips.orders.invoiceNumber' },
+        { key: 'customerNotes', label: 'store.trips.orders.customerNotes' },
+        { key: 'managerNotes', label: 'store.trips.orders.managerNotes' },
+        { key: 'amount', label: 'store.trips.orders.amount' },
+        { key: 'deliveryStatus', label: 'store.trips.orders.deliveryStatus' },
+        { key: 'deliveryDate', label: 'store.trips.orders.deliveryDate' },
+        { key: 'photos', label: 'store.trips.orders.photos' },
+    ],
+});
+const { shown, visibleColumns } = columns;
+const tableColumns = computed(() => [
+    ...(canSelect.value ? [t('store.trips.orders.select')] : []),
+    ...visibleColumns.value.map((column) => t(column.label)),
+    t('store.trips.orders.actions'),
+]);
 </script>
 
 <template>
@@ -157,10 +205,7 @@ function onPerPageChange(perPage: number): void {
         >
             {{ t('store.trips.orders.invoiceHelp') }}
         </p>
-        <StoreListFilters
-            :action="tripOrders()"
-            :active-count="activeFilterCount"
-        >
+        <StoreListFilters :action="tripOrders()" :chips="appliedFilters">
             <template #default="{ errors }">
                 <input
                     type="hidden"
@@ -215,34 +260,72 @@ function onPerPageChange(perPage: number): void {
                 />
             </template>
         </StoreListFilters>
-        <div v-if="canSelect" class="mb-4 flex flex-wrap items-start gap-3">
-            <template v-if="access.can('edit_trip')">
+        <StoreColumnPicker :state="columns">
+            <div v-if="canSelect" class="flex flex-wrap items-start gap-3">
+                <template v-if="access.can('edit_trip')">
+                    <Form
+                        v-for="status in bulkStatuses"
+                        :key="status"
+                        :action="bulkUpdateDeliveryStatus(sameList)"
+                        :on-before="
+                            () =>
+                                selected.length > 0 &&
+                                selectedTrip !== null &&
+                                confirmDeliveryStatus(
+                                    selection(),
+                                    statusLabel(status),
+                                )
+                        "
+                        #default="{ errors, processing }"
+                        @success="selected = []"
+                    >
+                        <input
+                            type="hidden"
+                            name="trip_id"
+                            :value="selectedTrip ?? ''"
+                        />
+                        <input
+                            type="hidden"
+                            name="delivery_status"
+                            :value="status"
+                        />
+                        <input
+                            v-for="id in selected"
+                            :key="id"
+                            type="hidden"
+                            name="id[]"
+                            :value="id"
+                        />
+                        <SubmitButton
+                            :label="
+                                t('store.trips.orders.markSelection', {
+                                    status: statusLabel(status),
+                                })
+                            "
+                            :processing-label="t('store.trips.orders.updating')"
+                            :processing="processing"
+                            :disabled="
+                                processing ||
+                                selected.length === 0 ||
+                                selectedTrip === null
+                            "
+                        />
+                        <FieldError :message="firstError(errors)" />
+                    </Form>
+                </template>
                 <Form
-                    v-for="status in bulkStatuses"
-                    :key="status"
-                    :action="bulkUpdateDeliveryStatus(sameList)"
+                    v-if="access.can('delete_order')"
+                    :action="
+                        bulk_order_delete({
+                            mergeQuery: { return_to: 'trip_orders' },
+                        })
+                    "
                     :on-before="
-                        () =>
-                            selected.length > 0 &&
-                            selectedTrip !== null &&
-                            confirmDeliveryStatus(
-                                selection(),
-                                statusLabel(status),
-                            )
+                        () => selected.length > 0 && confirmDelete(selection())
                     "
                     #default="{ errors, processing }"
                     @success="selected = []"
                 >
-                    <input
-                        type="hidden"
-                        name="trip_id"
-                        :value="selectedTrip ?? ''"
-                    />
-                    <input
-                        type="hidden"
-                        name="delivery_status"
-                        :value="status"
-                    />
                     <input
                         v-for="id in selected"
                         :key="id"
@@ -251,78 +334,17 @@ function onPerPageChange(perPage: number): void {
                         :value="id"
                     />
                     <SubmitButton
-                        :label="
-                            t('store.trips.orders.markSelection', {
-                                status: statusLabel(status),
-                            })
-                        "
-                        :processing-label="t('store.trips.orders.updating')"
+                        :label="t('store.trips.orders.deleteSelection')"
+                        :processing-label="t('store.trips.orders.deleting')"
                         :processing="processing"
-                        :disabled="
-                            processing ||
-                            selected.length === 0 ||
-                            selectedTrip === null
-                        "
+                        :disabled="processing || selected.length === 0"
                     />
                     <FieldError :message="firstError(errors)" />
                 </Form>
-            </template>
-            <Form
-                v-if="access.can('delete_order')"
-                :action="
-                    bulk_order_delete({
-                        mergeQuery: { return_to: 'trip_orders' },
-                    })
-                "
-                :on-before="
-                    () => selected.length > 0 && confirmDelete(selection())
-                "
-                #default="{ errors, processing }"
-                @success="selected = []"
-            >
-                <input
-                    v-for="id in selected"
-                    :key="id"
-                    type="hidden"
-                    name="id[]"
-                    :value="id"
-                />
-                <SubmitButton
-                    :label="t('store.trips.orders.deleteSelection')"
-                    :processing-label="t('store.trips.orders.deleting')"
-                    :processing="processing"
-                    :disabled="processing || selected.length === 0"
-                />
-                <FieldError :message="firstError(errors)" />
-            </Form>
-        </div>
+            </div>
+        </StoreColumnPicker>
         <DataTable
-            :columns="[
-                ...(canSelect ? [t('store.trips.orders.select')] : []),
-                t('store.trips.orders.code'),
-                t('store.trips.orders.products'),
-                t('store.trips.orders.otajerOrderId'),
-                t('store.trips.orders.accountingId'),
-                t('store.trips.orders.companyName'),
-                t('store.trips.orders.orderFrom'),
-                t('store.trips.orders.wmsStatus'),
-                t('store.trips.orders.customer'),
-                t('store.trips.orders.tripCode'),
-                t('store.trips.orders.driver'),
-                t('store.trips.orders.truck'),
-                t('store.trips.orders.representative'),
-                t('store.trips.orders.address'),
-                t('store.trips.orders.country'),
-                t('store.trips.orders.phone'),
-                t('store.trips.orders.invoiceNumber'),
-                t('store.trips.orders.customerNotes'),
-                t('store.trips.orders.managerNotes'),
-                t('store.trips.orders.amount'),
-                t('store.trips.orders.deliveryStatus'),
-                t('store.trips.orders.deliveryDate'),
-                t('store.trips.orders.photos'),
-                t('store.trips.orders.actions'),
-            ]"
+            :columns="tableColumns"
             :rows="orders.data"
             :empty-message="t('store.trips.orders.empty')"
         >
@@ -348,17 +370,25 @@ function onPerPageChange(perPage: number): void {
                         >{{ t('store.trips.orders.new') }}</span
                     >
                 </td>
-                <td class="px-4 py-2">{{ order.details_count }}</td>
-                <td class="px-4 py-2">{{ order.otajer_order_id ?? '' }}</td>
-                <td class="px-4 py-2">
+                <td v-if="shown.products" class="px-4 py-2">
+                    {{ order.details_count }}
+                </td>
+                <td v-if="shown.otajerOrderId" class="px-4 py-2">
+                    {{ order.otajer_order_id ?? '' }}
+                </td>
+                <td v-if="shown.accountingId" class="px-4 py-2">
                     {{ order.customer?.accounting_id ?? '--' }}
                 </td>
-                <td class="px-4 py-2">
+                <td v-if="shown.companyName" class="px-4 py-2">
                     {{ order.customer?.company_name ?? '--' }}
                 </td>
-                <td class="px-4 py-2">{{ order.order_from ?? '--' }}</td>
-                <td class="px-4 py-2">{{ order.wms_status ?? '' }}</td>
-                <td class="px-4 py-2">
+                <td v-if="shown.orderFrom" class="px-4 py-2">
+                    {{ order.order_from ?? '--' }}
+                </td>
+                <td v-if="shown.wmsStatus" class="px-4 py-2">
+                    {{ order.wms_status ?? '' }}
+                </td>
+                <td v-if="shown.customer" class="px-4 py-2">
                     <template v-if="order.customer">
                         <TableLink
                             v-if="access.can('edit_customer')"
@@ -371,7 +401,7 @@ function onPerPageChange(perPage: number): void {
                         t('store.trips.orders.deletedAccount')
                     }}</template>
                 </td>
-                <td class="px-4 py-2 whitespace-nowrap">
+                <td v-if="shown.tripCode" class="px-4 py-2 whitespace-nowrap">
                     <Link
                         v-if="order.trip"
                         :href="tripsShow(order.trip)"
@@ -380,7 +410,7 @@ function onPerPageChange(perPage: number): void {
                     >
                     <template v-else>-</template>
                 </td>
-                <td class="px-4 py-2">
+                <td v-if="shown.driver" class="px-4 py-2">
                     <template v-if="order.trip?.driver">
                         <TableLink
                             v-if="access.can('edit_driver')"
@@ -391,7 +421,7 @@ function onPerPageChange(perPage: number): void {
                     </template>
                     <template v-else>-</template>
                 </td>
-                <td class="px-4 py-2">
+                <td v-if="shown.truck" class="px-4 py-2">
                     <template v-if="order.trip?.truck">
                         <TableLink
                             v-if="access.can('edit_truck')"
@@ -402,23 +432,32 @@ function onPerPageChange(perPage: number): void {
                     </template>
                     <template v-else>-</template>
                 </td>
-                <td class="px-4 py-2">
-                    <template v-if="order.by_rep">{{
-                        order.representative?.name ??
-                        t('store.trips.orders.deletedAccount')
-                    }}</template>
+                <td v-if="shown.representative" class="px-4 py-2">
+                    <template v-if="order.by_rep">
+                        <TableObjectLink
+                            v-if="order.representative"
+                            :allowed="access.can('edit_customer')"
+                            :href="customerEdit(order.representative)"
+                            >{{ order.representative.name }}</TableObjectLink
+                        >
+                        <template v-else>{{
+                            t('store.trips.orders.deletedAccount')
+                        }}</template>
+                    </template>
                     <template v-else>{{
                         t('store.trips.orders.noRepresentative')
                     }}</template>
                 </td>
-                <td class="px-4 py-2">
+                <td v-if="shown.address" class="px-4 py-2">
                     <AddressMapLink :address="order.address" placeholder="-" />
                 </td>
-                <td class="px-4 py-2">{{ order.country ?? '-' }}</td>
-                <td class="px-4 py-2 whitespace-nowrap">
+                <td v-if="shown.country" class="px-4 py-2">
+                    {{ order.country ?? '-' }}
+                </td>
+                <td v-if="shown.phone" class="px-4 py-2 whitespace-nowrap">
                     {{ order.phone ?? '-' }}
                 </td>
-                <td class="px-4 py-2">
+                <td v-if="shown.invoiceNumber" class="px-4 py-2">
                     <template v-if="access.can('edit_trip') && order.trip">
                         <input
                             :id="`order-invoice-${order.id}`"
@@ -448,20 +487,34 @@ function onPerPageChange(perPage: number): void {
                     </template>
                     <template v-else>{{ order.invoice_number ?? '' }}</template>
                 </td>
-                <td class="px-4 py-2 whitespace-pre-line">
+                <td
+                    v-if="shown.customerNotes"
+                    class="px-4 py-2 whitespace-pre-line"
+                >
                     {{ order.customer_notes ?? '' }}
                 </td>
-                <td class="px-4 py-2 whitespace-pre-line">
+                <td
+                    v-if="shown.managerNotes"
+                    class="px-4 py-2 whitespace-pre-line"
+                >
                     {{ order.manager_notes ?? '' }}
                 </td>
-                <td class="px-4 py-2 whitespace-nowrap">{{ order.amount }}</td>
-                <td class="px-4 py-2 whitespace-nowrap">
+                <td v-if="shown.amount" class="px-4 py-2 whitespace-nowrap">
+                    {{ order.amount }}
+                </td>
+                <td
+                    v-if="shown.deliveryStatus"
+                    class="px-4 py-2 whitespace-nowrap"
+                >
                     {{ statusLabel(order.delivery_status) }}
                 </td>
-                <td class="px-4 py-2 whitespace-nowrap">
+                <td
+                    v-if="shown.deliveryDate"
+                    class="px-4 py-2 whitespace-nowrap"
+                >
                     {{ order.delivery_date ?? '' }}
                 </td>
-                <td class="px-4 py-2">
+                <td v-if="shown.photos" class="px-4 py-2">
                     <div
                         v-if="photoUrls(order).length"
                         class="flex flex-wrap gap-1"

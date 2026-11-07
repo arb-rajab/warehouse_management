@@ -115,7 +115,13 @@ Setup > Product data sources (`product_field_sources.index`, permission
   `collection_id`, `published`) appear in the note and are protected by the
   guard alone. A read-only `unit_price` is also merged into the request before
   validation (`UpdateProductRequest`), so the discount rule checks the stored
-  price. A read-only description renders as a locked block
+  price. A read-only field is never validated as posted
+  (`UpdateProductRequest::readOnlyFieldRules()` swaps its rule for `nullable`;
+  the default-language-only name, unit and description count only on that tab):
+  its stored value may be null or blank (a feed row the sync never filled) and
+  must not block the save, and `InHouseProductWriter::update()` leaves the
+  column out of the write, null included. A store-origin product has no
+  read-only field, so every rule applies to what it posts. A read-only description renders as a locked block
   (`StoreSanitizedHtml`) with a hidden input posting the stored HTML; the
   controller sends the synced column, not a stale translation, for a read-only
   `unit` or `description`. `Product::setAttribute()` compares the numeric synced
@@ -157,6 +163,12 @@ Setup > Product data sources (`product_field_sources.index`, permission
   it as an optional "Can expire soon" checkbox in Stock and shipping (after
   Today's deal), posted with a hidden `0` so an unticked box clears the flag
   (an absent key would leave it unchanged).
+
+- **Discount limit** (`ValidatesStoreProduct::discountLimitRule()`, physical
+  create and edit): a flat discount must be below the unit price and a
+  percentage below 100, but a discount of 0 is always allowed. The old
+  `lt:unit_price` refused the form's default 0 on a price of 0 ("discount must
+  be less than 0"). The digital forms have no such comparison.
 
 ## Tests
 

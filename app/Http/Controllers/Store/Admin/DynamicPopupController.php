@@ -14,6 +14,7 @@ use App\Models\Category;
 use App\Models\DynamicPopup;
 use App\Models\Offer;
 use App\Models\OfferProduct;
+use App\Support\NewestFirst;
 use App\Support\StorefrontUrl;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Query\Builder as QueryBuilder;
@@ -50,7 +51,7 @@ class DynamicPopupController extends Controller implements HasMiddleware
                 DynamicPopup::query()->leftJoin('uploads', 'uploads.id', '=', 'dynamic_popups.banner')
                     ->select(['dynamic_popups.id', 'dynamic_popups.title', 'dynamic_popups.btn_link', 'dynamic_popups.status', 'uploads.id as banner_upload_id', 'uploads.file_name as banner_file_name', 'uploads.external_link as banner_external_link'])
                     ->when($search, fn (Builder $query) => $query->where('dynamic_popups.title', 'like', '%'.$search.'%'))
-                    ->orderBy('dynamic_popups.id')->paginate($perPage)->withQueryString()
+                    ->tap(NewestFirst::apply(...))->paginate($perPage)->withQueryString()
             )),
             'filters' => ['per_page' => $perPage, 'search' => $search],
         ]);

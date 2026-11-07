@@ -12,6 +12,7 @@ use App\Http\Requests\Store\Admin\UpdateReferenceStatusRequest;
 use App\Http\Resources\Store\CurrencyResource;
 use App\Models\BusinessSetting;
 use App\Models\Currency;
+use App\Support\NewestFirst;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
@@ -49,7 +50,7 @@ class CurrencyController extends Controller implements HasMiddleware
         $perPage = $this->resolvePerPage($request, 20);
 
         return Inertia::render('Store/Admin/Setup/Currencies/Index', [
-            'currencies' => $this->paginated(CurrencyResource::collection(Currency::query()->select(['id', 'name', 'symbol', 'code', 'exchange_rate', 'status'])->when($request->filled('search'), fn ($query) => $query->where('name', 'like', '%'.$request->validated('search').'%'))->orderByDesc('id')->paginate($perPage)->withQueryString())),
+            'currencies' => $this->paginated(CurrencyResource::collection(Currency::query()->select(['id', 'name', 'symbol', 'code', 'exchange_rate', 'status'])->when($request->filled('search'), fn ($query) => $query->where('name', 'like', '%'.$request->validated('search').'%'))->tap(NewestFirst::apply(...))->paginate($perPage)->withQueryString())),
             'filters' => ['per_page' => $perPage, 'search' => $request->validated('search')],
             'activeCurrencies' => Currency::query()->select(['id', 'name'])->where('status', 1)->orderBy('name')->get(),
             'settings' => ['system_default_currency' => (int) get_setting('system_default_currency', 0), ...collect(BusinessSetting::CURRENCY_DEFAULTS)->map(fn (int $default, string $key): int => (int) (filled($value = get_setting($key)) ? $value : $default))->all()],

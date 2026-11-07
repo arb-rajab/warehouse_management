@@ -11,6 +11,7 @@ use App\Http\Requests\Store\Admin\UpdateRepresentativePackageRequest;
 use App\Http\Resources\Store\RepresentativePackageResource;
 use App\Models\RepresentativePackage;
 use App\Models\StoreUser;
+use App\Support\NewestFirst;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -41,7 +42,7 @@ class RepresentativePackageController extends Controller implements HasMiddlewar
 
         return Inertia::render('Store/Admin/Representatives/Packages/Index', [
             'packages' => $this->paginated(RepresentativePackageResource::collection(
-                RepresentativePackage::query()->select(['id', 'name', 'percentage'])->orderBy('id')->paginate($perPage)->withQueryString()
+                RepresentativePackage::query()->select(['id', 'name', 'percentage'])->tap(NewestFirst::apply(...))->paginate($perPage)->withQueryString()
             )),
             'filters' => ['per_page' => $perPage],
         ]);

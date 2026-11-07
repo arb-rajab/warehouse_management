@@ -8,6 +8,7 @@ import FilterDialogFooter from '@/components/FilterDialogFooter.vue';
 import FilterMultiSelect from '@/components/FilterMultiSelect.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import Pagination from '@/components/Pagination.vue';
+import StoreSearchSelect from '@/components/StoreSearchSelect.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
 import {
     createdDateRangeExclusivity,
@@ -15,7 +16,9 @@ import {
     selectedCountLabel,
 } from '@/lib/filters';
 import { t } from '@/lib/i18n';
+import type { SearchEndpoint } from '@/lib/useSearchOptions';
 import type { PaginationLink } from '@/types/admin';
+import type { SearchOption } from '@/types/searchSelect';
 import type {
     StoreReportFilters,
     StoreReportOption,
@@ -30,6 +33,13 @@ const props = defineProps<{
     selection?: StoreReportSelection;
     selectionLabel?: string;
     options?: StoreReportOption[];
+    /**
+     * A selection that is searched on demand (the wallet users, the commission
+     * sellers) instead of listed whole: the endpoint to search and the options
+     * already selected in the current filters.
+     */
+    selectionEndpoint?: SearchEndpoint;
+    selectedOptions?: SearchOption[];
     dates?: boolean;
 }>();
 
@@ -42,12 +52,24 @@ const draft = reactive({
     per_page: 20,
 });
 
+const picked = ref<SearchOption[]>([]);
+
+watch(picked, (options) => {
+    if (props.selectionEndpoint) {
+        draft.selected = options.map((option) => String(option.id));
+    }
+});
 watch(
     () => props.filters,
     (filters) => {
         draft.selected = props.selection
             ? (filters[props.selection] ?? []).map(String)
             : [];
+
+        if (props.selectionEndpoint) {
+            picked.value = [...(props.selectedOptions ?? [])];
+        }
+
         draft.date_from = filters.date_from ?? '';
         draft.date_to = filters.date_to ?? '';
         draft.created_within_days =
@@ -81,6 +103,7 @@ function apply(): void {
 
 function clear(): void {
     draft.selected = [];
+    picked.value = [];
     draft.date_from = '';
     draft.date_to = '';
     draft.created_within_days = '';
@@ -118,8 +141,18 @@ function changePerPage(perPage: number): void {
                 class="grid gap-4 sm:grid-cols-2"
                 @submit.prevent="apply"
             >
+                <StoreSearchSelect
+                    v-if="selection && selectionEndpoint"
+                    id="report-selection"
+                    v-model:items="picked"
+                    multiple
+                    :label="selectionLabel ?? ''"
+                    :endpoint="selectionEndpoint"
+                    :placeholder="t('store.reports.all')"
+                    :search-placeholder="t('store.reports.searchSelection')"
+                />
                 <FilterMultiSelect
-                    v-if="selection"
+                    v-else-if="selection"
                     id="report-selection"
                     v-model="draft.selected"
                     :label="selectionLabel ?? ''"

@@ -2,6 +2,7 @@
 import { Form, Head } from '@inertiajs/vue3';
 import { computed } from 'vue';
 import { invoice_download } from '@/actions/App/Http/Controllers/InvoiceController';
+import { edit as customerEdit } from '@/actions/App/Http/Controllers/Store/Admin/CustomerController';
 import {
     update_delivery_status,
     update_payment_status,
@@ -10,6 +11,7 @@ import {
     edit_item_price,
 } from '@/actions/App/Http/Controllers/Store/Admin/OrderController';
 import { edit } from '@/actions/App/Http/Controllers/Store/Admin/OrderEntryController';
+import { edit as productEdit } from '@/actions/App/Http/Controllers/Store/Admin/ProductController';
 import ActionErrorBanner from '@/components/ActionErrorBanner.vue';
 import AddResourceLink from '@/components/AddResourceLink.vue';
 import AddressMapLink from '@/components/AddressMapLink.vue';
@@ -19,6 +21,7 @@ import PageHeader from '@/components/PageHeader.vue';
 import RequiredLegend from '@/components/RequiredLegend.vue';
 import RequiredMark from '@/components/RequiredMark.vue';
 import SubmitButton from '@/components/SubmitButton.vue';
+import TableObjectLink from '@/components/TableObjectLink.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
 import { joinAddressParts } from '@/lib/address';
 import { fieldLabelClass, plainFieldInputClass } from '@/lib/filters';
@@ -89,9 +92,23 @@ const hasRequiredFields = provideRequiredFields();
             <dt>{{ t('store.orders.managerNotes') }}</dt>
             <dd>{{ order.manager_notes }}</dd>
             <dt>{{ t('store.orders.customer') }}</dt>
-            <dd>{{ order.customer?.name }}</dd>
+            <dd>
+                <TableObjectLink
+                    v-if="order.customer"
+                    :allowed="access.can('edit_customer')"
+                    :href="customerEdit(order.customer)"
+                    >{{ order.customer.name }}</TableObjectLink
+                >
+            </dd>
             <dt>{{ t('store.orders.representative') }}</dt>
-            <dd>{{ order.representative?.name }}</dd>
+            <dd>
+                <TableObjectLink
+                    v-if="order.representative"
+                    :allowed="access.can('edit_customer')"
+                    :href="customerEdit(order.representative)"
+                    >{{ order.representative.name }}</TableObjectLink
+                >
+            </dd>
             <dt>{{ t('store.orders.deliveryDate') }}</dt>
             <dd>{{ order.delivery_date }}</dd>
             <dt>{{ t('store.orders.notes') }}</dt>
@@ -215,7 +232,12 @@ const hasRequiredFields = provideRequiredFields();
         >
             <template #row="{ row }"
                 ><td class="px-3 py-3">
-                    {{ row.name }} {{ row.serial }}
+                    <TableObjectLink
+                        :allowed="access.can('product_edit')"
+                        :href="productEdit(row.product_id)"
+                        >{{ row.name }}</TableObjectLink
+                    >
+                    {{ row.serial }}
                     <p>{{ row.info }}</p>
                 </td>
                 <td class="px-3 py-3">{{ row.quantity }}</td>

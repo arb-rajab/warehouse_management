@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Head, router } from '@inertiajs/vue3';
 import { Pencil, Trash2 } from '@lucide/vue';
+import { computed } from 'vue';
 import {
     create,
     destroy,
@@ -13,6 +14,7 @@ import DataTable from '@/components/DataTable.vue';
 import FormField from '@/components/FormField.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import Pagination from '@/components/Pagination.vue';
+import StoreColumnPicker from '@/components/StoreColumnPicker.vue';
 import StoreStatusSwitch from '@/components/StoreStatusSwitch.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
 import TableLink from '@/components/TableLink.vue';
@@ -20,6 +22,7 @@ import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
 import { confirmDelete } from '@/lib/confirm';
 import { t } from '@/lib/i18n';
 import { useStoreAccess } from '@/lib/storeAccess';
+import { useTableColumns } from '@/lib/useTableColumns';
 import type { Paginated, PerPageFilters } from '@/types/admin';
 import type { StoreCategory } from '@/types/store';
 const props = defineProps<{
@@ -46,6 +49,25 @@ function search(event: Event): void {
         { preserveState: true, replace: true },
     );
 }
+const columns = useTableColumns({
+    listId: 'product.categories',
+    columns: [
+        { key: 'name', label: 'store.categories.name', required: true },
+        { key: 'parent', label: 'store.categories.parent' },
+        { key: 'ordering', label: 'store.categories.ordering' },
+        { key: 'level', label: 'store.categories.level' },
+        { key: 'banner', label: 'store.categories.banner' },
+        { key: 'icon', label: 'store.categories.icon' },
+        { key: 'cover', label: 'store.categories.cover' },
+        { key: 'featured', label: 'store.categories.featured' },
+        { key: 'commission', label: 'store.categories.commission' },
+    ],
+});
+const { shown, visibleColumns } = columns;
+const tableColumns = computed(() => [
+    ...visibleColumns.value.map((column) => t(column.label)),
+    t('store.categories.actions'),
+]);
 </script>
 <template>
     <Head :title="t('store.categories.title')" />
@@ -65,25 +87,15 @@ function search(event: Event): void {
                 maxlength="255"
             />
         </form>
+        <StoreColumnPicker :state="columns" />
         <DataTable
-            :columns="[
-                t('store.categories.name'),
-                t('store.categories.parent'),
-                t('store.categories.ordering'),
-                t('store.categories.level'),
-                t('store.categories.banner'),
-                t('store.categories.icon'),
-                t('store.categories.cover'),
-                t('store.categories.featured'),
-                t('store.categories.commission'),
-                t('store.categories.actions'),
-            ]"
+            :columns="tableColumns"
             :rows="categories.data"
             :empty-message="t('store.categories.empty')"
         >
             <template #row="{ row: item }">
                 <td class="px-4 py-2">{{ item.name }}</td>
-                <td class="px-4 py-2">
+                <td v-if="shown.parent" class="px-4 py-2">
                     <TableLink
                         v-if="
                             item.parent && access.can('edit_product_category')
@@ -97,26 +109,29 @@ function search(event: Event): void {
                     >
                     <span v-else>{{ item.parent?.name ?? '—' }}</span>
                 </td>
-                <td class="px-4 py-2">{{ item.order_level }}</td>
-                <td class="px-4 py-2">{{ item.level }}</td>
-                <td
+                <td v-if="shown.ordering" class="px-4 py-2">
+                    {{ item.order_level }}
+                </td>
+                <td v-if="shown.level" class="px-4 py-2">{{ item.level }}</td>
+                <template
                     v-for="(url, field) in {
                         banner: item.banner_url,
                         icon: item.icon_url,
                         cover: item.cover_image_url,
                     }"
                     :key="field"
-                    class="px-4 py-2"
                 >
-                    <img
-                        v-if="url"
-                        :src="url"
-                        :alt="t(`store.categories.${field}`)"
-                        class="h-12 w-12 object-contain"
-                    />
-                    <span v-else>—</span>
-                </td>
-                <td class="px-4 py-2">
+                    <td v-if="shown[field]" class="px-4 py-2">
+                        <img
+                            v-if="url"
+                            :src="url"
+                            :alt="t(`store.categories.${field}`)"
+                            class="h-8 w-8 object-contain"
+                        />
+                        <span v-else>—</span>
+                    </td>
+                </template>
+                <td v-if="shown.featured" class="px-4 py-2">
                     <StoreStatusSwitch
                         v-if="access.can('edit_product_category')"
                         :action="updateFeatured({ mergeQuery: {} })"
@@ -133,7 +148,9 @@ function search(event: Event): void {
                         )
                     }}</span>
                 </td>
-                <td class="px-4 py-2">{{ item.commision_rate }} %</td>
+                <td v-if="shown.commission" class="px-4 py-2">
+                    {{ item.commision_rate }} %
+                </td>
                 <td class="px-4 py-2">
                     <div class="flex items-center gap-2">
                         <TableActionLink

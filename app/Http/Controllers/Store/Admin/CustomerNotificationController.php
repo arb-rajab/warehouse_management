@@ -3,12 +3,17 @@
 namespace App\Http\Controllers\Store\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Store\Admin\Concerns\SearchesOptions;
 use App\Http\Requests\Store\Admin\FilterNotificationsRequest;
+use App\Http\Requests\Store\Admin\SearchOptionsRequest;
 use App\Http\Requests\Store\Admin\StoreCustomerNotificationRequest;
 use App\Http\Resources\Store\CustomerNotificationResource;
 use App\Models\Notification;
 use App\Models\StoreUser;
+use App\Support\NewestFirst;
+use App\Support\SearchOption;
 use Google\Client as GoogleClient;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -20,11 +25,13 @@ use Throwable;
 
 class CustomerNotificationController extends Controller implements HasMiddleware
 {
+    use SearchesOptions;
+
     /** @return array<int, Middleware> */
     public static function middleware(): array
     {
         return [
-            new Middleware('permission:add_notification', only: ['index', 'create', 'store']),
+            new Middleware('permission:add_notification', only: ['index', 'create', 'customers', 'store']),
             new Middleware('permission:delete_notification', only: ['destroy']),
         ];
     }
@@ -36,7 +43,7 @@ class CustomerNotificationController extends Controller implements HasMiddleware
         return Inertia::render('Store/Admin/Notifications/Customers/Index', [
             'notifications' => $this->paginated(CustomerNotificationResource::collection(
                 Notification::query()->select(['id', 'user_id', 'title', 'status'])
-                    ->with('user:id,name')->orderBy('id')->paginate($perPage)->withQueryString()
+                    ->with('user:id,name')->tap(NewestFirst::apply(...))->paginate($perPage)->withQueryString()
             )),
             'filters' => ['per_page' => $perPage],
         ]);
@@ -44,11 +51,20 @@ class CustomerNotificationController extends Controller implements HasMiddleware
 
     public function create(): Response
     {
-        return Inertia::render('Store/Admin/Notifications/Customers/Create', [
-            'customers' => StoreUser::query()->select(['id', 'name', 'AccSysID'])
-                ->where('user_type', 'customer')->orderByDesc('name')->orderBy('id')->get()
-                ->map(fn (StoreUser $user): array => ['id' => $user->id, 'name' => $user->name, 'account_id' => $user->AccSysID]),
-        ]);
+        return Inertia::render('Store/Admin/Notifications/Customers/Create');
+    }
+
+    /** The typeahead behind the notification's customer select (StoreSearchSelect). */
+    public function customers(SearchOptionsRequest $request): JsonResponse
+    {
+        $term = $this->searchTerm($request);
+        $customers = StoreUser::query()->select(['id', 'name', 'email', 'phone', 'AccSysID', 'member_serial', 'rep_discount_percentage'])->where('user_type', 'customer');
+        if ($term !== '') {
+            $this->whereWordsMatch($customers, ['name', 'email', 'phone', 'AccSysID', 'member_serial'], $term);
+        }
+        $this->orderByRelevance($customers, 'name', $term);
+
+        return $this->optionsPage($customers, fn (StoreUser $user): array => SearchOption::customer($user));
     }
 
     public function store(StoreCustomerNotificationRequest $request, GoogleClient $client): RedirectResponse

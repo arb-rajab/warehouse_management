@@ -9,7 +9,7 @@ import ResourceFormPage from '@/components/ResourceFormPage.vue';
 import StoreCustomerNotificationFormFields from '@/components/StoreCustomerNotificationFormFields.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
 import { t } from '@/lib/i18n';
-import { notificationCustomer, storeSharedProps } from '@/testing/factories';
+import { storeSharedProps } from '@/testing/factories';
 import { defaultAuthProps } from '@/testing/inertiaPageMocks';
 import Create from './Create.vue';
 
@@ -26,6 +26,7 @@ vi.mock('@inertiajs/vue3', async () => {
             processing: false,
         })),
         usePage: usePageMock,
+        useHttp: () => ({ get: vi.fn() }),
         router: { post: vi.fn() },
     };
 });
@@ -39,8 +40,7 @@ beforeEach(() =>
 
 describe('customer notification create', () => {
     it('passes the correct form action, labels, layout, recipients and validation errors', () => {
-        const customers = [notificationCustomer()];
-        const wrapper = mount(Create, { props: { customers } });
+        const wrapper = mount(Create);
         expect(wrapper.getComponent(ResourceFormPage).props()).toMatchObject({
             title: t('store.notifications.create.title'),
             action: store(),
@@ -52,7 +52,7 @@ describe('customer notification create', () => {
         expect(wrapper.getComponent(Form).props('action')).toEqual(store());
         expect(
             wrapper.getComponent(StoreCustomerNotificationFormFields).props(),
-        ).toEqual({ customers, errors: { user_id: 'Choose a customer' } });
+        ).toEqual({ errors: { user_id: 'Choose a customer' } });
 
         for (const key of ['title', 'submit']) {
             expect(wrapper.text()).toContain(

@@ -2,6 +2,7 @@ import { Form, Head, Link } from '@inertiajs/vue3';
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ComponentPublicInstance } from 'vue';
+import { edit as customerEdit } from '@/actions/App/Http/Controllers/Store/Admin/CustomerController';
 import {
     create as createPackage,
     destroy as destroyPackage,
@@ -42,6 +43,10 @@ import {
     storeSharedProps,
 } from '@/testing/factories';
 import { defaultAuthProps } from '@/testing/inertiaPageMocks';
+import {
+    expectColumnCanBeHidden,
+    expectColumnLocked,
+} from '@/testing/tableColumns';
 import PackageCreate from './Packages/Create.vue';
 import PackageEdit from './Packages/Edit.vue';
 import PackagesIndex from './Packages/Index.vue';
@@ -397,7 +402,20 @@ describe('representative payments index', () => {
         });
         const form = wrapper.getComponent(StoreListFilters);
         expect(form.props('action')).toEqual(paymentsIndex());
-        expect(form.props('activeCount')).toBe(2);
+        expect(form.props('chips')).toEqual([
+            {
+                key: 'pending',
+                label: t('store.representativePayments.status'),
+                value: t('store.representativePayments.pending'),
+                keys: ['pending'],
+            },
+            {
+                key: 'accepted',
+                label: t('store.representativePayments.status'),
+                value: t('store.representativePayments.accepted'),
+                keys: ['accepted'],
+            },
+        ]);
         const inline = wrapper.get('form#store-list-filters');
         expect(inline.get('input[name="per_page"]').attributes('value')).toBe(
             '20',
@@ -604,7 +622,14 @@ describe('representative visits index', () => {
         });
         const form = wrapper.getComponent(StoreListFilters);
         expect(form.props('action')).toEqual(visitsIndex());
-        expect(form.props('activeCount')).toBe(1);
+        expect(form.props('chips')).toEqual([
+            {
+                key: 'date_from',
+                label: t('store.representativeVisits.dateFrom'),
+                value: '2026-10-01',
+                keys: ['date_from'],
+            },
+        ]);
         const inline = wrapper.get('form#store-list-filters');
         expect(inline.get('input[name="per_page"]').attributes('value')).toBe(
             '20',
@@ -652,4 +677,91 @@ describe('representative visits index', () => {
             { preserveState: true, replace: true },
         );
     });
+
+    describe('representative reference links', () => {
+        it('links payment customer and representative to their edit pages only with edit_customer', () => {
+            const row = representativePayment({
+                customer_id: 31,
+                representative: { id: 10, name: 'Rep One' },
+            });
+            const hrefs = (wrapper: ReturnType<typeof mount>) =>
+                wrapper
+                    .findAll('tbody a')
+                    .map((link) => link.attributes('href'));
+
+            setAccess(['edit_customer']);
+            expect(hrefs(paymentPage([row]))).toEqual(
+                expect.arrayContaining([
+                    customerEdit(31).url,
+                    customerEdit(10).url,
+                ]),
+            );
+
+            const typedName = representativePayment({ customer_id: null });
+            expect(hrefs(paymentPage([typedName]))).not.toContain(
+                customerEdit(31).url,
+            );
+
+            setAccess([]);
+            expect(hrefs(paymentPage([row]))).not.toContain(
+                customerEdit(31).url,
+            );
+        });
+
+        it('links visit customer and representative to their edit pages only with edit_customer', () => {
+            const hrefs = (wrapper: ReturnType<typeof mount>) =>
+                wrapper
+                    .findAll('tbody a')
+                    .map((link) => link.attributes('href'));
+
+            setAccess(['edit_customer']);
+            expect(hrefs(visitPage())).toEqual(
+                expect.arrayContaining([
+                    customerEdit(10).url,
+                    customerEdit(11).url,
+                ]),
+            );
+
+            setAccess([]);
+            expect(hrefs(visitPage())).not.toContain(customerEdit(11).url);
+        });
+    });
+});
+
+it('the payments list lets staff hide an optional column and keeps the customer', async () => {
+    window.localStorage.clear();
+    const wrapper = paymentPage();
+    await expectColumnCanBeHidden(wrapper, 'representatives.payments', {
+        key: 'accountId',
+        label: t('store.representativePayments.accountId'),
+    });
+    expectColumnLocked(wrapper, t('store.representativePayments.customer'));
+    window.localStorage.clear();
+});
+
+it('the visits list lets staff hide an optional column and keeps the representative', async () => {
+    window.localStorage.clear();
+    const wrapper = visitPage();
+    await expectColumnCanBeHidden(wrapper, 'representatives.visits', {
+        key: 'note',
+        label: t('store.representativeVisits.note'),
+    });
+    expectColumnLocked(wrapper, t('store.representativeVisits.representative'));
+    window.localStorage.clear();
+});
+
+it('the packages list lets staff hide an optional column and keeps the name', async () => {
+    window.localStorage.clear();
+    const wrapper = mount(PackagesIndex, {
+        props: {
+            packages: paginated([representativePackage()]),
+            filters: { per_page: 10 },
+        },
+    });
+    await expectColumnCanBeHidden(wrapper, 'representatives.packages', {
+        key: 'percentage',
+        label: t('store.representativePackages.percentage'),
+    });
+    expectColumnLocked(wrapper, t('store.representativePackages.name'));
+    window.localStorage.clear();
 });

@@ -9,6 +9,7 @@ import StoreDigitalProductFormFields from '@/components/StoreDigitalProductFormF
 import StoreLanguageTabs from '@/components/StoreLanguageTabs.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
 import { t } from '@/lib/i18n';
+import { digitalProductValidation } from '@/lib/storeProductForm';
 import type {
     StoreDigitalProductForm,
     StoreDigitalProductTax,
@@ -27,6 +28,8 @@ defineProps<{
     taxes: StoreDigitalProductTax[];
     initialFiles: Record<string, StoreUpload[]>;
 }>();
+// Checked in the browser before anything is sent; the server re-checks.
+const validation = digitalProductValidation('edit');
 </script>
 <template>
     <ResourceFormPage
@@ -36,6 +39,7 @@ defineProps<{
         :submitting-label="t('store.digitalProducts.form.updating')"
         :cancel-href="digitalProductsIndex()"
         :layout="StoreAdminLayout"
+        :validation="validation"
         wide
         #default="{ errors }"
     >

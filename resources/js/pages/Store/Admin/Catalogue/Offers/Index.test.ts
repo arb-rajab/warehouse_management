@@ -21,6 +21,10 @@ import {
     storeSharedProps,
 } from '@/testing/factories';
 import { defaultAuthProps } from '@/testing/inertiaPageMocks';
+import {
+    expectColumnCanBeHidden,
+    expectColumnLocked,
+} from '@/testing/tableColumns';
 import Index from './Index.vue';
 
 const { usePageMock, routerGetMock } = vi.hoisted(() => ({
@@ -206,5 +210,16 @@ describe('Store offers catalogue', () => {
             'ملف PDF*مطلوب',
         );
         expect(wrapper.text()).toContain('رفع الكتالوج');
+    });
+
+    it('lets staff hide an optional column from the header and every row, and keeps the identifier', async () => {
+        window.localStorage.clear();
+        const wrapper = mountPage({ existing: true });
+        await expectColumnCanBeHidden(wrapper, 'catalogue.offers', {
+            key: 'createdAt',
+            label: t('store.offersCatalog.createdAt'),
+        });
+        expectColumnLocked(wrapper, t('store.offersCatalog.file'));
+        window.localStorage.clear();
     });
 });

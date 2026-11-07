@@ -1,29 +1,27 @@
 import { Form, Head } from '@inertiajs/vue3';
-import { flushPromises, mount } from '@vue/test-utils';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { reactive } from 'vue';
+import { mount } from '@vue/test-utils';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
     index,
+    representatives,
     update,
     updateRepresentative,
 } from '@/actions/App/Http/Controllers/Store/Admin/OrderConfigurationController';
 import { search } from '@/actions/App/Http/Controllers/Store/Admin/ProductSearchController';
+import StoreSearchSelect from '@/components/StoreSearchSelect.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
 import { t } from '@/lib/i18n';
 import ar from '@/locales/ar.json';
 import { storeSharedProps } from '@/testing/factories';
 import { defaultAuthProps } from '@/testing/inertiaPageMocks';
-import type { OrderConfigurationProduct } from '@/types/store';
+import type { SearchOption } from '@/types/searchSelect';
 import Index from './Index.vue';
-const { usePageMock, routerPostMock, slotMock, getMock, cancelMock, httpMock } =
-    vi.hoisted(() => ({
-        usePageMock: vi.fn(),
-        routerPostMock: vi.fn(),
-        slotMock: vi.fn(() => ({ errors: {}, processing: false })),
-        getMock: vi.fn(),
-        cancelMock: vi.fn(),
-        httpMock: vi.fn(),
-    }));
+const { usePageMock, routerPostMock, slotMock, getMock } = vi.hoisted(() => ({
+    usePageMock: vi.fn(),
+    routerPostMock: vi.fn(),
+    slotMock: vi.fn(() => ({ errors: {}, processing: false })),
+    getMock: vi.fn(),
+}));
 vi.mock('@inertiajs/vue3', async () => {
     const { createFormStub, createLinkStub, headStub } =
         await import('@/testing/inertiaStubs');
@@ -33,7 +31,7 @@ vi.mock('@inertiajs/vue3', async () => {
         Form: createFormStub(slotMock),
         Link: createLinkStub(),
         usePage: usePageMock,
-        useHttp: httpMock,
+        useHttp: () => ({ get: getMock }),
         router: { post: routerPostMock },
     };
 });
@@ -44,7 +42,20 @@ const settings = {
     default_representative_check: false,
     default_representative_id: 7,
 };
-const selectedProduct = { id: 42, name: 'Special product', mat_id: '42' };
+const selectedProduct: SearchOption = {
+    id: 42,
+    label: 'Special product',
+    description: '#42',
+    icon: 'package',
+    extra: { mat_id: '42' },
+};
+const selectedRepresentative: SearchOption = {
+    id: 7,
+    label: 'Representative',
+    description: '0612345678 · rep@example.test',
+    icon: 'user',
+    badge: { text: '10% discount', tone: 'info' },
+};
 function mountPage(permissions = ['order_configuration']) {
     usePageMock.mockReturnValue({
         url: index.url(),
@@ -55,28 +66,16 @@ function mountPage(permissions = ['order_configuration']) {
         props: {
             settings,
             selectedProduct,
-            representatives: [{ id: 7, name: 'Representative' }],
+            selectedRepresentative,
         },
     });
 }
 describe('Order configuration', () => {
     beforeEach(() => {
-        vi.useFakeTimers();
         getMock.mockReset();
-        cancelMock.mockReset();
         slotMock.mockReturnValue({ errors: {}, processing: false });
-        httpMock.mockReturnValue(
-            reactive({
-                query: '',
-                errors: {},
-                processing: false,
-                get: getMock,
-                cancel: cancelMock,
-            }),
-        );
     });
-    afterEach(() => vi.useRealTimers());
-    it('uses the store layout and renders all static labels and the selected product as text', () => {
+    it('uses the store layout and renders all static labels and the selected product and representative', () => {
         const wrapper = mountPage();
         expect(wrapper.findComponent(StoreAdminLayout).exists()).toBe(true);
         expect(wrapper.getComponent(Head).props('title')).toBe(
@@ -101,23 +100,23 @@ describe('Order configuration', () => {
         expect(wrapper.text()).toContain(
             'Enter at least 4 characters to search by product ID.',
         );
-        expect(wrapper.text()).not.toContain('MAT');
         expect(ar.store.orderConfiguration.product).toBe(
             'معرّف المنتج الافتراضي',
         );
         expect(ar.store.orderConfiguration.searchHint).toBe(
             'أدخل 4 أحرف على الأقل للبحث بمعرّف المنتج.',
         );
-        expect(wrapper.text()).toContain(
-            t('store.orderConfiguration.selected', { name: 'Special product' }),
+        expect(wrapper.get('#default_specific_product').text()).toContain(
+            'Special product',
         );
-        expect(wrapper.get('#default_specific_product').element).toHaveProperty(
-            'value',
-            '42',
+        expect(wrapper.get('#default_representative_id').text()).toContain(
+            'Representative',
         );
+        // Both are searched on demand: nothing is listed or fetched on load.
+        expect(getMock).not.toHaveBeenCalled();
         wrapper.unmount();
     });
-    it('keeps the minimum/product and representative forms separate with native constraints', () => {
+    it('keeps the minimum/product and representative forms separate and posts both picks as ids', () => {
         const wrapper = mountPage();
         expect(
             wrapper.findAllComponents(Form).map((form) => form.props('action')),
@@ -125,12 +124,59 @@ describe('Order configuration', () => {
         expect(wrapper.get('#minimum_order_amount').attributes()).toMatchObject(
             { type: 'number', required: '', min: '0', step: 'any' },
         );
+        const [product, representative] =
+            wrapper.findAllComponents(StoreSearchSelect);
+        expect(product.props()).toMatchObject({
+            id: 'default_specific_product',
+            name: 'default_specific_product',
+            endpoint: search,
+            minChars: 4,
+            required: true,
+            modelValue: selectedProduct,
+        });
+        expect(representative.props()).toMatchObject({
+            id: 'default_representative_id',
+            name: 'default_representative_id',
+            endpoint: representatives,
+            required: true,
+            modelValue: selectedRepresentative,
+        });
         expect(
-            wrapper.get('#default_specific_product').attributes(),
-        ).toMatchObject({ required: '', maxlength: '255' });
+            wrapper
+                .get('input[type="hidden"][name="default_specific_product"]')
+                .attributes('value'),
+        ).toBe('42');
         expect(
-            wrapper.get('#default_representative_id').element,
-        ).toHaveProperty('value', '7');
+            wrapper
+                .get('input[type="hidden"][name="default_representative_id"]')
+                .attributes('value'),
+        ).toBe('7');
+        expect(
+            wrapper
+                .get('#default_specific_product')
+                .attributes('aria-required'),
+        ).toBe('true');
+        wrapper.unmount();
+    });
+    it('changes the posted product id when another product is picked', async () => {
+        const wrapper = mountPage();
+
+        wrapper.getComponent(StoreSearchSelect).vm.$emit('update:modelValue', {
+            id: 55,
+            label: '<img src=x onerror=alert(1)>',
+            icon: 'package',
+        });
+        await wrapper.vm.$nextTick();
+
+        expect(
+            wrapper
+                .get('input[type="hidden"][name="default_specific_product"]')
+                .attributes('value'),
+        ).toBe('55');
+        expect(wrapper.get('#default_specific_product').text()).toContain(
+            '<img src=x onerror=alert(1)>',
+        );
+        expect(wrapper.find('img').exists()).toBe(false);
         wrapper.unmount();
     });
     it('hides both writable groups without permission', () => {
@@ -160,91 +206,6 @@ describe('Order configuration', () => {
                 .findAll('button[type=submit]')
                 .every((button) => button.attributes('disabled') !== undefined),
         ).toBe(true);
-        wrapper.unmount();
-    });
-    it('waits for four characters, debounces search and safely selects a product id', async () => {
-        const malicious = {
-            id: 55,
-            name: '<img src=x onerror=alert(1)>',
-            mat_id: '55',
-        };
-        getMock.mockResolvedValue([malicious]);
-        const wrapper = mountPage();
-        const input = wrapper.get('#default_specific_product');
-        await input.setValue('abc');
-        await vi.advanceTimersByTimeAsync(350);
-        expect(getMock).not.toHaveBeenCalled();
-        await input.setValue('abcd');
-        await vi.advanceTimersByTimeAsync(299);
-        expect(getMock).not.toHaveBeenCalled();
-        await vi.advanceTimersByTimeAsync(1);
-        await flushPromises();
-        expect(httpMock().query).toBe('abcd');
-        expect(getMock).toHaveBeenCalledWith(search.url());
-        expect(wrapper.text()).toContain(
-            t('store.orderConfiguration.searchResults'),
-        );
-        expect(wrapper.find('img').exists()).toBe(false);
-        const button = wrapper
-            .findAll('button[type=button]')
-            .find((button) => button.text().includes(malicious.name));
-        expect(button).toBeDefined();
-        await button!.trigger('click');
-        expect(input.element).toHaveProperty('value', '55');
-        expect(wrapper.text()).toContain(
-            t('store.orderConfiguration.selected', { name: malicious.name }),
-        );
-        expect(wrapper.find('img').exists()).toBe(false);
-        wrapper.unmount();
-    });
-    it('discards an older response after the query changes', async () => {
-        let finish: (products: OrderConfigurationProduct[]) => void = () => {};
-        getMock
-            .mockImplementationOnce(
-                () =>
-                    new Promise<OrderConfigurationProduct[]>((resolve) => {
-                        finish = resolve;
-                    }),
-            )
-            .mockResolvedValueOnce([
-                { id: 2, name: 'Current result', mat_id: '2' },
-            ]);
-        const wrapper = mountPage();
-        await wrapper.get('#default_specific_product').setValue('older');
-        await vi.advanceTimersByTimeAsync(300);
-        await wrapper.get('#default_specific_product').setValue('newer');
-        await vi.advanceTimersByTimeAsync(300);
-        finish([{ id: 1, name: 'Stale result', mat_id: '1' }]);
-        await flushPromises();
-        expect(wrapper.text()).toContain('Current result');
-        expect(wrapper.text()).not.toContain('Stale result');
-        wrapper.unmount();
-    });
-    it('clears a pending request when unmounted', async () => {
-        const wrapper = mountPage();
-        await wrapper.get('#default_specific_product').setValue('pending');
-        wrapper.unmount();
-        await vi.advanceTimersByTimeAsync(300);
-        expect(getMock).not.toHaveBeenCalled();
-        expect(cancelMock).toHaveBeenCalled();
-    });
-    it('shows empty results, loading and errors from the HTTP helper', async () => {
-        getMock.mockResolvedValue([]);
-        const wrapper = mountPage();
-        await wrapper.get('#default_specific_product').setValue('empty');
-        await vi.advanceTimersByTimeAsync(300);
-        expect(wrapper.text()).toContain(
-            t('store.orderConfiguration.noResults'),
-        );
-        Object.assign(httpMock(), {
-            processing: true,
-            errors: { query: 'Search unavailable' },
-        });
-        await wrapper.vm.$nextTick();
-        expect(wrapper.text()).toContain(
-            t('store.orderConfiguration.searching'),
-        );
-        expect(wrapper.text()).toContain('Search unavailable');
         wrapper.unmount();
     });
 });

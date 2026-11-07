@@ -21,6 +21,7 @@ use App\Models\StoreUser;
 use App\Models\Upload;
 use App\Notifications\EmailVerificationNotification;
 use App\Services\ShopVerificationStorage;
+use App\Support\NewestFirst;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Http\JsonResponse;
@@ -59,7 +60,7 @@ class SellerController extends Controller implements HasMiddleware
                 ->where('user_type', 'seller')
                 ->where(fn (Builder $search) => $search->where('name', 'like', '%'.$request->string('search').'%')->orWhere('email', 'like', '%'.$request->string('search').'%'))))
             ->when($request->filled('approved_status'), fn (Builder $query) => $query->where('verification_status', $request->boolean('approved_status')))
-            ->orderByDesc('created_at')->orderByDesc('id')->paginate($perPage)->withQueryString();
+            ->tap(NewestFirst::apply(...))->paginate($perPage)->withQueryString();
 
         return Inertia::render('Store/Admin/Sellers/Sellers/Index', [
             'sellers' => $this->paginated(SellerResource::collection($sellers)),

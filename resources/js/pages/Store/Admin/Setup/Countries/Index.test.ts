@@ -13,6 +13,10 @@ import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
 import { t } from '@/lib/i18n';
 import { paginated, storeCountry, storeSharedProps } from '@/testing/factories';
 import { defaultAuthProps, resetMocks } from '@/testing/inertiaPageMocks';
+import {
+    expectColumnCanBeHidden,
+    expectColumnLocked,
+} from '@/testing/tableColumns';
 import Index from './Index.vue';
 const {
     usePageMock,
@@ -119,5 +123,16 @@ describe('Store Countries Index', () => {
             checked: true,
             label: storeCountry().name,
         });
+    });
+
+    it('lets staff hide an optional column from the header and every row, and keeps the identifier', async () => {
+        window.localStorage.clear();
+        const wrapper = mountPage();
+        await expectColumnCanBeHidden(wrapper, 'setup.countries', {
+            key: 'code',
+            label: t('store.countries.code'),
+        });
+        expectColumnLocked(wrapper, t('store.reference.name'));
+        window.localStorage.clear();
     });
 });

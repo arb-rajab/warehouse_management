@@ -34,6 +34,7 @@
         "stock_quantity": 50,
         "low_stock": false,
         "category": null,
+        "category_id": null,
         "for_sale": true,
         "published": true,
         "featured": false,

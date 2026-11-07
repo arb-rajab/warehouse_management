@@ -13,6 +13,7 @@ use App\Http\Resources\Store\CustomerPackageResource;
 use App\Models\CustomerPackage;
 use App\Models\CustomerPackageTranslation;
 use App\Models\Upload;
+use App\Support\NewestFirst;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -46,7 +47,7 @@ class CustomerPackageController extends Controller implements HasMiddleware
             'packages' => $this->paginated(CustomerPackageResource::collection(
                 CustomerPackage::query()->select(self::COLUMNS)
                     ->with('customer_package_translations:id,customer_package_id,lang,name')
-                    ->orderBy('id')->paginate($perPage)->withQueryString()
+                    ->tap(NewestFirst::apply(...))->paginate($perPage)->withQueryString()
             )),
             'filters' => ['per_page' => $perPage],
             'defaultLanguage' => config('app.default_language'),

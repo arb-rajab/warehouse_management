@@ -1,0 +1,276 @@
+{
+    "physical": {
+        "rules": {
+            "name": ["required", "string", "max:200"],
+            "ar_name": ["sometimes", "nullable", "string", "max:191"],
+            "category_id": ["required", "integer"],
+            "brand_id": ["nullable", "integer"],
+            "unit": ["required", "string", "max:20"],
+            "weight": [
+                "nullable",
+                "numeric",
+                "min:0",
+                "max:999999.99",
+                "decimal:0,2"
+            ],
+            "max_qty": ["required", "integer", "max:2147483647", "min:1"],
+            "min_qty": [
+                "required",
+                "integer",
+                "max:2147483647",
+                "min:1",
+                "lte:max_qty"
+            ],
+            "tags": ["nullable", "string", "max:500"],
+            "product_types": ["nullable", "array", "max:50"],
+            "product_types.*": ["nullable", "string", "max:255"],
+            "product_barcodes": ["nullable", "array", "max:50"],
+            "product_barcodes.*": ["nullable", "string", "max:255", "distinct"],
+            "photos": ["nullable", "string", "max:2000"],
+            "thumbnail_img": ["nullable", "integer"],
+            "video_provider": [
+                "nullable",
+                "string",
+                "in:youtube,dailymotion,vimeo"
+            ],
+            "video_link": ["nullable", "string", "max:100", "url:http,https"],
+            "pdf": ["nullable", "integer"],
+            "colors_active": ["nullable", "boolean"],
+            "colors": ["nullable", "array", "max:100"],
+            "colors.*": ["required", "string", "distinct"],
+            "choice_options": ["nullable", "array", "max:20"],
+            "choice_options.*": ["required"],
+            "choice_options.*.attribute_id": [
+                "required",
+                "integer",
+                "distinct"
+            ],
+            "choice_options.*.values": [
+                "required",
+                "array",
+                "min:1",
+                "max:100"
+            ],
+            "choice_options.*.values.*": ["required", "string", "max:255"],
+            "unit_price": [
+                "required",
+                "numeric",
+                "min:0",
+                "max:999999999999999999.99",
+                "decimal:0,2"
+            ],
+            "date_range": ["bail", "nullable", "string", "max:42"],
+            "discount": [
+                "required",
+                "numeric",
+                "min:0",
+                "max:999999999999999999.99",
+                "decimal:0,2"
+            ],
+            "discount_type": ["required", "string", "in:amount,percent"],
+            "current_stock": ["required", "integer", "max:2147483647", "min:0"],
+            "sku": ["nullable", "string", "max:255"],
+            "variants": ["nullable", "array"],
+            "variants.*": ["required"],
+            "variants.*.variant": ["required", "string", "max:255"],
+            "variants.*.price": [
+                "required",
+                "numeric",
+                "min:0",
+                "max:999999999999999999.99",
+                "decimal:0,2"
+            ],
+            "variants.*.sku": ["nullable", "string", "max:255"],
+            "variants.*.qty": [
+                "required",
+                "integer",
+                "max:2147483647",
+                "min:0"
+            ],
+            "variants.*.image": ["nullable", "integer"],
+            "external_link": [
+                "nullable",
+                "string",
+                "max:500",
+                "url:http,https"
+            ],
+            "external_link_btn": ["nullable", "string", "max:255"],
+            "description": ["nullable", "string"],
+            "meta_title": ["nullable", "string"],
+            "meta_description": ["nullable", "string"],
+            "meta_img": ["nullable", "integer"],
+            "shipping_type": {
+                "when": "productWiseShipping",
+                "rules": ["required", "string", "in:free,flat_rate"]
+            },
+            "flat_shipping_cost": {
+                "when": "productWiseShipping",
+                "rules": [
+                    "nullable",
+                    "required_if:shipping_type,flat_rate",
+                    "numeric",
+                    "min:0",
+                    "max:999999999999999999.99",
+                    "decimal:0,2"
+                ]
+            },
+            "is_quantity_multiplied": {
+                "when": "productWiseShipping",
+                "rules": ["nullable", "boolean"]
+            },
+            "est_shipping_days": {
+                "when": "shipping",
+                "rules": ["nullable", "integer", "max:2147483647", "min:1"]
+            },
+            "low_stock_quantity": [
+                "nullable",
+                "integer",
+                "max:2147483647",
+                "min:0"
+            ],
+            "stock_visibility_state": [
+                "required",
+                "string",
+                "in:quantity,text,hide"
+            ],
+            "cash_on_delivery": {
+                "when": "cashOnDelivery",
+                "rules": ["nullable", "boolean"]
+            },
+            "featured": ["nullable", "boolean"],
+            "todays_deal": ["nullable", "boolean"],
+            "can_expire": ["sometimes", "boolean"],
+            "flash_deal_id": {
+                "when": "flashDeals",
+                "rules": ["nullable", "integer"]
+            },
+            "flash_discount": {
+                "when": "flashDeals",
+                "rules": [
+                    "nullable",
+                    "required_with:flash_deal_id",
+                    "numeric",
+                    "min:0",
+                    "max:999999999999999999.99",
+                    "decimal:0,2"
+                ]
+            },
+            "flash_discount_type": {
+                "when": "flashDeals",
+                "rules": [
+                    "nullable",
+                    "required_with:flash_deal_id",
+                    "string",
+                    "in:amount,percent"
+                ]
+            },
+            "tax_id": {
+                "when": "vat",
+                "rules": ["nullable", "array", "max:100"]
+            },
+            "tax_id.*": {
+                "when": "vat",
+                "rules": ["required", "integer", "distinct"]
+            },
+            "tax": {
+                "when": "vat",
+                "rules": ["nullable", "required_with:tax_id", "array"]
+            },
+            "tax.*": {
+                "when": "vat",
+                "rules": [
+                    "required",
+                    "numeric",
+                    "min:0",
+                    "max:999999999999999999.99",
+                    "decimal:0,2"
+                ]
+            },
+            "tax_type": {
+                "when": "vat",
+                "rules": ["nullable", "required_with:tax_id", "array"]
+            },
+            "tax_type.*": {
+                "when": "vat",
+                "rules": ["required", "string", "in:amount,percent"]
+            }
+        },
+        "create": {
+            "button": ["nullable", "string", "in:publish,unpublish"]
+        },
+        "edit": {
+            "lang": ["required", "string", "max:10"],
+            "slug": ["nullable", "string"],
+            "old_photo": ["nullable", "string", "max:2000"]
+        },
+        "named": {
+            "discount": ["discountLimit"],
+            "date_range": ["discountDateRange"]
+        },
+        "readOnlyNullable": [
+            "name",
+            "ar_name",
+            "unit",
+            "unit_price",
+            "description"
+        ]
+    },
+    "digital": {
+        "rules": {
+            "name": ["required", "string", "max:200"],
+            "category_id": ["required", "integer"],
+            "photos": ["nullable", "string", "max:2000"],
+            "thumbnail_img": ["nullable", "integer"],
+            "tags": ["nullable", "string", "max:500"],
+            "description": ["nullable", "string"],
+            "unit_price": [
+                "required",
+                "numeric",
+                "min:0",
+                "max:999999999999999999.99",
+                "decimal:0,2"
+            ],
+            "purchase_price": [
+                "required",
+                "numeric",
+                "min:0",
+                "max:999999999999999999.99",
+                "decimal:0,2"
+            ],
+            "discount": [
+                "required",
+                "numeric",
+                "min:0",
+                "max:999999999999999999.99",
+                "decimal:0,2"
+            ],
+            "discount_type": ["required", "string", "in:amount,percent"],
+            "date_range": ["bail", "nullable", "string", "max:42"],
+            "tax_id": ["nullable", "array", "max:100"],
+            "tax_id.*": ["required", "integer", "distinct"],
+            "tax": ["nullable", "required_with:tax_id", "array"],
+            "tax.*": [
+                "required",
+                "numeric",
+                "min:0",
+                "max:999999999999999999.99",
+                "decimal:0,2"
+            ],
+            "tax_type": ["nullable", "required_with:tax_id", "array"],
+            "tax_type.*": ["required", "string", "in:amount,percent"],
+            "meta_title": ["nullable", "string"],
+            "meta_description": ["nullable", "string"],
+            "meta_img": ["nullable", "integer"],
+            "file": ["nullable", "integer"]
+        },
+        "create": {},
+        "edit": {
+            "lang": ["required", "string", "max:10"],
+            "slug": ["nullable", "string"]
+        },
+        "named": {
+            "date_range": ["discountDateRange"]
+        },
+        "readOnlyNullable": []
+    }
+}

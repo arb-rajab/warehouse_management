@@ -3,6 +3,7 @@
 use App\Models\Order;
 use App\Models\OrderDetail;
 use App\Models\StoreUser;
+use App\Models\Upload;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
@@ -175,7 +176,100 @@ test('search returns only eligible options in bounded pages without credentials 
     $this->getJson(route('orders.search-options', ['kind' => 'customers', 'q' => 'Find']))->assertOk()->assertJsonCount(20, 'data')->assertJsonPath('meta.total', 21)->assertJsonMissingPath('data.0.password');
     $payload = adminOrderPayload();
     createStoreProduct(['name' => 'Hidden', 'approved' => 0]);
-    $this->getJson(route('orders.search-options', ['kind' => 'products']))->assertOk()->assertJsonCount(1, 'data')->assertJsonPath('data.0.id', $payload['products'][0]['product_id'])->assertJsonMissingPath('data.0.description');
+    $this->getJson(route('orders.search-options', ['kind' => 'products']))->assertOk()->assertJsonCount(1, 'data')->assertJsonPath('data.0.id', $payload['products'][0]['product_id'])->assertJsonMissingPath('data.0.extra.description');
+});
+
+test('customer and representative options show phone and email, an account or discount badge, and rank prefix matches first', function () {
+    actingAsStoreUser(createStoreStaff('add_order'));
+    $contains = createStoreUser();
+    $contains->forceFill(['name' => 'Zed Alina', 'AccSysID' => 20481, 'phone' => '0612345678', 'email' => 'zed@example.test', 'member_serial' => 'M-1'])->save();
+    createStoreUser()->forceFill(['name' => 'Alina Kowalska', 'phone' => null, 'email' => 'alina@example.test'])->save();
+    createStoreUser()->forceFill(['name' => 'Noise Customer'])->save();
+    createStoreUser()->forceFill(['name' => 'Alina Rep', 'is_rep' => 1, 'rep_discount_percentage' => 12.5, 'phone' => '0687654321', 'email' => 'rep@example.test'])->save();
+
+    $customers = $this->getJson(route('orders.search-options', ['kind' => 'customers', 'q' => 'alina']))->assertOk();
+    expect(collect($customers->json('data'))->pluck('label')->all())->toBe(['Alina Kowalska', 'Zed Alina']);
+    expect($customers->json('data.1'))->toEqual([
+        'id' => $contains->id, 'label' => 'Zed Alina', 'description' => '0612345678 · zed@example.test', 'image' => null, 'icon' => 'user',
+        'badge' => ['text' => 'Account 20481', 'tone' => 'neutral'],
+        'extra' => ['account_id' => '20481', 'member_serial' => 'M-1', 'rep_discount_percentage' => 0],
+    ]);
+    expect($customers->json('data.0.description'))->toBe('alina@example.test')->and($customers->json('data.0.badge'))->toBeNull();
+
+    $reps = $this->getJson(route('orders.search-options', ['kind' => 'representatives']))->assertOk();
+    expect($reps->json('data'))->toHaveCount(1)->and($reps->json('data.0'))->toMatchArray([
+        'label' => 'Alina Rep', 'description' => '0687654321 · rep@example.test', 'badge' => ['text' => '12.5% discount', 'tone' => 'info'],
+    ])->and($reps->json('data.0.extra.rep_discount_percentage'))->toEqual(12.5);
+});
+
+test('order search treats percent and underscore as characters, matches words in any column and pages past the first twenty', function () {
+    actingAsStoreUser(createStoreStaff('add_order'));
+    createStoreUser()->forceFill(['name' => 'Discount 100%'])->save();
+    createStoreUser()->forceFill(['name' => 'Discount 1000'])->save();
+    createStoreUser()->forceFill(['name' => 'A_B Foods'])->save();
+    createStoreUser()->forceFill(['name' => 'AXB Foods'])->save();
+    createStoreUser()->forceFill(['name' => 'Buyer Name', 'email' => 'wide@example.test', 'member_serial' => 'SER-77'])->save();
+
+    $names = fn (string $q) => collect($this->getJson(route('orders.search-options', ['kind' => 'customers', 'q' => $q]))->assertOk()->json('data'))->pluck('label')->all();
+    expect($names('100%'))->toBe(['Discount 100%'])
+        ->and($names('a_b'))->toBe(['A_B Foods'])
+        ->and($names('buyer ser-77'))->toBe(['Buyer Name'])
+        ->and($names('%'))->toBe(['Discount 100%']);
+
+    foreach (range(1, 25) as $number) {
+        createStoreUser()->forceFill(['name' => sprintf('Page %02d', $number)])->save();
+    }
+    $first = $this->getJson(route('orders.search-options', ['kind' => 'customers', 'q' => 'Page']))->assertOk();
+    $second = $this->getJson(route('orders.search-options', ['kind' => 'customers', 'q' => 'Page', 'page' => 2]))->assertOk();
+    expect($first->json('data'))->toHaveCount(20)->and($first->json('meta.last_page'))->toBe(2)->and($first->json('meta.total'))->toBe(25)
+        ->and($second->json('data'))->toHaveCount(5)->and($second->json('data.0.label'))->toBe('Page 21');
+    $this->getJson(route('orders.search-options', ['kind' => 'customers', 'q' => str_repeat('a', 101)]))->assertUnprocessable();
+    $this->getJson(route('orders.search-options', ['kind' => 'customers', 'page' => 0]))->assertUnprocessable();
+});
+
+test('product options carry the sku, unit price, stock badge, stocks and thumbnail and exclude private columns', function () {
+    actingAsStoreUser(createStoreStaff('add_order'));
+    $thumbnail = Upload::factory()->create(['external_link' => 'https://images.example.test/rice.jpg', 'file_name' => null]);
+    $unsafe = Upload::factory()->create(['external_link' => 'javascript:alert(1)', 'file_name' => null]);
+    $rice = createStoreProduct(['thumbnail_img' => $thumbnail->id, 'name' => 'Basmati Rice', 'ar_name' => 'أرز بسمتي', 'serial' => 'RC-5000', 'unit_price' => 24, 'unit_equal' => 6, 'tax' => 21, 'approved' => 1, 'digital' => 0, 'current_stock' => 120, 'description' => 'private description']);
+    $low = createStoreProduct(['thumbnail_img' => null, 'name' => 'Basmati Low', 'serial' => 'RC-LOW', 'approved' => 1, 'current_stock' => 4]);
+    $out = createStoreProduct(['thumbnail_img' => $unsafe->id, 'name' => 'Basmati Out', 'serial' => 'RC-OUT', 'approved' => 1, 'current_stock' => 0]);
+    createStoreProduct(['name' => 'Unrelated Flour', 'serial' => 'FL-1', 'approved' => 1]);
+    createStoreProduct(['name' => 'Basmati Unapproved', 'approved' => 0]);
+
+    $response = $this->getJson(route('orders.search-options', ['kind' => 'products', 'q' => 'basmati']))->assertOk();
+    expect(collect($response->json('data'))->pluck('label')->all())->toBe(['Basmati Low', 'Basmati Out', 'Basmati Rice'])
+        ->and(collect($response->json('data'))->firstWhere('id', $rice->id))->toEqual([
+            'id' => $rice->id, 'label' => 'Basmati Rice', 'description' => 'SKU RC-5000 · #'.$rice->id.' · 24.00', 'image' => 'https://images.example.test/rice.jpg', 'icon' => 'package',
+            'badge' => ['text' => 'In stock 120', 'tone' => 'success'],
+            'extra' => ['serial' => 'RC-5000', 'mat_id' => (string) $rice->id, 'unit_price' => 24, 'unit_equal' => 6, 'tax' => 21, 'digital' => false, 'stocks' => [['variant' => '', 'price' => 24, 'qty' => 120]]],
+        ])
+        ->and(collect($response->json('data'))->firstWhere('id', $low->id)['badge'])->toBe(['text' => 'Low 4', 'tone' => 'warning'])
+        ->and(collect($response->json('data'))->firstWhere('id', $out->id)['badge'])->toBe(['text' => 'Out of stock', 'tone' => 'danger'])
+        // No thumbnail, and a thumbnail that is not an http(s) URL, both give no image.
+        ->and(collect($response->json('data'))->firstWhere('id', $low->id)['image'])->toBeNull()
+        ->and(collect($response->json('data'))->firstWhere('id', $out->id)['image'])->toBeNull();
+    expect($response->getContent())->not->toContain('private description');
+
+    $bySerial = $this->getJson(route('orders.search-options', ['kind' => 'products', 'q' => 'rc-5000 basmati']))->assertOk();
+    expect($bySerial->json('data'))->toHaveCount(1)->and($bySerial->json('data.0.id'))->toBe($rice->id);
+    expect($this->getJson(route('orders.search-options', ['kind' => 'products', 'q' => (string) $rice->id]))->assertOk()->json('data.*.id'))->toContain($rice->id);
+
+    $this->withSession(['locale' => 'ar']);
+    $arabic = $this->getJson(route('orders.search-options', ['kind' => 'products', 'q' => 'rc-5000']))->assertOk();
+    expect($arabic->json('data.0.label'))->toBe('أرز بسمتي')->and($arabic->json('data.0.description'))->toContain('RC-5000');
+});
+
+test('the edit form receives its customer in the search option shape', function () {
+    actingAsStoreUser(createStoreStaff('add_order', 'edit_order'));
+    $payload = adminOrderPayload();
+    $this->post(route('new.feat-order.trip.store'), $payload);
+    $order = Order::firstOrFail();
+    $customer = StoreUser::findOrFail($payload['customer_id']);
+
+    $this->get(route('new.feat-order.trip.edit', $order))->assertOk()->assertInertia(fn (Assert $page) => $page->component('Store/Admin/Sales/Orders/Edit')
+        ->where('customerOption.id', $customer->id)->where('customerOption.label', $customer->name)->where('customerOption.icon', 'user')
+        ->where('customerOption.description', $customer->phone.' · '.$customer->email)->missing('customerOption.password'));
 });
 
 test('detail aliases accept legacy encrypted links, expose narrow escaped props and return 404 for bad IDs', function () {

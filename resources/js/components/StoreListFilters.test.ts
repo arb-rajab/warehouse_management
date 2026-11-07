@@ -6,15 +6,21 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { nextTick } from 'vue';
 import FilterDialog from '@/components/FilterDialog.vue';
 import FilterDialogFooter from '@/components/FilterDialogFooter.vue';
-import { countBadgeClass, filterTriggerButtonClass } from '@/lib/filters';
+import {
+    countBadgeClass,
+    filterClearButtonClass,
+    filterTriggerButtonClass,
+} from '@/lib/filters';
 import { t } from '@/lib/i18n';
+import type { StoreFilterChip } from '@/types/store';
 import StoreListFilters from './StoreListFilters.vue';
 
-const { formState, submitMock } = vi.hoisted(() => ({
+const { formState, routerGetMock, submitMock } = vi.hoisted(() => ({
     formState: {
         errors: {} as Record<string, string>,
         processing: false,
     },
+    routerGetMock: vi.fn(),
     submitMock: vi.fn(),
 }));
 vi.mock('@inertiajs/vue3', async () => {
@@ -25,6 +31,7 @@ vi.mock('@inertiajs/vue3', async () => {
             () => formState,
             (data: FormData) => submitMock(Object.fromEntries(data.entries())),
         ),
+        router: { get: routerGetMock },
     };
 });
 
@@ -52,10 +59,23 @@ const dialogSlot = `<template #filters="{ errors }">
 
 let wrapper: VueWrapper | null = null;
 
-function mountFilters(activeCount = 0): VueWrapper {
+const chips: StoreFilterChip[] = [
+    { key: 'sort', label: 'Sort', value: 'Price', keys: ['type'] },
+    { key: 'featured', label: 'Featured', keys: ['featured'] },
+    {
+        key: 'profit',
+        label: 'Profit range',
+        keys: ['profit_from', 'profit_to'],
+    },
+];
+
+function mountFilters(
+    activeCount = 0,
+    appliedChips?: StoreFilterChip[],
+): VueWrapper {
     wrapper = mount(StoreListFilters, {
         attachTo: document.body,
-        props: { action, activeCount },
+        props: { action, activeCount, chips: appliedChips },
         slots: { default: inlineSlot, filters: dialogSlot },
     });
 
@@ -76,6 +96,8 @@ describe('StoreListFilters', () => {
         formState.errors = {};
         formState.processing = false;
         submitMock.mockReset();
+        routerGetMock.mockReset();
+        window.history.replaceState({}, '', '/');
     });
 
     afterEach(() => {
@@ -263,5 +285,92 @@ describe('StoreListFilters', () => {
         expect(apply.text()).toBe(t('store.listFilters.applying'));
         expect(apply.findComponent(LoaderCircle).exists()).toBe(true);
         expect(current.get('#inline-processing').text()).toBe('true');
+    });
+
+    it('renders no chip list while no filter is applied', () => {
+        expect(mountFilters(0, []).find('ul').exists()).toBe(false);
+        expect(mountFilters(0).find('ul').exists()).toBe(false);
+    });
+
+    it('shows one removable chip per applied dialog filter and counts them in the badge', () => {
+        const current = mountFilters(9, chips);
+        const list = current.get('ul');
+        const items = list.findAll('li');
+
+        expect(list.attributes('aria-label')).toBe(
+            t('store.listFilters.appliedFilters'),
+        );
+        expect(
+            items.slice(0, 3).map((item) => item.get('span').text()),
+        ).toEqual(['Sort: Price', 'Featured', 'Profit range']);
+        expect(
+            items
+                .slice(0, 3)
+                .map((item) => item.get('button').attributes('aria-label')),
+        ).toEqual(
+            ['Sort: Price', 'Featured', 'Profit range'].map((label) =>
+                t('store.listFilters.removeFilter', { label }),
+            ),
+        );
+        // The chips decide the count, not the activeCount prop.
+        expect(trigger(current).get('[aria-hidden="true"]').text()).toBe('3');
+        expect(trigger(current).get('.sr-only').text()).toBe(
+            t('store.listFilters.activeCount', { count: 3 }),
+        );
+    });
+
+    it('removes a chip by reloading with the rest of the address kept and the page dropped', async () => {
+        window.history.replaceState(
+            {},
+            '',
+            '/temp/admin/products?search=milk&type=x&featured=1&per_page=50&page=3',
+        );
+        const current = mountFilters(0, chips);
+
+        await current.findAll('ul li')[0].get('button').trigger('click');
+
+        expect(routerGetMock).toHaveBeenCalledWith(
+            '/temp/admin/products?search=milk&featured=1&per_page=50',
+            {},
+            { preserveState: true, replace: true },
+        );
+    });
+
+    it('drops both keys of a range chip and goes to the bare route when nothing is left', async () => {
+        window.history.replaceState(
+            {},
+            '',
+            '/temp/admin/products?profit_from=a&profit_to=b',
+        );
+        const current = mountFilters(0, chips);
+
+        await current.findAll('ul li')[2].get('button').trigger('click');
+
+        expect(routerGetMock).toHaveBeenCalledWith(
+            '/temp/admin/products',
+            {},
+            { preserveState: true, replace: true },
+        );
+    });
+
+    it('clears every chip but keeps search, the key filter and per_page', async () => {
+        window.history.replaceState(
+            {},
+            '',
+            '/temp/admin/products?search=milk&user_id=4&per_page=50&type=x&featured=1&profit_from=a&profit_to=b&page=2',
+        );
+        const current = mountFilters(0, chips);
+        const clear = current.findAll('ul li').at(-1)!.get('button');
+
+        expect(clear.text()).toBe(t('store.listFilters.clearFilters'));
+        expect(clear.classes()).toEqual(filterClearButtonClass.split(' '));
+
+        await clear.trigger('click');
+
+        expect(routerGetMock).toHaveBeenCalledWith(
+            '/temp/admin/products?search=milk&user_id=4&per_page=50',
+            {},
+            { preserveState: true, replace: true },
+        );
     });
 });

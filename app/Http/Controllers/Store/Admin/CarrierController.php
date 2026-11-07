@@ -14,6 +14,7 @@ use App\Models\CarrierRange;
 use App\Models\CarrierRangePrice;
 use App\Models\Upload;
 use App\Models\Zone;
+use App\Support\NewestFirst;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -42,7 +43,7 @@ class CarrierController extends Controller implements HasMiddleware
         $query->when($request->filled('search'), fn ($query) => $query->where('name', 'like', '%'.$request->validated('search').'%'));
 
         return Inertia::render('Store/Admin/Setup/Carriers/Index', [
-            'carriers' => $this->paginated(CarrierResource::collection($query->orderByDesc('id')->paginate($perPage)->withQueryString())),
+            'carriers' => $this->paginated(CarrierResource::collection($query->tap(NewestFirst::apply(...))->paginate($perPage)->withQueryString())),
             'filters' => ['per_page' => $perPage, 'search' => $request->validated('search') ?? ''],
         ]);
     }

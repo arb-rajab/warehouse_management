@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Head, router } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
+import { edit as customerEdit } from '@/actions/App/Http/Controllers/Store/Admin/CustomerController';
 import {
     index as reviewsIndex,
     updatePublished,
@@ -8,12 +9,15 @@ import {
 import DataTable from '@/components/DataTable.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import Pagination from '@/components/Pagination.vue';
+import StoreColumnPicker from '@/components/StoreColumnPicker.vue';
 import StoreStatusSwitch from '@/components/StoreStatusSwitch.vue';
 import SubmitButton from '@/components/SubmitButton.vue';
+import TableObjectLink from '@/components/TableObjectLink.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
 import { plainFieldInputClass } from '@/lib/filters';
 import { t } from '@/lib/i18n';
 import { useStoreAccess } from '@/lib/storeAccess';
+import { useTableColumns } from '@/lib/useTableColumns';
 import type { Paginated } from '@/types/admin';
 
 import type { StoreReview } from '@/types/store';
@@ -32,6 +36,21 @@ function filter(perPage = currentPerPage.value): void {
         { preserveState: true, replace: true },
     );
 }
+const columns = useTableColumns({
+    listId: 'product.reviews',
+    columns: [
+        { key: 'product', label: 'store.reviews.product', required: true },
+        { key: 'owner', label: 'store.reviews.owner' },
+        { key: 'customer', label: 'store.reviews.customer' },
+        { key: 'rating', label: 'store.reviews.rating' },
+        { key: 'comment', label: 'store.reviews.comment' },
+        { key: 'published', label: 'store.reviews.published' },
+    ],
+});
+const { shown, visibleColumns } = columns;
+const tableColumns = computed(() => [
+    ...visibleColumns.value.map((column) => t(column.label)),
+]);
 </script>
 
 <template>
@@ -64,16 +83,10 @@ function filter(perPage = currentPerPage.value): void {
                 :processing="false"
             />
         </form>
+        <StoreColumnPicker :state="columns" />
         <DataTable
             :rows="reviews.data"
-            :columns="[
-                t('store.reviews.product'),
-                t('store.reviews.owner'),
-                t('store.reviews.customer'),
-                t('store.reviews.rating'),
-                t('store.reviews.comment'),
-                t('store.reviews.published'),
-            ]"
+            :columns="tableColumns"
             :empty-message="t('store.reviews.empty')"
         >
             <template #row="{ row }">
@@ -86,13 +99,26 @@ function filter(perPage = currentPerPage.value): void {
                         >{{ row.product.name }}</a
                     >
                 </td>
-                <td class="px-4 py-2">{{ row.product.owner }}</td>
-                <td class="px-4 py-2">
-                    {{ row.customer.name }} ({{ row.customer.email }})
+                <td v-if="shown.owner" class="px-4 py-2">
+                    {{ row.product.owner }}
                 </td>
-                <td class="px-4 py-2">{{ row.rating }}</td>
-                <td class="px-4 py-2 whitespace-pre-wrap">{{ row.comment }}</td>
-                <td class="px-4 py-2">
+                <td v-if="shown.customer" class="px-4 py-2">
+                    <TableObjectLink
+                        :allowed="access.can('edit_customer')"
+                        :href="customerEdit(row.customer)"
+                        >{{ row.customer.name }}</TableObjectLink
+                    >
+                    ({{ row.customer.email }})
+                </td>
+                <td v-if="shown.rating" class="px-4 py-2">{{ row.rating }}</td>
+                <td
+                    v-if="shown.comment"
+                    class="max-w-xs truncate px-4 py-2"
+                    :title="row.comment"
+                >
+                    {{ row.comment }}
+                </td>
+                <td v-if="shown.published" class="px-4 py-2">
                     <StoreStatusSwitch
                         v-if="access.can('publish_product_review')"
                         :action="updatePublished(row, { mergeQuery: {} })"

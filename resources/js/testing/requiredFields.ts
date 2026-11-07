@@ -12,6 +12,12 @@ export function expectRequiredFields(wrapper: VueWrapper, ids: string[]): void {
                 .findAll(
                     'input[required], select[required], textarea[required], [aria-required="true"]',
                 )
+                // A search select's native guard mirrors the trigger's aria-required.
+                .filter(
+                    (control) =>
+                        control.attributes('data-testid') !==
+                        'search-select-guard',
+                )
                 .map(
                     (control) =>
                         control.attributes('id') ?? control.attributes('name'),

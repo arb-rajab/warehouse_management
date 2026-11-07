@@ -91,7 +91,6 @@ import type {
 import type { CustomerDetails } from '@/types/storeCustomers';
 import type {
     CustomerNotification,
-    NotificationCustomer,
     AdminNotification,
 } from '@/types/storeNotifications';
 import type {
@@ -484,6 +483,7 @@ export function storeCommissionReportRow(
 ): StoreCommissionReportRow {
     return {
         id: 1,
+        order_id: 77,
         order_code: '20261008-101',
         admin_commission: '3.50',
         seller_earning: '31.50',
@@ -515,12 +515,6 @@ export function customerNotification(
         customer: { id: 21, name: 'Customer' },
         ...overrides,
     };
-}
-
-export function notificationCustomer(
-    overrides: Partial<NotificationCustomer> = {},
-): NotificationCustomer {
-    return { id: 21, name: 'Customer', account_id: 100, ...overrides };
 }
 
 export function adminNotification(
@@ -625,6 +619,7 @@ export function representativePayment(
         notes: 'Paid in cash',
         status: 'pending',
         date: '2026-10-08 10:00:00',
+        customer_id: 31,
         customer_name: 'Customer One',
         account_id: 42,
         representative: { id: 10, name: 'Rep One' },
@@ -1007,10 +1002,12 @@ export function storeCampaignProduct(
 ): StoreCampaignProduct {
     return {
         id: 12,
-        name: 'Translated product',
-        price: 100,
-        discount: 10,
-        discount_type: 'amount',
+        label: 'Translated product',
+        description: 'SKU TP-12 · #12 · 100.00',
+        image: null,
+        icon: 'package',
+        badge: { text: '10 off', tone: 'info' },
+        extra: { price: 100, discount: 10, discount_type: 'amount' },
         ...overrides,
     };
 }
@@ -1482,6 +1479,7 @@ export function storeProductListRow(
         stock_quantity: 40,
         low_stock: false,
         category: 'Oils',
+        category_id: 5,
         for_sale: true,
         published: true,
         featured: false,
@@ -1692,7 +1690,7 @@ export function storeSellerWithdrawal(
 ): StoreSellerWithdrawal {
     return {
         id: 8,
-        seller: storeSellerPayment().seller,
+        seller: { ...storeSellerPayment().seller, shop_id: 9 },
         date: '2026-10-19 08:00:00',
         amount: '€40.00',
         due: '€100.00',

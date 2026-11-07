@@ -11,6 +11,7 @@ use App\Http\Resources\Store\AttributeResource;
 use App\Models\Attribute;
 use App\Models\AttributeTranslation;
 use App\Models\Language;
+use App\Support\NewestFirst;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -39,7 +40,7 @@ class AttributeController extends Controller implements HasMiddleware
             'attributes' => $this->paginated(AttributeResource::collection(
                 Attribute::query()->select(['id', 'name'])
                     ->with(['attribute_translations:id,attribute_id,lang,name', 'attribute_values:id,attribute_id,value'])
-                    ->orderByDesc('id')->paginate($perPage)->withQueryString()
+                    ->tap(NewestFirst::apply(...))->paginate($perPage)->withQueryString()
             )),
             'filters' => ['per_page' => $perPage],
         ]);

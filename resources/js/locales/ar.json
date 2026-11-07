@@ -49,7 +49,31 @@
         },
         "required": "مطلوب",
         "requiredLegend": "حقول مطلوبة",
-        "optional": "(اختياري)"
+        "optional": "(اختياري)",
+        "formValidation": {
+            "blocked": "بعض الحقول تحتاج إلى تصحيح. تم تحديد أولها."
+        },
+        "searchSelect": {
+            "placeholder": "اختر خيارًا",
+            "addMore": "إضافة…",
+            "searchPlaceholder": "بحث…",
+            "searching": "جارٍ البحث…",
+            "noResults": "لا توجد نتائج",
+            "noResultsFor": "لا شيء يطابق «{query}». تحقق من الإملاء أو جرّب كلمة أخرى.",
+            "minChars": "اكتب {count} أحرف على الأقل للبحث.",
+            "error": "فشل البحث. حاول مرة أخرى.",
+            "retry": "إعادة المحاولة",
+            "clear": "مسح الاختيار",
+            "clearAll": "مسح الكل",
+            "clearSearch": "مسح البحث",
+            "remove": "إزالة {label}",
+            "selectedCount": "{count} محدد",
+            "resultsCount": "{count} نتيجة",
+            "moreResults": "مرّر لعرض المزيد",
+            "panelLabel": "خيارات {label}",
+            "keyboardHint": "مفاتيح الأسهم للتنقل، Enter للاختيار، Esc للإغلاق",
+            "close": "إغلاق"
+        }
     },
     "welcome": {
         "brand": "إدارة المستودع",
@@ -1191,13 +1215,13 @@
             "minimumCheck": "التحقق من الحد الأدنى للطلب",
             "amount": "الحد الأدنى لمبلغ الطلب",
             "product": "معرّف المنتج الافتراضي",
-            "selected": "المنتج المحدد: {name}",
-            "searchResults": "نتائج البحث",
             "searchHint": "أدخل 4 أحرف على الأقل للبحث بمعرّف المنتج.",
-            "searching": "جارٍ البحث…",
-            "noResults": "لم يتم العثور على منتجات.",
             "representative": "المندوب الافتراضي",
-            "representativeCheck": "استخدام مندوب افتراضي"
+            "representativeCheck": "استخدام مندوب افتراضي",
+            "chooseProduct": "اختر المنتج الافتراضي",
+            "searchProducts": "ابحث بمعرّف المنتج…",
+            "chooseRepresentative": "اختر المندوب الافتراضي",
+            "searchRepresentatives": "ابحث عن مندوب بالاسم أو الهاتف أو البريد…"
         },
         "generalSettings": {
             "title": "الإعدادات العامة",
@@ -1366,6 +1390,7 @@
             "noTranslations": "لا توجد مفاتيح ترجمة."
         },
         "reports": {
+            "number": "#",
             "all": "الكل",
             "dateFrom": "من تاريخ",
             "dateTo": "إلى تاريخ",
@@ -1401,7 +1426,8 @@
             "commissionHistoryTitle": "تقرير سجل العمولات",
             "walletHistoryTitle": "تقرير معاملات المحفظة",
             "approved": "معتمد",
-            "nonApproved": "غير معتمد"
+            "nonApproved": "غير معتمد",
+            "searchSelection": "ابحث بالاسم أو الهاتف أو البريد…"
         },
         "notifications": {
             "index": {
@@ -1417,7 +1443,8 @@
                 "title": "العنوان",
                 "body": "الوصف",
                 "customer": "العميل",
-                "customerPlaceholder": "اختر عميلاً"
+                "customerPlaceholder": "اختر عميلاً",
+                "searchCustomers": "ابحث عن عميل بالاسم أو الهاتف أو البريد أو الحساب…"
             },
             "create": {
                 "title": "إرسال إشعار للعميل",
@@ -1711,7 +1738,13 @@
                 "last_order_at": "آخر طلب",
                 "created_at": "تاريخ الإنشاء",
                 "updated_at": "تاريخ التحديث",
-                "balance": "رصيد المحفظة"
+                "balance": "رصيد المحفظة",
+                "selectState": "اختر منطقة",
+                "selectCountryFirst": "اختر دولة أولاً",
+                "searchStates": "ابحث عن منطقة بالاسم…",
+                "selectCity": "اختر مدينة",
+                "selectStateFirst": "اختر منطقة أولاً",
+                "searchCities": "ابحث عن مدينة بالاسم…"
             },
             "all": "الكل",
             "yes": "نعم",
@@ -1725,10 +1758,6 @@
             "products": "المنتجات",
             "categories": "الفئات",
             "representativeAccount": "حساب مندوب",
-            "columns": "الأعمدة",
-            "columnsTitle": "اختيار الأعمدة",
-            "showAllColumns": "إظهار الكل",
-            "resetColumns": "الإعادة للافتراضي",
             "profits": "الأرباح",
             "profitsRange": "الأرباح (الفترة)",
             "tradeLicense": "الرخصة التجارية",
@@ -2040,9 +2069,9 @@
                 "endDate": "تاريخ النهاية",
                 "minBuy": "الحد الأدنى للشراء",
                 "maxDiscount": "الحد الأقصى للخصم",
-                "searchProducts": "البحث عن المنتجات",
-                "searching": "جارٍ البحث…",
-                "products": "المنتجات"
+                "searchProducts": "ابحث عن منتجات بالاسم…",
+                "products": "المنتجات",
+                "chooseProducts": "اختر المنتجات"
             }
         },
         "campaigns": {
@@ -2051,9 +2080,8 @@
                 "banner": "البانر",
                 "startDate": "تاريخ البداية",
                 "endDate": "تاريخ النهاية",
-                "searchProducts": "البحث عن المنتجات الأساسية والمكافآت",
-                "searchBrands": "البحث عن العلامات التجارية",
-                "searching": "جارٍ البحث…",
+                "searchProducts": "ابحث عن منتجات بالاسم…",
+                "searchBrands": "ابحث عن علامات تجارية بالاسم…",
                 "products": "منتجات المكافأة",
                 "product": "المنتج",
                 "discount": "الخصم",
@@ -2069,7 +2097,6 @@
                 "baseProduct": "المنتج الأساسي",
                 "baseQuantity": "الكمية الأساسية المطلوبة",
                 "spendThreshold": "الإنفاق المطلوب على العلامة",
-                "choose": "اختر…",
                 "backgroundColor": "لون الخلفية",
                 "textColor": "لون النص",
                 "dark": "داكن",
@@ -2079,7 +2106,10 @@
                 "repeatable": "متكرر",
                 "multipleUsage": "استخدام متعدد",
                 "featured": "مميز",
-                "price": "السعر الأساسي"
+                "price": "السعر الأساسي",
+                "chooseProducts": "اختر منتجات المكافأة",
+                "chooseProduct": "اختر منتجًا",
+                "chooseBrand": "اختر علامة تجارية"
             },
             "saving": "جارٍ الحفظ…",
             "search": "بحث",
@@ -2174,16 +2204,18 @@
             "content": "محتوى النشرة البريدية",
             "smtpMissing": "يرجى إعداد SMTP قبل إرسال النشرات البريدية.",
             "recipientHelp": "اختر بريد مستخدم أو مشترك واحدًا على الأقل. ابحث للعثور على المزيد من المستلمين.",
-            "searching": "جارٍ البحث…",
             "search": {
-                "users": "بحث في بريد المستخدمين",
-                "subscribers": "بحث في بريد المشتركين"
+                "users": "ابحث في البريد الإلكتروني أو الأسماء…",
+                "subscribers": "ابحث في البريد الإلكتروني للمشتركين…"
             },
             "recipients": {
                 "users": "بريد المستخدمين",
                 "subscribers": "بريد المشتركين"
             },
-            "searchFailed": "تعذّر تحميل المستلمين. حاول مرة أخرى."
+            "choose": {
+                "users": "اختر البريد الإلكتروني للمستخدمين",
+                "subscribers": "اختر البريد الإلكتروني للمشتركين"
+            }
         },
         "blogPosts": {
             "index": {
@@ -2408,14 +2440,16 @@
                 "customer": "العميل",
                 "selectOrder": "اختر طلبًا",
                 "selectCustomer": "اختر عميلًا",
-                "orderOption": "#{code} {customer}",
-                "unknownCustomer": "عميل غير معروف",
                 "checkpointNotes": "ملاحظات نقطة التوقف",
                 "moveUp": "نقل التوقف {position} للأعلى",
                 "moveDown": "نقل التوقف {position} للأسفل",
                 "remove": "إزالة التوقف {position}",
                 "addOrder": "إضافة نقطة توقف لطلب",
-                "addCustomer": "إضافة نقطة توقف لعميل"
+                "addCustomer": "إضافة نقطة توقف لعميل",
+                "searchOrders": "ابحث عن طلبات قيد التوصيل بالرمز أو اسم العميل…",
+                "searchCustomers": "ابحث عن عميل بالاسم أو الهاتف أو البريد…",
+                "orderOption": "#{code} {customer}",
+                "unknownCustomer": "عميل غير معروف"
             },
             "orders": {
                 "title": "طلبات الرحلات",
@@ -2517,12 +2551,6 @@
             "piece": "قطعة",
             "variant": "الخيار",
             "defaultVariant": "الخيار الافتراضي",
-            "choose": "حدد خياراً",
-            "searchFor": "البحث عن {label}",
-            "searchFailed": "فشل البحث. حاول مرة أخرى.",
-            "previous": "النتائج السابقة",
-            "next": "النتائج التالية",
-            "loading": "جار التحميل",
             "save": "حفظ الطلب",
             "saving": "جار الحفظ…",
             "noLines": "لا توجد بنود",
@@ -2566,7 +2594,13 @@
                 "unpaid": "غير مدفوع",
                 "placed": "تم الطلب"
             },
-            "allStatuses": "جميع الحالات"
+            "allStatuses": "جميع الحالات",
+            "chooseCustomer": "اختر عميلاً",
+            "searchCustomers": "ابحث عن عميل بالاسم أو الهاتف أو البريد أو الحساب…",
+            "chooseRepresentative": "اختر مندوبًا",
+            "searchRepresentatives": "ابحث عن مندوب بالاسم أو الهاتف أو البريد…",
+            "chooseProduct": "اختر منتجًا",
+            "searchProducts": "ابحث عن منتج بالاسم أو الرمز أو المعرّف…"
         },
         "dashboard": {
             "smtpMissing": "لم يتم إعداد SMTP.",
@@ -2761,9 +2795,7 @@
             "active": "نشط",
             "forSale": "معروض للبيع",
             "featured": "مميز",
-            "deleted": "محذوف من أوتاجر",
             "inHouseStateHint": "تُعرض فقط المنتجات التي تطابق مفاتيحها الثلاثة هذه الخانات تمامًا، محددة كانت أم لا.",
-            "allStateHint": "عند عدم تحديد أي خانة تُخفى المنتجات المحذوفة من أوتاجر. تحديد أي خانة يعرض فقط المنتجات المطابقة للخانات الأربع تمامًا.",
             "apply": "تطبيق",
             "applying": "جارٍ التطبيق…",
             "presets": "عوامل تصفية سريعة",
@@ -2905,7 +2937,8 @@
                 "flashDiscountHelp": "الخصم ونوعه مطلوبان عند اختيار عرض سريع.",
                 "flashDiscountType": "نوع خصم العرض الخاطف",
                 "chooseDiscountType": "اختر نوع الخصم"
-            }
+            },
+            "searchSellers": "ابحث عن بائع بالاسم أو البريد…"
         },
         "productForm": {
             "taxType": "نوع {tax}",
@@ -2961,7 +2994,17 @@
         },
         "listFilters": {
             "applying": "جارٍ التطبيق…",
-            "activeCount": "الفلاتر المفعّلة: {count}"
+            "activeCount": "الفلاتر المفعّلة: {count}",
+            "appliedFilters": "الفلاتر المطبّقة",
+            "removeFilter": "إزالة الفلتر: {label}",
+            "clearFilters": "مسح الفلاتر"
+        },
+        "table": {
+            "columns": "الأعمدة",
+            "columnsTitle": "اختيار الأعمدة",
+            "showAll": "إظهار الكل",
+            "reset": "الإعادة للافتراضي",
+            "alwaysShown": "يظهر دائمًا"
         }
     },
     "store.attributes.index.title": "خصائص المنتجات",
@@ -3208,5 +3251,121 @@
         "upload": "رفع الصورة",
         "all": "الكل",
         "help": "قبل تخزين كل بليت مستلم، قارن المنتج بالصورة المرجعية واختر النتيجة. يمكنك إضافة ملاحظة اختيارية. في صفحة المنتجات، افتح التحقق من الصورة لعرض الملاحظات السابقة أو استبدال الصورة. استخدم مرشح التحقق من الصورة للعثور على الصور غير المطابقة أو المفقودة."
+    },
+    "validation": {
+        "messages": {
+            "required": "حقل :attribute مطلوب.",
+            "required_if": "حقل :attribute مطلوب عندما تكون قيمة :other هي :value.",
+            "required_with": "حقل :attribute مطلوب عندما تكون :values موجودة.",
+            "string": "يجب أن يكون حقل :attribute نصًا.",
+            "integer": "يجب أن يكون حقل :attribute عددًا صحيحًا.",
+            "numeric": "يجب أن يكون حقل :attribute رقمًا.",
+            "boolean": "يجب أن يكون حقل :attribute صحيحًا أو خاطئًا.",
+            "array": "يجب أن يكون حقل :attribute مصفوفة.",
+            "decimal": "يجب أن يحتوي حقل :attribute على :decimal أرقام عشرية.",
+            "in": ":attribute المحدد غير صالح.",
+            "url": "يجب أن يكون حقل :attribute رابطًا صالحًا.",
+            "regex": "صيغة حقل :attribute غير صالحة.",
+            "distinct": "حقل :attribute يحتوي على قيمة مكررة.",
+            "date_format": "يجب أن يطابق حقل :attribute الصيغة :format.",
+            "discount_below_price": "يجب أن يكون :attribute أقل من سعر الوحدة (:price).",
+            "discount_percent_limit": "يجب أن تكون نسبة :attribute أقل من 100.",
+            "min": {
+                "numeric": "يجب أن يكون حقل :attribute :min على الأقل.",
+                "string": "يجب أن يكون حقل :attribute :min حرفًا على الأقل.",
+                "array": "يجب أن يحتوي حقل :attribute على :min عناصر على الأقل."
+            },
+            "max": {
+                "numeric": "يجب ألا يكون حقل :attribute أكبر من :max.",
+                "string": "يجب ألا يكون حقل :attribute أكبر من :max حرفًا.",
+                "array": "يجب ألا يحتوي حقل :attribute على أكثر من :max عناصر."
+            },
+            "lt": {
+                "numeric": "يجب أن يكون حقل :attribute أقل من :value.",
+                "string": "يجب أن يكون حقل :attribute أقل من :value حرفًا.",
+                "array": "يجب أن يحتوي حقل :attribute على أقل من :value عناصر."
+            },
+            "lte": {
+                "numeric": "يجب أن يكون حقل :attribute أقل من أو يساوي :value.",
+                "string": "يجب أن يكون حقل :attribute أقل من أو يساوي :value حرفًا.",
+                "array": "يجب ألا يحتوي حقل :attribute على أكثر من :value عناصر."
+            },
+            "gt": {
+                "numeric": "يجب أن يكون حقل :attribute أكبر من :value.",
+                "string": "يجب أن يكون حقل :attribute أكبر من :value حرفًا.",
+                "array": "يجب أن يحتوي حقل :attribute على أكثر من :value عناصر."
+            },
+            "gte": {
+                "numeric": "يجب أن يكون حقل :attribute أكبر من أو يساوي :value.",
+                "string": "يجب أن يكون حقل :attribute أكبر من أو يساوي :value حرفًا.",
+                "array": "يجب أن يحتوي حقل :attribute على :value عناصر أو أكثر."
+            }
+        },
+        "attributes": {
+            "name": "الاسم",
+            "ar_name": "الاسم العربي",
+            "category_id": "الفئة",
+            "brand_id": "العلامة التجارية",
+            "unit": "الوحدة",
+            "weight": "الوزن",
+            "max_qty": "الحد الأقصى لكمية الشراء",
+            "min_qty": "الحد الأدنى لكمية الشراء",
+            "tags": "الوسوم",
+            "product_types": "أنواع المنتج",
+            "product_types.*": "نوع المنتج",
+            "product_barcodes": "الرموز الشريطية للمنتج",
+            "product_barcodes.*": "الرمز الشريطي للمنتج",
+            "photos": "صور المعرض",
+            "thumbnail_img": "الصورة المصغرة",
+            "video_provider": "منصة الفيديو",
+            "video_link": "رابط الفيديو",
+            "pdf": "مواصفات PDF",
+            "colors_active": "تفعيل الألوان",
+            "colors": "الألوان",
+            "colors.*": "اللون",
+            "choice_options": "خيارات التنويعات",
+            "unit_price": "سعر الوحدة",
+            "date_range": "الفترة الزمنية",
+            "discount": "الخصم",
+            "discount_type": "نوع الخصم",
+            "current_stock": "كمية المخزون",
+            "sku": "رمز المخزون",
+            "variants": "التنويعات",
+            "variants.*.variant": "التنويع",
+            "variants.*.price": "سعر التنويع",
+            "variants.*.sku": "رمز مخزون التنويع",
+            "variants.*.qty": "كمية التنويع",
+            "external_link": "الرابط الخارجي",
+            "external_link_btn": "نص زر الرابط الخارجي",
+            "description": "الوصف",
+            "meta_title": "العنوان التعريفي",
+            "meta_description": "الوصف التعريفي",
+            "meta_img": "الصورة التعريفية",
+            "shipping_type": "نوع الشحن",
+            "flat_shipping_cost": "تكلفة الشحن الثابتة",
+            "is_quantity_multiplied": "تكلفة الشحن لكل قطعة",
+            "est_shipping_days": "أيام الشحن المقدرة",
+            "low_stock_quantity": "كمية التنبيه لانخفاض المخزون",
+            "stock_visibility_state": "طريقة عرض المخزون",
+            "cash_on_delivery": "الدفع عند الاستلام",
+            "featured": "مميز",
+            "todays_deal": "عرض اليوم",
+            "can_expire": "قابل لانتهاء الصلاحية قريبًا",
+            "flash_deal_id": "العرض الخاطف",
+            "flash_discount": "خصم العرض الخاطف",
+            "flash_discount_type": "نوع خصم العرض الخاطف",
+            "tax_id": "الضريبة",
+            "tax_id.*": "الضريبة",
+            "tax": "الضريبة",
+            "tax.*": "الضريبة",
+            "tax_type": "نوع الضريبة",
+            "tax_type.*": "نوع الضريبة",
+            "button": "خيار النشر",
+            "lang": "لغة المحتوى",
+            "slug": "الرابط المختصر",
+            "old_photo": "صور أوتاجر",
+            "purchase_price": "سعر الشراء",
+            "file": "ملف المنتج"
+        }
     }
 }

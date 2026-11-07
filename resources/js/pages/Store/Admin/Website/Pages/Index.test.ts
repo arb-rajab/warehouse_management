@@ -19,6 +19,10 @@ import {
     storeWebsitePage,
 } from '@/testing/factories';
 import { defaultAuthProps } from '@/testing/inertiaPageMocks';
+import {
+    expectColumnCanBeHidden,
+    expectColumnLocked,
+} from '@/testing/tableColumns';
 import Index from './Index.vue';
 
 const { usePageMock, getMock } = vi.hoisted(() => ({
@@ -198,5 +202,16 @@ describe('Website pages Index', () => {
             { per_page: 50 },
             { preserveState: true, replace: true },
         );
+    });
+
+    it('lets staff hide an optional column from the header and every row, and keeps the identifier', async () => {
+        window.localStorage.clear();
+        const wrapper = mountPage();
+        await expectColumnCanBeHidden(wrapper, 'website.pages', {
+            key: 'url',
+            label: t('store.website.pages.url'),
+        });
+        expectColumnLocked(wrapper, t('store.website.pages.name'));
+        window.localStorage.clear();
     });
 });

@@ -12,6 +12,7 @@ use App\Http\Resources\Store\TicketReplyResource;
 use App\Models\Ticket;
 use App\Models\TicketReply;
 use App\Services\Store\TicketAttachments;
+use App\Support\NewestFirst;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
@@ -37,7 +38,7 @@ class SupportTicketController extends Controller implements HasMiddleware
                 Ticket::query()->select(['id', 'user_id', 'code', 'subject', 'status', 'viewed', 'created_at'])
                     ->whereHas('user')->with('user:id,name')->withMax('ticketreplies', 'created_at')
                     ->when(is_string($search) && $search !== '', fn ($query) => $query->where('code', 'like', '%'.$search.'%'))
-                    ->orderByDesc('created_at')->orderByDesc('id')->paginate($perPage)->withQueryString()
+                    ->tap(NewestFirst::apply(...))->paginate($perPage)->withQueryString()
             )),
             'filters' => ['per_page' => $perPage, 'search' => $search],
         ]);

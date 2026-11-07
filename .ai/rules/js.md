@@ -58,6 +58,8 @@ vi.mock('@inertiajs/vue3', () => ({
 
 To keep invalid submissions from reaching the backend, every field bound to a FormRequest rule must carry the matching native HTML5 constraint, passed through FormField's `$attrs` (see js.md): `required` for `required`, `maxlength`/`minlength` for `max:`/`min:` on strings, `min`/`max`/`step="1"` for integer rules, `type="email"` for `email`. Only mirror rules that don't require a round trip (skip `unique`, `confirmed`-style cross-field checks stay client-side too when cheap — see UserFormFields.vue's `password`/`password_confirmation` `setCustomValidity` mismatch check). The backend rule stays authoritative; the frontend copy is just a flood guard. When adding/editing a form field, check its FormRequest's `rules()` and add the missing attribute in the same change, with a test asserting it (see UserFormFields.test.ts, RowFormFields.test.ts, Login.test.ts). A required field also shows the required mark and the form the legend: see form-required-fields.md.
 
+A form that passes `ResourceFormPage` a `validation` schema (the store product forms, and every new form) validates in the browser through the shared layer instead ([client-side-validation.md](client-side-validation.md)): the form is `novalidate`, so the native attributes stay for the marks and accessibility while `lib/formValidation.ts` checks the rule copy (`lib/storeProductRules.json` for the products) and shows the server's wording inline. Changing a server rule there means: change the FormRequest, run its parity test (`ProductClientValidationParityTest`), update the rule copy until it passes.
+
 ## Add a Playwright e2e spec for browser-only behavior
 
 tests/e2e (Playwright) exists only for behavior Vitest/jsdom cannot exercise — don't use it to re-test things unit/component tests already cover. Add or extend a spec (one concern per file, see existing tests/e2e/*.spec.ts for the pattern) whenever a change introduces:
@@ -80,7 +82,7 @@ tests/e2e (Playwright) exists only for behavior Vitest/jsdom cannot exercise —
 When adding or touching a page/component, give common affordances an icon instead of leaving them as plain text/color — warnings, errors, loading/processing states, empty states, status/role badges, clear/apply actions, and duration/time tags all get one. Reuse the icon already established for that concept elsewhere rather than picking a new one:
 
 - Add=Plus, Edit=Pencil, Delete=Trash2, View=Eye, external/related-record link=ArrowUpRight
-- Sort=ArrowUp/ArrowDown/ArrowUpDown, Close=X, Filter trigger=SlidersHorizontal, Clear=X, Apply/confirm=Check
+- Sort=ArrowUp/ArrowDown/ArrowUpDown, Close=X, Filter trigger=SlidersHorizontal, Clear=X, Apply/confirm=Check, Column picker=Columns3
 - Cell states (mirrored by hand in the Flutter app, see [cell-state visuals](cell-state-visuals.md)): empty=CircleDashed, full=Inbox, opened=PackageOpen; expiration=CalendarX, added-at/stored=CalendarPlus
 - Warning/disabled hint=TriangleAlert, field/form error=CircleAlert, admin/privileged role=ShieldCheck, signed-in user=CircleUser, processing/loading=LoaderCircle (with animate-spin), ongoing/duration=Clock, transfer=ArrowLeftRight, empty table state=PackageSearch, brand mark=Warehouse
 - Nav icons: LayoutDashboard, Rows3, Map, ArrowLeftRight, Users, LogOut, Languages

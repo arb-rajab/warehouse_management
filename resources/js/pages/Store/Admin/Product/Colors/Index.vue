@@ -13,12 +13,14 @@ import FormField from '@/components/FormField.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import Pagination from '@/components/Pagination.vue';
 import StoreColorFormFields from '@/components/StoreColorFormFields.vue';
+import StoreColumnPicker from '@/components/StoreColumnPicker.vue';
 import SubmitButton from '@/components/SubmitButton.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
 import { confirmDelete } from '@/lib/confirm';
 import { t } from '@/lib/i18n';
 import { useStoreAccess } from '@/lib/storeAccess';
+import { useTableColumns } from '@/lib/useTableColumns';
 import type { Paginated, PerPageFilters } from '@/types/admin';
 import type { StoreColor } from '@/types/storeCatalogue';
 
@@ -35,6 +37,18 @@ function onPerPageChange(perPage: number): void {
         { preserveState: true, replace: true },
     );
 }
+const columns = useTableColumns({
+    listId: 'product.colors',
+    columns: [
+        { key: 'name', label: 'store.colors.index.columnName', required: true },
+        { key: 'code', label: 'store.colors.index.columnCode' },
+    ],
+});
+const { shown, visibleColumns } = columns;
+const tableColumns = computed(() => [
+    ...visibleColumns.value.map((column) => t(column.label)),
+    t('store.colors.index.columnActions'),
+]);
 </script>
 
 <template>
@@ -61,12 +75,9 @@ function onPerPageChange(perPage: number): void {
                     :processing="processing"
                 />
             </Form>
+            <StoreColumnPicker :state="columns" />
             <DataTable
-                :columns="[
-                    t('store.colors.index.columnName'),
-                    t('store.colors.index.columnCode'),
-                    t('store.colors.index.columnActions'),
-                ]"
+                :columns="tableColumns"
                 :rows="colors.data"
                 :empty-message="t('store.colors.index.empty')"
             >
@@ -76,7 +87,7 @@ function onPerPageChange(perPage: number): void {
                     >
                         {{ row.name }}
                     </td>
-                    <td class="px-4 py-2">
+                    <td v-if="shown.code" class="px-4 py-2">
                         <span
                             class="me-2 inline-block h-4 w-4 rounded border border-gray-300"
                             :style="{ backgroundColor: row.code }"
@@ -84,7 +95,7 @@ function onPerPageChange(perPage: number): void {
                         />{{ row.code }}
                     </td>
                     <td class="px-4 py-2">
-                        <div class="flex flex-wrap items-center gap-2">
+                        <div class="flex flex-nowrap items-center gap-2">
                             <TableActionLink
                                 v-if="access.can('edit_color')"
                                 :href="edit(row)"

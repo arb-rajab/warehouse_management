@@ -21,6 +21,7 @@ use App\Models\ProductTax;
 use App\Models\ProductTranslation;
 use App\Models\Upload;
 use App\Services\ProductTaxService;
+use App\Support\NewestFirst;
 use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -76,7 +77,7 @@ class DigitalProductController extends Controller implements HasMiddleware
                     ->select(['id', 'name', 'added_by', 'thumbnail_img', 'unit_price', 'todays_deal', 'published', 'featured', 'slug', 'created_at'])
                     ->with('product_translations:id,product_id,lang,name')
                     ->when($search !== null, fn ($query) => $query->where('name', 'like', '%'.$search.'%'))
-                    ->orderByDesc('created_at')->orderByDesc('id')->paginate($perPage)->withQueryString()
+                    ->tap(NewestFirst::apply(...))->paginate($perPage)->withQueryString()
             )),
             'filters' => ['search' => $search, 'per_page' => $perPage],
             'defaultLanguage' => config('app.default_language'),

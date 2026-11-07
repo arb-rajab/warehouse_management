@@ -34,15 +34,13 @@ vi.mock('@inertiajs/vue3', async () => {
     };
 });
 const trip = storeTripForm();
-const orders = [{ id: 78, code: '20261013-0041', customer: 'Bram Customer' }];
-const customers = [{ id: 9, name: 'Warehouse' }];
 function mountPage() {
     usePageMock.mockReturnValue({
         url: edit.url(trip),
         props: defaultAuthProps({ store: storeSharedProps() }),
     });
 
-    return mount(Edit, { props: { trip, orders, customers } });
+    return mount(Edit, { props: { trip } });
 }
 
 describe('Store trip Edit', () => {
@@ -97,8 +95,6 @@ describe('Store trip Edit', () => {
         await flushPromises();
         expect(wrapper.getComponent(StoreTripFormFields).props()).toEqual({
             trip,
-            orders,
-            customers,
             errors: { due_date: 'Required' },
         });
         expect(getMock).toHaveBeenCalledTimes(1);

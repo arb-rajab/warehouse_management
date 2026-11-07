@@ -30,8 +30,27 @@ function seedProduct(): void {
     `);
 }
 
+/**
+ * Waits for the switch's CSS transitions (the knob slides, the track fades) to
+ * end. Reading `getAnimations()` flushes pending style changes first, so a
+ * transition a state change just started is included.
+ */
+async function settled(toggle: Locator): Promise<void> {
+    await toggle.evaluate((button) =>
+        Promise.all(
+            button
+                .getAnimations({ subtree: true })
+                .map((animation) => animation.finished.catch(() => undefined)),
+        ),
+    );
+}
+
 /** The knob's distance from the track's physical left and right edges. */
-function knobInsets(toggle: Locator): Promise<{ left: number; right: number }> {
+async function knobInsets(
+    toggle: Locator,
+): Promise<{ left: number; right: number }> {
+    await settled(toggle);
+
     return toggle.evaluate((button) => {
         const track = button
             .querySelector('[data-switch-track]')!
@@ -48,9 +67,11 @@ function knobInsets(toggle: Locator): Promise<{ left: number; right: number }> {
 }
 
 /** The track's color and the first opaque background behind it. */
-function trackColors(
+async function trackColors(
     toggle: Locator,
 ): Promise<{ track: number[]; background: number[] }> {
+    await settled(toggle);
+
     return toggle.evaluate((button) => {
         const canvas = document.createElement('canvas');
         canvas.width = canvas.height = 1;

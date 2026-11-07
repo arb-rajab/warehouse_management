@@ -25,6 +25,10 @@ import {
     storeUpload,
 } from '@/testing/factories';
 import { defaultAuthProps } from '@/testing/inertiaPageMocks';
+import {
+    expectColumnCanBeHidden,
+    expectColumnLocked,
+} from '@/testing/tableColumns';
 import Create from './Create.vue';
 import Edit from './Edit.vue';
 import Index from './Index.vue';
@@ -255,5 +259,16 @@ describe('customer package pages', () => {
                 true,
             );
         }
+    });
+
+    it('lets staff hide an optional column from the header and every row, and keeps the identifier', async () => {
+        window.localStorage.clear();
+        const wrapper = indexPage();
+        await expectColumnCanBeHidden(wrapper, 'customers.packages', {
+            key: 'logo',
+            label: t('store.customerPackages.logo'),
+        });
+        expectColumnLocked(wrapper, t('store.customerPackages.name'));
+        window.localStorage.clear();
     });
 });

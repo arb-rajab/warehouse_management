@@ -13,6 +13,7 @@ use App\Models\Permission;
 use App\Models\Role;
 use App\Models\RoleTranslation;
 use App\Models\StoreUser;
+use App\Support\NewestFirst;
 use App\Support\StaffPrivileges;
 use App\Support\StorePermissions;
 use Illuminate\Http\RedirectResponse;
@@ -77,7 +78,7 @@ class RoleController extends Controller implements HasMiddleware
                 Role::query()
                     ->excludingSuperAdmin()
                     ->select(['id', 'name'])
-                    ->orderBy('id')
+                    ->tap(NewestFirst::apply(...))
                     ->paginate($perPage)
                     ->withQueryString()
             )),

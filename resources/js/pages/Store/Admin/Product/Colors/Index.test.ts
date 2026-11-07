@@ -18,6 +18,10 @@ import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
 import { t } from '@/lib/i18n';
 import { paginated, storeColor, storeSharedProps } from '@/testing/factories';
 import { defaultAuthProps, resetMocks } from '@/testing/inertiaPageMocks';
+import {
+    expectColumnCanBeHidden,
+    expectColumnLocked,
+} from '@/testing/tableColumns';
 import type { StoreColor } from '@/types/storeCatalogue';
 
 import Index from './Index.vue';
@@ -201,5 +205,16 @@ describe('Store Colors Index', () => {
             label: t('store.colors.index.searchSubmit'),
             processingLabel: t('store.colors.index.searching'),
         });
+    });
+
+    it('lets staff hide an optional column from the header and every row, and keeps the identifier', async () => {
+        window.localStorage.clear();
+        const wrapper = mountPage([storeColor()]);
+        await expectColumnCanBeHidden(wrapper, 'product.colors', {
+            key: 'code',
+            label: t('store.colors.index.columnCode'),
+        });
+        expectColumnLocked(wrapper, t('store.colors.index.columnName'));
+        window.localStorage.clear();
     });
 });

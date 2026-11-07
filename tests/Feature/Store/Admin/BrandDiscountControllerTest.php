@@ -18,8 +18,8 @@ test('brand discounts expose the full narrow translated brand shape and batched 
     DB::table('brand_translations')->insert(['brand_id' => $brand->id, 'lang' => 'en', 'name' => 'Translated dates']);
     $this->get('/temp/admin/brands-wise-product-discount')->assertInertia(fn (Assert $page) => $page
         ->where('filters', ['per_page' => 20, 'search' => null])->has('brands.data', 2)
-        ->has('brands.data.0', fn (Assert $row) => $row->where('id', $brand->id)->where('name', 'Translated dates')->where('logo_url', 'https://example.com/logo.png'))
-        ->where('brands.data.1.logo_url', null));
+        ->has('brands.data.1', fn (Assert $row) => $row->where('id', $brand->id)->where('name', 'Translated dates')->where('logo_url', 'https://example.com/logo.png'))
+        ->where('brands.data.0.logo_url', null));
 });
 
 test('brand discount listing pages searches and validates filters', function () {

@@ -2,6 +2,7 @@ import { Form, Head } from '@inertiajs/vue3';
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ComponentPublicInstance } from 'vue';
+import { edit as customerEdit } from '@/actions/App/Http/Controllers/Store/Admin/CustomerController';
 import {
     index as reviewsIndex,
     updatePublished,
@@ -13,6 +14,10 @@ import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
 import { t } from '@/lib/i18n';
 import { paginated, storeReview, storeSharedProps } from '@/testing/factories';
 import { defaultAuthProps } from '@/testing/inertiaPageMocks';
+import {
+    expectColumnCanBeHidden,
+    expectColumnLocked,
+} from '@/testing/tableColumns';
 import type { StoreReview } from '@/types/store';
 import Index from './Index.vue';
 
@@ -184,5 +189,31 @@ describe('Store product reviews', () => {
             { rating: 'rating,asc', per_page: 10 },
             { preserveState: true, replace: true },
         );
+    });
+
+    it('links the reviewer to their edit page only with the edit_customer permission', () => {
+        const customerCell = (wrapper: ReturnType<typeof mountPage>) =>
+            wrapper.get('tbody tr').findAll('td')[2];
+
+        const allowed = mountPage(['view_product_reviews', 'edit_customer']);
+        expect(customerCell(allowed).get('a').attributes('href')).toBe(
+            customerEdit(9).url,
+        );
+        expect(customerCell(allowed).text()).toContain('customer@example.com');
+
+        const denied = mountPage(['view_product_reviews']);
+        expect(customerCell(denied).find('a').exists()).toBe(false);
+        expect(customerCell(denied).text()).toContain('Customer');
+    });
+
+    it('lets staff hide an optional column from the header and every row, and keeps the identifier', async () => {
+        window.localStorage.clear();
+        const wrapper = mountPage();
+        await expectColumnCanBeHidden(wrapper, 'product.reviews', {
+            key: 'comment',
+            label: t('store.reviews.comment'),
+        });
+        expectColumnLocked(wrapper, t('store.reviews.product'));
+        window.localStorage.clear();
     });
 });

@@ -2,6 +2,7 @@
 import { Head, router, usePage } from '@inertiajs/vue3';
 import { Pencil, ShieldCheck, Trash2 } from '@lucide/vue';
 import { computed } from 'vue';
+import { edit as roleEdit } from '@/actions/App/Http/Controllers/Store/Admin/RoleController';
 import {
     create,
     destroy,
@@ -12,11 +13,14 @@ import AddResourceLink from '@/components/AddResourceLink.vue';
 import DataTable from '@/components/DataTable.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import Pagination from '@/components/Pagination.vue';
+import StoreColumnPicker from '@/components/StoreColumnPicker.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
+import TableObjectLink from '@/components/TableObjectLink.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
 import { confirmDelete } from '@/lib/confirm';
 import { t } from '@/lib/i18n';
 import { useStoreAccess } from '@/lib/storeAccess';
+import { useTableColumns } from '@/lib/useTableColumns';
 import type { Paginated, PerPageFilters } from '@/types/admin';
 import type { StaffMember } from '@/types/store';
 
@@ -50,6 +54,20 @@ function onPerPageChange(perPage: number): void {
         { preserveState: true, replace: true },
     );
 }
+const columns = useTableColumns({
+    listId: 'staff.staffs',
+    columns: [
+        { key: 'name', label: 'store.staff.index.columnName', required: true },
+        { key: 'email', label: 'store.staff.index.columnEmail' },
+        { key: 'phone', label: 'store.staff.index.columnPhone' },
+        { key: 'role', label: 'store.staff.index.columnRole' },
+    ],
+});
+const { shown, visibleColumns } = columns;
+const tableColumns = computed(() => [
+    ...visibleColumns.value.map((column) => t(column.label)),
+    t('store.staff.index.columnActions'),
+]);
 </script>
 
 <template>
@@ -64,14 +82,9 @@ function onPerPageChange(perPage: number): void {
             />
         </PageHeader>
 
+        <StoreColumnPicker :state="columns" />
         <DataTable
-            :columns="[
-                t('store.staff.index.columnName'),
-                t('store.staff.index.columnEmail'),
-                t('store.staff.index.columnPhone'),
-                t('store.staff.index.columnRole'),
-                t('store.staff.index.columnActions'),
-            ]"
+            :columns="tableColumns"
             :rows="staff.data"
             :empty-message="t('store.staff.index.empty')"
         >
@@ -81,9 +94,9 @@ function onPerPageChange(perPage: number): void {
                 >
                     {{ member.name }}
                 </td>
-                <td class="px-4 py-2">{{ member.email }}</td>
-                <td class="px-4 py-2">{{ member.phone }}</td>
-                <td class="px-4 py-2">
+                <td v-if="shown.email" class="px-4 py-2">{{ member.email }}</td>
+                <td v-if="shown.phone" class="px-4 py-2">{{ member.phone }}</td>
+                <td v-if="shown.role" class="px-4 py-2">
                     <span
                         v-if="member.is_super_admin"
                         class="inline-flex items-center gap-1"
@@ -91,9 +104,12 @@ function onPerPageChange(perPage: number): void {
                         <ShieldCheck class="h-3.5 w-3.5 shrink-0" />
                         {{ t('store.staff.index.superAdmin') }}
                     </span>
-                    <template v-else-if="member.role">
-                        {{ member.role.name }}
-                    </template>
+                    <TableObjectLink
+                        v-else-if="member.role"
+                        :allowed="access.can('edit_staff_role')"
+                        :href="roleEdit(member.role)"
+                        >{{ member.role.name }}</TableObjectLink
+                    >
                     <span v-else class="text-gray-400 dark:text-neutral-500">
                         {{ t('store.staff.index.noRole') }}
                     </span>

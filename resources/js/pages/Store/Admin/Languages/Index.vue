@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Form, Head, router } from '@inertiajs/vue3';
 import { Eye, Pencil, Trash2, TriangleAlert } from '@lucide/vue';
+import { computed } from 'vue';
 import {
     create,
     destroy,
@@ -18,6 +19,7 @@ import FormField from '@/components/FormField.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import Pagination from '@/components/Pagination.vue';
 import RequiredLegend from '@/components/RequiredLegend.vue';
+import StoreColumnPicker from '@/components/StoreColumnPicker.vue';
 import StoreStatusSwitch from '@/components/StoreStatusSwitch.vue';
 import SubmitButton from '@/components/SubmitButton.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
@@ -26,6 +28,7 @@ import { confirmDelete } from '@/lib/confirm';
 import { t } from '@/lib/i18n';
 import { provideRequiredFields } from '@/lib/requiredFields';
 import { useStoreAccess } from '@/lib/storeAccess';
+import { useTableColumns } from '@/lib/useTableColumns';
 import type { Paginated, PerPageFilters } from '@/types/admin';
 import type { AdminLanguage } from '@/types/store';
 defineProps<{
@@ -42,6 +45,20 @@ function onPerPageChange(per_page: number): void {
     );
 }
 const hasRequiredFields = provideRequiredFields();
+const columns = useTableColumns({
+    listId: 'languages.languages',
+    columns: [
+        { key: 'name', label: 'store.languages.name', required: true },
+        { key: 'code', label: 'store.languages.code' },
+        { key: 'rtl', label: 'store.languages.rtl' },
+        { key: 'status', label: 'store.languages.status' },
+    ],
+});
+const { shown, visibleColumns } = columns;
+const tableColumns = computed(() => [
+    ...visibleColumns.value.map((column) => t(column.label)),
+    t('store.languages.actions'),
+]);
 </script>
 <template>
     <div>
@@ -62,21 +79,18 @@ const hasRequiredFields = provideRequiredFields();
                 }}
             </p>
             <p class="mb-4">{{ t('store.languages.translationScope') }}</p>
+            <StoreColumnPicker :state="columns" />
             <DataTable
-                :columns="[
-                    t('store.languages.name'),
-                    t('store.languages.code'),
-                    t('store.languages.rtl'),
-                    t('store.languages.status'),
-                    t('store.languages.actions'),
-                ]"
+                :columns="tableColumns"
                 :rows="languages.data"
                 :empty-message="t('store.languages.empty')"
             >
                 <template #row="{ row: language }">
                     <td class="px-4 py-2">{{ language.name }}</td>
-                    <td class="px-4 py-2">{{ language.code }}</td>
-                    <td class="px-4 py-2">
+                    <td v-if="shown.code" class="px-4 py-2">
+                        {{ language.code }}
+                    </td>
+                    <td v-if="shown.rtl" class="px-4 py-2">
                         <StoreStatusSwitch
                             v-if="access.can('language_setup')"
                             :action="updateRtlStatus({ mergeQuery: {} })"
@@ -92,7 +106,7 @@ const hasRequiredFields = provideRequiredFields();
                                 :value="language.id"
                         /></StoreStatusSwitch>
                     </td>
-                    <td class="px-4 py-2">
+                    <td v-if="shown.status" class="px-4 py-2">
                         <StoreStatusSwitch
                             v-if="access.can('language_setup')"
                             :action="updateStatus({ mergeQuery: {} })"
@@ -124,7 +138,7 @@ const hasRequiredFields = provideRequiredFields();
                     <td class="px-4 py-2">
                         <div
                             v-if="access.can('language_setup')"
-                            class="flex flex-wrap gap-2"
+                            class="flex flex-nowrap gap-2"
                         >
                             <TableActionLink :href="edit(language)"
                                 ><Pencil class="h-3.5 w-3.5" />{{

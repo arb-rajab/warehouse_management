@@ -54,7 +54,7 @@ rule; change the rule only as a deliberate, tested behaviour change.
   was; pass `:required="false"` where the rule is optional),
   `StoreUploadField`, `StoreRichTextField`, `ProductSelect`,
   `FilterNumberField`, `FilterDateField`, `StoreNewsletterRecipients`,
-  `StoreOrderSearch`. Pass `required` only when the rule requires the field.
+  `StoreSearchSelect`. Pass `required` only when the rule requires the field.
 - A hand-written label for a raw `<input>`/`<select>`/`<textarea>`: put
   `<RequiredMark />` right after the label text, with no whitespace between
   (`>{{ label }}<RequiredMark /></label>`), so the accessible name is

@@ -7,6 +7,7 @@ import ResourceFormPage from '@/components/ResourceFormPage.vue';
 import StoreProductFormFields from '@/components/StoreProductFormFields.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
 import { t } from '@/lib/i18n';
+import { physicalProductValidation } from '@/lib/storeProductForm';
 import type {
     StoreDigitalProductTax,
     StoreProductColor,
@@ -14,7 +15,7 @@ import type {
     StoreReferenceOption,
 } from '@/types/store';
 
-defineProps<{
+const props = defineProps<{
     categories: StoreReferenceOption[];
     brands: StoreReferenceOption[];
     colors: StoreProductColor[];
@@ -23,6 +24,11 @@ defineProps<{
     taxes: StoreDigitalProductTax[];
     sections: StoreProductFormSections;
 }>();
+// Checked in the browser before anything is sent; the server re-checks.
+const validation = physicalProductValidation({
+    form: 'create',
+    sections: props.sections,
+});
 </script>
 <template>
     <ResourceFormPage
@@ -32,6 +38,7 @@ defineProps<{
         :submitting-label="t('store.products.form.saving')"
         :cancel-href="inHouseProducts()"
         :layout="StoreAdminLayout"
+        :validation="validation"
         wide
         #default="{ errors }"
     >

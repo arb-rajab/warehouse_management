@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Head, router } from '@inertiajs/vue3';
 import { Pencil, Printer } from '@lucide/vue';
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import { show as showTrip } from '@/actions/App/Http/Controllers/Store/Admin/TripCheckpointController';
 import {
     create,
@@ -14,11 +14,13 @@ import DataTable from '@/components/DataTable.vue';
 import FormField from '@/components/FormField.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import Pagination from '@/components/Pagination.vue';
+import StoreColumnPicker from '@/components/StoreColumnPicker.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
 import TableLink from '@/components/TableLink.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
 import { t } from '@/lib/i18n';
 import { useStoreAccess } from '@/lib/storeAccess';
+import { useTableColumns } from '@/lib/useTableColumns';
 import type { Paginated } from '@/types/admin';
 import type { StoreTruck, TruckPhoto } from '@/types/storeTruck';
 
@@ -42,6 +44,22 @@ function photoUrl(truck: StoreTruck): string | null {
         props.photos.find((photo) => photo.id === truck.photos[0])?.url ?? null
     );
 }
+const columns = useTableColumns({
+    listId: 'trips.trucks',
+    columns: [
+        { key: 'name', label: 'store.trucks.fields.name', required: true },
+        { key: 'id', label: 'store.trucks.index.id' },
+        { key: 'model', label: 'store.trucks.fields.model' },
+        { key: 'capacity', label: 'store.trucks.fields.capacity' },
+        { key: 'description', label: 'store.trucks.fields.description' },
+        { key: 'plate', label: 'store.trucks.fields.plate' },
+    ],
+});
+const { shown, visibleColumns } = columns;
+const tableColumns = computed(() => [
+    ...visibleColumns.value.map((column) => t(column.label)),
+    t('store.trucks.index.actions'),
+]);
 </script>
 
 <template>
@@ -63,16 +81,9 @@ function photoUrl(truck: StoreTruck): string | null {
                 @input="search = ($event.target as HTMLInputElement).value"
             />
         </form>
+        <StoreColumnPicker :state="columns" />
         <DataTable
-            :columns="[
-                t('store.trucks.fields.name'),
-                t('store.trucks.index.id'),
-                t('store.trucks.fields.model'),
-                t('store.trucks.fields.capacity'),
-                t('store.trucks.fields.description'),
-                t('store.trucks.fields.plate'),
-                t('store.trucks.index.actions'),
-            ]"
+            :columns="tableColumns"
             :rows="trucks.data"
             :empty-message="t('store.trucks.index.empty')"
         >
@@ -83,7 +94,7 @@ function photoUrl(truck: StoreTruck): string | null {
                             v-if="photoUrl(truck)"
                             :src="photoUrl(truck) ?? ''"
                             alt=""
-                            class="h-12 w-12 rounded object-cover"
+                            class="h-8 w-8 rounded object-cover"
                         /><TableLink
                             v-if="
                                 truck.open_trip_id &&
@@ -94,11 +105,21 @@ function photoUrl(truck: StoreTruck): string | null {
                         ><span v-else>{{ truck.name }}</span>
                     </div>
                 </td>
-                <td class="px-4 py-2">{{ truck.id }}</td>
-                <td class="px-4 py-2">{{ truck.model }}</td>
-                <td class="px-4 py-2">{{ truck.max_pallets_number }}</td>
-                <td class="px-4 py-2">{{ truck.description }}</td>
-                <td class="px-4 py-2">{{ truck.license_plate }}</td>
+                <td v-if="shown.id" class="px-4 py-2">{{ truck.id }}</td>
+                <td v-if="shown.model" class="px-4 py-2">{{ truck.model }}</td>
+                <td v-if="shown.capacity" class="px-4 py-2">
+                    {{ truck.max_pallets_number }}
+                </td>
+                <td
+                    v-if="shown.description"
+                    class="max-w-xs truncate px-4 py-2"
+                    :title="truck.description ?? undefined"
+                >
+                    {{ truck.description }}
+                </td>
+                <td v-if="shown.plate" class="px-4 py-2">
+                    {{ truck.license_plate }}
+                </td>
                 <td class="px-4 py-2">
                     <div class="flex items-center gap-2">
                         <TableActionLink

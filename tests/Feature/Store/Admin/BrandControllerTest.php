@@ -39,7 +39,7 @@ foreach (['index', 'edit'] as $action) {
     })->with('refused store admin callers');
 }
 
-test('brand list exposes the full narrow row and keeps name ordering, base-name search and real pagination', function () {
+test('brand list exposes the full narrow row and lists newest first, base-name search and real pagination', function () {
     actingAsStoreUser(createStoreStaff('view_all_brands'));
     $this->get(route('brands.index'))->assertInertia(fn (Assert $page) => $page
         ->has('brands.data', 1)
@@ -50,7 +50,7 @@ test('brand list exposes the full narrow row and keeps name ordering, base-name 
     }
     assertPagesWithoutOverlap(fn ($page) => $this->get(route('brands.index', ['page' => $page])), fn ($response) => array_column($response->inertiaProps('brands.data'), 'id'), 23, 20);
     $this->get(route('brands.index', ['per_page' => 10]))->assertInertia(fn (Assert $page) => $page->has('brands.data', 10)
-        ->where('brands.data.0.id', $this->brand->id)->where('brands.data.1.name', 'Noise 01')->where('brands.data.9.name', 'Noise 09')->where('filters.per_page', 10));
+        ->where('brands.data.0.name', 'Noise 22')->where('brands.data.1.name', 'Noise 21')->where('brands.data.9.name', 'Noise 13')->where('filters.per_page', 10));
     $this->get(route('brands.index', ['search' => 'Date']))->assertInertia(fn (Assert $page) => $page->has('brands.data', 1)->where('brands.data.0.id', $this->brand->id)->where('filters.search', 'Date'));
     foreach ([11, 0, 1000] as $size) {
         $this->getJson(route('brands.index', ['per_page' => $size]))->assertUnprocessable()->assertJsonValidationErrors('per_page');
@@ -66,8 +66,8 @@ test('brand list localizes names and resolves logos like the legacy uploaded ass
     $missing = Brand::forceCreate(['name' => 'Missing logo', 'logo' => '999999']);
     BrandTranslation::create(['brand_id' => $this->brand->id, 'lang' => 'ar', 'name' => 'تمور']);
     $this->withSession(['locale' => 'ar'])->get(route('brands.index'))->assertInertia(fn (Assert $page) => $page
-        ->where('brands.data.0', ['id' => $this->brand->id, 'name' => 'تمور', 'logo_url' => 'https://example.com/brand.png'])
-        ->where('brands.data.1', ['id' => $missing->id, 'name' => 'Missing logo', 'logo_url' => static_asset('assets/img/placeholder.jpg')]));
+        ->where('brands.data.1', ['id' => $this->brand->id, 'name' => 'تمور', 'logo_url' => 'https://example.com/brand.png'])
+        ->where('brands.data.0', ['id' => $missing->id, 'name' => 'Missing logo', 'logo_url' => static_asset('assets/img/placeholder.jpg')]));
     $this->get(route('brands.index', ['search' => 'تمور']))->assertInertia(fn (Assert $page) => $page->has('brands.data', 0));
 });
 

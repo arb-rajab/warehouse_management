@@ -9,6 +9,7 @@ use App\Http\Requests\Store\Admin\UpdateReferenceStatusRequest;
 use App\Http\Requests\Store\Admin\UpdateTaxRequest;
 use App\Http\Resources\Store\TaxResource;
 use App\Models\Tax;
+use App\Support\NewestFirst;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -31,7 +32,7 @@ class TaxController extends Controller implements HasMiddleware
         $query = Tax::query()->select(['id', 'name', 'tax_status']);
 
         return Inertia::render('Store/Admin/Setup/Taxes/Index', [
-            'taxes' => $this->paginated(TaxResource::collection($query->orderByDesc('id')->paginate($perPage)->withQueryString())),
+            'taxes' => $this->paginated(TaxResource::collection($query->tap(NewestFirst::apply(...))->paginate($perPage)->withQueryString())),
             'filters' => ['per_page' => $perPage],
         ]);
     }

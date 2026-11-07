@@ -12,6 +12,7 @@ use App\Http\Resources\Store\PickupPointResource;
 use App\Models\PickupPoint;
 use App\Models\PickupPointTranslation;
 use App\Models\Staff;
+use App\Support\NewestFirst;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -37,7 +38,7 @@ class PickupPointController extends Controller implements HasMiddleware
         $query->when($request->filled('search'), fn ($query) => $query->where('name', 'like', '%'.$request->validated('search').'%'));
 
         return Inertia::render('Store/Admin/Setup/PickupPoints/Index', [
-            'pickupPoints' => $this->paginated(PickupPointResource::collection($query->orderByDesc('id')->paginate($perPage)->withQueryString())),
+            'pickupPoints' => $this->paginated(PickupPointResource::collection($query->tap(NewestFirst::apply(...))->paginate($perPage)->withQueryString())),
             'filters' => ['per_page' => $perPage, 'search' => $request->validated('search')],
         ]);
     }

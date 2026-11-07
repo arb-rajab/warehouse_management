@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Head, router } from '@inertiajs/vue3';
 import { Pencil, Trash2 } from '@lucide/vue';
+import { computed } from 'vue';
 import {
     create,
     destroy,
@@ -11,11 +12,13 @@ import AddResourceLink from '@/components/AddResourceLink.vue';
 import DataTable from '@/components/DataTable.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import Pagination from '@/components/Pagination.vue';
+import StoreColumnPicker from '@/components/StoreColumnPicker.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
 import { confirmDelete } from '@/lib/confirm';
 import { t } from '@/lib/i18n';
 import { useStoreAccess } from '@/lib/storeAccess';
+import { useTableColumns } from '@/lib/useTableColumns';
 import type { Paginated, PerPageFilters } from '@/types/admin';
 import type { StoreCustomerPackage } from '@/types/store';
 
@@ -32,6 +35,20 @@ function onPerPageChange(perPage: number): void {
         { preserveState: true, replace: true },
     );
 }
+const columns = useTableColumns({
+    listId: 'customers.packages',
+    columns: [
+        { key: 'name', label: 'store.customerPackages.name', required: true },
+        { key: 'logo', label: 'store.customerPackages.logo' },
+        { key: 'amount', label: 'store.customerPackages.amount' },
+        { key: 'uploads', label: 'store.customerPackages.uploads' },
+    ],
+});
+const { shown, visibleColumns } = columns;
+const tableColumns = computed(() => [
+    ...visibleColumns.value.map((column) => t(column.label)),
+    t('store.customerPackages.actions'),
+]);
 </script>
 
 <template>
@@ -44,28 +61,27 @@ function onPerPageChange(perPage: number): void {
                 :label="t('store.customerPackages.create')"
             />
         </PageHeader>
+        <StoreColumnPicker :state="columns" />
         <DataTable
-            :columns="[
-                t('store.customerPackages.name'),
-                t('store.customerPackages.logo'),
-                t('store.customerPackages.amount'),
-                t('store.customerPackages.uploads'),
-                t('store.customerPackages.actions'),
-            ]"
+            :columns="tableColumns"
             :rows="packages.data"
             :empty-message="t('store.customerPackages.empty')"
         >
             <template #row="{ row: item }">
                 <td class="px-4 py-2">{{ item.localized_name }}</td>
-                <td class="px-4 py-2">
+                <td v-if="shown.logo" class="px-4 py-2">
                     <img
                         :src="item.logo_url"
                         :alt="t('store.customerPackages.logo')"
-                        class="h-12 w-12 object-contain"
+                        class="h-8 w-8 object-contain"
                     />
                 </td>
-                <td class="px-4 py-2">{{ item.formatted_amount }}</td>
-                <td class="px-4 py-2">{{ item.product_upload }}</td>
+                <td v-if="shown.amount" class="px-4 py-2">
+                    {{ item.formatted_amount }}
+                </td>
+                <td v-if="shown.uploads" class="px-4 py-2">
+                    {{ item.product_upload }}
+                </td>
                 <td class="px-4 py-2">
                     <div class="flex items-center gap-2">
                         <TableActionLink

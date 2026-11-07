@@ -10,6 +10,7 @@ use App\Http\Resources\Store\AttributeResource;
 use App\Http\Resources\Store\AttributeValueResource;
 use App\Models\Attribute;
 use App\Models\AttributeValue;
+use App\Support\NewestFirst;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -37,7 +38,7 @@ class AttributeValueController extends Controller implements HasMiddleware
             'attribute' => new AttributeResource($attribute),
             'values' => $this->paginated(AttributeValueResource::collection(
                 AttributeValue::query()->select(['id', 'attribute_id', 'value'])
-                    ->where('attribute_id', $attribute->id)->orderByDesc('id')->paginate($perPage)->withQueryString()
+                    ->where('attribute_id', $attribute->id)->tap(NewestFirst::apply(...))->paginate($perPage)->withQueryString()
             )),
             'filters' => ['per_page' => $perPage],
         ]);

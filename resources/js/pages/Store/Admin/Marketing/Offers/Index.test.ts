@@ -16,6 +16,10 @@ import TableActionLink from '@/components/TableActionLink.vue';
 import { t } from '@/lib/i18n';
 import { storeOffer, paginated, storeSharedProps } from '@/testing/factories';
 import { defaultAuthProps } from '@/testing/inertiaPageMocks';
+import {
+    expectColumnCanBeHidden,
+    expectColumnLocked,
+} from '@/testing/tableColumns';
 import Index from './Index.vue';
 const { usePageMock, getMock, confirmMock } = vi.hoisted(() => ({
     usePageMock: vi.fn(),
@@ -154,4 +158,15 @@ it('preserves search when paging and keeps public navigation a plain link', () =
         { per_page: 50, search: 'Test' },
         { preserveState: true, replace: true },
     );
+});
+
+it('lets staff hide an optional column from the header and every row, and keeps the identifier', async () => {
+    window.localStorage.clear();
+    const wrapper = mountPage();
+    await expectColumnCanBeHidden(wrapper, 'marketing.offers', {
+        key: 'multipleUsage',
+        label: t('store.campaigns.fields.multipleUsage'),
+    });
+    expectColumnLocked(wrapper, t('store.campaigns.fields.title'));
+    window.localStorage.clear();
 });

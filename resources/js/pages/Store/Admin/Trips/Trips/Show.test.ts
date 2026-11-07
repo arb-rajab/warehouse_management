@@ -26,6 +26,10 @@ import {
     truckPhoto,
 } from '@/testing/factories';
 import { defaultAuthProps, resetMocks } from '@/testing/inertiaPageMocks';
+import {
+    expectColumnCanBeHidden,
+    expectColumnLocked,
+} from '@/testing/tableColumns';
 import type { StoreTripCheckpointRow } from '@/types/store';
 import Show from './Show.vue';
 
@@ -238,6 +242,7 @@ describe('Store trip detail', () => {
                 href: orderShow['/temp/admin/orders/{order}/show'](77),
             },
             { href: customerEdit({ id: 21 }) },
+            { href: customerEdit({ id: 22 }) },
         ]);
         expect(rows[0].findAll('img').map((img) => img.attributes())).toEqual([
             expect.objectContaining({
@@ -280,6 +285,7 @@ describe('Store trip detail', () => {
             { href: truckEdit({ id: 11 }) },
             { href: orderShow['/temp/admin/orders/{order}/show'](77) },
             { href: customerEdit({ id: 21 }) },
+            { href: customerEdit({ id: 22 }) },
             { href: customerEdit({ id: 23 }) },
         ]);
         expect(wrapper.getComponent(TableActionLink).props('href')).toEqual(
@@ -492,5 +498,16 @@ describe('Store trip detail', () => {
         expect(wrapper.find('textarea').exists()).toBe(false);
         expect(wrapper.find('select').exists()).toBe(false);
         expect(wrapper.text()).toContain(visit.notes ?? '');
+    });
+
+    it('lets staff hide an optional column from the header and every row, and keeps the identifier', async () => {
+        window.localStorage.clear();
+        const wrapper = mountPage([storeTripCheckpointRow()]);
+        await expectColumnCanBeHidden(wrapper, 'trips.checkpoints', {
+            key: 'eta',
+            label: t('store.trips.show.eta'),
+        });
+        expectColumnLocked(wrapper, t('store.trips.show.checkpoint'));
+        window.localStorage.clear();
     });
 });

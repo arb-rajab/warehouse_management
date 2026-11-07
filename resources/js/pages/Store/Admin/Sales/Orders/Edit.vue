@@ -5,9 +5,11 @@ import ResourceFormPage from '@/components/ResourceFormPage.vue';
 import StoreOrderEntryFields from '@/components/StoreOrderEntryFields.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
 import { t } from '@/lib/i18n';
+import type { SearchOption } from '@/types/searchSelect';
 import type { StoreOrder } from '@/types/store';
 defineProps<{
     order: StoreOrder;
+    customerOption?: SearchOption | null;
     additionalInfo: string | null;
     couponDiscount: number;
 }>();
@@ -26,6 +28,7 @@ defineProps<{
         <StoreOrderEntryFields
             :representative-order="false"
             :order="order"
+            :customer-option="customerOption"
             :additional-info="additionalInfo"
             :coupon-discount="couponDiscount"
             :errors="errors"

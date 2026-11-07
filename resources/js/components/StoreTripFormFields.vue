@@ -3,25 +3,28 @@ import { useHttp } from '@inertiajs/vue3';
 import { ArrowDown, ArrowUp, Plus, Trash2 } from '@lucide/vue';
 import { onMounted, ref } from 'vue';
 import { getAvailableVehicles } from '@/actions/App/Http/Controllers/Api/V1/Trip/DriverController';
+import {
+    customerOptions,
+    orderOptions,
+} from '@/actions/App/Http/Controllers/Store/Admin/TripController';
 import FieldError from '@/components/FieldError.vue';
 import FormField from '@/components/FormField.vue';
 import RequiredMark from '@/components/RequiredMark.vue';
+import StoreSearchSelect from '@/components/StoreSearchSelect.vue';
 import { fieldLabelClass, plainFieldInputClass } from '@/lib/filters';
 import { t } from '@/lib/i18n';
 import { tripCheckpointLabel } from '@/lib/storeTrip';
+import type { SearchOption } from '@/types/searchSelect';
 import type {
     StoreReferenceOption,
     StoreTripCheckpointType,
     StoreTripForm,
-    StoreTripOrderOption,
     StoreTripTruckOption,
     StoreTripVehicles,
 } from '@/types/store';
 
 const props = defineProps<{
     trip?: StoreTripForm;
-    orders: StoreTripOrderOption[];
-    customers: StoreReferenceOption[];
     errors: Record<string, string>;
 }>();
 
@@ -34,6 +37,8 @@ interface CheckpointRow {
     id: number;
     type: StoreTripCheckpointType;
     relatedId: string;
+    /** The order or customer picked for a new row; a stored row keeps `relatedId`. */
+    related: SearchOption | null;
     notes: string;
     orderCode: string | null;
     customer: string | null;
@@ -46,6 +51,7 @@ const rows = ref<CheckpointRow[]>(
         id: checkpoint.id,
         type: checkpoint.type,
         relatedId: String(checkpoint.related_id),
+        related: null,
         notes: checkpoint.notes ?? '',
         orderCode: checkpoint.order_code,
         customer: checkpoint.customer,
@@ -134,6 +140,7 @@ function addRow(type: StoreTripCheckpointType): void {
         id: 0,
         type,
         relatedId: '',
+        related: null,
         notes: '',
         orderCode: null,
         customer: null,
@@ -349,64 +356,38 @@ function requireOneRow(event: Event): void {
                             </p>
                         </div>
                         <div v-else>
-                            <label
-                                :for="`checkpoint-${row.key}-related`"
-                                :class="fieldLabelClass"
-                                >{{
+                            <StoreSearchSelect
+                                :id="`checkpoint-${row.key}-related`"
+                                v-model="row.related"
+                                :name="`checkpoints_array[${index}][checkpoint_related_id]`"
+                                :label="
                                     t(
                                         row.type === 'delivery'
                                             ? 'store.trips.form.order'
                                             : 'store.trips.form.customer',
                                     )
-                                }}<RequiredMark
-                            /></label>
-                            <select
-                                :id="`checkpoint-${row.key}-related`"
-                                v-model="row.relatedId"
-                                :name="`checkpoints_array[${index}][checkpoint_related_id]`"
+                                "
+                                :endpoint="
+                                    row.type === 'delivery'
+                                        ? orderOptions
+                                        : customerOptions
+                                "
+                                :placeholder="
+                                    t(
+                                        row.type === 'delivery'
+                                            ? 'store.trips.form.selectOrder'
+                                            : 'store.trips.form.selectCustomer',
+                                    )
+                                "
+                                :search-placeholder="
+                                    t(
+                                        row.type === 'delivery'
+                                            ? 'store.trips.form.searchOrders'
+                                            : 'store.trips.form.searchCustomers',
+                                    )
+                                "
                                 required
-                                :class="[
-                                    plainFieldInputClass,
-                                    'cursor-pointer',
-                                ]"
-                            >
-                                <option value="">
-                                    {{
-                                        t(
-                                            row.type === 'delivery'
-                                                ? 'store.trips.form.selectOrder'
-                                                : 'store.trips.form.selectCustomer',
-                                        )
-                                    }}
-                                </option>
-                                <template v-if="row.type === 'delivery'">
-                                    <option
-                                        v-for="order in orders"
-                                        :key="order.id"
-                                        :value="String(order.id)"
-                                    >
-                                        {{
-                                            t('store.trips.form.orderOption', {
-                                                code: order.code,
-                                                customer:
-                                                    order.customer ??
-                                                    t(
-                                                        'store.trips.form.unknownCustomer',
-                                                    ),
-                                            })
-                                        }}
-                                    </option>
-                                </template>
-                                <template v-else>
-                                    <option
-                                        v-for="customer in customers"
-                                        :key="customer.id"
-                                        :value="String(customer.id)"
-                                    >
-                                        {{ customer.name }}
-                                    </option>
-                                </template>
-                            </select>
+                            />
                         </div>
                         <div>
                             <label

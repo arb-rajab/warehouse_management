@@ -60,7 +60,7 @@ describe('index', function () {
 
         expect($firstPage['data'])->toHaveCount(20)
             ->and($firstPage['meta']['total'])->toBe(23)
-            ->and($listed->all())->toBe($ids->all())
+            ->and($listed->all())->toBe($ids->reverse()->values()->all())
             ->and($listed)->not->toContain($warehouseRole->id)
             ->and($listed)->not->toContain($superAdminRole->id);
     });

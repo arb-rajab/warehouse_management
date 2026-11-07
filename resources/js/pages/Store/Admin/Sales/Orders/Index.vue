@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Form, Head, router } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
+import { edit as customerEdit } from '@/actions/App/Http/Controllers/Store/Admin/CustomerController';
 import {
     all_orders,
     show,
@@ -20,22 +21,21 @@ import PageHeader from '@/components/PageHeader.vue';
 import Pagination from '@/components/Pagination.vue';
 import RequiredLegend from '@/components/RequiredLegend.vue';
 import RequiredMark from '@/components/RequiredMark.vue';
+import StoreColumnPicker from '@/components/StoreColumnPicker.vue';
 import StoreListFilters from '@/components/StoreListFilters.vue';
 import SubmitButton from '@/components/SubmitButton.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
+import TableObjectLink from '@/components/TableObjectLink.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
 import { confirmDelete } from '@/lib/confirm';
-import {
-    countActive,
-    fieldLabelClass,
-    plainFieldInputClass,
-} from '@/lib/filters';
+import { fieldLabelClass, plainFieldInputClass } from '@/lib/filters';
 import { t } from '@/lib/i18n';
 import { usePageError } from '@/lib/pageErrors';
 import { provideRequiredFields } from '@/lib/requiredFields';
 import { useStoreAccess } from '@/lib/storeAccess';
+import { useTableColumns } from '@/lib/useTableColumns';
 import type { Paginated } from '@/types/admin';
-import type { StoreOrder } from '@/types/store';
+import type { StoreFilterChip, StoreOrder } from '@/types/store';
 const props = defineProps<{
     orders: Paginated<StoreOrder>;
     filters: {
@@ -49,6 +49,22 @@ const props = defineProps<{
     listRoute: string;
 }>();
 const access = useStoreAccess();
+const columns = useTableColumns({
+    listId: 'sales.orders',
+    columns: [
+        { key: 'code', label: 'store.orders.code', required: true },
+        { key: 'customer', label: 'store.orders.customer' },
+        { key: 'total', label: 'store.orders.total' },
+        { key: 'deliveryStatus', label: 'store.orders.deliveryStatus' },
+        { key: 'paymentStatus', label: 'store.orders.paymentStatus' },
+    ],
+});
+const { shown, visibleColumns } = columns;
+const tableColumns = computed(() => [
+    t('store.orders.select'),
+    ...visibleColumns.value.map((column) => t(column.label)),
+    t('store.orders.actions'),
+]);
 const selected = ref<number[]>([]);
 const error = usePageError('action');
 const listAction = computed(
@@ -81,14 +97,40 @@ const deliveryStatuses = [
     'delivered',
     'cancelled',
 ];
-/** Dialog filters only: payment status and each date bound. */
-const activeFilterCount = computed(() =>
-    countActive([
-        Boolean(props.filters.payment_status),
-        Boolean(props.filters.from),
-        Boolean(props.filters.to),
-    ]),
-);
+/** Dialog filters only, one chip each: payment status and each date bound. */
+const appliedFilters = computed<StoreFilterChip[]>(() => {
+    const { payment_status: payment, from, to } = props.filters;
+    const chips: StoreFilterChip[] = [];
+
+    if (payment) {
+        chips.push({
+            key: 'payment_status',
+            label: t('store.orders.paymentStatus'),
+            value: t(`store.orders.status.${payment}`),
+            keys: ['payment_status'],
+        });
+    }
+
+    if (from) {
+        chips.push({
+            key: 'from',
+            label: t('store.orders.from'),
+            value: from,
+            keys: ['from'],
+        });
+    }
+
+    if (to) {
+        chips.push({
+            key: 'to',
+            label: t('store.orders.to'),
+            value: to,
+            keys: ['to'],
+        });
+    }
+
+    return chips;
+});
 const hasRequiredFields = provideRequiredFields();
 </script>
 <template>
@@ -105,10 +147,7 @@ const hasRequiredFields = provideRequiredFields();
                 /></div
         ></PageHeader>
         <ActionErrorBanner :message="error" />
-        <StoreListFilters
-            :action="listAction()"
-            :active-count="activeFilterCount"
-        >
+        <StoreListFilters :action="listAction()" :chips="appliedFilters">
             <template #default="{ errors }">
                 <input
                     name="per_page"
@@ -189,6 +228,7 @@ const hasRequiredFields = provideRequiredFields();
                 />
             </template>
         </StoreListFilters>
+        <StoreColumnPicker :state="columns" />
         <Form
             :action="bulk_order_delete({ mergeQuery: {} })"
             :options="{ preserveScroll: true }"
@@ -198,7 +238,7 @@ const hasRequiredFields = provideRequiredFields();
             <RequiredLegend
                 v-if="hasRequiredFields && access.can('delete_order')"
             />
-            <fieldset>
+            <fieldset class="min-w-0">
                 <legend
                     v-if="access.can('delete_order')"
                     :class="fieldLabelClass"
@@ -206,15 +246,7 @@ const hasRequiredFields = provideRequiredFields();
                     {{ t('store.orders.selectedOrders') }}<RequiredMark />
                 </legend>
                 <DataTable
-                    :columns="[
-                        t('store.orders.select'),
-                        t('store.orders.code'),
-                        t('store.orders.customer'),
-                        t('store.orders.total'),
-                        t('store.orders.deliveryStatus'),
-                        t('store.orders.paymentStatus'),
-                        t('store.orders.actions'),
-                    ]"
+                    :columns="tableColumns"
                     :rows="orders.data"
                     :empty-message="t('store.orders.empty')"
                 >
@@ -238,16 +270,23 @@ const hasRequiredFields = provideRequiredFields();
                             />
                         </td>
                         <td class="px-3 py-3">{{ row.code }}</td>
-                        <td class="px-3 py-3">{{ row.customer?.name }}</td>
-                        <td class="px-3 py-3">
+                        <td v-if="shown.customer" class="px-3 py-3">
+                            <TableObjectLink
+                                v-if="row.customer"
+                                :allowed="access.can('edit_customer')"
+                                :href="customerEdit(row.customer)"
+                                >{{ row.customer.name }}</TableObjectLink
+                            >
+                        </td>
+                        <td v-if="shown.total" class="px-3 py-3">
                             {{ row.grand_total.toFixed(2) }}
                         </td>
-                        <td class="px-3 py-3">
+                        <td v-if="shown.deliveryStatus" class="px-3 py-3">
                             {{
                                 t(`store.orders.status.${row.delivery_status}`)
                             }}
                         </td>
-                        <td class="px-3 py-3">
+                        <td v-if="shown.paymentStatus" class="px-3 py-3">
                             {{ t(`store.orders.status.${row.payment_status}`) }}
                         </td>
                         <td class="space-x-2 px-3 py-3">

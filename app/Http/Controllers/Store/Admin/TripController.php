@@ -9,8 +9,10 @@ use App\Events\SetTruckAvailability;
 use App\Http\Controllers\Concerns\ReservesTripTrucks;
 use App\Http\Controllers\Concerns\WritesTripCheckpoints;
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Store\Admin\Concerns\SearchesOptions;
 use App\Http\Requests\Store\Admin\BulkDeleteTripsRequest;
 use App\Http\Requests\Store\Admin\FilterTripsRequest;
+use App\Http\Requests\Store\Admin\SearchOptionsRequest;
 use App\Http\Requests\Store\Admin\StoreTripRequest;
 use App\Http\Requests\Store\Admin\TripListActionRequest;
 use App\Http\Requests\Store\Admin\UpdateTripNotesRequest;
@@ -24,8 +26,12 @@ use App\Models\Trip;
 use App\Models\Truck;
 use App\Services\DriverService;
 use App\Services\UserService;
+use App\Support\NewestFirst;
+use App\Support\SearchOption;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Database\Eloquent\Relations\Relation;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -45,6 +51,7 @@ use Inertia\Response;
 class TripController extends Controller implements HasMiddleware
 {
     use ReservesTripTrucks;
+    use SearchesOptions;
     use WritesTripCheckpoints;
 
     public function __construct(private UserService $userService, private DriverService $driverService) {}
@@ -55,6 +62,7 @@ class TripController extends Controller implements HasMiddleware
         return [
             new Middleware('permission:view_all_trips', only: ['index', 'today']),
             new Middleware('permission:add_trip', only: ['create', 'store']),
+            new Middleware('permission:add_trip|edit_trip', only: ['orderOptions', 'customerOptions']),
             new Middleware('permission:edit_trip', only: ['edit', 'update', 'updateStatus', 'updateNotes']),
             new Middleware('permission:delete_trip', only: ['destroy', 'bulkDestroy']),
         ];
@@ -72,7 +80,7 @@ class TripController extends Controller implements HasMiddleware
 
     public function create(): Response
     {
-        return Inertia::render('Store/Admin/Trips/Trips/Create', $this->formOptions());
+        return Inertia::render('Store/Admin/Trips/Trips/Create');
     }
 
     /**
@@ -119,7 +127,6 @@ class TripController extends Controller implements HasMiddleware
 
         return Inertia::render('Store/Admin/Trips/Trips/Edit', [
             'trip' => new TripFormResource($trip),
-            ...$this->formOptions(),
         ]);
     }
 
@@ -244,27 +251,40 @@ class TripController extends Controller implements HasMiddleware
     }
 
     /**
-     * The forms' checkpoint choices, as the Blade forms offered them: orders
-     * out for delivery (newest code first, labelled with the order's
-     * customer) and every store user who is not a representative.
-     *
-     * @return array{orders: list<array{id: int, code: string, customer: string|null}>, customers: list<array{id: int, name: string}>}
+     * The typeahead behind a delivery checkpoint's order (StoreSearchSelect):
+     * the orders out for delivery, by code or customer name, newest code first.
      */
-    private function formOptions(): array
+    public function orderOptions(SearchOptionsRequest $request): JsonResponse
     {
-        $orders = array_values(Order::query()->select(['id', 'code', 'by_rep', 'user_id', 'for_customer'])
-            ->with(['user:id,name', 'rep:id,name'])
-            ->where('delivery_status', 'on_delivery')
-            ->orderByDesc('code')->orderByDesc('id')->get()
-            ->map(fn (Order $order) => ['id' => $order->id, 'code' => (string) $order->code, 'customer' => $order->customer?->name])
-            ->all());
-        $customers = array_values(StoreUser::query()->select(['id', 'name'])
-            ->where('is_rep', false)
-            ->orderBy('name')->orderBy('id')->get()
-            ->map(fn (StoreUser $user) => ['id' => $user->id, 'name' => (string) $user->name])
-            ->all());
+        $term = $this->searchTerm($request);
+        $orders = Order::query()->select(['id', 'code', 'by_rep', 'user_id', 'for_customer', 'grand_total'])
+            ->with(['user:id,name', 'rep:id,name'])->where('delivery_status', 'on_delivery');
+        if ($term !== '') {
+            $pattern = $this->likePattern($term);
+            $orders->where(fn (Builder $match) => $match
+                ->whereRaw('`code` like ? escape ?', [$pattern, '\\'])
+                ->orWhereHas('user', fn (Builder $user) => $user->whereRaw('`name` like ? escape ?', [$pattern, '\\']))
+                ->orWhereHas('rep', fn (Builder $rep) => $rep->whereRaw('`name` like ? escape ?', [$pattern, '\\'])));
+        }
+        $this->orderByRelevance($orders, 'code', $term, 'desc');
 
-        return ['orders' => $orders, 'customers' => $customers];
+        return $this->optionsPage($orders, fn (Order $order): array => SearchOption::tripOrder($order));
+    }
+
+    /**
+     * The typeahead behind a customer checkpoint's customer (StoreSearchSelect):
+     * every store user who is not a representative.
+     */
+    public function customerOptions(SearchOptionsRequest $request): JsonResponse
+    {
+        $term = $this->searchTerm($request);
+        $customers = StoreUser::query()->select(['id', 'name', 'email', 'phone', 'AccSysID', 'member_serial', 'rep_discount_percentage'])->where('is_rep', false);
+        if ($term !== '') {
+            $this->whereWordsMatch($customers, ['name', 'email', 'phone', 'AccSysID', 'member_serial'], $term);
+        }
+        $this->orderByRelevance($customers, 'name', $term);
+
+        return $this->optionsPage($customers, fn (StoreUser $user): array => SearchOption::customer($user));
     }
 
     /**
@@ -327,7 +347,7 @@ class TripController extends Controller implements HasMiddleware
         return Inertia::render('Store/Admin/Trips/Trips/Index', [
             'listType' => $list->value,
             'trips' => $this->paginated(TripResource::collection(
-                $trips->orderByDesc('created_at')->orderByDesc('id')->paginate($perPage)->withQueryString()
+                $trips->tap(NewestFirst::apply(...))->paginate($perPage)->withQueryString()
             )),
             'filters' => ['per_page' => $perPage, 'search' => $search ?? '', 'status' => $statuses],
             'statuses' => array_column(TripStatus::cases(), 'value'),

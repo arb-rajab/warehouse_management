@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Store\Admin\FilterRepresentativePaymentsRequest;
 use App\Http\Resources\Store\RepresentativePaymentResource;
 use App\Models\RepresentativePayment;
+use App\Support\NewestFirst;
 use App\Support\StoreLocale;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -52,7 +53,7 @@ class RepresentativePaymentController extends Controller implements HasMiddlewar
         }
 
         return Inertia::render('Store/Admin/Representatives/Payments/Index', [
-            'payments' => $this->paginated(RepresentativePaymentResource::collection($payments->orderByDesc('created_at')->orderBy('id')->paginate($perPage)->withQueryString())),
+            'payments' => $this->paginated(RepresentativePaymentResource::collection($payments->tap(NewestFirst::apply(...))->paginate($perPage)->withQueryString())),
             'filters' => ['per_page' => $perPage, 'search' => $request->input('search', ''), 'accepted' => $request->boolean('accepted'), 'rejected' => $request->boolean('rejected'), 'pending' => $request->boolean('pending')],
         ]);
     }

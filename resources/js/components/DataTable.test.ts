@@ -272,14 +272,53 @@ describe('DataTable', () => {
         expect(table.classes()).not.toContain('w-full');
 
         const scrollContainer = table.element.parentElement;
-        expect(scrollContainer?.classList.contains('overflow-x-auto')).toBe(
-            true,
-        );
+        expect(scrollContainer?.classList.contains('overflow-auto')).toBe(true);
 
         const clippingWrapper = scrollContainer?.parentElement;
         expect(clippingWrapper?.classList.contains('overflow-hidden')).toBe(
             true,
         );
+    });
+
+    it('makes the clipping wrapper the containing block of the cells, so their absolutely positioned sr-only content never stretches the page', () => {
+        const wrapper = mountTable([{ id: 1, letter: 'A' }]);
+
+        const clippingWrapper =
+            wrapper.get('table').element.parentElement?.parentElement;
+        expect(clippingWrapper?.classList.contains('relative')).toBe(true);
+        expect(clippingWrapper?.classList.contains('overflow-hidden')).toBe(
+            true,
+        );
+    });
+
+    it('sizes the table to its content and keeps cells on one line, so a wide table scrolls sideways instead of growing tall', () => {
+        const wrapper = mountTable([{ id: 1, letter: 'A' }]);
+
+        const classes = wrapper.get('table').classes();
+        expect(classes).toContain('w-max');
+        expect(classes).toContain('whitespace-nowrap');
+        expect(classes).toContain('[&_td]:py-1.5');
+    });
+
+    it('keeps the empty-state message wrappable and roomy despite the nowrap/compact defaults', () => {
+        const wrapper = mountTable([]);
+
+        const cell = wrapper.get('tbody td');
+        expect(cell.classes()).toContain('whitespace-normal');
+        expect(cell.classes()).toContain('py-6!');
+    });
+
+    it('limits the scroller to a viewport-based height and sticks every header cell to its top edge', () => {
+        const wrapper = mountTable([{ id: 1, letter: 'A' }]);
+
+        const scroller = wrapper.get('[data-table-scroller]');
+        expect(scroller.classes()).toContain('max-h-[calc(100dvh-8rem)]');
+
+        for (const th of wrapper.findAll('thead th')) {
+            expect(th.classes()).toContain('sticky');
+            expect(th.classes()).toContain('top-0');
+            expect(th.classes()).toContain('bg-gray-50');
+        }
     });
 
     it('renders the popover outside the overflow-hidden table wrapper, so a short table cannot clip it', async () => {

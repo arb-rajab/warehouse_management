@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { loginAsStoreAdmin } from './support/auth';
 import { php } from './support/editor';
+import { pickSearchOption } from './support/searchSelect';
 import { seedStoreFixtures } from './support/storeFixtures';
 
 /** A pending trip due today on its own busy truck. */
@@ -112,12 +113,16 @@ test('the trip form loads free vehicles for its date, needs a checkpoint nativel
     await page
         .getByRole('button', { name: 'Add customer checkpoint', exact: true })
         .click();
-    const checkpointCustomer = page.getByRole('combobox', {
-        name: 'Customer required',
-        exact: true,
+    const checkpointCustomer = page.getByRole('button', {
+        name: /^Customer required/,
     });
-    await expect(checkpointCustomer).toHaveAttribute('required', '');
-    await checkpointCustomer.selectOption({ label: customer });
+    await expect(checkpointCustomer).toHaveAttribute('aria-required', 'true');
+    await pickSearchOption(
+        page,
+        checkpointCustomer,
+        customer,
+        new RegExp(customer),
+    );
     await page
         .getByLabel('Checkpoint notes', { exact: true })
         .fill('Ring twice');

@@ -20,7 +20,8 @@ defineProps<{
     <StoreProductReport
         numbered
         :title="t('store.reports.inHouseSalesTitle')"
-        :metric-label="t('store.reports.sales')"
+        metric-key="store.reports.sales"
+        list-id="reports.inHouseSales"
         :url="in_house_sale_report.url()"
         :rows="rows"
         :filters="filters"

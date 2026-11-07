@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { router } from '@inertiajs/vue3';
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import {
     exportAppTranslations,
     show,
@@ -13,10 +13,12 @@ import FieldError from '@/components/FieldError.vue';
 import FormField from '@/components/FormField.vue';
 import Pagination from '@/components/Pagination.vue';
 import ResourceFormPage from '@/components/ResourceFormPage.vue';
+import StoreColumnPicker from '@/components/StoreColumnPicker.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
 import { filterApplyButtonClass } from '@/lib/filters';
 import { t } from '@/lib/i18n';
 import { useStoreAccess } from '@/lib/storeAccess';
+import { useTableColumns } from '@/lib/useTableColumns';
 import type { Paginated } from '@/types/admin';
 import type { AdminLanguage, StoreTranslation } from '@/types/store';
 const props = defineProps<{
@@ -45,6 +47,18 @@ function copy(): void {
                 ].source;
         });
 }
+const columns = useTableColumns({
+    listId: 'languages.translations',
+    columns: [
+        { key: 'key', label: 'store.languages.key', required: true },
+        { key: 'source', label: 'store.languages.source' },
+        { key: 'value', label: 'store.languages.value' },
+    ],
+});
+const { shown, visibleColumns } = columns;
+const tableColumns = computed(() => [
+    ...visibleColumns.value.map((column) => t(column.label)),
+]);
 </script>
 <template>
     <ResourceFormPage
@@ -112,19 +126,18 @@ function copy(): void {
             >
         </div>
         <div ref="fields">
+            <StoreColumnPicker :state="columns" />
             <DataTable
-                :columns="[
-                    t('store.languages.key'),
-                    t('store.languages.source'),
-                    t('store.languages.value'),
-                ]"
+                :columns="tableColumns"
                 :rows="translations.data"
                 :empty-message="t('store.languages.noTranslations')"
             >
                 <template #row="{ row: translation }">
                     <td class="px-4 py-2">{{ translation.key }}</td>
-                    <td class="px-4 py-2">{{ translation.source }}</td>
-                    <td class="px-4 py-2">
+                    <td v-if="shown.source" class="px-4 py-2">
+                        {{ translation.source }}
+                    </td>
+                    <td v-if="shown.value" class="px-4 py-2">
                         <input
                             type="hidden"
                             :name="`translations[${translations.data.indexOf(translation)}][key]`"

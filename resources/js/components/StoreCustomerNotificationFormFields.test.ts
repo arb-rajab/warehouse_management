@@ -1,28 +1,23 @@
 import { mount } from '@vue/test-utils';
-import { describe, expect, it } from 'vitest';
-import FieldError from '@/components/FieldError.vue';
+import { describe, expect, it, vi } from 'vitest';
+import { customers } from '@/actions/App/Http/Controllers/Store/Admin/CustomerNotificationController';
 import FormField from '@/components/FormField.vue';
-import RequiredMark from '@/components/RequiredMark.vue';
+import StoreSearchSelect from '@/components/StoreSearchSelect.vue';
 import { t } from '@/lib/i18n';
-import { notificationCustomer } from '@/testing/factories';
 import StoreCustomerNotificationFormFields from './StoreCustomerNotificationFormFields.vue';
 
+const { getMock } = vi.hoisted(() => ({ getMock: vi.fn() }));
+vi.mock('@inertiajs/vue3', () => ({
+    useHttp: () => ({ get: getMock }),
+}));
+
 describe('StoreCustomerNotificationFormFields', () => {
-    it('renders all labels, narrow customer options and native validation constraints', () => {
-        const customers = [
-            notificationCustomer(),
-            notificationCustomer({ id: 22, name: 'Other', account_id: null }),
-        ];
+    it('renders all labels, a required customer search select and native validation constraints', () => {
         const wrapper = mount(StoreCustomerNotificationFormFields, {
-            props: { customers, errors: {} },
+            props: { errors: {} },
         });
 
-        for (const key of [
-            'title',
-            'body',
-            'customer',
-            'customerPlaceholder',
-        ]) {
+        for (const key of ['title', 'body', 'customer']) {
             expect(wrapper.text()).toContain(
                 t(`store.notifications.fields.${key}`),
             );
@@ -38,58 +33,63 @@ describe('StoreCustomerNotificationFormFields', () => {
             maxlength: '255',
         });
         expect(wrapper.get('#body').attributes('required')).toBeDefined();
-        expect(wrapper.get('#user_id').attributes()).toMatchObject({
-            required: '',
+        expect(wrapper.getComponent(StoreSearchSelect).props()).toMatchObject({
+            id: 'user_id',
             name: 'user_id',
+            required: true,
+            endpoint: customers,
+            placeholder: t('store.notifications.fields.customerPlaceholder'),
         });
+        expect(wrapper.get('#user_id').attributes('aria-required')).toBe(
+            'true',
+        );
         expect(
-            wrapper.findAll('option').map((option) => option.text()),
-        ).toEqual([
-            t('store.notifications.fields.customerPlaceholder'),
-            'Customer 100',
-            'Other',
-        ]);
+            wrapper.get('input[type="hidden"][name="user_id"]').element,
+        ).toHaveProperty('value', '');
+        // The customers are searched on demand, never listed in the page.
+        expect(getMock).not.toHaveBeenCalled();
     });
 
-    it('passes each server error and escapes customer names', () => {
+    it('posts the picked customer id and shows its label', async () => {
+        const wrapper = mount(StoreCustomerNotificationFormFields, {
+            props: { errors: {} },
+        });
+
+        wrapper.getComponent(StoreSearchSelect).vm.$emit('update:modelValue', {
+            id: 21,
+            label: '<b>Customer</b>',
+            description: '0612345678 · customer@example.test',
+            icon: 'user',
+        });
+        await wrapper.vm.$nextTick();
+
+        expect(
+            wrapper
+                .get('input[type="hidden"][name="user_id"]')
+                .attributes('value'),
+        ).toBe('21');
+        expect(wrapper.get('#user_id').text()).toContain('<b>Customer</b>');
+        expect(wrapper.find('b').exists()).toBe(false);
+    });
+
+    it('passes each server error to its field', () => {
         const errors = {
             title: 'Title invalid',
             body: 'Body invalid',
             user_id: 'Recipient invalid',
         };
         const wrapper = mount(StoreCustomerNotificationFormFields, {
-            props: {
-                customers: [notificationCustomer({ name: '<b>Customer</b>' })],
-                errors,
-            },
+            props: { errors },
         });
+
         expect(
             wrapper
                 .findAllComponents(FormField)
                 .map((field) => field.props('error')),
         ).toEqual(['Title invalid', 'Body invalid']);
-        expect(
-            wrapper
-                .findAllComponents(FieldError)
-                .map((field) => field.props('message')),
-        ).toContain('Recipient invalid');
-        expect(wrapper.find('b').exists()).toBe(false);
-        expect(wrapper.text()).toContain('<b>Customer</b>');
+        expect(wrapper.getComponent(StoreSearchSelect).props('error')).toBe(
+            'Recipient invalid',
+        );
+        expect(wrapper.text()).toContain('Recipient invalid');
     });
-});
-
-it('marks every required notification field', () => {
-    const wrapper = mount(StoreCustomerNotificationFormFields, {
-        props: { customers: [notificationCustomer()], errors: {} },
-    });
-
-    for (const id of ['title', 'body', 'user_id']) {
-        expect(wrapper.get(`#${id}`).attributes('required')).toBeDefined();
-        expect(
-            wrapper
-                .get(`label[for="${id}"]`)
-                .findComponent(RequiredMark)
-                .exists(),
-        ).toBe(true);
-    }
 });

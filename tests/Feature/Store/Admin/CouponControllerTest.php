@@ -67,7 +67,9 @@ test('coupon create and edit render narrow selected translated product options',
             ->where('discount', 50)->where('discount_type', 'amount')
             ->where('start_date', date('Y-m-d', $coupon->start_date))->where('end_date', date('Y-m-d', $coupon->end_date))
             ->where('product_ids', [$product->id])->where('min_buy', null)->where('max_discount', null))
-        ->where('selectedProducts', [['id' => $product->id, 'name' => 'Translated product']]));
+        ->has('selectedProducts', 1, fn (Assert $option) => $option
+            ->where('id', $product->id)->where('label', 'Translated product')->where('icon', 'package')
+            ->where('description', fn ($description) => str_contains($description, '#'.$product->id))->etc()));
 });
 
 test('editing retains selected unpublished products and validation refuses them without changing targeting', function () {
@@ -75,7 +77,7 @@ test('editing retains selected unpublished products and validation refuses them 
     $product = createStoreProduct(['user_id' => $this->couponOwner->id, 'added_by' => 'admin', 'published' => 0]);
     $coupon = couponFor($this->couponOwner, ['type' => 'product_base', 'details' => json_encode([['product_id' => $product->id]])]);
     $this->get(route('coupon.edit', $coupon))->assertOk()->assertInertia(fn (Assert $page) => $page
-        ->where('selectedProducts', [['id' => $product->id, 'name' => $product->name]])
+        ->where('selectedProducts.0.id', $product->id)->where('selectedProducts.0.label', $product->name)
         ->where('coupon.product_ids', [$product->id]));
     $this->put(route('coupon.update', $coupon), storeCouponForm(['type' => 'product_base', 'product_ids' => [$product->id]]))
         ->assertSessionHasErrors('product_ids.0');
@@ -88,14 +90,15 @@ test('coupon product search is translated bounded and scoped to eligible shop pr
     DB::table('product_translations')->insert(['product_id' => $product->id, 'lang' => 'en', 'name' => 'Translated target']);
     createStoreProduct(['user_id' => $this->couponOwner->id, 'name' => 'Translated target', 'added_by' => 'admin', 'published' => 0]);
     createStoreProduct(['user_id' => createStoreUser('seller')->id, 'name' => 'Translated target', 'published' => 1]);
-    $this->getJson(route('coupon.product-options', ['q' => 'Translated']))->assertOk()->assertExactJson([
-        ['id' => $product->id, 'name' => 'Translated target'],
-    ]);
+    $found = $this->getJson(route('coupon.product-options', ['q' => 'Translated']))->assertOk();
+    expect($found->json('data'))->toHaveCount(1)->and($found->json('data.0'))->toMatchArray(['id' => $product->id, 'label' => 'Translated target', 'icon' => 'package'])
+        ->and($found->json('data.0.extra.price'))->toEqual((float) $product->unit_price);
     foreach (range(1, 32) as $number) {
         createStoreProduct(['user_id' => $this->couponOwner->id, 'added_by' => 'admin', 'published' => 1]);
     }
-    $this->getJson(route('coupon.product-options'))->assertOk()->assertJsonCount(30);
-    $this->getJson(route('coupon.product-options', ['q' => str_repeat('x', 256)]))->assertUnprocessable()->assertJsonValidationErrors('q');
+    $this->getJson(route('coupon.product-options'))->assertOk()->assertJsonCount(20, 'data')->assertJsonPath('meta.total', 33);
+    $this->getJson(route('coupon.product-options', ['page' => 2]))->assertOk()->assertJsonCount(13, 'data');
+    $this->getJson(route('coupon.product-options', ['q' => str_repeat('x', 101)]))->assertUnprocessable()->assertJsonValidationErrors('q');
 });
 
 test('storing coupon derives dates details and ownership and updating changes targeting', function () {

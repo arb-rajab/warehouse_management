@@ -16,6 +16,10 @@ import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
 import { t } from '@/lib/i18n';
 import { paginated, storeCarrier, storeSharedProps } from '@/testing/factories';
 import { defaultAuthProps, resetMocks } from '@/testing/inertiaPageMocks';
+import {
+    expectColumnCanBeHidden,
+    expectColumnLocked,
+} from '@/testing/tableColumns';
 import Index from './Index.vue';
 const {
     usePageMock,
@@ -145,5 +149,16 @@ describe('Store Carriers Index', () => {
         expect(mountPage().getComponent(AddResourceLink).props('href')).toEqual(
             create(),
         );
+    });
+
+    it('lets staff hide an optional column from the header and every row, and keeps the identifier', async () => {
+        window.localStorage.clear();
+        const wrapper = mountPage();
+        await expectColumnCanBeHidden(wrapper, 'setup.carriers', {
+            key: 'transitTime',
+            label: t('store.carriers.transitTime'),
+        });
+        expectColumnLocked(wrapper, t('store.carriers.name'));
+        window.localStorage.clear();
     });
 });

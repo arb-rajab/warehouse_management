@@ -7,6 +7,7 @@ import {
     destroy,
     create,
 } from '@/actions/App/Http/Controllers/Store/Admin/PickupPointController';
+import { edit as staffEdit } from '@/actions/App/Http/Controllers/Store/Admin/StaffController';
 import AddResourceLink from '@/components/AddResourceLink.vue';
 import Pagination from '@/components/Pagination.vue';
 import StoreStatusSwitch from '@/components/StoreStatusSwitch.vue';
@@ -19,6 +20,10 @@ import {
     storeSharedProps,
 } from '@/testing/factories';
 import { defaultAuthProps, resetMocks } from '@/testing/inertiaPageMocks';
+import {
+    expectColumnCanBeHidden,
+    expectColumnLocked,
+} from '@/testing/tableColumns';
 import Index from './Index.vue';
 const {
     usePageMock,
@@ -143,5 +148,31 @@ describe('Store PickupPoints Index', () => {
         expect(mountPage().getComponent(AddResourceLink).props('href')).toEqual(
             create(),
         );
+    });
+
+    it('links the manager to their staff edit page only with edit_staff', () => {
+        const cell = (wrapper: ReturnType<typeof mountPage>) =>
+            wrapper.get('tbody tr').findAll('td')[3];
+
+        const allowed = mountPage(['pickup_point_setup', 'edit_staff']);
+        expect(cell(allowed).get('a').attributes('href')).toBe(
+            staffEdit(16).url,
+        );
+        expect(cell(allowed).text()).toBe('Manager');
+
+        const denied = mountPage(['pickup_point_setup']);
+        expect(cell(denied).find('a').exists()).toBe(false);
+        expect(cell(denied).text()).toBe('Manager');
+    });
+
+    it('lets staff hide an optional column from the header and every row, and keeps the identifier', async () => {
+        window.localStorage.clear();
+        const wrapper = mountPage();
+        await expectColumnCanBeHidden(wrapper, 'setup.pickupPoints', {
+            key: 'manager',
+            label: t('store.pickupPoints.manager'),
+        });
+        expectColumnLocked(wrapper, t('store.reference.name'));
+        window.localStorage.clear();
     });
 });

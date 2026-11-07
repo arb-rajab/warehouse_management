@@ -16,6 +16,10 @@ import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
 import { i18n, t } from '@/lib/i18n';
 import { paginated, storeDriver, storeSharedProps } from '@/testing/factories';
 import { defaultAuthProps, resetMocks } from '@/testing/inertiaPageMocks';
+import {
+    expectColumnCanBeHidden,
+    expectColumnLocked,
+} from '@/testing/tableColumns';
 import type { StoreDriver } from '@/types/store';
 import Index from './Index.vue';
 
@@ -188,5 +192,16 @@ describe('Store driver Index', () => {
         expect(wrapper.get('tbody').text()).toContain(
             '<script>alert(1)</script>',
         );
+    });
+
+    it('lets staff hide an optional column from the header and every row, and keeps the identifier', async () => {
+        window.localStorage.clear();
+        const wrapper = mountPage([storeDriver()]);
+        await expectColumnCanBeHidden(wrapper, 'trips.drivers', {
+            key: 'phone',
+            label: t('store.drivers.index.phone'),
+        });
+        expectColumnLocked(wrapper, t('store.drivers.index.name'));
+        window.localStorage.clear();
     });
 });

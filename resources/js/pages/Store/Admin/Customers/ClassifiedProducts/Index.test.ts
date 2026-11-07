@@ -20,6 +20,10 @@ import {
     storeSharedProps,
 } from '@/testing/factories';
 import { defaultAuthProps } from '@/testing/inertiaPageMocks';
+import {
+    expectColumnCanBeHidden,
+    expectColumnLocked,
+} from '@/testing/tableColumns';
 import type { StoreClassifiedProduct } from '@/types/store';
 import Index from './Index.vue';
 
@@ -297,4 +301,15 @@ describe('classified products', () => {
             );
         },
     );
+
+    it('lets staff hide an optional column from the header and every row, and keeps the identifier', async () => {
+        window.localStorage.clear();
+        const wrapper = render();
+        await expectColumnCanBeHidden(wrapper, 'customers.classifiedProducts', {
+            key: 'image',
+            label: t('store.classifiedProducts.image'),
+        });
+        expectColumnLocked(wrapper, t('store.classifiedProducts.name'));
+        window.localStorage.clear();
+    });
 });

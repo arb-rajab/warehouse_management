@@ -8,6 +8,7 @@ use App\Http\Requests\Store\Admin\StoreColorRequest;
 use App\Http\Requests\Store\Admin\UpdateColorRequest;
 use App\Http\Resources\Store\ColorResource;
 use App\Models\Color;
+use App\Support\NewestFirst;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -37,7 +38,7 @@ class ColorController extends Controller implements HasMiddleware
             'colors' => $this->paginated(ColorResource::collection(
                 Color::query()->select(['id', 'name', 'code'])
                     ->when($search !== '', fn ($query) => $query->where('name', 'like', '%'.$search.'%'))
-                    ->orderByDesc('id')->paginate($perPage)->withQueryString()
+                    ->tap(NewestFirst::apply(...))->paginate($perPage)->withQueryString()
             )),
             'filters' => ['search' => $search, 'per_page' => $perPage],
         ]);

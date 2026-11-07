@@ -1,15 +1,16 @@
 <script setup lang="ts">
-import { useHttp } from '@inertiajs/vue3';
-import { ref, onMounted } from 'vue';
+import { ref } from 'vue';
 import {
-    states as listStates,
-    cities as listCities,
+    states,
+    cities,
 } from '@/actions/App/Http/Controllers/Store/Admin/AddressController';
 import FieldError from '@/components/FieldError.vue';
 import FormField from '@/components/FormField.vue';
 import RequiredMark from '@/components/RequiredMark.vue';
+import StoreSearchSelect from '@/components/StoreSearchSelect.vue';
 import { plainFieldInputClass, fieldLabelClass } from '@/lib/filters';
 import { t } from '@/lib/i18n';
+import type { SearchOption } from '@/types/searchSelect';
 import type { AddressOption, CustomerAddress } from '@/types/storeCustomers';
 const props = defineProps<{
     address?: CustomerAddress;
@@ -17,52 +18,21 @@ const props = defineProps<{
     errors: Record<string, string>;
 }>();
 const country = ref(props.address?.country_id ?? '');
-const state = ref(props.address?.state_id ?? '');
-const city = ref(props.address?.city_id ?? '');
-const stateOptions = ref<AddressOption[]>([]);
-const cityOptions = ref<AddressOption[]>([]);
-const stateHttp = useHttp<Record<string, never>, AddressOption[]>({});
-const cityHttp = useHttp<Record<string, never>, AddressOption[]>({});
-function loadStates(reset = true): void {
-    if (reset) {
-        state.value = '';
-        city.value = '';
-        cityOptions.value = [];
-    }
-
-    if (!country.value) {
-        stateOptions.value = [];
-
-        return;
-    }
-
-    stateHttp.get(listStates({ query: { country_id: country.value } }).url, {
-        onSuccess: (response) => {
-            stateOptions.value = response;
-        },
-    });
+const state = ref<SearchOption | null>(props.address?.state_option ?? null);
+const city = ref<SearchOption | null>(props.address?.city_option ?? null);
+/** A new country drops the state and city chosen under the old one. */
+function changeCountry(): void {
+    state.value = null;
+    city.value = null;
 }
-function loadCities(reset = true): void {
-    if (reset) {
-        city.value = '';
+/** A new state drops the city chosen under the old one. */
+function pickState(option: SearchOption | null): void {
+    if (String(option?.id ?? '') !== String(state.value?.id ?? '')) {
+        city.value = null;
     }
 
-    if (!state.value) {
-        cityOptions.value = [];
-
-        return;
-    }
-
-    cityHttp.get(listCities({ query: { state_id: state.value } }).url, {
-        onSuccess: (response) => {
-            cityOptions.value = response;
-        },
-    });
+    state.value = option;
 }
-onMounted(() => {
-    loadStates(false);
-    loadCities(false);
-});
 </script>
 <template>
     <div class="grid gap-3 md:grid-cols-2">
@@ -92,7 +62,7 @@ onMounted(() => {
                 name="country_id"
                 required
                 :class="plainFieldInputClass"
-                @change="loadStates()"
+                @change="changeCountry"
             >
                 <option value="">
                     {{ t('store.customers.fields.selectCountry') }}
@@ -106,49 +76,43 @@ onMounted(() => {
                 </option></select
             ><FieldError :message="errors.country_id" />
         </div>
-        <div>
-            <label for="state_id" :class="fieldLabelClass">{{
-                t('store.customers.fields.state')
-            }}</label
-            ><select
-                id="state_id"
-                v-model="state"
-                name="state_id"
-                :class="plainFieldInputClass"
-                :disabled="stateHttp.processing"
-                @change="loadCities()"
-            >
-                <option value="">—</option>
-                <option
-                    v-for="option in stateOptions"
-                    :key="option.id"
-                    :value="option.id"
-                >
-                    {{ option.name }}
-                </option></select
-            ><FieldError :message="errors.state_id" />
-        </div>
-        <div>
-            <label for="city_id" :class="fieldLabelClass">{{
-                t('store.customers.fields.city')
-            }}</label
-            ><select
-                id="city_id"
-                v-model="city"
-                name="city_id"
-                :class="plainFieldInputClass"
-                :disabled="cityHttp.processing"
-            >
-                <option value="">—</option>
-                <option
-                    v-for="option in cityOptions"
-                    :key="option.id"
-                    :value="option.id"
-                >
-                    {{ option.name }}
-                </option></select
-            ><FieldError :message="errors.city_id" />
-        </div>
+        <StoreSearchSelect
+            id="state_id"
+            name="state_id"
+            :model-value="state"
+            :label="t('store.customers.fields.state')"
+            :endpoint="states"
+            :params="{ country_id: country }"
+            :disabled="!country"
+            :placeholder="
+                t(
+                    country
+                        ? 'store.customers.fields.selectState'
+                        : 'store.customers.fields.selectCountryFirst',
+                )
+            "
+            :search-placeholder="t('store.customers.fields.searchStates')"
+            :error="errors.state_id"
+            @update:model-value="pickState"
+        />
+        <StoreSearchSelect
+            id="city_id"
+            v-model="city"
+            name="city_id"
+            :label="t('store.customers.fields.city')"
+            :endpoint="cities"
+            :params="{ state_id: state?.id }"
+            :disabled="!state"
+            :placeholder="
+                t(
+                    state
+                        ? 'store.customers.fields.selectCity'
+                        : 'store.customers.fields.selectStateFirst',
+                )
+            "
+            :search-placeholder="t('store.customers.fields.searchCities')"
+            :error="errors.city_id"
+        />
         <FormField
             id="postal_code"
             :label="t('store.customers.fields.postal_code')"

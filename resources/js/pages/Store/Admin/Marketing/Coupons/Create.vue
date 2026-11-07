@@ -7,9 +7,9 @@ import ResourceFormPage from '@/components/ResourceFormPage.vue';
 import StoreCouponFormFields from '@/components/StoreCouponFormFields.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
 import { t } from '@/lib/i18n';
-import type { StoreCouponProductOption } from '@/types/store';
+import type { StoreCampaignProduct } from '@/types/store';
 
-defineProps<{ selectedProducts: StoreCouponProductOption[] }>();
+defineProps<{ selectedProducts: StoreCampaignProduct[] }>();
 </script>
 
 <template>
