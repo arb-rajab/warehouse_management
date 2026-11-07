@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Store\Admin;
 
 use App\Http\Controllers\Concerns\BuildsQrLabels;
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Store\Admin\Concerns\FlashesSuccess;
 use App\Http\Requests\Store\Admin\FilterTruckPhotosRequest;
 use App\Http\Requests\Store\Admin\FilterTrucksRequest;
 use App\Http\Requests\Store\Admin\StoreTruckRequest;
@@ -27,6 +28,7 @@ use Inertia\Response;
 class TruckController extends Controller implements HasMiddleware
 {
     use BuildsQrLabels;
+    use FlashesSuccess;
 
     private const array COLUMNS = ['id', 'name', 'model', 'max_pallets_number', 'description', 'license_plate', 'photos'];
 
@@ -79,6 +81,7 @@ class TruckController extends Controller implements HasMiddleware
         $data = $request->validated();
         $data['photos'] = implode(',', $data['photos'] ?? []);
         Truck::query()->create($data);
+        $this->flashSuccess('truck_has_been_created_successfully');
 
         return redirect()->route('trucks.index');
     }
@@ -88,6 +91,7 @@ class TruckController extends Controller implements HasMiddleware
         $data = $request->validated();
         $data['photos'] = implode(',', $data['photos'] ?? []);
         $truck->update($data);
+        $this->flashSuccess('truck_has_been_updated_successfully');
 
         return redirect()->route('trucks.index');
     }

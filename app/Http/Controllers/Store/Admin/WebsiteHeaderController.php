@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Store\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Store\Admin\Concerns\FlashesSuccess;
 use App\Http\Requests\Store\Admin\UpdateWebsiteHeaderRequest;
 use App\Services\Store\WebsiteSettings;
 use Illuminate\Http\RedirectResponse;
@@ -13,6 +14,8 @@ use Inertia\Response;
 
 class WebsiteHeaderController extends Controller implements HasMiddleware
 {
+    use FlashesSuccess;
+
     public const SWITCHES = ['show_currency_switcher', 'header_stikcy'];
 
     public const ARRAYS = ['header_menu_labels', 'header_menu_links'];
@@ -33,6 +36,7 @@ class WebsiteHeaderController extends Controller implements HasMiddleware
     public function update(UpdateWebsiteHeaderRequest $request, WebsiteSettings $settings): RedirectResponse
     {
         $settings->write($request->validated('settings'), self::SWITCHES);
+        $this->flashSuccess('website_header_has_been_updated_successfully');
 
         return redirect()->route('website.header');
     }
