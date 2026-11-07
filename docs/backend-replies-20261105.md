@@ -4,10 +4,14 @@ Replies to **BR-20261105-A**. Every point is quoted by its number. Paths are und
 "Done" means changed and covered by tests in `tests/Feature/StoreApiBackendRequestsTest.php`
 (A.2 and A.3 also by `tests/Feature/Models/ProductTest.php` and `BrandTest.php`).
 
-**Not deployed anywhere yet.** These changes are on a branch that has to be merged into `develop`, and later
-promoted to `staging` and `main`. **I could not run the PHP tests in the environment I wrote this in** (it has PHP
-8.3 and the app needs 8.5, and Pest cannot be installed there). The code and tests were checked by reading and by
-`php -l`; CI is the first real run. Please re-test on dev after the deploy, as you did for BR-20261104-A.
+**On dev since 2026-11-07 06:00 UTC** (`develop` at `a299667`, PR #549). The PHP, JavaScript and browser suites
+passed in the attested run before the merge, and the new tests are part of them. Staging and production do not have
+these changes yet; they arrive with the next promotion. One thing changed on the way: the `with_cart` answer is now
+built as a new response instead of editing the one it was given, because the API reference export failed on the
+edit. The JSON, the status and the `X-Prices-Hidden` header are the same as described below.
+
+**I did not re-run your steps on dev**, because I cannot reach it. A.2, A.3 and A.5 were reproduced in tests. Please
+re-test them on dev, as you did for BR-20261104-A.
 
 Every change is additive: a new field, a new optional parameter, or a new header. Nothing the current app versions
 read was changed or removed. The one exception to "nothing changes" is in A.3: a brand row has a new field, so a test
@@ -30,8 +34,8 @@ deploy workflow's history, not from a request. The key was added in `5f45f20` (2
 
 | Branch (server) | Has `5f45f20` | Last deploy |
 | :--- | :-: | :--- |
-| `develop` (dev) | yes | 2026-11-07 03:58 UTC, success |
-| `staging` | yes | 2026-11-07 05:03 UTC, success |
+| `develop` (dev) | yes | 2026-11-07 06:00 UTC, success (PR #549) |
+| `staging` | yes | 2026-11-07 05:03 UTC, success (it has had the key since 2026-11-04, but not A.2 to A.5) |
 | `main` (production) | **no** | 2026-10-27 08:27 UTC, success (PR #508) |
 
 If your "old server" is production, **it does not have the fix, so keep "send again" off there.** Production also
