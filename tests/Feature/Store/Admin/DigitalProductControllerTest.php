@@ -362,12 +362,14 @@ test('the Inertia create and edit forms keep their routes, gates and redirects b
     $this->get(route('digitalproducts.create'))->assertOk()->assertInertia(fn (Assert $page) => $page->component('Store/Admin/Product/DigitalProducts/Create'));
     $this->get(route('digitalproducts.edit', ['product' => $this->product->id, 'lang' => 'en']))->assertOk()->assertInertia(fn (Assert $page) => $page->component('Store/Admin/Product/DigitalProducts/Edit'));
     $this->get(route('digitalproducts.create'), inertiaHeaders())->assertOk()->assertHeader('X-Inertia', 'true');
-    $this->post(route('digitalproducts.store'), ['name' => 'New guide', ...$form])->assertSessionHasNoErrors()->assertRedirect(route('digitalproducts.index'));
+    $this->post(route('digitalproducts.store'), ['name' => 'New guide', ...$form])->assertSessionHasNoErrors()->assertRedirect(route('digitalproducts.index'))
+        ->assertInertiaFlash('success', 'Digital product has been created successfully');
     $new = Product::query()->where('name', 'New guide')->firstOrFail();
     expect($new->getAttribute('digital'))->toBe(1)->and($new->getAttribute('added_by'))->toBe('admin');
     $this->assertDatabaseHas('product_translations', ['product_id' => $new->id, 'lang' => 'en', 'name' => 'New guide']);
     $this->patch(route('digitalproducts.update', $new->id), ['name' => 'Renamed guide', 'lang' => 'en', 'slug' => 'Renamed-Guide', ...$form])
-        ->assertSessionHasNoErrors()->assertRedirect(route('digitalproducts.edit', ['product' => $new->id, 'lang' => 'en']));
+        ->assertSessionHasNoErrors()->assertRedirect(route('digitalproducts.edit', ['product' => $new->id, 'lang' => 'en']))
+        ->assertInertiaFlash('success', 'Digital product has been updated successfully');
     expect($new->fresh()->name)->toBe('Renamed guide')->and($new->fresh()->slug)->toBe('renamed-guide');
     actingAsStoreUser(createStoreStaff('show_digital_products'));
     $this->get(route('digitalproducts.create'))->assertForbidden();

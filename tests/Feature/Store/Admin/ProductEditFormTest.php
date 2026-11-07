@@ -321,7 +321,8 @@ test('saving the unchanged form keeps every stock row, its id and its values, an
     Artisan::shouldReceive('call')->with('cache:clear')->once()->andReturn(0);
 
     $this->post(route('products.update', $this->product), productEditForm())
-        ->assertSessionHasNoErrors()->assertRedirect(route('products.admin.edit', ['product' => $this->product->id, 'lang' => 'en']));
+        ->assertSessionHasNoErrors()->assertRedirect(route('products.admin.edit', ['product' => $this->product->id, 'lang' => 'en']))
+        ->assertInertiaFlash('success', 'Product has been updated successfully');
 
     expect($committed)->toBe([true])
         ->and(productEditStocks($this->product->id))->toEqual($stocks)

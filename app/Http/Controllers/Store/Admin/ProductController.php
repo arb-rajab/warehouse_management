@@ -189,13 +189,15 @@ class ProductController extends Controller implements HasMiddleware
      * Creates the product, its stock rows, taxes, flash deal entry,
      * default-language translation, types and store barcodes in one
      * transaction, then clears the compiled views and the cache as the
-     * legacy form did, once the write has committed.
+     * legacy form did, once the write has committed. The list shows the
+     * flashed success message in the layout's SuccessBanner.
      */
     public function store(StoreProductRequest $request, InHouseProductWriter $writer): RedirectResponse
     {
         $data = $request->validated();
         DB::transaction(fn () => $writer->create($data, $request->variantNames(), $request->variantColorCodes(), StoreProductRequest::cashPaymentEnabled()));
         $this->clearStorefrontCaches();
+        Inertia::flash('success', __('store_admin.product_has_been_created_successfully'));
 
         return redirect()->route('products.admin');
     }
@@ -240,7 +242,8 @@ class ProductController extends Controller implements HasMiddleware
      * edited language's translation, types and store barcodes in one
      * transaction (InHouseProductWriter::update()), then clears the compiled
      * views and the cache as the legacy form did, once the write has
-     * committed, and returns to the edit form in the same language.
+     * committed, and returns to the edit form in the same language with a
+     * flashed success message (the layout's SuccessBanner).
      */
     public function update(UpdateProductRequest $request, Product $product, InHouseProductWriter $writer): RedirectResponse
     {
@@ -254,6 +257,7 @@ class ProductController extends Controller implements HasMiddleware
             UpdateProductRequest::productWiseShippingEnabled(),
         ));
         $this->clearStorefrontCaches();
+        Inertia::flash('success', __('store_admin.product_has_been_updated_successfully'));
 
         return redirect()->route($product->getAttribute('added_by') === 'seller' ? 'products.seller.edit' : 'products.admin.edit', ['product' => $product->id, 'lang' => $data['lang']]);
     }

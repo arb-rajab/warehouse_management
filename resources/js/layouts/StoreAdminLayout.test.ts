@@ -18,6 +18,7 @@ import LanguageSwitcher from '@/components/LanguageSwitcher.vue';
 import LogoutLink from '@/components/LogoutLink.vue';
 import SkipToContentLink from '@/components/SkipToContentLink.vue';
 import StoreAdminNavLink from '@/components/StoreAdminNavLink.vue';
+import SuccessBanner from '@/components/SuccessBanner.vue';
 import { t } from '@/lib/i18n';
 import { storeSharedProps } from '@/testing/factories';
 import { defaultAuthProps, resetMocks } from '@/testing/inertiaPageMocks';
@@ -46,10 +47,15 @@ const staffManager = storeSharedProps({
     settings: { Staffs_section: true },
 });
 
-function mountLayout(url: string, store: StoreSharedProps = staffManager) {
+function mountLayout(
+    url: string,
+    store: StoreSharedProps = staffManager,
+    flash: { success?: string } = {},
+) {
     usePageMock.mockReturnValue({
         url,
         props: defaultAuthProps({ store }),
+        flash,
     });
 
     return mount(StoreAdminLayout, {
@@ -417,6 +423,25 @@ describe('StoreAdminLayout', () => {
 
         expect(wrapper.findComponent(SkipToContentLink).exists()).toBe(true);
         expect(wrapper.get('main#main').text()).toContain('Page content');
+    });
+
+    it('shows a flashed success message at the top of the page content', () => {
+        const wrapper = mountLayout(staffIndex.url(), staffManager, {
+            success: 'Product has been updated successfully',
+        });
+
+        const banner = wrapper.getComponent(SuccessBanner);
+        expect(banner.attributes('role')).toBe('status');
+        expect(banner.text()).toBe('Product has been updated successfully');
+        expect(wrapper.get('main#main > div').element.firstElementChild).toBe(
+            banner.element,
+        );
+    });
+
+    it('shows no success banner without a flashed message', () => {
+        const wrapper = mountLayout(staffIndex.url());
+
+        expect(wrapper.find('main [role="status"]').exists()).toBe(false);
     });
 
     it('highlights nothing on a page that is not in the menu', () => {

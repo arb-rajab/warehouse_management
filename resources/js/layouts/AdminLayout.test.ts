@@ -12,6 +12,7 @@ import {
 import { edit as settingsEdit } from '@/actions/App/Http/Controllers/Admin/SettingController';
 import { index as usersIndex } from '@/actions/App/Http/Controllers/Admin/UserController';
 import { index as warehouseMapIndex } from '@/actions/App/Http/Controllers/Admin/WarehouseMapController';
+import SuccessBanner from '@/components/SuccessBanner.vue';
 import { t } from '@/lib/i18n';
 import { defaultAuthProps, resetMocks } from '@/testing/inertiaPageMocks';
 import AdminLayout from './AdminLayout.vue';
@@ -31,10 +32,15 @@ vi.mock('@inertiajs/vue3', async () => {
     };
 });
 
-function mountLayout(url: string, props: { fullBleed?: boolean } = {}) {
+function mountLayout(
+    url: string,
+    props: { fullBleed?: boolean } = {},
+    flash: { success?: string } = {},
+) {
     usePageMock.mockReturnValue({
         url,
         props: defaultAuthProps(),
+        flash,
     });
 
     return mount(AdminLayout, {
@@ -288,6 +294,38 @@ describe('AdminLayout', () => {
         const wrapper = mountLayout(rowsIndex.url());
 
         expect(wrapper.get('main').text()).toContain('Page content');
+    });
+
+    it('shows a flashed success message at the top of the page content', () => {
+        const wrapper = mountLayout(
+            rowsIndex.url(),
+            {},
+            { success: 'Row saved' },
+        );
+
+        const banner = wrapper.getComponent(SuccessBanner);
+        expect(banner.attributes('role')).toBe('status');
+        expect(banner.text()).toBe('Row saved');
+        expect(wrapper.get('main').element.firstElementChild).toBe(
+            banner.element,
+        );
+    });
+
+    it('shows no success banner without a flashed message', () => {
+        const wrapper = mountLayout(rowsIndex.url());
+
+        expect(wrapper.find('[role="status"]').exists()).toBe(false);
+    });
+
+    it('leaves the success banner out of a full-bleed page', () => {
+        const wrapper = mountLayout(
+            warehouseMapIndex.url(),
+            { fullBleed: true },
+            { success: 'Pallet stored' },
+        );
+
+        expect(wrapper.findComponent(SuccessBanner).exists()).toBe(false);
+        expect(wrapper.text()).not.toContain('Pallet stored');
     });
 
     it('hides the mobile menu panel by default and expands it via the toggle button', async () => {

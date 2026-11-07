@@ -112,6 +112,7 @@ class DigitalProductController extends Controller implements HasMiddleware
             $this->saveStock($product, $data);
             $this->saveTranslation($product, config('app.default_language'), $data);
         });
+        Inertia::flash('success', __('store_admin.digital_product_has_been_created_successfully'));
 
         return redirect()->route('digitalproducts.index');
     }
@@ -168,6 +169,7 @@ class DigitalProductController extends Controller implements HasMiddleware
             $this->saveStock($product, $data);
             $this->saveTranslation($product, $data['lang'], $data);
         });
+        Inertia::flash('success', __('store_admin.digital_product_has_been_updated_successfully'));
 
         return redirect()->route('digitalproducts.edit', ['product' => $product->id, 'lang' => $data['lang']]);
     }

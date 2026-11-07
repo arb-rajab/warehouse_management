@@ -207,7 +207,8 @@ test('creating a product writes every table together, clears the caches after co
     Artisan::shouldReceive('call')->with('cache:clear')->once()->andReturn(0);
 
     $this->post(route('products.store'), productCreateForm(['photos' => $photo->id.','.$thumb->id, 'thumbnail_img' => $thumb->id, 'pdf' => $pdf->id, 'digital' => 1, 'added_by' => 'seller', 'user_id' => $staff->id, 'auction_product' => 1, 'wholesale_product' => 1, 'approved' => 0, 'num_of_sale' => 99]))
-        ->assertSessionHasNoErrors()->assertRedirect(route('products.admin'));
+        ->assertSessionHasNoErrors()->assertRedirect(route('products.admin'))
+        ->assertInertiaFlash('success', 'Product has been created successfully');
 
     expect($committed)->toBe([true]);
     $product = Product::query()->where('name', 'Extra virgin olive oil')->sole();
