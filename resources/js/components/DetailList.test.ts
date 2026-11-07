@@ -48,6 +48,13 @@ describe('DetailList', () => {
         expect(mountList({ columns: 3 }).get('dl').classes()).toEqual(
             expect.arrayContaining(['grid-cols-1', 'md:grid-cols-3']),
         );
+        expect(mountList({ columns: 4 }).get('dl').classes()).toEqual(
+            expect.arrayContaining([
+                'grid-cols-1',
+                'sm:grid-cols-2',
+                'lg:grid-cols-4',
+            ]),
+        );
     });
 
     it('keeps the columns on a phone with keepColumns', () => {

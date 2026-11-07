@@ -15,6 +15,8 @@ import { store as storeFromMap } from '@/actions/App/Http/Controllers/Store/Admi
 import { markDelivered } from '@/actions/App/Http/Controllers/Store/Admin/TripOrderController';
 import ActionErrorBanner from '@/components/ActionErrorBanner.vue';
 import AddressMapLink from '@/components/AddressMapLink.vue';
+import DetailItem from '@/components/DetailItem.vue';
+import DetailList from '@/components/DetailList.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import StoreTripMap from '@/components/StoreTripMap.vue';
 import type { StoreTripMapPoint } from '@/components/StoreTripMap.vue';
@@ -230,35 +232,27 @@ function hasStops(truck: StoreTripMapTruck): boolean {
                                 </button>
                             </div>
                         </div>
-                        <dl
-                            class="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1"
-                        >
-                            <dt class="text-gray-500 dark:text-neutral-400">
-                                {{ t('store.trips.map.customerId') }}
-                            </dt>
-                            <dd>{{ order.customer.id }}</dd>
-                            <dt class="text-gray-500 dark:text-neutral-400">
-                                {{ t('store.trips.map.postalCode') }}
-                            </dt>
-                            <dd>{{ order.postal_code || '-' }}</dd>
-                            <dt class="text-gray-500 dark:text-neutral-400">
-                                {{ t('store.trips.map.phone') }}
-                            </dt>
-                            <dd>{{ order.customer.phone || '-' }}</dd>
-                            <dt class="text-gray-500 dark:text-neutral-400">
-                                {{ t('store.trips.map.address') }}
-                            </dt>
-                            <dd>
-                                <AddressMapLink
-                                    :address="order.address"
-                                    placeholder="-"
-                                />
-                            </dd>
-                            <dt class="text-gray-500 dark:text-neutral-400">
-                                {{ t('store.trips.map.accountingId') }}
-                            </dt>
-                            <dd>{{ order.customer.accounting_id || '-' }}</dd>
-                        </dl>
+                        <DetailList plain :columns="2" class="mt-2">
+                            <DetailItem
+                                :label="t('store.trips.map.customerId')"
+                                :value="order.customer.id"
+                            />
+                            <DetailItem
+                                :label="t('store.trips.map.postalCode')"
+                                :value="order.postal_code"
+                            />
+                            <DetailItem
+                                :label="t('store.trips.map.phone')"
+                                :value="order.customer.phone"
+                            />
+                            <DetailItem :label="t('store.trips.map.address')"
+                                ><AddressMapLink :address="order.address"
+                            /></DetailItem>
+                            <DetailItem
+                                :label="t('store.trips.map.accountingId')"
+                                :value="order.customer.accounting_id"
+                            />
+                        </DetailList>
                         <div
                             v-if="
                                 access.can('edit_trip') && orderTrips[order.id]

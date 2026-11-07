@@ -4,6 +4,8 @@ import { computed, ref } from 'vue';
 import { search } from '@/actions/App/Http/Controllers/Store/Admin/OrderEntryController';
 import ActionErrorBanner from '@/components/ActionErrorBanner.vue';
 import DataTable from '@/components/DataTable.vue';
+import DetailItem from '@/components/DetailItem.vue';
+import DetailList from '@/components/DetailList.vue';
 import FieldError from '@/components/FieldError.vue';
 import FormField from '@/components/FormField.vue';
 import RequiredMark from '@/components/RequiredMark.vue';
@@ -383,13 +385,22 @@ function unitChanged(line: EntryLine): void {
         >
             <Plus class="h-4 w-4" />{{ t('store.orders.addLine') }}
         </button>
-        <dl class="grid grid-cols-2 gap-2 text-sm">
-            <dt>{{ t('store.orders.subtotal') }}</dt>
-            <dd>{{ subtotal.toFixed(2) }}</dd>
-            <dt>{{ t('store.orders.tax') }}</dt>
-            <dd>{{ tax.toFixed(2) }}</dd>
-            <dt>{{ t('store.orders.total') }}</dt>
-            <dd class="font-semibold">{{ total.toFixed(2) }}</dd>
-        </dl>
+        <DetailList plain :columns="3" keep-columns>
+            <DetailItem
+                amount
+                :label="t('store.orders.subtotal')"
+                :value="subtotal.toFixed(2)"
+            />
+            <DetailItem
+                amount
+                :label="t('store.orders.tax')"
+                :value="tax.toFixed(2)"
+            />
+            <DetailItem
+                amount
+                :label="t('store.orders.total')"
+                :value="total.toFixed(2)"
+            />
+        </DetailList>
     </div>
 </template>

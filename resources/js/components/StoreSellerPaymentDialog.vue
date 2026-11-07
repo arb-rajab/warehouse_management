@@ -8,6 +8,8 @@ import {
 } from '@/actions/App/Http/Controllers/Store/Admin/SellerPaymentController';
 import { paymentModal } from '@/actions/App/Http/Controllers/Store/Admin/SellerWithdrawRequestController';
 import ActionErrorBanner from '@/components/ActionErrorBanner.vue';
+import DetailItem from '@/components/DetailItem.vue';
+import DetailList from '@/components/DetailList.vue';
 import FieldError from '@/components/FieldError.vue';
 import FilterDialog from '@/components/FilterDialog.vue';
 import FormField from '@/components/FormField.vue';
@@ -104,26 +106,26 @@ const hasRequiredFields = provideRequiredFields();
         >
             <RequiredLegend v-if="hasRequiredFields" />
             <ActionErrorBanner :message="firstError(errors)" />
-            <dl class="grid grid-cols-2 gap-3">
-                <dt>
-                    {{
+            <DetailList plain :columns="2">
+                <DetailItem
+                    amount
+                    :label="
                         t(
                             details.shop.admin_to_pay < 0
                                 ? 'store.sellers.dueToAdmin'
                                 : 'store.sellers.dueToSeller',
                         )
-                    }}
-                </dt>
-                <dd>{{ details.shop.due }}</dd>
+                    "
+                    :value="details.shop.due"
+                />
                 <template v-if="details.shop.bank_enabled"
-                    ><template v-for="key in bankFields" :key="key"
-                        ><dt>{{ t(`store.sellers.${key}`) }}</dt>
-                        <dd class="break-words">
-                            {{ details.shop[key] }}
-                        </dd></template
-                    ></template
-                >
-            </dl>
+                    ><DetailItem
+                        v-for="key in bankFields"
+                        :key="key"
+                        :label="t(`store.sellers.${key}`)"
+                        :value="details.shop[key]"
+                /></template>
+            </DetailList>
             <template
                 v-if="!details.withdrawal || details.shop.admin_to_pay > 0"
             >
