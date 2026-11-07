@@ -23,13 +23,16 @@ use Illuminate\Http\Request;
 
 class StoreProductController extends Controller
 {
-    public function index()
+    /** The sort key that puts the store's own best-graded products first. */
+    private const string STARS_SORT = 'stars_high_to_low';
+
+    public function index(Request $request)
     {
-        return new ProductMiniCollection(Product::with(Product::WITH_STORE_LIST)->where('published', 1)->where('approved', 1)->latest()->paginate(10));
+        return new ProductMiniCollection(Product::with(Product::WITH_STORE_LIST)->where('published', 1)->where('approved', 1)->latest()->paginate($this->perPage($request)));
     }
 
 
-    public function newProducts()
+    public function newProducts(Request $request)
     {
         $lang = App::getLocale();
         if ($lang == 'sa') {
@@ -47,14 +50,14 @@ class StoreProductController extends Controller
             WHEN name LIKE '.%' THEN 0
             ELSE 1
             END" . (empty($order) ? '' : ", $order"), [])
-            ->paginate(10));
+            ->paginate($this->perPage($request)));
     }
 
 
 
-    public function inhouse()
+    public function inhouse(Request $request)
     {
-        return new ProductMiniCollection(filter_products(Product::with(Product::WITH_STORE_LIST)->where('added_by', 'admin')->storeOpenable())->latest()->paginate(10));
+        return new ProductMiniCollection(filter_products(Product::with(Product::WITH_STORE_LIST)->where('added_by', 'admin')->storeOpenable())->latest()->paginate($this->perPage($request)));
     }
 
     public function show($id)
@@ -212,7 +215,7 @@ class StoreProductController extends Controller
             $products = $products->where('name', 'like', '%' . $request->name . '%');
         }
         $products->where('published', 1);
-        return new ProductMiniCollection($products->latest()->paginate(10));
+        return new ProductMiniCollection($products->latest()->paginate($this->perPage($request)));
     }
 
     public function category($id, Request $request)
@@ -236,6 +239,15 @@ class StoreProductController extends Controller
             $products->whereIn('brand_id', $brand_ids);
         }
 
+        $this->filterByStars($products, $request);
+
+        if ($this->sortsByStars($request)) {
+            // Asked for by sort_key=stars_high_to_low: grade first, then name.
+            $products->orderedByStars();
+
+            return new ProductMiniCollection(filter_products($products->storeOpenable())->paginate($this->perPage($request)));
+        }
+
         // Order by the related `amount` field in `product_collections`
         $products = $products->orderByDesc(
             ModelsProductCollection::select('amount')
@@ -243,7 +255,7 @@ class StoreProductController extends Controller
                 ->limit(1)
         );
 
-        return new ProductMiniCollection(filter_products($products->storeOpenable())->latest()->paginate(10));
+        return new ProductMiniCollection(filter_products($products->storeOpenable())->latest()->paginate($this->perPage($request)));
     }
 
 
@@ -254,7 +266,36 @@ class StoreProductController extends Controller
             $products = $products->where('name', 'like', '%' . $request->name . '%');
         }
 
-        return new ProductMiniCollection(filter_products($products->storeOpenable())->latest()->paginate(10));
+        $this->filterByStars($products, $request);
+
+        if ($this->sortsByStars($request)) {
+            $products->orderedByStars();
+
+            return new ProductMiniCollection(filter_products($products->storeOpenable())->paginate($this->perPage($request)));
+        }
+
+        return new ProductMiniCollection(filter_products($products->storeOpenable())->latest()->paginate($this->perPage($request)));
+    }
+
+    /** Whether the caller asked for the store's best-graded products first. */
+    private function sortsByStars(Request $request): bool
+    {
+        return $request->input('sort_key') === self::STARS_SORT;
+    }
+
+    /**
+     * The optional min_stars filter: products graded at least that high. A
+     * value that is not a number is ignored, like min and max in the search.
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder<Product>  $products
+     */
+    private function filterByStars($products, Request $request): void
+    {
+        $minimum = $request->input('min_stars');
+
+        if (is_numeric($minimum)) {
+            $products->atLeastStars((float) $minimum);
+        }
     }
 
     public function todaysDeal()
@@ -272,16 +313,16 @@ class StoreProductController extends Controller
         }));
     }
 
-    public function featured()
+    public function featured(Request $request)
     {
         $products = Product::with(Product::WITH_STORE_LIST)->where('featured', 1)->physical();
-        return new ProductMiniCollection(filter_products($products->storeOpenable())->latest()->paginate(10));
+        return new ProductMiniCollection(filter_products($products->storeOpenable())->latest()->paginate($this->perPage($request)));
     }
 
-    public function digital()
+    public function digital(Request $request)
     {
         $products = Product::with(Product::WITH_STORE_LIST)->digital();
-        return new ProductMiniCollection(filter_products($products->storeOpenable())->latest()->paginate(10));
+        return new ProductMiniCollection(filter_products($products->storeOpenable())->latest()->paginate($this->perPage($request)));
     }
 
 
@@ -461,6 +502,8 @@ class StoreProductController extends Controller
         $max = $request->max;
 
 
+        // storeOpenable() is applied once, here: the list below used to apply it a second
+        // time, which only repeated the same EXISTS test on the stock rows.
         $products = Product::with(Product::WITH_STORE_LIST);
 
         $products->storeOpenable()->physical();
@@ -518,6 +561,8 @@ class StoreProductController extends Controller
             $products->where('unit_price', '<=', $max);
         }
 
+        $this->filterByStars($products, $request);
+
         switch ($sort_by) {
             case 'price_low_to_high':
                 $products->orderBy('unit_price', 'asc');
@@ -535,8 +580,14 @@ class StoreProductController extends Controller
                 $products->orderBy('num_of_sale', 'desc');
                 break;
 
+            // The customers' review rating (the `rating` field).
             case 'top_rated':
                 $products->orderBy('rating', 'desc');
+                break;
+
+            // The store's own grade (the `stars` field), highest first, ties by name.
+            case self::STARS_SORT:
+                $products->orderedByStars();
                 break;
 
             default:
@@ -544,7 +595,7 @@ class StoreProductController extends Controller
                 break;
         }
 
-        return new ProductMiniCollection(filter_products($products->storeOpenable())->paginate(10));
+        return new ProductMiniCollection(filter_products($products)->paginate($this->perPage($request)));
     }
 
     public function getVariant(Request $request)

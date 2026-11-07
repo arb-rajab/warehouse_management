@@ -298,7 +298,7 @@ test('brand migration retains public and mobile contracts and removes only the e
         ->and(route('brands.destroy', 5, false))->toBe('/temp/admin/brands/destroy/5');
     $this->get('/temp/admin/brands/'.$this->brand->id)->assertMethodNotAllowed();
     $this->getJson('/api/v1/store/brands')->assertOk()->assertJsonPath('success', true)->assertJsonPath('status', 200)
-        ->assertJsonPath('data.0', ['id' => $this->brand->id, 'name' => 'Dates', 'logo' => uploaded_asset(null), 'links' => ['products' => route('api.products.brand', $this->brand->id)]]);
+        ->assertJsonPath('data.0', ['id' => $this->brand->id, 'name' => 'Dates', 'logo' => uploaded_asset(null), 'category_ids' => [], 'links' => ['products' => route('api.products.brand', $this->brand->id)]]);
     $this->get('/temp/brands')->assertOk()->assertSee('Dates');
     expect(view()->exists('shop.backend.downloads.brand'))->toBeTrue()
         ->and(view()->exists('shop.backend.product.brands.index'))->toBeFalse()
