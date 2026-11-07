@@ -97,7 +97,10 @@ class DigitalProductController extends Controller implements HasMiddleware
     /**
      * Creates an admin digital product as the legacy form did, with the
      * generated slug, then the product's tax rows, one empty-variant stock row at the unit
-     * price with no quantity and the default-language translation.
+     * price with no quantity and the default-language translation. It then
+     * opens the main Products list (products.all, which lists digital
+     * products too) with the flashed success message; staff who may not open
+     * that list return to the digital products list instead.
      */
     public function store(StoreDigitalProductRequest $request): RedirectResponse
     {
@@ -116,7 +119,7 @@ class DigitalProductController extends Controller implements HasMiddleware
         });
         $this->flashSuccess('digital_product_has_been_created_successfully');
 
-        return redirect()->route('digitalproducts.index');
+        return redirect()->route($request->user('store')->can('show_all_products') ? 'products.all' : 'digitalproducts.index');
     }
 
     public function edit(EditReferenceTranslationRequest $request, Product $product): Response

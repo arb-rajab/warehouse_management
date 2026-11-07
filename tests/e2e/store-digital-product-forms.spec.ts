@@ -156,7 +156,12 @@ test('a digital product is created with editor content, canonical uploads, taxes
         .getByRole('button', { name: 'Save product', exact: true })
         .click();
     expect([302, 303]).toContain((await created).status());
-    await expect(page).toHaveURL(/\/temp\/admin\/digitalproducts$/);
+    await expect(page).toHaveURL(/\/temp\/admin\/products\/all$/);
+    await expect(
+        page.getByRole('status').filter({
+            hasText: 'Digital product has been created successfully',
+        }),
+    ).toBeVisible();
     const product = storedProduct(
         'Browser bread guide',
         "['description' => $product->description, 'tags' => $product->tags, 'photos' => $product->photos, 'file' => $product->file_name, 'start' => $product->discount_start_date, 'end' => $product->discount_end_date, 'discount_type' => $product->discount_type, 'taxes' => Illuminate\\Support\\Facades\\DB::table('product_taxes')->where('product_id', $product->id)->get(['tax', 'tax_type'])->map(fn ($t) => [(float) $t->tax, $t->tax_type])->all(), 'stocks' => Illuminate\\Support\\Facades\\DB::table('product_stocks')->where('product_id', $product->id)->count(), 'translation' => App\\Models\\ProductTranslation::where('product_id', $product->id)->where('lang', 'en')->value('name')]",

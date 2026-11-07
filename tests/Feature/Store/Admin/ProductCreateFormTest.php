@@ -191,8 +191,8 @@ test('the create form leaves out the sections their business settings switch off
         ->where('sections', ['shipping' => true, 'productWiseShipping' => false, 'flashDeals' => false, 'vat' => false, 'cashOnDelivery' => false]));
 });
 
-test('creating a product writes every table together, clears the caches after commit and returns to the in-house list', function () {
-    $staff = createStoreStaff('add_new_product');
+test('creating a product writes every table together, clears the caches after commit and opens the main products list', function () {
+    $staff = createStoreStaff('add_new_product', 'show_all_products');
     actingAsStoreUser($staff);
     $photo = productImage($staff->id);
     $thumb = productImage($staff->id);
@@ -207,7 +207,7 @@ test('creating a product writes every table together, clears the caches after co
     Artisan::shouldReceive('call')->with('cache:clear')->once()->andReturn(0);
 
     $this->post(route('products.store'), productCreateForm(['photos' => $photo->id.','.$thumb->id, 'thumbnail_img' => $thumb->id, 'pdf' => $pdf->id, 'digital' => 1, 'added_by' => 'seller', 'user_id' => $staff->id, 'auction_product' => 1, 'wholesale_product' => 1, 'approved' => 0, 'num_of_sale' => 99]))
-        ->assertSessionHasNoErrors()->assertRedirect(route('products.admin'))
+        ->assertSessionHasNoErrors()->assertRedirect(route('products.all'))
         ->assertInertiaFlash('success', 'Product has been created successfully');
 
     expect($committed)->toBe([true]);
@@ -240,6 +240,25 @@ test('creating a product writes every table together, clears the caches after co
         ->and(DB::table('product_barcodes')->where('product_id', $product->id)->pluck('barcode')->all())->toBe(['8712345678906'])
         ->and(DB::table('wms_product_barcodes')->count())->toBe(0)
         ->and(DB::table('flash_deal_products')->count())->toBe(0);
+});
+
+test('the created product opens the main products list showing the success message', function () {
+    actingAsStoreUser(createStoreStaff('add_new_product', 'show_all_products'));
+    Artisan::shouldReceive('call')->andReturn(0);
+
+    $this->followingRedirects()->post(route('products.store'), productCreateForm(['product_barcodes' => []]))
+        ->assertOk()->assertInertia(fn (Assert $page) => $page
+        ->component('Store/Admin/Product/Products/Index')->where('listType', 'all')
+        ->hasFlash('success', 'Product has been created successfully'));
+});
+
+test('staff who may not open the main products list return to the in-house list after creating', function () {
+    actingAsStoreUser(createStoreStaff('add_new_product', 'show_in_house_products'));
+    Artisan::shouldReceive('call')->andReturn(0);
+
+    $this->post(route('products.store'), productCreateForm(['product_barcodes' => []]))
+        ->assertSessionHasNoErrors()->assertRedirect(route('products.admin'))
+        ->assertInertiaFlash('success', 'Product has been created successfully');
 });
 
 test('a new product cannot expire soon unless the flag is posted', function () {

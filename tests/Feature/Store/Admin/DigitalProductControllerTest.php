@@ -363,6 +363,8 @@ test('the Inertia create and edit forms keep their routes, gates and redirects b
     $this->get(route('digitalproducts.create'))->assertOk()->assertInertia(fn (Assert $page) => $page->component('Store/Admin/Product/DigitalProducts/Create'));
     $this->get(route('digitalproducts.edit', ['product' => $this->product->id, 'lang' => 'en']))->assertOk()->assertInertia(fn (Assert $page) => $page->component('Store/Admin/Product/DigitalProducts/Edit'));
     $this->get(route('digitalproducts.create'), inertiaHeaders())->assertOk()->assertHeader('X-Inertia', 'true');
+    // Without show_all_products the main products list is closed to this
+    // staff member, so the create returns to the digital products list.
     $this->post(route('digitalproducts.store'), ['name' => 'New guide', ...$form])->assertSessionHasNoErrors()->assertRedirect(route('digitalproducts.index'))
         ->assertInertiaFlash('success', 'Digital product has been created successfully');
     $new = Product::query()->where('name', 'New guide')->firstOrFail();

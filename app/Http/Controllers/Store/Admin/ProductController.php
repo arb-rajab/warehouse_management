@@ -191,8 +191,10 @@ class ProductController extends Controller implements HasMiddleware
      * Creates the product, its stock rows, taxes, flash deal entry,
      * default-language translation, types and store barcodes in one
      * transaction, then clears the compiled views and the cache as the
-     * legacy form did, once the write has committed. The list shows the
-     * flashed success message in the layout's SuccessBanner.
+     * legacy form did, once the write has committed. It then opens the main
+     * Products list (products.all), which shows the flashed success message
+     * in the layout's SuccessBanner; staff who may not open that list return
+     * to the in-house list instead of landing on a refusal.
      */
     public function store(StoreProductRequest $request, InHouseProductWriter $writer): RedirectResponse
     {
@@ -201,7 +203,7 @@ class ProductController extends Controller implements HasMiddleware
         $this->clearStorefrontCaches();
         $this->flashSuccess('product_has_been_created_successfully');
 
-        return redirect()->route('products.admin');
+        return redirect()->route($request->user('store')->can('show_all_products') ? 'products.all' : 'products.admin');
     }
 
     /**
