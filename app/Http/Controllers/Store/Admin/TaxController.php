@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Store\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Store\Admin\Concerns\FlashesSuccess;
 use App\Http\Requests\Store\Admin\FilterTaxesRequest;
 use App\Http\Requests\Store\Admin\StoreTaxRequest;
 use App\Http\Requests\Store\Admin\UpdateReferenceStatusRequest;
@@ -20,6 +21,8 @@ use Inertia\Response;
 
 class TaxController extends Controller implements HasMiddleware
 {
+    use FlashesSuccess;
+
     /** @return array<int, Middleware> */
     public static function middleware(): array
     {
@@ -41,6 +44,7 @@ class TaxController extends Controller implements HasMiddleware
     {
         $tax->tax_status = $request->boolean('status');
         $tax->save();
+        $this->flashSuccess('tax_status_has_been_updated_successfully');
 
         return $this->redirectPreservingQuery('tax.index', $request);
     }
@@ -59,6 +63,7 @@ class TaxController extends Controller implements HasMiddleware
             $tax->name = $request->validated('name');
             $tax->save();
         });
+        $this->flashSuccess('tax_has_been_created_successfully');
 
         return redirect()->route('tax.index');
     }
@@ -69,6 +74,7 @@ class TaxController extends Controller implements HasMiddleware
             $tax->name = $request->validated('name');
             $tax->save();
         });
+        $this->flashSuccess('tax_has_been_updated_successfully');
 
         return redirect()->route('tax.index');
     }
@@ -78,6 +84,7 @@ class TaxController extends Controller implements HasMiddleware
         DB::transaction(function () use ($tax) {
             $tax->delete();
         });
+        $this->flashSuccess('tax_has_been_deleted_successfully');
 
         return $this->redirectPreservingQuery('tax.index', $request);
     }
