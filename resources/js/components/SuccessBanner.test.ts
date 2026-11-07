@@ -1,6 +1,6 @@
 import { CircleCheck, X } from '@lucide/vue';
 import { mount } from '@vue/test-utils';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { nextTick, reactive } from 'vue';
 import { t } from '@/lib/i18n';
 import SuccessBanner from './SuccessBanner.vue';
@@ -85,5 +85,112 @@ describe('SuccessBanner', () => {
         await nextTick();
 
         expect(wrapper.find('[role="status"]').exists()).toBe(false);
+    });
+
+    describe('scrolling into view', () => {
+        const rect = (top: number, bottom: number) =>
+            ({
+                top,
+                bottom,
+                left: 0,
+                right: 0,
+                width: 0,
+                height: bottom - top,
+                x: 0,
+                y: top,
+                toJSON: () => ({}),
+            }) as DOMRect;
+
+        function mountWithRect(top: number, bottom: number) {
+            const scrollIntoView = vi.fn();
+            Element.prototype.scrollIntoView = scrollIntoView;
+            vi.spyOn(
+                Element.prototype,
+                'getBoundingClientRect',
+            ).mockReturnValue(rect(top, bottom));
+            const wrapper = mount(SuccessBanner, { attachTo: document.body });
+
+            return { wrapper, scrollIntoView };
+        }
+
+        async function flashAgain() {
+            page.flash = { success: 'Saved' };
+            await nextTick();
+            await nextTick();
+        }
+
+        beforeEach(() => {
+            window.matchMedia = vi
+                .fn()
+                .mockReturnValue({
+                    matches: false,
+                }) as unknown as typeof window.matchMedia;
+        });
+
+        afterEach(() => {
+            vi.restoreAllMocks();
+            delete (Element.prototype as { scrollIntoView?: unknown })
+                .scrollIntoView;
+        });
+
+        it('scrolls a new message into view smoothly when the banner is above the viewport', async () => {
+            const { wrapper, scrollIntoView } = mountWithRect(-200, -160);
+
+            await flashAgain();
+
+            expect(scrollIntoView).toHaveBeenCalledWith({
+                block: 'nearest',
+                behavior: 'smooth',
+            });
+            wrapper.unmount();
+        });
+
+        it('scrolls when the banner is only partly visible', async () => {
+            const { wrapper, scrollIntoView } = mountWithRect(-10, 30);
+
+            await flashAgain();
+
+            expect(scrollIntoView).toHaveBeenCalledTimes(1);
+            wrapper.unmount();
+        });
+
+        it('does not scroll when the banner is fully visible', async () => {
+            const { wrapper, scrollIntoView } = mountWithRect(10, 50);
+
+            await flashAgain();
+
+            expect(scrollIntoView).not.toHaveBeenCalled();
+            wrapper.unmount();
+        });
+
+        it('scrolls instantly when the user prefers reduced motion', async () => {
+            window.matchMedia = vi
+                .fn()
+                .mockReturnValue({
+                    matches: true,
+                }) as unknown as typeof window.matchMedia;
+            const { wrapper, scrollIntoView } = mountWithRect(-200, -160);
+
+            await flashAgain();
+
+            expect(scrollIntoView).toHaveBeenCalledWith({
+                block: 'nearest',
+                behavior: 'instant',
+            });
+            wrapper.unmount();
+        });
+
+        it('does nothing when scrollIntoView is not available', async () => {
+            vi.spyOn(
+                Element.prototype,
+                'getBoundingClientRect',
+            ).mockReturnValue(rect(-200, -160));
+            const wrapper = mount(SuccessBanner, { attachTo: document.body });
+
+            await flashAgain();
+
+            expect(wrapper.get('[role="status"]').text()).toBe('Saved');
+            wrapper.unmount();
+        });
     });
 });

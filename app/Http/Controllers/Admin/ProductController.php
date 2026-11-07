@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Concerns\BuildsCellLogFilterOptions;
 use App\Http\Controllers\Concerns\BuildsProductQrLabels;
 use App\Http\Controllers\Concerns\ExpiringSoonDefaults;
+use App\Http\Controllers\Concerns\FlashesAdminSuccess;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\FilterProductsRequest;
 use App\Http\Requests\Admin\SearchProductsRequest;
@@ -31,7 +32,7 @@ use ZipArchive;
 
 class ProductController extends Controller
 {
-    use BuildsCellLogFilterOptions, BuildsProductQrLabels;
+    use BuildsCellLogFilterOptions, BuildsProductQrLabels, FlashesAdminSuccess;
 
     /**
      * @var list<string>
@@ -116,6 +117,7 @@ class ProductController extends Controller
         $product->setting()->updateOrCreate([], [
             'boxes_count' => $request->integer('boxes_count'),
         ]);
+        $this->flashAdminSuccess('box_count_has_been_updated_successfully');
 
         return $this->redirectPreservingQuery('admin.products.index', $request);
     }
@@ -147,6 +149,7 @@ class ProductController extends Controller
 
         $setting->minimum_pallets = $request->input('minimum_pallets');
         $setting->save();
+        $this->flashAdminSuccess('minimum_pallets_has_been_updated_successfully');
 
         return $this->redirectPreservingQuery('admin.products.index', $request);
     }
@@ -164,6 +167,7 @@ class ProductController extends Controller
         $product->barcodes()->create([
             'barcode' => $request->validated('barcode'),
         ]);
+        $this->flashAdminSuccess('barcode_has_been_added_successfully');
 
         return $this->redirectPreservingQuery('admin.products.index', $request);
     }
@@ -177,6 +181,7 @@ class ProductController extends Controller
     public function destroyBarcode(Request $request, Product $product, ProductBarcode $barcode): RedirectResponse
     {
         $barcode->delete();
+        $this->flashAdminSuccess('barcode_has_been_removed_successfully');
 
         return $this->redirectPreservingQuery('admin.products.index', $request);
     }

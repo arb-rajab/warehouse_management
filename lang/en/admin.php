@@ -1,0 +1,28 @@
+<?php
+
+return [
+    'barcode_has_been_added_successfully' => 'Barcode has been added successfully',
+    'barcode_has_been_removed_successfully' => 'Barcode has been removed successfully',
+    'box_count_has_been_updated_successfully' => 'Boxes per pallet has been updated successfully',
+    'cell_has_been_activated_successfully' => 'Cell has been reactivated successfully',
+    'cell_has_been_deactivated_successfully' => 'Cell has been deactivated successfully',
+    'flags_have_been_acknowledged_successfully' => 'Flags have been acknowledged successfully',
+    'minimum_pallets_has_been_updated_successfully' => 'Minimum pallets has been updated successfully',
+    'pallet_boxes_have_been_removed_successfully' => 'Boxes have been removed from the pallet successfully',
+    'pallet_has_been_emptied_successfully' => 'Pallet has been emptied successfully',
+    'pallet_has_been_opened_successfully' => 'Pallet has been opened successfully',
+    'pallet_has_been_stored_successfully' => 'Pallet has been stored successfully',
+    'pallet_has_been_transferred_successfully' => 'Pallet has been transferred successfully',
+    'pallet_has_been_updated_successfully' => 'Pallet has been updated successfully',
+    'product_image_has_been_updated_successfully' => 'Product reference image has been updated successfully',
+    'product_image_review_has_been_saved_successfully' => 'Product image review has been saved successfully',
+    'report_has_been_accepted_successfully' => 'Report has been accepted successfully',
+    'row_has_been_created_successfully' => 'Row has been created successfully',
+    'row_has_been_deleted_successfully' => 'Row has been deleted successfully',
+    'row_has_been_updated_successfully' => 'Row has been updated successfully',
+    'settings_have_been_updated_successfully' => 'Settings have been updated successfully',
+    'user_has_been_created_successfully' => 'User has been created successfully',
+    'user_has_been_deleted_successfully' => 'User has been deleted successfully',
+    'user_has_been_updated_successfully' => 'User has been updated successfully',
+    'verification_round_has_been_completed_successfully' => 'Verification round has been completed successfully',
+];

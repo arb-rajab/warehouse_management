@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Concerns\BuildsCellLogFilterOptions;
+use App\Http\Controllers\Concerns\FlashesAdminSuccess;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\AcknowledgeCellStatusLogFlagsRequest;
 use App\Http\Requests\Admin\FilterCellStatusLogsRequest;
@@ -14,7 +15,7 @@ use Inertia\Response;
 
 class CellStatusLogController extends Controller
 {
-    use BuildsCellLogFilterOptions;
+    use BuildsCellLogFilterOptions, FlashesAdminSuccess;
 
     public function index(FilterCellStatusLogsRequest $request): Response
     {
@@ -49,6 +50,8 @@ class CellStatusLogController extends Controller
             'acknowledged_at' => now(),
             'acknowledged_by' => $request->user()->id,
         ]);
+
+        $this->flashAdminSuccess('flags_have_been_acknowledged_successfully');
 
         return $this->redirectAfterAcknowledge($request, $cellStatusLog);
     }

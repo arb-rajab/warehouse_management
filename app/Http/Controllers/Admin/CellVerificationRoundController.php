@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Concerns\FlashesAdminSuccess;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\FilterCellVerificationReportsRequest;
 use App\Http\Requests\Admin\FilterCellVerificationRoundsRequest;
@@ -24,6 +25,8 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class CellVerificationRoundController extends Controller
 {
+    use FlashesAdminSuccess;
+
     public function __construct(private readonly CellVerificationService $cellVerifications) {}
 
     /**
@@ -93,6 +96,7 @@ class CellVerificationRoundController extends Controller
     public function complete(Request $request, CellVerificationRound $cellVerificationRound): RedirectResponse
     {
         $this->cellVerifications->completeRound($cellVerificationRound);
+        $this->flashAdminSuccess('verification_round_has_been_completed_successfully');
 
         return $this->redirectPreservingQuery('admin.cell-verification-rounds.show', $request, [
             'cellVerificationRound' => $cellVerificationRound->id,

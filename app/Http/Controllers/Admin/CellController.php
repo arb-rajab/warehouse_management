@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Enums\CellLogAction;
 use App\Http\Controllers\Concerns\BuildsCellQrLabels;
+use App\Http\Controllers\Concerns\FlashesAdminSuccess;
 use App\Http\Controllers\Concerns\RedirectsAfterCellAction;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\ToggleCellActiveRequest;
@@ -16,7 +17,7 @@ use Illuminate\Support\Facades\DB;
 
 class CellController extends Controller
 {
-    use BuildsCellQrLabels, RedirectsAfterCellAction;
+    use BuildsCellQrLabels, FlashesAdminSuccess, RedirectsAfterCellAction;
 
     public function exportQrCode(Cell $cell): HttpResponse
     {
@@ -57,6 +58,8 @@ class CellController extends Controller
                 'user_id' => $request->user()->id,
                 'note' => $request->input('note'),
             ]);
+
+            $this->flashAdminSuccess($activating ? 'cell_has_been_activated_successfully' : 'cell_has_been_deactivated_successfully');
 
             return $this->redirectAfterCellAction($lockedCell);
         });

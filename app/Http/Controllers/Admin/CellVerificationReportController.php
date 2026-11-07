@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Exceptions\CellVerificationReportNotAcceptableException;
 use App\Exceptions\InvalidSlotStateException;
+use App\Http\Controllers\Concerns\FlashesAdminSuccess;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\AcceptCellVerificationReportRequest;
 use App\Models\CellVerificationReport;
@@ -13,6 +14,8 @@ use Illuminate\Http\RedirectResponse;
 
 class CellVerificationReportController extends Controller
 {
+    use FlashesAdminSuccess;
+
     /**
      * Accept an incorrect report, updating its cell to match what was reported
      * (see CellVerificationService::acceptReport()). A refusal — the cell
@@ -32,6 +35,8 @@ class CellVerificationReportController extends Controller
         } catch (CellVerificationReportNotAcceptableException|InvalidSlotStateException $e) {
             return $redirect->withErrors(['action' => $e->getMessage()]);
         }
+
+        $this->flashAdminSuccess('report_has_been_accepted_successfully');
 
         return $redirect;
     }
