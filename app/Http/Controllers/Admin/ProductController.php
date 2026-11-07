@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Concerns\BuildsCellLogFilterOptions;
-use App\Http\Controllers\Concerns\BuildsProductQrLabels;
 use App\Http\Controllers\Concerns\ExpiringSoonDefaults;
 use App\Http\Controllers\Concerns\FlashesAdminSuccess;
 use App\Http\Controllers\Controller;
@@ -20,6 +19,7 @@ use App\Models\ProductBarcode;
 use App\Models\ProductImageReview;
 use App\Models\ProductSetting;
 use App\Models\Setting;
+use App\Services\ProductBarcodeLabels;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -32,7 +32,9 @@ use ZipArchive;
 
 class ProductController extends Controller
 {
-    use BuildsCellLogFilterOptions, BuildsProductQrLabels, FlashesAdminSuccess;
+    use BuildsCellLogFilterOptions, FlashesAdminSuccess;
+
+    public function __construct(private readonly ProductBarcodeLabels $labels) {}
 
     /**
      * @var list<string>
@@ -211,14 +213,14 @@ class ProductController extends Controller
     /**
      * The product's default barcode — its id as a Code 128 label, meant to be
      * printed and stuck on every box/pallet of that product — see
-     * BuildsProductQrLabels. Derived from the id, never stored, so it cannot
+     * ProductBarcodeLabels. Derived from the id, never stored, so it cannot
      * be edited or deleted like a custom barcode.
      */
     public function exportQr(Product $product): HttpResponse
     {
         $setting = Setting::current();
 
-        return response($this->productQrLabelImage($product, $setting->qr_code_width, $setting->qr_code_height))
+        return response($this->labels->productQrLabelImage($product, $setting->qr_code_width, $setting->qr_code_height))
             ->header('Content-Type', 'image/svg+xml')
             ->header('Content-Disposition', "attachment; filename=\"product-{$product->id}-barcode.svg\"");
     }
@@ -229,14 +231,7 @@ class ProductController extends Controller
      */
     public function previewDefaultBarcode(Request $request, Product $product): HttpResponse
     {
-        $setting = Setting::current();
-
-        $etag = md5(implode('|', [
-            $this->productLabelName($product),
-            $product->id,
-            $setting->qr_code_width,
-            $setting->qr_code_height,
-        ]));
+        $etag = $this->labels->etag($product, (string) $product->id);
 
         $notModified = $this->notModifiedResponse($request, $etag, 'private, no-cache');
 
@@ -244,7 +239,8 @@ class ProductController extends Controller
             return $notModified;
         }
 
-        return response($this->productQrLabelImage($product, $setting->qr_code_width, $setting->qr_code_height))
+        // The id label is the id's own barcode label (productQrLabelImage()).
+        return response($this->labels->barcodeSvg($product, (string) $product->id))
             ->header('Content-Type', 'image/svg+xml')
             ->header('Content-Disposition', 'inline')
             ->header('Cache-Control', 'private, no-cache')
@@ -269,16 +265,9 @@ class ProductController extends Controller
      */
     public function previewBarcode(Request $request, Product $product, ProductBarcode $barcode): HttpResponse
     {
-        $setting = Setting::current();
-
         // Every input of the label, hashed before the SVG is rendered, so a
         // repeat request is answered with a 304 without rendering it.
-        $etag = md5(implode('|', [
-            $this->productLabelName($product),
-            $barcode->barcode,
-            $setting->qr_code_width,
-            $setting->qr_code_height,
-        ]));
+        $etag = $this->labels->etag($product, $barcode->barcode);
 
         $notModified = $this->notModifiedResponse($request, $etag, 'private, no-cache');
 
@@ -306,10 +295,8 @@ class ProductController extends Controller
 
     private function barcodeLabelSvg(Product $product, ProductBarcode $barcode): string
     {
-        $setting = Setting::current();
-
         try {
-            return $this->productBarcodeLabelImage($product, $barcode->barcode, $setting->qr_code_width, $setting->qr_code_height);
+            return $this->labels->barcodeSvg($product, $barcode->barcode);
         } catch (InvalidArgumentException) {
             abort(HttpResponse::HTTP_UNPROCESSABLE_ENTITY, __('messages.barcode_not_printable', ['barcode' => $barcode->barcode]));
         }
@@ -338,14 +325,14 @@ class ProductController extends Controller
         try {
             $zip->addFromString(
                 "product-{$product->id}-barcode.svg",
-                $this->productQrLabelImage($product, $setting->qr_code_width, $setting->qr_code_height),
+                $this->labels->productQrLabelImage($product, $setting->qr_code_width, $setting->qr_code_height),
             );
 
             foreach ($barcodes as $barcode) {
                 $current = $barcode->barcode;
                 $zip->addFromString(
                     $this->barcodeFileName($product, $barcode),
-                    $this->productBarcodeLabelImage($product, $barcode->barcode, $setting->qr_code_width, $setting->qr_code_height),
+                    $this->labels->productBarcodeLabelImage($product, $barcode->barcode, $setting->qr_code_width, $setting->qr_code_height),
                 );
             }
         } catch (InvalidArgumentException) {
