@@ -447,13 +447,10 @@
     <!-- Product information -->
     @if ($detailedProduct->auction_product != 1)
         @php
-            $barcodeNumbers = $detailedProduct->barcodes->pluck('barcode')
-                ->merge($detailedProduct->storeBarcodes->pluck('barcode'))
-                ->push($detailedProduct->barcode)
-                ->filter(fn ($barcodeValue) => filled($barcodeValue))
-                ->map(fn ($barcodeValue) => ar_barcode_to_en($barcodeValue))
-                ->unique()
-                ->values();
+            // One merged set (WMS, store, legacy column), Arabic digits
+            // converted, each drawn as the WMS barcode label.
+            $barcodeLabels = app(\App\Services\ProductBarcodeLabels::class);
+            $barcodeEntries = $barcodeLabels->merged($detailedProduct);
             $skuValue = $detailedProduct->variant_product ? null : $detailedProduct->stocks->first()?->sku;
             $tagList = collect(explode(',', (string) $detailedProduct->tags))
                 ->map(fn ($tagValue) => trim($tagValue))
@@ -499,13 +496,23 @@
             </div>
         @endif
 
-        @if ($barcodeNumbers->isNotEmpty())
+        @if ($barcodeEntries->isNotEmpty())
             <div class="row no-gutters mb-3">
                 <div class="col-sm-2">
                     <div class="text-secondary fs-14 fw-400">{{ __('storefront.product.barcodes') }}</div>
                 </div>
                 <div class="col-sm-10">
-                    <span class="fs-14 fw-500">{{ $barcodeNumbers->implode(', ') }}</span>
+                    <div class="d-flex flex-wrap">
+                        @foreach ($barcodeEntries as $barcodeEntry)
+                            @if ($barcodeEntry['printable'])
+                                <img src="{{ $barcodeLabels->dataUri($detailedProduct, $barcodeEntry['value']) }}"
+                                    alt="{{ $barcodeEntry['value'] }}" width="220"
+                                    class="border rounded bg-white mw-100 h-auto mr-3 mb-2">
+                            @else
+                                <span class="fs-14 fw-500 mr-3 mb-2">{{ $barcodeEntry['value'] }}</span>
+                            @endif
+                        @endforeach
+                    </div>
                 </div>
             </div>
         @endif

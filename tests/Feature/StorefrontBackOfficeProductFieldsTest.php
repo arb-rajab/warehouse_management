@@ -4,6 +4,8 @@ use App\Models\Category;
 use App\Models\Language;
 use App\Models\Product;
 use App\Models\ProductBarcode;
+use App\Models\StoreProductBarcode;
+use App\Services\ProductBarcodeLabels;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Testing\TestResponse;
@@ -116,6 +118,26 @@ function backOfficeFieldsRow(TestResponse $page, string $label): ?string
     return $cells->length === 0 ? null : trim((string) preg_replace('/\s+/', ' ', $cells->item(0)->textContent));
 }
 
+/**
+ * The barcodes beside the label, in page order: each barcode image's alt
+ * (its value) or a value Code 128 cannot draw, printed as text.
+ *
+ * @return list<string>
+ */
+function backOfficeFieldsBarcodes(TestResponse $page, string $label): array
+{
+    $cells = backOfficeFieldsCells($page, $label);
+    if ($cells->length === 0) {
+        return [];
+    }
+    $nodes = (new DOMXPath($cells->item(0)->ownerDocument))->query('.//img | .//span', $cells->item(0));
+
+    return array_map(
+        fn (DOMElement $node): string => $node->tagName === 'img' ? $node->getAttribute('alt') : trim($node->textContent),
+        iterator_to_array($nodes),
+    );
+}
+
 /** @return list<string> */
 function backOfficeFieldsTags(TestResponse $page, string $label): array
 {
@@ -135,8 +157,7 @@ test('a product saved on the back office form shows its barcodes, weight, quanti
 
     $page = backOfficeFieldsPage($product);
 
-    $barcodes = backOfficeFieldsRow($page, __('storefront.product.barcodes'));
-    expect($barcodes)->toContain('5412345678901')->toContain('8712345678906')->toContain('8712345678913')
+    expect(backOfficeFieldsBarcodes($page, __('storefront.product.barcodes')))->toBe(['5412345678901', '8712345678906', '8712345678913'])
         ->and(backOfficeFieldsRow($page, __('storefront.product.weight')))->toBe('1.25 kg')
         ->and(backOfficeFieldsRow($page, __('storefront.product.min_qty')))->toBe('3')
         ->and(backOfficeFieldsRow($page, __('storefront.product.max_qty')))->toBe('24')
@@ -154,7 +175,7 @@ test('a guest sees the same fields, without the flat shipping amount', function 
 
     $page = backOfficeFieldsPage($product, guest: true);
 
-    expect(backOfficeFieldsRow($page, __('storefront.product.barcodes')))->toContain('8712345678906')
+    expect(backOfficeFieldsBarcodes($page, __('storefront.product.barcodes')))->toBe(['8712345678906', '8712345678913'])
         ->and(backOfficeFieldsRow($page, __('storefront.product.weight')))->toBe('1.25 kg')
         ->and(backOfficeFieldsRow($page, __('storefront.product.min_qty')))->toBe('3')
         ->and(backOfficeFieldsRow($page, __('storefront.product.max_qty')))->toBe('24')
@@ -167,7 +188,7 @@ test('the fields are printed in Arabic too', function () {
     $product = backOfficeFieldsCreate();
     $page = $this->withSession(['locale' => 'ar'])->get('/temp/product/'.$product->slug)->assertOk();
 
-    expect(backOfficeFieldsRow($page, 'الباركود'))->toContain('8712345678906')
+    expect(backOfficeFieldsBarcodes($page, 'الباركود'))->toBe(['8712345678906', '8712345678913'])
         ->and(backOfficeFieldsRow($page, 'الوزن'))->toBe('1.25 كغ')
         ->and(backOfficeFieldsRow($page, 'الحد الأدنى للكمية'))->toBe('3')
         ->and(backOfficeFieldsRow($page, 'الحد الأقصى للكمية'))->toBe('24')
@@ -178,7 +199,7 @@ test('the fields are printed in Arabic too', function () {
 test('editing the product on the back office form changes what the page shows', function () {
     $product = backOfficeFieldsCreate();
     $page = backOfficeFieldsPage($product);
-    expect(backOfficeFieldsRow($page, __('storefront.product.barcodes')))->toContain('8712345678906');
+    expect(backOfficeFieldsBarcodes($page, __('storefront.product.barcodes')))->toContain('8712345678906');
 
     // Reading the page signed in a customer; the edit is the admin's.
     actingAsStoreUser(createStoreAdmin());
@@ -199,7 +220,7 @@ test('editing the product on the back office form changes what the page shows', 
 
     $page = backOfficeFieldsPage($product->refresh());
 
-    expect(backOfficeFieldsRow($page, __('storefront.product.barcodes')))->toBe('9780201379624')
+    expect(backOfficeFieldsBarcodes($page, __('storefront.product.barcodes')))->toBe(['9780201379624'])
         ->and(backOfficeFieldsRow($page, __('storefront.product.weight')))->toBe('2 kg')
         ->and(backOfficeFieldsRow($page, __('storefront.product.min_qty')))->toBe('5')
         ->and(backOfficeFieldsRow($page, __('storefront.product.max_qty')))->toBe('10')
@@ -208,6 +229,51 @@ test('editing the product on the back office form changes what the page shows', 
     $page->assertSee('7 '.__('storefront.common.days'))
         ->assertDontSee('8712345678906')
         ->assertDontSee(__('storefront.checkout.flat_shipping_rate'));
+});
+
+test('the barcodes are one merged set drawn as the WMS barcode label, inline, with Arabic digits converted', function () {
+    $product = backOfficeFieldsCreate(['product_barcodes' => ['٥٤١٢٣٤٥٦٧٨٩٠١', '8712345678906', 'متجر']]);
+    // The WMS barcode equals the first store one once converted: shown once.
+    ProductBarcode::query()->create(['product_id' => $product->id, 'barcode' => '5412345678901']);
+    ProductBarcode::query()->create(['product_id' => $product->id, 'barcode' => 'WMS-7']);
+    DB::table('products')->where('id', $product->id)->update(['barcode' => 'LEGACY-<9>']);
+
+    $page = backOfficeFieldsPage($product);
+    $images = htmlXPath($page)->query("//img[starts-with(@src, 'data:image/svg+xml;base64,')]");
+    $labels = new ProductBarcodeLabels;
+    $fresh = Product::query()->findOrFail($product->id);
+
+    expect(backOfficeFieldsBarcodes($page, __('storefront.product.barcodes')))->toBe(['5412345678901', 'WMS-7', '8712345678906', 'متجر', 'LEGACY-<9>'])
+        ->and($images->length)->toBe(4)
+        ->and(array_map(fn (DOMElement $img): string => $img->getAttribute('src'), iterator_to_array($images)))->toBe([
+            $labels->dataUri($fresh, '5412345678901'),
+            $labels->dataUri($fresh, 'WMS-7'),
+            $labels->dataUri($fresh, '8712345678906'),
+            $labels->dataUri($fresh, 'LEGACY-<9>'),
+        ])
+        ->and(base64_decode(substr($images->item(0)->getAttribute('src'), 26)))->toContain('>5412345678901</text>')->toContain('>Extra virgin olive oil</text>');
+    // The value printed as text is escaped, and no external barcode service is asked.
+    $page->assertSee('متجر')->assertDontSee('tec-it', false)->assertDontSee('LEGACY-<9>', false);
+});
+
+test('the barcode images add no queries, however many barcodes a product has', function () {
+    $product = backOfficeFieldsCreate(['product_barcodes' => ['8712345678906']]);
+    app('auth')->forgetGuards();
+    $count = function () use ($product): int {
+        DB::flushQueryLog();
+        DB::enableQueryLog();
+        $this->get('/temp/product/'.$product->slug)->assertOk();
+        DB::disableQueryLog();
+
+        return count(DB::getQueryLog());
+    };
+    $this->get('/temp/product/'.$product->slug)->assertOk();
+    $one = $count();
+    StoreProductBarcode::query()->create(['product_id' => $product->id, 'barcode' => '8712345678913']);
+    ProductBarcode::query()->create(['product_id' => $product->id, 'barcode' => '5412345678901']);
+    ProductBarcode::query()->create(['product_id' => $product->id, 'barcode' => '5412345678918']);
+
+    expect($count())->toBe($one);
 });
 
 test('a product with the form defaults prints only the rows that carry a value', function () {
