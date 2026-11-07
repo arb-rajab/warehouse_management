@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Store\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Store\Admin\Concerns\FlashesSuccess;
 use App\Http\Controllers\Store\Admin\Concerns\SearchesOptions;
 use App\Http\Requests\Store\Admin\FilterNotificationsRequest;
 use App\Http\Requests\Store\Admin\SearchOptionsRequest;
@@ -25,6 +26,7 @@ use Throwable;
 
 class CustomerNotificationController extends Controller implements HasMiddleware
 {
+    use FlashesSuccess;
     use SearchesOptions;
 
     /** @return array<int, Middleware> */
@@ -106,6 +108,7 @@ class CustomerNotificationController extends Controller implements HasMiddleware
         } catch (Throwable) {
             return $this->sendFailure();
         }
+        $this->flashSuccess('notification_has_been_sent_successfully');
 
         return redirect()->route('admin.notifications.all');
     }
@@ -113,6 +116,7 @@ class CustomerNotificationController extends Controller implements HasMiddleware
     public function destroy(Request $request, Notification $notification): RedirectResponse
     {
         $notification->delete();
+        $this->flashSuccess('notification_has_been_deleted_successfully');
 
         return $this->redirectPreservingQuery('admin.notifications.all', $request);
     }

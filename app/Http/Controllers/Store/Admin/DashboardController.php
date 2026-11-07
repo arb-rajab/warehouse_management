@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Store\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Store\Admin\Concerns\FlashesSuccess;
 use App\Http\Resources\Store\DashboardProductResource;
 use App\Models\Brand;
 use App\Models\Category;
@@ -21,6 +22,8 @@ use Inertia\Response;
 
 class DashboardController extends Controller implements HasMiddleware
 {
+    use FlashesSuccess;
+
     public const string GRAPH_CACHE_KEY = 'store.admin.dashboard.graphs.v2';
 
     /** @return list<Middleware> */
@@ -143,6 +146,7 @@ class DashboardController extends Controller implements HasMiddleware
     {
         Cache::forget(self::GRAPH_CACHE_KEY);
         Cache::forget('cached_graph_data');
+        $this->flashSuccess('dashboard_cache_has_been_cleared_successfully');
 
         return redirect()->route('shop.admin.dashboard');
     }

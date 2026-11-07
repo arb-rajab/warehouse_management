@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Store\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Store\Admin\Concerns\FlashesSuccess;
 use App\Http\Requests\Store\Admin\FilterLanguagesRequest;
 use App\Http\Requests\Store\Admin\ImportAppTranslationsRequest;
 use App\Http\Requests\Store\Admin\StoreLanguageRequest;
@@ -24,6 +25,8 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class LanguageController extends Controller implements HasMiddleware
 {
+    use FlashesSuccess;
+
     /** @return array<int, Middleware> */
     public static function middleware(): array
     {
@@ -53,6 +56,7 @@ class LanguageController extends Controller implements HasMiddleware
         $language = new Language;
         $language->forceFill($request->validated())->save();
         Cache::forget('app.languages');
+        $this->flashSuccess('language_has_been_created_successfully');
 
         return redirect()->route('languages.index');
     }
@@ -66,6 +70,7 @@ class LanguageController extends Controller implements HasMiddleware
     {
         $language->forceFill($request->validated())->save();
         Cache::forget('app.languages');
+        $this->flashSuccess('language_has_been_updated_successfully');
 
         return redirect()->route('languages.index');
     }
@@ -78,6 +83,7 @@ class LanguageController extends Controller implements HasMiddleware
         }
         $language->delete();
         Cache::forget('app.languages');
+        $this->flashSuccess('language_has_been_deleted_successfully');
 
         return $this->redirectPreservingQuery('languages.index', $request);
     }
@@ -89,6 +95,7 @@ class LanguageController extends Controller implements HasMiddleware
         $language->status = $request->boolean('status');
         $language->save();
         Cache::forget('app.languages');
+        $this->flashSuccess('language_status_has_been_updated_successfully');
 
         return $this->redirectPreservingQuery('languages.index', $request);
     }
@@ -99,6 +106,7 @@ class LanguageController extends Controller implements HasMiddleware
         $language->rtl = (int) $request->boolean('status');
         $language->save();
         Cache::forget('app.languages');
+        $this->flashSuccess('language_rtl_status_has_been_updated_successfully');
 
         return $this->redirectPreservingQuery('languages.index', $request);
     }
@@ -130,6 +138,7 @@ class LanguageController extends Controller implements HasMiddleware
                 $this->writeTranslation('app_translations', 'en', $key, $value);
             }
         });
+        $this->flashSuccess('app_translations_have_been_imported_successfully');
 
         return redirect()->route('languages.index');
     }
@@ -183,6 +192,7 @@ class LanguageController extends Controller implements HasMiddleware
         if (! $app) {
             Cache::forget('translations-'.$language->code);
         }
+        $this->flashSuccess($app ? 'app_translations_have_been_updated_successfully' : 'translations_have_been_updated_successfully');
 
         return $this->redirectPreservingQuery($app ? 'app-translations.show' : 'languages.show', $request, ['language' => $language]);
     }

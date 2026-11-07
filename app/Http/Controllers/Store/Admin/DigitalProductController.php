@@ -189,6 +189,7 @@ class DigitalProductController extends Controller implements HasMiddleware
             $product->stocks()->delete();
             $product->delete();
         });
+        $this->flashSuccess('digital_product_has_been_deleted_successfully');
 
         return $this->redirectPreservingQuery('digitalproducts.index', $request);
     }
@@ -229,6 +230,7 @@ class DigitalProductController extends Controller implements HasMiddleware
     public function updatePublished(UpdateDigitalProductFlagRequest $request, Product $product): RedirectResponse
     {
         $this->updateProductPublished(Product::query()->digital(), $product, $request->boolean('status'));
+        $this->flashSuccess('digital_product_published_status_has_been_updated_successfully');
 
         return $this->redirectPreservingQuery('digitalproducts.index', $request);
     }
@@ -236,6 +238,7 @@ class DigitalProductController extends Controller implements HasMiddleware
     public function updateFeatured(UpdateDigitalProductFlagRequest $request, Product $product): RedirectResponse
     {
         $this->updateProductFeatured(Product::query()->digital(), $product, $request->boolean('status'));
+        $this->flashSuccess('digital_product_featured_status_has_been_updated_successfully');
 
         return $this->redirectPreservingQuery('digitalproducts.index', $request);
     }
@@ -243,6 +246,7 @@ class DigitalProductController extends Controller implements HasMiddleware
     public function updateTodaysDeal(UpdateDigitalProductFlagRequest $request, Product $product): RedirectResponse
     {
         $this->updateProductTodaysDeal(Product::query()->digital(), $product, $request->boolean('status'));
+        $this->flashSuccess('digital_product_todays_deal_status_has_been_updated_successfully');
 
         return $this->redirectPreservingQuery('digitalproducts.index', $request);
     }

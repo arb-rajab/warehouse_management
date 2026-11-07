@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Store\Admin;
 use App\Http\Controllers\Concerns\ProvidesStoreUploadPreviews;
 use App\Http\Controllers\Concerns\UpdatesStoreSettings;
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Store\Admin\Concerns\FlashesSuccess;
 use App\Http\Requests\Store\Admin\UpdateGeneralSettingsRequest;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -16,6 +17,7 @@ use Inertia\Response;
 
 class GeneralSettingsController extends Controller implements HasMiddleware
 {
+    use FlashesSuccess;
     use ProvidesStoreUploadPreviews;
     use UpdatesStoreSettings;
 
@@ -42,6 +44,7 @@ class GeneralSettingsController extends Controller implements HasMiddleware
     public function update(UpdateGeneralSettingsRequest $request): RedirectResponse
     {
         $this->updateSettings(Arr::except($request->validated('settings'), 'timezone'));
+        $this->flashSuccess('general_settings_have_been_updated_successfully');
 
         return redirect()->route('general_setting.index');
     }

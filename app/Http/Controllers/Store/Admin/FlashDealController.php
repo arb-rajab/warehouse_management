@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Store\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Store\Admin\Concerns\FlashesSuccess;
 use App\Http\Requests\Store\Admin\EditFlashDealRequest;
 use App\Http\Requests\Store\Admin\FilterCampaignsRequest;
 use App\Http\Requests\Store\Admin\StoreFlashDealRequest;
@@ -27,6 +28,8 @@ use Inertia\Response;
 
 class FlashDealController extends Controller implements HasMiddleware
 {
+    use FlashesSuccess;
+
     public static function middleware(): array
     {
         return [new Middleware('permission:view_all_flash_deals', only: ['index']), new Middleware('permission:add_flash_deal', only: ['create', 'store']), new Middleware('permission:edit_flash_deal', only: ['edit', 'update', 'update_status']), new Middleware('permission:publish_flash_deal', only: ['update_featured']), new Middleware('permission:delete_flash_deal', only: ['destroy'])];
@@ -56,6 +59,7 @@ class FlashDealController extends Controller implements HasMiddleware
     public function store(StoreFlashDealRequest $request): RedirectResponse
     {
         $this->saveDeal(new FlashDeal, $request->validated(), config('app.default_language'));
+        $this->flashSuccess('flash_deal_has_been_created_successfully');
 
         return redirect()->route('flash_deals.index');
     }
@@ -63,6 +67,7 @@ class FlashDealController extends Controller implements HasMiddleware
     public function update(UpdateFlashDealRequest $request, FlashDeal $flashDeal): RedirectResponse
     {
         $this->saveDeal($flashDeal, $request->validated(), $request->validated('lang'));
+        $this->flashSuccess('flash_deal_has_been_updated_successfully');
 
         return redirect()->route('flash_deals.index');
     }
@@ -101,6 +106,7 @@ class FlashDealController extends Controller implements HasMiddleware
             $flashDeal->flash_deal_translations()->delete();
             $flashDeal->delete();
         });
+        $this->flashSuccess('flash_deal_has_been_deleted_successfully');
 
         return $this->redirectPreservingQuery('flash_deals.index', $request);
     }
@@ -109,6 +115,7 @@ class FlashDealController extends Controller implements HasMiddleware
     {
         $flashDeal->status = $request->boolean('value') ? 1 : 0;
         $flashDeal->save();
+        $this->flashSuccess('flash_deal_status_has_been_updated_successfully');
 
         return $this->redirectPreservingQuery('flash_deals.index', $request);
     }
@@ -120,6 +127,7 @@ class FlashDealController extends Controller implements HasMiddleware
             $flashDeal->featured = $request->boolean('value') ? 1 : 0;
             $flashDeal->save();
         });
+        $this->flashSuccess('flash_deal_featured_status_has_been_updated_successfully');
 
         return $this->redirectPreservingQuery('flash_deals.index', $request);
     }

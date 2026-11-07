@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Store\Admin;
 use App\Http\Controllers\Concerns\ProvidesStoreReferenceOptions;
 use App\Http\Controllers\Concerns\ProvidesStoreUploadPreviews;
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Store\Admin\Concerns\FlashesSuccess;
 use App\Http\Requests\Store\Admin\EditReferenceTranslationRequest;
 use App\Http\Requests\Store\Admin\FilterCustomerPackagesRequest;
 use App\Http\Requests\Store\Admin\StoreCustomerPackageRequest;
@@ -24,6 +25,7 @@ use Inertia\Response;
 
 class CustomerPackageController extends Controller implements HasMiddleware
 {
+    use FlashesSuccess;
     use ProvidesStoreReferenceOptions;
     use ProvidesStoreUploadPreviews;
 
@@ -78,6 +80,7 @@ class CustomerPackageController extends Controller implements HasMiddleware
     public function store(StoreCustomerPackageRequest $request): RedirectResponse
     {
         DB::transaction(fn () => $this->savePackage(new CustomerPackage, $request->validated(), config('app.default_language')));
+        $this->flashSuccess('customer_package_has_been_created_successfully');
 
         return redirect()->route('customer_packages.index');
     }
@@ -88,6 +91,7 @@ class CustomerPackageController extends Controller implements HasMiddleware
             $package = CustomerPackage::query()->lockForUpdate()->findOrFail($customerPackage->id);
             $this->savePackage($package, $request->validated(), $request->validated('lang'));
         });
+        $this->flashSuccess('customer_package_has_been_updated_successfully');
 
         return redirect()->route('customer_packages.edit', ['customerPackage' => $customerPackage->id, 'lang' => $request->validated('lang')]);
     }
@@ -114,6 +118,7 @@ class CustomerPackageController extends Controller implements HasMiddleware
             $package->customer_package_translations()->delete();
             $package->delete();
         });
+        $this->flashSuccess('customer_package_has_been_deleted_successfully');
 
         return $this->redirectPreservingQuery('customer_packages.index', $request);
     }

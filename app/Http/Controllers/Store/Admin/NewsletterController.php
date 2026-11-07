@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Store\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Store\Admin\Concerns\FlashesSuccess;
 use App\Http\Controllers\Store\Admin\Concerns\SearchesOptions;
 use App\Http\Requests\Store\Admin\SearchNewsletterRecipientsRequest;
 use App\Http\Requests\Store\Admin\SendNewsletterRequest;
@@ -21,6 +22,7 @@ use Inertia\Response;
 
 class NewsletterController extends Controller implements HasMiddleware
 {
+    use FlashesSuccess;
     use SearchesOptions;
 
     /** @return array<int, Middleware> */
@@ -84,6 +86,7 @@ class NewsletterController extends Controller implements HasMiddleware
         foreach ($recipients as $email) {
             Mail::to($email)->queue(new EmailManager($message));
         }
+        $this->flashSuccess('newsletter_has_been_sent_successfully');
 
         return redirect()->route('shop.admin.dashboard');
     }
