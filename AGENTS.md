@@ -29,6 +29,10 @@ Maintain shared instructions here and in the referenced `.ai/` files; keep
    [.ai/rules/success-messages.md](.ai/rules/success-messages.md): `flashSuccess()` from
    the `FlashesSuccess` controller concern, with the text in `lang/{en,ar}/store_admin.php`
    and an `assertInertiaFlash` test; never on a failure path.
+10. Label/value details on show pages, summaries and dialogs must use the shared
+    `DetailList`/`DetailItem`, per [.ai/rules/detail-lists.md](.ai/rules/detail-lists.md):
+    the label sits above its value, empty values show "-", and a bare `<dl>`/`dt`/`dd`,
+    a two-column label grid or a label-left/value-right line is never used.
 
 Read this file and the rules index fully once per session. For
 `.ai/agent-framework.md` and `.ai/agent-conventions.md`, read the whole file for
