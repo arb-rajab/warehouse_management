@@ -197,10 +197,24 @@ onBeforeUnmount(() => {
 <template>
     <div ref="outerRef" class="relative">
         <div
-            class="overflow-hidden rounded-lg border border-gray-200 dark:border-neutral-800"
+            class="relative overflow-hidden rounded-lg border border-gray-200 dark:border-neutral-800"
         >
-            <div class="overflow-x-auto">
-                <table class="min-w-full text-start text-sm">
+            <!--
+                Layout contract (store-table-layout.md): the table is as wide
+                as its content (`w-max`) and cells do not wrap (`whitespace-
+                nowrap` is inherited from the table; a cell opts back in with
+                `whitespace-normal` or `max-w-xs truncate`), so a wide table
+                scrolls sideways here instead of growing tall. The wrapper's
+                height is viewport-based so the sticky header has a scroller
+                to stick to.
+            -->
+            <div
+                data-table-scroller
+                class="max-h-[calc(100dvh-8rem)] overflow-auto"
+            >
+                <table
+                    class="w-max min-w-full text-start text-sm whitespace-nowrap [&_td]:py-1.5"
+                >
                     <thead
                         class="bg-gray-50 text-gray-500 dark:bg-neutral-900 dark:text-neutral-400"
                     >
@@ -208,7 +222,7 @@ onBeforeUnmount(() => {
                             <th
                                 v-for="(column, index) in columns"
                                 :key="index"
-                                class="px-4 py-2 font-medium"
+                                class="sticky top-0 z-10 bg-gray-50 px-4 py-2 font-medium shadow-[inset_0_-1px_0_#e5e7eb] dark:bg-neutral-900 dark:shadow-[inset_0_-1px_0_#262626]"
                             >
                                 <div class="flex items-center gap-1">
                                     <button
@@ -283,7 +297,7 @@ onBeforeUnmount(() => {
                         <tr v-if="rows.length === 0">
                             <td
                                 :colspan="columns.length"
-                                class="px-4 py-6 text-center text-gray-500 dark:text-neutral-400"
+                                class="px-4 py-6! text-center whitespace-normal text-gray-500 dark:text-neutral-400"
                             >
                                 <div class="flex flex-col items-center gap-2">
                                     <PackageSearch

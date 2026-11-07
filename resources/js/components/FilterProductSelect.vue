@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ChevronDown, LoaderCircle, Search } from '@lucide/vue';
-import { computed, nextTick, onBeforeUnmount, reactive, ref, watch } from 'vue';
+import { computed, nextTick, reactive, ref, watch } from 'vue';
 import ProductActiveBadge from '@/components/ProductActiveBadge.vue';
 import ProductOptionLabel from '@/components/ProductOptionLabel.vue';
 import { fieldLabelClass } from '@/lib/filters';
@@ -9,6 +9,7 @@ import {
     useDismissibleListbox,
     useMultiSelectToggle,
     usePanelMaxWidth,
+    usePanelViewportTracking,
 } from '@/lib/useDismissibleListbox';
 import { useProductSearch } from '@/lib/useProductSearch';
 import type { ProductFilterOption } from '@/types/admin';
@@ -98,55 +99,7 @@ function toggleOpen(): void {
     }
 }
 
-/**
- * The panel is `position: fixed` (see the template) rather than the plain
- * in-flow `absolute` FilterMultiSelect.vue uses, so it can escape
- * FilterDialog's `overflow-y-auto` content area instead of being clipped by
- * it — but `fixed` positioning is computed once from the trigger's
- * on-screen rect and does not itself track that ancestor scrolling
- * underneath it. Recompute on scroll of the nearest scrollable ancestor (or
- * the window, if there isn't one) and on resize, for as long as the panel
- * is open, so it stays visually anchored under the trigger.
- */
-function closestScrollableAncestor(
-    el: HTMLElement,
-): HTMLElement | (Window & typeof globalThis) {
-    let node = el.parentElement;
-
-    while (node) {
-        if (['auto', 'scroll'].includes(getComputedStyle(node).overflowY)) {
-            return node;
-        }
-
-        node = node.parentElement;
-    }
-
-    return window;
-}
-
-let scrollAncestor: HTMLElement | (Window & typeof globalThis) | null = null;
-
-function stopTrackingViewport(): void {
-    scrollAncestor?.removeEventListener('scroll', recomputePanelGeometry);
-    window.removeEventListener('resize', recomputePanelGeometry);
-    scrollAncestor = null;
-}
-
-watch(open, (isOpen) => {
-    if (isOpen) {
-        scrollAncestor = containerRef.value
-            ? closestScrollableAncestor(containerRef.value)
-            : window;
-        scrollAncestor.addEventListener('scroll', recomputePanelGeometry, {
-            passive: true,
-        });
-        window.addEventListener('resize', recomputePanelGeometry);
-    } else {
-        stopTrackingViewport();
-    }
-});
-
-onBeforeUnmount(stopTrackingViewport);
+usePanelViewportTracking(containerRef, open, recomputePanelGeometry);
 
 function deselectAll(): void {
     model.value = [];

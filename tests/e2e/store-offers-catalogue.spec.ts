@@ -51,21 +51,36 @@ test('order configuration renders hostile search results as text', async ({
     const name = '<img src=x onerror="window.catalogueXss=true">';
     const matId = 'MAT-\"><img src=x onerror="window.catalogueXss=true">';
     await page.route('**/temp/admin/product/search?*', (route) =>
-        route.fulfill({ json: [{ id: 1, name, mat_id: matId }] }),
+        route.fulfill({
+            json: {
+                data: [
+                    {
+                        id: 1,
+                        label: name,
+                        description: matId,
+                        image: null,
+                        icon: 'package',
+                        badge: null,
+                        extra: { mat_id: matId },
+                    },
+                ],
+                meta: { current_page: 1, last_page: 1, total: 1 },
+            },
+        }),
     );
     await page.goto('/temp/admin/order-configuration');
-    await page.locator('#default_specific_product').fill('MAT-');
-    const result = page.getByRole('button', {
-        name: `${name} (${matId})`,
-        exact: true,
-    });
-    await expect(result).toHaveText(`${name} (${matId})`);
+    await page.locator('#default_specific_product').click();
+    await page.locator('input[role="combobox"]').fill('MAT-');
+    const result = page
+        .locator('[data-search-select-layer]')
+        .getByRole('option');
+    await expect(result).toContainText(name);
     await expect(result.locator('img')).toHaveCount(0);
     await result.click();
-    await expect(page.locator('#default_specific_product')).toHaveValue(matId);
+    await expect(page.locator('#default_specific_product')).toContainText(name);
     await expect(
-        page.getByText(`Selected product: ${name}`, { exact: true }),
-    ).toBeVisible();
+        page.locator('input[name="default_specific_product"]'),
+    ).toHaveValue('1');
     expect(await page.evaluate(() => 'catalogueXss' in window)).toBe(false);
 });
 

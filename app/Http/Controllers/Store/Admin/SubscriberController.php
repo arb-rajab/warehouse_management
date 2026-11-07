@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Store\Admin\FilterSubscribersRequest;
 use App\Http\Resources\Store\SubscriberResource;
 use App\Models\Subscriber;
+use App\Support\NewestFirst;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -31,7 +32,7 @@ class SubscriberController extends Controller implements HasMiddleware
         return Inertia::render('Store/Admin/Marketing/Subscribers/Index', [
             'subscribers' => $this->paginated(SubscriberResource::collection(
                 Subscriber::query()->select(['id', 'email', 'created_at'])
-                    ->orderByDesc('created_at')->orderByDesc('id')->paginate($perPage)->withQueryString()
+                    ->tap(NewestFirst::apply(...))->paginate($perPage)->withQueryString()
             )),
             'filters' => ['per_page' => $perPage],
         ]);

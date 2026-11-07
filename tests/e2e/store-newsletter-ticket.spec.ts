@@ -18,6 +18,7 @@ import {
     watchCsp,
 } from './support/editor';
 import { switchLocale } from './support/nav';
+import { pickSearchOptions } from './support/searchSelect';
 import {
     ensureStoreRtlLanguage,
     seedStoreFixtures,
@@ -141,41 +142,45 @@ test('a newsletter is composed with formatting, keeps its draft after a refused 
 
     // A recipient the search never offered is refused by the server, and
     // the draft survives the round trip.
-    const users = page.locator('#user_emails');
-    await users.evaluate(async (element) => {
-        const option = new Option(
-            'forged-recipient@example.test',
-            'forged-recipient@example.test',
-            true,
-            true,
-        );
-        element.appendChild(option);
-        element.dispatchEvent(new Event('change', { bubbles: true }));
-        await new Promise((resolve) => requestAnimationFrame(resolve));
-        option.remove();
+    const forged =
+        'input[name="user_emails[]"][value="forged-recipient@example.test"]';
+    // The empty lists carry a native `required` guard that would stop the submit
+    // in the browser; a forged request skips it, so the server is what refuses.
+    await page.locator('#subject').evaluate((subject) => {
+        const form = subject.closest('form')!;
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'user_emails[]';
+        input.value = 'forged-recipient@example.test';
+        form.noValidate = true;
+        form.appendChild(input);
     });
-    await users.selectOption('forged-recipient@example.test');
     await page.getByRole('button', { name: 'Send', exact: true }).click();
     await expect(
         page.getByText('The selected user_emails.0 is invalid.'),
     ).toBeVisible();
+    await page.locator(forged).evaluate((input) => {
+        input.closest('form')!.noValidate = false;
+        input.remove();
+    });
     await expect(page.locator('#subject')).toHaveValue('Weekly offers');
     await expect(page.locator('#content strong')).toHaveText('Fresh dates');
 
     // Pick a real recipient through the bounded search.
-    await page.locator('#user_emails_search').fill('newsletter-reader');
-    await expect(
-        users.locator('option[value="newsletter-reader@example.test"]'),
-    ).toHaveCount(1);
-    await users.selectOption('newsletter-reader@example.test');
-    await page
-        .locator('#subscriber_emails_search')
-        .fill('newsletter-subscriber');
+    await pickSearchOptions(page, '#user_emails', 'newsletter-reader', [
+        /newsletter-reader@example.test/,
+    ]);
     await expect(
         page.locator(
-            '#subscriber_emails option[value="newsletter-subscriber@example.test"]',
+            'input[name="user_emails[]"][value="newsletter-reader@example.test"]',
         ),
     ).toHaveCount(1);
+    await pickSearchOptions(
+        page,
+        '#subscriber_emails',
+        'newsletter-subscriber',
+        [/newsletter-subscriber@example.test/],
+    );
     expect(await documentViolations(page)).toEqual([]);
 
     const sent = page.waitForResponse(
@@ -406,9 +411,15 @@ test('both editors work in Arabic RTL with dark contrast and a keyboard-only too
 
     for (const selector of ['#content', '#user_emails', '#subject']) {
         const colors = await colorsOf(page, selector);
-        expect(Math.max(...colors.background)).toBeLessThan(60);
+        // A multiple search select's trigger button is transparent: the box
+        // around it is what the text sits on.
+        const background =
+            selector === '#user_emails'
+                ? (await colorsOf(page, 'div:has(> #user_emails)')).background
+                : colors.background;
+        expect(Math.max(...background)).toBeLessThan(60);
         expect(
-            contrastRatio(colors.foreground, colors.background),
+            contrastRatio(colors.foreground, background),
         ).toBeGreaterThanOrEqual(4.5);
     }
 

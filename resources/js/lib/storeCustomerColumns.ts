@@ -1,13 +1,15 @@
 import { formatDate, formatDateTime, currentLocaleTag } from '@/lib/date';
 import { t } from '@/lib/i18n';
+import type { TableColumnDef } from '@/lib/useTableColumns';
 import type { StoreCustomer } from '@/types/storeCustomers';
 
-/** One toggleable column of the customers / representatives list. */
-export interface CustomerColumn {
-    /** The `StoreCustomer` field the cell shows (or a special cell: `package`, `status`). */
-    key: string;
-    /** The translation key of the header and of the chooser's checkbox. */
-    label: string;
+/**
+ * One toggleable column of the customers / representatives list: the shared
+ * `TableColumnDef` (useTableColumns.ts) plus what is customer-specific. `key`
+ * is the `StoreCustomer` field the cell shows (or a special cell: `package`,
+ * `status`).
+ */
+export interface CustomerColumn extends TableColumnDef {
     /** Shown until the admin chooses otherwise. */
     defaultVisible: boolean;
     /** Only the representatives list has this column. */
@@ -22,13 +24,13 @@ const field = (key: string) => `store.customers.fields.${key}`;
 
 /**
  * Every column the list can show, in table order. Select and Actions are not
- * listed: they are always shown. A column's data comes from
- * `CustomerListResource`; secrets (password hash, tokens, verification codes)
- * are never part of it.
+ * listed: they are always shown, and so is the required name. A column's data
+ * comes from `CustomerListResource`; secrets (password hash, tokens,
+ * verification codes) are never part of it.
  */
 export const customerColumns: CustomerColumn[] = [
     { key: 'id', label: field('id'), defaultVisible: true },
-    { key: 'name', label: field('name'), defaultVisible: true },
+    { key: 'name', label: field('name'), defaultVisible: true, required: true },
     { key: 'company_name', label: field('company_name'), defaultVisible: true },
     { key: 'email', label: field('email'), defaultVisible: true },
     { key: 'phone', label: field('phone'), defaultVisible: true },
@@ -147,49 +149,6 @@ export function availableCustomerColumns(
             (representatives || !column.representativesOnly) &&
             (canSeeRestricted || !column.restricted),
     );
-}
-
-export function defaultColumnKeys(available: CustomerColumn[]): string[] {
-    return available
-        .filter((column) => column.defaultVisible)
-        .map((column) => column.key);
-}
-
-/**
- * The remembered choice for a list, limited to columns that are available
- * now. Storage can be empty, blocked or hold junk: the defaults then apply.
- */
-export function loadColumnKeys(
-    storageKey: string,
-    available: CustomerColumn[],
-): string[] {
-    try {
-        const stored: unknown = JSON.parse(
-            window.localStorage.getItem(storageKey) ?? 'null',
-        );
-
-        if (Array.isArray(stored)) {
-            const keys = available
-                .map((column) => column.key)
-                .filter((key) => stored.includes(key));
-
-            if (keys.length > 0) {
-                return keys;
-            }
-        }
-    } catch {
-        // Unreadable storage: fall through to the defaults.
-    }
-
-    return defaultColumnKeys(available);
-}
-
-export function saveColumnKeys(storageKey: string, keys: string[]): void {
-    try {
-        window.localStorage.setItem(storageKey, JSON.stringify(keys));
-    } catch {
-        // Blocked storage: the choice just lasts for this page view.
-    }
 }
 
 /** A profit total with two decimals in the current locale's tag. */

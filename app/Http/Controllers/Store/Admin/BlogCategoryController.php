@@ -8,6 +8,7 @@ use App\Http\Requests\Store\Admin\StoreBlogCategoryRequest;
 use App\Http\Requests\Store\Admin\UpdateBlogCategoryRequest;
 use App\Http\Resources\Store\BlogCategoryResource;
 use App\Models\BlogCategory;
+use App\Support\NewestFirst;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -37,7 +38,7 @@ class BlogCategoryController extends Controller implements HasMiddleware
             'categories' => $this->paginated(BlogCategoryResource::collection(
                 BlogCategory::query()->select(['id', 'category_name'])
                     ->when($search, fn ($query) => $query->where('category_name', 'like', '%'.$search.'%'))
-                    ->orderBy('category_name')->orderBy('id')->paginate($perPage)->withQueryString()
+                    ->tap(NewestFirst::apply(...))->paginate($perPage)->withQueryString()
             )),
             'filters' => ['per_page' => $perPage, 'search' => $search],
         ]);

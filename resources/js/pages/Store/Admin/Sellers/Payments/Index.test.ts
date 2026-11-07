@@ -17,6 +17,10 @@ import {
     storeSharedProps,
 } from '@/testing/factories';
 import { defaultAuthProps } from '@/testing/inertiaPageMocks';
+import {
+    expectColumnCanBeHidden,
+    expectColumnLocked,
+} from '@/testing/tableColumns';
 import type { StoreSellerPayment } from '@/types/store';
 import Index from './Index.vue';
 
@@ -137,5 +141,22 @@ describe('seller payments page', () => {
             },
         });
         expect(empty.text()).toContain(t('store.sellers.noPayments'));
+    });
+
+    it('lets staff hide an optional column from the header and every row, and keeps the identifier', async () => {
+        window.localStorage.clear();
+        const wrapper = mount(Index, {
+            props: {
+                payments: paginated([storeSellerPayment()]),
+                seller: null,
+                filters: { per_page: 20 },
+            },
+        });
+        await expectColumnCanBeHidden(wrapper, 'sellers.payments', {
+            key: 'date',
+            label: t('store.sellers.date'),
+        });
+        expectColumnLocked(wrapper, t('store.sellers.seller'));
+        window.localStorage.clear();
     });
 });

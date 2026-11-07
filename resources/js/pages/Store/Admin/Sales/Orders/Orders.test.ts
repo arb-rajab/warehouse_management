@@ -1,11 +1,15 @@
 import { Form, Link } from '@inertiajs/vue3';
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { edit as customerEdit } from '@/actions/App/Http/Controllers/Store/Admin/CustomerController';
+import { edit as productEdit } from '@/actions/App/Http/Controllers/Store/Admin/ProductController';
 import StoreListFilters from '@/components/StoreListFilters.vue';
 import StoreOrderEntryFields from '@/components/StoreOrderEntryFields.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
+import { t } from '@/lib/i18n';
 import { paginated, storeOrder, storeSharedProps } from '@/testing/factories';
+import { expectColumnCanBeHidden, headerTexts } from '@/testing/tableColumns';
 import Create from './Create.vue';
 import Edit from './Edit.vue';
 import Index from './Index.vue';
@@ -69,10 +73,27 @@ describe('Store order pages', () => {
             expect(
                 wrapper.get('input[name=submission_key]').attributes('value'),
             ).toBe('token');
-            expect(wrapper.get('#customer_id').attributes()).toHaveProperty(
-                'required',
-            );
+            // The customer is a search select: a combobox trigger marked
+            // required, a hidden input named as the form field, and the
+            // native required guard the browser validates.
+            expect(
+                wrapper.get('#customer_id').attributes('aria-required'),
+            ).toBe('true');
+            expect(
+                wrapper.get('input[type="hidden"][name="customer_id"]').element,
+            ).toHaveProperty('value', '');
+            expect(
+                wrapper.get('[data-testid="search-select-guard"]').attributes(),
+            ).toHaveProperty('required');
             expect(wrapper.find('#rep_id').exists()).toBe(representativeOrder);
+            expect(
+                wrapper.find('input[type="hidden"][name="rep_id"]').exists(),
+            ).toBe(representativeOrder);
+            expect(
+                wrapper
+                    .get('input[name="products[0][product_id]"]')
+                    .attributes('type'),
+            ).toBe('hidden');
             expect(wrapper.get('#quantity-1').attributes()).toMatchObject({
                 min: '1',
                 max: '100000',
@@ -154,6 +175,18 @@ describe('Store order pages', () => {
         expect(wrapper.text()).toContain('20.00');
         expect(wrapper.text()).toContain('6.30');
         expect(wrapper.text()).toContain('Invalid price');
+        // The selects start prefilled: their labels show before any search and
+        // their hidden inputs post the stored ids.
+        expect(
+            wrapper.get('input[name="customer_id"]').attributes('value'),
+        ).toBe('3');
+        expect(wrapper.get('#customer_id').text()).toContain('Buyer');
+        expect(
+            wrapper
+                .get('input[name="products[0][product_id]"]')
+                .attributes('value'),
+        ).toBe('5');
+        expect(wrapper.get('#product-1').text()).toContain('SER-5');
         expect(
             wrapper.get('input[name="products[0][id]"]').attributes('value'),
         ).toBe('1');
@@ -278,7 +311,20 @@ describe('Store order pages', () => {
                 ).value,
             ).toBe('paid');
             // payment status and "from" are applied; "to" is not.
-            expect(form.props('activeCount')).toBe(2);
+            expect(form.props('chips')).toEqual([
+                {
+                    key: 'payment_status',
+                    label: t('store.orders.paymentStatus'),
+                    value: t('store.orders.status.paid'),
+                    keys: ['payment_status'],
+                },
+                {
+                    key: 'from',
+                    label: t('store.orders.from'),
+                    value: '2026-01-01',
+                    keys: ['from'],
+                },
+            ]);
             expect(
                 wrapper
                     .get('form#store-list-filters > button[type="button"]')
@@ -301,6 +347,9 @@ describe('Store order pages', () => {
         const form = pageForms(wrapper)[1];
         expect(form.findAll('[data-required-legend]')).toHaveLength(1);
         expect(form.find('legend [data-required-mark]').exists()).toBe(true);
+        // A fieldset is as wide as its content by default; the table's own
+        // wrapper must be what scrolls on a phone, not the page.
+        expect(form.get('fieldset').classes()).toContain('min-w-0');
         expect(form.findAll('input[required]')).toHaveLength(1);
         expect((form.element as HTMLFormElement).checkValidity()).toBe(false);
         await form.findAll('input[type="checkbox"]')[1].setValue(true);
@@ -355,5 +404,109 @@ describe('Store order pages', () => {
                     .exists(),
             ).toBe(false);
         }
+    });
+
+    it('links the customer, representative and products to their edit pages by permission', () => {
+        const withRep = {
+            ...order,
+            representative: {
+                id: 4,
+                name: 'Rep',
+                rep_discount_percentage: null,
+            },
+        };
+        const props = {
+            order: withRep,
+            additionalInfo: '',
+            trackingCode: 'TRACK',
+            shippingAddress: { address: 'Street' },
+            couponDiscount: 0,
+        };
+        const hrefs = (wrapper: ReturnType<typeof mount>) =>
+            wrapper.findAll('a').map((link) => link.attributes('href'));
+
+        const admin = mount(Show, { props });
+        expect(hrefs(admin)).toEqual(
+            expect.arrayContaining([
+                customerEdit(3).url,
+                customerEdit(4).url,
+                productEdit(5).url,
+            ]),
+        );
+
+        mocks.page.mockReturnValue({
+            url: '/temp/admin/orders/7/show',
+            props: {
+                locale: 'en',
+                auth: { user: { id: 1, name: 'Staff' } },
+                store: storeSharedProps({
+                    permissions: ['view_order_details'],
+                }),
+                errors: {},
+            },
+        });
+        const staff = mount(Show, { props });
+        expect(hrefs(staff)).not.toContain(customerEdit(3).url);
+        expect(hrefs(staff)).not.toContain(customerEdit(4).url);
+        expect(hrefs(staff)).not.toContain(productEdit(5).url);
+        expect(staff.text()).toContain('Buyer');
+    });
+
+    it('links the order list customer to their edit page by permission', () => {
+        const props = {
+            orders: paginated([order]),
+            filters: { per_page: 20 },
+            listRoute: 'all_orders.index',
+        };
+        const admin = mount(Index, { props });
+        expect(
+            admin.findAll('a').map((link) => link.attributes('href')),
+        ).toContain(customerEdit(3).url);
+
+        mocks.page.mockReturnValue({
+            url: '/temp/admin/all_orders',
+            props: {
+                locale: 'en',
+                auth: { user: { id: 1, name: 'Staff' } },
+                store: storeSharedProps({
+                    permissions: ['view_order_details'],
+                }),
+                errors: {},
+            },
+        });
+        const staff = mount(Index, { props });
+        expect(
+            staff.findAll('a').map((link) => link.attributes('href')),
+        ).not.toContain(customerEdit(3).url);
+    });
+
+    it('lets staff hide optional order columns and keeps the code and the select cell', async () => {
+        window.localStorage.clear();
+        const wrapper = mount(Index, {
+            props: {
+                orders: paginated([order]),
+                filters: { per_page: 20 },
+                listRoute: 'all_orders.index',
+            },
+        });
+        expect(headerTexts(wrapper)).toEqual([
+            t('store.orders.select'),
+            t('store.orders.code'),
+            t('store.orders.customer'),
+            t('store.orders.total'),
+            t('store.orders.deliveryStatus'),
+            t('store.orders.paymentStatus'),
+            t('store.orders.actions'),
+        ]);
+        expect(wrapper.get('tbody').text()).toContain('Buyer');
+        await expectColumnCanBeHidden(
+            wrapper,
+            'sales.orders',
+            { key: 'customer', label: t('store.orders.customer') },
+            1,
+        );
+        expect(wrapper.get('tbody').text()).not.toContain('Buyer');
+        expect(headerTexts(wrapper)).toContain(t('store.orders.code'));
+        window.localStorage.clear();
     });
 });

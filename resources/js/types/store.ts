@@ -1,3 +1,5 @@
+import type { SearchOption } from '@/types/searchSelect';
+
 /**
  * The store back office's shared props (HandleInertiaRequests::storeProps()),
  * present on every page under /temp. They hide sidebar links and buttons
@@ -97,12 +99,6 @@ export interface StoreCurrency extends StoreReferenceOption {
     exchange_rate: string;
     status: boolean;
 }
-export interface OrderConfigurationProduct {
-    id: number;
-    name: string;
-    mat_id: string;
-}
-
 /** The narrow database language shape used by administration. */
 export interface AdminLanguage {
     id: number;
@@ -419,19 +415,14 @@ export interface StoreCoupon {
     max_discount: number | null;
 }
 
-export interface StoreCouponProductOption {
-    id: number;
-    name: string;
-}
-
 /** The kinds of file the store's uploader accepts (MultipartUploadService::KINDS). */
-export interface StoreCampaignProduct {
-    id: number;
-    name: string;
+/** What a campaign or coupon product option carries in `extra` (App\Support\SearchOption::campaignProduct). */
+export type StoreCampaignProductExtra = {
     price: number;
     discount: number;
     discount_type: 'amount' | 'percent';
-}
+};
+export type StoreCampaignProduct = SearchOption<StoreCampaignProductExtra>;
 export interface StoreCampaignRow {
     id: number;
     discount: number;
@@ -584,13 +575,6 @@ export interface StoreTripMapTruck {
 /** A trip checkpoint's kind: an order's delivery or another stop at a customer. */
 export type StoreTripCheckpointType = 'delivery' | 'other';
 
-/** An order the trip forms offer for a new delivery checkpoint. */
-export interface StoreTripOrderOption {
-    id: number;
-    code: string;
-    customer: string | null;
-}
-
 /** A truck from the available-vehicles lookup. */
 export interface StoreTripTruckOption {
     id: number;
@@ -729,12 +713,8 @@ export interface StoreNotification {
     message: string | null;
     created_at: string | null;
 }
-export interface StoreOrderOption {
-    id: number;
-    name: string;
-    AccSysID?: string | null;
-    member_serial?: string | null;
-    rep_discount_percentage?: number | null;
+/** What the order form's product search carries in `extra` (App\Support\SearchOption::orderProduct). */
+export type StoreOrderProductExtra = {
     serial?: string | null;
     mat_id?: string | null;
     unit_price?: number;
@@ -742,7 +722,11 @@ export interface StoreOrderOption {
     tax?: number;
     digital?: boolean;
     stocks?: { variant: string; price: number; qty: number }[];
-}
+};
+/** What a representative option carries in `extra`. */
+export type StoreOrderRepresentativeExtra = {
+    rep_discount_percentage?: number | null;
+};
 export interface StoreOrderLine {
     id: number;
     product_id: number;
@@ -978,6 +962,8 @@ export interface StoreProductListRow {
     stock_quantity: number | null;
     low_stock: boolean;
     category: string | null;
+    /** The category's id, for its back office link; null when unset. */
+    category_id: number | null;
     for_sale: boolean;
     published: boolean;
     featured: boolean;
@@ -991,6 +977,16 @@ export interface StoreProductListRow {
     deleted_from_api: boolean;
     public_url: string | null;
 }
+/** One applied Filters-dialog filter, shown as a removable chip. */
+export interface StoreFilterChip {
+    key: string;
+    label: string;
+    /** Shown after the label as "label: value"; omit for a plain flag. */
+    value?: string;
+    /** The query keys that removing the chip drops. */
+    keys: string[];
+}
+
 export interface StoreProductListFilters {
     search: string | null;
     category_id: number | null;
@@ -1120,7 +1116,8 @@ export interface StoreSellerPayment {
 }
 export interface StoreSellerWithdrawal {
     id: number;
-    seller: StoreSellerPayment['seller'];
+    /** The seller's user, plus the shop id its edit page is keyed by. */
+    seller: StoreSellerPayment['seller'] & { shop_id: number | null };
     date: string | null;
     due: string;
     amount: string;

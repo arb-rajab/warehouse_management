@@ -11,6 +11,7 @@ use App\Http\Resources\Store\VisitDetailResource;
 use App\Http\Resources\Store\VisitResource;
 use App\Models\StoreUser;
 use App\Models\Visit;
+use App\Support\NewestFirst;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
@@ -50,7 +51,7 @@ class VisitController extends Controller implements HasMiddleware
         }
 
         return Inertia::render('Store/Admin/Representatives/Visits/Index', [
-            'visits' => $this->paginated(VisitResource::collection($visits->orderByDesc('created_at')->orderByDesc('id')->paginate($perPage)->withQueryString())),
+            'visits' => $this->paginated(VisitResource::collection($visits->tap(NewestFirst::apply(...))->paginate($perPage)->withQueryString())),
             'filters' => ['per_page' => $perPage, 'search' => $request->input('search', ''), 'date_from' => $request->input('date_from', ''), 'date_to' => $request->input('date_to', '')],
         ]);
     }

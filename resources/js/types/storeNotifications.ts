@@ -5,12 +5,6 @@ export interface CustomerNotification {
     customer: { id: number; name: string } | null;
 }
 
-export interface NotificationCustomer {
-    id: number;
-    name: string;
-    account_id: number | null;
-}
-
 export interface AdminNotification {
     id: string;
     kind: 'order' | 'cart' | 'other';

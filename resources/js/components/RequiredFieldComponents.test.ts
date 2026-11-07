@@ -2,15 +2,15 @@ import { flushPromises, mount } from '@vue/test-utils';
 import type { VueWrapper } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Component } from 'vue';
+import { search } from '@/actions/App/Http/Controllers/Store/Admin/OrderEntryController';
 import FilterDateField from '@/components/FilterDateField.vue';
 import FilterNumberField from '@/components/FilterNumberField.vue';
 import FormField from '@/components/FormField.vue';
 import ProductSelect from '@/components/ProductSelect.vue';
 import RequiredMark from '@/components/RequiredMark.vue';
 import StoreBooleanField from '@/components/StoreBooleanField.vue';
-import StoreNewsletterRecipients from '@/components/StoreNewsletterRecipients.vue';
-import StoreOrderSearch from '@/components/StoreOrderSearch.vue';
 import StoreRichTextField from '@/components/StoreRichTextField.vue';
+import StoreSearchSelect from '@/components/StoreSearchSelect.vue';
 import StoreSelectField from '@/components/StoreSelectField.vue';
 import StoreUploadField from '@/components/StoreUploadField.vue';
 import { i18n } from '@/lib/i18n';
@@ -99,22 +99,15 @@ const requiredFieldComponents: {
         control: '#product-guard',
     },
     {
-        name: 'StoreNewsletterRecipients',
-        component: StoreNewsletterRecipients,
-        props: { kind: 'users', errors: {}, required: false },
-        control: 'select',
-        label: 'label[for="user_emails"]',
-    },
-    {
-        name: 'StoreOrderSearch',
-        component: StoreOrderSearch,
+        name: 'StoreSearchSelect',
+        component: StoreSearchSelect,
         props: {
             id: 'customer',
             name: 'customer_id',
             label: 'Customer',
-            kind: 'customers',
+            endpoint: search,
         },
-        control: 'select',
+        control: 'button#customer',
         label: 'label[for="customer"]',
     },
 ];

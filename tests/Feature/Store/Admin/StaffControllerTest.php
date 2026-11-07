@@ -75,16 +75,17 @@ describe('index', function () {
         $this->get('/temp/admin/staffs')->assertOk()->assertInertia(
             fn (Assert $page) => $page
                 ->has('staff.data', 2)
-                ->where('staff.data.0.id', $superAdmin->id)
-                ->where('staff.data.0.is_super_admin', true)
-                ->where('staff.data.1.role.name', 'Shop clerk')
+                ->where('staff.data.1.id', $superAdmin->id)
+                ->where('staff.data.1.is_super_admin', true)
+                ->where('staff.data.0.role.name', 'Shop clerk')
                 ->where('staff.meta.total', 2)
         );
     });
 
     test('the staff list pages, twenty to a page by default', function () {
         actingAsStoreUser(createStoreStaff('view_all_staffs'));
-        $ids = collect(range(1, 23))->map(fn () => createStaffRow(createStoreUser('staff'))->id);
+        // Newest first: the reverse of the order the staff were created in.
+        $ids = collect(range(1, 23))->map(fn () => createStaffRow(createStoreUser('staff'))->id)->reverse()->values();
 
         $firstPage = $this->get('/temp/admin/staffs')->assertOk()->inertiaProps('staff');
         $secondPage = $this->get('/temp/admin/staffs?page=2')->assertOk()->inertiaProps('staff');

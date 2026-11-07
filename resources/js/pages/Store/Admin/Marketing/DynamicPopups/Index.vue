@@ -16,6 +16,7 @@ import FieldError from '@/components/FieldError.vue';
 import FormField from '@/components/FormField.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import Pagination from '@/components/Pagination.vue';
+import StoreColumnPicker from '@/components/StoreColumnPicker.vue';
 import StoreStatusSwitch from '@/components/StoreStatusSwitch.vue';
 import SubmitButton from '@/components/SubmitButton.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
@@ -23,6 +24,7 @@ import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
 import { confirmDelete } from '@/lib/confirm';
 import { t } from '@/lib/i18n';
 import { useStoreAccess } from '@/lib/storeAccess';
+import { useTableColumns } from '@/lib/useTableColumns';
 import type { Paginated, PerPageFilters } from '@/types/admin';
 import type { StoreDynamicPopupSummary } from '@/types/store';
 
@@ -63,6 +65,27 @@ function confirmPublication(published: boolean): boolean {
 function selectAll(checked: boolean): void {
     selected.value = checked ? props.popups.data.map((popup) => popup.id) : [];
 }
+const columns = useTableColumns({
+    listId: 'marketing.dynamicPopups',
+    columns: [
+        { key: 'image', label: 'store.dynamicPopups.index.image' },
+        {
+            key: 'title',
+            label: 'store.dynamicPopups.fields.title',
+            required: true,
+        },
+        { key: 'link', label: 'store.dynamicPopups.index.link' },
+        { key: 'status', label: 'store.dynamicPopups.index.status' },
+    ],
+});
+const { shown, visibleColumns } = columns;
+const tableColumns = computed(() => [
+    ...(access.value.can('delete_dynamic_popups')
+        ? [t('store.dynamicPopups.index.select')]
+        : []),
+    ...visibleColumns.value.map((column) => t(column.label)),
+    t('store.dynamicPopups.index.actions'),
+]);
 </script>
 
 <template>
@@ -94,48 +117,41 @@ function selectAll(checked: boolean): void {
                 :processing="processing"
             />
         </Form>
-        <Form
-            v-if="access.can('delete_dynamic_popups')"
-            :action="bulkDestroy({ mergeQuery: {} })"
-            :on-before="
-                () =>
-                    selected.length > 0 &&
-                    confirmDelete(
-                        t('store.dynamicPopups.index.selection', {
-                            count: selected.length,
-                        }),
-                    )
-            "
-            #default="{ errors, processing }"
-            class="mb-4 max-w-sm"
-            @success="selected = []"
-        >
-            <input
-                v-for="id in selected"
-                :key="id"
-                type="hidden"
-                name="id[]"
-                :value="id"
-            />
-            <SubmitButton
-                :label="t('store.dynamicPopups.index.deleteSelection')"
-                :processing-label="t('store.dynamicPopups.index.deleting')"
-                :processing="processing"
-                :disabled="processing || selected.length === 0"
-            />
-            <FieldError :message="errors.id" />
-        </Form>
+        <StoreColumnPicker :state="columns">
+            <Form
+                v-if="access.can('delete_dynamic_popups')"
+                :action="bulkDestroy({ mergeQuery: {} })"
+                :on-before="
+                    () =>
+                        selected.length > 0 &&
+                        confirmDelete(
+                            t('store.dynamicPopups.index.selection', {
+                                count: selected.length,
+                            }),
+                        )
+                "
+                #default="{ errors, processing }"
+                class="max-w-sm"
+                @success="selected = []"
+            >
+                <input
+                    v-for="id in selected"
+                    :key="id"
+                    type="hidden"
+                    name="id[]"
+                    :value="id"
+                />
+                <SubmitButton
+                    :label="t('store.dynamicPopups.index.deleteSelection')"
+                    :processing-label="t('store.dynamicPopups.index.deleting')"
+                    :processing="processing"
+                    :disabled="processing || selected.length === 0"
+                />
+                <FieldError :message="errors.id" />
+            </Form>
+        </StoreColumnPicker>
         <DataTable
-            :columns="[
-                ...(access.can('delete_dynamic_popups')
-                    ? [t('store.dynamicPopups.index.select')]
-                    : []),
-                t('store.dynamicPopups.index.image'),
-                t('store.dynamicPopups.fields.title'),
-                t('store.dynamicPopups.index.link'),
-                t('store.dynamicPopups.index.status'),
-                t('store.dynamicPopups.index.actions'),
-            ]"
+            :columns="tableColumns"
             :rows="popups.data"
             :empty-message="t('store.dynamicPopups.index.empty')"
         >
@@ -156,7 +172,7 @@ function selectAll(checked: boolean): void {
                         class="cursor-pointer"
                     />
                 </td>
-                <td class="px-4 py-2">
+                <td v-if="shown.image" class="px-4 py-2">
                     <img
                         v-if="popup.banner_url"
                         :src="popup.banner_url"
@@ -164,9 +180,13 @@ function selectAll(checked: boolean): void {
                         class="size-16 rounded object-cover"
                     />
                 </td>
-                <td class="px-4 py-2">{{ popup.title }}</td>
-                <td class="px-4 py-2 break-all">{{ popup.btn_link }}</td>
-                <td class="px-4 py-2">
+                <td class="max-w-xs truncate px-4 py-2" :title="popup.title">
+                    {{ popup.title }}
+                </td>
+                <td v-if="shown.link" class="px-4 py-2 break-all">
+                    {{ popup.btn_link }}
+                </td>
+                <td v-if="shown.status" class="px-4 py-2">
                     <StoreStatusSwitch
                         v-if="access.can('publish_dynamic_popups')"
                         :action="updateStatus({ mergeQuery: {} })"

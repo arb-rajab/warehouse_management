@@ -72,6 +72,25 @@ test('display dates and currency numbers follow the active locale with Western d
     expect(StoreLocale::date(strtotime('2026-10-28 14:35:00'), true))->toContain('35');
 })->with(['ar', 'en']);
 
+test('prices fall back to two decimals with the symbol first when the currency settings are missing or blank', function (?string $stored) {
+    seedStoreCurrency();
+    if ($stored !== null) {
+        DB::table('business_settings')->insert([['type' => 'no_of_decimals', 'value' => $stored], ['type' => 'symbol_format', 'value' => $stored]]);
+    }
+
+    // Dev had no rows and printed "11€" for 10.90 and "3€" for 2.70 (BR-20261104-A, FYI).
+    expect(format_price(10.9))->toBe('€10.90')
+        ->and(format_price(2.7))->toBe('€2.70')
+        ->and(format_price(1500000, true))->toBe('€1.50M');
+})->with(['no rows' => null, 'blank rows' => '']);
+
+test('stored currency settings still win over the defaults, a zero included', function () {
+    seedStoreCurrency();
+    DB::table('business_settings')->insert([['type' => 'no_of_decimals', 'value' => '0'], ['type' => 'symbol_format', 'value' => '4']]);
+
+    expect(format_price(10.9))->toBe('11 €');
+});
+
 test('the storefront uses Arabic direction even without a language row or with a contrary flag', function () {
     config(['app.locale' => 'ar']);
     $this->get('/temp/users/login')->assertOk()

@@ -19,7 +19,8 @@ defineProps<{
 <template>
     <StoreProductReport
         :title="t('store.reports.stockTitle')"
-        :metric-label="t('store.reports.stock')"
+        metric-key="store.reports.stock"
+        list-id="reports.stock"
         :url="stock_report.url()"
         :rows="rows"
         :filters="filters"

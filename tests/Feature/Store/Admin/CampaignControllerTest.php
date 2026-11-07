@@ -93,7 +93,7 @@ test('brand offer edits retain their discriminator and derive the correct base r
     $this->put(route('offer_deals.update', $offer), $data)->assertRedirect();
     expect((int) $offer->fresh()->brand_id)->toBe($another->id);
     expect((int) $offer->fresh()->base_product->product_id)->toBe($nextBase->id);
-    $this->get(route('offer_deals.edit', $offer))->assertInertia(fn (Assert $p) => $p->where('offer.offer_type', 'brand_offer')->where('selectedBrand.id', $another->id));
+    $this->get(route('offer_deals.edit', $offer))->assertInertia(fn (Assert $p) => $p->where('offer.offer_type', 'brand_offer')->where('selectedBrand.id', $another->id)->where('selectedBrand.label', 'Other')->where('selectedBrand.icon', 'tag'));
     $data['offer_type'] = 'products_offer';
     $this->putJson(route('offer_deals.update', $offer), $data)->assertUnprocessable()->assertJsonValidationErrors('offer_type');
 });
@@ -107,7 +107,8 @@ test('flash edits preserve slug and default title while translating and removal 
     expect($deal->fresh()->title)->toBe('Existing');
     expect($deal->fresh()->slug)->toBe('stable-url');
     expect(FlashDealTranslation::query()->where('lang', 'ar')->value('title'))->toBe('عرض');
-    $this->get(route('flash_deals.edit', [$deal, 'lang' => 'ar']))->assertInertia(fn (Assert $p) => $p->where('title', 'عرض')->where('lang', 'ar')->has('products', 1));
+    $this->get(route('flash_deals.edit', [$deal, 'lang' => 'ar']))->assertInertia(fn (Assert $p) => $p->where('title', 'عرض')->where('lang', 'ar')->has('products', 1)
+        ->has('selectedProducts', 1, fn (Assert $option) => $option->where('id', $data['products'][0]['id'])->where('icon', 'package')->has('label')->has('description')->has('image')->has('badge')->has('extra')));
     $product = Product::findOrFail($data['products'][0]['id']);
     $discount = $product->discount;
     $data = campaignForm('flash_deals', ['title' => 'Changed']);
@@ -129,11 +130,19 @@ test('campaign product search is translated bounded and preserves legacy eligibi
     session(['locale' => 'ar']);
     createStoreProduct(['published' => 0, 'approved' => 1, 'name' => 'منتج']);
     createStoreProduct(['published' => 1, 'approved' => 0, 'name' => 'منتج']);
-    $this->getJson(route('admin.campaign-products.index', ['q' => 'منتج']))->assertOk()->assertExactJson([['id' => $product->id, 'name' => 'منتج', 'price' => (float) $product->unit_price, 'discount' => (float) $product->discount, 'discount_type' => $product->discount_type ?? 'amount']]);
+    $product->forceFill(['serial' => 'FD-1', 'discount' => 10, 'discount_type' => 'percent'])->save();
+    $found = $this->getJson(route('admin.campaign-products.index', ['q' => 'منتج']))->assertOk();
+    expect($found->json('data'))->toHaveCount(1)->and($found->json('data.0'))->toEqual([
+        'id' => $product->id, 'label' => 'منتج', 'description' => 'رمز المنتج FD-1 · #'.$product->id.' · 2.50',
+        'image' => $product->thumbnailUpload->external_link, 'icon' => 'package', 'badge' => ['text' => 'خصم 10%', 'tone' => 'info'],
+        'extra' => ['price' => 2.5, 'discount' => 10, 'discount_type' => 'percent'],
+    ]);
     foreach (range(1, 35) as $i) {
         createStoreProduct(['published' => 1, 'approved' => 1]);
-    }$this->getJson(route('admin.campaign-products.index'))->assertJsonCount(30);
-    $this->getJson(route('admin.campaign-products.index', ['q' => str_repeat('a', 256)]))->assertUnprocessable();
+    }
+    $this->getJson(route('admin.campaign-products.index'))->assertOk()->assertJsonCount(20, 'data')->assertJsonPath('meta.total', 36)->assertJsonPath('meta.last_page', 2);
+    $this->getJson(route('admin.campaign-products.index', ['page' => 2]))->assertOk()->assertJsonCount(16, 'data');
+    $this->getJson(route('admin.campaign-products.index', ['q' => str_repeat('a', 101)]))->assertUnprocessable();
 });
 
 test('invalid campaign inputs refuse partial writes and preserve old targeting', function (string $module, string $field, mixed $value) {
@@ -246,3 +255,23 @@ test('warehouse administrator sessions cannot write campaigns or change product 
     $this->assertDatabaseCount($module === 'offer_deals' ? 'offers' : 'flash_deals', 1);
     $this->assertDatabaseCount($module === 'offer_deals' ? 'offer_products' : 'flash_deal_products', 0);
 })->with('campaign modules');
+
+test('brand search returns tag options, escapes wildcards and pages', function () {
+    actingAsStoreUser(createStoreStaff('add_offer_deal'));
+    Brand::forceCreate(['name' => 'Al Wazir']);
+    Brand::forceCreate(['name' => 'Wazir Foods']);
+    Brand::forceCreate(['name' => '100% Pure']);
+    Brand::forceCreate(['name' => '1000 Pure']);
+    $names = fn (string $q) => collect($this->getJson(route('admin.campaign-products.brands', ['q' => $q]))->assertOk()->json('data'))->pluck('label')->all();
+
+    expect($names('wazir'))->toBe(['Wazir Foods', 'Al Wazir'])
+        ->and($names('100%'))->toBe(['100% Pure']);
+    $first = Brand::query()->where('name', 'Al Wazir')->firstOrFail();
+    expect($this->getJson(route('admin.campaign-products.brands', ['q' => 'Al Wazir']))->json('data.0'))->toEqual([
+        'id' => $first->id, 'label' => 'Al Wazir', 'description' => null, 'image' => null, 'icon' => 'tag', 'badge' => null,
+    ]);
+    foreach (range(1, 22) as $number) {
+        Brand::forceCreate(['name' => 'Bulk '.$number]);
+    }
+    $this->getJson(route('admin.campaign-products.brands', ['q' => 'Bulk']))->assertJsonCount(20, 'data')->assertJsonPath('meta.total', 22);
+});

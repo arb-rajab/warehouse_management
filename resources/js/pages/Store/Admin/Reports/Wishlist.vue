@@ -19,7 +19,8 @@ defineProps<{
 <template>
     <StoreProductReport
         :title="t('store.reports.wishlistTitle')"
-        :metric-label="t('store.reports.wishes')"
+        metric-key="store.reports.wishes"
+        list-id="reports.wishlist"
         :url="wish_report.url()"
         :rows="rows"
         :filters="filters"

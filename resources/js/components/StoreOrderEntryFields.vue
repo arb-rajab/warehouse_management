@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { Plus, Trash2 } from '@lucide/vue';
 import { computed, ref } from 'vue';
+import { search } from '@/actions/App/Http/Controllers/Store/Admin/OrderEntryController';
 import ActionErrorBanner from '@/components/ActionErrorBanner.vue';
 import DataTable from '@/components/DataTable.vue';
 import FieldError from '@/components/FieldError.vue';
 import FormField from '@/components/FormField.vue';
 import RequiredMark from '@/components/RequiredMark.vue';
-import StoreOrderSearch from '@/components/StoreOrderSearch.vue';
+import StoreSearchSelect from '@/components/StoreSearchSelect.vue';
 import {
     fieldLabelClass,
     plainFieldInputClass,
@@ -14,11 +15,18 @@ import {
 } from '@/lib/filters';
 import { t } from '@/lib/i18n';
 import { firstError } from '@/lib/pageErrors';
-import type { StoreOrder, StoreOrderOption } from '@/types/store';
+import type { SearchOption } from '@/types/searchSelect';
+import type {
+    StoreOrder,
+    StoreOrderProductExtra,
+    StoreOrderRepresentativeExtra,
+} from '@/types/store';
 const props = defineProps<{
     representativeOrder: boolean;
     submissionKey?: string;
     order?: StoreOrder;
+    /** The order's customer in the search select's shape, so the edit form shows its label. */
+    customerOption?: SearchOption | null;
     additionalInfo?: string | null;
     couponDiscount?: number;
     errors: Record<string, string>;
@@ -26,7 +34,7 @@ const props = defineProps<{
 type EntryLine = {
     id: number;
     persistedId?: number;
-    option?: StoreOrderOption;
+    option?: SearchOption;
     quantity: number;
     price: number;
     unit: string;
@@ -36,11 +44,29 @@ type EntryLine = {
     shipping?: number;
 };
 let nextId = 1;
-const customer = ref<StoreOrderOption | undefined>(
-    props.order?.customer ?? undefined,
+const customer = ref<SearchOption | null>(
+    props.customerOption ??
+        (props.order?.customer
+            ? {
+                  id: props.order.customer.id,
+                  label: props.order.customer.name,
+                  description: props.order.customer.AccSysID,
+                  icon: 'user',
+              }
+            : null),
 );
-const representative = ref<StoreOrderOption | undefined>(
-    props.order?.representative ?? undefined,
+const representative = ref<SearchOption | null>(
+    props.order?.representative
+        ? {
+              id: props.order.representative.id,
+              label: props.order.representative.name,
+              icon: 'user',
+              extra: {
+                  rep_discount_percentage:
+                      props.order.representative.rep_discount_percentage,
+              },
+          }
+        : null,
 );
 const lines = ref<EntryLine[]>(
     props.order?.details?.map((line) => ({
@@ -48,9 +74,12 @@ const lines = ref<EntryLine[]>(
         persistedId: line.id,
         option: {
             id: line.product_id,
-            name: line.name,
-            serial: line.serial,
-            mat_id: line.mat_id,
+            label: line.name,
+            description: [line.serial, `#${line.product_id}`]
+                .filter(Boolean)
+                .join(' · '),
+            icon: 'package',
+            extra: { serial: line.serial, mat_id: line.mat_id },
         },
         quantity: line.quantity,
         price: line.unit_price,
@@ -78,17 +107,31 @@ const subtotal = computed(() =>
 );
 const tax = computed(() =>
     lines.value.reduce(
-        (sum, line) => sum + (line.tax ?? line.option?.tax ?? 0),
+        (sum, line) => sum + (line.tax ?? productExtra(line).tax ?? 0),
         0,
     ),
 );
 const total = computed(() => Math.max(0, subtotal.value));
 
-function selectProduct(line: EntryLine, product: StoreOrderOption): void {
-    const same = product.id === line.option?.id;
+function productExtra(line: EntryLine): StoreOrderProductExtra {
+    return (line.option?.extra ?? {}) as StoreOrderProductExtra;
+}
+function selectProduct(line: EntryLine, product: SearchOption | null): void {
+    if (!product) {
+        line.option = undefined;
+        line.variant = '';
+        line.price = 0;
+        line.tax = undefined;
+        line.shipping = undefined;
+
+        return;
+    }
+
+    const extra = (product.extra ?? {}) as StoreOrderProductExtra;
+    const same = String(product.id) === String(line.option?.id);
     line.option = product;
-    line.variant = product.stocks?.[0]?.variant ?? '';
-    line.price = product.unit_price ?? 0;
+    line.variant = extra.stocks?.[0]?.variant ?? '';
+    line.price = extra.unit_price ?? 0;
     line.unit = 'PerBox';
     unitChanged(line);
 
@@ -97,27 +140,27 @@ function selectProduct(line: EntryLine, product: StoreOrderOption): void {
         line.shipping = undefined;
     }
 }
-function selectRepresentative(option: StoreOrderOption): void {
+function selectRepresentative(option: SearchOption | null): void {
     representative.value = option;
     lines.value.forEach(unitChanged);
 }
 function unitChanged(line: EntryLine): void {
-    if (!line.option?.unit_price) {
+    const extra = productExtra(line);
+
+    if (!extra.unit_price) {
         return;
     }
 
     const base =
         line.unit === 'PerPiece'
-            ? line.option.unit_price / Math.max(1, line.option.unit_equal ?? 1)
-            : line.option.unit_price;
-    line.price =
-        Math.round(
-            base *
-                (1 -
-                    (representative.value?.rep_discount_percentage ?? 0) /
-                        100) *
-                100,
-        ) / 100;
+            ? extra.unit_price / Math.max(1, extra.unit_equal ?? 1)
+            : extra.unit_price;
+    const discount =
+        (
+            representative.value?.extra as
+                StoreOrderRepresentativeExtra | undefined
+        )?.rep_discount_percentage ?? 0;
+    line.price = Math.round(base * (1 - discount / 100) * 100) / 100;
 }
 </script>
 <template>
@@ -130,26 +173,31 @@ function unitChanged(line: EntryLine): void {
             :value="submissionKey"
         />
         <div class="grid gap-4 md:grid-cols-2">
-            <StoreOrderSearch
+            <StoreSearchSelect
                 id="customer_id"
+                v-model="customer"
                 name="customer_id"
                 :label="t('store.orders.customer')"
-                kind="customers"
-                :selected="customer"
+                :endpoint="search"
+                :params="{ kind: 'customers' }"
+                :placeholder="t('store.orders.chooseCustomer')"
+                :search-placeholder="t('store.orders.searchCustomers')"
                 required
                 :error="errors.customer_id"
-                @select="customer = $event"
             />
-            <StoreOrderSearch
+            <StoreSearchSelect
                 v-if="representativeOrder"
                 id="rep_id"
                 name="rep_id"
+                :model-value="representative"
                 :label="t('store.orders.representative')"
-                kind="representatives"
-                :selected="representative"
+                :endpoint="search"
+                :params="{ kind: 'representatives' }"
+                :placeholder="t('store.orders.chooseRepresentative')"
+                :search-placeholder="t('store.orders.searchRepresentatives')"
                 required
                 :error="errors.rep_id"
-                @select="selectRepresentative"
+                @update:model-value="selectRepresentative"
             />
             <FormField
                 id="delivery_date"
@@ -187,17 +235,20 @@ function unitChanged(line: EntryLine): void {
                         :name="`products[${lines.indexOf(row)}][id]`"
                         :value="row.persistedId"
                     />
-                    <StoreOrderSearch
+                    <StoreSearchSelect
                         :id="`product-${row.id}`"
                         :name="`products[${lines.indexOf(row)}][product_id]`"
+                        :model-value="row.option ?? null"
                         :label="t('store.orders.product')"
-                        kind="products"
-                        :selected="row.option"
+                        :endpoint="search"
+                        :params="{ kind: 'products' }"
+                        :placeholder="t('store.orders.chooseProduct')"
+                        :search-placeholder="t('store.orders.searchProducts')"
                         required
                         :error="
                             errors[`products.${lines.indexOf(row)}.product_id`]
                         "
-                        @select="selectProduct(row, $event)"
+                        @update:model-value="selectProduct(row, $event)"
                     />
                     <label
                         :for="`variant-${row.id}`"
@@ -205,14 +256,14 @@ function unitChanged(line: EntryLine): void {
                         >{{ t('store.orders.variant') }}</label
                     >
                     <select
-                        v-if="row.option?.stocks?.length"
+                        v-if="productExtra(row).stocks?.length"
                         :id="`variant-${row.id}`"
                         v-model="row.variant"
                         :class="plainFieldInputClass"
                         :name="`products[${lines.indexOf(row)}][stock_variant]`"
                     >
                         <option
-                            v-for="stock in row.option.stocks"
+                            v-for="stock in productExtra(row).stocks"
                             :key="stock.variant"
                             :value="stock.variant"
                         >

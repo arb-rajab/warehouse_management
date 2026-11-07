@@ -43,6 +43,10 @@ class ProductStockService
         }
     }
 
+    /**
+     * Copy stock rows to a duplicated product. The SKU is not copied: it names
+     * the source's article, and two products with one SKU are not told apart.
+     */
     public function product_duplicate_store($product_stocks , $product_new)
     {
         foreach ($product_stocks as $key => $stock) {
@@ -50,7 +54,6 @@ class ProductStockService
             $product_stock->product_id  = $product_new->id;
             $product_stock->variant     = $stock->variant;
             $product_stock->price       = $stock->price;
-            $product_stock->sku         = $stock->sku;
             $product_stock->qty         = $stock->qty;
             $product_stock->save();
         }

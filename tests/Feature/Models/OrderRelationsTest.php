@@ -2,6 +2,7 @@
 
 use App\Models\Cart;
 use App\Models\Order;
+use App\Models\OrderDetail;
 use App\Models\StoreUser;
 use Illuminate\Support\Facades\DB;
 
@@ -71,4 +72,18 @@ test('proxy payment references stay attached to their own order when eager loade
 test('a cart has no always-true carts_offer relation any more', function () {
     expect(method_exists(Cart::class, 'carts_offer'))->toBeFalse()
         ->and(method_exists(StoreUser::class, 'carts_offered'))->toBeTrue();
+});
+
+test('an order line\'s product is the one whose id the line stores, not another product with its serial', function () {
+    $order = createStoreOrder(createStoreUser('customer'));
+    $placed = createStoreProduct(['serial' => 'MAT-1']);
+    $other = createStoreProduct(['serial' => 'MAT-1']); // e.g. a copy made with the same serial
+    $line = OrderDetail::query()->create(['order_id' => $order->id, 'seller_id' => 0, 'product_id' => $placed->id, 'product_serial' => 'MAT-1', 'price' => 1, 'tax' => 0, 'quantity' => 1]);
+    $otherLine = OrderDetail::query()->create(['order_id' => $order->id, 'seller_id' => 0, 'product_id' => $other->id, 'product_serial' => 'MAT-1', 'price' => 1, 'tax' => 0, 'quantity' => 1]);
+
+    $lines = OrderDetail::query()->with('product:id')->whereKey([$line->id, $otherLine->id])->get()->keyBy('id');
+
+    expect($line->product->id)->toBe($placed->id)
+        ->and($lines[$line->id]->product->id)->toBe($placed->id)
+        ->and($lines[$otherLine->id]->product->id)->toBe($other->id);
 });

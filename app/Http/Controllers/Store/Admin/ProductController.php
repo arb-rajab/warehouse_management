@@ -8,6 +8,7 @@ use App\Http\Controllers\Concerns\ProvidesStoreReferenceOptions;
 use App\Http\Controllers\Concerns\ProvidesStoreUploadPreviews;
 use App\Http\Controllers\Concerns\UpdatesStoreProductFlags;
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Store\Admin\Concerns\SearchesOptions;
 use App\Http\Requests\Store\Admin\BulkDeleteProductsRequest;
 use App\Http\Requests\Store\Admin\EditReferenceTranslationRequest;
 use App\Http\Requests\Store\Admin\FilterAllProductsRequest;
@@ -15,6 +16,7 @@ use App\Http\Requests\Store\Admin\FilterInHouseProductsRequest;
 use App\Http\Requests\Store\Admin\FilterSellerProductsRequest;
 use App\Http\Requests\Store\Admin\ProductListActionRequest;
 use App\Http\Requests\Store\Admin\ProductVariantCombinationsRequest;
+use App\Http\Requests\Store\Admin\SearchOptionsRequest;
 use App\Http\Requests\Store\Admin\StoreProductRequest;
 use App\Http\Requests\Store\Admin\UpdateProductApprovalRequest;
 use App\Http\Requests\Store\Admin\UpdateProductListFlagRequest;
@@ -36,8 +38,10 @@ use App\Services\ProductStockService;
 use App\Services\ProductTaxService;
 use App\Services\Store\InHouseProductWriter;
 use App\Services\Store\ProductVariantCombinations;
+use App\Support\NewestFirst;
 use App\Support\ProductFormNumber;
 use App\Support\ProductSlug;
+use App\Support\SearchOption;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -62,6 +66,7 @@ class ProductController extends Controller implements HasMiddleware
     use ProvidesStoreProductTaxes;
     use ProvidesStoreReferenceOptions;
     use ProvidesStoreUploadPreviews;
+    use SearchesOptions;
     use UpdatesStoreProductFlags;
 
     /** @return array<int, Middleware> */
@@ -73,7 +78,7 @@ class ProductController extends Controller implements HasMiddleware
             new Middleware('permission:product_edit', only: ['edit', 'sellerEdit', 'update', 'editVariantCombinations']),
             new Middleware('permission:show_in_house_products', only: ['inHouse']),
             new Middleware('permission:show_all_products', only: ['all']),
-            new Middleware('permission:show_seller_products', only: ['seller']),
+            new Middleware('permission:show_seller_products', only: ['seller', 'sellerOptions']),
             // The root ProductController's own gates for the same writes.
             new Middleware('permission:product_edit', only: ['updatePublished', 'updateFeatured', 'updateForSale', 'sellerPublished', 'sellerFeatured', 'updateSaleStatus', 'updateTodaysDeal', 'updateProductApproval']),
             new Middleware('permission:product_duplicate', only: ['duplicate', 'sellerDuplicate']),
@@ -97,7 +102,7 @@ class ProductController extends Controller implements HasMiddleware
             ->where('featured', $request->boolean('featured'));
         $this->applyCategoryAndSort($query, $request);
 
-        return $this->renderList(StoreProductList::InHouse, $request, $query->orderByDesc('created_at')->orderByDesc('id'), [
+        return $this->renderList(StoreProductList::InHouse, $request, $query->tap(NewestFirst::apply(...)), [
             'active' => $request->boolean('active'),
             'for_sale' => $request->boolean('for_sale'),
             'featured' => $request->boolean('featured'),
@@ -109,8 +114,8 @@ class ProductController extends Controller implements HasMiddleware
      * of the search over the names, id and barcodes, one preset or
      * the four state switches matched exactly, the category and the
      * optional legacy sort. With none of those, products the Otajer sync
-     * retired stay hidden. It had no order of its own, so rows keep their
-     * primary-key order.
+     * retired stay hidden. Without a legacy sort it lists newest first, like
+     * the other two lists.
      */
     public function all(FilterAllProductsRequest $request): Response
     {
@@ -140,7 +145,7 @@ class ProductController extends Controller implements HasMiddleware
         }
         $this->applyCategoryAndSort($query, $request);
 
-        return $this->renderList(StoreProductList::All, $request, $query->orderBy('id'), [
+        return $this->renderList(StoreProductList::All, $request, $query->tap(NewestFirst::apply(...)), [
             ...collect($flags)->keys()->mapWithKeys(fn (string $flag) => [$flag => $request->boolean($flag)])->all(),
             'user_id' => $userId === null ? null : (int) $userId,
             'preset' => $preset,
@@ -162,7 +167,7 @@ class ProductController extends Controller implements HasMiddleware
             ->where('featured', $request->boolean('featured'));
         $this->applyCategoryAndSort($query, $request);
 
-        return $this->renderList(StoreProductList::Seller, $request, $query->orderByDesc('created_at')->orderByDesc('id'), [
+        return $this->renderList(StoreProductList::Seller, $request, $query->tap(NewestFirst::apply(...)), [
             'active' => $request->boolean('active'),
             'for_sale' => $request->boolean('for_sale'),
             'featured' => $request->boolean('featured'),
@@ -299,7 +304,9 @@ class ProductController extends Controller implements HasMiddleware
     /**
      * Copies the `products` row as ProductController::duplicate() does, with
      * a random suffix on its slug, and its stock and tax rows; translations,
-     * variations and barcodes are not copied, as before. This is a second
+     * variations and barcodes are not copied, as before. The copy gets no
+     * Otajer `serial` and its stock rows no `sku`: those name the source's
+     * article, and a copy is a product of its own. This is a second
      * writer of `products` beside `products:sync`; see the store migration
      * guide.
      */
@@ -309,6 +316,7 @@ class ProductController extends Controller implements HasMiddleware
             $source = $this->lockedProduct($this->listQuery($request->productList()), $product);
             $copy = $source->replicate();
             $copy->setAttribute('slug', ProductSlug::duplicate($source->slug));
+            $copy->setAttribute('serial', null);
             $copy->save();
             $stocks->product_duplicate_store($source->stocks()->orderBy('id')->get(), $copy);
             $taxes->product_duplicate_store($source->taxes()->orderBy('id')->get(), $copy);
@@ -482,10 +490,41 @@ class ProductController extends Controller implements HasMiddleware
             'categories' => Category::query()->without('category_translations')->select(['id', 'name'])->orderBy('id')->get()->map(fn (Category $category) => ['id' => $category->id, 'name' => $category->name])->all(),
             'defaultLanguage' => config('app.default_language'),
             'approvalEnabled' => $list === StoreProductList::Seller && (int) get_setting('product_approve_by_admin') === 1,
-            'sellers' => $list === StoreProductList::Seller
-                ? StoreUser::query()->select(['id', 'name'])->where('user_type', 'seller')->orderBy('name')->orderBy('id')->get()->map(fn (StoreUser $seller): array => ['id' => $seller->id, 'name' => $seller->name])->all()
-                : [],
+            'selectedSeller' => $this->selectedSeller($list, $listFilters['user_id'] ?? null),
         ]);
+    }
+
+    /**
+     * The typeahead behind the seller product list's seller filter (StoreSearchSelect):
+     * seller accounts by name or email.
+     */
+    public function sellerOptions(SearchOptionsRequest $request): JsonResponse
+    {
+        $term = $this->searchTerm($request);
+        $sellers = StoreUser::query()->select(['id', 'name', 'email'])->where('user_type', 'seller');
+        if ($term !== '') {
+            $this->whereWordsMatch($sellers, ['name', 'email'], $term);
+        }
+        $this->orderByRelevance($sellers, 'name', $term);
+
+        return $this->optionsPage($sellers, fn (StoreUser $seller): array => SearchOption::user($seller));
+    }
+
+    /**
+     * The seller the list is filtered by, as a search option, so the filter
+     * shows its name without listing every seller.
+     *
+     * @return array<string, mixed>|null
+     */
+    private function selectedSeller(StoreProductList $list, mixed $id): ?array
+    {
+        if ($list !== StoreProductList::Seller || $id === null) {
+            return null;
+        }
+
+        $seller = StoreUser::query()->select(['id', 'name', 'email'])->where('user_type', 'seller')->whereKey($id)->first();
+
+        return $seller === null ? null : SearchOption::user($seller);
     }
 
     /**
@@ -569,7 +608,7 @@ class ProductController extends Controller implements HasMiddleware
             'product' => new ProductFormResource($product, in_array($flashDealId, array_column($options['flashDeals'], 'id'), true) ? (int) $flashDealId : null),
             // A read-only name shows the synced column, which a stale
             // default-language translation could otherwise hide.
-            'name' => in_array('name', $readOnlyFields, true) ? $product->name : (string) $product->getTranslation('name', $lang),
+            'name' => in_array('name', $readOnlyFields, true) ? (string) $product->name : (string) $product->getTranslation('name', $lang),
             'arName' => $this->arabicName($product, in_array('ar_name', $readOnlyFields, true)),
             'readOnlyFields' => $readOnlyFields,
             // A read-only unit or description shows the synced column too.

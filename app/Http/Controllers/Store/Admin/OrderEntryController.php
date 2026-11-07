@@ -3,19 +3,18 @@
 namespace App\Http\Controllers\Store\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Store\Admin\Concerns\SearchesOptions;
 use App\Http\Requests\Store\Admin\SearchOrderOptionsRequest;
 use App\Http\Requests\Store\Admin\StoreOrderRequest;
 use App\Http\Requests\Store\Admin\UpdateOrderRequest;
 use App\Http\Resources\Store\OrderResource;
 use App\Models\Order;
 use App\Models\Product;
-use App\Models\ProductStock;
 use App\Models\StoreUser;
 use App\Services\StoreAdminOrderService;
-use Illuminate\Database\Eloquent\Builder;
+use App\Support\SearchOption;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
 use Illuminate\Support\Str;
@@ -24,6 +23,11 @@ use Inertia\Response;
 
 class OrderEntryController extends Controller implements HasMiddleware
 {
+    use SearchesOptions;
+
+    /** The columns of a customer or representative option (App\Support\SearchOption). */
+    private const array PERSON_COLUMNS = ['id', 'name', 'email', 'phone', 'AccSysID', 'member_serial', 'rep_discount_percentage'];
+
     public function __construct(private StoreAdminOrderService $orders) {}
 
     /** @return array<int, Middleware> */
@@ -62,9 +66,10 @@ class OrderEntryController extends Controller implements HasMiddleware
     {
         $this->orders->assertEditable($order);
         abort_if($order->by_rep, 403);
-        $order->load('user:id,name,AccSysID,rep_discount_percentage', 'rep:id,name,AccSysID', 'orderDetails:'.implode(',', OrderResource::DETAIL_COLUMNS));
+        $order->load('user:'.implode(',', self::PERSON_COLUMNS), 'rep:id,name,AccSysID', 'orderDetails:'.implode(',', OrderResource::DETAIL_COLUMNS));
 
         return Inertia::render('Store/Admin/Sales/Orders/Edit', ['order' => new OrderResource($order),
+            'customerOption' => $order->user === null ? null : SearchOption::customer($order->user),
             'additionalInfo' => $order->getAttribute('additional_info'), 'couponDiscount' => (float) $order->coupon_discount]);
     }
 
@@ -75,29 +80,34 @@ class OrderEntryController extends Controller implements HasMiddleware
         return redirect()->route('all_orders.show', $order);
     }
 
+    /**
+     * The typeahead behind the order form's customer, representative and product
+     * selects (StoreSearchSelect): one page of `App\Support\SearchOption` rows.
+     */
     public function search(SearchOrderOptionsRequest $request): JsonResponse
     {
-        $q = $request->string('q')->toString();
-        if ($request->validated('kind') !== 'products') {
-            $users = StoreUser::query()->select(['id', 'name', 'AccSysID', 'member_serial', 'rep_discount_percentage'])
-                ->where('user_type', 'customer')->where('is_rep', $request->validated('kind') === 'representatives')
-                ->when($q !== '', fn (Builder $query) => $query->where(fn (Builder $names) => $names->where('name', 'like', '%'.$q.'%')->orWhere('AccSysID', 'like', '%'.$q.'%')->orWhere('member_serial', 'like', '%'.$q.'%')))
-                ->orderBy('name')->orderBy('id')->paginate(20)->withQueryString();
+        $term = $this->searchTerm($request);
+        $kind = $request->validated('kind');
 
-            return response()->json($this->paginated(JsonResource::collection($users->through(fn (StoreUser $user) => $user->only(['id', 'name', 'AccSysID', 'member_serial', 'rep_discount_percentage'])))));
+        if ($kind === 'products') {
+            $products = Product::query()->select(['id', 'name', 'ar_name', 'serial', 'unit_price', 'unit_equal', 'tax', 'digital', 'thumbnail_img'])
+                ->where('published', 1)->where('approved', 1)
+                ->with(['thumbnailUpload:id,file_name,external_link', 'stocks' => fn ($query) => $query->select(['id', 'product_id', 'variant', 'price', 'qty'])->orderBy('id')]);
+            if ($term !== '') {
+                $this->whereWordsMatch($products, ctype_digit($term) ? ['name', 'ar_name', 'serial', 'id'] : ['name', 'ar_name', 'serial'], $term);
+            }
+            $this->orderByRelevance($products, 'name', $term);
+
+            return $this->optionsPage($products, fn (Product $product): array => SearchOption::orderProduct($product));
         }
-        $products = Product::query()->select(['id', 'name', 'ar_name', 'serial', 'unit_price', 'unit_equal', 'tax', 'digital'])
-            ->where('published', 1)->where('approved', 1)
-            ->when($q !== '', fn (Builder $query) => $query->where(fn (Builder $names) => $names->where('name', 'like', '%'.$q.'%')->orWhere('ar_name', 'like', '%'.$q.'%')->orWhere('serial', 'like', '%'.$q.'%')))
-            ->with(['stocks' => fn ($query) => $query->select(['id', 'product_id', 'variant', 'price', 'qty'])->orderBy('id')])
-            ->orderBy('name')->orderBy('id')->paginate(20)->withQueryString();
 
-        return response()->json($this->paginated(JsonResource::collection($products->through(fn (Product $product) => [
-            'id' => $product->id, 'name' => app()->getLocale() === 'ar' ? ($product->ar_name ?: $product->name) : $product->name,
-            'serial' => $product->getAttribute('serial'), 'mat_id' => (string) $product->id,
-            'unit_price' => (float) $product->getAttribute('unit_price'), 'unit_equal' => (float) $product->getAttribute('unit_equal'),
-            'tax' => (float) $product->getAttribute('tax'), 'digital' => (bool) $product->getAttribute('digital'),
-            'stocks' => $product->stocks->map(fn (ProductStock $stock) => ['variant' => $stock->variant, 'price' => (float) $stock->price, 'qty' => (int) $stock->qty])->all(),
-        ]))));
+        $users = StoreUser::query()->select(self::PERSON_COLUMNS)
+            ->where('user_type', 'customer')->where('is_rep', $kind === 'representatives');
+        if ($term !== '') {
+            $this->whereWordsMatch($users, ['name', 'email', 'phone', 'AccSysID', 'member_serial'], $term);
+        }
+        $this->orderByRelevance($users, 'name', $term);
+
+        return $this->optionsPage($users, fn (StoreUser $user): array => $kind === 'representatives' ? SearchOption::representative($user) : SearchOption::customer($user));
     }
 }

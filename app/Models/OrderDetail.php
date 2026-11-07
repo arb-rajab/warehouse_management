@@ -43,9 +43,14 @@ class OrderDetail extends Model
         return $this->belongsTo(Order::class);
     }
 
+    /**
+     * The product the line was placed for, by the id stored on the line. Not by
+     * `product_serial`: a duplicated product shares its source's serial, and the
+     * line then showed whichever copy was loaded last.
+     */
     public function product()
     {
-        return $this->belongsTo(Product::class, 'product_serial', 'serial');
+        return $this->belongsTo(Product::class);
     }
 
     public function pickup_point()

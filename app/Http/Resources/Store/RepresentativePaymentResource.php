@@ -33,6 +33,7 @@ class RepresentativePaymentResource extends JsonResource
             'notes' => $this->notes,
             'status' => $this->status,
             'date' => $this->date,
+            'customer_id' => $this->customer?->id,
             'customer_name' => $this->customer === null ? $this->customer_name : $this->customer->name,
             'account_id' => $this->otajer_id ?? ($this->customer === null ? null : $this->customer->AccSysID),
             'representative' => $this->whenLoaded('rep', fn () => $this->rep === null ? null : ['id' => $this->rep->id, 'name' => $this->rep->name]),

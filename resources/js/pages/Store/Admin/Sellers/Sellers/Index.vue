@@ -17,6 +17,7 @@ import AddResourceLink from '@/components/AddResourceLink.vue';
 import DataTable from '@/components/DataTable.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import Pagination from '@/components/Pagination.vue';
+import StoreColumnPicker from '@/components/StoreColumnPicker.vue';
 import StoreSellerPaymentDialog from '@/components/StoreSellerPaymentDialog.vue';
 import StoreSellerProfileDialog from '@/components/StoreSellerProfileDialog.vue';
 import StoreStatusSwitch from '@/components/StoreStatusSwitch.vue';
@@ -31,6 +32,7 @@ import {
 } from '@/lib/filters';
 import { t } from '@/lib/i18n';
 import { useStoreAccess } from '@/lib/storeAccess';
+import { useTableColumns } from '@/lib/useTableColumns';
 import type { Paginated } from '@/types/admin';
 import type { StoreSeller } from '@/types/store';
 
@@ -51,17 +53,6 @@ const profileId = ref<number | null>(null);
 const profileOpen = ref(false);
 const paymentId = ref<number | null>(null);
 const paymentOpen = ref(false);
-const columns = computed(() => [
-    t('store.sellers.select'),
-    t('store.sellers.shopName'),
-    t('store.sellers.phone'),
-    t('store.sellers.email'),
-    t('store.sellers.verificationInfo'),
-    t('store.sellers.approval'),
-    t('store.sellers.products_count'),
-    ...(props.payouts ? [t('store.sellers.due')] : []),
-    t('store.sellers.options'),
-]);
 function apply(perPage = props.filters.per_page): void {
     selected.value = [];
     router.get(
@@ -87,6 +78,24 @@ function showProfile(seller: StoreSeller): void {
     profileId.value = seller.id;
     profileOpen.value = true;
 }
+const columns = useTableColumns({
+    listId: 'sellers.sellers',
+    columns: () => [
+        { key: 'shopName', label: 'store.sellers.shopName', required: true },
+        { key: 'phone', label: 'store.sellers.phone' },
+        { key: 'email', label: 'store.sellers.email' },
+        { key: 'verificationInfo', label: 'store.sellers.verificationInfo' },
+        { key: 'approval', label: 'store.sellers.approval' },
+        { key: 'productsCount', label: 'store.sellers.products_count' },
+        { key: 'due', label: 'store.sellers.due', available: props.payouts },
+    ],
+});
+const { shown, visibleColumns } = columns;
+const tableColumns = computed(() => [
+    t('store.sellers.select'),
+    ...visibleColumns.value.map((column) => t(column.label)),
+    t('store.sellers.options'),
+]);
 </script>
 
 <template>
@@ -124,46 +133,55 @@ function showProfile(seller: StoreSeller): void {
                 <Check class="h-4 w-4" />{{ t('common.filters.apply') }}
             </button>
         </form>
-        <label
-            v-if="access.can('delete_seller')"
-            class="mb-3 inline-flex items-center gap-2"
-        >
-            <input
-                type="checkbox"
-                :checked="
-                    sellers.data.length > 0 &&
-                    sellers.data.every((seller) => selected.includes(seller.id))
-                "
-                @change="
-                    selected = ($event.target as HTMLInputElement).checked
-                        ? sellers.data.map((seller) => seller.id)
-                        : []
-                "
-            />
-            {{ t('store.sellers.selectAll') }}
-        </label>
-        <Form
-            v-if="access.can('delete_seller') && selected.length"
-            :action="bulkDestroy({ mergeQuery: {} })"
-            :on-before="() => confirmDelete(t('store.sellers.selection'))"
-            @success="selected = []"
-            #default="{ processing }"
-        >
-            <input
-                v-for="id in selected"
-                :key="id"
-                type="hidden"
-                name="id[]"
-                :value="id"
-            />
-            <SubmitButton
-                :label="t('store.sellers.deleteSelection')"
-                :processing-label="t('store.sellers.deleting')"
-                :processing="processing"
-            />
-        </Form>
+        <StoreColumnPicker :state="columns">
+            <div class="flex flex-wrap items-center gap-3">
+                <label
+                    v-if="access.can('delete_seller')"
+                    class="inline-flex items-center gap-2"
+                >
+                    <input
+                        type="checkbox"
+                        :checked="
+                            sellers.data.length > 0 &&
+                            sellers.data.every((seller) =>
+                                selected.includes(seller.id),
+                            )
+                        "
+                        @change="
+                            selected = ($event.target as HTMLInputElement)
+                                .checked
+                                ? sellers.data.map((seller) => seller.id)
+                                : []
+                        "
+                    />
+                    {{ t('store.sellers.selectAll') }}
+                </label>
+                <Form
+                    v-if="access.can('delete_seller') && selected.length"
+                    :action="bulkDestroy({ mergeQuery: {} })"
+                    :on-before="
+                        () => confirmDelete(t('store.sellers.selection'))
+                    "
+                    @success="selected = []"
+                    #default="{ processing }"
+                >
+                    <input
+                        v-for="id in selected"
+                        :key="id"
+                        type="hidden"
+                        name="id[]"
+                        :value="id"
+                    />
+                    <SubmitButton
+                        :label="t('store.sellers.deleteSelection')"
+                        :processing-label="t('store.sellers.deleting')"
+                        :processing="processing"
+                    />
+                </Form>
+            </div>
+        </StoreColumnPicker>
         <DataTable
-            :columns="columns"
+            :columns="tableColumns"
             :rows="sellers.data"
             :empty-message="t('store.sellers.empty')"
         >
@@ -190,16 +208,16 @@ function showProfile(seller: StoreSeller): void {
                         />{{ row.name }}</span
                     >
                 </td>
-                <td class="px-4 py-3">{{ row.phone }}</td>
-                <td class="px-4 py-3">{{ row.email }}</td>
-                <td class="px-4 py-3">
+                <td v-if="shown.phone" class="px-4 py-3">{{ row.phone }}</td>
+                <td v-if="shown.email" class="px-4 py-3">{{ row.email }}</td>
+                <td v-if="shown.verificationInfo" class="px-4 py-3">
                     <TableActionLink
                         v-if="!row.approved && row.has_verification"
                         :href="verification(row)"
                         >{{ t('store.sellers.show') }}</TableActionLink
                     >
                 </td>
-                <td class="px-4 py-3">
+                <td v-if="shown.approval" class="px-4 py-3">
                     <StoreStatusSwitch
                         v-if="access.can('edit_seller')"
                         :action="approved({ mergeQuery: {} })"
@@ -223,15 +241,17 @@ function showProfile(seller: StoreSeller): void {
                         )
                     }}</span>
                 </td>
-                <td class="px-4 py-3">{{ row.products_count }}</td>
-                <td v-if="payouts" class="px-4 py-3">
+                <td v-if="shown.productsCount" class="px-4 py-3">
+                    {{ row.products_count }}
+                </td>
+                <td v-if="shown.due" class="px-4 py-3">
                     {{ row.due
                     }}<span v-if="row.due_to_admin">
                         ({{ t('store.sellers.dueToAdmin') }})</span
                     >
                 </td>
                 <td class="px-4 py-3">
-                    <div class="flex flex-wrap items-center gap-2">
+                    <div class="flex flex-nowrap items-center gap-2">
                         <button
                             v-if="access.can('view_seller_profile')"
                             type="button"

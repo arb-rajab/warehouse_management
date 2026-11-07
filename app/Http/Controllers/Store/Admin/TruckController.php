@@ -13,6 +13,7 @@ use App\Http\Resources\Store\TruckResource;
 use App\Models\Trip;
 use App\Models\Truck;
 use App\Models\Upload;
+use App\Support\NewestFirst;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
@@ -46,7 +47,7 @@ class TruckController extends Controller implements HasMiddleware
         $search = $request->validated('search');
         $trucks = $this->truckQuery()->when(filled($search), fn (Builder $query) => $query->where(fn (Builder $query) => $query
             ->where('name', 'like', '%'.$search.'%')->orWhere('license_plate', 'like', '%'.$search.'%')))
-            ->orderBy('id')->paginate($perPage)->withQueryString();
+            ->tap(NewestFirst::apply(...))->paginate($perPage)->withQueryString();
 
         $photoIds = array_values($trucks->getCollection()->flatMap(fn (Truck $truck) => explode(',', $truck->photos ?? ''))->filter()->unique()->all());
 
@@ -94,7 +95,7 @@ class TruckController extends Controller implements HasMiddleware
     public function photos(FilterTruckPhotosRequest $request): JsonResponse
     {
         $images = $this->photoQuery()->when($request->filled('search'), fn (Builder $query) => $query->originalNameContains($request->string('search')->toString()))
-            ->orderByDesc('id')->paginate(20);
+            ->tap(NewestFirst::apply(...))->paginate(20);
 
         return response()->json(['data' => TruckPhotoResource::collection($images->items()), 'has_more' => $images->hasMorePages()]);
     }

@@ -27,6 +27,10 @@ import {
     storeCustomer,
 } from '@/testing/factories';
 import { defaultAuthProps } from '@/testing/inertiaPageMocks';
+import {
+    expectColumnCanBeHidden,
+    expectColumnLocked,
+} from '@/testing/tableColumns';
 import type { StoreCustomer } from '@/types/storeCustomers';
 import Create from './Create.vue';
 import Edit from './Edit.vue';
@@ -370,9 +374,7 @@ function listPage(
 const columnsDialog = (wrapper: ReturnType<typeof listPage>) =>
     wrapper
         .findAll('[role="dialog"]')
-        .find((item) =>
-            item.text().includes(t('store.customers.columnsTitle')),
-        )!;
+        .find((item) => item.text().includes(t('store.table.columnsTitle')))!;
 const headers = (wrapper: ReturnType<typeof listPage>) =>
     wrapper.findAll('th').map((th) => th.text());
 const defaultHeaders = [
@@ -389,7 +391,7 @@ const defaultHeaders = [
 it('shows the default columns and keeps every other property out of the table', () => {
     const wrapper = listPage({}, [{ profits: 1234.5, country: 'Netherlands' }]);
     expect(headers(wrapper)).toEqual(defaultHeaders);
-    expect(wrapper.text()).toContain(t('store.customers.columns'));
+    expect(wrapper.text()).toContain(t('store.table.columns'));
     expect(wrapper.text()).toContain('1,234.50');
     expect(wrapper.text()).not.toContain('Netherlands');
     // The company moved out of the name cell into its own column.
@@ -414,7 +416,7 @@ it('the column chooser toggles, remembers, shows all and resets columns', async 
     ]);
     await wrapper
         .findAll('button')
-        .find((button) => button.text() === t('store.customers.columns'))!
+        .find((button) => button.text() === t('store.table.columns'))!
         .trigger('click');
     const dialog = columnsDialog(wrapper);
     expect(dialog.exists()).toBe(true);
@@ -436,7 +438,9 @@ it('the column chooser toggles, remembers, shows all and resets columns', async 
     expect(wrapper.get('tbody').text()).toContain('Netherlands');
     expect(
         JSON.parse(
-            window.localStorage.getItem('store.customers.columns.customers')!,
+            window.localStorage.getItem(
+                'store.tableColumns.7.customers.customers',
+            )!,
         ),
     ).toContain('country');
     await box(t('store.customers.fields.email')).setValue(false);
@@ -444,9 +448,7 @@ it('the column chooser toggles, remembers, shows all and resets columns', async 
 
     await dialog
         .findAll('button')
-        .find(
-            (button) => button.text() === t('store.customers.showAllColumns'),
-        )!
+        .find((button) => button.text() === t('store.table.showAll'))!
         .trigger('click');
     expect(headers(wrapper)).toEqual(
         expect.arrayContaining([
@@ -467,14 +469,14 @@ it('the column chooser toggles, remembers, shows all and resets columns', async 
 
     await dialog
         .findAll('button')
-        .find((button) => button.text() === t('store.customers.resetColumns'))!
+        .find((button) => button.text() === t('store.table.reset'))!
         .trigger('click');
     expect(headers(wrapper)).toEqual(defaultHeaders);
     wrapper.unmount();
 });
 it('restores a remembered column choice and survives unreadable storage', () => {
     window.localStorage.setItem(
-        'store.customers.columns.customers',
+        'store.tableColumns.7.customers.customers',
         JSON.stringify(['name', 'city', 'unknown']),
     );
     const wrapper = listPage();
@@ -485,12 +487,15 @@ it('restores a remembered column choice and survives unreadable storage', () => 
         t('store.customers.actions'),
     ]);
     wrapper.unmount();
-    window.localStorage.setItem('store.customers.columns.customers', '{oops');
+    window.localStorage.setItem(
+        'store.tableColumns.7.customers.customers',
+        '{oops',
+    );
     expect(headers(listPage())).toEqual(defaultHeaders);
     const spy = vi
         .spyOn(Storage.prototype, 'getItem')
         .mockImplementation((key: string) => {
-            if (key.startsWith('store.customers.columns')) {
+            if (key.startsWith('store.tableColumns')) {
                 throw new Error('blocked');
             }
 
@@ -499,11 +504,70 @@ it('restores a remembered column choice and survives unreadable storage', () => 
     expect(headers(listPage())).toEqual(defaultHeaders);
     spy.mockRestore();
 });
+it('keeps the name column locked and asks for it again when an old choice left it out', async () => {
+    window.localStorage.setItem(
+        'store.tableColumns.7.customers.customers',
+        JSON.stringify(['city']),
+    );
+    const wrapper = listPage();
+    expect(headers(wrapper)).toEqual([
+        t('store.customers.select'),
+        t('store.customers.fields.name'),
+        t('store.customers.fields.city'),
+        t('store.customers.actions'),
+    ]);
+    await wrapper
+        .findAll('button')
+        .find((button) => button.text() === t('store.table.columns'))!
+        .trigger('click');
+    const name = columnsDialog(wrapper)
+        .findAll('label')
+        .find((item) => item.text() === t('store.customers.fields.name'))!
+        .get('input');
+    expect((name.element as HTMLInputElement).checked).toBe(true);
+    expect(name.attributes('disabled')).toBeDefined();
+    wrapper.unmount();
+});
+it('carries over a choice stored under the old per-list key, once', () => {
+    window.localStorage.setItem(
+        'store.customers.columns.customers',
+        JSON.stringify(['id', 'country']),
+    );
+    window.localStorage.setItem(
+        'store.customers.columns.representatives',
+        JSON.stringify(['id', 'rep_serial']),
+    );
+    const wrapper = listPage();
+    expect(headers(wrapper)).toEqual([
+        t('store.customers.select'),
+        t('store.customers.fields.id'),
+        t('store.customers.fields.name'),
+        t('store.customers.fields.country'),
+        t('store.customers.actions'),
+    ]);
+    expect(
+        JSON.parse(
+            window.localStorage.getItem(
+                'store.tableColumns.7.customers.customers',
+            )!,
+        ),
+    ).toEqual(['id', 'name', 'country']);
+    // The representatives list keeps its own choice.
+    expect(
+        window.localStorage.getItem(
+            'store.tableColumns.7.customers.representatives',
+        ),
+    ).toBeNull();
+    wrapper.unmount();
+    const reps = listPage({}, [{}], ['view_all_customers'], true);
+    expect(headers(reps)).toContain(t('store.customers.fields.rep_serial'));
+    reps.unmount();
+});
 it('restricted columns are offered only to staff who may edit customers', async () => {
     const wrapper = listPage({}, [{}], ['view_all_customers']);
     await wrapper
         .findAll('button')
-        .find((button) => button.text() === t('store.customers.columns'))!
+        .find((button) => button.text() === t('store.table.columns'))!
         .trigger('click');
     const labels = columnsDialog(wrapper)
         .findAll('label')
@@ -534,7 +598,7 @@ it('the representatives list shows the package column with its assign button and
     );
     await wrapper
         .findAll('button')
-        .find((button) => button.text() === t('store.customers.columns'))!
+        .find((button) => button.text() === t('store.table.columns'))!
         .trigger('click');
     expect(columnsDialog(wrapper).text()).toContain(
         t('store.customers.fields.rep_discount_percentage'),
@@ -581,6 +645,33 @@ it('counts the profit range once and shows its indicator, header and reset link'
             }),
         ),
     ).toContain('2');
+    const chipsOf = (wrapper: ReturnType<typeof listPage>) =>
+        wrapper.getComponent(StoreListFilters).props('chips');
+    expect(chipsOf(listPage())).toEqual([]);
+    expect(
+        chipsOf(
+            listPage({
+                important: false,
+                profit_from: '2026-11-01T14:00',
+                profit_to: '2026-11-03T09:00',
+            }),
+        ),
+    ).toEqual([
+        {
+            key: 'important',
+            label: t('store.customers.filterLabels.important'),
+            value: t('store.customers.no'),
+            keys: ['important'],
+        },
+        {
+            key: 'profit',
+            label: t('store.customers.profitRangeActive', {
+                from: '2026-11-01 14:00',
+                to: '2026-11-03 09:00',
+            }),
+            keys: ['profit_from', 'profit_to'],
+        },
+    ]);
     expect(listPage().find('[role="status"]').exists()).toBe(false);
     expect(headers(listPage())).toContain(t('store.customers.profits'));
 
@@ -731,4 +822,31 @@ it.each([
     });
     expect(wrapper.get('td a').attributes('href')).toBe(public_url);
     wrapper.unmount();
+});
+
+it('the views list lets staff hide an optional column and keeps the name', async () => {
+    window.localStorage.clear();
+    const wrapper = mount(Views, {
+        props: {
+            customer,
+            views: paginated([
+                {
+                    id: 5,
+                    kind: 'products',
+                    name: 'Olive oil',
+                    slug: null,
+                    public_url: '/temp/product/~id-5?catalog_id=5',
+                    view_count: 3,
+                    last_viewed_at: '2026-10-08 12:00:00',
+                },
+            ]),
+            filters: { kind: null, per_page: 20 },
+        },
+    });
+    await expectColumnCanBeHidden(wrapper, 'customers.views', {
+        key: 'viewCount',
+        label: t('store.customers.viewCount'),
+    });
+    expectColumnLocked(wrapper, t('store.customers.fields.name'));
+    window.localStorage.clear();
 });

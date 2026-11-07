@@ -2,6 +2,7 @@ import { Link } from '@inertiajs/vue3';
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ComponentPublicInstance } from 'vue';
+import { edit as customerEdit } from '@/actions/App/Http/Controllers/Store/Admin/CustomerController';
 import {
     create,
     destroy,
@@ -19,6 +20,10 @@ import {
     storeSharedProps,
 } from '@/testing/factories';
 import { defaultAuthProps } from '@/testing/inertiaPageMocks';
+import {
+    expectColumnCanBeHidden,
+    expectColumnLocked,
+} from '@/testing/tableColumns';
 import type { CustomerNotification } from '@/types/storeNotifications';
 import Index from './Index.vue';
 
@@ -126,5 +131,33 @@ describe('customer notification index', () => {
             { per_page: 50 },
             { preserveState: true, replace: true },
         );
+    });
+
+    it('links the customer to their edit page only with the edit_customer permission', () => {
+        const row = customerNotification({
+            customer: { id: 21, name: 'Customer' },
+        });
+        const customerCell = (wrapper: ReturnType<typeof mountPage>) =>
+            wrapper.get('tbody tr').findAll('td')[2];
+
+        const allowed = mountPage([row], ['edit_customer']);
+        expect(customerCell(allowed).get('a').attributes('href')).toBe(
+            customerEdit(21).url,
+        );
+
+        const denied = mountPage([row], []);
+        expect(customerCell(denied).find('a').exists()).toBe(false);
+        expect(customerCell(denied).text()).toBe('Customer');
+    });
+
+    it('lets staff hide an optional column from the header and every row, and keeps the identifier', async () => {
+        window.localStorage.clear();
+        const wrapper = mountPage();
+        await expectColumnCanBeHidden(wrapper, 'notifications.customers', {
+            key: 'customer',
+            label: t('store.notifications.fields.customer'),
+        });
+        expectColumnLocked(wrapper, t('store.notifications.fields.title'));
+        window.localStorage.clear();
     });
 });

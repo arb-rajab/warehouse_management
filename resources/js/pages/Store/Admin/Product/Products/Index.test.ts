@@ -1,7 +1,9 @@
 import { Form, Head, Link } from '@inertiajs/vue3';
 import { flushPromises, mount } from '@vue/test-utils';
+import type { VueWrapper } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fetch as fetchProducts } from '@/actions/App/Http/Controllers/ProductController';
+import { edit as categoryEdit } from '@/actions/App/Http/Controllers/Store/Admin/CategoryController';
 import {
     all as allProducts,
     bulkDestroy,
@@ -11,6 +13,7 @@ import {
     edit,
     inHouse as inHouseProducts,
     seller as sellerProducts,
+    sellerOptions,
     sellerEdit,
     sellerDuplicate,
     sellerDestroy,
@@ -27,8 +30,10 @@ import {
 import AddResourceLink from '@/components/AddResourceLink.vue';
 import FieldError from '@/components/FieldError.vue';
 import FormField from '@/components/FormField.vue';
+import IconStat from '@/components/IconStat.vue';
 import Pagination from '@/components/Pagination.vue';
 import StoreListFilters from '@/components/StoreListFilters.vue';
+import StoreSearchSelect from '@/components/StoreSearchSelect.vue';
 import StoreStatusSwitch from '@/components/StoreStatusSwitch.vue';
 import SubmitButton from '@/components/SubmitButton.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
@@ -41,6 +46,16 @@ import {
     storeSharedProps,
 } from '@/testing/factories';
 import { defaultAuthProps } from '@/testing/inertiaPageMocks';
+import {
+    columnsDialog,
+    expectColumnCanBeHidden,
+    headerTexts,
+    offeredColumns,
+    openColumnPicker,
+    setColumnShown,
+    storedColumns,
+} from '@/testing/tableColumns';
+import type { SearchOption } from '@/types/searchSelect';
 import type {
     StoreProductListFilters,
     StoreProductListRow,
@@ -94,14 +109,14 @@ function mountPage({
     filters = storeProductListFilters(),
     permissions = allPermissions,
     approvalEnabled = false,
-    sellers = [],
+    selectedSeller = null,
 }: {
     listType?: StoreProductListType;
     products?: StoreProductListRow[];
     filters?: StoreProductListFilters;
     permissions?: string[];
     approvalEnabled?: boolean;
-    sellers?: { id: number; name: string }[];
+    selectedSeller?: SearchOption | null;
 } = {}) {
     usePageMock.mockReturnValue({
         url: {
@@ -119,12 +134,15 @@ function mountPage({
             categories,
             defaultLanguage: 'en',
             approvalEnabled,
-            sellers,
+            selectedSeller,
         },
     });
     wrappers.push(wrapper);
 
     return wrapper;
+}
+function categoryCell(wrapper: ReturnType<typeof mount>) {
+    return wrapper.findAll('tbody td').filter((td) => td.text() === 'Oils')[0];
 }
 function forms(wrapper: ReturnType<typeof mount>) {
     return wrapper.findAllComponents(Form);
@@ -179,22 +197,34 @@ describe('Store product lists Index', () => {
                 expect(
                     wrapper.getComponent(AddResourceLink).props('label'),
                 ).toBe(t('store.products.create'));
-                expect(
-                    wrapper.get('#product-presets').attributes('aria-label'),
-                ).toBe(t('store.products.presets'));
-                expect(
-                    wrapper
-                        .findAll('#product-presets a')
-                        .map((link) => link.text()),
-                ).toEqual(
-                    [
-                        'presetAllProducts',
-                        'presetAllActive',
-                        'presetAllForSale',
-                        'presetAllFeatured',
-                        'presetAllDeleted',
-                    ].map((key) => t(`store.products.${key}`)),
-                );
+
+                if (listType === 'all') {
+                    expect(
+                        wrapper
+                            .get('#product-presets')
+                            .attributes('aria-label'),
+                    ).toBe(t('store.products.presets'));
+                    expect(
+                        wrapper
+                            .findAll('#product-presets a')
+                            .map((link) => link.text()),
+                    ).toEqual(
+                        [
+                            'presetAllProducts',
+                            'presetAllActive',
+                            'presetAllForSale',
+                            'presetAllFeatured',
+                            'presetAllDeleted',
+                        ].map((key) => t(`store.products.${key}`)),
+                    );
+                } else {
+                    // The presets are the all list's status switch; the
+                    // other lists keep their state boxes in the dialog.
+                    expect(wrapper.find('#product-presets').exists()).toBe(
+                        false,
+                    );
+                }
+
                 const [filterForm, bulkForm] = forms(wrapper);
                 expect(filterForm.getComponent(FormField).props('label')).toBe(
                     t('store.products.search'),
@@ -229,28 +259,28 @@ describe('Store product lists Index', () => {
                         'sortPriceAsc',
                     ].map((key) => t(`store.products.${key}`)),
                 );
-                expect(filterForm.get('legend').text()).toBe(
-                    t('store.products.stateFilters'),
-                );
-                expect(
-                    filterForm
-                        .findAll('fieldset label')
-                        .map((label) => label.text()),
-                ).toEqual(
-                    [
-                        'active',
-                        'forSale',
-                        'featured',
-                        ...(listType === 'all' ? ['deleted'] : []),
-                    ].map((key) => t(`store.products.${key}`)),
-                );
-                expect(filterForm.get('fieldset p').text()).toBe(
-                    t(
-                        listType === 'all'
-                            ? 'store.products.allStateHint'
-                            : 'store.products.inHouseStateHint',
-                    ),
-                );
+
+                if (listType === 'all') {
+                    // Never in both places: the all list has no state boxes.
+                    expect(filterForm.find('fieldset').exists()).toBe(false);
+                } else {
+                    expect(filterForm.get('legend').text()).toBe(
+                        t('store.products.stateFilters'),
+                    );
+                    expect(
+                        filterForm
+                            .findAll('fieldset label')
+                            .map((label) => label.text()),
+                    ).toEqual(
+                        ['active', 'forSale', 'featured'].map((key) =>
+                            t(`store.products.${key}`),
+                        ),
+                    );
+                    expect(filterForm.get('fieldset p').text()).toBe(
+                        t('store.products.inHouseStateHint'),
+                    );
+                }
+
                 expect(filterForm.get('button[type="submit"]').text()).toBe(
                     t('common.filters.apply'),
                 );
@@ -438,11 +468,15 @@ describe('Store product lists Index', () => {
             expect(forms(wrapper)[1].props('action')).toEqual(
                 bulkDestroy(query),
             );
-            expect(
-                wrapper
-                    .findAll('#product-presets a')
-                    .map((link) => link.attributes('href')),
-            ).toEqual(
+            const presetLinks = wrapper.findAll('#product-presets a');
+
+            if (list !== 'all') {
+                expect(presetLinks).toHaveLength(0);
+
+                continue;
+            }
+
+            expect(presetLinks.map((link) => link.attributes('href'))).toEqual(
                 [
                     'allProducts',
                     'allActive',
@@ -540,9 +574,26 @@ describe('Store product lists Index', () => {
         expect(only('add_new_product').find('h1 + div button').exists()).toBe(
             true,
         );
+        // The presets belong to the all list only, and need the permission.
         expect(
             only('show_all_products').find('#product-presets').exists(),
+        ).toBe(false);
+        expect(
+            mountPage({
+                listType: 'all',
+                permissions: ['show_all_products'],
+            })
+                .find('#product-presets')
+                .exists(),
         ).toBe(true);
+        expect(
+            mountPage({
+                listType: 'all',
+                permissions: ['show_in_house_products'],
+            })
+                .find('#product-presets')
+                .exists(),
+        ).toBe(false);
         expect(
             only('product_edit').findAllComponents(StoreStatusSwitch),
         ).toHaveLength(3);
@@ -660,35 +711,28 @@ describe('Store product lists Index', () => {
         expect((wrapper.get('#type').element as HTMLSelectElement).value).toBe(
             'unit_price,desc',
         );
-        expect(
-            filterForm
-                .findAll('fieldset input')
-                .map((input) => [
-                    input.attributes('name'),
-                    input.attributes('value'),
-                    (input.element as HTMLInputElement).checked,
-                ]),
-        ).toEqual([
-            ['active', '1', true],
-            ['for_sale', '1', false],
-            ['featured', '1', false],
-            ['deleted', '1', true],
-        ]);
-        // Category is the inline key filter here; sort and the state boxes are
-        // in the dialog and counted (sort, active, deleted).
+        // Category is the inline key filter here; sort is the only dialog
+        // filter (counted). The preset links are the status switch, so the
+        // all list has no state boxes: a filter is never in both places.
         expect(filterForm.findAll('#category_id').length).toBe(1);
+        expect(filterForm.find('fieldset').exists()).toBe(false);
         expect(
             wrapper
                 .get('[role="dialog"]')
                 .findAll('select, input')
                 .map((control) => control.attributes('name')),
-        ).toEqual(['type', 'active', 'for_sale', 'featured', 'deleted']);
+        ).toEqual(['type']);
         expect(
             wrapper.get('[role="dialog"]').find('#category_id').exists(),
         ).toBe(false);
-        expect(
-            wrapper.getComponent(StoreListFilters).props('activeCount'),
-        ).toBe(3);
+        expect(wrapper.getComponent(StoreListFilters).props('chips')).toEqual([
+            {
+                key: 'type',
+                label: t('store.products.sort'),
+                value: t('store.products.sortPriceDesc'),
+                keys: ['type'],
+            },
+        ]);
         const presetLinks = wrapper.findAll('#product-presets a');
         expect(presetLinks[3].classes()).toContain('bg-gray-900');
         expect(presetLinks[0].classes()).not.toContain('bg-gray-900');
@@ -755,7 +799,7 @@ describe('seller product list', () => {
             const wrapper = mountPage({
                 listType: 'seller',
                 approvalEnabled: true,
-                sellers: [{ id: 9, name: '<b>Seller</b>' }],
+                selectedSeller: { id: 9, label: '<b>Seller</b>', icon: 'user' },
                 filters: storeProductListFilters({
                     user_id: 9,
                     approved: false,
@@ -773,7 +817,6 @@ describe('seller product list', () => {
 
             for (const key of [
                 'seller',
-                'allSellers',
                 'approvalStatus',
                 'allApprovals',
                 'approved',
@@ -788,10 +831,22 @@ describe('seller product list', () => {
             expect(wrapper.text()).toContain(
                 t('store.products.form.todaysDeal'),
             );
-            expect(wrapper.get('#user_id').element).toHaveProperty(
-                'value',
-                '9',
-            );
+            // The seller is a search select: the picked id posts as user_id and
+            // its label shows before any search.
+            expect(
+                wrapper
+                    .get('input[type="hidden"][name="user_id"]')
+                    .attributes('value'),
+            ).toBe('9');
+            expect(
+                wrapper.getComponent(StoreSearchSelect).props(),
+            ).toMatchObject({
+                id: 'user_id',
+                name: 'user_id',
+                endpoint: sellerOptions,
+                required: false,
+                modelValue: { id: 9, label: '<b>Seller</b>' },
+            });
             expect(wrapper.get('#approved').element).toHaveProperty(
                 'value',
                 '0',
@@ -801,11 +856,24 @@ describe('seller product list', () => {
             expect(wrapper.find('input[name=deleted]').exists()).toBe(false);
         },
     );
+    it('offers every seller from the search when none is selected', () => {
+        const wrapper = mountPage({ listType: 'seller' });
+
+        expect(wrapper.get('#user_id').text()).toBe(
+            t('store.products.allSellers'),
+        );
+        expect(
+            wrapper
+                .get('input[type="hidden"][name="user_id"]')
+                .attributes('value'),
+        ).toBe('');
+        expect(wrapper.text()).toContain(t('store.products.allSellers'));
+    });
     it('keeps the seller inline and puts category, approval and sort in the dialog', () => {
         const wrapper = mountPage({
             listType: 'seller',
             approvalEnabled: true,
-            sellers: [{ id: 9, name: 'Seller' }],
+            selectedSeller: { id: 9, label: 'Seller', icon: 'user' },
             filters: storeProductListFilters({
                 user_id: 9,
                 approved: false,
@@ -834,9 +902,25 @@ describe('seller product list', () => {
             (dialog.get('#category_id').element as HTMLSelectElement).value,
         ).toBe('3');
         // approved, category and featured; the seller is not counted.
-        expect(
-            wrapper.getComponent(StoreListFilters).props('activeCount'),
-        ).toBe(3);
+        expect(wrapper.getComponent(StoreListFilters).props('chips')).toEqual([
+            {
+                key: 'approved',
+                label: t('store.products.approvalStatus'),
+                value: t('store.products.unapproved'),
+                keys: ['approved'],
+            },
+            {
+                key: 'category_id',
+                label: t('store.products.category'),
+                value: 'Oils',
+                keys: ['category_id'],
+            },
+            {
+                key: 'featured',
+                label: t('store.products.featured'),
+                keys: ['featured'],
+            },
+        ]);
         expect(
             wrapper
                 .getComponent(StoreListFilters)
@@ -943,5 +1027,93 @@ describe('seller product list', () => {
             { per_page: 10, approved: 0, user_id: 9, active: 1 },
             { preserveState: true, replace: true },
         );
+    });
+    it('links the category to its edit page for staff who may edit categories', () => {
+        const wrapper = mountPage({
+            products: [storeProductListRow({ category_id: 5 })],
+            permissions: ['edit_product_category'],
+        });
+        const link = categoryCell(wrapper).get('a');
+
+        expect(link.text()).toBe('Oils');
+        expect(link.attributes('href')).toBe(
+            categoryEdit(5, { query: { lang: 'en' } }).url,
+        );
+    });
+
+    it('keeps the category as plain text without that permission or without an id', () => {
+        const withoutAccess = mountPage({
+            products: [storeProductListRow({ category_id: 5 })],
+            permissions: [],
+        });
+        expect(categoryCell(withoutAccess).find('a').exists()).toBe(false);
+
+        const withoutId = mountPage({
+            products: [storeProductListRow({ category_id: null })],
+            permissions: ['edit_product_category'],
+        });
+        expect(categoryCell(withoutId).find('a').exists()).toBe(false);
+    });
+
+    it('shows sales, base price and profit as icon pairs that each explain their value', () => {
+        const wrapper = mountPage();
+        const stats: VueWrapper<InstanceType<typeof IconStat>>[] = wrapper
+            .find('tbody tr')
+            .findAllComponents(IconStat);
+
+        expect(stats.map((stat) => stat.props('label'))).toEqual([
+            t('store.products.salesCount', { count: 7 }),
+            t('store.products.basePrice', { price: '€12.50' }),
+            t('store.products.profit', { price: '€1.25' }),
+        ]);
+        expect(stats.map((stat) => stat.props('value'))).toEqual([
+            7,
+            '€12.50',
+            '€1.25',
+        ]);
+    });
+
+    it('lets staff hide optional columns per list, keeps the name and remembers the choice', async () => {
+        window.localStorage.clear();
+        const wrapper = mountPage({
+            listType: 'seller',
+            approvalEnabled: true,
+        });
+        const switchCount = () =>
+            wrapper.get('tbody tr').findAllComponents(StoreStatusSwitch).length;
+        expect(switchCount()).toBe(5);
+        expect(wrapper.get('tbody').text()).toContain('Oils');
+
+        await expectColumnCanBeHidden(wrapper, 'product.products.seller', {
+            key: 'category',
+            label: t('store.products.category'),
+        });
+        expect(wrapper.get('tbody').text()).not.toContain('Oils');
+        await setColumnShown(wrapper, t('store.products.featured'), false);
+        expect(headerTexts(wrapper)).not.toContain(
+            t('store.products.featured'),
+        );
+        expect(switchCount()).toBe(4);
+        expect(storedColumns('product.products.seller')).not.toContain(
+            'featured',
+        );
+
+        // The name is the row's identifier: shown, locked, never stored away.
+        const name = columnsDialog(wrapper)
+            .findAll('label')
+            .find((item) => item.text() === t('store.products.name'))!
+            .get('input');
+        expect((name.element as HTMLInputElement).disabled).toBe(true);
+        expect(headerTexts(wrapper)).toContain(t('store.products.name'));
+        expect(offeredColumns(wrapper)).toContain(t('store.products.approved'));
+
+        // Another list type keeps its own choice (and its own switch columns).
+        const inHouse = mountPage({ listType: 'admin' });
+        expect(headerTexts(inHouse)).toContain(t('store.products.category'));
+        await openColumnPicker(inHouse);
+        expect(offeredColumns(inHouse)).not.toContain(
+            t('store.products.approved'),
+        );
+        window.localStorage.clear();
     });
 });

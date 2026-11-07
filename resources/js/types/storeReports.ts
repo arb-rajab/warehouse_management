@@ -35,6 +35,7 @@ export interface StoreSearchReportRow {
 }
 export interface StoreCommissionReportRow {
     id: number;
+    order_id: number | null;
     order_code: string | null;
     admin_commission: string;
     seller_earning: string;

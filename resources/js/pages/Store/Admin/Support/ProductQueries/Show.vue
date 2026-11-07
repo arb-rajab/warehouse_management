@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Head } from '@inertiajs/vue3';
+import { edit as customerEdit } from '@/actions/App/Http/Controllers/Store/Admin/CustomerController';
 import {
     index as queriesIndex,
     reply,
@@ -7,6 +8,7 @@ import {
 import PageHeader from '@/components/PageHeader.vue';
 import StoreSupportReplyForm from '@/components/StoreSupportReplyForm.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
+import TableObjectLink from '@/components/TableObjectLink.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
 import { formatDateTime } from '@/lib/date';
 import { t } from '@/lib/i18n';
@@ -30,7 +32,15 @@ const access = useStoreAccess();
             <div>
                 <dt class="font-medium">{{ t('store.support.customer') }}</dt>
                 <dd>
-                    {{ query.user?.name ?? t('store.support.missingUser') }}
+                    <TableObjectLink
+                        v-if="query.user"
+                        :allowed="access.can('edit_customer')"
+                        :href="customerEdit(query.user)"
+                        >{{ query.user.name }}</TableObjectLink
+                    >
+                    <template v-else>{{
+                        t('store.support.missingUser')
+                    }}</template>
                 </dd>
             </div>
             <div>

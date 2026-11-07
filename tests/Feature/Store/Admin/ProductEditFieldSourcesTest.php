@@ -167,6 +167,59 @@ test('saving writes an admin-owned unit price, unit and description on a feed-or
         ->unit->toBe('jar')->description->toBe('<p>Admin text</p>');
 });
 
+test('a feed-origin field with no stored value never blocks the save and stays null', function () {
+    DB::table('products')->where('id', $this->feed->id)->update(['name' => '', 'unit' => null, 'description' => null, 'unit_price' => 0]);
+    $before = DB::table('products')->where('id', $this->feed->id)->first(['name', 'unit', 'description', 'unit_price']);
+
+    // The read-only inputs post blank values, which the Otajer-owned fields ignore.
+    $this->post(route('products.update', $this->feed), fieldSourceEditForm(['name' => '', 'unit' => '', 'unit_price' => '', 'description' => '', 'discount' => '0']))
+        ->assertSessionHasNoErrors();
+
+    $after = DB::table('products')->where('id', $this->feed->id)->first(['name', 'unit', 'description', 'unit_price', 'max_qty']);
+    expect($after->name)->toBe($before->name)->and($after->unit)->toBeNull()->and($after->description)->toBeNull()
+        ->and((float) $after->unit_price)->toBe(0.0)
+        // The editable fields are still saved.
+        ->and((int) $after->max_qty)->toBe(10);
+});
+
+test('the stored price of a feed-origin product still limits its discount, even a price of 0', function () {
+    DB::table('products')->where('id', $this->feed->id)->update(['unit_price' => 0]);
+
+    $this->post(route('products.update', $this->feed), fieldSourceEditForm(['unit_price' => '50', 'discount' => '5']))->assertSessionHasErrors('discount');
+    $this->post(route('products.update', $this->feed), fieldSourceEditForm(['unit_price' => '50', 'discount' => '0']))->assertSessionHasNoErrors();
+});
+
+test('a store-origin product is fully editable when its Otajer-owned values are null or zero', function () {
+    DB::table('products')->where('id', $this->store->id)->update(['name' => 'Store oil', 'unit' => null, 'description' => null, 'unit_price' => 0]);
+
+    $this->get(route('products.admin.edit', $this->store))->assertOk()->assertInertia(fn (Assert $page) => $page->where('readOnlyFields', []));
+    $this->post(route('products.update', $this->store), fieldSourceEditForm(['unit_price' => '0', 'discount' => '0', 'description' => '<p>Now set</p>']))
+        ->assertSessionHasNoErrors();
+
+    $product = $this->store->fresh();
+    expect($product)->name->toBe('Posted name')
+        ->and($product->getAttribute('unit'))->toBe('jar')
+        ->and($product->getAttribute('description'))->toBe('<p>Now set</p>')
+        ->and((float) $product->getAttribute('unit_price'))->toBe(0.0);
+
+    // The server rules still apply to what a store-origin product posts.
+    $this->post(route('products.update', $this->store), fieldSourceEditForm(['name' => '', 'unit' => '', 'unit_price' => '']))
+        ->assertSessionHasErrors(['name', 'unit', 'unit_price']);
+});
+
+test('an admin-owned field of a feed-origin product is validated as posted, a read-only one is not', function () {
+    app(ProductFieldSourceService::class)->update(['unit' => 'admin']);
+
+    // The unit is the admin's now and required; the Otajer-owned name is not validated.
+    $this->post(route('products.update', $this->feed), fieldSourceEditForm(['name' => '', 'unit' => '']))
+        ->assertSessionHasErrors('unit')->assertSessionDoesntHaveErrors('name');
+});
+
+test('another language keeps requiring its translated name on a feed-origin product', function () {
+    $this->post(route('products.update', $this->feed), fieldSourceEditForm(['lang' => 'ar', 'name' => '']))
+        ->assertSessionHasErrors('name');
+});
+
 test('another language edits its own translation of the unit and description without touching the synced columns', function () {
     $this->post(route('products.update', $this->feed), fieldSourceEditForm(['lang' => 'ar', 'name' => 'اسم', 'unit' => 'برطمان', 'description' => '<p>نص</p>']))
         ->assertSessionHasNoErrors();

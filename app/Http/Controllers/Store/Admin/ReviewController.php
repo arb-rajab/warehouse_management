@@ -9,6 +9,7 @@ use App\Http\Resources\Store\ReviewResource;
 use App\Models\Product;
 use App\Models\Review;
 use App\Models\Shop;
+use App\Support\NewestFirst;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -37,7 +38,7 @@ class ReviewController extends Controller implements HasMiddleware
             ->has('product')->has('user')
             ->with(['product:id,name,slug,added_by', 'product.product_translations:id,product_id,name,lang', 'user:id,name,email'])
             ->when($rating, fn ($query) => $query->orderBy('rating', $rating === 'rating,asc' ? 'asc' : 'desc'))
-            ->orderByDesc('created_at')->orderByDesc('id')
+            ->tap(NewestFirst::apply(...))
             ->paginate($perPage)->withQueryString();
 
         return Inertia::render('Store/Admin/Product/Reviews/Index', [

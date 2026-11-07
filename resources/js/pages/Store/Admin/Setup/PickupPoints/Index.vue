@@ -1,24 +1,29 @@
 <script setup lang="ts">
 import { Head, router } from '@inertiajs/vue3';
 import { Pencil, Trash2, CircleCheck, CircleSlash } from '@lucide/vue';
+import { computed } from 'vue';
 import {
     index as resourceIndex,
     edit,
     destroy,
     create,
 } from '@/actions/App/Http/Controllers/Store/Admin/PickupPointController';
+import { edit as staffEdit } from '@/actions/App/Http/Controllers/Store/Admin/StaffController';
 import AddResourceLink from '@/components/AddResourceLink.vue';
 import AddressMapLink from '@/components/AddressMapLink.vue';
 import DataTable from '@/components/DataTable.vue';
 import FormField from '@/components/FormField.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import Pagination from '@/components/Pagination.vue';
+import StoreColumnPicker from '@/components/StoreColumnPicker.vue';
 import SubmitButton from '@/components/SubmitButton.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
+import TableObjectLink from '@/components/TableObjectLink.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
 import { confirmDelete } from '@/lib/confirm';
 import { t } from '@/lib/i18n';
 import { useStoreAccess } from '@/lib/storeAccess';
+import { useTableColumns } from '@/lib/useTableColumns';
 import type { Paginated } from '@/types/admin';
 import type { StorePickupPoint } from '@/types/store';
 const props = defineProps<{
@@ -45,6 +50,21 @@ function filter(event: Event): void {
         { preserveState: true, replace: true },
     );
 }
+const columns = useTableColumns({
+    listId: 'setup.pickupPoints',
+    columns: [
+        { key: 'name', label: 'store.reference.name', required: true },
+        { key: 'address', label: 'store.pickupPoints.address' },
+        { key: 'phone', label: 'store.pickupPoints.phone' },
+        { key: 'manager', label: 'store.pickupPoints.manager' },
+        { key: 'status', label: 'store.reference.status' },
+    ],
+});
+const { shown, visibleColumns } = columns;
+const tableColumns = computed(() => [
+    ...visibleColumns.value.map((column) => t(column.label)),
+    t('store.reference.actions'),
+]);
 </script>
 
 <template>
@@ -73,26 +93,27 @@ function filter(event: Event): void {
                 :processing="false"
             />
         </form>
+        <StoreColumnPicker :state="columns" />
         <DataTable
             :rows="pickupPoints.data"
-            :columns="[
-                t('store.reference.name'),
-                t('store.pickupPoints.address'),
-                t('store.pickupPoints.phone'),
-                t('store.pickupPoints.manager'),
-                t('store.reference.status'),
-                t('store.reference.actions'),
-            ]"
+            :columns="tableColumns"
             :empty-message="t('store.reference.empty')"
         >
             <template #row="{ row }">
                 <td class="px-4 py-2">{{ row.name }}</td>
-                <td class="px-4 py-2">
+                <td v-if="shown.address" class="px-4 py-2">
                     <AddressMapLink :address="row.address" />
                 </td>
-                <td class="px-4 py-2">{{ row.phone }}</td>
-                <td class="px-4 py-2">{{ row.staff?.name }}</td>
-                <td class="px-4 py-2">
+                <td v-if="shown.phone" class="px-4 py-2">{{ row.phone }}</td>
+                <td v-if="shown.manager" class="px-4 py-2">
+                    <TableObjectLink
+                        v-if="row.staff"
+                        :allowed="access.can('edit_staff')"
+                        :href="staffEdit(row.staff)"
+                        >{{ row.staff.name }}</TableObjectLink
+                    >
+                </td>
+                <td v-if="shown.status" class="px-4 py-2">
                     <span class="inline-flex items-center gap-1">
                         <CircleCheck
                             v-if="row.pick_up_status"

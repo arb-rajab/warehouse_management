@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Head, Form, router } from '@inertiajs/vue3';
 import { Pencil, Trash2 } from '@lucide/vue';
+import { computed } from 'vue';
 import {
     index as resourceIndex,
     updateStatus,
@@ -11,6 +12,7 @@ import {
 import DataTable from '@/components/DataTable.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import Pagination from '@/components/Pagination.vue';
+import StoreColumnPicker from '@/components/StoreColumnPicker.vue';
 import StoreStatusSwitch from '@/components/StoreStatusSwitch.vue';
 import StoreTaxFormFields from '@/components/StoreTaxFormFields.vue';
 import SubmitButton from '@/components/SubmitButton.vue';
@@ -19,6 +21,7 @@ import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
 import { confirmDelete } from '@/lib/confirm';
 import { t } from '@/lib/i18n';
 import { useStoreAccess } from '@/lib/storeAccess';
+import { useTableColumns } from '@/lib/useTableColumns';
 import type { Paginated } from '@/types/admin';
 import type { StoreTax } from '@/types/store';
 const props = defineProps<{
@@ -33,24 +36,33 @@ function changePerPage(per_page: number): void {
         { preserveState: true, replace: true },
     );
 }
+const columns = useTableColumns({
+    listId: 'setup.taxes',
+    columns: [
+        { key: 'name', label: 'store.reference.name', required: true },
+        { key: 'status', label: 'store.reference.status' },
+    ],
+});
+const { shown, visibleColumns } = columns;
+const tableColumns = computed(() => [
+    ...visibleColumns.value.map((column) => t(column.label)),
+    t('store.reference.actions'),
+]);
 </script>
 
 <template>
     <StoreAdminLayout>
         <Head :title="t('store.taxes.title')" />
         <PageHeader :title="t('store.taxes.title')"> </PageHeader>
+        <StoreColumnPicker :state="columns" />
         <DataTable
             :rows="taxes.data"
-            :columns="[
-                t('store.reference.name'),
-                t('store.reference.status'),
-                t('store.reference.actions'),
-            ]"
+            :columns="tableColumns"
             :empty-message="t('store.reference.empty')"
         >
             <template #row="{ row }">
                 <td class="px-4 py-2">{{ row.name }}</td>
-                <td class="px-4 py-2">
+                <td v-if="shown.status" class="px-4 py-2">
                     <StoreStatusSwitch
                         v-if="access.can('vat_&_tax_setup')"
                         :action="updateStatus(row, { mergeQuery: {} })"

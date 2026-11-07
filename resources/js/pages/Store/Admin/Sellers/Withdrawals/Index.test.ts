@@ -1,6 +1,7 @@
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ComponentPublicInstance } from 'vue';
+import { edit as sellerEdit } from '@/actions/App/Http/Controllers/Store/Admin/SellerController';
 import { show } from '@/actions/App/Http/Controllers/Store/Admin/SellerPaymentController';
 import { index as withdrawalsIndex } from '@/actions/App/Http/Controllers/Store/Admin/SellerWithdrawRequestController';
 import DataTable from '@/components/DataTable.vue';
@@ -16,6 +17,10 @@ import {
     storeSharedProps,
 } from '@/testing/factories';
 import { defaultAuthProps } from '@/testing/inertiaPageMocks';
+import {
+    expectColumnCanBeHidden,
+    expectColumnLocked,
+} from '@/testing/tableColumns';
 import type { StoreSellerWithdrawal } from '@/types/store';
 import Index from './Index.vue';
 
@@ -134,5 +139,52 @@ describe('seller withdrawals page', () => {
             props: { withdrawals: paginated([]), filters: { per_page: 20 } },
         });
         expect(empty.text()).toContain(t('store.sellers.noWithdrawals'));
+    });
+
+    it('links the seller to their edit page only with edit_seller and a shop id', () => {
+        const sellerCell = (w: ReturnType<typeof mount>) =>
+            w.get('tbody tr').findAll('td')[2];
+        const props = (shopId: number | null) => ({
+            withdrawals: paginated([
+                storeSellerWithdrawal({
+                    seller: {
+                        ...storeSellerWithdrawal().seller,
+                        shop_id: shopId,
+                    },
+                }),
+            ]),
+            filters: { per_page: 20 },
+        });
+
+        access(['view_seller_payout_requests', 'edit_seller']);
+        const allowed = mount(Index, { props: props(9) });
+        expect(sellerCell(allowed).get('a').attributes('href')).toBe(
+            sellerEdit(9).url,
+        );
+        expect(sellerCell(allowed).text()).toContain('Acme shop');
+
+        const noShop = mount(Index, { props: props(null) });
+        expect(sellerCell(noShop).find('a').exists()).toBe(false);
+
+        access(['view_seller_payout_requests']);
+        const denied = mount(Index, { props: props(9) });
+        expect(sellerCell(denied).find('a').exists()).toBe(false);
+        expect(sellerCell(denied).text()).toContain('Sam Seller');
+    });
+
+    it('lets staff hide an optional column from the header and every row, and keeps the identifier', async () => {
+        window.localStorage.clear();
+        const wrapper = mount(Index, {
+            props: {
+                withdrawals: paginated([storeSellerWithdrawal()]),
+                filters: { per_page: 20 },
+            },
+        });
+        await expectColumnCanBeHidden(wrapper, 'sellers.withdrawals', {
+            key: 'message',
+            label: t('store.sellers.message'),
+        });
+        expectColumnLocked(wrapper, t('store.sellers.seller'));
+        window.localStorage.clear();
     });
 });

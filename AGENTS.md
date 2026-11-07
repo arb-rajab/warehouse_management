@@ -16,6 +16,15 @@ Maintain shared instructions here and in the referenced `.ai/` files; keep
 4. Check sibling files and the actual dependency versions before choosing APIs.
 5. Forms must follow [.ai/rules/form-required-fields.md](.ai/rules/form-required-fields.md):
    mark required fields, and keep the mark, `required` and the server rule in agreement.
+6. Store back office list tables must follow [.ai/rules/store-table-columns.md](.ai/rules/store-table-columns.md):
+   every list lets users show or hide optional columns through `useTableColumns` and
+   `StoreColumnPicker`; a new or changed list adopts it in the same change.
+7. Forms must follow [.ai/rules/client-side-validation.md](.ai/rules/client-side-validation.md):
+   they validate in the browser first through the shared layer, from a copy of the
+   server rules kept equal by a parity test; the backend stays authoritative.
+8. Any store back office select that searches another table (customer, product,
+   brand, city, ...) must be a `StoreSearchSelect` shaped like the product search,
+   with its row content defined per entity, per [.ai/rules/store-search-select.md](.ai/rules/store-search-select.md).
 
 Read this file and the rules index fully once per session. For
 `.ai/agent-framework.md` and `.ai/agent-conventions.md`, read the whole file for

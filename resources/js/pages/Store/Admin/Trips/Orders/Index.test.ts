@@ -37,6 +37,10 @@ import {
     storeTripOrder,
 } from '@/testing/factories';
 import { defaultAuthProps, resetMocks } from '@/testing/inertiaPageMocks';
+import {
+    expectColumnCanBeHidden,
+    expectColumnLocked,
+} from '@/testing/tableColumns';
 import type { StoreTripOrder, StoreTripOrderFilters } from '@/types/store';
 import Index from './Index.vue';
 
@@ -388,6 +392,11 @@ describe('Store trip orders list', () => {
             [driverEdit(order.trip!.driver!), 'Sam Driver'],
             [truckEdit(order.trip!.truck!), 'Cargo truck'],
         ]);
+        expect(
+            wrapper
+                .findAllComponents(TableLink)
+                .map((link) => [link.props('href'), link.text()])[3],
+        ).toEqual([customerEdit(order.representative!), 'Rita Rep']);
         expect(wrapper.findAll('tbody tr')[1].findAll('td')[11].text()).toBe(
             t('store.trips.orders.deletedAccount'),
         );
@@ -400,7 +409,7 @@ describe('Store trip orders list', () => {
             customersOnly
                 .findAllComponents(TableLink)
                 .map((link) => link.text()),
-        ).toEqual(['Alma Customer']);
+        ).toEqual(['Alma Customer', 'Rita Rep']);
     });
 
     it('gates each control by its own permission', () => {
@@ -675,7 +684,20 @@ describe('Store trip orders list', () => {
             'Alma',
         );
         expect(filter.get('#search').attributes('maxlength')).toBe('100');
-        expect(form.props('activeCount')).toBe(2);
+        expect(form.props('chips')).toEqual([
+            {
+                key: 'from',
+                label: t('store.trips.orders.from'),
+                value: '2026-10-01',
+                keys: ['from'],
+            },
+            {
+                key: 'to',
+                label: t('store.trips.orders.to'),
+                value: '2026-10-09',
+                keys: ['to'],
+            },
+        ]);
         expect(filter.get('#from').attributes('type')).toBe('date');
         expect(filter.get<HTMLInputElement>('#from').element.value).toBe(
             '2026-10-01',
@@ -757,5 +779,16 @@ describe('Store trip orders list', () => {
         expect(wrapper.get('tbody').text()).toContain(
             '<script>alert(1)</script>',
         );
+    });
+
+    it('lets staff hide an optional column from the header and every row, and keeps the identifier', async () => {
+        window.localStorage.clear();
+        const wrapper = mountPage([storeTripOrder()]);
+        await expectColumnCanBeHidden(wrapper, 'trips.orders', {
+            key: 'managerNotes',
+            label: t('store.trips.orders.managerNotes'),
+        });
+        expectColumnLocked(wrapper, t('store.trips.orders.code'));
+        window.localStorage.clear();
     });
 });

@@ -1,5 +1,5 @@
 import type { ComponentPublicInstance, Ref } from 'vue';
-import { onBeforeUnmount, onMounted, ref } from 'vue';
+import { onBeforeUnmount, onMounted, ref, watch } from 'vue';
 
 /**
  * The open/close + click-outside/Escape-to-close + Arrow/Home/End option
@@ -151,6 +151,65 @@ export function usePanelMaxWidth(
     }
 
     return { panelMaxWidthPx, panelPosition, recompute };
+}
+
+/**
+ * The nearest ancestor that scrolls vertically, or the window when there is
+ * none: the element whose `scroll` moves a trigger underneath a fixed panel.
+ */
+function closestScrollableAncestor(
+    el: HTMLElement,
+): HTMLElement | (Window & typeof globalThis) {
+    let node = el.parentElement;
+
+    while (node) {
+        if (['auto', 'scroll'].includes(getComputedStyle(node).overflowY)) {
+            return node;
+        }
+
+        node = node.parentElement;
+    }
+
+    return window;
+}
+
+/**
+ * A `position: fixed` panel (FilterProductSelect.vue, StoreSearchSelect.vue)
+ * is computed once from the trigger's on-screen rect and does not itself track
+ * the trigger moving underneath it. While `open` is true this recomputes on
+ * scroll of the trigger's nearest scrollable ancestor (or the window, if there
+ * isn't one) and on resize, so the panel stays visually anchored under the
+ * trigger, and removes the listeners again on close or unmount.
+ */
+export function usePanelViewportTracking(
+    containerRef: Ref<HTMLElement | null>,
+    open: Ref<boolean>,
+    recompute: () => void,
+): void {
+    let scrollAncestor: HTMLElement | (Window & typeof globalThis) | null =
+        null;
+
+    function stopTracking(): void {
+        scrollAncestor?.removeEventListener('scroll', recompute);
+        window.removeEventListener('resize', recompute);
+        scrollAncestor = null;
+    }
+
+    watch(open, (isOpen) => {
+        if (isOpen) {
+            scrollAncestor = containerRef.value
+                ? closestScrollableAncestor(containerRef.value)
+                : window;
+            scrollAncestor.addEventListener('scroll', recompute, {
+                passive: true,
+            });
+            window.addEventListener('resize', recompute);
+        } else {
+            stopTracking();
+        }
+    });
+
+    onBeforeUnmount(stopTracking);
 }
 
 /**

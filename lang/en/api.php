@@ -93,6 +93,7 @@ return [
         'representative_price_only' => 'Only Representatives with discount packages can change the price',
         'stock_out' => 'Stock out',
         'updated' => 'Cart updated',
+        'variant_not_found' => 'This product has no such variant.',
     ],
     'clubpoint' => [
         'converted' => 'Successfully converted',
@@ -113,6 +114,7 @@ return [
     'order' => [
         'account_not_verified' => 'Your account has not been verified yet, so it cannot place orders. We will verify it shortly; contact us if it takes long.',
         'address_required' => 'A delivery address with a street address is required to place an order.',
+        'below_minimum' => 'The minimum order amount is :amount. Please add more products to your cart.',
         'address_country_required' => 'The delivery address needs a country. Please edit the address and try again.',
         'payment_type_invalid' => 'The payment type is not available.',
         'payment_type_cash_disabled' => 'Cash on delivery is not available at the moment. Please choose another payment method.',

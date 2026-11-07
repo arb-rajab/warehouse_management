@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { loginAsStoreAdmin } from './support/auth';
+import { pickSearchOption, pickSearchOptions } from './support/searchSelect';
 
 test('campaign dates keep seconds and picker selection, while native offer and popup confirmations refuse dismissed writes', async ({
     page,
@@ -11,19 +12,18 @@ test('campaign dates keep seconds and picker selection, while native offer and p
     await expect(page.locator('#start_date')).toHaveCSS('color-scheme', 'dark');
     await page.locator('#start_date').fill('2026-10-01T08:09:11');
     await page.locator('#end_date').fill('2026-10-30T09:08:07');
-    await page.locator('#product_search').fill('Campaign browser');
-    await expect(
-        page.locator('#products option', {
-            hasText: 'Campaign browser reward',
-        }),
-    ).toHaveCount(1);
-    await page
-        .locator('#base_product_id')
-        .selectOption({ label: 'Campaign browser base' });
-    await page
-        .locator('#products')
-        .selectOption({ label: 'Campaign browser reward' });
-    const rewardId = await page.locator('#products').inputValue();
+    await pickSearchOption(
+        page,
+        '#base_product_id',
+        'Campaign browser',
+        /Campaign browser base/,
+    );
+    await pickSearchOptions(page, '#products', 'Campaign browser', [
+        /Campaign browser reward/,
+    ]);
+    const rewardId = await page
+        .locator('input[name="products[0][id]"]')
+        .inputValue();
     await page.locator(`#discount-${rewardId}`).fill('15');
     await page.locator(`#quantity-${rewardId}`).fill('2');
     await page
@@ -111,16 +111,12 @@ test('flash-deal dates render native dark controls with second precision', async
     await page.locator('#title').fill('Browser flash deal');
     await page.locator('#start_date').fill('2026-10-01T08:09:11');
     await page.locator('#end_date').fill('2026-10-30T09:08:07');
-    await page.locator('#product_search').fill('Campaign browser');
-    await expect(
-        page.locator('#products option', {
-            hasText: 'Campaign browser reward',
-        }),
-    ).toHaveCount(1);
-    await page
-        .locator('#products')
-        .selectOption({ label: 'Campaign browser reward' });
-    const rewardId = await page.locator('#products').inputValue();
+    await pickSearchOptions(page, '#products', 'Campaign browser', [
+        /Campaign browser reward/,
+    ]);
+    const rewardId = await page
+        .locator('input[name="products[0][id]"]')
+        .inputValue();
     await page.locator(`#discount-${rewardId}`).fill('25');
     await page
         .getByRole('button', { name: 'Create flash deal', exact: true })

@@ -112,18 +112,24 @@ class InHouseProductWriter extends PhysicalProductWriter
         // default-language translation mirrors that name.
         $readOnly = $this->fieldSources->readOnlyFieldsFor($product);
         // The name, unit and description are the default language's only;
-        // other languages edit a translation the sync never writes.
+        // other languages edit a translation the sync never writes. A stored
+        // value may be null or blank (a feed row the sync never filled): the
+        // translation mirrors it as a string, and the column is not written.
+        $ignored = [];
         if ($data['lang'] === config('app.default_language')) {
             foreach (array_intersect(['name', 'unit', 'description'], $readOnly) as $field) {
-                $data[$field] = $product->getAttribute($field);
+                $data[$field] = $field === 'name' ? (string) $product->getAttribute($field) : $product->getAttribute($field);
+                $ignored[] = $field;
             }
         }
         // The unit price is shared by the languages; the stock row of a
         // product with no variants is priced from it.
         if (in_array('unit_price', $readOnly, true)) {
-            $data['unit_price'] = $product->getAttribute('unit_price');
+            $data['unit_price'] = $product->getAttribute('unit_price') ?? 0;
+            $ignored[] = 'unit_price';
         }
-        $columns = $this->postedColumns($data);
+        // A read-only column keeps its stored value untouched, null included.
+        $columns = array_diff_key($this->postedColumns($data), array_flip($ignored));
         if (array_key_exists('ar_name', $data) && ! in_array('ar_name', $readOnly, true)) {
             $columns['ar_name'] = (string) ($data['ar_name'] ?? '');
         }

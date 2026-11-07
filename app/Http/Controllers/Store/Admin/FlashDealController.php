@@ -8,13 +8,14 @@ use App\Http\Requests\Store\Admin\FilterCampaignsRequest;
 use App\Http\Requests\Store\Admin\StoreFlashDealRequest;
 use App\Http\Requests\Store\Admin\ToggleCampaignRequest;
 use App\Http\Requests\Store\Admin\UpdateFlashDealRequest;
-use App\Http\Resources\Store\CampaignProductResource;
 use App\Http\Resources\Store\FlashDealResource;
 use App\Models\FlashDeal;
 use App\Models\FlashDealProduct;
 use App\Models\FlashDealTranslation;
 use App\Models\Language;
 use App\Models\Product;
+use App\Support\NewestFirst;
+use App\Support\SearchOption;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -36,7 +37,7 @@ class FlashDealController extends Controller implements HasMiddleware
         $perPage = $this->resolvePerPage($request, 20);
         $search = $request->validated('search');
 
-        return Inertia::render('Store/Admin/Marketing/FlashDeals/Index', ['deals' => $this->paginated(FlashDealResource::collection(FlashDeal::query()->without('flash_deal_translations')->select(['id', 'title', 'slug', 'banner', 'start_date', 'end_date', 'background_color', 'text_color', 'status', 'featured'])->when($search, fn ($q) => $q->where('title', 'like', '%'.$search.'%'))->orderByDesc('id')->paginate($perPage)->withQueryString())), 'filters' => ['search' => $search, 'per_page' => $perPage]]);
+        return Inertia::render('Store/Admin/Marketing/FlashDeals/Index', ['deals' => $this->paginated(FlashDealResource::collection(FlashDeal::query()->without('flash_deal_translations')->select(['id', 'title', 'slug', 'banner', 'start_date', 'end_date', 'background_color', 'text_color', 'status', 'featured'])->when($search, fn ($q) => $q->where('title', 'like', '%'.$search.'%'))->tap(NewestFirst::apply(...))->paginate($perPage)->withQueryString())), 'filters' => ['search' => $search, 'per_page' => $perPage]]);
     }
 
     public function create(): Response
@@ -49,7 +50,7 @@ class FlashDealController extends Controller implements HasMiddleware
         $lang = $request->validated('lang') ?? config('app.default_language');
         $products = CampaignProductController::products()->whereIn('id', FlashDealProduct::query()->where('flash_deal_id', $flashDeal->id)->pluck('product_id'))->get();
 
-        return Inertia::render('Store/Admin/Marketing/FlashDeals/Edit', ['deal' => new FlashDealResource($flashDeal), 'title' => $flashDeal->getTranslation('title', $lang), 'lang' => $lang, 'languages' => Language::query()->select(['code', 'name'])->orderBy('id')->get(), 'products' => $products->map(fn (Product $p) => ['id' => $p->id, 'discount' => (float) $p->getAttribute('discount'), 'discount_type' => $p->getAttribute('discount_type') ?? 'amount'])->all(), 'selectedProducts' => CampaignProductResource::collection($products)]);
+        return Inertia::render('Store/Admin/Marketing/FlashDeals/Edit', ['deal' => new FlashDealResource($flashDeal), 'title' => $flashDeal->getTranslation('title', $lang), 'lang' => $lang, 'languages' => Language::query()->select(['code', 'name'])->orderBy('id')->get(), 'products' => $products->map(fn (Product $p) => ['id' => $p->id, 'discount' => (float) $p->getAttribute('discount'), 'discount_type' => $p->getAttribute('discount_type') ?? 'amount'])->all(), 'selectedProducts' => $products->map(fn (Product $p): array => SearchOption::campaignProduct($p))->all()]);
     }
 
     public function store(StoreFlashDealRequest $request): RedirectResponse

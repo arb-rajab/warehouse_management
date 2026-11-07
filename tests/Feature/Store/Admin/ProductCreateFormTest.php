@@ -438,6 +438,45 @@ test('a failed write rolls every table back and clears no cache', function (stri
     }
 })->with(['translation', 'store barcode']);
 
+test('a product can be created with no discount, even priced 0, or with a discount below the price', function (array $overrides, string $discount, string $type) {
+    actingAsStoreUser(createStoreStaff('add_new_product'));
+    Artisan::shouldReceive('call')->andReturn(0);
+
+    $this->post(route('products.store'), productCreateForm(['name' => 'Discount case', ...$overrides]))->assertSessionHasNoErrors();
+
+    $product = Product::query()->where('name', 'Discount case')->sole();
+    expect((float) $product->getAttribute('discount'))->toBe((float) $discount)
+        ->and($product->getAttribute('discount_type'))->toBe($type);
+})->with([
+    'no discount on the form default price of 0' => [['unit_price' => '0', 'discount' => '0'], '0', 'amount'],
+    'no discount on a priced product' => [['unit_price' => '12.50', 'discount' => '0'], '0', 'amount'],
+    'no percentage discount on a price of 0' => [['unit_price' => '0', 'discount' => '0', 'discount_type' => 'percent'], '0', 'percent'],
+    'flat discount below the price' => [['unit_price' => '12.50', 'discount' => '12.49'], '12.49', 'amount'],
+    'percentage below 100 whatever the price' => [['unit_price' => '0', 'discount' => '99.99', 'discount_type' => 'percent'], '99.99', 'percent'],
+]);
+
+test('a flat discount must stay below the unit price and says so, a percentage below 100', function (array $overrides, string $message) {
+    actingAsStoreUser(createStoreStaff('add_new_product'));
+    $before = productCreateSnapshot();
+
+    $this->post(route('products.store'), productCreateForm($overrides))->assertSessionHasErrors(['discount' => $message]);
+
+    expect(productCreateSnapshot())->toEqual($before);
+})->with([
+    'equal to the price' => [['unit_price' => '12.50', 'discount' => '12.50'], 'The discount must be less than the unit price (12.5).'],
+    'above the price' => [['unit_price' => '10', 'discount' => '10.01'], 'The discount must be less than the unit price (10).'],
+    'any discount on a price of 0' => [['unit_price' => '0', 'discount' => '0.01'], 'The discount must be less than the unit price (0).'],
+    'percentage of 100' => [['discount' => '100', 'discount_type' => 'percent'], 'The discount percentage must be less than 100.'],
+    'percentage over 100' => [['discount' => '150', 'discount_type' => 'percent'], 'The discount percentage must be less than 100.'],
+]);
+
+test('an invalid unit price is reported on the unit price, not as a discount limit', function () {
+    actingAsStoreUser(createStoreStaff('add_new_product'));
+
+    $this->post(route('products.store'), productCreateForm(['unit_price' => '', 'discount' => '5']))
+        ->assertSessionHasErrors('unit_price')->assertSessionDoesntHaveErrors('discount');
+});
+
 test('the store validates every field against the schema widths and the form options', function (array|Closure $overrides, string $field) {
     actingAsStoreUser(createStoreStaff('add_new_product'));
     $before = productCreateSnapshot();
@@ -622,3 +661,15 @@ function productUtcTimestamp(string $dateTime): int
 {
     return (new DateTimeImmutable($dateTime, new DateTimeZone('UTC')))->getTimestamp();
 }
+
+test('the store refuses a minimum purchase quantity above the maximum, and accepts them equal', function () {
+    actingAsStoreUser(createStoreStaff('add_new_product'));
+    $before = productCreateSnapshot();
+
+    $this->post(route('products.store'), productCreateForm(['min_qty' => '25', 'max_qty' => '24']))
+        ->assertSessionHasErrors(['min_qty' => __('validation.lte.numeric', ['attribute' => __('validation.attributes.min_qty'), 'value' => '24'])]);
+    expect(productCreateSnapshot())->toEqual($before);
+
+    $this->post(route('products.store'), productCreateForm(['min_qty' => '24', 'max_qty' => '24']))->assertSessionHasNoErrors();
+    expect(Product::query()->where('name', 'Extra virgin olive oil')->value('min_qty'))->toEqual(24);
+});

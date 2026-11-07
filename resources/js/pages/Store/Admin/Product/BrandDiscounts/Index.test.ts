@@ -2,6 +2,7 @@ import { Form, Head } from '@inertiajs/vue3';
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ComponentPublicInstance } from 'vue';
+import { edit as brandEdit } from '@/actions/App/Http/Controllers/Store/Admin/BrandController';
 import {
     index as brandDiscountsIndex,
     update,
@@ -15,6 +16,10 @@ import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
 import { t } from '@/lib/i18n';
 import { paginated, storeBrand, storeSharedProps } from '@/testing/factories';
 import { defaultAuthProps } from '@/testing/inertiaPageMocks';
+import {
+    expectColumnCanBeHidden,
+    expectColumnLocked,
+} from '@/testing/tableColumns';
 import type { StoreBrand } from '@/types/store';
 import Index from './Index.vue';
 
@@ -185,5 +190,35 @@ describe('Store brand discounts', () => {
             { search: 'Dates', per_page: 10 },
             { preserveState: true, replace: true },
         );
+    });
+
+    it('links the brand name to its edit page only with edit_brand', () => {
+        const cell = (wrapper: ReturnType<typeof mountPage>) =>
+            wrapper.get('tbody tr').findAll('td')[1];
+
+        const allowed = mountPage([
+            'view_all_brands',
+            'product_edit',
+            'edit_brand',
+        ]);
+        expect(cell(allowed).get('a').attributes('href')).toBe(
+            brandEdit(3).url,
+        );
+        expect(cell(allowed).text()).toBe('Dates brand');
+
+        const denied = mountPage(['view_all_brands', 'product_edit']);
+        expect(cell(denied).find('a').exists()).toBe(false);
+        expect(cell(denied).text()).toBe('Dates brand');
+    });
+
+    it('lets staff hide an optional column from the header and every row, and keeps the identifier', async () => {
+        window.localStorage.clear();
+        const wrapper = mountPage();
+        await expectColumnCanBeHidden(wrapper, 'product.brandDiscounts', {
+            key: 'logo',
+            label: t('store.brandDiscount.logo'),
+        });
+        expectColumnLocked(wrapper, t('store.brandDiscount.name'));
+        window.localStorage.clear();
     });
 });

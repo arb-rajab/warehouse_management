@@ -16,12 +16,16 @@ use App\Http\Resources\Store\CustomerPageViewResource;
 use App\Http\Resources\Store\CustomerResource;
 use App\Models\Address;
 use App\Models\Category;
+use App\Models\City;
 use App\Models\Country;
 use App\Models\Product;
 use App\Models\RepresentativePackage;
+use App\Models\State;
 use App\Models\StoreUser;
 use App\Services\TradeLicenseStorage;
 use App\Services\UserService;
+use App\Support\NewestFirst;
+use App\Support\SearchOption;
 use Carbon\Carbon;
 use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Http\RedirectResponse;
@@ -111,7 +115,7 @@ class CustomerController extends Controller implements HasMiddleware
         }
 
         return Inertia::render('Store/Admin/Customers/Customers/Index', [
-            'customers' => $this->paginated(CustomerListResource::collection($query->orderBy('users.id')->paginate($perPage)->withQueryString())),
+            'customers' => $this->paginated(CustomerListResource::collection($query->tap(NewestFirst::apply(...))->paginate($perPage)->withQueryString())),
             'filters' => [...$request->only(['search', 'activity_status']), ...collect(['archived', 'important', 'verified', 'from_api', 'registration_completed'])->filter(fn ($filter) => $request->filled($filter))->mapWithKeys(fn ($filter) => [$filter => $request->boolean($filter)])->all(), ...collect(['profit_from', 'profit_to'])->filter(fn ($filter) => $request->filled($filter))->mapWithKeys(fn ($filter) => [$filter => $request->string($filter)->toString()])->all(), 'per_page' => $perPage],
             'representatives' => $representatives,
             'packages' => $representatives && $request->user('store')->can('assign_representative_package') ? RepresentativePackage::query()->select(['id', 'name', 'percentage'])->orderBy('id')->get()->map(fn ($package) => ['id' => $package->id, 'name' => $package->name, 'percentage' => (string) $package->percentage])->all() : [],
@@ -215,8 +219,32 @@ class CustomerController extends Controller implements HasMiddleware
         return Inertia::render('Store/Admin/Customers/Customers/Edit', [
             'customer' => [...(new CustomerResource($customer))->resolve(), 'country' => $customer->country, 'tax_number' => $customer->tax_number, 'bank_account_number' => $customer->bank_account_number, 'company_address' => $customer->company_address, 'shipping_address' => $customer->shipping_address, 'member_serial' => $customer->member_serial, 'AccSysID' => $customer->AccSysID, 'trade_license' => $customer->trade_license, 'admin_notes' => $customer->admin_notes, 'registration_completed' => (bool) $customer->registration_completed],
             'countries' => $this->countries(),
-            'addresses' => $customer->addresses()->select(['id', 'user_id', 'address', 'country_id', 'state_id', 'city_id', 'postal_code', 'phone', 'latitude', 'longitude', 'set_default'])->orderBy('id')->get()->map(fn ($address) => $address->only(['id', 'address', 'country_id', 'state_id', 'city_id', 'postal_code', 'phone', 'latitude', 'longitude', 'set_default']))->all(),
+            'addresses' => $this->addressesWithOptions($customer),
         ]);
+    }
+
+    /**
+     * The customer's addresses with their state and city as search options, so
+     * the address form shows their names before anything is searched.
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function addressesWithOptions(StoreUser $customer): array
+    {
+        $addresses = $customer->addresses()->select(['id', 'user_id', 'address', 'country_id', 'state_id', 'city_id', 'postal_code', 'phone', 'latitude', 'longitude', 'set_default'])->orderBy('id')->get();
+        $states = State::query()->select(['id', 'name', 'country_id'])->with('country:id,name')->whereIn('id', $addresses->pluck('state_id')->filter()->all())->get()->keyBy('id');
+        $cities = City::query()->select(['id', 'name', 'state_id'])->with(['city_translations:id,city_id,lang,name', 'state:id,name'])->whereIn('id', $addresses->pluck('city_id')->filter()->all())->get()->keyBy('id');
+
+        return $addresses->map(function (Address $address) use ($states, $cities): array {
+            $state = $states->get($address->state_id);
+            $city = $cities->get($address->city_id);
+
+            return [
+                ...$address->only(['id', 'address', 'country_id', 'state_id', 'city_id', 'postal_code', 'phone', 'latitude', 'longitude', 'set_default']),
+                'state_option' => $state === null ? null : SearchOption::state($state),
+                'city_option' => $city === null ? null : SearchOption::city($city),
+            ];
+        })->all();
     }
 
     public function update(UpdateCustomerRequest $request, StoreUser $customer): RedirectResponse

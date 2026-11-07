@@ -11,6 +11,7 @@ use App\Http\Requests\Store\Admin\UpdateLanguageStatusRequest;
 use App\Http\Requests\Store\Admin\UpdateTranslationsRequest;
 use App\Http\Resources\Store\LanguageResource;
 use App\Models\Language;
+use App\Support\NewestFirst;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -36,7 +37,7 @@ class LanguageController extends Controller implements HasMiddleware
         return Inertia::render('Store/Admin/Languages/Index', [
             'languages' => $this->paginated(LanguageResource::collection(Language::query()
                 ->select(['id', 'name', 'code', 'app_lang_code', 'rtl', 'status'])
-                ->orderBy('id')->paginate($perPage)->withQueryString())),
+                ->tap(NewestFirst::apply(...))->paginate($perPage)->withQueryString())),
             'filters' => ['per_page' => $perPage],
             'defaultLanguage' => config('app.default_language'),
         ]);

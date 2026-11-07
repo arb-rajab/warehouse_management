@@ -10,6 +10,7 @@ use App\Http\Requests\Store\Admin\UpdateStateRequest;
 use App\Http\Resources\Store\StateResource;
 use App\Models\Country;
 use App\Models\State;
+use App\Support\NewestFirst;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -35,7 +36,7 @@ class StateController extends Controller implements HasMiddleware
         $query->when($request->filled('sort_country'), fn ($query) => $query->where('country_id', $request->integer('sort_country')));
 
         return Inertia::render('Store/Admin/Setup/States/Index', [
-            'states' => $this->paginated(StateResource::collection($query->orderByDesc('status')->orderBy('id')->paginate($perPage)->withQueryString())),
+            'states' => $this->paginated(StateResource::collection($query->tap(NewestFirst::apply(...))->paginate($perPage)->withQueryString())),
             'filters' => ['per_page' => $perPage, 'sort_state' => $request->validated('sort_state'), 'sort_country' => $request->validated('sort_country')],
             'countries' => $this->countryOptions(),
         ]);

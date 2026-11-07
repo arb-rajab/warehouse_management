@@ -113,13 +113,25 @@ describe('StoreNewsletterFormFields', () => {
             true,
             true,
         ]);
-        lists()[0].vm.$emit('update:modelValue', ['user@example.test']);
+        lists()[0].vm.$emit('update:modelValue', [
+            {
+                id: 'user@example.test',
+                label: 'user@example.test',
+                icon: 'mail',
+            },
+        ]);
         await flushPromises();
         expect(lists().map((child) => child.props('required'))).toEqual([
             true,
             false,
         ]);
-        lists()[1].vm.$emit('update:modelValue', ['reader@example.test']);
+        lists()[1].vm.$emit('update:modelValue', [
+            {
+                id: 'reader@example.test',
+                label: 'reader@example.test',
+                icon: 'mail',
+            },
+        ]);
         await flushPromises();
         expect(lists().map((child) => child.props('required'))).toEqual([
             false,

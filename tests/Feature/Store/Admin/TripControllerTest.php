@@ -299,27 +299,56 @@ test('a status change returns to the list it was made from with that list\'s fil
 });
 
 describe('trip forms', function () {
-    test('the create form renders the orders out for delivery and the non-representative store users', function () {
+    test('the create form sends no order or customer lists and the checkpoint searches offer only eligible rows', function () {
         $customer = createStoreUser();
-        $customer->forceFill(['name' => 'Alma Customer'])->save();
+        $customer->forceFill(['name' => 'Alma Customer', 'phone' => '0611111111', 'email' => 'alma@example.test'])->save();
         $rep = createStoreUser();
-        $rep->forceFill(['name' => 'Rita Rep', 'is_rep' => true])->save();
-        $order = createStoreOrder($customer, ['delivery_status' => 'on_delivery', 'code' => '20261014-0002']);
-        $repOrder = createStoreOrder($customer, ['delivery_status' => 'on_delivery', 'code' => '20261014-0001', 'by_rep' => 1, 'for_customer' => $rep->id]);
+        $rep->forceFill(['name' => 'Alma Rep', 'is_rep' => true])->save();
+        $order = createStoreOrder($customer, ['delivery_status' => 'on_delivery', 'code' => '20261014-0002', 'grand_total' => 120]);
+        $repOrder = createStoreOrder($customer, ['delivery_status' => 'on_delivery', 'code' => '20261014-0001', 'by_rep' => 1, 'for_customer' => $rep->id, 'grand_total' => 80.5]);
         createStoreOrder($customer, ['delivery_status' => 'delivered', 'code' => '20261014-0003']);
         $staff = createStoreStaff('add_trip');
         actingAsStoreUser($staff);
 
         $this->get(route('trips.create'))->assertOk()->assertInertia(fn (Assert $page) => $page
-            ->component('Store/Admin/Trips/Trips/Create')
-            ->where('orders', [
-                ['id' => $order->id, 'code' => '20261014-0002', 'customer' => 'Alma Customer'],
-                ['id' => $repOrder->id, 'code' => '20261014-0001', 'customer' => 'Rita Rep'],
-            ])
-            ->where('customers', StoreUser::query()->where('is_rep', false)->orderBy('name')->orderBy('id')->get(['id', 'name'])->map(fn (StoreUser $user) => ['id' => $user->id, 'name' => (string) $user->name])->all())
-            ->where('customers', fn ($customers) => collect($customers)->pluck('id')->contains($customer->id) && ! collect($customers)->pluck('id')->contains($rep->id))
-            ->missing('trip'));
+            ->component('Store/Admin/Trips/Trips/Create')->missing('orders')->missing('customers')->missing('trip'));
+
+        $orders = $this->getJson(route('trips.order-options'))->assertOk();
+        expect($orders->json('data'))->toEqual([
+            ['id' => $order->id, 'label' => '#20261014-0002', 'description' => 'Alma Customer · 120.00', 'image' => null, 'icon' => 'truck', 'badge' => null],
+            ['id' => $repOrder->id, 'label' => '#20261014-0001', 'description' => 'Alma Rep · 80.50', 'image' => null, 'icon' => 'truck', 'badge' => null],
+        ]);
+        // By code, by customer name (the representative's order names its customer) and by nothing.
+        expect($this->getJson(route('trips.order-options', ['q' => '0001']))->json('data.*.id'))->toBe([$repOrder->id])
+            ->and($this->getJson(route('trips.order-options', ['q' => 'alma rep']))->json('data.*.id'))->toBe([$repOrder->id])
+            ->and($this->getJson(route('trips.order-options', ['q' => 'nothing-matches']))->json('data'))->toBe([]);
+
+        $customers = $this->getJson(route('trips.customer-options', ['q' => 'alma']))->assertOk();
+        expect(collect($customers->json('data'))->pluck('id')->all())->toContain($customer->id)->not->toContain($rep->id)
+            ->and(collect($customers->json('data'))->firstWhere('id', $customer->id)['description'])->toBe('0611111111 · alma@example.test');
     });
+
+    test('the checkpoint searches page past twenty rows and refuse callers outside the trip write permissions', function () {
+        $customer = createStoreUser();
+        foreach (range(1, 25) as $number) {
+            createStoreOrder($customer, ['delivery_status' => 'on_delivery', 'code' => sprintf('20261014-%04d', $number)]);
+            createStoreUser()->forceFill(['name' => sprintf('Stop %02d', $number)])->save();
+        }
+        actingAsStoreUser(createStoreStaff('edit_trip'));
+
+        $first = $this->getJson(route('trips.order-options'))->assertOk();
+        expect($first->json('data'))->toHaveCount(20)->and($first->json('meta.total'))->toBe(25)
+            ->and($first->json('data.0.label'))->toBe('#20261014-0025')
+            ->and($this->getJson(route('trips.order-options', ['page' => 2]))->json('data'))->toHaveCount(5);
+        expect($this->getJson(route('trips.customer-options', ['q' => 'Stop']))->json('meta.total'))->toBe(25);
+        $this->getJson(route('trips.order-options', ['q' => str_repeat('x', 101)]))->assertUnprocessable()->assertJsonValidationErrors('q');
+        $this->getJson(route('trips.customer-options', ['page' => 0]))->assertUnprocessable();
+    });
+
+    test('the checkpoint searches refuse unauthorized callers', function (string $caller, string $route) {
+        actingAsRefusedStoreCaller($caller);
+        assertStoreCallerRefused($this->get(route($route)), $caller);
+    })->with('refused store admin callers')->with(['trips.order-options', 'trips.customer-options']);
 
     test('the edit form renders the trip and its stored checkpoints in their order', function () {
         $driver = createStoreUser('driver');
@@ -347,8 +376,8 @@ describe('trip forms', function () {
                     ->where('id', $delivery->id)->where('type', 'delivery')->where('related_id', $order->id)
                     ->where('notes', 'Back door')->where('order_code', '20261014-0009')
                     ->where('customer', 'Alma Customer')))
-            ->has('orders')
-            ->has('customers'));
+            ->missing('orders')
+            ->missing('customers'));
     });
 
     test('a new trip and an update return to the trip\'s detail', function () {

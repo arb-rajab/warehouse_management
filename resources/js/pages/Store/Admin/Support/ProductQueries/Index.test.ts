@@ -1,6 +1,8 @@
 import { Head } from '@inertiajs/vue3';
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { edit as customerEdit } from '@/actions/App/Http/Controllers/Store/Admin/CustomerController';
+import { edit as productEdit } from '@/actions/App/Http/Controllers/Store/Admin/ProductController';
 import PageHeader from '@/components/PageHeader.vue';
 import Pagination from '@/components/Pagination.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
@@ -12,6 +14,10 @@ import {
     storeSharedProps,
 } from '@/testing/factories';
 import { defaultAuthProps, resetMocks } from '@/testing/inertiaPageMocks';
+import {
+    expectColumnCanBeHidden,
+    expectColumnLocked,
+} from '@/testing/tableColumns';
 import Index from './Index.vue';
 const { usePageMock, routerGetMock, routerPostMock } = vi.hoisted(() => ({
     usePageMock: vi.fn(),
@@ -112,5 +118,55 @@ describe('Product query index', () => {
             { per_page: 10 },
             { preserveState: true, replace: true },
         );
+    });
+
+    it('links the customer and the product to their edit pages by permission', () => {
+        const cells = (w: ReturnType<typeof mountPage>) =>
+            w.get('tbody tr').findAll('td');
+
+        usePageMock.mockReturnValue({
+            url: '/temp/admin/x',
+            props: defaultAuthProps({
+                store: storeSharedProps({
+                    permissions: [
+                        'view_all_product_queries',
+                        'edit_customer',
+                        'product_edit',
+                    ],
+                }),
+            }),
+        });
+        const allowed = cells(mountPage());
+        expect(allowed[0].get('a').attributes('href')).toBe(
+            customerEdit(8).url,
+        );
+        expect(allowed[1].get('a').attributes('href')).toBe(
+            productEdit(10).url,
+        );
+
+        usePageMock.mockReturnValue({
+            url: '/temp/admin/x',
+            props: defaultAuthProps({
+                store: storeSharedProps({
+                    permissions: ['view_all_product_queries'],
+                }),
+            }),
+        });
+        const denied = cells(mountPage());
+        expect(denied[0].find('a').exists()).toBe(false);
+        expect(denied[1].find('a').exists()).toBe(false);
+        expect(denied[0].text()).toBe('Customer');
+        expect(denied[1].text()).toBe('Rice');
+    });
+
+    it('lets staff hide an optional column from the header and every row, and keeps the identifier', async () => {
+        window.localStorage.clear();
+        const wrapper = mountPage();
+        await expectColumnCanBeHidden(wrapper, 'support.productQueries', {
+            key: 'reply',
+            label: t('store.support.reply'),
+        });
+        expectColumnLocked(wrapper, t('store.support.customer'));
+        window.localStorage.clear();
     });
 });

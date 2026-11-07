@@ -43,6 +43,8 @@ export function createLinkStub() {
  * `onSubmit`, when given, receives the form's `FormData` each time it is
  * submitted, either natively (a submit button, `form="<id>"` included) or
  * through the `submit` slot prop, like Inertia's `<Form>` reading its fields.
+ * As there, an `onBefore` returning false cancels the submit, and `onStart`
+ * runs before it is sent.
  */
 export function createFormStub(
     getSlotProps: () => {
@@ -58,14 +60,18 @@ export function createFormStub(
             options: { type: Object, default: undefined },
             resetOnSuccess: Boolean,
             onBefore: { type: Function, default: undefined },
+            onStart: { type: Function, default: undefined },
         },
         setup(props, { slots }) {
             const formRef = ref<HTMLFormElement | null>(null);
 
             function submit(): void {
-                if (formRef.value) {
-                    onSubmit?.(new FormData(formRef.value));
+                if (!formRef.value || props.onBefore?.() === false) {
+                    return;
                 }
+
+                props.onStart?.();
+                onSubmit?.(new FormData(formRef.value));
             }
 
             return () =>

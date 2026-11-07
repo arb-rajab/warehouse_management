@@ -2,6 +2,7 @@
 import { Head, router } from '@inertiajs/vue3';
 import { Check, Clock, Download, X } from '@lucide/vue';
 import { computed } from 'vue';
+import { edit as customerEdit } from '@/actions/App/Http/Controllers/Store/Admin/CustomerController';
 import {
     accept,
     exportMethod,
@@ -13,13 +14,17 @@ import FieldError from '@/components/FieldError.vue';
 import FormField from '@/components/FormField.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import Pagination from '@/components/Pagination.vue';
+import StoreColumnPicker from '@/components/StoreColumnPicker.vue';
 import StoreListFilters from '@/components/StoreListFilters.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
+import TableObjectLink from '@/components/TableObjectLink.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
-import { countActive, fieldLabelClass } from '@/lib/filters';
+import { fieldLabelClass } from '@/lib/filters';
 import { t } from '@/lib/i18n';
 import { useStoreAccess } from '@/lib/storeAccess';
+import { useTableColumns } from '@/lib/useTableColumns';
 import type { Paginated } from '@/types/admin';
+import type { StoreFilterChip } from '@/types/store';
 import type { RepresentativePayment } from '@/types/storeRepresentatives';
 
 const props = defineProps<{
@@ -37,9 +42,16 @@ function confirmPayment(receipt: string): boolean {
     return confirm(t('store.representativePayments.confirm', { receipt }));
 }
 const statuses = ['pending', 'accepted', 'rejected'] as const;
-/** Dialog filters only: how many status boxes are ticked. */
-const activeFilterCount = computed(() =>
-    countActive(statuses.map((status) => props.filters[status])),
+/** Dialog filters only: one chip per ticked status box. */
+const appliedFilters = computed<StoreFilterChip[]>(() =>
+    statuses
+        .filter((status) => props.filters[status])
+        .map((status) => ({
+            key: status,
+            label: t('store.representativePayments.status'),
+            value: t(`store.representativePayments.${status}`),
+            keys: [status],
+        })),
 );
 /** Change the page size, keeping the applied search and statuses. */
 function changePerPage(perPage: number): void {
@@ -55,16 +67,40 @@ function changePerPage(perPage: number): void {
         { preserveState: true, replace: true },
     );
 }
+const columns = useTableColumns({
+    listId: 'representatives.payments',
+    columns: [
+        { key: 'id', label: 'store.representativePayments.id' },
+        {
+            key: 'customer',
+            label: 'store.representativePayments.customer',
+            required: true,
+        },
+        { key: 'accountId', label: 'store.representativePayments.accountId' },
+        {
+            key: 'representative',
+            label: 'store.representativePayments.representative',
+        },
+        { key: 'receipt', label: 'store.representativePayments.receipt' },
+        { key: 'invoice', label: 'store.representativePayments.invoice' },
+        { key: 'amount', label: 'store.representativePayments.amount' },
+        { key: 'accountant', label: 'store.representativePayments.accountant' },
+        { key: 'notes', label: 'store.representativePayments.notes' },
+        { key: 'status', label: 'store.representativePayments.status' },
+    ],
+});
+const { shown, visibleColumns } = columns;
+const tableColumns = computed(() => [
+    ...visibleColumns.value.map((column) => t(column.label)),
+    t('store.representativePayments.actions'),
+]);
 </script>
 
 <template>
     <Head :title="t('store.representativePayments.title')" />
     <StoreAdminLayout>
         <PageHeader :title="t('store.representativePayments.title')" />
-        <StoreListFilters
-            :action="paymentsIndex()"
-            :active-count="activeFilterCount"
-        >
+        <StoreListFilters :action="paymentsIndex()" :chips="appliedFilters">
             <template #default="{ errors }">
                 <input
                     type="hidden"
@@ -108,34 +144,53 @@ function changePerPage(perPage: number): void {
                 </fieldset>
             </template>
         </StoreListFilters>
+        <StoreColumnPicker :state="columns" />
         <DataTable
-            :columns="[
-                t('store.representativePayments.id'),
-                t('store.representativePayments.customer'),
-                t('store.representativePayments.accountId'),
-                t('store.representativePayments.representative'),
-                t('store.representativePayments.receipt'),
-                t('store.representativePayments.invoice'),
-                t('store.representativePayments.amount'),
-                t('store.representativePayments.accountant'),
-                t('store.representativePayments.notes'),
-                t('store.representativePayments.status'),
-                t('store.representativePayments.actions'),
-            ]"
+            :columns="tableColumns"
             :rows="payments.data"
             :empty-message="t('store.representativePayments.empty')"
         >
             <template #row="{ row: payment }">
-                <td class="px-4 py-2">{{ payment.id }}</td>
-                <td class="px-4 py-2">{{ payment.customer_name }}</td>
-                <td class="px-4 py-2">{{ payment.account_id }}</td>
-                <td class="px-4 py-2">{{ payment.representative?.name }}</td>
-                <td class="px-4 py-2">{{ payment.receipt_code }}</td>
-                <td class="px-4 py-2">{{ payment.invoice_code }}</td>
-                <td class="px-4 py-2">{{ payment.amount }}</td>
-                <td class="px-4 py-2">{{ payment.accountant?.name }}</td>
-                <td class="px-4 py-2">{{ payment.notes }}</td>
+                <td v-if="shown.id" class="px-4 py-2">{{ payment.id }}</td>
                 <td class="px-4 py-2">
+                    <TableObjectLink
+                        v-if="payment.customer_id !== null"
+                        :allowed="access.can('edit_customer')"
+                        :href="customerEdit(payment.customer_id)"
+                        >{{ payment.customer_name }}</TableObjectLink
+                    ><template v-else>{{ payment.customer_name }}</template>
+                </td>
+                <td v-if="shown.accountId" class="px-4 py-2">
+                    {{ payment.account_id }}
+                </td>
+                <td v-if="shown.representative" class="px-4 py-2">
+                    <TableObjectLink
+                        v-if="payment.representative"
+                        :allowed="access.can('edit_customer')"
+                        :href="customerEdit(payment.representative)"
+                        >{{ payment.representative.name }}</TableObjectLink
+                    >
+                </td>
+                <td v-if="shown.receipt" class="px-4 py-2">
+                    {{ payment.receipt_code }}
+                </td>
+                <td v-if="shown.invoice" class="px-4 py-2">
+                    {{ payment.invoice_code }}
+                </td>
+                <td v-if="shown.amount" class="px-4 py-2">
+                    {{ payment.amount }}
+                </td>
+                <td v-if="shown.accountant" class="px-4 py-2">
+                    {{ payment.accountant?.name }}
+                </td>
+                <td
+                    v-if="shown.notes"
+                    class="max-w-xs truncate px-4 py-2"
+                    :title="payment.notes ?? undefined"
+                >
+                    {{ payment.notes }}
+                </td>
+                <td v-if="shown.status" class="px-4 py-2">
                     <span class="inline-flex items-center gap-1"
                         ><Clock
                             v-if="payment.status === 'pending'"
@@ -149,7 +204,7 @@ function changePerPage(perPage: number): void {
                     >
                 </td>
                 <td class="px-4 py-2">
-                    <div class="flex flex-wrap items-center gap-2">
+                    <div class="flex flex-nowrap items-center gap-2">
                         <template
                             v-if="
                                 payment.status === 'pending' &&

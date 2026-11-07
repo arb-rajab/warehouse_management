@@ -7,6 +7,7 @@ import ResourceFormPage from '@/components/ResourceFormPage.vue';
 import StoreDigitalProductFormFields from '@/components/StoreDigitalProductFormFields.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
 import { t } from '@/lib/i18n';
+import { digitalProductValidation } from '@/lib/storeProductForm';
 import type {
     StoreDigitalProductTax,
     StoreReferenceOption,
@@ -16,6 +17,8 @@ defineProps<{
     categories: StoreReferenceOption[];
     taxes: StoreDigitalProductTax[];
 }>();
+// Checked in the browser before anything is sent; the server re-checks.
+const validation = digitalProductValidation('create');
 </script>
 <template>
     <ResourceFormPage
@@ -25,6 +28,7 @@ defineProps<{
         :submitting-label="t('store.digitalProducts.form.saving')"
         :cancel-href="digitalProductsIndex()"
         :layout="StoreAdminLayout"
+        :validation="validation"
         wide
         #default="{ errors }"
     >

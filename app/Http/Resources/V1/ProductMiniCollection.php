@@ -139,8 +139,12 @@ class ProductMiniCollection extends ResourceCollection
                     'unit_equal' => (int) $data->unit_equal,
                     'serial' => $data->serial,
                     'mat_id' => (string) $data->id,
-                    'tax' => (float) $data->tax,
-                    'tax_type' => $data->tax_type,
+                    // The VAT percent charged (product_vat_percent()). The catalogue prices above
+                    // include it only for a product with tax rows from the back office's VAT
+                    // section; the cart and the order always add it on top of a price before VAT.
+                    'tax' => product_vat_percent($data),
+                    'tax_type' => 'percent',
+                    'price_includes_tax' => $data->taxes->isNotEmpty(),
                     'is_wholesale' => $wholesale_product,
                     'variation' => $productVariation,
                     'offers' => $offer_array ?? null,

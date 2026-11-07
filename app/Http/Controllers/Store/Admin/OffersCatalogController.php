@@ -8,6 +8,7 @@ use App\Http\Requests\Store\Admin\StoreOffersCatalogRequest;
 use App\Http\Resources\Store\OffersCatalogResource;
 use App\Models\OffersCatalog;
 use App\Services\OffersCatalogStorage;
+use App\Support\NewestFirst;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
@@ -37,7 +38,8 @@ class OffersCatalogController extends Controller implements HasMiddleware
 
         return Inertia::render('Store/Admin/Catalogue/Offers/Index', [
             'catalogs' => $this->paginated(OffersCatalogResource::collection(
-                OffersCatalog::query()->select(['id', 'created_at'])->orderByDesc('id')
+                OffersCatalog::query()->select(['id', 'created_at'])
+                    ->tap(NewestFirst::apply(...))
                     ->paginate($perPage)->withQueryString()
             )),
             'hasCatalog' => OffersCatalog::query()->exists(),

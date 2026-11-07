@@ -16,6 +16,7 @@ use App\Models\Brand;
 use App\Models\BrandTranslation;
 use App\Models\Product;
 use App\Models\Upload;
+use App\Support\NewestFirst;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -49,7 +50,7 @@ class BrandController extends Controller implements HasMiddleware
         $brands = Brand::query()->select(['id', 'name', 'logo'])
             ->with('brand_translations:id,brand_id,lang,name')
             ->when($search !== null, fn ($query) => $query->where('name', 'like', '%'.$search.'%'))
-            ->orderBy('name')->orderBy('id')->paginate($perPage)->withQueryString();
+            ->tap(NewestFirst::apply(...))->paginate($perPage)->withQueryString();
         $this->attachBrandLogoUrls($brands->getCollection());
 
         return Inertia::render('Store/Admin/Product/Brands/Index', [

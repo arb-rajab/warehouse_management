@@ -342,3 +342,113 @@ describe('ResourceFormPage required-field legend', () => {
         i18n.global.locale.value = 'en';
     });
 });
+
+describe('ResourceFormPage browser validation', () => {
+    const validation = { rules: { name: ['required', 'max:10'] } };
+
+    beforeEach(() => {
+        formSlotPropsMock.mockReset();
+        formSlotPropsMock.mockReturnValue({ errors: {}, processing: false });
+        usePageMock.mockReturnValue({
+            url: rowsIndex.url(),
+            props: {
+                locale: 'en',
+                auth: { user: { name: 'Jane Doe', id: 7 } },
+            },
+        });
+    });
+
+    function mountValidated(extraProps: Record<string, unknown> = {}) {
+        return mount(ResourceFormPage, {
+            attachTo: document.body,
+            props: {
+                title: 'Add row',
+                action: rowsIndex.url(),
+                submitLabel: 'Create',
+                submittingLabel: 'Creating...',
+                validation,
+                ...extraProps,
+            },
+            slots: {
+                default: ({ errors }: { errors: Record<string, string> }) =>
+                    h(FormField, {
+                        id: 'name',
+                        label: 'Name',
+                        required: true,
+                        error: errors.name,
+                    }),
+            },
+        });
+    }
+
+    it('leaves a form without rules to the browser and the server', () => {
+        const wrapper = mountPage();
+
+        expect(wrapper.get('form').attributes('novalidate')).toBeUndefined();
+        expect(wrapper.getComponent(Form).props('onBefore')).toBeUndefined();
+        expect(wrapper.find('[role="alert"]').exists()).toBe(false);
+    });
+
+    it('replaces the native bubbles with its own check before sending', () => {
+        const wrapper = mountValidated();
+
+        expect(wrapper.get('form').attributes('novalidate')).toBeDefined();
+        expect(wrapper.get('#name').attributes('required')).toBeDefined();
+        expect(
+            (wrapper.getComponent(Form).props('onBefore') as () => boolean)(),
+        ).toBe(false);
+        wrapper.unmount();
+    });
+
+    it('shows the message under the field and the summary above the buttons', async () => {
+        const wrapper = mountValidated();
+        await wrapper.get('form').trigger('submit');
+
+        expect(
+            wrapper.get('#name').element.parentElement?.textContent,
+        ).toContain('The name field is required.');
+        expect(wrapper.get('[role="alert"]').text()).toBe(
+            'Some fields need correcting. The first one is selected.',
+        );
+        expect(document.activeElement).toBe(wrapper.get('#name').element);
+
+        await wrapper.get('#name').setValue('Row A');
+
+        expect(wrapper.text()).not.toContain('The name field is required.');
+        expect(wrapper.find('[role="alert"]').exists()).toBe(false);
+        expect(
+            (wrapper.getComponent(Form).props('onBefore') as () => boolean)(),
+        ).toBe(true);
+        wrapper.unmount();
+    });
+
+    it('keeps a server error until its field is edited', async () => {
+        formSlotPropsMock.mockReturnValue({
+            errors: { name: 'The name has already been taken.' },
+            processing: false,
+        });
+        const wrapper = mountValidated();
+
+        expect(wrapper.text()).toContain('The name has already been taken.');
+
+        await wrapper.get('#name').setValue('Row B');
+
+        expect(wrapper.text()).not.toContain(
+            'The name has already been taken.',
+        );
+        wrapper.unmount();
+    });
+
+    it('translates the summary in Arabic', async () => {
+        i18n.global.locale.value = 'ar';
+        const wrapper = mountValidated();
+        await wrapper.get('form').trigger('submit');
+
+        expect(wrapper.get('[role="alert"]').text()).toBe(
+            'بعض الحقول تحتاج إلى تصحيح. تم تحديد أولها.',
+        );
+        expect(wrapper.text()).toContain('حقل الاسم مطلوب.');
+        i18n.global.locale.value = 'en';
+        wrapper.unmount();
+    });
+});

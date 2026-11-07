@@ -25,6 +25,7 @@ class CommissionReportResource extends JsonResource
     {
         return [
             'id' => $this->id,
+            'order_id' => $this->order?->id,
             'order_code' => $this->order?->code,
             'admin_commission' => (string) $this->admin_commission,
             'seller_earning' => (string) $this->seller_earning,

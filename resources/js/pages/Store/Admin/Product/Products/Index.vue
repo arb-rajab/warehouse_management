@@ -1,8 +1,19 @@
 <script setup lang="ts">
 import { Form, Head, Link, router, useHttp } from '@inertiajs/vue3';
-import { Copy, Eye, Pencil, RefreshCw, Trash2 } from '@lucide/vue';
+import {
+    Copy,
+    Eye,
+    Pencil,
+    RefreshCw,
+    ShoppingCart,
+    Tag,
+    Trash2,
+    TrendingUp,
+    TriangleAlert,
+} from '@lucide/vue';
 import { computed, ref, watch } from 'vue';
 import { fetch as fetchProducts } from '@/actions/App/Http/Controllers/ProductController';
+import { edit as categoryEdit } from '@/actions/App/Http/Controllers/Store/Admin/CategoryController';
 import {
     all as allProducts,
     bulkDestroy,
@@ -21,6 +32,7 @@ import {
     sellerDestroy,
     sellerBulkDestroy,
     sellerEdit,
+    sellerOptions,
     updateFeatured,
     updateForSale,
     updatePublished,
@@ -29,24 +41,30 @@ import AddResourceLink from '@/components/AddResourceLink.vue';
 import DataTable from '@/components/DataTable.vue';
 import FieldError from '@/components/FieldError.vue';
 import FormField from '@/components/FormField.vue';
+import IconStat from '@/components/IconStat.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import Pagination from '@/components/Pagination.vue';
+import StoreColumnPicker from '@/components/StoreColumnPicker.vue';
 import StoreListFilters from '@/components/StoreListFilters.vue';
+import StoreSearchSelect from '@/components/StoreSearchSelect.vue';
 import StoreStatusSwitch from '@/components/StoreStatusSwitch.vue';
 import SubmitButton from '@/components/SubmitButton.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
+import TableObjectLink from '@/components/TableObjectLink.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
 import { confirmDelete } from '@/lib/confirm';
 import {
-    countActive,
     fieldLabelClass,
     plainFieldInputClass,
     selectedToggleClass,
 } from '@/lib/filters';
 import { t } from '@/lib/i18n';
 import { useStoreAccess } from '@/lib/storeAccess';
+import { useTableColumns } from '@/lib/useTableColumns';
 import type { Paginated } from '@/types/admin';
+import type { SearchOption } from '@/types/searchSelect';
 import type {
+    StoreFilterChip,
     StoreProductListFilters,
     StoreProductListPreset,
     StoreProductListRow,
@@ -61,10 +79,12 @@ const props = withDefaults(
         categories: { id: number; name: string }[];
         defaultLanguage: string;
         approvalEnabled?: boolean;
-        sellers?: { id: number; name: string }[];
+        /** The seller the list is filtered by; the others are searched on demand. */
+        selectedSeller?: SearchOption | null;
     }>(),
-    { approvalEnabled: false, sellers: () => [] },
+    { approvalEnabled: false, selectedSeller: null },
 );
+const seller = ref<SearchOption | null>(props.selectedSeller);
 const access = useStoreAccess();
 const isAllList = computed(() => props.listType === 'all');
 const isSellerList = computed(() => props.listType === 'seller');
@@ -101,30 +121,74 @@ const sorts = [
     { value: 'unit_price,desc', label: 'sortPriceDesc' },
     { value: 'unit_price,asc', label: 'sortPriceAsc' },
 ] as const;
-const stateFilters = computed(() => [
+/**
+ * The in-house and seller lists' state boxes. The all list has the preset
+ * links instead (store-list-filter-placement.md): a filter is never in both.
+ */
+const stateFilters = [
     { name: 'active', label: 'active' },
     { name: 'for_sale', label: 'forSale' },
     { name: 'featured', label: 'featured' },
-    ...(isAllList.value ? [{ name: 'deleted', label: 'deleted' }] : []),
-]);
-/** Dialog filters only; search and the inline seller/category are not counted. */
-const activeFilterCount = computed(() =>
-    countActive([
+] as const;
+/** Dialog filters only, one chip each; search and the inline seller/category have none. */
+const appliedFilters = computed<StoreFilterChip[]>(() => {
+    const chips: StoreFilterChip[] = [];
+    const { approved, category_id: categoryId, type } = props.filters;
+
+    if (
         isSellerList.value &&
-            props.approvalEnabled &&
-            props.filters.approved !== null &&
-            props.filters.approved !== undefined,
-        isSellerList.value &&
-            props.filters.category_id !== null &&
-            props.filters.category_id !== undefined,
-        Boolean(props.filters.type),
-        ...stateFilters.value.map(
-            (state) =>
-                props.filters[state.name as keyof StoreProductListFilters] ===
-                true,
-        ),
-    ]),
-);
+        props.approvalEnabled &&
+        approved !== null &&
+        approved !== undefined
+    ) {
+        chips.push({
+            key: 'approved',
+            label: t('store.products.approvalStatus'),
+            value: t(
+                approved
+                    ? 'store.products.approved'
+                    : 'store.products.unapproved',
+            ),
+            keys: ['approved'],
+        });
+    }
+
+    if (isSellerList.value && categoryId !== null && categoryId !== undefined) {
+        chips.push({
+            key: 'category_id',
+            label: t('store.products.category'),
+            value:
+                props.categories.find((category) => category.id === categoryId)
+                    ?.name ?? String(categoryId),
+            keys: ['category_id'],
+        });
+    }
+
+    const sort = sorts.find((option) => option.value === type);
+
+    if (type) {
+        chips.push({
+            key: 'type',
+            label: t('store.products.sort'),
+            value: sort ? t(`store.products.${sort.label}`) : type,
+            keys: ['type'],
+        });
+    }
+
+    if (!isAllList.value) {
+        stateFilters
+            .filter((state) => props.filters[state.name] === true)
+            .forEach((state) =>
+                chips.push({
+                    key: state.name,
+                    label: t(`store.products.${state.label}`),
+                    keys: [state.name],
+                }),
+            );
+    }
+
+    return chips;
+});
 const presets: { name: StoreProductListPreset; label: string }[] = [
     { name: 'allProducts', label: 'presetAllProducts' },
     { name: 'allActive', label: 'presetAllActive' },
@@ -183,6 +247,32 @@ const publishedLock = computed(() => ({
     reason: t('store.products.otajerLocked'),
     hint: t('store.products.form.otajerSynced'),
 }));
+/** The cells below test `shown`; the header comes from `visibleColumns`. */
+const columns = useTableColumns({
+    listId: () => `product.products.${props.listType}`,
+    columns: () => [
+        { key: 'name', label: 'store.products.name', required: true },
+        { key: 'id', label: 'store.products.id' },
+        { key: 'unit', label: 'store.products.unit' },
+        { key: 'info', label: 'store.products.info' },
+        { key: 'stock', label: 'store.products.totalStock' },
+        { key: 'category', label: 'store.products.category' },
+        ...switches.value.map((item) => ({
+            key: item.field,
+            label: item.label,
+        })),
+        { key: 'deleted', label: 'store.products.deletedFromOtajer' },
+    ],
+});
+const { shown, visibleColumns } = columns;
+const visibleSwitches = computed(() =>
+    switches.value.filter((item) => shown.value[item.field]),
+);
+const tableColumns = computed(() => [
+    ...(access.value.can('product_delete') ? [t('store.products.select')] : []),
+    ...visibleColumns.value.map((column) => t(column.label)),
+    t('store.products.actions'),
+]);
 const selected = ref<number[]>([]);
 const allSelected = computed(
     () =>
@@ -207,7 +297,6 @@ function selectAll(checked: boolean): void {
 }
 /** The current filters as the list's own query string. */
 function currentQuery(perPage: number): Record<string, string | number> {
-    const flags = stateFilters.value.map((filter) => filter.name);
     const query: Record<string, string | number> = { per_page: perPage };
 
     for (const key of [
@@ -224,8 +313,12 @@ function currentQuery(perPage: number): Record<string, string | number> {
         }
     }
 
-    for (const flag of flags) {
-        if (props.filters[flag as keyof StoreProductListFilters] === true) {
+    // The all list may still carry the legacy state flags from a link.
+    for (const flag of [
+        ...stateFilters.map((s) => s.name),
+        'deleted',
+    ] as const) {
+        if (props.filters[flag] === true) {
             query[flag] = 1;
         }
     }
@@ -290,7 +383,7 @@ async function requestFetch(): Promise<void> {
             {{ t(`store.products.${fetchNotice}`) }}
         </p>
         <nav
-            v-if="access.can('show_all_products')"
+            v-if="isAllList && access.can('show_all_products')"
             id="product-presets"
             :aria-label="t('store.products.presets')"
             class="mb-4 flex flex-wrap gap-2"
@@ -308,10 +401,7 @@ async function requestFetch(): Promise<void> {
                 >{{ t(`store.products.${preset.label}`) }}</Link
             >
         </nav>
-        <StoreListFilters
-            :action="listIndex()"
-            :active-count="activeFilterCount"
-        >
+        <StoreListFilters :action="listIndex()" :chips="appliedFilters">
             <template #default="{ errors }">
                 <input
                     type="hidden"
@@ -325,29 +415,18 @@ async function requestFetch(): Promise<void> {
                     :error="errors.search"
                     maxlength="255"
                 />
-                <div v-if="isSellerList">
-                    <label for="user_id" :class="fieldLabelClass">{{
-                        t('store.products.seller')
-                    }}</label>
-                    <select
-                        id="user_id"
-                        name="user_id"
-                        :class="plainFieldInputClass"
-                    >
-                        <option value="">
-                            {{ t('store.products.allSellers') }}
-                        </option>
-                        <option
-                            v-for="seller in sellers"
-                            :key="seller.id"
-                            :value="seller.id"
-                            :selected="filters.user_id === seller.id"
-                        >
-                            {{ seller.name }}
-                        </option>
-                    </select>
-                    <FieldError :message="errors.user_id" />
-                </div>
+                <StoreSearchSelect
+                    v-if="isSellerList"
+                    id="user_id"
+                    v-model="seller"
+                    name="user_id"
+                    class="min-w-56"
+                    :label="t('store.products.seller')"
+                    :endpoint="sellerOptions"
+                    :placeholder="t('store.products.allSellers')"
+                    :search-placeholder="t('store.products.searchSellers')"
+                    :error="errors.user_id"
+                />
                 <div v-else>
                     <label for="category_id" :class="fieldLabelClass">{{
                         t('store.products.category')
@@ -439,7 +518,7 @@ async function requestFetch(): Promise<void> {
                     </select>
                     <FieldError :message="errors.type" />
                 </div>
-                <fieldset class="sm:col-span-2">
+                <fieldset v-if="!isAllList" class="sm:col-span-2">
                     <legend :class="fieldLabelClass">
                         {{ t('store.products.stateFilters') }}
                     </legend>
@@ -453,73 +532,52 @@ async function requestFetch(): Promise<void> {
                                 type="checkbox"
                                 :name="state.name"
                                 value="1"
-                                :checked="
-                                    filters[
-                                        state.name as keyof StoreProductListFilters
-                                    ] === true
-                                "
+                                :checked="filters[state.name] === true"
                                 class="cursor-pointer"
                             />{{ t(`store.products.${state.label}`) }}
                         </label>
                     </div>
                     <p class="mt-1 text-xs text-gray-600 dark:text-neutral-400">
-                        {{
-                            t(
-                                isAllList
-                                    ? 'store.products.allStateHint'
-                                    : 'store.products.inHouseStateHint',
-                            )
-                        }}
+                        {{ t('store.products.inHouseStateHint') }}
                     </p>
                 </fieldset>
             </template>
         </StoreListFilters>
-        <Form
-            v-if="access.can('product_delete')"
-            :action="listActions.bulkDestroy(listQuery)"
-            :on-before="
-                () =>
-                    selected.length > 0 &&
-                    confirmDelete(
-                        t('store.products.selection', {
-                            count: selected.length,
-                        }),
-                    )
-            "
-            #default="{ errors, processing }"
-            class="mb-4 max-w-sm"
-            @success="selected = []"
-        >
-            <input
-                v-for="id in selected"
-                :key="id"
-                type="hidden"
-                name="id[]"
-                :value="id"
-            />
-            <SubmitButton
-                :label="t('store.products.deleteSelection')"
-                :processing-label="t('store.products.deleting')"
-                :processing="processing"
-                :disabled="processing || selected.length === 0"
-            />
-            <FieldError :message="errors.id ?? errors.list" />
-        </Form>
+        <StoreColumnPicker :state="columns">
+            <Form
+                v-if="access.can('product_delete')"
+                :action="listActions.bulkDestroy(listQuery)"
+                :on-before="
+                    () =>
+                        selected.length > 0 &&
+                        confirmDelete(
+                            t('store.products.selection', {
+                                count: selected.length,
+                            }),
+                        )
+                "
+                #default="{ errors, processing }"
+                class="max-w-sm"
+                @success="selected = []"
+            >
+                <input
+                    v-for="id in selected"
+                    :key="id"
+                    type="hidden"
+                    name="id[]"
+                    :value="id"
+                />
+                <SubmitButton
+                    :label="t('store.products.deleteSelection')"
+                    :processing-label="t('store.products.deleting')"
+                    :processing="processing"
+                    :disabled="processing || selected.length === 0"
+                />
+                <FieldError :message="errors.id ?? errors.list" />
+            </Form>
+        </StoreColumnPicker>
         <DataTable
-            :columns="[
-                ...(access.can('product_delete')
-                    ? [t('store.products.select')]
-                    : []),
-                t('store.products.name'),
-                t('store.products.id'),
-                t('store.products.unit'),
-                t('store.products.info'),
-                t('store.products.totalStock'),
-                t('store.products.category'),
-                ...switches.map((item) => t(item.label)),
-                t('store.products.deletedFromOtajer'),
-                t('store.products.actions'),
-            ]"
+            :columns="tableColumns"
             :rows="products.data"
             :empty-message="t('store.products.empty')"
         >
@@ -542,7 +600,7 @@ async function requestFetch(): Promise<void> {
                         <img
                             :src="product.thumbnail_url"
                             :alt="t('store.products.photo')"
-                            class="h-12 w-12 shrink-0 object-contain"
+                            class="h-8 w-8 shrink-0 object-contain"
                         />
                         <div
                             :class="
@@ -557,30 +615,49 @@ async function requestFetch(): Promise<void> {
                             <span
                                 v-if="product.ar_name"
                                 dir="auto"
-                                class="block"
+                                class="block text-gray-600 dark:text-neutral-400"
                                 >{{ product.ar_name }}</span
                             >
                         </div>
                     </div>
                 </td>
-                <td class="px-4 py-2">{{ product.id }}</td>
-                <td class="px-4 py-2">{{ product.unit }}</td>
-                <td class="px-4 py-2 whitespace-nowrap">
-                    <span class="block">{{
-                        t('store.products.salesCount', {
-                            count: product.num_of_sale,
-                        })
-                    }}</span>
-                    <span class="block">{{
-                        t('store.products.basePrice', {
-                            price: product.base_price,
-                        })
-                    }}</span>
-                    <span class="block">{{
-                        t('store.products.profit', { price: product.profit })
-                    }}</span>
+                <td v-if="shown.id" class="px-4 py-2 tabular-nums">
+                    {{ product.id }}
                 </td>
-                <td class="px-4 py-2">
+                <td v-if="shown.unit" class="px-4 py-2">{{ product.unit }}</td>
+                <td v-if="shown.info" class="px-4 py-2">
+                    <div class="flex items-center gap-4">
+                        <IconStat
+                            :icon="ShoppingCart"
+                            :value="product.num_of_sale"
+                            :label="
+                                t('store.products.salesCount', {
+                                    count: product.num_of_sale,
+                                })
+                            "
+                        />
+                        <IconStat
+                            :icon="Tag"
+                            :value="product.base_price"
+                            :label="
+                                t('store.products.basePrice', {
+                                    price: product.base_price,
+                                })
+                            "
+                        />
+                        <IconStat
+                            :icon="TrendingUp"
+                            :value="product.profit"
+                            tone="text-green-700 dark:text-green-400"
+                            :label="
+                                t('store.products.profit', {
+                                    price: product.profit,
+                                })
+                            "
+                        />
+                    </div>
+                </td>
+                <td v-if="shown.stock" class="px-4 py-2">
                     <template v-if="product.variant_stocks">
                         <span
                             v-for="stock in product.variant_stocks"
@@ -589,18 +666,32 @@ async function requestFetch(): Promise<void> {
                             >{{ stock.variant }} - {{ stock.qty }}</span
                         >
                     </template>
-                    <span v-else class="block">{{
+                    <span v-else class="tabular-nums">{{
                         product.stock_quantity
                     }}</span>
                     <span
                         v-if="product.low_stock"
-                        class="mt-1 inline-block rounded bg-red-100 px-1.5 text-xs font-medium text-red-800 dark:bg-red-950 dark:text-red-200"
-                        >{{ t('store.products.low') }}</span
+                        class="ms-2 inline-flex items-center gap-1 rounded bg-red-100 px-1.5 text-xs font-medium text-red-800 dark:bg-red-950 dark:text-red-200"
+                        ><TriangleAlert class="h-3 w-3 shrink-0" />{{
+                            t('store.products.low')
+                        }}</span
                     >
                 </td>
-                <td class="px-4 py-2">{{ product.category }}</td>
+                <td v-if="shown.category" class="px-4 py-2">
+                    <TableObjectLink
+                        v-if="product.category && product.category_id !== null"
+                        :allowed="access.can('edit_product_category')"
+                        :href="
+                            categoryEdit(product.category_id, {
+                                query: { lang: defaultLanguage },
+                            })
+                        "
+                        >{{ product.category }}</TableObjectLink
+                    >
+                    <template v-else>{{ product.category }}</template>
+                </td>
                 <td
-                    v-for="item in switches"
+                    v-for="item in visibleSwitches"
                     :key="item.field"
                     class="px-4 py-2"
                 >
@@ -625,7 +716,7 @@ async function requestFetch(): Promise<void> {
                         )
                     }}</span>
                 </td>
-                <td class="px-4 py-2">
+                <td v-if="shown.deleted" class="px-4 py-2">
                     <span
                         v-if="product.deleted_from_api"
                         class="font-medium text-red-700 dark:text-red-400"
@@ -633,7 +724,7 @@ async function requestFetch(): Promise<void> {
                     >
                 </td>
                 <td class="px-4 py-2">
-                    <div class="flex flex-wrap items-center gap-2">
+                    <div class="flex flex-nowrap items-center gap-2">
                         <TableActionLink
                             v-if="product.public_url"
                             :href="product.public_url"

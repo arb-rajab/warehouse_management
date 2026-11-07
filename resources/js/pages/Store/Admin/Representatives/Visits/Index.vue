@@ -2,6 +2,7 @@
 import { Head, Link, router, useForm } from '@inertiajs/vue3';
 import { Eye, Trash2 } from '@lucide/vue';
 import { computed, ref } from 'vue';
+import { edit as customerEdit } from '@/actions/App/Http/Controllers/Store/Admin/CustomerController';
 import {
     bulkDestroy,
     destroy,
@@ -14,15 +15,18 @@ import DataTable from '@/components/DataTable.vue';
 import FormField from '@/components/FormField.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import Pagination from '@/components/Pagination.vue';
+import StoreColumnPicker from '@/components/StoreColumnPicker.vue';
 import StoreListFilters from '@/components/StoreListFilters.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
+import TableObjectLink from '@/components/TableObjectLink.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
 import { confirmDelete } from '@/lib/confirm';
-import { countActive } from '@/lib/filters';
 import { t } from '@/lib/i18n';
 import { firstError } from '@/lib/pageErrors';
 import { useStoreAccess } from '@/lib/storeAccess';
+import { useTableColumns } from '@/lib/useTableColumns';
 import type { Paginated } from '@/types/admin';
+import type { StoreFilterChip } from '@/types/store';
 import type { RepresentativeVisit } from '@/types/storeRepresentatives';
 
 const props = defineProps<{
@@ -37,12 +41,21 @@ const props = defineProps<{
 const access = useStoreAccess();
 /** The "to" date cannot precede the "from" date; both inputs stay uncontrolled. */
 const dateFrom = ref(props.filters.date_from);
-/** Dialog filters only: the two dates. */
-const activeFilterCount = computed(() =>
-    countActive([
-        Boolean(props.filters.date_from),
-        Boolean(props.filters.date_to),
-    ]),
+/** Dialog filters only: one chip per date bound. */
+const appliedFilters = computed<StoreFilterChip[]>(() =>
+    (
+        [
+            ['date_from', 'store.representativeVisits.dateFrom'],
+            ['date_to', 'store.representativeVisits.dateTo'],
+        ] as const
+    )
+        .filter(([key]) => Boolean(props.filters[key]))
+        .map(([key, label]) => ({
+            key,
+            label: t(label),
+            value: props.filters[key],
+            keys: [key],
+        })),
 );
 const selection = useForm({ id: [] as number[] });
 /** Change the page size, keeping the applied search and dates. */
@@ -69,16 +82,33 @@ function deleteSelection(): void {
         });
     }
 }
+const columns = useTableColumns({
+    listId: 'representatives.visits',
+    columns: [
+        {
+            key: 'representative',
+            label: 'store.representativeVisits.representative',
+            required: true,
+        },
+        { key: 'customer', label: 'store.representativeVisits.customer' },
+        { key: 'note', label: 'store.representativeVisits.note' },
+        { key: 'date', label: 'store.representativeVisits.date' },
+        { key: 'hasOrder', label: 'store.representativeVisits.hasOrder' },
+    ],
+});
+const { shown, visibleColumns } = columns;
+const tableColumns = computed(() => [
+    t('store.representativeVisits.select'),
+    ...visibleColumns.value.map((column) => t(column.label)),
+    t('store.representativeVisits.actions'),
+]);
 </script>
 
 <template>
     <Head :title="t('store.representativeVisits.title')" />
     <StoreAdminLayout>
         <PageHeader :title="t('store.representativeVisits.title')" />
-        <StoreListFilters
-            :action="visitsIndex()"
-            :active-count="activeFilterCount"
-        >
+        <StoreListFilters :action="visitsIndex()" :chips="appliedFilters">
             <template #default="{ errors }">
                 <input
                     type="hidden"
@@ -117,6 +147,7 @@ function deleteSelection(): void {
             </template>
         </StoreListFilters>
         <ActionErrorBanner :message="firstError(selection.errors)" />
+        <StoreColumnPicker :state="columns" />
         <form @submit.prevent="deleteSelection">
             <button
                 v-if="access.can('delete_representative_visit')"
@@ -129,15 +160,7 @@ function deleteSelection(): void {
                 }}
             </button>
             <DataTable
-                :columns="[
-                    t('store.representativeVisits.select'),
-                    t('store.representativeVisits.representative'),
-                    t('store.representativeVisits.customer'),
-                    t('store.representativeVisits.note'),
-                    t('store.representativeVisits.date'),
-                    t('store.representativeVisits.hasOrder'),
-                    t('store.representativeVisits.actions'),
-                ]"
+                :columns="tableColumns"
                 :rows="visits.data"
                 :empty-message="t('store.representativeVisits.empty')"
             >
@@ -156,11 +179,33 @@ function deleteSelection(): void {
                             class="cursor-pointer"
                         />
                     </td>
-                    <td class="px-4 py-2">{{ visit.representative?.name }}</td>
-                    <td class="px-4 py-2">{{ visit.customer?.name }}</td>
-                    <td class="px-4 py-2">{{ visit.note }}</td>
-                    <td class="px-4 py-2">{{ visit.visit_date }}</td>
                     <td class="px-4 py-2">
+                        <TableObjectLink
+                            v-if="visit.representative"
+                            :allowed="access.can('edit_customer')"
+                            :href="customerEdit(visit.representative)"
+                            >{{ visit.representative.name }}</TableObjectLink
+                        >
+                    </td>
+                    <td v-if="shown.customer" class="px-4 py-2">
+                        <TableObjectLink
+                            v-if="visit.customer"
+                            :allowed="access.can('edit_customer')"
+                            :href="customerEdit(visit.customer)"
+                            >{{ visit.customer.name }}</TableObjectLink
+                        >
+                    </td>
+                    <td
+                        v-if="shown.note"
+                        class="max-w-xs truncate px-4 py-2"
+                        :title="visit.note ?? undefined"
+                    >
+                        {{ visit.note }}
+                    </td>
+                    <td v-if="shown.date" class="px-4 py-2">
+                        {{ visit.visit_date }}
+                    </td>
+                    <td v-if="shown.hasOrder" class="px-4 py-2">
                         {{
                             t(
                                 visit.has_order
@@ -170,7 +215,7 @@ function deleteSelection(): void {
                         }}
                     </td>
                     <td class="px-4 py-2">
-                        <div class="flex flex-wrap items-center gap-2">
+                        <div class="flex flex-nowrap items-center gap-2">
                             <Link
                                 :href="show(visit)"
                                 class="inline-flex items-center gap-1 text-sm underline"

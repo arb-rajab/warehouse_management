@@ -2,14 +2,21 @@
 
 namespace App\Http\Requests\Store\Admin;
 
+use App\Http\Requests\Concerns\ValidatesSearchOptions;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 class SearchOrderOptionsRequest extends FormRequest
 {
-    /** @return array<string, array<mixed>> */
+    use ValidatesSearchOptions;
+
+    /**
+     * Get the validation rules that apply to the request.
+     *
+     * @return array<string, array<mixed>>
+     */
     public function rules(): array
     {
-        return ['q' => ['nullable', 'string', 'max:100'], 'kind' => ['required', Rule::in(['customers', 'representatives', 'products'])], 'page' => ['nullable', 'integer', 'min:1']];
+        return [...$this->searchOptionsRules(), 'kind' => ['required', Rule::in(['customers', 'representatives', 'products'])]];
     }
 }

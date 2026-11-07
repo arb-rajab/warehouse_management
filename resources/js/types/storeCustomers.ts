@@ -1,3 +1,5 @@
+import type { SearchOption } from '@/types/searchSelect';
+
 export interface StoreCustomer {
     id: number;
     name: string;
@@ -64,6 +66,9 @@ export interface CustomerAddress {
     latitude: string | null;
     longitude: string | null;
     set_default: number;
+    /** The state and city as search options, so the form shows their names before any search. */
+    state_option?: SearchOption | null;
+    city_option?: SearchOption | null;
 }
 export interface AddressOption {
     id: number;

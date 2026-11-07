@@ -2,12 +2,15 @@ import { Head } from '@inertiajs/vue3';
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ComponentPublicInstance, DefineComponent } from 'vue';
+import { show as orderShow } from '@/actions/App/Http/Controllers/Store/Admin/OrderController';
 import * as actions from '@/actions/App/Http/Controllers/Store/Admin/ReportController';
+import { edit as sellerEdit } from '@/actions/App/Http/Controllers/Store/Admin/SellerController';
 import DataTable from '@/components/DataTable.vue';
 import FilterMultiSelect from '@/components/FilterMultiSelect.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import Pagination from '@/components/Pagination.vue';
 import StoreReportPage from '@/components/StoreReportPage.vue';
+import StoreSearchSelect from '@/components/StoreSearchSelect.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
 import { formatDate, formatDateTime } from '@/lib/date';
 import { t } from '@/lib/i18n';
@@ -21,6 +24,10 @@ import {
     storeSharedProps,
 } from '@/testing/factories';
 import { defaultAuthProps } from '@/testing/inertiaPageMocks';
+import {
+    expectColumnCanBeHidden,
+    expectColumnLocked,
+} from '@/testing/tableColumns';
 import CommissionHistory from './CommissionHistory.vue';
 import InHouseSales from './InHouseSales.vue';
 import Searches from './Searches.vue';
@@ -40,6 +47,7 @@ vi.mock('@inertiajs/vue3', async () => {
         Head: headStub,
         Link: createLinkStub(),
         usePage: usePageMock,
+        useHttp: () => ({ get: vi.fn() }),
         router: { get: getMock, post: vi.fn() },
     };
 });
@@ -114,6 +122,7 @@ const cases = [
         ],
         selection: 'seller_ids',
         label: 'seller',
+        search: 'commissionSellers',
     },
     {
         page: WalletHistory,
@@ -130,6 +139,7 @@ const cases = [
         ],
         selection: 'user_ids',
         label: 'user',
+        search: 'walletUsers',
     },
 ];
 
@@ -147,6 +157,9 @@ describe('Store report screens', () => {
             const rows = paginated([entry.row]);
             const filters = { per_page: 50 };
             const options = [{ value: '1', label: 'Selected option' }];
+            const picked = [
+                { id: 1, label: 'Selected option', icon: 'user' as const },
+            ];
             const wrapper = mount<
                 typeof entry.page,
                 DefineComponent<Record<string, unknown>>
@@ -154,7 +167,9 @@ describe('Store report screens', () => {
                 props: {
                     rows,
                     filters,
-                    ...(entry.selection ? { options } : {}),
+                    ...(entry.selection
+                        ? { options: 'search' in entry ? picked : options }
+                        : {}),
                 },
             });
             expect(wrapper.findComponent(StoreAdminLayout).exists()).toBe(true);
@@ -196,25 +211,42 @@ describe('Store report screens', () => {
                     .getComponent(PageHeader)
                     .get('button')
                     .trigger('click');
-                expect(
-                    wrapper.getComponent(FilterMultiSelect).props(),
-                ).toMatchObject({
-                    options:
-                        entry.selection === 'verification_statuses'
-                            ? [
-                                  {
-                                      value: '1',
-                                      label: t('store.reports.approved'),
-                                  },
-                                  {
-                                      value: '0',
-                                      label: t('store.reports.nonApproved'),
-                                  },
-                              ]
-                            : options,
-                    label: t(`store.reports.${entry.label}`),
-                    modelValue: [],
-                });
+
+                if ('search' in entry) {
+                    // The users and sellers are searched on demand; the filter
+                    // starts from the ones already selected.
+                    expect(
+                        wrapper.getComponent(StoreSearchSelect).props(),
+                    ).toMatchObject({
+                        multiple: true,
+                        endpoint: actions[entry.search as 'walletUsers'],
+                        label: t(`store.reports.${entry.label}`),
+                        items: picked,
+                    });
+                    expect(
+                        wrapper.findComponent(FilterMultiSelect).exists(),
+                    ).toBe(false);
+                } else {
+                    expect(
+                        wrapper.getComponent(FilterMultiSelect).props(),
+                    ).toMatchObject({
+                        options:
+                            entry.selection === 'verification_statuses'
+                                ? [
+                                      {
+                                          value: '1',
+                                          label: t('store.reports.approved'),
+                                      },
+                                      {
+                                          value: '0',
+                                          label: t('store.reports.nonApproved'),
+                                      },
+                                  ]
+                                : options,
+                        label: t(`store.reports.${entry.label}`),
+                        modelValue: [],
+                    });
+                }
             }
 
             await wrapper.setProps({ rows: paginated([]) });
@@ -266,5 +298,114 @@ describe('Store report screens', () => {
         expect(searches.find('tbody').text()).toContain(
             '<img src=x onerror=alert(1)>',
         );
+    });
+
+    it('links the seller and the commission order to their pages by permission', () => {
+        const sellerPage = () =>
+            mount(SellerSales, {
+                props: {
+                    rows: paginated([storeSellerReportRow({ id: 6 })]),
+                    filters: {},
+                    options: [],
+                },
+            });
+        const commissionPage = () =>
+            mount(CommissionHistory, {
+                props: {
+                    rows: paginated([storeCommissionReportRow()]),
+                    filters: {},
+                    options: [],
+                },
+            });
+        const orderUrl = orderShow['/temp/admin/orders/{order}/show'](77).url;
+
+        usePageMock.mockReturnValue({
+            url: '/temp/admin/report',
+            props: defaultAuthProps({
+                store: storeSharedProps({
+                    permissions: ['edit_seller', 'view_order_details'],
+                }),
+            }),
+        });
+        expect(sellerPage().get('tbody a').attributes('href')).toBe(
+            sellerEdit(6).url,
+        );
+        expect(commissionPage().get('tbody a').attributes('href')).toBe(
+            orderUrl,
+        );
+
+        usePageMock.mockReturnValue({
+            url: '/temp/admin/report',
+            props: defaultAuthProps({
+                store: storeSharedProps({ permissions: [] }),
+            }),
+        });
+        expect(sellerPage().find('tbody a').exists()).toBe(false);
+        expect(commissionPage().find('tbody a').exists()).toBe(false);
+        expect(commissionPage().text()).toContain('20261008-101');
+    });
+
+    it('commission history lets staff hide an optional column and keeps the order code', async () => {
+        window.localStorage.clear();
+        const wrapper = mount(CommissionHistory, {
+            props: {
+                rows: paginated([storeCommissionReportRow()]),
+                filters: {},
+                options: [],
+            },
+        });
+        await expectColumnCanBeHidden(wrapper, 'reports.commissionHistory', {
+            key: 'createdAt',
+            label: t('store.reports.createdAt'),
+        });
+        expectColumnLocked(wrapper, t('store.reports.orderCode'));
+        window.localStorage.clear();
+    });
+
+    it('wallet history lets staff hide an optional column and keeps the customer', async () => {
+        window.localStorage.clear();
+        const wrapper = mount(WalletHistory, {
+            props: {
+                rows: paginated([storeWalletReportRow()]),
+                filters: {},
+                options: [],
+            },
+        });
+        await expectColumnCanBeHidden(wrapper, 'reports.walletHistory', {
+            key: 'paymentMethod',
+            label: t('store.reports.paymentMethod'),
+        });
+        expectColumnLocked(wrapper, t('store.reports.customer'));
+        window.localStorage.clear();
+    });
+
+    it('seller sales lets staff hide an optional column and keeps the seller name', async () => {
+        window.localStorage.clear();
+        const wrapper = mount(SellerSales, {
+            props: {
+                rows: paginated([storeSellerReportRow({ id: 6 })]),
+                filters: {},
+                options: [],
+            },
+        });
+        await expectColumnCanBeHidden(wrapper, 'reports.sellerSales', {
+            key: 'orderAmount',
+            label: t('store.reports.orderAmount'),
+        });
+        expectColumnLocked(wrapper, t('store.reports.sellerName'));
+        window.localStorage.clear();
+    });
+
+    it('searches lets staff hide an optional column and keeps the search term', async () => {
+        window.localStorage.clear();
+        const wrapper = mount(Searches, {
+            props: { rows: paginated([storeSearchReportRow()]), filters: {} },
+        });
+        await expectColumnCanBeHidden(wrapper, 'reports.searches', {
+            key: 'searchCount',
+            label: t('store.reports.searchCount'),
+        });
+        expectColumnLocked(wrapper, t('store.reports.searchBy'));
+        window.localStorage.clear();
     });
 });

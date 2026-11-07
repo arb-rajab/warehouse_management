@@ -1,10 +1,11 @@
 import { mount } from '@vue/test-utils';
 import { describe, expect, it, vi } from 'vitest';
-import { defineComponent, h, ref } from 'vue';
+import { defineComponent, h, nextTick, ref } from 'vue';
 import {
     useDismissibleListbox,
     useMultiSelectToggle,
     usePanelMaxWidth,
+    usePanelViewportTracking,
 } from './useDismissibleListbox';
 
 function mountListbox(optionCount = 3) {
@@ -339,5 +340,76 @@ describe('useMultiSelectToggle', () => {
         toggleValue('a');
 
         expect(model.value).toEqual(['b']);
+    });
+});
+
+describe('usePanelViewportTracking', () => {
+    function mountTracking(
+        scrolls: boolean,
+        containerRef = ref<HTMLElement | null>(null),
+    ) {
+        const recompute = vi.fn();
+        const open = ref(false);
+        const scroller = document.createElement('div');
+        const trigger = document.createElement('div');
+
+        if (scrolls) {
+            scroller.style.overflowY = 'auto';
+        }
+
+        scroller.appendChild(trigger);
+        document.body.appendChild(scroller);
+        containerRef.value = containerRef.value ?? trigger;
+        const wrapper = mount(
+            defineComponent({
+                setup() {
+                    usePanelViewportTracking(containerRef, open, recompute);
+
+                    return () => h('div');
+                },
+            }),
+        );
+
+        return { recompute, open, scroller, wrapper };
+    }
+
+    it('recomputes on scroll of the scrolling ancestor and on resize while open, and stops once closed', async () => {
+        const { recompute, open, scroller } = mountTracking(true);
+
+        scroller.dispatchEvent(new Event('scroll'));
+        expect(recompute).not.toHaveBeenCalled();
+
+        open.value = true;
+        await nextTick();
+        scroller.dispatchEvent(new Event('scroll'));
+        window.dispatchEvent(new Event('resize'));
+        expect(recompute).toHaveBeenCalledTimes(2);
+
+        open.value = false;
+        await nextTick();
+        scroller.dispatchEvent(new Event('scroll'));
+        window.dispatchEvent(new Event('resize'));
+        expect(recompute).toHaveBeenCalledTimes(2);
+    });
+
+    it('listens on the window when no ancestor scrolls', async () => {
+        const { recompute, open } = mountTracking(false);
+
+        open.value = true;
+        await nextTick();
+        window.dispatchEvent(new Event('scroll'));
+
+        expect(recompute).toHaveBeenCalledTimes(1);
+    });
+
+    it('removes its listeners when the component unmounts while open', async () => {
+        const { recompute, open, wrapper } = mountTracking(false);
+
+        open.value = true;
+        await nextTick();
+        wrapper.unmount();
+        window.dispatchEvent(new Event('resize'));
+
+        expect(recompute).not.toHaveBeenCalled();
     });
 });

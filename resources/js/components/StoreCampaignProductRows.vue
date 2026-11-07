@@ -1,134 +1,92 @@
 <script setup lang="ts">
-import { useHttp } from '@inertiajs/vue3';
-import { LoaderCircle, Trash2 } from '@lucide/vue';
-import { computed, onMounted, ref } from 'vue';
+import { Trash2 } from '@lucide/vue';
+import { computed } from 'vue';
 import { index as productIndex } from '@/actions/App/Http/Controllers/Store/Admin/CampaignProductController';
 import DataTable from '@/components/DataTable.vue';
 import FieldError from '@/components/FieldError.vue';
 import FormField from '@/components/FormField.vue';
 import RequiredMark from '@/components/RequiredMark.vue';
+import StoreSearchSelect from '@/components/StoreSearchSelect.vue';
 import {
     fieldLabelClass,
-    plainFieldInputClass,
     filterTriggerButtonClass,
+    plainFieldInputClass,
 } from '@/lib/filters';
 import { t } from '@/lib/i18n';
-import type { StoreCampaignProduct, StoreCampaignRow } from '@/types/store';
+import type { SearchOption } from '@/types/searchSelect';
+import type {
+    StoreCampaignProductExtra,
+    StoreCampaignRow,
+} from '@/types/store';
+
+/**
+ * The reward products of a flash deal or an offer: picked in a multiple
+ * StoreSearchSelect, listed below with their own discount (and quantity) inputs
+ * posted as `products[i][...]`. Every product ever seen is remembered, so a
+ * row keeps its name and price while the search changes.
+ */
 const props = defineProps<{
-    selectedProducts: StoreCampaignProduct[];
+    selectedProducts: SearchOption[];
     quantity?: boolean;
-    pinnedIds?: number[];
     errors: Record<string, string>;
 }>();
 const rows = defineModel<StoreCampaignRow[]>({ required: true });
-const results = ref<StoreCampaignProduct[]>(props.selectedProducts);
-const remembered = new Map(props.selectedProducts.map((p) => [p.id, p]));
-const http = useHttp<{ q: string }, StoreCampaignProduct[]>({ q: '' });
-let sequence = 0;
-const options = computed(() => {
-    const map = new Map(props.selectedProducts.map((p) => [p.id, p]));
+const known = new Map<number, SearchOption>(
+    props.selectedProducts.map((option) => [Number(option.id), option]),
+);
+const picked = computed(() =>
+    rows.value
+        .map((row) => known.get(row.id))
+        .filter((option): option is SearchOption => option !== undefined),
+);
 
-    for (const r of [
-        ...rows.value,
-        ...(props.pinnedIds ?? []).map((id) => ({ id })),
-    ]) {
-        const p = remembered.get(r.id);
+function extraOf(id: number): Partial<StoreCampaignProductExtra> {
+    return (known.get(id)?.extra ?? {}) as Partial<StoreCampaignProductExtra>;
+}
+function newRow(option: SearchOption): StoreCampaignRow {
+    const extra = (option.extra ?? {}) as Partial<StoreCampaignProductExtra>;
 
-        if (p) {
-            map.set(p.id, p);
-        }
+    return {
+        id: Number(option.id),
+        discount: props.quantity ? 0 : (extra.discount ?? 0),
+        discount_type: props.quantity
+            ? 'amount'
+            : (extra.discount_type ?? 'amount'),
+        ...(props.quantity ? { quantity: 1 } : {}),
+    };
+}
+function pick(options: SearchOption[]): void {
+    for (const option of options) {
+        known.set(Number(option.id), option);
     }
 
-    for (const p of results.value) {
-        map.set(p.id, p);
-    }
-
-    return [...map.values()];
-});
-function search() {
-    const current = ++sequence;
-    http.get(productIndex.url(), {
-        onSuccess: (response) => {
-            if (current !== sequence) {
-                return;
-            }
-
-            for (const p of response) {
-                remembered.set(p.id, p);
-            }
-
-            results.value = response;
-        },
-    }).catch(() => undefined);
-}
-function select(event: Event) {
-    const ids = Array.from(
-        (event.target as HTMLSelectElement).selectedOptions,
-        (p) => Number(p.value),
-    );
-    rows.value = ids.map(
-        (id) =>
-            rows.value.find((r) => r.id === id) ?? {
-                id,
-                discount: props.quantity
-                    ? 0
-                    : (remembered.get(id)?.discount ?? 0),
-                discount_type: props.quantity
-                    ? 'amount'
-                    : (remembered.get(id)?.discount_type ?? 'amount'),
-                ...(props.quantity ? { quantity: 1 } : {}),
-            },
+    rows.value = options.map(
+        (option) =>
+            rows.value.find((row) => row.id === Number(option.id)) ??
+            newRow(option),
     );
 }
-function name(id: number) {
+function name(id: number): string {
     return (
-        remembered.get(id)?.name ??
-        t('store.campaigns.fields.unavailable', { id })
+        known.get(id)?.label ?? t('store.campaigns.fields.unavailable', { id })
     );
 }
-onMounted(search);
 </script>
 <template>
     <div class="space-y-4">
-        <FormField
-            id="product_search"
-            type="search"
-            maxlength="255"
-            :label="t('store.campaigns.fields.searchProducts')"
-            :error="http.errors.q"
-            @input="
-                http.q = ($event.target as HTMLInputElement).value;
-                search();
-            "
+        <slot name="targeting" />
+        <StoreSearchSelect
+            id="products"
+            multiple
+            :items="picked"
+            :label="t('store.campaigns.fields.products')"
+            :endpoint="productIndex"
+            :placeholder="t('store.campaigns.fields.chooseProducts')"
+            :search-placeholder="t('store.campaigns.fields.searchProducts')"
+            required
+            :error="errors.products"
+            @update:items="pick"
         />
-        <p v-if="http.processing" role="status" class="flex items-center gap-2">
-            <LoaderCircle aria-hidden="true" class="size-4 animate-spin" />{{
-                t('store.campaigns.fields.searching')
-            }}
-        </p>
-        <slot name="targeting" :options="options" />
-        <div>
-            <label for="products" :class="fieldLabelClass"
-                >{{ t('store.campaigns.fields.products')
-                }}<RequiredMark /></label
-            ><select
-                id="products"
-                multiple
-                required
-                size="6"
-                :class="plainFieldInputClass"
-                @change="select"
-            >
-                <option
-                    v-for="p in options"
-                    :key="p.id"
-                    :value="p.id"
-                    :selected="rows.some((r) => r.id === p.id)"
-                >
-                    {{ p.name }}
-                </option></select
-            ><FieldError :message="errors.products" />
-        </div>
         <DataTable
             :columns="[
                 t('store.campaigns.fields.product'),
@@ -153,7 +111,7 @@ onMounted(search);
                     />
                 </td>
                 <td class="px-4 py-2">
-                    {{ remembered.get(row.id)?.price ?? '—' }}
+                    {{ extraOf(row.id).price ?? '—' }}
                 </td>
                 <td class="px-4 py-2">
                     <FormField

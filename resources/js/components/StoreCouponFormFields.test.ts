@@ -1,27 +1,21 @@
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { productOptions } from '@/actions/App/Http/Controllers/Store/Admin/CouponController';
+import StoreSearchSelect from '@/components/StoreSearchSelect.vue';
 import { t } from '@/lib/i18n';
-import { storeCoupon } from '@/testing/factories';
+import { storeCampaignProduct, storeCoupon } from '@/testing/factories';
 import { expectRequiredFields } from '@/testing/requiredFields';
 import StoreCouponFormFields from './StoreCouponFormFields.vue';
 
 const { getMock } = vi.hoisted(() => ({ getMock: vi.fn() }));
 vi.mock('@inertiajs/vue3', () => ({
-    useHttp: () => ({ get: getMock, errors: {}, processing: false, q: '' }),
+    useHttp: () => ({ get: getMock }),
 }));
 function mountFields(props: Record<string, unknown> = {}) {
     return mount(StoreCouponFormFields, {
         props: { selectedProducts: [], errors: {}, ...props },
     });
 }
-function resolveSearch(
-    products: { id: number; name: string }[],
-    call = getMock.mock.calls.length - 1,
-) {
-    getMock.mock.calls[call][1].onSuccess(products);
-}
-
 describe('StoreCouponFormFields', () => {
     beforeEach(() => vi.clearAllMocks());
     it('renders labels and required native constraints for cart discount fields', () => {
@@ -90,10 +84,14 @@ describe('StoreCouponFormFields', () => {
         expect(wrapper.get('#start_date').attributes('max')).toBe('2026-10-31');
         expect(wrapper.get('#end_date').attributes('min')).toBe('2026-10-01');
     });
-    it('switches targeting in Vue and keeps selected products across searches', async () => {
+    it('switches targeting in Vue and posts the picked products as product_ids[]', async () => {
+        const selected = storeCampaignProduct({
+            id: 12,
+            label: 'Selected product',
+        });
         const wrapper = mountFields({
             coupon: storeCoupon({ type: 'product_base', product_ids: [12] }),
-            selectedProducts: [{ id: 12, name: 'Selected product' }],
+            selectedProducts: [selected],
         });
         expectRequiredFields(wrapper, [
             'type',
@@ -105,55 +103,53 @@ describe('StoreCouponFormFields', () => {
             'product_ids',
         ]);
         expect(wrapper.find('#min_buy').exists()).toBe(false);
-        expect(wrapper.get('#product_ids').attributes()).toMatchObject({
+        const select = wrapper.getComponent(StoreSearchSelect);
+        expect(select.props()).toMatchObject({
+            id: 'product_ids',
             name: 'product_ids[]',
-            multiple: '',
-            required: '',
+            multiple: true,
+            required: true,
+            endpoint: productOptions,
         });
-        expect(getMock).toHaveBeenCalledWith(
-            productOptions.url(),
-            expect.any(Object),
-        );
-        resolveSearch([{ id: 14, name: '<script>unsafe</script>' }]);
-        await wrapper.vm.$nextTick();
-        expect(wrapper.get('#product_ids').text()).toContain(
-            'Selected product',
-        );
-        expect(wrapper.find('script').exists()).toBe(false);
-        await wrapper.get('#product_ids').setValue(['12', '14']);
-        await wrapper.get('#product_search').setValue('Other');
-        resolveSearch([{ id: 15, name: 'Other product' }]);
-        await wrapper.vm.$nextTick();
-        expect(
+        const posted = () =>
             wrapper
-                .get('#product_ids')
-                .findAll('option')
-                .map((option) => option.text()),
-        ).toEqual([
-            'Selected product',
-            '<script>unsafe</script>',
-            'Other product',
-        ]);
+                .findAll('input[type="hidden"][name="product_ids[]"]')
+                .map((input) => input.attributes('value'));
+        expect(posted()).toEqual(['12']);
         expect(
-            (wrapper.get('#product_ids').element as HTMLSelectElement)
-                .selectedOptions,
-        ).toHaveLength(2);
+            wrapper.get('[data-testid="search-select-chip"]').text(),
+        ).toContain('Selected product');
+        expect(getMock).not.toHaveBeenCalled();
+
+        select.vm.$emit('update:items', [
+            selected,
+            storeCampaignProduct({ id: 14, label: '<script>unsafe</script>' }),
+        ]);
+        await wrapper.vm.$nextTick();
+        expect(posted()).toEqual(['12', '14']);
+        expect(wrapper.find('script').exists()).toBe(false);
+
         await wrapper.get('#type').setValue('cart_base');
         expect(wrapper.find('#product_ids').exists()).toBe(false);
         expect(wrapper.find('#min_buy').exists()).toBe(true);
+        await wrapper.get('#type').setValue('product_base');
+        expect(posted()).toEqual(['12', '14']);
     });
-    it('ignores stale search results and forwards server field and row errors', async () => {
+    it('forwards server field and row errors', () => {
         const wrapper = mountFields({
             coupon: storeCoupon({ type: 'product_base' }),
-            errors: { code: 'Taken', 'product_ids.0': 'Unavailable' },
+            errors: {
+                code: 'Taken',
+                product_ids: 'Pick products',
+                'product_ids.0': 'Unavailable',
+            },
         });
-        await wrapper.get('#product_search').setValue('Latest');
-        resolveSearch([{ id: 2, name: 'Latest' }]);
-        resolveSearch([{ id: 1, name: 'Stale' }], 0);
-        await wrapper.vm.$nextTick();
-        expect(wrapper.get('#product_ids').text()).toContain('Latest');
-        expect(wrapper.get('#product_ids').text()).not.toContain('Stale');
+
         expect(wrapper.text()).toContain('Taken');
+        expect(wrapper.text()).toContain('Pick products');
         expect(wrapper.text()).toContain('Unavailable');
+        expect(wrapper.get('#product_ids').attributes('aria-invalid')).toBe(
+            'true',
+        );
     });
 });

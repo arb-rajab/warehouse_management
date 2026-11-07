@@ -9,6 +9,7 @@ use App\Http\Resources\Store\ProductQueryResource;
 use App\Models\ProductQuery;
 use App\Models\StoreUser;
 use App\Policies\ProductQueryPolicy;
+use App\Support\NewestFirst;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -39,7 +40,7 @@ class ProductQueryController extends Controller implements HasMiddleware
                     ->select(['id', 'customer_id', 'product_id', 'question', 'reply', 'created_at'])
                     ->where('seller_id', StoreUser::query()->where('user_type', 'admin')->orderBy('id')->value('id'))
                     ->with($this->relations())
-                    ->orderByDesc('created_at')->orderByDesc('id')->paginate($perPage)->withQueryString()
+                    ->tap(NewestFirst::apply(...))->paginate($perPage)->withQueryString()
             )),
             'filters' => ['per_page' => $perPage],
         ]);

@@ -11,6 +11,7 @@ import StoreLanguageTabs from '@/components/StoreLanguageTabs.vue';
 import StoreProductFormFields from '@/components/StoreProductFormFields.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
 import { t } from '@/lib/i18n';
+import { physicalProductValidation } from '@/lib/storeProductForm';
 import type {
     StoreDigitalProductTax,
     StoreLanguage,
@@ -53,6 +54,13 @@ const props = defineProps<{
     initialFiles: Record<string, StoreUpload[]>;
 }>();
 const editRoute = props.listType === 'seller' ? sellerEdit : edit;
+// Checked in the browser before anything is sent; a read-only field is not
+// validated as posted, as on the server.
+const validation = physicalProductValidation({
+    form: 'edit',
+    sections: props.sections,
+    readOnlyFields: props.readOnlyFields,
+});
 </script>
 <template>
     <ResourceFormPage
@@ -62,6 +70,7 @@ const editRoute = props.listType === 'seller' ? sellerEdit : edit;
         :submitting-label="t('store.products.form.updating')"
         :cancel-href="listType === 'admin' ? inHouseProducts() : undefined"
         :layout="StoreAdminLayout"
+        :validation="validation"
         wide
         #default="{ errors }"
     >

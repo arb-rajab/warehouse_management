@@ -32,6 +32,20 @@ The application [README](../README.md) covers warehouse setup, APIs and deployme
   and [SQL](role-grants-audit-20261020.sql) evidence. Reviewing definitions never
   grants permissions or authorizes production changes.
 
+- The [store list filter audit](store-list-filter-audit-20261105.md) records which
+  back office lists render filters and where; the standing placement rule is
+  [store-list-filter-placement](rules/store-list-filter-placement.md).
+- The [store list links audit](store-list-links-audit-20261105.md) records, per column,
+  which object a store back office table or detail view names, where its link goes and
+  which permission gates it, plus the objects deliberately left as text; the standing
+  rule is [store-table-object-links](rules/store-table-object-links.md).
+- The [store list order audit](store-list-order-audit-20261105.md) records, per list, the
+  default order before and after newest-first and the exceptions with reasons; the
+  standing rule is [store-list-default-order](rules/store-list-default-order.md).
+- The [store search select rule](rules/store-search-select.md) is the standing rule for
+  every store back office select that searches another table: the shared component, its
+  endpoint contract and the result row content per entity.
+
 ## Documentation consumers
 
 Agents use AGENTS.md, its shared guidance, the rule index and rule `paths`
