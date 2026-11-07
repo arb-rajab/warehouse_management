@@ -211,6 +211,7 @@ return [
     'truck_has_been_created_successfully' => 'Truck has been created successfully',
     'truck_has_been_updated_successfully' => 'Truck has been updated successfully',
     'visit_has_been_deleted_successfully' => 'Visit has been deleted successfully',
+    'visit_note_has_been_updated_successfully' => 'Visit note has been updated successfully',
     'visits_have_been_deleted_successfully' => 'Visits have been deleted successfully',
     'website_appearance_has_been_updated_successfully' => 'Website appearance has been updated successfully',
     'website_footer_has_been_updated_successfully' => 'Website footer has been updated successfully',

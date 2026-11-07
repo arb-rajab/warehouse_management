@@ -227,6 +227,8 @@ authorized extension. Trace routes and all remaining consumers before deletion.
    deletes. Keep explicit route methods and route names; state-changing routes
    use POST/PUT/DELETE as appropriate. Regenerate Wayfinder with repository
    tooling; never hand-edit generated actions/routes.
+   Every write that succeeds and redirects flashes a success message with
+   `flashSuccess()`; see [success-messages.md](success-messages.md).
 6. Pages live under `Store/Admin`, use `StoreAdminLayout`, `ResourceFormPage`
    and existing tables, field/error/button/pagination/confirmation components.
    A module's shared form group lives in `Store<Resource>FormFields.vue`.

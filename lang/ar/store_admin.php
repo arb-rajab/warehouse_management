@@ -211,6 +211,7 @@ return [
     'truck_has_been_created_successfully' => 'تمت إضافة الشاحنة بنجاح',
     'truck_has_been_updated_successfully' => 'تم تحديث الشاحنة بنجاح',
     'visit_has_been_deleted_successfully' => 'تم حذف الزيارة بنجاح',
+    'visit_note_has_been_updated_successfully' => 'تم تحديث ملاحظة الزيارة بنجاح',
     'visits_have_been_deleted_successfully' => 'تم حذف الزيارات بنجاح',
     'website_appearance_has_been_updated_successfully' => 'تم تحديث مظهر الموقع بنجاح',
     'website_footer_has_been_updated_successfully' => 'تم تحديث تذييل الموقع بنجاح',
