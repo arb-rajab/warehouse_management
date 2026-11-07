@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Store\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Store\Admin\Concerns\FlashesSuccess;
 use App\Http\Requests\Store\Admin\FilterProductQueriesRequest;
 use App\Http\Requests\Store\Admin\ReplyProductQueryRequest;
 use App\Http\Resources\Store\ProductQueryResource;
@@ -19,6 +20,8 @@ use Inertia\Response;
 
 class ProductQueryController extends Controller implements HasMiddleware
 {
+    use FlashesSuccess;
+
     public function __construct(private readonly ProductQueryPolicy $policy) {}
 
     /** @return array<int, Middleware> */
@@ -61,6 +64,7 @@ class ProductQueryController extends Controller implements HasMiddleware
         abort_unless($this->policy->reply($request->user('store'), $productQuery), 403);
         $productQuery->reply = clean_html($request->validated('reply'));
         $productQuery->save();
+        $this->flashSuccess('reply_has_been_sent_successfully');
 
         return redirect()->route('product_query.index');
     }

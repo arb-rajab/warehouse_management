@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Store\Admin;
 
 use App\Http\Controllers\Concerns\ProvidesStoreReferenceOptions;
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Store\Admin\Concerns\FlashesSuccess;
 use App\Http\Requests\Store\Admin\EditReferenceTranslationRequest;
 use App\Http\Requests\Store\Admin\FilterPickupPointsRequest;
 use App\Http\Requests\Store\Admin\StorePickupPointRequest;
@@ -23,6 +24,7 @@ use Inertia\Response;
 
 class PickupPointController extends Controller implements HasMiddleware
 {
+    use FlashesSuccess;
     use ProvidesStoreReferenceOptions;
 
     /** @return array<int, Middleware> */
@@ -81,6 +83,7 @@ class PickupPointController extends Controller implements HasMiddleware
             $pickupPoint->save();
             PickupPointTranslation::query()->updateOrCreate(['pickup_point_id' => $pickupPoint->id, 'lang' => config('app.default_language')], $request->safe()->only(['name', 'address']));
         });
+        $this->flashSuccess('pickup_point_has_been_created_successfully');
 
         return redirect()->route('pick_up_points.index');
     }
@@ -98,6 +101,7 @@ class PickupPointController extends Controller implements HasMiddleware
             $pickupPoint->save();
             PickupPointTranslation::query()->updateOrCreate(['pickup_point_id' => $pickupPoint->id, 'lang' => $request->validated('lang')], $request->safe()->only(['name', 'address']));
         });
+        $this->flashSuccess('pickup_point_has_been_updated_successfully');
 
         return redirect()->route('pick_up_points.index');
     }
@@ -108,6 +112,7 @@ class PickupPointController extends Controller implements HasMiddleware
             $pickupPoint->pickup_point_translations()->delete();
             $pickupPoint->delete();
         });
+        $this->flashSuccess('pickup_point_has_been_deleted_successfully');
 
         return $this->redirectPreservingQuery('pick_up_points.index', $request);
     }

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Store\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Store\Admin\Concerns\FlashesSuccess;
 use App\Http\Requests\Store\Admin\UpdateProductFieldSourcesRequest;
 use App\Services\ProductFieldSourceService;
 use Illuminate\Http\RedirectResponse;
@@ -18,6 +19,8 @@ use Inertia\Response;
  */
 class ProductFieldSourceController extends Controller implements HasMiddleware
 {
+    use FlashesSuccess;
+
     /** @return array<int, Middleware> */
     public static function middleware(): array
     {
@@ -40,6 +43,7 @@ class ProductFieldSourceController extends Controller implements HasMiddleware
     public function update(UpdateProductFieldSourcesRequest $request, ProductFieldSourceService $fieldSources): RedirectResponse
     {
         $fieldSources->update($request->sources());
+        $this->flashSuccess('product_data_sources_have_been_updated_successfully');
 
         return redirect()->route('product_field_sources.index');
     }

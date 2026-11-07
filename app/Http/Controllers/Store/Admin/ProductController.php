@@ -278,6 +278,7 @@ class ProductController extends Controller implements HasMiddleware
     public function updatePublished(UpdateProductListFlagRequest $request, Product $product): RedirectResponse
     {
         $this->updateProductPublished($this->listQuery($request->productList()), $product, $request->boolean('status'));
+        $this->flashSuccess('product_published_status_has_been_updated_successfully');
 
         return $this->redirectToList($request->productList(), $request);
     }
@@ -285,6 +286,7 @@ class ProductController extends Controller implements HasMiddleware
     public function updateFeatured(UpdateProductListFlagRequest $request, Product $product): RedirectResponse
     {
         $this->updateProductFeatured($this->listQuery($request->productList()), $product, $request->boolean('status'));
+        $this->flashSuccess('product_featured_status_has_been_updated_successfully');
 
         return $this->redirectToList($request->productList(), $request);
     }
@@ -303,6 +305,7 @@ class ProductController extends Controller implements HasMiddleware
             $this->saveAvailability($product, $forSale);
         });
         $this->clearStorefrontCaches();
+        $this->flashSuccess('product_for_sale_status_has_been_updated_successfully');
 
         return $this->redirectToList($request->productList(), $request);
     }
@@ -327,6 +330,7 @@ class ProductController extends Controller implements HasMiddleware
             $stocks->product_duplicate_store($source->stocks()->orderBy('id')->get(), $copy);
             $taxes->product_duplicate_store($source->taxes()->orderBy('id')->get(), $copy);
         });
+        $this->flashSuccess('product_has_been_duplicated_successfully');
 
         return $this->redirectToList($request->productList(), $request);
     }
@@ -344,6 +348,7 @@ class ProductController extends Controller implements HasMiddleware
             $this->deleteProduct($this->lockedProduct($this->listQuery($request->productList()), $product));
         });
         $this->clearStorefrontCaches();
+        $this->flashSuccess('product_has_been_deleted_successfully');
 
         return $this->redirectToList($request->productList(), $request);
     }
@@ -364,6 +369,7 @@ class ProductController extends Controller implements HasMiddleware
             $products->each(fn (Product $product) => $this->deleteProduct($product));
         });
         $this->clearStorefrontCaches();
+        $this->flashSuccess('products_have_been_deleted_successfully');
 
         return $this->redirectToList($request->productList(), $request);
     }
@@ -391,6 +397,7 @@ class ProductController extends Controller implements HasMiddleware
     public function updateTodaysDeal(UpdateProductListFlagRequest $request, Product $product): RedirectResponse
     {
         $this->updateProductTodaysDeal($this->listQuery(StoreProductList::Seller), $product, $request->boolean('status'));
+        $this->flashSuccess('product_todays_deal_status_has_been_updated_successfully');
 
         return $this->redirectToList(StoreProductList::Seller, $request);
     }
@@ -398,6 +405,7 @@ class ProductController extends Controller implements HasMiddleware
     public function updateProductApproval(UpdateProductApprovalRequest $request, Product $product): RedirectResponse
     {
         $this->writeProductApproval($this->listQuery(StoreProductList::Seller), $product, $request->boolean('approved'));
+        $this->flashSuccess('product_approval_status_has_been_updated_successfully');
 
         return $this->redirectToList(StoreProductList::Seller, $request);
     }

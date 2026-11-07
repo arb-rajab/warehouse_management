@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Store\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Store\Admin\Concerns\FlashesSuccess;
 use App\Http\Controllers\Store\Admin\Concerns\SearchesOptions;
 use App\Http\Requests\Store\Admin\SearchOrderOptionsRequest;
 use App\Http\Requests\Store\Admin\StoreOrderRequest;
@@ -23,6 +24,7 @@ use Inertia\Response;
 
 class OrderEntryController extends Controller implements HasMiddleware
 {
+    use FlashesSuccess;
     use SearchesOptions;
 
     /** The columns of a customer or representative option (App\Support\SearchOption). */
@@ -51,6 +53,7 @@ class OrderEntryController extends Controller implements HasMiddleware
     public function store(StoreOrderRequest $request): RedirectResponse
     {
         $order = $this->orders->create($request->validated(), $request->user('store')->id, true);
+        $this->flashSuccess('order_has_been_created_successfully');
 
         return redirect()->route('all_orders.show', $order);
     }
@@ -58,6 +61,7 @@ class OrderEntryController extends Controller implements HasMiddleware
     public function shippingStore(StoreOrderRequest $request): RedirectResponse
     {
         $order = $this->orders->create($request->validated(), $request->user('store')->id, false);
+        $this->flashSuccess('order_has_been_created_successfully');
 
         return redirect()->route('all_orders.show', $order);
     }
@@ -76,6 +80,7 @@ class OrderEntryController extends Controller implements HasMiddleware
     public function update(UpdateOrderRequest $request, Order $order): RedirectResponse
     {
         $this->orders->update($order, $request->validated());
+        $this->flashSuccess('order_has_been_updated_successfully');
 
         return redirect()->route('all_orders.show', $order);
     }
