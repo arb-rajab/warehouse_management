@@ -154,14 +154,18 @@ class CartController extends Controller
 
         $body['cart'] = $this->shopsFor($user);
         $body['summary'] = $this->summaryBody();
+        $hidesPrices = HidePricesFromUnverified::hidesPricesFrom($user);
 
-        if (HidePricesFromUnverified::hidesPricesFrom($user)) {
+        if ($hidesPrices) {
             $body['cart'] = HidePricesFromUnverified::blankPrices($body['cart'], 'cart');
             $body['summary'] = [...HidePricesFromUnverified::blankPrices($body['summary'], 'cart'), 'price_hidden' => true];
-            $response->header('X-Prices-Hidden', '1');
         }
 
-        return $response->setData($body);
+        // A new answer rather than $response->setData(): Scramble (the API reference)
+        // cannot infer setData() on a response it did not build, and its export fails.
+        $answer = response()->json($body, $response->getStatusCode());
+
+        return $hidesPrices ? $answer->header('X-Prices-Hidden', '1') : $answer;
     }
 
     /**
