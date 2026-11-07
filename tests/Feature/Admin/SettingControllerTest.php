@@ -50,6 +50,7 @@ test('an admin can update the QR code size and it persists', function () {
     $response = $this->put('/admin/settings', ['qr_code_width' => 400, 'qr_code_height' => 500, 'allowed_open_levels' => [1]]);
 
     $response->assertRedirect(route('admin.settings.edit'));
+    $response->assertInertiaFlash('success', 'Settings have been updated successfully');
     $this->assertDatabaseHas('wms_settings', [
         'qr_code_width' => 400,
         'qr_code_height' => 500,

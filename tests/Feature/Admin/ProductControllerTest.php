@@ -576,6 +576,7 @@ test('an authenticated admin can set a minimum pallets threshold for a product',
     $response = $this->put("/admin/products/{$product->id}/minimum-pallets", ['minimum_pallets' => 10]);
 
     $response->assertRedirect(route('admin.products.index'));
+    $response->assertInertiaFlash('success', 'Minimum pallets has been updated successfully');
     $this->assertDatabaseHas('wms_product_settings', [
         'product_id' => $product->id,
         'minimum_pallets' => 10,
@@ -1183,6 +1184,7 @@ test('an authenticated admin can set how many boxes a pallet of a product holds'
     $response = $this->put("/admin/products/{$product->id}/box-count", ['boxes_count' => 30]);
 
     $response->assertRedirect(route('admin.products.index'));
+    $response->assertInertiaFlash('success', 'Boxes per pallet has been updated successfully');
     $this->assertDatabaseHas('wms_product_settings', [
         'product_id' => $product->id,
         'boxes_count' => 30,
@@ -1266,6 +1268,7 @@ test('an authenticated admin can add a barcode to a product', function () {
     $response = $this->post("/admin/products/{$product->id}/barcodes", ['barcode' => '1234567890123']);
 
     $response->assertRedirect(route('admin.products.index'));
+    $response->assertInertiaFlash('success', 'Barcode has been added successfully');
     $this->assertDatabaseHas('wms_product_barcodes', [
         'product_id' => $product->id,
         'barcode' => '1234567890123',
@@ -1415,6 +1418,7 @@ test('an authenticated admin can remove a barcode from a product', function () {
     $response = $this->delete("/admin/products/{$product->id}/barcodes/{$barcode->id}");
 
     $response->assertRedirect(route('admin.products.index'));
+    $response->assertInertiaFlash('success', 'Barcode has been removed successfully');
     $this->assertDatabaseMissing('wms_product_barcodes', ['id' => $barcode->id]);
 });
 

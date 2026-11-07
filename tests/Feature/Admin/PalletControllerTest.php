@@ -240,6 +240,7 @@ test('an authenticated admin can store a pallet into an empty cell', function ()
     ]);
 
     $response->assertRedirect(route('admin.rows.show', $row->letter));
+    $response->assertInertiaFlash('success', 'Pallet has been stored successfully');
 
     $pallet = Pallet::query()->sole();
     expect($pallet->cell_id)->toBe($cell->id);
@@ -423,6 +424,7 @@ test('an authenticated admin can open a full pallet, removing boxes at the same 
     $response = $this->post("/admin/pallets/{$pallet->id}/open", ['boxes_count' => 3]);
 
     $response->assertRedirect(route('admin.rows.show', $pallet->cell->row->letter));
+    $response->assertInertiaFlash('success', 'Pallet has been opened successfully');
     expect($pallet->cell->refresh()->state)->toBe(CellState::Opened);
     expect($pallet->refresh()->remaining_boxes)->toBe(7);
 
@@ -567,6 +569,7 @@ test('an authenticated admin can remove more boxes from an already-opened pallet
     $response = $this->post("/admin/pallets/{$pallet->id}/remove-boxes", ['boxes_count' => 4]);
 
     $response->assertRedirect(route('admin.rows.show', $pallet->cell->row->letter));
+    $response->assertInertiaFlash('success', 'Boxes have been removed from the pallet successfully');
     expect($pallet->refresh()->remaining_boxes)->toBe(2);
 
     $this->assertDatabaseHas('cell_status_logs', [
@@ -662,6 +665,7 @@ test('an authenticated admin can empty a pallet regardless of remaining boxes', 
     $response = $this->post("/admin/pallets/{$pallet->id}/empty", ['note' => 'Damaged.']);
 
     $response->assertRedirect(route('admin.rows.show', $pallet->cell->row->letter));
+    $response->assertInertiaFlash('success', 'Pallet has been emptied successfully');
     $this->assertDatabaseMissing('pallets', ['id' => $pallet->id]);
     expect($cell->refresh()->state)->toBe(CellState::Empty);
 
@@ -739,6 +743,7 @@ test('an authenticated admin can transfer a pallet to another empty cell', funct
     ]);
 
     $response->assertRedirect(route('admin.rows.show', $sourceRow->letter));
+    $response->assertInertiaFlash('success', 'Pallet has been transferred successfully');
     expect($sourceCell->refresh()->state)->toBe(CellState::Empty);
     expect($destinationCell->refresh()->state)->toBe(CellState::Full);
     expect($pallet->refresh()->cell_id)->toBe($destinationCell->id);
@@ -918,6 +923,7 @@ test('an authenticated admin can update a pallet\'s product, expiration date, an
     ]);
 
     $response->assertRedirect(route('admin.rows.show', $pallet->cell->row->letter));
+    $response->assertInertiaFlash('success', 'Pallet has been updated successfully');
 
     $pallet->refresh();
     expect($pallet->product_id)->toBe($newProduct->id);

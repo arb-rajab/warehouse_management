@@ -15,7 +15,8 @@ test('an admin records a mismatch with an optional note and reviewer without cha
     $this->post("/admin/products/{$product->id}/image-reviews?page=2", [
         'image_review_status' => 'doesnt_match', 'image_source' => $product->image_url,
         'image_review_note' => '  Different packaging  ',
-    ])->assertRedirect('/admin/products?page=2')->assertSessionHasNoErrors();
+    ])->assertRedirect('/admin/products?page=2')
+        ->assertInertiaFlash('success', 'Product image review has been saved successfully')->assertSessionHasNoErrors();
     $review = ProductImageReview::query()->sole();
     expect($review->status)->toBe('doesnt_match')->and($review->note)->toBe('Different packaging')
         ->and($review->user_id)->toBe($user->id)->and($review->created_at)->not->toBeNull()
@@ -57,7 +58,8 @@ test('new images invalidate reviews and preserve their notes and old reference i
     ]);
     $this->post("/admin/products/{$product->id}/reference-image", [
         'image' => UploadedFile::fake()->image('new.png', 200, 100),
-    ])->assertSessionHasNoErrors()->assertRedirect('/admin/products');
+    ])->assertSessionHasNoErrors()->assertRedirect('/admin/products')
+        ->assertInertiaFlash('success', 'Product reference image has been updated successfully');
     $product->refresh();
     Storage::disk('public')->assertExists($product->warehouse_image_path);
     expect($product->image_url)->toBe(Storage::disk('public')->url($product->warehouse_image_path));
