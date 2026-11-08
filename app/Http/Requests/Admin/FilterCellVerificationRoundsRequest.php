@@ -4,6 +4,7 @@ namespace App\Http\Requests\Admin;
 
 use App\Http\Requests\Concerns\FiltersByDateRange;
 use App\Http\Requests\Concerns\FiltersByUserIds;
+use App\Http\Requests\Concerns\FiltersByWarehouseIds;
 use App\Http\Requests\Concerns\FiltersPerPage;
 use App\Http\Requests\Concerns\NormalizesBooleanFilters;
 use App\Http\Requests\Concerns\SortsByDirection;
@@ -14,6 +15,7 @@ class FilterCellVerificationRoundsRequest extends FormRequest
 {
     use FiltersByDateRange;
     use FiltersByUserIds;
+    use FiltersByWarehouseIds;
     use FiltersPerPage;
     use NormalizesBooleanFilters;
     use SortsByDirection;
@@ -32,6 +34,7 @@ class FilterCellVerificationRoundsRequest extends FormRequest
     {
         return [
             ...$this->userIdsFilterRules(),
+            ...$this->warehouseIdsFilterRules(),
             'completed' => ['nullable', 'boolean'],
             ...$this->dateRangeFilterRules(),
             ...$this->sortDirectionRules(),

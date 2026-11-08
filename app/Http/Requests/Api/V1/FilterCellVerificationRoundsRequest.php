@@ -2,12 +2,14 @@
 
 namespace App\Http\Requests\Api\V1;
 
+use App\Http\Requests\Concerns\FiltersByWarehouseIds;
 use App\Http\Requests\Concerns\NormalizesBooleanFilters;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 
 class FilterCellVerificationRoundsRequest extends FormRequest
 {
+    use FiltersByWarehouseIds;
     use NormalizesBooleanFilters;
 
     protected function prepareForValidation(): void
@@ -24,6 +26,7 @@ class FilterCellVerificationRoundsRequest extends FormRequest
     {
         return [
             'only_unfinished' => ['nullable', 'boolean'],
+            ...$this->warehouseIdsFilterRules(),
         ];
     }
 }

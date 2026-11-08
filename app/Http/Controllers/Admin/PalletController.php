@@ -18,6 +18,7 @@ use App\Models\Cell;
 use App\Models\Pallet;
 use App\Models\Product;
 use App\Models\User;
+use App\Models\Warehouse;
 use App\Services\PalletActionService;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
@@ -43,17 +44,19 @@ class PalletController extends Controller
         $pallets = Pallet::query()
             ->listedForAdmin()
             ->matchingHighlightFilters($request)
+            ->forWarehouses($request->warehouseIds())
             ->paginate($perPage)
             ->withQueryString();
 
         return Inertia::render('Admin/Pallets/Index', [
             'pallets' => $this->paginated(MatchingPalletResource::collection($pallets)),
             'filters' => [
-                ...$request->only(['state', 'is_active', 'expired', 'expires_within_days', 'stale_after_days', 'product_id']),
+                ...$request->only(['state', 'is_active', 'expired', 'expires_within_days', 'stale_after_days', 'product_id', 'warehouse_ids']),
                 'per_page' => $perPage,
             ],
             'filterOptions' => [
                 'products' => Product::selectedOptions($request->productIds() ?? []),
+                'warehouses' => Warehouse::selectedOptions($request->warehouseIds() ?? []),
             ],
         ]);
     }

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Concerns\BuildsDashboardStats;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\ShowDashboardRequest;
+use App\Models\Warehouse;
 use Illuminate\Http\JsonResponse;
 
 class DashboardController extends Controller
@@ -18,14 +19,19 @@ class DashboardController extends Controller
         $staleDays = $request->integer('stale_days') ?: self::DEFAULT_CUSTOM_STALE_DAYS;
         $productIds = $request->productIds();
         $productPublished = $request->productPublished();
+        $warehouseIds = $request->warehouseIds();
 
         return response()->json([
-            'stats' => $this->buildDashboardStats($today, $customExpiringDays, $staleDays, $productIds, $productPublished),
+            'stats' => $this->buildDashboardStats($today, $customExpiringDays, $staleDays, $productIds, $warehouseIds, $productPublished),
             'today' => $today->toDateString(),
             'weekStart' => $this->dashboardWeekStart($today)->toDateString(),
             'filters' => [
                 'product_id' => $productIds,
                 'product_status' => $request->input('product_status'),
+                'warehouse_ids' => $warehouseIds,
+            ],
+            'filterOptions' => [
+                'warehouses' => Warehouse::selectedOptions($warehouseIds ?? []),
             ],
         ]);
     }

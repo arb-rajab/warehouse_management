@@ -2,12 +2,14 @@
 
 namespace App\Http\Requests\Admin;
 
+use App\Http\Requests\Concerns\FiltersByWarehouseIds;
 use App\Http\Requests\Concerns\FiltersPerPage;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 
 class FilterRowsRequest extends FormRequest
 {
+    use FiltersByWarehouseIds;
     use FiltersPerPage;
 
     /**
@@ -17,6 +19,9 @@ class FilterRowsRequest extends FormRequest
      */
     public function rules(): array
     {
-        return $this->perPageRules();
+        return [
+            ...$this->warehouseIdsFilterRules(),
+            ...$this->perPageRules(),
+        ];
     }
 }

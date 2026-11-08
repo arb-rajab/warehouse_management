@@ -17,6 +17,12 @@ use Illuminate\Support\Collection;
 /**
  * Shared dashboard stats computation, used by both the admin Inertia dashboard
  * and the mobile API dashboard endpoint so the two stay in lockstep.
+ *
+ * Every stat honours the optional warehouse filter (`$warehouseIds`, null for
+ * every warehouse) the same way it honours the product filter: cells through
+ * their row, pallets through their cell, logs through the cell they were
+ * written against, and the product counts (low stock, inactive in the
+ * warehouse) through the pallets those warehouses hold.
  */
 trait BuildsDashboardStats
 {
@@ -43,6 +49,7 @@ trait BuildsDashboardStats
 
     /**
      * @param  list<int>|null  $productIds
+     * @param  list<int>|null  $warehouseIds
      * @return array{
      *     occupancy: array{empty: int, full: int, opened: int},
      *     expiring: array{expired: int, windows: list<array{months: int, days: int, until: string, count: int}>, custom: array{days: int, until: string, count: int}},
@@ -63,21 +70,21 @@ trait BuildsDashboardStats
      *     activity_week: array{stored: int, opened: int, emptied: int, transferred: int},
      * }
      */
-    private function buildDashboardStats(CarbonImmutable $today, int $customExpiringDays, int $staleDays, ?array $productIds, ?bool $productPublished = null): array
+    private function buildDashboardStats(CarbonImmutable $today, int $customExpiringDays, int $staleDays, ?array $productIds, ?array $warehouseIds, ?bool $productPublished = null): array
     {
         return DashboardStatsCache::remember(
-            ['today' => $today->toDateString(), 'customExpiringDays' => $customExpiringDays, 'staleDays' => $staleDays, 'productIds' => $productIds, 'productPublished' => $productPublished],
-            function () use ($today, $customExpiringDays, $staleDays, $productIds, $productPublished): array {
+            ['today' => $today->toDateString(), 'customExpiringDays' => $customExpiringDays, 'staleDays' => $staleDays, 'productIds' => $productIds, 'warehouseIds' => $warehouseIds, 'productPublished' => $productPublished],
+            function () use ($today, $customExpiringDays, $staleDays, $productIds, $warehouseIds, $productPublished): array {
                 $startOfWeek = $this->dashboardWeekStart($today);
 
                 return [
-                    'occupancy' => $this->occupancy($productIds, $productPublished),
-                    'expiring' => $this->expiring($today, $customExpiringDays, $productIds, $productPublished),
-                    'stale' => $this->stale($today, $staleDays, $productIds, $productPublished),
-                    'low_stock' => $this->lowStock($productIds, $productPublished),
-                    'inactive_in_warehouse' => $this->inactiveInWarehouse($productIds, $productPublished),
-                    'activity_today' => $this->activityCounts(CellStatusLog::query()->whereDate('created_at', $today), $productIds, $productPublished),
-                    'activity_week' => $this->activityCounts(CellStatusLog::query()->whereBetween('created_at', [$startOfWeek, $today->copy()->endOfDay()]), $productIds, $productPublished),
+                    'occupancy' => $this->occupancy($productIds, $warehouseIds, $productPublished),
+                    'expiring' => $this->expiring($today, $customExpiringDays, $productIds, $warehouseIds, $productPublished),
+                    'stale' => $this->stale($today, $staleDays, $productIds, $warehouseIds, $productPublished),
+                    'low_stock' => $this->lowStock($productIds, $warehouseIds, $productPublished),
+                    'inactive_in_warehouse' => $this->inactiveInWarehouse($productIds, $warehouseIds, $productPublished),
+                    'activity_today' => $this->activityCounts(CellStatusLog::query()->whereDate('created_at', $today)->forWarehouses($warehouseIds), $productIds, $productPublished),
+                    'activity_week' => $this->activityCounts(CellStatusLog::query()->whereBetween('created_at', [$startOfWeek, $today->copy()->endOfDay()])->forWarehouses($warehouseIds), $productIds, $productPublished),
                 ];
             },
         );
@@ -89,24 +96,31 @@ trait BuildsDashboardStats
     }
 
     /**
+     * With a product filter an empty cell holds no matching product, so
+     * `empty` is 0; the warehouse filter alone keeps those warehouses' empty
+     * cells.
+     *
      * @param  list<int>|null  $productIds
+     * @param  list<int>|null  $warehouseIds
      * @return array{empty: int, full: int, opened: int}
      */
-    private function occupancy(?array $productIds, ?bool $productPublished = null): array
+    private function occupancy(?array $productIds, ?array $warehouseIds, ?bool $productPublished = null): array
     {
         if ($productIds !== null || $productPublished !== null) {
             return [
                 'empty' => 0,
                 'full' => Cell::query()->where('state', CellState::Full)
+                    ->forWarehouses($warehouseIds)
                     ->whereHas('pallet', fn ($q) => $this->applyProductFilters($q, $productIds, $productPublished))
                     ->count(),
                 'opened' => Cell::query()->where('state', CellState::Opened)
+                    ->forWarehouses($warehouseIds)
                     ->whereHas('pallet', fn ($q) => $this->applyProductFilters($q, $productIds, $productPublished))
                     ->count(),
             ];
         }
 
-        $byState = Cell::query()->select('state')->selectRaw('count(*) as count')->groupBy('state')->pluck('count', 'state');
+        $byState = Cell::query()->forWarehouses($warehouseIds)->select('state')->selectRaw('count(*) as count')->groupBy('state')->pluck('count', 'state');
 
         return [
             'empty' => (int) ($byState[CellState::Empty->value] ?? 0),
@@ -117,20 +131,21 @@ trait BuildsDashboardStats
 
     /**
      * @param  list<int>|null  $productIds
+     * @param  list<int>|null  $warehouseIds
      * @return array{expired: int, windows: list<array{months: int, days: int, until: string, count: int}>, custom: array{days: int, until: string, count: int}}
      */
-    private function expiring(CarbonImmutable $today, int $customDays, ?array $productIds, ?bool $productPublished = null): array
+    private function expiring(CarbonImmutable $today, int $customDays, ?array $productIds, ?array $warehouseIds, ?bool $productPublished = null): array
     {
-        $expired = Pallet::query()->where('expiration_date', '<', $today);
+        $expired = Pallet::query()->where('expiration_date', '<', $today)->forWarehouses($warehouseIds);
         $this->applyProductFilters($expired, $productIds, $productPublished);
 
         return [
             'expired' => $expired->count(),
             'windows' => array_map(
-                fn (int $months) => $this->expiringMonthWindow($today, $months, $productIds, $productPublished),
+                fn (int $months) => $this->expiringMonthWindow($today, $months, $productIds, $warehouseIds, $productPublished),
                 self::EXPIRING_WINDOW_MONTHS,
             ),
-            'custom' => $this->expiringDayWindow($today, $customDays, $productIds, $productPublished),
+            'custom' => $this->expiringDayWindow($today, $customDays, $productIds, $warehouseIds, $productPublished),
         ];
     }
 
@@ -139,16 +154,17 @@ trait BuildsDashboardStats
      * so `until` lands on the correct calendar date regardless of month length).
      *
      * @param  list<int>|null  $productIds
+     * @param  list<int>|null  $warehouseIds
      * @return array{months: int, days: int, until: string, count: int}
      */
-    private function expiringMonthWindow(CarbonImmutable $today, int $months, ?array $productIds, ?bool $productPublished = null): array
+    private function expiringMonthWindow(CarbonImmutable $today, int $months, ?array $productIds, ?array $warehouseIds, ?bool $productPublished = null): array
     {
         $until = $today->copy()->addMonths($months);
 
         return [
             'months' => $months,
             'days' => (int) $today->diffInDays($until),
-            ...$this->expiringWindowCounts($today, $until, $productIds, $productPublished),
+            ...$this->expiringWindowCounts($today, $until, $productIds, $warehouseIds, $productPublished),
         ];
     }
 
@@ -156,25 +172,27 @@ trait BuildsDashboardStats
      * The caller-adjustable custom expiring-soon window, expressed in days.
      *
      * @param  list<int>|null  $productIds
+     * @param  list<int>|null  $warehouseIds
      * @return array{days: int, until: string, count: int}
      */
-    private function expiringDayWindow(CarbonImmutable $today, int $days, ?array $productIds, ?bool $productPublished = null): array
+    private function expiringDayWindow(CarbonImmutable $today, int $days, ?array $productIds, ?array $warehouseIds, ?bool $productPublished = null): array
     {
         $until = $today->copy()->addDays($days);
 
         return [
             'days' => $days,
-            ...$this->expiringWindowCounts($today, $until, $productIds, $productPublished),
+            ...$this->expiringWindowCounts($today, $until, $productIds, $warehouseIds, $productPublished),
         ];
     }
 
     /**
      * @param  list<int>|null  $productIds
+     * @param  list<int>|null  $warehouseIds
      * @return array{until: string, count: int}
      */
-    private function expiringWindowCounts(CarbonImmutable $today, CarbonImmutable $until, ?array $productIds, ?bool $productPublished): array
+    private function expiringWindowCounts(CarbonImmutable $today, CarbonImmutable $until, ?array $productIds, ?array $warehouseIds, ?bool $productPublished): array
     {
-        $query = Pallet::query()->whereBetween('expiration_date', [$today, $until]);
+        $query = Pallet::query()->whereBetween('expiration_date', [$today, $until])->forWarehouses($warehouseIds);
         $this->applyProductFilters($query, $productIds, $productPublished);
 
         return [
@@ -190,11 +208,12 @@ trait BuildsDashboardStats
      * .ai/rules/models.md); $days always comes from the caller.
      *
      * @param  list<int>|null  $productIds
+     * @param  list<int>|null  $warehouseIds
      * @return array{days: int, count: int}
      */
-    private function stale(CarbonImmutable $today, int $days, ?array $productIds, ?bool $productPublished = null): array
+    private function stale(CarbonImmutable $today, int $days, ?array $productIds, ?array $warehouseIds, ?bool $productPublished = null): array
     {
-        $query = Pallet::query()->where('created_at', '<=', $today->copy()->subDays($days));
+        $query = Pallet::query()->where('created_at', '<=', $today->copy()->subDays($days))->forWarehouses($warehouseIds);
         $this->applyProductFilters($query, $productIds, $productPublished);
 
         return [
@@ -215,17 +234,27 @@ trait BuildsDashboardStats
      * {@see self::applyProductFilters()}, which assumes a `product_id`
      * column/`product` relation that Product itself doesn't have.
      *
+     * With a warehouse filter the minimum is compared with the pallets those
+     * warehouses hold, so a product the selected warehouses are short of
+     * counts even when another warehouse holds enough of it.
+     *
      * @param  list<int>|null  $productIds
+     * @param  list<int>|null  $warehouseIds
      * @return array{count: int}
      */
-    private function lowStock(?array $productIds, ?bool $productPublished = null): array
+    private function lowStock(?array $productIds, ?array $warehouseIds, ?bool $productPublished = null): array
     {
+        $palletCount = Pallet::query()
+            ->selectRaw('count(*)')
+            ->whereColumn('pallets.product_id', 'products.id')
+            ->forWarehouses($warehouseIds);
+
         $count = Product::query()
             ->whereHas('setting', fn ($q) => $q->whereNotNull('minimum_pallets'))
-            ->whereRaw('
-                (select minimum_pallets from wms_product_settings where wms_product_settings.product_id = products.id)
-                > (select count(*) from pallets where pallets.product_id = products.id)
-            ')
+            ->whereRaw(
+                '(select minimum_pallets from wms_product_settings where wms_product_settings.product_id = products.id) > ('.$palletCount->toSql().')',
+                $palletCount->getBindings(),
+            )
             ->when($productIds !== null, fn ($q) => $q->whereIn('id', $productIds))
             ->when($productPublished !== null, fn ($q) => $q->where('published', $productPublished))
             ->count();
@@ -242,16 +271,18 @@ trait BuildsDashboardStats
      * it links to can never disagree on which products match.
      *
      * Filtered by `$productIds`/`$productPublished` directly (Product's own
-     * `id`/`published` columns), the same as {@see self::lowStock()}.
+     * `id`/`published` columns), the same as {@see self::lowStock()}; with a
+     * warehouse filter the pallet must be in one of those warehouses.
      *
      * @param  list<int>|null  $productIds
+     * @param  list<int>|null  $warehouseIds
      * @return array{count: int}
      */
-    private function inactiveInWarehouse(?array $productIds, ?bool $productPublished = null): array
+    private function inactiveInWarehouse(?array $productIds, ?array $warehouseIds, ?bool $productPublished = null): array
     {
         $count = Product::query()
             ->where('published', false)
-            ->inWarehouse()
+            ->inWarehouse($warehouseIds)
             ->when($productIds !== null, fn ($q) => $q->whereIn('id', $productIds))
             ->when($productPublished !== null, fn ($q) => $q->where('published', $productPublished))
             ->count();

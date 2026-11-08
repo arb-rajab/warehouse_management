@@ -13,6 +13,7 @@ use App\Models\CellVerificationRound;
 use App\Models\Product;
 use App\Models\Row;
 use App\Models\User;
+use App\Models\Warehouse;
 use App\Services\CellVerificationService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -44,6 +45,7 @@ class CellVerificationRoundController extends Controller
             ->with(['user:id,name', 'rows:id,letter'])
             ->withCount('reports')
             ->filtered($request)
+            ->forWarehouses($request->warehouseIds())
             ->sorted($request)
             ->paginate($perPage)
             ->withQueryString();
@@ -51,11 +53,12 @@ class CellVerificationRoundController extends Controller
         return Inertia::render('Admin/CellVerificationRounds/Index', [
             'rounds' => $this->paginated(CellVerificationRoundResource::collection($rounds)),
             'filters' => [
-                ...$request->only(['user_id', 'completed', 'date_from', 'date_to', 'created_within_days', 'sort_direction']),
+                ...$request->only(['user_id', 'completed', 'date_from', 'date_to', 'created_within_days', 'sort_direction', 'warehouse_ids']),
                 'per_page' => $perPage,
             ],
             'filterOptions' => [
                 'users' => User::filterOptions(),
+                'warehouses' => Warehouse::selectedOptions($request->warehouseIds() ?? []),
             ],
         ]);
     }

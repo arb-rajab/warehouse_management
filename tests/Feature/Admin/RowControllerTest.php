@@ -4,6 +4,7 @@ use App\Models\CellStatusLog;
 use App\Models\Pallet;
 use App\Models\Product;
 use App\Models\Row;
+use App\Models\Warehouse;
 use App\Models\Setting;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\File;
@@ -112,6 +113,7 @@ test('an authenticated user can create a row and its cells are generated', funct
     actingAsAdmin();
 
     $response = $this->post('/admin/rows', [
+        'warehouse_id' => Warehouse::firstOrCreateDefault()->id,
         'letter' => 'Z',
         'cells_count' => 3,
         'flats_count' => 2,
@@ -129,6 +131,7 @@ test('creating a row normalizes a lowercase letter to uppercase', function () {
     actingAsAdmin();
 
     $response = $this->post('/admin/rows', [
+        'warehouse_id' => Warehouse::firstOrCreateDefault()->id,
         'letter' => 'z',
         'cells_count' => 3,
         'flats_count' => 2,
@@ -145,6 +148,7 @@ test('creating a row with a duplicate letter is rejected and nothing changes', f
     Row::factory()->create(['letter' => 'Z']);
 
     $response = $this->post('/admin/rows', [
+        'warehouse_id' => Warehouse::firstOrCreateDefault()->id,
         'letter' => 'Z',
         'cells_count' => 3,
         'flats_count' => 2,
@@ -158,6 +162,7 @@ test('creating a row with invalid dimensions is rejected and nothing changes', f
     actingAsAdmin();
 
     $response = $this->post('/admin/rows', [
+        'warehouse_id' => Warehouse::firstOrCreateDefault()->id,
         'letter' => 'Z',
         'cells_count' => 0,
         'flats_count' => 2,
@@ -171,6 +176,7 @@ test('creating a row with an invalid flats_count is rejected and nothing changes
     actingAsAdmin();
 
     $response = $this->post('/admin/rows', [
+        'warehouse_id' => Warehouse::firstOrCreateDefault()->id,
         'letter' => 'Z',
         'cells_count' => 2,
         'flats_count' => 0,
@@ -184,6 +190,7 @@ test('creating a row with a cells_count over the operational maximum is rejected
     actingAsAdmin();
 
     $response = $this->post('/admin/rows', [
+        'warehouse_id' => Warehouse::firstOrCreateDefault()->id,
         'letter' => 'Z',
         'cells_count' => Row::MAX_DIMENSION + 1,
         'flats_count' => 2,
@@ -198,6 +205,7 @@ test('creating a row with a flats_count over the operational maximum is rejected
     actingAsAdmin();
 
     $response = $this->post('/admin/rows', [
+        'warehouse_id' => Warehouse::firstOrCreateDefault()->id,
         'letter' => 'Z',
         'cells_count' => 2,
         'flats_count' => Row::MAX_DIMENSION + 1,
@@ -212,6 +220,7 @@ test('creating a row at exactly the operational maximum dimensions succeeds', fu
     actingAsAdmin();
 
     $response = $this->post('/admin/rows', [
+        'warehouse_id' => Warehouse::firstOrCreateDefault()->id,
         'letter' => 'Z',
         'cells_count' => Row::MAX_DIMENSION,
         'flats_count' => 1,
@@ -228,6 +237,7 @@ test('creating a row with a letter longer than 2 characters is rejected and noth
     actingAsAdmin();
 
     $response = $this->post('/admin/rows', [
+        'warehouse_id' => Warehouse::firstOrCreateDefault()->id,
         'letter' => 'ABC',
         'cells_count' => 2,
         'flats_count' => 2,
@@ -241,6 +251,7 @@ test('a mobile app user cannot create a row and nothing changes', function () {
     actingAsMobilePanelUser();
 
     $response = $this->post('/admin/rows', [
+        'warehouse_id' => Warehouse::firstOrCreateDefault()->id,
         'letter' => 'Z',
         'cells_count' => 3,
         'flats_count' => 2,
@@ -252,6 +263,7 @@ test('a mobile app user cannot create a row and nothing changes', function () {
 
 test('an unauthenticated caller cannot create a row and nothing changes', function () {
     $response = $this->post('/admin/rows', [
+        'warehouse_id' => Warehouse::firstOrCreateDefault()->id,
         'letter' => 'Z',
         'cells_count' => 3,
         'flats_count' => 2,

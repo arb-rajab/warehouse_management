@@ -25,7 +25,8 @@ class PalletController extends Controller
         'product:id,name,ar_name,thumbnail_img,warehouse_image_path,published',
         'product.thumbnailUpload:id,file_name,external_link',
         'product.setting:product_id,boxes_count',
-        'cell.row:id,letter',
+        'cell.row:id,warehouse_id,letter',
+        'cell.row.warehouse:id,name',
         // Table-qualified — see the comment on Cell::WITH_CONTENTS for why.
         'cellEnteredLog:cell_status_logs.id,cell_status_logs.pallet_id,cell_status_logs.action,cell_status_logs.created_at',
     ];

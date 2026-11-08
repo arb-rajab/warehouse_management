@@ -11,6 +11,7 @@ use Illuminate\Contracts\Validation\ValidationRule;
 trait FiltersDashboard
 {
     use FiltersByProductIds;
+    use FiltersByWarehouseIds;
 
     /**
      * @return array<string, ValidationRule|array<mixed>|string>
@@ -21,6 +22,7 @@ trait FiltersDashboard
             'expiring_days' => ['nullable', 'integer', 'min:1'],
             'stale_days' => ['nullable', 'integer', 'min:1'],
             ...$this->productIdsFilterRules(),
+            ...$this->warehouseIdsFilterRules(),
         ];
     }
 }

@@ -15,6 +15,10 @@ use Illuminate\Http\Resources\Json\JsonResource;
  * @property-read CellState $state
  * @property-read bool $is_active
  * @property-read Row $row
+ *
+ * `warehouse` is present when the caller loaded `row.warehouse`
+ * (`Cell::WITH_ROW_AND_CONTENTS`); cells nested in a row payload leave it to
+ * the row.
  * @property-read Pallet|null $pallet
  */
 class CellResource extends JsonResource
@@ -32,6 +36,10 @@ class CellResource extends JsonResource
         return [
             'id' => $this->id,
             'row_letter' => $this->whenLoaded('row', fn () => $this->row->letter),
+            'warehouse' => $this->when(
+                $this->resource->relationLoaded('row') && $this->row->relationLoaded('warehouse'),
+                fn () => new WarehouseSummaryResource($this->row->warehouse),
+            ),
             'cell_number' => $this->cell_number,
             'flat_number' => $this->flat_number,
             'state' => $this->state->value,
