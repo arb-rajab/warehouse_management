@@ -1123,6 +1123,21 @@ html[lang='ar'] .sf-brand-name {
 
 /* ---- Section headings, home and listing pages ---------------------------- */
 
+/* "View all" links: the theme's blue reads as the brand link colour. */
+.text-blue {
+    color: var(--link) !important;
+}
+
+.text-blue:hover {
+    color: var(--brand) !important;
+}
+
+/* Today's deal: an owner-set colour (todays_deal_bg_color) on a rounded panel. */
+.sf-deal-panel {
+    border-radius: var(--radius-xl);
+    overflow: hidden;
+}
+
 section h3.fs-16.fw-700,
 section h3.fs-md-20.fw-700 {
     letter-spacing: -0.01em;

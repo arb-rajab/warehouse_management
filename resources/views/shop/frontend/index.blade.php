@@ -161,7 +161,7 @@
                 </div>
             @endif
             <!-- Products -->
-            <div class="" style="background-color: {{ get_setting('todays_deal_bg_color', '#3d4666') }}">
+            <div class="sf-deal-panel" style="background-color: {{ get_setting('todays_deal_bg_color', '#1f1a17') }}">
                 <div class="text-right px-4 px-xl-5 pt-4 pt-md-3">
                     <a href="{{ route('todays-deal') }}" class="fs-12 fw-700 text-white has-transition hov-text-warning">{{ __('storefront.common.view_all') }}</a>
                 </div>
