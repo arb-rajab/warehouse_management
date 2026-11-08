@@ -19,7 +19,7 @@ import {
 } from '@/lib/filters';
 import { t } from '@/lib/i18n';
 
-const sections = ['overview', 'productFilter'];
+const sections = ['overview', 'productFilter', 'warehouseFilter'];
 
 /**
  * Same action/icon pairing as Dashboard/Index.vue's ACTIVITY_ACTIONS

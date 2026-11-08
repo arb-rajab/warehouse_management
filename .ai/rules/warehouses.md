@@ -13,6 +13,12 @@ paths:
   - app/Http/Requests/Admin/StoreRowRequest.php
   - app/Http/Requests/Admin/UpdateRowRequest.php
   - database/factories/RowFactory.php
+  - resources/js/components/FilterWarehouseSelect.vue
+  - resources/js/components/WarehouseFormFields.vue
+  - resources/js/pages/Admin/Warehouses/**
+  - resources/js/lib/warehouseForm.ts
+  - resources/js/lib/warehouseRules.json
+  - resources/js/lib/location.ts
 ---
 
 # Warehouses: rows belong to one, letters are unique per warehouse, one filter shape
@@ -104,3 +110,11 @@ links to has no warehouse filter yet. The cache key includes the warehouse ids.
 (`WarehouseSummaryResource`); cells nested in a row payload leave it to the
 row. Row listings load `Row::WITH_WAREHOUSE`; `rows/frozen` loads it for its
 `RowSummaryResource`.
+
+## The WMS pages (Vue)
+
+- **Warehouses pages.** `Admin/Warehouses/{Index,Create,Edit}.vue` with `WarehouseFormFields` (name required, code and address optional, native attributes equal to `ValidatesWarehouse`). Create and Edit also pass `ResourceFormPage` the browser validation schema (`lib/warehouseRules.json`, kept equal to the requests by `WarehouseClientValidationParityTest`; `unique` stays on the server). The list shows the row count, offers Delete only while it is 0 (otherwise a "Has rows" notice), and reads the backend's race refusal from `usePageError('warehouse')` into an `ActionErrorBanner`. The nav item sits after Rows; the help topic is `warehouses`.
+- **The filter control.** `FilterWarehouseSelect` (see [filter dialogs](filter-dialogs.md)) is on the dashboard ([dashboard](dashboard.md)), the rows and pallets headers, a bar above the warehouse map, the cell log dialog (Location section and the Cell column popover) and the rounds dialog. The map remounts on a changed selection (`preserveState: false`) and fetches `warehouse-map/rows` with the same `warehouse_ids[]`. Each page puts `warehouse_ids` in its filter state, its active-filter count and Clear, and the pallets "view on map" link keeps it.
+- **Rows.** Create posts a required `warehouse_id` (`StoreSelectField` over the `warehouses` prop); Edit shows the row's warehouse read-only (an update never moves a row); Show lists it in a `DetailList`; the list has a Warehouse column. A pallet transfer from the row page posts the destination row's `warehouse_id`.
+- **Linking to a row.** Every link, form action or export URL for a row goes through `rowLinkOptions(row.warehouse)` (`lib/location.ts`), which adds `warehouse_id`; the cell, pallet, report and round listings therefore carry the cell's `warehouse: {id, name}` (`Cell::toLocationWithWarehouseArray()`, loaded by the admin controllers through `CellStatusLog::WITH_WAREHOUSES` / `CellVerificationReport::WITH_WAREHOUSE` / `Pallet::listedForAdmin()`; the mobile API loads none, so its payloads are unchanged and `PalletControllerTest`-style exact comparisons stay valid). A link built from a bare letter would be refused for a letter two warehouses use.
+- **Row dropdowns.** `Row::filterOptions()` returns `{id, letter}` and adds `warehouse: {id, name}` only for a letter that more than one warehouse uses; `LocationFilterFields` labels such rows "A - Annex" (`rowOptionLabel()`), and the rounds' covered rows name their warehouse (`rows.warehouse` loaded by the admin round controller).

@@ -61,6 +61,7 @@ describe('Help Dashboard', () => {
         expect(headings).toEqual([
             t('help.dashboard.overview.heading'),
             t('help.dashboard.productFilter.heading'),
+            t('help.dashboard.warehouseFilter.heading'),
         ]);
     });
 
@@ -75,6 +76,14 @@ describe('Help Dashboard', () => {
 
         expect(wrapper.text()).toContain(
             t('help.dashboard.productFilter.body'),
+        );
+    });
+
+    it('explains the warehouse filter', () => {
+        const wrapper = mountPage();
+
+        expect(wrapper.text()).toContain(
+            t('help.dashboard.warehouseFilter.body'),
         );
     });
 

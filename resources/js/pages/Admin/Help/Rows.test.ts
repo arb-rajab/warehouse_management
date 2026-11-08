@@ -110,6 +110,10 @@ describe('Help Rows', () => {
         expect(wrapper.text()).toContain(t('rows.fields.cellsPerFlat'));
         expect(wrapper.text()).toContain(t('rows.fields.flats'));
         expect(wrapper.find('#help-row-create-letter').exists()).toBe(true);
+        expect(wrapper.text()).toContain(t('rows.fields.warehouse'));
+        expect(wrapper.find('#help-row-create-warehouse_id').exists()).toBe(
+            true,
+        );
     });
 
     it('renders a preview of the row-edit form fields', () => {

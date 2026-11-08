@@ -12,6 +12,9 @@ import { t } from '@/lib/i18n';
 
 const plainSections = ['grid', 'dimensions'];
 
+/** The warehouse the creation form's preview offers — plain fixture data, never fetched. */
+const previewWarehouses = [{ id: 1, name: 'Main' }];
+
 /** Representative rows for the Rows-list table preview below — plain fixture data, never fetched. */
 const previewRows = [
     { id: 1, letter: 'A', cells_count: 10, flats_count: 3 },
@@ -49,7 +52,11 @@ const previewRows = [
                 />
             </HelpUiPreview>
             <HelpUiPreview inert class="mt-2 block max-w-xs">
-                <RowFormFields id-prefix="help-row-create-" :errors="{}" />
+                <RowFormFields
+                    id-prefix="help-row-create-"
+                    :warehouses="previewWarehouses"
+                    :errors="{}"
+                />
             </HelpUiPreview>
         </section>
 

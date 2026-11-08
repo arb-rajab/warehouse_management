@@ -6,6 +6,8 @@ paths:
   - 'resources/js/components/FilterMultiSelect.test.ts'
   - 'resources/js/components/FilterProductSelect.vue'
   - 'resources/js/components/FilterProductSelect.test.ts'
+  - 'resources/js/components/FilterWarehouseSelect.vue'
+  - 'resources/js/components/FilterWarehouseSelect.test.ts'
 ---
 
 # Filter dialog focus, scrolling and dropdown positioning
@@ -30,3 +32,6 @@ By default FilterDialog renders nothing while closed (`v-if`). With `keepMounted
 
 ## FilterMultiSelect options are role=option with Arrow/Home/End navigation
 Each option `<label>` carries `role="option"` + `:aria-selected="isChecked(...)"`, and its checkbox supports ArrowUp/ArrowDown (wrapping) and Home/End to move focus between options, via `setOptionRef(el, index)` populating `optionRefs` (a plain script function, not an inline template arrow-function ref callback — Vue's ref-unwrap-in-templates rules make an inline `(el) => optionRefs[index] = el` ambiguous/wrong; always define the setter as a real function in `<script setup>` and call it from the template). Tab-based navigation and click-to-toggle still work unchanged; arrow keys are an added enhancement, not a replacement.
+
+## FilterWarehouseSelect is FilterProductSelect for warehouses, with the same panel
+`FilterWarehouseSelect.vue` (props `id`, `label`, `allLabel`, `selectedCountLabel`, `selected`; `defineModel<string[]>`) is the one warehouse filter control. It is built like the product one: options come on demand from `admin/warehouses/search` through `useSearchOptions` (debounced search, paging on scroll, stale-response guard), the already-selected labels come from the page's `filterOptions.warehouses` (`selected`, hydrated by `Warehouse::selectedOptions()`), and the checked warehouses are pinned on top under "Selected" with a "Deselect all". The panel is the same `position: fixed` one (`usePanelMaxWidth`, `usePanelViewportTracking`), so every rule above applies to it unchanged; an option is the warehouse name only (the search endpoint returns `{id, name}`). Do not copy it into a page: place it where the product filter would go (a header for a listing without a dialog, the dialog's Location section on the cell log, the first row of the rounds dialog) and keep `warehouse_ids` in the page's filter state, in its active-filter count and in Clear. A page that renders it needs `useHttp` in its Vitest `@inertiajs/vue3` mock, as one that renders `FilterProductSelect` does. See [warehouses](warehouses.md) for where it appears.
