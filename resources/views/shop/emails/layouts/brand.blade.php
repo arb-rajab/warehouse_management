@@ -1,5 +1,5 @@
 {{--
-    Direction A email shell (docs/identity-proposal/README.md, .ai/rules/views.md).
+    Direction A email shell (palette and decisions in .ai/rules/views.md).
     Inline CSS only and web-safe fonts: mail clients ignore web fonts and
     external stylesheets, and the page loads nothing from a third party. The
     brand red is #C4170C on warm paper (#FAF7F4) and ink (#1F1A17) neutrals; the

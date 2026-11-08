@@ -1,5 +1,7 @@
 /*
- * Direction A ("Souq") tokens, docs/identity-proposal/README.md.
+ * Direction A ("Souq") tokens: brand red #C4170C (hover and strong #A11208),
+ * saffron accent #F2A900, ink #1F1A17, paper #FAF7F4, danger #B42318, IBM Plex
+ * Sans Arabic for both scripts, IBM Plex Mono for codes (.ai/rules/views.md).
  * One source for the public storefront (storefront.css) and the seller panel
  * (seller.css); the back office (app.css) does not import it. The block also
  * maps the legacy theme's own variables (--primary, --dark, ...) onto them.

@@ -1,5 +1,7 @@
 /*
- * Seller panel identity: Direction A ("Souq"), docs/identity-proposal/README.md.
+ * Seller panel identity: Direction A ("Souq"), the storefront's palette (brand red
+ * #C4170C, saffron #F2A900, warm ink and paper neutrals) from brand/tokens.css;
+ * .ai/rules/views.md states the decisions.
  *
  * This is the seller panel's own Vite entry. Only the seller layout
  * (resources/views/shop/seller/layouts/app.blade.php) loads it, after the

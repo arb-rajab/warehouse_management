@@ -1,5 +1,8 @@
 /*
- * Storefront identity: Direction A ("Souq"), docs/identity-proposal/README.md.
+ * Storefront identity: Direction A ("Souq"): brand red #C4170C, saffron accent
+ * #F2A900, warm ink (#1F1A17) and paper (#FAF7F4) neutrals, danger #B42318,
+ * IBM Plex Sans Arabic for both scripts and IBM Plex Mono for codes. The values
+ * live in brand/tokens.css; .ai/rules/views.md states the decisions.
  *
  * This is the public storefront's own Vite entry. Only the storefront Blade
  * layout (resources/views/shop/frontend/layouts/app.blade.php) loads it, after
