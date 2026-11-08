@@ -111,7 +111,7 @@ class ProductBarcodeConflictsCommand extends Command
                     (int) $row->product_id,
                     $row->name,
                     (int) $row->id,
-                    $productIds->reject(fn (int $id): bool => $id === (int) $row->product_id)->values()->all(),
+                    array_values($productIds->reject(fn (int $id): bool => $id === (int) $row->product_id)->all()),
                 );
             }
         }
@@ -140,7 +140,7 @@ class ProductBarcodeConflictsCommand extends Command
                         ->map(fn (mixed $id): int => (int) $id);
 
                     if ($holders->isNotEmpty() && ! $holders->contains((int) $row->product_id)) {
-                        $items[] = $this->item((string) $row->barcode, (int) $row->product_id, $row->name, (int) $row->id, $holders->all(), 'wms_product_barcodes row');
+                        $items[] = $this->item((string) $row->barcode, (int) $row->product_id, $row->name, (int) $row->id, array_values($holders->all()), 'wms_product_barcodes row');
                     }
                 }
             });
@@ -156,13 +156,13 @@ class ProductBarcodeConflictsCommand extends Command
      */
     private function wmsProductMissing(): array
     {
-        return DB::table('wms_product_barcodes as w')
+        return array_values(DB::table('wms_product_barcodes as w')
             ->leftJoin('products as p', 'p.id', '=', 'w.product_id')
             ->whereNull('p.id')
             ->orderBy('w.id')
             ->get(['w.id', 'w.product_id', 'w.barcode'])
             ->map(fn (stdClass $row): array => $this->item((string) $row->barcode, (int) $row->product_id, null, (int) $row->id, [], 'wms_product_barcodes row'))
-            ->all();
+            ->all());
     }
 
     /**

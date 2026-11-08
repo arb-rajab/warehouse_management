@@ -93,6 +93,6 @@ class NewProductBarcode implements ValidationRule
     {
         return $this->held ??= $this->holder === null
             ? []
-            : $this->holder->barcodes()->pluck('barcode')->map(fn (mixed $barcode): string => trim((string) $barcode))->all();
+            : array_values($this->holder->barcodes()->pluck('barcode')->map(fn (mixed $barcode): string => trim((string) $barcode))->all());
     }
 }
