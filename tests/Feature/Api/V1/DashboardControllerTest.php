@@ -325,14 +325,21 @@ test('the mobile dashboard echoes the warehouse filter beside the product filter
     $north = Warehouse::factory()->create(['name' => 'North']);
     $product = Product::factory()->create();
 
-    $response = $this->getJson("/api/v1/dashboard?warehouse_ids[]={$north->id}&product_id[]={$product->id}&product_status=active");
+    // product_status and product_id exclude each other, so each is echoed in its own request.
+    $byProduct = $this->getJson("/api/v1/dashboard?warehouse_ids[]={$north->id}&product_id[]={$product->id}");
+    $byStatus = $this->getJson("/api/v1/dashboard?warehouse_ids[]={$north->id}&product_status=active");
 
-    $response->assertOk();
-    expect($response->json('filters'))->toEqual([
+    $byProduct->assertOk();
+    $byStatus->assertOk();
+    expect($byProduct->json('filters'))->toEqual([
         'product_id' => [$product->id],
+        'product_status' => null,
+        'warehouse_ids' => [$north->id],
+    ])->and($byStatus->json('filters'))->toEqual([
+        'product_id' => null,
         'product_status' => 'active',
         'warehouse_ids' => [$north->id],
-    ])->and($response->json('filterOptions'))->toBeNull();
+    ])->and($byProduct->json('filterOptions'))->toBeNull();
 });
 
 test('the mobile dashboard rejects a warehouse id that does not exist', function () {
