@@ -1345,6 +1345,19 @@ test('a barcode must be unique across every product, not just the one it is bein
     $this->assertDatabaseCount('product_barcodes', 1);
 });
 
+test('a barcode the store holds (written by the store form or the import) is refused too: one shared table', function () {
+    actingAsAdmin();
+
+    $product = Product::factory()->create();
+    $storeProduct = Product::factory()->create();
+    DB::table('product_barcodes')->insert(['product_id' => $storeProduct->id, 'barcode' => 'STORE-ONLY-1']);
+
+    $response = $this->post("/admin/products/{$product->id}/barcodes", ['barcode' => 'STORE-ONLY-1']);
+
+    $response->assertSessionHasErrors(['barcode' => __('validation.unique', ['attribute' => 'barcode'])]);
+    expect(DB::table('product_barcodes')->pluck('product_id')->all())->toBe([$storeProduct->id]);
+});
+
 test('a barcode cannot equal the id of another product', function () {
     actingAsAdmin();
 

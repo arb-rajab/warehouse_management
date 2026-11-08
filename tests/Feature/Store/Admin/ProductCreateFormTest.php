@@ -562,6 +562,19 @@ test('barcodes must be new and distinct and empty rows are skipped', function ()
     expect(DB::table('product_barcodes')->orderBy('id')->pluck('barcode')->all())->toBe(['8710000000001', '4006381333931']);
 });
 
+test('a barcode another product holds, from the WMS or the store, or a product id is refused, and nothing is written', function () {
+    actingAsStoreUser(createStoreStaff('add_new_product'));
+    Artisan::shouldReceive('call')->andReturn(0);
+    ProductBarcode::factory()->create(['product_id' => $this->existing->id, 'barcode' => 'WMS-ADDED-1']);
+    $before = productCreateSnapshot();
+
+    $this->post(route('products.store'), productCreateForm(['product_barcodes' => ['4006381333931', 'WMS-ADDED-1']]))
+        ->assertSessionHasErrors(['product_barcodes.1' => 'The product barcode has already been taken.']);
+    $this->post(route('products.store'), productCreateForm(['product_barcodes' => [(string) $this->existing->id]]))
+        ->assertSessionHasErrors(['product_barcodes.0' => __('messages.barcode_is_product_id')]);
+    expect(productCreateSnapshot())->toEqual($before);
+});
+
 test('uploads follow the ownership, library and file type rules', function () {
     $staff = createStoreStaff('add_new_product');
     actingAsStoreUser($staff);

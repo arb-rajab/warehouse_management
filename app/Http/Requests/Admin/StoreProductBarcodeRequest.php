@@ -2,16 +2,16 @@
 
 namespace App\Http\Requests\Admin;
 
-use App\Models\Product;
-use Closure;
+use App\Rules\NewProductBarcode;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 
 class StoreProductBarcodeRequest extends FormRequest
 {
     /**
-     * Trimmed before validation, so `unique` compares what is actually stored
-     * and a scanner's trailing whitespace can't slip a duplicate past it.
+     * Trimmed before validation, so the uniqueness check compares what is
+     * actually stored and a scanner's trailing whitespace can't slip a
+     * duplicate past it.
      */
     protected function prepareForValidation(): void
     {
@@ -23,42 +23,32 @@ class StoreProductBarcodeRequest extends FormRequest
     /**
      * Get the validation rules that apply to the request.
      *
-     * `unique` is global across every product, not scoped to the one being
-     * added to — a barcode identifies one physical product for scanning, so
-     * the same code must never resolve to two different products (see the
-     * ProductBarcode model).
-     *
-     * A barcode may also never equal a product id: every product already
-     * carries its id as an undeletable default barcode, so a custom barcode
-     * reading the same would resolve to two products (or to one twice).
+     * The WMS keeps its own limits: printable ASCII (what a Code 128 label
+     * can draw) up to 64 characters. NewProductBarcode adds the shared rules:
+     * no product, this one included, may already hold the value anywhere in
+     * the one barcode table (`product_barcodes`, shared with the store), so
+     * one scan never resolves to two products; and the value may not be an
+     * existing product's id, since every product already carries its id as
+     * an undeletable default barcode. The controller repeats the check under
+     * the shared lock before inserting.
      *
      * @return array<string, ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {
-        return [
-            'barcode' => [
-                'required', 'string', 'max:64', 'regex:/^[\x20-\x7E]+$/', 'unique:product_barcodes,barcode',
-                function (string $attribute, mixed $value, Closure $fail): void {
-                    if ($this->isProductId((string) $value)) {
-                        $fail('messages.barcode_is_product_id')->translate();
-                    }
-                },
-            ],
-        ];
+        return self::barcodeRules();
     }
 
     /**
-     * Only the canonical form of an id ("7", not "007" or "7.0") collides:
-     * the default barcode is the id as plain digits, so that is the only
-     * string a scan can match it by.
+     * The rules, also run again by Admin\ProductController::storeBarcode()
+     * under NewProductBarcode::locked().
+     *
+     * @return array<string, list<mixed>>
      */
-    private function isProductId(string $value): bool
+    public static function barcodeRules(): array
     {
-        if (! preg_match('/^[1-9][0-9]{0,17}$/', $value)) {
-            return false;
-        }
-
-        return Product::query()->whereKey((int) $value)->exists();
+        return [
+            'barcode' => ['required', 'string', 'max:64', 'regex:/^[\x20-\x7E]+$/', new NewProductBarcode],
+        ];
     }
 }

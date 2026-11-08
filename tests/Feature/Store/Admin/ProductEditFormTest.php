@@ -517,7 +517,7 @@ test('stored uploads round-trip whoever owns them; new references follow the lib
     expect(DB::table('products')->where('id', $this->product->id)->value('old_photo'))->toBe($stored->id.','.$foreign->id);
 });
 
-test('the product\'s own store barcodes may be posted again; another product\'s may not', function () {
+test('the product\'s own barcodes may be posted again; another product\'s may not', function () {
     actingAsStoreUser(createStoreStaff('product_edit'));
     Artisan::shouldReceive('call')->andReturn(0);
     $before = productEditSnapshot();
@@ -526,6 +526,24 @@ test('the product\'s own store barcodes may be posted again; another product\'s 
     expect(productEditSnapshot())->toEqual($before);
     $this->post(route('products.update', $this->product), productEditForm(['product_barcodes' => []]))->assertSessionHasNoErrors();
     expect(DB::table('product_barcodes')->pluck('barcode')->all())->toBe(['8710000000002']);
+});
+
+test('values the product already holds save again, even one another product shares or its own id; new ones must be new and not an id', function () {
+    actingAsStoreUser(createStoreStaff('product_edit'));
+    Artisan::shouldReceive('call')->andReturn(0);
+    // Legacy data: a value two products share, and the import's own-id row.
+    ProductBarcode::query()->create(['product_id' => $this->product->id, 'barcode' => '8710000000002']);
+    ProductBarcode::query()->create(['product_id' => $this->product->id, 'barcode' => (string) $this->product->id]);
+    $held = ['8710000000001', '8710000000002', (string) $this->product->id];
+    $before = productEditSnapshot();
+
+    $this->post(route('products.update', $this->product), productEditForm(['product_barcodes' => [...$held, (string) $this->other->id]]))
+        ->assertSessionHasErrors(['product_barcodes.3' => __('messages.barcode_is_product_id')]);
+    expect(productEditSnapshot())->toEqual($before);
+
+    $this->post(route('products.update', $this->product), productEditForm(['product_barcodes' => $held]))->assertSessionHasNoErrors();
+    expect(DB::table('product_barcodes')->where('product_id', $this->product->id)->orderBy('barcode')->pluck('barcode')->all())->toEqualCanonicalizing($held)
+        ->and(DB::table('product_barcodes')->where('product_id', $this->other->id)->pluck('barcode')->all())->toBe(['8710000000002']);
 });
 
 test('the update validates every field and refuses rows that do not match the choices', function (array|Closure $overrides, string $field) {
