@@ -1,10 +1,8 @@
 @php($mailLocale = $array['locale'])
-<!DOCTYPE html>
-<html lang="{{ $mailLocale }}" dir="{{ $mailLocale === 'ar' ? 'rtl' : 'ltr' }}">
-<head><meta charset="utf-8"></head>
-<body>
-    <h1>{{ $array['subject'] }}</h1>
-    <p>{{ $array['content'] }}</p>
-    <a dir="ltr" href="{{ $array['link'] }}">{{ __('delivery.mail.see_details', [], $mailLocale) }}</a>
-</body>
-</html>
+@extends('shop.emails.layouts.brand')
+
+@section('content')
+    <h1 style="margin:0 0 16px;font-size:22px;line-height:1.3;font-weight:bold;color:#1f1a17;">{{ $array['subject'] }}</h1>
+    <p style="margin:0 0 14px;">{{ $array['content'] }}</p>
+    @include('shop.emails.partials.button', ['href' => $array['link'], 'label' => __('delivery.mail.see_details', [], $mailLocale)])
+@endsection
