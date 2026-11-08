@@ -33,6 +33,11 @@ Maintain shared instructions here and in the referenced `.ai/` files; keep
     `DetailList`/`DetailItem`, per [.ai/rules/detail-lists.md](.ai/rules/detail-lists.md):
     the label sits above its value, empty values show "-", and a bare `<dl>`/`dt`/`dd`,
     a two-column label grid or a label-left/value-right line is never used.
+11. Product barcodes live in the one table `product_barcodes`, per
+    [.ai/rules/product-barcodes.md](.ai/rules/product-barcodes.md): own-id rows are
+    never deleted by a form, new values pass `NewProductBarcode` under its lock,
+    every product delete path deletes its barcodes, labels go through
+    `ProductBarcodeLabels`, and the Store form always posts `product_barcodes_seen`.
 
 Read this file and the rules index fully once per session. For
 `.ai/agent-framework.md` and `.ai/agent-conventions.md`, read the whole file for
