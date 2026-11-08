@@ -71,7 +71,9 @@ test('the hero is hidden when the admin has configured a home slider, and the sl
 });
 
 test('an empty slider setting, as the admin form can store, still shows the hero', function (string $value) {
+    // The admin form stores the images and their links together.
     storeSetting('home_slider_images', $value);
+    storeSetting('home_slider_links', $value);
 
     $this->withSession(['locale' => 'en'])->get('/temp')->assertOk()
         ->assertSee('class="sf-hero"', false);
