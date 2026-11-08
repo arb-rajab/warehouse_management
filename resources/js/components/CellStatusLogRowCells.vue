@@ -16,7 +16,7 @@ import {
 import type { DisplayCellStatusLog } from '@/lib/cellStatusLogDisplay';
 import { formatDate, formatDateTime, formatDuration } from '@/lib/date';
 import { t } from '@/lib/i18n';
-import { formatSlot } from '@/lib/location';
+import { formatSlot, rowLinkOptions } from '@/lib/location';
 import { productName } from '@/lib/productName';
 
 /**
@@ -54,12 +54,10 @@ const pair = computed(() => transferPair(props.log));
                 :href="
                     showRow(
                         { letter: pair.from.row_letter },
-                        {
-                            query: {
-                                cell_number: pair.from.cell_number,
-                                flat_number: pair.from.flat_number,
-                            },
-                        },
+                        rowLinkOptions(pair.from.warehouse, {
+                            cell_number: pair.from.cell_number,
+                            flat_number: pair.from.flat_number,
+                        }),
                     )
                 "
             >
@@ -79,12 +77,10 @@ const pair = computed(() => transferPair(props.log));
                     :href="
                         showRow(
                             { letter: pair.to.row_letter },
-                            {
-                                query: {
-                                    cell_number: pair.to.cell_number,
-                                    flat_number: pair.to.flat_number,
-                                },
-                            },
+                            rowLinkOptions(pair.to.warehouse, {
+                                cell_number: pair.to.cell_number,
+                                flat_number: pair.to.flat_number,
+                            }),
                         )
                     "
                 >

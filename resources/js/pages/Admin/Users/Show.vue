@@ -29,7 +29,7 @@ import {
 import { formatDateTime } from '@/lib/date';
 import { filterSectionHeadingClass as sectionHeadingClass } from '@/lib/filters';
 import { t } from '@/lib/i18n';
-import { formatSlot } from '@/lib/location';
+import { formatSlot, rowLinkOptions } from '@/lib/location';
 import { usePageError } from '@/lib/pageErrors';
 import type {
     CellStatusLog,
@@ -160,14 +160,10 @@ function onReportsPerPageChange(perPage: number): void {
                             :href="
                                 showRow(
                                     { letter: report.cell.row_letter },
-                                    {
-                                        query: {
-                                            cell_number:
-                                                report.cell.cell_number,
-                                            flat_number:
-                                                report.cell.flat_number,
-                                        },
-                                    },
+                                    rowLinkOptions(report.cell.warehouse, {
+                                        cell_number: report.cell.cell_number,
+                                        flat_number: report.cell.flat_number,
+                                    }),
                                 )
                             "
                         >

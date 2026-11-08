@@ -100,6 +100,26 @@ test('filterOptions returns rows ordered by letter and the highest cells_count a
     expect($options['maxColumnNumber'])->toBe(5);
 });
 
+test('filterOptions leaves a letter only one warehouse uses as a plain id and letter', function () {
+    $row = Row::factory()->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 1]);
+
+    expect(Row::filterOptions()['rows']->all())->toBe([['id' => $row->id, 'letter' => 'A']]);
+});
+
+test('filterOptions names the warehouse of a letter that two warehouses share, and only of those', function () {
+    $main = Warehouse::firstOrCreateDefault();
+    $annex = Warehouse::factory()->create(['name' => 'Annex']);
+    $mainA = Row::factory()->for($main)->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 1]);
+    $annexA = Row::factory()->for($annex)->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 1]);
+    $annexB = Row::factory()->for($annex)->create(['letter' => 'B', 'cells_count' => 1, 'flats_count' => 1]);
+
+    expect(Row::filterOptions()['rows']->all())->toBe([
+        ['id' => $mainA->id, 'letter' => 'A', 'warehouse' => ['id' => $main->id, 'name' => Warehouse::DEFAULT_NAME]],
+        ['id' => $annexA->id, 'letter' => 'A', 'warehouse' => ['id' => $annex->id, 'name' => 'Annex']],
+        ['id' => $annexB->id, 'letter' => 'B'],
+    ]);
+});
+
 test('filterOptions maxColumnNumber is 0 when there are no rows', function () {
     $options = Row::filterOptions();
 

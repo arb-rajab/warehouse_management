@@ -7,7 +7,7 @@ import TableLink from '@/components/TableLink.vue';
 import { cellStateLabel } from '@/lib/cellStateColor';
 import { formatDate } from '@/lib/date';
 import { t } from '@/lib/i18n';
-import { formatSlot } from '@/lib/location';
+import { formatSlot, rowLinkOptions } from '@/lib/location';
 import { productName } from '@/lib/productName';
 import type { MatchingPallet } from '@/types/admin';
 
@@ -60,12 +60,10 @@ defineProps<{
                     :href="
                         showRow(
                             { letter: pallet.location.row_letter },
-                            {
-                                query: {
-                                    cell_number: pallet.location.cell_number,
-                                    flat_number: pallet.location.flat_number,
-                                },
-                            },
+                            rowLinkOptions(pallet.location.warehouse, {
+                                cell_number: pallet.location.cell_number,
+                                flat_number: pallet.location.flat_number,
+                            }),
                         )
                     "
                 >

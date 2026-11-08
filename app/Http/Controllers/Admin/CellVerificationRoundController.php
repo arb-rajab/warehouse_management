@@ -42,7 +42,7 @@ class CellVerificationRoundController extends Controller
 
         $rounds = CellVerificationRound::query()
             ->select(CellVerificationRound::SELECT_COLUMNS)
-            ->with(['user:id,name', 'rows:id,letter'])
+            ->with(['user:id,name', 'rows:id,warehouse_id,letter', 'rows.warehouse:id,name'])
             ->withCount('reports')
             ->filtered($request)
             ->forWarehouses($request->warehouseIds())
@@ -75,7 +75,7 @@ class CellVerificationRoundController extends Controller
 
         $reports = CellVerificationReport::query()
             ->select(CellVerificationReport::SELECT_COLUMNS)
-            ->with(CellVerificationReport::WITH_DETAILS)
+            ->with([...CellVerificationReport::WITH_DETAILS, ...CellVerificationReport::WITH_WAREHOUSE])
             ->where('cell_verification_round_id', $cellVerificationRound->id)
             ->filtered($request)
             ->sorted($request)
@@ -83,7 +83,7 @@ class CellVerificationRoundController extends Controller
             ->withQueryString();
 
         return Inertia::render('Admin/CellVerificationRounds/Show', [
-            'round' => new CellVerificationRoundResource($cellVerificationRound->loadMissing(['user:id,name', 'rows:id,letter'])->loadCount('reports')),
+            'round' => new CellVerificationRoundResource($cellVerificationRound->loadMissing(['user:id,name', 'rows:id,warehouse_id,letter', 'rows.warehouse:id,name'])->loadCount('reports')),
             'reports' => $this->paginated(CellVerificationReportResource::collection($reports)),
             'filters' => [
                 ...$request->only(['cell_id', 'row_id', 'column_number', 'product_id', 'is_correct', 'date_from', 'date_to', 'created_within_days', 'sort_direction']),

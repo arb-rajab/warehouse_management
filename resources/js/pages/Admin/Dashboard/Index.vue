@@ -23,6 +23,7 @@ import DashboardStatTile from '@/components/DashboardStatTile.vue';
 import FilterDialog from '@/components/FilterDialog.vue';
 import FilterNumberField from '@/components/FilterNumberField.vue';
 import FilterProductSelect from '@/components/FilterProductSelect.vue';
+import FilterWarehouseSelect from '@/components/FilterWarehouseSelect.vue';
 import HelpLink from '@/components/HelpLink.vue';
 import MatchingPalletsTable from '@/components/MatchingPalletsTable.vue';
 import PageHeader from '@/components/PageHeader.vue';
@@ -35,7 +36,11 @@ import {
     selectedCountLabel,
 } from '@/lib/filters';
 import { t } from '@/lib/i18n';
-import type { MatchingPallet, ProductFilterOptions } from '@/types/admin';
+import type {
+    MatchingPallet,
+    ProductFilterOptions,
+    WarehouseFilterOptions,
+} from '@/types/admin';
 
 interface ExpiringMonthWindow {
     months: number;
@@ -90,8 +95,8 @@ const props = defineProps<{
     today: string;
     weekStart: string;
     productPallets: MatchingPallet[];
-    filters: { product_id: number[] | null };
-    filterOptions: ProductFilterOptions;
+    filters: { product_id: number[] | null; warehouse_ids: number[] | null };
+    filterOptions: ProductFilterOptions & WarehouseFilterOptions;
 }>();
 
 const tileGridClass = 'grid grid-cols-2 gap-4 sm:grid-cols-3';
@@ -100,9 +105,24 @@ const productIdStrings = computed(() =>
     (props.filters.product_id ?? []).map(String),
 );
 
+const warehouseIdStrings = computed(() =>
+    (props.filters.warehouse_ids ?? []).map(String),
+);
+
 const productQuery = computed(() =>
     props.filters.product_id && props.filters.product_id.length > 0
         ? { product_id: props.filters.product_id }
+        : {},
+);
+
+/**
+ * The warehouse filter, carried by every tile link whose page filters by
+ * warehouse (pallets, activity log). The products page has no warehouse
+ * filter, so its links leave it out.
+ */
+const warehouseQuery = computed(() =>
+    props.filters.warehouse_ids && props.filters.warehouse_ids.length > 0
+        ? { warehouse_ids: props.filters.warehouse_ids }
         : {},
 );
 
@@ -138,6 +158,7 @@ function submitCustomExpiringDays(): void {
         dashboardIndex().url,
         {
             product_id: props.filters.product_id ?? [],
+            warehouse_ids: props.filters.warehouse_ids ?? [],
             expiring_days: Number(customExpiringDaysDraft.value),
             stale_days: props.stats.stale.days,
         },
@@ -163,6 +184,7 @@ function submitCustomStaleDays(): void {
         dashboardIndex().url,
         {
             product_id: props.filters.product_id ?? [],
+            warehouse_ids: props.filters.warehouse_ids ?? [],
             expiring_days: props.stats.expiring.custom.days,
             stale_days: Number(customStaleDaysDraft.value),
         },
@@ -176,6 +198,20 @@ function onProductIdsChange(ids: string[]): void {
         dashboardIndex().url,
         {
             product_id: ids,
+            warehouse_ids: props.filters.warehouse_ids ?? [],
+            expiring_days: props.stats.expiring.custom.days,
+            stale_days: props.stats.stale.days,
+        },
+        { preserveState: true, replace: true },
+    );
+}
+
+function onWarehouseIdsChange(ids: string[]): void {
+    router.get(
+        dashboardIndex().url,
+        {
+            product_id: props.filters.product_id ?? [],
+            warehouse_ids: ids,
             expiring_days: props.stats.expiring.custom.days,
             stale_days: props.stats.stale.days,
         },
@@ -200,6 +236,15 @@ function onProductIdsChange(ids: string[]): void {
                     :selected="filterOptions.products"
                     @update:model-value="onProductIdsChange"
                 />
+                <FilterWarehouseSelect
+                    id="dashboard-warehouse"
+                    :model-value="warehouseIdStrings"
+                    :label="t('warehouses.filters.label')"
+                    :all-label="t('cellLog.filters.all')"
+                    :selected-count-label="selectedCountLabel"
+                    :selected="filterOptions.warehouses"
+                    @update:model-value="onWarehouseIdsChange"
+                />
             </div>
         </PageHeader>
 
@@ -216,7 +261,11 @@ function onProductIdsChange(ids: string[]): void {
                 :empty-message="t('dashboard.productPallets.empty')"
             />
             <Link
-                :href="palletsIndex({ query: productQuery })"
+                :href="
+                    palletsIndex({
+                        query: { ...productQuery, ...warehouseQuery },
+                    })
+                "
                 :class="['mt-3', filterTriggerButtonClass]"
             >
                 {{ t('dashboard.productPallets.viewAll') }}
@@ -233,7 +282,11 @@ function onProductIdsChange(ids: string[]): void {
                     :value="stats.occupancy.empty"
                     :href="
                         palletsIndex({
-                            query: { state: 'empty', ...productQuery },
+                            query: {
+                                state: 'empty',
+                                ...productQuery,
+                                ...warehouseQuery,
+                            },
                         })
                     "
                     :icon="CELL_STATE_COLOR.empty.icon"
@@ -243,7 +296,11 @@ function onProductIdsChange(ids: string[]): void {
                     :value="stats.occupancy.full"
                     :href="
                         palletsIndex({
-                            query: { state: 'full', ...productQuery },
+                            query: {
+                                state: 'full',
+                                ...productQuery,
+                                ...warehouseQuery,
+                            },
                         })
                     "
                     :icon="CELL_STATE_COLOR.full.icon"
@@ -253,7 +310,11 @@ function onProductIdsChange(ids: string[]): void {
                     :value="stats.occupancy.opened"
                     :href="
                         palletsIndex({
-                            query: { state: 'opened', ...productQuery },
+                            query: {
+                                state: 'opened',
+                                ...productQuery,
+                                ...warehouseQuery,
+                            },
                         })
                     "
                     :icon="CELL_STATE_COLOR.opened.icon"
@@ -274,6 +335,7 @@ function onProductIdsChange(ids: string[]): void {
                             query: {
                                 expired: true,
                                 ...productQuery,
+                                ...warehouseQuery,
                             },
                         })
                     "
@@ -294,6 +356,7 @@ function onProductIdsChange(ids: string[]): void {
                             query: {
                                 expires_within_days: window.days,
                                 ...productQuery,
+                                ...warehouseQuery,
                             },
                         })
                     "
@@ -312,6 +375,7 @@ function onProductIdsChange(ids: string[]): void {
                             query: {
                                 expires_within_days: stats.expiring.custom.days,
                                 ...productQuery,
+                                ...warehouseQuery,
                             },
                         })
                     "
@@ -383,6 +447,7 @@ function onProductIdsChange(ids: string[]): void {
                             query: {
                                 stale_after_days: stats.stale.days,
                                 ...productQuery,
+                                ...warehouseQuery,
                             },
                         })
                     "
@@ -490,6 +555,7 @@ function onProductIdsChange(ids: string[]): void {
                                 date_from: today,
                                 date_to: today,
                                 ...productQuery,
+                                ...warehouseQuery,
                             },
                         })
                     "
@@ -515,6 +581,7 @@ function onProductIdsChange(ids: string[]): void {
                                 date_from: weekStart,
                                 date_to: today,
                                 ...productQuery,
+                                ...warehouseQuery,
                             },
                         })
                     "

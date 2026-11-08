@@ -16,6 +16,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\Relation;
+use Illuminate\Support\Collection as BaseCollection;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -319,14 +320,30 @@ class Row extends Model
 
     /**
      * The rows + max column number shape shared by the admin cell and cell
-     * status log filter dropdowns.
+     * status log filter dropdowns. A row is `{id, letter}`, plus its
+     * `warehouse` (`{id, name}`) only when another warehouse has a row with
+     * the same letter, so the dropdown can tell the two apart ("A - Annex")
+     * while a letter only one warehouse uses keeps its plain label. Ordered by
+     * letter, then warehouse.
      *
-     * @return array{rows: Collection<int, Row>, maxColumnNumber: int}
+     * @return array{rows: BaseCollection<int, array{id: int, letter: string, warehouse?: array{id: int, name: string}}>, maxColumnNumber: int}
      */
     public static function filterOptions(): array
     {
+        $rows = self::query()->select(['id', 'warehouse_id', 'letter'])->orderBy('letter')->orderBy('warehouse_id')->get();
+        $sharedLetters = $rows->countBy('letter')->filter(fn (int $count): bool => $count > 1);
+        $warehouseNames = $sharedLetters->isEmpty()
+            ? new BaseCollection
+            : Warehouse::query()->whereIn('id', $rows->whereIn('letter', $sharedLetters->keys()->all())->pluck('warehouse_id'))->pluck('name', 'id');
+
         return [
-            'rows' => self::query()->select(['id', 'letter'])->orderBy('letter')->get(),
+            'rows' => $rows->toBase()->map(fn (Row $row): array => [
+                'id' => $row->id,
+                'letter' => $row->letter,
+                ...($sharedLetters->has($row->letter)
+                    ? ['warehouse' => ['id' => $row->warehouse_id, 'name' => (string) $warehouseNames->get($row->warehouse_id)]]
+                    : []),
+            ]),
             'maxColumnNumber' => (int) (self::query()->max('cells_count') ?? 0),
         ];
     }

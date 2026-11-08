@@ -189,6 +189,9 @@ function buildRequest(): PalletActionRequest | null {
             return {
                 action: transfer(pallet, query),
                 data: {
+                    // A letter names one row per warehouse, so the transfer
+                    // names the chosen row's warehouse too.
+                    ...transferWarehouse(),
                     row_letter: form.row_letter,
                     cell_number: form.cell_number,
                     flat_number: form.flat_number,
@@ -208,6 +211,14 @@ function buildRequest(): PalletActionRequest | null {
         default:
             return null;
     }
+}
+
+function transferWarehouse(): { warehouse_id?: number } {
+    const warehouseId = props.rows.find(
+        (row) => row.letter === form.row_letter,
+    )?.warehouse_id;
+
+    return warehouseId === undefined ? {} : { warehouse_id: warehouseId };
 }
 
 function submit(): void {

@@ -6,6 +6,8 @@ import { edit } from '@/actions/App/Http/Controllers/Admin/RowController';
 import ActionErrorBanner from '@/components/ActionErrorBanner.vue';
 import CellHighlightFilters from '@/components/CellHighlightFilters.vue';
 import CellSlot from '@/components/CellSlot.vue';
+import DetailItem from '@/components/DetailItem.vue';
+import DetailList from '@/components/DetailList.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import PalletActionsDialog from '@/components/PalletActionsDialog.vue';
 import ToggleCellActiveDialog from '@/components/ToggleCellActiveDialog.vue';
@@ -16,7 +18,7 @@ import {
     matchesCellHighlight,
 } from '@/lib/cellHighlight';
 import { t } from '@/lib/i18n';
-import { formatSlot } from '@/lib/location';
+import { formatSlot, rowLinkOptions } from '@/lib/location';
 import { usePageError } from '@/lib/pageErrors';
 import { usePulse } from '@/lib/usePulse';
 import type {
@@ -188,7 +190,7 @@ const palletActionError = usePageError('action');
                     :products="filterOptions.products"
                 />
                 <Link
-                    :href="edit(row)"
+                    :href="edit(row, rowLinkOptions(row.warehouse))"
                     class="inline-flex items-center gap-1 text-sm text-gray-600 hover:underline dark:text-neutral-400"
                 >
                     <Pencil class="h-3.5 w-3.5" />
@@ -196,6 +198,13 @@ const palletActionError = usePageError('action');
                 </Link>
             </div>
         </PageHeader>
+
+        <DetailList :title="t('rows.show.details')" class="mb-6">
+            <DetailItem
+                :label="t('rows.show.warehouse')"
+                :value="row.warehouse.name"
+            />
+        </DetailList>
 
         <ActionErrorBanner :message="palletActionError" />
 

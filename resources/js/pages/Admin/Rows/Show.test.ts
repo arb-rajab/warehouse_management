@@ -152,7 +152,34 @@ describe('Rows Show', () => {
         const editLink = wrapper
             .findAll('a')
             .find((a) => a.text().includes(t('rows.show.editRow')));
-        expect(editLink?.attributes('href')).toBe(rowEdit.url({ row: 'B' }));
+        expect(editLink?.attributes('href')).toBe(
+            rowEdit.url({ row: 'B' }, { query: { warehouse_id: 1 } }),
+        );
+    });
+
+    it("shows the row's warehouse in a details list", () => {
+        const wrapper = mountPage(
+            { letter: 'B', warehouse: { id: 5, name: 'Annex' } },
+            [],
+        );
+
+        const item = wrapper.get('dl > div');
+        expect(item.get('dt').text()).toBe(t('rows.show.warehouse'));
+        expect(item.get('dd').text()).toBe('Annex');
+    });
+
+    it('links to the edit page of the row in its own warehouse, so a shared letter opens the right row', () => {
+        const wrapper = mountPage(
+            { letter: 'B', warehouse: { id: 5, name: 'Annex' } },
+            [],
+        );
+
+        const editLink = wrapper
+            .findAll('a')
+            .find((a) => a.text().includes(t('rows.show.editRow')));
+        expect(editLink?.attributes('href')).toBe(
+            rowEdit.url({ row: 'B' }, { query: { warehouse_id: 5 } }),
+        );
     });
 
     it('renders a column header for every cell number, ascending', () => {

@@ -57,8 +57,8 @@ class CellStatusLogResource extends JsonResource
             'to_state' => $this->to_state->value,
             'note' => $this->note,
             'boxes_count' => $this->boxes_count,
-            'cell' => $this->whenLoaded('cell', fn () => $this->cell->toLocationArray()),
-            'related_cell' => $this->whenLoaded('relatedCell', fn () => $this->relatedCell?->toLocationArray()),
+            'cell' => $this->whenLoaded('cell', fn () => $this->cell->toLocationWithWarehouseArray()),
+            'related_cell' => $this->whenLoaded('relatedCell', fn () => $this->relatedCell?->toLocationWithWarehouseArray()),
             'product' => $this->whenLoaded('product', fn () => $this->product === null ? null : new ProductResource($this->product)),
             'pallet' => $this->pallet_id === null ? null : [
                 'id' => $this->pallet_id,

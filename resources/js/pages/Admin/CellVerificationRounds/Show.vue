@@ -49,7 +49,7 @@ import {
     toggleSort,
 } from '@/lib/filters';
 import { t } from '@/lib/i18n';
-import { formatRowLetters, formatSlot } from '@/lib/location';
+import { formatRowLetters, formatSlot, rowLinkOptions } from '@/lib/location';
 import { usePageError } from '@/lib/pageErrors';
 import type {
     CellVerificationReport,
@@ -390,12 +390,10 @@ const actionError = usePageError('action');
                         :href="
                             showRow(
                                 { letter: row.cell.row_letter },
-                                {
-                                    query: {
-                                        cell_number: row.cell.cell_number,
-                                        flat_number: row.cell.flat_number,
-                                    },
-                                },
+                                rowLinkOptions(row.cell.warehouse, {
+                                    cell_number: row.cell.cell_number,
+                                    flat_number: row.cell.flat_number,
+                                }),
                             )
                         "
                     >

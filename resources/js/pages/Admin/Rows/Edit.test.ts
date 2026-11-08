@@ -57,8 +57,26 @@ describe('Rows Edit', () => {
         const wrapper = mountPage({ letter: 'B' });
 
         expect(wrapper.get('form').attributes('data-action-url')).toBe(
-            rowShow.url({ row: 'B' }),
+            rowShow.url({ row: 'B' }, { query: { warehouse_id: 1 } }),
         );
+    });
+
+    it('addresses the row in its own warehouse and shows that warehouse read-only', () => {
+        const wrapper = mountPage({
+            letter: 'B',
+            warehouse: { id: 5, name: 'Annex' },
+        });
+
+        expect(wrapper.get('form').attributes('data-action-url')).toBe(
+            rowShow.url({ row: 'B' }, { query: { warehouse_id: 5 } }),
+        );
+        expect(wrapper.findComponent(RowFormFields).props()).toMatchObject({
+            warehouseName: 'Annex',
+        });
+        expect(
+            (wrapper.get('#warehouse_name').element as HTMLInputElement)
+                .readOnly,
+        ).toBe(true);
     });
 
     it('passes the row values to the row form fields', () => {

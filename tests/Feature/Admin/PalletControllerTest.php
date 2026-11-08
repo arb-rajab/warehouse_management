@@ -77,6 +77,20 @@ test('the matching pallets list says whether each product is still sold and each
     );
 });
 
+test('the matching pallets list names the warehouse of each pallet\'s cell, so a link to its row can address the right row', function () {
+    actingAsAdmin();
+    $annex = Warehouse::factory()->create(['name' => 'Annex']);
+    $row = Row::factory()->for($annex)->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 1]);
+    $pallet = Pallet::factory()->create(['cell_id' => $row->cells()->first()->id, 'expiration_date' => '2026-09-01']);
+
+    $this->get('/admin/pallets')->assertOk()->assertInertia(
+        fn (Assert $page) => $page->component('Admin/Pallets/Index')
+            ->where('pallets.data.0.id', $pallet->id)
+            ->where('pallets.data.0.location.row_letter', 'A')
+            ->where('pallets.data.0.location.warehouse', ['id' => $annex->id, 'name' => 'Annex'])
+    );
+});
+
 test('the matching pallets list filters by cell state, excluding a pallet in a different state', function () {
     actingAsAdmin();
     $row = Row::factory()->create(['cells_count' => 1, 'flats_count' => 2]);

@@ -4,12 +4,13 @@ import { Map } from '@lucide/vue';
 import { computed } from 'vue';
 import { index as palletsIndex } from '@/actions/App/Http/Controllers/Admin/PalletController';
 import { index as warehouseMapIndex } from '@/actions/App/Http/Controllers/Admin/WarehouseMapController';
+import FilterWarehouseSelect from '@/components/FilterWarehouseSelect.vue';
 import MatchingPalletsTable from '@/components/MatchingPalletsTable.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import Pagination from '@/components/Pagination.vue';
 import AdminLayout from '@/layouts/AdminLayout.vue';
 import { cellStateLabel } from '@/lib/cellStateColor';
-import { filterTriggerButtonClass } from '@/lib/filters';
+import { filterTriggerButtonClass, selectedCountLabel } from '@/lib/filters';
 import { t } from '@/lib/i18n';
 import { productName } from '@/lib/productName';
 import type {
@@ -17,6 +18,7 @@ import type {
     MatchingPalletFilters,
     Paginated,
     ProductFilterOptions,
+    WarehouseFilterOptions,
 } from '@/types/admin';
 import { filterHash } from '@/warehouse-map/domain/SlotCode';
 import type { QueryParams } from '@/wayfinder';
@@ -24,7 +26,7 @@ import type { QueryParams } from '@/wayfinder';
 const props = defineProps<{
     pallets: Paginated<MatchingPallet>;
     filters: MatchingPalletFilters;
-    filterOptions: ProductFilterOptions;
+    filterOptions: ProductFilterOptions & WarehouseFilterOptions;
 }>();
 
 /**
@@ -39,12 +41,17 @@ const filterQuery = computed<QueryParams>(() => {
 
 /**
  * The warehouse map, opened on the same products (any of them) and cell state
- * through its `#products=…&state=…` filter link. The other filters (expiry,
- * staleness, inactive cells) have no equivalent there and are left behind.
+ * through its `#products=…&state=…` filter link, and on the same warehouses
+ * through `warehouse_ids[]`. The other filters (expiry, staleness, inactive
+ * cells) have no equivalent there and are left behind.
  */
 const mapHref = computed(
     () =>
-        warehouseMapIndex.url() +
+        warehouseMapIndex({
+            query: props.filters.warehouse_ids
+                ? { warehouse_ids: props.filters.warehouse_ids }
+                : {},
+        }).url +
         filterHash({
             productIds: props.filters.product_id ?? [],
             state: props.filters.state ?? null,
@@ -76,6 +83,14 @@ const filterChips = computed<string[]>(() => {
         );
     }
 
+    if (props.filterOptions.warehouses.length > 0) {
+        chips.push(
+            props.filterOptions.warehouses
+                .map((warehouse) => warehouse.name)
+                .join(', '),
+        );
+    }
+
     if (props.filterOptions.products.length > 0) {
         chips.push(
             props.filterOptions.products
@@ -86,6 +101,14 @@ const filterChips = computed<string[]>(() => {
 
     return chips;
 });
+
+function onWarehouseIdsChange(ids: string[]): void {
+    router.get(
+        palletsIndex().url,
+        { ...filterQuery.value, warehouse_ids: ids },
+        { preserveState: true, replace: true },
+    );
+}
 
 function onPerPageChange(perPage: number): void {
     router.get(
@@ -101,10 +124,21 @@ function onPerPageChange(perPage: number): void {
 
     <AdminLayout>
         <PageHeader :title="t('pallets.title')">
-            <Link :href="mapHref" :class="filterTriggerButtonClass">
-                <Map class="h-4 w-4" />
-                {{ t('pallets.viewOnMap') }}
-            </Link>
+            <div class="flex items-end gap-4">
+                <FilterWarehouseSelect
+                    id="pallets-warehouse"
+                    :model-value="(filters.warehouse_ids ?? []).map(String)"
+                    :label="t('warehouses.filters.label')"
+                    :all-label="t('cellLog.filters.all')"
+                    :selected-count-label="selectedCountLabel"
+                    :selected="filterOptions.warehouses"
+                    @update:model-value="onWarehouseIdsChange"
+                />
+                <Link :href="mapHref" :class="filterTriggerButtonClass">
+                    <Map class="h-4 w-4" />
+                    {{ t('pallets.viewOnMap') }}
+                </Link>
+            </div>
         </PageHeader>
 
         <div

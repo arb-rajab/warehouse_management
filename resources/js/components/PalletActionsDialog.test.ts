@@ -92,12 +92,15 @@ function fullCell(remainingBoxes: number): CellWithLocation {
  * is only set by the `watch(open, ...)` handler, which needs a false→true
  * transition to fire (see FilterDialog.test.ts for the same pattern).
  */
-async function mountDialog(cell: CellWithLocation | null) {
+async function mountDialog(
+    cell: CellWithLocation | null,
+    destinationRows: CellMapRow[] = rows,
+) {
     const wrapper = mount(PalletActionsDialog, {
         props: {
             cell,
             label: 'A2·1',
-            rows,
+            rows: destinationRows,
             open: false,
             'onUpdate:open': () => {},
         },
@@ -463,6 +466,39 @@ describe('PalletActionsDialog', () => {
             cell_number: 3,
             flat_number: 2,
         });
+    });
+
+    it("names the destination row's warehouse in the transfer, since a letter is unique per warehouse only", async () => {
+        const wrapper = await mountDialog(fullCell(6), [
+            { ...rows[0], warehouse_id: 4 },
+        ]);
+
+        await wrapper
+            .findAll('[data-testid="pallet-action-tab"]')[2]
+            .trigger('click');
+        await wrapper.get('#pallet-action-to-row').setValue('A');
+        await wrapper.get('#pallet-action-to-cell').setValue('3');
+        await wrapper.get('#pallet-action-to-flat').setValue('2');
+        await wrapper.get('form').trigger('submit');
+
+        expect(submitMock.mock.calls[0][1]).toMatchObject({
+            warehouse_id: 4,
+            row_letter: 'A',
+        });
+    });
+
+    it('sends no warehouse with a transfer to a row whose warehouse the page did not name', async () => {
+        const wrapper = await mountDialog(fullCell(6));
+
+        await wrapper
+            .findAll('[data-testid="pallet-action-tab"]')[2]
+            .trigger('click');
+        await wrapper.get('#pallet-action-to-row').setValue('A');
+        await wrapper.get('#pallet-action-to-cell').setValue('3');
+        await wrapper.get('#pallet-action-to-flat').setValue('2');
+        await wrapper.get('form').trigger('submit');
+
+        expect(submitMock.mock.calls[0][1]).not.toHaveProperty('warehouse_id');
     });
 
     it("prefills the edit tab with the pallet's current product, expiration date, and remaining boxes, and hides the note field", async () => {

@@ -13,7 +13,7 @@ import { t } from '@/lib/i18n';
 import { rowCells } from '@/testing/dom';
 import { paginated, row } from '@/testing/factories';
 import { defaultAuthProps, resetMocks } from '@/testing/inertiaPageMocks';
-import type { Row } from '@/types/admin';
+import type { Row, RowFilters, WarehouseSummary } from '@/types/admin';
 import Index from './Index.vue';
 
 const { usePageMock, routerPostMock, routerGetMock } = vi.hoisted(() => ({
@@ -30,6 +30,13 @@ vi.mock('@inertiajs/vue3', async () => {
         Link: createLinkStub(),
         usePage: usePageMock,
         router: { post: routerPostMock, get: routerGetMock },
+        useHttp: () => ({
+            get: (
+                _url: string,
+                options?: { onSuccess?: (response: unknown) => void },
+            ) =>
+                options?.onSuccess?.(paginated([{ id: 5, name: 'Annex' }], 20)),
+        }),
     };
 });
 
@@ -37,6 +44,8 @@ function mountPage(
     rows: Row[],
     errors: Partial<Record<'row', string>> = {},
     perPage = 20,
+    filters: RowFilters = {},
+    selectedWarehouses: WarehouseSummary[] = [],
 ) {
     usePageMock.mockReturnValue({
         url: rowsIndex.url(),
@@ -44,7 +53,11 @@ function mountPage(
     });
 
     return mount(Index, {
-        props: { rows: paginated(rows), filters: { per_page: perPage } },
+        props: {
+            rows: paginated(rows),
+            filters: { per_page: perPage, ...filters },
+            filterOptions: { warehouses: selectedWarehouses },
+        },
     });
 }
 
@@ -68,6 +81,7 @@ describe('Rows Index', () => {
         const headers = wrapper.findAll('thead th').map((th) => th.text());
         expect(headers).toEqual([
             t('rows.index.columnLetter'),
+            t('rows.index.columnWarehouse'),
             t('rows.index.columnCells'),
             t('rows.index.columnFlats'),
             t('rows.index.columnAction'),
@@ -102,13 +116,19 @@ describe('Rows Index', () => {
 
     it('renders the letter, cell count, and flat count for a row', () => {
         const wrapper = mountPage([
-            row({ letter: 'B', cells_count: 3, flats_count: 4 }),
+            row({
+                letter: 'B',
+                cells_count: 3,
+                flats_count: 4,
+                warehouse: { id: 5, name: 'Annex' },
+            }),
         ]);
 
         const cells = rowCells(wrapper);
         expect(cells[0].text()).toBe('B');
-        expect(cells[1].text()).toBe('3');
-        expect(cells[2].text()).toBe('4');
+        expect(cells[1].text()).toBe('Annex');
+        expect(cells[2].text()).toBe('3');
+        expect(cells[3].text()).toBe('4');
     });
 
     it("links a row's view action to its show page", () => {
@@ -117,7 +137,9 @@ describe('Rows Index', () => {
         const viewLink = wrapper
             .findAll('a')
             .find((a) => a.text().includes(t('rows.index.view')));
-        expect(viewLink?.attributes('href')).toBe(rowShow.url({ row: 'C' }));
+        expect(viewLink?.attributes('href')).toBe(
+            rowShow.url({ row: 'C' }, { query: { warehouse_id: 1 } }),
+        );
     });
 
     it("links a row's export action to its QR-codes PDF download", () => {
@@ -127,7 +149,7 @@ describe('Rows Index', () => {
             .findAll('a')
             .find((a) => a.text().includes(t('rows.index.exportQrCodes')));
         expect(exportLink?.attributes('href')).toBe(
-            rowExportQrCodes.url({ row: 'C' }),
+            rowExportQrCodes.url({ row: 'C' }, { query: { warehouse_id: 1 } }),
         );
     });
 
@@ -138,7 +160,7 @@ describe('Rows Index', () => {
             .findAll('button')
             .find((b) => b.text().includes(t('rows.index.delete')));
         expect(deleteButton?.attributes('href')).toBe(
-            rowShow.url({ row: 'D' }),
+            rowShow.url({ row: 'D' }, { query: { warehouse_id: 1 } }),
         );
         expect(wrapper.text()).not.toContain(t('rows.index.hasPallets'));
     });
@@ -185,7 +207,58 @@ describe('Rows Index', () => {
 
         expect(routerGetMock).toHaveBeenCalledWith(
             rowsIndex.url(),
-            { per_page: 50 },
+            { warehouse_ids: [], per_page: 50 },
+            { preserveState: true, replace: true },
+        );
+    });
+    it("names the row's warehouse in every link to it, so a letter two warehouses share opens the right row", () => {
+        const wrapper = mountPage([
+            row({ letter: 'A', warehouse: { id: 5, name: 'Annex' } }),
+        ]);
+
+        const hrefs = wrapper
+            .findAll('a, button[href]')
+            .map((el) => el.attributes('href'))
+            .filter((href) => href?.includes('/admin/rows/A'));
+
+        expect(hrefs).toHaveLength(3);
+
+        for (const href of hrefs) {
+            expect(href).toContain('warehouse_id=5');
+        }
+    });
+
+    it('renders the warehouse filter in the header, labelled from the selected warehouses', () => {
+        const wrapper = mountPage([], {}, 20, { warehouse_ids: [5] }, [
+            { id: 5, name: 'Annex' },
+        ]);
+
+        expect(wrapper.get('#rows-warehouse').text()).toBe('Annex');
+    });
+
+    it('reloads with the chosen warehouses, keeping the page size', async () => {
+        const wrapper = mountPage([], {}, 50);
+
+        await wrapper.get('#rows-warehouse').trigger('click');
+        await wrapper.findAll('input[type="checkbox"]')[0].setValue(true);
+
+        expect(routerGetMock).toHaveBeenCalledWith(
+            rowsIndex.url(),
+            { warehouse_ids: ['5'], per_page: 50 },
+            { preserveState: true, replace: true },
+        );
+    });
+
+    it('keeps the selected warehouses when the page size changes', async () => {
+        const wrapper = mountPage([], {}, 20, { warehouse_ids: [5] }, [
+            { id: 5, name: 'Annex' },
+        ]);
+
+        await wrapper.get('select').setValue('50');
+
+        expect(routerGetMock).toHaveBeenCalledWith(
+            rowsIndex.url(),
+            { warehouse_ids: [5], per_page: 50 },
             { preserveState: true, replace: true },
         );
     });

@@ -68,11 +68,13 @@ test('an authenticated admin can view the cell log with every property the table
                     ->where('row_letter', 'A')
                     ->where('cell_number', 1)
                     ->where('flat_number', 2)
+                    ->where('warehouse', ['id' => $fromRow->warehouse_id, 'name' => Warehouse::DEFAULT_NAME])
                 )
                 ->has('related_cell', fn (Assert $relatedCell) => $relatedCell
                     ->where('row_letter', 'B')
                     ->where('cell_number', 2)
                     ->where('flat_number', 1)
+                    ->where('warehouse', ['id' => $toRow->warehouse_id, 'name' => Warehouse::DEFAULT_NAME])
                 )
                 ->has('product', fn (Assert $productProp) => $productProp
                     ->where('id', $product->id)

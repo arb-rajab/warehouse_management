@@ -220,7 +220,8 @@ class Pallet extends Model
                 'product.thumbnailUpload:id,file_name,external_link',
                 'product.setting:product_id,boxes_count',
                 'cell:id,row_id,cell_number,flat_number,state,is_active',
-                'cell.row:id,letter',
+                'cell.row:id,warehouse_id,letter',
+                'cell.row.warehouse:id,name',
             ])
             ->orderedByExpirationThenAdded();
     }

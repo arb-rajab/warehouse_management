@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import FormField from '@/components/FormField.vue';
+import StoreSelectField from '@/components/StoreSelectField.vue';
 import { t } from '@/lib/i18n';
+import type { WarehouseSummary } from '@/types/admin';
 
 /**
  * Mirrors Row::MAX_DIMENSION (app/Models/Row.php) — the backend rule stays
@@ -19,8 +21,20 @@ withDefaults(
         letter?: string;
         cellsCount?: number;
         flatsCount?: number;
+        /**
+         * The warehouses a new row can be created in: given, the form shows
+         * the required warehouse select (the create form). A row stays in the
+         * warehouse it was created in, so the edit form instead shows its
+         * `warehouseName` read-only.
+         */
+        warehouses?: WarehouseSummary[];
+        warehouseId?: number;
+        warehouseName?: string;
         errors: Partial<
-            Record<'letter' | 'cells_count' | 'flats_count', string>
+            Record<
+                'warehouse_id' | 'letter' | 'cells_count' | 'flats_count',
+                string
+            >
         >;
     }>(),
     {
@@ -32,6 +46,23 @@ withDefaults(
 
 <template>
     <div class="space-y-4">
+        <StoreSelectField
+            v-if="warehouses"
+            :id="`${idPrefix}warehouse_id`"
+            :label="t('rows.fields.warehouse')"
+            :options="warehouses"
+            :value="warehouseId"
+            :error="errors.warehouse_id"
+            required
+        />
+        <FormField
+            v-else-if="warehouseName !== undefined"
+            :id="`${idPrefix}warehouse_name`"
+            :label="t('rows.fields.warehouse')"
+            :value="warehouseName"
+            readonly
+        />
+
         <FormField
             :id="`${idPrefix}letter`"
             :label="t('rows.fields.letter')"

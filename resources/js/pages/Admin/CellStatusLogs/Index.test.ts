@@ -19,6 +19,7 @@ import type {
     CellStatusLog,
     CellStatusLogFilterOptions,
     CellStatusLogFilters,
+    WarehouseFilterOptions,
 } from '@/types/admin';
 import Index from './Index.vue';
 
@@ -45,12 +46,13 @@ vi.mock('@inertiajs/vue3', async () => {
     };
 });
 
-const filterOptions: CellStatusLogFilterOptions = {
+const filterOptions: CellStatusLogFilterOptions & WarehouseFilterOptions = {
     rows: [
         { id: 1, letter: 'A' },
         { id: 2, letter: 'B' },
     ],
     maxColumnNumber: 3,
+    warehouses: [{ id: 5, name: 'Annex' }],
     products: [{ id: 10, name: 'Widgets', ar_name: 'ودجات', active: true }],
     users: [{ id: 7, name: 'Jane Doe' }],
     actions: [
@@ -62,14 +64,18 @@ const filterOptions: CellStatusLogFilterOptions = {
     ],
 };
 
-function mountPage(logs: CellStatusLog[], filters: CellStatusLogFilters = {}) {
+function mountPage(
+    logs: CellStatusLog[],
+    filters: CellStatusLogFilters = {},
+    options: typeof filterOptions = filterOptions,
+) {
     usePageMock.mockReturnValue({
         url: cellLogsIndex.url(),
         props: defaultAuthProps(),
     });
 
     return mount(Index, {
-        props: { logs: paginated(logs), filters, filterOptions },
+        props: { logs: paginated(logs), filters, filterOptions: options },
     });
 }
 
@@ -1313,6 +1319,121 @@ describe('CellStatusLogs Index', () => {
             cellLogsIndex.url(),
             expect.objectContaining({ per_page: 50 }),
             { preserveState: true, replace: true },
+        );
+    });
+    it('shows the warehouse filter in the Location section of the Filters dialog, labelled from the selected warehouses', async () => {
+        const wrapper = mountPage([], { warehouse_ids: [5] });
+        await openFilters(wrapper);
+
+        expect(wrapper.get('#filter-warehouse').text()).toBe('Annex');
+        expect(wrapper.get('label[for="filter-warehouse"]').text()).toBe(
+            t('warehouses.filters.label'),
+        );
+    });
+
+    it('counts the warehouse filter in the filter badge and marks the Cell column as filtered', () => {
+        const wrapper = mountPage([], { warehouse_ids: [5] });
+
+        const trigger = wrapper
+            .findAll('button')
+            .find((button) =>
+                button.text().includes(t('common.filters.title')),
+            );
+        expect(trigger?.get('span').text()).toBe('1');
+        expect(isColumnActive(wrapper, t('cellLog.columns.cell'))).toBe(true);
+    });
+
+    it('requests the selected warehouses when the warehouse filter is submitted', async () => {
+        const wrapper = mountPage([]);
+        await openFilters(wrapper);
+
+        await wrapper.get('#filter-warehouse').trigger('click');
+        await wrapper.findAll('input[type="checkbox"]')[0].setValue(true);
+        await wrapper.get('form').trigger('submit');
+
+        expect(routerGetMock).toHaveBeenCalledWith(
+            cellLogsIndex.url(),
+            expect.objectContaining({ warehouse_ids: ['10'] }),
+            { preserveState: true, replace: true },
+        );
+    });
+
+    it('clears the warehouse filter with the other filters', async () => {
+        const wrapper = mountPage([], { warehouse_ids: [5] });
+        await openFilters(wrapper);
+
+        await wrapper
+            .findAll('button')
+            .find((button) => button.text() === t('common.filters.clear'))
+            ?.trigger('click');
+
+        expect(routerGetMock).toHaveBeenCalledWith(
+            cellLogsIndex.url(),
+            { per_page: 20 },
+            { preserveState: true, replace: true },
+        );
+        expect(wrapper.get('#filter-warehouse').text()).toBe(
+            t('cellLog.filters.all'),
+        );
+    });
+
+    it('offers the warehouse filter in the Cell column popover too', async () => {
+        const wrapper = mountPage([]);
+
+        await openColumnPopover(wrapper, t('cellLog.columns.cell'));
+
+        expect(wrapper.find('#popover-filter-warehouse').exists()).toBe(true);
+    });
+
+    it('tells apart row letters shared by two warehouses in the row filter', async () => {
+        const wrapper = mountPage(
+            [],
+            {},
+            {
+                ...filterOptions,
+                rows: [
+                    { id: 1, letter: 'A', warehouse: { id: 1, name: 'Main' } },
+                    { id: 2, letter: 'A', warehouse: { id: 5, name: 'Annex' } },
+                    { id: 3, letter: 'B' },
+                ],
+            },
+        );
+        await openFilters(wrapper);
+
+        await wrapper.get('#filter-row').trigger('click');
+
+        expect(
+            wrapper
+                .get('[role="listbox"]')
+                .findAll('[role="option"]')
+                .map((o) => o.text()),
+        ).toEqual(['A - Main', 'A - Annex', 'B']);
+    });
+
+    it("adds the cell's warehouse to the link to its row, which shares its letter with another warehouse's row", () => {
+        const wrapper = mountPage([
+            cellLog({
+                cell: {
+                    row_letter: 'A',
+                    cell_number: 3,
+                    flat_number: 2,
+                    warehouse: { id: 5, name: 'Annex' },
+                },
+            }),
+        ]);
+
+        const links = rowCells(wrapper)[0].findAll('a');
+        expect(links[0].attributes('href')).toBe(
+            rowShow.url(
+                { row: 'A' },
+                {
+                    query: {
+                        cell_number: '3',
+                        flat_number: '2',
+                        warehouse_id: 5,
+                    },
+                },
+            ),
         );
     });
 });

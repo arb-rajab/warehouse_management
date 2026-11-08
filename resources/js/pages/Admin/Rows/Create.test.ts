@@ -35,7 +35,14 @@ function mountPage() {
         props: defaultAuthProps(),
     });
 
-    return mount(Create);
+    return mount(Create, {
+        props: {
+            warehouses: [
+                { id: 1, name: 'Main' },
+                { id: 5, name: 'Annex' },
+            ],
+        },
+    });
 }
 
 describe('Rows Create', () => {
@@ -69,6 +76,31 @@ describe('Rows Create', () => {
         expect(wrapper.findComponent(RowFormFields).props('errors')).toEqual({
             letter: 'The letter has already been taken.',
         });
+    });
+
+    it('offers every warehouse in a required warehouse select that posts warehouse_id', () => {
+        const wrapper = mountPage();
+
+        const select = wrapper.get<HTMLSelectElement>('#warehouse_id');
+        expect(select.attributes('name')).toBe('warehouse_id');
+        expect(select.element.required).toBe(true);
+        expect(select.findAll('option').map((option) => option.text())).toEqual(
+            [t('store.reference.select'), 'Main', 'Annex'],
+        );
+        expect(wrapper.get('label[for="warehouse_id"]').text()).toContain(
+            t('rows.fields.warehouse'),
+        );
+    });
+
+    it('forwards a warehouse validation error to the warehouse select', () => {
+        formSlotPropsMock.mockReturnValue({
+            errors: { warehouse_id: 'The warehouse id field is required.' },
+            processing: false,
+        });
+
+        const wrapper = mountPage();
+
+        expect(wrapper.text()).toContain('The warehouse id field is required.');
     });
 
     it('shows the submitting label and disables the button while processing', () => {

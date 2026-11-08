@@ -12,6 +12,7 @@ import type {
     MatchingPallet,
     MatchingPalletFilters,
     ProductFilterOption,
+    WarehouseSummary,
 } from '@/types/admin';
 import Index from './Index.vue';
 
@@ -28,6 +29,13 @@ vi.mock('@inertiajs/vue3', async () => {
         Link: createLinkStub(),
         usePage: usePageMock,
         router: { get: routerGetMock },
+        useHttp: () => ({
+            get: (
+                _url: string,
+                options?: { onSuccess?: (response: unknown) => void },
+            ) =>
+                options?.onSuccess?.(paginated([{ id: 5, name: 'Annex' }], 20)),
+        }),
     };
 });
 
@@ -35,6 +43,7 @@ function mountPage(
     pallets: MatchingPallet[],
     filters: MatchingPalletFilters = {},
     selectedProducts: ProductFilterOption[] = [],
+    selectedWarehouses: WarehouseSummary[] = [],
 ) {
     usePageMock.mockReturnValue({
         url: palletsIndex.url(),
@@ -45,7 +54,10 @@ function mountPage(
         props: {
             pallets: paginated(pallets),
             filters,
-            filterOptions: { products: selectedProducts },
+            filterOptions: {
+                products: selectedProducts,
+                warehouses: selectedWarehouses,
+            },
         },
     });
 }
@@ -230,6 +242,72 @@ describe('Pallets Index', () => {
             palletsIndex.url(),
             { state: 'full', per_page: 50 },
             { preserveState: true, replace: true },
+        );
+    });
+    it('renders the warehouse filter in the header, labelled from the selected warehouses', () => {
+        const wrapper = mountPage(
+            [],
+            { warehouse_ids: [5] },
+            [],
+            [{ id: 5, name: 'Annex' }],
+        );
+
+        expect(wrapper.get('#pallets-warehouse').text()).toBe('Annex');
+    });
+
+    it('reloads with the chosen warehouses, keeping the other filters', async () => {
+        const wrapper = mountPage([], { state: 'full', per_page: 20 });
+
+        await wrapper.get('#pallets-warehouse').trigger('click');
+        await wrapper.findAll('input[type="checkbox"]')[0].setValue(true);
+
+        expect(routerGetMock).toHaveBeenCalledWith(
+            palletsIndex.url(),
+            { state: 'full', warehouse_ids: ['5'] },
+            { preserveState: true, replace: true },
+        );
+    });
+
+    it('shows a chip for the selected warehouses and keeps them in the "view on map" link', () => {
+        const wrapper = mountPage(
+            [],
+            { warehouse_ids: [5] },
+            [],
+            [{ id: 5, name: 'Annex' }],
+        );
+
+        expect(wrapper.text()).toContain(t('pallets.filteredBy'));
+        expect(
+            wrapper.findAll('span.rounded-full').map((c) => c.text()),
+        ).toEqual(['Annex']);
+        expect(mapLink(wrapper)?.props('href')).toBe(
+            warehouseMapIndex({ query: { warehouse_ids: [5] } }).url,
+        );
+    });
+
+    it("adds the pallet cell's warehouse to the link to its row", () => {
+        const wrapper = mountPage([
+            matchingPallet({
+                location: {
+                    row_letter: 'A',
+                    cell_number: 3,
+                    flat_number: 2,
+                    warehouse: { id: 5, name: 'Annex' },
+                },
+            }),
+        ]);
+
+        expect(rowCells(wrapper)[2].get('a').attributes('href')).toBe(
+            rowShow.url(
+                { row: 'A' },
+                {
+                    query: {
+                        cell_number: '3',
+                        flat_number: '2',
+                        warehouse_id: 5,
+                    },
+                },
+            ),
         );
     });
 });

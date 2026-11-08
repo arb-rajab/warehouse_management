@@ -187,8 +187,8 @@ test('an authenticated admin can view the cell verification rounds list with eve
                 ->where('completed_at', $round->completed_at->toIso8601String())
                 ->where('reports_count', 2)
                 ->where('rows', [
-                    ['id' => $rowA->id, 'letter' => 'A'],
-                    ['id' => $rowB->id, 'letter' => 'B'],
+                    ['id' => $rowA->id, 'letter' => 'A', 'warehouse' => ['id' => $rowA->warehouse_id, 'name' => Warehouse::DEFAULT_NAME]],
+                    ['id' => $rowB->id, 'letter' => 'B', 'warehouse' => ['id' => $rowB->warehouse_id, 'name' => Warehouse::DEFAULT_NAME]],
                 ])
                 ->has('user', fn (Assert $userProp) => $userProp
                     ->where('id', $worker->id)
@@ -310,7 +310,7 @@ test('an authenticated admin can view a single round with its own reports and ev
     $response->assertOk()->assertInertia(
         fn (Assert $page) => $page->component('Admin/CellVerificationRounds/Show')
             ->where('round.id', $round->id)
-            ->where('round.rows', [['id' => $row->id, 'letter' => 'C']])
+            ->where('round.rows', [['id' => $row->id, 'letter' => 'C', 'warehouse' => ['id' => $row->warehouse_id, 'name' => Warehouse::DEFAULT_NAME]]])
             ->where('filterOptions.rows', [['id' => $row->id, 'letter' => 'C']])
             ->where('filterOptions.maxColumnNumber', 1)
             ->has('filterOptions.products', 0)
@@ -323,6 +323,7 @@ test('an authenticated admin can view a single round with its own reports and ev
                     ->where('row_letter', 'C')
                     ->where('cell_number', 1)
                     ->where('flat_number', 1)
+                    ->where('warehouse', ['id' => $row->warehouse_id, 'name' => Warehouse::DEFAULT_NAME])
                 )
                 ->has('expected', fn (Assert $expectedProp) => $expectedProp
                     ->where('cell_state', 'full')
