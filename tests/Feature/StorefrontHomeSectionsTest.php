@@ -138,7 +138,9 @@ test('product cards print two labelled prices instead of a || separator, in both
         ->assertSeeInOrder(['€12.50', $label, '€3.125'], false)
         ->getContent();
 
-    expect($html)->not->toContain('||');
+    // Only the price block: the page's own scripts use `||` as the JS operator.
+    preg_match('#<div class="sf-price-stack">.*?</div>#s', $html, $price);
+    expect($price)->not->toBeEmpty()->and($price[0])->not->toContain('||');
 })->with([
     'English' => ['en', 'ltr', 'Per piece'],
     'Arabic' => ['ar', 'rtl', 'للقطعة الواحدة'],
