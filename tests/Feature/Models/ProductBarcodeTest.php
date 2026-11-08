@@ -48,3 +48,27 @@ test('distinctValues keeps the first row of each trimmed value and drops blanks'
     expect(ProductBarcode::distinctValues($product->barcodes)->modelKeys())->toBe([$first->id, $other->id])
         ->and(ProductBarcode::distinctValues($product->barcodes)->keys()->all())->toBe([0, 1]);
 });
+
+test('isOwnProductId is true only for a value that is the product\'s own id once normalized', function () {
+    $product = Product::factory()->create();
+    $other = Product::factory()->create();
+
+    expect(ProductBarcode::factory()->create(['product_id' => $product->id, 'barcode' => (string) $product->id])->isOwnProductId())->toBeTrue()
+        ->and(ProductBarcode::factory()->create(['product_id' => $product->id, 'barcode' => ' '.$product->id.' '])->isOwnProductId())->toBeTrue()
+        ->and(ProductBarcode::factory()->create(['product_id' => $product->id, 'barcode' => strtr((string) $product->id, ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'])])->isOwnProductId())->toBeTrue()
+        ->and(ProductBarcode::factory()->create(['product_id' => $product->id, 'barcode' => (string) $other->id])->isOwnProductId())->toBeFalse()
+        ->and(ProductBarcode::factory()->create(['product_id' => $product->id, 'barcode' => '0'.$product->id])->isOwnProductId())->toBeFalse();
+});
+
+test('listedInWms leaves out the own-id and blank rows and keeps the others in order', function () {
+    $product = Product::factory()->create();
+    $first = ProductBarcode::factory()->create(['product_id' => $product->id, 'barcode' => 'FIRST']);
+    ProductBarcode::factory()->create(['product_id' => $product->id, 'barcode' => (string) $product->id]);
+    ProductBarcode::factory()->create(['product_id' => $product->id, 'barcode' => '  ']);
+    $word = ProductBarcode::factory()->create(['product_id' => $product->id, 'barcode' => 'متجر']);
+    // Noise: another product's own id is just a value on this product.
+    $otherId = ProductBarcode::factory()->create(['product_id' => $product->id, 'barcode' => (string) Product::factory()->create()->id]);
+
+    expect(ProductBarcode::listedInWms($product->barcodes)->modelKeys())->toBe([$first->id, $word->id, $otherId->id])
+        ->and(ProductBarcode::listedInWms($product->barcodes)->keys()->all())->toBe([0, 1, 2]);
+});
