@@ -762,7 +762,9 @@ describe('Products Index', () => {
                 name: 'Widgets',
                 ar_name: 'ودجات',
                 active: true,
-                barcodes: [{ id: 1, barcode: '1234567890123' }],
+                barcodes: [
+                    { id: 1, barcode: '1234567890123', printable: true },
+                ],
             }),
         ]);
 
@@ -786,8 +788,8 @@ describe('Products Index', () => {
         const wrapper = mountPage([
             product({
                 barcodes: [
-                    { id: 1, barcode: '1111111111111' },
-                    { id: 2, barcode: '2222222222222' },
+                    { id: 1, barcode: '1111111111111', printable: true },
+                    { id: 2, barcode: '2222222222222', printable: true },
                 ],
             }),
         ]);
@@ -804,7 +806,9 @@ describe('Products Index', () => {
         const wrapper = mountPage([
             product({
                 id: 42,
-                barcodes: [{ id: 7, barcode: '1111111111111' }],
+                barcodes: [
+                    { id: 7, barcode: '1111111111111', printable: true },
+                ],
             }),
         ]);
 
@@ -883,8 +887,8 @@ describe('Products Index', () => {
             product({
                 id: 42,
                 barcodes: [
-                    { id: 7, barcode: '1111111111111' },
-                    { id: 8, barcode: '2222222222222' },
+                    { id: 7, barcode: '1111111111111', printable: true },
+                    { id: 8, barcode: '2222222222222', printable: true },
                 ],
             }),
         ]);
@@ -927,8 +931,8 @@ describe('Products Index', () => {
                 product({
                     id: 42,
                     barcodes: [
-                        { id: 7, barcode: '1111111111111' },
-                        { id: 8, barcode: '2222222222222' },
+                        { id: 7, barcode: '1111111111111', printable: true },
+                        { id: 8, barcode: '2222222222222', printable: true },
                     ],
                 }),
             ]);
@@ -1090,7 +1094,9 @@ describe('Products Index', () => {
             products: paginated([
                 product({
                     id: 42,
-                    barcodes: [{ id: 9, barcode: '9999999999999' }],
+                    barcodes: [
+                        { id: 9, barcode: '9999999999999', printable: true },
+                    ],
                 }),
             ]),
         });
@@ -1111,7 +1117,9 @@ describe('Products Index', () => {
             return mountPage([
                 product({
                     id: 42,
-                    barcodes: [{ id: 7, barcode: '1234567890123' }],
+                    barcodes: [
+                        { id: 7, barcode: '1234567890123', printable: true },
+                    ],
                 }),
             ]);
         }

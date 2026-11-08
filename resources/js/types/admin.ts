@@ -240,9 +240,19 @@ export interface CellStatusLogFilterOptions
     actions: CellLogAction[];
 }
 
+/**
+ * One row of the products page's Barcodes dialog: a `product_barcodes` row, the
+ * table the WMS shares with the store. The product's own-id rows (the import's
+ * Mat_ID) are left out, since the default barcode already is the id.
+ */
 export interface ProductBarcode {
     id: number;
     barcode: string;
+    /**
+     * Whether Code 128 can draw the value (Arabic digits converted). Store
+     * barcodes can be any text; preview and download answer 422 when false.
+     */
+    printable: boolean;
 }
 
 export interface ProductSummary {
@@ -272,7 +282,7 @@ export interface ProductSummary {
     opened_cells_count: number;
     expired_cells_count: number;
     expiring_soon_count: number;
-    /** Barcodes attached to this product, oldest first. Stored in this app's own `wms_product_barcodes`. */
+    /** Barcodes attached to this product, oldest first, from the shared `product_barcodes` table (the own-id rows are left out). */
     barcodes: ProductBarcode[];
 }
 
