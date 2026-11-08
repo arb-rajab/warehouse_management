@@ -84,7 +84,7 @@ test('an integer value is checked like its string', function () {
 test('locked() runs the callback under the shared barcode lock and returns its result', function () {
     $lock = Mockery::mock(Lock::class);
     $lock->shouldReceive('block')->once()->with(5, Mockery::type(Closure::class))->andReturnUsing(fn (int $seconds, Closure $callback) => $callback());
-    Cache::shouldReceive('lock')->once()->with('product-barcodes', 10)->andReturn($lock);
+    Cache::partialMock()->shouldReceive('lock')->once()->with('product-barcodes', 10)->andReturn($lock);
 
     expect(NewProductBarcode::locked(fn () => 'written'))->toBe('written');
 });

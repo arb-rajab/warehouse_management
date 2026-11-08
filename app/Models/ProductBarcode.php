@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\ProductBarcodeLabels;
 use Database\Factories\ProductBarcodeFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Table;
@@ -46,6 +47,34 @@ class ProductBarcode extends Model
         return $barcodes
             ->reject(fn (self $barcode): bool => trim($barcode->barcode) === '')
             ->unique(fn (self $barcode): string => trim($barcode->barcode))
+            ->values();
+    }
+
+    /**
+     * Whether the value, as a label shows it (ProductBarcodeLabels::normalize()),
+     * is the product's own id: the row the Otajer import stores for every
+     * product (Mat_ID), which the store app's barcode search finds it by. The
+     * WMS already shows the id as the product's default barcode, so it hides
+     * these rows and cannot delete them.
+     */
+    public function isOwnProductId(): bool
+    {
+        return app(ProductBarcodeLabels::class)->normalize($this->barcode) === (string) $this->product_id;
+    }
+
+    /**
+     * The rows the WMS products page lists: neither the own-id row
+     * ({@see self::isOwnProductId()}) nor a blank value.
+     *
+     * @param  Collection<int, self>  $barcodes
+     * @return Collection<int, self>
+     */
+    public static function listedInWms(Collection $barcodes): Collection
+    {
+        $labels = app(ProductBarcodeLabels::class);
+
+        return $barcodes
+            ->reject(fn (self $barcode): bool => $labels->normalize($barcode->barcode) === '' || $barcode->isOwnProductId())
             ->values();
     }
 

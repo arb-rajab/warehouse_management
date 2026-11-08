@@ -6,6 +6,7 @@ use App\Models\Product;
 use App\Models\ProductImageReview;
 use App\Models\Row;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Testing\AssertableInertia as Assert;
 
@@ -166,3 +167,19 @@ test('image review routes return 404 for unknown products', function (string $me
     actingAsAdmin();
     $this->{$method}('/admin/products/999999/'.$suffix)->assertNotFound();
 })->with([['get', 'image-reviews'], ['post', 'image-reviews'], ['post', 'reference-image']]);
+
+test('the image review lists the product\'s barcodes from the shared table, without its own-id row or blanks', function () {
+    actingAsAdmin();
+    $product = Product::factory()->create();
+    DB::table('product_barcodes')->insert([
+        ['product_id' => $product->id, 'barcode' => 'WMS-ADDED'],
+        ['product_id' => $product->id, 'barcode' => (string) $product->id],
+        ['product_id' => $product->id, 'barcode' => '8712345678906'],
+        ['product_id' => $product->id, 'barcode' => ' '],
+    ]);
+    // Noise: another product's barcode.
+    DB::table('product_barcodes')->insert(['product_id' => Product::factory()->create()->id, 'barcode' => 'NOISE']);
+
+    $this->get("/admin/products/{$product->id}/image-reviews")->assertOk()
+        ->assertJsonPath('barcodes', ['WMS-ADDED', '8712345678906']);
+});

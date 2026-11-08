@@ -8,6 +8,7 @@ use App\Http\Requests\Admin\FilterProductImageReviewsRequest;
 use App\Http\Requests\Admin\StoreProductImageReviewRequest;
 use App\Http\Requests\Admin\UpdateProductImageRequest;
 use App\Models\Product;
+use App\Models\ProductBarcode;
 use App\Models\ProductImageReview;
 use App\Services\ImageOptimizer;
 use App\Services\ProductImageReviewService;
@@ -39,7 +40,7 @@ class ProductImageReviewController extends Controller
             'ar_name' => $product->ar_name,
             'image_url' => $product->image_url,
             'image_source' => $product->image_url ?? '',
-            'barcodes' => $product->barcodes->pluck('barcode'),
+            'barcodes' => ProductBarcode::listedInWms($product->barcodes)->pluck('barcode'),
             'reviews' => $reviews->through(fn (ProductImageReview $review): array => [
                 'id' => $review->id,
                 'status' => $review->status,

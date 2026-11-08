@@ -34,6 +34,7 @@ return [
     'verification_report_accepted_note' => 'Accepted from verification report #:id',
     'barcode_not_printable' => 'Barcode :barcode cannot be rendered as a Code 128 label.',
     'barcode_is_product_id' => 'This barcode is the ID of a product. Every product already has its ID as a default barcode.',
+    'barcodes_not_printable_in_zip' => 'These barcodes cannot be drawn as a Code 128 label, so they are not in this ZIP:',
     'password_same_as_current' => 'The new password must be different from your current password.',
     'pallet_moved' => 'This pallet has been moved since it was loaded. Refresh and try again.',
     'precondition_failed' => 'The resource has changed since it was loaded. Refresh and try again.',

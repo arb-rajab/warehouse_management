@@ -8,7 +8,10 @@ use App\Models\ProductBarcode;
 use App\Models\Row;
 use App\Models\Setting;
 use App\Models\User;
+use App\Services\ProductBarcodeLabels;
+use Illuminate\Contracts\Cache\Lock;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Inertia\Testing\AssertableInertia as Assert;
 
@@ -49,7 +52,7 @@ test('an authenticated admin can view the products index with every property the
                 ->where('opened_cells_count', 0)
                 ->where('expired_cells_count', 0)
                 ->where('expiring_soon_count', 0)
-                ->where('barcodes', [['id' => $barcode->id, 'barcode' => '1234567890123']])
+                ->where('barcodes', [['id' => $barcode->id, 'barcode' => '1234567890123', 'printable' => true]])
             )
             ->where('expiringSoonDays', 45)
             ->has('filterOptions.rows', 1)
@@ -83,8 +86,29 @@ test('the products index orders a product\'s barcodes by id, oldest first', func
 
     $response->assertOk()->assertInertia(
         fn (Assert $page) => $page->where('products.data.0.barcodes', [
-            ['id' => $olderBarcode->id, 'barcode' => '2222222222222'],
-            ['id' => $newerBarcode->id, 'barcode' => '1111111111111'],
+            ['id' => $olderBarcode->id, 'barcode' => '2222222222222', 'printable' => true],
+            ['id' => $newerBarcode->id, 'barcode' => '1111111111111', 'printable' => true],
+        ])
+    );
+});
+
+test('the products index lists the store\'s barcodes too, flags those that cannot be drawn, and hides the own-id and blank rows', function () {
+    actingAsAdmin();
+    $product = Product::factory()->create();
+    // Rows the store form and the Otajer import wrote into the shared table.
+    $store = DB::table('product_barcodes')->insertGetId(['product_id' => $product->id, 'barcode' => '8712345678906']);
+    $arabicDigits = DB::table('product_barcodes')->insertGetId(['product_id' => $product->id, 'barcode' => '٥٩٠١٢٣٤١٢٣٤٥٧']);
+    $word = DB::table('product_barcodes')->insertGetId(['product_id' => $product->id, 'barcode' => 'متجر']);
+    DB::table('product_barcodes')->insert(['product_id' => $product->id, 'barcode' => (string) $product->id]);
+    DB::table('product_barcodes')->insert(['product_id' => $product->id, 'barcode' => '  ']);
+
+    $response = $this->get('/admin/products');
+
+    $response->assertOk()->assertInertia(
+        fn (Assert $page) => $page->where('products.data.0.barcodes', [
+            ['id' => $store, 'barcode' => '8712345678906', 'printable' => true],
+            ['id' => $arabicDigits, 'barcode' => '٥٩٠١٢٣٤١٢٣٤٥٧', 'printable' => true],
+            ['id' => $word, 'barcode' => 'متجر', 'printable' => false],
         ])
     );
 });
@@ -1345,6 +1369,26 @@ test('a barcode must be unique across every product, not just the one it is bein
     $this->assertDatabaseCount('product_barcodes', 1);
 });
 
+test('adding a barcode re-checks it under the shared lock, so a value added meanwhile is refused', function () {
+    actingAsAdmin();
+
+    $product = Product::factory()->create();
+    $racer = Product::factory()->create();
+    // Another admin's insert lands between this request's validation and its write.
+    $lock = Mockery::mock(Lock::class);
+    $lock->shouldReceive('block')->once()->andReturnUsing(function (int $seconds, Closure $callback) use ($racer) {
+        ProductBarcode::factory()->create(['product_id' => $racer->id, 'barcode' => 'RACED-1']);
+
+        return $callback();
+    });
+    Cache::partialMock()->shouldReceive('lock')->once()->with('product-barcodes', 10)->andReturn($lock);
+
+    $response = $this->post("/admin/products/{$product->id}/barcodes", ['barcode' => 'RACED-1']);
+
+    $response->assertSessionHasErrors('barcode');
+    expect(DB::table('product_barcodes')->pluck('product_id')->all())->toBe([$racer->id]);
+});
+
 test('a barcode the store holds (written by the store form or the import) is refused too: one shared table', function () {
     actingAsAdmin();
 
@@ -1479,6 +1523,28 @@ test('an unauthenticated caller cannot remove a barcode', function () {
 
     $response->assertRedirect(route('login'));
     $this->assertDatabaseHas('product_barcodes', ['id' => $barcode->id]);
+});
+
+test('the own-id row the import stores cannot be removed: a 404, and it stays', function () {
+    actingAsAdmin();
+
+    $product = Product::factory()->create();
+    $ownId = ProductBarcode::factory()->create(['product_id' => $product->id, 'barcode' => (string) $product->id]);
+
+    $this->delete("/admin/products/{$product->id}/barcodes/{$ownId->id}")->assertNotFound();
+    $this->assertDatabaseHas('product_barcodes', ['id' => $ownId->id, 'barcode' => (string) $product->id]);
+});
+
+test('a barcode the store added can be removed from the WMS', function () {
+    actingAsAdmin();
+
+    $product = Product::factory()->create();
+    $store = DB::table('product_barcodes')->insertGetId(['product_id' => $product->id, 'barcode' => 'STORE-ADDED']);
+
+    $this->delete("/admin/products/{$product->id}/barcodes/{$store}")
+        ->assertRedirect(route('admin.products.index'))
+        ->assertInertiaFlash('success', 'Barcode has been removed successfully');
+    $this->assertDatabaseMissing('product_barcodes', ['id' => $store]);
 });
 
 test('removing a non-existent barcode returns a 404', function () {
@@ -1759,6 +1825,28 @@ test('a long barcode widens the label instead of shrinking its bars below a scan
     expect((int) $width[1])->toBeGreaterThan(300);
 });
 
+test('a stored value with Arabic-Indic digits is downloaded as the label of its converted value', function () {
+    actingAsAdmin();
+
+    $product = Product::factory()->create();
+    $barcode = ProductBarcode::factory()->create(['product_id' => $product->id, 'barcode' => ' ٥٩٠١٢٣٤١٢٣٤٥٧ ']);
+
+    $svg = $this->get("/admin/products/{$product->id}/barcodes/{$barcode->id}/download")->assertOk()->getContent();
+
+    expect($svg)->toBe((new ProductBarcodeLabels)->barcodeSvg($product, '5901234123457'));
+});
+
+test('the own-id row and a blank row are not shown, so their labels are 404s', function (string $action) {
+    actingAsAdmin();
+
+    $product = Product::factory()->create();
+    $ownId = ProductBarcode::factory()->create(['product_id' => $product->id, 'barcode' => (string) $product->id]);
+    $blank = ProductBarcode::factory()->create(['product_id' => $product->id, 'barcode' => '   ']);
+
+    $this->get("/admin/products/{$product->id}/barcodes/{$ownId->id}/{$action}")->assertNotFound();
+    $this->get("/admin/products/{$product->id}/barcodes/{$blank->id}/{$action}")->assertNotFound();
+})->with(['download', 'preview']);
+
 test('a barcode that is not printable ASCII cannot be downloaded as a label', function () {
     actingAsAdmin();
 
@@ -1818,14 +1906,45 @@ test('downloading all barcodes of a product without custom ones still yields its
         ->and(implode('', $entries))->not->toContain('9999999999999');
 });
 
-test('one barcode that cannot be rendered fails the whole ZIP instead of omitting it', function () {
+test('a barcode that cannot be drawn is left out of the ZIP and named in not-printable.txt', function () {
     actingAsAdmin();
 
     $product = Product::factory()->create();
-    ProductBarcode::factory()->create(['product_id' => $product->id, 'barcode' => '1111111111111']);
+    $drawn = ProductBarcode::factory()->create(['product_id' => $product->id, 'barcode' => '1111111111111']);
     ProductBarcode::factory()->create(['product_id' => $product->id, 'barcode' => 'باركود']);
+    // Arabic-Indic digits are drawn once converted.
+    $digits = ProductBarcode::factory()->create(['product_id' => $product->id, 'barcode' => '٥٩٠١']);
+    // The own-id row is the default label already; a blank row is nothing to draw.
+    ProductBarcode::factory()->create(['product_id' => $product->id, 'barcode' => (string) $product->id]);
+    ProductBarcode::factory()->create(['product_id' => $product->id, 'barcode' => ' ']);
 
-    $this->get("/admin/products/{$product->id}/barcodes/download")->assertUnprocessable();
+    $response = $this->get("/admin/products/{$product->id}/barcodes/download");
+
+    $response->assertOk();
+    $entries = barcodeZipEntries($response->baseResponse->getFile()->getContent());
+    expect(array_keys($entries))->toBe([
+        "product-{$product->id}-barcode.svg",
+        "product-{$product->id}-barcode-{$drawn->id}-1111111111111.svg",
+        "product-{$product->id}-barcode-{$digits->id}.svg",
+        'not-printable.txt',
+    ])
+        ->and($entries["product-{$product->id}-barcode-{$digits->id}.svg"])->toContain('>5901</text>')
+        ->and($entries['not-printable.txt'])->toBe("These barcodes cannot be drawn as a Code 128 label, so they are not in this ZIP:\n\nباركود\n");
+});
+
+test('a ZIP of a product none of whose barcodes can be drawn holds the default label and not-printable.txt', function () {
+    actingAsAdmin();
+
+    $product = Product::factory()->create();
+    ProductBarcode::factory()->create(['product_id' => $product->id, 'barcode' => 'باركود']);
+    ProductBarcode::factory()->create(['product_id' => $product->id, 'barcode' => 'متجر']);
+
+    $response = $this->get("/admin/products/{$product->id}/barcodes/download");
+
+    $response->assertOk();
+    $entries = barcodeZipEntries($response->baseResponse->getFile()->getContent());
+    expect(array_keys($entries))->toBe(["product-{$product->id}-barcode.svg", 'not-printable.txt'])
+        ->and($entries['not-printable.txt'])->toEndWith("\n\nباركود\nمتجر\n");
 });
 
 test('downloading all barcodes of a non-existent product returns a 404', function () {
