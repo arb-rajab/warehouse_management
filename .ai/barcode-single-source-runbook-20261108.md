@@ -134,6 +134,17 @@ product and timestamps and get new ids.
 - `wms_product_barcodes` is neither emptied nor dropped.
 - Nothing resolves a conflict: sections (a) and (b) are lists for the owner.
 
+## Known limitation: the Otajer import is best-effort
+
+`NewFetchProductsCommand` still checks `exists()` and then inserts, without the
+`NewProductBarcode` lock, a transaction or trimming/Arabic-digit normalisation
+(the form rule does all three). Two overlapping import runs, or an import racing
+a form save, can therefore add the same value to two products. There is no
+unique index to stop it, by design: the legacy data already holds shared values.
+A residual duplicate shows up in `products:barcode-conflicts` section (a) and
+makes the scan lookup answer 409 `ambiguous_barcode`. Run the report after large
+imports, and do not schedule overlapping import runs.
+
 Behaviours that do change with the code (no data change): a product's barcodes
 are deleted with it on every delete path; the store app's search and
 `barcode_search` now see barcodes added in the WMS, and the WMS scan lookup sees
