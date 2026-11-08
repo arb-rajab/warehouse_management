@@ -21,6 +21,7 @@ test('naming the mobile API routes leaves their URIs unchanged', function (strin
     'logout' => ['api.v1.auth.logout', [], '/api/v1/logout'],
     'user' => ['api.v1.user.show', [], '/api/v1/user'],
     'dashboard' => ['api.v1.dashboard.index', [], '/api/v1/dashboard'],
+    'warehouses' => ['api.v1.warehouses.index', [], '/api/v1/warehouses'],
     'rows' => ['api.v1.rows.index', [], '/api/v1/rows'],
     'rows full' => ['api.v1.rows.full', [], '/api/v1/rows/full'],
     'rows frozen' => ['api.v1.rows.frozen', [], '/api/v1/rows/frozen'],

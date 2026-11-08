@@ -25,4 +25,7 @@ return [
     'user_has_been_deleted_successfully' => 'تم حذف المستخدم بنجاح',
     'user_has_been_updated_successfully' => 'تم تحديث المستخدم بنجاح',
     'verification_round_has_been_completed_successfully' => 'تم إكمال جولة التحقق بنجاح',
+    'warehouse_has_been_created_successfully' => 'تمت إضافة المستودع بنجاح',
+    'warehouse_has_been_deleted_successfully' => 'تم حذف المستودع بنجاح',
+    'warehouse_has_been_updated_successfully' => 'تم تحديث المستودع بنجاح',
 ];

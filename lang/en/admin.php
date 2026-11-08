@@ -25,4 +25,7 @@ return [
     'user_has_been_deleted_successfully' => 'User has been deleted successfully',
     'user_has_been_updated_successfully' => 'User has been updated successfully',
     'verification_round_has_been_completed_successfully' => 'Verification round has been completed successfully',
+    'warehouse_has_been_created_successfully' => 'Warehouse has been created successfully',
+    'warehouse_has_been_deleted_successfully' => 'Warehouse has been deleted successfully',
+    'warehouse_has_been_updated_successfully' => 'Warehouse has been updated successfully',
 ];
