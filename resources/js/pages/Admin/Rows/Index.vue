@@ -64,7 +64,7 @@ function onWarehouseIdsChange(ids: string[]): void {
 
     <AdminLayout>
         <PageHeader :title="t('rows.index.title')">
-            <div class="flex items-end gap-2">
+            <div class="flex flex-wrap items-end gap-2">
                 <FilterWarehouseSelect
                     id="rows-warehouse"
                     :model-value="(filters.warehouse_ids ?? []).map(String)"

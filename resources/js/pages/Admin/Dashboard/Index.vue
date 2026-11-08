@@ -225,7 +225,7 @@ function onWarehouseIdsChange(ids: string[]): void {
 
     <AdminLayout>
         <PageHeader :title="t('dashboard.title')">
-            <div class="flex items-center gap-4">
+            <div class="flex flex-wrap items-center gap-4">
                 <HelpLink :href="showHelp('dashboard')" />
                 <FilterProductSelect
                     id="dashboard-product"

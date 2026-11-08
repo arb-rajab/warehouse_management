@@ -7,6 +7,7 @@ test('the add row form keeps what was typed after a duplicate-letter validation 
     await loginAsAdmin(page);
 
     await page.goto('/admin/rows/create');
+    await page.locator('#warehouse_id').selectOption({ label: 'Default' });
     await page.locator('#letter').fill('ZZ');
     await page.locator('#cells_count').fill('5');
     await page.locator('#flats_count').fill('3');
@@ -14,6 +15,7 @@ test('the add row form keeps what was typed after a duplicate-letter validation 
     await expect(page).toHaveURL(/\/admin\/rows\/ZZ$/);
 
     await page.goto('/admin/rows/create');
+    await page.locator('#warehouse_id').selectOption({ label: 'Default' });
     await page.locator('#letter').fill('ZZ');
     await page.locator('#cells_count').fill('5');
     await page.locator('#flats_count').fill('3');
@@ -22,6 +24,7 @@ test('the add row form keeps what was typed after a duplicate-letter validation 
     await expect(
         page.getByText('The letter has already been taken.'),
     ).toBeVisible();
+    await expect(page.locator('#warehouse_id')).toHaveValue(/^\d+$/);
     await expect(page.locator('#letter')).toHaveValue('ZZ');
     await expect(page.locator('#cells_count')).toHaveValue('5');
     await expect(page.locator('#flats_count')).toHaveValue('3');

@@ -124,7 +124,7 @@ function onPerPageChange(perPage: number): void {
 
     <AdminLayout>
         <PageHeader :title="t('pallets.title')">
-            <div class="flex items-end gap-4">
+            <div class="flex flex-wrap items-end gap-4">
                 <FilterWarehouseSelect
                     id="pallets-warehouse"
                     :model-value="(filters.warehouse_ids ?? []).map(String)"

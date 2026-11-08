@@ -7,6 +7,7 @@ test('dismissing the delete confirmation keeps the row, accepting it deletes it'
     await loginAsAdmin(page);
 
     await page.goto('/admin/rows/create');
+    await page.locator('#warehouse_id').selectOption({ label: 'Default' });
     await page.locator('#letter').fill('ZY');
     await page.locator('#cells_count').fill('1');
     await page.locator('#flats_count').fill('1');

@@ -30,3 +30,25 @@ test('the app bar highlights the current section and not the others', async ({
         'page',
     );
 });
+
+test('the Warehouses link is highlighted on its own pages, not on the warehouse map', async ({
+    page,
+}) => {
+    await loginAsAdmin(page);
+
+    await page.getByRole('link', { name: 'Warehouses', exact: true }).click();
+    await expect(page).toHaveURL(/\/admin\/warehouses$/);
+    await expect(
+        page.getByRole('link', { name: 'Warehouses', exact: true }),
+    ).toHaveAttribute('aria-current', 'page');
+
+    await page.goto('/admin/warehouses/create');
+    await expect(
+        page.getByRole('link', { name: 'Warehouses', exact: true }),
+    ).toHaveAttribute('aria-current', 'page');
+
+    await page.getByRole('link', { name: 'Warehouse map' }).click();
+    await expect(
+        page.getByRole('link', { name: 'Warehouses', exact: true }),
+    ).not.toHaveAttribute('aria-current', 'page');
+});

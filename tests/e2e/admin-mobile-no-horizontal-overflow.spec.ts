@@ -3,7 +3,13 @@ import { loginAsAdmin } from './support/auth';
 
 test.use({ viewport: { width: 375, height: 800 } });
 
-for (const path of ['/admin/products', '/admin/users', '/admin/rows']) {
+for (const path of [
+    '/admin',
+    '/admin/products',
+    '/admin/users',
+    '/admin/rows',
+    '/admin/warehouses',
+]) {
     test(`${path} does not scroll sideways on a phone`, async ({ page }) => {
         await loginAsAdmin(page);
         await page.goto(path);
