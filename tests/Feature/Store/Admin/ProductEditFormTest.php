@@ -627,7 +627,11 @@ test('a value another product takes between validation and the write is refused 
 
         return $callback();
     });
-    Cache::partialMock()->shouldReceive('lock')->once()->with('product-barcodes', 10)->andReturn($lock);
+    // Cache::partialMock() would build the manager without its container, so every other
+    // store lookup in the request would fail. A proxied mock of the real manager keeps it.
+    $cache = Mockery::mock(app('cache'));
+    $cache->shouldReceive('lock')->once()->with('product-barcodes', 10)->andReturn($lock);
+    Cache::swap($cache);
 
     $this->post(route('products.update', $this->product), productEditForm(['name' => 'Renamed', 'product_barcodes' => ['8710000000001', '4006381333931']]))
         ->assertSessionHasErrors(['product_barcodes.1' => 'The product barcode has already been taken.']);

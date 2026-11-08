@@ -1797,13 +1797,16 @@ test('an admin can download one barcode of a product as an SVG carrying exactly 
 test('a downloaded barcode is encoded as the same Code 128 bars the product label uses for that value', function () {
     actingAsAdmin();
 
-    // A barcode equal to the product id must render bar for bar like the existing
-    // product-id export, which is already verified scannable.
+    // A stored barcode must render bar for bar like the existing product-id export
+    // does for the same value, which is already verified scannable. A product's
+    // own id is no stored barcode here (its row is a 404), so the value is the
+    // id of another product, whose export is the reference.
     $product = Product::factory()->create();
-    $barcode = ProductBarcode::factory()->create(['product_id' => $product->id, 'barcode' => (string) $product->id]);
+    $reference = Product::factory()->create();
+    $barcode = ProductBarcode::factory()->create(['product_id' => $product->id, 'barcode' => (string) $reference->id]);
 
-    $download = $this->get("/admin/products/{$product->id}/barcodes/{$barcode->id}/download")->getContent();
-    $export = $this->get("/admin/products/{$product->id}/export-qr")->getContent();
+    $download = $this->get("/admin/products/{$product->id}/barcodes/{$barcode->id}/download")->assertOk()->getContent();
+    $export = $this->get("/admin/products/{$reference->id}/export-qr")->assertOk()->getContent();
 
     preg_match('/<path fill="#000000" d="([^"]+)"/', $download, $downloadBars);
     preg_match('/<path fill="#000000" d="([^"]+)"/', $export, $exportBars);
