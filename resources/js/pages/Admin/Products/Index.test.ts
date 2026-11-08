@@ -911,6 +911,92 @@ describe('Products Index', () => {
         expect(wrapper.find('img').exists()).toBe(false);
     });
 
+    it('lists a barcode that cannot be drawn with a note, disabled preview and download, and a working remove', async () => {
+        const wrapper = mountPage([
+            product({
+                id: 42,
+                barcodes: [
+                    { id: 7, barcode: '1111111111111', printable: true },
+                    { id: 8, barcode: 'متجر-٢٠٢٦', printable: false },
+                ],
+            }),
+        ]);
+
+        await rowCells(wrapper)[4].get('button').trigger('click');
+        const rows = wrapper.findAll('li');
+        const buttonFor = (row: number, key: string, barcode: string) =>
+            rows[row].get(
+                `button[aria-label="${t(`products.${key}`, { barcode })}"]`,
+            );
+
+        // The drawable row has no note and live buttons.
+        expect(rows).toHaveLength(3);
+        expect(rows[1].find('#barcode-note-7').exists()).toBe(false);
+
+        for (const key of ['viewBarcode', 'downloadBarcode']) {
+            const live = buttonFor(1, key, '1111111111111');
+            expect(live.attributes('disabled')).toBeUndefined();
+            expect(live.attributes('aria-describedby')).toBeUndefined();
+            expect(live.classes()).toContain('cursor-pointer');
+        }
+
+        // The other row says why, under its value, in the Store form's muted style.
+        const note = rows[2].get('#barcode-note-8');
+        expect(note.text()).toBe(t('products.barcodeNotPrintable'));
+        expect(note.classes()).toEqual([
+            'mt-1',
+            'text-xs',
+            'text-gray-600',
+            'dark:text-neutral-400',
+        ]);
+
+        for (const key of ['viewBarcode', 'downloadBarcode']) {
+            const off = buttonFor(2, key, 'متجر-٢٠٢٦');
+            expect(off.attributes('disabled')).toBeDefined();
+            expect(off.attributes('aria-describedby')).toBe('barcode-note-8');
+            expect(off.classes()).toEqual(
+                expect.arrayContaining(['cursor-not-allowed', 'opacity-50']),
+            );
+            expect(off.classes()).not.toContain('cursor-pointer');
+        }
+
+        // A click on a disabled preview shows nothing.
+        await buttonFor(2, 'viewBarcode', 'متجر-٢٠٢٦').trigger('click');
+        expect(wrapper.find('img').exists()).toBe(false);
+
+        // Removing stays available, with its normal link and label.
+        const remove = rows[2].findComponent(Link);
+        expect(remove.attributes('disabled')).toBeUndefined();
+        expect(remove.props('href')).toEqual(
+            destroyBarcode({ product: 42, barcode: 8 }, { mergeQuery: {} }),
+        );
+        expect(remove.attributes('aria-label')).toBe(
+            t('products.removeBarcode', { barcode: 'متجر-٢٠٢٦' }),
+        );
+        // The default line is untouched.
+        expect(
+            wrapper
+                .get('[data-testid="default-barcode"] button')
+                .attributes('disabled'),
+        ).toBeUndefined();
+    });
+
+    it.each(['en', 'ar'] as const)(
+        'words the not-drawable note in %s as its own admin key',
+        (locale) => {
+            i18n.global.locale.value = locale;
+
+            expect(t('products.barcodeNotPrintable')).not.toBe(
+                'products.barcodeNotPrintable',
+            );
+            expect(t('products.barcodeNotPrintable')).toBe(
+                locale === 'en'
+                    ? 'This barcode cannot be shown as an image.'
+                    : 'لا يمكن عرض هذا الباركود كصورة.',
+            );
+        },
+    );
+
     it('shows an empty-state message for custom barcodes, still listing the default', async () => {
         const wrapper = mountPage([product({ barcodes: [] })]);
 
