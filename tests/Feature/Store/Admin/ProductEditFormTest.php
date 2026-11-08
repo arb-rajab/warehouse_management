@@ -732,6 +732,9 @@ test('the edit form sends each saved barcode once, with its id and whether it ca
     // A legacy duplicate on the same product, padded, and a blank row are shown once and not at all.
     ProductBarcode::query()->create(['product_id' => $this->product->id, 'barcode' => ' 8710000000001 ']);
     ProductBarcode::query()->create(['product_id' => $this->product->id, 'barcode' => '   ']);
+    // The import's own-id row, plain or padded, is not offered for removal; another product's id is an ordinary value.
+    ProductBarcode::query()->create(['product_id' => $this->product->id, 'barcode' => (string) $this->product->id]);
+    ProductBarcode::query()->create(['product_id' => $this->product->id, 'barcode' => ' '.$this->product->id.' ']);
     // The legacy column is not an input of this form.
     DB::table('products')->where('id', $this->product->id)->update(['barcode' => 'LEGACY-1']);
 
@@ -743,6 +746,60 @@ test('the edit form sends each saved barcode once, with its id and whether it ca
             ['id' => $word->id, 'barcode' => 'متجر', 'printable' => false],
             ['id' => $wms->id, 'barcode' => 'WMS-ADDED', 'printable' => true],
         ]));
+});
+
+test('the own-id row stays: the form neither shows it nor deletes it, whatever else is saved', function () {
+    actingAsStoreUser(createStoreStaff('product_edit'));
+    Artisan::shouldReceive('call')->andReturn(0);
+    $ownId = ProductBarcode::query()->create(['product_id' => $this->product->id, 'barcode' => (string) $this->product->id]);
+    $kept = ProductBarcode::query()->where('product_id', $this->product->id)->where('barcode', '8710000000001')->firstOrFail();
+    $other = ProductBarcode::query()->create(['product_id' => $this->product->id, 'barcode' => 'REMOVE-ME']);
+    $ids = fn () => DB::table('product_barcodes')->where('product_id', $this->product->id)->orderBy('id')->pluck('id')->all();
+
+    $this->get(route('products.admin.edit', $this->product))->assertOk()->assertInertia(fn (Assert $page) => $page
+        ->where('product.product_barcodes', ['8710000000001', 'REMOVE-ME'])
+        ->where('barcodeImages', fn ($images) => collect($images)->pluck('barcode')->all() === ['8710000000001', 'REMOVE-ME']));
+
+    // Saving the form as it loaded changes nothing.
+    $this->post(route('products.update', $this->product), productEditForm([
+        'product_barcodes' => ['8710000000001', 'REMOVE-ME'],
+        'product_barcodes_seen' => ['8710000000001', 'REMOVE-ME'],
+    ]))->assertSessionHasNoErrors();
+    expect($ids())->toEqual([$kept->id, $ownId->id, $other->id]);
+
+    // Removing another barcode keeps the own-id row, with its id.
+    $this->post(route('products.update', $this->product), productEditForm([
+        'product_barcodes' => ['8710000000001'],
+        'product_barcodes_seen' => ['8710000000001', 'REMOVE-ME'],
+    ]))->assertSessionHasNoErrors();
+    expect($ids())->toEqual([$kept->id, $ownId->id]);
+
+    // Removing every shown barcode, with the seen list posted as the blank entry of a form that loaded none, keeps it too.
+    $this->post(route('products.update', $this->product), productEditForm([
+        'product_barcodes' => [],
+        'product_barcodes_seen' => ['8710000000001'],
+    ]))->assertSessionHasNoErrors();
+    expect($ids())->toEqual([$ownId->id]);
+    $this->post(route('products.update', $this->product), productEditForm(['product_barcodes' => [], 'product_barcodes_seen' => ['']]))->assertSessionHasNoErrors();
+    expect($ids())->toEqual([$ownId->id]);
+
+    // Even a client that posts no seen list, and not the own id, cannot delete it.
+    $this->post(route('products.update', $this->product), productEditForm(['product_barcodes' => []]))->assertSessionHasNoErrors();
+    expect($ids())->toEqual([$ownId->id]);
+});
+
+test('typing the product\'s own id adds no second row', function () {
+    actingAsStoreUser(createStoreStaff('product_edit'));
+    Artisan::shouldReceive('call')->andReturn(0);
+    $ownId = ProductBarcode::query()->create(['product_id' => $this->product->id, 'barcode' => (string) $this->product->id]);
+
+    $this->post(route('products.update', $this->product), productEditForm([
+        'product_barcodes' => ['8710000000001', (string) $this->product->id],
+        'product_barcodes_seen' => ['8710000000001'],
+    ]))->assertSessionHasNoErrors();
+
+    expect(DB::table('product_barcodes')->where('product_id', $this->product->id)->where('barcode', (string) $this->product->id)->pluck('id')->all())->toEqual([$ownId->id])
+        ->and(DB::table('product_barcodes')->where('product_id', $this->product->id)->count())->toBe(2);
 });
 
 test('a store barcode image is the WMS label of its converted value, served inline and answered with a 304 when unchanged', function () {

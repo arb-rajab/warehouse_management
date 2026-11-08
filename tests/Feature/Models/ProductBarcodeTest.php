@@ -49,6 +49,18 @@ test('distinctValues keeps the first row of each trimmed value and drops blanks'
         ->and(ProductBarcode::distinctValues($product->barcodes)->keys()->all())->toBe([0, 1]);
 });
 
+test('distinctValues leaves out the own-id row, however it is written, and keeps another product\'s id', function () {
+    $product = Product::factory()->create();
+    $kept = ProductBarcode::factory()->create(['product_id' => $product->id, 'barcode' => 'KEPT']);
+    ProductBarcode::factory()->create(['product_id' => $product->id, 'barcode' => (string) $product->id]);
+    ProductBarcode::factory()->create(['product_id' => $product->id, 'barcode' => ' '.$product->id.' ']);
+    // Noise: another product's id is an ordinary value on this product.
+    $otherId = ProductBarcode::factory()->create(['product_id' => $product->id, 'barcode' => (string) Product::factory()->create()->id]);
+
+    expect(ProductBarcode::distinctValues($product->barcodes)->modelKeys())->toBe([$kept->id, $otherId->id])
+        ->and(ProductBarcode::distinctValues($product->barcodes)->keys()->all())->toBe([0, 1]);
+});
+
 test('isOwnProductId is true only for a value that is the product\'s own id once normalized', function () {
     $product = Product::factory()->create();
     $other = Product::factory()->create();

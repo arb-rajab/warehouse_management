@@ -39,13 +39,18 @@ class ProductBarcode extends Model
      * twice), blanks left out. A legacy duplicate on one product therefore
      * cannot fail the form's `distinct` rule when posted back.
      *
+     * The own-id row ({@see self::isOwnProductId()}) is left out as well: the
+     * form must not offer it for removal, since the store app's barcode search
+     * finds the product by it. It is never in the form's seen list, so
+     * InHouseProductWriter::update keeps it.
+     *
      * @param  Collection<int, self>  $barcodes
      * @return Collection<int, self>
      */
     public static function distinctValues(Collection $barcodes): Collection
     {
         return $barcodes
-            ->reject(fn (self $barcode): bool => trim($barcode->barcode) === '')
+            ->reject(fn (self $barcode): bool => trim($barcode->barcode) === '' || $barcode->isOwnProductId())
             ->unique(fn (self $barcode): string => trim($barcode->barcode))
             ->values();
     }

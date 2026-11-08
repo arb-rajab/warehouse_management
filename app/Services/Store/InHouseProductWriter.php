@@ -181,7 +181,8 @@ class InHouseProductWriter extends PhysicalProductWriter
      * - S is `product_barcodes_seen`, the values the form loaded; P the
      *   non-empty values posted;
      * - every row whose value is in S but not in P is deleted (the user
-     *   removed it), duplicates of that value on this product included;
+     *   removed it), duplicates of that value on this product included,
+     *   except the own-id row, which no form deletes;
      * - each value of P the product does not hold is inserted, after the
      *   shared rule is checked again under the lock;
      * - every other row stays with its id: values still posted, and values
@@ -202,7 +203,8 @@ class InHouseProductWriter extends PhysicalProductWriter
             ? $this->trimmedValues(is_array($data['product_barcodes_seen']) ? $data['product_barcodes_seen'] : [])
             : $held;
 
-        $removed = $rows->filter(fn (ProductBarcode $barcode): bool => in_array(trim($barcode->barcode), $seen, true) && ! in_array(trim($barcode->barcode), $posted, true));
+        // The own-id row (the import's Mat_ID, which the store app's barcode search needs) is never removed by a form.
+        $removed = $rows->filter(fn (ProductBarcode $barcode): bool => in_array(trim($barcode->barcode), $seen, true) && ! in_array(trim($barcode->barcode), $posted, true) && ! $barcode->isOwnProductId());
         if ($removed->isNotEmpty()) {
             ProductBarcode::query()->whereKey($removed->modelKeys())->delete();
         }

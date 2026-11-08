@@ -44,9 +44,13 @@ label shows it). Consequences:
   `ProductSummaryResource`), counts and ZIPs leave them out, the product's
   default barcode (its id, computed and never stored) stays the only own-id
   line, and the WMS destroy answers 404 for one.
-- No form deletes one by posting a list: the Store form's merge-save deletes only
-  values it showed and the user removed (see "The Store form always posts
-  `product_barcodes_seen`" below), so a row the form did not show is kept.
+- The Store edit form hides them too (`ProductBarcode::distinctValues()`, behind
+  both `ProductFormResource::product_barcodes` and `barcodeImages`), so they are
+  neither an input nor in the seen list. No form deletes one by posting a list:
+  the merge-save deletes only values the form showed and the user removed (see
+  "The Store form always posts `product_barcodes_seen`" below) and never an
+  own-id row, even from a client that posts no seen list. Typing the product's
+  own id into the form adds no second row (the product already holds it).
 - `NewProductBarcode` refuses a *new* value equal to an existing product's id, but
   lets a product that already holds a value post it again (the grandfathered
   own-id row and legacy duplicates).
