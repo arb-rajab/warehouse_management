@@ -35,6 +35,7 @@ use App\Models\Product;
 use App\Models\ProductBarcode;
 use App\Models\ProductStock;
 use App\Models\StoreUser;
+use App\Rules\NewProductBarcode;
 use App\Services\ProductBarcodeLabels;
 use App\Services\ProductFieldSourceService;
 use App\Services\ProductStockService;
@@ -202,7 +203,7 @@ class ProductController extends Controller implements HasMiddleware
     public function store(StoreProductRequest $request, InHouseProductWriter $writer): RedirectResponse
     {
         $data = $request->validated();
-        DB::transaction(fn () => $writer->create($data, $request->variantNames(), $request->variantColorCodes(), StoreProductRequest::cashPaymentEnabled()));
+        NewProductBarcode::locked(fn () => DB::transaction(fn () => $writer->create($data, $request->variantNames(), $request->variantColorCodes(), StoreProductRequest::cashPaymentEnabled())));
         $this->clearStorefrontCaches();
         $this->flashSuccess('product_has_been_created_successfully');
 
@@ -255,14 +256,15 @@ class ProductController extends Controller implements HasMiddleware
     public function update(UpdateProductRequest $request, Product $product, InHouseProductWriter $writer): RedirectResponse
     {
         $data = $request->validated();
-        $product = DB::transaction(fn (): Product => $writer->update(
+        // Under the shared barcode lock, which the writer's final barcode check needs.
+        $product = NewProductBarcode::locked(fn (): Product => DB::transaction(fn (): Product => $writer->update(
             $this->lockedProduct(Product::query()->physical(), $product),
             $data,
             $request->variantNames(),
             $request->variantColorCodes(),
             UpdateProductRequest::cashPaymentEnabled(),
             UpdateProductRequest::productWiseShippingEnabled(),
-        ));
+        )));
         $this->clearStorefrontCaches();
         $this->flashSuccess('product_has_been_updated_successfully');
 

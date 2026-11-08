@@ -7,9 +7,11 @@ use App\Models\ProductBarcode;
 use App\Models\ProductStock;
 use App\Models\ProductVariation;
 use App\Models\StoreUser;
+use App\Rules\NewProductBarcode;
 use App\Services\ProductFieldSourceService;
 use App\Services\ProductFlashDealService;
 use App\Services\ProductTaxService;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 
 /**
@@ -37,7 +39,9 @@ use Illuminate\Support\Str;
  * (ProductFieldSourceService); update() ignores a posted read-only one
  * (name, ar_name, unit, unit_price and description are on the form; the
  * others have no field there and only the guard protects them).
- * The caller wraps each write in one transaction.
+ * The caller wraps each write in one transaction, held under
+ * NewProductBarcode::locked(): new barcodes are checked again right before
+ * they are inserted, since `product_barcodes` has no unique index.
  */
 class InHouseProductWriter extends PhysicalProductWriter
 {
@@ -80,7 +84,8 @@ class InHouseProductWriter extends PhysicalProductWriter
             $stock->forceFill(['product_id' => $product->id, ...$row])->save();
         }
         $this->saveTranslation($product, config('app.default_language'), $data);
-        $this->saveTypesAndBarcodes($product, $data);
+        $this->saveTypes($product, $data);
+        $this->insertBarcodes($product, null, $this->postedBarcodes($data));
 
         return $product;
     }
@@ -97,8 +102,9 @@ class InHouseProductWriter extends PhysicalProductWriter
      *
      * A stock row is kept, and updated, for each posted row whose variant it
      * already names (the first such row when names repeat); other posted rows
-     * are added and the rows no posted row names are deleted. Taxes, product
-     * types and store barcodes are replaced as before.
+     * are added and the rows no posted row names are deleted. Taxes and
+     * product types are replaced as before; barcodes are merged
+     * ({@see self::mergeBarcodes()}).
      *
      * @param  array<string, mixed>  $data  the validated edit form
      * @param  list<string>  $variantNames
@@ -163,10 +169,95 @@ class InHouseProductWriter extends PhysicalProductWriter
         $this->syncStocks($product, $this->stockRows($data, $variantNames));
         $this->saveTranslation($product, $data['lang'], $data);
         $product->variations()->delete();
-        $product->barcodes()->delete();
-        $this->saveTypesAndBarcodes($product, $data);
+        $this->saveTypes($product, $data);
+        $this->mergeBarcodes($product, $data);
 
         return $product;
+    }
+
+    /**
+     * Reconciles the product's barcodes with the form, comparing trimmed
+     * values, so a store save never deletes a barcode it did not show:
+     * - S is `product_barcodes_seen`, the values the form loaded; P the
+     *   non-empty values posted;
+     * - every row whose value is in S but not in P is deleted (the user
+     *   removed it), duplicates of that value on this product included;
+     * - each value of P the product does not hold is inserted, after the
+     *   shared rule is checked again under the lock;
+     * - every other row stays with its id: values still posted, and values
+     *   added elsewhere (the WMS, the import, another tab) after the form
+     *   loaded.
+     * Without `product_barcodes_seen` (another client, an older page) S is
+     * every value the product holds, which keeps the earlier replace
+     * behaviour: the product ends up with exactly the posted values.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function mergeBarcodes(Product $product, array $data): void
+    {
+        $posted = $this->postedBarcodes($data);
+        $rows = $product->barcodes()->get(['id', 'product_id', 'barcode']);
+        $held = $rows->map(fn (ProductBarcode $barcode): string => trim($barcode->barcode))->unique()->values()->all();
+        $seen = array_key_exists('product_barcodes_seen', $data)
+            ? $this->trimmedValues(is_array($data['product_barcodes_seen']) ? $data['product_barcodes_seen'] : [])
+            : $held;
+
+        $removed = $rows->filter(fn (ProductBarcode $barcode): bool => in_array(trim($barcode->barcode), $seen, true) && ! in_array(trim($barcode->barcode), $posted, true));
+        if ($removed->isNotEmpty()) {
+            ProductBarcode::query()->whereKey($removed->modelKeys())->delete();
+        }
+
+        $this->insertBarcodes($product, $product, array_filter($posted, fn (string $value): bool => ! in_array($value, $held, true)));
+    }
+
+    /**
+     * Inserts $values (by their form index), once the shared rule passes
+     * again for every one: a value another product took since validation is
+     * refused on its field, and the caller's transaction rolls back.
+     *
+     * @param  array<int, string>  $values
+     */
+    private function insertBarcodes(Product $product, ?Product $holder, array $values): void
+    {
+        if ($values === []) {
+            return;
+        }
+
+        Validator::make(['product_barcodes' => $values], ['product_barcodes.*' => [new NewProductBarcode($holder)]])->validate();
+
+        foreach ($values as $value) {
+            ProductBarcode::query()->create(['product_id' => $product->id, 'barcode' => $value]);
+        }
+    }
+
+    /**
+     * The posted non-empty barcodes, trimmed, by their form index (the
+     * request's `distinct` rule already refused repeats).
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<int, string>
+     */
+    private function postedBarcodes(array $data): array
+    {
+        $values = [];
+
+        foreach (is_array($data['product_barcodes'] ?? null) ? $data['product_barcodes'] : [] as $index => $value) {
+            $value = trim((string) $value);
+            if ($value !== '') {
+                $values[(int) $index] = $value;
+            }
+        }
+
+        return $values;
+    }
+
+    /**
+     * @param  array<mixed>  $values
+     * @return list<string>
+     */
+    private function trimmedValues(array $values): array
+    {
+        return array_values(array_filter(array_map(fn (mixed $value): string => trim((string) $value), $values), fn (string $value): bool => $value !== ''));
     }
 
     /**
@@ -188,21 +279,15 @@ class InHouseProductWriter extends PhysicalProductWriter
     }
 
     /**
-     * The non-empty product types and store barcodes, as the legacy loops
-     * created them.
+     * The non-empty product types, as the legacy loop created them.
      *
      * @param  array<string, mixed>  $data
      */
-    private function saveTypesAndBarcodes(Product $product, array $data): void
+    private function saveTypes(Product $product, array $data): void
     {
         foreach ($data['product_types'] ?? [] as $type) {
             if ($type !== null && $type !== '') {
                 ProductVariation::query()->create(['product_id' => $product->id, 'name' => $type]);
-            }
-        }
-        foreach ($data['product_barcodes'] ?? [] as $barcode) {
-            if ($barcode !== null && $barcode !== '') {
-                ProductBarcode::query()->create(['product_id' => $product->id, 'barcode' => $barcode]);
             }
         }
     }

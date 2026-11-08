@@ -9,7 +9,9 @@ use App\Models\ProductTranslation;
 use App\Models\Upload;
 use App\Models\User;
 use App\Services\ProductBarcodeLabels;
+use Illuminate\Contracts\Cache\Lock;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -409,8 +411,9 @@ test('a default-language save writes the base fields and its translation and kee
             ['lang' => 'en', 'name' => 'Extra virgin olive oil', 'unit' => 'jar', 'description' => '<p>Cold</p>'],
         ])
         ->and(DB::table('product_variations')->where('product_id', $this->product->id)->pluck('name')->all())->toBe(['Organic'])
+        // The kept barcode keeps its row (and id); only the new one is inserted.
         ->and(DB::table('product_barcodes')->orderBy('id')->get(['product_id', 'barcode'])->map(fn ($row) => [$row->product_id, $row->barcode])->all())->toBe([
-            [$this->other->id, '8710000000002'], [$this->product->id, '8710000000001'], [$this->product->id, '4006381333931'],
+            [$this->product->id, '8710000000001'], [$this->other->id, '8710000000002'], [$this->product->id, '4006381333931'],
         ])
         ->and(DB::table('product_taxes')->where('product_id', $this->product->id)->orderBy('id')->get(['tax_id', 'tax', 'tax_type'])->map(fn ($row) => (array) $row)->all())
         ->toEqual([['tax_id' => $this->vat, 'tax' => 9, 'tax_type' => 'percent'], ['tax_id' => $this->service, 'tax' => 1.5, 'tax_type' => 'amount']]);
@@ -546,6 +549,93 @@ test('values the product already holds save again, even one another product shar
         ->and(DB::table('product_barcodes')->where('product_id', $this->other->id)->pluck('barcode')->all())->toBe(['8710000000002']);
 });
 
+test('a save never deletes a barcode the form did not show: one added in the WMS after the form loaded stays', function () {
+    actingAsStoreUser(createStoreStaff('product_edit'));
+    Artisan::shouldReceive('call')->andReturn(0);
+    $kept = ProductBarcode::query()->where('product_id', $this->product->id)->sole();
+    // Added in the WMS (or by the import, or another tab) while the form was open.
+    $late = ProductBarcode::factory()->create(['product_id' => $this->product->id, 'barcode' => 'WMS-LATE']);
+
+    $this->post(route('products.update', $this->product), productEditForm([
+        'product_barcodes' => ['8710000000001', '4006381333931'],
+        'product_barcodes_seen' => ['8710000000001'],
+    ]))->assertSessionHasNoErrors()->assertInertiaFlash('success', 'Product has been updated successfully');
+
+    expect(DB::table('product_barcodes')->where('product_id', $this->product->id)->orderBy('id')->get(['id', 'barcode'])->map(fn ($row) => [$row->id, $row->barcode])->all())
+        ->toEqual([[$kept->id, '8710000000001'], [$late->id, 'WMS-LATE'], [DB::table('product_barcodes')->where('barcode', '4006381333931')->value('id'), '4006381333931']])
+        ->and(DB::table('product_barcodes')->where('product_id', $this->other->id)->pluck('barcode')->all())->toBe(['8710000000002']);
+});
+
+test('a value the form showed and the user removed is deleted, with its duplicates on the product, and nothing else', function () {
+    actingAsStoreUser(createStoreStaff('product_edit'));
+    Artisan::shouldReceive('call')->andReturn(0);
+    ProductBarcode::query()->create(['product_id' => $this->product->id, 'barcode' => ' 8710000000001 ']);
+    $stays = ProductBarcode::query()->create(['product_id' => $this->product->id, 'barcode' => 'STAYS']);
+    $late = ProductBarcode::factory()->create(['product_id' => $this->product->id, 'barcode' => 'WMS-LATE']);
+
+    $this->post(route('products.update', $this->product), productEditForm([
+        'product_barcodes' => ['STAYS'],
+        'product_barcodes_seen' => ['8710000000001', 'STAYS'],
+    ]))->assertSessionHasNoErrors();
+
+    expect(DB::table('product_barcodes')->where('product_id', $this->product->id)->orderBy('id')->pluck('id')->all())->toEqual([$stays->id, $late->id])
+        ->and(DB::table('product_barcodes')->where('product_id', $this->other->id)->count())->toBe(1);
+});
+
+test('an empty seen list deletes nothing: every row the form did not show stays', function () {
+    actingAsStoreUser(createStoreStaff('product_edit'));
+    Artisan::shouldReceive('call')->andReturn(0);
+    $before = DB::table('product_barcodes')->orderBy('id')->get()->toArray();
+
+    $this->post(route('products.update', $this->product), productEditForm(['product_barcodes' => [], 'product_barcodes_seen' => []]))->assertSessionHasNoErrors();
+
+    expect(DB::table('product_barcodes')->orderBy('id')->get()->toArray())->toEqual($before);
+});
+
+test('without the seen list a save keeps today\'s replace: the product ends up with exactly the posted values, kept rows keeping their ids', function () {
+    actingAsStoreUser(createStoreStaff('product_edit'));
+    Artisan::shouldReceive('call')->andReturn(0);
+    $kept = ProductBarcode::query()->where('product_id', $this->product->id)->sole();
+    ProductBarcode::factory()->create(['product_id' => $this->product->id, 'barcode' => 'WMS-LATE']);
+
+    $this->post(route('products.update', $this->product), productEditForm(['product_barcodes' => ['8710000000001', '4006381333931']]))->assertSessionHasNoErrors();
+
+    expect(DB::table('product_barcodes')->where('product_id', $this->product->id)->orderBy('id')->pluck('barcode')->all())->toBe(['8710000000001', '4006381333931'])
+        ->and(DB::table('product_barcodes')->where('barcode', '8710000000001')->value('id'))->toEqual($kept->id);
+});
+
+test('the seen list is validated', function (mixed $seen, string $field) {
+    actingAsStoreUser(createStoreStaff('product_edit'));
+    $before = productEditSnapshot();
+
+    $this->post(route('products.update', $this->product), productEditForm(['product_barcodes_seen' => $seen]))->assertSessionHasErrors($field);
+    expect(productEditSnapshot())->toEqual($before);
+})->with([
+    'not a list' => ['8710000000001', 'product_barcodes_seen'],
+    'too many' => [array_fill(0, 51, 'X'), 'product_barcodes_seen'],
+    'too long' => [[str_repeat('9', 256)], 'product_barcodes_seen.0'],
+]);
+
+test('a value another product takes between validation and the write is refused under the lock, and nothing is written', function () {
+    actingAsStoreUser(createStoreStaff('product_edit'));
+    Artisan::shouldReceive('call')->never();
+    $before = productEditSnapshot();
+    $racer = $this->other;
+    $lock = Mockery::mock(Lock::class);
+    $lock->shouldReceive('block')->once()->andReturnUsing(function (int $seconds, Closure $callback) use ($racer) {
+        DB::table('product_barcodes')->insert(['product_id' => $racer->id, 'barcode' => '4006381333931']);
+
+        return $callback();
+    });
+    Cache::partialMock()->shouldReceive('lock')->once()->with('product-barcodes', 10)->andReturn($lock);
+
+    $this->post(route('products.update', $this->product), productEditForm(['name' => 'Renamed', 'product_barcodes' => ['8710000000001', '4006381333931']]))
+        ->assertSessionHasErrors(['product_barcodes.1' => 'The product barcode has already been taken.']);
+
+    DB::table('product_barcodes')->where('product_id', $racer->id)->where('barcode', '4006381333931')->delete();
+    expect(productEditSnapshot())->toEqual($before);
+});
+
 test('the update validates every field and refuses rows that do not match the choices', function (array|Closure $overrides, string $field) {
     actingAsStoreUser(createStoreStaff('product_edit'));
     $before = productEditSnapshot();
@@ -601,8 +691,9 @@ test('a failed update rolls every table back and clears no cache', function () {
     ProductBarcode::saving(fn () => throw new RuntimeException('Persistence failure'));
     $this->withoutExceptionHandling();
     try {
+        // A new barcode, so the save inserts one (a kept one is not rewritten).
         expect(fn () => $this->post(route('products.update', $this->product), productEditForm([
-            'name' => 'Renamed', 'choice_options' => [['attribute_id' => $this->size, 'values' => ['S', 'M']]],
+            'name' => 'Renamed', 'product_barcodes' => ['8710000000001', '4006381333931'], 'choice_options' => [['attribute_id' => $this->size, 'values' => ['S', 'M']]],
             'variants' => [['variant' => 'S', 'price' => '1', 'qty' => '1'], ['variant' => 'M', 'price' => '1', 'qty' => '1']],
             'flash_deal_id' => $this->flashDeal, 'flash_discount_type' => 'amount',
         ])))->toThrow(RuntimeException::class);
