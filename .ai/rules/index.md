@@ -73,5 +73,5 @@ Before planning or editing, find the row whose globs match the file's path and r
 | tests/** | .ai/rules/tests.md |
 | resources/js/types/admin.ts | .ai/rules/types.md |
 | app/Http/Controllers/Api/V1/PalletController.php | .ai/rules/v1.md |
-| resources/views/** | .ai/rules/views.md |
+| resources/views/**, resources/css/storefront.css | .ai/rules/views.md |
 | resources/js/warehouse-map/**,resources/css/warehouse-map/**,resources/js/pages/Admin/WarehouseMap/**,app/Http/Controllers/Admin/WarehouseMapController.php,tests/e2e/warehouse-map.spec.ts | .ai/rules/warehouse-map.md |

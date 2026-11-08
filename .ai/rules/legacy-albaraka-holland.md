@@ -1382,8 +1382,12 @@ The legacy `webpack.mix.js`/`package.json` (Mix 2, Vue 2, Bootstrap 4) are
 
 Drop them outright. There is nothing to port to Vite.
 
-Done: `vite.config.ts` and the Inertia bundle are untouched and there is no
-second Vite entry. `public/assets/**` and `public/download/` are copied in
+Done: the Inertia bundle is untouched. The Blade side has two small Vite
+entries of its own: `resources/js/legacy-image-upload.ts` and, since the
+Direction A identity, `resources/css/storefront.css`, the storefront's tokens,
+self-hosted IBM Plex fonts and theme overrides, loaded after `aiz-core.css` by
+the storefront layout only (views.md); `base_color` no longer colours the
+storefront. `public/assets/**` and `public/download/` are copied in
 verbatim, and `static_asset()`/`my_asset()` no longer prefix `public/`.
 `/temp` routes return plain Blade (the views never call `@vite` or extend
 `app.blade.php`), so jQuery/Bootstrap never share a page with the Vue 3 app;
