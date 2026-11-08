@@ -228,6 +228,23 @@ class CellStatusLog extends Model
     }
 
     /**
+     * Scope a query to the logs written against cells of the given
+     * warehouses; null matches every log. A transfer between two warehouses
+     * writes one log per cell, so each side counts in its own warehouse.
+     * See {@see Row::forWarehouses()}.
+     *
+     * @param  Builder<CellStatusLog>  $query
+     * @param  list<int>|null  $warehouseIds
+     */
+    #[Scope]
+    protected function forWarehouses(Builder $query, ?array $warehouseIds): void
+    {
+        if ($warehouseIds !== null) {
+            $query->whereIn($query->qualifyColumn('cell_id'), Cell::query()->select('id')->forWarehouses($warehouseIds));
+        }
+    }
+
+    /**
      * Scope a query by the product/pallet/row/column/user/action/date-range filters
      * shared by the admin and mobile API listings. Reads straight off the request
      * (not `$request->validated()`) so an absent filter is skipped rather than

@@ -12,17 +12,21 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\Relation;
+use Illuminate\Validation\ValidationException;
 
 /**
  * @property int $id
+ * @property int $warehouse_id
  * @property string $letter
  * @property int $cells_count
  * @property int $flats_count
+ * @property-read Warehouse $warehouse
  */
-#[Fillable(['letter', 'cells_count', 'flats_count'])]
+#[Fillable(['warehouse_id', 'letter', 'cells_count', 'flats_count'])]
 #[ObservedBy(RowObserver::class)]
 #[RouteKey('letter')]
 class Row extends Model
@@ -35,7 +39,12 @@ class Row extends Model
      *
      * @var list<string>
      */
-    public const array SELECT_COLUMNS = ['id', 'letter', 'cells_count', 'flats_count'];
+    public const array SELECT_COLUMNS = ['id', 'warehouse_id', 'letter', 'cells_count', 'flats_count'];
+
+    /**
+     * The eager load behind RowResource's `warehouse` summary.
+     */
+    public const string WITH_WAREHOUSE = 'warehouse:id,name';
 
     /**
      * The operational ceiling for cells_count/flats_count. The columns are
@@ -59,11 +68,81 @@ class Row extends Model
     }
 
     /**
+     * @return BelongsTo<Warehouse, $this>
+     */
+    public function warehouse(): BelongsTo
+    {
+        return $this->belongsTo(Warehouse::class);
+    }
+
+    /**
      * @return HasMany<Cell, $this>
      */
     public function cells(): HasMany
     {
         return $this->hasMany(Cell::class);
+    }
+
+    /**
+     * A letter is unique per warehouse only, so `{row}` (bound by letter)
+     * can match one row in each of several warehouses. The optional
+     * `?warehouse_id=` query parameter picks the warehouse; without it a
+     * letter that more than one warehouse uses is refused with a
+     * `warehouse_id` validation error rather than resolved to an arbitrary
+     * one of them. Only the query string is read, so a form body's own
+     * `warehouse_id` never changes which row a route addresses.
+     * {@see routeParameters()} builds URLs that always resolve.
+     *
+     * @param  mixed  $value
+     * @param  string|null  $field
+     * @return self|null
+     */
+    public function resolveRouteBinding($value, $field = null)
+    {
+        $warehouseId = request()->query('warehouse_id');
+
+        /** @var Collection<int, self> $rows */
+        $rows = $this->resolveRouteBindingQuery($this->newQuery(), $value, $field)
+            ->when(is_scalar($warehouseId) && $warehouseId !== '', fn (Builder $query) => $query->where('warehouse_id', (int) $warehouseId))
+            ->limit(2)
+            ->get();
+
+        if ($rows->count() > 1) {
+            throw ValidationException::withMessages(['warehouse_id' => __('messages.row_letter_in_several_warehouses')]);
+        }
+
+        return $rows->first();
+    }
+
+    /**
+     * The route parameters addressing this row: its letter, plus
+     * `warehouse_id` while another warehouse has a row with the same letter
+     * (see {@see resolveRouteBinding()}). A letter only one warehouse uses
+     * keeps its plain `/rows/{letter}` URL.
+     *
+     * @return array<string, int|string>
+     */
+    public function routeParameters(): array
+    {
+        $shared = self::query()->where('letter', $this->letter)->whereKeyNot($this->getKey())->exists();
+
+        return ['row' => $this->letter, ...($shared ? ['warehouse_id' => $this->warehouse_id] : [])];
+    }
+
+    /**
+     * Scope a query to the rows of the given warehouses; null (no warehouse
+     * filter) matches every row. The cell, pallet, log and round scopes of
+     * the same name all narrow through this column.
+     *
+     * @param  Builder<Row>  $query
+     * @param  list<int>|null  $warehouseIds
+     */
+    #[Scope]
+    protected function forWarehouses(Builder $query, ?array $warehouseIds): void
+    {
+        if ($warehouseIds !== null) {
+            $query->whereIn($query->qualifyColumn('warehouse_id'), $warehouseIds);
+        }
     }
 
     /**
@@ -150,6 +229,7 @@ class Row extends Model
     {
         $query->select(self::SELECT_COLUMNS)
             ->withHasPallets()
+            ->with(self::WITH_WAREHOUSE)
             ->with(['cells' => fn ($cells) => $cells
                 ->select(Cell::SELECT_COLUMNS)
                 ->with([...Cell::WITH_CONTENTS, 'pallet.product.setting:product_id,boxes_count'])

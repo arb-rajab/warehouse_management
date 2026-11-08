@@ -12,6 +12,8 @@ return [
     'row_cannot_reduce_columns_has_history' => 'لا يمكن تقليل عدد الأعمدة: تم تسجيل نشاط على خلايا بعض الأعمدة المراد حذفها.',
     'row_cannot_reduce_levels_has_history' => 'لا يمكن تقليل عدد المستويات: تم تسجيل نشاط على خلايا بعض المستويات المراد حذفها.',
     'row_cannot_delete_has_history' => 'لا يمكن حذف ممر تم تسجيل نشاط على خلاياه.',
+    'row_letter_in_several_warehouses' => 'حرف هذا الممر مستخدم في أكثر من مستودع. اختر المستودع.',
+    'warehouse_cannot_delete_has_rows' => 'لا يمكن حذف مستودع لا يزال يحتوي على ممرات.',
     'slot_does_not_exist' => 'هذا الموقع غير موجود في هذا الممر.',
     'cannot_delete_own_account' => 'لا يمكنك حذف حسابك الخاص.',
     'pallet_already_at_location' => 'المنصات النقالة موجودة بالفعل في هذا الموقع.',

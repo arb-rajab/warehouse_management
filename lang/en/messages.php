@@ -12,6 +12,8 @@ return [
     'row_cannot_reduce_columns_has_history' => 'Cannot reduce the columns: some of the columns being removed have history logged against their cells.',
     'row_cannot_reduce_levels_has_history' => 'Cannot reduce the levels: some of the levels being removed have history logged against their cells.',
     'row_cannot_delete_has_history' => 'Cannot delete a row that has history logged against its cells.',
+    'row_letter_in_several_warehouses' => 'This row letter is used in more than one warehouse. Choose the warehouse.',
+    'warehouse_cannot_delete_has_rows' => 'Cannot delete a warehouse that still has rows.',
     'slot_does_not_exist' => 'This slot does not exist for this row.',
     'cannot_delete_own_account' => 'You cannot delete your own account.',
     'pallet_already_at_location' => 'Pallet is already at that location.',
