@@ -7,6 +7,7 @@ use App\Models\Pallet;
 use App\Models\Product;
 use App\Models\Row;
 use App\Models\Setting;
+use App\Models\Warehouse;
 use Illuminate\Support\Carbon;
 use Inertia\Testing\AssertableInertia as Assert;
 
@@ -1156,4 +1157,23 @@ test('storing a pallet into a first-level cell leaves it full when level 1 is no
     ])->assertRedirect(route('admin.rows.show', $row->letter));
 
     expect($cell->refresh()->state)->toBe(CellState::Full);
+});
+
+test('the pallets list can be filtered by warehouse, hydrating the selected warehouse labels', function () {
+    actingAsAdmin();
+    $north = Warehouse::factory()->create(['name' => 'North']);
+    $northRow = Row::factory()->for($north)->create(['cells_count' => 1, 'flats_count' => 1]);
+    $otherRow = Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
+    $inNorth = Pallet::factory()->create(['cell_id' => $northRow->cells()->value('id')]);
+    Pallet::factory()->create(['cell_id' => $otherRow->cells()->value('id')]);
+
+    $this->get("/admin/pallets?warehouse_ids[]={$north->id}")->assertOk()->assertInertia(
+        fn (Assert $page) => $page->has('pallets.data', 1)
+            ->where('pallets.data.0.id', $inNorth->id)
+            ->where('filters.warehouse_ids', [(string) $north->id])
+            ->where('filterOptions.warehouses', [['id' => $north->id, 'name' => 'North']])
+    );
+    $this->get('/admin/pallets')->assertOk()->assertInertia(
+        fn (Assert $page) => $page->has('pallets.data', 2)->where('filterOptions.warehouses', [])
+    );
 });

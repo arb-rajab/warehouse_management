@@ -10,6 +10,7 @@ use App\Models\Pallet;
 use App\Models\Product;
 use App\Models\Row;
 use App\Models\User;
+use App\Models\Warehouse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -992,4 +993,20 @@ test('accepting a non-existent report returns a 404', function () {
     actingAsAdmin();
 
     $this->post('/admin/cell-verification-reports/999999/accept')->assertNotFound();
+});
+
+test('the verification rounds can be filtered by warehouse, hydrating the selected warehouse labels', function () {
+    actingAsAdmin();
+    $north = Warehouse::factory()->create(['name' => 'North']);
+    $northRow = Row::factory()->for($north)->create(['cells_count' => 1, 'flats_count' => 1]);
+    $otherRow = Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
+    $inNorth = CellVerificationRound::factory()->covering($northRow)->create();
+    CellVerificationRound::factory()->covering($otherRow)->create();
+
+    $this->get("/admin/cell-verification-rounds?warehouse_ids[]={$north->id}")->assertOk()->assertInertia(
+        fn (Assert $page) => $page->has('rounds.data', 1)
+            ->where('rounds.data.0.id', $inNorth->id)
+            ->where('filters.warehouse_ids', [(string) $north->id])
+            ->where('filterOptions.warehouses', [['id' => $north->id, 'name' => 'North']])
+    );
 });

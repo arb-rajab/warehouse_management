@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\DashboardController;
 use App\Models\Pallet;
 use App\Models\Product;
 use App\Models\Row;
+use App\Models\Warehouse;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -449,4 +450,69 @@ test('the expired and expiring-soon pallet queries compare expiration_date direc
     expect($queries)->toContain('"expiration_date"')
         ->and($queries)->not->toContain('date("expiration_date")')
         ->and($queries)->not->toContain("strftime('Date', \"expiration_date\")");
+});
+
+test('every dashboard stat respects the warehouse filter', function () {
+    Carbon::setTestNow('2026-08-13 10:00:00');
+    actingAsAdmin();
+    ['north' => $north] = $this->seedDashboardWarehouseFilterFixture();
+
+    $this->get("/admin?warehouse_ids[]={$north->id}")->assertOk()->assertInertia(
+        fn (Assert $page) => $page->where('stats.occupancy', ['empty' => 1, 'full' => 1, 'opened' => 1])
+            ->where('stats.expiring.expired', 0)
+            ->where('stats.expiring.custom.count', 1)
+            ->where('stats.stale.count', 0)
+            ->where('stats.low_stock.count', 1)
+            ->where('stats.inactive_in_warehouse.count', 1)
+            ->where('stats.activity_today.stored', 1)
+            ->where('stats.activity_week.stored', 1)
+    );
+});
+
+test('without a warehouse filter the dashboard counts every warehouse', function () {
+    Carbon::setTestNow('2026-08-13 10:00:00');
+    actingAsAdmin();
+    $this->seedDashboardWarehouseFilterFixture();
+
+    $this->get('/admin')->assertOk()->assertInertia(
+        fn (Assert $page) => $page->where('stats.occupancy', ['empty' => 2, 'full' => 3, 'opened' => 1])
+            ->where('stats.expiring.expired', 1)
+            ->where('stats.expiring.custom.count', 1)
+            ->where('stats.stale.count', 1)
+            ->where('stats.low_stock.count', 0)
+            ->where('stats.inactive_in_warehouse.count', 2)
+            ->where('stats.activity_today.stored', 2)
+            ->where('filters.warehouse_ids', null)
+            ->has('filterOptions.warehouses', 0)
+    );
+});
+
+test('the warehouse filter combines with the product filter, for the stats and the selected-product pallet list', function () {
+    Carbon::setTestNow('2026-08-13 10:00:00');
+    actingAsAdmin();
+    ['north' => $north, 'stocked' => $stocked] = $this->seedDashboardWarehouseFilterFixture();
+
+    $this->get("/admin?warehouse_ids[]={$north->id}&product_id[]={$stocked->id}")->assertOk()->assertInertia(
+        fn (Assert $page) => $page->where('stats.occupancy', ['empty' => 0, 'full' => 1, 'opened' => 0])
+            ->where('stats.expiring.expired', 0)
+            ->has('productPallets', 1)
+            ->where('productPallets.0.expiration_date', '2026-08-23')
+    );
+});
+
+test('the dashboard echoes the warehouse filter and hydrates only the selected warehouse labels', function () {
+    actingAsAdmin();
+    $north = Warehouse::factory()->create(['name' => 'North']);
+    Warehouse::factory()->create(['name' => 'Unselected']);
+
+    $this->get("/admin?warehouse_ids[]={$north->id}")->assertOk()->assertInertia(
+        fn (Assert $page) => $page->where('filters', ['product_id' => null, 'warehouse_ids' => [$north->id]])
+            ->where('filterOptions.warehouses', [['id' => $north->id, 'name' => 'North']])
+    );
+});
+
+test('the dashboard rejects a warehouse id that does not exist', function () {
+    actingAsAdmin();
+
+    $this->get('/admin?warehouse_ids[]=999999')->assertSessionHasErrors('warehouse_ids.0');
 });

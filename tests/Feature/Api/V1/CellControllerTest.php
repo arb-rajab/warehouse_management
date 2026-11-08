@@ -339,3 +339,30 @@ test('an inactive cell is reported as such by the lookup and listing endpoints',
     $listing->assertOk();
     expect(collect($listing->json('data'))->firstWhere('id', $cell->id)['is_active'])->toBeFalse();
 });
+
+test('a row letter two warehouses use needs ?warehouse_id= to list its cells', function () {
+    actingAsMobileUser();
+    $north = Warehouse::factory()->create(['name' => 'North']);
+    $northRow = Row::factory()->for($north)->create(['letter' => 'A', 'cells_count' => 2, 'flats_count' => 1]);
+    Row::factory()->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 1]);
+
+    $this->getJson('/api/v1/rows/A/cells')->assertUnprocessable()->assertJsonValidationErrors(['warehouse_id' => 'This row letter is used in more than one warehouse. Choose the warehouse.']);
+
+    $response = $this->getJson("/api/v1/rows/A/cells?warehouse_id={$north->id}");
+
+    $response->assertOk();
+    expect(collect($response->json('data'))->pluck('id')->sort()->values()->all())->toBe($northRow->cells()->orderBy('id')->pluck('id')->all())
+        ->and($response->json('data.0.warehouse'))->toEqual(['id' => $north->id, 'name' => 'North']);
+});
+
+test('a cell of a row letter two warehouses use is found with ?warehouse_id=', function () {
+    actingAsMobileUser();
+    $north = Warehouse::factory()->create();
+    $northRow = Row::factory()->for($north)->create(['letter' => 'A', 'cells_count' => 2, 'flats_count' => 1]);
+    Row::factory()->create(['letter' => 'A', 'cells_count' => 2, 'flats_count' => 1]);
+
+    $this->getJson('/api/v1/rows/A/cells/2/flats/1')->assertUnprocessable();
+    $this->getJson("/api/v1/rows/A/cells/2/flats/1?warehouse_id={$north->id}")
+        ->assertOk()
+        ->assertJsonPath('id', $northRow->cells()->where('cell_number', 2)->value('id'));
+});

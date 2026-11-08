@@ -1029,3 +1029,150 @@ test('exporting QR codes for a non-existent row returns a 404', function () {
 
     $response->assertNotFound();
 });
+
+test('the create row screen offers every warehouse for its required warehouse select', function () {
+    actingAsAdmin();
+    $annex = Warehouse::factory()->create(['name' => 'Annex']);
+
+    $this->get('/admin/rows/create')->assertOk()->assertInertia(
+        fn (Assert $page) => $page->component('Admin/Rows/Create')
+            ->has('warehouses', 2)
+            ->has('warehouses.0', fn (Assert $warehouse) => $warehouse->where('id', $annex->id)->where('name', 'Annex'))
+            ->where('warehouses.1.name', Warehouse::DEFAULT_NAME)
+    );
+});
+
+test('creating a row without a warehouse is rejected and nothing changes', function () {
+    actingAsAdmin();
+
+    $response = $this->post('/admin/rows', ['letter' => 'Z', 'cells_count' => 1, 'flats_count' => 1]);
+
+    $response->assertSessionHasErrors('warehouse_id');
+    $this->assertDatabaseCount('rows', 0);
+});
+
+test('creating a row in a warehouse that does not exist is rejected and nothing changes', function () {
+    actingAsAdmin();
+
+    $response = $this->post('/admin/rows', ['warehouse_id' => 999999, 'letter' => 'Z', 'cells_count' => 1, 'flats_count' => 1]);
+
+    $response->assertSessionHasErrors('warehouse_id');
+    $this->assertDatabaseCount('rows', 0);
+});
+
+test('a letter another warehouse already uses can be created in a second warehouse, and its redirect names the warehouse', function () {
+    actingAsAdmin();
+    Row::factory()->create(['letter' => 'Z', 'cells_count' => 1, 'flats_count' => 1]);
+    $annex = Warehouse::factory()->create();
+
+    $response = $this->post('/admin/rows', ['warehouse_id' => $annex->id, 'letter' => 'z', 'cells_count' => 2, 'flats_count' => 1]);
+
+    $row = Row::query()->where('warehouse_id', $annex->id)->where('letter', 'Z')->sole();
+    $response->assertRedirect(route('admin.rows.show', ['row' => 'Z', 'warehouse_id' => $annex->id]));
+    $response->assertInertiaFlash('success', 'Row has been created successfully');
+    expect($row->cells()->count())->toBe(2)
+        ->and(Row::query()->where('letter', 'Z')->count())->toBe(2);
+});
+
+test('a letter is still unique within one warehouse', function () {
+    actingAsAdmin();
+    $annex = Warehouse::factory()->create();
+    Row::factory()->for($annex)->create(['letter' => 'Z', 'cells_count' => 1, 'flats_count' => 1]);
+
+    $response = $this->post('/admin/rows', ['warehouse_id' => $annex->id, 'letter' => 'Z', 'cells_count' => 1, 'flats_count' => 1]);
+
+    $response->assertSessionHasErrors('letter');
+    expect(Row::query()->where('letter', 'Z')->count())->toBe(1);
+});
+
+test('renaming a row checks the letter within its own warehouse only', function () {
+    actingAsAdmin();
+    $annex = Warehouse::factory()->create();
+    Row::factory()->for($annex)->create(['letter' => 'Y', 'cells_count' => 1, 'flats_count' => 1]);
+    Row::factory()->create(['letter' => 'X', 'cells_count' => 1, 'flats_count' => 1]);
+    $row = Row::factory()->create(['letter' => 'B', 'cells_count' => 1, 'flats_count' => 1]);
+
+    // Y exists only in the annex, so the Default warehouse's row may take it.
+    $this->put('/admin/rows/B', ['letter' => 'Y', 'cells_count' => 1, 'flats_count' => 1])
+        ->assertRedirect(route('admin.rows.show', ['row' => 'Y', 'warehouse_id' => $row->warehouse_id]));
+    expect($row->fresh()->letter)->toBe('Y');
+
+    // X is taken in the row's own warehouse.
+    $this->put('/admin/rows/Y?warehouse_id='.$row->warehouse_id, ['letter' => 'X', 'cells_count' => 1, 'flats_count' => 1])
+        ->assertSessionHasErrors('letter');
+    expect($row->fresh()->letter)->toBe('Y');
+});
+
+test('a row letter two warehouses use is refused without ?warehouse_id= and resolved with it', function () {
+    actingAsAdmin();
+    $annex = Warehouse::factory()->create(['name' => 'Annex']);
+    $defaultRow = Row::factory()->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 1]);
+    $annexRow = Row::factory()->for($annex)->create(['letter' => 'A', 'cells_count' => 2, 'flats_count' => 1]);
+
+    $this->get('/admin/rows/A')->assertSessionHasErrors(['warehouse_id' => 'This row letter is used in more than one warehouse. Choose the warehouse.']);
+
+    $this->get("/admin/rows/A?warehouse_id={$annex->id}")->assertOk()->assertInertia(
+        fn (Assert $page) => $page->where('row.id', $annexRow->id)
+            ->where('row.warehouse', ['id' => $annex->id, 'name' => 'Annex'])
+            // The row switcher lists the annex's rows only.
+            ->has('rows', 1)
+            ->where('rows.0.id', $annexRow->id)
+    );
+    $this->get("/admin/rows/A?warehouse_id={$defaultRow->warehouse_id}")->assertOk()->assertInertia(
+        fn (Assert $page) => $page->where('row.id', $defaultRow->id)
+    );
+});
+
+test('a row letter in a warehouse that does not have it returns a 404', function () {
+    actingAsAdmin();
+    $annex = Warehouse::factory()->create();
+    Row::factory()->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 1]);
+
+    $this->get("/admin/rows/A?warehouse_id={$annex->id}")->assertNotFound();
+});
+
+test('deleting a row whose letter two warehouses use deletes only the chosen one', function () {
+    actingAsAdmin();
+    $annex = Warehouse::factory()->create();
+    $defaultRow = Row::factory()->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 1]);
+    $annexRow = Row::factory()->for($annex)->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 1]);
+
+    $this->delete("/admin/rows/A?warehouse_id={$annex->id}")->assertInertiaFlash('success', 'Row has been deleted successfully');
+
+    expect(Row::query()->whereKey($annexRow->id)->exists())->toBeFalse()
+        ->and(Row::query()->whereKey($defaultRow->id)->exists())->toBeTrue();
+});
+
+test('the row list can be filtered by warehouse, hydrating the selected warehouse labels', function () {
+    actingAsAdmin();
+    $annex = Warehouse::factory()->create(['name' => 'Annex']);
+    $annexRow = Row::factory()->for($annex)->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 1]);
+    Row::factory()->create(['letter' => 'B', 'cells_count' => 1, 'flats_count' => 1]);
+
+    $this->get("/admin/rows?warehouse_ids[]={$annex->id}")->assertOk()->assertInertia(
+        fn (Assert $page) => $page->component('Admin/Rows/Index')
+            ->has('rows.data', 1)
+            ->where('rows.data.0.id', $annexRow->id)
+            ->where('rows.data.0.warehouse', ['id' => $annex->id, 'name' => 'Annex'])
+            ->where('filters', ['warehouse_ids' => [(string) $annex->id], 'per_page' => 20])
+            ->where('filterOptions.warehouses', [['id' => $annex->id, 'name' => 'Annex']])
+    );
+});
+
+test('the row list shows every warehouse and hydrates no labels without a warehouse filter', function () {
+    actingAsAdmin();
+    Row::factory()->for(Warehouse::factory())->create(['cells_count' => 1, 'flats_count' => 1]);
+    Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
+
+    $this->get('/admin/rows')->assertOk()->assertInertia(
+        fn (Assert $page) => $page->has('rows.data', 2)
+            ->where('filters', ['per_page' => 20])
+            ->where('filterOptions.warehouses', [])
+    );
+});
+
+test('the row list rejects a warehouse id that does not exist', function () {
+    actingAsAdmin();
+
+    $this->get('/admin/rows?warehouse_ids[]=999999')->assertSessionHasErrors('warehouse_ids.0');
+});

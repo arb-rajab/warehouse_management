@@ -10,6 +10,7 @@ use App\Models\Pallet;
 use App\Models\Product;
 use App\Models\Row;
 use App\Models\User;
+use App\Models\Warehouse;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -733,4 +734,20 @@ test('an unauthenticated caller cannot acknowledge cell log flags', function () 
 
     $response->assertRedirect(route('login'));
     expect($flag->fresh()->acknowledged_at)->toBeNull();
+});
+
+test('the cell logs can be filtered by warehouse, hydrating the selected warehouse labels', function () {
+    actingAsAdmin();
+    $north = Warehouse::factory()->create(['name' => 'North']);
+    $northRow = Row::factory()->for($north)->create(['cells_count' => 1, 'flats_count' => 1]);
+    $otherRow = Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
+    $inNorth = CellStatusLog::factory()->create(['cell_id' => $northRow->cells()->value('id')]);
+    CellStatusLog::factory()->create(['cell_id' => $otherRow->cells()->value('id')]);
+
+    $this->get("/admin/cell-logs?warehouse_ids[]={$north->id}")->assertOk()->assertInertia(
+        fn (Assert $page) => $page->has('logs.data', 1)
+            ->where('logs.data.0.id', $inNorth->id)
+            ->where('filters.warehouse_ids', [(string) $north->id])
+            ->where('filterOptions.warehouses', [['id' => $north->id, 'name' => 'North']])
+    );
 });
