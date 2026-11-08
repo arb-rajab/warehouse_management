@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Concerns\BuildsDashboardStats;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\ShowDashboardRequest;
-use App\Models\Warehouse;
 use Illuminate\Http\JsonResponse;
 
 class DashboardController extends Controller
@@ -29,9 +28,6 @@ class DashboardController extends Controller
                 'product_id' => $productIds,
                 'product_status' => $request->input('product_status'),
                 'warehouse_ids' => $warehouseIds,
-            ],
-            'filterOptions' => [
-                'warehouses' => Warehouse::selectedOptions($warehouseIds ?? []),
             ],
         ]);
     }

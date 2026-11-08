@@ -10,6 +10,7 @@ use App\Models\Pallet;
 use App\Models\Product;
 use App\Models\Row;
 use App\Models\User;
+use App\Models\Warehouse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 
@@ -475,4 +476,15 @@ test('attachNextLogs breaks ties on id when same-pallet siblings share the same 
 
     $secondFresh = $logs->firstWhere('id', $second->id);
     expect($secondFresh->next_log_at?->equalTo($third->created_at))->toBeTrue();
+});
+
+test('forWarehouses narrows logs to those written against cells of the given warehouses', function () {
+    $north = Warehouse::factory()->create();
+    $northRow = Row::factory()->for($north)->create(['cells_count' => 1, 'flats_count' => 1]);
+    $otherRow = Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
+    $inNorth = CellStatusLog::factory()->create(['cell_id' => $northRow->cells()->value('id')]);
+    $noise = CellStatusLog::factory()->create(['cell_id' => $otherRow->cells()->value('id')]);
+
+    expect(CellStatusLog::query()->forWarehouses([$north->id])->pluck('id')->all())->toBe([$inNorth->id])
+        ->and(CellStatusLog::query()->forWarehouses(null)->pluck('id'))->toContain($noise->id);
 });

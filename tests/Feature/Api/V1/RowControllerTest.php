@@ -5,6 +5,7 @@ use App\Models\Pallet;
 use App\Models\Product;
 use App\Models\Row;
 use App\Models\User;
+use App\Models\Warehouse;
 use Illuminate\Support\Facades\DB;
 
 test('an authenticated worker can list rows with every property the app reads', function () {
@@ -19,6 +20,7 @@ test('an authenticated worker can list rows with every property the app reads', 
     expect(collect($response->json('data'))->firstWhere('id', $row->id))->toEqual([
         'id' => $row->id,
         'letter' => 'Z',
+        'warehouse' => ['id' => $row->warehouse_id, 'name' => Warehouse::DEFAULT_NAME],
         'cells_count' => 3,
         'flats_count' => 2,
         'has_pallets' => false,
@@ -41,7 +43,9 @@ test('the row listing computes has_pallets without an exists query per row', fun
 
     $response->assertOk();
     expect(collect($response->json('data'))->pluck('has_pallets')->unique()->all())->toBe([true]);
-    expect($queryCount)->toBeLessThan(5);
+    // One more than before warehouses existed: the single `warehouse` eager
+    // load. A per-row query would still add five.
+    expect($queryCount)->toBeLessThan(6);
 });
 
 test('the row listing paginates instead of returning everything at once', function () {
@@ -175,9 +179,10 @@ test('listing every row with its cells computes has_pallets without an exists qu
     expect($payload->where('has_pallets', true))->toHaveCount(10);
     expect($payload->where('has_pallets', false))->toHaveCount(2);
 
-    // A per-row exists query would put this at 12+ on top of the eager loads;
-    // the subquery keeps it flat regardless of how many rows come back.
-    expect($queryCount)->toBeLessThan(12);
+    // A per-row exists query would put this at 12+ on top of the eager loads
+    // (one more since the `warehouse` eager load); the subquery keeps it flat
+    // regardless of how many rows come back.
+    expect($queryCount)->toBeLessThan(13);
 });
 
 test('listing every row with its cells computes is_stale from a caller-supplied stale_after_days instead of a fixed threshold', function () {

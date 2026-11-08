@@ -4,8 +4,8 @@ use App\Models\CellStatusLog;
 use App\Models\Pallet;
 use App\Models\Product;
 use App\Models\Row;
-use App\Models\Warehouse;
 use App\Models\Setting;
+use App\Models\Warehouse;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\File;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -23,6 +23,7 @@ test('an authenticated user can view the row list with every property the table 
             ->has('rows.data.0', fn (Assert $rowProp) => $rowProp
                 ->where('id', $row->id)
                 ->where('letter', 'Z')
+                ->where('warehouse', ['id' => $row->warehouse_id, 'name' => Warehouse::DEFAULT_NAME])
                 ->where('cells_count', 3)
                 ->where('flats_count', 2)
                 ->where('has_pallets', false)
@@ -293,6 +294,7 @@ test('an authenticated user can view a rows cell grid, including pallet and adde
             ->has('row', fn (Assert $rowProp) => $rowProp
                 ->where('id', $row->id)
                 ->where('letter', 'B')
+                ->where('warehouse', ['id' => $row->warehouse_id, 'name' => Warehouse::DEFAULT_NAME])
                 ->where('cells_count', 2)
                 ->where('flats_count', 1)
                 ->where('has_pallets', true)
@@ -443,6 +445,7 @@ test('an authenticated user can view the edit row page with every property the f
             ->has('row', fn (Assert $rowProp) => $rowProp
                 ->where('id', $row->id)
                 ->where('letter', 'B')
+                ->where('warehouse', ['id' => $row->warehouse_id, 'name' => Warehouse::DEFAULT_NAME])
                 ->where('cells_count', 2)
                 ->where('flats_count', 1)
                 ->where('has_pallets', false)

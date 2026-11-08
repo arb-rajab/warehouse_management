@@ -4,6 +4,7 @@ use App\Models\CellVerificationReport;
 use App\Models\CellVerificationRound;
 use App\Models\Row;
 use App\Models\User;
+use App\Models\Warehouse;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -200,4 +201,15 @@ test('the sorted scope breaks ties on id, in the requested direction, when creat
 
     $asc = CellVerificationRound::query()->sorted(Request::create('/', 'GET', ['sort_direction' => 'asc']))->get();
     expect($asc->pluck('id')->all())->toEqual([$first->id, $second->id]);
+});
+
+test('forWarehouses narrows rounds to those claiming a row of the given warehouses', function () {
+    $north = Warehouse::factory()->create();
+    $northRow = Row::factory()->for($north)->create(['cells_count' => 1, 'flats_count' => 1]);
+    $otherRow = Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
+    $inNorth = CellVerificationRound::factory()->covering($northRow, $otherRow)->create();
+    $noise = CellVerificationRound::factory()->covering($otherRow)->completed()->create();
+
+    expect(CellVerificationRound::query()->forWarehouses([$north->id])->pluck('id')->all())->toBe([$inNorth->id])
+        ->and(CellVerificationRound::query()->forWarehouses(null)->pluck('id'))->toContain($noise->id);
 });

@@ -9,6 +9,7 @@ use App\Models\Pallet;
 use App\Models\Product;
 use App\Models\Row;
 use App\Models\Setting;
+use App\Models\Warehouse;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
@@ -58,6 +59,7 @@ test('an authenticated worker can add a pallet to an empty slot', function () {
             'cell_number' => 1,
             'flat_number' => 2,
         ],
+        'warehouse' => ['id' => Warehouse::firstOrCreateDefault()->id, 'name' => Warehouse::DEFAULT_NAME],
     ]);
 
     $this->assertDatabaseCount('pallets', 1);
@@ -110,6 +112,7 @@ test('an authenticated worker can add a pallet to an empty slot with no expirati
             'cell_number' => 1,
             'flat_number' => 2,
         ],
+        'warehouse' => ['id' => Warehouse::firstOrCreateDefault()->id, 'name' => Warehouse::DEFAULT_NAME],
     ]);
 
     expect($pallet->expiration_date)->toBeNull();
@@ -396,6 +399,7 @@ test('an authenticated worker can view a pallet with every property the app read
             'cell_number' => 2,
             'flat_number' => 1,
         ],
+        'warehouse' => ['id' => Warehouse::firstOrCreateDefault()->id, 'name' => Warehouse::DEFAULT_NAME],
     ]);
 });
 

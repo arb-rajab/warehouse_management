@@ -3,6 +3,7 @@
 use App\Models\Pallet;
 use App\Models\Product;
 use App\Models\Row;
+use App\Models\Warehouse;
 
 test('a cell\'s pallet carries both raw product name columns, whatever the request locale', function () {
     // The payload no longer varies by `Accept-Language`: both store columns
@@ -52,6 +53,7 @@ test('an authenticated worker can list a row cells with every property the app r
     expect(collect($response->json('data'))->firstWhere('id', $occupiedCell->id))->toEqual([
         'id' => $occupiedCell->id,
         'row_letter' => 'Z',
+        'warehouse' => ['id' => Warehouse::firstOrCreateDefault()->id, 'name' => Warehouse::DEFAULT_NAME],
         'cell_number' => 1,
         'flat_number' => 1,
         'state' => 'full',
@@ -73,6 +75,7 @@ test('an authenticated worker can list a row cells with every property the app r
     expect(collect($response->json('data'))->firstWhere('id', $emptyCell->id))->toEqual([
         'id' => $emptyCell->id,
         'row_letter' => 'Z',
+        'warehouse' => ['id' => Warehouse::firstOrCreateDefault()->id, 'name' => Warehouse::DEFAULT_NAME],
         'cell_number' => 2,
         'flat_number' => 1,
         'state' => 'empty',
@@ -238,6 +241,7 @@ test('an authenticated worker can look up a cell by its coordinates with every p
     expect($response->json())->toEqual([
         'id' => $cell->id,
         'row_letter' => 'Z',
+        'warehouse' => ['id' => Warehouse::firstOrCreateDefault()->id, 'name' => Warehouse::DEFAULT_NAME],
         'cell_number' => 2,
         'flat_number' => 1,
         'state' => 'full',
