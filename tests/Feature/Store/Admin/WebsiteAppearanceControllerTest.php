@@ -325,12 +325,16 @@ test('a saved appearance still renders on the storefront in its stored represent
         'cookies_agreement_text' => '<p>We use <strong>cookies</strong></p>',
         'show_cookies_agreement' => true,
     ])])->assertSessionHasNoErrors()->assertRedirect();
+    $this->assertDatabaseHas('business_settings', ['type' => 'base_color', 'value' => '#123456']);
     auth('store')->logout();
 
     $this->get('/temp/users/login')->assertOk()
         ->assertSee('<title>Holland Store | Fresh food</title>', false)
         ->assertSee('<link rel="icon" href="https://example.com/icon.png">', false)
-        ->assertSee('--primary: #123456;', false)
+        // base_color is retired as the storefront colour driver: it is stored
+        // and edited as before, but the Direction A stylesheet sets the colour.
+        ->assertDontSee('--primary: #123456;', false)
+        ->assertDontSee('#123456', false)
         ->assertSee('content="Groceries delivered"', false)
         ->assertSee('<p>We use <strong>cookies</strong></p>', false);
     $this->getJson('/api/v1/store/business-settings')->assertOk()->assertJsonFragment(['type' => 'site_icon']);

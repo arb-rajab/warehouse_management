@@ -880,6 +880,36 @@ html[lang='ar'] .sf-brand-name {
     border-radius: var(--radius-md);
 }
 
+/* Account area: the theme marks the active side link and hovered menu rows
+   in saffron; the brand's soft red marks selection instead. */
+.aiz-user-sidenav .aiz-side-nav-link {
+    border-radius: var(--radius-pill);
+}
+
+.aiz-user-sidenav .aiz-side-nav-link.active,
+.aiz-user-sidenav .aiz-side-nav-link:hover,
+.aiz-user-top-menu .user-top-nav-element:hover > a,
+.aiz-category-menu .category-nav-element:hover > a {
+    background-color: var(--brand-soft);
+    color: var(--brand-strong) !important;
+}
+
+.aiz-user-panel .bg-white.border,
+.aiz-user-sidenav-wrap .bg-white,
+.aiz-user-sidenav-wrap.border {
+    border-radius: var(--radius-lg);
+}
+
+.bootstrap-select .dropdown-toggle,
+.bootstrap-select .btn.dropdown-toggle {
+    border-radius: var(--radius-md) !important;
+}
+
+.noUi-handle {
+    background: var(--surface);
+    border: 2px solid var(--brand);
+}
+
 /* ---- Product cards ------------------------------------------------------- */
 
 /* The grids drew 1px cell borders around every card; cards now carry their own. */
@@ -1128,10 +1158,6 @@ html[lang='ar'] section h3.fs-16.fw-700 {
 
 .noUi-connect {
     background: var(--brand);
-}
-
-.noUi-handle {
-    border-color: var(--brand);
 }
 
 /* Product page */
