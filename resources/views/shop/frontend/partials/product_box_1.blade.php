@@ -130,11 +130,14 @@
                         <del class="fw-400 text-secondary mr-1">{{ home_base_price($product) }}</del>
                     </div>
                 @endif
-                <!-- price -->
-                <div class="">
-                    <span class="mx-2 fw-400 text-primary">{{ home_discounted_base_price($product) . "  \t ||   "}}</span>
+                <!-- price: the main price on its own line, the per-piece price labelled below it -->
+                <div class="sf-price-stack">
+                    <span class="sf-price-main mx-2 fw-400 text-primary">{{ home_discounted_base_price($product) }}</span>
                     @if ($product->price_per_piece !== null)
-                        <span class="mx-2 fw-800 text-primary">{{ " €" . $product->price_per_piece }}</span>
+                        <span class="sf-price-piece">
+                            <span class="sf-price-piece-label">{{ __('storefront.common.per_piece') }}</span>
+                            <span class="mx-2 fw-800 text-primary"> €{{ $product->price_per_piece }}</span>
+                        </span>
                     @endif
                 </div>
             @endif
