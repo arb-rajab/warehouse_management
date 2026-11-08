@@ -14,21 +14,19 @@
 	<link rel="icon" href="{{ uploaded_asset(get_setting('site_icon')) }}">
 	<title>{{ get_setting('website_name').' | '.get_setting('site_motto') }}</title>
 
-	<!-- google font -->
-	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Poppins:300,400,500,600,700">
-
 	<!-- aiz core css -->
 	<link rel="stylesheet" href="{{ static_asset('assets/css/vendors.css') }}">
     @if(\App\Support\StoreLocale::isRtl())
     <link rel="stylesheet" href="{{ static_asset('assets/css/bootstrap-rtl.min.css') }}">
     @endif
 	<link rel="stylesheet" href="{{ static_asset('assets/css/aiz-core.css') }}">
-
-    <style>
-        body {
-            font-size: 12px;
-        }
-    </style>
+    {{-- Same identity sheet as the storefront (Direction A): these standalone
+         pages (seller and delivery-boy login, maintenance) run on aiz-core.css. --}}
+    @vite('resources/css/storefront.css')
+    <link rel="preload" as="font" type="font/woff2" crossorigin href="{{ \Illuminate\Support\Facades\Vite::asset('node_modules/@fontsource/ibm-plex-sans-arabic/files/ibm-plex-sans-arabic-latin-400-normal.woff2') }}">
+    @if(\App\Support\StoreLocale::isRtl())
+    <link rel="preload" as="font" type="font/woff2" crossorigin href="{{ \Illuminate\Support\Facades\Vite::asset('node_modules/@fontsource/ibm-plex-sans-arabic/files/ibm-plex-sans-arabic-arabic-400-normal.woff2') }}">
+    @endif
 	<script>
     	var AIZ = AIZ || {};
         AIZ.local = {

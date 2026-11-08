@@ -14,6 +14,7 @@ export default defineConfig({
                 'resources/js/app.ts',
                 'resources/js/legacy-image-upload.ts',
                 'resources/css/storefront.css',
+                'resources/css/seller.css',
             ],
             refresh: true,
             fonts: [

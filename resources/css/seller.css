@@ -1,0 +1,648 @@
+/*
+ * Seller panel identity: Direction A ("Souq"), docs/identity-proposal/README.md.
+ *
+ * This is the seller panel's own Vite entry. Only the seller layout
+ * (resources/views/shop/seller/layouts/app.blade.php) loads it, after the
+ * legacy seller theme (public/assets/css/aiz-seller.css, which says not to
+ * edit it), so it overrides the theme instead of forking it. The tokens and
+ * the Plex fonts are the storefront's (resources/css/brand/*); the WMS and
+ * the store control panel never load this sheet and keep resources/css/app.css.
+ *
+ * The seller theme reads var(--primary), var(--success), ... almost everywhere,
+ * so the shared token block already recolours most of the panel. What is left
+ * is what the theme hard-codes: the page, topbar and sidebar colours, the
+ * Poppins body font, the square corners, the table lines and a few SVG fills.
+ *
+ * Light only (the theme has no dark mode). Every rule works in both
+ * directions: logical properties, or a [dir='rtl'] override where the theme
+ * itself sets a physical side.
+ */
+
+@import './brand/fonts.css';
+@import './brand/tokens.css';
+
+:root {
+    --seller-sidebar-bg: var(--surface);
+    --seller-sidebar-ink: #3d3530;
+    --seller-sidebar-muted: #756c65;
+    --seller-sidebar-active-bg: var(--brand-soft);
+    --seller-sidebar-active-ink: var(--brand-strong);
+}
+
+/* ---- Base ---------------------------------------------------------------- */
+
+body {
+    font-family: var(--font-sans);
+    font-size: 0.875rem;
+    color: var(--ink);
+    background-color: var(--page);
+    -webkit-font-smoothing: antialiased;
+}
+
+html[lang='ar'] body {
+    font-size: 0.9375rem;
+}
+
+html[lang='ar'] .text-uppercase {
+    text-transform: none !important;
+    letter-spacing: 0 !important;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+.h1,
+.h2,
+.h3,
+.h4,
+.h5,
+.h6,
+.btn,
+.form-control,
+input,
+select,
+textarea,
+button {
+    font-family: var(--font-sans);
+}
+
+code,
+kbd,
+pre,
+samp {
+    font-family: var(--font-mono);
+}
+
+.aiz-main-wrapper {
+    background-color: var(--page);
+}
+
+.aiz-main-content > .bg-white {
+    background-color: var(--surface) !important;
+    border-color: var(--line) !important;
+    color: var(--muted);
+}
+
+a {
+    color: var(--link);
+}
+
+a:hover {
+    color: var(--brand);
+}
+
+.text-dark {
+    color: var(--ink) !important;
+}
+
+.text-secondary,
+.text-muted {
+    color: var(--muted) !important;
+}
+
+.text-primary {
+    color: var(--brand) !important;
+}
+
+.text-warning {
+    color: var(--accent-strong) !important;
+}
+
+.text-success {
+    color: var(--success-color) !important;
+}
+
+.text-danger {
+    color: var(--danger-color) !important;
+}
+
+.text-info {
+    color: var(--info-color) !important;
+}
+
+.bg-light {
+    background-color: var(--subtle) !important;
+}
+
+.border,
+.border-top,
+.border-bottom,
+.border-left,
+.border-right,
+.border-sm-top {
+    border-color: var(--line) !important;
+}
+
+:focus-visible {
+    outline: 2px solid var(--brand);
+    outline-offset: 2px;
+}
+
+/* Theme SVG icons carry their colour as a fill attribute (the seller
+   dashboard's navy): map it onto the brand. */
+[fill='#2e294e' i] {
+    fill: var(--brand);
+}
+
+/* ---- Buttons --------------------------------------------------------------- */
+
+.btn {
+    border-radius: var(--radius-md);
+    font-weight: 600;
+}
+
+.btn-primary {
+    background-color: var(--brand);
+    border-color: var(--brand);
+    color: var(--on-brand);
+    box-shadow: var(--shadow-btn);
+}
+
+.btn-primary:hover,
+.btn-primary:focus,
+.btn-primary:active,
+.btn-primary:not(:disabled):not(.disabled):active,
+.btn-primary:not(:disabled):not(.disabled).active,
+.show > .btn-primary.dropdown-toggle {
+    background-color: var(--brand-hover);
+    border-color: var(--brand-hover);
+    color: var(--on-brand);
+}
+
+.btn-primary.disabled,
+.btn-primary:disabled {
+    background-color: var(--brand);
+    border-color: var(--brand);
+    opacity: 0.55;
+}
+
+.btn-soft-primary {
+    background-color: var(--brand-soft);
+    color: var(--brand-strong);
+}
+
+.btn-soft-primary:hover,
+.btn-outline-primary:hover {
+    background-color: var(--brand);
+    border-color: var(--brand);
+    color: var(--on-brand);
+}
+
+.btn-outline-primary {
+    border-color: var(--brand);
+    color: var(--brand);
+}
+
+.btn-secondary {
+    background-color: var(--ink);
+    border-color: var(--ink);
+    color: #ffffff;
+}
+
+.btn-light,
+.btn-soft-secondary,
+.btn-soft-dark {
+    background-color: var(--subtle);
+    border-color: var(--subtle);
+    color: var(--ink);
+}
+
+.btn-outline-secondary {
+    border-color: var(--line-strong);
+    color: var(--ink);
+}
+
+.btn-success {
+    background-color: var(--success-color);
+    border-color: var(--success-color);
+}
+
+.btn-soft-success {
+    background-color: var(--success-soft);
+    color: var(--success-strong);
+}
+
+.btn-warning {
+    background-color: var(--accent);
+    border-color: var(--accent);
+    color: var(--on-accent);
+}
+
+.btn-soft-warning {
+    background-color: var(--warning-soft);
+    color: var(--warning-strong);
+}
+
+.btn-info {
+    background-color: var(--info-color);
+    border-color: var(--info-color);
+    color: #ffffff;
+}
+
+.btn-soft-info {
+    background-color: var(--info-soft);
+    color: var(--info-strong);
+}
+
+/* Destructive actions use the soft danger style, kept apart from the brand red. */
+.btn-danger,
+.btn-soft-danger {
+    background-color: var(--danger-soft);
+    border-color: var(--danger-soft);
+    color: var(--danger-strong);
+}
+
+.btn-danger:hover,
+.btn-danger:focus,
+.btn-soft-danger:hover,
+.btn-outline-danger:hover {
+    background-color: var(--danger-color);
+    border-color: var(--danger-color);
+    color: #ffffff;
+}
+
+.btn-outline-danger {
+    border-color: var(--danger-color);
+    color: var(--danger-color);
+}
+
+.btn-icon.btn-circle,
+.btn-circle {
+    border-radius: var(--radius-pill);
+}
+
+/* ---- Forms ----------------------------------------------------------------- */
+
+.form-control,
+.custom-select,
+.bootstrap-select > .dropdown-toggle,
+.input-group-text {
+    border-color: var(--line-strong);
+    border-radius: var(--radius-md);
+    color: var(--ink);
+    background-color: var(--surface);
+}
+
+.form-control.rounded-0,
+.bootstrap-select.rounded-0 > .dropdown-toggle {
+    border-radius: var(--radius-md) !important;
+}
+
+.form-control::placeholder {
+    color: var(--muted);
+}
+
+.form-control:disabled,
+.form-control[readonly] {
+    background-color: var(--subtle);
+    border-color: var(--line);
+}
+
+.form-control:focus,
+.custom-select:focus,
+.bootstrap-select > .dropdown-toggle:focus,
+.bootstrap-select.show > .dropdown-toggle {
+    border-color: var(--brand) !important;
+    box-shadow: 0 0 0 4px var(--focus-ring) !important;
+    outline: none !important;
+}
+
+.input-group > .form-control:not(:last-child),
+.input-group > .input-group-prepend > .btn {
+    border-start-end-radius: 0;
+    border-end-end-radius: 0;
+}
+
+label {
+    color: var(--ink);
+}
+
+.aiz-checkbox > input:checked ~ .aiz-square-check,
+.aiz-checkbox > input:checked ~ .aiz-rounded-check,
+.aiz-radio > input:checked ~ .aiz-rounded-check {
+    border-color: var(--brand);
+}
+
+.aiz-checkbox > input:checked ~ .aiz-square-check:after,
+.aiz-checkbox > input:checked ~ .aiz-rounded-check:after {
+    color: var(--brand);
+}
+
+.dropdown-menu {
+    border-color: var(--line);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-pop);
+}
+
+.dropdown-item.active,
+.dropdown-item:active,
+.dropdown-item:hover {
+    background-color: var(--brand-soft);
+    color: var(--brand-strong);
+}
+
+/* ---- Cards, tables, badges, modals ----------------------------------------- */
+
+.card {
+    background-color: var(--surface);
+    border-color: var(--line);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-card);
+}
+
+.card .card-header {
+    border-bottom-color: var(--line);
+    border-start-start-radius: var(--radius-lg);
+    border-start-end-radius: var(--radius-lg);
+}
+
+.card .card-footer {
+    border-top-color: var(--line);
+}
+
+.card.bg-primary {
+    background-color: var(--brand);
+    border-color: var(--brand);
+}
+
+.card-bordered {
+    border-color: var(--line);
+}
+
+.table {
+    color: var(--ink);
+}
+
+.aiz-table thead th {
+    background-color: var(--subtle);
+    border-bottom: 1px solid var(--line-strong);
+    color: var(--muted);
+    font-size: 0.8125rem;
+    font-weight: 600;
+}
+
+.aiz-table td,
+.aiz-table th {
+    border-top-color: var(--line);
+}
+
+.aiz-table.table-bordered td,
+.aiz-table.table-bordered th {
+    border-color: var(--line);
+}
+
+.table-hover tbody tr:hover {
+    background-color: var(--brand-soft);
+}
+
+.table-striped tbody tr:nth-of-type(odd) {
+    background-color: var(--page);
+}
+
+/* Replaces the inline Bootstrap-blue note tables of the bulk upload page. */
+.seller-note-table {
+    background-color: var(--info-soft);
+    border-color: var(--info-soft);
+    color: var(--info-strong);
+    font-size: 0.875rem;
+}
+
+.badge-primary {
+    background-color: var(--brand);
+    color: var(--on-brand);
+}
+
+.badge-warning {
+    background-color: var(--accent);
+    color: var(--on-accent) !important;
+}
+
+.badge-success {
+    background-color: var(--success-color);
+}
+
+.badge-danger {
+    background-color: var(--danger-color);
+}
+
+.badge-info {
+    background-color: var(--info-color);
+}
+
+.badge-soft-primary {
+    background-color: var(--brand-soft);
+    color: var(--brand-strong);
+}
+
+.badge-soft-success {
+    background-color: var(--success-soft);
+    color: var(--success-strong);
+}
+
+.badge-soft-warning {
+    background-color: var(--warning-soft);
+    color: var(--warning-strong);
+}
+
+.badge-soft-danger {
+    background-color: var(--danger-soft);
+    color: var(--danger-strong);
+}
+
+.badge-soft-info {
+    background-color: var(--info-soft);
+    color: var(--info-strong);
+}
+
+.badge-soft-secondary,
+.badge-soft-dark {
+    background-color: var(--subtle);
+    color: var(--muted);
+}
+
+.alert {
+    border-radius: var(--radius-md);
+}
+
+.alert-success {
+    background-color: var(--success-soft);
+    border-color: #c7e7d5;
+    color: var(--success-strong);
+}
+
+.alert-danger {
+    background-color: var(--danger-soft);
+    border-color: #f8c9c5;
+    color: var(--danger-strong);
+}
+
+.alert-warning {
+    background-color: var(--warning-soft);
+    border-color: #f6dc9b;
+    color: var(--warning-strong);
+}
+
+.alert-info {
+    background-color: var(--info-soft);
+    border-color: #c4d8f0;
+    color: var(--info-strong);
+}
+
+/* bootstrap-notify toasts (AIZ.plugins.notify) */
+.alert[data-notify] {
+    box-shadow: var(--shadow-pop);
+    font-weight: 500;
+}
+
+.modal-backdrop {
+    background-color: var(--ink);
+}
+
+.modal-content {
+    border: 0;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-pop);
+    overflow: hidden;
+}
+
+.modal-content .modal-header {
+    border-bottom-color: var(--line);
+}
+
+.modal-content .modal-footer {
+    border-top-color: var(--line);
+}
+
+.nav-tabs .nav-link.active,
+.nav-tabs .nav-item.show .nav-link {
+    color: var(--brand);
+    border-color: transparent transparent var(--brand);
+}
+
+.pagination .page-link,
+.page-item.disabled .page-link {
+    border-radius: var(--radius-pill) !important;
+    color: var(--ink);
+    font-weight: 600;
+}
+
+.pagination .page-link:hover {
+    background-color: var(--subtle);
+    color: var(--ink);
+}
+
+.pagination .active .page-link,
+.pagination .page-item.active .page-link {
+    background-color: var(--brand);
+    color: var(--on-brand);
+}
+
+.page-item.disabled .page-link {
+    color: var(--line-strong);
+}
+
+/* ---- Topbar ---------------------------------------------------------------- */
+
+.aiz-topbar {
+    background-color: var(--surface);
+    border-bottom-color: var(--line);
+}
+
+.aiz-topbar-user,
+.aiz-topbar-user:hover {
+    color: var(--ink);
+}
+
+.aiz-topbar .btn-light {
+    border-color: var(--line);
+}
+
+.aiz-topbar .badge-dot.badge-primary {
+    background-color: var(--brand);
+}
+
+.aiz-mobile-toggler span,
+.aiz-mobile-toggler span:before,
+.aiz-mobile-toggler span:after {
+    background-color: var(--ink);
+}
+
+/* ---- Sidebar --------------------------------------------------------------- */
+
+.aiz-sidebar.left {
+    background-color: var(--seller-sidebar-bg);
+    border-color: var(--line);
+}
+
+[dir='rtl'] .aiz-sidebar.left {
+    border-right: 0;
+    border-left: 1px solid var(--line);
+}
+
+.aiz-side-nav-logo-wrap {
+    background-color: var(--brand-soft);
+    border-bottom: 1px solid var(--line);
+}
+
+.aiz-side-nav-logo-wrap h3,
+.aiz-side-nav-logo-wrap p {
+    color: var(--brand-strong) !important;
+}
+
+.aiz-side-nav-logo-wrap p {
+    font-size: 0.8125rem;
+    word-break: break-all;
+}
+
+.aiz-side-nav-list .aiz-side-nav-link {
+    color: var(--seller-sidebar-ink);
+    font-weight: 500;
+    border-radius: var(--radius-md);
+    margin-inline: 10px;
+    padding-inline: 15px;
+}
+
+.aiz-side-nav-list .level-2 .aiz-side-nav-link {
+    padding-inline: 44px 15px;
+}
+
+[dir='rtl'] .aiz-side-nav-list .level-2 .aiz-side-nav-link {
+    padding-inline: 15px 44px;
+}
+
+.aiz-side-nav-list .aiz-side-nav-icon {
+    color: var(--seller-sidebar-muted);
+}
+
+.aiz-side-nav-list .level-2 .aiz-side-nav-link:after {
+    border-color: var(--seller-sidebar-muted);
+    left: 28px;
+}
+
+[dir='rtl'] .aiz-side-nav-list .level-2 .aiz-side-nav-link:after {
+    left: auto;
+    right: 28px;
+}
+
+.aiz-side-nav-list .aiz-side-nav-link:hover,
+.aiz-side-nav-list .aiz-side-nav-link.level-2-active,
+.aiz-side-nav-list .aiz-side-nav-link.level-3-active,
+.aiz-side-nav-list .aiz-side-nav-link.active {
+    background-color: var(--seller-sidebar-active-bg);
+    color: var(--seller-sidebar-active-ink);
+    font-weight: 600;
+}
+
+.aiz-side-nav-list .aiz-side-nav-link:hover .aiz-side-nav-icon,
+.aiz-side-nav-link.active .aiz-side-nav-icon {
+    color: var(--seller-sidebar-active-ink);
+}
+
+.aiz-side-nav-list .level-2 .aiz-side-nav-link:hover:after,
+.aiz-side-nav-list .level-2 .aiz-side-nav-link.active:after {
+    background: var(--seller-sidebar-active-ink);
+    border-color: var(--seller-sidebar-active-ink);
+}
