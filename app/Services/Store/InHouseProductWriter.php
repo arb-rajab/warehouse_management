@@ -3,9 +3,9 @@
 namespace App\Services\Store;
 
 use App\Models\Product;
+use App\Models\ProductBarcode;
 use App\Models\ProductStock;
 use App\Models\ProductVariation;
-use App\Models\StoreProductBarcode;
 use App\Models\StoreUser;
 use App\Services\ProductFieldSourceService;
 use App\Services\ProductFlashDealService;
@@ -163,7 +163,7 @@ class InHouseProductWriter extends PhysicalProductWriter
         $this->syncStocks($product, $this->stockRows($data, $variantNames));
         $this->saveTranslation($product, $data['lang'], $data);
         $product->variations()->delete();
-        $product->storeBarcodes()->delete();
+        $product->barcodes()->delete();
         $this->saveTypesAndBarcodes($product, $data);
 
         return $product;
@@ -202,7 +202,7 @@ class InHouseProductWriter extends PhysicalProductWriter
         }
         foreach ($data['product_barcodes'] ?? [] as $barcode) {
             if ($barcode !== null && $barcode !== '') {
-                StoreProductBarcode::query()->create(['product_id' => $product->id, 'barcode' => $barcode]);
+                ProductBarcode::query()->create(['product_id' => $product->id, 'barcode' => $barcode]);
             }
         }
     }

@@ -16,10 +16,10 @@ use InvalidArgumentException;
  * (Store\Admin\ProductController's barcode image routes) and the storefront
  * product page (inline data URIs), so all three show the same image.
  *
- * merged() is a product's one set of barcodes as both store pages show it:
- * the WMS table, the store table and the legacy `products.barcode` column,
- * Arabic digits converted (ar_barcode_to_en) and duplicates dropped. The
- * product's default barcode (its id, never stored) is a WMS label only.
+ * merged() is a product's one set of barcodes as the storefront shows it:
+ * the shared `product_barcodes` table and the legacy `products.barcode`
+ * column, Arabic digits converted (ar_barcode_to_en) and duplicates dropped.
+ * The product's default barcode (its id, never stored) is a WMS label only.
  *
  * One barcode encodes one product id (the bare id, as ASCII digits), not one
  * physical pallet/box — every unit of that product carries an identical
@@ -284,67 +284,32 @@ final class ProductBarcodeLabels
     }
 
     /**
-     * The product's barcodes as one set: the WMS barcodes (`barcodes`), then
-     * the store barcodes (`storeBarcodes`), then the legacy `barcode` column,
-     * each with Arabic digits converted, blanks skipped and a value already
-     * listed dropped (the first source keeps it). Reads the loaded relations
-     * and the column, so the caller eager-loads both relations and selects
-     * `barcode`.
+     * The product's barcodes as one set: the `barcodes` relation (oldest
+     * first), then the legacy `barcode` column, each with Arabic digits
+     * converted, blanks skipped and a value already listed dropped (the first
+     * keeps it). Reads the loaded relation and the column, so the caller
+     * eager-loads `barcodes` and selects `barcode`.
      *
-     * @return Collection<int, array{value: string, source: 'wms'|'store'|'legacy', id: int|null, printable: bool}>
+     * @return Collection<int, array{value: string, printable: bool}>
      */
     public function merged(Product $product): Collection
     {
         $merged = new Collection;
         $seen = [];
+        $values = [...$product->barcodes->pluck('barcode')->all(), (string) $product->getAttribute('barcode')];
 
-        foreach ($this->sourceEntries($product) as $entry) {
-            $value = $this->normalize($entry['value']);
+        foreach ($values as $raw) {
+            $value = $this->normalize((string) $raw);
 
             if ($value === '' || isset($seen[$value])) {
                 continue;
             }
 
             $seen[$value] = true;
-            $merged->push($this->mergedEntry($value, $entry['source'], $entry['id']));
+            $merged->push(['value' => $value, 'printable' => $this->isPrintable($value)]);
         }
 
         return $merged;
-    }
-
-    /**
-     * The raw entries of merged(), in source order: WMS barcodes, store
-     * barcodes, then the legacy column.
-     *
-     * @return list<array{value: string, source: 'wms'|'store'|'legacy', id: int|null}>
-     */
-    private function sourceEntries(Product $product): array
-    {
-        $entries = [];
-
-        foreach ($product->barcodes as $barcode) {
-            $entries[] = ['value' => (string) $barcode->barcode, 'source' => 'wms', 'id' => $barcode->id];
-        }
-
-        foreach ($product->storeBarcodes as $barcode) {
-            $entries[] = ['value' => (string) $barcode->getAttribute('barcode'), 'source' => 'store', 'id' => (int) $barcode->getKey()];
-        }
-
-        $entries[] = ['value' => (string) $product->getAttribute('barcode'), 'source' => 'legacy', 'id' => null];
-
-        return $entries;
-    }
-
-    /**
-     * One entry of merged(): the normalized value with its source and whether
-     * Code 128 can encode it.
-     *
-     * @param  'wms'|'store'|'legacy'  $source
-     * @return array{value: string, source: 'wms'|'store'|'legacy', id: int|null, printable: bool}
-     */
-    private function mergedEntry(string $value, string $source, ?int $id): array
-    {
-        return ['value' => $value, 'source' => $source, 'id' => $id, 'printable' => $this->isPrintable($value)];
     }
 
     /**

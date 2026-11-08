@@ -105,7 +105,7 @@ test('seller duplication copies ownership stock and taxes without translations v
     expect($copy->getAttribute('added_by'))->toBe('seller')->and($copy->user_id)->toBe($this->seller->id)
         ->and($copy->name)->toBe('Seller oil')->and($copy->slug)->toStartWith('seller-oil-')
         ->and($copy->stocks()->count())->toBe(1)->and($copy->taxes()->count())->toBe(1)
-        ->and($copy->product_translations()->count())->toBe(0)->and($copy->variations()->count())->toBe(0)->and($copy->storeBarcodes()->count())->toBe(0);
+        ->and($copy->product_translations()->count())->toBe(0)->and($copy->variations()->count())->toBe(0)->and($copy->barcodes()->count())->toBe(0);
     Notification::assertNothingSent();
 });
 

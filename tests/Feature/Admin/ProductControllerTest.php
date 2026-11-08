@@ -1269,7 +1269,7 @@ test('an authenticated admin can add a barcode to a product', function () {
 
     $response->assertRedirect(route('admin.products.index'));
     $response->assertInertiaFlash('success', 'Barcode has been added successfully');
-    $this->assertDatabaseHas('wms_product_barcodes', [
+    $this->assertDatabaseHas('product_barcodes', [
         'product_id' => $product->id,
         'barcode' => '1234567890123',
     ]);
@@ -1282,7 +1282,7 @@ test('adding a barcode trims surrounding whitespace', function () {
 
     $this->post("/admin/products/{$product->id}/barcodes", ['barcode' => '  1234567890123  ']);
 
-    $this->assertDatabaseHas('wms_product_barcodes', [
+    $this->assertDatabaseHas('product_barcodes', [
         'product_id' => $product->id,
         'barcode' => '1234567890123',
     ]);
@@ -1317,7 +1317,7 @@ test('a barcode is required and cannot be blank', function () {
     $response = $this->post("/admin/products/{$product->id}/barcodes", ['barcode' => '']);
 
     $response->assertSessionHasErrors('barcode');
-    $this->assertDatabaseCount('wms_product_barcodes', 0);
+    $this->assertDatabaseCount('product_barcodes', 0);
 });
 
 test('a barcode is checked for uniqueness after trimming surrounding whitespace', function () {
@@ -1329,7 +1329,7 @@ test('a barcode is checked for uniqueness after trimming surrounding whitespace'
     $response = $this->post("/admin/products/{$product->id}/barcodes", ['barcode' => '  1234567890123 ']);
 
     $response->assertSessionHasErrors('barcode');
-    $this->assertDatabaseCount('wms_product_barcodes', 1);
+    $this->assertDatabaseCount('product_barcodes', 1);
 });
 
 test('a barcode must be unique across every product, not just the one it is being added to', function () {
@@ -1342,7 +1342,7 @@ test('a barcode must be unique across every product, not just the one it is bein
     $response = $this->post("/admin/products/{$product->id}/barcodes", ['barcode' => '1234567890123']);
 
     $response->assertSessionHasErrors('barcode');
-    $this->assertDatabaseCount('wms_product_barcodes', 1);
+    $this->assertDatabaseCount('product_barcodes', 1);
 });
 
 test('a barcode cannot equal the id of another product', function () {
@@ -1354,7 +1354,7 @@ test('a barcode cannot equal the id of another product', function () {
     $response = $this->post("/admin/products/{$product->id}/barcodes", ['barcode' => (string) $otherProduct->id]);
 
     $response->assertSessionHasErrors(['barcode' => __('messages.barcode_is_product_id')]);
-    $this->assertDatabaseCount('wms_product_barcodes', 0);
+    $this->assertDatabaseCount('product_barcodes', 0);
 });
 
 test('a barcode cannot equal the product\'s own id either, since that is its default barcode', function () {
@@ -1365,7 +1365,7 @@ test('a barcode cannot equal the product\'s own id either, since that is its def
     $response = $this->post("/admin/products/{$product->id}/barcodes", ['barcode' => " {$product->id} "]);
 
     $response->assertSessionHasErrors('barcode');
-    $this->assertDatabaseCount('wms_product_barcodes', 0);
+    $this->assertDatabaseCount('product_barcodes', 0);
 });
 
 test('a numeric barcode that is not the id of any product can be added', function (string $barcode) {
@@ -1374,7 +1374,7 @@ test('a numeric barcode that is not the id of any product can be added', functio
     $product = Product::factory()->create();
 
     $this->post("/admin/products/{$product->id}/barcodes", ['barcode' => $barcode])->assertSessionHasNoErrors();
-    $this->assertDatabaseHas('wms_product_barcodes', ['product_id' => $product->id, 'barcode' => $barcode]);
+    $this->assertDatabaseHas('product_barcodes', ['product_id' => $product->id, 'barcode' => $barcode]);
 })->with([
     'no product has this id' => ['99999999'],
     'leading zeros are not the canonical id' => ['00001'],
@@ -1389,7 +1389,7 @@ test('a mobile app user cannot add a barcode', function () {
     $response = $this->post("/admin/products/{$product->id}/barcodes", ['barcode' => '1234567890123']);
 
     $response->assertForbidden();
-    $this->assertDatabaseCount('wms_product_barcodes', 0);
+    $this->assertDatabaseCount('product_barcodes', 0);
 });
 
 test('an unauthenticated caller cannot add a barcode', function () {
@@ -1398,7 +1398,7 @@ test('an unauthenticated caller cannot add a barcode', function () {
     $response = $this->post("/admin/products/{$product->id}/barcodes", ['barcode' => '1234567890123']);
 
     $response->assertRedirect(route('login'));
-    $this->assertDatabaseCount('wms_product_barcodes', 0);
+    $this->assertDatabaseCount('product_barcodes', 0);
 });
 
 test('adding a barcode to a non-existent product returns a 404', function () {
@@ -1419,7 +1419,7 @@ test('an authenticated admin can remove a barcode from a product', function () {
 
     $response->assertRedirect(route('admin.products.index'));
     $response->assertInertiaFlash('success', 'Barcode has been removed successfully');
-    $this->assertDatabaseMissing('wms_product_barcodes', ['id' => $barcode->id]);
+    $this->assertDatabaseMissing('product_barcodes', ['id' => $barcode->id]);
 });
 
 test('removing a barcode redirects back with the current page and filters preserved', function () {
@@ -1443,7 +1443,7 @@ test('removing a barcode that belongs to a different product returns a 404, leav
     $response = $this->delete("/admin/products/{$product->id}/barcodes/{$barcode->id}");
 
     $response->assertNotFound();
-    $this->assertDatabaseHas('wms_product_barcodes', ['id' => $barcode->id, 'product_id' => $otherProduct->id]);
+    $this->assertDatabaseHas('product_barcodes', ['id' => $barcode->id, 'product_id' => $otherProduct->id]);
 });
 
 test('a mobile app user cannot remove a barcode', function () {
@@ -1455,7 +1455,7 @@ test('a mobile app user cannot remove a barcode', function () {
     $response = $this->delete("/admin/products/{$product->id}/barcodes/{$barcode->id}");
 
     $response->assertForbidden();
-    $this->assertDatabaseHas('wms_product_barcodes', ['id' => $barcode->id]);
+    $this->assertDatabaseHas('product_barcodes', ['id' => $barcode->id]);
 });
 
 test('an unauthenticated caller cannot remove a barcode', function () {
@@ -1465,7 +1465,7 @@ test('an unauthenticated caller cannot remove a barcode', function () {
     $response = $this->delete("/admin/products/{$product->id}/barcodes/{$barcode->id}");
 
     $response->assertRedirect(route('login'));
-    $this->assertDatabaseHas('wms_product_barcodes', ['id' => $barcode->id]);
+    $this->assertDatabaseHas('product_barcodes', ['id' => $barcode->id]);
 });
 
 test('removing a non-existent barcode returns a 404', function () {
@@ -1938,7 +1938,7 @@ test('a barcode must be printable ASCII to be added', function () {
     $response = $this->post("/admin/products/{$product->id}/barcodes", ['barcode' => 'باركود']);
 
     $response->assertSessionHasErrors('barcode');
-    $this->assertDatabaseCount('wms_product_barcodes', 0);
+    $this->assertDatabaseCount('product_barcodes', 0);
 });
 
 test('the product search answers a repeat request that already holds the current results with a 304', function () {

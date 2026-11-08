@@ -447,7 +447,7 @@
     <!-- Product information -->
     @if ($detailedProduct->auction_product != 1)
         @php
-            // One merged set (WMS, store, legacy column), Arabic digits
+            // One merged set (product_barcodes, legacy column), Arabic digits
             // converted, each drawn as the WMS barcode label.
             $barcodeLabels = app(\App\Services\ProductBarcodeLabels::class);
             $barcodeEntries = $barcodeLabels->merged($detailedProduct);

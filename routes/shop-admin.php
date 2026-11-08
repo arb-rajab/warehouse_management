@@ -129,8 +129,8 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin']], function 
     Route::get('/products/seller/{product}/edit', [StoreProductController::class, 'sellerEdit'])->name('products.seller.edit');
     Route::post('/products/update/{product}', [StoreProductController::class, 'update'])->name('products.update');
     Route::post('/products/{product}/variant-combinations', [StoreProductController::class, 'editVariantCombinations'])->name('products.edit_variant_combinations');
-    // The edit form's barcode image: scoped, so only this product's store barcodes resolve.
-    Route::get('/products/{product}/store-barcodes/{storeBarcode}/image', [StoreProductController::class, 'storeBarcodeImage'])->scopeBindings()->name('products.store_barcodes.image');
+    // The edit form's barcode image: scoped through Product::barcodes(), so only this product's barcodes resolve.
+    Route::get('/products/{product}/store-barcodes/{barcode}/image', [StoreProductController::class, 'storeBarcodeImage'])->scopeBindings()->name('products.store_barcodes.image');
     Route::get('/products/seller', [StoreProductController::class, 'seller'])->name('products.seller');
     Route::get('/products/seller/options', [StoreProductController::class, 'sellerOptions'])->name('products.seller.options');
     Route::post('/products/seller/{product}/todays-deal', [StoreProductController::class, 'updateTodaysDeal'])->defaults('productList', 'seller')->name('products.todays_deal');

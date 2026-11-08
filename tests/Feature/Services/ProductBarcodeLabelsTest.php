@@ -3,40 +3,48 @@
 use App\Models\Product;
 use App\Models\ProductBarcode;
 use App\Models\Setting;
-use App\Models\StoreProductBarcode;
 use App\Services\ProductBarcodeLabels;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Loads the product the way the store pages do: both barcode relations and
+ * Loads the product the way the storefront does: the barcodes relation and
  * the legacy `barcode` column.
  */
 function productWithBarcodes(Product $product): Product
 {
-    return Product::query()->with(['barcodes:id,product_id,barcode', 'storeBarcodes:id,product_id,barcode'])->findOrFail($product->id);
+    return Product::query()->with('barcodes:id,product_id,barcode')->findOrFail($product->id);
 }
 
-test('merged lists the WMS, then the store, then the legacy barcodes once each, converted and without blanks', function () {
+test('merged lists the barcodes, oldest first, then the legacy column, once each, converted and without blanks', function () {
     $product = Product::factory()->create(['name' => 'Olive oil']);
     DB::table('products')->where('id', $product->id)->update(['barcode' => ' ٨٧١٢٣٤٥٦٧٨٩٠٦ ']);
-    $wms = ProductBarcode::factory()->create(['product_id' => $product->id, 'barcode' => 'WMS-ONLY']);
-    $shared = ProductBarcode::factory()->create(['product_id' => $product->id, 'barcode' => '5901234123457']);
-    // The same barcode as the WMS one once its Arabic digits are converted.
-    StoreProductBarcode::query()->create(['product_id' => $product->id, 'barcode' => '٥٩٠١٢٣٤١٢٣٤٥٧']);
-    $storeOnly = StoreProductBarcode::query()->create(['product_id' => $product->id, 'barcode' => 'STORE-ONLY']);
-    StoreProductBarcode::query()->create(['product_id' => $product->id, 'barcode' => '   ']);
-    $storeArabic = StoreProductBarcode::query()->create(['product_id' => $product->id, 'barcode' => 'متجر']);
+    ProductBarcode::factory()->create(['product_id' => $product->id, 'barcode' => 'WMS-ADDED']);
+    ProductBarcode::factory()->create(['product_id' => $product->id, 'barcode' => '5901234123457']);
+    // The same barcode as the one above once its Arabic digits are converted.
+    ProductBarcode::factory()->create(['product_id' => $product->id, 'barcode' => '٥٩٠١٢٣٤١٢٣٤٥٧']);
+    ProductBarcode::factory()->create(['product_id' => $product->id, 'barcode' => 'STORE-ONLY']);
+    ProductBarcode::factory()->create(['product_id' => $product->id, 'barcode' => '   ']);
+    ProductBarcode::factory()->create(['product_id' => $product->id, 'barcode' => 'متجر']);
     // Noise: another product's barcodes never appear.
     $other = Product::factory()->create();
-    ProductBarcode::factory()->create(['product_id' => $other->id, 'barcode' => 'OTHER-WMS']);
-    StoreProductBarcode::query()->create(['product_id' => $other->id, 'barcode' => 'OTHER-STORE']);
+    ProductBarcode::factory()->create(['product_id' => $other->id, 'barcode' => 'OTHER-PRODUCT']);
 
     expect((new ProductBarcodeLabels)->merged(productWithBarcodes($product))->all())->toBe([
-        ['value' => 'WMS-ONLY', 'source' => 'wms', 'id' => $wms->id, 'printable' => true],
-        ['value' => '5901234123457', 'source' => 'wms', 'id' => $shared->id, 'printable' => true],
-        ['value' => 'STORE-ONLY', 'source' => 'store', 'id' => $storeOnly->id, 'printable' => true],
-        ['value' => 'متجر', 'source' => 'store', 'id' => $storeArabic->id, 'printable' => false],
-        ['value' => '8712345678906', 'source' => 'legacy', 'id' => null, 'printable' => true],
+        ['value' => 'WMS-ADDED', 'printable' => true],
+        ['value' => '5901234123457', 'printable' => true],
+        ['value' => 'STORE-ONLY', 'printable' => true],
+        ['value' => 'متجر', 'printable' => false],
+        ['value' => '8712345678906', 'printable' => true],
+    ]);
+});
+
+test('a legacy column value already among the barcodes is listed once', function () {
+    $product = Product::factory()->create();
+    DB::table('products')->where('id', $product->id)->update(['barcode' => '8712345678906']);
+    ProductBarcode::factory()->create(['product_id' => $product->id, 'barcode' => '8712345678906']);
+
+    expect((new ProductBarcodeLabels)->merged(productWithBarcodes($product))->all())->toBe([
+        ['value' => '8712345678906', 'printable' => true],
     ]);
 });
 

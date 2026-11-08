@@ -32,8 +32,8 @@ use App\Models\Category;
 use App\Models\Color;
 use App\Models\FlashDeal;
 use App\Models\Product;
+use App\Models\ProductBarcode;
 use App\Models\ProductStock;
-use App\Models\StoreProductBarcode;
 use App\Models\StoreUser;
 use App\Services\ProductBarcodeLabels;
 use App\Services\ProductFieldSourceService;
@@ -449,10 +449,10 @@ class ProductController extends Controller implements HasMiddleware
     }
 
     /**
-     * One search word or phrase against the name, the Arabic name and both
-     * barcode tables: the WMS barcodes the merged `barcodes()` relation now
-     * reads, and the store barcodes the legacy Otajer import fills with each
-     * product's material id, which the legacy search meant to cover.
+     * One search word or phrase against the name, the Arabic name and the
+     * product's barcodes (the one `product_barcodes` table, which also holds
+     * the material id the Otajer import stores for each product, as the
+     * legacy search meant to cover).
      *
      * @param  Builder<Product>  $query
      */
@@ -461,8 +461,7 @@ class ProductController extends Controller implements HasMiddleware
         $like = '%'.$term.'%';
         $query->orWhere('name', 'like', $like)
             ->orWhere('ar_name', 'like', $like)
-            ->orWhereHas('barcodes', fn (Builder $barcodes) => $barcodes->where('barcode', 'like', $like))
-            ->orWhereHas('storeBarcodes', fn (Builder $barcodes) => $barcodes->where('barcode', 'like', $like));
+            ->orWhereHas('barcodes', fn (Builder $barcodes) => $barcodes->where('barcode', 'like', $like));
     }
 
     /**
@@ -605,7 +604,7 @@ class ProductController extends Controller implements HasMiddleware
                 'product_translations:id,product_id,lang,name,unit,description',
                 'stocks' => fn ($stocks) => $stocks->select(['id', 'product_id', 'variant', 'sku', 'qty'])->orderBy('id'),
                 'variations' => fn ($variations) => $variations->select(['id', 'product_id', 'name'])->orderBy('id'),
-                'storeBarcodes' => fn ($barcodes) => $barcodes->select(['id', 'product_id', 'barcode'])->orderBy('id'),
+                'barcodes' => fn ($barcodes) => $barcodes->select(['id', 'product_id', 'barcode']),
                 'flash_deal_product:id,product_id,flash_deal_id',
             ])
             ->findOrFail($product->id);
@@ -649,10 +648,12 @@ class ProductController extends Controller implements HasMiddleware
     }
 
     /**
-     * The saved store barcodes the form's inputs edit, each with its id for
-     * its image route and whether Code 128 can encode it once its Arabic
-     * digits are converted (ProductBarcodeLabels). An input shows the image
-     * only while it still holds a saved value.
+     * The saved barcodes the form's inputs edit, one per distinct trimmed
+     * value as ProductFormResource lists them (the oldest row of a value the
+     * product holds twice), each with its id for its image route and whether
+     * Code 128 can encode it once its Arabic digits are converted
+     * (ProductBarcodeLabels). An input shows the image only while it still
+     * holds a saved value.
      *
      * @return list<array{id: int, barcode: string, printable: bool}>
      */
@@ -662,11 +663,11 @@ class ProductController extends Controller implements HasMiddleware
 
         $images = [];
 
-        foreach ($product->storeBarcodes as $barcode) {
+        foreach (ProductBarcode::distinctValues($product->barcodes) as $barcode) {
             $images[] = [
-                'id' => (int) $barcode->getKey(),
-                'barcode' => (string) $barcode->getAttribute('barcode'),
-                'printable' => $labels->isPrintable($labels->normalize((string) $barcode->getAttribute('barcode'))),
+                'id' => $barcode->id,
+                'barcode' => trim($barcode->barcode),
+                'printable' => $labels->isPrintable($labels->normalize($barcode->barcode)),
             ];
         }
 
@@ -674,16 +675,16 @@ class ProductController extends Controller implements HasMiddleware
     }
 
     /**
-     * One of the product's store barcodes (`product_barcodes`) as the WMS
-     * barcode label, for the edit form's image. Scoped binding: a barcode of
+     * One of the product's barcodes (`product_barcodes`) as the WMS barcode
+     * label, for the edit form's image. Scoped binding: a barcode of
      * another product is a 404. The stored value is converted as the
      * storefront shows it; a blank one is a 404 and one Code 128 cannot
      * encode a 422, as in the WMS. Served like the WMS previews: inline SVG,
      * `private, no-cache`, an ETag answered by a 304 before rendering.
      */
-    public function storeBarcodeImage(Request $request, Product $product, StoreProductBarcode $storeBarcode, ProductBarcodeLabels $labels): HttpResponse
+    public function storeBarcodeImage(Request $request, Product $product, ProductBarcode $barcode, ProductBarcodeLabels $labels): HttpResponse
     {
-        $value = $labels->normalize((string) $storeBarcode->getAttribute('barcode'));
+        $value = $labels->normalize($barcode->barcode);
         abort_if($value === '', HttpResponse::HTTP_NOT_FOUND);
         abort_unless($labels->isPrintable($value), HttpResponse::HTTP_UNPROCESSABLE_ENTITY, __('messages.barcode_not_printable', ['barcode' => $value]));
         $etag = $labels->etag($product, $value);
@@ -811,7 +812,7 @@ class ProductController extends Controller implements HasMiddleware
         $product->stocks()->delete();
         $product->taxes()->delete();
         $product->variations()->delete();
-        $product->storeBarcodes()->delete();
+        $product->barcodes()->delete();
         $product->delete();
         Cart::query()->where('product_id', $product->id)->delete();
     }

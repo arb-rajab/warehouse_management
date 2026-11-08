@@ -6,8 +6,8 @@ use App\Http\Middleware\BlockMaliciousRequests;
 use App\Models\Category;
 use App\Models\Language;
 use App\Models\Product;
+use App\Models\ProductBarcode;
 use App\Models\ProductTranslation;
-use App\Models\StoreProductBarcode;
 use App\Models\Upload;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
@@ -47,7 +47,7 @@ beforeEach(function () {
         DB::table('business_settings')->insert(['type' => $type, 'value' => $value]);
     }
     $this->existing = createStoreProduct(['name' => 'Olive oil', 'slug' => 'olive-oil', 'thumbnail_img' => null]);
-    StoreProductBarcode::query()->create(['product_id' => $this->existing->id, 'barcode' => '8710000000001']);
+    ProductBarcode::query()->create(['product_id' => $this->existing->id, 'barcode' => '8710000000001']);
 });
 
 /** @return array<string, list<mixed>> */
@@ -238,7 +238,6 @@ test('creating a product writes every table together, clears the caches after co
         ->toEqual([['tax_id' => $this->vat, 'tax' => 21, 'tax_type' => 'percent'], ['tax_id' => $this->service, 'tax' => 0.5, 'tax_type' => 'amount']])
         ->and(DB::table('product_variations')->where('product_id', $product->id)->orderBy('id')->pluck('name')->all())->toBe(['Cold pressed', 'Organic'])
         ->and(DB::table('product_barcodes')->where('product_id', $product->id)->pluck('barcode')->all())->toBe(['8712345678906'])
-        ->and(DB::table('wms_product_barcodes')->count())->toBe(0)
         ->and(DB::table('flash_deal_products')->count())->toBe(0);
 });
 
@@ -443,7 +442,7 @@ test('the cash-on-delivery switch is honoured where it shows, and free shipping 
 });
 
 test('a failed write rolls every table back and clears no cache', function (string $failing) {
-    $model = ['translation' => ProductTranslation::class, 'store barcode' => StoreProductBarcode::class][$failing];
+    $model = ['translation' => ProductTranslation::class, 'barcode' => ProductBarcode::class][$failing];
     actingAsStoreUser(createStoreStaff('add_new_product'));
     $before = productCreateSnapshot();
     Artisan::shouldReceive('call')->never();
@@ -456,7 +455,7 @@ test('a failed write rolls every table back and clears no cache', function (stri
     } finally {
         $model::flushEventListeners();
     }
-})->with(['translation', 'store barcode']);
+})->with(['translation', 'barcode']);
 
 test('a product can be created with no discount, even priced 0, or with a discount below the price', function (array $overrides, string $discount, string $type) {
     actingAsStoreUser(createStoreStaff('add_new_product'));
@@ -551,7 +550,7 @@ test('the store validates every field against the schema widths and the form opt
     'unknown button' => [['button' => 'draft'], 'button'],
 ]);
 
-test('store barcodes must be new and distinct, empty rows are skipped and the WMS barcodes are untouched', function () {
+test('barcodes must be new and distinct and empty rows are skipped', function () {
     actingAsStoreUser(createStoreStaff('add_new_product'));
     Artisan::shouldReceive('call')->andReturn(0);
     $before = productCreateSnapshot();
@@ -560,8 +559,7 @@ test('store barcodes must be new and distinct, empty rows are skipped and the WM
     $this->post(route('products.store'), productCreateForm(['product_barcodes' => [str_repeat('9', 256)]]))->assertSessionHasErrors('product_barcodes.0');
     expect(productCreateSnapshot())->toEqual($before);
     $this->post(route('products.store'), productCreateForm(['product_barcodes' => ['', ' 4006381333931 ', null]]))->assertSessionHasNoErrors();
-    expect(DB::table('product_barcodes')->orderBy('id')->pluck('barcode')->all())->toBe(['8710000000001', '4006381333931'])
-        ->and(DB::table('wms_product_barcodes')->count())->toBe(0);
+    expect(DB::table('product_barcodes')->orderBy('id')->pluck('barcode')->all())->toBe(['8710000000001', '4006381333931']);
 });
 
 test('uploads follow the ownership, library and file type rules', function () {

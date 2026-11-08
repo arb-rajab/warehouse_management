@@ -49,7 +49,7 @@ function detailsProduct(array $attributes = []): Product
         ...$attributes,
     ]);
 
-    // The WMS barcode is stored with Arabic-Indic digits; the store one repeats it.
+    // The first barcode is stored with Arabic-Indic digits; the next one repeats it in ASCII.
     ProductBarcode::query()->create(['product_id' => $product->id, 'barcode' => '٦٢٨١٠٠٠٠٠٠٠١١']);
     DB::table('product_barcodes')->insert([
         ['product_id' => $product->id, 'barcode' => '6281000000011'],

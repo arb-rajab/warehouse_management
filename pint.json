@@ -350,7 +350,6 @@
         "app/Models/SellerWithdrawRequest.php",
         "app/Models/SmsTemplate.php",
         "app/Models/State.php",
-        "app/Models/StoreProductBarcode.php",
         "app/Models/StoreUser.php",
         "app/Models/Subscriber.php",
         "app/Models/Tax.php",

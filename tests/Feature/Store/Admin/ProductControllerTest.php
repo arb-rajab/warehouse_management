@@ -238,7 +238,7 @@ test('the all-products list shows every owner and digital product, hides retired
     }
 });
 
-test('the in-house search matches one phrase against both names and both barcode tables, inside the list', function () {
+test('the in-house search matches one phrase against both names and the barcodes, inside the list', function () {
     actingAsStoreUser(createStoreStaff('show_in_house_products'));
     $noise = productListNoise();
     DB::table('products')->where('id', $noise['seller']->id)->update(['ar_name' => 'زيت البائع']);
@@ -475,7 +475,7 @@ test('deleting a product changes nothing while a warehouse pallet references it'
     expect(productListSnapshot())->toEqual($before);
 });
 
-test('deleting a product removes its store barcodes and variations itself, cascades WMS rows and keeps logs and reports without it', function () {
+test('deleting a product removes its barcodes (store and WMS-added alike) and variations itself, cascades WMS rows and keeps logs and reports without it', function () {
     actingAsStoreUser(createStoreStaff('product_delete'));
     DB::table('product_variations')->insert(['product_id' => $this->product->id, 'name' => '1L']);
     DB::table('product_barcodes')->insert(['product_id' => $this->product->id, 'barcode' => '100027']);
@@ -484,7 +484,7 @@ test('deleting a product removes its store barcodes and variations itself, casca
     $report = CellVerificationReport::factory()->create(['expected_product_id' => $this->product->id, 'reported_product_id' => $this->product->id]);
     expectProductListCachesCleared();
     $this->delete(route('products.list.destroy', [$this->product, 'list' => 'all']))->assertRedirect(route('products.all'));
-    $this->assertDatabaseMissing('wms_product_barcodes', ['id' => $barcode->id]);
+    $this->assertDatabaseMissing('product_barcodes', ['id' => $barcode->id]);
     $this->assertDatabaseMissing('wms_product_settings', ['product_id' => $this->product->id]);
     $this->assertDatabaseMissing('product_barcodes', ['product_id' => $this->product->id]);
     $this->assertDatabaseMissing('product_variations', ['product_id' => $this->product->id]);

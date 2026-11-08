@@ -2,10 +2,10 @@
 
 use App\Models\Category;
 use App\Models\Product;
-use App\Models\StoreProductBarcode;
+use App\Models\ProductBarcode;
 
 /**
- * Regression coverage for Product::category()/storeBarcodes() (merged from
+ * Regression coverage for Product::category()/barcodes() (merged from
  * the legacy store's own Product model, see
  * .ai/rules/legacy-albaraka-holland.md section 2). Both were untestable
  * until the migrations adding products.category_id and the product_barcodes
@@ -28,18 +28,13 @@ test('category() resolves the product\'s own category, not another product\'s', 
         ->and($product->category->id)->not->toBe($noiseCategory->id);
 });
 
-test('storeBarcodes() resolves only the product\'s own barcodes', function () {
+test('barcodes() resolves only the product\'s own barcodes, oldest first', function () {
     $product = Product::create(['name' => 'Widget', 'ar_name' => 'ويدجت']);
     $noiseProduct = Product::create(['name' => 'Gadget', 'ar_name' => 'أداة']);
 
-    StoreProductBarcode::create(['product_id' => $product->id, 'barcode' => '1111111111']);
-    StoreProductBarcode::create(['product_id' => $product->id, 'barcode' => '2222222222']);
-    StoreProductBarcode::create(['product_id' => $noiseProduct->id, 'barcode' => 'NOISE']);
+    ProductBarcode::create(['product_id' => $product->id, 'barcode' => '2222222222']);
+    ProductBarcode::create(['product_id' => $noiseProduct->id, 'barcode' => 'NOISE']);
+    ProductBarcode::create(['product_id' => $product->id, 'barcode' => '1111111111']);
 
-    $barcodes = $product->storeBarcodes->pluck('barcode');
-
-    expect($product->storeBarcodes)->toHaveCount(2)
-        ->and($barcodes)->toContain('1111111111')
-        ->and($barcodes)->toContain('2222222222')
-        ->and($barcodes)->not->toContain('NOISE');
+    expect($product->barcodes->pluck('barcode')->all())->toBe(['2222222222', '1111111111']);
 });

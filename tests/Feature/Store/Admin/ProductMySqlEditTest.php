@@ -12,7 +12,7 @@ use Inertia\Testing\AssertableInertia;
 test('product edit decimals have the same exact string representation on MySQL and SQLite', function () {
     expect(ProductFormNumber::format('999999999999999999.90'))->toBe('999999999999999999.9');
     $product = createStoreProduct(['unit_price' => '12.50', 'discount' => '1.50', 'weight' => '1.20', 'shipping_cost' => '4.00']);
-    $product->load(['stocks', 'variations', 'storeBarcodes']);
+    $product->load(['stocks', 'variations', 'barcodes']);
     $fields = (new ProductFormResource($product))->toArray(request());
     expect($fields['unit_price'])->toBe('12.5')->and($fields['discount'])->toBe('1.5')
         ->and($fields['weight'])->toBe('1.2')->and($fields['flat_shipping_cost'])->toBe('4');

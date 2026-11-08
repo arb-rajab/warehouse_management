@@ -26,7 +26,7 @@ class StoreProductBarcodeRequest extends FormRequest
      * `unique` is global across every product, not scoped to the one being
      * added to — a barcode identifies one physical product for scanning, so
      * the same code must never resolve to two different products (see the
-     * `wms_product_barcodes` migration).
+     * ProductBarcode model).
      *
      * A barcode may also never equal a product id: every product already
      * carries its id as an undeletable default barcode, so a custom barcode
@@ -38,7 +38,7 @@ class StoreProductBarcodeRequest extends FormRequest
     {
         return [
             'barcode' => [
-                'required', 'string', 'max:64', 'regex:/^[\x20-\x7E]+$/', 'unique:wms_product_barcodes,barcode',
+                'required', 'string', 'max:64', 'regex:/^[\x20-\x7E]+$/', 'unique:product_barcodes,barcode',
                 function (string $attribute, mixed $value, Closure $fail): void {
                     if ($this->isProductId((string) $value)) {
                         $fail('messages.barcode_is_product_id')->translate();

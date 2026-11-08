@@ -244,7 +244,7 @@ class HomeController extends Controller
     public function product(Request $request, $slug)
     {
         $detailedProduct = \App\Support\StorefrontUrl::resolve(
-            Product::with('reviews', 'brand', 'stocks', 'user', 'user.shop', 'barcodes', 'storeBarcodes:id,product_id,barcode', 'category:id,name,slug,parent_id', 'category.category_translations:id,category_id,lang,name')->where('auction_product', 0)->where('approved', 1),
+            Product::with('reviews', 'brand', 'stocks', 'user', 'user.shop', 'barcodes:id,product_id,barcode', 'category:id,name,slug,parent_id', 'category.category_translations:id,category_id,lang,name')->where('auction_product', 0)->where('approved', 1),
             $slug,
             $request
         )->first();

@@ -4,7 +4,6 @@ use App\Models\Category;
 use App\Models\Language;
 use App\Models\Product;
 use App\Models\ProductBarcode;
-use App\Models\StoreProductBarcode;
 use App\Services\ProductBarcodeLabels;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
@@ -152,12 +151,12 @@ function backOfficeFieldsTags(TestResponse $page, string $label): array
 
 test('a product saved on the back office form shows its barcodes, weight, quantities, shipping and tags to a verified customer', function () {
     $product = backOfficeFieldsCreate();
-    // The warehouse's own barcode of the same product is listed beside the store ones.
+    // A barcode added in the WMS later is listed after the form's, oldest first.
     ProductBarcode::query()->create(['product_id' => $product->id, 'barcode' => '5412345678901']);
 
     $page = backOfficeFieldsPage($product);
 
-    expect(backOfficeFieldsBarcodes($page, __('storefront.product.barcodes')))->toBe(['5412345678901', '8712345678906', '8712345678913'])
+    expect(backOfficeFieldsBarcodes($page, __('storefront.product.barcodes')))->toBe(['8712345678906', '8712345678913', '5412345678901'])
         ->and(backOfficeFieldsRow($page, __('storefront.product.weight')))->toBe('1.25 kg')
         ->and(backOfficeFieldsRow($page, __('storefront.product.min_qty')))->toBe('3')
         ->and(backOfficeFieldsRow($page, __('storefront.product.max_qty')))->toBe('24')
@@ -233,7 +232,7 @@ test('editing the product on the back office form changes what the page shows', 
 
 test('the barcodes are one merged set drawn as the WMS barcode label, inline, with Arabic digits converted', function () {
     $product = backOfficeFieldsCreate(['product_barcodes' => ['٥٤١٢٣٤٥٦٧٨٩٠١', '8712345678906', 'متجر']]);
-    // The WMS barcode equals the first store one once converted: shown once.
+    // A WMS-added barcode equal to the first one once converted: shown once.
     ProductBarcode::query()->create(['product_id' => $product->id, 'barcode' => '5412345678901']);
     ProductBarcode::query()->create(['product_id' => $product->id, 'barcode' => 'WMS-7']);
     DB::table('products')->where('id', $product->id)->update(['barcode' => 'LEGACY-<9>']);
@@ -243,12 +242,12 @@ test('the barcodes are one merged set drawn as the WMS barcode label, inline, wi
     $labels = new ProductBarcodeLabels;
     $fresh = Product::query()->findOrFail($product->id);
 
-    expect(backOfficeFieldsBarcodes($page, __('storefront.product.barcodes')))->toBe(['5412345678901', 'WMS-7', '8712345678906', 'متجر', 'LEGACY-<9>'])
+    expect(backOfficeFieldsBarcodes($page, __('storefront.product.barcodes')))->toBe(['5412345678901', '8712345678906', 'متجر', 'WMS-7', 'LEGACY-<9>'])
         ->and($images->length)->toBe(4)
         ->and(array_map(fn (DOMElement $img): string => $img->getAttribute('src'), iterator_to_array($images)))->toBe([
             $labels->dataUri($fresh, '5412345678901'),
-            $labels->dataUri($fresh, 'WMS-7'),
             $labels->dataUri($fresh, '8712345678906'),
+            $labels->dataUri($fresh, 'WMS-7'),
             $labels->dataUri($fresh, 'LEGACY-<9>'),
         ])
         ->and(base64_decode(substr($images->item(0)->getAttribute('src'), 26)))->toContain('>5412345678901</text>')->toContain('>Extra virgin olive oil</text>');
@@ -269,7 +268,7 @@ test('the barcode images add no queries, however many barcodes a product has', f
     };
     $this->get('/temp/product/'.$product->slug)->assertOk();
     $one = $count();
-    StoreProductBarcode::query()->create(['product_id' => $product->id, 'barcode' => '8712345678913']);
+    ProductBarcode::query()->create(['product_id' => $product->id, 'barcode' => '8712345678913']);
     ProductBarcode::query()->create(['product_id' => $product->id, 'barcode' => '5412345678901']);
     ProductBarcode::query()->create(['product_id' => $product->id, 'barcode' => '5412345678918']);
 

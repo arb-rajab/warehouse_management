@@ -13,7 +13,7 @@ import { seedStoreFixtures, storedProduct } from './support/storeFixtures';
 
 const name = 'Browser barcode oil';
 
-/** A simple published product with one store and one WMS barcode. */
+/** A simple published product with a barcode from the store form and one added in the WMS (one table). */
 function seedBarcodeProduct(): void {
     seedStoreFixtures(String.raw`
         foreach (App\Models\Product::where('name', ${php(name)})->pluck('id') as $id) {
@@ -34,7 +34,7 @@ function seedBarcodeProduct(): void {
         ]);
         Illuminate\Support\Facades\DB::table('product_stocks')->insert(['product_id' => $product->id, 'variant' => '', 'price' => 12.5, 'sku' => 'BR-BC', 'qty' => 4]);
         Illuminate\Support\Facades\DB::table('product_translations')->insert(['product_id' => $product->id, 'lang' => 'en', 'name' => ${php(name)}, 'unit' => 'bottle', 'description' => '<p>Pressed</p>']);
-        App\Models\StoreProductBarcode::query()->create(['product_id' => $product->id, 'barcode' => '8712345678906']);
+        App\Models\ProductBarcode::query()->create(['product_id' => $product->id, 'barcode' => '8712345678906']);
         App\Models\ProductBarcode::query()->create(['product_id' => $product->id, 'barcode' => 'BROWSER-WMS-1']);
     `);
 }
@@ -90,12 +90,13 @@ test('the back office edit form and the storefront page draw the barcodes as bar
         .getByRole('button', { name: 'Add barcode', exact: true })
         .click();
     await page
-        .getByLabel('Product barcodes 2', { exact: true })
+        .getByLabel('Product barcodes 3', { exact: true })
         .fill('5901234123457');
     await expect(
         page.getByText('The barcode image appears once the product is saved.'),
     ).toBeVisible();
-    await expect(page.locator('#product_barcodes img')).toHaveCount(1);
+    // Both saved barcodes (the WMS one included) have an image; the new one none.
+    await expect(page.locator('#product_barcodes img')).toHaveCount(2);
     expect(await violations(page)).toEqual([]);
 
     await page.goto('/temp/product/browser-barcode-oil');
