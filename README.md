@@ -56,6 +56,7 @@ Token-based, under `/api/v1`, authenticated with Sanctum bearer tokens (all rout
 - `POST /api/v1/logout` — revoke the current token.
 - `GET /api/v1/rows`, `GET /api/v1/rows/{row}/cells`, `GET /api/v1/rows/{row}/cells/{cellNumber}/flats/{flatNumber}` — browse rows and cells.
 - `GET /api/v1/products` — browse the product catalog.
+- `POST /api/v1/products/{product}/barcodes` — add a barcode to a product (201 with its barcode list; 409 `barcode_taken` when another product holds it; 422 when this product already does).
 - `POST /api/v1/pallets` — store a new pallet on a cell.
 - `GET /api/v1/pallets/{pallet}` — read a pallet and its current contents.
 - `POST /api/v1/pallets/{pallet}/open`, `.../remove-boxes`, `.../empty`, `.../transfer` — pallet actions delegated to `PalletActionService`, which locks and updates the affected records and writes audit logs in a transaction. Removing boxes preserves the cell's state; a transfer writes paired source/destination logs.

@@ -48,7 +48,21 @@ class StoreProductBarcodeRequest extends FormRequest
     public static function barcodeRules(): array
     {
         return [
-            'barcode' => ['required', 'string', 'max:64', 'regex:/^[\x20-\x7E]+$/', new NewProductBarcode],
+            'barcode' => [...self::barcodeFormatRules()['barcode'], new NewProductBarcode],
+        ];
+    }
+
+    /**
+     * The rules without the uniqueness check: required printable ASCII up to
+     * 64 characters. The mobile API uses it to tell a malformed value (422)
+     * from one another product holds (409).
+     *
+     * @return array<string, list<string>>
+     */
+    public static function barcodeFormatRules(): array
+    {
+        return [
+            'barcode' => ['required', 'string', 'max:64', 'regex:/^[\x20-\x7E]+$/'],
         ];
     }
 }
