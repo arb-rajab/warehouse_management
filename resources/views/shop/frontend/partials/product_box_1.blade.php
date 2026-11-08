@@ -34,27 +34,24 @@
         </a>
         <!-- Discount percentage tag -->
         @if(discount_in_percentage($product) > 0)
-            <span class="absolute-top-left bg-primary ml-1 mt-1 fs-11 fw-700 text-white w-35px text-center" style="padding-top:2px;padding-bottom:2px;">-{{discount_in_percentage($product)}}%</span>
+            <span class="sf-tag sf-tag-sale" dir="ltr">-{{discount_in_percentage($product)}}%</span>
         @endif
         <!-- Wholesale tag -->
         @if ($product->wholesale_product)
-            <span class="absolute-top-left fs-11 text-white fw-700 px-2 lh-1-8 ml-1 mt-1" style="background-color: #455a64; @if(discount_in_percentage($product) > 0) top:25px; @endif">
+            <span class="sf-tag sf-tag-wholesale">
                 {{ __('storefront.common.wholesale') }}
             </span>
         @endif
 
-
         <!-- Not for sale (out of stock) -->
         @if (! $product->for_sale)
-            <span class="absolute-top-left fs-16 text-white fw-700 px-4 py-4 lh-1-8 ml-1 mt-1" style="background-color: #ff0000; @if(discount_in_percentage($product) > 0) top:25px; @endif">
+            <span class="sf-tag sf-tag-out">
                 {{ __('storefront.product.out_of_stock') }}
             </span>
-
         @elseif(! $product->published)
-        <span class="absolute-top-left fs-16 text-white fw-700 px-4 py-4 lh-1-8 ml-1 mt-1" style="background-color: #7d7d7dc1; @if(discount_in_percentage($product) > 0) top:25px; @endif">
-            {{ __('storefront.common.not_available') }}
-        </span>
-
+            <span class="sf-tag sf-tag-muted">
+                {{ __('storefront.common.not_available') }}
+            </span>
         @endif
 
 
@@ -106,28 +103,26 @@
         <h3 class="fw-400 fs-13 text-truncate-2 lh-1-4 mb-0 h-35px my-2 text-center">
             <a href="{{ $product_url }}" class="d-block text-reset hov-text-primary" title="{{  $product->getTranslation('name')  }}">{{  $product->getTranslation('name')  }}</a>
         </h3>
-        <p class="text-bold text-danger">
-      {{ $product->id }}
-        </p>
-        <p class="d-flex justify-content-between">
-        <span class="text-info">{{ " " . $product->unit_equal . " / " . $product->unit }}</span>
+        <p class="sf-card-code">{{ $product->id }}</p>
+        <p class="sf-card-meta">
+        <span>{{ " " . $product->unit_equal . " / " . $product->unit }}</span>
 
         @php
             $show_offer_badge = $product->offers->count() > 0 ? $product->offers->toQuery()->forAuthUser()->get()->count() > 0 : false;
         @endphp
 
         @if ($show_offer_badge)
-            <span class="badge badge-warning" style="color: white;">{{ __('storefront.cart.offer') }}</span>
+            <span class="badge badge-warning">{{ __('storefront.cart.offer') }}</span>
         @endif
         </p>
-        <p>
-            <span class="text-dark">Tax: </span>{{  $product->tax . "%" }}
+        <p class="sf-card-meta">
+            <span>{{ __('storefront.common.tax') }}: {{  $product->tax . "%" }}</span>
         </p>
 
 
 
         @if(Auth::check() && Auth::user()->admin_verified)
-        <div class="fs-14 d-flex justify-content-center mt-3">
+        <div class="sf-card-price fs-14 d-flex justify-content-center mt-3">
             @if($product->auction_product == 0)
                 <!-- Previous price -->
                 @if(home_base_price($product) != home_discounted_base_price($product))

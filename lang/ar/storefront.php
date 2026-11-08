@@ -627,6 +627,7 @@ return [
         'purchase_history' => 'سجل المشتريات',
         'refund_requests' => 'طلبات الاسترداد',
         'return_policy' => 'سياسة الإرجاع',
+        'search' => 'بحث',
         'see_all' => 'عرض الكل',
         'sign_out' => 'تسجيل الخروج',
         'subscribe' => 'اشتراك',

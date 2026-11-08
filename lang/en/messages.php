@@ -79,4 +79,6 @@ return [
     'staff_role_not_assignable' => 'You can only give a role that grants nothing beyond your own permissions, and you cannot change your own role.',
     'seller_payout_full_request' => 'Pay the full requested amount (:amount), or ask the seller to submit a new request. Partial payments are not supported.',
     'seller_payout_balance_limit' => 'The amount cannot exceed the available balance for this payment method (:amount).',
+    // Storefront header brand name: a placeholder until the owner chooses the store's name.
+    'brand_name' => 'Store name',
 ];

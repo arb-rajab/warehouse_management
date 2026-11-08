@@ -627,6 +627,7 @@ return [
         'purchase_history' => 'Purchase History',
         'refund_requests' => 'Refund Requests',
         'return_policy' => 'Return Policy',
+        'search' => 'Search',
         'see_all' => 'See All',
         'sign_out' => 'Sign Out',
         'subscribe' => 'Subscribe',

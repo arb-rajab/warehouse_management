@@ -79,4 +79,6 @@ return [
     'staff_role_not_assignable' => 'يمكنك فقط منح دور لا يتجاوز صلاحياتك، ولا يمكنك تغيير دورك الخاص.',
     'seller_payout_full_request' => 'ادفع كامل المبلغ المطلوب (:amount)، أو اطلب من البائع تقديم طلب جديد. الدفعات الجزئية غير مدعومة.',
     'seller_payout_balance_limit' => 'لا يمكن أن يتجاوز المبلغ الرصيد المتاح لطريقة الدفع هذه (:amount).',
+    // Storefront header brand name: a placeholder until the owner chooses the store's name.
+    'brand_name' => 'اسم المتجر',
 ];
