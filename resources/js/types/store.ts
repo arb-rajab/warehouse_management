@@ -933,8 +933,9 @@ export interface StoreProductForm {
     product_barcodes: string[];
 }
 /**
- * A saved store barcode of the edit form, with its id for its barcode image
- * route and whether Code 128 can draw it (Arabic digits converted).
+ * A saved barcode of the edit form (`product_barcodes`), with its id for its
+ * barcode image route (`barcode` argument) and whether Code 128 can draw it
+ * (Arabic digits converted).
  */
 export interface StoreProductBarcodeImage {
     id: number;

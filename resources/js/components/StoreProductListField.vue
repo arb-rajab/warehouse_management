@@ -10,6 +10,13 @@ import { plainFieldInputClass } from '@/lib/filters';
  * stored `values` on the edit form. Empty rows are posted and skipped by the
  * server, as the legacy form's were. The `after-input` slot renders below
  * each row's input with its current `value` (the barcode images).
+ *
+ * With `seenName`, the field also posts the values it was loaded with as
+ * `<seenName>[]` hidden inputs (the edit form's `product_barcodes_seen`), so
+ * the server deletes only what the form showed and the user removed. A list
+ * loaded empty still posts one blank entry: the browser drops an empty array
+ * from a multipart post, and without the key the server would fall back to
+ * replacing the whole list. The server skips the blank entry.
  */
 const props = defineProps<{
     id: string;
@@ -19,11 +26,14 @@ const props = defineProps<{
     removeLabel: string;
     placeholder: string;
     values?: string[];
+    seenName?: string;
     errors: Record<string, string>;
 }>();
 let nextKey = 0;
+// The values the rows were loaded with, whatever the user edits afterwards.
+const loaded = [...(props.values ?? [])];
 const rows = ref<{ key: number; value: string }[]>(
-    (props.values ?? []).map((value) => ({ key: nextKey++, value })),
+    loaded.map((value) => ({ key: nextKey++, value })),
 );
 const list = ref<HTMLElement>();
 
@@ -40,6 +50,15 @@ function remove(key: number): void {
 <template>
     <div :id="id" role="group" :aria-labelledby="`${id}_label`">
         <p :id="`${id}_label`" class="text-sm font-medium">{{ label }}</p>
+        <template v-if="seenName">
+            <input
+                v-for="(value, index) in loaded.length > 0 ? loaded : ['']"
+                :key="index"
+                type="hidden"
+                :name="`${seenName}[]`"
+                :value="value"
+            />
+        </template>
         <ul ref="list" class="mt-2 space-y-2">
             <li
                 v-for="(row, index) in rows"

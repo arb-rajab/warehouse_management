@@ -47,10 +47,13 @@ import type {
  * unit, unit price and description have a field here; a synced description
  * shows as a locked block with a hidden input that posts it unchanged.
  *
- * `barcodeImages` (edit form) are the saved store barcodes: an input still
- * holding one shows its barcode image below it (the WMS label, from
- * `storeBarcodeImage`), or a note when Code 128 cannot draw it; a new or
- * changed value says the image appears once the product is saved.
+ * `barcodeImages` (edit form) are the saved barcodes (the shared
+ * `product_barcodes` table): an input still holding one shows its barcode
+ * image below it (the WMS label, from `storeBarcodeImage`), or a note when
+ * Code 128 cannot draw it; a new or changed value says the image appears once
+ * the product is saved. The edit form also posts `product_barcodes_seen`, the
+ * values it loaded, so a save deletes only the barcodes the form showed and
+ * the user removed, and keeps those added elsewhere in the meantime.
  */
 const props = defineProps<{
     categories: StoreReferenceOption[];
@@ -81,7 +84,7 @@ const barcodeImageSrc = (value: string): string | undefined => {
     const saved = savedBarcode(value);
 
     return props.product && saved?.printable
-        ? storeBarcodeImage.url({ product: props.product, storeBarcode: saved })
+        ? storeBarcodeImage.url({ product: props.product, barcode: saved })
         : undefined;
 };
 const barcodeNote = (value: string): string | undefined => {
@@ -413,6 +416,7 @@ const linkClass =
                 :remove-label="t('store.products.form.removeBarcode')"
                 :placeholder="t('store.products.form.barcodePlaceholder')"
                 :values="product?.product_barcodes"
+                :seen-name="product ? 'product_barcodes_seen' : undefined"
                 :errors="errors"
             >
                 <template #after-input="{ value }">

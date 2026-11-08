@@ -265,12 +265,12 @@ describe('StoreProductFormFields', () => {
 
         expect(images()).toEqual([
             [
-                storeBarcodeImage.url({ product: 41, storeBarcode: 3 }),
+                storeBarcodeImage.url({ product: 41, barcode: 3 }),
                 '8712345678906',
             ],
-            [storeBarcodeImage.url({ product: 41, storeBarcode: 5 }), 'EVOO-1'],
+            [storeBarcodeImage.url({ product: 41, barcode: 5 }), 'EVOO-1'],
         ]);
-        expect(storeBarcodeImage.url({ product: 41, storeBarcode: 3 })).toBe(
+        expect(storeBarcodeImage.url({ product: 41, barcode: 3 })).toBe(
             '/temp/admin/products/41/store-barcodes/3/image',
         );
         expect(rows()[1].text()).toContain(
@@ -289,7 +289,7 @@ describe('StoreProductFormFields', () => {
         // Typing the saved value back shows its image again.
         await rows()[2].get('input').setValue(' EVOO-1 ');
         expect(rows()[2].get('img').attributes('src')).toBe(
-            storeBarcodeImage.url({ product: 41, storeBarcode: 5 }),
+            storeBarcodeImage.url({ product: 41, barcode: 5 }),
         );
 
         // A new row says nothing while empty, then the after-save note.
@@ -306,6 +306,43 @@ describe('StoreProductFormFields', () => {
             t('store.products.form.barcodeImageAfterSave'),
         );
         expect(rows()[3].find('img').exists()).toBe(false);
+    });
+
+    it('posts the loaded barcodes as the seen list on the edit form only, blank when it loaded none', async () => {
+        const seen = (wrapper: ReturnType<typeof mountFields>) =>
+            wrapper
+                .findAll('input[name="product_barcodes_seen[]"]')
+                .map((input) => (input.element as HTMLInputElement).value);
+        const edit = mountFields({
+            product: storeProductForm({
+                product_barcodes: ['8712345678906', 'EVOO-1'],
+            }),
+        });
+
+        expect(seen(edit)).toEqual(['8712345678906', 'EVOO-1']);
+        await edit
+            .get(
+                'button[aria-label="' +
+                    t('store.products.form.removeBarcode') +
+                    ' 1"]',
+            )
+            .trigger('click');
+        expect(seen(edit)).toEqual(['8712345678906', 'EVOO-1']);
+
+        // A product that loaded none still posts the key, blank.
+        expect(
+            seen(
+                mountFields({
+                    product: storeProductForm({ product_barcodes: [] }),
+                }),
+            ),
+        ).toEqual(['']);
+        // The create form has no seen list.
+        expect(seen(mountFields())).toEqual([]);
+        // The product types are not tracked.
+        expect(edit.find('input[name="product_types_seen[]"]').exists()).toBe(
+            false,
+        );
     });
 
     it.each(['en', 'ar'] as const)(

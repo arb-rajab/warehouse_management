@@ -116,6 +116,30 @@ describe('physicalProductValidation', () => {
         expect(edit.rules.button).toBeUndefined();
     });
 
+    it('checks the seen barcode list on the edit form only, as the server does', () => {
+        const create = physicalProductValidation({
+            form: 'create',
+            sections: allOn,
+        });
+        const edit = physicalProductValidation({
+            form: 'edit',
+            sections: allOn,
+        });
+
+        expect(edit.rules.product_barcodes_seen).toEqual([
+            'nullable',
+            'array',
+            'max:50',
+        ]);
+        expect(edit.rules['product_barcodes_seen.*']).toEqual([
+            'nullable',
+            'string',
+            'max:255',
+        ]);
+        expect(create.rules.product_barcodes_seen).toBeUndefined();
+        expect(create.rules['product_barcodes_seen.*']).toBeUndefined();
+    });
+
     it('does not validate a read-only Otajer field as posted', () => {
         const edit = physicalProductValidation({
             form: 'edit',

@@ -317,6 +317,32 @@ describe('validateKey', () => {
         expect(errorFor(html, rules, 'product_barcodes.2')).toBeUndefined();
     });
 
+    it('accepts the blank seen entry of a form that loaded no barcodes, and a full list', () => {
+        const rules = {
+            product_barcodes_seen: ['nullable', 'array', 'max:50'],
+            'product_barcodes_seen.*': ['nullable', 'string', 'max:255'],
+        };
+        const blank =
+            '<input type="hidden" name="product_barcodes_seen[]" value="">';
+        const full = Array.from(
+            { length: 50 },
+            (_, index) =>
+                `<input type="hidden" name="product_barcodes_seen[]" value="B${index}">`,
+        ).join('');
+        const tooMany =
+            full +
+            '<input type="hidden" name="product_barcodes_seen[]" value="B50">';
+
+        expect(errorFor(blank, rules, 'product_barcodes_seen')).toBeUndefined();
+        expect(
+            errorFor(blank, rules, 'product_barcodes_seen.0'),
+        ).toBeUndefined();
+        expect(errorFor(full, rules, 'product_barcodes_seen')).toBeUndefined();
+        expect(errorFor(tooMany, rules, 'product_barcodes_seen')).toBe(
+            'The product barcodes seen field must not have more than 50 items.',
+        );
+    });
+
     it('runs the named rules after the token rules', () => {
         const html =
             '<input name="unit_price" value="10"><select name="discount_type"><option value="amount" selected></option></select><input name="discount" value="12">';

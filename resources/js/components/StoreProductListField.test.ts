@@ -3,9 +3,14 @@ import type { VueWrapper } from '@vue/test-utils';
 import { describe, expect, it } from 'vitest';
 import StoreProductListField from './StoreProductListField.vue';
 
-function mountList(errors: Record<string, string> = {}, values?: string[]) {
+function mountList(
+    errors: Record<string, string> = {},
+    values?: string[],
+    seenName?: string,
+) {
     return mount(StoreProductListField, {
         props: {
+            seenName,
             id: 'product_barcodes',
             name: 'product_barcodes',
             label: 'Barcodes',
@@ -133,5 +138,87 @@ describe('StoreProductListField', () => {
         expect(wrapper.text()).toContain('Taken');
         expect(wrapper.text()).toContain('Too many');
         wrapper.unmount();
+    });
+
+    describe('seen list', () => {
+        const seen = (wrapper: VueWrapper) =>
+            wrapper
+                .findAll('input[type="hidden"]')
+                .map((input) => [
+                    input.attributes('name'),
+                    (input.element as HTMLInputElement).value,
+                ]);
+
+        it('posts nothing unless a seen name is given', () => {
+            const wrapper = mountList({}, ['8712345678906']);
+
+            expect(wrapper.findAll('input[type="hidden"]')).toHaveLength(0);
+            wrapper.unmount();
+        });
+
+        it('posts each loaded value as a hidden entry that outlives edits and removals', async () => {
+            const wrapper = mountList(
+                {},
+                ['8712345678906', '4006381333931'],
+                'product_barcodes_seen',
+            );
+            const expected = [
+                ['product_barcodes_seen[]', '8712345678906'],
+                ['product_barcodes_seen[]', '4006381333931'],
+            ];
+
+            expect(seen(wrapper)).toEqual(expected);
+            await wrapper
+                .get('button[aria-label="Remove barcode 1"]')
+                .trigger('click');
+            await addButton(wrapper).trigger('click');
+            await wrapper.findAll('input[type="text"]')[1].setValue('NEW-1');
+            await wrapper.findAll('input[type="text"]')[0].setValue('CHANGED');
+
+            expect(seen(wrapper)).toEqual(expected);
+            wrapper.unmount();
+        });
+
+        it('posts one blank entry when the list loaded empty, so the key survives a multipart post', async () => {
+            const form = document.createElement('form');
+            document.body.appendChild(form);
+            const wrapper = mount(StoreProductListField, {
+                props: {
+                    id: 'product_barcodes',
+                    name: 'product_barcodes',
+                    label: 'Barcodes',
+                    addLabel: 'Add barcode',
+                    removeLabel: 'Remove barcode',
+                    placeholder: 'Barcode number',
+                    values: [],
+                    seenName: 'product_barcodes_seen',
+                    errors: {},
+                },
+                attachTo: form,
+            });
+
+            expect(seen(wrapper)).toEqual([['product_barcodes_seen[]', '']]);
+            expect(
+                new FormData(form).getAll('product_barcodes_seen[]'),
+            ).toEqual(['']);
+            // Rows the user adds do not change what was seen.
+            await addButton(wrapper).trigger('click');
+            await wrapper.get('input[type="text"]').setValue('NEW-1');
+            expect(
+                new FormData(form).getAll('product_barcodes_seen[]'),
+            ).toEqual(['']);
+            expect(new FormData(form).getAll('product_barcodes[]')).toEqual([
+                'NEW-1',
+            ]);
+            wrapper.unmount();
+            form.remove();
+        });
+
+        it('treats a missing values prop as loaded empty', () => {
+            const wrapper = mountList({}, undefined, 'product_barcodes_seen');
+
+            expect(seen(wrapper)).toEqual([['product_barcodes_seen[]', '']]);
+            wrapper.unmount();
+        });
     });
 });

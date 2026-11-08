@@ -33,7 +33,9 @@ import type {
  * opened from. Only the in-house list is an Inertia page to cancel back to.
  * `readOnlyFields` are the Otajer-owned synced fields of a feed-origin
  * product (Setup > Product data sources), shown read-only. `barcodeImages`
- * are the saved store barcodes, shown as barcode images under their inputs.
+ * are the saved barcodes (the shared `product_barcodes` table), shown as
+ * barcode images under their inputs; the form also posts the values it loaded
+ * as `product_barcodes_seen`.
  */
 const props = defineProps<{
     product: StoreProductForm;
