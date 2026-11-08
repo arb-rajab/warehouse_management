@@ -13,6 +13,7 @@ export default defineConfig({
                 'resources/css/app.css',
                 'resources/js/app.ts',
                 'resources/js/legacy-image-upload.ts',
+                'resources/css/storefront.css',
             ],
             refresh: true,
             fonts: [
