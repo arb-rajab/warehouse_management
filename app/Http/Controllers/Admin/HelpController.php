@@ -19,6 +19,7 @@ class HelpController extends Controller
         $component = match ($topic) {
             HelpTopic::Dashboard => 'Dashboard',
             HelpTopic::Rows => 'Rows',
+            HelpTopic::Warehouses => 'Warehouses',
             HelpTopic::Cells => 'Cells',
             HelpTopic::WarehouseMap => 'WarehouseMap',
             HelpTopic::Users => 'Users',

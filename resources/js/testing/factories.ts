@@ -10,6 +10,7 @@ import type {
     Row,
     Setting,
     User,
+    Warehouse,
 } from '@/types/admin';
 import type {
     StoreSeller,
@@ -132,6 +133,17 @@ export function paginated<T>(
     };
 }
 
+export function warehouse(overrides: Partial<Warehouse> = {}): Warehouse {
+    return {
+        id: 1,
+        name: 'Main',
+        code: 'MAIN',
+        address: '1 Dock Road',
+        rows_count: 2,
+        ...overrides,
+    };
+}
+
 export function row(overrides: Partial<Row> = {}): Row {
     return {
         id: 1,
@@ -139,6 +151,7 @@ export function row(overrides: Partial<Row> = {}): Row {
         cells_count: 5,
         flats_count: 7,
         has_pallets: false,
+        warehouse: { id: 1, name: 'Main' },
         ...overrides,
     };
 }

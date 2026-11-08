@@ -11,6 +11,7 @@ import {
 } from '@/actions/App/Http/Controllers/Admin/RowController';
 import { edit as settingsEdit } from '@/actions/App/Http/Controllers/Admin/SettingController';
 import { index as usersIndex } from '@/actions/App/Http/Controllers/Admin/UserController';
+import { index as warehousesIndex } from '@/actions/App/Http/Controllers/Admin/WarehouseController';
 import { index as warehouseMapIndex } from '@/actions/App/Http/Controllers/Admin/WarehouseMapController';
 import SuccessBanner from '@/components/SuccessBanner.vue';
 import { t } from '@/lib/i18n';
@@ -61,12 +62,24 @@ describe('AdminLayout', () => {
         expect(links.map((link) => link.attributes('href'))).toEqual([
             '/admin',
             rowsIndex.url(),
+            warehousesIndex.url(),
             warehouseMapIndex.url(),
             cellLogsIndex.url(),
             cellVerificationRoundsIndex.url(),
             productsIndex.url(),
             usersIndex.url(),
         ]);
+    });
+
+    it('links to the warehouses page with its own label, and marks it active on its subpages', () => {
+        const wrapper = mountLayout(warehousesIndex.url() + '/3/edit');
+
+        const link = wrapper
+            .findAll('nav a')
+            .find((a) => a.attributes('href') === warehousesIndex.url());
+
+        expect(link?.text()).toBe(t('nav.warehouses'));
+        expect(link?.attributes('aria-current')).toBe('page');
     });
 
     it('links to the warehouse map with its own icon and label, and marks it active on its page', () => {
@@ -116,7 +129,7 @@ describe('AdminLayout', () => {
         const navLinks = wrapper
             .findAllComponents(Link)
             .filter((link) => link.element.closest('nav') !== null);
-        expect(navLinks).toHaveLength(7);
+        expect(navLinks).toHaveLength(8);
 
         for (const link of navLinks) {
             expect(link.props('href')).toMatchObject({ method: 'get' });
@@ -343,10 +356,11 @@ describe('AdminLayout', () => {
             panel
                 .findAll('a')
                 .map((link) => link.attributes('href'))
-                .slice(0, 7),
+                .slice(0, 8),
         ).toEqual([
             '/admin',
             rowsIndex.url(),
+            warehousesIndex.url(),
             warehouseMapIndex.url(),
             cellLogsIndex.url(),
             cellVerificationRoundsIndex.url(),

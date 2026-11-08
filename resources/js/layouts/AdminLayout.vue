@@ -4,6 +4,7 @@ import { Link, usePage } from '@inertiajs/vue3';
 import {
     ArrowLeftRight,
     Boxes,
+    Building2,
     CircleUser,
     ClipboardCheck,
     LayoutDashboard,
@@ -23,6 +24,7 @@ import { index as productsIndex } from '@/actions/App/Http/Controllers/Admin/Pro
 import { index as rowsIndex } from '@/actions/App/Http/Controllers/Admin/RowController';
 import { edit as settingsEdit } from '@/actions/App/Http/Controllers/Admin/SettingController';
 import { index as usersIndex } from '@/actions/App/Http/Controllers/Admin/UserController';
+import { index as warehousesIndex } from '@/actions/App/Http/Controllers/Admin/WarehouseController';
 import { index as warehouseMapIndex } from '@/actions/App/Http/Controllers/Admin/WarehouseMapController';
 import AccountMenu from '@/components/AccountMenu.vue';
 import LanguageSwitcher from '@/components/LanguageSwitcher.vue';
@@ -51,6 +53,11 @@ const navItems = computed(() => [
         icon: LayoutDashboard,
     },
     { labelKey: 'nav.rows', href: rowsIndex(), icon: Rows3 },
+    {
+        labelKey: 'nav.warehouses',
+        href: warehousesIndex(),
+        icon: Building2,
+    },
     {
         labelKey: 'nav.warehouseMap',
         href: warehouseMapIndex(),
