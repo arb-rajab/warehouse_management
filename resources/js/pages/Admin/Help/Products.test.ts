@@ -1,12 +1,12 @@
 import { Head } from '@inertiajs/vue3';
 import { mount } from '@vue/test-utils';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
     show as helpShow,
     index as helpIndex,
 } from '@/actions/App/Http/Controllers/Admin/HelpController';
 import { index as productsIndex } from '@/actions/App/Http/Controllers/Admin/ProductController';
-import { t } from '@/lib/i18n';
+import { i18n, t } from '@/lib/i18n';
 import { defaultAuthProps, resetMocks } from '@/testing/inertiaPageMocks';
 import Products from './Products.vue';
 
@@ -36,6 +36,10 @@ function mountPage() {
 describe('Help Products', () => {
     beforeEach(() => {
         resetMocks({ usePageMock });
+    });
+
+    afterEach(() => {
+        i18n.global.locale.value = 'en';
     });
 
     it('renders the page title in the Head and the PageHeader', () => {
@@ -90,6 +94,32 @@ describe('Help Products', () => {
         );
         expect(wrapper.text()).toContain(t('help.products.exportingQr.body'));
     });
+
+    it.each(['en', 'ar'] as const)(
+        'tells in %s that barcodes are shared with the store, unique across products, and that undrawable ones have no label',
+        (locale) => {
+            i18n.global.locale.value = locale;
+            const body = t('help.products.exportingQr.body');
+            const phrases = {
+                en: [
+                    'shared with the store',
+                    'unique across all products',
+                    'cannot be drawn',
+                ],
+                ar: [
+                    'مشتركة مع المتجر',
+                    'فريدة بين جميع المنتجات',
+                    'لا يمكن رسمه',
+                ],
+            }[locale];
+
+            for (const phrase of phrases) {
+                expect(body).toContain(phrase);
+            }
+
+            expect(mountPage().text()).toContain(body);
+        },
+    );
 
     it('renders a preview of the products table with its real column headers and an example row', () => {
         const wrapper = mountPage();

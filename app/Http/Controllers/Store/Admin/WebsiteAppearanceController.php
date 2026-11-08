@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Store\Admin;
 
 use App\Http\Controllers\Concerns\ProvidesStoreUploadPreviews;
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Store\Admin\Concerns\FlashesSuccess;
 use App\Http\Requests\Store\Admin\UpdateLegacyWebsiteScriptsRequest;
 use App\Http\Requests\Store\Admin\UpdateWebsiteAppearanceRequest;
 use App\Services\Store\WebsiteSettings;
@@ -21,6 +22,7 @@ use Inertia\Response;
  */
 class WebsiteAppearanceController extends Controller implements HasMiddleware
 {
+    use FlashesSuccess;
     use ProvidesStoreUploadPreviews;
 
     /** @return array<int, Middleware> */
@@ -47,6 +49,7 @@ class WebsiteAppearanceController extends Controller implements HasMiddleware
     public function update(UpdateWebsiteAppearanceRequest $request, WebsiteSettings $settings): RedirectResponse
     {
         $settings->write($request->validated('settings'), UpdateWebsiteAppearanceRequest::SWITCHES);
+        $this->flashSuccess('website_appearance_has_been_updated_successfully');
 
         return redirect()->route('website.appearance');
     }

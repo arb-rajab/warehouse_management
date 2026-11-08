@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Store\Admin;
 
 use App\Enums\CheckpointStatus;
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Store\Admin\Concerns\FlashesSuccess;
 use App\Http\Requests\Store\Admin\UpdateCheckpointNotesRequest;
 use App\Http\Requests\Store\Admin\UpdateCheckpointStatusRequest;
 use App\Http\Resources\Store\TripCheckpointResource;
@@ -34,6 +35,8 @@ use Inertia\Response;
  */
 class TripCheckpointController extends Controller implements HasMiddleware
 {
+    use FlashesSuccess;
+
     /** @return array<int, Middleware> */
     public static function middleware(): array
     {
@@ -84,6 +87,7 @@ class TripCheckpointController extends Controller implements HasMiddleware
             $checkpoint->notes = $request->validated('notes');
             $checkpoint->save();
         });
+        $this->flashSuccess('checkpoint_notes_have_been_updated_successfully');
 
         return $this->redirectToTrip($checkpoint, $request);
     }
@@ -103,6 +107,7 @@ class TripCheckpointController extends Controller implements HasMiddleware
             }
             $checkpoint->save();
         });
+        $this->flashSuccess('checkpoint_status_has_been_updated_successfully');
 
         return $this->redirectToTrip($checkpoint, $request);
     }

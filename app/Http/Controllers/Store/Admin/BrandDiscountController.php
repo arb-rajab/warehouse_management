@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Store\Admin;
 
 use App\Http\Controllers\Concerns\ProvidesStoreBrandLogos;
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Store\Admin\Concerns\FlashesSuccess;
 use App\Http\Requests\Store\Admin\FilterBrandDiscountsRequest;
 use App\Http\Requests\Store\Admin\UpdateBrandDiscountRequest;
 use App\Http\Resources\Store\BrandResource;
@@ -20,6 +21,7 @@ use Inertia\Response;
 
 class BrandDiscountController extends Controller implements HasMiddleware
 {
+    use FlashesSuccess;
     use ProvidesStoreBrandLogos;
 
     /** @return array<int, Middleware> */
@@ -57,6 +59,7 @@ class BrandDiscountController extends Controller implements HasMiddleware
             'date_range' => $request->validated('date_range'),
             'seller_product_discount' => $request->boolean('seller_product_discount'),
         ]);
+        $this->flashSuccess('brand_discounts_have_been_updated_successfully');
 
         return $this->redirectPreservingQuery('brands_wise_product_discount', $request);
     }

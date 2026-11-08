@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Store\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Store\Admin\Concerns\FlashesSuccess;
 use App\Http\Requests\Store\Admin\FilterRepresentativePaymentsRequest;
 use App\Http\Resources\Store\RepresentativePaymentResource;
 use App\Models\RepresentativePayment;
@@ -23,6 +24,8 @@ use Symfony\Component\HttpFoundation\Response as HttpResponse;
 
 class RepresentativePaymentController extends Controller implements HasMiddleware
 {
+    use FlashesSuccess;
+
     /** @return array<int, Middleware> */
     public static function middleware(): array
     {
@@ -83,6 +86,7 @@ class RepresentativePaymentController extends Controller implements HasMiddlewar
             abort_unless($payment->status === 'pending', 409);
             $payment->update(['status' => $status, 'admin_id' => $request->user('store')->id]);
         });
+        $this->flashSuccess($status === 'accepted' ? 'representative_payment_has_been_accepted_successfully' : 'representative_payment_has_been_rejected_successfully');
 
         return $this->redirectPreservingQuery('admin.rep.payments.index', $request);
     }

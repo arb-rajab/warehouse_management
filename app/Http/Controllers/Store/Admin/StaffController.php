@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Store\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Store\Admin\Concerns\FlashesSuccess;
 use App\Http\Requests\Store\Admin\FilterStaffRequest;
 use App\Http\Requests\Store\Admin\StoreStaffRequest;
 use App\Http\Requests\Store\Admin\UpdateStaffRequest;
@@ -31,6 +32,8 @@ use Inertia\Response;
  */
 class StaffController extends Controller implements HasMiddleware
 {
+    use FlashesSuccess;
+
     /**
      * @return array<int, Middleware>
      */
@@ -89,6 +92,7 @@ class StaffController extends Controller implements HasMiddleware
 
             $user->assignRole($role);
         });
+        $this->flashSuccess('staff_has_been_created_successfully');
 
         return redirect()->route('staffs.index');
     }
@@ -128,6 +132,7 @@ class StaffController extends Controller implements HasMiddleware
 
             $user->syncRoles([$role]);
         });
+        $this->flashSuccess('staff_has_been_updated_successfully');
 
         return redirect()->route('staffs.index');
     }
@@ -140,6 +145,7 @@ class StaffController extends Controller implements HasMiddleware
             StoreUser::destroy($staff->user_id);
             $staff->delete();
         });
+        $this->flashSuccess('staff_has_been_deleted_successfully');
 
         return $this->redirectPreservingQuery('staffs.index', $request);
     }

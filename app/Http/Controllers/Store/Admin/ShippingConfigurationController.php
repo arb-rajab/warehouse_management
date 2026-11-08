@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Store\Admin;
 
 use App\Http\Controllers\Concerns\UpdatesStoreSettings;
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Store\Admin\Concerns\FlashesSuccess;
 use App\Http\Requests\Store\Admin\UpdateShippingConfigurationRequest;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -13,6 +14,7 @@ use Inertia\Response;
 
 class ShippingConfigurationController extends Controller implements HasMiddleware
 {
+    use FlashesSuccess;
     use UpdatesStoreSettings;
 
     /** @return array<int, Middleware> */
@@ -30,6 +32,7 @@ class ShippingConfigurationController extends Controller implements HasMiddlewar
     {
         $key = $request->validated('type');
         $this->updateSettings([$key => $request->validated($key)]);
+        $this->flashSuccess('shipping_configuration_has_been_updated_successfully');
 
         return redirect()->route('shipping_configuration.index');
     }

@@ -32,7 +32,8 @@ test('an admin can finish another workers round and persist its completion witho
     $this->travelTo('2026-10-12 10:00:00');
 
     $this->post("/admin/cell-verification-rounds/{$round->id}/complete?is_correct=0&page=2")
-        ->assertRedirect("/admin/cell-verification-rounds/{$round->id}?is_correct=0&page=2");
+        ->assertRedirect("/admin/cell-verification-rounds/{$round->id}?is_correct=0&page=2")
+        ->assertInertiaFlash('success', 'Verification round has been completed successfully');
 
     expect($round->fresh()->completed_at->toDateTimeString())->toBe('2026-10-12 10:00:00')
         ->and($round->fresh()->user_id)->toBe($worker->id)
@@ -687,6 +688,7 @@ test('accepting a report of an empty cell empties the stored pallet and records 
     $response = $this->post("/admin/cell-verification-reports/{$report->id}/accept");
 
     $response->assertRedirect("/admin/cell-verification-rounds/{$report->cell_verification_round_id}");
+    $response->assertInertiaFlash('success', 'Report has been accepted successfully');
     $response->assertSessionHasNoErrors();
     expect($cell->fresh()->state)->toBe(CellState::Empty);
     expect(Pallet::find($pallet->id))->toBeNull();

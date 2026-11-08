@@ -185,7 +185,8 @@ test('customer status importance notes ban archive and restore actions preserve 
     expect($customer->fresh()->admin_notes)->toBe('Contact later');
     $this->delete(route('customers.destroy', $customer))->assertRedirect();
     expect((bool) $customer->fresh()->is_delete)->toBeTrue();
-    $this->post(route('customers.restore', $customer))->assertRedirect();
+    $this->post(route('customers.restore', $customer))->assertRedirect()
+        ->assertInertiaFlash('success', 'Customer has been restored successfully');
     expect($customer->fresh()->is_delete)->toBeNull();
 });
 test('bulk archive validates all targets before writing and never deletes classified products', function () {
@@ -195,7 +196,8 @@ test('bulk archive validates all targets before writing and never deletes classi
     $classified = CustomerProduct::forceCreate(['user_id' => $customer->id, 'name' => 'Customer listing', 'published' => 1, 'status' => 1]);
     $this->post(route('bulk-customer-delete'), ['id' => [$customer->id, $seller->id]])->assertSessionHasErrors('id.1');
     expect($customer->fresh()->is_delete)->toBeNull();
-    $this->post(route('bulk-customer-delete'), ['id' => [$customer->id]])->assertRedirect();
+    $this->post(route('bulk-customer-delete'), ['id' => [$customer->id]])->assertRedirect()
+        ->assertInertiaFlash('success', 'Customers have been deleted successfully');
     expect((bool) $customer->fresh()->is_delete)->toBeTrue()->and(CustomerProduct::whereKey($classified->id)->exists())->toBeTrue()->and($classified->fresh()->published)->toBe(1);
 });
 test('bulk archive refuses unauthorized callers without changing accounts', function (string $caller) {

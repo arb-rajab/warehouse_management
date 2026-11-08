@@ -141,7 +141,8 @@ test('a ticket attachment stays listed for its viewer without opening it to libr
 
     $own = Upload::factory()->create(['user_id' => $staff->id, 'type' => 'image']);
     $this->post(route('support_ticket.admin_store'), ['ticket_id' => $ticket->id, 'reply' => 'Mine', 'status' => 'open', 'attachments' => (string) $own->id])
-        ->assertRedirect(route('support_ticket.admin_show', $ticket));
+        ->assertRedirect(route('support_ticket.admin_show', $ticket))
+        ->assertInertiaFlash('success', 'Reply has been sent successfully');
     expect(TicketReply::sole()->files)->toBe((string) $own->id);
 });
 

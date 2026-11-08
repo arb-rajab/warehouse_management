@@ -110,7 +110,8 @@ test('conversation replies use the current store account, sanitize HTML, and pre
     $noise = supportConversation();
     $this->post(route('conversations.admin_reply', $conversation), [
         'message' => '<script>bad</script><b>Help</b>', 'user_id' => $conversation->sender_id, 'conversation_id' => $noise->id,
-    ])->assertRedirect(route('conversations.admin_show', $conversation));
+    ])->assertRedirect(route('conversations.admin_show', $conversation))
+        ->assertInertiaFlash('success', 'Reply has been sent successfully');
     expect(Message::query()->first()->only(['conversation_id', 'user_id', 'message']))->toBe([
         'conversation_id' => $conversation->id, 'user_id' => $staff->id, 'message' => '<b>Help</b>',
     ])->and($conversation->fresh()->receiver_viewed)->toBe(0)
@@ -149,7 +150,8 @@ test('deleting a conversation removes only that thread and keeps list query para
     Message::forceCreate(['conversation_id' => $noise->id, 'user_id' => $noise->sender_id, 'message' => 'keep']);
     actingAsStoreUser(createStoreStaff('delete_product_conversations'));
     $this->delete(route('conversations.admin_destroy', [$conversation, 'page' => 2, 'per_page' => 10]))
-        ->assertRedirect(route('conversations.admin_index', ['page' => 2, 'per_page' => 10]));
+        ->assertRedirect(route('conversations.admin_index', ['page' => 2, 'per_page' => 10]))
+        ->assertInertiaFlash('success', 'Conversation has been deleted successfully');
     expect(Conversation::query()->pluck('id')->all())->toBe([$noise->id])
         ->and(Message::query()->pluck('message')->all())->toBe(['keep']);
 });

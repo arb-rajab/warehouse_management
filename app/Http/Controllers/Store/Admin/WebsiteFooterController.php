@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Store\Admin;
 use App\Http\Controllers\Concerns\ProvidesStoreReferenceOptions;
 use App\Http\Controllers\Concerns\ProvidesStoreUploadPreviews;
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Store\Admin\Concerns\FlashesSuccess;
 use App\Http\Requests\Store\Admin\EditReferenceTranslationRequest;
 use App\Http\Requests\Store\Admin\UpdateWebsiteFooterRequest;
 use App\Services\Store\WebsiteSettings;
@@ -20,6 +21,7 @@ use Inertia\Response;
  */
 class WebsiteFooterController extends Controller implements HasMiddleware
 {
+    use FlashesSuccess;
     use ProvidesStoreReferenceOptions;
     use ProvidesStoreUploadPreviews;
 
@@ -61,6 +63,7 @@ class WebsiteFooterController extends Controller implements HasMiddleware
     {
         $lang = $request->validated('lang');
         $settings->write($request->validated('settings'), UpdateWebsiteFooterRequest::SWITCHES, $lang, UpdateWebsiteFooterRequest::LOCALIZED);
+        $this->flashSuccess('website_footer_has_been_updated_successfully');
 
         return redirect()->route('website.footer', ['lang' => $lang]);
     }

@@ -155,7 +155,8 @@ test('blog creation preserves database language and sanitizes rich content with 
         'title' => 'وصفة الأرز', 'short_description' => 'وصفة طازجة', 'banner' => $upload->id, 'meta_img' => $upload->id,
         'description' => '<p dir="rtl">أرز <strong>لذيذ</strong></p><script>alert(1)</script><img src=x onerror=alert(1)>',
         'status' => 0, 'deleted_at' => now(),
-    ]))->assertRedirect(route('blog.index'));
+    ]))->assertRedirect(route('blog.index'))
+        ->assertInertiaFlash('success', 'Blog post has been created successfully');
     $blog = Blog::query()->sole();
     expect($blog->title)->toBe('وصفة الأرز')->and($blog->short_description)->toBe('وصفة طازجة')
         ->and($blog->status)->toBe(1)->and($blog->deleted_at)->toBeNull()
@@ -168,7 +169,8 @@ test('blog update keeps canonical URLs and publication status unless explicitly 
     $blog = adminBlog($category, ['status' => 0]);
     $other = adminBlog($category, ['title' => 'Other', 'slug' => 'other']);
     actingAsStoreUser(createStoreStaff('edit_blog', 'view_uploads'));
-    $this->put(route('blog.update', $blog), adminBlogForm($category, ['title' => 'Changed title', 'status' => 1]))->assertRedirect(route('blog.index'));
+    $this->put(route('blog.update', $blog), adminBlogForm($category, ['title' => 'Changed title', 'status' => 1]))->assertRedirect(route('blog.index'))
+        ->assertInertiaFlash('success', 'Blog post has been updated successfully');
     expect($blog->fresh()->title)->toBe('Changed title')->and($blog->fresh()->slug)->toBe('fresh-recipes')
         ->and($blog->fresh()->status)->toBe(0)->and($other->fresh()->title)->toBe('Other');
 });

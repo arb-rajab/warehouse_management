@@ -15,7 +15,8 @@ test('shipping configuration preserves each shipping method without clearing WMS
     actingAsStoreUser(createStoreStaff('shipping_configuration'));
     Cache::put('wms-sentinel', 'retained');
     Cache::put('business_settings', collect());
-    $this->post('/temp/admin/shipping_configuration/update', ['type' => 'shipping_type', 'shipping_type' => $method, 'header_script' => 'Unrelated'])->assertRedirect(route('shipping_configuration.index'));
+    $this->post('/temp/admin/shipping_configuration/update', ['type' => 'shipping_type', 'shipping_type' => $method, 'header_script' => 'Unrelated'])->assertRedirect(route('shipping_configuration.index'))
+        ->assertInertiaFlash('success', 'Shipping configuration has been updated successfully');
     $this->assertDatabaseHas('business_settings', ['type' => 'shipping_type', 'value' => $method]);
     $this->assertDatabaseMissing('business_settings', ['type' => 'header_script']);
     expect(Cache::get('wms-sentinel'))->toBe('retained')->and(Cache::has('business_settings'))->toBeFalse();

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Store\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Store\Admin\Concerns\FlashesSuccess;
 use App\Http\Requests\Store\Admin\FilterReviewsRequest;
 use App\Http\Requests\Store\Admin\UpdateReviewPublishedRequest;
 use App\Http\Resources\Store\ReviewResource;
@@ -20,6 +21,8 @@ use Inertia\Response;
 
 class ReviewController extends Controller implements HasMiddleware
 {
+    use FlashesSuccess;
+
     /** @return array<int, Middleware> */
     public static function middleware(): array
     {
@@ -79,6 +82,7 @@ class ReviewController extends Controller implements HasMiddleware
                 }
             }
         });
+        $this->flashSuccess('review_published_status_has_been_updated_successfully');
 
         return $this->redirectPreservingQuery('admin.reviews.index', $request);
     }

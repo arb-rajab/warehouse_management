@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Store\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Store\Admin\Concerns\FlashesSuccess;
 use App\Http\Requests\Store\Admin\FilterConversationsRequest;
 use App\Http\Requests\Store\Admin\ReplyConversationRequest;
 use App\Http\Resources\Store\ConversationResource;
@@ -20,6 +21,8 @@ use Inertia\Response;
 
 class ConversationController extends Controller implements HasMiddleware
 {
+    use FlashesSuccess;
+
     /** @return array<int, Middleware> */
     public static function middleware(): array
     {
@@ -93,6 +96,7 @@ class ConversationController extends Controller implements HasMiddleware
             }
             $conversation->save();
         });
+        $this->flashSuccess('reply_has_been_sent_successfully');
 
         return redirect()->route('conversations.admin_show', $conversation);
     }
@@ -103,6 +107,7 @@ class ConversationController extends Controller implements HasMiddleware
             $conversation->messages()->delete();
             $conversation->delete();
         });
+        $this->flashSuccess('conversation_has_been_deleted_successfully');
 
         return $this->redirectPreservingQuery('conversations.admin_index', $request);
     }

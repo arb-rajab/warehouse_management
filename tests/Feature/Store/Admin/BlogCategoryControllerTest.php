@@ -64,7 +64,8 @@ test('the edit blog category form can be rendered with its full payload', functi
 test('a blog category is created preserving legacy slug generation and database content', function () {
     actingAsStoreUser(createStoreStaff('add_blog_category'));
     $this->post(route('blog-category.store'), ['category_name' => 'Fresh Recipes!', 'slug' => 'forged'])
-        ->assertRedirect(route('blog-category.index'));
+        ->assertRedirect(route('blog-category.index'))
+        ->assertInertiaFlash('success', 'Blog category has been created successfully');
     $this->assertDatabaseHas('blog_categories', ['category_name' => 'Fresh Recipes!', 'slug' => 'Fresh-Recipes']);
 });
 
@@ -73,7 +74,8 @@ test('updating a blog category validates its name and preserves other records', 
     $other = marketingBlogCategory('Other');
     actingAsStoreUser(createStoreStaff('edit_blog_category'));
     $this->put(route('blog-category.update', $category), ['category_name' => 'New Recipes'])
-        ->assertRedirect(route('blog-category.index'));
+        ->assertRedirect(route('blog-category.index'))
+        ->assertInertiaFlash('success', 'Blog category has been updated successfully');
     expect($category->fresh()->slug)->toBe('New-Recipes')->and($other->fresh()->category_name)->toBe('Other');
 });
 

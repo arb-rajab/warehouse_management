@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Store\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Store\Admin\Concerns\FlashesSuccess;
 use App\Http\Requests\Store\Admin\FilterAttributeValuesRequest;
 use App\Http\Requests\Store\Admin\StoreAttributeValueRequest;
 use App\Http\Requests\Store\Admin\UpdateAttributeValueRequest;
@@ -20,6 +21,8 @@ use Inertia\Response;
 
 class AttributeValueController extends Controller implements HasMiddleware
 {
+    use FlashesSuccess;
+
     /** @return array<int, Middleware> */
     public static function middleware(): array
     {
@@ -50,6 +53,7 @@ class AttributeValueController extends Controller implements HasMiddleware
             'attribute_id' => $request->validated('attribute_id'),
             'value' => ucfirst($request->validated('value')),
         ]);
+        $this->flashSuccess('attribute_value_has_been_created_successfully');
 
         return redirect()->route('attributes.show', $value->attribute_id);
     }
@@ -66,6 +70,7 @@ class AttributeValueController extends Controller implements HasMiddleware
         $attributeValue->attribute_id = $request->validated('attribute_id');
         $attributeValue->value = ucfirst($request->validated('value'));
         $attributeValue->save();
+        $this->flashSuccess('attribute_value_has_been_updated_successfully');
 
         return redirect()->route('attributes.show', $attributeValue->attribute_id);
     }
@@ -74,6 +79,7 @@ class AttributeValueController extends Controller implements HasMiddleware
     {
         $attributeId = $attributeValue->attribute_id;
         $attributeValue->delete();
+        $this->flashSuccess('attribute_value_has_been_deleted_successfully');
 
         return $this->redirectPreservingQuery('attributes.show', $request, ['attribute' => $attributeId]);
     }

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Store\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Store\Admin\Concerns\FlashesSuccess;
 use App\Http\Requests\Store\Admin\ImportProductsRequest;
 use App\Models\Brand;
 use App\Models\Category;
@@ -24,6 +25,8 @@ use Symfony\Component\HttpFoundation\Response as HttpResponse;
 
 class ProductBulkUploadController extends Controller implements HasMiddleware
 {
+    use FlashesSuccess;
+
     /** @return array<int, Middleware> */
     public static function middleware(): array
     {
@@ -47,6 +50,7 @@ class ProductBulkUploadController extends Controller implements HasMiddleware
         }
 
         app(ProductSpreadsheetImporter::class)->import(new ProductsImport(notify: false), $request->file('bulk_file'));
+        $this->flashSuccess('products_have_been_imported_successfully');
 
         return redirect()->route('product_bulk_upload.index');
     }

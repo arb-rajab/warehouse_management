@@ -120,6 +120,7 @@ test('an authenticated user can create a row and its cells are generated', funct
     $row = Row::query()->where('letter', 'Z')->first();
 
     $response->assertRedirect(route('admin.rows.show', $row));
+    $response->assertInertiaFlash('success', 'Row has been created successfully');
     expect($row)->not->toBeNull();
     expect($row->cells()->count())->toBe(6);
 });
@@ -474,6 +475,7 @@ test('renaming a rows letter always succeeds', function () {
     ]);
 
     $response->assertRedirect(route('admin.rows.show', $row->fresh()));
+    $response->assertInertiaFlash('success', 'Row has been updated successfully');
     expect($row->fresh()->letter)->toBe('Y');
     expect($row->cells()->pluck('id'))->toEqual($cellIds);
 });
@@ -771,6 +773,7 @@ test('an admin can delete a row with no pallets in it', function () {
     $response = $this->delete("/admin/rows/{$row->letter}");
 
     $response->assertRedirect(route('admin.rows.index'));
+    $response->assertInertiaFlash('success', 'Row has been deleted successfully');
     $this->assertDatabaseMissing('rows', ['id' => $row->id]);
     $this->assertDatabaseMissing('cells', ['row_id' => $row->id]);
     $this->assertDatabaseHas('rows', ['id' => $otherRow->id]);

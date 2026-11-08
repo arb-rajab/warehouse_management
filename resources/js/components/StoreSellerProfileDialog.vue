@@ -5,6 +5,8 @@ import { onBeforeUnmount, ref, watch } from 'vue';
 import { profile } from '@/actions/App/Http/Controllers/Store/Admin/SellerController';
 import ActionErrorBanner from '@/components/ActionErrorBanner.vue';
 import AddressMapLink from '@/components/AddressMapLink.vue';
+import DetailItem from '@/components/DetailItem.vue';
+import DetailList from '@/components/DetailList.vue';
 import FilterDialog from '@/components/FilterDialog.vue';
 import { t } from '@/lib/i18n';
 import type { StoreSellerProfile } from '@/types/store';
@@ -99,12 +101,14 @@ const fields = [
                 >
             </div>
             <h3 class="font-semibold">{{ t('store.sellers.payoutInfo') }}</h3>
-            <dl class="grid grid-cols-2 gap-3">
-                <template v-for="field in fields" :key="field"
-                    ><dt>{{ t(`store.sellers.${field}`) }}</dt>
-                    <dd class="break-words">{{ details[field] }}</dd></template
-                >
-            </dl>
+            <DetailList plain :columns="2">
+                <DetailItem
+                    v-for="field in fields"
+                    :key="field"
+                    :label="t(`store.sellers.${field}`)"
+                    :value="details[field]"
+                />
+            </DetailList>
         </div>
     </FilterDialog>
 </template>

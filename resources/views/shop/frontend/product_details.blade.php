@@ -36,21 +36,6 @@
 
                     <div class="col-xl-4 col-lg-4">
                         @include('shop.frontend.product_details.description')
-                        @if ($detailedProduct->barcodes->count() > 0)
-                            <div class="bg-white mb-4 border p-3 p-sm-4">
-                                <p class="mr-5 pb-2 fs-16 fw-700 text-reset">{{ __('storefront.product.barcodes') }}</p>
-                                    @foreach ($detailedProduct->barcodes as $barcode)
-                                        @php
-                                            $englishBarcode = ar_barcode_to_en($barcode->barcode);
-                                            $barcode->barcode = $englishBarcode;
-                                        @endphp
-                                        <div class="mb-5">
-                                            <img alt='Barcode Generator TEC-IT'
-                                                src='https://barcode.tec-it.com/barcode.ashx?data={{ $barcode->barcode }}&code=Code128&translate-esc=on'/>
-                                        </div>
-                                    @endforeach
-                            </div>
-                        @endif
                     </div>
                 </div>
             </div>

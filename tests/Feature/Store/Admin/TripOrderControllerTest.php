@@ -198,7 +198,8 @@ describe('trip order actions', function () {
         actingAsStoreUser(createStoreStaff('edit_trip'));
 
         $this->post(route('trips.orders.bulk-change-delivery-status', ['search' => 'x', 'page' => 2]), ['trip_id' => $first->checkpoints()->firstOrFail()->trip_id, 'id' => [$first->id, $second->id], 'delivery_status' => $status])
-            ->assertRedirect(route('trips.orders', ['search' => 'x', 'page' => 2]));
+            ->assertRedirect(route('trips.orders', ['search' => 'x', 'page' => 2]))
+            ->assertInertiaFlash('success', 'Delivery status of the orders has been updated successfully');
 
         expect($first->fresh()->delivery_status)->toBe($status)
             ->and($second->fresh()->delivery_status)->toBe($status)
@@ -260,7 +261,8 @@ describe('trip order actions', function () {
         $other = attachedTripWriteOrder(createStoreUser(), ['delivery_status' => 'on_delivery']);
         actingAsStoreUser(createStoreStaff('edit_trip'));
 
-        $this->put(route('trips.orders.update_order_status_to_delivered', [...tripWriteOrderContext($order), 'page' => 3]))->assertRedirect(route('trips.orders', ['page' => 3]));
+        $this->put(route('trips.orders.update_order_status_to_delivered', [...tripWriteOrderContext($order), 'page' => 3]))->assertRedirect(route('trips.orders', ['page' => 3]))
+            ->assertInertiaFlash('success', 'Order has been marked as delivered successfully');
         $this->put(route('trips.orders.update_order_status_to_delivered', tripWriteOrderContext($map)), ['return_to' => 'map'])->assertRedirect(route('trips.create-from-map'));
         $this->put(route('trips.orders.update_order_status_to_delivered', tripWriteOrderContext($other)), ['return_to' => 'elsewhere'])->assertSessionHasErrors('return_to');
 

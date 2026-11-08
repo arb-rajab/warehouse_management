@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Store\Admin;
 
 use App\Http\Controllers\Concerns\ProvidesStoreUploadPreviews;
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Store\Admin\Concerns\FlashesSuccess;
 use App\Http\Requests\Store\Admin\FilterCarriersRequest;
 use App\Http\Requests\Store\Admin\StoreCarrierRequest;
 use App\Http\Requests\Store\Admin\UpdateCarrierRequest;
@@ -26,6 +27,7 @@ use Inertia\Response;
 
 class CarrierController extends Controller implements HasMiddleware
 {
+    use FlashesSuccess;
     use ProvidesStoreUploadPreviews;
 
     private const array COLUMNS = ['id', 'name', 'transit_time', 'logo', 'free_shipping', 'status'];
@@ -77,6 +79,7 @@ class CarrierController extends Controller implements HasMiddleware
     public function store(StoreCarrierRequest $request): RedirectResponse
     {
         DB::transaction(fn () => $this->saveCarrier(new Carrier, $request->validated()));
+        $this->flashSuccess('carrier_has_been_created_successfully');
 
         return redirect()->route('carriers.index');
     }
@@ -89,6 +92,7 @@ class CarrierController extends Controller implements HasMiddleware
             $carrier->carrier_ranges()->delete();
             $this->saveCarrier($carrier, $request->validated());
         });
+        $this->flashSuccess('carrier_has_been_updated_successfully');
 
         return redirect()->route('carriers.index');
     }
@@ -130,6 +134,7 @@ class CarrierController extends Controller implements HasMiddleware
             $carrier->carrier_ranges()->delete();
             $carrier->delete();
         });
+        $this->flashSuccess('carrier_has_been_deleted_successfully');
 
         return $this->redirectPreservingQuery('carriers.index', $request);
     }
@@ -139,6 +144,7 @@ class CarrierController extends Controller implements HasMiddleware
         $carrier = Carrier::query()->findOrFail($request->integer('id'));
         $carrier->status = $request->boolean('status');
         $carrier->save();
+        $this->flashSuccess('carrier_status_has_been_updated_successfully');
 
         return $this->redirectPreservingQuery('carriers.index', $request);
     }

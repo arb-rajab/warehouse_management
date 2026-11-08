@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Concerns\FlashesAdminSuccess;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\FilterUsersRequest;
 use App\Http\Requests\Admin\ShowUserRequest;
@@ -22,6 +23,8 @@ use Spatie\Permission\Models\Role;
 
 class UserController extends Controller
 {
+    use FlashesAdminSuccess;
+
     public function index(FilterUsersRequest $request): Response
     {
         $perPage = $this->resolvePerPage($request, 20);
@@ -82,6 +85,7 @@ class UserController extends Controller
         $user->save();
 
         $user->syncRoles($request->boolean('is_admin') ? ['admin'] : []);
+        $this->flashAdminSuccess('user_has_been_created_successfully');
 
         return redirect()->route('admin.users.index');
     }
@@ -119,6 +123,7 @@ class UserController extends Controller
             $user->save();
 
             $user->syncRoles($isAdmin ? ['admin'] : []);
+            $this->flashAdminSuccess('user_has_been_updated_successfully');
 
             return redirect()->route('admin.users.index');
         });
@@ -139,6 +144,7 @@ class UserController extends Controller
             // phone's old login.
             $user->tokens()->delete();
             $user->delete();
+            $this->flashAdminSuccess('user_has_been_deleted_successfully');
 
             return $this->redirectPreservingQuery('admin.users.index', $request);
         });

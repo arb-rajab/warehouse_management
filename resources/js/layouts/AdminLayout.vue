@@ -28,6 +28,7 @@ import AccountMenu from '@/components/AccountMenu.vue';
 import LanguageSwitcher from '@/components/LanguageSwitcher.vue';
 import LogoutLink from '@/components/LogoutLink.vue';
 import SkipToContentLink from '@/components/SkipToContentLink.vue';
+import SuccessBanner from '@/components/SuccessBanner.vue';
 import { t } from '@/lib/i18n';
 import { isActiveNavUrl } from '@/lib/navigation';
 
@@ -215,6 +216,8 @@ function navLinkStateClass(href: UrlMethodPair): string[] {
                     : 'mx-auto max-w-6xl min-w-0 overflow-x-auto px-4 py-8 sm:px-6'
             "
         >
+            <!-- The full-bleed map has no room above it for a banner. -->
+            <SuccessBanner v-if="!fullBleed" />
             <slot />
         </main>
     </div>

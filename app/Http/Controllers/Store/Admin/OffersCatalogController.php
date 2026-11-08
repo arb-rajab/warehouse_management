@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Store\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Store\Admin\Concerns\FlashesSuccess;
 use App\Http\Requests\Store\Admin\FilterOffersCatalogRequest;
 use App\Http\Requests\Store\Admin\StoreOffersCatalogRequest;
 use App\Http\Resources\Store\OffersCatalogResource;
@@ -22,6 +23,8 @@ use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class OffersCatalogController extends Controller implements HasMiddleware
 {
+    use FlashesSuccess;
+
     /** @return array<int, Middleware> */
     public static function middleware(): array
     {
@@ -67,6 +70,7 @@ class OffersCatalogController extends Controller implements HasMiddleware
                 throw $exception;
             }
         });
+        $this->flashSuccess('offers_catalog_has_been_uploaded_successfully');
 
         return redirect()->route('offers.index');
     }
@@ -80,6 +84,7 @@ class OffersCatalogController extends Controller implements HasMiddleware
     {
         $catalogs->delete($catalog->file);
         $catalog->delete();
+        $this->flashSuccess('offers_catalog_has_been_deleted_successfully');
 
         return $this->redirectPreservingQuery('offers.index', $request);
     }

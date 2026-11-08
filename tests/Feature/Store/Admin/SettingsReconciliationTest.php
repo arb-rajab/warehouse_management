@@ -67,7 +67,8 @@ test('each former generic writer permission saves only its own website page', fu
 test('the retained script form writes only its two existing settings', function () {
     actingAsStoreUser(createStoreStaff('website_appearance'));
     $payload = ['types' => ['header_script', 'footer_script'], 'header_script' => 'Existing script content', 'footer_script' => null];
-    $this->post(route('website.scripts.compatibility.update'), $payload)->assertRedirect(route('website.appearance'));
+    $this->post(route('website.scripts.compatibility.update'), $payload)->assertRedirect(route('website.appearance'))
+        ->assertInertiaFlash('success', 'Website scripts have been updated successfully');
     $this->assertDatabaseHas('business_settings', ['type' => 'header_script', 'value' => 'Existing script content']);
     $this->postJson(route('website.scripts.compatibility.update'), array_replace($payload, ['types' => [['ar' => 'header_script'], 'footer_script']]))->assertUnprocessable();
     $this->postJson(route('website.scripts.compatibility.update'), $payload + ['site_name' => 'Injected'])->assertUnprocessable();

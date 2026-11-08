@@ -8,6 +8,8 @@ import {
     show_all_visits_in_a_day,
     update_note,
 } from '@/actions/App/Http/Controllers/Store/Admin/VisitController';
+import DetailItem from '@/components/DetailItem.vue';
+import DetailList from '@/components/DetailList.vue';
 import FieldError from '@/components/FieldError.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import StoreVisitMap from '@/components/StoreVisitMap.vue';
@@ -60,24 +62,18 @@ const access = useStoreAccess();
             }}</TableLink
         >
         <div class="my-6 grid gap-6 md:grid-cols-2">
-            <dl class="space-y-3" data-testid="visit-customer">
-                <div>
-                    <dt :class="fieldLabelClass">
-                        {{ t('store.representatives.visits.customer') }}
-                    </dt>
-                    <dd>
-                        <TableLink
-                            v-if="visit.customer && access.can('edit_customer')"
-                            :href="customerEdit(visit.customer)"
-                            >{{ visit.customer.name }}</TableLink
-                        >
-                        <span v-else>{{
-                            visit.customer?.name ??
-                            t('store.representatives.visits.missingCustomer')
-                        }}</span>
-                    </dd>
-                </div>
-                <div
+            <DetailList plain data-testid="visit-customer">
+                <DetailItem :label="t('store.representatives.visits.customer')"
+                    ><TableLink
+                        v-if="visit.customer && access.can('edit_customer')"
+                        :href="customerEdit(visit.customer)"
+                        >{{ visit.customer.name }}</TableLink
+                    ><template v-else>{{
+                        visit.customer?.name ??
+                        t('store.representatives.visits.missingCustomer')
+                    }}</template></DetailItem
+                >
+                <DetailItem
                     v-for="[key, value] in [
                         ['company', visit.customer?.company_name],
                         ['email', visit.customer?.email],
@@ -92,34 +88,26 @@ const access = useStoreAccess();
                         ],
                     ]"
                     :key="String(key)"
+                    preserve
+                    :label="t(`store.representatives.visits.${key}`)"
+                    :value="value"
+                />
+            </DetailList>
+            <DetailList v-if="visit.order" plain data-testid="visit-order">
+                <DetailItem :label="t('store.representatives.visits.order')"
+                    ><TableLink
+                        v-if="access.can('view_order_details')"
+                        :href="
+                            orderShow['/temp/admin/orders/{order}/show'](
+                                visit.order.id,
+                            )
+                        "
+                        >{{ visit.order.code }}</TableLink
+                    ><template v-else>{{
+                        visit.order.code
+                    }}</template></DetailItem
                 >
-                    <dt :class="fieldLabelClass">
-                        {{ t(`store.representatives.visits.${key}`) }}
-                    </dt>
-                    <dd class="break-words whitespace-pre-wrap">
-                        {{ value ?? '-' }}
-                    </dd>
-                </div>
-            </dl>
-            <dl v-if="visit.order" class="space-y-3" data-testid="visit-order">
-                <div>
-                    <dt :class="fieldLabelClass">
-                        {{ t('store.representatives.visits.order') }}
-                    </dt>
-                    <dd>
-                        <TableLink
-                            v-if="access.can('view_order_details')"
-                            :href="
-                                orderShow['/temp/admin/orders/{order}/show'](
-                                    visit.order.id,
-                                )
-                            "
-                            >{{ visit.order.code }}</TableLink
-                        >
-                        <span v-else>{{ visit.order.code }}</span>
-                    </dd>
-                </div>
-                <div
+                <DetailItem
                     v-for="[key, value] in [
                         [
                             'status',
@@ -144,21 +132,16 @@ const access = useStoreAccess();
                         ],
                     ]"
                     :key="String(key)"
-                >
-                    <dt :class="fieldLabelClass">
-                        {{ t(`store.representatives.visits.${key}`) }}
-                    </dt>
-                    <dd class="break-words whitespace-pre-wrap">
-                        {{ value ?? '-' }}
-                    </dd>
-                </div>
-                <div v-if="visit.order.customer_otajer_id !== null">
-                    <dt :class="fieldLabelClass">
-                        {{ t('store.representatives.visits.customerOtajerId') }}
-                    </dt>
-                    <dd>{{ visit.order.customer_otajer_id }}</dd>
-                </div>
-            </dl>
+                    preserve
+                    :label="t(`store.representatives.visits.${key}`)"
+                    :value="value"
+                />
+                <DetailItem
+                    v-if="visit.order.customer_otajer_id !== null"
+                    :label="t('store.representatives.visits.customerOtajerId')"
+                    :value="visit.order.customer_otajer_id"
+                />
+            </DetailList>
             <p v-else class="flex items-center gap-2">
                 <PackageSearch class="h-5 w-5" />{{
                     t('store.representatives.visits.noOrder')

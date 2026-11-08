@@ -52,7 +52,8 @@ test('a header save keeps the legacy keys and values without clearing the shared
     Cache::put('business_settings', 'stale');
     $payload = websiteHeaderPayload(['header_logo' => (string) $image->id, 'header_stikcy' => false]);
 
-    $this->put(route('website.header.update'), ['settings' => $payload])->assertRedirect(route('website.header'));
+    $this->put(route('website.header.update'), ['settings' => $payload])->assertRedirect(route('website.header'))
+        ->assertInertiaFlash('success', 'Website header has been updated successfully');
 
     expect(get_setting('header_logo'))->toBe((string) $image->id)
         ->and(get_setting('show_currency_switcher'))->toBeNull()

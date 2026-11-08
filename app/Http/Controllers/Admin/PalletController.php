@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Exceptions\InvalidSlotStateException;
+use App\Http\Controllers\Concerns\FlashesAdminSuccess;
 use App\Http\Controllers\Concerns\RedirectsAfterCellAction;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\EmptyPalletRequest;
@@ -24,7 +25,7 @@ use Inertia\Response;
 
 class PalletController extends Controller
 {
-    use RedirectsAfterCellAction;
+    use FlashesAdminSuccess, RedirectsAfterCellAction;
 
     public function __construct(private readonly PalletActionService $palletActions) {}
 
@@ -62,7 +63,7 @@ class PalletController extends Controller
         /** @var User $user */
         $user = $request->user();
 
-        return $this->handle($cell, function () use ($request, $cell, $user) {
+        return $this->handle($cell, 'pallet_has_been_stored_successfully', function () use ($request, $cell, $user) {
             $this->palletActions->store(
                 $cell->id,
                 $request->integer('product_id'),
@@ -79,7 +80,7 @@ class PalletController extends Controller
         /** @var User $user */
         $user = $request->user();
 
-        return $this->handle($this->cellFor($pallet), function () use ($request, $pallet, $user) {
+        return $this->handle($this->cellFor($pallet), 'pallet_has_been_opened_successfully', function () use ($request, $pallet, $user) {
             $this->palletActions->open(
                 $pallet,
                 $request->filled('boxes_count') ? $request->integer('boxes_count') : null,
@@ -95,7 +96,7 @@ class PalletController extends Controller
         /** @var User $user */
         $user = $request->user();
 
-        return $this->handle($this->cellFor($pallet), function () use ($request, $pallet, $user) {
+        return $this->handle($this->cellFor($pallet), 'pallet_boxes_have_been_removed_successfully', function () use ($request, $pallet, $user) {
             $this->palletActions->removeBoxes(
                 $pallet,
                 $request->integer('boxes_count'),
@@ -111,7 +112,7 @@ class PalletController extends Controller
         /** @var User $user */
         $user = $request->user();
 
-        return $this->handle($this->cellFor($pallet), function () use ($request, $pallet, $user) {
+        return $this->handle($this->cellFor($pallet), 'pallet_has_been_emptied_successfully', function () use ($request, $pallet, $user) {
             $this->palletActions->emptyPallet($pallet, $user->id, $request->input('note'));
         });
     }
@@ -121,7 +122,7 @@ class PalletController extends Controller
         /** @var User $user */
         $user = $request->user();
 
-        return $this->handle($this->cellFor($pallet), function () use ($request, $pallet, $user) {
+        return $this->handle($this->cellFor($pallet), 'pallet_has_been_transferred_successfully', function () use ($request, $pallet, $user) {
             $this->palletActions->transfer(
                 $pallet,
                 $request->resolvedSlot()->id,
@@ -136,7 +137,7 @@ class PalletController extends Controller
         /** @var User $user */
         $user = $request->user();
 
-        return $this->handle($this->cellFor($pallet), function () use ($request, $pallet, $user) {
+        return $this->handle($this->cellFor($pallet), 'pallet_has_been_updated_successfully', function () use ($request, $pallet, $user) {
             $this->palletActions->update(
                 $pallet,
                 $request->integer('product_id'),
@@ -155,13 +156,15 @@ class PalletController extends Controller
      * ActionErrorBanner to render — the target state can legitimately have changed
      * since the page was rendered (another admin, or the mobile app).
      */
-    private function handle(Cell $cell, callable $action): RedirectResponse
+    private function handle(Cell $cell, string $successKey, callable $action): RedirectResponse
     {
         try {
             $action();
         } catch (InvalidSlotStateException $e) {
             return $this->redirectAfterCellAction($cell)->withErrors(['action' => $e->getMessage()]);
         }
+
+        $this->flashAdminSuccess($successKey);
 
         return $this->redirectAfterCellAction($cell);
     }

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Store\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Store\Admin\Concerns\FlashesSuccess;
 use App\Http\Requests\Store\Admin\BulkDeleteVisitsRequest;
 use App\Http\Requests\Store\Admin\FilterVisitsRequest;
 use App\Http\Requests\Store\Admin\ShowRepresentativeVisitsRequest;
@@ -24,6 +25,8 @@ use Inertia\Response;
 
 class VisitController extends Controller implements HasMiddleware
 {
+    use FlashesSuccess;
+
     /** @return array<int, Middleware> */
     public static function middleware(): array
     {
@@ -100,7 +103,8 @@ class VisitController extends Controller implements HasMiddleware
     /**
      * Both the retained customer writer and its admin alias keep the same
      * ownership restriction (§7). A foreign visit remains a no-op, including
-     * for Super Admin; only the response changes to a redirect back.
+     * for Super Admin; only the response changes to a redirect back, and only a saved note
+     * flashes a success message.
      */
     public function update_note(UpdateRepresentativeVisitNoteRequest $request, ?Visit $visit = null): RedirectResponse
     {
@@ -108,6 +112,7 @@ class VisitController extends Controller implements HasMiddleware
         if ($visit->rep_id === $request->user('store')->id) {
             $visit->note = $request->validated('note');
             $visit->save();
+            $this->flashSuccess('visit_note_has_been_updated_successfully');
         }
 
         return redirect()->back();
@@ -147,6 +152,7 @@ class VisitController extends Controller implements HasMiddleware
     public function destroy(Request $request, Visit $visit): RedirectResponse
     {
         $visit->delete();
+        $this->flashSuccess('visit_has_been_deleted_successfully');
 
         return $this->redirectPreservingQuery('admin.rep.visits.index', $request);
     }
@@ -154,6 +160,7 @@ class VisitController extends Controller implements HasMiddleware
     public function bulkDestroy(BulkDeleteVisitsRequest $request): RedirectResponse
     {
         Visit::query()->whereIn('id', $request->validated('id'))->delete();
+        $this->flashSuccess('visits_have_been_deleted_successfully');
 
         return $this->redirectPreservingQuery('admin.rep.visits.index', $request);
     }

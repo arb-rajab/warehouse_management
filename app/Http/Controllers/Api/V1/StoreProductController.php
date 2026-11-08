@@ -16,7 +16,7 @@ use App\Models\FlashDeal;
 use App\Models\Product;
 use App\Models\ProductCollection as ModelsProductCollection;
 use App\Models\Shop;
-use App\Models\StoreProductBarcode;
+use App\Models\ProductBarcode;
 use App\Utility\CategoryUtility;
 use App\Utility\SearchUtility;
 use Illuminate\Http\Request;
@@ -356,7 +356,7 @@ class StoreProductController extends Controller
 
     public function barcode_search(Request $request)
     {
-        $productBarcodes = StoreProductBarcode::where('barcode', $request->barcode)->get();
+        $productBarcodes = ProductBarcode::where('barcode', $request->barcode)->get();
         $productToShow = null;
         if ($productBarcodes->isNotEmpty()) {
             foreach ($productBarcodes as $index => $productBarcode) {

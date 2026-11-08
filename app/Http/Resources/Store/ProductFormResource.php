@@ -3,9 +3,9 @@
 namespace App\Http\Resources\Store;
 
 use App\Models\Product;
+use App\Models\ProductBarcode;
 use App\Models\ProductStock;
 use App\Models\ProductVariation;
-use App\Models\StoreProductBarcode;
 use App\Support\ProductFormNumber;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -118,7 +118,7 @@ class ProductFormResource extends JsonResource
             'can_expire' => (bool) $this->can_expire,
             'flash_deal_id' => $this->flashDealId,
             'product_types' => $this->variations->map(fn (ProductVariation $variation): string => (string) $variation->getAttribute('name'))->values()->all(),
-            'product_barcodes' => $this->storeBarcodes->map(fn (StoreProductBarcode $barcode): string => (string) $barcode->getAttribute('barcode'))->values()->all(),
+            'product_barcodes' => ProductBarcode::distinctValues($this->barcodes)->map(fn (ProductBarcode $barcode): string => trim($barcode->barcode))->all(),
         ];
     }
 }

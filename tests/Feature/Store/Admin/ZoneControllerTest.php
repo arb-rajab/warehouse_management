@@ -65,7 +65,8 @@ test('the Zones edit screen returns 404 for a missing id', function () {
 
 test('the Zones store saves validated values', function () {
     actingAsStoreUser(createStoreStaff('manage_zones'));
-    $this->post('/temp/admin/zones', ['name' => 'West', 'country_id' => [$this->refs['country']]])->assertRedirect(route('zones.index'));
+    $this->post('/temp/admin/zones', ['name' => 'West', 'country_id' => [$this->refs['country']]])->assertRedirect(route('zones.index'))
+        ->assertInertiaFlash('success', 'Zone has been created successfully');
     $this->assertDatabaseHas('zones', ['name' => 'West']);
 });
 
@@ -83,7 +84,8 @@ test('the Zones store refuses writes', function (string $caller) {
 
 test('the Zones update saves validated values', function () {
     actingAsStoreUser(createStoreStaff('manage_zones'));
-    $this->put('/temp/admin/zones/'.$this->refs['zone'], ['name' => 'West', 'country_id' => [$this->refs['country']]])->assertRedirect(route('zones.index'));
+    $this->put('/temp/admin/zones/'.$this->refs['zone'], ['name' => 'West', 'country_id' => [$this->refs['country']]])->assertRedirect(route('zones.index'))
+        ->assertInertiaFlash('success', 'Zone has been updated successfully');
     $this->assertDatabaseHas('zones', ['id' => $this->refs['zone'], 'name' => 'West']);
 });
 

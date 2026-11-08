@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Concerns\FlashesAdminSuccess;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\FilterProductImageReviewsRequest;
 use App\Http\Requests\Admin\StoreProductImageReviewRequest;
 use App\Http\Requests\Admin\UpdateProductImageRequest;
 use App\Models\Product;
+use App\Models\ProductBarcode;
 use App\Models\ProductImageReview;
 use App\Services\ImageOptimizer;
 use App\Services\ProductImageReviewService;
@@ -22,6 +24,8 @@ use Throwable;
 
 class ProductImageReviewController extends Controller
 {
+    use FlashesAdminSuccess;
+
     public function show(FilterProductImageReviewsRequest $request, Product $product): JsonResponse
     {
         $product->load(['thumbnailUpload:id,file_name,external_link', 'barcodes:id,product_id,barcode']);
@@ -36,7 +40,7 @@ class ProductImageReviewController extends Controller
             'ar_name' => $product->ar_name,
             'image_url' => $product->image_url,
             'image_source' => $product->image_url ?? '',
-            'barcodes' => $product->barcodes->pluck('barcode'),
+            'barcodes' => ProductBarcode::listedInWms($product->barcodes)->pluck('barcode'),
             'reviews' => $reviews->through(fn (ProductImageReview $review): array => [
                 'id' => $review->id,
                 'status' => $review->status,
@@ -51,6 +55,7 @@ class ProductImageReviewController extends Controller
     public function store(StoreProductImageReviewRequest $request, Product $product, ProductImageReviewService $service): RedirectResponse
     {
         $service->record($product->id, (int) $request->user()?->getAuthIdentifier(), $request->imageReviewData());
+        $this->flashAdminSuccess('product_image_review_has_been_saved_successfully');
 
         return $this->redirectPreservingQuery('admin.products.index', $request);
     }
@@ -77,6 +82,8 @@ class ProductImageReviewController extends Controller
             Storage::disk('public')->delete($path);
             throw $exception;
         }
+
+        $this->flashAdminSuccess('product_image_has_been_updated_successfully');
 
         return $this->redirectPreservingQuery('admin.products.index', $request);
     }

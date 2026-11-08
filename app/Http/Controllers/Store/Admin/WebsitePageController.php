@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Store\Admin;
 use App\Http\Controllers\Concerns\ProvidesStoreReferenceOptions;
 use App\Http\Controllers\Concerns\ProvidesStoreUploadPreviews;
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Store\Admin\Concerns\FlashesSuccess;
 use App\Http\Requests\Store\Admin\EditReferenceTranslationRequest;
 use App\Http\Requests\Store\Admin\FilterWebsitePagesRequest;
 use App\Http\Requests\Store\Admin\StoreWebsitePageRequest;
@@ -32,6 +33,7 @@ use Inertia\Response;
  */
 class WebsitePageController extends Controller implements HasMiddleware
 {
+    use FlashesSuccess;
     use ProvidesStoreReferenceOptions;
     use ProvidesStoreUploadPreviews;
 
@@ -78,6 +80,7 @@ class WebsitePageController extends Controller implements HasMiddleware
             $page->save();
             $this->saveTranslation($page, config('app.default_language'), $data['title'], $data['content']);
         });
+        $this->flashSuccess('page_has_been_created_successfully');
 
         return redirect()->route('website.pages');
     }
@@ -126,6 +129,7 @@ class WebsitePageController extends Controller implements HasMiddleware
             $page->save();
             $this->saveTranslation($page, $data['lang'], $data['title'], $data['content']);
         });
+        $this->flashSuccess('page_has_been_updated_successfully');
 
         return redirect()->route('website.pages');
     }
@@ -139,6 +143,7 @@ class WebsitePageController extends Controller implements HasMiddleware
             $page->page_translations()->delete();
             $page->delete();
         });
+        $this->flashSuccess('page_has_been_deleted_successfully');
 
         return $this->redirectPreservingQuery('website.pages', $request);
     }

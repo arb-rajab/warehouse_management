@@ -35,3 +35,14 @@ The Products listing keeps `sort_by=name` as its public sort key. Resolve it to
 matches the displayed label, including untranslated products. Apply it before
 pagination and keep material ID as the stable tie-breaker. Other sort keys are
 independent of the panel language.
+
+## The Barcodes dialog lists the shared table's rows and marks the ones that cannot be drawn
+
+Added 2026-11-08. The rows are `product_barcodes` (shared with the store,
+[product-barcodes.md](product-barcodes.md)); the product's own-id row is not
+listed, so the default line is the only line showing the id. A row with
+`printable: false` (store text Code 128 cannot draw) shows the muted
+`products.barcodeNotPrintable` note under its value (the Store form's note
+classes), its Eye and Download buttons are `disabled` with `aria-describedby`
+pointing at the note and `cursor-not-allowed opacity-50`, and Remove stays
+enabled. The key is the admin namespace's own: WMS pages do not read `store.*`.

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Store\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Store\Admin\Concerns\FlashesSuccess;
 use App\Http\Requests\Store\Admin\FilterZonesRequest;
 use App\Http\Requests\Store\Admin\StoreZoneRequest;
 use App\Http\Requests\Store\Admin\UpdateZoneRequest;
@@ -21,6 +22,8 @@ use Inertia\Response;
 
 class ZoneController extends Controller implements HasMiddleware
 {
+    use FlashesSuccess;
+
     /** @return array<int, Middleware> */
     public static function middleware(): array
     {
@@ -67,6 +70,7 @@ class ZoneController extends Controller implements HasMiddleware
             $zone = Zone::create(['name' => $request->validated('name'), 'status' => 1]);
             Country::query()->whereIn('id', $request->validated('country_id'))->update(['zone_id' => $zone->id]);
         });
+        $this->flashSuccess('zone_has_been_created_successfully');
 
         return redirect()->route('zones.index');
     }
@@ -78,6 +82,7 @@ class ZoneController extends Controller implements HasMiddleware
             Country::query()->where('zone_id', $zone->id)->update(['zone_id' => 0]);
             Country::query()->whereIn('id', $request->validated('country_id'))->update(['zone_id' => $zone->id]);
         });
+        $this->flashSuccess('zone_has_been_updated_successfully');
 
         return redirect()->route('zones.index');
     }
@@ -88,6 +93,7 @@ class ZoneController extends Controller implements HasMiddleware
             Country::query()->where('zone_id', $zone->id)->update(['zone_id' => 0]);
             $zone->delete();
         });
+        $this->flashSuccess('zone_has_been_deleted_successfully');
 
         return $this->redirectPreservingQuery('zones.index', $request);
     }

@@ -14,8 +14,9 @@ use Illuminate\Foundation\Http\FormRequest;
  * otherwise, before any validation): the fields it shares with the create form
  * (ValidatesStoreProduct), the language being edited, the slug and the
  * Otajer image the edit form alone shows. Stored upload references
- * round-trip whoever owns them, and the product's own store barcodes may be
- * posted again.
+ * round-trip whoever owns them, and the product's own barcodes may be posted
+ * again (ValidatesStoreProduct, with the `product_barcodes_seen` list the
+ * barcode merge reads).
  *
  * `ar_name` (its rule is shared with the create form in
  * ValidatesStoreProduct), `unit`, `unit_price` and `description` are among the

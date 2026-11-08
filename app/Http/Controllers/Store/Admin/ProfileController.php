@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Store\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Store\Admin\Concerns\FlashesSuccess;
 use App\Http\Requests\Store\Admin\UpdateProfileRequest;
 use App\Http\Resources\Store\UploadResource;
 use App\Models\StoreUser;
@@ -14,6 +15,8 @@ use Inertia\Response;
 
 class ProfileController extends Controller implements HasMiddleware
 {
+    use FlashesSuccess;
+
     /** @return array<int, string> */
     public static function middleware(): array
     {
@@ -47,6 +50,7 @@ class ProfileController extends Controller implements HasMiddleware
         }
         $user->avatar_original = $request->validated('avatar');
         $user->save();
+        $this->flashSuccess('profile_has_been_updated_successfully');
 
         return redirect()->route('profile.index');
     }

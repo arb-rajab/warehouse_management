@@ -98,7 +98,8 @@ test('classified publishing changes only the admin flag both ways and keeps the 
     $this->product->forceFill(['published' => (int) ! $published])->save();
     $before = $this->product->fresh()->getAttributes();
     $this->put(route('classified_products.published', ['classifiedProduct' => $this->product->id, 'per_page' => 50, 'page' => 2]), ['status' => $published])
-        ->assertRedirect(route('classified_products', ['per_page' => 50, 'page' => 2]));
+        ->assertRedirect(route('classified_products', ['per_page' => 50, 'page' => 2]))
+        ->assertInertiaFlash('success', 'Classified product published status has been updated successfully');
     $after = $this->product->fresh()->getAttributes();
     expect((bool) $after['published'])->toBe($published)
         ->and(array_diff_key($after, array_flip(['published', 'updated_at'])))->toBe(array_diff_key($before, array_flip(['published', 'updated_at'])));
@@ -125,7 +126,8 @@ test('classified deletion removes only its product and translations and retains 
     $owner = $this->product->user->getAttributes();
     actingAsStoreUser(createStoreStaff('delete_classified_product'));
     $this->delete(route('classified_products.destroy', ['classifiedProduct' => $this->product->id, 'page' => 2, 'per_page' => 10]))
-        ->assertRedirect(route('classified_products', ['page' => 2, 'per_page' => 10]));
+        ->assertRedirect(route('classified_products', ['page' => 2, 'per_page' => 10]))
+        ->assertInertiaFlash('success', 'Classified product has been deleted successfully');
     $this->assertDatabaseMissing('customer_products', ['id' => $this->product->id]);
     $this->assertDatabaseMissing('customer_product_translations', ['customer_product_id' => $this->product->id]);
     $this->assertDatabaseHas('customer_products', ['id' => $other->id]);

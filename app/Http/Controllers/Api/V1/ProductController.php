@@ -8,8 +8,12 @@ use App\Http\Resources\ProductPalletResource;
 use App\Http\Resources\ProductResource;
 use App\Models\Pallet;
 use App\Models\Product;
+use App\Models\ProductBarcode;
+use Dedoc\Scramble\Attributes\Response as DocumentedResponse;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Http\Response as HttpResponse;
 
 class ProductController extends Controller
 {
@@ -42,13 +46,20 @@ class ProductController extends Controller
      * A deactivated product (`published = 0`) is returned normally rather than
      * 404ing — a QR label printed while it was active still needs to resolve
      * to "this product isn't sold anymore" (active: false) instead of looking
-     * like an unknown/broken label. Both the default id barcode and additional
-     * WMS barcodes resolve here, with canonical product ids taking priority.
-     * Unknown ids and barcodes return 404. Direct lookups remain exempt from
-     * the listing's Product::activeOrInWarehouse() rule even when the warehouse
-     * no longer holds any of the product.
+     * like an unknown/broken label. The default id barcode resolves first;
+     * otherwise the code is matched exactly (as the database compares it)
+     * against every barcode in the shared `product_barcodes` table: those
+     * added in the WMS, on the store form and by the Otajer import. A code
+     * several products hold answers 409 `ambiguous_barcode` with their ids
+     * rather than picking one. Stored values are not converted (Arabic-Indic
+     * digits) and the legacy `products.barcode` column is not read;
+     * `products:barcode-conflicts` lists both. Unknown ids and barcodes
+     * return 404. Direct lookups remain exempt from the listing's
+     * Product::activeOrInWarehouse() rule even when the warehouse no longer
+     * holds any of the product.
      */
-    public function show(string $product): ProductResource
+    #[DocumentedResponse(409, description: 'The code is not a product id and several products hold it as a barcode (`error_code`: `ambiguous_barcode`; `product_ids` lists them, ascending).', type: 'array{message: string, error_code: string, product_ids: list<int>}')]
+    public function show(string $product): ProductResource|JsonResponse
     {
         $query = Product::query()
             ->select('id', 'name', 'ar_name', 'thumbnail_img', 'warehouse_image_path', 'published')
@@ -58,11 +69,22 @@ class ProductController extends Controller
             ? (clone $query)->find($product)
             : null;
 
-        $resolvedProduct ??= $query
-            ->whereHas('barcodes', fn (Builder $query) => $query->where('barcode', $product))
-            ->firstOrFail();
+        if ($resolvedProduct !== null) {
+            return new ProductResource($resolvedProduct);
+        }
 
-        return new ProductResource($resolvedProduct);
+        $productIds = ProductBarcode::query()->where('barcode', $product)->distinct()->orderBy('product_id')->pluck('product_id')
+            ->map(fn (mixed $id): int => (int) $id);
+
+        if ($productIds->count() > 1) {
+            return response()->json([
+                'message' => __('messages.barcode_ambiguous'),
+                'error_code' => 'ambiguous_barcode',
+                'product_ids' => $productIds->all(),
+            ], HttpResponse::HTTP_CONFLICT);
+        }
+
+        return new ProductResource($query->whereKey($productIds->all())->firstOrFail());
     }
 
     /**

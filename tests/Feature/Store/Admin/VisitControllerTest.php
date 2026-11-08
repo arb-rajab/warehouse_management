@@ -45,7 +45,8 @@ test('single visit deletion preserves unrelated visits and filter query', functi
     actingAsStoreUser(createStoreStaff('delete_representative_visit'));
     $visit = adminRepresentativeVisit();
     $noise = adminRepresentativeVisit();
-    $this->delete('/temp/admin/representatives/visits/delete/'.$visit->id.'?page=2&search=Match')->assertRedirect(route('admin.rep.visits.index', ['page' => 2, 'search' => 'Match']));
+    $this->delete('/temp/admin/representatives/visits/delete/'.$visit->id.'?page=2&search=Match')->assertRedirect(route('admin.rep.visits.index', ['page' => 2, 'search' => 'Match']))
+        ->assertInertiaFlash('success', 'Visit has been deleted successfully');
     $this->assertDatabaseMissing('visits', ['id' => $visit->id]);
     $this->assertDatabaseHas('visits', ['id' => $noise->id]);
 });
@@ -55,7 +56,8 @@ test('bulk deletion removes only selected visits and preserves filter query', fu
     $visit = adminRepresentativeVisit();
     $second = adminRepresentativeVisit();
     $noise = adminRepresentativeVisit();
-    $this->post('/temp/admin/representatives/visits/bulk-visit-delete?per_page=10', ['id' => [$visit->id, $second->id]])->assertRedirect(route('admin.rep.visits.index', ['per_page' => 10]));
+    $this->post('/temp/admin/representatives/visits/bulk-visit-delete?per_page=10', ['id' => [$visit->id, $second->id]])->assertRedirect(route('admin.rep.visits.index', ['per_page' => 10]))
+        ->assertInertiaFlash('success', 'Visits have been deleted successfully');
     $this->assertDatabaseMissing('visits', ['id' => $visit->id]);
     $this->assertDatabaseMissing('visits', ['id' => $second->id]);
     $this->assertDatabaseHas('visits', ['id' => $noise->id]);

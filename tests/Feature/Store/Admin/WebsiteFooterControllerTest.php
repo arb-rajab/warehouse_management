@@ -130,7 +130,8 @@ test('the footer offers the seller and delivery boy app links only while their f
     $this->put(route('website.footer.update'), ['settings' => websiteFooterPayload([
         'seller_app_link' => 'https://example.com/new-seller',
         'delivery_boy_app_link' => '',
-    ]), 'lang' => 'en'])->assertRedirect(route('website.footer', ['lang' => 'en']));
+    ]), 'lang' => 'en'])->assertRedirect(route('website.footer', ['lang' => 'en']))
+        ->assertInertiaFlash('success', 'Website footer has been updated successfully');
     expect(get_setting('seller_app_link'))->toBe('https://example.com/new-seller')
         ->and(get_setting('delivery_boy_app_link'))->toBeNull();
 });

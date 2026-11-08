@@ -6,6 +6,7 @@ use App\Http\Controllers\Concerns\ProvidesStoreBrandLogos;
 use App\Http\Controllers\Concerns\ProvidesStoreReferenceOptions;
 use App\Http\Controllers\Concerns\ProvidesStoreUploadPreviews;
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Store\Admin\Concerns\FlashesSuccess;
 use App\Http\Requests\Store\Admin\EditReferenceTranslationRequest;
 use App\Http\Requests\Store\Admin\FilterBrandsRequest;
 use App\Http\Requests\Store\Admin\StoreBrandRequest;
@@ -15,6 +16,7 @@ use App\Http\Resources\Store\BrandResource;
 use App\Models\Brand;
 use App\Models\BrandTranslation;
 use App\Models\Product;
+use App\Models\ProductBarcode;
 use App\Models\Upload;
 use App\Support\NewestFirst;
 use Illuminate\Http\RedirectResponse;
@@ -28,6 +30,7 @@ use Inertia\Response;
 
 class BrandController extends Controller implements HasMiddleware
 {
+    use FlashesSuccess;
     use ProvidesStoreBrandLogos;
     use ProvidesStoreReferenceOptions;
     use ProvidesStoreUploadPreviews;
@@ -73,6 +76,7 @@ class BrandController extends Controller implements HasMiddleware
             $brand->save();
             $this->saveTranslation($brand, config('app.default_language'), $data['name']);
         });
+        $this->flashSuccess('brand_has_been_created_successfully');
 
         return redirect()->route('brands.index');
     }
@@ -108,22 +112,26 @@ class BrandController extends Controller implements HasMiddleware
             $brand->save();
             $this->saveTranslation($brand, $data['lang'], $data['name']);
         });
+        $this->flashSuccess('brand_has_been_updated_successfully');
 
         return redirect()->route('brands.edit', ['brand' => $brand->id, 'lang' => $data['lang']]);
     }
 
     /**
      * Deleting a brand still deletes every product row carrying it, as the
-     * legacy handler did; the three statements now commit or fail together.
+     * legacy handler did, with those products' barcodes, as on every product
+     * delete path; the statements commit or fail together.
      */
     public function destroy(Request $request, Brand $brand): RedirectResponse
     {
         DB::transaction(function () use ($brand): void {
             $brand = Brand::query()->without('brand_translations')->lockForUpdate()->findOrFail($brand->id);
+            ProductBarcode::query()->whereIn('product_id', Product::query()->select('id')->where('brand_id', $brand->id))->delete();
             Product::query()->where('brand_id', $brand->id)->delete();
             $brand->brand_translations()->delete();
             $brand->delete();
         });
+        $this->flashSuccess('brand_has_been_deleted_successfully');
 
         return $this->redirectPreservingQuery('brands.index', $request);
     }

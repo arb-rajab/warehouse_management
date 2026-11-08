@@ -92,7 +92,8 @@ test('storing a popup derives the button columns and ignores forged ones', funct
     actingAsStoreUser(createStoreStaff('add_dynamic_popups'));
     $this->post(route('dynamic-popups.store'), adminPopupForm($offer->id, [
         'status' => 1, 'btn_link' => 'https://evil.example', 'btn_background_color' => '#ff0000', 'btn_text_color' => 'pink', 'id' => 999,
-    ]))->assertRedirect(route('dynamic-popups.index'));
+    ]))->assertRedirect(route('dynamic-popups.index'))
+        ->assertInertiaFlash('success', 'Popup has been created successfully');
     $popup = DynamicPopup::firstOrFail();
     expect($popup->id)->not->toBe(999)->and($popup->status)->toBe(0)
         ->and($popup->btn_link)->toBe(route('product', ['slug' => $slug]))
@@ -154,7 +155,8 @@ test('popup deletion and bulk deletion affect only selected rows and preserve fi
     $noise = adminDynamicPopup('Noise');
     actingAsStoreUser(createStoreStaff('delete_dynamic_popups'));
     $this->delete(route('dynamic-popups.destroy', [$first, 'search' => 'First']))->assertRedirect(route('dynamic-popups.index', ['search' => 'First']));
-    $this->post(route('bulk-dynamic-popup-delete', ['page' => 2]), ['id' => [$second->id]])->assertRedirect(route('dynamic-popups.index', ['page' => 2]));
+    $this->post(route('bulk-dynamic-popup-delete', ['page' => 2]), ['id' => [$second->id]])->assertRedirect(route('dynamic-popups.index', ['page' => 2]))
+        ->assertInertiaFlash('success', 'Popups have been deleted successfully');
     expect(DynamicPopup::count())->toBe(1)->and($noise->fresh())->not->toBeNull();
     $this->postJson(route('bulk-dynamic-popup-delete'), ['id' => [$noise->id, 999999]])->assertUnprocessable()->assertJsonValidationErrors('id.1');
     $this->postJson(route('bulk-dynamic-popup-delete'), ['id' => []])->assertUnprocessable()->assertJsonValidationErrors('id');

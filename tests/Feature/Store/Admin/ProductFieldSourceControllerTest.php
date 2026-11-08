@@ -58,7 +58,8 @@ test('saving stores exactly one owner per field and returns to the page', functi
 
     $this->post(route('product_field_sources.update'), ['sources' => productFieldSourcesPayload(['name' => 'admin', 'description' => 'admin'])])
         ->assertRedirect(route('product_field_sources.index'))
-        ->assertSessionHasNoErrors();
+        ->assertSessionHasNoErrors()
+        ->assertInertiaFlash('success', 'Product data sources have been updated successfully');
 
     $expected = array_map(fn (string $field): string => in_array($field, ['name', 'description'], true) ? 'admin' : 'otajer', array_combine(PRODUCT_SYNCED_FIELDS, PRODUCT_SYNCED_FIELDS));
     $stored = array_combine(array_map(fn (string $field): string => 'product_source_'.$field, PRODUCT_SYNCED_FIELDS), array_values($expected));

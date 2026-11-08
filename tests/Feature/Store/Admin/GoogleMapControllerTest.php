@@ -80,7 +80,8 @@ test('the Google Maps endpoint changes only allowlisted settings and invalidates
         'google_map' => '0',
         'google_map_longtitude' => 0,
         'google_map_latitude' => 0,
-    ])->assertRedirect(route('google-map.index'));
+    ])->assertRedirect(route('google-map.index'))
+        ->assertInertiaFlash('success', 'Google map settings have been updated successfully');
 
     $this->assertDatabaseHas('business_settings', ['type' => 'google_map', 'value' => '0']);
     $this->assertDatabaseHas('business_settings', ['type' => 'google_map_longtitude', 'value' => '0']);

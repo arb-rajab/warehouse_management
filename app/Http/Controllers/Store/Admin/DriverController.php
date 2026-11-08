@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Store\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Store\Admin\Concerns\FlashesSuccess;
 use App\Http\Requests\Store\Admin\FilterDriversRequest;
 use App\Http\Requests\Store\Admin\StoreDriverRequest;
 use App\Http\Requests\Store\Admin\UpdateDriverRequest;
@@ -21,6 +22,8 @@ use Inertia\Response;
 
 class DriverController extends Controller implements HasMiddleware
 {
+    use FlashesSuccess;
+
     /** @return array<int, Middleware> */
     public static function middleware(): array
     {
@@ -66,6 +69,7 @@ class DriverController extends Controller implements HasMiddleware
         $driver->user_type = 'driver';
         $driver->email_verified_at = now();
         $driver->forceFill(['registration_completed' => 1])->save();
+        $this->flashSuccess('driver_has_been_created_successfully');
 
         return redirect()->route('drivers.index');
     }
@@ -90,6 +94,7 @@ class DriverController extends Controller implements HasMiddleware
             $driver->password = $request->validated('password');
         }
         $driver->save();
+        $this->flashSuccess('driver_has_been_updated_successfully');
 
         return redirect()->route('drivers.index');
     }
@@ -102,6 +107,7 @@ class DriverController extends Controller implements HasMiddleware
             $driver->trips()->update(['driver_id' => null]);
             $driver->delete();
         });
+        $this->flashSuccess('driver_has_been_deleted_successfully');
 
         return $this->redirectPreservingQuery('drivers.index', $request);
     }

@@ -4,6 +4,7 @@ use App\Models\Pallet;
 use App\Models\Product;
 use App\Models\ProductBarcode;
 use App\Models\Row;
+use Illuminate\Support\Facades\DB;
 
 test('an authenticated worker can list products with every property the app reads', function () {
     actingAsMobileUser();
@@ -358,6 +359,72 @@ test('a barcode lookup requires an exact match', function (string $barcode) {
 
     $this->getJson('/api/v1/products/'.rawurlencode($barcode))->assertNotFound();
 })->with(['BOX-123', 'UNKNOWN-CODE']);
+
+test('a barcode the store form or the import wrote resolves too: one shared table', function () {
+    actingAsMobileUser();
+
+    $product = Product::factory()->create();
+    DB::table('product_barcodes')->insert(['product_id' => $product->id, 'barcode' => 'STORE-WRITTEN-1']);
+    DB::table('product_barcodes')->insert(['product_id' => Product::factory()->create()->id, 'barcode' => 'UNRELATED-CODE']);
+
+    $this->getJson('/api/v1/products/STORE-WRITTEN-1')
+        ->assertOk()
+        ->assertJsonPath('id', $product->id);
+});
+
+test('a barcode several products hold answers 409 ambiguous_barcode with their ids', function () {
+    actingAsMobileUser();
+
+    $first = Product::factory()->create();
+    $second = Product::factory()->create();
+    ProductBarcode::factory()->create(['product_id' => $second->id, 'barcode' => 'SHARED-BOX']);
+    ProductBarcode::factory()->create(['product_id' => $first->id, 'barcode' => 'SHARED-BOX']);
+    ProductBarcode::factory()->create(['product_id' => $first->id, 'barcode' => 'OTHER-BOX']);
+
+    $response = $this->getJson('/api/v1/products/SHARED-BOX');
+
+    $response->assertConflict();
+    expect($response->json())->toBe([
+        'message' => 'This barcode belongs to more than one product.',
+        'error_code' => 'ambiguous_barcode',
+        'product_ids' => [$first->id, $second->id],
+    ]);
+});
+
+test('a barcode one product holds twice is not ambiguous', function () {
+    actingAsMobileUser();
+
+    $product = Product::factory()->create();
+    ProductBarcode::factory()->create(['product_id' => $product->id, 'barcode' => 'TWICE-BOX']);
+    ProductBarcode::factory()->create(['product_id' => $product->id, 'barcode' => 'TWICE-BOX']);
+
+    $this->getJson('/api/v1/products/TWICE-BOX')
+        ->assertOk()
+        ->assertJsonPath('id', $product->id);
+});
+
+test('a product id still wins over a barcode several other products hold', function () {
+    actingAsMobileUser();
+
+    $product = Product::factory()->create();
+    ProductBarcode::factory()->create(['barcode' => (string) $product->id]);
+    ProductBarcode::factory()->create(['barcode' => (string) $product->id]);
+
+    $this->getJson("/api/v1/products/{$product->id}")
+        ->assertOk()
+        ->assertJsonPath('id', $product->id);
+});
+
+test('a stored value is matched as stored: Arabic-Indic digits and the legacy column do not match an ASCII scan', function () {
+    actingAsMobileUser();
+
+    $product = Product::factory()->create();
+    ProductBarcode::factory()->create(['product_id' => $product->id, 'barcode' => '٨٧١٢٣٤٥']);
+    DB::table('products')->where('id', $product->id)->update(['barcode' => 'LEGACY-COLUMN-1']);
+
+    $this->getJson('/api/v1/products/8712345')->assertNotFound();
+    $this->getJson('/api/v1/products/LEGACY-COLUMN-1')->assertNotFound();
+});
 
 test('an unauthenticated caller cannot fetch a product by its additional barcode', function () {
     ProductBarcode::factory()->create(['barcode' => 'BOX-12345']);

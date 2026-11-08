@@ -37,7 +37,8 @@ test('colors paginate and validate the page size', function () {
 
 test('colors normalize spaces and enforce the database widths and unique codes', function () {
     actingAsStoreUser(createStoreStaff('edit_color'));
-    $this->post('/temp/admin/colors/store', ['name' => 'Light Red', 'code' => '#ff0000'])->assertRedirect(route('colors'));
+    $this->post('/temp/admin/colors/store', ['name' => 'Light Red', 'code' => '#ff0000'])->assertRedirect(route('colors'))
+        ->assertInertiaFlash('success', 'Color has been created successfully');
     $this->assertDatabaseHas('colors', ['name' => 'LightRed', 'code' => '#ff0000']);
     foreach ([['name' => '', 'code' => '#abc'], ['name' => str_repeat('x', 31), 'code' => '#abc'], ['name' => 'Blue', 'code' => ''], ['name' => 'Blue', 'code' => str_repeat('x', 11)], ['name' => 'Duplicate', 'code' => '#ff0000']] as $invalid) {
         $this->post('/temp/admin/colors/store', $invalid)->assertSessionHasErrors();
@@ -68,7 +69,8 @@ test('color deletion preserves search pagination and unrelated rows', function (
     $color = catalogueColor();
     $other = catalogueColor('Blue', '#0000ff');
     actingAsStoreUser(createStoreStaff('delete_color'));
-    $this->delete("/temp/admin/colors/destroy/{$color->id}?search=Red&page=2&per_page=10")->assertRedirect(route('colors', ['search' => 'Red', 'page' => 2, 'per_page' => 10]));
+    $this->delete("/temp/admin/colors/destroy/{$color->id}?search=Red&page=2&per_page=10")->assertRedirect(route('colors', ['search' => 'Red', 'page' => 2, 'per_page' => 10]))
+        ->assertInertiaFlash('success', 'Color has been deleted successfully');
     $this->assertDatabaseMissing('colors', ['id' => $color->id]);
     $this->assertDatabaseHas('colors', ['id' => $other->id]);
 });

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Store\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Store\Admin\Concerns\FlashesSuccess;
 use App\Http\Requests\Store\Admin\UpdateGoogleMapRequest;
 use App\Models\BusinessSetting;
 use Illuminate\Http\RedirectResponse;
@@ -15,6 +16,8 @@ use Inertia\Response;
 
 class GoogleMapController extends Controller implements HasMiddleware
 {
+    use FlashesSuccess;
+
     /** @return array<int, Middleware> */
     public static function middleware(): array
     {
@@ -44,6 +47,7 @@ class GoogleMapController extends Controller implements HasMiddleware
         });
 
         Cache::forget('business_settings');
+        $this->flashSuccess('google_map_settings_have_been_updated_successfully');
 
         return redirect()->route('google-map.index');
     }

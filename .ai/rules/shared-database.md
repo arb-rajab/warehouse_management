@@ -332,9 +332,9 @@ therefore a plain `integer` with an explicit `foreign()` clause, not
 - `cell_verification_reports.expected_product_id`
 - `cell_verification_reports.reported_product_id`
 - `wms_product_settings.product_id`
-- `wms_product_barcodes.product_id`
+- `wms_product_barcodes.product_id` (retired 2026-11-08, see "Barcodes: one table"; dropped by a follow-up migration after one release)
 - `wms_product_image_reviews.product_id`
-- `product_barcodes.product_id`
+- `product_barcodes.product_id` (the one barcode table)
 - `product_variations.product_id`
 - `carts_offered.product_id` (no constraint, as in the store's schema)
 - `offer_products.product_id` (no constraint, as in the store's schema)
@@ -531,6 +531,36 @@ row's `updated_at` is store-owned and is no longer automatically changed by the 
 `synced_at` now records sync time instead. Barcodes, variations, images,
 categories, brands, unit translations, stock quantities, owner and approval
 values are not imported by this command.
+
+## Barcodes: one table
+
+Added 2026-11-08. A product's barcodes live in **one** table, `product_barcodes`
+(`App\Models\ProductBarcode`, reached through `Product::barcodes()`). It is
+owned by both apps' code: the WMS products page (Barcodes dialog), the store
+back office's product form, the Otajer import, the storefront label, the store
+app's search and `GET /api/v1/products/{code}` all read and write it. There is
+no `StoreProductBarcode` model and no `Product::storeBarcodes()`; do not add a
+second model or relation over the same table.
+
+- **No unique index.** The inherited table already held the same value on
+  several products, and existing data is never changed to make room for a
+  constraint. The table has only a plain index on `barcode`
+  (`2026_11_08_100000`). **Uniqueness is application-level**:
+  `App\Rules\NewProductBarcode` checks a new value across every product, and
+  its writers repeat the check and insert under `NewProductBarcode::locked()`.
+  Existing duplicates are listed by `php artisan products:barcode-conflicts`,
+  never deleted automatically. On MySQL "equal" follows the column's collation.
+- **`wms_product_barcodes` is retired.** The WMS used to keep its own table with
+  its own unique index. `2026_11_08_100001` copied its rows into
+  `product_barcodes` (skipping a value another row already holds, and rows whose
+  product is gone) and no code reads the old table any more. It stays, unused,
+  for one release, because the copy migration's `down()` is a no-op and the old
+  rows are the rollback. A follow-up migration drops it, removes the report's
+  (b) and (c) categories, replaces `CreateWmsProductBarcodesTableTest` and
+  removes the table from the e2e cleanup lists.
+  Runbook: [barcode-single-source-runbook-20261108.md](../barcode-single-source-runbook-20261108.md).
+- The behaviours that follow (own-id rows, deletion, labels, the Store form's
+  seen list) are in [product-barcodes.md](product-barcodes.md).
 
 ## Every other table is WMS-owned, under a `wms_` prefix
 

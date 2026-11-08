@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Store\Admin;
 use App\Http\Controllers\Concerns\ProvidesStoreReferenceOptions;
 use App\Http\Controllers\Concerns\ProvidesStoreUploadPreviews;
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Store\Admin\Concerns\FlashesSuccess;
 use App\Http\Requests\Store\Admin\EditReferenceTranslationRequest;
 use App\Http\Requests\Store\Admin\FilterCategoriesRequest;
 use App\Http\Requests\Store\Admin\StoreCategoryRequest;
@@ -31,6 +32,7 @@ use Inertia\Response;
 
 class CategoryController extends Controller implements HasMiddleware
 {
+    use FlashesSuccess;
     use ProvidesStoreReferenceOptions;
     use ProvidesStoreUploadPreviews;
 
@@ -113,6 +115,7 @@ class CategoryController extends Controller implements HasMiddleware
             $data = Validator::make($request->validated(), $request->rules())->validate();
             $this->saveCategory(new Category, $data, config('app.default_language'));
         });
+        $this->flashSuccess('category_has_been_created_successfully');
 
         return redirect()->route('categories.index');
     }
@@ -127,6 +130,7 @@ class CategoryController extends Controller implements HasMiddleware
             $this->saveCategory($category, $data, $data['lang']);
         });
         Cache::forget('featured_categories');
+        $this->flashSuccess('category_has_been_updated_successfully');
 
         return redirect()->route('categories.edit', ['category' => $category->id, 'lang' => $request->validated('lang')]);
     }
@@ -188,6 +192,7 @@ class CategoryController extends Controller implements HasMiddleware
             CategoryUtility::delete_category($category->id);
         });
         Cache::forget('featured_categories');
+        $this->flashSuccess('category_has_been_deleted_successfully');
 
         return $this->redirectPreservingQuery('categories.index', $request);
     }
@@ -200,6 +205,7 @@ class CategoryController extends Controller implements HasMiddleware
             $category->save();
         });
         Cache::forget('featured_categories');
+        $this->flashSuccess('category_featured_status_has_been_updated_successfully');
 
         return $this->redirectPreservingQuery('categories.index', $request);
     }

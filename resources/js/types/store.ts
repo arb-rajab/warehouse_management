@@ -932,6 +932,16 @@ export interface StoreProductForm {
     product_types: string[];
     product_barcodes: string[];
 }
+/**
+ * A saved barcode of the edit form (`product_barcodes`), with its id for its
+ * barcode image route (`barcode` argument) and whether Code 128 can draw it
+ * (Arabic digits converted).
+ */
+export interface StoreProductBarcodeImage {
+    id: number;
+    barcode: string;
+    printable: boolean;
+}
 /** The product list an edit form was opened from. */
 export type StoreProductEditListType = 'admin' | 'seller';
 /** The physical product form's sections the business settings switch on. */

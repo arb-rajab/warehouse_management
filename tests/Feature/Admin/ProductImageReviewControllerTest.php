@@ -6,6 +6,7 @@ use App\Models\Product;
 use App\Models\ProductImageReview;
 use App\Models\Row;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Testing\AssertableInertia as Assert;
 
@@ -15,7 +16,8 @@ test('an admin records a mismatch with an optional note and reviewer without cha
     $this->post("/admin/products/{$product->id}/image-reviews?page=2", [
         'image_review_status' => 'doesnt_match', 'image_source' => $product->image_url,
         'image_review_note' => '  Different packaging  ',
-    ])->assertRedirect('/admin/products?page=2')->assertSessionHasNoErrors();
+    ])->assertRedirect('/admin/products?page=2')
+        ->assertInertiaFlash('success', 'Product image review has been saved successfully')->assertSessionHasNoErrors();
     $review = ProductImageReview::query()->sole();
     expect($review->status)->toBe('doesnt_match')->and($review->note)->toBe('Different packaging')
         ->and($review->user_id)->toBe($user->id)->and($review->created_at)->not->toBeNull()
@@ -57,7 +59,8 @@ test('new images invalidate reviews and preserve their notes and old reference i
     ]);
     $this->post("/admin/products/{$product->id}/reference-image", [
         'image' => UploadedFile::fake()->image('new.png', 200, 100),
-    ])->assertSessionHasNoErrors()->assertRedirect('/admin/products');
+    ])->assertSessionHasNoErrors()->assertRedirect('/admin/products')
+        ->assertInertiaFlash('success', 'Product reference image has been updated successfully');
     $product->refresh();
     Storage::disk('public')->assertExists($product->warehouse_image_path);
     expect($product->image_url)->toBe(Storage::disk('public')->url($product->warehouse_image_path));
@@ -164,3 +167,19 @@ test('image review routes return 404 for unknown products', function (string $me
     actingAsAdmin();
     $this->{$method}('/admin/products/999999/'.$suffix)->assertNotFound();
 })->with([['get', 'image-reviews'], ['post', 'image-reviews'], ['post', 'reference-image']]);
+
+test('the image review lists the product\'s barcodes from the shared table, without its own-id row or blanks', function () {
+    actingAsAdmin();
+    $product = Product::factory()->create();
+    DB::table('product_barcodes')->insert([
+        ['product_id' => $product->id, 'barcode' => 'WMS-ADDED'],
+        ['product_id' => $product->id, 'barcode' => (string) $product->id],
+        ['product_id' => $product->id, 'barcode' => '8712345678906'],
+        ['product_id' => $product->id, 'barcode' => ' '],
+    ]);
+    // Noise: another product's barcode.
+    DB::table('product_barcodes')->insert(['product_id' => Product::factory()->create()->id, 'barcode' => 'NOISE']);
+
+    $this->get("/admin/products/{$product->id}/image-reviews")->assertOk()
+        ->assertJsonPath('barcodes', ['WMS-ADDED', '8712345678906']);
+});

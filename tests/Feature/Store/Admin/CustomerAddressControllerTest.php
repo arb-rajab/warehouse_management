@@ -59,7 +59,8 @@ test('admin address creation derives ownership and first default from the bound 
     $customer = createStoreUser();
     $other = createStoreUser();
     $form = adminCustomerAddressForm(['customer_id' => $other->id, 'user_id' => $other->id, 'set_default' => 0]);
-    $this->post(route('admin.customers.addresses.store', $customer), $form)->assertRedirect(route('customers.edit', $customer));
+    $this->post(route('admin.customers.addresses.store', $customer), $form)->assertRedirect(route('customers.edit', $customer))
+        ->assertInertiaFlash('success', 'Address has been created successfully');
     $address = Address::query()->firstOrFail();
     expect((int) $address->user_id)->toBe($customer->id)->and((bool) $address->set_default)->toBeTrue()->and($address->address)->toBe('Main Street');
     $this->post(route('admin.customers.addresses.store', $customer), $form)->assertRedirect();
@@ -76,7 +77,8 @@ test('admin address updates validate related country state city and coordinates 
     $this->put(route('admin.customers.addresses.update', [$customer, $address]), [...$payload, 'state_id' => $state, 'city_id' => $city, 'latitude' => 91, 'longitude' => 181])->assertSessionHasErrors(['state_id', 'latitude', 'longitude']);
     $this->put(route('admin.customers.addresses.update', [$customer, $address]), [...$payload, 'state_id' => null, 'city_id' => $city])->assertSessionHasErrors('city_id');
     $this->post(route('admin.customers.addresses.store', $customer), [...$payload, 'phone' => '', 'address' => ''])->assertSessionHasErrors(['phone', 'address']);
-    $this->put(route('admin.customers.addresses.update', [$customer, $address]), [...$payload, 'address' => 'Changed', 'latitude' => 52.1, 'longitude' => 4.3, 'user_id' => 999999])->assertRedirect();
+    $this->put(route('admin.customers.addresses.update', [$customer, $address]), [...$payload, 'address' => 'Changed', 'latitude' => 52.1, 'longitude' => 4.3, 'user_id' => 999999])->assertRedirect()
+        ->assertInertiaFlash('success', 'Address has been updated successfully');
     expect((int) $address->fresh()->user_id)->toBe($customer->id)->and($address->fresh()->address)->toBe('Changed')->and((float) $address->fresh()->latitude)->toBe(52.1);
 });
 

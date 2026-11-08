@@ -84,13 +84,15 @@ test('brand offer edits retain their discriminator and derive the correct base r
     $nextBase = createStoreProduct(['brand_id' => $another->id, 'published' => 1, 'approved' => 1]);
     $data = campaignForm('offer_deals', ['offer_type' => 'brand_offer', 'brand_id' => $brand->id, 'base_quantity' => 35.5]);
     $this->get(route('offer_deals.brands.create'))->assertInertia(fn (Assert $p) => $p->where('offerType', 'brand_offer'));
-    $this->post(route('offer_deals.store'), $data)->assertRedirect();
+    $this->post(route('offer_deals.store'), $data)->assertRedirect()
+        ->assertInertiaFlash('success', 'Offer has been created successfully');
     $offer = Offer::query()->firstOrFail();
     expect($offer->offer_type)->toBe('brand_offer');
     expect((int) $offer->base_product->product_id)->toBe($brandProduct->id);
     expect((float) $offer->base_product->quantity)->toBe(35.5);
     $data['brand_id'] = $another->id;
-    $this->put(route('offer_deals.update', $offer), $data)->assertRedirect();
+    $this->put(route('offer_deals.update', $offer), $data)->assertRedirect()
+        ->assertInertiaFlash('success', 'Offer has been updated successfully');
     expect((int) $offer->fresh()->brand_id)->toBe($another->id);
     expect((int) $offer->fresh()->base_product->product_id)->toBe($nextBase->id);
     $this->get(route('offer_deals.edit', $offer))->assertInertia(fn (Assert $p) => $p->where('offer.offer_type', 'brand_offer')->where('selectedBrand.id', $another->id)->where('selectedBrand.label', 'Other')->where('selectedBrand.icon', 'tag'));
@@ -103,7 +105,8 @@ test('flash edits preserve slug and default title while translating and removal 
     DB::table('languages')->insert(['name' => 'Arabic', 'code' => 'ar']);
     $deal = campaignRecord('flash_deals');
     $data = campaignForm('flash_deals', ['lang' => 'ar', 'title' => 'عرض']);
-    $this->put(route('flash_deals.update', $deal), $data)->assertRedirect();
+    $this->put(route('flash_deals.update', $deal), $data)->assertRedirect()
+        ->assertInertiaFlash('success', 'Flash deal has been updated successfully');
     expect($deal->fresh()->title)->toBe('Existing');
     expect($deal->fresh()->slug)->toBe('stable-url');
     expect(FlashDealTranslation::query()->where('lang', 'ar')->value('title'))->toBe('عرض');
@@ -116,7 +119,8 @@ test('flash edits preserve slug and default title while translating and removal 
     expect($deal->fresh()->slug)->toBe('stable-url');
     expect(FlashDealProduct::query()->where('product_id', $product->id)->exists())->toBeFalse();
     expect($product->fresh()->discount)->toBe($discount);
-    $this->delete(route('flash_deals.destroy', $deal))->assertRedirect();
+    $this->delete(route('flash_deals.destroy', $deal))->assertRedirect()
+        ->assertInertiaFlash('success', 'Flash deal has been deleted successfully');
     expect($product->fresh()->discount)->toBe($discount);
     expect(FlashDealTranslation::query()->count())->toBe(0);
 });

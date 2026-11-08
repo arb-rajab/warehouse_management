@@ -6,8 +6,8 @@ use App\Http\Middleware\BlockMaliciousRequests;
 use App\Models\Category;
 use App\Models\Language;
 use App\Models\Product;
+use App\Models\ProductBarcode;
 use App\Models\ProductTranslation;
-use App\Models\StoreProductBarcode;
 use App\Models\Upload;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
@@ -47,7 +47,7 @@ beforeEach(function () {
         DB::table('business_settings')->insert(['type' => $type, 'value' => $value]);
     }
     $this->existing = createStoreProduct(['name' => 'Olive oil', 'slug' => 'olive-oil', 'thumbnail_img' => null]);
-    StoreProductBarcode::query()->create(['product_id' => $this->existing->id, 'barcode' => '8710000000001']);
+    ProductBarcode::query()->create(['product_id' => $this->existing->id, 'barcode' => '8710000000001']);
 });
 
 /** @return array<string, list<mixed>> */
@@ -191,8 +191,8 @@ test('the create form leaves out the sections their business settings switch off
         ->where('sections', ['shipping' => true, 'productWiseShipping' => false, 'flashDeals' => false, 'vat' => false, 'cashOnDelivery' => false]));
 });
 
-test('creating a product writes every table together, clears the caches after commit and returns to the in-house list', function () {
-    $staff = createStoreStaff('add_new_product');
+test('creating a product writes every table together, clears the caches after commit and opens the main products list', function () {
+    $staff = createStoreStaff('add_new_product', 'show_all_products');
     actingAsStoreUser($staff);
     $photo = productImage($staff->id);
     $thumb = productImage($staff->id);
@@ -207,7 +207,8 @@ test('creating a product writes every table together, clears the caches after co
     Artisan::shouldReceive('call')->with('cache:clear')->once()->andReturn(0);
 
     $this->post(route('products.store'), productCreateForm(['photos' => $photo->id.','.$thumb->id, 'thumbnail_img' => $thumb->id, 'pdf' => $pdf->id, 'digital' => 1, 'added_by' => 'seller', 'user_id' => $staff->id, 'auction_product' => 1, 'wholesale_product' => 1, 'approved' => 0, 'num_of_sale' => 99]))
-        ->assertSessionHasNoErrors()->assertRedirect(route('products.admin'));
+        ->assertSessionHasNoErrors()->assertRedirect(route('products.all'))
+        ->assertInertiaFlash('success', 'Product has been created successfully');
 
     expect($committed)->toBe([true]);
     $product = Product::query()->where('name', 'Extra virgin olive oil')->sole();
@@ -237,8 +238,26 @@ test('creating a product writes every table together, clears the caches after co
         ->toEqual([['tax_id' => $this->vat, 'tax' => 21, 'tax_type' => 'percent'], ['tax_id' => $this->service, 'tax' => 0.5, 'tax_type' => 'amount']])
         ->and(DB::table('product_variations')->where('product_id', $product->id)->orderBy('id')->pluck('name')->all())->toBe(['Cold pressed', 'Organic'])
         ->and(DB::table('product_barcodes')->where('product_id', $product->id)->pluck('barcode')->all())->toBe(['8712345678906'])
-        ->and(DB::table('wms_product_barcodes')->count())->toBe(0)
         ->and(DB::table('flash_deal_products')->count())->toBe(0);
+});
+
+test('the created product opens the main products list showing the success message', function () {
+    actingAsStoreUser(createStoreStaff('add_new_product', 'show_all_products'));
+    Artisan::shouldReceive('call')->andReturn(0);
+
+    $this->followingRedirects()->post(route('products.store'), productCreateForm(['product_barcodes' => []]))
+        ->assertOk()->assertInertia(fn (Assert $page) => $page
+        ->component('Store/Admin/Product/Products/Index')->where('listType', 'all')
+        ->hasFlash('success', 'Product has been created successfully'));
+});
+
+test('staff who may not open the main products list return to the in-house list after creating', function () {
+    actingAsStoreUser(createStoreStaff('add_new_product', 'show_in_house_products'));
+    Artisan::shouldReceive('call')->andReturn(0);
+
+    $this->post(route('products.store'), productCreateForm(['product_barcodes' => []]))
+        ->assertSessionHasNoErrors()->assertRedirect(route('products.admin'))
+        ->assertInertiaFlash('success', 'Product has been created successfully');
 });
 
 test('a new product cannot expire soon unless the flag is posted', function () {
@@ -423,7 +442,7 @@ test('the cash-on-delivery switch is honoured where it shows, and free shipping 
 });
 
 test('a failed write rolls every table back and clears no cache', function (string $failing) {
-    $model = ['translation' => ProductTranslation::class, 'store barcode' => StoreProductBarcode::class][$failing];
+    $model = ['translation' => ProductTranslation::class, 'barcode' => ProductBarcode::class][$failing];
     actingAsStoreUser(createStoreStaff('add_new_product'));
     $before = productCreateSnapshot();
     Artisan::shouldReceive('call')->never();
@@ -436,7 +455,7 @@ test('a failed write rolls every table back and clears no cache', function (stri
     } finally {
         $model::flushEventListeners();
     }
-})->with(['translation', 'store barcode']);
+})->with(['translation', 'barcode']);
 
 test('a product can be created with no discount, even priced 0, or with a discount below the price', function (array $overrides, string $discount, string $type) {
     actingAsStoreUser(createStoreStaff('add_new_product'));
@@ -531,7 +550,7 @@ test('the store validates every field against the schema widths and the form opt
     'unknown button' => [['button' => 'draft'], 'button'],
 ]);
 
-test('store barcodes must be new and distinct, empty rows are skipped and the WMS barcodes are untouched', function () {
+test('barcodes must be new and distinct and empty rows are skipped', function () {
     actingAsStoreUser(createStoreStaff('add_new_product'));
     Artisan::shouldReceive('call')->andReturn(0);
     $before = productCreateSnapshot();
@@ -540,8 +559,20 @@ test('store barcodes must be new and distinct, empty rows are skipped and the WM
     $this->post(route('products.store'), productCreateForm(['product_barcodes' => [str_repeat('9', 256)]]))->assertSessionHasErrors('product_barcodes.0');
     expect(productCreateSnapshot())->toEqual($before);
     $this->post(route('products.store'), productCreateForm(['product_barcodes' => ['', ' 4006381333931 ', null]]))->assertSessionHasNoErrors();
-    expect(DB::table('product_barcodes')->orderBy('id')->pluck('barcode')->all())->toBe(['8710000000001', '4006381333931'])
-        ->and(DB::table('wms_product_barcodes')->count())->toBe(0);
+    expect(DB::table('product_barcodes')->orderBy('id')->pluck('barcode')->all())->toBe(['8710000000001', '4006381333931']);
+});
+
+test('a barcode another product holds, from the WMS or the store, or a product id is refused, and nothing is written', function () {
+    actingAsStoreUser(createStoreStaff('add_new_product'));
+    Artisan::shouldReceive('call')->andReturn(0);
+    ProductBarcode::factory()->create(['product_id' => $this->existing->id, 'barcode' => 'WMS-ADDED-1']);
+    $before = productCreateSnapshot();
+
+    $this->post(route('products.store'), productCreateForm(['product_barcodes' => ['4006381333931', 'WMS-ADDED-1']]))
+        ->assertSessionHasErrors(['product_barcodes.1' => 'The product barcode has already been taken.']);
+    $this->post(route('products.store'), productCreateForm(['product_barcodes' => [(string) $this->existing->id]]))
+        ->assertSessionHasErrors(['product_barcodes.0' => __('messages.barcode_is_product_id')]);
+    expect(productCreateSnapshot())->toEqual($before);
 });
 
 test('uploads follow the ownership, library and file type rules', function () {

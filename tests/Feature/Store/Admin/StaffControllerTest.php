@@ -141,7 +141,8 @@ describe('store', function () {
     test('a staff member is created with their role and a hashed password', function () {
         actingAsStoreUser(createStoreStaff('add_staff'));
 
-        $this->post('/temp/admin/staffs', storeStaffForm())->assertRedirect(route('staffs.index'));
+        $this->post('/temp/admin/staffs', storeStaffForm())->assertRedirect(route('staffs.index'))
+            ->assertInertiaFlash('success', 'Staff member has been created successfully');
 
         $created = StoreUser::where('email', 'new-staff@example.com')->firstOrFail();
 
@@ -260,7 +261,8 @@ describe('update', function () {
         expect($member->fresh()->only(['name', 'email', 'password']))->toBe(['name' => $member->name, 'email' => $member->email, 'password' => $hash]);
 
         $this->put("/temp/admin/staffs/{$row->id}", storeStaffForm(['name' => 'Renamed', 'email' => $member->email, 'password' => '', 'password_confirmation' => '']))
-            ->assertRedirect(route('staffs.index'));
+            ->assertRedirect(route('staffs.index'))
+            ->assertInertiaFlash('success', 'Staff member has been updated successfully');
 
         expect($member->fresh()->name)->toBe('Renamed')
             ->and($member->fresh()->password)->toBe($hash)

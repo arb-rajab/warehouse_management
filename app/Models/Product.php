@@ -229,9 +229,12 @@ class Product extends Model
     }
 
     /**
-     * Ordered oldest-first (by id) so the admin products screen lists a
-     * product's barcodes in the order they were added, deterministically —
-     * see ProductController::index()'s column-scoped eager load.
+     * Every barcode of the product in the one shared table `product_barcodes`
+     * (see ProductBarcode): those added in the WMS, on the store form and by
+     * the Otajer import, which also stores the product's own id. Ordered
+     * oldest-first (by id) so the admin products screen lists a product's
+     * barcodes in the order they were added, deterministically — see
+     * ProductController::index()'s column-scoped eager load.
      *
      * @return HasMany<ProductBarcode, $this>
      */
@@ -1001,18 +1004,6 @@ class Product extends Model
     public function variations(): HasMany
     {
         return $this->hasMany(ProductVariation::class);
-    }
-
-    /**
-     * The store's own barcodes (table `product_barcodes`), distinct from this
-     * app's {@see self::barcodes()} (table `wms_product_barcodes`) — same
-     * name would otherwise collide, see StoreProductBarcode's docblock.
-     *
-     * @return HasMany<StoreProductBarcode, $this>
-     */
-    public function storeBarcodes(): HasMany
-    {
-        return $this->hasMany(StoreProductBarcode::class);
     }
 
     public function profit(): float

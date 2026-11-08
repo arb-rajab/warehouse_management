@@ -676,6 +676,7 @@ test('an authenticated admin can acknowledge every unacknowledged flag on a cell
 
     // Returns to the log list by default (no return_to sent).
     $response->assertRedirect(route('admin.cell-logs.index'));
+    $response->assertInertiaFlash('success', 'Flags have been acknowledged successfully');
     $freshFlag = $flag->fresh();
     expect($freshFlag->acknowledged_at)->not->toBeNull();
     expect($freshFlag->acknowledged_by)->toBe($admin->id);

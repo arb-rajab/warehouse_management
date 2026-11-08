@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Store\Admin;
 
 use App\Http\Controllers\Concerns\UpdatesStoreSettings;
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Store\Admin\Concerns\FlashesSuccess;
 use App\Http\Controllers\Store\Admin\Concerns\SearchesOptions;
 use App\Http\Requests\Store\Admin\SearchOptionsRequest;
 use App\Http\Requests\Store\Admin\UpdateDefaultRepresentativeRequest;
@@ -20,6 +21,7 @@ use Inertia\Response;
 
 class OrderConfigurationController extends Controller implements HasMiddleware
 {
+    use FlashesSuccess;
     use SearchesOptions;
     use UpdatesStoreSettings;
 
@@ -73,6 +75,7 @@ class OrderConfigurationController extends Controller implements HasMiddleware
     public function update(UpdateOrderConfigurationRequest $request): RedirectResponse
     {
         $this->updateSettings($request->validated());
+        $this->flashSuccess('order_configuration_has_been_updated_successfully');
 
         return redirect()->route('order_configuration.index');
     }
@@ -80,6 +83,7 @@ class OrderConfigurationController extends Controller implements HasMiddleware
     public function updateRepresentative(UpdateDefaultRepresentativeRequest $request): RedirectResponse
     {
         $this->updateSettings($request->validated());
+        $this->flashSuccess('default_representative_has_been_updated_successfully');
 
         return redirect()->route('order_configuration.index');
     }

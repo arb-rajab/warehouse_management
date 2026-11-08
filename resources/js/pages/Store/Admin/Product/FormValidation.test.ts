@@ -79,6 +79,7 @@ const editProps = {
     listType: 'admin' as const,
     variants: storeProductVariantState(),
     initialFiles: {},
+    barcodeImages: [],
 };
 const digitalOptions = {
     categories: [{ id: 12, name: 'E-books' }],

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Store\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Store\Admin\Concerns\FlashesSuccess;
 use App\Http\Requests\Store\Admin\BulkDeleteSellersRequest;
 use App\Http\Requests\Store\Admin\FilterSellerRequest;
 use App\Http\Requests\Store\Admin\SellerActionRequest;
@@ -15,6 +16,7 @@ use App\Http\Resources\Store\UploadResource;
 use App\Models\Order;
 use App\Models\OrderDetail;
 use App\Models\Product;
+use App\Models\ProductBarcode;
 use App\Models\Seller;
 use App\Models\Shop;
 use App\Models\StoreUser;
@@ -37,6 +39,8 @@ use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class SellerController extends Controller implements HasMiddleware
 {
+    use FlashesSuccess;
+
     /** @return array<int, Middleware> */
     public static function middleware(): array
     {
@@ -97,6 +101,7 @@ class SellerController extends Controller implements HasMiddleware
             $shop->slug = 'demo-shop-'.$user->id;
             $shop->save();
         });
+        $this->flashSuccess('seller_has_been_created_successfully');
 
         return redirect()->route('sellers.index');
     }
@@ -121,6 +126,7 @@ class SellerController extends Controller implements HasMiddleware
             $user->password = $request->validated('password');
         }
         $user->save();
+        $this->flashSuccess('seller_has_been_updated_successfully');
 
         return redirect()->route('sellers.index');
     }
@@ -131,6 +137,7 @@ class SellerController extends Controller implements HasMiddleware
         abort_if($user === null, 404);
         $user->banned = $user->banned == 1 ? 0 : 1;
         $user->save();
+        $this->flashSuccess($user->banned == 1 ? 'seller_has_been_banned_successfully' : 'seller_has_been_unbanned_successfully');
 
         return $this->redirectPreservingQuery('sellers.index', $request);
     }
@@ -140,6 +147,7 @@ class SellerController extends Controller implements HasMiddleware
         $seller->verification_status = 1;
         $seller->save();
         Cache::forget('verified_sellers_id');
+        $this->flashSuccess('seller_has_been_approved_successfully');
 
         return redirect()->route('sellers.index');
     }
@@ -150,6 +158,7 @@ class SellerController extends Controller implements HasMiddleware
         $seller->verification_info = null;
         $seller->save();
         Cache::forget('verified_sellers_id');
+        $this->flashSuccess('seller_has_been_rejected_successfully');
 
         return redirect()->route('sellers.index');
     }
@@ -160,6 +169,7 @@ class SellerController extends Controller implements HasMiddleware
         $seller->verification_status = (int) $request->boolean('status');
         $seller->save();
         Cache::forget('verified_sellers_id');
+        $this->flashSuccess('seller_approval_status_has_been_updated_successfully');
 
         return $this->redirectPreservingQuery('sellers.index', $request);
     }
@@ -167,6 +177,7 @@ class SellerController extends Controller implements HasMiddleware
     public function destroy(SellerActionRequest $request, Shop $seller): RedirectResponse
     {
         DB::transaction(fn () => $this->deleteSeller($seller));
+        $this->flashSuccess('seller_has_been_deleted_successfully');
 
         return $this->redirectPreservingQuery('sellers.index', $request);
     }
@@ -178,12 +189,15 @@ class SellerController extends Controller implements HasMiddleware
                 $this->deleteSeller($seller);
             }
         });
+        $this->flashSuccess('sellers_have_been_deleted_successfully');
 
         return $this->redirectPreservingQuery('sellers.index', $request);
     }
 
     private function deleteSeller(Shop $seller): void
     {
+        // The barcodes go with the products, as on every product delete path.
+        ProductBarcode::query()->whereIn('product_id', Product::query()->select('id')->where('user_id', $seller->user_id))->delete();
         Product::query()->where('user_id', $seller->user_id)->delete();
         OrderDetail::query()->whereIn('order_id', Order::query()->select('id')->where('user_id', $seller->user_id))->delete();
         Order::query()->where('user_id', $seller->user_id)->delete();

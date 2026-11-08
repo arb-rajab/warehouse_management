@@ -2,6 +2,7 @@
 import { Link } from '@inertiajs/vue3';
 import { Info } from '@lucide/vue';
 import { ref } from 'vue';
+import { storeBarcodeImage } from '@/actions/App/Http/Controllers/Store/Admin/ProductController';
 import { activation } from '@/actions/App/Http/Controllers/Store/Admin/SettingsController';
 import { index as shippingConfigurationIndex } from '@/actions/App/Http/Controllers/Store/Admin/ShippingConfigurationController';
 import FieldError from '@/components/FieldError.vue';
@@ -19,6 +20,7 @@ import { t } from '@/lib/i18n';
 import { productAmountMax } from '@/lib/storeProductForm';
 import type {
     StoreDigitalProductTax,
+    StoreProductBarcodeImage,
     StoreProductColor,
     StoreProductForm,
     StoreProductFormSections,
@@ -44,6 +46,14 @@ import type {
  * (the server ignores what is posted for them). Only the name, Arabic name,
  * unit, unit price and description have a field here; a synced description
  * shows as a locked block with a hidden input that posts it unchanged.
+ *
+ * `barcodeImages` (edit form) are the saved barcodes (the shared
+ * `product_barcodes` table): an input still holding one shows its barcode
+ * image below it (the WMS label, from `storeBarcodeImage`), or a note when
+ * Code 128 cannot draw it; a new or changed value says the image appears once
+ * the product is saved. The edit form also posts `product_barcodes_seen`, the
+ * values it loaded, so a save deletes only the barcodes the form showed and
+ * the user removed, and keeps those added elsewhere in the meantime.
  */
 const props = defineProps<{
     categories: StoreReferenceOption[];
@@ -62,11 +72,30 @@ const props = defineProps<{
     variants?: StoreProductVariantState;
     variantsUrl?: string;
     initialFiles?: Record<string, StoreUpload[]>;
+    barcodeImages?: StoreProductBarcodeImage[];
     errors: Record<string, string>;
 }>();
 const int = '2147483647';
 const readOnly = (field: StoreProductSyncedField): boolean =>
     props.readOnlyFields?.includes(field) ?? false;
+const savedBarcode = (value: string): StoreProductBarcodeImage | undefined =>
+    props.barcodeImages?.find((barcode) => barcode.barcode === value.trim());
+const barcodeImageSrc = (value: string): string | undefined => {
+    const saved = savedBarcode(value);
+
+    return props.product && saved?.printable
+        ? storeBarcodeImage.url({ product: props.product, barcode: saved })
+        : undefined;
+};
+const barcodeNote = (value: string): string | undefined => {
+    if (value.trim() === '' || barcodeImageSrc(value)) {
+        return undefined;
+    }
+
+    return props.product && savedBarcode(value)
+        ? t('store.products.form.barcodeNotPrintable')
+        : t('store.products.form.barcodeImageAfterSave');
+};
 const stored = props.product;
 const categoryId = ref(
     stored?.category_id == null ? '' : String(stored.category_id),
@@ -387,8 +416,21 @@ const linkClass =
                 :remove-label="t('store.products.form.removeBarcode')"
                 :placeholder="t('store.products.form.barcodePlaceholder')"
                 :values="product?.product_barcodes"
+                :seen-name="product ? 'product_barcodes_seen' : undefined"
                 :errors="errors"
-            />
+            >
+                <template #after-input="{ value }">
+                    <img
+                        v-if="barcodeImageSrc(value)"
+                        :src="barcodeImageSrc(value)"
+                        :alt="value.trim()"
+                        class="mt-2 w-full max-w-xs rounded border border-gray-200 bg-white dark:border-neutral-700"
+                    />
+                    <p v-else-if="barcodeNote(value)" :class="helpClass">
+                        {{ barcodeNote(value) }}
+                    </p>
+                </template>
+            </StoreProductListField>
         </fieldset>
 
         <fieldset :class="sectionClass">

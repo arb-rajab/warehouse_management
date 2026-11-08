@@ -296,6 +296,11 @@ function isLowStock(product: ProductSummary): boolean {
     );
 }
 
+/** The Barcodes dialog's preview and download buttons, and the same while disabled. */
+const barcodeActionClass =
+    'cursor-pointer text-gray-400 hover:text-blue-600 dark:text-neutral-500 dark:hover:text-blue-400';
+const barcodeActionDisabledClass =
+    'cursor-not-allowed text-gray-400 opacity-50 dark:text-neutral-500';
 const barcodesDialogProduct = ref<ProductSummary | null>(null);
 /** The barcode whose printable label is shown inline in the dialog, if any. */
 const previewedBarcodeId = ref<number | 'default' | null>(null);
@@ -697,7 +702,7 @@ function refreshBarcodesDialogProduct(): void {
                                     :aria-pressed="
                                         previewedBarcodeId === 'default'
                                     "
-                                    class="cursor-pointer text-gray-400 hover:text-blue-600 dark:text-neutral-500 dark:hover:text-blue-400"
+                                    :class="barcodeActionClass"
                                     @click="togglePreview('default')"
                                 >
                                     <Eye class="h-4 w-4" />
@@ -709,7 +714,7 @@ function refreshBarcodesDialogProduct(): void {
                                             barcode: barcodesDialogProduct.id,
                                         })
                                     "
-                                    class="cursor-pointer text-gray-400 hover:text-blue-600 dark:text-neutral-500 dark:hover:text-blue-400"
+                                    :class="barcodeActionClass"
                                     @click="
                                         downloadFile(
                                             exportQr.url(barcodesDialogProduct),
@@ -739,6 +744,12 @@ function refreshBarcodesDialogProduct(): void {
                             <span class="flex items-center gap-3">
                                 <button
                                     type="button"
+                                    :disabled="!barcode.printable"
+                                    :aria-describedby="
+                                        barcode.printable
+                                            ? undefined
+                                            : `barcode-note-${barcode.id}`
+                                    "
                                     :aria-label="
                                         t('products.viewBarcode', {
                                             barcode: barcode.barcode,
@@ -747,19 +758,33 @@ function refreshBarcodesDialogProduct(): void {
                                     :aria-pressed="
                                         previewedBarcodeId === barcode.id
                                     "
-                                    class="cursor-pointer text-gray-400 hover:text-blue-600 dark:text-neutral-500 dark:hover:text-blue-400"
+                                    :class="
+                                        barcode.printable
+                                            ? barcodeActionClass
+                                            : barcodeActionDisabledClass
+                                    "
                                     @click="togglePreview(barcode.id)"
                                 >
                                     <Eye class="h-4 w-4" />
                                 </button>
                                 <button
                                     type="button"
+                                    :disabled="!barcode.printable"
+                                    :aria-describedby="
+                                        barcode.printable
+                                            ? undefined
+                                            : `barcode-note-${barcode.id}`
+                                    "
                                     :aria-label="
                                         t('products.downloadBarcode', {
                                             barcode: barcode.barcode,
                                         })
                                     "
-                                    class="cursor-pointer text-gray-400 hover:text-blue-600 dark:text-neutral-500 dark:hover:text-blue-400"
+                                    :class="
+                                        barcode.printable
+                                            ? barcodeActionClass
+                                            : barcodeActionDisabledClass
+                                    "
                                     @click="
                                         downloadFile(
                                             downloadBarcode.url({
@@ -799,8 +824,15 @@ function refreshBarcodesDialogProduct(): void {
                                 </Link>
                             </span>
                         </div>
+                        <p
+                            v-if="!barcode.printable"
+                            :id="`barcode-note-${barcode.id}`"
+                            class="mt-1 text-xs text-gray-600 dark:text-neutral-400"
+                        >
+                            {{ t('products.barcodeNotPrintable') }}
+                        </p>
                         <img
-                            v-if="previewedBarcodeId === barcode.id"
+                            v-else-if="previewedBarcodeId === barcode.id"
                             :src="
                                 previewBarcode.url({
                                     product: barcodesDialogProduct,

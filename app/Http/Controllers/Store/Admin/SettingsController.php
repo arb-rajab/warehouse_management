@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Store\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Store\Admin\Concerns\FlashesSuccess;
 use App\Http\Requests\Store\Admin\TestSmtpRequest;
 use App\Http\Requests\Store\Admin\UpdateStoreSettingsRequest;
 use App\Mail\EmailManager;
@@ -20,6 +21,8 @@ use Inertia\Response;
 
 class SettingsController extends Controller implements HasMiddleware
 {
+    use FlashesSuccess;
+
     /** @var array<string, array{permission: string, index: string, keys: list<string>}> */
     public const PAGES = [
         'activation' => [
@@ -214,6 +217,7 @@ class SettingsController extends Controller implements HasMiddleware
             'from' => config('mail.from.address'),
             'content_key' => 'delivery.mail.smtp_body',
         ]));
+        $this->flashSuccess('test_email_has_been_sent_successfully');
 
         return redirect()->route('smtp_settings.index');
     }
@@ -251,6 +255,15 @@ class SettingsController extends Controller implements HasMiddleware
             }
         });
         Cache::forget('business_settings');
+        $this->flashSuccess(match ($page) {
+            'activation' => 'feature_activation_settings_have_been_updated_successfully',
+            'facebookChat' => 'facebook_chat_settings_have_been_updated_successfully',
+            'facebookComments' => 'facebook_comments_settings_have_been_updated_successfully',
+            'analytics' => 'google_analytics_settings_have_been_updated_successfully',
+            'firebase' => 'google_firebase_settings_have_been_updated_successfully',
+            'recaptcha' => 'google_recaptcha_settings_have_been_updated_successfully',
+            default => 'payment_method_settings_have_been_updated_successfully',
+        });
 
         return redirect()->route(self::PAGES[$page]['index']);
     }

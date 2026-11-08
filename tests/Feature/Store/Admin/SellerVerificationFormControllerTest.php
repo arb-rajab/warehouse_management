@@ -65,7 +65,8 @@ test('an empty field list deliberately saves an empty form for new and existing 
 test('seller verification screens still read nested options JSON and store answers in field order', function () {
     Storage::fake('local');
     actingAsStoreUser(createStoreStaff('seller_verification_form_configuration'));
-    $this->post(route('seller_verification_form.update'), ['fields' => sellerVerificationFields()])->assertRedirect();
+    $this->post(route('seller_verification_form.update'), ['fields' => sellerVerificationFields()])->assertRedirect()
+        ->assertInertiaFlash('success', 'Seller verification form has been updated successfully');
     $seller = createStoreUser('seller');
     $shop = Shop::forceCreate(['user_id' => $seller->id, 'name' => 'Round trip shop', 'slug' => 'round-trip-shop']);
     actingAsStoreUser($seller);

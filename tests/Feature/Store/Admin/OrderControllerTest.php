@@ -24,7 +24,8 @@ beforeEach(fn () => Notification::fake());
 test('new shipping orders preserve established tax amounts, calculate line totals, margins and stock exactly once', function () {
     actingAsStoreUser(createStoreStaff('add_order'));
     $payload = adminOrderPayload();
-    $this->post(route('new.feat-order.trip.store'), $payload)->assertRedirect();
+    $this->post(route('new.feat-order.trip.store'), $payload)->assertRedirect()
+        ->assertInertiaFlash('success', 'Order has been created successfully');
     $order = Order::firstOrFail();
     $line = $order->orderDetails()->firstOrFail();
     expect((float) $line->price)->toBe(30.0)->and((float) $line->tax)->toBe(21.0)
@@ -82,7 +83,8 @@ test('edits preserve stored tax shipping serials and variants, adjust stock, and
     unset($payload['submission_key']);
     $payload['products'][0]['id'] = $line->id;
     $payload['products'][0]['quantity'] = 2;
-    $this->put(route('new.feat-order.trip.update', $order), $payload)->assertRedirect();
+    $this->put(route('new.feat-order.trip.update', $order), $payload)->assertRedirect()
+        ->assertInertiaFlash('success', 'Order has been updated successfully');
     expect((float) $order->fresh()->grand_total)->toBe(24.2)
         ->and((float) $line->fresh()->tax)->toBe(21.0)
         ->and(json_decode($line->fresh()->getAttribute('variation_qty'), true, flags: JSON_THROW_ON_ERROR))->toBe(['boxes' => 3])
@@ -289,7 +291,8 @@ test('authorized price tracking and notes writes preserve totals and enforce val
     $this->post(route('new.feat-order.trip.store'), $payload);
     $order = Order::firstOrFail();
     $line = $order->orderDetails()->firstOrFail();
-    $this->post(route('order.item.edit_price'), ['id' => $line->id, 'admin_price' => 8])->assertRedirect();
+    $this->post(route('order.item.edit_price'), ['id' => $line->id, 'admin_price' => 8])->assertRedirect()
+        ->assertInertiaFlash('success', 'Order item price has been updated successfully');
     expect((float) $order->fresh()->grand_total)->toBe(29.04) // 24 + 21 percent VAT on the new price
         ->and((float) $order->fresh()->getAttribute('profits'))->toBe(2.4)
         ->and((float) StoreUser::findOrFail($payload['customer_id'])->getAttribute('profits'))->toBe(2.4);
@@ -368,7 +371,8 @@ test('bulk deletion rolls back earlier stock and order changes when a later orde
     $this->postJson(route('bulk-order-delete'), ['id' => [$first->id, $second->id]])->assertUnprocessable();
     expect(Order::count())->toBe(2)->and(DB::table('product_stocks')->where('product_id', $payload['products'][0]['product_id'])->value('qty'))->toBe(44);
     $second->forceFill(['payment_status' => 'unpaid', 'commission_calculated' => 0])->save();
-    $this->post(route('bulk-order-delete'), ['id' => [$first->id, $second->id]])->assertRedirect();
+    $this->post(route('bulk-order-delete'), ['id' => [$first->id, $second->id]])->assertRedirect()
+        ->assertInertiaFlash('success', 'Orders have been deleted successfully');
     expect(Order::count())->toBe(0)->and(DB::table('product_stocks')->where('product_id', $payload['products'][0]['product_id'])->value('qty'))->toBe(50);
 });
 

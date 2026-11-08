@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Store\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\Store\Admin\Concerns\ChecksCustomerAccount;
+use App\Http\Controllers\Store\Admin\Concerns\FlashesSuccess;
 use App\Http\Requests\Store\Admin\AssignRepresentativePackageRequest;
 use App\Http\Requests\Store\Admin\FilterRepresentativePackagesRequest;
 use App\Http\Requests\Store\Admin\StoreRepresentativePackageRequest;
@@ -23,6 +24,7 @@ use Inertia\Response;
 class RepresentativePackageController extends Controller implements HasMiddleware
 {
     use ChecksCustomerAccount;
+    use FlashesSuccess;
 
     /** @return array<int, Middleware> */
     public static function middleware(): array
@@ -56,6 +58,7 @@ class RepresentativePackageController extends Controller implements HasMiddlewar
     public function store(StoreRepresentativePackageRequest $request): RedirectResponse
     {
         RepresentativePackage::create($request->validated());
+        $this->flashSuccess('representative_package_has_been_created_successfully');
 
         return redirect()->route('rep.packages.index');
     }
@@ -73,6 +76,7 @@ class RepresentativePackageController extends Controller implements HasMiddlewar
             StoreUser::query()->where('user_type', 'customer')->where('is_rep', true)->where('rep_package_id', $package->id)
                 ->update(['rep_discount_percentage' => $package->percentage]);
         });
+        $this->flashSuccess('representative_package_has_been_updated_successfully');
 
         return redirect()->route('rep.packages.index');
     }
@@ -84,6 +88,7 @@ class RepresentativePackageController extends Controller implements HasMiddlewar
             StoreUser::query()->where('rep_package_id', $package->id)->update(['rep_package_id' => null, 'rep_discount_percentage' => 0]);
             $package->delete();
         });
+        $this->flashSuccess('representative_package_has_been_deleted_successfully');
 
         return $this->redirectPreservingQuery('rep.packages.index', $request);
     }
@@ -97,6 +102,7 @@ class RepresentativePackageController extends Controller implements HasMiddlewar
             $this->assertCustomer($representative);
             $representative->forceFill(['rep_package_id' => $package->id, 'rep_discount_percentage' => $package->percentage])->save();
         });
+        $this->flashSuccess('representative_package_has_been_assigned_successfully');
 
         return redirect()->route('representatives.index');
     }

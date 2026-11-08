@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Store\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Store\Admin\Concerns\FlashesSuccess;
 use App\Http\Requests\Store\Admin\BulkDeleteDynamicPopupsRequest;
 use App\Http\Requests\Store\Admin\FilterDynamicPopupsRequest;
 use App\Http\Requests\Store\Admin\StoreDynamicPopupRequest;
@@ -29,6 +30,8 @@ use Inertia\Response;
 
 class DynamicPopupController extends Controller implements HasMiddleware
 {
+    use FlashesSuccess;
+
     /** @return array<int, Middleware> */
     public static function middleware(): array
     {
@@ -65,6 +68,7 @@ class DynamicPopupController extends Controller implements HasMiddleware
     public function store(StoreDynamicPopupRequest $request): RedirectResponse
     {
         DynamicPopup::create($this->popupAttributes($request));
+        $this->flashSuccess('popup_has_been_created_successfully');
 
         return redirect()->route('dynamic-popups.index');
     }
@@ -80,6 +84,7 @@ class DynamicPopupController extends Controller implements HasMiddleware
     public function update(UpdateDynamicPopupRequest $request, DynamicPopup $popup): RedirectResponse
     {
         $popup->update($this->popupAttributes($request));
+        $this->flashSuccess('popup_has_been_updated_successfully');
 
         return redirect()->route('dynamic-popups.index');
     }
@@ -87,6 +92,7 @@ class DynamicPopupController extends Controller implements HasMiddleware
     public function destroy(Request $request, DynamicPopup $popup): RedirectResponse
     {
         $popup->delete();
+        $this->flashSuccess('popup_has_been_deleted_successfully');
 
         return $this->redirectPreservingQuery('dynamic-popups.index', $request);
     }
@@ -94,6 +100,7 @@ class DynamicPopupController extends Controller implements HasMiddleware
     public function bulkDestroy(BulkDeleteDynamicPopupsRequest $request): RedirectResponse
     {
         DynamicPopup::query()->whereIn('id', $request->validated('id'))->delete();
+        $this->flashSuccess('popups_have_been_deleted_successfully');
 
         return $this->redirectPreservingQuery('dynamic-popups.index', $request);
     }
@@ -103,6 +110,7 @@ class DynamicPopupController extends Controller implements HasMiddleware
         $popup = DynamicPopup::query()->findOrFail($request->integer('id'));
         $popup->status = (int) $request->boolean('status');
         $popup->save();
+        $this->flashSuccess('popup_status_has_been_updated_successfully');
 
         return $this->redirectPreservingQuery('dynamic-popups.index', $request);
     }

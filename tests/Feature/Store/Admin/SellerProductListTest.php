@@ -105,7 +105,7 @@ test('seller duplication copies ownership stock and taxes without translations v
     expect($copy->getAttribute('added_by'))->toBe('seller')->and($copy->user_id)->toBe($this->seller->id)
         ->and($copy->name)->toBe('Seller oil')->and($copy->slug)->toStartWith('seller-oil-')
         ->and($copy->stocks()->count())->toBe(1)->and($copy->taxes()->count())->toBe(1)
-        ->and($copy->product_translations()->count())->toBe(0)->and($copy->variations()->count())->toBe(0)->and($copy->storeBarcodes()->count())->toBe(0);
+        ->and($copy->product_translations()->count())->toBe(0)->and($copy->variations()->count())->toBe(0)->and($copy->barcodes()->count())->toBe(0);
     Notification::assertNothingSent();
 });
 
@@ -382,7 +382,8 @@ test('a current package permits approval both ways and publication without chang
     Cache::forget('addons');
     sellerListCaches(3);
     foreach ([0, 1] as $approved) {
-        $this->post(route('products.approved', $this->product), ['approved' => $approved])->assertRedirect(route('products.seller'));
+        $this->post(route('products.approved', $this->product), ['approved' => $approved])->assertRedirect(route('products.seller'))
+            ->assertInertiaFlash('success', 'Product approval status has been updated successfully');
         expect((int) $this->product->fresh()->getAttribute('approved'))->toBe($approved);
     }
     $this->post(route('products.published', $this->product), ['status' => 1])->assertRedirect(route('products.seller'));

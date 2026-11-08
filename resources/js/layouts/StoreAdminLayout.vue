@@ -24,6 +24,7 @@ import LogoutLink from '@/components/LogoutLink.vue';
 import SkipToContentLink from '@/components/SkipToContentLink.vue';
 import StoreAdminNavLink from '@/components/StoreAdminNavLink.vue';
 import SubmitButton from '@/components/SubmitButton.vue';
+import SuccessBanner from '@/components/SuccessBanner.vue';
 import { formatDateTime } from '@/lib/date';
 import { t } from '@/lib/i18n';
 import { useStoreAccess } from '@/lib/storeAccess';
@@ -424,6 +425,7 @@ function toggle(item: StoreMenuItem): void {
         </aside>
         <main id="main" class="min-w-0 flex-1 px-4 py-8 sm:px-6">
             <div class="mx-auto max-w-screen-2xl">
+                <SuccessBanner />
                 <slot />
             </div>
         </main>

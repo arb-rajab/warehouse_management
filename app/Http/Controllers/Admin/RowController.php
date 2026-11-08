@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Concerns\BuildsCellQrLabels;
+use App\Http\Controllers\Concerns\FlashesAdminSuccess;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\FilterRowsRequest;
 use App\Http\Requests\Admin\ShowRowRequest;
@@ -25,7 +26,7 @@ use SimpleXMLElement;
 
 class RowController extends Controller
 {
-    use BuildsCellQrLabels;
+    use BuildsCellQrLabels, FlashesAdminSuccess;
 
     public function index(FilterRowsRequest $request): Response
     {
@@ -51,6 +52,7 @@ class RowController extends Controller
     public function store(StoreRowRequest $request): RedirectResponse
     {
         $row = DB::transaction(fn () => Row::create($request->validated()));
+        $this->flashAdminSuccess('row_has_been_created_successfully');
 
         return redirect()->route('admin.rows.show', $row);
     }
@@ -163,6 +165,7 @@ class RowController extends Controller
             }
 
             $row->update($validated);
+            $this->flashAdminSuccess('row_has_been_updated_successfully');
 
             return redirect()->route('admin.rows.show', $row);
         });
@@ -182,6 +185,7 @@ class RowController extends Controller
             }
 
             $row->delete();
+            $this->flashAdminSuccess('row_has_been_deleted_successfully');
 
             return $this->redirectPreservingQuery('admin.rows.index', $request);
         });

@@ -99,6 +99,7 @@ const props = {
     },
     variants,
     initialFiles,
+    barcodeImages: [{ id: 3, barcode: '8712345678906', printable: true }],
 };
 const wrappers: VueWrapper[] = [];
 
@@ -236,8 +237,12 @@ describe('Store/Admin/Product/Products/Edit', () => {
             variants,
             variantsUrl: editVariantCombinations.url(product),
             initialFiles,
+            barcodeImages: props.barcodeImages,
             errors: { slug: 'Slug taken' },
         });
+        expect(wrapper.get('img[alt="8712345678906"]').attributes('src')).toBe(
+            '/temp/admin/products/41/store-barcodes/3/image',
+        );
         expect(editVariantCombinations.url(product)).toBe(
             '/temp/admin/products/41/variant-combinations',
         );
@@ -326,6 +331,11 @@ describe('Store/Admin/Product/Products/Edit', () => {
                 .findAll('input[name="product_barcodes[]"]')
                 .map((input) => (input.element as HTMLInputElement).value),
         ).toEqual(['8712345678906']);
+        expect(
+            wrapper
+                .findAll('input[name="product_barcodes_seen[]"]')
+                .map((input) => (input.element as HTMLInputElement).value),
+        ).toEqual(['8712345678906']);
         const editor = wrapper.getComponent(StoreRichTextField);
         expect(editor.props('modelValue')).toBe(
             '<p><strong>Fresh</strong> oil</p>',
@@ -345,6 +355,35 @@ describe('Store/Admin/Product/Products/Edit', () => {
             'variants[0][image]': ['12', variants.rows[0].files],
             'variants[1][image]': ['', []],
         });
+    });
+
+    it('posts the loaded barcodes as the seen list, and a blank entry when it loaded none', async () => {
+        const posted = (wrapper: VueWrapper) => {
+            const data = new FormData(
+                wrapper.get('form').element as HTMLFormElement,
+            );
+
+            return [
+                data.getAll('product_barcodes_seen[]'),
+                data.getAll('product_barcodes[]'),
+            ];
+        };
+        const withBarcodes = editPage();
+        await flushPromises();
+        await withBarcodes
+            .get('#product_barcodes button[aria-label$=" 1"]')
+            .trigger('click');
+
+        // The removed value is no longer posted, but it is still seen.
+        expect(posted(withBarcodes)).toEqual([['8712345678906'], []]);
+
+        const none = editPage({
+            product: { ...product, product_barcodes: [] },
+            barcodeImages: [],
+        });
+        await flushPromises();
+
+        expect(posted(none)).toEqual([[''], []]);
     });
 
     it('shows the stored choice and its stock rows without regenerating them', async () => {

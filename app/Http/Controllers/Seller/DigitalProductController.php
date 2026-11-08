@@ -10,6 +10,7 @@ use App\Models\Upload;
 use Auth;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 
 class DigitalProductController  extends Controller
@@ -116,10 +117,14 @@ class DigitalProductController  extends Controller
             return back();
         }
 
-        $product->product_translations()->delete();
-        $product->stocks()->delete();
-
-        Product::destroy($id);
+        // The barcodes go with the product (product_barcodes restricts the
+        // delete otherwise), and nothing is removed unless the product is.
+        DB::transaction(function () use ($product, $id): void {
+            $product->product_translations()->delete();
+            $product->stocks()->delete();
+            $product->barcodes()->delete();
+            Product::destroy($id);
+        });
 
         flash(__('storefront.product.product_has_been_deleted_successfully'))->success();
         return redirect()->route('seller.digitalproducts');

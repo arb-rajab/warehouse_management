@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Store\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Store\Admin\Concerns\FlashesSuccess;
 use App\Http\Requests\Store\Admin\FilterBlogCategoriesRequest;
 use App\Http\Requests\Store\Admin\StoreBlogCategoryRequest;
 use App\Http\Requests\Store\Admin\UpdateBlogCategoryRequest;
@@ -18,6 +19,8 @@ use Inertia\Response;
 
 class BlogCategoryController extends Controller implements HasMiddleware
 {
+    use FlashesSuccess;
+
     /** @return array<int, Middleware> */
     public static function middleware(): array
     {
@@ -55,6 +58,7 @@ class BlogCategoryController extends Controller implements HasMiddleware
         $category->category_name = $request->validated('category_name');
         $category->slug = preg_replace('/[^A-Za-z0-9\-]/', '', str_replace(' ', '-', $category->category_name));
         $category->save();
+        $this->flashSuccess('blog_category_has_been_created_successfully');
 
         return redirect()->route('blog-category.index');
     }
@@ -71,6 +75,7 @@ class BlogCategoryController extends Controller implements HasMiddleware
         $category->category_name = $request->validated('category_name');
         $category->slug = preg_replace('/[^A-Za-z0-9\-]/', '', str_replace(' ', '-', $category->category_name));
         $category->save();
+        $this->flashSuccess('blog_category_has_been_updated_successfully');
 
         return redirect()->route('blog-category.index');
     }
@@ -78,6 +83,7 @@ class BlogCategoryController extends Controller implements HasMiddleware
     public function destroy(Request $request, BlogCategory $category): RedirectResponse
     {
         $category->delete();
+        $this->flashSuccess('blog_category_has_been_deleted_successfully');
 
         return $this->redirectPreservingQuery('blog-category.index', $request);
     }

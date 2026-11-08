@@ -67,7 +67,8 @@ test('the Cities edit screen returns 404 for a missing id', function () {
 
 test('the Cities store saves validated values', function () {
     actingAsStoreUser(createStoreStaff('manage_shipping_cities'));
-    $this->post('/temp/admin/cities', ['name' => 'Rotterdam', 'state_id' => $this->refs['state'], 'cost' => '3.25'])->assertRedirect(route('cities.index'));
+    $this->post('/temp/admin/cities', ['name' => 'Rotterdam', 'state_id' => $this->refs['state'], 'cost' => '3.25'])->assertRedirect(route('cities.index'))
+        ->assertInertiaFlash('success', 'City has been created successfully');
     $this->assertDatabaseHas('cities', ['name' => 'Rotterdam']);
 });
 
@@ -85,7 +86,8 @@ test('the Cities store refuses writes', function (string $caller) {
 
 test('the Cities update saves validated values', function () {
     actingAsStoreUser(createStoreStaff('manage_shipping_cities'));
-    $this->put('/temp/admin/cities/'.$this->refs['city'], ['name' => 'Rotterdam', 'state_id' => $this->refs['state'], 'cost' => '3.25'] + ['lang' => 'en'])->assertRedirect(route('cities.index'));
+    $this->put('/temp/admin/cities/'.$this->refs['city'], ['name' => 'Rotterdam', 'state_id' => $this->refs['state'], 'cost' => '3.25'] + ['lang' => 'en'])->assertRedirect(route('cities.index'))
+        ->assertInertiaFlash('success', 'City has been updated successfully');
     $this->assertDatabaseHas('cities', ['id' => $this->refs['city'], 'name' => 'Rotterdam']);
 });
 

@@ -93,7 +93,8 @@ test('deleting a package clears assigned discounts and preserves unrelated assig
     $rep = packageRepresentative(['rep_package_id' => $package->id, 'rep_discount_percentage' => 12.5]);
     $otherPackage = representativePackage();
     $other = packageRepresentative(['rep_package_id' => $otherPackage->id, 'rep_discount_percentage' => 5]);
-    $this->delete('/temp/admin/representatives/packages/delete/'.$package->id.'?page=2&per_page=10')->assertRedirect(route('rep.packages.index', ['page' => 2, 'per_page' => 10]));
+    $this->delete('/temp/admin/representatives/packages/delete/'.$package->id.'?page=2&per_page=10')->assertRedirect(route('rep.packages.index', ['page' => 2, 'per_page' => 10]))
+        ->assertInertiaFlash('success', 'Representative package has been deleted successfully');
     expect($rep->fresh()->rep_package_id)->toBeNull()->and($rep->fresh()->rep_discount_percentage)->toEqual(0)->and($other->fresh()->rep_package_id)->toBe($otherPackage->id);
     $this->assertDatabaseMissing('representative_packages', ['id' => $package->id]);
 });
@@ -103,7 +104,8 @@ test('a package can be assigned only to an active representative and keeps perce
     $package = representativePackage();
     $rep = packageRepresentative();
     $noise = packageRepresentative();
-    $this->post('/temp/admin/representatives/packages/set_package', ['user_id' => $rep->id, 'package_id' => $package->id])->assertRedirect(route('representatives.index'));
+    $this->post('/temp/admin/representatives/packages/set_package', ['user_id' => $rep->id, 'package_id' => $package->id])->assertRedirect(route('representatives.index'))
+        ->assertInertiaFlash('success', 'Representative package has been assigned successfully');
     expect($rep->fresh()->rep_package_id)->toBe($package->id)->and($rep->fresh()->rep_discount_percentage)->toEqual(12.5)->and($noise->fresh()->rep_package_id)->toBeNull();
 });
 

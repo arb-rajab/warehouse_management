@@ -174,7 +174,8 @@ describe('checkpoint notes', function () {
         actingAsStoreUser(createStoreStaff('edit_trip'));
 
         $this->put(route('checkpoints.update-notes', [$checkpoint, 'trip_id' => $checkpoint->trip_id, 'tab' => 'stops']), ['notes' => 'Leave at the back door'])
-            ->assertRedirect(route('trips.show', [$trip, 'tab' => 'stops']));
+            ->assertRedirect(route('trips.show', [$trip, 'tab' => 'stops']))
+            ->assertInertiaFlash('success', 'Checkpoint notes have been updated successfully');
         expect($checkpoint->fresh()->only(['notes', 'status', 'cmr_file', 'photos']))->toBe(['notes' => 'Leave at the back door', 'status' => 'delivered', 'cmr_file' => '17', 'photos' => '18'])
             ->and($other->fresh()->notes)->toBe('Untouched');
 
@@ -214,7 +215,8 @@ describe('checkpoint status', function () {
         actingAsStoreUser(createStoreStaff('edit_trip'));
 
         $this->put(route('checkpoints.update-status', [$checkpoint, 'trip_id' => $checkpoint->trip_id, 'tab' => 'stops']), ['status' => $status])
-            ->assertRedirect(route('trips.show', [$trip, 'tab' => 'stops']));
+            ->assertRedirect(route('trips.show', [$trip, 'tab' => 'stops']))
+            ->assertInertiaFlash('success', 'Checkpoint status has been updated successfully');
 
         expect($checkpoint->fresh()->status)->toBe($status);
         if ($status === 'delivered') {

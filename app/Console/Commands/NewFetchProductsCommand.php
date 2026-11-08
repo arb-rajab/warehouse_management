@@ -15,7 +15,7 @@ use App\Models\ProductStock;
 use App\Models\ProductTax;
 use App\Models\ProductTranslation;
 use App\Models\ProductVariation;
-use App\Models\StoreProductBarcode;
+use App\Models\ProductBarcode;
 use App\Models\StoreUser;
 use App\Models\Tax;
 use App\Models\Upload;
@@ -353,8 +353,8 @@ class NewFetchProductsCommand extends Command
                         $barcodes = $product['Barcodes'];
                         foreach ($barcodes as $barcode) {
                             $barcodeValue = $barcode['Barcode'];
-                            if (! StoreProductBarcode::where('barcode', $barcodeValue)->exists()) {
-                                StoreProductBarcode::create([
+                            if (! ProductBarcode::where('barcode', $barcodeValue)->exists()) {
+                                ProductBarcode::create([
                                     'product_id' => $selectedProduct?->id,
                                     'barcode'   => $barcodeValue
                                 ]);
@@ -364,8 +364,8 @@ class NewFetchProductsCommand extends Command
                     //End: Updating Barcode
 
                     // Store the material_id as a barcode - Task:BS-152
-                    if (! StoreProductBarcode::where('barcode', $product['Mat_ID'])->exists()) {
-                        StoreProductBarcode::create([
+                    if (! ProductBarcode::where('barcode', $product['Mat_ID'])->exists()) {
+                        ProductBarcode::create([
                             'product_id' => $selectedProduct?->id,
                             'barcode'   => $product['Mat_ID']
                         ]);
@@ -530,8 +530,8 @@ class NewFetchProductsCommand extends Command
                     //Begin: Barcode
                     $barcodes = $productDetails['VariationFreeBarcodes'];
                     foreach ($barcodes as $barcode) {
-                        if (! StoreProductBarcode::where('barcode', $barcode)->exists()) {
-                            StoreProductBarcode::create([
+                        if (! ProductBarcode::where('barcode', $barcode)->exists()) {
+                            ProductBarcode::create([
                                 'product_id' => $productId?->id,
                                 'barcode'   => $barcode
                             ]);
@@ -540,8 +540,8 @@ class NewFetchProductsCommand extends Command
                     //End: Barcode
 
                     // Store the material_id as a barcode - Task:BS-152
-                    if (! StoreProductBarcode::where('barcode', $productDetails['Mat_ID'])->exists()) {
-                        StoreProductBarcode::create([
+                    if (! ProductBarcode::where('barcode', $productDetails['Mat_ID'])->exists()) {
+                        ProductBarcode::create([
                             'product_id' => $productId?->id,
                             'barcode'   => $productDetails['Mat_ID']
                         ]);

@@ -128,7 +128,8 @@ test('digital product deletion keeps removing its translations, stock and produc
     $other = createStoreProduct(['name' => 'Other guide', 'digital' => 1]);
     ProductTranslation::create(['product_id' => $other->id, 'lang' => 'en', 'name' => 'Other guide']);
     $this->delete(route('digitalproducts.destroy', [$this->product, 'page' => 2, 'per_page' => 10, 'search' => 'Rec']))
-        ->assertRedirect(route('digitalproducts.index', ['page' => 2, 'per_page' => 10, 'search' => 'Rec']));
+        ->assertRedirect(route('digitalproducts.index', ['page' => 2, 'per_page' => 10, 'search' => 'Rec']))
+        ->assertInertiaFlash('success', 'Digital product has been deleted successfully');
     $this->assertDatabaseMissing('products', ['id' => $this->product->id]);
     $this->assertDatabaseMissing('product_translations', ['product_id' => $this->product->id]);
     $this->assertDatabaseMissing('product_stocks', ['product_id' => $this->product->id]);
@@ -157,21 +158,36 @@ test('digital product deletion changes nothing when a warehouse pallet still ref
     expect(digitalProductAdminSnapshot())->toEqual($before);
 });
 
-test('digital product deletion changes nothing when a store barcode still references the product', function () {
+test('digital product deletion deletes the product\'s barcodes with it, and no other product\'s', function () {
+    // Barcodes used to block this delete (the table restricts it); every
+    // delete path now removes them first, in the same transaction.
     actingAsStoreUser(createStoreStaff('delete_digital_product'));
     DB::table('product_barcodes')->insert(['product_id' => $this->product->id, 'barcode' => '8710000000001']);
+    $noise = createStoreProduct(['digital' => 1, 'thumbnail_img' => null]);
+    $noiseBarcode = ProductBarcode::factory()->create(['product_id' => $noise->id]);
+    $this->delete(route('digitalproducts.destroy', $this->product))->assertRedirect(route('digitalproducts.index'))
+        ->assertInertiaFlash('success', 'Digital product has been deleted successfully');
+    $this->assertDatabaseMissing('products', ['id' => $this->product->id]);
+    $this->assertDatabaseMissing('product_barcodes', ['product_id' => $this->product->id]);
+    $this->assertDatabaseHas('product_barcodes', ['id' => $noiseBarcode->id, 'product_id' => $noise->id]);
+});
+
+test('digital product deletion with barcodes changes nothing when a warehouse pallet still references the product', function () {
+    actingAsStoreUser(createStoreStaff('delete_digital_product'));
+    DB::table('product_barcodes')->insert(['product_id' => $this->product->id, 'barcode' => '8710000000001']);
+    Pallet::factory()->create(['product_id' => $this->product->id]);
     $before = [...digitalProductAdminSnapshot(), 'product_barcodes' => DB::table('product_barcodes')->get()->toArray()];
     $this->withoutExceptionHandling();
     expect(fn () => $this->delete(route('digitalproducts.destroy', $this->product)))->toThrow(QueryException::class);
     expect([...digitalProductAdminSnapshot(), 'product_barcodes' => DB::table('product_barcodes')->get()->toArray()])->toEqual($before);
 });
 
-test('digital product deletion cascades WMS barcodes and settings and keeps cell logs without the product', function () {
+test('digital product deletion removes WMS-added barcodes, cascades settings and keeps cell logs without the product', function () {
     actingAsStoreUser(createStoreStaff('delete_digital_product'));
     $barcode = ProductBarcode::factory()->create(['product_id' => $this->product->id]);
     $log = CellStatusLog::factory()->create(['product_id' => $this->product->id]);
     $this->delete(route('digitalproducts.destroy', $this->product))->assertRedirect(route('digitalproducts.index'));
-    $this->assertDatabaseMissing('wms_product_barcodes', ['id' => $barcode->id]);
+    $this->assertDatabaseMissing('product_barcodes', ['id' => $barcode->id]);
     $this->assertDatabaseMissing('wms_product_settings', ['product_id' => $this->product->id]);
     expect(DB::table('cell_status_logs')->where('id', $log->id)->value('product_id'))->toBeNull();
 });
@@ -362,12 +378,16 @@ test('the Inertia create and edit forms keep their routes, gates and redirects b
     $this->get(route('digitalproducts.create'))->assertOk()->assertInertia(fn (Assert $page) => $page->component('Store/Admin/Product/DigitalProducts/Create'));
     $this->get(route('digitalproducts.edit', ['product' => $this->product->id, 'lang' => 'en']))->assertOk()->assertInertia(fn (Assert $page) => $page->component('Store/Admin/Product/DigitalProducts/Edit'));
     $this->get(route('digitalproducts.create'), inertiaHeaders())->assertOk()->assertHeader('X-Inertia', 'true');
-    $this->post(route('digitalproducts.store'), ['name' => 'New guide', ...$form])->assertSessionHasNoErrors()->assertRedirect(route('digitalproducts.index'));
+    // Without show_all_products the main products list is closed to this
+    // staff member, so the create returns to the digital products list.
+    $this->post(route('digitalproducts.store'), ['name' => 'New guide', ...$form])->assertSessionHasNoErrors()->assertRedirect(route('digitalproducts.index'))
+        ->assertInertiaFlash('success', 'Digital product has been created successfully');
     $new = Product::query()->where('name', 'New guide')->firstOrFail();
     expect($new->getAttribute('digital'))->toBe(1)->and($new->getAttribute('added_by'))->toBe('admin');
     $this->assertDatabaseHas('product_translations', ['product_id' => $new->id, 'lang' => 'en', 'name' => 'New guide']);
     $this->patch(route('digitalproducts.update', $new->id), ['name' => 'Renamed guide', 'lang' => 'en', 'slug' => 'Renamed-Guide', ...$form])
-        ->assertSessionHasNoErrors()->assertRedirect(route('digitalproducts.edit', ['product' => $new->id, 'lang' => 'en']));
+        ->assertSessionHasNoErrors()->assertRedirect(route('digitalproducts.edit', ['product' => $new->id, 'lang' => 'en']))
+        ->assertInertiaFlash('success', 'Digital product has been updated successfully');
     expect($new->fresh()->name)->toBe('Renamed guide')->and($new->fresh()->slug)->toBe('renamed-guide');
     actingAsStoreUser(createStoreStaff('show_digital_products'));
     $this->get(route('digitalproducts.create'))->assertForbidden();

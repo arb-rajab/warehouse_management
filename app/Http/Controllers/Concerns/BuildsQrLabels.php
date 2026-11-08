@@ -9,7 +9,7 @@ use SimpleSoftwareIO\QrCode\Facades\QrCode;
 /**
  * Low-level SVG/PDF label helpers — QR encoding plus text wrapping/clamping —
  * used by BuildsCellQrLabels (row/cell labels) and, for its text layout only,
- * BuildsProductQrLabels (product barcode labels).
+ * App\Services\ProductBarcodeLabels (product barcode labels).
  */
 trait BuildsQrLabels
 {
@@ -317,9 +317,9 @@ trait BuildsQrLabels
      * clipped, so the label grows past $height rather than cut it off.
      *
      * $idText is an optional small caption line drawn directly below the QR,
-     * above the primary line — currently only BuildsProductQrLabels passes
-     * one (the product id), so BuildsCellQrLabels's call sites are unaffected
-     * by leaving it null. It's plain digits/ASCII so it's always drawn LTR
+     * above the primary line — no caller passes one today (the product
+     * barcode label, App\Services\ProductBarcodeLabels, draws its own), so
+     * BuildsCellQrLabels's call sites leave it null. It's plain digits/ASCII so it's always drawn LTR
      * regardless of locale, and it shares the same $height budget as the
      * other text: when it doesn't fit above $maxTextY it's dropped via
      * clampLinesToHeight() like any other line, and the primary line's start

@@ -5,6 +5,7 @@ use App\Http\Controllers\Store\Admin\SellerPaymentController;
 use App\Models\Order;
 use App\Models\OrderDetail;
 use App\Models\Product;
+use App\Models\ProductBarcode;
 use App\Models\Seller;
 use App\Models\Shop;
 use App\Models\StoreUser;
@@ -103,7 +104,8 @@ test('seller creation preserves email verification policy without granting roles
     Notification::fake();
     actingAsStoreUser(createStoreStaff('edit_seller'));
     DB::table('business_settings')->insert(['type' => 'email_verification', 'value' => (int) $verify]);
-    $this->post(route('sellers.store'), sellerAdminForm())->assertRedirect(route('sellers.index'));
+    $this->post(route('sellers.store'), sellerAdminForm())->assertRedirect(route('sellers.index'))
+        ->assertInertiaFlash('success', 'Seller has been created successfully');
     $user = StoreUser::where('email', 'new-seller@example.com')->sole();
     expect($user->user_type)->toBe('seller')->and($user->name)->toBe('New seller')
         ->and(Hash::check('seller-password', $user->password))->toBeTrue()
@@ -162,7 +164,8 @@ test('accept reject and approved switch retain distinct verification transitions
     $shop = sellerAdminShop(['verification_info' => '[{"label":"Company","type":"text","value":"Acme"}]']);
     $info = $shop->verification_info;
     Cache::put('verified_sellers_id', [999]);
-    $this->post(route('sellers.approve', $shop))->assertRedirect(route('sellers.index'));
+    $this->post(route('sellers.approve', $shop))->assertRedirect(route('sellers.index'))
+        ->assertInertiaFlash('success', 'Seller has been approved successfully');
     expect((int) $shop->fresh()->verification_status)->toBe(1)->and($shop->fresh()->verification_info)->toBe($info)->and(Cache::has('verified_sellers_id'))->toBeFalse();
     foreach ([0, 1] as $status) {
         Cache::put('verified_sellers_id', [999]);
@@ -196,6 +199,9 @@ test('seller delete and bulk delete preserve the exact legacy deletion boundary'
     $sellerRow = Seller::forceCreate(['user_id' => $shop->user_id]);
     $product = createStoreProduct(['user_id' => $shop->user_id]);
     $noiseProduct = createStoreProduct(['user_id' => $noise->user_id]);
+    // The deleted products' barcodes go with them; another seller's stay.
+    ProductBarcode::factory()->create(['product_id' => $product->id]);
+    $keptBarcode = ProductBarcode::factory()->create(['product_id' => $noiseProduct->id]);
     $bought = orderStoreProduct($shop->user, $noiseProduct);
     $sold = orderStoreProduct($noise->user, $product);
     $payment = DB::table('payments')->insertGetId(['seller_id' => $shop->user_id, 'amount' => 7]);
@@ -209,7 +215,9 @@ test('seller delete and bulk delete preserve the exact legacy deletion boundary'
         ->and(DB::table('payments')->where('id', $payment)->value('amount'))->toEqual(7)
         ->and(DB::table('seller_withdraw_requests')->where('id', $withdraw)->exists())->toBeTrue()
         ->and(OrderDetail::find($sold->id))->not->toBeNull()->and(Order::find($sold->order_id))->not->toBeNull()
-        ->and(Product::find($noiseProduct->id))->not->toBeNull()->and((float) $noise->fresh()->admin_to_pay)->toBe(125.0);
+        ->and(Product::find($noiseProduct->id))->not->toBeNull()->and((float) $noise->fresh()->admin_to_pay)->toBe(125.0)
+        ->and(DB::table('product_barcodes')->where('product_id', $product->id)->exists())->toBeFalse()
+        ->and(DB::table('product_barcodes')->where('id', $keptBarcode->id)->value('product_id'))->toEqual($noiseProduct->id);
     if ($extra) {
         expect(Shop::find($extra->id))->toBeNull();
     }

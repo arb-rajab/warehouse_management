@@ -555,6 +555,16 @@ test('barcodes returns every barcode attached to the product, excluding another 
         ->toBe(['1111111111111', '2222222222222']);
 });
 
+test('barcodes includes a row the store wrote, such as the import\'s own-id barcode', function () {
+    $product = Product::factory()->create();
+    ProductBarcode::factory()->create(['product_id' => $product->id, 'barcode' => 'WMS-ADDED']);
+    DB::table('product_barcodes')->insert(['product_id' => $product->id, 'barcode' => (string) $product->id]);
+    $noise = Product::factory()->create();
+    DB::table('product_barcodes')->insert(['product_id' => $noise->id, 'barcode' => (string) $noise->id]);
+
+    expect($product->barcodes->pluck('barcode')->all())->toBe(['WMS-ADDED', (string) $product->id]);
+});
+
 test('barcodes is empty for a product nobody has added one to', function () {
     $product = Product::factory()->create();
 

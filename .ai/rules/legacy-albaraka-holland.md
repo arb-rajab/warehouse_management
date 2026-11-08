@@ -1785,7 +1785,7 @@ The other seams between the two halves stay as they are until their phase:
   - Its controller moves to `App\Http\Controllers\Store\Admin`, its Resources go in `App\Http\Resources\Store`, and its pages in `resources/js/pages/Store/Admin/`. This is new code, so it says "store".
   - Its Blade views are deleted, not moved, and its block of `routes/shop-admin.php` is rewritten in place with the same route names. That is not the piecemeal rename this section rules out: the file stays where it is until phase 6.
   - The storefront and seller area keep their inline `validate()`.
-- the `Setting`/`BusinessSetting` and `ProductBarcode`/`StoreProductBarcode` duplicates (phase 5);
+- the `Setting`/`BusinessSetting` duplicate (phase 5). The `ProductBarcode`/`StoreProductBarcode` duplicate was resolved on 2026-11-08: `product_barcodes` is the one barcode table (see [shared-database.md](shared-database.md#barcodes-one-table));
 - the three image pipelines and `uploaded_asset()` vs `Upload::url` (phases 2 and 6);
 - the generic middleware aliases `admin`/`seller`/`customer` in `bootstrap/app.php` (phase 6).
 

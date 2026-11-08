@@ -1,14 +1,25 @@
 <?php
 
-namespace App\Http\Controllers\Concerns;
+namespace App\Services;
 
+use App\Http\Controllers\Concerns\BuildsQrLabels;
 use App\Models\Product;
+use App\Models\Setting;
+use Illuminate\Support\Collection;
 use InvalidArgumentException;
 
 /**
- * Shared label building for the single-product barcode export image
- * (Admin\ProductController) — a Code 128 subset B barcode plus the product's
- * id and its name in the app's active locale only.
+ * The product barcode label image — a Code 128 subset B barcode, the encoded
+ * value printed beneath it and the product's name in the app's active locale
+ * only — shared by the WMS products page (Admin\ProductController: previews,
+ * downloads, the ZIP), the store back office's product edit form
+ * (Store\Admin\ProductController's barcode image routes) and the storefront
+ * product page (inline data URIs), so all three show the same image.
+ *
+ * merged() is a product's one set of barcodes as the storefront shows it:
+ * the shared `product_barcodes` table and the legacy `products.barcode`
+ * column, Arabic digits converted (ar_barcode_to_en) and duplicates dropped.
+ * The product's default barcode (its id, never stored) is a WMS label only.
  *
  * One barcode encodes one product id (the bare id, as ASCII digits), not one
  * physical pallet/box — every unit of that product carries an identical
@@ -22,9 +33,12 @@ use InvalidArgumentException;
  * with every character, and the full URI would shrink each bar below what a
  * scanner can resolve at the label's configured width.
  */
-trait BuildsProductQrLabels
+final class ProductBarcodeLabels
 {
     use BuildsQrLabels;
+
+    /** Read once per instance: a page renders several labels. */
+    private ?Setting $setting = null;
 
     private const int CODE128_START_B = 104;
 
@@ -128,7 +142,7 @@ trait BuildsProductQrLabels
      * empty string rather than null then), the base name otherwise. Mirrors
      * resources/js/lib/productName.ts; the other locale's name is never shown.
      */
-    private function productLabelName(Product $product): string
+    public function productLabelName(Product $product): string
     {
         return app()->getLocale() === 'ar' && $product->ar_name !== ''
             ? $product->ar_name
@@ -139,7 +153,7 @@ trait BuildsProductQrLabels
      * The product-id label: the product's id encoded and printed beneath its
      * barcode, with its name below.
      */
-    private function productQrLabelImage(Product $product, int $width, int $height): string
+    public function productQrLabelImage(Product $product, int $width, int $height): string
     {
         return $this->productLabelImage(
             $product,
@@ -157,7 +171,7 @@ trait BuildsProductQrLabels
      *
      * @throws InvalidArgumentException when the value is not printable ASCII
      */
-    private function productBarcodeLabelImage(Product $product, string $barcode, int $width, int $height): string
+    public function productBarcodeLabelImage(Product $product, string $barcode, int $width, int $height): string
     {
         return $this->productLabelImage($product, $barcode, $barcode, $width, $height);
     }
@@ -218,5 +232,97 @@ trait BuildsProductQrLabels
                 {$nameMarkup}
             </svg>
             SVG;
+    }
+
+    /**
+     * The label for $value at the configured label size
+     * (Setting::current()'s qr_code_width/qr_code_height).
+     *
+     * @throws InvalidArgumentException when the value is not printable ASCII
+     */
+    public function barcodeSvg(Product $product, string $value): string
+    {
+        $setting = $this->setting();
+
+        return $this->productBarcodeLabelImage($product, $value, $setting->qr_code_width, $setting->qr_code_height);
+    }
+
+    /**
+     * Every input of the label, hashed, so a preview route can answer a
+     * repeat request with a 304 before rendering anything.
+     */
+    public function etag(Product $product, string $value): string
+    {
+        $setting = $this->setting();
+
+        return md5(implode('|', [
+            $this->productLabelName($product),
+            $value,
+            $setting->qr_code_width,
+            $setting->qr_code_height,
+        ]));
+    }
+
+    /**
+     * Whether Code 128 subset B can encode $value: printable ASCII only,
+     * the same check code128BModules() makes.
+     */
+    public function isPrintable(string $value): bool
+    {
+        return preg_match('/^[\x20-\x7E]+$/', $value) === 1;
+    }
+
+    /**
+     * The label as an inline `data:` URI for an `<img>` on a server-rendered
+     * page, or null when the value cannot be encoded.
+     */
+    public function dataUri(Product $product, string $value): ?string
+    {
+        return $this->isPrintable($value)
+            ? 'data:image/svg+xml;base64,'.base64_encode($this->barcodeSvg($product, $value))
+            : null;
+    }
+
+    /**
+     * The product's barcodes as one set: the `barcodes` relation (oldest
+     * first), then the legacy `barcode` column, each with Arabic digits
+     * converted, blanks skipped and a value already listed dropped (the first
+     * keeps it). Reads the loaded relation and the column, so the caller
+     * eager-loads `barcodes` and selects `barcode`.
+     *
+     * @return Collection<int, array{value: string, printable: bool}>
+     */
+    public function merged(Product $product): Collection
+    {
+        $merged = new Collection;
+        $seen = [];
+        $values = [...$product->barcodes->pluck('barcode')->all(), (string) $product->getAttribute('barcode')];
+
+        foreach ($values as $raw) {
+            $value = $this->normalize((string) $raw);
+
+            if ($value === '' || isset($seen[$value])) {
+                continue;
+            }
+
+            $seen[$value] = true;
+            $merged->push(['value' => $value, 'printable' => $this->isPrintable($value)]);
+        }
+
+        return $merged;
+    }
+
+    /**
+     * A stored barcode as the store pages encode and show it: Arabic-Indic
+     * digits as ASCII digits (ar_barcode_to_en), surrounding spaces dropped.
+     */
+    public function normalize(string $value): string
+    {
+        return trim(ar_barcode_to_en($value));
+    }
+
+    private function setting(): Setting
+    {
+        return $this->setting ??= Setting::current();
     }
 }

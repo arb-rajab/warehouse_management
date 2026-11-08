@@ -55,7 +55,8 @@ test('the Taxes edit screen returns 404 for a missing id', function () {
 
 test('the Taxes store saves validated values', function () {
     actingAsStoreUser(createStoreStaff('vat_&_tax_setup'));
-    $this->post('/temp/admin/tax', ['name' => 'Sales tax'])->assertRedirect(route('tax.index'));
+    $this->post('/temp/admin/tax', ['name' => 'Sales tax'])->assertRedirect(route('tax.index'))
+        ->assertInertiaFlash('success', 'Tax has been created successfully');
     $this->assertDatabaseHas('taxes', ['name' => 'Sales tax']);
 });
 
@@ -73,7 +74,8 @@ test('the Taxes store refuses writes', function (string $caller) {
 
 test('the Taxes update saves validated values', function () {
     actingAsStoreUser(createStoreStaff('vat_&_tax_setup'));
-    $this->put('/temp/admin/tax/'.$this->refs['tax'], ['name' => 'Sales tax'])->assertRedirect(route('tax.index'));
+    $this->put('/temp/admin/tax/'.$this->refs['tax'], ['name' => 'Sales tax'])->assertRedirect(route('tax.index'))
+        ->assertInertiaFlash('success', 'Tax has been updated successfully');
     $this->assertDatabaseHas('taxes', ['id' => $this->refs['tax'], 'name' => 'Sales tax']);
 });
 

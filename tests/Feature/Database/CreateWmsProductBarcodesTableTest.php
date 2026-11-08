@@ -3,35 +3,45 @@
 use App\Models\Product;
 use App\Models\ProductBarcode;
 use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+
+/**
+ * The retired WMS barcode table. App\Models\ProductBarcode now reads
+ * `product_barcodes`; this table stays, unread, for one release, so its own
+ * constraints are tested through the query builder.
+ */
+function wmsBarcodeRow(int $productId, string $barcode): int
+{
+    return DB::table('wms_product_barcodes')->insertGetId(['product_id' => $productId, 'barcode' => $barcode, 'created_at' => now(), 'updated_at' => now()]);
+}
 
 test('a barcode must be unique across every product, not just within one', function () {
     $product = Product::factory()->create();
     $otherProduct = Product::factory()->create();
-    ProductBarcode::factory()->create(['product_id' => $product->id, 'barcode' => '1234567890123']);
+    wmsBarcodeRow($product->id, '1234567890123');
 
-    expect(fn () => ProductBarcode::factory()->create(['product_id' => $otherProduct->id, 'barcode' => '1234567890123']))
-        ->toThrow(QueryException::class);
+    expect(fn () => wmsBarcodeRow($otherProduct->id, '1234567890123'))->toThrow(QueryException::class)
+        ->and(DB::table('wms_product_barcodes')->where('barcode', '1234567890123')->count())->toBe(1);
 });
 
 test('deleting a product cascades to its barcodes and leaves other products\' barcodes alone', function () {
     // Pallets restrict a product delete, so this product deliberately has none.
     $product = Product::factory()->create();
-    $barcode = ProductBarcode::factory()->create(['product_id' => $product->id]);
+    $barcode = wmsBarcodeRow($product->id, 'WMS-CASCADE');
 
     $survivor = Product::factory()->create();
-    $survivorBarcode = ProductBarcode::factory()->create(['product_id' => $survivor->id]);
+    $survivorBarcode = wmsBarcodeRow($survivor->id, 'WMS-SURVIVOR');
 
     $product->delete();
 
-    expect(ProductBarcode::query()->whereKey($barcode->id)->exists())->toBeFalse();
-    expect(ProductBarcode::query()->whereKey($survivorBarcode->id)->exists())->toBeTrue();
+    expect(DB::table('wms_product_barcodes')->where('id', $barcode)->exists())->toBeFalse()
+        ->and(DB::table('wms_product_barcodes')->where('id', $survivorBarcode)->exists())->toBeTrue();
 });
 
-test('barcodes are wms-owned rows rather than the shared products table\'s own barcode column', function () {
-    // `products.barcode` is the store's single barcode per product, which its
-    // seller pages still read and write; this app's barcodes never touch it.
+test('the table still exists, but no model reads it any more', function () {
     expect(Schema::hasTable('wms_product_barcodes'))->toBeTrue()
-        ->and((new Product)->barcodes()->getRelated()->getTable())->toBe('wms_product_barcodes')
-        ->and((new Product)->getFillable())->not->toContain('barcode');
+        ->and((new ProductBarcode)->getTable())->toBe('product_barcodes')
+        ->and((new Product)->barcodes()->getRelated()->getTable())->toBe('product_barcodes')
+        ->and(collect(glob(app_path('Models/*.php')))->filter(fn (string $file): bool => str_contains((string) file_get_contents($file), "'wms_product_barcodes'"))->all())->toBe([]);
 });

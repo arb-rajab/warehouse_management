@@ -15,6 +15,13 @@ declare module 'vite/client' {
 
 declare module '@inertiajs/core' {
     export interface InertiaConfig {
+        /**
+         * One-time messages a controller sends with Inertia::flash(); the
+         * layouts' SuccessBanner shows `success` above the page content.
+         */
+        flashDataType: {
+            success?: string;
+        };
         sharedPageProps: {
             name: string;
             locale: string;
