@@ -63,7 +63,10 @@ test('the identity stylesheet maps the theme variables onto the Direction A toke
         ->toMatch('/--dark:\s*var\(--ink\)/')
         ->toMatch('/--danger-color:\s*#b42318/i')
         ->not->toContain('fonts.googleapis.com')
-        ->not->toContain('#d43533');
+        // The old theme red is only ever matched (legacy SVG fill attributes are remapped onto
+        // the brand token), never declared as a colour.
+        ->toMatch('/\[fill=\\\\?#d43533 i\]/i')
+        ->not->toMatch('/:\s*#d43533/i');
 });
 
 test('the brand name is one placeholder per language, not the legacy store name', function () {
@@ -72,7 +75,7 @@ test('the brand name is one placeholder per language, not the legacy store name'
 });
 
 test('the back office never loads the storefront stylesheet or its fonts', function () {
-    $this->get('/login')->assertOk()
+    $this->get(route('login'))->assertOk()
         ->assertSee(Vite::asset('resources/css/app.css'), false)
         ->assertDontSee(Vite::asset('resources/css/storefront.css'), false)
         ->assertDontSee('ibm-plex', false);
