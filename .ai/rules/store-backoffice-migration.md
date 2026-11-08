@@ -490,6 +490,11 @@ redirect and launch steps remain in the go-live checklist.
 - Production setup, data rehearsals, external delivery/payments, gateway activation,
   fetch-button policy, finance/impersonation grants, accepted risks and search-engine
   setup remain owner/system decisions. Repository checks cannot certify those.
+- Product barcodes are one table, `product_barcodes`, shared with the WMS
+  (2026-11-08). Deploy the two `2026_11_08_1000xx` migrations together with the
+  code; follow [the runbook](../barcode-single-source-runbook-20261108.md). The
+  retired `wms_product_barcodes` is dropped by a follow-up migration after one
+  release; that task is open.
 - Keep held script/WAF, order-tax and global image-policy decisions above. Retained
   legacy uploader deletion failure handling, missing legacy API/seller handlers,
   import-created external-upload ownership and POST verification-status repetition

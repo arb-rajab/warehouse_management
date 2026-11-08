@@ -32,6 +32,10 @@ guard for new alterations. The existing `uploads` and `product_barcodes`
 create migrations retain `Schema::hasTable()` on `up()` and
 `app()->isProduction()` on `down()`; those historical schema guards do not
 make the tables read-only. Integrated upload and product writers mutate them.
+`product_barcodes` is also the one barcode table of the WMS since 2026-11-08
+(`wms_product_barcodes` is retired, copied in by `2026_11_08_100001` and dropped
+by a follow-up migration after one release; see shared-database.md, "Barcodes:
+one table").
 Every `product_id` FK is a signed
 `integer` rather than `foreignId()` regardless of which of these a migration
 touches. Read **.ai/rules/shared-database.md** before adding a migration —
