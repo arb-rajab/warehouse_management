@@ -29,6 +29,9 @@
     --sf-nav-hover: rgb(255 255 255 / 0.14);
     --sf-card-img-bg: #f7f0e9;
     --sf-price: #a11208;
+    --sf-hero-bg: #fbede0;
+    --sf-hero-chip-ink: #a11208;
+    --sf-banner-bg: #c4170c;
     --sf-footer-bg: #1f1a17;
     --sf-footer-ink: #e9e1da;
     --sf-footer-head: #ffffff;
@@ -1045,6 +1048,267 @@ html[lang='ar'] .sf-brand-name {
 .aiz-card-box .disc-amount del {
     color: var(--muted) !important;
     font-size: 0.8125rem;
+}
+
+/* Two labelled prices: the main price on its own line, the per-piece price a
+   smaller muted line below it. The inner spans keep the theme's text-primary
+   markup, so the colour and weight are reset here. */
+.aiz-card-box .sf-price-stack {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+}
+
+.aiz-card-box .sf-price-stack .sf-price-main {
+    display: block;
+    margin-inline: 0 !important;
+}
+
+.aiz-card-box .sf-price-piece {
+    display: block;
+    font-size: 0.8125rem;
+    line-height: 1.4;
+    color: var(--muted);
+}
+
+.aiz-card-box .sf-card-price .sf-price-piece .text-primary {
+    margin-inline: 0 !important;
+    color: var(--muted) !important;
+    font-size: 0.8125rem;
+    font-weight: 500 !important;
+    direction: ltr;
+    unicode-bidi: isolate;
+}
+
+.aiz-card-box .sf-price-piece-label::after {
+    content: ':';
+}
+
+/* ---- Home page: hero, trust tiles, "Run a shop?" banner ------------------ */
+
+.sf-hero {
+    padding-block: 24px 8px;
+}
+
+.sf-hero-card {
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-height: 300px;
+    padding: 44px 48px;
+    border-radius: var(--radius-xl);
+    background: var(--sf-hero-bg);
+    color: var(--ink);
+}
+
+.sf-hero-eyebrow {
+    align-self: flex-start;
+    padding: 6px 12px;
+    border-radius: var(--radius-pill);
+    background: var(--surface);
+    color: var(--sf-hero-chip-ink);
+    font-size: 0.8125rem;
+    font-weight: 700;
+}
+
+.sf-hero-title {
+    max-width: 18ch;
+    margin: 18px 0 12px;
+    font-size: 2.5rem;
+    font-weight: 800;
+    line-height: 1.15;
+    letter-spacing: -0.02em;
+    color: var(--ink);
+}
+
+[dir='rtl'] .sf-hero-title {
+    letter-spacing: 0;
+    line-height: 1.35;
+}
+
+.sf-hero-text {
+    max-width: 44ch;
+    margin: 0 0 24px;
+    font-size: 1.0625rem;
+    color: var(--ink);
+    opacity: 0.9;
+}
+
+.sf-hero-actions {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.sf-hero-cta,
+.sf-hero-ghost,
+.sf-shop-banner-cta {
+    text-decoration: none;
+}
+
+.sf-hero-ghost {
+    border: 1px solid var(--line-strong);
+    background: var(--surface);
+    color: var(--ink);
+}
+
+.sf-hero-ghost:hover,
+.sf-hero-ghost:focus {
+    border-color: var(--brand);
+    color: var(--brand-strong);
+}
+
+.sf-hero-art {
+    position: absolute;
+    inset-inline-end: -10px;
+    inset-block-end: -10px;
+    width: 300px;
+    height: 300px;
+    color: var(--brand);
+    pointer-events: none;
+}
+
+.sf-hero-art .sf-hero-sun {
+    color: var(--accent);
+}
+
+[dir='rtl'] .sf-hero-art {
+    transform: scaleX(-1);
+}
+
+.sf-trust {
+    padding-block: 16px 8px;
+}
+
+.sf-trust-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 16px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.sf-trust-tile {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    background: var(--surface);
+}
+
+.sf-trust-icon {
+    display: grid;
+    flex: none;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    border-radius: var(--radius-md);
+    background: var(--brand-soft);
+    color: var(--brand-strong);
+}
+
+.sf-trust-body {
+    display: block;
+    min-width: 0;
+}
+
+.sf-trust-title,
+.sf-trust-text {
+    display: block;
+}
+
+.sf-trust-title {
+    font-size: 0.875rem;
+    color: var(--ink);
+}
+
+.sf-trust-text {
+    font-size: 0.8125rem;
+    color: var(--muted);
+}
+
+.sf-shop-banner-wrap {
+    padding-block: 16px;
+}
+
+.sf-shop-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    padding: 28px 36px;
+    border-radius: var(--radius-xl);
+    background: var(--sf-banner-bg);
+    color: var(--on-brand);
+}
+
+.sf-shop-banner-title {
+    margin: 0 0 4px;
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: var(--on-brand);
+}
+
+.sf-shop-banner-text {
+    max-width: 60ch;
+    margin: 0;
+    color: var(--on-brand);
+    opacity: 0.9;
+}
+
+.sf-shop-banner-cta {
+    flex: none;
+    border: 0;
+    background: var(--accent);
+    color: var(--on-accent);
+    font-weight: 700;
+}
+
+.sf-shop-banner-cta:hover,
+.sf-shop-banner-cta:focus {
+    background: var(--accent-soft);
+    color: var(--on-accent);
+}
+
+@media (max-width: 991.98px) {
+    .sf-trust-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 575.98px) {
+    .sf-hero-card {
+        min-height: 0;
+        padding: 28px 22px;
+    }
+
+    .sf-hero-title {
+        font-size: 1.75rem;
+    }
+
+    .sf-hero-art {
+        width: 180px;
+        height: 180px;
+        opacity: 0.5;
+    }
+
+    .sf-trust-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .sf-shop-banner {
+        flex-direction: column;
+        align-items: flex-start;
+        padding: 24px 22px;
+    }
 }
 
 /* ---- Section headings, home and listing pages ---------------------------- */

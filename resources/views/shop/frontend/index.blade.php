@@ -5,6 +5,14 @@
 @endsection
 
 @section('content')
+    {{-- Direction A hero: only when the admin has not configured a home slider (it would clash with it). --}}
+    @php
+        $has_home_slider = count(array_filter((array) json_decode((string) get_setting('home_slider_images'), true))) > 0;
+    @endphp
+    @unless ($has_home_slider)
+        @include('shop.frontend.partials.home.hero')
+    @endunless
+
     <!-- Sliders & Today's deal -->
     <div class="home-banner-area mb-3" style="">
         <div class="container">
@@ -39,6 +47,8 @@
             </div>
         </div>
     </div>
+
+    @include('shop.frontend.partials.home.trust')
 
     <!-- Flash Deal -->
     @php
@@ -624,6 +634,11 @@
             @endforeach
         @endif
     @endauth
+
+    {{-- "Run a shop?" banner: not for a signed-in seller, who already has a shop. --}}
+    @unless (auth()->check() && auth()->user()->user_type === 'seller')
+        @include('shop.frontend.partials.home.shop_banner')
+    @endunless
 
     <!-- Top Brands -->
     {{--
