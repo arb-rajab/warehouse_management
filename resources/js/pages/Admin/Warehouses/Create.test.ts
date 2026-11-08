@@ -59,8 +59,9 @@ describe('Warehouses Create', () => {
         );
     });
 
-    it('shows the required-fields legend because the name is required', () => {
+    it('shows the required-fields legend because the name is required', async () => {
         const wrapper = mountPage();
+        await wrapper.vm.$nextTick();
 
         expect(wrapper.text()).toContain(t('common.requiredLegend'));
     });
