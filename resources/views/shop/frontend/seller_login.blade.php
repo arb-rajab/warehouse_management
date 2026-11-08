@@ -12,7 +12,7 @@
                             @if(get_setting('system_logo_black') != null)
                                 <img src="{{ uploaded_asset(get_setting('system_logo_black')) }}" class="mw-100 mb-4" height="40">
                             @else
-                                <img src="{{ static_asset('assets/img/logo.png') }}" class="mw-100 mb-4" height="40">
+                                <img src="{{ static_asset('assets/img/33logoqr.png') }}" class="mw-100 mb-4" height="40">
                             @endif
                             <h1 class="fs-20 fs-md-24 fw-700 text-primary">{{ __('storefront.auth.welcome_back')}}</h1>
                             <h5 class="fs-14 fw-400 text-dark">{{ __('storefront.auth.login_to_your_seller_account')}}</h5>

@@ -193,3 +193,15 @@ test('the retained storefront currency switcher still updates the session', func
 
     $this->post('/temp/currency', ['currency_code' => 'missing'])->assertNotFound();
 });
+
+test('the storefront no longer renders the raizer logo', function (string $uri) {
+    $response = $this->get($uri);
+
+    $response->assertOk();
+    $response->assertDontSee('assets/img/logo.png', false);
+    $response->assertSee('assets/img/33logoqr.png', false);
+    expect(public_path('assets/img/logo.png'))->not->toBeFile();
+})->with([
+    '/temp',
+    '/temp/users/login',
+]);
