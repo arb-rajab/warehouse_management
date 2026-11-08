@@ -34,12 +34,55 @@ export interface UserSummary {
     name: string;
 }
 
+/**
+ * The id/name pair a row, cell or pallet payload carries for the warehouse it
+ * belongs to, and the option shape of the warehouse filter's search
+ * (`WarehouseSummaryResource`). Narrower than `Warehouse`, which the
+ * warehouses pages list.
+ */
+export interface WarehouseSummary {
+    id: number;
+    name: string;
+}
+
+/** A warehouse as the warehouses admin pages show it (`WarehouseResource`). */
+export interface Warehouse extends WarehouseSummary {
+    code: string | null;
+    address: string | null;
+    /** Present on the listing and the edit page; the delete button is offered only while it is 0. */
+    rows_count?: number;
+}
+
+/**
+ * Hydration data for a warehouse filter's already-selected ids (see
+ * `FilterWarehouseSelect.vue`'s `selected` prop) — not every warehouse,
+ * which the search endpoint fetches on demand.
+ */
+export interface WarehouseFilterOptions {
+    warehouses: WarehouseSummary[];
+}
+
+/**
+ * The `filters` prop of a page whose only filter is the warehouse one (the
+ * warehouse map). `null` means every warehouse.
+ */
+export interface WarehouseFilters {
+    warehouse_ids: number[] | null;
+}
+
 export interface Row {
     id: number;
     letter: string;
     cells_count: number;
     flats_count: number;
     has_pallets: boolean;
+    warehouse: WarehouseSummary;
+}
+
+/** The rows listing's `filters` prop: the warehouse filter and the page size. */
+export interface RowFilters {
+    warehouse_ids?: number[];
+    per_page?: number;
 }
 
 /**
@@ -113,9 +156,15 @@ export interface CellWithLocation extends Cell {
     row_letter: string;
 }
 
+/**
+ * One row of a row dropdown. `warehouse` is present only for a letter that
+ * more than one warehouse uses (`Row::filterOptions()`), so the label can tell
+ * the two apart — see `rowOptionLabel()` in `lib/location.ts`.
+ */
 export interface RowFilterOption {
     id: number;
     letter: string;
+    warehouse?: WarehouseSummary;
 }
 
 export interface RowAndColumnFilterOptions {
@@ -128,6 +177,8 @@ export interface CellMapRow {
     letter: string;
     cells_count: number;
     flats_count: number;
+    /** The row's warehouse, which a transfer to this row names (a letter alone is unique per warehouse only). */
+    warehouse_id?: number;
 }
 
 /**
@@ -169,6 +220,12 @@ export interface CellSlotLocation {
     row_letter: string;
     cell_number: number;
     flat_number: number;
+    /**
+     * The warehouse of the cell's row, present in the admin listings. A row
+     * letter names one row per warehouse, so a link to the row carries
+     * `warehouse.id` (`rowRouteOptions()` in `lib/location.ts`).
+     */
+    warehouse?: WarehouseSummary;
 }
 
 export type CellLogAction =
@@ -231,11 +288,15 @@ export interface CellStatusLogFilters {
     sort_by?: CellStatusLogSortBy;
     sort_direction?: 'asc' | 'desc';
     flagged?: boolean;
+    warehouse_ids?: number[];
     per_page?: number;
 }
 
 export interface CellStatusLogFilterOptions
-    extends RowAndColumnFilterOptions, ProductFilterOptions {
+    extends
+        RowAndColumnFilterOptions,
+        ProductFilterOptions,
+        Partial<WarehouseFilterOptions> {
     users: UserSummary[];
     actions: CellLogAction[];
 }
@@ -366,6 +427,7 @@ export interface MatchingPalletFilters {
     expires_within_days?: number;
     stale_after_days?: number;
     product_id?: number[];
+    warehouse_ids?: number[];
     per_page?: number;
 }
 
@@ -415,10 +477,11 @@ export interface CellVerificationRoundFilters {
     date_to?: string;
     created_within_days?: number;
     sort_direction?: 'asc' | 'desc';
+    warehouse_ids?: number[];
     per_page?: number;
 }
 
-export interface CellVerificationRoundFilterOptions {
+export interface CellVerificationRoundFilterOptions extends WarehouseFilterOptions {
     users: UserSummary[];
 }
 
