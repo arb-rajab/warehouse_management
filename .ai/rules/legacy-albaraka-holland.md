@@ -1387,7 +1387,11 @@ entries of its own: `resources/js/legacy-image-upload.ts` and, since the
 Direction A identity, `resources/css/storefront.css`, the storefront's tokens,
 self-hosted IBM Plex fonts and theme overrides, loaded after `aiz-core.css` by
 the storefront layout only (views.md); `base_color` no longer colours the
-storefront. `public/assets/**` and `public/download/` are copied in
+storefront. The seller layout has a third entry, `resources/css/seller.css`
+(loaded after `aiz-seller.css`), the standalone login layout reuses
+`storefront.css`, and both share `resources/css/brand/{tokens,fonts}.css`;
+emails and the customer PDFs are styled inline (views.md, "Storefront identity
+beyond the shell"). `public/assets/**` and `public/download/` are copied in
 verbatim, and `static_asset()`/`my_asset()` no longer prefix `public/`.
 `/temp` routes return plain Blade (the views never call `@vite` or extend
 `app.blade.php`), so jQuery/Bootstrap never share a page with the Vue 3 app;

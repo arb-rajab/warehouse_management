@@ -324,6 +324,12 @@ Seven protected files remain under `resources/views/shop/backend/`:
 The old backend app shell and its two navigation includes are retired. Keep
 storefront/seller/auth layouts and assets, the Inertia root and Blade CSP.
 
+The two retained customer-facing files carry the Direction A identity:
+`layouts/layout.blade.php` loads `storefront.css`, and `invoices/invoice.blade.php`
+takes the brand colours, logo and `messages.brand_name` (mPDF keeps DejaVu Sans
+for Arabic). The seller panel layout loads `resources/css/seller.css`. The
+`downloads/*` exports are back-office tools and keep their own styling (views.md).
+
 ## 6. Registered migrated controllers and consumers
 
 `routes/shop-admin.php`, controller render calls and `storeAdminMenu.ts` define
