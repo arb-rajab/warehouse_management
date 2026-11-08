@@ -113,13 +113,13 @@ class Cell extends Model
     public function toLocationWithWarehouseArray(): array
     {
         $row = $this->row;
+        $location = $this->toLocationArray();
 
-        return [
-            ...$this->toLocationArray(),
-            ...($row->relationLoaded('warehouse')
-                ? ['warehouse' => ['id' => $row->warehouse->id, 'name' => $row->warehouse->name]]
-                : []),
-        ];
+        if ($row->relationLoaded('warehouse')) {
+            $location['warehouse'] = ['id' => $row->warehouse->id, 'name' => $row->warehouse->name];
+        }
+
+        return $location;
     }
 
     /**

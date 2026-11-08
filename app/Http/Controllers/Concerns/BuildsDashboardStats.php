@@ -250,11 +250,7 @@ trait BuildsDashboardStats
             ->forWarehouses($warehouseIds);
 
         $count = Product::query()
-            ->whereHas('setting', fn ($q) => $q->whereNotNull('minimum_pallets'))
-            ->whereRaw(
-                '(select minimum_pallets from wms_product_settings where wms_product_settings.product_id = products.id) > ('.$palletCount->toSql().')',
-                $palletCount->getBindings(),
-            )
+            ->whereHas('setting', fn ($q) => $q->whereNotNull('minimum_pallets')->where('minimum_pallets', '>', $palletCount))
             ->when($productIds !== null, fn ($q) => $q->whereIn('id', $productIds))
             ->when($productPublished !== null, fn ($q) => $q->where('published', $productPublished))
             ->count();

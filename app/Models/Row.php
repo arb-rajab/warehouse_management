@@ -332,19 +332,32 @@ class Row extends Model
     {
         $rows = self::query()->select(['id', 'warehouse_id', 'letter'])->orderBy('letter')->orderBy('warehouse_id')->get();
         $sharedLetters = $rows->countBy('letter')->filter(fn (int $count): bool => $count > 1);
-        $warehouseNames = $sharedLetters->isEmpty()
-            ? new BaseCollection
-            : Warehouse::query()->whereIn('id', $rows->whereIn('letter', $sharedLetters->keys()->all())->pluck('warehouse_id'))->pluck('name', 'id');
+        $warehouseNames = self::warehouseNamesFor($rows->whereIn('letter', $sharedLetters->keys()->all())->pluck('warehouse_id'));
 
         return [
-            'rows' => $rows->toBase()->map(fn (Row $row): array => [
-                'id' => $row->id,
-                'letter' => $row->letter,
-                ...($sharedLetters->has($row->letter)
-                    ? ['warehouse' => ['id' => $row->warehouse_id, 'name' => (string) $warehouseNames->get($row->warehouse_id)]]
-                    : []),
-            ]),
+            'rows' => $rows->toBase()->map(function (Row $row) use ($sharedLetters, $warehouseNames): array {
+                $option = ['id' => $row->id, 'letter' => $row->letter];
+
+                if ($sharedLetters->has($row->letter)) {
+                    $option['warehouse'] = ['id' => $row->warehouse_id, 'name' => $warehouseNames->get($row->warehouse_id, '')];
+                }
+
+                return $option;
+            }),
             'maxColumnNumber' => (int) (self::query()->max('cells_count') ?? 0),
         ];
+    }
+
+    /**
+     * The names of the given warehouses by id, without a query when there are none.
+     *
+     * @param  BaseCollection<int, int>  $warehouseIds
+     * @return BaseCollection<int, string>
+     */
+    private static function warehouseNamesFor(BaseCollection $warehouseIds): BaseCollection
+    {
+        return $warehouseIds->isEmpty()
+            ? new BaseCollection
+            : Warehouse::query()->whereIn('id', $warehouseIds)->pluck('name', 'id');
     }
 }

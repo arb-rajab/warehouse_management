@@ -30,7 +30,7 @@ test('naming the mobile API routes leaves their URIs unchanged', function (strin
     'products' => ['api.v1.products.index', [], '/api/v1/products'],
     'product' => ['api.v1.products.show', ['product' => 7], '/api/v1/products/7'],
     'product pallets' => ['api.v1.products.pallets', ['product' => 7], '/api/v1/products/7/pallets'],
-    'product barcodes store' => ['api.v1.products.barcodes.store', ['product' => 7], '/api/v1/products/7/barcodes'],
+    'product barcodes store' => ['api.v1.product-barcodes.store', ['product' => 7], '/api/v1/products/7/barcodes'],
     'pallet store' => ['api.v1.pallets.store', [], '/api/v1/pallets'],
     'pallet' => ['api.v1.pallets.show', ['pallet' => 4], '/api/v1/pallets/4'],
     'pallet open' => ['api.v1.pallets.open', ['pallet' => 4], '/api/v1/pallets/4/open'],

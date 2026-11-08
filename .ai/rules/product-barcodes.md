@@ -72,7 +72,7 @@ rely on a database error.
 
 ## Mobile: `POST /api/v1/products/{product}/barcodes`
 
-`Api\V1\ProductController::storeBarcode` (route `api.v1.products.barcodes.store`,
+`Api\V1\ProductController::storeBarcode` (route `api.v1.product-barcodes.store`,
 `auth:sanctum`, no role gate like the other v1 routes, no cache headers) mirrors
 the WMS add-barcode flow through `ProductBarcodeAttacher` and the Api/V1
 `StoreProductBarcodeRequest` (same trim and rules as the Admin one, via

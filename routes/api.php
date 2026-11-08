@@ -34,7 +34,7 @@ Route::prefix('v1')->group(function () {
         Route::get('products', [ProductController::class, 'index'])->middleware('cache.headers:private;etag')->name('api.v1.products.index');
         Route::get('products/{product}', [ProductController::class, 'show'])->middleware('cache.headers:private;etag')->name('api.v1.products.show');
         Route::get('products/{product}/pallets', [ProductController::class, 'pallets'])->whereNumber('product')->middleware('cache.headers:private;etag')->name('api.v1.products.pallets');
-        Route::post('products/{product}/barcodes', [ProductController::class, 'storeBarcode'])->whereNumber('product')->name('api.v1.products.barcodes.store');
+        Route::post('products/{product}/barcodes', [ProductController::class, 'storeBarcode'])->whereNumber('product')->name('api.v1.product-barcodes.store');
 
         Route::post('pallets', [PalletController::class, 'store'])->name('api.v1.pallets.store');
         Route::get('pallets/{pallet}', [PalletController::class, 'show'])->name('api.v1.pallets.show');

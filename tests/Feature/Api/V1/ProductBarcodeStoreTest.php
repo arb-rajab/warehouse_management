@@ -127,5 +127,5 @@ test('the added barcode then resolves the product through the lookup', function 
 
     $this->getJson('/api/v1/products/SCAN-ME-42')
         ->assertOk()
-        ->assertJsonPath('data.id', $product->id);
+        ->assertJsonPath('id', $product->id);
 });

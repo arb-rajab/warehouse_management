@@ -38,13 +38,13 @@ class ProductBarcodeAttacher
      */
     public function otherHolders(Product $product, string $barcode): array
     {
-        return ProductBarcode::query()
+        return array_values(ProductBarcode::query()
             ->where('barcode', $barcode)
             ->where('product_id', '!=', $product->id)
             ->distinct()
             ->orderBy('product_id')
             ->pluck('product_id')
             ->map(fn (mixed $id): int => (int) $id)
-            ->all();
+            ->all());
     }
 }
