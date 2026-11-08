@@ -3406,7 +3406,9 @@
             "slug": "slug",
             "old_photo": "Otajer images",
             "purchase_price": "purchase price",
-            "file": "product file"
+            "file": "product file",
+            "code": "code",
+            "address": "address"
         }
     },
     "warehouses": {

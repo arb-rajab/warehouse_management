@@ -6,6 +6,7 @@ import {
 import ResourceFormPage from '@/components/ResourceFormPage.vue';
 import WarehouseFormFields from '@/components/WarehouseFormFields.vue';
 import { t } from '@/lib/i18n';
+import { warehouseValidation } from '@/lib/warehouseForm';
 import type { Warehouse } from '@/types/admin';
 
 defineProps<{
@@ -20,6 +21,7 @@ defineProps<{
         :submit-label="t('warehouses.edit.submit')"
         :submitting-label="t('warehouses.edit.submitting')"
         :cancel-href="warehousesIndex()"
+        :validation="warehouseValidation"
         #default="{ errors }"
     >
         <WarehouseFormFields

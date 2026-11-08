@@ -1,3 +1,4 @@
+import { Form } from '@inertiajs/vue3';
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
@@ -90,6 +91,21 @@ describe('Warehouses Edit', () => {
         expect(
             wrapper.findComponent(WarehouseFormFields).props('errors'),
         ).toEqual({ code: 'The code has already been taken.' });
+    });
+
+    it('checks the form in the browser first, holding back a blanked name', async () => {
+        const wrapper = mountPage();
+        const onBefore = wrapper
+            .getComponent(Form)
+            .props('onBefore') as () => boolean;
+
+        expect(onBefore()).toBe(true);
+
+        await wrapper.get('#name').setValue('');
+
+        expect(onBefore()).toBe(false);
+        await wrapper.vm.$nextTick();
+        expect(wrapper.text()).toContain('The name field is required.');
     });
 
     it('shows the submitting label and disables the button while processing', () => {
