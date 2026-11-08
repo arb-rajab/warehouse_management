@@ -60,7 +60,12 @@ test('the warehouse form\'s client rules mirror the server rules', function (str
             expect($rule)->toBeInstanceOf(Unique::class, "{$field}: a server rule neither copied nor listed as server-only");
         }
     }
-})->with([StoreWarehouseRequest::class, UpdateWarehouseRequest::class]);
+})->with([
+    // Wrapped, not a bare [class, class] pair: Pest runs a two-element array as a callable when the
+    // class answers static calls, and a FormRequest does (Macroable::__callStatic).
+    'store request' => [StoreWarehouseRequest::class],
+    'update request' => [UpdateWarehouseRequest::class],
+]);
 
 test('only the name and the code are unique on the server, which the browser leaves to it', function () {
     $server = warehouseRequestRules(StoreWarehouseRequest::class);
