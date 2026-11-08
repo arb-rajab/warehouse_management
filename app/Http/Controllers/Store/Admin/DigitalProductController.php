@@ -182,7 +182,8 @@ class DigitalProductController extends Controller implements HasMiddleware
     /**
      * Deleting a digital product still removes its translations and stock
      * rows and then hard-deletes the `products` row, as the legacy handler
-     * did; the three statements now commit or fail together.
+     * did; its barcodes go with it, as on every product delete path. The
+     * statements commit or fail together.
      */
     public function destroy(Request $request, Product $product): RedirectResponse
     {
@@ -190,6 +191,7 @@ class DigitalProductController extends Controller implements HasMiddleware
             $product = $this->lockedDigitalProduct($product);
             $product->product_translations()->delete();
             $product->stocks()->delete();
+            $product->barcodes()->delete();
             $product->delete();
         });
         $this->flashSuccess('digital_product_has_been_deleted_successfully');

@@ -158,21 +158,36 @@ test('digital product deletion changes nothing when a warehouse pallet still ref
     expect(digitalProductAdminSnapshot())->toEqual($before);
 });
 
-test('digital product deletion changes nothing when a store barcode still references the product', function () {
+test('digital product deletion deletes the product\'s barcodes with it, and no other product\'s', function () {
+    // Barcodes used to block this delete (the table restricts it); every
+    // delete path now removes them first, in the same transaction.
     actingAsStoreUser(createStoreStaff('delete_digital_product'));
     DB::table('product_barcodes')->insert(['product_id' => $this->product->id, 'barcode' => '8710000000001']);
+    $noise = createStoreProduct(['digital' => 1, 'thumbnail_img' => null]);
+    $noiseBarcode = ProductBarcode::factory()->create(['product_id' => $noise->id]);
+    $this->delete(route('digitalproducts.destroy', $this->product))->assertRedirect(route('digitalproducts.index'))
+        ->assertInertiaFlash('success', 'Digital product has been deleted successfully');
+    $this->assertDatabaseMissing('products', ['id' => $this->product->id]);
+    $this->assertDatabaseMissing('product_barcodes', ['product_id' => $this->product->id]);
+    $this->assertDatabaseHas('product_barcodes', ['id' => $noiseBarcode->id, 'product_id' => $noise->id]);
+});
+
+test('digital product deletion with barcodes changes nothing when a warehouse pallet still references the product', function () {
+    actingAsStoreUser(createStoreStaff('delete_digital_product'));
+    DB::table('product_barcodes')->insert(['product_id' => $this->product->id, 'barcode' => '8710000000001']);
+    Pallet::factory()->create(['product_id' => $this->product->id]);
     $before = [...digitalProductAdminSnapshot(), 'product_barcodes' => DB::table('product_barcodes')->get()->toArray()];
     $this->withoutExceptionHandling();
     expect(fn () => $this->delete(route('digitalproducts.destroy', $this->product)))->toThrow(QueryException::class);
     expect([...digitalProductAdminSnapshot(), 'product_barcodes' => DB::table('product_barcodes')->get()->toArray()])->toEqual($before);
 });
 
-test('digital product deletion cascades WMS barcodes and settings and keeps cell logs without the product', function () {
+test('digital product deletion removes WMS-added barcodes, cascades settings and keeps cell logs without the product', function () {
     actingAsStoreUser(createStoreStaff('delete_digital_product'));
     $barcode = ProductBarcode::factory()->create(['product_id' => $this->product->id]);
     $log = CellStatusLog::factory()->create(['product_id' => $this->product->id]);
     $this->delete(route('digitalproducts.destroy', $this->product))->assertRedirect(route('digitalproducts.index'));
-    $this->assertDatabaseMissing('wms_product_barcodes', ['id' => $barcode->id]);
+    $this->assertDatabaseMissing('product_barcodes', ['id' => $barcode->id]);
     $this->assertDatabaseMissing('wms_product_settings', ['product_id' => $this->product->id]);
     expect(DB::table('cell_status_logs')->where('id', $log->id)->value('product_id'))->toBeNull();
 });

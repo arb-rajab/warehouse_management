@@ -5,6 +5,7 @@ use App\Http\Controllers\Store\Admin\SellerPaymentController;
 use App\Models\Order;
 use App\Models\OrderDetail;
 use App\Models\Product;
+use App\Models\ProductBarcode;
 use App\Models\Seller;
 use App\Models\Shop;
 use App\Models\StoreUser;
@@ -198,6 +199,9 @@ test('seller delete and bulk delete preserve the exact legacy deletion boundary'
     $sellerRow = Seller::forceCreate(['user_id' => $shop->user_id]);
     $product = createStoreProduct(['user_id' => $shop->user_id]);
     $noiseProduct = createStoreProduct(['user_id' => $noise->user_id]);
+    // The deleted products' barcodes go with them; another seller's stay.
+    ProductBarcode::factory()->create(['product_id' => $product->id]);
+    $keptBarcode = ProductBarcode::factory()->create(['product_id' => $noiseProduct->id]);
     $bought = orderStoreProduct($shop->user, $noiseProduct);
     $sold = orderStoreProduct($noise->user, $product);
     $payment = DB::table('payments')->insertGetId(['seller_id' => $shop->user_id, 'amount' => 7]);
@@ -211,7 +215,9 @@ test('seller delete and bulk delete preserve the exact legacy deletion boundary'
         ->and(DB::table('payments')->where('id', $payment)->value('amount'))->toEqual(7)
         ->and(DB::table('seller_withdraw_requests')->where('id', $withdraw)->exists())->toBeTrue()
         ->and(OrderDetail::find($sold->id))->not->toBeNull()->and(Order::find($sold->order_id))->not->toBeNull()
-        ->and(Product::find($noiseProduct->id))->not->toBeNull()->and((float) $noise->fresh()->admin_to_pay)->toBe(125.0);
+        ->and(Product::find($noiseProduct->id))->not->toBeNull()->and((float) $noise->fresh()->admin_to_pay)->toBe(125.0)
+        ->and(DB::table('product_barcodes')->where('product_id', $product->id)->exists())->toBeFalse()
+        ->and(DB::table('product_barcodes')->where('id', $keptBarcode->id)->value('product_id'))->toEqual($noiseProduct->id);
     if ($extra) {
         expect(Shop::find($extra->id))->toBeNull();
     }

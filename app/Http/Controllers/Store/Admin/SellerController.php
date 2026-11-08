@@ -16,6 +16,7 @@ use App\Http\Resources\Store\UploadResource;
 use App\Models\Order;
 use App\Models\OrderDetail;
 use App\Models\Product;
+use App\Models\ProductBarcode;
 use App\Models\Seller;
 use App\Models\Shop;
 use App\Models\StoreUser;
@@ -195,6 +196,8 @@ class SellerController extends Controller implements HasMiddleware
 
     private function deleteSeller(Shop $seller): void
     {
+        // The barcodes go with the products, as on every product delete path.
+        ProductBarcode::query()->whereIn('product_id', Product::query()->select('id')->where('user_id', $seller->user_id))->delete();
         Product::query()->where('user_id', $seller->user_id)->delete();
         OrderDetail::query()->whereIn('order_id', Order::query()->select('id')->where('user_id', $seller->user_id))->delete();
         Order::query()->where('user_id', $seller->user_id)->delete();

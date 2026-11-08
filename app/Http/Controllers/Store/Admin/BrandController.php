@@ -16,6 +16,7 @@ use App\Http\Resources\Store\BrandResource;
 use App\Models\Brand;
 use App\Models\BrandTranslation;
 use App\Models\Product;
+use App\Models\ProductBarcode;
 use App\Models\Upload;
 use App\Support\NewestFirst;
 use Illuminate\Http\RedirectResponse;
@@ -118,12 +119,14 @@ class BrandController extends Controller implements HasMiddleware
 
     /**
      * Deleting a brand still deletes every product row carrying it, as the
-     * legacy handler did; the three statements now commit or fail together.
+     * legacy handler did, with those products' barcodes, as on every product
+     * delete path; the statements commit or fail together.
      */
     public function destroy(Request $request, Brand $brand): RedirectResponse
     {
         DB::transaction(function () use ($brand): void {
             $brand = Brand::query()->without('brand_translations')->lockForUpdate()->findOrFail($brand->id);
+            ProductBarcode::query()->whereIn('product_id', Product::query()->select('id')->where('brand_id', $brand->id))->delete();
             Product::query()->where('brand_id', $brand->id)->delete();
             $brand->brand_translations()->delete();
             $brand->delete();
