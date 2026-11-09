@@ -49,6 +49,24 @@ class ReceiptLine extends Model
     use HasFactory;
 
     /**
+     * Eager loads ReceiptLineResource reads: the product summary (as on
+     * PalletResource) and the actual pallets, oldest entry first.
+     *
+     * @return array<int|string, mixed>
+     */
+    public static function withDetails(): array
+    {
+        return [
+            'product:id,name,ar_name,thumbnail_img,warehouse_image_path,published',
+            'product.thumbnailUpload:id,file_name,external_link',
+            'product.setting:product_id,boxes_count',
+            'actualPallets' => fn (HasMany $query) => $query
+                ->select(['id', 'receipt_line_id', 'boxes', 'expiration_date', 'pallet_id'])
+                ->orderBy('id'),
+        ];
+    }
+
+    /**
      * A line created without a status is pending, as in the column default.
      *
      * @var array<string, mixed>

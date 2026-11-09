@@ -66,6 +66,9 @@ that only knows the letter:
 - **Coordinates.** `ResolvesSlotFromCoordinates` takes an optional
   `{prefix}warehouse_id` (`warehouse_id` on pallet store, `to_warehouse_id` on
   the mobile transfer) with the same refusal on `{prefix}warehouse_id`.
+  Placing an unplaced pallet passes its own warehouse as the default that
+  settles a shared letter (`resolveSlot(..., defaultWarehouseId:)`, see
+  [receiving](receiving.md)).
 - **QR labels.** The cell deep link carries `&warehouse={id}`; labels printed
   before it have row/cell/flat only.
 - Lookups by id (`row_id[]` filters, rounds' row ids) need nothing.

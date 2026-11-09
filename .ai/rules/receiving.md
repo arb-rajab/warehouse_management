@@ -17,6 +17,14 @@ paths:
   - app/Http/Requests/Api/V1/FilterUnplacedPalletsRequest.php
   - app/Http/Resources/PalletResource.php
   - app/Http/Resources/ProductPalletResource.php
+  - app/Services/ReceiptService.php
+  - app/Exceptions/ReceiptFinalizedException.php
+  - app/Exceptions/InvalidReceiptStateException.php
+  - 'app/Http/Controllers/Api/V1/Receipt*Controller.php'
+  - 'app/Http/Requests/Api/V1/*Receipt*Request.php'
+  - app/Http/Requests/Concerns/ValidatesReceivedPallets.php
+  - app/Http/Requests/Concerns/ResolvesSlotFromCoordinates.php
+  - 'app/Http/Resources/Receipt*Resource.php'
 ---
 
 # Truck receiving: receipts, unplaced pallets and their warehouse
@@ -114,3 +122,65 @@ not recorded. Every WMS user sees every warehouse (see [warehouses](warehouses.m
   `pallets/{pallet}`; `FilterUnplacedPalletsRequest`: `warehouse_ids[]` through
   `Pallet::forWarehouses()`, `product_id[]`) lists `PalletResource`s, oldest
   received first (`created_at`, `id`), 20 per page.
+
+## Receiving API (mobile, `role:admin`)
+
+Under `api/v1/receipts`, in the `auth:sanctum` group behind the same
+`role:admin` middleware as the admin web routes (a non-admin gets 403), with
+`scopeBindings()` so a `{file}` or `{line}` of another receipt is a 404. Thin
+controllers (`ReceiptController`, `ReceiptFileController`,
+`ReceiptLineController`) over `ReceiptService`; one FormRequest per endpoint
+that takes input.
+
+| Endpoint | Request | Answers | Errors |
+| --- | --- | --- | --- |
+| `GET receipts` (`api.v1.receipts.index`) | `FilterReceiptsRequest`: `warehouse_ids[]`, `status` | `ReceiptResource`s, newest first, 20 per page, with `lines_count`/`files_count` | |
+| `POST receipts` (`.store`) | `StoreReceiptRequest`: `warehouse_id`, `bill_name`, `bill_info?`, `lines[]` (>= 1: `product_id`, `expected_pallets_count` >= 1, `expected_boxes` >= 1 per pallet, `expected_expiration_date?`) | 201, the detail; lines `pending` | |
+| `GET receipts/{receipt}` (`.show`) | | the detail: `files` (download `url`), `lines` (product, `expected_*`, `status`, `note`, `pallets[]` with `boxes`, `expiration_date`, `pallet_id` once finalized) | |
+| `POST receipts/{receipt}/files` (`.files.store`, multipart) | `StoreReceiptFileRequest`: `file` (`ReceiptFile::MIMES`, `MAX_KILOBYTES`) | 201, `ReceiptFileResource` | 409 `receipt_finalized`, 422 `receipt_file_limit_reached` |
+| `GET receipts/{receipt}/files/{file}` (`.files.show`) | | the file inline (`private, no-store`) | 404 when the bytes are gone |
+| `DELETE receipts/{receipt}/files/{file}` (`.files.destroy`) | | 204 | 409 `receipt_finalized` |
+| `PUT receipts/{receipt}/lines/{line}/check` (`.lines.check`) | `CheckReceiptLineRequest`: `pallets[]` (`boxes` >= 1, `expiration_date?`; `[]` = nothing arrived, at least one on an extra line), `note?` | the `ReceiptLineResource` | 409 `receipt_finalized` |
+| `POST receipts/{receipt}/lines` (`.lines.store`) | `StoreReceiptLineRequest`: `product_id`, `pallets[]` (>= 1), `note?` | 201, the extra line | 409 `receipt_finalized` |
+| `DELETE receipts/{receipt}/lines/{line}` (`.lines.destroy`) | | 204 | 409 `receipt_finalized`, 422 `receipt_line_not_extra` |
+| `POST receipts/{receipt}/finalize` (`.finalize`) | | the detail | 409 `receipt_finalized`, 422 `receipt_has_no_files` / `receipt_has_pending_lines` / `receipt_has_no_pallets` |
+
+Products are validated by `ValidatesPalletContents::palletProductRules()`, the
+rule pallet store uses; actual pallets by `ValidatesReceivedPallets`, which
+normalizes expiry dates to `Y-m-d`. Expiry dates are not required to be in the
+future: the receipt records what arrived.
+
+- **Locking and immutability.** Every mutating call runs in one transaction
+  that locks the receipt row first (`ReceiptService::lockDraft()`) and refuses
+  a finalized receipt with 409 `receipt_finalized` (`ReceiptFinalizedException`).
+  A finalized receipt never changes again; its pallets are corrected through
+  the normal pallet actions. Precondition failures are
+  `InvalidReceiptStateException` (422, `error_code` as above); every code has
+  a `lang/{en,ar}/messages.php` key.
+- **Matching rule.** `ReceiptService::checkStatus()` is pure (unit test it
+  directly): a bill line is `matched` when the number of actual pallets equals
+  `expected_pallets_count`, every pallet's `boxes` equals `expected_boxes` and
+  every `expiration_date` equals `expected_expiration_date`; a null expected
+  value is not compared (a bill without an expiry matches any, including none).
+  Anything else, nothing arriving included, is `mismatched`. A check replaces
+  the line's earlier actual pallets and sets `note` to what was sent (omitted
+  clears it). An extra line keeps `extra`.
+- **Extra lines.** `is_extra`, status `extra`, no `expected_*`, at least one
+  pallet. Only an extra line can be deleted; a bill line is checked with `[]`
+  when nothing of it arrived.
+- **Finalize preconditions** (under the lock, in this order): a draft, at
+  least one file, no `pending` line, at least one actual pallet in total.
+  Then one `Pallet` per actual pallet (the line's product, `remaining_boxes` =
+  `boxes`, its expiry, `cell_id` null, `receipt_line_id` the line), its id
+  stored on the `ReceiptLinePallet`, and the receipt stamped `finalized`,
+  `finalized_by`, `finalized_at`. Mismatches finalize as received.
+- **Bill files are private.** Stored on `ReceiptFile::DISK` (`local`,
+  `storage/app/private`, served by Laravel only with a valid signature), under
+  `receipt-bills/` with a random name; never on `public`. Photos are
+  re-encoded to JPEG through `ImageOptimizer` (longest side 2400 px), a PDF is
+  kept as sent; `original_name` is the client's base name with the stored
+  extension. `ReceiptFile::MAX_PER_RECEIPT` (10) is checked under the lock; the
+  bytes are written before the lock and removed when the record is refused,
+  and a deleted record's bytes are removed after its transaction commits.
+  Payloads never carry `path`: `ReceiptFileResource.url` is the authenticated
+  `files.show` route.

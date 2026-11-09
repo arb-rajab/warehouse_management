@@ -7,6 +7,7 @@ use App\Models\Pallet;
 use App\Models\Row;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Contracts\Validation\Validator;
+use Illuminate\Database\Eloquent\Collection;
 use RuntimeException;
 
 /**
@@ -41,8 +42,13 @@ trait ResolvesSlotFromCoordinates
     /**
      * Resolve the slot addressed by this request's coordinate fields, recording a
      * validation error against the cell-number field when no such slot exists.
+     *
+     * `$defaultWarehouseId` settles a letter several warehouses use when the
+     * caller sent no `{prefix}warehouse_id` (placing an unplaced pallet passes
+     * the pallet's own warehouse); a letter just one warehouse uses resolves
+     * to that row as before, whatever the default.
      */
-    protected function resolveSlot(Validator $validator, string $prefix = ''): ?Cell
+    protected function resolveSlot(Validator $validator, string $prefix = '', ?int $defaultWarehouseId = null): ?Cell
     {
         if ($validator->errors()->hasAny([$prefix.'row_letter', $prefix.'warehouse_id'])) {
             return null;
@@ -53,6 +59,17 @@ trait ResolvesSlotFromCoordinates
             ->when($this->filled($prefix.'warehouse_id'), fn ($query) => $query->where('warehouse_id', $this->integer($prefix.'warehouse_id')))
             ->limit(2)
             ->get();
+
+        if ($rows->count() > 1 && $defaultWarehouseId !== null) {
+            $rowInDefault = Row::query()
+                ->where('letter', $this->input($prefix.'row_letter'))
+                ->where('warehouse_id', $defaultWarehouseId)
+                ->first();
+
+            if ($rowInDefault !== null) {
+                $rows = new Collection([$rowInDefault]);
+            }
+        }
 
         if ($rows->count() > 1) {
             $validator->errors()->add($prefix.'warehouse_id', __('messages.row_letter_in_several_warehouses'));

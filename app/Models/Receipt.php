@@ -40,6 +40,47 @@ class Receipt extends Model
     use HasFactory;
 
     /**
+     * The columns ReceiptResource reads off a receipt.
+     *
+     * @var list<string>
+     */
+    public const array SELECT_COLUMNS = [
+        'id', 'warehouse_id', 'bill_name', 'bill_info', 'status',
+        'created_by', 'finalized_by', 'finalized_at', 'created_at', 'updated_at',
+    ];
+
+    /**
+     * Eager loads ReceiptResource reads on every receipt, listed or shown.
+     *
+     * @var list<string>
+     */
+    public const array WITH_SUMMARY = [
+        'warehouse:id,name',
+        'createdBy:id,name',
+        'finalizedBy:id,name',
+    ];
+
+    /**
+     * Eager loads of a receipt's detail: the summary plus its files (never
+     * their storage path) and its lines with their product and actual pallets,
+     * each in the order they were added.
+     *
+     * @return array<int|string, mixed>
+     */
+    public static function withDetails(): array
+    {
+        return [
+            ...self::WITH_SUMMARY,
+            'files' => fn (HasMany $query) => $query
+                ->select(['id', 'receipt_id', 'original_name', 'mime_type', 'size', 'created_at'])
+                ->orderBy('id'),
+            'lines' => fn (HasMany $query) => $query
+                ->with(ReceiptLine::withDetails())
+                ->orderBy('id'),
+        ];
+    }
+
+    /**
      * A receipt created without a status is a draft, as in the column default.
      *
      * @var array<string, mixed>
