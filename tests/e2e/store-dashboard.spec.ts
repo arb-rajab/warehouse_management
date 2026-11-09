@@ -96,10 +96,16 @@ test('real dashboard charts render under enforced CSP in light dark and Arabic R
     }
 
     await page.emulateMedia({ colorScheme: 'dark' });
+    // The chart reads its colours from the dark Direction A tokens
+    // (resources/css/brand/backoffice.css): --ink for the text, --brand and
+    // --info-color for the series.
+    const darkInk = [245, 240, 235];
+    const darkBrand = [212, 42, 30];
+    const darkInfo = [125, 179, 240];
     const chart = canvases.first();
     await expect
         .poll(() =>
-            chart.evaluate((canvas: HTMLCanvasElement) => {
+            chart.evaluate((canvas: HTMLCanvasElement, ink: number[]) => {
                 const pixels = canvas
                     .getContext('2d')!
                     .getImageData(0, 0, canvas.width, canvas.height).data;
@@ -107,9 +113,9 @@ test('real dashboard charts render under enforced CSP in light dark and Arabic R
 
                 for (let i = 0; i < pixels.length; i += 4) {
                     if (
-                        pixels[i] === 229 &&
-                        pixels[i + 1] === 231 &&
-                        pixels[i + 2] === 235 &&
+                        pixels[i] === ink[0] &&
+                        pixels[i + 1] === ink[1] &&
+                        pixels[i + 2] === ink[2] &&
                         pixels[i + 3] === 255
                     ) {
                         text++;
@@ -117,7 +123,7 @@ test('real dashboard charts render under enforced CSP in light dark and Arabic R
                 }
 
                 return text;
-            }),
+            }, darkInk),
         )
         .toBeGreaterThan(0);
     const background = await chart
@@ -134,8 +140,9 @@ test('real dashboard charts render under enforced CSP in light dark and Arabic R
                 number,
             ];
         });
-    expect(contrastRatio([229, 231, 235], background)).toBeGreaterThan(4.5);
-    expect(contrastRatio([96, 165, 250], background)).toBeGreaterThan(3);
+    expect(contrastRatio(darkInk, background)).toBeGreaterThan(4.5);
+    expect(contrastRatio(darkBrand, background)).toBeGreaterThan(3);
+    expect(contrastRatio(darkInfo, background)).toBeGreaterThan(3);
     expect(errors).toEqual([]);
     expect(reports).toEqual([]);
     expect(await documentViolations(page)).toEqual([]);
