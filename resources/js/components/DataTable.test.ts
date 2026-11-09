@@ -317,8 +317,29 @@ describe('DataTable', () => {
         for (const th of wrapper.findAll('thead th')) {
             expect(th.classes()).toContain('sticky');
             expect(th.classes()).toContain('top-0');
-            expect(th.classes()).toContain('bg-gray-50');
+            expect(th.classes()).toContain('bg-table-head');
         }
+    });
+
+    it('draws the header in the Direction A style with a token-based rule, not a hex colour', () => {
+        const wrapper = mountTable([{ id: 1, letter: 'A' }]);
+
+        for (const th of wrapper.findAll('thead th')) {
+            expect(th.classes()).toEqual(
+                expect.arrayContaining([
+                    'uppercase',
+                    'text-xs',
+                    'font-semibold',
+                    'shadow-[inset_0_-1px_0_var(--line)]',
+                ]),
+            );
+            expect(th.attributes('class')).not.toMatch(/#[0-9a-f]{3,6}/i);
+        }
+
+        expect(
+            wrapper.get('[data-table-scroller]').element.parentElement
+                ?.className,
+        ).toContain('shadow-card');
     });
 
     it('renders the popover outside the overflow-hidden table wrapper, so a short table cannot clip it', async () => {

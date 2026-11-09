@@ -323,6 +323,7 @@ const hasRequiredFields = provideRequiredFields();
                     "
                 >
                     <SubmitButton
+                        variant="danger"
                         :label="t('store.orders.deleteSelected')"
                         :processing-label="t('store.orders.saving')"
                         :processing="processing"

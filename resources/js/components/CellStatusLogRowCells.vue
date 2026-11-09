@@ -51,6 +51,7 @@ const pair = computed(() => transferPair(props.log));
     <td class="px-4 py-2">
         <div class="flex items-center gap-1">
             <TableLink
+                class="font-mono"
                 :href="
                     showRow(
                         { letter: pair.from.row_letter },
@@ -74,6 +75,7 @@ const pair = computed(() => transferPair(props.log));
                     class="h-3 w-3 shrink-0 text-gray-400 rtl:rotate-180 dark:text-neutral-500"
                 />
                 <TableLink
+                    class="font-mono"
                     :href="
                         showRow(
                             { letter: pair.to.row_letter },

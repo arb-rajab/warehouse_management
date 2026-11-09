@@ -13,9 +13,17 @@
         "confirmLogout": "Log out of your account?",
         "openMenu": "Open menu",
         "closeMenu": "Close menu",
-        "account": "Account",
         "skipToContent": "Skip to main content",
-        "warehouses": "Warehouses"
+        "warehouses": "Warehouses",
+        "breadcrumb": "Breadcrumb",
+        "pallets": "Pallets",
+        "help": "Help",
+        "groupInventory": "Inventory",
+        "groupActivity": "Activity",
+        "groupAdmin": "Administration",
+        "menuLabel": "Warehouse menu",
+        "collapseSidebar": "Collapse sidebar",
+        "expandSidebar": "Expand sidebar"
     },
     "language": {
         "label": "Language",

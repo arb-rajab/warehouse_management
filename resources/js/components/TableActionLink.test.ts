@@ -2,6 +2,10 @@ import { Link } from '@inertiajs/vue3';
 import { mount } from '@vue/test-utils';
 import { describe, expect, it } from 'vitest';
 import { show as rowShow } from '@/actions/App/Http/Controllers/Admin/RowController';
+import {
+    dangerPillVariantClass,
+    primaryPillVariantClass,
+} from '@/lib/actionLink';
 import TableActionLink from './TableActionLink.vue';
 
 describe('TableActionLink', () => {
@@ -16,18 +20,37 @@ describe('TableActionLink', () => {
         expect(link.text()).toBe('View');
     });
 
-    it('uses the primary palette by default and the danger palette on request', () => {
+    it('uses the outlined secondary palette by default and the soft danger palette on request', () => {
         const primary = mount(TableActionLink, {
             props: { href: rowShow.url({ row: 'A' }) },
         });
-        expect(primary.get('a').classes()).toContain('bg-blue-600');
-        expect(primary.get('a').classes()).not.toContain('bg-red-600');
+        expect(primary.get('a').classes()).toEqual(
+            expect.arrayContaining(primaryPillVariantClass.split(' ')),
+        );
+        expect(primary.get('a').classes()).not.toContain('bg-danger-soft');
 
         const danger = mount(TableActionLink, {
             props: { href: rowShow.url({ row: 'A' }), variant: 'danger' },
         });
-        expect(danger.get('a').classes()).toContain('bg-red-600');
-        expect(danger.get('a').classes()).not.toContain('bg-blue-600');
+        expect(danger.get('a').classes()).toEqual(
+            expect.arrayContaining(dangerPillVariantClass.split(' ')),
+        );
+        expect(danger.get('a').classes()).toContain('bg-danger-soft');
+        expect(danger.get('a').classes()).not.toContain('bg-surface');
+    });
+
+    it('never paints a destructive action solid red or a row action solid brand red', () => {
+        for (const variant of ['primary', 'danger'] as const) {
+            const classes = mount(TableActionLink, {
+                props: { href: rowShow.url({ row: 'A' }), variant },
+            })
+                .get('a')
+                .classes();
+
+            expect(classes).not.toContain('bg-red-600');
+            expect(classes).not.toContain('bg-brand');
+            expect(classes).not.toContain('text-white');
+        }
     });
 
     it('keeps the shared sizing regardless of variant', () => {

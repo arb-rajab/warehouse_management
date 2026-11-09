@@ -5,10 +5,8 @@ import {
     ChevronDown,
     CircleUser,
     Globe,
-    Menu,
-    Store,
+    Search,
     Trash2,
-    X,
 } from '@lucide/vue';
 import { computed, ref, watch } from 'vue';
 import { logout } from '@/actions/App/Http/Controllers/Auth/LoginController';
@@ -16,15 +14,14 @@ import { index as storefrontHome } from '@/actions/App/Http/Controllers/HomeCont
 import { clearCache } from '@/actions/App/Http/Controllers/Store/Admin/DashboardController';
 import { index as notificationsIndex } from '@/actions/App/Http/Controllers/Store/Admin/NotificationController';
 import { index as profileIndex } from '@/actions/App/Http/Controllers/Store/Admin/ProfileController';
+import BackofficeShell from '@/components/BackofficeShell.vue';
 import FilterDialog from '@/components/FilterDialog.vue';
-import FormField from '@/components/FormField.vue';
 import HelpTooltip from '@/components/HelpTooltip.vue';
 import LanguageSwitcher from '@/components/LanguageSwitcher.vue';
 import LogoutLink from '@/components/LogoutLink.vue';
-import SkipToContentLink from '@/components/SkipToContentLink.vue';
+import SidebarUser from '@/components/SidebarUser.vue';
 import StoreAdminNavLink from '@/components/StoreAdminNavLink.vue';
 import SubmitButton from '@/components/SubmitButton.vue';
-import SuccessBanner from '@/components/SuccessBanner.vue';
 import { formatDateTime } from '@/lib/date';
 import { t } from '@/lib/i18n';
 import { useStoreAccess } from '@/lib/storeAccess';
@@ -43,14 +40,15 @@ import type { StoreMenuItem, StoreMenuLink } from '@/lib/storeAdminMenu';
 import { useDismissibleListbox } from '@/lib/useDismissibleListbox';
 
 /**
- * The store back office's shell: a sidebar built from lib/storeAdminMenu.ts,
- * gated on the shared store permissions, with the account utilities at its
- * foot. Below `lg` the sidebar folds behind a menu button.
+ * The store control panel, drawn by the shared BackofficeShell
+ * (.ai/rules/layouts.md): a sidebar built from lib/storeAdminMenu.ts, gated
+ * on the shared store permissions, with Notifications above and Clear
+ * dashboard cache, the user, profile and logout in its footer; the header
+ * carries the language switcher and "Browse website". The menu and its
+ * active state stay here (.ai/rules/store-admin-menu-highlighting.md).
  */
 const page = usePage();
 const access = useStoreAccess();
-
-const isSidebarOpen = ref(false);
 
 const menuQuery = ref('');
 const clearCacheOpen = ref(false);
@@ -103,6 +101,10 @@ function isActive(link: StoreMenuLink): boolean {
     return link === activeLink.value;
 }
 
+const section = computed(() =>
+    activeLink.value ? t(activeLink.value.labelKey) : undefined,
+);
+
 function containsActive(item: StoreMenuItem): boolean {
     return storeMenuItemContains(item, activeLink.value);
 }
@@ -135,90 +137,107 @@ function toggle(item: StoreMenuItem): void {
     next.set(item.labelKey, !isOpen(item));
     manualGroups.value = next;
 }
+
+/**
+ * On the folded icon rail a group shows only its icon: a click unfolds the
+ * sidebar with that group open.
+ */
+function openGroup(
+    item: StoreMenuItem,
+    collapsed: boolean,
+    expand: () => void,
+): void {
+    if (!collapsed) {
+        toggle(item);
+
+        return;
+    }
+
+    const next = new Map(manualGroups.value);
+
+    next.set(item.labelKey, true);
+    manualGroups.value = next;
+    expand();
+}
 </script>
 
 <template>
-    <div
-        class="min-h-screen bg-gray-50 text-gray-900 lg:flex dark:bg-neutral-950 dark:text-neutral-100"
+    <BackofficeShell
+        sidebar-id="store-admin-sidebar"
+        :area="t('store.nav.brand')"
+        :section="section"
     >
-        <SkipToContentLink />
-        <div
-            class="flex items-center justify-between border-b border-gray-200 bg-white px-4 lg:hidden dark:border-neutral-800 dark:bg-neutral-900 print:hidden"
-        >
-            <span class="inline-flex items-center gap-1.5 py-3 font-semibold">
-                <Store class="h-5 w-5 shrink-0" />
-                {{ t('store.nav.brand') }}
-            </span>
-            <button
-                type="button"
-                class="cursor-pointer rounded-md p-2 text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-white"
-                :aria-label="
-                    t(isSidebarOpen ? 'nav.closeMenu' : 'nav.openMenu')
-                "
-                aria-controls="store-admin-sidebar"
-                :aria-expanded="isSidebarOpen"
-                @click="isSidebarOpen = !isSidebarOpen"
-            >
-                <component :is="isSidebarOpen ? X : Menu" class="h-5 w-5" />
-            </button>
-        </div>
-        <aside
-            id="store-admin-sidebar"
-            class="border-gray-200 bg-white lg:sticky lg:top-0 lg:flex lg:h-screen lg:w-64 lg:shrink-0 lg:flex-col lg:border-e dark:border-neutral-800 dark:bg-neutral-900 print:hidden"
-            :class="isSidebarOpen ? 'flex flex-col border-b' : 'hidden'"
-        >
-            <span
-                class="hidden items-center gap-1.5 px-5 py-4 font-semibold lg:inline-flex"
-            >
-                <Store class="h-5 w-5 shrink-0" />
-                {{ t('store.nav.brand') }}
-            </span>
-            <div class="px-3 pb-3">
-                <FormField
-                    id="store-menu-search"
-                    type="search"
-                    :label="t('store.nav.searchMenu')"
-                    maxlength="100"
-                    @input="
-                        menuQuery = ($event.target as HTMLInputElement).value
-                    "
-                />
+        <template #nav="{ close, collapsed, expand }">
+            <div class="px-3.5 pb-2" :class="{ 'lg:hidden': collapsed }">
+                <label
+                    for="store-menu-search"
+                    class="flex h-9 items-center gap-2 rounded-md bg-sidebar-well px-2.5 text-sm text-sidebar-muted focus-within:ring-2 focus-within:ring-focus-ring"
+                >
+                    <Search class="h-4 w-4 shrink-0" aria-hidden="true" />
+                    <span class="sr-only">{{ t('store.nav.searchMenu') }}</span>
+                    <input
+                        id="store-menu-search"
+                        type="search"
+                        maxlength="100"
+                        :placeholder="t('store.nav.searchMenu')"
+                        class="min-w-0 flex-1 bg-transparent text-sidebar-strong outline-none placeholder:text-sidebar-muted"
+                        @input="
+                            menuQuery = ($event.target as HTMLInputElement)
+                                .value
+                        "
+                    />
+                </label>
             </div>
             <nav
                 :aria-label="t('store.nav.menuLabel')"
-                class="flex-1 overflow-y-auto px-2 pb-2"
+                class="flex-1 overflow-y-auto px-2.5 pb-2"
             >
                 <ul class="space-y-0.5">
                     <li v-for="item in menu" :key="item.labelKey">
                         <template v-if="isStoreMenuGroup(item)">
                             <button
                                 type="button"
-                                class="flex w-full cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors hover:bg-gray-50 dark:hover:bg-neutral-800"
-                                :class="
+                                class="flex w-full cursor-pointer items-center gap-2.5 rounded-md px-2.5 py-2 text-sm transition-colors hover:bg-sidebar-hover"
+                                :class="[
                                     containsActive(item)
-                                        ? 'font-medium text-gray-900 dark:text-white'
-                                        : 'text-gray-600 hover:text-gray-900 dark:text-neutral-400 dark:hover:text-white'
+                                        ? 'font-semibold text-sidebar-strong'
+                                        : 'font-medium text-sidebar-ink hover:text-sidebar-strong',
+                                    { 'lg:justify-center': collapsed },
+                                ]"
+                                :aria-expanded="
+                                    collapsed ? undefined : isOpen(item)
                                 "
-                                :aria-expanded="isOpen(item)"
+                                :title="
+                                    collapsed ? t(item.labelKey) : undefined
+                                "
                                 :data-active="containsActive(item)"
-                                @click="toggle(item)"
+                                @click="openGroup(item, collapsed, expand)"
                             >
                                 <component
                                     :is="item.icon"
                                     v-if="item.icon"
-                                    class="h-4 w-4 shrink-0"
+                                    class="h-[18px] w-[18px] shrink-0"
+                                    aria-hidden="true"
                                 />
-                                <span class="flex-1 text-start">
+                                <span
+                                    class="flex-1 text-start"
+                                    :class="{ 'lg:sr-only': collapsed }"
+                                >
                                     {{ t(item.labelKey) }}
                                 </span>
                                 <ChevronDown
-                                    class="h-4 w-4 shrink-0 transition-transform"
-                                    :class="{ 'rotate-180': isOpen(item) }"
+                                    class="h-4 w-4 shrink-0 text-sidebar-muted transition-transform"
+                                    :class="{
+                                        'rotate-180': isOpen(item),
+                                        'lg:hidden': collapsed,
+                                    }"
+                                    aria-hidden="true"
                                 />
                             </button>
                             <ul
                                 v-if="isOpen(item)"
-                                class="mt-0.5 space-y-0.5 ps-6"
+                                class="mt-0.5 space-y-0.5 ps-7"
+                                :class="{ 'lg:hidden': collapsed }"
                             >
                                 <li
                                     v-for="child in item.children"
@@ -226,11 +245,11 @@ function toggle(item: StoreMenuItem): void {
                                 >
                                     <template v-if="isStoreMenuGroup(child)">
                                         <p
-                                            class="px-3 pt-2 pb-1 text-xs font-semibold tracking-wide uppercase"
+                                            class="px-2.5 pt-2 pb-1 text-[11px] font-bold tracking-[0.08em] uppercase rtl:text-xs rtl:tracking-normal"
                                             :class="
                                                 containsActive(child)
-                                                    ? 'text-gray-900 dark:text-white'
-                                                    : 'text-gray-400 dark:text-neutral-500'
+                                                    ? 'text-sidebar-strong'
+                                                    : 'text-sidebar-muted'
                                             "
                                             :data-active="containsActive(child)"
                                         >
@@ -247,9 +266,7 @@ function toggle(item: StoreMenuItem): void {
                                                     :item="link"
                                                     :count="badge(link)"
                                                     :active="isActive(link)"
-                                                    @click="
-                                                        isSidebarOpen = false
-                                                    "
+                                                    @click="close()"
                                                 />
                                             </li>
                                         </ul>
@@ -259,7 +276,7 @@ function toggle(item: StoreMenuItem): void {
                                         :item="child"
                                         :count="badge(child)"
                                         :active="isActive(child)"
-                                        @click="isSidebarOpen = false"
+                                        @click="close()"
                                     />
                                 </li>
                             </ul>
@@ -269,30 +286,44 @@ function toggle(item: StoreMenuItem): void {
                             :item="item"
                             :count="badge(item)"
                             :active="isActive(item)"
-                            @click="isSidebarOpen = false"
+                            :collapsed="collapsed"
+                            @click="close()"
                         />
                     </li>
                 </ul>
             </nav>
             <div
                 ref="notificationsRef"
-                class="relative border-t border-gray-200 px-2 py-2 dark:border-neutral-800"
+                class="relative border-t border-sidebar-line px-2.5 py-2"
             >
                 <button
                     type="button"
-                    class="flex w-full cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-sm text-gray-600 transition-colors hover:bg-gray-50 hover:text-gray-900 dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-white"
+                    class="relative flex w-full cursor-pointer items-center gap-2.5 rounded-md px-2.5 py-2 text-sm font-medium text-sidebar-ink transition-colors hover:bg-sidebar-hover hover:text-sidebar-strong"
+                    :class="{ 'lg:justify-center': collapsed }"
+                    :title="
+                        collapsed ? t('store.nav.notifications') : undefined
+                    "
                     :aria-expanded="notificationsOpen"
                     aria-controls="store-notifications"
                     @click="notificationsOpen = !notificationsOpen"
                 >
-                    <Bell class="h-4 w-4 shrink-0" />
-                    <span class="flex-1 text-start">{{
-                        t('store.nav.notifications')
-                    }}</span>
+                    <Bell
+                        class="h-[18px] w-[18px] shrink-0"
+                        aria-hidden="true"
+                    />
+                    <span
+                        class="flex-1 text-start"
+                        :class="{ 'lg:sr-only': collapsed }"
+                        >{{ t('store.nav.notifications') }}</span
+                    >
                     <template v-if="notifications.unread_count">
                         <span
                             aria-hidden="true"
-                            class="ms-auto rounded-full bg-blue-100 px-2 text-xs text-blue-800 dark:bg-blue-900 dark:text-blue-100"
+                            class="ms-auto rounded-full bg-brand px-2 text-[11px] font-bold text-on-brand"
+                            :class="{
+                                'lg:absolute lg:end-0 lg:-top-0.5 lg:ms-0 lg:px-1 lg:text-[10px]':
+                                    collapsed,
+                            }"
                             >{{ notifications.unread_count }}</span
                         >
                         <span class="sr-only">{{
@@ -305,7 +336,7 @@ function toggle(item: StoreMenuItem): void {
                 <div
                     v-if="notificationsOpen"
                     id="store-notifications"
-                    class="z-30 mt-2 max-h-96 overflow-y-auto rounded-md border border-gray-200 bg-white p-4 text-sm shadow-lg lg:absolute lg:start-full lg:bottom-0 lg:ms-2 lg:mt-0 lg:w-80 dark:border-neutral-700 dark:bg-neutral-900"
+                    class="z-30 mt-2 max-h-96 overflow-y-auto rounded-lg border border-line bg-surface p-4 text-sm text-ink shadow-pop lg:absolute lg:start-full lg:bottom-0 lg:ms-2 lg:mt-0 lg:w-80"
                 >
                     <p v-if="!notifications.items.length">
                         {{ t('store.nav.noNotifications') }}
@@ -329,105 +360,120 @@ function toggle(item: StoreMenuItem): void {
                                 {{ notification.user_name }}
                                 {{ notification.message }}
                             </p>
-                            <time
-                                class="text-xs text-gray-500 dark:text-neutral-400"
-                                >{{
-                                    formatDateTime(
-                                        notification.created_at ?? '',
-                                    )
-                                }}</time
-                            >
+                            <time class="text-xs text-muted">{{
+                                formatDateTime(notification.created_at ?? '')
+                            }}</time>
                         </li>
                     </ul>
                     <a
                         :href="notificationsIndex.url()"
-                        class="mt-3 block text-blue-700 dark:text-blue-400"
+                        class="mt-3 block font-medium text-link"
                         >{{ t('store.nav.allNotifications') }}</a
                     >
                 </div>
             </div>
+        </template>
+        <template #footer="{ collapsed }">
             <div
-                class="space-y-3 border-t border-gray-200 px-5 py-4 text-sm dark:border-neutral-800"
+                v-if="access.can('file_system_&_cache_configuration')"
+                class="px-2.5 pt-2"
             >
-                <a
-                    :href="storefrontHome.url()"
-                    target="_blank"
-                    rel="noopener"
-                    class="flex items-center gap-1.5 text-gray-600 hover:text-gray-900 dark:text-neutral-400 dark:hover:text-white"
+                <div class="flex items-center gap-1.5">
+                    <button
+                        type="button"
+                        class="flex flex-1 cursor-pointer items-center gap-2.5 rounded-md px-2.5 py-2 text-sm font-medium text-sidebar-ink hover:bg-sidebar-hover hover:text-sidebar-strong"
+                        :class="{ 'lg:justify-center': collapsed }"
+                        :title="
+                            collapsed ? t('store.nav.clearCache') : undefined
+                        "
+                        @click="clearCacheOpen = true"
+                    >
+                        <Trash2
+                            class="h-[18px] w-[18px] shrink-0"
+                            aria-hidden="true"
+                        />
+                        <span :class="{ 'lg:sr-only': collapsed }">{{
+                            t('store.nav.clearCache')
+                        }}</span>
+                    </button>
+                    <HelpTooltip
+                        :class="{ 'lg:hidden': collapsed }"
+                        :label="t('store.nav.clearCacheHelpLabel')"
+                        :text="t('store.nav.clearCacheHelp')"
+                    />
+                </div>
+                <FilterDialog
+                    v-model:open="clearCacheOpen"
+                    :title="t('store.nav.clearCacheConfirmTitle')"
+                    :close-label="t('common.close')"
                 >
-                    <Globe class="h-4 w-4 shrink-0" />
-                    {{ t('store.nav.browseWebsite') }}
-                </a>
+                    <Form
+                        :action="clearCache()"
+                        class="pb-6"
+                        #default="{ processing }"
+                    >
+                        <p class="text-sm text-gray-700 dark:text-neutral-300">
+                            {{ t('store.nav.clearCacheHelp') }}
+                        </p>
+                        <div class="mt-5 flex justify-end gap-2">
+                            <button
+                                type="button"
+                                class="cursor-pointer rounded-md border border-line-strong bg-surface px-3 py-2 text-sm font-semibold hover:bg-subtle"
+                                @click="clearCacheOpen = false"
+                            >
+                                {{ t('common.cancel') }}
+                            </button>
+                            <SubmitButton
+                                class="!w-auto"
+                                :label="t('store.nav.clearCacheConfirm')"
+                                :processing-label="t('store.orders.saving')"
+                                :processing="processing"
+                            />
+                        </div>
+                    </Form>
+                </FilterDialog>
+            </div>
+            <div class="px-4 pt-3 sm:hidden">
+                <LanguageSwitcher />
+            </div>
+            <SidebarUser
+                :name="page.props.auth.user?.name"
+                :detail="page.props.auth.user?.email"
+                :collapsed="collapsed"
+            >
                 <Link
                     :href="profileIndex()"
                     :aria-label="t('store.nav.profile')"
-                    class="flex items-center gap-1.5 text-gray-600 hover:text-gray-900 dark:text-neutral-400 dark:hover:text-white"
+                    :title="t('store.nav.profile')"
+                    class="shrink-0 rounded-md p-1.5 text-sidebar-muted hover:bg-sidebar-hover hover:text-sidebar-strong"
                 >
-                    <CircleUser class="h-4 w-4 shrink-0" />
-                    <span class="truncate">{{
-                        page.props.auth.user?.name
-                    }}</span>
+                    <CircleUser class="h-4 w-4" aria-hidden="true" />
                 </Link>
-                <LanguageSwitcher />
-                <div v-if="access.can('file_system_&_cache_configuration')">
-                    <div class="flex items-center gap-1.5">
-                        <button
-                            type="button"
-                            class="flex cursor-pointer items-center gap-1.5 text-gray-600 hover:text-gray-900 dark:text-neutral-400 dark:hover:text-white"
-                            @click="clearCacheOpen = true"
-                        >
-                            <Trash2 class="h-4 w-4 shrink-0" />
-                            {{ t('store.nav.clearCache') }}
-                        </button>
-                        <HelpTooltip
-                            :label="t('store.nav.clearCacheHelpLabel')"
-                            :text="t('store.nav.clearCacheHelp')"
-                        />
-                    </div>
-                    <FilterDialog
-                        v-model:open="clearCacheOpen"
-                        :title="t('store.nav.clearCacheConfirmTitle')"
-                        :close-label="t('common.close')"
-                    >
-                        <Form
-                            :action="clearCache()"
-                            class="pb-6"
-                            #default="{ processing }"
-                        >
-                            <p
-                                class="text-sm text-gray-700 dark:text-neutral-300"
-                            >
-                                {{ t('store.nav.clearCacheHelp') }}
-                            </p>
-                            <div class="mt-5 flex justify-end gap-2">
-                                <button
-                                    type="button"
-                                    class="cursor-pointer rounded-md border border-gray-300 px-3 py-2 text-sm hover:bg-gray-50 dark:border-neutral-700 dark:hover:bg-neutral-800"
-                                    @click="clearCacheOpen = false"
-                                >
-                                    {{ t('common.cancel') }}
-                                </button>
-                                <SubmitButton
-                                    class="!w-auto"
-                                    :label="t('store.nav.clearCacheConfirm')"
-                                    :processing-label="t('store.orders.saving')"
-                                    :processing="processing"
-                                />
-                            </div>
-                        </Form>
-                    </FilterDialog>
-                </div>
                 <LogoutLink
                     :href="logout.post()"
-                    class="flex cursor-pointer items-center gap-1.5 text-gray-600 hover:text-gray-900 dark:text-neutral-400 dark:hover:text-white"
+                    label-class="sr-only"
+                    :title="t('nav.logout')"
+                    class="flex shrink-0 cursor-pointer items-center rounded-md p-1.5 text-sidebar-muted hover:bg-sidebar-hover hover:text-sidebar-strong"
                 />
+            </SidebarUser>
+        </template>
+        <template #actions>
+            <div
+                class="hidden h-9 items-center rounded-md border border-line bg-surface px-2 sm:flex"
+            >
+                <LanguageSwitcher />
             </div>
-        </aside>
-        <main id="main" class="min-w-0 flex-1 px-4 py-8 sm:px-6">
-            <div class="mx-auto max-w-screen-2xl">
-                <SuccessBanner />
-                <slot />
-            </div>
-        </main>
-    </div>
+            <a
+                :href="storefrontHome.url()"
+                target="_blank"
+                rel="noopener"
+                :aria-label="t('store.nav.browseWebsite')"
+                :title="t('store.nav.browseWebsite')"
+                class="grid h-9 w-9 place-items-center rounded-md border border-line bg-surface text-muted hover:bg-subtle hover:text-ink"
+            >
+                <Globe class="h-[18px] w-[18px]" aria-hidden="true" />
+            </a>
+        </template>
+        <slot />
+    </BackofficeShell>
 </template>

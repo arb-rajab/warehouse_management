@@ -27,18 +27,18 @@ export const filterFooterClass =
 
 /**
  * The small rounded-pill count badge used by every filter-dialog trigger's
- * active-filter count. Blue rather than the page's usual gray-900/white pairing,
- * matching the blue highlight ring cells get.
+ * active-filter count: brand red with white text, so it stays visible on a
+ * selected or dark background.
  */
 export const countBadgeClass =
-    'inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-blue-600 px-1 text-xs font-medium text-white dark:bg-blue-500';
+    'inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-brand px-1 text-xs font-semibold text-on-brand';
 
 /**
  * The "open filter dialog" trigger button shared by CellHighlightFilters.vue
  * and CellStatusLogs/Index.vue.
  */
 export const filterTriggerButtonClass =
-    'inline-flex items-center gap-2 rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-neutral-700 dark:text-neutral-200 dark:hover:bg-neutral-800 cursor-pointer';
+    'inline-flex items-center gap-2 rounded-md border border-line-strong bg-surface px-3 py-2 text-sm font-medium text-ink hover:bg-subtle cursor-pointer';
 
 /**
  * The filter-dialog "Clear" button shared by CellHighlightFilters.vue and
@@ -58,15 +58,22 @@ export const mapToolbarButtonClass =
  * button (flat tabs, 2D/3D view mode, orbit camera mode, touch sprint) or a
  * pagination page link.
  */
-export const selectedToggleClass =
-    'bg-gray-900 text-white dark:bg-white dark:text-gray-900';
+export const selectedToggleClass = 'bg-brand text-on-brand';
 
 /**
  * The filter-dialog "Apply" submit button shared by CellStatusLogs/Index.vue
  * and Dashboard/Index.vue's custom-expiring-days dialog.
  */
 export const filterApplyButtonClass =
-    'inline-flex cursor-pointer items-center gap-1.5 rounded-md bg-gray-900 px-3 py-2 text-sm font-medium text-white hover:bg-gray-700 dark:bg-white dark:text-gray-900 dark:hover:bg-neutral-200';
+    'inline-flex cursor-pointer items-center gap-1.5 rounded-md bg-brand px-3.5 py-2 text-sm font-semibold text-on-brand shadow-btn hover:bg-brand-hover';
+
+/**
+ * A destructive action button (Delete selection, Delete selected files): the
+ * soft danger style, so it never reads as the brand-red primary button.
+ * SubmitButton's `variant="danger"` uses it; pair it with the Trash2 icon.
+ */
+export const dangerButtonClass =
+    'inline-flex cursor-pointer items-center justify-center gap-1.5 rounded-md border border-transparent bg-danger-soft px-3.5 py-2 text-sm font-semibold text-danger-strong hover:bg-danger-soft-hover disabled:cursor-not-allowed disabled:opacity-50';
 
 /**
  * The filter-field label shared by every FilterDateField/FilterMultiSelect/
@@ -81,7 +88,7 @@ export const fieldLabelClass =
  * — extracted once it was repeated 7 times across the first two files.
  */
 export const plainFieldInputClass =
-    'w-full rounded-md border border-gray-300 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-neutral-800';
+    'w-full rounded-md border border-gray-300 bg-surface px-3 py-2 text-sm focus:border-focus focus:ring-2 focus:ring-focus-ring focus:outline-none dark:border-neutral-700 dark:bg-neutral-800';
 
 /**
  * The `selectedCountLabel` FilterMultiSelect expects, shared by every

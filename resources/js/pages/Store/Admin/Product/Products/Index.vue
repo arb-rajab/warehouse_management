@@ -568,6 +568,7 @@ async function requestFetch(): Promise<void> {
                     :value="id"
                 />
                 <SubmitButton
+                    variant="danger"
                     :label="t('store.products.deleteSelection')"
                     :processing-label="t('store.products.deleting')"
                     :processing="processing"

@@ -13,9 +13,17 @@
         "confirmLogout": "هل تريد تسجيل الخروج من حسابك؟",
         "openMenu": "فتح القائمة",
         "closeMenu": "إغلاق القائمة",
-        "account": "الحساب",
         "skipToContent": "تخطَّ إلى المحتوى الرئيسي",
-        "warehouses": "المستودعات"
+        "warehouses": "المستودعات",
+        "breadcrumb": "مسار التنقل",
+        "pallets": "المنصات",
+        "help": "المساعدة",
+        "groupInventory": "المخزون",
+        "groupActivity": "النشاط",
+        "groupAdmin": "الإدارة",
+        "menuLabel": "قائمة المستودع",
+        "collapseSidebar": "طيّ الشريط الجانبي",
+        "expandSidebar": "توسيع الشريط الجانبي"
     },
     "language": {
         "label": "اللغة",

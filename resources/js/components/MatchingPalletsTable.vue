@@ -57,6 +57,7 @@ defineProps<{
             </td>
             <td class="px-4 py-2">
                 <TableLink
+                    class="font-mono"
                     :href="
                         showRow(
                             { letter: pallet.location.row_letter },

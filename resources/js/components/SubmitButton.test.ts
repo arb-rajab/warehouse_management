@@ -1,5 +1,6 @@
 import { mount } from '@vue/test-utils';
 import { describe, expect, it } from 'vitest';
+import { dangerButtonClass } from '@/lib/filters';
 import SubmitButton from './SubmitButton.vue';
 
 describe('SubmitButton', () => {
@@ -32,5 +33,39 @@ describe('SubmitButton', () => {
         expect(button.text()).toBe('Creating...');
         expect((button.element as HTMLButtonElement).disabled).toBe(true);
         expect(button.find('svg.animate-spin').exists()).toBe(true);
+    });
+});
+
+describe('SubmitButton variants', () => {
+    it('is the brand-red primary button by default', () => {
+        const button = mount(SubmitButton, {
+            props: {
+                label: 'Save',
+                processingLabel: 'Saving',
+                processing: false,
+            },
+        }).get('button');
+
+        expect(button.classes()).toContain('bg-brand');
+        expect(button.classes()).toContain('text-on-brand');
+    });
+
+    it('is the soft danger button with a trash icon for a destructive submit', () => {
+        const button = mount(SubmitButton, {
+            props: {
+                label: 'Delete selection',
+                processingLabel: 'Deleting',
+                processing: false,
+                variant: 'danger',
+            },
+        }).get('button');
+
+        expect(button.classes()).toEqual(
+            expect.arrayContaining(dangerButtonClass.split(' ')),
+        );
+        expect(button.classes()).not.toContain('bg-brand');
+        expect(button.classes()).not.toContain('bg-red-600');
+        expect(button.find('svg').exists()).toBe(true);
+        expect(button.text()).toBe('Delete selection');
     });
 });

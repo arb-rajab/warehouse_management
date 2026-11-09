@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Form, Head, Link, router } from '@inertiajs/vue3';
-import { Clock, X } from '@lucide/vue';
+import { Clock, Trash2, X } from '@lucide/vue';
 import { computed, ref } from 'vue';
 import {
     create,
@@ -35,6 +35,7 @@ import TableActionLink from '@/components/TableActionLink.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
 import { confirmDelete } from '@/lib/confirm';
 import {
+    dangerButtonClass,
     fieldLabelClass,
     filterClearButtonClass,
     plainFieldInputClass,
@@ -388,6 +389,7 @@ function choosePackage(customer: StoreCustomer): void {
                     :value="id"
                 /><FieldError :message="errors.id" /><button
                     type="submit"
+                    :class="dangerButtonClass"
                     :disabled="processing || !selected.length"
                     @click="
                         (event: MouseEvent) => {
@@ -396,7 +398,9 @@ function choosePackage(customer: StoreCustomer): void {
                         }
                     "
                 >
-                    {{ t('store.customers.deleteSelected') }}
+                    <Trash2 class="h-4 w-4 shrink-0" aria-hidden="true" />{{
+                        t('store.customers.deleteSelected')
+                    }}
                 </button></Form
             >
         </StoreColumnPicker>

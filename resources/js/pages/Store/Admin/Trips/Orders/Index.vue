@@ -334,6 +334,7 @@ const tableColumns = computed(() => [
                         :value="id"
                     />
                     <SubmitButton
+                        variant="danger"
                         :label="t('store.trips.orders.deleteSelection')"
                         :processing-label="t('store.trips.orders.deleting')"
                         :processing="processing"

@@ -17,7 +17,7 @@ withDefaults(
     <component
         :is="inertia ? Link : 'a'"
         :href="inertia || typeof href === 'string' ? href : href.url"
-        class="inline-flex items-center gap-1.5 rounded-md bg-gray-900 px-3 py-2 text-sm font-medium text-white hover:bg-gray-700 dark:bg-white dark:text-gray-900 dark:hover:bg-neutral-200"
+        class="inline-flex items-center gap-1.5 rounded-md bg-brand px-3.5 py-2 text-sm font-semibold text-on-brand shadow-btn hover:bg-brand-hover"
     >
         <Plus class="h-4 w-4" />
         {{ label }}

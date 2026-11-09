@@ -15,6 +15,7 @@ import Pagination from '@/components/Pagination.vue';
 import SubmitButton from '@/components/SubmitButton.vue';
 import { confirmDelete } from '@/lib/confirm';
 import {
+    dangerButtonClass,
     fieldLabelClass,
     plainFieldInputClass,
     filterApplyButtonClass,
@@ -374,7 +375,7 @@ onBeforeUnmount(() => {
                     selected.length > 0
                 "
                 type="button"
-                :class="filterApplyButtonClass"
+                :class="dangerButtonClass"
                 :disabled="deletion.processing"
                 @click="removeSelected"
             >
