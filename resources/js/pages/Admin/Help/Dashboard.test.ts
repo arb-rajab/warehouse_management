@@ -5,6 +5,7 @@ import {
     CalendarX,
     CircleDashed,
     PackageOpen,
+    Truck,
 } from '@lucide/vue';
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -60,6 +61,7 @@ describe('Help Dashboard', () => {
         const headings = wrapper.findAll('h2').map((h2) => h2.text());
         expect(headings).toEqual([
             t('help.dashboard.overview.heading'),
+            t('help.dashboard.unplaced.heading'),
             t('help.dashboard.productFilter.heading'),
             t('help.dashboard.warehouseFilter.heading'),
         ]);
@@ -69,6 +71,14 @@ describe('Help Dashboard', () => {
         const wrapper = mountPage();
 
         expect(wrapper.text()).toContain(t('help.dashboard.overview.body'));
+    });
+
+    it('explains the unplaced pallets tile and previews it', () => {
+        const wrapper = mountPage();
+
+        expect(wrapper.text()).toContain(t('help.dashboard.unplaced.body'));
+        expect(wrapper.text()).toContain(t('dashboard.unplaced.count'));
+        expect(wrapper.findComponent(Truck).exists()).toBe(true);
     });
 
     it('explains the product filter', () => {

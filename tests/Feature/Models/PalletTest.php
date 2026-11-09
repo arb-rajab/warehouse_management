@@ -521,11 +521,15 @@ test('the cell entered log of an unplaced pallet is null and of a placed one is 
         ->and(Pallet::query()->findOrFail($placed->id)->cellEnteredLog->id)->toBe($log->id);
 });
 
-test('listedForAdmin leaves unplaced pallets out', function () {
-    $placed = Pallet::factory()->create();
-    Pallet::factory()->unplaced()->create(); // noise
+test('listedForAdmin includes unplaced pallets, with their receipt warehouse loaded', function () {
+    $placed = Pallet::factory()->create(['expiration_date' => '2026-09-01']);
+    $unplaced = Pallet::factory()->unplaced()->create(['expiration_date' => '2026-08-01']);
 
-    expect(Pallet::query()->listedForAdmin()->pluck('id')->all())->toBe([$placed->id]);
+    $listed = Pallet::query()->listedForAdmin()->get();
+
+    expect($listed->pluck('id')->all())->toBe([$unplaced->id, $placed->id])
+        ->and($listed->first()->warehouseLoaded())->toBeTrue()
+        ->and($listed->first()->receipt->warehouse->id)->toBe($unplaced->receipt->warehouse_id);
 });
 
 test('placing an unplaced pallet does not change its receipt link', function () {

@@ -118,10 +118,21 @@ product owner.
   409 `pallet_not_placed` before locking anything. The admin pallet routes 404
   first (`cellFor()`): they are offered from a cell's row page only.
 - **Admin matching pallets list and the dashboard's selected-product list**
-  (`Pallet::listedForAdmin()`): excluded; every row links to its map location
-  and the cell filters cannot apply. The dashboard's expired, expiring and
-  stale cards exclude them too (`placed()`), so a card matches the list it
-  opens. Low stock, inactive in the warehouse (`Product::inWarehouse()`),
+  (`Pallet::listedForAdmin()`): included. `MatchingPalletResource` sends
+  `placed` (bool) on every row; an unplaced row has null `state`, `location`
+  and `cell_active`, the `warehouse` `{id, name}` of its receipt and its
+  `receipt_id`, and `MatchingPalletsTable` shows an Unplaced badge, the
+  warehouse name and a `Receipt #N` link to `admin.receipts.show`, never a
+  pallet, row or map link (a placed row keeps `warehouse` null and its
+  `receipt_id`). The list's `unplaced=true` filter (`FilterMatchingPalletsRequest`,
+  `Pallet::matchingHighlightFilters`) keeps only them and hides the page's
+  "view on map" button; `state` and `is_active=false` are cell facts and never
+  match one. The dashboard's expired, expiring and stale cards include them
+  too (no `placed()`), and the `unplaced_pallets` card
+  (`BuildsDashboardStats::unplacedPallets()`, also `stats.unplaced_pallets.count`
+  of `GET api/v1/dashboard`, additive) counts them under the product and
+  warehouse filters and opens the list with `unplaced=true`, so every card
+  matches the list it opens. Low stock, inactive in the warehouse (`Product::inWarehouse()`),
   `activeOrInWarehouse()` and the products page's `pallets_count`/low-stock
   filter count them: the product is held. The products page's full/opened/
   expired/expiring columns already go through the cell and leave them out.

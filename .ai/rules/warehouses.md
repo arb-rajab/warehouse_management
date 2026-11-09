@@ -106,7 +106,7 @@ that only knows the letter:
 Cells through their row, pallets through their cell, logs through the cell
 they were written against (a transfer between warehouses counts once on each
 side). An unplaced pallet counts through its receipt's warehouse in the product
-counts and is left out of the expired/expiring/stale cards (see
+counts, the expired/expiring/stale cards and the `unplaced_pallets` card (see
 [receiving](receiving.md)). With a product filter `occupancy.empty` is 0; the warehouse filter alone
 keeps those warehouses' empty cells. `low_stock` compares a product's minimum
 with the pallets the selected warehouses hold, so a product short in the

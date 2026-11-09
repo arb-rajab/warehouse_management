@@ -6,7 +6,11 @@ import { show as rowShow } from '@/actions/App/Http/Controllers/Admin/RowControl
 import { index as warehouseMapIndex } from '@/actions/App/Http/Controllers/Admin/WarehouseMapController';
 import { t } from '@/lib/i18n';
 import { rowCells } from '@/testing/dom';
-import { matchingPallet, paginated } from '@/testing/factories';
+import {
+    matchingPallet,
+    paginated,
+    unplacedMatchingPallet,
+} from '@/testing/factories';
 import { defaultAuthProps, resetMocks } from '@/testing/inertiaPageMocks';
 import type {
     MatchingPallet,
@@ -225,6 +229,21 @@ describe('Pallets Index', () => {
         expect(text).toContain(t('dashboard.expiring.soon', { days: 5 }));
         expect(text).toContain(t('dashboard.stale.soon', { days: 30 }));
         expect(text).toContain('Widgets');
+    });
+
+    it('shows an unplaced chip and hides the map button for the unplaced filter', () => {
+        const wrapper = mountPage([unplacedMatchingPallet()], {
+            unplaced: true,
+        });
+
+        expect(wrapper.text()).toContain(t('dashboard.unplaced.title'));
+        expect(mapLink(wrapper)).toBeUndefined();
+    });
+
+    it('keeps the map button without the unplaced filter', () => {
+        const wrapper = mountPage([matchingPallet()]);
+
+        expect(mapLink(wrapper)).toBeDefined();
     });
 
     it('shows no filter-chip strip when no filter is active', () => {

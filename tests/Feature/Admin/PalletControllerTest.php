@@ -5,6 +5,7 @@ use App\Enums\CellState;
 use App\Models\CellVerificationRound;
 use App\Models\Pallet;
 use App\Models\Product;
+use App\Models\Receipt;
 use App\Models\Row;
 use App\Models\Setting;
 use App\Models\Warehouse;
@@ -1192,20 +1193,105 @@ test('the pallets list can be filtered by warehouse, hydrating the selected ware
     );
 });
 
-test('the matching pallets list leaves out unplaced pallets, in the rows, the total and every filter', function () {
+test('the matching pallets list includes unplaced pallets in the rows and the total, placed pallets keeping their shape', function () {
     actingAsAdmin();
     $product = Product::factory()->create();
     $north = Warehouse::factory()->create();
     $placed = placedPalletIn($north, ['product_id' => $product->id, 'expiration_date' => '2026-09-01']);
-    unplacedPalletIn($north, ['product_id' => $product->id, 'expiration_date' => '2026-08-01']);
-    unplacedPalletIn(Warehouse::firstOrCreateDefault(), ['product_id' => $product->id, 'expiration_date' => null]);
+    $unplaced = unplacedPalletIn($north, ['product_id' => $product->id, 'expiration_date' => '2026-08-01']);
+    $undated = unplacedPalletIn(Warehouse::firstOrCreateDefault(), ['product_id' => $product->id, 'expiration_date' => null]);
 
-    foreach (['/admin/pallets', "/admin/pallets?product_id[]={$product->id}", "/admin/pallets?warehouse_ids[]={$north->id}"] as $url) {
+    foreach (['/admin/pallets', "/admin/pallets?product_id[]={$product->id}"] as $url) {
         $this->get($url)->assertOk()->assertInertia(
-            fn (Assert $page) => $page->where('pallets.data', fn ($rows) => collect($rows)->pluck('id')->every(fn ($id) => $id === $placed->id))
-                ->where('pallets.meta.total', 1)
+            fn (Assert $page) => $page->where('pallets.meta.total', 3)
+                ->where('pallets.data', fn ($rows) => collect($rows)->pluck('id')->all() === [$unplaced->id, $placed->id, $undated->id])
         );
     }
+    $this->get("/admin/pallets?warehouse_ids[]={$north->id}")->assertOk()->assertInertia(
+        fn (Assert $page) => $page->where('pallets.meta.total', 2)
+    );
+});
+
+test('an unplaced row has no location, names the warehouse and receipt it arrived on, and a placed row keeps its location', function () {
+    actingAsAdmin();
+    $north = Warehouse::factory()->create();
+    $placed = placedPalletIn($north, ['expiration_date' => '2026-09-01']);
+    $unplaced = unplacedPalletIn($north, ['expiration_date' => '2026-08-01']);
+
+    $this->get('/admin/pallets')->assertOk()->assertInertia(
+        fn (Assert $page) => $page->where('pallets.data.0.id', $unplaced->id)
+            ->where('pallets.data.0.placed', false)
+            ->where('pallets.data.0.state', null)
+            ->where('pallets.data.0.location', null)
+            ->where('pallets.data.0.cell_active', null)
+            ->where('pallets.data.0.receipt_id', $unplaced->receipt_id)
+            ->where('pallets.data.0.warehouse', ['id' => $north->id, 'name' => $north->name])
+            ->where('pallets.data.1.id', $placed->id)
+            ->where('pallets.data.1.placed', true)
+            ->where('pallets.data.1.state', 'full')
+            ->where('pallets.data.1.location.warehouse', ['id' => $north->id, 'name' => $north->name])
+            ->where('pallets.data.1.cell_active', true)
+            ->where('pallets.data.1.warehouse', null)
+    );
+});
+
+test('a pallet that was received and then placed is a placed row that still carries its receipt', function () {
+    actingAsAdmin();
+    $pallet = placedPalletIn(Warehouse::firstOrCreateDefault());
+    $receipt = Receipt::factory()->finalized()->create();
+    $pallet->forceFill(['receipt_id' => $receipt->id])->save();
+
+    $this->get('/admin/pallets')->assertOk()->assertInertia(
+        fn (Assert $page) => $page->where('pallets.data.0.placed', true)->where('pallets.data.0.receipt_id', $receipt->id)->where('pallets.data.0.warehouse', null)
+    );
+});
+
+test('the unplaced filter lists only the pallets with no cell, composes with the warehouse and product filters, and is echoed', function () {
+    actingAsAdmin();
+    $north = Warehouse::factory()->create();
+    $south = Warehouse::factory()->create();
+    $widgets = Product::factory()->create();
+    placedPalletIn($north, ['product_id' => $widgets->id]);
+    $inNorth = unplacedPalletIn($north, ['product_id' => $widgets->id]);
+    unplacedPalletIn($north);
+    unplacedPalletIn($south, ['product_id' => $widgets->id]);
+
+    $this->get('/admin/pallets?unplaced=true')->assertOk()->assertInertia(
+        fn (Assert $page) => $page->where('pallets.meta.total', 3)->where('filters.unplaced', true)
+    );
+    $this->get("/admin/pallets?unplaced=1&warehouse_ids[]={$north->id}&product_id[]={$widgets->id}")->assertOk()->assertInertia(
+        fn (Assert $page) => $page->has('pallets.data', 1)->where('pallets.data.0.id', $inNorth->id)
+    );
+});
+
+test('the cell filters never match an unplaced pallet, so combined with unplaced they list nothing', function () {
+    actingAsAdmin();
+    unplacedPalletIn(Warehouse::firstOrCreateDefault());
+
+    foreach (['state=full', 'state=empty', 'is_active=false'] as $query) {
+        $this->get("/admin/pallets?unplaced=1&{$query}")->assertOk()->assertInertia(fn (Assert $page) => $page->where('pallets.meta.total', 0));
+        $this->get("/admin/pallets?{$query}")->assertOk()->assertInertia(fn (Assert $page) => $page->where('pallets.meta.total', 0));
+    }
+});
+
+test('the expired, expiring and stale filters match unplaced pallets like placed ones', function () {
+    Carbon::setTestNow('2026-08-13 10:00:00');
+    actingAsAdmin();
+    unplacedPalletIn(Warehouse::firstOrCreateDefault(), ['expiration_date' => '2026-08-01']);
+    unplacedPalletIn(Warehouse::firstOrCreateDefault(), ['expiration_date' => '2026-08-20']);
+    backdate(unplacedPalletIn(Warehouse::firstOrCreateDefault(), ['expiration_date' => null]), '2026-06-01 10:00:00');
+
+    $this->get('/admin/pallets?expired=1')->assertOk()->assertInertia(fn (Assert $page) => $page->where('pallets.meta.total', 1));
+    $this->get('/admin/pallets?expires_within_days=30')->assertOk()->assertInertia(fn (Assert $page) => $page->where('pallets.meta.total', 1));
+    $this->get('/admin/pallets?stale_after_days=30')->assertOk()->assertInertia(fn (Assert $page) => $page->where('pallets.meta.total', 1));
+
+    Carbon::setTestNow();
+});
+
+test('the unplaced filter rejects a value that is not a boolean', function () {
+    actingAsAdmin();
+
+    $this->get('/admin/pallets?unplaced=bogus')->assertSessionHasErrors('unplaced');
 });
 
 test('an unplaced pallet is a 404 on every admin pallet action, which are offered from a cell page only, and nothing changes', function (string $method, string $suffix, array $payload) {

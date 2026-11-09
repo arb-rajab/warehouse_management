@@ -19,6 +19,8 @@ Agreed design for the draft PR. Work proceeds in prompts; this file is the share
 - `pallets.cell_id` becomes nullable. An unplaced pallet belongs to its receipt's warehouse.
 - Placing is optional and can happen later via `POST pallets/{pallet}/place` (row/cell/flat, `warehouse_id`), logged like a store, cell must be in the pallet's warehouse. A list of unplaced pallets is filterable by `warehouse_ids[]`.
 - Existing pallet/cell code (logs, ETag, actions, dashboard, product pallet lists) must be safe for unplaced pallets.
+- The admin dashboard's expired, expiring and stale cards and the matching-pallets list each card opens include unplaced pallets. A row without a cell shows an "Unplaced" badge, the receipt's warehouse and a link to its receipt (never a pallet or map link); the list has an `unplaced=true` filter.
+- A dashboard card counts the unplaced pallets (warehouse and product filters respected) and opens that list; `GET api/v1/dashboard` adds `stats.unplaced_pallets.count`.
 
 ## Web
 Read-only admin pages (WMS `role:admin`, no create/edit/delete), following `.ai/rules`:

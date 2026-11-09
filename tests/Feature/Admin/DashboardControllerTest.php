@@ -517,25 +517,75 @@ test('the dashboard rejects a warehouse id that does not exist', function () {
     $this->get('/admin?warehouse_ids[]=999999')->assertSessionHasErrors('warehouse_ids.0');
 });
 
-test('the expired, expiring and stale cards leave out unplaced pallets, so each card matches the pallets list it opens', function () {
+test('the expired, expiring and stale cards include unplaced pallets', function () {
     Carbon::setTestNow('2026-08-13 10:00:00');
     actingAsAdmin();
     Pallet::factory()->create(['expiration_date' => '2026-08-01']);
     Pallet::factory()->create(['expiration_date' => '2026-08-20']);
     Pallet::factory()->stale()->create(['expiration_date' => null]);
-    // Noise: the same pallets, received and not placed yet.
+    // The same pallets, received and not placed yet.
     unplacedPalletIn(Warehouse::firstOrCreateDefault(), ['expiration_date' => '2026-08-01']);
     unplacedPalletIn(Warehouse::firstOrCreateDefault(), ['expiration_date' => '2026-08-20']);
     backdate(unplacedPalletIn(Warehouse::firstOrCreateDefault(), ['expiration_date' => null]), '2026-06-01 10:00:00');
 
     $this->get('/admin')->assertOk()->assertInertia(
-        fn (Assert $page) => $page->where('stats.expiring.expired', 1)
-            ->where('stats.expiring.windows.0.count', 1)
-            ->where('stats.expiring.custom.count', 1)
-            ->where('stats.stale.count', 1)
+        fn (Assert $page) => $page->where('stats.expiring.expired', 2)
+            ->where('stats.expiring.windows.0.count', 2)
+            ->where('stats.expiring.custom.count', 2)
+            ->where('stats.stale.count', 2)
     );
 
     Carbon::setTestNow();
+});
+
+test('each expired, expiring and stale card matches the pallets list it opens, unplaced pallets included', function () {
+    Carbon::setTestNow('2026-08-13 10:00:00');
+    actingAsAdmin();
+    $north = Warehouse::factory()->create();
+    placedPalletIn($north, ['expiration_date' => '2026-08-01']);
+    unplacedPalletIn($north, ['expiration_date' => '2026-08-02']);
+    unplacedPalletIn($north, ['expiration_date' => '2026-08-20']);
+    placedPalletIn($north, ['expiration_date' => '2026-08-25']);
+    backdate(unplacedPalletIn($north, ['expiration_date' => null]), '2026-06-01 10:00:00');
+    backdate(placedPalletIn($north, ['expiration_date' => null]), '2026-06-01 10:00:00');
+    unplacedPalletIn(Warehouse::factory()->create(), ['expiration_date' => '2026-08-01']); // noise: another warehouse
+
+    $stats = $this->get("/admin?warehouse_ids[]={$north->id}")->assertOk()->inertiaProps('stats');
+    $listTotal = fn (string $query) => $this->get("/admin/pallets?{$query}&warehouse_ids[]={$north->id}")->assertOk()->inertiaProps('pallets.meta.total');
+
+    expect($stats['expiring']['expired'])->toBe(2)->toBe($listTotal('expired=1'))
+        ->and($stats['expiring']['windows'][0]['count'])->toBe(2)
+        ->toBe($listTotal("expires_within_days={$stats['expiring']['windows'][0]['days']}"))
+        ->and($stats['expiring']['custom']['count'])->toBe($listTotal("expires_within_days={$stats['expiring']['custom']['days']}"))
+        ->and($stats['stale']['count'])->toBe(2)->toBe($listTotal("stale_after_days={$stats['stale']['days']}"))
+        ->and($stats['unplaced_pallets']['count'])->toBe(3)->toBe($listTotal('unplaced=1'));
+
+    Carbon::setTestNow();
+});
+
+test('the unplaced pallets card counts the received pallets that have no cell, not the placed ones', function () {
+    actingAsAdmin();
+    Pallet::factory()->create();
+    unplacedPalletIn(Warehouse::firstOrCreateDefault());
+    unplacedPalletIn(Warehouse::firstOrCreateDefault());
+
+    $this->get('/admin')->assertOk()->assertInertia(fn (Assert $page) => $page->where('stats.unplaced_pallets.count', 2));
+});
+
+test('the unplaced pallets card follows the warehouse of the receipt and the product filter', function () {
+    actingAsAdmin();
+    $north = Warehouse::factory()->create();
+    $south = Warehouse::factory()->create();
+    $widgets = Product::factory()->create();
+    unplacedPalletIn($north, ['product_id' => $widgets->id]);
+    unplacedPalletIn($north);
+    unplacedPalletIn($south, ['product_id' => $widgets->id]);
+    placedPalletIn($north, ['product_id' => $widgets->id]); // noise: placed
+
+    $this->get("/admin?warehouse_ids[]={$north->id}")->assertOk()->assertInertia(fn (Assert $page) => $page->where('stats.unplaced_pallets.count', 2));
+    $this->get("/admin?warehouse_ids[]={$south->id}")->assertOk()->assertInertia(fn (Assert $page) => $page->where('stats.unplaced_pallets.count', 1));
+    $this->get("/admin?warehouse_ids[]={$north->id}&product_id[]={$widgets->id}")->assertOk()->assertInertia(fn (Assert $page) => $page->where('stats.unplaced_pallets.count', 1));
+    $this->get('/admin')->assertOk()->assertInertia(fn (Assert $page) => $page->where('stats.unplaced_pallets.count', 3));
 });
 
 test('the occupancy counts do not change when pallets are received and not placed', function () {
@@ -590,13 +640,20 @@ test('under the warehouse filter an unplaced pallet counts through the warehouse
     );
 });
 
-test('the selected-product pallet list leaves out unplaced pallets of the product', function () {
+test('the selected-product pallet list includes unplaced pallets of the product, with their receipt and warehouse', function () {
     actingAsAdmin();
     $product = Product::factory()->create();
-    $placed = placedPalletIn(Warehouse::firstOrCreateDefault(), ['product_id' => $product->id]);
-    unplacedPalletIn(Warehouse::firstOrCreateDefault(), ['product_id' => $product->id]);
+    $north = Warehouse::factory()->create();
+    $placed = placedPalletIn(Warehouse::firstOrCreateDefault(), ['product_id' => $product->id, 'expiration_date' => '2026-09-01']);
+    $unplaced = unplacedPalletIn($north, ['product_id' => $product->id, 'expiration_date' => '2026-08-01']);
 
     $this->get("/admin?product_id[]={$product->id}")->assertOk()->assertInertia(
-        fn (Assert $page) => $page->has('productPallets', 1)->where('productPallets.0.id', $placed->id)
+        fn (Assert $page) => $page->has('productPallets', 2)
+            ->where('productPallets.0.id', $unplaced->id)
+            ->where('productPallets.0.placed', false)
+            ->where('productPallets.0.location', null)
+            ->where('productPallets.0.receipt_id', $unplaced->receipt_id)
+            ->where('productPallets.0.warehouse', ['id' => $north->id, 'name' => $north->name])
+            ->where('productPallets.1.id', $placed->id)
     );
 });
