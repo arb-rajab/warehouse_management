@@ -13,7 +13,7 @@ import { describe, expect, it } from 'vitest';
  * warehouse-map) and the tests are outside the globs. Keep the allow-list
  * short and explicit.
  */
-const sources: Record<string, string> = {
+const globbed: Record<string, string> = {
     ...import.meta.glob<string>('../components/**/*.vue', {
         query: '?raw',
         import: 'default',
@@ -35,6 +35,18 @@ const sources: Record<string, string> = {
         eager: true,
     }),
 };
+
+/**
+ * Vite shortens a glob that points into this test's own folder, so the
+ * components come back as `./X.vue` while the other folders keep their `../`.
+ * Give every key one shape: `../<folder>/<file>`.
+ */
+const sources: Record<string, string> = Object.fromEntries(
+    Object.entries(globbed).map(([file, source]) => [
+        file.startsWith('./') ? `../components/${file.slice(2)}` : file,
+        source,
+    ]),
+);
 
 const PALETTES =
     'gray|neutral|slate|zinc|stone|blue|red|green|amber|orange|yellow|lime|emerald|teal|cyan|sky|indigo|violet|purple|fuchsia|pink|rose';
