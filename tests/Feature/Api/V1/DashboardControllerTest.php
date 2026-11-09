@@ -347,3 +347,23 @@ test('the mobile dashboard rejects a warehouse id that does not exist', function
 
     $this->getJson('/api/v1/dashboard?warehouse_ids[]=999999')->assertUnprocessable()->assertJsonValidationErrors('warehouse_ids.0');
 });
+
+test('the mobile dashboard counts unplaced pallets as stock but leaves them out of the expired, expiring and stale cards', function () {
+    Carbon::setTestNow('2026-08-13 10:00:00');
+    actingAsMobileUser();
+    Pallet::factory()->create(['expiration_date' => '2026-08-01']);
+    $held = Product::factory()->minimumPallets(1)->create();
+    unplacedPalletIn(Warehouse::firstOrCreateDefault(), ['product_id' => $held->id, 'expiration_date' => '2026-08-01']);
+    backdate(unplacedPalletIn(Warehouse::firstOrCreateDefault(), ['expiration_date' => '2026-08-20']), '2026-06-01 10:00:00');
+    Product::factory()->minimumPallets(1)->create(); // noise: nothing received
+
+    $response = $this->getJson('/api/v1/dashboard');
+
+    $response->assertOk();
+    expect($response->json('stats.expiring.expired'))->toBe(1)
+        ->and($response->json('stats.expiring.windows.0.count'))->toBe(0)
+        ->and($response->json('stats.stale.count'))->toBe(0)
+        ->and($response->json('stats.low_stock.count'))->toBe(1);
+
+    Carbon::setTestNow();
+});

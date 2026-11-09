@@ -516,3 +516,87 @@ test('the dashboard rejects a warehouse id that does not exist', function () {
 
     $this->get('/admin?warehouse_ids[]=999999')->assertSessionHasErrors('warehouse_ids.0');
 });
+
+test('the expired, expiring and stale cards leave out unplaced pallets, so each card matches the pallets list it opens', function () {
+    Carbon::setTestNow('2026-08-13 10:00:00');
+    actingAsAdmin();
+    Pallet::factory()->create(['expiration_date' => '2026-08-01']);
+    Pallet::factory()->create(['expiration_date' => '2026-08-20']);
+    Pallet::factory()->stale()->create(['expiration_date' => null]);
+    // Noise: the same pallets, received and not placed yet.
+    unplacedPalletIn(Warehouse::firstOrCreateDefault(), ['expiration_date' => '2026-08-01']);
+    unplacedPalletIn(Warehouse::firstOrCreateDefault(), ['expiration_date' => '2026-08-20']);
+    backdate(unplacedPalletIn(Warehouse::firstOrCreateDefault(), ['expiration_date' => null]), '2026-06-01 10:00:00');
+
+    $this->get('/admin')->assertOk()->assertInertia(
+        fn (Assert $page) => $page->where('stats.expiring.expired', 1)
+            ->where('stats.expiring.windows.0.count', 1)
+            ->where('stats.expiring.custom.count', 1)
+            ->where('stats.stale.count', 1)
+    );
+
+    Carbon::setTestNow();
+});
+
+test('the occupancy counts do not change when pallets are received and not placed', function () {
+    actingAsAdmin();
+    $this->seedOccupancyFixture();
+    unplacedPalletIn(Warehouse::firstOrCreateDefault());
+    unplacedPalletIn(Warehouse::firstOrCreateDefault());
+
+    $this->get('/admin')->assertOk()->assertInertia(
+        fn (Assert $page) => $page->where('stats.occupancy.empty', 2)
+            ->where('stats.occupancy.full', 1)
+            ->where('stats.occupancy.opened', 1)
+    );
+});
+
+test('an unplaced pallet counts as stock for the low-stock card', function () {
+    actingAsAdmin();
+    $stocked = Product::factory()->minimumPallets(2)->create();
+    unplacedPalletIn(Warehouse::firstOrCreateDefault(), ['product_id' => $stocked->id]);
+    Pallet::factory()->create(['product_id' => $stocked->id]);
+    // Noise: short by the same threshold, with nothing received.
+    Product::factory()->minimumPallets(2)->create();
+
+    $this->get('/admin')->assertOk()->assertInertia(fn (Assert $page) => $page->where('stats.low_stock.count', 1));
+});
+
+test('an inactive product held only as an unplaced pallet counts as inactive in the warehouse', function () {
+    actingAsAdmin();
+    $held = Product::factory()->create(['published' => false]);
+    unplacedPalletIn(Warehouse::firstOrCreateDefault(), ['product_id' => $held->id]);
+    Product::factory()->create(['published' => false]); // noise: nothing received
+
+    $this->get('/admin')->assertOk()->assertInertia(fn (Assert $page) => $page->where('stats.inactive_in_warehouse.count', 1));
+});
+
+test('under the warehouse filter an unplaced pallet counts through the warehouse of its receipt', function () {
+    actingAsAdmin();
+    $north = Warehouse::factory()->create();
+    $south = Warehouse::factory()->create();
+    $lowNorth = Product::factory()->minimumPallets(1)->create();
+    $inactive = Product::factory()->create(['published' => false]);
+    unplacedPalletIn($north, ['product_id' => $lowNorth->id]);
+    unplacedPalletIn($north, ['product_id' => $inactive->id]);
+
+    // Held in North: neither low stock nor missing there; the inactive product is in the warehouse.
+    $this->get("/admin?warehouse_ids[]={$north->id}")->assertOk()->assertInertia(
+        fn (Assert $page) => $page->where('stats.low_stock.count', 0)->where('stats.inactive_in_warehouse.count', 1)
+    );
+    // South holds none of it: the product is short there and the inactive one is not held.
+    $this->get("/admin?warehouse_ids[]={$south->id}")->assertOk()->assertInertia(
+        fn (Assert $page) => $page->where('stats.low_stock.count', 1)->where('stats.inactive_in_warehouse.count', 0)
+    );
+});
+
+test('the selected-product pallet list leaves out unplaced pallets of the product', function () {
+    actingAsAdmin();
+    $product = Product::factory()->create();
+    $placed = placedPalletIn(Warehouse::firstOrCreateDefault(), ['product_id' => $product->id]);
+    unplacedPalletIn(Warehouse::firstOrCreateDefault(), ['product_id' => $product->id]);
+
+    $this->get("/admin?product_id[]={$product->id}")->assertOk()->assertInertia(
+        fn (Assert $page) => $page->has('productPallets', 1)->where('productPallets.0.id', $placed->id)
+    );
+});

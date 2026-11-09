@@ -1191,3 +1191,38 @@ test('the pallets list can be filtered by warehouse, hydrating the selected ware
         fn (Assert $page) => $page->has('pallets.data', 2)->where('filterOptions.warehouses', [])
     );
 });
+
+test('the matching pallets list leaves out unplaced pallets, in the rows, the total and every filter', function () {
+    actingAsAdmin();
+    $product = Product::factory()->create();
+    $north = Warehouse::factory()->create();
+    $placed = placedPalletIn($north, ['product_id' => $product->id, 'expiration_date' => '2026-09-01']);
+    unplacedPalletIn($north, ['product_id' => $product->id, 'expiration_date' => '2026-08-01']);
+    unplacedPalletIn(Warehouse::firstOrCreateDefault(), ['product_id' => $product->id, 'expiration_date' => null]);
+
+    foreach (['/admin/pallets', "/admin/pallets?product_id[]={$product->id}", "/admin/pallets?warehouse_ids[]={$north->id}"] as $url) {
+        $this->get($url)->assertOk()->assertInertia(
+            fn (Assert $page) => $page->where('pallets.data', fn ($rows) => collect($rows)->pluck('id')->every(fn ($id) => $id === $placed->id))
+                ->where('pallets.meta.total', 1)
+        );
+    }
+});
+
+test('an unplaced pallet is a 404 on every admin pallet action, which are offered from a cell page only, and nothing changes', function (string $method, string $suffix, array $payload) {
+    actingAsAdmin();
+    $row = Row::factory()->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 1]);
+    $pallet = unplacedPalletIn(Warehouse::firstOrCreateDefault(), ['remaining_boxes' => 6]);
+
+    $this->call($method, "/admin/pallets/{$pallet->id}{$suffix}", $payload)->assertNotFound();
+
+    expect($pallet->fresh()->cell_id)->toBeNull()
+        ->and($pallet->fresh()->remaining_boxes)->toBe(6)
+        ->and($row->cells()->first()->state)->toBe(CellState::Empty)
+        ->and(Pallet::query()->count())->toBe(1);
+})->with([
+    'update' => ['PUT', '', ['product_id' => 1, 'remaining_boxes' => 3]],
+    'open' => ['POST', '/open', []],
+    'remove boxes' => ['POST', '/remove-boxes', ['boxes_count' => 1]],
+    'empty' => ['POST', '/empty', []],
+    'transfer' => ['POST', '/transfer', ['row_letter' => 'A', 'cell_number' => 1, 'flat_number' => 1]],
+]);

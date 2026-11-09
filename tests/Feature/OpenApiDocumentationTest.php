@@ -166,3 +166,53 @@ test('the unified API documentation is restricted and has no separate store refe
     $this->get('/docs/store-api')->assertNotFound();
     $this->get('/docs/store-api.json')->assertNotFound();
 });
+
+test('the API reference documents truck receiving and placing, with their conflict and validation answers', function () {
+    $exportPath = tempnam(sys_get_temp_dir(), 'openapi-');
+    try {
+        $result = Process::path(base_path())->run([PHP_BINARY, 'artisan', 'scramble:export', '--path='.$exportPath]);
+        expect($result->successful())->toBeTrue($result->errorOutput());
+        $document = json_decode(file_get_contents($exportPath), true, flags: JSON_THROW_ON_ERROR);
+    } finally {
+        unlink($exportPath);
+    }
+
+    $operation = fn (string $method, string $path): array => $document['paths'][$path][$method] ?? throw new RuntimeException("{$method} {$path} is not documented");
+    $parameters = fn (array $operation): array => array_column($operation['parameters'] ?? [], 'in', 'name');
+    $answers = fn (array $operation): array => array_map('strval', array_keys($operation['responses']));
+
+    $list = $operation('get', '/api/v1/receipts');
+    expect($parameters($list))->toMatchArray(['warehouse_ids[]' => 'query', 'status' => 'query'])
+        ->and($answers($list))->toContain('200', '401', '422');
+
+    expect($answers($operation('post', '/api/v1/receipts')))->toContain('201', '401', '422')
+        ->and($answers($operation('get', '/api/v1/receipts/{receipt}')))->toContain('200', '401', '404')
+        ->and($answers($operation('put', '/api/v1/receipts/{receipt}/pallets')))->toContain('200', '409', '422')
+        ->and($answers($operation('post', '/api/v1/receipts/{receipt}/finalize')))->toContain('200', '409', '422')
+        ->and($answers($operation('post', '/api/v1/receipts/{receipt}/files')))->toContain('201', '409', '422')
+        ->and($answers($operation('delete', '/api/v1/receipts/{receipt}/files/{file}')))->toContain('204', '409', '404')
+        ->and($answers($operation('get', '/api/v1/receipts/{receipt}/files/{file}')))->toContain('200', '404');
+
+    expect(array_keys($operation('post', '/api/v1/receipts/{receipt}/files')['requestBody']['content']))->toBe(['multipart/form-data']);
+
+    $unplaced = $operation('get', '/api/v1/pallets/unplaced');
+    expect($parameters($unplaced))->toMatchArray(['warehouse_ids[]' => 'query', 'product_id[]' => 'query'])
+        ->and($answers($unplaced))->toContain('200', '401', '422');
+
+    $place = $operation('post', '/api/v1/pallets/{pallet}/place');
+    expect($answers($place))->toContain('200', '404', '409', '412', '422');
+
+    foreach ([
+        'put /api/v1/receipts/{receipt}/pallets' => 'receipt_finalized',
+        'post /api/v1/receipts/{receipt}/finalize' => 'receipt_has_no_files',
+        'post /api/v1/receipts/{receipt}/files' => 'receipt_file_limit_reached',
+    ] as $endpoint => $errorCode) {
+        [$method, $path] = explode(' ', $endpoint);
+        expect(json_encode($operation($method, $path)['responses']))->toContain($errorCode);
+    }
+
+    // The bill's storage path is never part of a documented schema.
+    $schemas = $document['components']['schemas'];
+    expect(json_encode(array_intersect_key($schemas, array_flip(['ReceiptFileResource', 'ReceiptResource']))))->not->toContain('"path"');
+    expect($schemas)->toHaveKeys(['ReceiptResource', 'ReceiptFileResource']);
+});
