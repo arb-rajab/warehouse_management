@@ -30,6 +30,7 @@ trait ResolvesSlotFromCoordinates
     protected function coordinateRules(string $prefix = ''): array
     {
         return [
+            /** The row's warehouse. Optional while only one warehouse uses `row_letter`; required (422 on this field) once several do. */
             $prefix.'warehouse_id' => ['nullable', 'integer', 'exists:warehouses,id'],
             $prefix.'row_letter' => ['required', 'string', 'max:2', 'exists:rows,letter'],
             $prefix.'cell_number' => ['required', 'integer', 'min:1'],

@@ -22,7 +22,7 @@ class CellVerificationRoundController extends Controller
 
     /**
      * List the authenticated user's own verification rounds, most recent
-     * first, so the mobile app can offer resuming an unfinished one.
+     * first (`warehouse_ids[]` keeps those covering a row of those warehouses), so the mobile app can offer resuming an unfinished one.
      */
     public function index(FilterCellVerificationRoundsRequest $request): AnonymousResourceCollection
     {
@@ -31,7 +31,7 @@ class CellVerificationRoundController extends Controller
 
         $rounds = CellVerificationRound::query()
             ->select(CellVerificationRound::SELECT_COLUMNS)
-            ->with('rows:id,letter')
+            ->with(CellVerificationRound::WITH_ROWS)
             ->ownedBy($user->id)
             ->withCount('reports')
             ->when($request->boolean('only_unfinished'), fn (Builder $query) => $query->unfinished())
@@ -54,9 +54,9 @@ class CellVerificationRoundController extends Controller
         Gate::authorize('view', $cellVerificationRound);
 
         $cellVerificationRound->loadCount('reports');
-        $cellVerificationRound->load(['rows:id,letter']);
+        $cellVerificationRound->load(CellVerificationRound::WITH_ROWS);
         $cellVerificationRound->load(['reports' => fn ($query) => $query
-            ->with(CellVerificationReport::WITH_DETAILS)
+            ->with([...CellVerificationReport::WITH_DETAILS, ...CellVerificationReport::WITH_WAREHOUSE])
             ->orderBy('created_at')
             ->orderBy('id')]);
 
@@ -64,11 +64,13 @@ class CellVerificationRoundController extends Controller
     }
 
     /**
-     * Start a round over the rows the worker is about to walk, or over the
-     * whole warehouse when `row_ids` is omitted. Those rows are claimed
-     * exclusively until the round completes: no other round may include any of
-     * them, and pallet actions on their cells are refused meanwhile — so a
-     * warehouse-wide round holds everything until it is finished.
+     * Start a round over the rows the worker is about to walk, or over every
+     * row when `row_ids` is omitted; `warehouse_ids[]` narrows either to the
+     * rows of those warehouses (a named row outside them is refused), so a
+     * round over one warehouse is `warehouse_ids[]` alone. Those rows are
+     * claimed exclusively until the round completes: no other round may
+     * include any of them, and pallet actions on their cells are refused
+     * meanwhile — so a round over everything holds it until it is finished.
      */
     #[DocumentedResponse(409, description: 'One or more of the requested rows are already covered by another unfinished round (`error_code`: `rows_already_in_active_round`).', type: 'array{message: string, error_code: string}')]
     #[DocumentedResponse(422, description: 'The round would cover no rows, or a requested row no longer exists (`error_code`: `verification_round_scope_empty` / `verification_round_rows_not_found`).', type: 'array{message: string, error_code: string}')]
@@ -77,9 +79,9 @@ class CellVerificationRoundController extends Controller
         /** @var User $user */
         $user = $request->user();
 
-        $round = $this->cellVerifications->startRound($user->id, $request->rowIds());
+        $round = $this->cellVerifications->startRound($user->id, $request->rowIds(), $request->warehouseIds());
 
-        return (new CellVerificationRoundResource($round->load('rows:id,letter')))
+        return (new CellVerificationRoundResource($round->load(CellVerificationRound::WITH_ROWS)))
             ->response()
             ->setStatusCode(201);
     }
@@ -90,6 +92,6 @@ class CellVerificationRoundController extends Controller
 
         $round = $this->cellVerifications->completeRound($cellVerificationRound);
 
-        return new CellVerificationRoundResource($round->load('rows:id,letter'));
+        return new CellVerificationRoundResource($round->load(CellVerificationRound::WITH_ROWS));
     }
 }

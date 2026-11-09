@@ -84,11 +84,11 @@ class CellStatusLog extends Model
     ];
 
     /**
-     * The warehouses of the cells a log names, loaded only by the admin
-     * listings: their links to a cell's row carry the warehouse, because a row
-     * letter is unique per warehouse only. Left out of WITH_DETAILS so the
-     * mobile API's payloads keep their shape (`CellStatusLogResource` adds the
-     * `warehouse` key to a location only when it is loaded).
+     * The warehouses of the cells a log names, loaded by the admin listings
+     * (their links to a cell's row carry the warehouse) and the mobile API
+     * (a row letter is unique per warehouse only). Left out of WITH_DETAILS so
+     * a caller opts in (`CellStatusLogResource` adds the `warehouse` key to a
+     * location only when it is loaded).
      *
      * @var list<string>
      */

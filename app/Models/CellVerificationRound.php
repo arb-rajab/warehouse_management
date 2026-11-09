@@ -38,6 +38,14 @@ class CellVerificationRound extends Model
     public const array SELECT_COLUMNS = ['id', 'user_id', 'completed_at', 'created_at'];
 
     /**
+     * The eager loads behind `rows` in CellVerificationRoundResource: each
+     * row with its warehouse, because a letter names one row per warehouse.
+     *
+     * @var list<string>
+     */
+    public const array WITH_ROWS = ['rows:id,warehouse_id,letter', 'rows.warehouse:id,name'];
+
+    /**
      * @return array<string, string>
      */
     protected function casts(): array

@@ -81,7 +81,11 @@ that only knows the letter:
   takes the same ids.
 - Consumers: the web and mobile dashboards (`FiltersDashboard`), admin rows,
   warehouse map page and rows payload, pallets, cell logs and rounds; mobile
-  rows, rows/full, rows/frozen, cell logs and rounds.
+  rows, rows/full, rows/frozen, cell logs, rounds (list, and `POST` creation,
+  where it narrows the rows an omitted `row_ids` would claim and refuses a
+  named row outside it as `verification_round_rows_not_found`) and
+  `products/{product}/pallets`. The mobile ETags are content hashes, so the
+  filter and the `warehouse` keys need no cache-key work.
 - Admin pages echo the ids in `filters.warehouse_ids` (the dashboard and map
   always send the key, `null` when unfiltered; listings send it only when
   present, like their other `only()` filters) and hydrate only the selected
@@ -104,17 +108,25 @@ links to has no warehouse filter yet. The cache key includes the warehouse ids.
 
 ## Payloads
 
-`RowResource`, `CellResource` (when `row.warehouse` is loaded, as
+`RowResource`, `RowSummaryResource` (when `warehouse` is loaded: the rows of a
+mobile round and `rows/frozen`), `CellResource` (when `row.warehouse` is loaded, as
 `Cell::WITH_ROW_AND_CONTENTS` does) and `PalletResource` (when
 `cell.row.warehouse` is loaded) carry `warehouse: {id, name}`
 (`WarehouseSummaryResource`); cells nested in a row payload leave it to the
 row. Row listings load `Row::WITH_WAREHOUSE`; `rows/frozen` loads it for its
-`RowSummaryResource`.
+`RowSummaryResource`. `ProductPalletResource` carries the same top-level
+`warehouse`. The mobile cell logs, round reports (`cell.warehouse` through
+`toLocationWithWarehouseArray()`, from `CellStatusLog::WITH_WAREHOUSES` /
+`CellVerificationReport::WITH_WAREHOUSE`) and rounds' `rows`
+(`CellVerificationRound::WITH_ROWS`) name their warehouse too. Mobile
+`rows/{row}/cells` and its cell route document `?warehouse_id=` with a
+`QueryParameter`. A round's `rows_already_in_active_round` message labels a
+shared letter with its warehouse ("A (Annex)").
 
 ## The WMS pages (Vue)
 
 - **Warehouses pages.** `Admin/Warehouses/{Index,Create,Edit}.vue` with `WarehouseFormFields` (name required, code and address optional, native attributes equal to `ValidatesWarehouse`). Create and Edit also pass `ResourceFormPage` the browser validation schema (`lib/warehouseRules.json`, kept equal to the requests by `WarehouseClientValidationParityTest`; `unique` stays on the server). The list shows the row count, offers Delete only while it is 0 (otherwise a "Has rows" notice), and reads the backend's race refusal from `usePageError('warehouse')` into an `ActionErrorBanner`. The nav item sits after Rows; the help topic is `warehouses`.
 - **The filter control.** `FilterWarehouseSelect` (see [filter dialogs](filter-dialogs.md)) is on the dashboard ([dashboard](dashboard.md)), the rows and pallets headers, a bar above the warehouse map, the cell log dialog (Location section and the Cell column popover) and the rounds dialog. The map remounts on a changed selection (`preserveState: false`) and fetches `warehouse-map/rows` with the same `warehouse_ids[]`. Each page puts `warehouse_ids` in its filter state, its active-filter count and Clear, and the pallets "view on map" link keeps it.
 - **Rows.** Create posts a required `warehouse_id` (`StoreSelectField` over the `warehouses` prop); Edit shows the row's warehouse read-only (an update never moves a row); Show lists it in a `DetailList`; the list has a Warehouse column. A pallet transfer from the row page posts the destination row's `warehouse_id`.
-- **Linking to a row.** Every link, form action or export URL for a row goes through `rowLinkOptions(row.warehouse)` (`lib/location.ts`), which adds `warehouse_id`; the cell, pallet, report and round listings therefore carry the cell's `warehouse: {id, name}` (`Cell::toLocationWithWarehouseArray()`, loaded by the admin controllers through `CellStatusLog::WITH_WAREHOUSES` / `CellVerificationReport::WITH_WAREHOUSE` / `Pallet::listedForAdmin()`; the mobile API loads none, so its payloads are unchanged and `PalletControllerTest`-style exact comparisons stay valid). A link built from a bare letter would be refused for a letter two warehouses use.
+- **Linking to a row.** Every link, form action or export URL for a row goes through `rowLinkOptions(row.warehouse)` (`lib/location.ts`), which adds `warehouse_id`; the cell, pallet, report and round listings therefore carry the cell's `warehouse: {id, name}` (`Cell::toLocationWithWarehouseArray()`, loaded through `CellStatusLog::WITH_WAREHOUSES` / `CellVerificationReport::WITH_WAREHOUSE` / `Pallet::listedForAdmin()`; the mobile API loads them too, so its location payloads gained that key). A link built from a bare letter would be refused for a letter two warehouses use.
 - **Row dropdowns.** `Row::filterOptions()` returns `{id, letter}` and adds `warehouse: {id, name}` only for a letter that more than one warehouse uses; `LocationFilterFields` labels such rows "A - Annex" (`rowOptionLabel()`), and the rounds' covered rows name their warehouse (`rows.warehouse` loaded by the admin round controller).

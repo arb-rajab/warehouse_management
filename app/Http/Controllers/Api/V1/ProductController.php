@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\V1\FilterProductPalletsRequest;
 use App\Http\Requests\Api\V1\FilterProductsRequest;
 use App\Http\Requests\Api\V1\StoreProductBarcodeRequest;
 use App\Http\Resources\ProductPalletResource;
@@ -98,9 +99,10 @@ class ProductController extends Controller
      * mobile app's simple-mode "where is this product?" search. Ordered by
      * expiration_date ascending (nulls last, since an undated pallet never expires
      * soonest), then added_at ascending, then location, so the operator always
-     * drives to the oldest-expiring stock first.
+     * drives to the oldest-expiring stock first. Each pallet names its
+     * `warehouse`; `warehouse_ids[]` keeps only the pallets stored there.
      */
-    public function pallets(Product $product): AnonymousResourceCollection
+    public function pallets(FilterProductPalletsRequest $request, Product $product): AnonymousResourceCollection
     {
         $productBoxesCount = $product->load('setting:product_id,boxes_count')->boxes_count;
 
@@ -109,9 +111,11 @@ class ProductController extends Controller
             ->join('cells', 'pallets.cell_id', '=', 'cells.id')
             ->join('rows', 'cells.row_id', '=', 'rows.id')
             ->where('pallets.product_id', $product->id)
+            ->forWarehouses($request->warehouseIds())
             ->with([
                 'cell:id,row_id,cell_number,flat_number,state,is_active',
-                'cell.row:id,letter',
+                'cell.row:id,warehouse_id,letter',
+                'cell.row.warehouse:id,name',
                 'cellEnteredLog:cell_status_logs.id,cell_status_logs.pallet_id,cell_status_logs.action,cell_status_logs.created_at',
             ])
             ->orderByRaw('pallets.expiration_date IS NULL')

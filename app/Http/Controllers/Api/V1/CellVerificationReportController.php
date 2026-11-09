@@ -38,7 +38,7 @@ class CellVerificationReportController extends Controller
             'note' => $request->input('note'),
         ]);
 
-        return (new CellVerificationReportResource($report->load(CellVerificationReport::WITH_DETAILS)))
+        return (new CellVerificationReportResource($report->load([...CellVerificationReport::WITH_DETAILS, ...CellVerificationReport::WITH_WAREHOUSE])))
             ->response()
             ->setStatusCode(201);
     }

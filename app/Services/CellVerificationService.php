@@ -34,9 +34,11 @@ class CellVerificationService
     /**
      * Start a round over the given rows, claiming them exclusively until it is
      * completed, so two rounds may run at once as long as they share no row.
-     * A null `$rowIds` covers the whole warehouse — the round then claims every
-     * row, which blocks pallet actions everywhere and leaves no row for a second
-     * round to take.
+     * A null `$rowIds` covers every row — the round then claims all of them,
+     * which blocks pallet actions everywhere and leaves no row for a second
+     * round to take. `$warehouseIds` narrows the scope to the rows of those
+     * warehouses (null: every warehouse); a named row outside them counts as
+     * not found.
      *
      * Coverage is resolved to actual rows once, here, rather than left as a
      * standing "everything": a row added later belongs to the warehouse the
@@ -58,14 +60,15 @@ class CellVerificationService
      * the check that holds under the row locks.
      *
      * @param  array<int, int>|null  $rowIds
+     * @param  list<int>|null  $warehouseIds
      *
      * @throws InvalidVerificationRoundScopeException
      * @throws OverlappingVerificationRoundException
      */
-    public function startRound(int $userId, ?array $rowIds): CellVerificationRound
+    public function startRound(int $userId, ?array $rowIds, ?array $warehouseIds = null): CellVerificationRound
     {
-        return DB::transaction(function () use ($userId, $rowIds) {
-            $scope = Row::query();
+        return DB::transaction(function () use ($userId, $rowIds, $warehouseIds) {
+            $scope = Row::query()->forWarehouses($warehouseIds);
 
             if ($rowIds !== null) {
                 $scope->whereIn('id', $rowIds);
@@ -91,13 +94,23 @@ class CellVerificationService
                 throw new InvalidVerificationRoundScopeException('verification_round_rows_not_found', __('messages.verification_round_rows_not_found'));
             }
 
-            $conflictingLetters = Row::query()
+            $conflictingRows = Row::query()
                 ->whereIn('id', $scopedIds)
                 ->underActiveVerification()
+                ->with(Row::WITH_WAREHOUSE)
                 ->orderBy('letter')
-                ->get(['letter'])
+                ->orderBy('warehouse_id')
+                ->get(['id', 'warehouse_id', 'letter']);
+
+            // A letter several warehouses use names the warehouse too, so the
+            // worker can tell which row is taken ("A (Annex), B").
+            $sharedLetters = $conflictingRows->isEmpty()
+                ? []
+                : Row::query()->whereIn('letter', $conflictingRows->pluck('letter'))->groupBy('letter')->havingRaw('count(*) > 1')->pluck('letter')->all();
+
+            $conflictingLetters = $conflictingRows
                 ->toBase()
-                ->map(fn (Row $row): string => $row->letter)
+                ->map(fn (Row $row): string => in_array($row->letter, $sharedLetters, true) ? "{$row->letter} ({$row->warehouse->name})" : $row->letter)
                 ->all();
 
             if ($conflictingLetters !== []) {
