@@ -204,8 +204,9 @@ class Pallet extends Model
      * pallets" list's). It must stay in lockstep with the frontend's
      * `matchesCellHighlight()`/`isCellExpired()`/`isCellExpiringWithin()`/
      * `isCellStale()`. `state`/`is_active` live on the pallet's `Cell`, not on
-     * the pallet itself, so those two go through `whereHas('cell', ...)`; the
-     * rest are plain columns on this table.
+     * the pallet itself, so those two go through `whereHas('cell', ...)` (and
+     * never match an unplaced pallet); the rest are plain columns on this
+     * table. `unplaced` keeps only the received pallets with no cell yet.
      *
      * @param  Builder<Pallet>  $query
      */
@@ -217,6 +218,7 @@ class Pallet extends Model
         $query
             ->when($request->filled('state'), fn (Builder $q) => $q->whereHas('cell', fn (Builder $c) => $c->where('state', $request->string('state')->value())))
             ->when($request->filled('is_active') && ! $request->boolean('is_active'), fn (Builder $q) => $q->whereHas('cell', fn (Builder $c) => $c->where('is_active', false)))
+            ->when($request->boolean('unplaced'), fn (Builder $q) => $q->unplaced())
             ->when($request->boolean('expired'), fn (Builder $q) => $q->where('expiration_date', '<', $today))
             ->when($request->filled('expires_within_days'), fn (Builder $q) => $q->whereBetween('expiration_date', [$today, $today->copy()->addDays($request->integer('expires_within_days'))]))
             ->when($request->filled('stale_after_days'), fn (Builder $q) => $q->where('created_at', '<=', $today->copy()->subDays($request->integer('stale_after_days'))))
@@ -304,9 +306,9 @@ class Pallet extends Model
      * the dashboard's selected-product pallet list so both always show the
      * same rows in the same order.
      *
-     * Unplaced pallets are left out: every row links to its place on the
-     * warehouse map, and the cell-based filters (state, inactive) cannot
-     * apply to them. The mobile `GET pallets/unplaced` lists them.
+     * Unplaced pallets (received, no cell yet) are listed too: a row without a
+     * cell shows the warehouse of its receipt and links to that receipt, never
+     * to the map. The cell-based filters (state, inactive) cannot match them.
      *
      * @param  Builder<Pallet>  $query
      */
@@ -314,8 +316,7 @@ class Pallet extends Model
     protected function listedForAdmin(Builder $query): void
     {
         $query
-            ->placed()
-            ->select(['id', 'product_id', 'cell_id', 'expiration_date', 'remaining_boxes', 'created_at'])
+            ->select(['id', 'product_id', 'cell_id', 'receipt_id', 'expiration_date', 'remaining_boxes', 'created_at'])
             ->with([
                 'product:id,name,ar_name,thumbnail_img,warehouse_image_path,published',
                 'product.thumbnailUpload:id,file_name,external_link',
@@ -323,6 +324,7 @@ class Pallet extends Model
                 'cell:id,row_id,cell_number,flat_number,state,is_active',
                 'cell.row:id,warehouse_id,letter',
                 'cell.row.warehouse:id,name',
+                ...self::WITH_RECEIPT_WAREHOUSE,
             ])
             ->orderedByExpirationThenAdded();
     }
@@ -342,7 +344,8 @@ class Pallet extends Model
     {
         $query->orderByRaw('expiration_date IS NULL')
             ->orderBy('expiration_date')
-            ->orderBy('created_at');
+            ->orderBy('created_at')
+            ->orderBy('id');
     }
 
     /**

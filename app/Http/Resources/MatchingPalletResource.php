@@ -5,6 +5,7 @@ namespace App\Http\Resources;
 use App\Enums\CellState;
 use App\Models\Cell;
 use App\Models\Product;
+use App\Models\Receipt;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Carbon;
@@ -26,7 +27,15 @@ use Illuminate\Support\Carbon;
  * @property-read Carbon|null $created_at
  * @property-read int $remaining_boxes
  * @property-read Product $product
- * @property-read Cell $cell
+ * @property-read int|null $cell_id
+ * @property-read int|null $receipt_id
+ * @property-read Cell|null $cell
+ * @property-read Receipt|null $receipt
+ *
+ * An unplaced pallet (received, no cell yet) has null `state`, `location` and
+ * `cell_active`; it names the `warehouse` of its receipt and the `receipt_id`
+ * the list links to instead. `warehouse` is null for a placed pallet, whose
+ * `location` already carries it.
  */
 class MatchingPalletResource extends JsonResource
 {
@@ -37,11 +46,16 @@ class MatchingPalletResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
+        $placed = $this->cell_id !== null;
+
         return [
             ...$this->resource->toListingSummaryArray(),
+            'placed' => $placed,
             'product' => $this->whenLoaded('product', fn () => new ProductResource($this->product)),
-            'location' => $this->whenLoaded('cell', fn () => $this->cell->toLocationWithWarehouseArray()),
-            'cell_active' => $this->whenLoaded('cell', fn () => $this->cell->is_active),
+            'location' => $placed ? $this->whenLoaded('cell', fn () => $this->cell?->toLocationWithWarehouseArray()) : null,
+            'cell_active' => $placed ? $this->whenLoaded('cell', fn () => $this->cell?->is_active) : null,
+            'receipt_id' => $this->receipt_id,
+            'warehouse' => $placed ? null : $this->whenLoaded('receipt', fn () => $this->receipt?->warehouse?->only(['id', 'name'])),
         ];
     }
 }

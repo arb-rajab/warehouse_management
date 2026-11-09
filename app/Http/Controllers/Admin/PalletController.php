@@ -51,7 +51,7 @@ class PalletController extends Controller
         return Inertia::render('Admin/Pallets/Index', [
             'pallets' => $this->paginated(MatchingPalletResource::collection($pallets)),
             'filters' => [
-                ...$request->only(['state', 'is_active', 'expired', 'expires_within_days', 'stale_after_days', 'product_id', 'warehouse_ids']),
+                ...$request->only(['state', 'is_active', 'expired', 'unplaced', 'expires_within_days', 'stale_after_days', 'product_id', 'warehouse_ids']),
                 'per_page' => $perPage,
             ],
             'filterOptions' => [

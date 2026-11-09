@@ -30,6 +30,7 @@ class FilterMatchingPalletsRequest extends FormRequest
     {
         $this->normalizeExpiredFilter();
         $this->normalizeBooleanFilter('is_active');
+        $this->normalizeBooleanFilter('unplaced');
     }
 
     /**
@@ -44,6 +45,7 @@ class FilterMatchingPalletsRequest extends FormRequest
             'is_active' => ['nullable', 'boolean'],
             'expires_within_days' => ['nullable', 'integer', 'min:1'],
             'expired' => ['nullable', 'boolean'],
+            'unplaced' => ['nullable', 'boolean'],
             ...$this->staleAfterDaysFilterRules(),
             ...$this->productIdsFilterRules(),
             ...$this->warehouseIdsFilterRules(),
