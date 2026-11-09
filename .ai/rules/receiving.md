@@ -95,7 +95,9 @@ product owner.
 - Factories: `Receipt::factory()` is a draft in the Default warehouse unless
   `->for($warehouse)`; `ReceiptPallet::factory()` is an entry of a draft with
   no pallet yet; `Pallet::factory()->unplaced()` has no cell and a finalized
-  receipt of its own (pass `receipt_id` to pick one).
+  receipt of its own (pass `receipt_id` to pick one; `->for($receipt)` cannot,
+  the state would overwrite it). Tests build pallets in a given warehouse with
+  `placedPalletIn($warehouse)` / `unplacedPalletIn($warehouse)` from `tests/Pest.php`.
 
 ## How each pallet consumer treats an unplaced pallet
 
