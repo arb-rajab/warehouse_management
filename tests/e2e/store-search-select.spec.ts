@@ -23,17 +23,26 @@ test('the open list overlaps the order table instead of being clipped by it', as
     const open = await page
         .locator('[data-search-select-layer] input[role="combobox"]')
         .boundingBox();
-    const rows = await panel.getByRole('option').first().boundingBox();
+    const list = await panel.boundingBox();
     expect(table).not.toBeNull();
-    expect(rows).not.toBeNull();
-    // The list reaches past the table's bottom edge and is still fully hit-testable there.
-    expect(rows!.y + rows!.height).toBeGreaterThan(table!.y + table!.height);
+    expect(list).not.toBeNull();
+    // The list flips above the field when the room below is short (the field
+    // sits low in the 720px viewport), so it overlaps the table and reaches
+    // past whichever table edge it opens toward: it is not clipped by it.
+    const opensUp = list!.y < table!.y;
+    const opensDown = list!.y + list!.height > table!.y + table!.height;
+    expect(opensUp || opensDown).toBe(true);
+    // The part outside the table is still fully hit-testable.
+    const outside = {
+        x: list!.x + 20,
+        y: opensUp ? list!.y + 8 : list!.y + list!.height - 4,
+    };
     const hit = await page.evaluate(
         ({ x, y }) =>
             document
                 .elementFromPoint(x, y)
                 ?.closest('[data-search-select-layer]') !== null,
-        { x: rows!.x + 20, y: rows!.y + rows!.height - 4 },
+        outside,
     );
     expect(hit).toBe(true);
     expect(open).not.toBeNull();
