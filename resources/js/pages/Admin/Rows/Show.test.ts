@@ -279,7 +279,7 @@ describe('Rows Show', () => {
             'bg-orange-50',
         );
         expect(slot(wrapper, formatSlot('A', 3, 1))?.classes()).toContain(
-            'bg-gray-100',
+            'bg-cell-empty',
         );
     });
 

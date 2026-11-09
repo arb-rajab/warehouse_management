@@ -1,10 +1,148 @@
 @import 'tailwindcss';
+/*
+ * Back office (WMS + store control panel) identity: Direction A ("Souq").
+ * brand/fonts.css + brand/tokens.css are the same sources the storefront and
+ * the seller panel import (one palette, .ai/rules/views.md);
+ * brand/backoffice.css adds the sidebar tokens and the dark-mode values only
+ * the back office has.
+ */
+@import './brand/fonts.css';
+@import './brand/tokens.css';
+@import './brand/backoffice.css';
 
 @source '../../storage/framework/views/*.php';
 
 @theme inline {
     --font-sans:
-        Instrument Sans, ui-sans-serif, system-ui, sans-serif,
-        'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol',
-        'Noto Color Emoji';
+        'IBM Plex Sans Arabic', ui-sans-serif, system-ui, 'Segoe UI', sans-serif;
+    --font-mono:
+        'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+    /* Semantic colours (bg-brand, text-muted, border-line, ...). */
+    --color-brand: var(--brand);
+    --color-brand-hover: var(--brand-hover);
+    --color-brand-strong: var(--brand-strong);
+    --color-brand-soft: var(--brand-soft);
+    --color-on-brand: var(--on-brand);
+    --color-accent: var(--accent);
+    --color-accent-strong: var(--accent-strong);
+    --color-accent-soft: var(--accent-soft);
+    --color-on-accent: var(--on-accent);
+    --color-ink: var(--ink);
+    --color-muted: var(--muted);
+    --color-line: var(--line);
+    --color-line-strong: var(--line-strong);
+    --color-page: var(--page);
+    --color-surface: var(--surface);
+    --color-subtle: var(--subtle);
+    --color-table-head: var(--table-head);
+    --color-row-hover: var(--row-hover);
+    --color-link: var(--link);
+    --color-focus: var(--focus);
+    --color-focus-ring: var(--focus-ring);
+    --color-success: var(--success-color);
+    --color-success-strong: var(--success-strong);
+    --color-success-soft: var(--success-soft);
+    --color-warning: var(--warning-color);
+    --color-warning-strong: var(--warning-strong);
+    --color-warning-soft: var(--warning-soft);
+    --color-danger: var(--danger-color);
+    --color-danger-strong: var(--danger-strong);
+    --color-danger-soft: var(--danger-soft);
+    --color-danger-soft-hover: var(--danger-soft-hover);
+    --color-info: var(--info-color);
+    --color-info-strong: var(--info-strong);
+    --color-info-soft: var(--info-soft);
+    --color-sidebar: var(--sidebar);
+    --color-sidebar-ink: var(--sidebar-ink);
+    --color-sidebar-strong: var(--sidebar-strong);
+    --color-sidebar-muted: var(--sidebar-muted);
+    --color-sidebar-line: var(--sidebar-line);
+    --color-sidebar-well: var(--sidebar-well);
+    --color-sidebar-hover: var(--sidebar-hover);
+    --color-sidebar-active: var(--sidebar-active);
+    --color-sidebar-active-ink: var(--sidebar-active-ink);
+    --color-sidebar-indicator: var(--sidebar-indicator);
+
+    /* rounded-sm/md/lg/xl read --radius-* (6/10/14/22 px from tokens.css). */
+    --shadow-card: var(--shadow-card);
+    --shadow-pop: var(--shadow-pop);
+    --shadow-btn: var(--shadow-btn);
+
+    /*
+     * Cell-state colours are a functional legend (cell-state-visuals.md,
+     * mirrored by hand in the Flutter app). The empty state used to read
+     * gray-100/gray-400 and neutral-900/neutral-700, which the remap below
+     * moves, so it is pinned here to Tailwind's stock values for those four
+     * shades. green/orange (full/opened) are not remapped. cellStateColor.test.ts
+     * compares these values with node_modules/tailwindcss/theme.css.
+     */
+    --color-cell-empty: oklch(96.7% 0.003 264.542);
+    --color-cell-empty-line: oklch(70.7% 0.022 261.325);
+    --color-cell-empty-dark: oklch(20.5% 0 none);
+    --color-cell-empty-line-dark: oklch(37.1% 0 none);
+}
+
+/*
+ * The back-office pages use gray-* (light), neutral-* (dark), blue-* (the old
+ * action and link colour) and red-* (danger). Remapping those scales moves
+ * every page onto the warm paper/ink neutrals, the brand red and the deeper
+ * danger red without editing each file. green, amber and orange stay stock:
+ * cell states and status badges read them.
+ */
+@theme {
+    --color-gray-50: #faf7f4;
+    --color-gray-100: #f3eee9;
+    --color-gray-200: #ece5df;
+    --color-gray-300: #d9d0c8;
+    --color-gray-400: #a69c94;
+    --color-gray-500: #7d736c;
+    --color-gray-600: #6b625c;
+    --color-gray-700: #4a423c;
+    --color-gray-800: #2f2925;
+    --color-gray-900: #1f1a17;
+    --color-gray-950: #14110f;
+
+    --color-neutral-50: #faf7f4;
+    --color-neutral-100: #f5f0eb;
+    --color-neutral-200: #e8e1da;
+    --color-neutral-300: #d9d0c8;
+    --color-neutral-400: #b5aca4;
+    --color-neutral-500: #8c837b;
+    --color-neutral-600: #6e655e;
+    --color-neutral-700: #4a423c;
+    --color-neutral-800: #3a332e;
+    --color-neutral-900: #1e1a17;
+    --color-neutral-950: #14110f;
+
+    --color-blue-50: #fdecea;
+    --color-blue-100: #fbd9d5;
+    --color-blue-200: #f6b3ac;
+    --color-blue-300: #ff8a80;
+    --color-blue-400: #ff6b5e;
+    --color-blue-500: #d42a1e;
+    --color-blue-600: #c4170c;
+    --color-blue-700: #a11208;
+    --color-blue-800: #861006;
+    --color-blue-900: #5c0d06;
+    --color-blue-950: #3a0a05;
+
+    --color-red-50: #fef3f2;
+    --color-red-100: #fee4e2;
+    --color-red-200: #fecdca;
+    --color-red-300: #fda29b;
+    --color-red-400: #ff8a80;
+    --color-red-500: #d92d20;
+    --color-red-600: #b42318;
+    --color-red-700: #912018;
+    --color-red-800: #7a271a;
+    --color-red-900: #55160c;
+    --color-red-950: #3b0f08;
+}
+
+@layer base {
+    body {
+        background-color: var(--page);
+        color: var(--ink);
+    }
 }

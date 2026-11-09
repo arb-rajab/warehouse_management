@@ -1,0 +1,77 @@
+/*
+ * Back office (WMS + store control panel) additions to the shared Direction A
+ * tokens (brand/tokens.css): table, focus and sidebar tokens, plus the dark
+ * mode the storefront and the seller panel do not have. Dark follows
+ * prefers-color-scheme only (.ai/rules/views.md). Imported by
+ * resources/css/app.css only, so these values never reach the storefront.
+ */
+
+:root {
+    --table-head: #fbf8f5;
+    --row-hover: #fcf9f6;
+    --focus: #c4170c;
+    --danger-soft-hover: #fecdca;
+
+    /* The light sidebar with a brand-soft active item. */
+    --sidebar: #ffffff;
+    --sidebar-ink: #3d3530;
+    --sidebar-strong: #1f1a17;
+    --sidebar-muted: #756c65;
+    --sidebar-line: #ece5df;
+    --sidebar-well: #f6f1ec;
+    --sidebar-hover: #f8f3ee;
+    --sidebar-active: #fdecea;
+    --sidebar-active-ink: #a11208;
+    --sidebar-indicator: #c4170c;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --brand: #d42a1e;
+        --brand-hover: #e5483c;
+        --brand-strong: #ff6b5e;
+        --brand-soft: rgb(212 42 30 / 0.16);
+        --accent-strong: #fbbf24;
+        --accent-soft: rgb(242 169 0 / 0.16);
+        --ink: #f5f0eb;
+        --muted: #b5aca4;
+        --line: #3a332e;
+        --line-strong: #4a423c;
+        --page: #14110f;
+        --surface: #1e1a17;
+        --subtle: #2a2522;
+        --link: #ff6b5e;
+        --focus: #ff6b5e;
+        --focus-ring: rgb(255 107 94 / 0.25);
+        --success-color: #4ade80;
+        --success-strong: #86efac;
+        --success-soft: rgb(74 222 128 / 0.12);
+        --warning-color: #fbbf24;
+        --warning-strong: #fcd34d;
+        --warning-soft: rgb(251 191 36 / 0.12);
+        --danger-color: #ff8a80;
+        --danger-strong: #ffb4ac;
+        --danger-soft: rgb(255 138 128 / 0.12);
+        --danger-soft-hover: rgb(255 138 128 / 0.2);
+        --info-color: #7db3f0;
+        --info-strong: #a9ccf6;
+        --info-soft: rgb(125 179 240 / 0.12);
+        --table-head: #231f1c;
+        --row-hover: #25201d;
+        --shadow-card: 0 1px 2px rgb(0 0 0 / 0.4);
+        --shadow-pop: 0 16px 40px -12px rgb(0 0 0 / 0.6);
+        --shadow-btn: none;
+
+        /* The warm dark sidebar. */
+        --sidebar: #1a1614;
+        --sidebar-ink: #d9d0c8;
+        --sidebar-strong: #ffffff;
+        --sidebar-muted: #9c928a;
+        --sidebar-line: #3a332e;
+        --sidebar-well: #26211e;
+        --sidebar-hover: #26211e;
+        --sidebar-active: rgb(212 42 30 / 0.18);
+        --sidebar-active-ink: #ffb4ac;
+        --sidebar-indicator: #ff6b5e;
+    }
+}

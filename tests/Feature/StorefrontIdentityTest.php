@@ -74,13 +74,16 @@ test('the brand name is one placeholder per language, not the legacy store name'
         ->and(trans('messages.brand_name', [], 'ar'))->toBe('اسم المتجر');
 });
 
-test('the back office never loads the storefront stylesheet or its fonts', function () {
+test('the back office loads its own Direction A sheet and the shared fonts, never the storefront stylesheet', function () {
     $this->get(route('login'))->assertOk()
         ->assertSee(Vite::asset('resources/css/app.css'), false)
         ->assertDontSee(Vite::asset('resources/css/storefront.css'), false)
-        ->assertDontSee('ibm-plex', false);
+        ->assertSee('<link rel="preload" as="font" type="font/woff2" crossorigin href="'.Vite::asset(STOREFRONT_LATIN_FONT).'">', false)
+        ->assertDontSee('instrument-sans', false);
 
     expect(file_get_contents(resource_path('css/app.css')))
-        ->not->toContain('storefront')
-        ->not->toContain('plex');
+        ->toContain("@import './brand/fonts.css';")
+        ->toContain("@import './brand/tokens.css';")
+        ->toContain("@import './brand/backoffice.css';")
+        ->not->toContain('storefront.css');
 });

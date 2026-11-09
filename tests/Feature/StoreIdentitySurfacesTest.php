@@ -115,10 +115,9 @@ test('the storefront sign-in, registration and password pages carry the identity
 
 test('the back office never loads the seller stylesheet', function () {
     $this->get(route('login'))->assertOk()
-        ->assertDontSee(Vite::asset('resources/css/seller.css'), false)
-        ->assertDontSee('ibm-plex', false);
+        ->assertDontSee(Vite::asset('resources/css/seller.css'), false);
 
-    expect(file_get_contents(resource_path('css/app.css')))->not->toContain('seller')->not->toContain('brand/tokens');
+    expect(file_get_contents(resource_path('css/app.css')))->not->toContain('seller.css');
 });
 
 /*

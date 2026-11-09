@@ -60,8 +60,8 @@ describe('CellSlot', () => {
         expect(opened.classes()).toContain('border-orange-500');
 
         const empty = mountSlot({ cell: cell({ state: 'empty' }) });
-        expect(empty.classes()).toContain('bg-gray-100');
-        expect(empty.classes()).toContain('border-gray-400');
+        expect(empty.classes()).toContain('bg-cell-empty');
+        expect(empty.classes()).toContain('border-cell-empty-line');
     });
 
     it('shows a distinct icon per cell state', () => {
