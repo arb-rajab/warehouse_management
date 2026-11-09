@@ -182,10 +182,10 @@ describe('DataTable', () => {
 
         const headers = wrapper.findAll('thead th');
         expect(headers[0].find('button[title]').classes()).toContain(
-            'text-blue-600',
+            'text-link',
         );
         expect(headers[1].find('button[title]').classes()).not.toContain(
-            'text-blue-600',
+            'text-link',
         );
     });
 
@@ -220,7 +220,7 @@ describe('DataTable', () => {
 
         const button = wrapper.get('thead th').get('button[title]');
         expect(button.findComponent(Filter).exists()).toBe(true);
-        expect(button.classes()).toContain('text-blue-600');
+        expect(button.classes()).toContain('text-link');
     });
 
     function mountTableWithFilterSlot(

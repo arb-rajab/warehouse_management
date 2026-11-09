@@ -75,7 +75,7 @@ function hintId(key: string): string {
                 ><span
                     v-if="column.required"
                     :id="hintId(column.key)"
-                    class="text-xs text-gray-500 dark:text-neutral-400"
+                    class="text-xs text-muted"
                     >{{ t('store.table.alwaysShown') }}</span
                 >
             </div>

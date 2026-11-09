@@ -7,15 +7,14 @@ import { t } from '@/lib/i18n';
  * CellHighlightFilters.vue and CellStatusLogs/Index.vue).
  */
 export const filterSectionHeadingClass =
-    'mb-3 text-xs font-semibold tracking-wide text-gray-500 uppercase dark:text-neutral-400';
+    'mb-3 text-xs font-semibold tracking-wide text-muted uppercase';
 
 /**
  * The divider above each section inside a filter dialog — the sibling of
  * `filterSectionHeadingClass` (CellStatusLogs/Index.vue, Products/Index.vue,
  * CellVerificationRounds/Index.vue + Show.vue).
  */
-export const filterSectionClass =
-    'border-t border-gray-200 pt-6 dark:border-neutral-800';
+export const filterSectionClass = 'border-t border-line pt-6';
 
 /**
  * The same divider for a filter dialog's action row, which lays its Apply/Clear
@@ -23,7 +22,7 @@ export const filterSectionClass =
  * `mt-6`, since its footer follows plain content rather than a divided section.
  */
 export const filterFooterClass =
-    'flex items-center gap-2 border-t border-gray-200 pt-6 dark:border-neutral-800';
+    'flex items-center gap-2 border-t border-line pt-6';
 
 /**
  * The small rounded-pill count badge used by every filter-dialog trigger's
@@ -45,13 +44,13 @@ export const filterTriggerButtonClass =
  * CellStatusLogs/Index.vue.
  */
 export const filterClearButtonClass =
-    'inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 dark:text-neutral-400 dark:hover:bg-neutral-800 cursor-pointer';
+    'inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-sm text-muted hover:bg-subtle cursor-pointer';
 
 /**
  * A square icon-only toolbar button (the rich-text editor's toolbar).
  */
 export const mapToolbarButtonClass =
-    'cursor-pointer rounded-md border border-gray-300 p-2 text-gray-700 hover:bg-gray-50 dark:border-neutral-700 dark:text-neutral-200 dark:hover:bg-neutral-800';
+    'cursor-pointer rounded-md border border-line-strong p-2 text-ink hover:bg-subtle';
 
 /**
  * The "this item is the selected one" variant applied on top of a toggle
@@ -79,8 +78,7 @@ export const dangerButtonClass =
  * The filter-field label shared by every FilterDateField/FilterMultiSelect/
  * FilterNumberField/FilterSelect/FormField.
  */
-export const fieldLabelClass =
-    'mb-1 block text-sm text-gray-700 dark:text-neutral-300';
+export const fieldLabelClass = 'mb-1 block text-sm text-ink';
 
 /**
  * The plain bordered text/number/date/select/textarea input shared by the
@@ -88,7 +86,7 @@ export const fieldLabelClass =
  * — extracted once it was repeated 7 times across the first two files.
  */
 export const plainFieldInputClass =
-    'w-full rounded-md border border-gray-300 bg-surface px-3 py-2 text-sm focus:border-focus focus:ring-2 focus:ring-focus-ring focus:outline-none dark:border-neutral-700 dark:bg-neutral-800';
+    'w-full rounded-md border border-line-strong bg-surface px-3 py-2 text-sm focus:border-focus focus:ring-2 focus:ring-focus-ring focus:outline-none';
 
 /**
  * The `selectedCountLabel` FilterMultiSelect expects, shared by every

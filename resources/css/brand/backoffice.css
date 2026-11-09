@@ -11,6 +11,7 @@
     --row-hover: #fcf9f6;
     --focus: #c4170c;
     --danger-soft-hover: #fecdca;
+    --scrim: rgb(31 26 23 / 0.5);
 
     /* The light sidebar with a brand-soft active item. */
     --sidebar: #ffffff;
@@ -53,6 +54,7 @@
         --danger-strong: #ffb4ac;
         --danger-soft: rgb(255 138 128 / 0.12);
         --danger-soft-hover: rgb(255 138 128 / 0.2);
+        --scrim: rgb(0 0 0 / 0.6);
         --info-color: #7db3f0;
         --info-strong: #a9ccf6;
         --info-soft: rgb(125 179 240 / 0.12);

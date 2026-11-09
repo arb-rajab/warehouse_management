@@ -128,7 +128,7 @@ async function uploadImage(): Promise<void> {
             />
         </form>
         <form
-            class="mt-6 space-y-3 border-t border-gray-200 pt-4 dark:border-neutral-700"
+            class="mt-6 space-y-3 border-t border-line pt-4"
             @submit.prevent="uploadImage"
         >
             <RequiredLegend />
@@ -148,7 +148,7 @@ async function uploadImage(): Promise<void> {
                         ($event.target as HTMLInputElement).files?.[0] ?? null
                 "
             />
-            <p class="text-sm text-gray-600 dark:text-neutral-300">
+            <p class="text-sm text-muted">
                 {{ t('imageReview.uploadHint') }}
             </p>
             <SubmitButton

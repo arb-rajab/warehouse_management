@@ -147,7 +147,7 @@
     margin-bottom: 22px;
     z-index: 2;
     white-space: nowrap;
-    background: #1e3a8a;
+    background: var(--wms-primary-dark);
     color: #fff;
     font-weight: 800;
     font-size: 19px;

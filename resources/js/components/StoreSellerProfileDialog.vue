@@ -86,18 +86,15 @@ const fields = [
             <a
                 v-if="details.shop_url"
                 :href="details.shop_url"
-                class="text-blue-700 underline dark:text-blue-400"
+                class="text-link underline"
                 >{{ details.shop_name }}</a
             >
             <p v-else>{{ details.shop_name }}</p>
             <div class="flex gap-3">
                 <template v-for="(url, key) in details.social" :key="key"
-                    ><a
-                        v-if="url"
-                        :href="url"
-                        class="text-blue-700 underline dark:text-blue-400"
-                        >{{ t(`store.sellers.${key}`) }}</a
-                    ></template
+                    ><a v-if="url" :href="url" class="text-link underline">{{
+                        t(`store.sellers.${key}`)
+                    }}</a></template
                 >
             </div>
             <h3 class="font-semibold">{{ t('store.sellers.payoutInfo') }}</h3>

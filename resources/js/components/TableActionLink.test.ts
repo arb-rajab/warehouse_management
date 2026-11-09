@@ -47,9 +47,8 @@ describe('TableActionLink', () => {
                 .get('a')
                 .classes();
 
-            expect(classes).not.toContain('bg-red-600');
             expect(classes).not.toContain('bg-brand');
-            expect(classes).not.toContain('text-white');
+            expect(classes).not.toContain('text-on-brand');
         }
     });
 

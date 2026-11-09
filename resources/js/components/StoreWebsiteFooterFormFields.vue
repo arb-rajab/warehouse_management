@@ -50,8 +50,7 @@ const socialLinks = [
     'youtube_link',
     'linkedin_link',
 ] as const;
-const sectionClass =
-    'space-y-4 rounded-md border border-gray-200 p-4 dark:border-neutral-700';
+const sectionClass = 'space-y-4 rounded-md border border-line p-4';
 const legendClass = 'px-1 font-medium';
 
 function updateText(key: TextKey, event: Event): void {
@@ -69,7 +68,7 @@ function removeLink(index: number): void {
 
 <template>
     <FieldError :message="errors.settings" />
-    <p class="text-sm text-gray-600 dark:text-neutral-300">
+    <p class="text-sm text-muted">
         {{ t('store.website.footer.translatableHint') }}
     </p>
     <fieldset :class="sectionClass">
@@ -148,7 +147,7 @@ function removeLink(index: number): void {
         <div
             v-for="(_, index) in settings.widget_one_labels"
             :key="index"
-            class="grid gap-3 rounded-md border border-gray-200 p-3 sm:grid-cols-2 dark:border-neutral-700"
+            class="grid gap-3 rounded-md border border-line p-3 sm:grid-cols-2"
         >
             <div>
                 <label

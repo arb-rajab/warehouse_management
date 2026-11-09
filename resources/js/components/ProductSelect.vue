@@ -95,29 +95,29 @@ function buttonLabel(): string {
         <button
             :id="id"
             type="button"
-            class="flex w-full cursor-pointer items-center justify-between gap-2 rounded-md border border-gray-300 px-3 py-2 text-start text-sm dark:border-neutral-700 dark:bg-neutral-800"
+            class="flex w-full cursor-pointer items-center justify-between gap-2 rounded-md border border-line-strong bg-surface px-3 py-2 text-start text-sm"
             aria-haspopup="listbox"
             :aria-expanded="open"
             @click="toggleOpen"
         >
             <span class="min-w-0 flex-1 truncate">{{ buttonLabel() }}</span>
             <ProductActiveBadge v-if="model" :active="model.active" />
-            <ChevronDown class="h-4 w-4 shrink-0 text-gray-400" />
+            <ChevronDown class="h-4 w-4 shrink-0 text-muted" />
         </button>
         <div
             v-if="open"
-            class="absolute z-10 mt-1 w-full rounded-md border border-gray-300 bg-white p-2 shadow-lg dark:border-neutral-700 dark:bg-neutral-800"
+            class="absolute z-10 mt-1 w-full rounded-md border border-line-strong bg-surface p-2 shadow-pop"
         >
             <div class="relative mb-2">
                 <Search
-                    class="pointer-events-none absolute start-2 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400"
+                    class="pointer-events-none absolute start-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted"
                 />
                 <input
                     ref="searchInputRef"
                     v-model="query"
                     type="search"
                     :placeholder="t('cellLog.filters.searchPlaceholder')"
-                    class="w-full rounded-md border border-gray-300 py-1.5 ps-8 pe-2 text-sm dark:border-neutral-700 dark:bg-neutral-900"
+                    class="w-full rounded-md border border-line-strong bg-surface py-1.5 ps-8 pe-2 text-sm"
                 />
             </div>
 
@@ -129,22 +129,19 @@ function buttonLabel(): string {
             >
                 <p
                     v-if="loading && results.length === 0"
-                    class="flex items-center gap-2 px-2 py-1 text-sm text-gray-500 dark:text-neutral-400"
+                    class="flex items-center gap-2 px-2 py-1 text-sm text-muted"
                 >
                     <LoaderCircle class="h-4 w-4 animate-spin" />
                     {{ t('cellLog.filters.searching') }}
                 </p>
                 <p
                     v-else-if="!loading && results.length === 0"
-                    class="px-2 py-1 text-sm text-gray-500 dark:text-neutral-400"
+                    class="px-2 py-1 text-sm text-muted"
                 >
                     {{ t('cellLog.filters.noProductsFound') }}
                 </p>
 
-                <div
-                    v-if="results.length > 0"
-                    class="divide-y divide-gray-100 dark:divide-neutral-700"
-                >
+                <div v-if="results.length > 0" class="divide-y divide-line">
                     <button
                         v-for="(product, index) in results"
                         :key="product.id"
@@ -152,12 +149,8 @@ function buttonLabel(): string {
                         type="button"
                         role="option"
                         :aria-selected="model?.id === product.id"
-                        class="flex w-full cursor-pointer items-start gap-2 px-2 py-1.5 text-start text-sm hover:bg-gray-100 dark:hover:bg-neutral-700"
-                        :class="
-                            model?.id === product.id
-                                ? 'bg-gray-100 dark:bg-neutral-700'
-                                : ''
-                        "
+                        class="flex w-full cursor-pointer items-start gap-2 px-2 py-1.5 text-start text-sm hover:bg-subtle"
+                        :class="model?.id === product.id ? 'bg-subtle' : ''"
                         @click="select(product)"
                         @keydown="onOptionKeydown($event, index)"
                     >
@@ -167,7 +160,7 @@ function buttonLabel(): string {
 
                 <p
                     v-if="loading && results.length > 0"
-                    class="flex items-center gap-2 px-2 py-1 text-sm text-gray-500 dark:text-neutral-400"
+                    class="flex items-center gap-2 px-2 py-1 text-sm text-muted"
                 >
                     <LoaderCircle class="h-4 w-4 animate-spin" />
                     {{ t('cellLog.filters.searching') }}

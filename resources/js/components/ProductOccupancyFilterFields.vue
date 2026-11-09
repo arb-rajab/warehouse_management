@@ -72,7 +72,7 @@ function stateLabel(cellState: Cell['state']): string {
                     v-for="days in expiringSoonQuickPicks"
                     :key="days"
                     type="button"
-                    class="cursor-pointer rounded-md border border-gray-300 px-2 py-0.5 text-xs text-gray-600 hover:bg-gray-100 dark:border-neutral-700 dark:text-neutral-400 dark:hover:bg-neutral-800"
+                    class="cursor-pointer rounded-md border border-line-strong px-2 py-0.5 text-xs text-muted hover:bg-subtle"
                     @click="expiresWithinDays = String(days)"
                 >
                     {{ days }}

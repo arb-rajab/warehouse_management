@@ -105,7 +105,7 @@ onBeforeUnmount(() => {
             <div
                 v-for="file in files"
                 :key="file.id"
-                class="rounded-md border border-gray-300 p-2 dark:border-neutral-700"
+                class="rounded-md border border-line-strong p-2"
             >
                 <img
                     v-if="file.type === 'image' && file.url"

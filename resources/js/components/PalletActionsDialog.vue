@@ -272,7 +272,7 @@ const submitLabel = computed(() => {
         <div
             v-if="cell?.pallet"
             data-testid="pallet-action-details"
-            class="mb-4 flex items-start gap-3 rounded-md border border-gray-200 bg-gray-50 p-3 dark:border-neutral-800 dark:bg-neutral-950"
+            class="mb-4 flex items-start gap-3 rounded-md border border-line bg-subtle p-3"
         >
             <img
                 v-if="cell.pallet.product_image_url"
@@ -286,9 +286,7 @@ const submitLabel = computed(() => {
                 class="h-12 w-12 shrink-0 rounded object-cover"
             />
             <div class="min-w-0 space-y-0.5">
-                <p
-                    class="truncate font-medium text-gray-900 dark:text-neutral-100"
-                >
+                <p class="truncate font-medium text-ink">
                     {{
                         productName(
                             cell.pallet.product_name,
@@ -296,7 +294,7 @@ const submitLabel = computed(() => {
                         )
                     }}
                 </p>
-                <p class="text-sm text-gray-600 dark:text-neutral-300">
+                <p class="text-sm text-muted">
                     {{
                         t('cells.palletActions.details.remainingBoxes', {
                             count: cell.pallet.remaining_boxes,
@@ -305,14 +303,14 @@ const submitLabel = computed(() => {
                 </p>
                 <div
                     v-if="cell.pallet.expiration_date"
-                    class="flex items-center gap-1 text-xs text-gray-500 dark:text-neutral-400"
+                    class="flex items-center gap-1 text-xs text-muted"
                 >
                     <CalendarX class="h-3 w-3 shrink-0" />
                     {{ formatDate(cell.pallet.expiration_date) }}
                 </div>
                 <div
                     v-if="cell.pallet.added_at"
-                    class="flex items-center gap-1 text-xs text-gray-400 dark:text-neutral-500"
+                    class="flex items-center gap-1 text-xs text-muted"
                 >
                     <CalendarPlus class="h-3 w-3 shrink-0" />
                     {{ formatDateTime(cell.pallet.added_at) }}
@@ -334,7 +332,7 @@ const submitLabel = computed(() => {
                 :class="
                     selectedAction === action
                         ? selectedToggleClass
-                        : 'border border-gray-300 text-gray-700 hover:bg-gray-50 dark:border-neutral-700 dark:text-neutral-200 dark:hover:bg-neutral-800'
+                        : 'border border-line-strong text-ink hover:bg-subtle'
                 "
                 @click="selectedAction = action"
             >
@@ -428,7 +426,7 @@ const submitLabel = computed(() => {
                 </div>
                 <label
                     v-if="selectedAction === 'edit' && editWouldEmptyPallet"
-                    class="flex items-start gap-2 text-sm text-gray-700 dark:text-neutral-300"
+                    class="flex items-start gap-2 text-sm text-ink"
                 >
                     <input
                         v-model="form.confirm_empty"
@@ -445,7 +443,7 @@ const submitLabel = computed(() => {
                     selectedAction === 'remove-boxes'
                 "
             >
-                <p class="text-sm text-gray-600 dark:text-neutral-300">
+                <p class="text-sm text-muted">
                     {{
                         t(
                             `cells.palletActions.${selectedAction === 'open' ? 'open' : 'removeBoxes'}.remainingBoxesHint`,
@@ -475,7 +473,7 @@ const submitLabel = computed(() => {
                 </div>
                 <label
                     v-if="boxesWouldEmptyPallet"
-                    class="flex items-start gap-2 text-sm text-gray-700 dark:text-neutral-300"
+                    class="flex items-start gap-2 text-sm text-ink"
                 >
                     <input
                         v-model="form.confirm_empty"
@@ -491,7 +489,7 @@ const submitLabel = computed(() => {
             </template>
 
             <template v-else-if="selectedAction === 'empty'">
-                <p class="text-sm text-gray-600 dark:text-neutral-300">
+                <p class="text-sm text-muted">
                     {{
                         t('cells.palletActions.empty.confirmText', {
                             location: label,

@@ -101,7 +101,7 @@ const validator = useFormValidation(
                 <p
                     v-if="validation && validator.blocked.value"
                     role="alert"
-                    class="flex items-center gap-1 text-sm text-red-600 dark:text-red-400"
+                    class="flex items-center gap-1 text-sm text-danger"
                 >
                     <CircleAlert
                         class="h-3.5 w-3.5 shrink-0"
@@ -114,7 +114,7 @@ const validator = useFormValidation(
                     <Link
                         v-if="cancelHref"
                         :href="cancelHref"
-                        class="inline-flex items-center justify-center rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-neutral-700 dark:text-neutral-200 dark:hover:bg-neutral-800"
+                        class="inline-flex items-center justify-center rounded-md border border-line-strong px-3 py-2 text-sm font-medium text-ink hover:bg-subtle"
                     >
                         {{ t('common.cancel') }}
                     </Link>

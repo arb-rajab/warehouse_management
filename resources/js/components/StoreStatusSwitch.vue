@@ -32,7 +32,7 @@ const reasonId = useId();
 const trackClass =
     'relative inline-flex h-6 w-11 shrink-0 rounded-full transition-colors motion-reduce:transition-none';
 const knobClass =
-    'absolute top-0.5 inline-flex size-5 items-center justify-center rounded-full bg-white transition-all motion-reduce:transition-none';
+    'absolute top-0.5 inline-flex size-5 items-center justify-center rounded-full bg-surface shadow-card transition-all motion-reduce:transition-none';
 </script>
 
 <template>
@@ -46,39 +46,33 @@ const knobClass =
                 :aria-label="label"
                 :aria-describedby="reasonId"
                 :title="locked.hint ?? locked.reason"
-                class="inline-flex cursor-not-allowed items-center gap-2 rounded-full outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 dark:focus-visible:ring-blue-400 dark:focus-visible:ring-offset-neutral-900"
+                class="inline-flex cursor-not-allowed items-center gap-2 rounded-full outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-surface"
             >
                 <span
                     aria-hidden="true"
                     data-switch-track
                     :class="[
                         trackClass,
-                        checked
-                            ? 'bg-green-600/40 dark:bg-green-500/35'
-                            : 'bg-gray-500/40 dark:bg-neutral-500/40',
+                        checked ? 'bg-success/40' : 'bg-muted/40',
                     ]"
                     ><span
                         data-switch-knob
                         :class="[
                             knobClass,
                             checked ? 'start-[1.375rem]' : 'start-0.5',
-                            'text-gray-600 shadow-sm dark:bg-neutral-200',
+                            'text-muted',
                         ]"
                         ><Lock class="size-3" /></span
                 ></span>
-                <span
-                    class="text-sm font-medium text-gray-600 dark:text-neutral-400"
-                    >{{
-                        checked
-                            ? (stateLabels?.on ?? t('store.reference.enabled'))
-                            : (stateLabels?.off ??
-                              t('store.reference.disabled'))
-                    }}</span
-                >
+                <span class="text-sm font-medium text-muted">{{
+                    checked
+                        ? (stateLabels?.on ?? t('store.reference.enabled'))
+                        : (stateLabels?.off ?? t('store.reference.disabled'))
+                }}</span>
             </button>
             <p
                 :id="reasonId"
-                class="mt-1 flex items-center gap-1 text-xs text-gray-600 dark:text-neutral-400"
+                class="mt-1 flex items-center gap-1 text-xs text-muted"
             >
                 <Lock class="size-3 shrink-0" />{{ locked.reason }}
             </p>
@@ -99,7 +93,7 @@ const knobClass =
                 :aria-label="label"
                 :aria-busy="processing"
                 :disabled="processing"
-                class="group inline-flex cursor-pointer items-center gap-2 rounded-full outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 disabled:cursor-wait dark:focus-visible:ring-blue-400 dark:focus-visible:ring-offset-neutral-900"
+                class="group inline-flex cursor-pointer items-center gap-2 rounded-full outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-surface disabled:cursor-wait"
             >
                 <span
                     aria-hidden="true"
@@ -108,17 +102,15 @@ const knobClass =
                         trackClass,
                         processing ? 'opacity-70' : '',
                         checked
-                            ? 'bg-green-600 group-hover:bg-green-700 dark:bg-green-500 dark:group-hover:bg-green-400'
-                            : 'bg-gray-500 group-hover:bg-gray-600 dark:bg-neutral-500 dark:group-hover:bg-neutral-400',
+                            ? 'bg-success group-hover:bg-success-strong'
+                            : 'bg-muted group-hover:opacity-90',
                     ]"
                     ><span
                         data-switch-knob
                         :class="[
                             knobClass,
                             checked ? 'start-[1.375rem]' : 'start-0.5',
-                            processing
-                                ? 'text-gray-500'
-                                : 'text-green-700 shadow',
+                            processing ? 'text-muted' : 'text-success',
                         ]"
                         ><LoaderCircle
                             v-if="processing"
@@ -130,10 +122,10 @@ const knobClass =
                     class="text-sm font-medium"
                     :class="
                         processing
-                            ? 'text-gray-500 dark:text-neutral-400'
+                            ? 'text-muted'
                             : checked
-                              ? 'text-green-800 dark:text-green-300'
-                              : 'text-gray-600 dark:text-neutral-400'
+                              ? 'text-success-strong'
+                              : 'text-muted'
                     "
                     >{{
                         processing

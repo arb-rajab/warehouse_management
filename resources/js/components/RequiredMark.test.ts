@@ -18,13 +18,13 @@ describe('RequiredMark', () => {
         expect(wrapper.text()).toBe('*required');
     });
 
-    it('uses logical spacing and a red with a dark-mode variant', () => {
+    it('uses logical spacing and the danger token (which switches for dark mode)', () => {
         const classes = mount(RequiredMark).classes();
 
         expect(classes).toContain('ms-0.5');
         expect(classes).not.toContain('ml-0.5');
-        expect(classes).toContain('text-red-700');
-        expect(classes).toContain('dark:text-red-400');
+        expect(classes).toContain('text-danger-strong');
+        expect(classes.join(' ')).not.toContain('dark:');
     });
 
     it('reads "required" in Arabic', () => {

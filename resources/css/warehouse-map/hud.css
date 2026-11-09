@@ -303,8 +303,8 @@
 
 .wms-products__clear {
     font-size: 12px;
-    /* the dialogs' link blue is too dark on the always-dark HUD */
-    color: #93c5fd;
+    /* the brand red is too dark on the always-dark HUD */
+    color: var(--wms-primary-link);
 }
 
 .wms-products__clear:hover {

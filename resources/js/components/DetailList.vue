@@ -39,8 +39,7 @@ const columnClass = computed(() =>
     <section
         class="min-w-0"
         :class="{
-            'rounded-lg border border-gray-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900':
-                !plain,
+            'rounded-lg border border-line bg-surface p-4': !plain,
         }"
     >
         <h2 v-if="title" class="mb-3 text-sm font-semibold">{{ title }}</h2>

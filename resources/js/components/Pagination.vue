@@ -48,12 +48,12 @@ function isNext(index: number): boolean {
 
 function linkClass(link: PaginationLink): string {
     if (link.url === null) {
-        return 'text-gray-400 dark:text-neutral-600';
+        return 'border border-line text-muted opacity-50';
     }
 
     return link.active
-        ? selectedToggleClass
-        : 'text-gray-600 hover:bg-gray-100 dark:text-neutral-400 dark:hover:bg-neutral-800';
+        ? `border border-brand ${selectedToggleClass}`
+        : 'border border-line-strong bg-surface text-ink hover:bg-subtle';
 }
 </script>
 
@@ -89,12 +89,12 @@ function linkClass(link: PaginationLink): string {
 
         <label
             v-if="perPage !== undefined"
-            class="flex items-center gap-2 text-sm text-gray-600 dark:text-neutral-400"
+            class="flex items-center gap-2 text-sm text-muted"
         >
             {{ t('common.pagination.perPage') }}
             <select
                 :value="perPage"
-                class="cursor-pointer rounded-md border border-gray-300 bg-white px-2 py-1 text-sm text-gray-900 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100"
+                class="cursor-pointer rounded-md border border-line-strong bg-surface px-2 py-1 text-sm text-ink"
                 @change="onPerPageChange"
             >
                 <option

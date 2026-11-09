@@ -90,7 +90,7 @@ function removeRow(index: number): void {
         <div
             v-for="(_, index) in settings.header_menu_labels"
             :key="index"
-            class="grid gap-3 rounded-md border border-gray-200 p-3 sm:grid-cols-2 dark:border-neutral-700"
+            class="grid gap-3 rounded-md border border-line p-3 sm:grid-cols-2"
         >
             <div>
                 <label :for="`menu-label-${index}`" :class="fieldLabelClass"

@@ -31,7 +31,7 @@ function switchTo(locale: SupportedLocale): void {
         class="flex items-center gap-1 text-sm"
         :aria-label="t('language.label')"
     >
-        <Languages class="h-4 w-4 text-gray-400 dark:text-neutral-500" />
+        <Languages class="h-4 w-4 text-muted" />
         <button
             v-for="locale in locales"
             :key="locale.code"
@@ -39,8 +39,8 @@ function switchTo(locale: SupportedLocale): void {
             class="cursor-pointer rounded px-1.5 py-0.5"
             :class="
                 page.props.locale === locale.code
-                    ? 'font-semibold text-gray-900 dark:text-white'
-                    : 'text-gray-500 hover:text-gray-900 dark:text-neutral-400 dark:hover:text-white'
+                    ? 'font-semibold text-ink'
+                    : 'text-muted hover:text-ink'
             "
             @click="switchTo(locale.code)"
         >

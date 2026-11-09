@@ -78,16 +78,14 @@ const { confirmationMismatchError, syncConfirmationValidity } =
         />
 
         <div>
-            <label
-                class="flex items-center gap-2 text-sm text-gray-700 dark:text-neutral-300"
-            >
+            <label class="flex items-center gap-2 text-sm text-ink">
                 <input type="hidden" name="is_admin" value="0" />
                 <input
                     type="checkbox"
                     name="is_admin"
                     value="1"
                     :checked.attr="isAdmin"
-                    class="rounded border-gray-300 dark:border-neutral-700 dark:bg-neutral-800"
+                    class="rounded border-line-strong bg-surface"
                     :class="{
                         'cursor-not-allowed opacity-50': disableAdminToggle,
                     }"
@@ -98,7 +96,7 @@ const { confirmationMismatchError, syncConfirmationValidity } =
             <FieldError v-if="errors.is_admin" :message="errors.is_admin" />
             <p
                 v-else-if="disableAdminToggle"
-                class="mt-1 flex items-center gap-1 text-sm text-amber-600 dark:text-amber-400"
+                class="mt-1 flex items-center gap-1 text-sm text-warning"
             >
                 <TriangleAlert class="h-3.5 w-3.5 shrink-0" />
                 {{ t('users.fields.disabledAdminHint') }}

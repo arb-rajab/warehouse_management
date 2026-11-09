@@ -10,7 +10,7 @@ describe('CellVerificationCorrectnessBadge', () => {
         });
 
         expect(wrapper.text()).toBe(t('cellVerificationReport.correct'));
-        expect(wrapper.get('span').classes()).toContain('bg-green-100');
+        expect(wrapper.get('span').classes()).toContain('bg-success-soft');
     });
 
     it('shows the incorrect label and styling when not correct', () => {
@@ -19,6 +19,6 @@ describe('CellVerificationCorrectnessBadge', () => {
         });
 
         expect(wrapper.text()).toBe(t('cellVerificationReport.incorrect'));
-        expect(wrapper.get('span').classes()).toContain('bg-red-100');
+        expect(wrapper.get('span').classes()).toContain('bg-danger-soft');
     });
 });

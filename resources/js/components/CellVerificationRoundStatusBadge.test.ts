@@ -13,8 +13,8 @@ describe('CellVerificationRoundStatusBadge', () => {
         expect(wrapper.text()).toBe(
             t('cellVerificationRound.status.completed'),
         );
-        expect(wrapper.get('span').classes()).toContain('bg-green-100');
-        expect(wrapper.get('span').classes()).not.toContain('bg-amber-100');
+        expect(wrapper.get('span').classes()).toContain('bg-success-soft');
+        expect(wrapper.get('span').classes()).not.toContain('bg-warning-soft');
     });
 
     it('shows the in-progress label and styling while completed_at is null', () => {
@@ -25,8 +25,8 @@ describe('CellVerificationRoundStatusBadge', () => {
         expect(wrapper.text()).toBe(
             t('cellVerificationRound.status.inProgress'),
         );
-        expect(wrapper.get('span').classes()).toContain('bg-amber-100');
-        expect(wrapper.get('span').classes()).not.toContain('bg-green-100');
+        expect(wrapper.get('span').classes()).toContain('bg-warning-soft');
+        expect(wrapper.get('span').classes()).not.toContain('bg-success-soft');
     });
 
     it('lets the completed state be relabelled through the default slot', () => {
@@ -36,7 +36,7 @@ describe('CellVerificationRoundStatusBadge', () => {
         });
 
         expect(wrapper.text()).toBe(formatDateTime('2026-08-01T11:00:00Z'));
-        expect(wrapper.get('span').classes()).toContain('bg-green-100');
+        expect(wrapper.get('span').classes()).toContain('bg-success-soft');
     });
 
     it('ignores the slot while in progress, keeping the in-progress label', () => {

@@ -36,7 +36,7 @@ const metaImage = ref(props.product?.meta_img ?? '');
 const metaDescription = ref(props.product?.meta_description ?? '');
 const content = ref(props.description ?? '');
 const sectionClass =
-    'grid gap-4 rounded-lg border border-gray-200 p-4 lg:grid-cols-2 dark:border-neutral-800';
+    'grid gap-4 rounded-lg border border-line p-4 lg:grid-cols-2';
 const legendClass = 'px-1 text-sm font-semibold';
 </script>
 
@@ -96,10 +96,7 @@ const legendClass = 'px-1 text-sm font-semibold';
                     maxlength="500"
                     aria-describedby="tags_help"
                 />
-                <p
-                    id="tags_help"
-                    class="mt-1 text-xs text-gray-600 dark:text-neutral-400"
-                >
+                <p id="tags_help" class="mt-1 text-xs text-muted">
                     {{ t('store.digitalProducts.form.tagsHelp') }}
                 </p>
             </div>

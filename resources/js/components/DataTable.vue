@@ -245,7 +245,7 @@ onBeforeUnmount(() => {
                                         />
                                         <ArrowUpDown
                                             v-else
-                                            class="h-3 w-3 shrink-0 text-gray-300 dark:text-neutral-600"
+                                            class="h-3 w-3 shrink-0 text-line-strong"
                                         />
                                     </button>
                                     <span v-else>{{
@@ -258,7 +258,7 @@ onBeforeUnmount(() => {
                                         class="cursor-pointer rounded p-0.5"
                                         :class="
                                             isFiltered(column)
-                                                ? 'text-blue-600 dark:text-blue-400'
+                                                ? 'text-link'
                                                 : 'text-line-strong hover:text-muted'
                                         "
                                         :title="t('common.filteredColumn')"
@@ -295,11 +295,11 @@ onBeforeUnmount(() => {
                         <tr v-if="rows.length === 0">
                             <td
                                 :colspan="columns.length"
-                                class="px-4 py-6! text-center whitespace-normal text-gray-500 dark:text-neutral-400"
+                                class="px-4 py-6! text-center whitespace-normal text-muted"
                             >
                                 <div class="flex flex-col items-center gap-2">
                                     <PackageSearch
-                                        class="h-6 w-6 text-gray-300 dark:text-neutral-700"
+                                        class="h-6 w-6 text-line-strong"
                                     />
                                     <span>{{ emptyMessage }}</span>
                                 </div>

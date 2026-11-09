@@ -13,9 +13,7 @@ defineProps<{
 </script>
 
 <template>
-    <div
-        class="mt-1 flex flex-wrap items-center gap-1 text-xs text-gray-500 dark:text-neutral-400"
-    >
+    <div class="mt-1 flex flex-wrap items-center gap-1 text-xs text-muted">
         <Check class="h-3 w-3 shrink-0" />
         {{
             t('cellVerificationReport.acceptedOn', {

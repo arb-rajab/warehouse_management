@@ -402,7 +402,7 @@ onBeforeUnmount(() => {
                 <div
                     v-for="file in filter.response?.data ?? []"
                     :key="file.id"
-                    class="rounded-md border border-gray-300 p-3 dark:border-neutral-700"
+                    class="rounded-md border border-line-strong p-3"
                 >
                     <FilterCheckbox
                         v-if="library && access.can('delete_uploads')"
@@ -433,10 +433,7 @@ onBeforeUnmount(() => {
                             :alt="file.name ?? ''"
                             class="h-24 w-full object-contain"
                         />
-                        <File
-                            v-else
-                            class="h-24 w-10 text-gray-500 dark:text-neutral-400"
-                        />
+                        <File v-else class="h-24 w-10 text-muted" />
                         <span class="w-full truncate">{{ file.name }}</span>
                         <Check
                             v-if="
@@ -450,7 +447,7 @@ onBeforeUnmount(() => {
                     <button
                         v-if="library && access.can('delete_uploads')"
                         type="button"
-                        class="mt-2 flex cursor-pointer items-center gap-1 text-red-700 disabled:cursor-not-allowed disabled:opacity-50 dark:text-red-400"
+                        :class="[dangerButtonClass, 'mt-2']"
                         :disabled="deletion.processing"
                         @click="remove(file)"
                     >
@@ -473,7 +470,7 @@ onBeforeUnmount(() => {
             />
             <aside
                 v-if="info"
-                class="space-y-2 rounded-md border border-gray-300 p-4 dark:border-neutral-700"
+                class="space-y-2 rounded-md border border-line-strong p-4"
                 :aria-label="t('store.uploads.info')"
             >
                 <h2 class="font-semibold">{{ t('store.uploads.info') }}</h2>
@@ -508,7 +505,7 @@ onBeforeUnmount(() => {
                 :class="plainFieldInputClass"
                 @change="pickFiles"
             />
-            <p class="text-sm text-gray-600 dark:text-neutral-400">
+            <p class="text-sm text-muted">
                 {{ t('store.uploads.limits') }}
             </p>
             <progress

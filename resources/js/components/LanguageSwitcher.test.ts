@@ -37,7 +37,7 @@ describe('LanguageSwitcher', () => {
         const wrapper = mountWithLocale('ar');
 
         const [enButton, arButton] = wrapper.findAll('button');
-        expect(enButton.classes()).toContain('text-gray-500');
+        expect(enButton.classes()).toContain('text-muted');
         expect(arButton.classes()).toContain('font-semibold');
     });
 

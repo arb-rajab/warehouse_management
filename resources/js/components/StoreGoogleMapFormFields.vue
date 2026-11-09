@@ -107,14 +107,14 @@ watch([latitude, longitude], movePin);
             :required="!enabled || (latitude === '' && longitude === '')"
             @change="toggle"
         />
-        <p class="text-sm text-gray-600 dark:text-neutral-300">
+        <p class="text-sm text-muted">
             {{ t('store.googleMap.requirementsHint') }}
         </p>
         <template v-if="enabled">
             <h2 class="text-lg font-semibold">
                 {{ t('store.googleMap.location') }}
             </h2>
-            <p class="text-sm text-gray-600 dark:text-neutral-300">
+            <p class="text-sm text-muted">
                 {{ t('store.googleMap.hint') }}
             </p>
             <div class="grid gap-4 sm:grid-cols-2">
@@ -157,12 +157,12 @@ watch([latitude, longitude], movePin);
 
 <style scoped>
 :deep(.store-default-location-marker) {
-    border: 2px solid white;
+    border: 2px solid var(--surface);
     border-radius: 50%;
-    background: #1d4ed8;
-    color: white;
+    background: var(--info-color);
+    color: var(--page);
     text-align: center;
     line-height: 26px;
-    box-shadow: 0 1px 4px #0008;
+    box-shadow: var(--shadow-card);
 }
 </style>

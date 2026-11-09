@@ -140,7 +140,7 @@ defineExpose({ closeDrawer, expand, collapsed, drawerOpen });
         <div
             v-if="drawerOpen"
             data-testid="sidebar-backdrop"
-            class="fixed inset-0 z-40 bg-gray-950/40 lg:hidden"
+            class="fixed inset-0 z-40 bg-scrim lg:hidden"
             aria-hidden="true"
             @click="closeDrawer()"
         />

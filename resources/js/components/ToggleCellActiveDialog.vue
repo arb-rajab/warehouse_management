@@ -62,7 +62,7 @@ const submitLabel = computed(() =>
         >
             <ActionErrorBanner :message="firstError(errors)" />
 
-            <p class="text-sm text-gray-600 dark:text-neutral-300">
+            <p class="text-sm text-muted">
                 {{ confirmText }}
             </p>
 

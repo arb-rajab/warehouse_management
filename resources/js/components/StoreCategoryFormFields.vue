@@ -65,7 +65,7 @@ const images = ref({
                 step="1"
                 :error="errors.order_level"
             />
-            <p class="text-sm text-gray-600 dark:text-neutral-400">
+            <p class="text-sm text-muted">
                 {{ t('store.categories.orderHint') }}
             </p>
         </div>

@@ -31,7 +31,7 @@ const model = defineModel<string>({ required: true });
             :disabled="disabled"
             :min="min"
             :required="required"
-            class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50 dark:border-neutral-700 dark:bg-neutral-800 dark:[color-scheme:dark]"
+            class="w-full rounded-md border border-line-strong bg-surface px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50 dark:[color-scheme:dark]"
         />
     </div>
 </template>

@@ -64,7 +64,7 @@ describe('SubmitButton variants', () => {
             expect.arrayContaining(dangerButtonClass.split(' ')),
         );
         expect(button.classes()).not.toContain('bg-brand');
-        expect(button.classes()).not.toContain('bg-red-600');
+        expect(button.classes()).toContain('bg-danger-soft');
         expect(button.find('svg').exists()).toBe(true);
         expect(button.text()).toBe('Delete selection');
     });

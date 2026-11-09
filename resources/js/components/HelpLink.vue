@@ -14,7 +14,7 @@ defineProps<{
         :href="href"
         :title="t('help.viewHelp')"
         :aria-label="t('help.viewHelp')"
-        class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-gray-500 hover:bg-gray-100 hover:text-gray-900 dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-white"
+        class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted hover:bg-subtle hover:text-ink"
     >
         <CircleHelp class="h-5 w-5" />
     </Link>

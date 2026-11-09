@@ -42,7 +42,7 @@ withDefaults(
             :required="required"
             v-bind="$attrs"
             :class="[
-                'w-full rounded-md border border-gray-300 bg-surface px-3 py-2 text-sm read-only:bg-gray-100 focus:border-focus focus:ring-2 focus:ring-focus-ring focus:outline-none dark:border-neutral-700 dark:bg-neutral-800 dark:read-only:bg-neutral-900',
+                'w-full rounded-md border border-line-strong bg-surface px-3 py-2 text-sm read-only:bg-subtle focus:border-focus focus:ring-2 focus:ring-focus-ring focus:outline-none',
                 inputClass,
             ]"
         />
