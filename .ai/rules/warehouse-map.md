@@ -36,6 +36,7 @@ The page at `/admin/warehouse-map` is a Vue/Inertia host (`pages/Admin/Warehouse
 - Every view has `mount()`/`dispose()`; listeners go through the view's `AbortController`. Never assign
   data to `innerHTML`; build nodes with `utils/dom`. Scene colours come from the CSS tokens
   (`css/warehouse-map/tokens.css`) via `Palette`.
+- `.wms` is a size container (`container: wms / inline-size`): the HUD's width breakpoints in `responsive.css` are `@container wms` queries and popover widths use `cqw`, because the map sits beside the back-office sidebar (layouts.md; it starts folded to its icon rail on this page) and its own width, not the viewport's, decides what fits. Height breakpoints stay media queries. Below 1240 px the brand keeps only its logo, the search box keeps a 150 px minimum and the state chips scroll inside the filter bar instead of running under the 2D/3D switch. Nothing inside `.wms` may be `position: fixed` (the container is its containing block).
 - CSS classes are `wms-*` (BEM). Page state lives on `data-*` attributes of `.wms`. The base resets
   use `:where(.wms) button` so a single component class always wins; do not raise their specificity.
 - Strings are in `resources/js/locales/{en,ar}.json` under `warehouseMap.*`; the language switch is the
@@ -60,8 +61,8 @@ The page at `/admin/warehouse-map` is a Vue/Inertia host (`pages/Admin/Warehouse
 - Unit tests are co-located (`*.test.ts`, jsdom). Browser behaviour (WebGL, pointer, phone layout) is
   covered by `tests/e2e/warehouse-map.spec.ts`; phone tests must use `.tap()`, because a mouse click flips
   the input kind to `mouse`.
-- In the Claude sandbox `npm run build` fails on the font CDN: use `.claude/scripts/build_without_fonts.py`
-  and `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/opt/pw-browsers/chromium` for Playwright.
+- The build fetches no remote font any more (IBM Plex is self-hosted); for Playwright in the Claude
+  sandbox use `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/opt/pw-browsers/chromium`.
 
 ## Product picker filters by any of the checked products; `#products=` is its link
 `SlotFilter.productIds` is ANDed with the search words, state chip and expiring chip, but ORed within itself (a slot holding any checked product matches). `ui/ProductPicker.ts` mirrors the admin's `FilterProductSelect.vue`: checked products pinned on top under "Deselect all", Arrow/Home/End between checkboxes, Escape/outside click closes, keys never reach the map's window-level shortcuts. It lists only products the warehouse holds (`listProductOptions`, memoized per warehouse by `createProductOptionsSelector`), with an Active/Inactive badge from the payload's `product_active`. `#products=12,34&state=full` (`filterHash`/`parseHash` in `domain/SlotCode.ts`) is read-only: it is applied on load and on `hashchange`, never written back, and the Pallets list's "view on map" button builds it. Keep the picker's options in one memoized array so the slice's shallow compare holds.

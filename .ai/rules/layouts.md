@@ -1,27 +1,37 @@
 ---
 paths:
   - 'resources/js/layouts/**'
+  - 'resources/js/components/BackofficeShell.vue'
+  - 'resources/js/components/Sidebar*.vue'
+  - 'resources/js/lib/sidebarCollapse.ts'
 ---
 
-# Admin navigation, account menu and logout confirmation
+# Back-office shell, sidebar navigation and logout confirmation
 
-## App bar nav links: active indicator + icon are required
-Every top-level nav link in AdminLayout.vue (and any future app bar) must show which section is active and carry an icon:
-- Active state: compare the path portion of `usePage().url` (stripped of any query string) against the link's href (`currentPath === href || currentPath.startsWith(href + '/')`), set `aria-current="page"` when active, and style active vs. inactive differently (currently a bottom border + bold text vs. muted text). Stat-card links from the Dashboard navigate with filter query strings (e.g. `/admin/pallets?state=empty`), so matching against the raw `page.url` (path + query) breaks active-state detection.
-- Icon: every nav item and the logout action renders a `@lucide/vue` icon before its label, for scanability.
-Keep nav items as a small array (`{ label, href, icon }`) driving a `v-for`, not hand-duplicated links, since 3+ items already share this shape.
+## One shell, two layouts
+The WMS (`layouts/AdminLayout.vue`) and the store control panel (`layouts/StoreAdminLayout.vue`) both render through `components/BackofficeShell.vue`, so they look the same (Direction A, see views.md "Back office identity"). The layouts stay separate files: each owns its menu, permissions, active-state logic and footer content; the shell owns the chrome. Do not merge the layouts or move a menu into the shell.
+- **Sidebar** (`aside#admin-sidebar` / `aside#store-admin-sidebar`, light in light mode, warm dark in dark mode): the logo `/assets/img/33logoqr.png`, the brand name, the area title under it (`nav.brand` "Warehouse Admin" / `store.nav.brand` "Store Admin"), the layout's `#nav` slot and `#footer` slot. The brand name is the shared Inertia prop `brandName` (HandleInertiaRequests, `__('messages.brand_name')`, the storefront header's placeholder), so the owner edits it in one place; never hard-code it or copy it into `resources/js/locales`.
+- **Header** (56 px, `print:hidden`): the phone menu button, the `lg` rail toggle, the crumb (area > active menu label) and the layout's `#actions` slot. WMS actions: `LanguageSwitcher` (from `sm`) and the "?" link to Help. Store actions: `LanguageSwitcher` (from `sm`) and "Browse website" (new tab).
+- **Content**: `main#main`, padded, a `mx-auto max-w-screen-2xl` column with the one `SuccessBanner` (success-messages.md). `fullBleed` (the warehouse map) gives the page the whole area beside the sidebar and under the header: no column, padding or banner.
+- The parts are `SidebarNavLink.vue` (icon, label, count; `aria-current="page"` with the brand-soft fill and an inline-start indicator bar), `SidebarSectionHeading.vue` (group label) and `SidebarUser.vue` (initials avatar, the one saffron accent, name and e-mail, an actions slot). `StoreAdminNavLink` delegates to `SidebarNavLink`.
 
-## Logout link asks for confirmation via lib/confirm.ts
-AdminLayout.vue's logout Link carries `:on-before="confirmLogout"` (from `lib/confirm.ts`, wording key `nav.confirmLogout`) to guard against an accidental click, mirroring the `confirmDelete()` pattern used by Rows/Users delete actions. Its native-`window.confirm` wiring is covered by a Playwright e2e spec (`tests/e2e/admin-logout-confirmation.spec.ts`), not a Vitest unit test — jsdom's Link stub can't drive a real confirm dialog, same reasoning as `admin-delete-confirmation.spec.ts` (see js.md).
+## Sidebar nav links: grouped array, active indicator, icon
+`AdminLayout.vue`'s menu is a `navGroups` array (`{ labelKey?, items: { labelKey, href, icon }[] }`) driving a `v-for`, in this order: Dashboard; Inventory (Warehouses, Rows, Pallets, Warehouse map, Products); Activity (Cell log, Verification rounds); Administration (Users, Settings, Help). Its `<nav>` is named `nav.menuLabel` ("Warehouse menu"); the store's is `store.nav.menuLabel`.
+- Active state (WMS): `isActiveNavUrl()` from `lib/navigation.ts` compares paths only (stat links add query strings such as `/admin/pallets?state=empty`) and the longest matching href wins, so `/admin` lights up only on the dashboard. Exactly one link carries `aria-current="page"`. The store's active link comes only from `findActiveStoreMenuLink()` (store-admin-menu-highlighting.md).
+- Every link and the logout action render a `@lucide/vue` icon; hrefs are Wayfinder route objects.
 
-## Desktop app-bar utilities (language/user/logout) live behind AccountMenu.vue, not inline in the bar
-The 8 primary nav destinations stay as direct top-level links (see the rule above) — they're the thing people navigate between and shouldn't cost an extra click behind a menu. The language switcher, signed-in user name, and logout action are utilities, not destinations, so on the desktop (`xl:flex`) row they're collapsed into `resources/js/components/AccountMenu.vue`, a single trigger button (user icon + name + chevron) that opens a panel (`#account-menu-panel`, plain `<div>`, no `role`) containing the existing `LanguageSwitcher` component and the logout `Link`. This was done to relieve crowding on 1280–1440px screens without hiding any of the 7 admin sections behind a submenu.
-- Do not put `role="menu"`/`role="menuitem"` on this panel or its logout button: the panel has no arrow-key roving-focus behavior (WAI-ARIA menu pattern requires it), and `role="menuitem"` on the logout `<button>`/`Link` overrides its implicit `button` role — `getByRole('button', { name: 'Log out' })` (used by `tests/e2e/admin-logout-confirmation.spec.ts`) then never matches, timing out. Identify the panel by `id`/`aria-controls`, not ARIA menu roles, unless full keyboard menu semantics are added alongside.
-- AccountMenu reuses `lib/useDismissibleListbox.ts`'s `open`/`containerRef` pair for click-outside/Escape-to-close — only the listbox option-navigation half of that composable is skipped (call it with `() => 0`), since the panel here isn't a listbox.
-- The mobile hamburger menu (`#admin-mobile-menu`) intentionally keeps the language switcher and user/logout row inline (not nested in another dropdown) — it's already a vertical panel with room, and stacking a dropdown inside a dropdown adds a tap for no space benefit there.
+## Phone drawer and the icon rail
+- Below `lg` the sidebar is an off-canvas drawer opened by the header's "Open menu" button (`aria-controls` = the sidebar id, `aria-expanded`). Opening focuses the drawer's close button; Escape, the backdrop and the close button close it and return focus to the menu button; following a link or any visit (`page.url` changes) closes it.
+- From `lg` the header's rail toggle (`nav.collapseSidebar` / `nav.expandSidebar`, `PanelLeftClose`/`PanelLeftOpen` with `rtl:rotate-180`) folds the sidebar to a 64 px icon rail: labels stay for screen readers (`lg:sr-only`) and as `title` tooltips, counts sit over the icon, the store's group icons unfold the sidebar with that group open. Slots receive `collapsed` (and the nav slot `expand`); a layout element that must not show on the rail uses `lg:hidden`/`lg:sr-only`, never a `v-if`, so the phone drawer is unchanged.
+- The choice is remembered in localStorage per user, sidebar and scope (`lib/sidebarCollapse.ts`, key `backoffice.sidebar.<sidebar id>.<scope>.<user id>`), every access in try/catch so blocked storage falls back to the default. AdminLayout passes scope `map` with `defaultCollapsed` on the full-bleed warehouse map (it starts folded) and `page` elsewhere. Do not store anything else there.
 
-## Before adding any top-level app-bar item: classify it first
-Every time a new item is proposed for the app bar (`navItems` in `AdminLayout.vue`, or its future equivalents), decide which bucket it belongs to before writing any code:
-- **Destination** — a page a user navigates to and spends time on (its own route, its own content). → Add it to `navItems` as a top-level link, with an icon and active-state styling per the rule above.
-- **Account/session-scoped chrome** — a utility that acts on the current session or user, not a page of its own content (theme, profile/account settings, language, logout). → Add it inside `AccountMenu.vue`'s panel instead of growing the visible bar.
-A page that edits global/shared application state (e.g. `Admin/Settings/Edit.vue`, which edits the single shared `Setting` model — QR code dimensions — not anything scoped to the signed-in user) is a **destination**, not account-scoped chrome, even though its name is "Settings": classify by what the page edits (shared vs. per-user data), not by the word "settings" in its label. When genuinely unsure which bucket an item falls into, ask rather than guessing — this bar's crowding-vs-access-cost tradeoff was a deliberate decision (see above), not an accident to route around silently.
+## Logout asks for confirmation via lib/confirm.ts
+`LogoutLink.vue` carries `:on-before="confirmLogout"` (`lib/confirm.ts`, wording key `nav.confirmLogout`) to guard against an accidental click, mirroring `confirmDelete()`. In both layouts it sits in the sidebar footer's user block as an icon button whose label is `sr-only` (`label-class`), so its accessible name stays "Log out". Its native `window.confirm` wiring is covered by `tests/e2e/admin-logout-confirmation.spec.ts`, not Vitest (jsdom's Link stub cannot drive a real dialog). Do not give it `role="menuitem"` (js.md).
+
+## Before adding a sidebar item: classify it first
+- **Destination**: a page a user navigates to and spends time on (its own route and content) goes into a nav group as a link with an icon and active state.
+- **Account/session chrome**: something acting on the current session or user (language, profile, logout) goes into the footer user block or the header actions, not the menu.
+A page that edits global/shared state (e.g. `Admin/Settings/Edit.vue`, the shared `Setting` model) is a destination even though it is called "Settings": classify by what the page edits. When unsure, ask rather than guess.
+
+## Tests
+`layouts/AdminLayout.test.ts` and `layouts/StoreAdminLayout.test.ts` cover the menus, active state, footer, header actions, drawer and rail; `components/BackofficeShell.test.ts` and the `Sidebar*.test.ts` files cover the shell. `tests/e2e/backoffice-shell.spec.ts` covers both shells in the browser (Arabic, dark contrast, the map's rail and toolbar fit, phone drawers); `admin-nav-active-indicator.spec.ts` scopes its link lookups to the "Warehouse menu" landmark because "Help" is also in the header and "Dashboard" is also a page heading.

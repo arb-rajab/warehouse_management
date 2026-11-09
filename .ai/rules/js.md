@@ -21,7 +21,8 @@ Pagination.vue carries its own `mt-4`; do not wrap it in a spacing div.
 
 Alongside FormField / SubmitButton / DataTable, these are the single definitions for their concern — do not re-type the class strings or wording:
 
-- `components/TableActionLink.vue` — pill link inside a table cell. `variant="primary"` (blue, default) or `"danger"` (red). Extra attrs (`method`, `as`, `:on-before`) fall through to the Inertia Link.
+- `components/TableActionLink.vue` — pill link inside a table cell. `variant="primary"` (the outlined secondary pill, default) or `"danger"` (soft danger, `dangerPillVariantClass` in `lib/actionLink.ts`). Extra attrs (`method`, `as`, `:on-before`) fall through to the Inertia Link.
+- Destructive buttons are soft danger, never a solid red next to the brand-red primary: `SubmitButton variant="danger"` (adds the Trash2 icon; every "Delete selection"/"Delete selected" submit) or `dangerButtonClass` from `lib/filters.ts` on a plain button.
 - `components/AddResourceLink.vue` — the "Add X" header button; bakes in the Plus icon. Props: href, label.
 - `lib/confirm.ts` `confirmDelete(label)` — the only place the "Delete {label}? This cannot be undone." wording lives. Pass `` `row ${row.letter}` `` or a user's name.
 - `lib/location.ts` `formatSlot(rowLetter, cellNumber, flatNumber)` — the `A3·2` slot label. The `·` separator must not be re-typed; CellStatusLogs/Index and Rows/Show had drifted copies of this format.
@@ -85,7 +86,7 @@ When adding or touching a page/component, give common affordances an icon instea
 - Sort=ArrowUp/ArrowDown/ArrowUpDown, Close=X, Filter trigger=SlidersHorizontal, Clear=X, Apply/confirm=Check, Column picker=Columns3
 - Cell states (mirrored by hand in the Flutter app, see [cell-state visuals](cell-state-visuals.md)): empty=CircleDashed, full=Inbox, opened=PackageOpen; expiration=CalendarX, added-at/stored=CalendarPlus
 - Warning/disabled hint=TriangleAlert, field/form error=CircleAlert, admin/privileged role=ShieldCheck, signed-in user=CircleUser, processing/loading=LoaderCircle (with animate-spin), ongoing/duration=Clock, transfer=ArrowLeftRight, empty table state=PackageSearch, brand mark=Warehouse
-- Nav icons: LayoutDashboard, Rows3, Map, ArrowLeftRight, Users, LogOut, Languages
+- Nav icons (AdminLayout's sidebar): LayoutDashboard, Building2 (warehouses), Rows3, Layers (pallets), Boxes (warehouse map), Package (products), ArrowLeftRight (cell log), ClipboardCheck (verification rounds), Users, Settings, CircleHelp (help), LogOut, Languages; sidebar rail toggle PanelLeftClose/PanelLeftOpen (with `rtl:rotate-180`)
 
 Before inventing an icon for a concept, grep the codebase for how that concept is already iconified (CellSlot.vue, AdminLayout.vue, DataTable.vue, TableActionLink usages) and reuse it. A directional/flow arrow (transfer, state-change) gets `rtl:rotate-180` and needs a Playwright e2e spec asserting the flip (see admin-cell-log-*-arrow-rtl.spec.ts) — a plain glyph icon (warning, error, role, loader) does not.
 
@@ -105,14 +106,14 @@ Do not defer this to a final gate — Prettier failures in CI cost a full round 
 
 ## An explicit ARIA role must not override the implicit role a test relies on
 
-An explicit `role="X"` attribute replaces an element's implicit role entirely — it does not add to it. Putting `role="menuitem"` on a `<button>`/Inertia `Link as="button"` means `getByRole('button', ...)` (Playwright) or `wrapper.get('[role="button"]')` no longer matches it, even though it still looks and behaves like a button; the click target itself still works, so this fails silently until a test that queries by the old implicit role times out. This bit `AccountMenu.vue`'s logout button: `role="menuitem"` was added without also implementing the ARIA menu pattern's required arrow-key roving-focus behavior, so `admin-logout-confirmation.spec.ts`'s `getByRole('button', { name: 'Log out' })` could never find it (see layouts.md).
+An explicit `role="X"` attribute replaces an element's implicit role entirely — it does not add to it. Putting `role="menuitem"` on a `<button>`/Inertia `Link as="button"` means `getByRole('button', ...)` (Playwright) or `wrapper.get('[role="button"]')` no longer matches it, even though it still looks and behaves like a button; the click target itself still works, so this fails silently until a test that queries by the old implicit role times out. This bit the old account menu's logout button: `role="menuitem"` was added without also implementing the ARIA menu pattern's required arrow-key roving-focus behavior, so `admin-logout-confirmation.spec.ts`'s `getByRole('button', { name: 'Log out' })` could never find it. The logout button in the sidebar footer (layouts.md) keeps its implicit `button` role for the same reason.
 
 - Before adding `role="menu"`/`"menuitem"`/`"listbox"`/`"option"` etc. to an element, confirm you are implementing the full interaction pattern that role commits to (keyboard nav, focus management) — see `lib/useDismissibleListbox.ts`'s users (FilterMultiSelect.vue, FilterProductSelect.vue) for what a real one looks like. If you aren't, don't add the role; identify the element some other way (`id`, a data attribute, or its accessible name/label) instead.
 - When adding any `role`/`aria-*` attribute to an element that existing tests already query (by role, label, or text), grep for that element's current selector across both `*.test.ts` and `tests/e2e/*.spec.ts` before pushing — not after CI fails.
 
 ## filterApplyButtonClass is the shared Apply-button class
 
-lib/filters.ts's filterApplyButtonClass (bg-gray-900/white pill with a Check icon) is the single definition for a filter-dialog's submit/Apply button — shared by CellStatusLogs/Index.vue and Dashboard/Index.vue's custom-expiring-days dialog (extracted once the second call site appeared). Don't retype the class string. Also: filterTriggerButtonClass and FilterNumberField (previously shared only by CellHighlightFilters.vue/CellStatusLogs/Index.vue) now have a third user — Dashboard/Index.vue's custom-expiring-days field moved from a bare `@change`-wired number input into a FilterDialog + FilterNumberField + Apply-button flow, so a spinner click no longer fires a request that a subsequent click immediately cancels; see dashboard.md for the full rationale.
+lib/filters.ts's filterApplyButtonClass (the brand-red `bg-brand text-on-brand` button with a Check icon) is the single definition for a filter-dialog's submit/Apply button — shared by CellStatusLogs/Index.vue and Dashboard/Index.vue's custom-expiring-days dialog (extracted once the second call site appeared). Don't retype the class string. Also: filterTriggerButtonClass and FilterNumberField (previously shared only by CellHighlightFilters.vue/CellStatusLogs/Index.vue) now have a third user — Dashboard/Index.vue's custom-expiring-days field moved from a bare `@change`-wired number input into a FilterDialog + FilterNumberField + Apply-button flow, so a spinner click no longer fires a request that a subsequent click immediately cancels; see dashboard.md for the full rationale.
 
 ## Mutations use Inertia's <Form> or useForm — no router.post/put/delete plus a hand-rolled `processing` ref
 
@@ -146,3 +147,7 @@ Declare optional props `foo?: T` and leave them out of `withDefaults` — a `foo
 - Emit through `const emit = defineEmits<…>()` and call `emit()` in the template, not `$emit`.
 - Templates use bare prop names, not `props.x`. Keep `const props =` only when the script reads it.
 - Reuse the `lib/filters.ts` class constants (`plainFieldInputClass`, `filterTriggerButtonClass`, …) and `PageHeader.vue` rather than retyping their markup.
+
+## Back-office colours come from the Direction A tokens
+
+Write new back-office markup with the semantic utilities from `resources/css/app.css` (`bg-brand`/`text-on-brand` for the primary action, `text-muted`, `border-line`, `bg-surface`, `bg-subtle`, `text-link`, `bg-danger-soft`/`text-danger-strong`, `bg-success-soft`, `shadow-card`, `shadow-pop`, `ring-focus-ring`), which switch for dark mode by themselves, rather than a `gray-*`/`dark:neutral-*` pair. The remapped `gray`/`neutral`/`blue`/`red` scales keep existing pages on-brand; `blue-*` now renders brand red, so a colour that means "info" uses the `info` tokens. Never write a hex colour in a class (`shadow-[inset_0_-1px_0_var(--line)]`, not `#e5e7eb`). Code that cannot read a CSS variable (Chart.js on a canvas) reads the token with `readCssToken('--brand')` from `lib/cssToken.ts` and re-renders on a `prefers-color-scheme` change. The saffron accent is reserved for the sidebar user avatar. Cell-state colours are pinned (cell-state-visuals.md). Codes (cell slots, barcodes) use `font-mono` (IBM Plex Mono).

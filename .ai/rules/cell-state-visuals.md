@@ -6,6 +6,7 @@ paths:
   - 'resources/js/lib/cellStateColor.ts'
   - 'resources/js/pages/Admin/CellStatusLogs/**'
   - 'resources/js/components/CellStatusLogRowCells.vue'
+  - 'resources/css/app.css'
 ---
 
 # Shared cell-state colors, icons and labels
@@ -20,7 +21,19 @@ do not recreate local lists, labels, color maps or icon maps.
 
 The web values are empty = gray-100/gray-400 border/CircleDashed,
 full = green-50/green-500 border/Inbox, opened = orange-50/orange-500
-border/PackageOpen, with dark variants alongside. The separate Flutter mobile
+border/PackageOpen, with dark variants alongside (neutral-900/neutral-700,
+green-950/green-700, orange-950/orange-700), all Tailwind's stock values.
+
+The back office remaps the stock gray/neutral scales to the Direction A
+neutrals (views.md "Back office identity"), so the empty state is written as
+pinned tokens: `bg-cell-empty dark:bg-cell-empty-dark` and
+`border-cell-empty-line dark:border-cell-empty-line-dark`, defined in
+`resources/css/app.css` with exactly the stock oklch values of gray-100,
+gray-400, neutral-900 and neutral-700. Green and orange are never remapped.
+`cellStateColor.test.ts` compares the pins with
+`node_modules/tailwindcss/theme.css` and fails if any state uses a remapped
+scale; keep both when changing either file. The rendered colours, and so the
+Flutter mirror, are unchanged. The separate Flutter mobile
 repository mirrors them in `_getBgColor`, `_getBorderColor`, `_getStateIcon`;
 update those literals by hand when these values change. There is no shared
 cross-repository implementation.

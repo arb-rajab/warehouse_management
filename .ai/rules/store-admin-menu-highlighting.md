@@ -24,9 +24,9 @@ The Store admin sidebar (`StoreAdminLayout.vue`, menu in `lib/storeAdminMenu.ts`
 4. **Test it.** Any menu change (a link, group, `exact`, `/index` route or `storeAdminPageParents` row) adds or updates a case in `lib/storeAdminActiveMenu.test.ts`, and a layout-level change updates `layouts/StoreAdminLayout.test.ts`.
 
 ## Sidebar utilities outside the menu
-The Notifications item (unread badge, popover with recent items and the link to the notifications page) sits between the scrolling `<nav>` and the footer, outside the menu tree: it is never an active menu link and does not touch `findActiveStoreMenuLink()`. Clear dashboard cache is in the footer (permission `file_system_&_cache_configuration`), with a `HelpTooltip` and a `FilterDialog` confirm before the POST. The layout has no top strip above the page content. Changes to them update `layouts/StoreAdminLayout.test.ts`.
+The Notifications item (unread badge, popover with recent items and the link to the notifications page) sits between the scrolling `<nav>` and the footer, outside the menu tree: it is never an active menu link and does not touch `findActiveStoreMenuLink()`. Clear dashboard cache is in the footer (permission `file_system_&_cache_configuration`), with a `HelpTooltip` and a `FilterDialog` confirm before the POST, above the user block (profile icon link, logout). The shared `BackofficeShell` header (layouts.md) holds only the crumb (the active link's label), the language switcher and "Browse website"; Notifications and Clear dashboard cache never move into it or above the page content. On the folded icon rail a group shows its icon only and a click unfolds the sidebar with that group open; the highlight logic is unchanged. Changes to them update `layouts/StoreAdminLayout.test.ts`.
 
 ## Gotchas
 - Two menu links must not share a path; the helper test fails if they do.
 - `storeAdminPageParents` parents are resolved by path against the menu's links, so a parent must be a link that exists in `storeAdminMenu`.
-- The general admin app bar (`AdminLayout.vue`) keeps its own rule in `layouts.md`; this one is for the Store back office only.
+- The WMS sidebar (`AdminLayout.vue`) keeps its own menu and active-state rule in `layouts.md`; both layouts share only the `BackofficeShell` chrome. This rule is for the Store back office only.
