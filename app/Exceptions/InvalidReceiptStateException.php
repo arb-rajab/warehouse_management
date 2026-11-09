@@ -7,10 +7,9 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 /**
- * Thrown when a draft receipt cannot take the requested change yet: finalizing
- * without a bill file, with a line still pending or with no pallet at all, a
- * file beyond the per-receipt limit, or deleting a line of the bill itself
- * (see ReceiptService).
+ * Thrown when a draft receipt cannot take the requested change yet:
+ * finalizing without a bill file or without a pallet entry, or a file beyond
+ * the per-receipt limit (see ReceiptService).
  */
 class InvalidReceiptStateException extends Exception
 {

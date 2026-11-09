@@ -10,7 +10,6 @@ use App\Http\Controllers\Api\V1\PalletController;
 use App\Http\Controllers\Api\V1\ProductController;
 use App\Http\Controllers\Api\V1\ReceiptController;
 use App\Http\Controllers\Api\V1\ReceiptFileController;
-use App\Http\Controllers\Api\V1\ReceiptLineController;
 use App\Http\Controllers\Api\V1\RowController;
 use App\Http\Controllers\Api\V1\WarehouseController;
 use Illuminate\Support\Facades\Route;
@@ -59,21 +58,18 @@ Route::prefix('v1')->group(function () {
         Route::post('cell-verification-reports', [CellVerificationReportController::class, 'store'])->name('api.v1.cell-verification-reports.store');
 
         // Truck receiving: WMS admins only (the same role gate as the admin
-        // web routes). Scoped bindings make a file or line of another
-        // receipt a 404. See .ai/rules/receiving.md.
+        // web routes). Scoped bindings make a file of another receipt a
+        // 404. See .ai/rules/receiving.md.
         Route::middleware('role:admin')->prefix('receipts')->name('api.v1.receipts.')->scopeBindings()->group(function () {
             Route::get('/', [ReceiptController::class, 'index'])->name('index');
             Route::post('/', [ReceiptController::class, 'store'])->name('store');
             Route::get('{receipt}', [ReceiptController::class, 'show'])->name('show');
+            Route::put('{receipt}/pallets', [ReceiptController::class, 'updatePallets'])->name('pallets.update');
             Route::post('{receipt}/finalize', [ReceiptController::class, 'finalize'])->name('finalize');
 
             Route::post('{receipt}/files', [ReceiptFileController::class, 'store'])->name('files.store');
             Route::get('{receipt}/files/{file}', [ReceiptFileController::class, 'show'])->name('files.show');
             Route::delete('{receipt}/files/{file}', [ReceiptFileController::class, 'destroy'])->name('files.destroy');
-
-            Route::post('{receipt}/lines', [ReceiptLineController::class, 'store'])->name('lines.store');
-            Route::put('{receipt}/lines/{line}/check', [ReceiptLineController::class, 'check'])->name('lines.check');
-            Route::delete('{receipt}/lines/{line}', [ReceiptLineController::class, 'destroy'])->name('lines.destroy');
         });
     });
 });

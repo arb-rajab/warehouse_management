@@ -6,25 +6,31 @@ use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Support\Carbon;
 
 /**
- * Shared validation + accessor for the pallets that actually arrived on a
- * receipt line (`pallets[]`, each with its `boxes` and optional
- * `expiration_date`), for checking a bill line and adding an extra one.
+ * Shared validation + accessor for a receipt's pallets as written on the bill
+ * (`pallets[]`, one entry per pallet with its `product_id`, `boxes` and
+ * optional `expiration_date`), for creating a receipt and replacing its
+ * pallet list. The product is checked by the rule pallet store uses. Expiry
+ * dates may be in the past: the receipt records what arrived.
  */
 trait ValidatesReceivedPallets
 {
-    /** How many pallets one line may record. */
+    use ValidatesPalletContents;
+
+    /** How many pallets one receipt may record. */
     private const int MAX_RECEIVED_PALLETS = 500;
 
     /**
-     * @param  int  $min  The fewest pallets accepted: 0 when an empty list means nothing arrived.
+     * @param  bool  $required  Whether `pallets` must be sent (it may still be empty); otherwise it may be omitted.
      * @return array<string, ValidationRule|array<mixed>|string>
      */
-    protected function receivedPalletsRules(int $min): array
+    protected function receivedPalletsRules(bool $required): array
     {
         return [
-            /** The pallets that arrived, each its own boxes and expiry. */
-            'pallets' => ['present', 'array', 'min:'.$min, 'max:'.self::MAX_RECEIVED_PALLETS],
+            /** The pallets as written on the bill, in order: one entry per pallet. */
+            'pallets' => [$required ? 'present' : 'sometimes', 'array', 'max:'.self::MAX_RECEIVED_PALLETS],
             'pallets.*' => ['array'],
+            /** The pallet's product (ids from `GET /api/v1/products`). */
+            'pallets.*.product_id' => $this->palletProductRules(),
             /** Boxes on this pallet. */
             'pallets.*.boxes' => ['required', 'integer', 'min:1', 'max:100000'],
             /** This pallet's expiry (`Y-m-d`); omit when it has none. */
@@ -33,13 +39,15 @@ trait ValidatesReceivedPallets
     }
 
     /**
-     * The validated pallets, expiry dates normalized to `Y-m-d`.
+     * The validated pallets in the order sent, expiry dates normalized to
+     * `Y-m-d`; an empty list when none were sent.
      *
-     * @return list<array{boxes: int, expiration_date: string|null}>
+     * @return list<array{product_id: int, boxes: int, expiration_date: string|null}>
      */
     public function receivedPallets(): array
     {
         return array_values(array_map(fn (array $pallet): array => [
+            'product_id' => (int) $pallet['product_id'],
             'boxes' => (int) $pallet['boxes'],
             'expiration_date' => isset($pallet['expiration_date']) ? Carbon::parse($pallet['expiration_date'])->toDateString() : null,
         ], $this->array('pallets')));

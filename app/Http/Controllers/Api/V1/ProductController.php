@@ -110,7 +110,7 @@ class ProductController extends Controller
         $productBoxesCount = $product->load('setting:product_id,boxes_count')->boxes_count;
 
         $pallets = Pallet::query()
-            ->select(['pallets.id', 'pallets.cell_id', 'pallets.receipt_line_id', 'pallets.expiration_date', 'pallets.remaining_boxes', 'pallets.created_at'])
+            ->select(['pallets.id', 'pallets.cell_id', 'pallets.receipt_id', 'pallets.expiration_date', 'pallets.remaining_boxes', 'pallets.created_at'])
             ->leftJoin('cells', 'pallets.cell_id', '=', 'cells.id')
             ->leftJoin('rows', 'cells.row_id', '=', 'rows.id')
             ->where('pallets.product_id', $product->id)

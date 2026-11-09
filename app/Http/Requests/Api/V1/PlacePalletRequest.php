@@ -59,7 +59,6 @@ class PlacePalletRequest extends FormRequest
             return null;
         }
 
-        return $pallet->loadMissing('receiptLine:id,receipt_id', 'receiptLine.receipt:id,warehouse_id')
-            ->receiptLine?->receipt->warehouse_id;
+        return $pallet->loadMissing('receipt:id,warehouse_id')->receipt?->warehouse_id;
     }
 }

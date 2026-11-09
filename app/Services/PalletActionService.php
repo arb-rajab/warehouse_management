@@ -375,8 +375,7 @@ class PalletActionService
 
             $this->assertIfMatch($lockedPallet, null, $ifMatchEtags);
 
-            $palletWarehouseId = $lockedPallet->load('receiptLine:id,receipt_id', 'receiptLine.receipt:id,warehouse_id')
-                ->receiptLine?->receipt->warehouse_id;
+            $palletWarehouseId = $lockedPallet->load('receipt:id,warehouse_id')->receipt?->warehouse_id;
 
             if ($palletWarehouseId !== $cell->load('row:id,warehouse_id')->row->warehouse_id) {
                 throw new InvalidSlotStateException('pallet_warehouse_mismatch', __('messages.pallet_warehouse_mismatch'));

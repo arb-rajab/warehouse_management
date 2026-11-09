@@ -23,17 +23,17 @@ use Illuminate\Support\Carbon;
  * @property int $id
  * @property int $product_id
  * @property int|null $cell_id null while the pallet is received but not yet placed in a cell
- * @property int|null $receipt_line_id the receipt line the pallet arrived on, if it came from a truck receipt
+ * @property int|null $receipt_id the truck receipt the pallet arrived on, if it came from one
  * @property ?Carbon $expiration_date
  * @property int $remaining_boxes
  * @property-read Cell|null $cell
- * @property-read ReceiptLine|null $receiptLine
+ * @property-read Receipt|null $receipt
  * @property-read Warehouse|null $warehouse
  * @property-read CellState|null $state null while the pallet is unplaced
  * @property-read CellStatusLog|null $cellEnteredLog
  * @property-read CarbonImmutable|null $cell_entered_at
  */
-#[Fillable(['product_id', 'cell_id', 'receipt_line_id', 'expiration_date', 'remaining_boxes'])]
+#[Fillable(['product_id', 'cell_id', 'receipt_id', 'expiration_date', 'remaining_boxes'])]
 #[ObservedBy(PalletObserver::class)]
 class Pallet extends Model
 {
@@ -47,9 +47,8 @@ class Pallet extends Model
      * @var list<string>
      */
     public const array WITH_RECEIPT_WAREHOUSE = [
-        'receiptLine:id,receipt_id',
-        'receiptLine.receipt:id,warehouse_id',
-        'receiptLine.receipt.warehouse:id,name',
+        'receipt:id,warehouse_id',
+        'receipt.warehouse:id,name',
     ];
 
     /**
@@ -99,14 +98,14 @@ class Pallet extends Model
     }
 
     /**
-     * The receipt line the pallet arrived on, set for pallets created by
-     * finalizing a truck receipt (it stays after the pallet is placed).
+     * The truck receipt the pallet arrived on, set for pallets created by
+     * finalizing a receipt (it stays after the pallet is placed).
      *
-     * @return BelongsTo<ReceiptLine, $this>
+     * @return BelongsTo<Receipt, $this>
      */
-    public function receiptLine(): BelongsTo
+    public function receipt(): BelongsTo
     {
-        return $this->belongsTo(ReceiptLine::class);
+        return $this->belongsTo(Receipt::class);
     }
 
     /**
@@ -114,8 +113,8 @@ class Pallet extends Model
      * pallet is in its cell's row's warehouse (a transfer between warehouses
      * therefore moves it with no copy to update), an unplaced one in the
      * warehouse of its receipt. Eager load `cell.row.warehouse` and
-     * `receiptLine.receipt.warehouse` to avoid a query per pallet; null only
-     * for a pallet that has neither a cell nor a receipt line.
+     * `receipt.warehouse` to avoid a query per pallet; null only for a
+     * pallet that has neither a cell nor a receipt.
      *
      * @return Attribute<Warehouse|null, never>
      */
@@ -124,7 +123,7 @@ class Pallet extends Model
         return Attribute::make(
             get: fn (): ?Warehouse => $this->cell_id !== null
                 ? $this->cell?->row->warehouse
-                : $this->receiptLine?->receipt->warehouse,
+                : $this->receipt?->warehouse,
         );
     }
 
@@ -143,8 +142,8 @@ class Pallet extends Model
 
     /**
      * Whether the relations `warehouse` reads for this pallet are loaded:
-     * `cell.row.warehouse` for a placed pallet, `receiptLine.receipt.warehouse`
-     * (see WITH_RECEIPT_WAREHOUSE) for an unplaced one. Resources show
+     * `cell.row.warehouse` for a placed pallet, `receipt.warehouse` (see
+     * WITH_RECEIPT_WAREHOUSE) for an unplaced one. Resources show
      * `warehouse` only then, so they never lazy load it.
      */
     public function warehouseLoaded(): bool
@@ -154,9 +153,8 @@ class Pallet extends Model
                 && $this->cell->relationLoaded('row') && $this->cell->row->relationLoaded('warehouse');
         }
 
-        return $this->relationLoaded('receiptLine')
-            && ($this->receiptLine === null
-                || ($this->receiptLine->relationLoaded('receipt') && $this->receiptLine->receipt->relationLoaded('warehouse')));
+        return $this->relationLoaded('receipt')
+            && ($this->receipt === null || $this->receipt->relationLoaded('warehouse'));
     }
 
     /**
@@ -243,10 +241,7 @@ class Pallet extends Model
                 ->whereIn($query->qualifyColumn('cell_id'), Cell::query()->select('id')->forWarehouses($warehouseIds))
                 ->orWhere(fn (Builder $unplaced) => $unplaced
                     ->whereNull($query->qualifyColumn('cell_id'))
-                    ->whereIn($query->qualifyColumn('receipt_line_id'), ReceiptLine::query()->select('id')->whereIn(
-                        'receipt_id',
-                        Receipt::query()->select('id')->forWarehouses($warehouseIds),
-                    ))));
+                    ->whereIn($query->qualifyColumn('receipt_id'), Receipt::query()->select('id')->forWarehouses($warehouseIds))));
         }
     }
 

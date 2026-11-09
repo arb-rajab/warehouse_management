@@ -2,11 +2,9 @@
 paths:
   - app/Models/Receipt.php
   - app/Models/ReceiptFile.php
-  - app/Models/ReceiptLine.php
-  - app/Models/ReceiptLinePallet.php
+  - app/Models/ReceiptPallet.php
   - app/Models/Pallet.php
   - app/Enums/ReceiptStatus.php
-  - app/Enums/ReceiptLineStatus.php
   - database/factories/Receipt*Factory.php
   - database/factories/PalletFactory.php
   - 'database/migrations/*receipt*'
@@ -30,41 +28,54 @@ paths:
 # Truck receiving: receipts, unplaced pallets and their warehouse
 
 Design in [docs/truck-receiving-spec.md](../../docs/truck-receiving-spec.md). A
-WMS admin receives a truck against a bill, checks the pallets against it and
-stores the bill; the pallets exist before they have a cell. The truck itself is
-not recorded. Every WMS user sees every warehouse (see [warehouses](warehouses.md)).
+WMS admin receives a truck into one warehouse, stores the bill as photos/PDFs
+and records the pallets as written on the bill; the pallets exist before they
+have a cell. The truck itself is not recorded. Every WMS user sees every
+warehouse (see [warehouses](warehouses.md)).
+
+## No bill details are stored
+
+The bill is kept **only** as its files. There is no bill name, number or
+text, no expected lines or counts and no matched/mismatched computation: the
+admin compares the physical pallets with the bill's photos by eye and records
+the pallets as written on it (and physically verified), a flat list with
+**one entry per pallet**. There are no lines, no per-line pallet counts and no
+"extra" pallets. The receipt's only free text is the admin's optional `note`.
+Do not add bill fields, a comparison or a status per entry back without the
+product owner.
 
 ## Schema (bare table names, listed in `SharedDatabaseTableNamesTest`)
 
-- `receipts`: `warehouse_id` (NOT NULL, restrict), `bill_name`, `bill_info`,
+- `receipts`: `warehouse_id` (NOT NULL, restrict), `note` (nullable text),
   `status` (`ReceiptStatus`: draft, finalized), `created_by`, `finalized_by`,
   `finalized_at`.
 - `receipt_files`: the bill's photos/PDFs. A relative `path` on a filesystem
   disk (like `products.warehouse_image_path`), `original_name`, `mime_type`,
   `size`; not the store's `uploads` table. "At least one file before
-  finalizing" is a service/request rule, not a constraint.
-- `receipt_lines`: `product_id`, `is_extra` (a group not on the bill),
-  `expected_pallets_count`, `expected_boxes` (per pallet),
-  `expected_expiration_date` (all three null on an extra line), `status`
-  (`ReceiptLineStatus`: pending, matched, mismatched, extra), `note`.
-- `receipt_line_pallets`: the pallets actually received for a line while the
-  receipt is a draft (`boxes` >= 1, `expiration_date`); their product is the
-  line's. `pallet_id` is set when finalizing creates the real pallet and is
+  finalizing" is a service rule, not a constraint.
+- `receipt_pallets` (`ReceiptPallet`): one row per pallet as written on the
+  bill: `product_id` (signed `integer`, restrict, per
+  [shared-database](shared-database.md)), `boxes` (>= 1, by the request),
+  `expiration_date` (nullable), `position` (the order the admin typed, 0
+  upwards) and `pallet_id`, set when finalizing creates the real pallet and
   `nullOnDelete`, so the receipt survives a later pallet deletion.
-- Deleting a receipt cascades to its files and lines; a finalized one cannot be
-  deleted while its pallets exist (`pallets.receipt_line_id` restricts).
+- Deleting a receipt cascades to its files and pallet entries; a finalized one
+  cannot be deleted while its pallets exist (`pallets.receipt_id` restricts).
+- The migrations (`2026_11_09_100000` to `100004`) were rewritten in place
+  before merging; there are no stacked drop migrations for the earlier
+  line-based design.
 
 ## Unplaced pallets and their warehouse
 
 - `pallets.cell_id` is nullable (unique index and restricting FK kept; NULLs do
-  not collide). `pallets.receipt_line_id` is a nullable FK (`restrictOnDelete`:
+  not collide). `pallets.receipt_id` is a nullable FK (`restrictOnDelete`:
   `nullOnDelete` could leave a pallet with no cell and no receipt, i.e. in no
   warehouse) set for pallets created by finalizing a receipt, and kept after
   they are placed.
 - There is **no `pallets.warehouse_id`**: a placed pallet reaches its warehouse
   through `cell.row.warehouse`, and a stored copy would go stale when a transfer
   moves it to another warehouse. `Pallet::warehouse` resolves the cell's row
-  when `cell_id` is set, otherwise `receiptLine.receipt.warehouse`.
+  when `cell_id` is set, otherwise `receipt.warehouse`.
 - `Pallet::forWarehouses()` matches a placed pallet by its row only and an
   unplaced one (`cell_id` null) by its receipt's warehouse, so a received pallet
   transferred elsewhere follows its cell. `Receipt::forWarehouses()` is the
@@ -72,9 +83,10 @@ not recorded. Every WMS user sees every warehouse (see [warehouses](warehouses.m
 - Code that reads `$pallet->cell` must treat it as nullable; check
   `cell_id === null` rather than touching the relation (strict mode refuses a
   lazy load in a list). `Pallet::placed()` / `unplaced()` scope by it.
-- Factories: `Receipt::factory()` uses the Default warehouse unless
-  `->for($warehouse)`; `Pallet::factory()->unplaced()` has no cell and a line of
-  its own product.
+- Factories: `Receipt::factory()` is a draft in the Default warehouse unless
+  `->for($warehouse)`; `ReceiptPallet::factory()` is an entry of a draft with
+  no pallet yet; `Pallet::factory()->unplaced()` has no cell and a finalized
+  receipt of its own (pass `receipt_id` to pick one).
 
 ## How each pallet consumer treats an unplaced pallet
 
@@ -127,29 +139,35 @@ not recorded. Every WMS user sees every warehouse (see [warehouses](warehouses.m
 
 Under `api/v1/receipts`, in the `auth:sanctum` group behind the same
 `role:admin` middleware as the admin web routes (a non-admin gets 403), with
-`scopeBindings()` so a `{file}` or `{line}` of another receipt is a 404. Thin
-controllers (`ReceiptController`, `ReceiptFileController`,
-`ReceiptLineController`) over `ReceiptService`; one FormRequest per endpoint
-that takes input.
+`scopeBindings()` so a `{file}` of another receipt is a 404. Thin controllers
+(`ReceiptController`, `ReceiptFileController`) over `ReceiptService`; one
+FormRequest per endpoint that takes input.
 
 | Endpoint | Request | Answers | Errors |
 | --- | --- | --- | --- |
-| `GET receipts` (`api.v1.receipts.index`) | `FilterReceiptsRequest`: `warehouse_ids[]`, `status` | `ReceiptResource`s, newest first, 20 per page, with `lines_count`/`files_count` | |
-| `POST receipts` (`.store`) | `StoreReceiptRequest`: `warehouse_id`, `bill_name`, `bill_info?`, `lines[]` (>= 1: `product_id`, `expected_pallets_count` >= 1, `expected_boxes` >= 1 per pallet, `expected_expiration_date?`) | 201, the detail; lines `pending` | |
-| `GET receipts/{receipt}` (`.show`) | | the detail: `files` (download `url`), `lines` (product, `expected_*`, `status`, `note`, `pallets[]` with `boxes`, `expiration_date`, `pallet_id` once finalized) | |
+| `GET receipts` (`api.v1.receipts.index`) | `FilterReceiptsRequest`: `warehouse_ids[]`, `status` | `ReceiptResource`s, newest first, 20 per page, with `pallets_count`/`files_count` | |
+| `POST receipts` (`.store`) | `StoreReceiptRequest`: `warehouse_id`, `note?`, `pallets[]?` (each `product_id`, `boxes` >= 1, `expiration_date?`) | 201, the detail (a draft) | |
+| `GET receipts/{receipt}` (`.show`) | | the detail: `note`, `files` (download `url`), `pallets` (`product_id`, `product`, `boxes`, `expiration_date`, in `position` order) | |
+| `PUT receipts/{receipt}/pallets` (`.pallets.update`) | `UpdateReceiptPalletsRequest`: `pallets[]` (present, `[]` clears; same entry rules), `note?` (sent: set, null clears; omitted: kept) | the detail | 409 `receipt_finalized` |
 | `POST receipts/{receipt}/files` (`.files.store`, multipart) | `StoreReceiptFileRequest`: `file` (`ReceiptFile::MIMES`, `MAX_KILOBYTES`) | 201, `ReceiptFileResource` | 409 `receipt_finalized`, 422 `receipt_file_limit_reached` |
 | `GET receipts/{receipt}/files/{file}` (`.files.show`) | | the file inline (`private, no-store`) | 404 when the bytes are gone |
 | `DELETE receipts/{receipt}/files/{file}` (`.files.destroy`) | | 204 | 409 `receipt_finalized` |
-| `PUT receipts/{receipt}/lines/{line}/check` (`.lines.check`) | `CheckReceiptLineRequest`: `pallets[]` (`boxes` >= 1, `expiration_date?`; `[]` = nothing arrived, at least one on an extra line), `note?` | the `ReceiptLineResource` | 409 `receipt_finalized` |
-| `POST receipts/{receipt}/lines` (`.lines.store`) | `StoreReceiptLineRequest`: `product_id`, `pallets[]` (>= 1), `note?` | 201, the extra line | 409 `receipt_finalized` |
-| `DELETE receipts/{receipt}/lines/{line}` (`.lines.destroy`) | | 204 | 409 `receipt_finalized`, 422 `receipt_line_not_extra` |
-| `POST receipts/{receipt}/finalize` (`.finalize`) | | the detail | 409 `receipt_finalized`, 422 `receipt_has_no_files` / `receipt_has_pending_lines` / `receipt_has_no_pallets` |
+| `POST receipts/{receipt}/finalize` (`.finalize`) | | the detail | 409 `receipt_finalized`, 422 `receipt_has_no_files` / `receipt_has_no_pallets` |
 
-Products are validated by `ValidatesPalletContents::palletProductRules()`, the
-rule pallet store uses; actual pallets by `ValidatesReceivedPallets`, which
-normalizes expiry dates to `Y-m-d`. Expiry dates are not required to be in the
-future: the receipt records what arrived.
+Pallet entries are validated by `ValidatesReceivedPallets` (shared by both
+requests that take them): the product by
+`ValidatesPalletContents::palletProductRules()`, the rule pallet store uses,
+`boxes` an integer >= 1, expiry dates normalized to `Y-m-d` and not required
+to be in the future (the receipt records what arrived). The note is
+`ValidatesOptionalNote`.
 
+- **Pallet ids stay out of receipt payloads.** The detail lists the pallets
+  as written by the merchant only: no entry id and no `pallet_id`, also once
+  finalized. The created pallets are reached through `GET pallets/unplaced`
+  (and, placed, through the normal pallet and cell endpoints).
+- **Replacing the list.** `PUT .../pallets` deletes the draft's entries and
+  writes the ones sent, `position` 0 upwards in the order sent. There is no
+  per-entry endpoint.
 - **Locking and immutability.** Every mutating call runs in one transaction
   that locks the receipt row first (`ReceiptService::lockDraft()`) and refuses
   a finalized receipt with 409 `receipt_finalized` (`ReceiptFinalizedException`).
@@ -157,23 +175,12 @@ future: the receipt records what arrived.
   the normal pallet actions. Precondition failures are
   `InvalidReceiptStateException` (422, `error_code` as above); every code has
   a `lang/{en,ar}/messages.php` key.
-- **Matching rule.** `ReceiptService::checkStatus()` is pure (unit test it
-  directly): a bill line is `matched` when the number of actual pallets equals
-  `expected_pallets_count`, every pallet's `boxes` equals `expected_boxes` and
-  every `expiration_date` equals `expected_expiration_date`; a null expected
-  value is not compared (a bill without an expiry matches any, including none).
-  Anything else, nothing arriving included, is `mismatched`. A check replaces
-  the line's earlier actual pallets and sets `note` to what was sent (omitted
-  clears it). An extra line keeps `extra`.
-- **Extra lines.** `is_extra`, status `extra`, no `expected_*`, at least one
-  pallet. Only an extra line can be deleted; a bill line is checked with `[]`
-  when nothing of it arrived.
 - **Finalize preconditions** (under the lock, in this order): a draft, at
-  least one file, no `pending` line, at least one actual pallet in total.
-  Then one `Pallet` per actual pallet (the line's product, `remaining_boxes` =
-  `boxes`, its expiry, `cell_id` null, `receipt_line_id` the line), its id
-  stored on the `ReceiptLinePallet`, and the receipt stamped `finalized`,
-  `finalized_by`, `finalized_at`. Mismatches finalize as received.
+  least one file, at least one pallet entry. Then one `Pallet` per entry in
+  `position` order (its product, `remaining_boxes` = `boxes`, its expiry,
+  `cell_id` null, `receipt_id` the receipt), its id stored on the entry's
+  `pallet_id`, and the receipt stamped `finalized`, `finalized_by`,
+  `finalized_at`.
 - **Bill files are private.** Stored on `ReceiptFile::DISK` (`local`,
   `storage/app/private`, served by Laravel only with a valid signature), under
   `receipt-bills/` with a random name; never on `public`. Photos are

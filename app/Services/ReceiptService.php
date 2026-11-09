@@ -2,16 +2,13 @@
 
 namespace App\Services;
 
-use App\Enums\ReceiptLineStatus;
 use App\Enums\ReceiptStatus;
 use App\Exceptions\InvalidReceiptStateException;
 use App\Exceptions\ReceiptFinalizedException;
 use App\Models\Pallet;
 use App\Models\Receipt;
 use App\Models\ReceiptFile;
-use App\Models\ReceiptLine;
 use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -21,9 +18,11 @@ use RuntimeException;
 use Throwable;
 
 /**
- * Truck receiving against a bill, for Api\V1\ReceiptController and its file
- * and line siblings, in the controller/service split of PalletActionService
- * and CellVerificationService.
+ * Truck receiving, for Api\V1\ReceiptController and ReceiptFileController,
+ * in the controller/service split of PalletActionService and
+ * CellVerificationService. The bill is stored only as photos/PDFs; the admin
+ * records the pallets as written on it (one entry per pallet) and checks them
+ * against the bill by eye, so nothing is compared here.
  *
  * Every change to a receipt runs in a transaction holding a row lock on the
  * receipt (lockDraft()), which also refuses a finalized receipt with 409
@@ -31,7 +30,7 @@ use Throwable;
  * it created are corrected through the normal pallet actions. Who may receive
  * at all (`role:admin`) is the route's concern, not re-checked here.
  *
- * @phpstan-type ActualPallet array{boxes: int, expiration_date: string|null}
+ * @phpstan-type WrittenPallet array{product_id: int, boxes: int, expiration_date: string|null}
  */
 class ReceiptService
 {
@@ -41,34 +40,50 @@ class ReceiptService
     public function __construct(private readonly ImageOptimizer $images) {}
 
     /**
-     * Create a draft receipt for one warehouse with the bill's header and its
-     * lines, every line pending until it is checked.
+     * Create a draft receipt for one warehouse with an optional note and the
+     * pallets as written on the bill so far (possibly none yet).
      *
-     * @param  list<array{product_id: int, expected_pallets_count: int, expected_boxes: int, expected_expiration_date: string|null}>  $lines
+     * @param  list<WrittenPallet>  $pallets
      */
-    public function create(int $userId, int $warehouseId, string $billName, ?string $billInfo, array $lines): Receipt
+    public function create(int $userId, int $warehouseId, ?string $note, array $pallets): Receipt
     {
-        return DB::transaction(function () use ($userId, $warehouseId, $billName, $billInfo, $lines) {
+        return DB::transaction(function () use ($userId, $warehouseId, $note, $pallets) {
             $receipt = Receipt::create([
                 'warehouse_id' => $warehouseId,
-                'bill_name' => $billName,
-                'bill_info' => $billInfo,
+                'note' => $note,
                 'status' => ReceiptStatus::Draft,
                 'created_by' => $userId,
             ]);
 
-            foreach ($lines as $line) {
-                $receipt->lines()->create([
-                    'product_id' => $line['product_id'],
-                    'is_extra' => false,
-                    'expected_pallets_count' => $line['expected_pallets_count'],
-                    'expected_boxes' => $line['expected_boxes'],
-                    'expected_expiration_date' => $this->normalizeDate($line['expected_expiration_date']),
-                    'status' => ReceiptLineStatus::Pending,
-                ]);
-            }
+            $this->writePallets($receipt, $pallets);
 
             return $receipt;
+        });
+    }
+
+    /**
+     * Replace the whole pallet list of a draft receipt with the one sent (in
+     * that order), and its note when `$changes` carries one (null clears it;
+     * absent keeps it).
+     *
+     * @param  list<WrittenPallet>  $pallets
+     * @param  array{note?: string|null}  $changes
+     *
+     * @throws ReceiptFinalizedException
+     */
+    public function replacePallets(Receipt $receipt, array $pallets, array $changes): Receipt
+    {
+        return DB::transaction(function () use ($receipt, $pallets, $changes) {
+            $locked = $this->lockDraft($receipt->id);
+
+            $locked->pallets()->delete();
+            $this->writePallets($locked, $pallets);
+
+            if (array_key_exists('note', $changes)) {
+                $locked->update(['note' => $changes['note']]);
+            }
+
+            return $locked;
         });
     }
 
@@ -150,102 +165,12 @@ class ReceiptService
     }
 
     /**
-     * Record the pallets that actually arrived for a line, replacing what was
-     * recorded before (an empty list: nothing of it arrived), with an optional
-     * note, and set the line's status from checkStatus(). An extra line keeps
-     * the `extra` status: nothing is expected of it to compare against.
-     *
-     * @param  list<ActualPallet>  $pallets
-     *
-     * @throws ReceiptFinalizedException
-     */
-    public function checkLine(Receipt $receipt, ReceiptLine $line, array $pallets, ?string $note): ReceiptLine
-    {
-        return DB::transaction(function () use ($receipt, $line, $pallets, $note) {
-            $this->lockDraft($receipt->id);
-
-            $lockedLine = $receipt->lines()->findOrFail($line->id);
-
-            $this->replaceActualPallets($lockedLine, $pallets);
-
-            $lockedLine->update([
-                'status' => $lockedLine->is_extra
-                    ? ReceiptLineStatus::Extra
-                    : self::checkStatus(
-                        $lockedLine->expected_pallets_count,
-                        $lockedLine->expected_boxes,
-                        $lockedLine->expected_expiration_date?->toDateString(),
-                        $pallets,
-                    ),
-                'note' => $note,
-            ]);
-
-            return $lockedLine;
-        });
-    }
-
-    /**
-     * Add a line for pallets that arrived without being on the bill (another
-     * product, or more pallets of a billed one): `is_extra`, status `extra`,
-     * nothing expected.
-     *
-     * @param  list<ActualPallet>  $pallets
-     *
-     * @throws ReceiptFinalizedException
-     */
-    public function addExtraLine(Receipt $receipt, int $productId, array $pallets, ?string $note): ReceiptLine
-    {
-        return DB::transaction(function () use ($receipt, $productId, $pallets, $note) {
-            $locked = $this->lockDraft($receipt->id);
-
-            $line = $locked->lines()->create([
-                'product_id' => $productId,
-                'is_extra' => true,
-                'expected_pallets_count' => null,
-                'expected_boxes' => null,
-                'expected_expiration_date' => null,
-                'status' => ReceiptLineStatus::Extra,
-                'note' => $note,
-            ]);
-
-            $this->replaceActualPallets($line, $pallets);
-
-            return $line;
-        });
-    }
-
-    /**
-     * Delete an extra line of a draft receipt with its pallets. A line of the
-     * bill itself stays: the bill says it, so it is checked (an empty check
-     * records that nothing arrived) rather than removed.
-     *
-     * @throws ReceiptFinalizedException
-     * @throws InvalidReceiptStateException `receipt_line_not_extra`
-     */
-    public function deleteExtraLine(Receipt $receipt, ReceiptLine $line): void
-    {
-        DB::transaction(function () use ($receipt, $line) {
-            $this->lockDraft($receipt->id);
-
-            $lockedLine = $receipt->lines()->findOrFail($line->id);
-
-            if (! $lockedLine->is_extra) {
-                throw new InvalidReceiptStateException('receipt_line_not_extra', __('messages.receipt_line_not_extra'));
-            }
-
-            $lockedLine->delete();
-        });
-    }
-
-    /**
      * Finalize a draft receipt: with the receipt locked, refuse it while it
-     * has no bill file (`receipt_has_no_files`), a line is still pending
-     * (`receipt_has_pending_lines`) or no pallet arrived at all
+     * has no bill file (`receipt_has_no_files`) or no pallet entry
      * (`receipt_has_no_pallets`); otherwise create one unplaced pallet per
-     * actual pallet (the line's product, its boxes and expiry, no cell, owned
-     * by the receipt's warehouse through its line), link each entry to its
-     * pallet and stamp the receipt finalized. Discrepancies are allowed: a
-     * mismatched line finalizes with what actually arrived.
+     * entry (its product, boxes and expiry, no cell, owned by the receipt's
+     * warehouse through `receipt_id`), link each entry to its pallet and
+     * stamp the receipt finalized.
      *
      * @throws ReceiptFinalizedException
      * @throws InvalidReceiptStateException
@@ -259,34 +184,26 @@ class ReceiptService
                 throw new InvalidReceiptStateException('receipt_has_no_files', __('messages.receipt_has_no_files'));
             }
 
-            if ($locked->lines()->where('status', ReceiptLineStatus::Pending)->exists()) {
-                throw new InvalidReceiptStateException('receipt_has_pending_lines', __('messages.receipt_has_pending_lines'));
-            }
-
-            $lines = $locked->lines()
-                ->select(['id', 'receipt_id', 'product_id'])
-                ->with(['actualPallets' => fn ($query) => $query
-                    ->select(['id', 'receipt_line_id', 'boxes', 'expiration_date', 'pallet_id'])
-                    ->orderBy('id')])
+            $entries = $locked->pallets()
+                ->select(['id', 'receipt_id', 'product_id', 'boxes', 'expiration_date', 'pallet_id'])
+                ->orderBy('position')
                 ->orderBy('id')
                 ->get();
 
-            if ($lines->every(fn (ReceiptLine $line): bool => $line->actualPallets->isEmpty())) {
+            if ($entries->isEmpty()) {
                 throw new InvalidReceiptStateException('receipt_has_no_pallets', __('messages.receipt_has_no_pallets'));
             }
 
-            foreach ($lines as $line) {
-                foreach ($line->actualPallets as $actual) {
-                    $pallet = Pallet::create([
-                        'product_id' => $line->product_id,
-                        'cell_id' => null,
-                        'receipt_line_id' => $line->id,
-                        'expiration_date' => $actual->expiration_date?->toDateString(),
-                        'remaining_boxes' => $actual->boxes,
-                    ]);
+            foreach ($entries as $entry) {
+                $pallet = Pallet::create([
+                    'product_id' => $entry->product_id,
+                    'cell_id' => null,
+                    'receipt_id' => $locked->id,
+                    'expiration_date' => $entry->expiration_date?->toDateString(),
+                    'remaining_boxes' => $entry->boxes,
+                ]);
 
-                    $actual->update(['pallet_id' => $pallet->id]);
-                }
+                $entry->update(['pallet_id' => $pallet->id]);
             }
 
             $locked->update([
@@ -297,34 +214,6 @@ class ReceiptService
 
             return $locked;
         });
-    }
-
-    /**
-     * Whether a checked bill line matches its bill: as many pallets as
-     * expected, each with the expected boxes and the expected expiry. A null
-     * expected value is not compared (a bill without an expiry matches any).
-     * Anything else, including nothing arriving, is a mismatch. Pure, so it
-     * can be unit tested without a database.
-     *
-     * @param  list<ActualPallet>  $pallets  expiry dates as `Y-m-d`
-     */
-    public static function checkStatus(?int $expectedPalletsCount, ?int $expectedBoxes, ?string $expectedExpirationDate, array $pallets): ReceiptLineStatus
-    {
-        if ($expectedPalletsCount !== null && count($pallets) !== $expectedPalletsCount) {
-            return ReceiptLineStatus::Mismatched;
-        }
-
-        foreach ($pallets as $pallet) {
-            if ($expectedBoxes !== null && $pallet['boxes'] !== $expectedBoxes) {
-                return ReceiptLineStatus::Mismatched;
-            }
-
-            if ($expectedExpirationDate !== null && $pallet['expiration_date'] !== $expectedExpirationDate) {
-                return ReceiptLineStatus::Mismatched;
-            }
-        }
-
-        return ReceiptLineStatus::Matched;
     }
 
     /**
@@ -345,25 +234,18 @@ class ReceiptService
     }
 
     /**
-     * @param  list<ActualPallet>  $pallets
+     * Record the pallets in the order given, `position` 0 upwards.
+     *
+     * @param  list<WrittenPallet>  $pallets
      */
-    private function replaceActualPallets(ReceiptLine $line, array $pallets): void
+    private function writePallets(Receipt $receipt, array $pallets): void
     {
-        $line->actualPallets()->delete();
-
-        $line->actualPallets()->createMany(array_map(fn (array $pallet): array => [
+        $receipt->pallets()->createMany(array_map(fn (array $pallet, int $position): array => [
+            'product_id' => $pallet['product_id'],
             'boxes' => $pallet['boxes'],
             'expiration_date' => $pallet['expiration_date'],
-        ], $pallets));
-    }
-
-    /**
-     * A date-only value, so SQLite stores no time component (see
-     * PalletActionService::normalizeExpirationDate()).
-     */
-    private function normalizeDate(?string $date): ?string
-    {
-        return $date !== null ? Carbon::parse($date)->toDateString() : null;
+            'position' => $position,
+        ], $pallets, array_keys($pallets)));
     }
 
     /**

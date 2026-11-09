@@ -14,15 +14,16 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
- * A truck of pallets received into one warehouse against a bill. The truck
- * itself is not recorded. A draft receipt is edited while the admin checks the
- * pallets against the bill; finalizing it creates the real (unplaced) pallets
- * and freezes it. See .ai/rules/receiving.md.
+ * A truck of pallets received into one warehouse. The truck itself is not
+ * recorded and the bill is kept only as its photos/PDFs (`files`): no bill
+ * details are stored. While the receipt is a draft the admin records the
+ * pallets as written on the bill (`pallets`, checked against the bill by
+ * eye); finalizing it creates the real (unplaced) pallets and freezes it.
+ * See .ai/rules/receiving.md.
  *
  * @property int $id
  * @property int $warehouse_id
- * @property string $bill_name
- * @property string|null $bill_info
+ * @property string|null $note
  * @property ReceiptStatus $status
  * @property int $created_by
  * @property int|null $finalized_by
@@ -33,7 +34,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property-read User $createdBy
  * @property-read User|null $finalizedBy
  */
-#[Fillable(['warehouse_id', 'bill_name', 'bill_info', 'status', 'created_by', 'finalized_by', 'finalized_at'])]
+#[Fillable(['warehouse_id', 'note', 'status', 'created_by', 'finalized_by', 'finalized_at'])]
 class Receipt extends Model
 {
     /** @use HasFactory<ReceiptFactory> */
@@ -45,7 +46,7 @@ class Receipt extends Model
      * @var list<string>
      */
     public const array SELECT_COLUMNS = [
-        'id', 'warehouse_id', 'bill_name', 'bill_info', 'status',
+        'id', 'warehouse_id', 'note', 'status',
         'created_by', 'finalized_by', 'finalized_at', 'created_at', 'updated_at',
     ];
 
@@ -62,8 +63,9 @@ class Receipt extends Model
 
     /**
      * Eager loads of a receipt's detail: the summary plus its files (never
-     * their storage path) and its lines with their product and actual pallets,
-     * each in the order they were added.
+     * their storage path) in the order they were added, and its pallets as
+     * written on the bill with their product, in the order the admin typed
+     * them (never the id of the pallet finalizing created).
      *
      * @return array<int|string, mixed>
      */
@@ -74,8 +76,14 @@ class Receipt extends Model
             'files' => fn (HasMany $query) => $query
                 ->select(['id', 'receipt_id', 'original_name', 'mime_type', 'size', 'created_at'])
                 ->orderBy('id'),
-            'lines' => fn (HasMany $query) => $query
-                ->with(ReceiptLine::withDetails())
+            'pallets' => fn (HasMany $query) => $query
+                ->select(['id', 'receipt_id', 'product_id', 'boxes', 'expiration_date', 'position'])
+                ->with([
+                    'product:id,name,ar_name,thumbnail_img,warehouse_image_path,published',
+                    'product.thumbnailUpload:id,file_name,external_link',
+                    'product.setting:product_id,boxes_count',
+                ])
+                ->orderBy('position')
                 ->orderBy('id'),
         ];
     }
@@ -133,11 +141,14 @@ class Receipt extends Model
     }
 
     /**
-     * @return HasMany<ReceiptLine, $this>
+     * The pallets as written on the bill (one entry per pallet), linked to
+     * the real pallet once the receipt is finalized.
+     *
+     * @return HasMany<ReceiptPallet, $this>
      */
-    public function lines(): HasMany
+    public function pallets(): HasMany
     {
-        return $this->hasMany(ReceiptLine::class);
+        return $this->hasMany(ReceiptPallet::class);
     }
 
     /**

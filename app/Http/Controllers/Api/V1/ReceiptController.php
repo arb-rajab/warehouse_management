@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\FilterReceiptsRequest;
 use App\Http\Requests\Api\V1\StoreReceiptRequest;
+use App\Http\Requests\Api\V1\UpdateReceiptPalletsRequest;
 use App\Http\Resources\ReceiptResource;
 use App\Models\Receipt;
 use App\Models\User;
@@ -16,15 +17,17 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 /**
- * Truck receiving (WMS admins only): a draft receipt against a bill, checked
- * line by line and finalized into unplaced pallets. See .ai/rules/receiving.md.
+ * Truck receiving (WMS admins only): a draft receipt holding the bill's
+ * photos/PDFs and the pallets as written on the bill, finalized into unplaced
+ * pallets. No bill details are stored or compared: the admin checks the
+ * pallets against the bill by eye. See .ai/rules/receiving.md.
  */
 class ReceiptController extends Controller
 {
     public function __construct(private readonly ReceiptService $receipts) {}
 
     /**
-     * The receipts, newest first, 20 per page, with their line and file
+     * The receipts, newest first, 20 per page, with their pallet and file
      * counts. `warehouse_ids[]` keeps those received into these warehouses,
      * `status` the drafts or the finalized ones.
      */
@@ -33,7 +36,7 @@ class ReceiptController extends Controller
         $receipts = Receipt::query()
             ->select(Receipt::SELECT_COLUMNS)
             ->with(Receipt::WITH_SUMMARY)
-            ->withCount(['lines', 'files'])
+            ->withCount(['pallets', 'files'])
             ->when($request->validated('status'), fn (Builder $query, string $status) => $query->where('status', $status))
             ->forWarehouses($request->warehouseIds())
             ->latest('created_at')
@@ -45,8 +48,9 @@ class ReceiptController extends Controller
     }
 
     /**
-     * Create a draft receipt for one warehouse with the bill's header and
-     * lines (every line `pending`). Answers the receipt's detail.
+     * Create a draft receipt for one warehouse, with an optional note and,
+     * optionally already, the pallets as written on the bill. Answers the
+     * receipt's detail.
      */
     public function store(StoreReceiptRequest $request): JsonResponse
     {
@@ -56,9 +60,8 @@ class ReceiptController extends Controller
         $receipt = $this->receipts->create(
             $user->id,
             $request->integer('warehouse_id'),
-            (string) $request->string('bill_name'),
-            $request->filled('bill_info') ? (string) $request->string('bill_info') : null,
-            $request->billLines(),
+            $request->filled('note') ? (string) $request->string('note') : null,
+            $request->receivedPallets(),
         );
 
         return $this->detail($receipt)->response()->setStatusCode(201);
@@ -66,8 +69,8 @@ class ReceiptController extends Controller
 
     /**
      * A receipt with its bill files (each with its download `url`) and its
-     * lines: product, what the bill expects, status, note and the pallets
-     * that arrived (with the created `pallet_id` once finalized).
+     * pallets as written on the bill (product, boxes, expiry), in the order
+     * they were typed.
      */
     public function show(Receipt $receipt): ReceiptResource
     {
@@ -75,13 +78,23 @@ class ReceiptController extends Controller
     }
 
     /**
-     * Finalize a draft: one unplaced pallet per pallet that arrived, owned by
-     * the receipt's warehouse (`GET pallets/unplaced`, then
-     * `POST pallets/{pallet}/place`). Mismatched lines are allowed. The
-     * receipt can no longer change afterwards.
+     * Replace the whole pallet list of a draft receipt (one entry per pallet,
+     * in order; `[]` clears it) and, when sent, its note. Answers the detail.
      */
     #[DocumentedResponse(409, description: 'The receipt is already finalized (`error_code`: `receipt_finalized`).', type: 'array{message: string, error_code: string}')]
-    #[DocumentedResponse(422, description: 'The receipt has no bill file, a line is still pending, or no pallet arrived at all (`error_code`: `receipt_has_no_files` / `receipt_has_pending_lines` / `receipt_has_no_pallets`).', type: 'array{message: string, error_code: string}')]
+    public function updatePallets(UpdateReceiptPalletsRequest $request, Receipt $receipt): ReceiptResource
+    {
+        return $this->detail($this->receipts->replacePallets($receipt, $request->receivedPallets(), $request->receiptChanges()));
+    }
+
+    /**
+     * Finalize a draft: one unplaced pallet per pallet entry, owned by the
+     * receipt's warehouse (`GET pallets/unplaced`, then
+     * `POST pallets/{pallet}/place`). The receipt can no longer change
+     * afterwards.
+     */
+    #[DocumentedResponse(409, description: 'The receipt is already finalized (`error_code`: `receipt_finalized`).', type: 'array{message: string, error_code: string}')]
+    #[DocumentedResponse(422, description: 'The receipt has no bill file or no pallet entry (`error_code`: `receipt_has_no_files` / `receipt_has_no_pallets`).', type: 'array{message: string, error_code: string}')]
     public function finalize(Request $request, Receipt $receipt): ReceiptResource
     {
         /** @var User $user */
@@ -92,6 +105,6 @@ class ReceiptController extends Controller
 
     private function detail(Receipt $receipt): ReceiptResource
     {
-        return new ReceiptResource($receipt->load(Receipt::withDetails())->loadCount(['lines', 'files']));
+        return new ReceiptResource($receipt->load(Receipt::withDetails())->loadCount(['pallets', 'files']));
     }
 }

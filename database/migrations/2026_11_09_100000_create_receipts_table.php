@@ -5,8 +5,10 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * A truck receipt: a bill checked against the pallets that arrived, in one
- * warehouse. The truck itself is not recorded. See .ai/rules/receiving.md.
+ * A truck receipt received into one warehouse. The bill is not stored as
+ * data: only its photos/PDFs (receipt_files) and the pallets the admin
+ * records as written on it (receipt_pallets). `note` is the admin's only free
+ * text. The truck itself is not recorded. See .ai/rules/receiving.md.
  *
  * The status column holds a `ReceiptStatus` value as a string, like the other
  * enum columns. `created_by`/`finalized_by` restrict deletion of the user:
@@ -22,8 +24,7 @@ return new class extends Migration
         Schema::create('receipts', function (Blueprint $table) {
             $table->id();
             $table->foreignId('warehouse_id')->constrained('warehouses')->restrictOnDelete();
-            $table->string('bill_name');
-            $table->text('bill_info')->nullable();
+            $table->text('note')->nullable();
             $table->string('status', 32)->default('draft');
             $table->foreignId('created_by')->constrained('wms_users')->restrictOnDelete();
             $table->foreignId('finalized_by')->nullable()->constrained('wms_users')->restrictOnDelete();

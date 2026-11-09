@@ -6,7 +6,7 @@ use App\Enums\CellState;
 use App\Models\Cell;
 use App\Models\Pallet;
 use App\Models\Product;
-use App\Models\ReceiptLine;
+use App\Models\Receipt;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -59,16 +59,14 @@ class PalletFactory extends Factory
 
     /**
      * A pallet received from a truck and not yet placed: no cell, linked to a
-     * receipt line (of the pallet's own product, in the receipt's warehouse —
-     * the "Default" one unless the caller passes a `receipt_line_id`).
+     * finalized receipt in the "Default" warehouse unless the caller passes a
+     * `receipt_id` (or `->for($receipt)`).
      */
     public function unplaced(): static
     {
         return $this->state(fn (): array => [
             'cell_id' => null,
-            'receipt_line_id' => fn (array $attributes): Factory => ReceiptLine::factory()->state([
-                'product_id' => $attributes['product_id'],
-            ]),
+            'receipt_id' => Receipt::factory()->finalized(),
         ]);
     }
 

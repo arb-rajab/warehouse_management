@@ -24,8 +24,7 @@ class ReceiptFactory extends Factory
     {
         return [
             'warehouse_id' => fn (): int => Warehouse::firstOrCreateDefault()->id,
-            'bill_name' => 'BILL-'.fake()->unique()->numerify('#####'),
-            'bill_info' => fake()->optional()->sentence(),
+            'note' => fake()->optional()->sentence(),
             'status' => ReceiptStatus::Draft,
             'created_by' => User::factory(),
             'finalized_by' => null,

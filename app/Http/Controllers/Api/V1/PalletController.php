@@ -75,7 +75,7 @@ class PalletController extends Controller
     public function unplaced(FilterUnplacedPalletsRequest $request): AnonymousResourceCollection
     {
         $pallets = Pallet::query()
-            ->select(['id', 'product_id', 'cell_id', 'receipt_line_id', 'expiration_date', 'remaining_boxes', 'created_at'])
+            ->select(['id', 'product_id', 'cell_id', 'receipt_id', 'expiration_date', 'remaining_boxes', 'created_at'])
             ->unplaced()
             ->when($request->productIds(), fn (Builder $query, array $productIds) => $query->whereIn('product_id', $productIds))
             ->forWarehouses($request->warehouseIds())
