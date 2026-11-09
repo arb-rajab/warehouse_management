@@ -362,7 +362,7 @@ describe('AdminLayout', () => {
         const help = header
             .findAllComponents(Link)
             .find(
-                (link) =>
+                (link: { props: (key: string) => unknown }) =>
                     (link.props('href') as { url: string }).url ===
                     helpIndex.url(),
             );
