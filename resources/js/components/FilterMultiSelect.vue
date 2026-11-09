@@ -64,7 +64,7 @@ function buttonLabel(): string {
         <div
             v-if="open"
             role="listbox"
-            class="absolute z-10 mt-1 w-max min-w-full rounded-md border border-line-strong bg-surface p-2 shadow-pop"
+            class="absolute z-10 mt-1 w-max min-w-full rounded-lg border border-line-strong bg-surface p-2 shadow-pop"
             :style="{ maxWidth: `${panelMaxWidthPx}px` }"
         >
             <label

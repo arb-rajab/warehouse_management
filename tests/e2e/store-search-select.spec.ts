@@ -161,6 +161,6 @@ test('rows stay readable in dark mode', async ({ page }) => {
         page,
         '[data-search-select-layer] [id$="-panel"]',
     );
-    // neutral-800: a dark panel, not the white of light mode.
-    expect(panel.background).toEqual([38, 38, 38]);
+    // --surface in dark mode (#1e1a17): a dark panel, not the white of light mode.
+    expect(panel.background).toEqual([30, 26, 23]);
 });

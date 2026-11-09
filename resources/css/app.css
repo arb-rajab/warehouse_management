@@ -142,6 +142,11 @@
 }
 
 @layer base {
+    /* Native checkboxes, radios and range inputs take the brand colour. */
+    :root {
+        accent-color: var(--brand);
+    }
+
     body {
         background-color: var(--page);
         color: var(--ink);

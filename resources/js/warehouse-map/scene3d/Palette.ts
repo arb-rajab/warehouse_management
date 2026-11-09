@@ -43,7 +43,7 @@ export const DEFAULT_PALETTE: ScenePalette = {
     ceilLight: 0xe2e8f0,
     background: 0x0b1120,
     danger: 0xe11d48,
-    primary: 0x2563eb,
+    primary: 0xc4170c,
 };
 
 /** The CSS custom properties (declared in tokens.css) that drive the palette. */

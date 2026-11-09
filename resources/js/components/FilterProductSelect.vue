@@ -144,7 +144,7 @@ function buttonLabel(): string {
         </button>
         <div
             v-if="open"
-            class="fixed z-[60] w-max rounded-md border border-line-strong bg-surface p-2 shadow-pop"
+            class="fixed z-[60] w-max rounded-lg border border-line-strong bg-surface p-2 shadow-pop"
             :style="{
                 top: `${panelPosition.top}px`,
                 insetInlineStart: `${panelPosition.insetInlineStart}px`,

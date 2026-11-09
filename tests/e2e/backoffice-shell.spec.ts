@@ -250,3 +250,24 @@ test.describe('phone', () => {
         await expect(sidebar).toBeHidden();
     });
 });
+
+test('the sign-in page shows the logo and the shared brand name in light and dark, and dark mode darkens native controls', async ({
+    page,
+}) => {
+    await page.goto('/admin/login');
+
+    const brand = page.getByTestId('auth-brand');
+    await expect(page.getByTestId('auth-logo')).toBeVisible();
+    await expect(brand).not.toBeEmpty();
+    await expect(page.getByTestId('auth-area')).toBeVisible();
+    await expect(page.locator('html')).toHaveCSS('color-scheme', 'normal');
+    expect(await textContrast(brand)).toBeGreaterThanOrEqual(4.5);
+
+    await page.emulateMedia({ colorScheme: 'dark' });
+
+    await expect(page.locator('html')).toHaveCSS('color-scheme', 'dark');
+    expect(await textContrast(brand)).toBeGreaterThanOrEqual(4.5);
+    expect(
+        await textContrast(page.getByTestId('auth-area')),
+    ).toBeGreaterThanOrEqual(4.5);
+});

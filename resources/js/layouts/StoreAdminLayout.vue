@@ -412,7 +412,7 @@ function openGroup(
                         class="pb-6"
                         #default="{ processing }"
                     >
-                        <p class="text-sm text-gray-700 dark:text-neutral-300">
+                        <p class="text-sm text-ink">
                             {{ t('store.nav.clearCacheHelp') }}
                         </p>
                         <div class="mt-5 flex justify-end gap-2">

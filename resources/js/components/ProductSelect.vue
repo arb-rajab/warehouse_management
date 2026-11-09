@@ -106,7 +106,7 @@ function buttonLabel(): string {
         </button>
         <div
             v-if="open"
-            class="absolute z-10 mt-1 w-full rounded-md border border-line-strong bg-surface p-2 shadow-pop"
+            class="absolute z-10 mt-1 w-full rounded-lg border border-line-strong bg-surface p-2 shadow-pop"
         >
             <div class="relative mb-2">
                 <Search

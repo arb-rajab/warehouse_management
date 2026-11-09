@@ -28,6 +28,8 @@
 
 @media (prefers-color-scheme: dark) {
     :root {
+        /* Native controls (checkboxes, date pickers, scrollbars) follow dark. */
+        color-scheme: dark;
         --brand: #d42a1e;
         --brand-hover: #e5483c;
         --brand-strong: #ff6b5e;
