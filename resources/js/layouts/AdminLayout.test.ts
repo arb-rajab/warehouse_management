@@ -1,4 +1,5 @@
 import { Link } from '@inertiajs/vue3';
+import { Truck } from '@lucide/vue';
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { index as cellLogsIndex } from '@/actions/App/Http/Controllers/Admin/CellStatusLogController';
@@ -6,6 +7,10 @@ import { index as cellVerificationRoundsIndex } from '@/actions/App/Http/Control
 import { index as helpIndex } from '@/actions/App/Http/Controllers/Admin/HelpController';
 import { index as palletsIndex } from '@/actions/App/Http/Controllers/Admin/PalletController';
 import { index as productsIndex } from '@/actions/App/Http/Controllers/Admin/ProductController';
+import {
+    index as receiptsIndex,
+    show as receiptShow,
+} from '@/actions/App/Http/Controllers/Admin/ReceiptController';
 import {
     index as rowsIndex,
     edit as rowEdit,
@@ -42,6 +47,7 @@ const MENU_URLS = [
     warehousesIndex.url(),
     rowsIndex.url(),
     palletsIndex.url(),
+    receiptsIndex.url(),
     warehouseMapIndex.url(),
     productsIndex.url(),
     cellLogsIndex.url(),
@@ -138,6 +144,41 @@ describe('AdminLayout', () => {
         ]);
     });
 
+    it('lists Receipts in the Inventory group right after Pallets, with the receipts index url and the Truck icon', () => {
+        const wrapper = mountLayout(rowsIndex.url());
+        const hrefs = menu(wrapper)
+            .findAll('a')
+            .map((link) => link.attributes('href'));
+        const link = menuLink(wrapper, receiptsIndex.url());
+        const nav = wrapper
+            .findAllComponents(SidebarNavLink)
+            .find((item) => item.text() === t('nav.receipts'));
+
+        expect(link?.text()).toBe(t('nav.receipts'));
+        expect(hrefs.indexOf(receiptsIndex.url())).toBe(
+            hrefs.indexOf(palletsIndex.url()) + 1,
+        );
+        expect(hrefs.indexOf(receiptsIndex.url())).toBeLessThan(
+            hrefs.indexOf(cellLogsIndex.url()),
+        );
+        expect(nav?.props('href')).toEqual({
+            url: receiptsIndex.url(),
+            method: 'get',
+        });
+        expect(nav?.props('icon')).toBe(Truck);
+    });
+
+    it('lights the Receipts link up on a receipt page and nowhere else', () => {
+        const wrapper = mountLayout(receiptShow.url({ receipt: 9 }));
+        const active = menu(wrapper).findAll('[aria-current="page"]');
+
+        expect(active).toHaveLength(1);
+        expect(active[0].attributes('href')).toBe(receiptsIndex.url());
+        expect(
+            menuLink(wrapper, '/admin')?.attributes('aria-current'),
+        ).toBeUndefined();
+    });
+
     it('gives every menu link an icon and a Wayfinder route object, not a bare url string', () => {
         const wrapper = mountLayout(rowsIndex.url());
         const links = wrapper
@@ -220,9 +261,10 @@ describe('AdminLayout', () => {
         expect(link?.attributes('aria-current')).toBe('page');
     });
 
-    it('marks the pallets, settings and help destinations active on their pages', () => {
+    it('marks the pallets, receipts, settings and help destinations active on their pages', () => {
         for (const url of [
             palletsIndex.url({ query: { state: 'empty' } }),
+            receiptsIndex.url({ query: { status: 'draft' } }),
             settingsEdit.url(),
             helpIndex.url() + '/rows',
         ]) {
