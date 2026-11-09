@@ -5,6 +5,7 @@ namespace App\Providers;
 use App\Models\PersonalAccessToken;
 use App\Models\User;
 use App\Support\ApiResourceResponse;
+use App\Support\MergeRepeatedResponseAttributes;
 use Carbon\CarbonImmutable;
 use Dedoc\Scramble\Scramble;
 use Dedoc\Scramble\Support\Generator\OpenApi;
@@ -173,6 +174,8 @@ class AppServiceProvider extends ServiceProvider
 
         Scramble::configure()
             ->routes(fn (Route $route): bool => str_starts_with($route->uri(), 'api/') && ! $route->isFallback)
+            // Appended after Scramble's ResponseExtension, which keeps only the last #[Response] per status.
+            ->withOperationTransformers(MergeRepeatedResponseAttributes::class)
             ->withDocumentTransformers(function (OpenApi $openApi): void {
                 $openApi->components->addSecurityScheme('privateToken', SecurityScheme::apiKey('header', 'private-token'));
                 $openApi->tags = array_map(fn (string $name): Tag => new Tag($name), array_values(self::API_DOCUMENTATION_TAGS));

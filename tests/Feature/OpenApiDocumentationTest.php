@@ -1,12 +1,32 @@
 <?php
 
 use App\Models\User;
+use Dedoc\Scramble\Attributes\Response as DocumentedResponse;
 use Dedoc\Scramble\Generator;
 use Dedoc\Scramble\Scramble;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Route;
+
+/**
+ * Scramble caches reflection across application instances; export in a fresh
+ * process, as the CLI does, so another test's inferred types cannot leak in.
+ *
+ * @return array<string, mixed>
+ */
+function exportOpenApiDocument(): array
+{
+    $exportPath = tempnam(sys_get_temp_dir(), 'openapi-');
+    try {
+        $result = Process::path(base_path())->run([PHP_BINARY, 'artisan', 'scramble:export', '--path='.$exportPath]);
+        expect($result->successful())->toBeTrue($result->errorOutput());
+
+        return json_decode(file_get_contents($exportPath), true, flags: JSON_THROW_ON_ERROR);
+    } finally {
+        unlink($exportPath);
+    }
+}
 
 test('the generated OpenAPI document types the mobile dashboard stats field as an object, not a string', function () {
     $generator = app(Generator::class);
@@ -20,18 +40,7 @@ test('the generated OpenAPI document types the mobile dashboard stats field as a
 });
 
 test('the API reference covers implemented routes with their actual authentication and resource envelopes', function () {
-    // Scramble caches reflection across application instances; export in a fresh
-    // process, as the CLI does, so another test's inferred types cannot leak in.
-    $exportPath = tempnam(sys_get_temp_dir(), 'openapi-');
-    try {
-        $result = Process::path(base_path())->run([
-            PHP_BINARY, 'artisan', 'scramble:export', '--path='.$exportPath,
-        ]);
-        expect($result->successful())->toBeTrue($result->errorOutput());
-        $document = json_decode(file_get_contents($exportPath), true, flags: JSON_THROW_ON_ERROR);
-    } finally {
-        unlink($exportPath);
-    }
+    $document = exportOpenApiDocument();
     $normalizePath = fn (string $path): string => preg_replace('/\{[^}]+\}/', '{}', $path);
     $operations = [];
     $tags = [
@@ -168,14 +177,7 @@ test('the unified API documentation is restricted and has no separate store refe
 });
 
 test('the API reference documents truck receiving and placing, with their conflict and validation answers', function () {
-    $exportPath = tempnam(sys_get_temp_dir(), 'openapi-');
-    try {
-        $result = Process::path(base_path())->run([PHP_BINARY, 'artisan', 'scramble:export', '--path='.$exportPath]);
-        expect($result->successful())->toBeTrue($result->errorOutput());
-        $document = json_decode(file_get_contents($exportPath), true, flags: JSON_THROW_ON_ERROR);
-    } finally {
-        unlink($exportPath);
-    }
+    $document = exportOpenApiDocument();
 
     $operation = fn (string $method, string $path): array => $document['paths'][$path][$method] ?? throw new RuntimeException("{$method} {$path} is not documented");
     $parameters = fn (array $operation): array => array_column($operation['parameters'] ?? [], 'in', 'name');
@@ -215,4 +217,68 @@ test('the API reference documents truck receiving and placing, with their confli
     $schemas = $document['components']['schemas'];
     expect(json_encode(array_intersect_key($schemas, array_flip(['ReceiptFileResource', 'ReceiptResource']))))->not->toContain('"path"');
     expect($schemas)->toHaveKeys(['ReceiptResource', 'ReceiptFileResource']);
+});
+
+test('an operation documenting several answers of one status lists every error code in one response', function () {
+    $document = exportOpenApiDocument();
+    $conflict = fn (string $method, string $path): array => $document['paths'][$path][$method]['responses']['409']
+        ?? throw new RuntimeException("{$method} {$path} documents no 409");
+
+    foreach ([
+        'post /api/v1/pallets' => ['slot_not_empty', 'slot_inactive', 'cell_in_active_round'],
+        'post /api/v1/pallets/{pallet}/place' => ['pallet_already_placed', 'pallet_warehouse_mismatch', 'slot_not_empty', 'slot_inactive', 'cell_in_active_round'],
+        'post /api/v1/pallets/{pallet}/open' => ['pallet_not_full', 'open_level_not_allowed', 'insufficient_boxes_remaining', 'slot_inactive', 'cell_in_active_round', 'pallet_not_placed', 'pallet_moved'],
+        'post /api/v1/pallets/{pallet}/remove-boxes' => ['pallet_not_opened', 'insufficient_boxes_remaining', 'slot_inactive', 'cell_in_active_round', 'pallet_not_placed', 'pallet_moved'],
+        'post /api/v1/pallets/{pallet}/empty' => ['slot_inactive', 'cell_in_active_round', 'pallet_not_placed', 'pallet_moved'],
+        'post /api/v1/pallets/{pallet}/transfer' => ['destination_not_empty', 'slot_inactive', 'cell_in_active_round', 'pallet_not_placed', 'pallet_moved', 'pallet_already_at_location'],
+        'post /api/v1/cell-verification-reports' => ['verification_round_completed', 'cell_outside_round_rows'],
+    ] as $endpoint => $errorCodes) {
+        [$method, $path] = explode(' ', $endpoint);
+        $response = $conflict($method, $path);
+        $bullets = explode("\n", $response['description']);
+
+        expect($bullets)->toHaveCount(count($errorCodes));
+        foreach ($errorCodes as $index => $errorCode) {
+            expect($bullets[$index])->toStartWith('- ')->toContain("`error_code`: `{$errorCode}`");
+        }
+        expect($response['content']['application/json']['schema'])->toBe([
+            'type' => 'object',
+            'properties' => [
+                'message' => ['type' => 'string'],
+                'error_code' => ['type' => 'string', 'enum' => $errorCodes],
+            ],
+            'required' => ['message', 'error_code'],
+        ]);
+    }
+
+    // A status documented once keeps the attribute's own description and open error_code.
+    $finalized = $conflict('put', '/api/v1/receipts/{receipt}/pallets');
+    expect($finalized['description'])->toBe('The receipt is already finalized (`error_code`: `receipt_finalized`).')
+        ->and($finalized['content']['application/json']['schema']['properties']['error_code'])->toBe(['type' => 'string']);
+    expect($document['paths']['/api/v1/pallets/{pallet}/place']['post']['responses']['412']['description'])
+        ->toBe('The `If-Match` header no longer matches the pallet\'s current `ETag` (`error_code`: `precondition_failed`).');
+
+    // No documented answer is lost: every #[Response] status is in its operation, and
+    // every attribute's description is in that response.
+    $checked = 0;
+    foreach (Route::getRoutes() as $route) {
+        if (! str_starts_with($route->uri(), 'api/') || $route->isFallback || ! method_exists($route->getControllerClass() ?? '', $route->getActionMethod())) {
+            continue;
+        }
+
+        $attributes = (new ReflectionMethod($route->getControllerClass(), $route->getActionMethod()))
+            ->getAttributes(DocumentedResponse::class);
+        if ($attributes === []) {
+            continue;
+        }
+
+        $responses = $document['paths']['/'.$route->uri()][strtolower($route->methods()[0])]['responses'];
+        foreach ($attributes as $attribute) {
+            $documented = $attribute->newInstance();
+            expect($responses)->toHaveKey((string) $documented->status);
+            expect($responses[(string) $documented->status]['description'])->toContain($documented->description);
+            $checked++;
+        }
+    }
+    expect($checked)->toBeGreaterThan(40);
 });

@@ -38,9 +38,9 @@ class PalletController extends Controller
 
     public function __construct(private readonly PalletActionService $palletActions) {}
 
-    #[DocumentedResponse(409, description: 'The requested slot is not empty (`error_code`: `slot_not_empty`).', type: 'array{message: string, error_code: string}')]
-    #[DocumentedResponse(409, description: 'The requested slot is inactive (`error_code`: `slot_inactive`).', type: 'array{message: string, error_code: string}')]
-    #[DocumentedResponse(409, description: 'The cell\'s row is being verified by an unfinished round (`error_code`: `cell_in_active_round`).', type: 'array{message: string, error_code: string}')]
+    #[DocumentedResponse(409, description: 'The requested slot is not empty (`error_code`: `slot_not_empty`).', type: "array{message: string, error_code: 'slot_not_empty'}")]
+    #[DocumentedResponse(409, description: 'The requested slot is inactive (`error_code`: `slot_inactive`).', type: "array{message: string, error_code: 'slot_inactive'}")]
+    #[DocumentedResponse(409, description: 'The cell\'s row is being verified by an unfinished round (`error_code`: `cell_in_active_round`).', type: "array{message: string, error_code: 'cell_in_active_round'}")]
     public function store(StorePalletRequest $request): JsonResponse
     {
         /** @var User $user */
@@ -95,11 +95,11 @@ class PalletController extends Controller
      * allowed) and the cell log records it as `stored`. Honours `If-Match`
      * like the other pallet actions; the response carries the new `ETag`.
      */
-    #[DocumentedResponse(409, description: 'The pallet is already in a cell; move it with a transfer (`error_code`: `pallet_already_placed`).', type: 'array{message: string, error_code: string}')]
-    #[DocumentedResponse(409, description: 'The slot is in another warehouse than the pallet\'s receipt (`error_code`: `pallet_warehouse_mismatch`).', type: 'array{message: string, error_code: string}')]
-    #[DocumentedResponse(409, description: 'The requested slot is not empty (`error_code`: `slot_not_empty`).', type: 'array{message: string, error_code: string}')]
-    #[DocumentedResponse(409, description: 'The requested slot is inactive (`error_code`: `slot_inactive`).', type: 'array{message: string, error_code: string}')]
-    #[DocumentedResponse(409, description: 'The cell\'s row is being verified by an unfinished round (`error_code`: `cell_in_active_round`).', type: 'array{message: string, error_code: string}')]
+    #[DocumentedResponse(409, description: 'The pallet is already in a cell; move it with a transfer (`error_code`: `pallet_already_placed`).', type: "array{message: string, error_code: 'pallet_already_placed'}")]
+    #[DocumentedResponse(409, description: 'The slot is in another warehouse than the pallet\'s receipt (`error_code`: `pallet_warehouse_mismatch`).', type: "array{message: string, error_code: 'pallet_warehouse_mismatch'}")]
+    #[DocumentedResponse(409, description: 'The requested slot is not empty (`error_code`: `slot_not_empty`).', type: "array{message: string, error_code: 'slot_not_empty'}")]
+    #[DocumentedResponse(409, description: 'The requested slot is inactive (`error_code`: `slot_inactive`).', type: "array{message: string, error_code: 'slot_inactive'}")]
+    #[DocumentedResponse(409, description: 'The cell\'s row is being verified by an unfinished round (`error_code`: `cell_in_active_round`).', type: "array{message: string, error_code: 'cell_in_active_round'}")]
     #[DocumentedResponse(412, description: 'The `If-Match` header no longer matches the pallet\'s current `ETag` (`error_code`: `precondition_failed`).', type: 'array{message: string, error_code: string}')]
     public function place(PlacePalletRequest $request, Pallet $pallet): PalletResource
     {
@@ -117,13 +117,13 @@ class PalletController extends Controller
         return new PalletResource($pallet->load(self::EAGER_LOAD));
     }
 
-    #[DocumentedResponse(409, description: 'Only a full pallet can be opened (`error_code`: `pallet_not_full`).', type: 'array{message: string, error_code: string}')]
-    #[DocumentedResponse(409, description: 'The pallet\'s level is not one of the levels where opening is allowed (`error_code`: `open_level_not_allowed`).', type: 'array{message: string, error_code: string}')]
-    #[DocumentedResponse(409, description: 'The requested boxes_count meets or exceeds what remains on the pallet, and confirm_empty was not set (`error_code`: `insufficient_boxes_remaining`).', type: 'array{message: string, error_code: string}')]
-    #[DocumentedResponse(409, description: 'The pallet\'s cell is inactive (`error_code`: `slot_inactive`).', type: 'array{message: string, error_code: string}')]
-    #[DocumentedResponse(409, description: 'The cell\'s row is being verified by an unfinished round (`error_code`: `cell_in_active_round`).', type: 'array{message: string, error_code: string}')]
-    #[DocumentedResponse(409, description: 'The pallet has no cell yet; place it first (`error_code`: `pallet_not_placed`).', type: 'array{message: string, error_code: string}')]
-    #[DocumentedResponse(409, description: 'The pallet was moved by another request after it was loaded (`error_code`: `pallet_moved`).', type: 'array{message: string, error_code: string}')]
+    #[DocumentedResponse(409, description: 'Only a full pallet can be opened (`error_code`: `pallet_not_full`).', type: "array{message: string, error_code: 'pallet_not_full'}")]
+    #[DocumentedResponse(409, description: 'The pallet\'s level is not one of the levels where opening is allowed (`error_code`: `open_level_not_allowed`).', type: "array{message: string, error_code: 'open_level_not_allowed'}")]
+    #[DocumentedResponse(409, description: 'The requested boxes_count meets or exceeds what remains on the pallet, and confirm_empty was not set (`error_code`: `insufficient_boxes_remaining`).', type: "array{message: string, error_code: 'insufficient_boxes_remaining'}")]
+    #[DocumentedResponse(409, description: 'The pallet\'s cell is inactive (`error_code`: `slot_inactive`).', type: "array{message: string, error_code: 'slot_inactive'}")]
+    #[DocumentedResponse(409, description: 'The cell\'s row is being verified by an unfinished round (`error_code`: `cell_in_active_round`).', type: "array{message: string, error_code: 'cell_in_active_round'}")]
+    #[DocumentedResponse(409, description: 'The pallet has no cell yet; place it first (`error_code`: `pallet_not_placed`).', type: "array{message: string, error_code: 'pallet_not_placed'}")]
+    #[DocumentedResponse(409, description: 'The pallet was moved by another request after it was loaded (`error_code`: `pallet_moved`).', type: "array{message: string, error_code: 'pallet_moved'}")]
     #[DocumentedResponse(412, description: 'The `If-Match` header no longer matches the pallet\'s current `ETag` (`error_code`: `precondition_failed`).', type: 'array{message: string, error_code: string}')]
     public function open(OpenPalletRequest $request, Pallet $pallet): PalletResource|Response
     {
@@ -146,12 +146,12 @@ class PalletController extends Controller
         return new PalletResource($result['pallet']->load(self::EAGER_LOAD));
     }
 
-    #[DocumentedResponse(409, description: 'Boxes can only be removed from an opened pallet (`error_code`: `pallet_not_opened`).', type: 'array{message: string, error_code: string}')]
-    #[DocumentedResponse(409, description: 'The requested boxes_count meets or exceeds what remains on the pallet, and confirm_empty was not set (`error_code`: `insufficient_boxes_remaining`).', type: 'array{message: string, error_code: string}')]
-    #[DocumentedResponse(409, description: 'The pallet\'s cell is inactive (`error_code`: `slot_inactive`).', type: 'array{message: string, error_code: string}')]
-    #[DocumentedResponse(409, description: 'The cell\'s row is being verified by an unfinished round (`error_code`: `cell_in_active_round`).', type: 'array{message: string, error_code: string}')]
-    #[DocumentedResponse(409, description: 'The pallet has no cell yet; place it first (`error_code`: `pallet_not_placed`).', type: 'array{message: string, error_code: string}')]
-    #[DocumentedResponse(409, description: 'The pallet was moved by another request after it was loaded (`error_code`: `pallet_moved`).', type: 'array{message: string, error_code: string}')]
+    #[DocumentedResponse(409, description: 'Boxes can only be removed from an opened pallet (`error_code`: `pallet_not_opened`).', type: "array{message: string, error_code: 'pallet_not_opened'}")]
+    #[DocumentedResponse(409, description: 'The requested boxes_count meets or exceeds what remains on the pallet, and confirm_empty was not set (`error_code`: `insufficient_boxes_remaining`).', type: "array{message: string, error_code: 'insufficient_boxes_remaining'}")]
+    #[DocumentedResponse(409, description: 'The pallet\'s cell is inactive (`error_code`: `slot_inactive`).', type: "array{message: string, error_code: 'slot_inactive'}")]
+    #[DocumentedResponse(409, description: 'The cell\'s row is being verified by an unfinished round (`error_code`: `cell_in_active_round`).', type: "array{message: string, error_code: 'cell_in_active_round'}")]
+    #[DocumentedResponse(409, description: 'The pallet has no cell yet; place it first (`error_code`: `pallet_not_placed`).', type: "array{message: string, error_code: 'pallet_not_placed'}")]
+    #[DocumentedResponse(409, description: 'The pallet was moved by another request after it was loaded (`error_code`: `pallet_moved`).', type: "array{message: string, error_code: 'pallet_moved'}")]
     #[DocumentedResponse(412, description: 'The `If-Match` header no longer matches the pallet\'s current `ETag` (`error_code`: `precondition_failed`).', type: 'array{message: string, error_code: string}')]
     public function removeBoxes(RemovePalletBoxesRequest $request, Pallet $pallet): PalletResource|Response
     {
@@ -174,10 +174,10 @@ class PalletController extends Controller
         return new PalletResource($result['pallet']->load(self::EAGER_LOAD));
     }
 
-    #[DocumentedResponse(409, description: 'The pallet\'s cell is inactive (`error_code`: `slot_inactive`).', type: 'array{message: string, error_code: string}')]
-    #[DocumentedResponse(409, description: 'The cell\'s row is being verified by an unfinished round (`error_code`: `cell_in_active_round`).', type: 'array{message: string, error_code: string}')]
-    #[DocumentedResponse(409, description: 'The pallet has no cell yet; place it first (`error_code`: `pallet_not_placed`).', type: 'array{message: string, error_code: string}')]
-    #[DocumentedResponse(409, description: 'The pallet was moved by another request after it was loaded (`error_code`: `pallet_moved`).', type: 'array{message: string, error_code: string}')]
+    #[DocumentedResponse(409, description: 'The pallet\'s cell is inactive (`error_code`: `slot_inactive`).', type: "array{message: string, error_code: 'slot_inactive'}")]
+    #[DocumentedResponse(409, description: 'The cell\'s row is being verified by an unfinished round (`error_code`: `cell_in_active_round`).', type: "array{message: string, error_code: 'cell_in_active_round'}")]
+    #[DocumentedResponse(409, description: 'The pallet has no cell yet; place it first (`error_code`: `pallet_not_placed`).', type: "array{message: string, error_code: 'pallet_not_placed'}")]
+    #[DocumentedResponse(409, description: 'The pallet was moved by another request after it was loaded (`error_code`: `pallet_moved`).', type: "array{message: string, error_code: 'pallet_moved'}")]
     #[DocumentedResponse(412, description: 'The `If-Match` header no longer matches the pallet\'s current `ETag` (`error_code`: `precondition_failed`).', type: 'array{message: string, error_code: string}')]
     public function empty(EmptyPalletRequest $request, Pallet $pallet): Response
     {
@@ -189,12 +189,12 @@ class PalletController extends Controller
         return response()->noContent();
     }
 
-    #[DocumentedResponse(409, description: 'The destination slot is not empty (`error_code`: `destination_not_empty`).', type: 'array{message: string, error_code: string}')]
-    #[DocumentedResponse(409, description: 'The source or destination cell is inactive (`error_code`: `slot_inactive`).', type: 'array{message: string, error_code: string}')]
-    #[DocumentedResponse(409, description: 'The cell\'s row is being verified by an unfinished round (`error_code`: `cell_in_active_round`).', type: 'array{message: string, error_code: string}')]
-    #[DocumentedResponse(409, description: 'The pallet has no cell yet; place it first (`error_code`: `pallet_not_placed`).', type: 'array{message: string, error_code: string}')]
-    #[DocumentedResponse(409, description: 'The pallet was moved by another request after it was loaded (`error_code`: `pallet_moved`).', type: 'array{message: string, error_code: string}')]
-    #[DocumentedResponse(409, description: 'The destination is the cell the pallet is already in (`error_code`: `pallet_already_at_location`).', type: 'array{message: string, error_code: string}')]
+    #[DocumentedResponse(409, description: 'The destination slot is not empty (`error_code`: `destination_not_empty`).', type: "array{message: string, error_code: 'destination_not_empty'}")]
+    #[DocumentedResponse(409, description: 'The source or destination cell is inactive (`error_code`: `slot_inactive`).', type: "array{message: string, error_code: 'slot_inactive'}")]
+    #[DocumentedResponse(409, description: 'The cell\'s row is being verified by an unfinished round (`error_code`: `cell_in_active_round`).', type: "array{message: string, error_code: 'cell_in_active_round'}")]
+    #[DocumentedResponse(409, description: 'The pallet has no cell yet; place it first (`error_code`: `pallet_not_placed`).', type: "array{message: string, error_code: 'pallet_not_placed'}")]
+    #[DocumentedResponse(409, description: 'The pallet was moved by another request after it was loaded (`error_code`: `pallet_moved`).', type: "array{message: string, error_code: 'pallet_moved'}")]
+    #[DocumentedResponse(409, description: 'The destination is the cell the pallet is already in (`error_code`: `pallet_already_at_location`).', type: "array{message: string, error_code: 'pallet_already_at_location'}")]
     #[DocumentedResponse(412, description: 'The `If-Match` header no longer matches the pallet\'s current `ETag` (`error_code`: `precondition_failed`).', type: 'array{message: string, error_code: string}')]
     public function transfer(TransferPalletRequest $request, Pallet $pallet): PalletResource
     {
