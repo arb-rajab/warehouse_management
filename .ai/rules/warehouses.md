@@ -32,7 +32,9 @@ managing warehouses uses the same `role:admin` gate as rows.
 - `warehouses` (`name` unique, optional unique `code`, optional `address`).
   `rows.warehouse_id` is NOT NULL with `restrictOnDelete`. Cells, pallets,
   cell logs and verification rounds have no warehouse column: they reach it
-  through their row. Add a column only for a query that truly needs it.
+  through their row. Add a column only for a query that truly needs it. The
+  exception in kind: a pallet received but not yet placed has no cell and
+  reaches its warehouse through its receipt line (see [receiving](receiving.md)).
 - `2026_11_08_120001_add_warehouse_id_to_rows_table` created the "Default"
   warehouse (`Warehouse::DEFAULT_NAME`) and moved every existing row into it,
   so every database has it. `RowFactory` puts a row there unless the caller

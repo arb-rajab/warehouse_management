@@ -22,14 +22,18 @@ use Illuminate\Support\Carbon;
 /**
  * @property int $id
  * @property int $product_id
- * @property int $cell_id
+ * @property int|null $cell_id null while the pallet is received but not yet placed in a cell
+ * @property int|null $receipt_line_id the receipt line the pallet arrived on, if it came from a truck receipt
  * @property ?Carbon $expiration_date
  * @property int $remaining_boxes
+ * @property-read Cell|null $cell
+ * @property-read ReceiptLine|null $receiptLine
+ * @property-read Warehouse|null $warehouse
  * @property-read CellState $state
  * @property-read CellStatusLog|null $cellEnteredLog
  * @property-read CarbonImmutable|null $cell_entered_at
  */
-#[Fillable(['product_id', 'cell_id', 'expiration_date', 'remaining_boxes'])]
+#[Fillable(['product_id', 'cell_id', 'receipt_line_id', 'expiration_date', 'remaining_boxes'])]
 #[ObservedBy(PalletObserver::class)]
 class Pallet extends Model
 {
@@ -78,6 +82,36 @@ class Pallet extends Model
     public function cell(): BelongsTo
     {
         return $this->belongsTo(Cell::class);
+    }
+
+    /**
+     * The receipt line the pallet arrived on, set for pallets created by
+     * finalizing a truck receipt (it stays after the pallet is placed).
+     *
+     * @return BelongsTo<ReceiptLine, $this>
+     */
+    public function receiptLine(): BelongsTo
+    {
+        return $this->belongsTo(ReceiptLine::class);
+    }
+
+    /**
+     * The warehouse the pallet is in. There is no stored column: a placed
+     * pallet is in its cell's row's warehouse (a transfer between warehouses
+     * therefore moves it with no copy to update), an unplaced one in the
+     * warehouse of its receipt. Eager load `cell.row.warehouse` and
+     * `receiptLine.receipt.warehouse` to avoid a query per pallet; null only
+     * for a pallet that has neither a cell nor a receipt line.
+     *
+     * @return Attribute<Warehouse|null, never>
+     */
+    protected function warehouse(): Attribute
+    {
+        return Attribute::make(
+            get: fn (): ?Warehouse => $this->cell_id !== null
+                ? $this->cell?->row->warehouse
+                : $this->receiptLine?->receipt->warehouse,
+        );
     }
 
     /**
@@ -158,8 +192,11 @@ class Pallet extends Model
     }
 
     /**
-     * Scope a query to the pallets stored in the given warehouses (through
-     * their cell's row); null matches every pallet. See {@see Row::forWarehouses()}.
+     * Scope a query to the pallets in the given warehouses; null matches every
+     * pallet. A placed pallet matches through its cell's row, an unplaced one
+     * (no cell) through its receipt's warehouse — never both, so a received
+     * pallet transferred to another warehouse follows its cell. See
+     * {@see Row::forWarehouses()}.
      *
      * @param  Builder<Pallet>  $query
      * @param  list<int>|null  $warehouseIds
@@ -168,7 +205,14 @@ class Pallet extends Model
     protected function forWarehouses(Builder $query, ?array $warehouseIds): void
     {
         if ($warehouseIds !== null) {
-            $query->whereIn($query->qualifyColumn('cell_id'), Cell::query()->select('id')->forWarehouses($warehouseIds));
+            $query->where(fn (Builder $q) => $q
+                ->whereIn($query->qualifyColumn('cell_id'), Cell::query()->select('id')->forWarehouses($warehouseIds))
+                ->orWhere(fn (Builder $unplaced) => $unplaced
+                    ->whereNull($query->qualifyColumn('cell_id'))
+                    ->whereIn($query->qualifyColumn('receipt_line_id'), ReceiptLine::query()->select('id')->whereIn(
+                        'receipt_id',
+                        Receipt::query()->select('id')->forWarehouses($warehouseIds),
+                    ))));
         }
     }
 

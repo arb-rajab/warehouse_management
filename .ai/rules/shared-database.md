@@ -334,6 +334,7 @@ therefore a plain `integer` with an explicit `foreign()` clause, not
 - `wms_product_settings.product_id`
 - `wms_product_barcodes.product_id` (retired 2026-11-08, see "Barcodes: one table"; dropped by a follow-up migration after one release)
 - `wms_product_image_reviews.product_id`
+- `receipt_lines.product_id`
 - `product_barcodes.product_id` (the one barcode table)
 - `product_variations.product_id`
 - `carts_offered.product_id` (no constraint, as in the store's schema)
@@ -582,7 +583,8 @@ existing database, and changing one is a production data migration.
 | `wms_cache`, `wms_cache_locks` | no | this app runs `CACHE_STORE=database`; if the store ever does too, either app could read, overwrite or flush the other's entries |
 | `wms_jobs`, `wms_job_batches`, `wms_failed_jobs` | no | this app runs `QUEUE_CONNECTION=database`; if the store ever does too, each app's workers would reserve payloads whose job classes don't exist on their side |
 
-The remaining tables (`rows`, `cells`, `pallets`, `cell_status_logs`,
+The remaining tables (`rows`, `cells`, `pallets`, `warehouses`, `receipts`,
+`receipt_files`, `receipt_lines`, `receipt_line_pallets`, `cell_status_logs`,
 `cell_status_log_flags`, `cell_verification_rounds`,
 `cell_verification_reports`, `mobile_app_version_requirements`) keep bare names:
 they were specific enough to this domain that the store app had nothing like

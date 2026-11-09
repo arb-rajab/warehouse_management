@@ -6,6 +6,7 @@ use App\Enums\CellState;
 use App\Models\Cell;
 use App\Models\Pallet;
 use App\Models\Product;
+use App\Models\ReceiptLine;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -38,8 +39,9 @@ class PalletFactory extends Factory
      */
     public function configure(): static
     {
+        // An unplaced pallet has no cell to mark Full.
         return parent::configure()->afterCreating(
-            fn (Pallet $pallet) => $pallet->cell->update(['state' => CellState::Full])
+            fn (Pallet $pallet) => $pallet->cell?->update(['state' => CellState::Full])
         );
     }
 
@@ -52,6 +54,21 @@ class PalletFactory extends Factory
     {
         return $this->state(fn (): array => [
             'cell_id' => Cell::factory()->state(['flat_number' => $level]),
+        ]);
+    }
+
+    /**
+     * A pallet received from a truck and not yet placed: no cell, linked to a
+     * receipt line (of the pallet's own product, in the receipt's warehouse —
+     * the "Default" one unless the caller passes a `receipt_line_id`).
+     */
+    public function unplaced(): static
+    {
+        return $this->state(fn (): array => [
+            'cell_id' => null,
+            'receipt_line_id' => fn (array $attributes): Factory => ReceiptLine::factory()->state([
+                'product_id' => $attributes['product_id'],
+            ]),
         ]);
     }
 
