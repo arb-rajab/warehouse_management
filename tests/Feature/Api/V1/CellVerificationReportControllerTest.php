@@ -8,6 +8,7 @@ use App\Models\Pallet;
 use App\Models\Product;
 use App\Models\Row;
 use App\Models\User;
+use App\Models\Warehouse;
 
 function makeEmptyCell(): Cell
 {
@@ -44,6 +45,7 @@ test('a worker can report a cell as correct against their own round', function (
             'row_letter' => $cell->row->letter,
             'cell_number' => $cell->cell_number,
             'flat_number' => $cell->flat_number,
+            'warehouse' => ['id' => Warehouse::firstOrCreateDefault()->id, 'name' => Warehouse::DEFAULT_NAME],
         ],
         'expected' => [
             'cell_state' => 'empty',

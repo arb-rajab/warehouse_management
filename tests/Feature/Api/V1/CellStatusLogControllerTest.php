@@ -64,11 +64,13 @@ test('an authenticated worker can list cell logs with every property the app rea
             'row_letter' => 'A',
             'cell_number' => 1,
             'flat_number' => 2,
+            'warehouse' => ['id' => Warehouse::firstOrCreateDefault()->id, 'name' => Warehouse::DEFAULT_NAME],
         ],
         'related_cell' => [
             'row_letter' => 'B',
             'cell_number' => 2,
             'flat_number' => 1,
+            'warehouse' => ['id' => Warehouse::firstOrCreateDefault()->id, 'name' => Warehouse::DEFAULT_NAME],
         ],
         'product' => [
             'id' => $product->id,

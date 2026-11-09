@@ -35,8 +35,8 @@ test('an authenticated worker can start a verification round over the rows they 
         'started_at' => $round->created_at->toIso8601String(),
         'completed_at' => null,
         'rows' => [
-            ['id' => $rowA->id, 'letter' => 'A'],
-            ['id' => $rowB->id, 'letter' => 'B'],
+            ['id' => $rowA->id, 'letter' => 'A', 'warehouse' => ['id' => Warehouse::firstOrCreateDefault()->id, 'name' => Warehouse::DEFAULT_NAME]],
+            ['id' => $rowB->id, 'letter' => 'B', 'warehouse' => ['id' => Warehouse::firstOrCreateDefault()->id, 'name' => Warehouse::DEFAULT_NAME]],
         ],
     ]);
 });
@@ -52,9 +52,9 @@ test('a round started without row_ids covers every row in the warehouse', functi
 
     $response->assertCreated();
     expect($response->json('rows'))->toEqual([
-        ['id' => $rowA->id, 'letter' => 'A'],
-        ['id' => $rowB->id, 'letter' => 'B'],
-        ['id' => $rowC->id, 'letter' => 'C'],
+        ['id' => $rowA->id, 'letter' => 'A', 'warehouse' => ['id' => Warehouse::firstOrCreateDefault()->id, 'name' => Warehouse::DEFAULT_NAME]],
+        ['id' => $rowB->id, 'letter' => 'B', 'warehouse' => ['id' => Warehouse::firstOrCreateDefault()->id, 'name' => Warehouse::DEFAULT_NAME]],
+        ['id' => $rowC->id, 'letter' => 'C', 'warehouse' => ['id' => Warehouse::firstOrCreateDefault()->id, 'name' => Warehouse::DEFAULT_NAME]],
     ]);
 });
 
@@ -277,7 +277,7 @@ test('a worker can view one of their own rounds, including its reports in report
         'completed_at' => $round->completed_at->toIso8601String(),
         'reports_count' => 2,
         'rows' => [
-            ['id' => $row->id, 'letter' => 'D'],
+            ['id' => $row->id, 'letter' => 'D', 'warehouse' => ['id' => Warehouse::firstOrCreateDefault()->id, 'name' => Warehouse::DEFAULT_NAME]],
         ],
         'reports' => [
             [
@@ -288,6 +288,7 @@ test('a worker can view one of their own rounds, including its reports in report
                     'row_letter' => 'D',
                     'cell_number' => 1,
                     'flat_number' => 1,
+                    'warehouse' => ['id' => Warehouse::firstOrCreateDefault()->id, 'name' => Warehouse::DEFAULT_NAME],
                 ],
                 'expected' => [
                     'cell_state' => 'empty',
@@ -319,6 +320,7 @@ test('a worker can view one of their own rounds, including its reports in report
                     'row_letter' => 'D',
                     'cell_number' => 1,
                     'flat_number' => 1,
+                    'warehouse' => ['id' => Warehouse::firstOrCreateDefault()->id, 'name' => Warehouse::DEFAULT_NAME],
                 ],
                 'expected' => [
                     'cell_state' => 'full',

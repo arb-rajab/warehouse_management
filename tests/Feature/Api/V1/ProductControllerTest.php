@@ -4,6 +4,7 @@ use App\Models\Pallet;
 use App\Models\Product;
 use App\Models\ProductBarcode;
 use App\Models\Row;
+use App\Models\Warehouse;
 use Illuminate\Support\Facades\DB;
 
 test('an authenticated worker can list products with every property the app reads', function () {
@@ -519,6 +520,8 @@ test('an authenticated worker can list every current pallet of a product, ordere
             'flat_number' => 1,
         ],
         'is_active' => true,
+        'placed' => true,
+        'warehouse' => ['id' => Warehouse::firstOrCreateDefault()->id, 'name' => Warehouse::DEFAULT_NAME],
     ]);
 });
 

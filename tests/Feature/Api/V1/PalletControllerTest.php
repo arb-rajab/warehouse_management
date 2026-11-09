@@ -41,6 +41,7 @@ test('an authenticated worker can add a pallet to an empty slot', function () {
 
     expect($response->json())->toEqual([
         'id' => $pallet->id,
+        'placed' => true,
         'state' => 'full',
         'expiration_date' => $expirationDate,
         'cell_entered_at' => $storedLog->created_at->toIso8601String(),
@@ -94,6 +95,7 @@ test('an authenticated worker can add a pallet to an empty slot with no expirati
 
     expect($response->json())->toEqual([
         'id' => $pallet->id,
+        'placed' => true,
         'state' => 'full',
         'expiration_date' => null,
         'cell_entered_at' => $storedLog->created_at->toIso8601String(),
@@ -381,6 +383,7 @@ test('an authenticated worker can view a pallet with every property the app read
     $response->assertOk();
     expect($response->json())->toEqual([
         'id' => $pallet->id,
+        'placed' => true,
         'state' => 'full',
         'expiration_date' => $pallet->expiration_date->toDateString(),
         'cell_entered_at' => null,
