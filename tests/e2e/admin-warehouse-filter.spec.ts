@@ -91,10 +91,11 @@ test('the dashboard warehouse filter reloads the stats and keeps its label after
     );
 
     // A warehouse without rows holds nothing: the full-cells tile reads zero.
-    await expect(page.getByRole('link', { name: /^0 Full$/ })).toBeVisible();
+    // The tile's link is named label first, then value.
+    await expect(page.getByRole('link', { name: /^Full 0$/ })).toBeVisible();
 
     // The tiles carry the filter to the pallets list, whose own filter echoes it.
-    await page.getByRole('link', { name: /^0 Full$/ }).click();
+    await page.getByRole('link', { name: /^Full 0$/ }).click();
     await expect(page).toHaveURL(/warehouse_ids/);
     await expect(page.locator('#pallets-warehouse')).toHaveText(
         'E2E Empty Depot',
