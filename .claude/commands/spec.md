@@ -27,11 +27,13 @@ You are the coordinator. Run each prompt yourself with the Agent tool (explicit 
 2. Launch one sub-agent with that prompt, then wait for it to finish.
 3. Read its response yourself and verify it against the task (inspect the diff/commits on the draft PR branch; do not trust the summary alone).
 4. If something is incomplete or wrong, continue the same agent with SendMessage (a follow-up prompt, same model/effort). Only when nothing is outstanding, move on to the next prompt (new agent), adapting it to what earlier responses changed, and revise the outline and M if needed.
-Repeat until all tasks are done.
+Repeat until all tasks are done, then go to phase 5 (open items).
 
 The user intervenes only to answer questions or approve things. Sub-agents cannot ask the user directly: if a sub-agent reports a question, a blocker, or a UI/example/sample proposal awaiting confirmation, relay it to the user (include the screenshot, snapshot, or example), wait for the answer, then send it back to the same agent with SendMessage. Never approve on the user's behalf, and never skip a confirmation they asked for. Run sub-agents one at a time, never in parallel, since they share one branch.
 
 Each prompt must be self-contained for a session with no memory of this conversation: what to build/fix and why, relevant paths, applicable constraints and conventions, the branch/draft PR to commit and push to, and what "done" looks like. Do not include triple-backtick fences inside the prompt text. In addition each prompt must say:
+- Which files to read first: name the specific `.ai/rules/*.md` files and code paths that apply to this prompt (found in the interview research), and tell the sub-agent to read only those plus `AGENTS.md`, not the whole `.ai/` tree, to keep its cold start cheap. Pick the lowest Model/Effort that fits the scope.
+- Cost rules: write large output (logs, listings, route lists) to the scratchpad and search it with `rg` instead of printing it; never print whole listings; push after each commit; do not poll background jobs, start one watcher and end the turn.
 - Do NOT run tests, type checks, or the pre-push script; they run once at the end. Commit and push the changes to the draft PR branch.
 - End the response with a concise report: what changed, files touched, commit(s) pushed, open questions, and anything not done.
 - If the work involves UI changes, examples, or samples: before applying anything, show screenshots, a snapshot, or a concrete example of the proposed solution, then STOP, end the response with that proposal and an explicit request for confirmation, and apply nothing until the coordinator sends back the user's confirmation.
@@ -46,10 +48,21 @@ Output format for each prompt, exactly:
 **Model:** <model: Haiku for trivial/mechanical work, Sonnet for typical contained work, Opus for architecturally significant or highly ambiguous work>
 **Effort:** <low/medium/high/xhigh/max matching actual scope>
 
-## 5. Final verification
+## 5. Open items loop
 
-When every prompt is finished, run (or delegate to one final sub-agent) the relevant tests and checks once for the whole change (see the verification table in `AGENTS.md`), report results faithfully, and mark nothing as passing that was skipped.
+When every prompt is finished, check whether anything is still open for the user: sub-agent questions, unconfirmed proposals, anything reported as not done, skipped or partial checks, and gaps against the original tasks. List them clearly and wait for the user's approval or answers. Never approve on their behalf. Once approved, write new prompts exactly as in phase 4 (same output format, one sub-agent at a time, same draft PR) and verify them. Repeat this phase until nothing is open. Only then continue.
 
-## 6. Manual check list
+## 6. Attested verification
 
-Finish by giving the user an ordered, step-by-step list to manually verify everything works (where to click or run, and what to expect), covering every task.
+Commit everything and make sure the work tree is clean with an unpushed head commit, then run `python3 .claude/scripts/pre_push_check.py` with no flag, in the background, and wait for it to finish (about 10 minutes; see "Attested pre-push run" in `AGENTS.md`). It amends the head commit with the `CI-Verified` trailer. Never write or edit the trailer by hand. Report results faithfully and list any group that could not run. If it fails, fix the cause without asking the user (never skip or loosen a test), report the failure and the fix, and run it again. Push only after it passes.
+
+## 7. Open PR, merge, deploy
+
+1. Mark the draft PR ready for review (never create a second PR).
+2. Merge it automatically with a merge commit (not squash or rebase: those drop or stale the `CI-Verified` trailer that CI's `Plan CI jobs` checks). The user works on a dev branch and has approved automatic merging.
+3. After merging, watch the GitHub Actions run of the deploy workflow for the merge commit until it finishes.
+4. If a check or the deploy fails, report the failure to the user, then fix it without asking (a new change on a fresh branch from the default branch if the PR is already merged, with its own attested run), and repeat until the deploy succeeds.
+
+## 8. Manual check list
+
+Only after the deploy has succeeded, give the user an ordered, step-by-step list to manually verify everything works (where to click or run, and what to expect), covering every task.
