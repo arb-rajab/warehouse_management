@@ -15,10 +15,13 @@ use App\Models\OrderDetail;
 use App\Models\Pallet;
 use App\Models\Permission as StorePermission;
 use App\Models\Product;
+use App\Models\Receipt;
 use App\Models\Role as StoreRole;
+use App\Models\Row;
 use App\Models\Staff;
 use App\Models\StoreUser;
 use App\Models\User;
+use App\Models\Warehouse;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Schema\Blueprint;
@@ -790,6 +793,32 @@ function createTransferPair(Pallet $pallet, Cell $source, Cell $destination, str
     ]), $inAt);
 
     return [$transferredOut, $transferredIn];
+}
+
+/**
+ * A pallet placed in a fresh cell of a new row in the given warehouse (the row
+ * letter is drawn by the factory, so it cannot collide with another row).
+ *
+ * @param  array<string, mixed>  $attributes
+ */
+function placedPalletIn(Warehouse $warehouse, array $attributes = []): Pallet
+{
+    $row = Row::factory()->for($warehouse)->create(['cells_count' => 1, 'flats_count' => 1]);
+
+    return Pallet::factory()->create(['cell_id' => $row->cells()->value('id'), ...$attributes]);
+}
+
+/**
+ * A received pallet with no cell yet, on a finalized receipt of the given
+ * warehouse (`->for()` cannot pick it: see PalletFactory::unplaced()).
+ *
+ * @param  array<string, mixed>  $attributes
+ */
+function unplacedPalletIn(Warehouse $warehouse, array $attributes = []): Pallet
+{
+    $receipt = Receipt::factory()->finalized()->for($warehouse)->create();
+
+    return Pallet::factory()->unplaced()->create(['receipt_id' => $receipt->id, ...$attributes]);
 }
 
 /**

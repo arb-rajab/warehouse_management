@@ -6,6 +6,7 @@ use App\Models\Cell;
 use App\Models\CellStatusLog;
 use App\Models\Pallet;
 use App\Models\Product;
+use App\Models\Receipt;
 use App\Models\Row;
 use App\Models\Warehouse;
 use Carbon\CarbonImmutable;
@@ -323,4 +324,216 @@ test('forWarehouses narrows pallets to the cells of the given warehouses and is 
 
     expect(Pallet::query()->forWarehouses([$north->id])->pluck('id')->all())->toBe([$inNorth->id])
         ->and(Pallet::query()->forWarehouses(null)->pluck('id'))->toContain($noise->id);
+});
+
+test('a pallet belongs to the receipt it arrived on, if any', function () {
+    $receipt = Receipt::factory()->finalized()->create();
+    $received = Pallet::factory()->unplaced()->create(['receipt_id' => $receipt->id]);
+    $plain = Pallet::factory()->create();
+    Receipt::factory()->finalized()->create(); // noise
+
+    expect($received->receipt->id)->toBe($receipt->id)
+        ->and($plain->receipt_id)->toBeNull()
+        ->and($plain->fresh()->receipt)->toBeNull();
+});
+
+test('the unplaced factory state builds a pallet with no cell and a finalized receipt of its own, without creating a cell', function () {
+    $pallet = Pallet::factory()->unplaced()->create();
+
+    expect($pallet->cell_id)->toBeNull()
+        ->and($pallet->receipt->isFinalized())->toBeTrue()
+        ->and($pallet->receipt->warehouse_id)->toBe(Warehouse::firstOrCreateDefault()->id)
+        ->and(Cell::query()->count())->toBe(0);
+});
+
+test('the unplaced factory state takes the receipt it is given', function () {
+    $receipt = Receipt::factory()->finalized()->for(Warehouse::factory()->create())->create();
+
+    $pallet = Pallet::factory()->unplaced()->create(['receipt_id' => $receipt->id]);
+
+    expect($pallet->receipt_id)->toBe($receipt->id)
+        ->and($pallet->warehouse->id)->toBe($receipt->warehouse_id);
+});
+
+test('the warehouse of a placed pallet is its cells row warehouse', function () {
+    $north = Warehouse::factory()->create();
+    $pallet = placedPalletIn($north);
+    placedPalletIn(Warehouse::factory()->create()); // noise
+
+    expect($pallet->warehouse->id)->toBe($north->id);
+});
+
+test('the warehouse of an unplaced pallet is its receipts warehouse', function () {
+    $north = Warehouse::factory()->create();
+    $pallet = unplacedPalletIn($north);
+    Pallet::factory()->unplaced()->create(); // noise, Default warehouse
+
+    expect($pallet->warehouse->id)->toBe($north->id);
+});
+
+test('a received pallet that was placed in another warehouse is in the warehouse of its cell, not of its receipt', function () {
+    $receivedInto = Warehouse::factory()->create();
+    $movedTo = Warehouse::factory()->create();
+    $row = Row::factory()->for($movedTo)->create(['cells_count' => 1, 'flats_count' => 1]);
+    $pallet = unplacedPalletIn($receivedInto);
+
+    $pallet->update(['cell_id' => $row->cells()->value('id')]);
+
+    expect($pallet->fresh()->warehouse->id)->toBe($movedTo->id)
+        ->and(Pallet::query()->forWarehouses([$movedTo->id])->pluck('id')->all())->toBe([$pallet->id])
+        ->and(Pallet::query()->forWarehouses([$receivedInto->id])->count())->toBe(0);
+});
+
+test('the warehouse of a pallet with neither a cell nor a receipt is null', function () {
+    $pallet = Pallet::factory()->unplaced()->create(['receipt_id' => null]);
+
+    expect($pallet->warehouse)->toBeNull();
+});
+
+test('warehouseLoaded says whether the relations the warehouse reads are loaded, for a placed pallet', function () {
+    $pallet = placedPalletIn(Warehouse::factory()->create());
+    $bare = Pallet::query()->findOrFail($pallet->id);
+    $partial = Pallet::query()->with('cell.row')->findOrFail($pallet->id);
+    $loaded = Pallet::query()->with('cell.row.warehouse')->findOrFail($pallet->id);
+
+    expect($bare->warehouseLoaded())->toBeFalse()
+        ->and($partial->warehouseLoaded())->toBeFalse()
+        ->and($loaded->warehouseLoaded())->toBeTrue();
+});
+
+test('warehouseLoaded says whether the receipts warehouse is loaded, for an unplaced pallet', function () {
+    $pallet = Pallet::factory()->unplaced()->create();
+    $bare = Pallet::query()->findOrFail($pallet->id);
+    $partial = Pallet::query()->with('receipt:id,warehouse_id')->findOrFail($pallet->id);
+    $loaded = Pallet::query()->with(Pallet::WITH_RECEIPT_WAREHOUSE)->findOrFail($pallet->id);
+
+    expect($bare->warehouseLoaded())->toBeFalse()
+        ->and($partial->warehouseLoaded())->toBeFalse()
+        ->and($loaded->warehouseLoaded())->toBeTrue()
+        ->and($loaded->warehouse->id)->toBe($pallet->receipt->warehouse_id);
+});
+
+test('warehouseLoaded is true for a pallet with no receipt once the receipt relation is loaded as null', function () {
+    $pallet = Pallet::factory()->unplaced()->create(['receipt_id' => null]);
+
+    expect(Pallet::query()->findOrFail($pallet->id)->warehouseLoaded())->toBeFalse()
+        ->and(Pallet::query()->with('receipt')->findOrFail($pallet->id)->warehouseLoaded())->toBeTrue();
+});
+
+test('forWarehouses matches a placed pallet by its row and an unplaced one by its receipts warehouse', function () {
+    $north = Warehouse::factory()->create();
+    $south = Warehouse::factory()->create();
+    $placedNorth = placedPalletIn($north);
+    $placedSouth = placedPalletIn($south); // noise
+    $unplacedNorth = unplacedPalletIn($north);
+    $unplacedSouth = unplacedPalletIn($south); // noise
+
+    expect(Pallet::query()->forWarehouses([$north->id])->pluck('id')->sort()->values()->all())
+        ->toBe([$placedNorth->id, $unplacedNorth->id])
+        ->and(Pallet::query()->forWarehouses([$south->id])->pluck('id')->sort()->values()->all())
+        ->toBe([$placedSouth->id, $unplacedSouth->id])
+        ->and(Pallet::query()->forWarehouses(null)->count())->toBe(4)
+        ->and(Pallet::query()->forWarehouses([])->count())->toBe(0);
+});
+
+test('a placed pallet that arrived on a receipt of another warehouse is not matched through that receipt', function () {
+    $receivedInto = Warehouse::factory()->create();
+    $placedIn = Warehouse::factory()->create();
+    $pallet = placedPalletIn($placedIn, ['receipt_id' => Receipt::factory()->finalized()->for($receivedInto)->create()->id]);
+
+    expect(Pallet::query()->forWarehouses([$receivedInto->id])->count())->toBe(0)
+        ->and(Pallet::query()->forWarehouses([$placedIn->id])->pluck('id')->all())->toBe([$pallet->id]);
+});
+
+test('the placed and unplaced scopes split pallets by whether they have a cell', function () {
+    $placed = Pallet::factory()->create();
+    $unplaced = Pallet::factory()->unplaced()->create();
+
+    expect(Pallet::query()->placed()->pluck('id')->all())->toBe([$placed->id])
+        ->and(Pallet::query()->unplaced()->pluck('id')->all())->toBe([$unplaced->id]);
+});
+
+test('the placed and unplaced scopes qualify cell_id, so they compose with a join', function () {
+    $placed = Pallet::factory()->create();
+    Pallet::factory()->unplaced()->create(); // noise
+
+    $ids = Pallet::query()
+        ->leftJoin('cells', 'cells.id', '=', 'pallets.cell_id')
+        ->placed()
+        ->pluck('pallets.id')
+        ->all();
+
+    expect($ids)->toBe([$placed->id]);
+});
+
+test('the state of an unplaced pallet is null and is read without touching the cell relation', function () {
+    $pallet = Pallet::factory()->unplaced()->create();
+    $fresh = Pallet::query()->findOrFail($pallet->id);
+
+    expect($fresh->state)->toBeNull()
+        ->and($fresh->relationLoaded('cell'))->toBeFalse();
+});
+
+test('the etag works without a cell and changes when the pallet is placed', function () {
+    $pallet = Pallet::factory()->unplaced()->create();
+    $row = Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
+
+    $unplacedEtag = Pallet::query()->findOrFail($pallet->id)->etag();
+
+    expect($unplacedEtag)->toBeString()->toHaveLength(32)
+        ->and(Pallet::query()->findOrFail($pallet->id)->etag())->toBe($unplacedEtag);
+
+    $pallet->update(['cell_id' => $row->cells()->value('id')]);
+
+    expect(Pallet::query()->with('cell')->findOrFail($pallet->id)->etag())->not->toBe($unplacedEtag);
+});
+
+test('the etag of an unplaced pallet differs from another unplaced pallets', function () {
+    $first = Pallet::factory()->unplaced()->create();
+    $second = Pallet::factory()->unplaced()->create();
+
+    expect($first->etag())->not->toBe($second->etag());
+});
+
+test('toListingSummaryArray carries a null state for an unplaced pallet', function () {
+    $pallet = Pallet::factory()->unplaced()->create(['expiration_date' => '2027-01-15', 'remaining_boxes' => 8]);
+
+    expect(Pallet::query()->findOrFail($pallet->id)->toListingSummaryArray())->toBe([
+        'id' => $pallet->id,
+        'state' => null,
+        'expiration_date' => '2027-01-15',
+        'added_at' => $pallet->created_at->toIso8601String(),
+        'remaining_boxes' => 8,
+    ]);
+});
+
+test('the cell entered log of an unplaced pallet is null and of a placed one is its arrival', function () {
+    $unplaced = Pallet::factory()->unplaced()->create();
+    $placed = Pallet::factory()->create();
+    $log = CellStatusLog::factory()->create([
+        'pallet_id' => $placed->id,
+        'cell_id' => $placed->cell_id,
+        'action' => CellLogAction::Stored,
+    ]);
+
+    expect(Pallet::query()->findOrFail($unplaced->id)->cellEnteredLog)->toBeNull()
+        ->and(Pallet::query()->findOrFail($unplaced->id)->cell_entered_at)->toBeNull()
+        ->and(Pallet::query()->findOrFail($placed->id)->cellEnteredLog->id)->toBe($log->id);
+});
+
+test('listedForAdmin leaves unplaced pallets out', function () {
+    $placed = Pallet::factory()->create();
+    Pallet::factory()->unplaced()->create(); // noise
+
+    expect(Pallet::query()->listedForAdmin()->pluck('id')->all())->toBe([$placed->id]);
+});
+
+test('placing an unplaced pallet does not change its receipt link', function () {
+    $pallet = Pallet::factory()->unplaced()->create();
+    $receiptId = $pallet->receipt_id;
+    $row = Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
+
+    $pallet->update(['cell_id' => $row->cells()->value('id')]);
+
+    expect($pallet->fresh()->receipt_id)->toBe($receiptId);
 });

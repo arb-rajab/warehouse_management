@@ -60,7 +60,8 @@ class PalletFactory extends Factory
     /**
      * A pallet received from a truck and not yet placed: no cell, linked to a
      * finalized receipt in the "Default" warehouse unless the caller passes a
-     * `receipt_id` (or `->for($receipt)`).
+     * `receipt_id`. (`->for($receipt)` does not work here: this state is applied
+     * after the parent resolvers, so it would overwrite the receipt given.)
      */
     public function unplaced(): static
     {
