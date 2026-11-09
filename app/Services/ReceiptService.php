@@ -46,8 +46,6 @@ class ReceiptService
     /** The type each stored extension is recorded and served as. */
     private const array STORED_MIME_TYPES = [
         'jpg' => 'image/jpeg',
-        'png' => 'image/png',
-        'webp' => 'image/webp',
         'pdf' => 'application/pdf',
     ];
 
@@ -160,9 +158,9 @@ class ReceiptService
 
     /**
      * A bill photo re-encoded to JPEG (quality 80, longest side at most 2400
-     * px and never shrunk below 1600, metadata and appended bytes dropped),
-     * unless the upload as sent is already smaller: then the upload is kept,
-     * under its own (sniffed) type.
+     * px and never shrunk below 1600, orientation applied, metadata and
+     * appended bytes dropped). Always the re-encode, even in the rare case it
+     * is larger than the upload: an untrusted photo is never stored as sent.
      *
      * @return array{0: string, 1: string} the bytes to store and their extension
      *
@@ -176,12 +174,7 @@ class ReceiptService
             throw ValidationException::withMessages(['file' => $exception->getMessage()]);
         }
 
-        $info = @getimagesizefromstring($original);
-        $sentAs = is_array($info) ? array_search($info['mime'], self::STORED_MIME_TYPES, true) : false;
-
-        return is_string($sentAs) && $sentAs !== 'pdf' && strlen($original) < strlen($encoded)
-            ? [$original, $sentAs]
-            : [$encoded, 'jpg'];
+        return [$encoded, 'jpg'];
     }
 
     /**

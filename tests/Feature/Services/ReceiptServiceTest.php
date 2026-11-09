@@ -143,27 +143,34 @@ test('addFile removes the bytes it wrote when recording the file fails for anoth
         ->and(ReceiptFile::query()->count())->toBe(0);
 });
 
-test('addFile keeps a photo as sent, under its own type, when the re-encoded JPEG would be larger', function (string $name, Closure $photo, string $extension, string $mime) {
+test('addFile stores the re-encoded JPEG without metadata or appended bytes even when it is larger than the photo sent', function (string $name, Closure $photo) {
     $receipt = Receipt::factory()->create();
+    $exif = "Exif\0\0II\x2a\0\x08\0\0\0\x00\0PHONE-GPS-MARKER";
     $sent = $photo();
+    $sent = str_starts_with($sent, "\xFF\xD8")
+        ? substr($sent, 0, 2)."\xff\xe1".pack('n', strlen($exif) + 2).$exif.substr($sent, 2)
+        : $sent.'APPENDED-PAYLOAD-MARKER';
 
     $file = app(ReceiptService::class)->addFile($receipt, UploadedFile::fake()->createWithContent($name, $sent));
+    $stored = Storage::disk(ReceiptFile::DISK)->get($file->path);
 
-    expect(Storage::disk(ReceiptFile::DISK)->get($file->path))->toBe($sent)
-        ->and($file->path)->toEndWith('.'.$extension)
-        ->and($file->mime_type)->toBe($mime)
-        ->and($file->size)->toBe(strlen($sent))
-        ->and($file->original_name)->toBe('scan.'.$extension);
+    expect(strlen($stored))->toBeGreaterThan(strlen($sent))
+        ->and($stored)->not->toContain('PHONE-GPS-MARKER')->not->toContain('APPENDED-PAYLOAD-MARKER')
+        ->and(getimagesizefromstring($stored)['mime'])->toBe('image/jpeg')
+        ->and($file->path)->toEndWith('.jpg')
+        ->and($file->mime_type)->toBe('image/jpeg')
+        ->and($file->size)->toBe(strlen($stored))
+        ->and($file->original_name)->toBe('scan.jpg');
 })->with([
-    'an already heavily compressed JPEG' => ['scan.jpeg', fn () => billPhoto(400, 300, quality: 20), 'jpg', 'image/jpeg'],
-    'a flat PNG' => ['scan.png', function () {
+    'an already heavily compressed JPEG with EXIF' => ['scan.jpeg', fn () => billPhoto(400, 300, quality: 20)],
+    'a flat PNG with appended bytes' => ['scan.png', function () {
         $image = imagecreatetruecolor(1200, 900);
         imagefill($image, 0, 0, imagecolorallocate($image, 255, 255, 255));
         ob_start();
         imagepng($image, null, 9);
 
         return (string) ob_get_clean();
-    }, 'png', 'image/png'],
+    }],
 ]);
 
 test('addFile stores the re-encoded JPEG when it is smaller than the photo sent', function () {

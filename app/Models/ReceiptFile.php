@@ -52,8 +52,8 @@ class ReceiptFile extends Model
 
     /**
      * The accepted upload extensions (the `mimes` rule checks the content).
-     * Photos are stored re-encoded to JPEG unless the upload is smaller, and a
-     * PDF compressed when Ghostscript makes it smaller (ReceiptService::addFile()).
+     * Photos are always stored re-encoded to JPEG, and a PDF compressed when
+     * Ghostscript makes it smaller (ReceiptService::addFile()).
      *
      * @var list<string>
      */

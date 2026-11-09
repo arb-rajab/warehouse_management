@@ -197,7 +197,8 @@ to be in the future (the receipt records what arrived). The note is
   `storage/app/private`, served by Laravel only with a valid signature), under
   `receipt-bills/` with a random name; never on `public`. `original_name` is
   the client's base name with the stored extension, and `mime_type`/`size`
-  describe the bytes actually stored (`ReceiptService::STORED_MIME_TYPES`). `ReceiptFile::MAX_PER_RECEIPT` (10) is checked under the lock; the
+  describe the bytes actually stored (`ReceiptService::STORED_MIME_TYPES`).
+  `ReceiptFile::MAX_PER_RECEIPT` (10) is checked under the lock; the
   bytes are written before the lock and removed when the record is refused,
   and a deleted record's bytes are removed after its transaction commits.
   Payloads never carry `path`: `ReceiptFileResource.url` is the authenticated
@@ -207,9 +208,10 @@ to be in the future (the receipt records what arrived). The note is
     quality 80, longest side at most 2400 px, EXIF orientation applied and
     metadata/appended bytes dropped. To meet `ImageOptimizer::MAX_OUTPUT_BYTES`
     (1 MiB) it shrinks further, but `minDimension` stops it at 1600 px (legible
-    text wins over the budget). When the upload as sent is strictly smaller
-    than that JPEG, the upload is stored unchanged under its own sniffed type
-    (`.png` / `image/png`, ...), so its metadata stays in that case.
+    text wins over the budget). The re-encode is **always** stored, even in
+    the rare case it is larger than the upload: an untrusted photo is never
+    kept byte-for-byte (it would keep EXIF/GPS and appended bytes). Only PDFs
+    fall back to the original.
   - *PDFs* go through `PdfOptimizer`: Ghostscript (`gs -dSAFER -dBATCH
     -dNOPAUSE -dQUIET -sDEVICE=pdfwrite -dCompatibilityLevel=1.5
     -dPDFSETTINGS=/ebook`) through the `Process` facade with an argument list
@@ -232,9 +234,8 @@ to be in the future (the receipt records what arrived). The note is
     PDFs are simply stored as sent, with a warning in the log per upload.
   - Tests fake Ghostscript with `Process::fake()` (`PdfOptimizerTest`), and the
     one real-binary test skips where `gs` is not installed. `billPhoto()` in
-    `tests/Pest.php` builds a photo that compresses like a real one; the solid
-    black `UploadedFile::fake()->image()` is often smaller as sent than as JPEG,
-    so it is now stored as sent.
+    `tests/Pest.php` builds a photo that compresses like a real one (the solid
+    black `UploadedFile::fake()->image()` does not show a size reduction).
 
 ## Admin web pages (read-only, `role:admin`)
 
