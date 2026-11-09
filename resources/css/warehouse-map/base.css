@@ -1,6 +1,13 @@
+/*
+ * The map is a size container: its HUD breakpoints (responsive.css) follow
+ * the map's own width, which the back-office sidebar narrows, not the
+ * viewport's. Nothing inside is position: fixed, so the containing block
+ * this creates changes no layout.
+ */
 .wms {
     position: absolute;
     inset: 0;
+    container: wms / inline-size;
     overflow: hidden;
     font-family: var(--wms-font);
     background: var(--wms-page);

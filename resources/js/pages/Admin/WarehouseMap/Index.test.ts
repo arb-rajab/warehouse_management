@@ -79,6 +79,7 @@ function mountPage(
 describe('WarehouseMap Index', () => {
     beforeEach(() => {
         resetMocks({ usePageMock, routerPostMock, routerGetMock });
+        window.localStorage.clear();
         mountMapMock.mockReset();
         disposeMock.mockReset();
         mountMapMock.mockReturnValue({
@@ -96,13 +97,48 @@ describe('WarehouseMap Index', () => {
         wrapper.unmount();
     });
 
-    it('hands the whole area under the app bar to the map', () => {
+    it('hands the whole area beside the sidebar and under the header to the map', () => {
         const wrapper = mountPage();
+        const main = wrapper.get('main');
 
-        expect(wrapper.get('main').classes()).toContain('flex-1');
-        expect(wrapper.get('main').classes()).not.toContain('max-w-6xl');
+        expect(main.classes()).toEqual(
+            expect.arrayContaining(['relative', 'min-h-0', 'flex-1']),
+        );
+        expect(main.classes()).not.toContain('px-4');
+        expect(main.find('.max-w-screen-2xl').exists()).toBe(false);
+        expect(main.find('[role="status"]').exists()).toBe(false);
         expect(wrapper.find('[data-testid="warehouse-map"]').exists()).toBe(
             true,
+        );
+        wrapper.unmount();
+    });
+
+    it('starts with the sidebar folded to its icon rail and remembers an unfolded one for the map only', async () => {
+        let wrapper = mountPage();
+
+        expect(wrapper.get('#admin-sidebar').attributes('data-collapsed')).toBe(
+            'true',
+        );
+
+        await wrapper.get('[data-testid="sidebar-collapse"]').trigger('click');
+        expect(wrapper.get('#admin-sidebar').attributes('data-collapsed')).toBe(
+            'false',
+        );
+        expect(
+            window.localStorage.getItem(
+                'backoffice.sidebar.admin-sidebar.map.7',
+            ),
+        ).toBe('0');
+        expect(
+            window.localStorage.getItem(
+                'backoffice.sidebar.admin-sidebar.page.7',
+            ),
+        ).toBeNull();
+        wrapper.unmount();
+
+        wrapper = mountPage();
+        expect(wrapper.get('#admin-sidebar').attributes('data-collapsed')).toBe(
+            'false',
         );
         wrapper.unmount();
     });

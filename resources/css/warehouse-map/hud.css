@@ -153,7 +153,7 @@
 
 .wms-search {
     flex: 1 1 220px;
-    min-width: 0;
+    min-width: 150px;
     max-width: 420px;
     display: flex;
     align-items: center;
@@ -200,9 +200,17 @@
     display: none;
 }
 
+/* the chips scroll inside the filter bar rather than spill over the actions */
 .wms-chips {
     display: flex;
     gap: 2px;
+    min-width: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+
+.wms-chips::-webkit-scrollbar {
+    display: none;
 }
 
 /* the product picker: a chip that opens a searchable checklist under it */
@@ -231,7 +239,7 @@
     top: calc(100% + 10px);
     inset-inline-start: 0;
     z-index: 25;
-    width: min(340px, calc(100vw - 24px));
+    width: min(340px, calc(100cqw - 24px));
     padding: 8px;
     border-radius: 14px;
     background: var(--wms-surface-dark);
@@ -960,7 +968,7 @@
 
 .wms-welcome {
     padding: 18px 24px 16px;
-    width: min(760px, max(440px, calc(100vw - 620px)));
+    width: min(760px, max(440px, calc(100cqw - 620px)));
     border-radius: 20px;
 }
 

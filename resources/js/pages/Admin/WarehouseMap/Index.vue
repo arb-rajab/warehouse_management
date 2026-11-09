@@ -93,7 +93,7 @@ onBeforeUnmount(() => {
     <AdminLayout full-bleed>
         <div class="absolute inset-0 flex flex-col">
             <div
-                class="flex shrink-0 items-end justify-end border-b border-gray-200 bg-white px-4 py-2 dark:border-neutral-800 dark:bg-neutral-900"
+                class="flex shrink-0 items-end justify-end border-b border-line bg-surface px-4 py-2"
             >
                 <FilterWarehouseSelect
                     id="warehouse-map-warehouse"
