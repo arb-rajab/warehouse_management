@@ -1,4 +1,3 @@
-import { Warehouse } from '@lucide/vue';
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import LogoutLink from '@/components/LogoutLink.vue';
@@ -27,7 +26,9 @@ vi.mock('@inertiajs/vue3', async () => {
 });
 
 function mountPage() {
-    usePageMock.mockReturnValue({ props: { locale: 'en' } });
+    usePageMock.mockReturnValue({
+        props: { locale: 'en', brandName: 'Placeholder Brand' },
+    });
 
     return mount(ChangePassword);
 }
@@ -38,11 +39,16 @@ describe('ChangePassword', () => {
         formSlotPropsMock.mockReturnValue({ errors: {}, processing: false });
     });
 
-    it('renders the brand title with a brand icon', () => {
+    it('renders the logo, the shared brand name and the area title', () => {
         const wrapper = mountPage();
 
-        expect(wrapper.text()).toContain(t('auth.changePassword.brand'));
-        expect(wrapper.findComponent(Warehouse).exists()).toBe(true);
+        expect(wrapper.find('[data-testid="auth-logo"]').exists()).toBe(true);
+        expect(wrapper.get('[data-testid="auth-brand"]').text()).toBe(
+            'Placeholder Brand',
+        );
+        expect(wrapper.get('[data-testid="auth-area"]').text()).toBe(
+            t('auth.changePassword.brand'),
+        );
     });
 
     it('renders the title and description explaining why the change is required', () => {

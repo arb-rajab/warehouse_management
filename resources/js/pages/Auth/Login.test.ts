@@ -1,4 +1,3 @@
-import { Warehouse } from '@lucide/vue';
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { store as loginStore } from '@/actions/App/Http/Controllers/LoginController';
@@ -32,7 +31,9 @@ const honeypotProp = {
 };
 
 function mountPage(honeypot = honeypotProp) {
-    usePageMock.mockReturnValue({ props: defaultAuthProps() });
+    usePageMock.mockReturnValue({
+        props: defaultAuthProps({ brandName: 'Placeholder Brand' }),
+    });
 
     return mount(Login, { props: { honeypot } });
 }
@@ -43,11 +44,18 @@ describe('Login', () => {
         formSlotPropsMock.mockReturnValue({ errors: {}, processing: false });
     });
 
-    it('renders the brand title with a brand icon', () => {
+    it('renders the logo, the shared brand name and the area title', () => {
         const wrapper = mountPage();
 
-        expect(wrapper.text()).toContain(t('auth.login.brand'));
-        expect(wrapper.findComponent(Warehouse).exists()).toBe(true);
+        expect(wrapper.get('[data-testid="auth-logo"]').attributes('src')).toBe(
+            '/assets/img/33logoqr.png',
+        );
+        expect(wrapper.get('[data-testid="auth-brand"]').text()).toBe(
+            'Placeholder Brand',
+        );
+        expect(wrapper.get('[data-testid="auth-area"]').text()).toBe(
+            t('auth.login.brand'),
+        );
     });
 
     it('submits the form to the login route', () => {
