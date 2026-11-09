@@ -19,7 +19,7 @@ import type {
  */
 defineProps<{ fields: StoreProductFieldSourceRow[] }>();
 const sources: StoreProductFieldSource[] = ['otajer', 'admin'];
-const helpClass = 'text-xs text-gray-600 dark:text-neutral-400';
+const helpClass = 'text-xs text-muted';
 </script>
 
 <template>
@@ -32,7 +32,7 @@ const helpClass = 'text-xs text-gray-600 dark:text-neutral-400';
         wide
         #default="{ errors }"
     >
-        <p class="text-sm text-gray-600 dark:text-neutral-300">
+        <p class="text-sm text-muted">
             {{ t('store.productFieldSources.intro') }}
         </p>
         <FieldError :message="errors.sources" />
@@ -40,7 +40,7 @@ const helpClass = 'text-xs text-gray-600 dark:text-neutral-400';
             v-for="field in fields"
             :key="field.key"
             :data-field="field.key"
-            class="space-y-2 rounded-lg border border-gray-200 p-4 dark:border-neutral-800"
+            class="space-y-2 rounded-lg border border-line p-4"
         >
             <legend :class="[fieldLabelClass, 'px-1']">
                 {{ t(`store.productFieldSources.fields.${field.key}`)

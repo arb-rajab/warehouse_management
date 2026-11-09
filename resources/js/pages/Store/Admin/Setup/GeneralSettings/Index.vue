@@ -64,10 +64,7 @@ const uploads = ref<Record<StoreGeneralSettingsImage, string>>({
                 :initial-files="initialFiles[image.key]"
                 :error="errors[`settings.${image.key}`]"
             />
-            <p
-                v-if="image.hint"
-                class="text-sm text-gray-600 dark:text-neutral-300"
-            >
+            <p v-if="image.hint" class="text-sm text-muted">
                 {{ t(`store.generalSettings.${image.hint}`) }}
             </p>
         </div>
@@ -90,7 +87,7 @@ const uploads = ref<Record<StoreGeneralSettingsImage, string>>({
                     {{ timezone }}
                 </option>
             </select>
-            <p class="mt-1 text-sm text-gray-600 dark:text-neutral-300">
+            <p class="mt-1 text-sm text-muted">
                 {{ t('store.generalSettings.timezoneHint') }}
             </p>
             <FieldError :message="errors['settings.timezone']" />

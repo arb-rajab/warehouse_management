@@ -131,7 +131,7 @@ const tableColumns = computed(() => [
                         ><a
                             v-if="truck.license_plate"
                             :href="qr.url(truck)"
-                            class="inline-flex items-center gap-1 text-sm text-blue-700 underline dark:text-blue-300"
+                            class="inline-flex items-center gap-1 text-sm text-link underline"
                             ><Printer class="h-3.5 w-3.5" />{{
                                 t('store.trucks.index.print')
                             }}</a

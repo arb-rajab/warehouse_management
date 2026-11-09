@@ -57,12 +57,12 @@ function onPerPageChange(perPage: number): void {
             <li
                 v-for="message in messages.data"
                 :key="message.id"
-                class="rounded-md border border-gray-200 p-4 dark:border-neutral-700"
+                class="rounded-md border border-line p-4"
             >
                 <p class="font-medium">
                     {{ message.user?.name ?? t('store.support.missingUser') }}
                 </p>
-                <p class="text-sm text-gray-600 dark:text-neutral-400">
+                <p class="text-sm text-muted">
                     {{
                         message.created_at
                             ? formatDateTime(message.created_at)

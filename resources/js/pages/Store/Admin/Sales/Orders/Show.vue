@@ -174,7 +174,7 @@ const hasRequiredFields = provideRequiredFields();
         <a
             v-if="access.can('view_order_details')"
             :href="invoice_download.url(order.id)"
-            class="mb-4 inline-block text-blue-700 dark:text-blue-400"
+            class="mb-4 inline-block text-link"
             >{{ t('store.orders.invoice') }}</a
         >
         <div class="mb-5 grid gap-4 md:grid-cols-2">

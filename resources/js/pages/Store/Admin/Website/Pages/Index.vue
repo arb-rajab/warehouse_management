@@ -67,9 +67,7 @@ const tableColumns = computed(() => [
             :empty-message="t('store.website.pages.empty')"
         >
             <template #row="{ row: page }">
-                <td
-                    class="px-4 py-2 font-medium text-gray-900 dark:text-neutral-100"
-                >
+                <td class="px-4 py-2 font-medium text-ink">
                     <a
                         v-if="page.public_url"
                         :href="page.public_url"

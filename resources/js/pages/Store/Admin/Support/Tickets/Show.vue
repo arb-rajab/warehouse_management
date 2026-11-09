@@ -107,8 +107,7 @@ function onPerPageChange(perPage: number): void {
                 }}</template></span
             >
             <span>{{ formatDateTime(ticket.created_at) }}</span>
-            <span
-                class="rounded-full bg-gray-100 px-2 py-0.5 text-gray-800 dark:bg-neutral-800 dark:text-neutral-200"
+            <span class="rounded-full bg-subtle px-2 py-0.5 text-ink"
                 >{{ t('store.support.status') }}:
                 {{ ticketStatusLabel(ticket.status) }}</span
             >
@@ -118,26 +117,23 @@ function onPerPageChange(perPage: number): void {
             class="mb-8"
             :ticket="ticket"
         />
-        <p
-            v-if="replies.data.length === 0"
-            class="mb-4 text-sm text-gray-600 dark:text-neutral-400"
-        >
+        <p v-if="replies.data.length === 0" class="mb-4 text-sm text-muted">
             {{ t('store.support.noReplies') }}
         </p>
         <ul class="space-y-4">
             <li
                 v-for="message in messages"
                 :key="message.key"
-                class="rounded-md border border-gray-200 p-4 dark:border-neutral-700"
+                class="rounded-md border border-line p-4"
             >
                 <p
                     v-if="message.original"
-                    class="mb-1 text-xs font-semibold tracking-wide text-gray-600 uppercase dark:text-neutral-400"
+                    class="mb-1 text-xs font-semibold tracking-wide text-muted uppercase"
                 >
                     {{ t('store.support.originalMessage') }}
                 </p>
                 <p class="font-medium">{{ message.author }}</p>
-                <p class="mb-3 text-sm text-gray-600 dark:text-neutral-400">
+                <p class="mb-3 text-sm text-muted">
                     {{ formatDateTime(message.createdAt) }}
                 </p>
                 <StoreSanitizedHtml :html="message.html" />
@@ -149,7 +145,7 @@ function onPerPageChange(perPage: number): void {
                     <li
                         v-for="file in message.attachments"
                         :key="file.id"
-                        class="flex items-center gap-1 rounded-full bg-gray-100 px-3 py-1 text-sm dark:bg-neutral-800"
+                        class="flex items-center gap-1 rounded-full bg-subtle px-3 py-1 text-sm"
                     >
                         <Paperclip class="h-3.5 w-3.5" aria-hidden="true" />
                         <a

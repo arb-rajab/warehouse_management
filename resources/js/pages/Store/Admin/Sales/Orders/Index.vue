@@ -269,7 +269,7 @@ const hasRequiredFields = provideRequiredFields();
                                 "
                             />
                         </td>
-                        <td class="px-3 py-3">{{ row.code }}</td>
+                        <td class="px-3 py-3 font-mono">{{ row.code }}</td>
                         <td v-if="shown.customer" class="px-3 py-3">
                             <TableObjectLink
                                 v-if="row.customer"

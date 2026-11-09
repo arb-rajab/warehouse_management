@@ -113,14 +113,14 @@ onBeforeUnmount(() => http.cancel());
                     min="0"
                     step="any"
                 />
-                <p class="text-sm text-gray-700 dark:text-neutral-200">
+                <p class="text-sm text-ink">
                     {{
                         t('store.sellers.commissionNote', {
                             percentage: settings.vendor_commission,
                         })
                     }}
                 </p>
-                <p class="text-sm text-gray-700 dark:text-neutral-200">
+                <p class="text-sm text-ink">
                     {{ t('store.sellers.categoryCommissionNote') }}
                 </p>
             </template>
@@ -135,10 +135,7 @@ onBeforeUnmount(() => http.cancel());
                         :disabled="!canActivate || http.processing"
                         @change="activate(key, $event)"
                     />
-                    <p
-                        v-if="!canActivate"
-                        class="text-sm text-gray-700 dark:text-neutral-200"
-                    >
+                    <p v-if="!canActivate" class="text-sm text-ink">
                         {{ t('store.sellers.activationRestricted') }}
                     </p>
                     <FieldError

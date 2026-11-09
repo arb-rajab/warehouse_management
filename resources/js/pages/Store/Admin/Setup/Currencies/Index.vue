@@ -137,7 +137,9 @@ const tableColumns = computed(() => [
             <template #row="{ row }">
                 <td class="px-4 py-2">{{ row.name }}</td>
                 <td v-if="shown.symbol" class="px-4 py-2">{{ row.symbol }}</td>
-                <td v-if="shown.code" class="px-4 py-2">{{ row.code }}</td>
+                <td v-if="shown.code" class="px-4 py-2 font-mono">
+                    {{ row.code }}
+                </td>
                 <td v-if="shown.rate" class="px-4 py-2">
                     {{ row.exchange_rate }}
                 </td>
@@ -235,7 +237,7 @@ const tableColumns = computed(() => [
                             .value
                     "
                 />
-                <p class="text-sm text-gray-600 dark:text-neutral-300">
+                <p class="text-sm text-muted">
                     {{ t('store.currencies.formatsHint') }}
                 </p>
                 <StoreSelectField

@@ -66,7 +66,7 @@ const tableColumns = computed(() => [
             :empty-message="t('store.coupons.index.empty')"
         >
             <template #row="{ row: coupon }">
-                <td class="px-4 py-2">{{ coupon.code }}</td>
+                <td class="px-4 py-2 font-mono">{{ coupon.code }}</td>
                 <td v-if="shown.type" class="px-4 py-2">
                     {{
                         t(

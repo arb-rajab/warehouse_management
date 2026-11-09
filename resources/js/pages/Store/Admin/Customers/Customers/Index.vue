@@ -356,9 +356,7 @@ function choosePackage(customer: StoreCustomer): void {
                     :error="errors.profit_to"
                     class="dark:[color-scheme:dark]"
                 />
-                <p
-                    class="text-sm text-gray-500 sm:col-span-2 dark:text-neutral-400"
-                >
+                <p class="text-sm text-muted sm:col-span-2">
                     {{ t('store.customers.profitRangeHint') }}
                 </p>
             </template>
@@ -366,7 +364,7 @@ function choosePackage(customer: StoreCustomer): void {
         <div
             v-if="profitRangeActive"
             role="status"
-            class="mb-4 flex flex-wrap items-center gap-3 rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-900 dark:border-blue-900 dark:bg-blue-950 dark:text-blue-100"
+            class="mb-4 flex flex-wrap items-center gap-3 rounded-md border border-info/30 bg-info-soft px-3 py-2 text-sm text-info-strong"
         >
             <Clock class="h-4 w-4 shrink-0" />
             <span>{{ profitRangeText }}</span>

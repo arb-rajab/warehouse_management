@@ -34,6 +34,7 @@ import StoreRepresentativePackageFormFields from '@/components/StoreRepresentati
 import SubmitButton from '@/components/SubmitButton.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
+import { dangerButtonClass } from '@/lib/filters';
 import { t } from '@/lib/i18n';
 import {
     paginated,
@@ -573,6 +574,9 @@ describe('representative visits index', () => {
         const bulkButton = wrapper
             .findAll('button')
             .find((button) => button.text() === 'Delete selection')!;
+        expect(bulkButton.classes()).toEqual(
+            expect.arrayContaining(dangerButtonClass.split(' ')),
+        );
         expect(bulkButton.attributes('disabled')).toBeDefined();
         await wrapper.get('input[type=checkbox]').setValue(true);
         expect(bulkButton.attributes('disabled')).toBeUndefined();

@@ -84,10 +84,7 @@ const tableColumns = computed(() => [
                 required
                 aria-describedby="catalog-limit"
             />
-            <p
-                id="catalog-limit"
-                class="text-sm text-gray-600 dark:text-neutral-300"
-            >
+            <p id="catalog-limit" class="text-sm text-muted">
                 {{ t('store.offersCatalog.limit') }}
             </p>
             <SubmitButton
@@ -106,7 +103,7 @@ const tableColumns = computed(() => [
                 <td class="px-4 py-2">
                     <a
                         :href="download.url()"
-                        class="inline-flex items-center gap-1 text-blue-600 hover:underline dark:text-blue-400"
+                        class="inline-flex items-center gap-1 text-link hover:underline"
                     >
                         <Download class="h-3.5 w-3.5" />
                         {{ t('store.offersCatalog.download') }}

@@ -93,7 +93,7 @@ const charts = computed(() => [
                 v-for="alert in alerts"
                 :key="alert.key"
                 role="alert"
-                class="flex items-center gap-3 rounded-lg border border-red-300 bg-red-50 p-4 text-red-900 dark:border-red-700 dark:bg-red-950 dark:text-red-100"
+                class="flex items-center gap-3 rounded-lg border border-danger/30 bg-danger-soft p-4 text-danger-strong"
             >
                 <TriangleAlert class="size-5 shrink-0" />
                 <span
@@ -107,9 +107,9 @@ const charts = computed(() => [
                 <div
                     v-for="(value, key) in stats"
                     :key="key"
-                    class="rounded-lg border border-gray-200 p-4 dark:border-neutral-700"
+                    class="rounded-lg border border-line p-4"
                 >
-                    <dt class="text-sm text-gray-600 dark:text-neutral-300">
+                    <dt class="text-sm text-muted">
                         {{ t(`store.dashboard.${key}`) }}
                     </dt>
                     <dd class="mt-2 text-3xl font-semibold">{{ value }}</dd>
@@ -138,7 +138,7 @@ const charts = computed(() => [
                     <article
                         v-for="product in topProducts"
                         :key="product.id"
-                        class="overflow-hidden rounded-lg border border-gray-200 dark:border-neutral-700"
+                        class="overflow-hidden rounded-lg border border-line"
                     >
                         <component
                             :is="product.public_url ? 'a' : 'div'"
@@ -161,13 +161,11 @@ const charts = computed(() => [
                                             product.base_price !==
                                             product.discounted_price
                                         "
-                                        class="me-2 text-gray-600 dark:text-neutral-300"
+                                        class="me-2 text-muted"
                                         >{{ product.base_price }}</del
                                     ><span>{{ product.discounted_price }}</span>
                                 </p>
-                                <p
-                                    class="text-sm text-gray-600 dark:text-neutral-300"
-                                >
+                                <p class="text-sm text-muted">
                                     {{
                                         t('store.dashboard.rating', {
                                             rating: product.rating,
@@ -178,10 +176,7 @@ const charts = computed(() => [
                         </component>
                     </article>
                 </div>
-                <p
-                    v-else
-                    class="flex items-center gap-2 text-gray-600 dark:text-neutral-300"
-                >
+                <p v-else class="flex items-center gap-2 text-muted">
                     <PackageSearch class="size-5" />{{
                         t('store.dashboard.emptyProducts')
                     }}

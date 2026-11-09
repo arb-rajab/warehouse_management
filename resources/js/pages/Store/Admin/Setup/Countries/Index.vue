@@ -84,7 +84,9 @@ const tableColumns = computed(() => [
         >
             <template #row="{ row }">
                 <td class="px-4 py-2">{{ row.name }}</td>
-                <td v-if="shown.code" class="px-4 py-2">{{ row.code }}</td>
+                <td v-if="shown.code" class="px-4 py-2 font-mono">
+                    {{ row.code }}
+                </td>
                 <td v-if="shown.status" class="px-4 py-2">
                     <StoreStatusSwitch
                         v-if="access.can('shipping_country_setting')"

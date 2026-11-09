@@ -357,7 +357,7 @@ async function requestFetch(): Promise<void> {
             >
                 <button
                     type="button"
-                    class="inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-900 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-neutral-700 dark:text-neutral-100 dark:hover:bg-neutral-800"
+                    class="inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-line-strong px-3 py-2 text-sm font-medium text-ink hover:bg-subtle disabled:cursor-not-allowed disabled:opacity-50"
                     :disabled="fetchRequest.processing"
                     @click="requestFetch"
                 >
@@ -375,11 +375,7 @@ async function requestFetch(): Promise<void> {
                 />
             </div>
         </PageHeader>
-        <p
-            v-if="fetchNotice"
-            role="status"
-            class="mb-4 text-sm text-gray-700 dark:text-neutral-300"
-        >
+        <p v-if="fetchNotice" role="status" class="mb-4 text-sm text-ink">
             {{ t(`store.products.${fetchNotice}`) }}
         </p>
         <nav
@@ -392,11 +388,11 @@ async function requestFetch(): Promise<void> {
                 v-for="preset in presets"
                 :key="preset.name"
                 :href="allProducts({ query: { [preset.name]: 1 } })"
-                class="rounded-md border border-gray-300 px-3 py-1 text-sm dark:border-neutral-700"
+                class="rounded-md border border-line-strong px-3 py-1 text-sm"
                 :class="
                     isAllList && filters.preset === preset.name
                         ? selectedToggleClass
-                        : 'text-gray-700 hover:bg-gray-100 dark:text-neutral-300 dark:hover:bg-neutral-800'
+                        : 'text-ink hover:bg-subtle'
                 "
                 >{{ t(`store.products.${preset.label}`) }}</Link
             >
@@ -537,7 +533,7 @@ async function requestFetch(): Promise<void> {
                             />{{ t(`store.products.${state.label}`) }}
                         </label>
                     </div>
-                    <p class="mt-1 text-xs text-gray-600 dark:text-neutral-400">
+                    <p class="mt-1 text-xs text-muted">
                         {{ t('store.products.inHouseStateHint') }}
                     </p>
                 </fieldset>
@@ -606,8 +602,8 @@ async function requestFetch(): Promise<void> {
                         <div
                             :class="
                                 product.deleted_from_api
-                                    ? 'text-red-700 dark:text-red-400'
-                                    : 'text-gray-900 dark:text-neutral-100'
+                                    ? 'text-danger-strong'
+                                    : 'text-ink'
                             "
                         >
                             <span class="block font-medium">{{
@@ -616,7 +612,7 @@ async function requestFetch(): Promise<void> {
                             <span
                                 v-if="product.ar_name"
                                 dir="auto"
-                                class="block text-gray-600 dark:text-neutral-400"
+                                class="block text-muted"
                                 >{{ product.ar_name }}</span
                             >
                         </div>
@@ -649,7 +645,7 @@ async function requestFetch(): Promise<void> {
                         <IconStat
                             :icon="TrendingUp"
                             :value="product.profit"
-                            tone="text-green-700 dark:text-green-400"
+                            tone="text-success-strong"
                             :label="
                                 t('store.products.profit', {
                                     price: product.profit,
@@ -672,7 +668,7 @@ async function requestFetch(): Promise<void> {
                     }}</span>
                     <span
                         v-if="product.low_stock"
-                        class="ms-2 inline-flex items-center gap-1 rounded bg-red-100 px-1.5 text-xs font-medium text-red-800 dark:bg-red-950 dark:text-red-200"
+                        class="ms-2 inline-flex items-center gap-1 rounded bg-danger-soft px-1.5 text-xs font-medium text-danger-strong"
                         ><TriangleAlert class="h-3 w-3 shrink-0" />{{
                             t('store.products.low')
                         }}</span
@@ -720,7 +716,7 @@ async function requestFetch(): Promise<void> {
                 <td v-if="shown.deleted" class="px-4 py-2">
                     <span
                         v-if="product.deleted_from_api"
-                        class="font-medium text-red-700 dark:text-red-400"
+                        class="font-medium text-danger-strong"
                         >{{ t('store.products.deletedBadge') }}</span
                     >
                 </td>

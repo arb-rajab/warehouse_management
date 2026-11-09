@@ -37,7 +37,7 @@ function onPerPageChange(perPage: number): void {
     <Head :title="t('store.notifications.personal.title')" />
     <StoreAdminLayout>
         <PageHeader :title="t('store.notifications.personal.title')" />
-        <ul class="divide-y divide-gray-200 dark:divide-neutral-700">
+        <ul class="divide-y divide-line">
             <li
                 v-for="notification in notifications.data"
                 :key="notification.id"
@@ -48,7 +48,7 @@ function onPerPageChange(perPage: number): void {
                     <a
                         v-if="notification.url"
                         :href="notification.url"
-                        class="text-blue-600 underline dark:text-blue-400"
+                        class="text-link underline"
                         >{{ notification.order_code }}</a
                     >
                     <span v-else>{{ notification.order_code }}</span>
@@ -61,7 +61,7 @@ function onPerPageChange(perPage: number): void {
                 <a
                     v-else-if="notification.kind === 'cart' && notification.url"
                     :href="notification.url"
-                    class="text-blue-600 underline dark:text-blue-400"
+                    class="text-link underline"
                     >{{ notification.customer_name }}
                     {{ notification.message }}</a
                 >
@@ -69,7 +69,7 @@ function onPerPageChange(perPage: number): void {
                 <time
                     v-if="notification.created_at"
                     :datetime="notification.created_at"
-                    class="text-sm text-gray-500 dark:text-neutral-400"
+                    class="text-sm text-muted"
                     >{{ formatDateTime(notification.created_at) }}</time
                 >
             </li>

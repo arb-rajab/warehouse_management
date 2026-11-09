@@ -205,7 +205,7 @@ const tableColumns = computed(() => [
                         ><Ban
                             v-if="row.banned"
                             :aria-label="t('store.sellers.banned')"
-                            class="h-4 w-4 text-red-700 dark:text-red-400"
+                            class="h-4 w-4 text-danger-strong"
                         />{{ row.name }}</span
                     >
                 </td>
@@ -256,7 +256,7 @@ const tableColumns = computed(() => [
                         <button
                             v-if="access.can('view_seller_profile')"
                             type="button"
-                            class="inline-flex cursor-pointer items-center gap-1 text-blue-700 underline dark:text-blue-400"
+                            class="inline-flex cursor-pointer items-center gap-1 text-link underline"
                             @click="showProfile(row)"
                         >
                             <Eye class="h-4 w-4" />{{
@@ -266,7 +266,7 @@ const tableColumns = computed(() => [
                         <a
                             v-if="access.can('login_as_seller')"
                             :href="login.url(row)"
-                            class="inline-flex items-center gap-1 text-blue-700 underline dark:text-blue-400"
+                            class="inline-flex items-center gap-1 text-link underline"
                             ><LogIn class="h-4 w-4 rtl:rotate-180" />{{
                                 t('store.sellers.login')
                             }}</a
@@ -274,7 +274,7 @@ const tableColumns = computed(() => [
                         <button
                             v-if="payouts && access.can('pay_to_seller')"
                             type="button"
-                            class="cursor-pointer text-blue-700 underline dark:text-blue-400"
+                            class="cursor-pointer text-link underline"
                             @click="
                                 paymentId = row.id;
                                 paymentOpen = true;
@@ -289,7 +289,7 @@ const tableColumns = computed(() => [
                                 row.payment_history_url
                             "
                             :href="row.payment_history_url"
-                            class="text-blue-700 underline dark:text-blue-400"
+                            class="text-link underline"
                             >{{ t('store.sellers.paymentHistory') }}</Link
                         >
                         <TableActionLink

@@ -92,8 +92,8 @@ const tableColumns = computed(() => [
                         class="inline-flex rounded-full px-2 py-1 text-xs font-medium"
                         :class="
                             row.status
-                                ? 'bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-200'
-                                : 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-200'
+                                ? 'bg-success-soft text-success-strong'
+                                : 'bg-danger-soft text-danger-strong'
                         "
                         >{{
                             t(
@@ -132,7 +132,7 @@ const tableColumns = computed(() => [
                             })
                         "
                         disabled
-                        class="cursor-not-allowed text-gray-500 dark:text-neutral-400"
+                        class="cursor-not-allowed text-muted"
                     >
                         {{
                             t(

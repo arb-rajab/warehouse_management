@@ -89,9 +89,7 @@ const tableColumns = computed(() => [
             :empty-message="t('store.staff.index.empty')"
         >
             <template #row="{ row: member }">
-                <td
-                    class="px-4 py-2 font-medium text-gray-900 dark:text-neutral-100"
-                >
+                <td class="px-4 py-2 font-medium text-ink">
                     {{ member.name }}
                 </td>
                 <td v-if="shown.email" class="px-4 py-2">{{ member.email }}</td>
@@ -110,7 +108,7 @@ const tableColumns = computed(() => [
                         :href="roleEdit(member.role)"
                         >{{ member.role.name }}</TableObjectLink
                     >
-                    <span v-else class="text-gray-400 dark:text-neutral-500">
+                    <span v-else class="text-muted">
                         {{ t('store.staff.index.noRole') }}
                     </span>
                 </td>

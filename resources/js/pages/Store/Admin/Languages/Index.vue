@@ -87,7 +87,7 @@ const tableColumns = computed(() => [
             >
                 <template #row="{ row: language }">
                     <td class="px-4 py-2">{{ language.name }}</td>
-                    <td v-if="shown.code" class="px-4 py-2">
+                    <td v-if="shown.code" class="px-4 py-2 font-mono">
                         {{ language.code }}
                     </td>
                     <td v-if="shown.rtl" class="px-4 py-2">

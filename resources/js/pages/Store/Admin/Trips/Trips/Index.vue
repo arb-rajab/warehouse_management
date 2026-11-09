@@ -265,7 +265,7 @@ const tableColumns = computed(() => [
                 <td class="px-4 py-2 whitespace-nowrap">
                     <Link
                         :href="tripsShow(trip)"
-                        class="font-medium text-gray-900 underline dark:text-neutral-100"
+                        class="font-mono font-medium text-ink underline"
                         >{{ trip.code }}</Link
                     >
                 </td>
@@ -310,7 +310,7 @@ const tableColumns = computed(() => [
                         <button
                             v-if="access.can('edit_trip')"
                             type="button"
-                            class="inline-flex cursor-pointer items-center rounded p-1 text-amber-700 hover:bg-amber-50 dark:text-amber-400 dark:hover:bg-neutral-800"
+                            class="inline-flex cursor-pointer items-center rounded p-1 text-warning-strong hover:bg-warning-soft"
                             :aria-label="
                                 t('store.trips.index.updateStatusFor', {
                                     code: trip.code,
@@ -365,7 +365,7 @@ const tableColumns = computed(() => [
                             <p
                                 v-if="savedNotesTripId === trip.id"
                                 role="status"
-                                class="mt-1 text-xs text-green-700 dark:text-green-400"
+                                class="mt-1 text-xs text-success-strong"
                             >
                                 {{ t('store.trips.index.notesSaved') }}
                             </p>
