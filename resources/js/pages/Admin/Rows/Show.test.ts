@@ -237,7 +237,7 @@ describe('Rows Show', () => {
         expect(wrapper.text()).toContain(
             formatDateTime('2026-08-01T10:00:00Z'),
         );
-        const img = wrapper.get('img');
+        const img = wrapper.get('main').get('img');
         expect(img.attributes('src')).toBe('/img/widgets.png');
         expect(img.attributes('alt')).toBe('Widgets');
     });

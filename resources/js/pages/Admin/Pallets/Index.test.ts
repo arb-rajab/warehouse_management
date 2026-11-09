@@ -278,7 +278,10 @@ describe('Pallets Index', () => {
 
         expect(wrapper.text()).toContain(t('pallets.filteredBy'));
         expect(
-            wrapper.findAll('span.rounded-full').map((c) => c.text()),
+            wrapper
+                .get('main')
+                .findAll('span.rounded-full')
+                .map((c) => c.text()),
         ).toEqual(['Annex']);
         expect(mapLink(wrapper)?.props('href')).toBe(
             warehouseMapIndex({ query: { warehouse_ids: [5] } }).url,

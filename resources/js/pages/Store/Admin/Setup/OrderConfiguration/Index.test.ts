@@ -176,7 +176,7 @@ describe('Order configuration', () => {
         expect(wrapper.get('#default_specific_product').text()).toContain(
             '<img src=x onerror=alert(1)>',
         );
-        expect(wrapper.find('img').exists()).toBe(false);
+        expect(wrapper.get('main').find('img').exists()).toBe(false);
         wrapper.unmount();
     });
     it('hides both writable groups without permission', () => {
