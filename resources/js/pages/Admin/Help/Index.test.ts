@@ -70,10 +70,11 @@ describe('Help Index', () => {
     it('links each topic to its help page', () => {
         const wrapper = mountPage();
 
-        // Scoped to the topic grid, not the whole page — AdminLayout's own
-        // nav also renders a "Dashboard" link, which would otherwise collide
-        // with the "Dashboard" topic card's text.
-        const links = wrapper.get('ul').findAll('a');
+        // Scoped to the topic grid in the page content, not the whole page —
+        // the shell's sidebar is a list of links too and also has a
+        // "Dashboard" entry, which would otherwise collide with the
+        // "Dashboard" topic card's text.
+        const links = wrapper.get('main').get('ul').findAll('a');
 
         for (const [key, href] of Object.entries(topicHrefs)) {
             const link = links.find((a) =>

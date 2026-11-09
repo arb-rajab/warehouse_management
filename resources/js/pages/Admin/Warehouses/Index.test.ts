@@ -95,7 +95,10 @@ describe('Warehouses Index', () => {
     it('links the help icon to the warehouses help page', () => {
         const wrapper = mountPage([]);
 
+        // The shell's own header carries a "Help" link with the same name, so
+        // look inside the page content.
         const helpLink = wrapper
+            .get('main')
             .findAll('a')
             .find((a) => a.attributes('aria-label') === t('help.viewHelp'));
         expect(helpLink?.attributes('href')).toBe(
