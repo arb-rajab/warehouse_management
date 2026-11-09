@@ -14,7 +14,9 @@
 #
 # Expects in the environment: DEPLOY_PATH, TARGET_BRANCH, TARGET_SHA,
 # PHP_BINARY, KEEP_RELEASES. Optional: FETCH_ATTEMPTS (default 4) and
-# FETCH_RETRY_DELAY in seconds (default 10), which bound the git fetch retries.
+# FETCH_RETRY_DELAY in seconds (default 10), which bound the git fetch retries,
+# and GHOSTSCRIPT_INSTALL_TIMEOUT in seconds (default 300), which bounds the
+# package manager when the deploy installs Ghostscript.
 
 set -euo pipefail
 
@@ -108,6 +110,162 @@ env_value() {
     sed -n "s/^[[:space:]]*$1[[:space:]]*=[[:space:]]*//p" "$SHARED_DIR/.env" \
         | head -n 1 \
         | sed -e 's/[[:space:]]*$//' -e 's/^"\(.*\)"$/\1/' -e "s/^'\(.*\)'\$/\1/"
+}
+
+# --------------------------------------------------------------------------
+# Ghostscript (best effort -- never fails the deploy)
+# --------------------------------------------------------------------------
+#
+# App\Services\PdfOptimizer compresses receiving bill PDFs with Ghostscript and
+# stores them unchanged when it is missing, so a host without it is degraded, not
+# broken. This script therefore never fails, and never waits, because of it.
+#
+# Every command below that could read stdin has `</dev/null`: this script is
+# itself fed to `bash -s` on stdin, and a command that read from it would swallow
+# the rest of the deploy.
+
+# Run a command for at most $1 seconds when `timeout` exists.
+run_bounded() {
+    local seconds="$1"
+    shift
+
+    if command -v timeout >/dev/null 2>&1; then
+        timeout "$seconds" "$@"
+    else
+        "$@"
+    fi
+}
+
+# True when $1 is a Ghostscript of at least 9.50 (the first release with -dSAFER
+# on by default). Leaves what it reported in $gs_version for the log.
+gs_version=''
+gs_version_ok() {
+    local major minor
+
+    gs_version="$(run_bounded 15 "$1" --version </dev/null 2>/dev/null | head -n 1)" || true
+    gs_version="${gs_version//[[:space:]]/}"
+
+    [[ "$gs_version" =~ ^([0-9]+)\.([0-9]+)(\..*)?$ ]] || return 1
+
+    # 10# so a minor such as "02" (Ghostscript 10.02) is not read as octal.
+    major=$((10#${BASH_REMATCH[1]}))
+    minor=$((10#${BASH_REMATCH[2]}))
+
+    [ "$major" -gt 9 ] || { [ "$major" -eq 9 ] && [ "$minor" -ge 50 ]; }
+}
+
+# Install the distribution's ghostscript package without ever prompting. Only
+# attempted with privileges that are known to work without a prompt: root, or a
+# `sudo -n` that succeeds (never assumed -- a shared host usually has neither).
+# Returns non-zero, with the reason logged, when it did not install.
+install_ghostscript() {
+    local privilege=0 install_timeout="${GHOSTSCRIPT_INSTALL_TIMEOUT:-300}"
+    local manager as_user install_log status
+    local -a update_cmd=() install_cmd=()
+
+    if [ "$(id -u)" -eq 0 ]; then
+        privilege=0
+    elif command -v sudo >/dev/null 2>&1 && run_bounded 10 sudo -n true </dev/null >/dev/null 2>&1; then
+        privilege=1
+    else
+        log "Ghostscript: not installing -- the deploy user is not root and has no passwordless sudo"
+        return 1
+    fi
+
+    if ! command -v timeout >/dev/null 2>&1; then
+        log "Ghostscript: not installing -- no timeout command to bound the package manager"
+        return 1
+    fi
+
+    if command -v apt-get >/dev/null 2>&1; then
+        manager=apt-get
+        update_cmd=(env DEBIAN_FRONTEND=noninteractive apt-get update -q)
+        install_cmd=(env DEBIAN_FRONTEND=noninteractive apt-get install -y -q --no-install-recommends ghostscript)
+    elif command -v dnf >/dev/null 2>&1; then
+        manager=dnf
+        install_cmd=(dnf install -y -q ghostscript)
+    elif command -v yum >/dev/null 2>&1; then
+        manager=yum
+        install_cmd=(yum install -y -q ghostscript)
+    else
+        log "Ghostscript: not installing -- no supported package manager (apt-get, dnf, yum)"
+        return 1
+    fi
+
+    as_user='as root'
+    if [ "$privilege" -eq 1 ]; then
+        as_user='through sudo -n'
+        if [ "${#update_cmd[@]}" -gt 0 ]; then
+            update_cmd=(sudo -n "${update_cmd[@]}")
+        fi
+        install_cmd=(sudo -n "${install_cmd[@]}")
+    fi
+
+    install_log="$(mktemp)"
+
+    log "Ghostscript: installing the 'ghostscript' package with $manager, $as_user"
+
+    # The index refresh is best effort: a stale index is only a reason for the
+    # install below to fail, which is reported there.
+    if [ "${#update_cmd[@]}" -gt 0 ]; then
+        timeout "$install_timeout" "${update_cmd[@]}" </dev/null >"$install_log" 2>&1 || true
+    fi
+
+    status=0
+    timeout "$install_timeout" "${install_cmd[@]}" </dev/null >"$install_log" 2>&1 || status=$?
+
+    if [ "$status" -ne 0 ]; then
+        log "Ghostscript: $manager failed (exit $status, 124 means it timed out); last output:"
+        tail -n 5 "$install_log" | sed 's/^/    /'
+        rm -f "$install_log"
+        return 1
+    fi
+
+    rm -f "$install_log"
+}
+
+ghostscript_warning() {
+    log "WARNING: Ghostscript not available: bill PDFs will be stored uncompressed; install the 'ghostscript' package (>= 9.50) on the host or set GHOSTSCRIPT_COMPRESS_PDFS=false"
+}
+
+# Checks the binary the app will run (GHOSTSCRIPT_BINARY from the shared .env,
+# else `gs`) and installs the package only when it is missing. Only the binary
+# path is read from .env and logged, never any other value. Always returns 0.
+ensure_ghostscript() {
+    local compress configured binary
+
+    compress="$(env_value GHOSTSCRIPT_COMPRESS_PDFS | tr '[:upper:]' '[:lower:]')"
+    case "$compress" in
+        false | '(false)' | 0)
+            log "Ghostscript: compression is turned off in .env; skipping"
+            return 0
+            ;;
+    esac
+
+    configured="$(env_value GHOSTSCRIPT_BINARY)"
+    binary="${configured:-gs}"
+
+    if command -v -- "$binary" >/dev/null 2>&1; then
+        if gs_version_ok "$binary"; then
+            log "Ghostscript $gs_version found ($binary); nothing to install"
+        else
+            log "Ghostscript: $binary reports '${gs_version:-no version}', which is not 9.50 or later; leaving it as it is"
+            ghostscript_warning
+        fi
+        return 0
+    fi
+
+    log "Ghostscript: '$binary' not found"
+
+    if install_ghostscript; then
+        if command -v -- "$binary" >/dev/null 2>&1 && gs_version_ok "$binary"; then
+            log "Ghostscript $gs_version is now installed ($binary)"
+            return 0
+        fi
+        log "Ghostscript: the package installed, but '$binary' is still missing or older than 9.50 (reports '${gs_version:-no version}')"
+    fi
+
+    ghostscript_warning
 }
 
 # --------------------------------------------------------------------------
@@ -339,6 +497,12 @@ log "Generating Wayfinder types"
 log "Building frontend assets"
 (cd "$RELEASE_DIR" && PATH="$php_shim_dir:$PATH" npm run build)
 rm -rf "$php_shim_dir"
+
+# Still before maintenance mode and the symlink flip, and deliberately non-fatal:
+# a missing Ghostscript only leaves bill PDFs uncompressed. `|| true` is belt and
+# braces, so nothing in the check can change the deploy's exit code.
+log "Checking Ghostscript for bill PDF compression"
+ensure_ghostscript || true
 
 # --------------------------------------------------------------------------
 # The live window -- everything below is covered by maintenance mode

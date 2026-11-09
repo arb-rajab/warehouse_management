@@ -140,6 +140,25 @@ before planning). Its docstring is the rule list. The constraints behind it:
   require a successful plan. Skipping uses job-level `if:`, never narrower `on:`
   filters. Do not rename jobs: branch protection may require their check names.
 
+## `deploy-remote.sh` and the host's privileges
+
+`deploy.yml` ssh-es into a Hostinger account (`ssh -o BatchMode=yes`,
+`bash -l -s`, script on stdin) as `HOSTINGER_SSH_USER`. Nothing in the repo
+shows root or `sudo`; the script works around a PHP with `proc_open`, `exec` and
+`symlink` disabled and a domain root managed by hPanel, which is an unprivileged
+shared account. So treat system packages as **not installable** from the deploy
+unless a probe proves otherwise.
+
+The Ghostscript step (`ensure_ghostscript`, after the asset build, before
+maintenance mode) follows that: it probes (`id -u`, `sudo -n true`, then
+`apt-get`/`dnf`/`yum`), installs `ghostscript` non-interactively under
+`GHOSTSCRIPT_INSTALL_TIMEOUT` (default 300s) only on success, and otherwise logs
+one warning. It must never fail or stall the deploy: every command in it has
+`</dev/null` (stdin is the script itself), and `deploy-remote-test.sh` covers
+present, installed, root, dnf, no privileges, no package manager, failed and
+hanging installs, old versions and the opt-out, with `id`, `sudo` and the
+package managers stubbed.
+
 ## Permissions under `workflow_call`
 
 `deploy.yml` calls `tests.yml` to test merged content no PR run covered. A

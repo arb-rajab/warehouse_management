@@ -238,10 +238,22 @@ to be in the future (the receipt records what arrived). The note is
   - **Server requirement.** PDF compression needs the `ghostscript` system
     package (binary `gs`, 9.50 or later so `-dSAFER` is the hardened default;
     keep it patched, it parses untrusted PDFs) and `proc_open` enabled for PHP.
-    Neither the deploy workflow (`.github/workflows/deploy.yml`,
-    `.github/scripts/deploy-remote.sh`, which only installs Composer/npm
-    dependencies) nor the Sail image (`compose.yaml`) installs it: install it
-    on the host by hand or set `GHOSTSCRIPT_BINARY` to its path. Without it
+    `.github/scripts/deploy-remote.sh` tries to provide it on every deploy
+    (`ensure_ghostscript`, before maintenance mode and the symlink flip) and is
+    **non-fatal by design**: it checks the binary the app will run
+    (`GHOSTSCRIPT_BINARY` from the shared `.env`, else `gs`) and its version,
+    and only when it is missing installs the distribution package, without
+    prompts and under a timeout, if the deploy user is root or `sudo -n true`
+    works and `apt-get`, `dnf` or `yum` exists. It skips the step when
+    `GHOSTSCRIPT_COMPRESS_PDFS` is false in `.env`, never upgrades an installed
+    but too old `gs`, and in every other case (no privileges, no package
+    manager, failed or timed-out install, version below 9.50) prints one
+    `WARNING: Ghostscript not available: bill PDFs will be stored uncompressed`
+    line and carries on with the deploy's exit code unchanged. The host is
+    Hostinger (shared/Cloud, unprivileged SSH account, no `sudo` anywhere in the
+    repo), so expect the warning there until the owner installs the package by
+    hand (hosting support) or sets `GHOSTSCRIPT_BINARY` to a user-installed
+    binary. The Sail image (`compose.yaml`) does not install it. Without it
     PDFs are simply stored as sent, with a warning in the log per upload.
   - Tests fake Ghostscript with `Process::fake()` (`PdfOptimizerTest`), and the
     one real-binary test skips where `gs` is not installed. `billPhoto()` in
