@@ -12,6 +12,7 @@ use App\Models\User;
 use App\Models\Warehouse;
 use App\Services\ReceiptService;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Storage;
 
 beforeEach(function () {
@@ -140,6 +141,57 @@ test('addFile removes the bytes it wrote when recording the file fails for anoth
 
     expect(Storage::disk(ReceiptFile::DISK)->allFiles())->toBe([])
         ->and(ReceiptFile::query()->count())->toBe(0);
+});
+
+test('addFile keeps a photo as sent, under its own type, when the re-encoded JPEG would be larger', function (string $name, Closure $photo, string $extension, string $mime) {
+    $receipt = Receipt::factory()->create();
+    $sent = $photo();
+
+    $file = app(ReceiptService::class)->addFile($receipt, UploadedFile::fake()->createWithContent($name, $sent));
+
+    expect(Storage::disk(ReceiptFile::DISK)->get($file->path))->toBe($sent)
+        ->and($file->path)->toEndWith('.'.$extension)
+        ->and($file->mime_type)->toBe($mime)
+        ->and($file->size)->toBe(strlen($sent))
+        ->and($file->original_name)->toBe('scan.'.$extension);
+})->with([
+    'an already heavily compressed JPEG' => ['scan.jpeg', fn () => billPhoto(400, 300, quality: 20), 'jpg', 'image/jpeg'],
+    'a flat PNG' => ['scan.png', function () {
+        $image = imagecreatetruecolor(1200, 900);
+        imagefill($image, 0, 0, imagecolorallocate($image, 255, 255, 255));
+        ob_start();
+        imagepng($image, null, 9);
+
+        return (string) ob_get_clean();
+    }, 'png', 'image/png'],
+]);
+
+test('addFile stores the re-encoded JPEG when it is smaller than the photo sent', function () {
+    $receipt = Receipt::factory()->create();
+    $sent = billPhoto(800, 600, 'png');
+
+    $file = app(ReceiptService::class)->addFile($receipt, UploadedFile::fake()->createWithContent('scan.png', $sent));
+    $stored = Storage::disk(ReceiptFile::DISK)->get($file->path);
+
+    expect(strlen($stored))->toBeLessThan(strlen($sent))
+        ->and(substr($stored, 0, 3))->toBe("\xFF\xD8\xFF")
+        ->and($file->mime_type)->toBe('image/jpeg')
+        ->and($file->size)->toBe(strlen($stored))
+        ->and($file->original_name)->toBe('scan.jpg');
+});
+
+test('addFile stores a PDF as sent when compressing it fails, and never fails the upload for it', function () {
+    $receipt = Receipt::factory()->create();
+    Process::fake(['*' => Process::result(errorOutput: 'Unrecoverable error', exitCode: 1)]);
+    $sent = "%PDF-1.4\n1 0 obj\n<< /Type /Catalog >>\nendobj\n%%EOF\n";
+
+    $file = app(ReceiptService::class)->addFile($receipt, UploadedFile::fake()->createWithContent('bill.pdf', $sent));
+
+    expect(Storage::disk(ReceiptFile::DISK)->get($file->path))->toBe($sent)
+        ->and($file->mime_type)->toBe('application/pdf')
+        ->and($file->size)->toBe(strlen($sent))
+        ->and($file->original_name)->toBe('bill.pdf');
+    Process::assertRan(fn ($process) => $process->command[0] === 'gs');
 });
 
 test('deleteFile removes the record and then its bytes, and only that file', function () {

@@ -6,6 +6,8 @@ use App\Models\Receipt;
 use App\Models\ReceiptFile;
 use App\Models\ReceiptPallet;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Process\PendingProcess;
+use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Storage;
 
 beforeEach(function () {
@@ -31,7 +33,7 @@ test('uploading a photo stores it re-encoded as a JPEG on the private disk and a
     $receipt = Receipt::factory()->create();
 
     $response = $this->postJson("/api/v1/receipts/{$receipt->id}/files", [
-        'file' => UploadedFile::fake()->image('front-page.png', 120, 80),
+        'file' => UploadedFile::fake()->createWithContent('front-page.png', billPhoto(120, 80, 'png')),
     ]);
 
     $response->assertCreated();
@@ -65,8 +67,9 @@ test('a bill is never written to the public disk', function () {
     expect(Storage::disk('public')->allFiles())->toBe([]);
 });
 
-test('a PDF is kept exactly as sent', function () {
+test('a PDF Ghostscript cannot compress is kept exactly as sent', function () {
     actingAsAdminMobileUser();
+    Process::fake(['*' => Process::result(errorOutput: 'gs: not found', exitCode: 127)]);
     $receipt = Receipt::factory()->create();
     $pdf = "%PDF-1.4\n1 0 obj\n<< /Type /Catalog >>\nendobj\ntrailer\n<< /Root 1 0 R >>\n%%EOF";
 
@@ -84,11 +87,79 @@ test('a PDF is kept exactly as sent', function () {
         ->and(Storage::disk(ReceiptFile::DISK)->get($file->path))->toBe($pdf);
 });
 
+test('a typical phone photo is stored as a much smaller JPEG without its metadata, still at least 1600 pixels wide', function () {
+    actingAsAdminMobileUser();
+    $receipt = Receipt::factory()->create();
+    $photo = billPhoto(4032, 3024);
+    $exif = "Exif\0\0II\x2a\0\x08\0\0\0\x00\0PHONE-GPS-MARKER";
+    $photo = substr($photo, 0, 2)."\xff\xe1".pack('n', strlen($exif) + 2).$exif.substr($photo, 2);
+
+    $response = $this->postJson("/api/v1/receipts/{$receipt->id}/files", [
+        'file' => UploadedFile::fake()->createWithContent('IMG_2041.jpg', $photo),
+    ])->assertCreated();
+
+    $file = ReceiptFile::query()->sole();
+    $bytes = Storage::disk(ReceiptFile::DISK)->get($file->path);
+    $info = getimagesizefromstring($bytes);
+    [$width, $height, $mime] = [$info[0], $info[1], $info['mime']];
+
+    expect(strlen($bytes))->toBeLessThan(intdiv(strlen($photo), 4))
+        ->and($width)->toBeGreaterThanOrEqual(1600)->toBeLessThanOrEqual(2400)
+        ->and($height)->toBe((int) round($width * 3024 / 4032))
+        ->and($mime)->toBe('image/jpeg')
+        ->and($bytes)->not->toContain('PHONE-GPS-MARKER')
+        ->and($response->json('size'))->toBe(strlen($bytes))
+        ->and($response->json('mime_type'))->toBe('image/jpeg')
+        ->and($response->json('original_name'))->toBe('IMG_2041.jpg');
+});
+
+test('a PNG or WebP photo is converted to a JPEG', function (string $format) {
+    actingAsAdminMobileUser();
+    $receipt = Receipt::factory()->create();
+
+    $this->postJson("/api/v1/receipts/{$receipt->id}/files", [
+        'file' => UploadedFile::fake()->createWithContent("scan.{$format}", billPhoto(800, 600, $format)),
+    ])
+        ->assertCreated()
+        ->assertJsonPath('mime_type', 'image/jpeg')
+        ->assertJsonPath('original_name', 'scan.jpg');
+
+    $file = ReceiptFile::query()->sole();
+    expect($file->path)->toEndWith('.jpg')
+        ->and(getimagesizefromstring(Storage::disk(ReceiptFile::DISK)->get($file->path))['mime'])->toBe('image/jpeg');
+})->with(['png', 'webp']);
+
+test('a PDF is stored as Ghostscript compressed it, and its record describes the stored file', function () {
+    actingAsAdminMobileUser();
+    $receipt = Receipt::factory()->create();
+    $sent = "%PDF-1.4\n".str_repeat('% uncompressed scan bytes'."\n", 200).'%%EOF';
+    $compressed = "%PDF-1.5\n% compressed\n%%EOF\n";
+    Process::fake(function (PendingProcess $process) use ($compressed) {
+        $output = collect($process->command)->first(fn (string $argument) => str_starts_with($argument, '-sOutputFile='));
+        file_put_contents(substr($output, strlen('-sOutputFile=')), $compressed);
+
+        return Process::result();
+    });
+
+    $response = $this->postJson("/api/v1/receipts/{$receipt->id}/files", [
+        'file' => UploadedFile::fake()->createWithContent('Delivery Note.pdf', $sent),
+    ])->assertCreated();
+
+    $file = ReceiptFile::query()->sole();
+    expect(Storage::disk(ReceiptFile::DISK)->get($file->path))->toBe($compressed)
+        ->and($file->size)->toBe(strlen($compressed))
+        ->and($file->mime_type)->toBe('application/pdf')
+        ->and($file->original_name)->toBe('Delivery Note.pdf')
+        ->and($response->json('size'))->toBe(strlen($compressed));
+    // The client's file name never reaches the command line.
+    Process::assertRan(fn (PendingProcess $process) => ! str_contains(implode(' ', $process->command), 'Delivery'));
+});
+
 test('a photo larger than the bill needs is scaled down to 2400 pixels on its longest side', function () {
     actingAsAdminMobileUser();
     $receipt = Receipt::factory()->create();
 
-    $this->postJson("/api/v1/receipts/{$receipt->id}/files", ['file' => UploadedFile::fake()->image('wide.jpg', 3200, 300)])->assertCreated();
+    $this->postJson("/api/v1/receipts/{$receipt->id}/files", ['file' => UploadedFile::fake()->createWithContent('wide.jpg', billPhoto(3200, 300))])->assertCreated();
 
     [$width, $height] = getimagesizefromstring(Storage::disk(ReceiptFile::DISK)->get(ReceiptFile::query()->sole()->path));
 
@@ -114,7 +185,7 @@ test('the download name is the clients base name with the stored extension, with
     actingAsAdminMobileUser();
     $receipt = Receipt::factory()->create();
 
-    $this->postJson("/api/v1/receipts/{$receipt->id}/files", ['file' => UploadedFile::fake()->image($clientName)])
+    $this->postJson("/api/v1/receipts/{$receipt->id}/files", ['file' => UploadedFile::fake()->createWithContent($clientName, billPhoto(40, 30, 'png'))])
         ->assertCreated()
         ->assertJsonPath('original_name', $expected);
 })->with([
@@ -130,7 +201,7 @@ test('a very long file name is shortened to 200 characters before its extension'
     $receipt = Receipt::factory()->create();
 
     $name = ReceiptFile::query()->whereKey(
-        $this->postJson("/api/v1/receipts/{$receipt->id}/files", ['file' => UploadedFile::fake()->image(str_repeat('a', 300).'.png')])
+        $this->postJson("/api/v1/receipts/{$receipt->id}/files", ['file' => UploadedFile::fake()->createWithContent(str_repeat('a', 300).'.png', billPhoto(40, 30, 'png'))])
             ->assertCreated()->json('id')
     )->value('original_name');
 

@@ -822,6 +822,48 @@ function unplacedPalletIn(Warehouse $warehouse, array $attributes = []): Pallet
 }
 
 /**
+ * The bytes of a photographed bill as a phone would send it: lines of text
+ * on paper with sensor noise (`$noise` around the paper's grey level, 255
+ * for random pixels), encoded at a phone's high quality. Unlike the solid
+ * black UploadedFile::fake()->image(), it compresses like a real photo. The
+ * noise is seeded, so the same call always gives the same bytes.
+ *
+ * @param  'jpg'|'png'|'webp'  $format
+ */
+function billPhoto(int $width, int $height, string $format = 'jpg', int $noise = 6, int $quality = 95): string
+{
+    mt_srand(7);
+    $tile = imagecreatetruecolor(97, 89);
+    $level = fn (): int => mt_rand(max(0, 220 - $noise), min(255, 220 + $noise));
+    for ($x = 0; $x < 97; $x++) {
+        for ($y = 0; $y < 89; $y++) {
+            imagesetpixel($tile, $x, $y, imagecolorallocate($tile, $level(), $level(), $level()));
+        }
+    }
+    mt_srand();
+
+    $image = imagecreatetruecolor($width, $height);
+    for ($x = 0; $x < $width; $x += 97) {
+        for ($y = 0; $y < $height; $y += 89) {
+            imagecopy($image, $tile, $x, $y, 0, 0, 97, 89);
+        }
+    }
+    $ink = imagecolorallocate($image, 30, 30, 40);
+    for ($y = 10; $y < $height - 10; $y += 36) {
+        imagestring($image, 5, 10, $y, str_repeat('PALLET 12  BOXES 48  EXP 2027-03-01  ', max(1, intdiv($width, 330))), $ink);
+    }
+
+    ob_start();
+    match ($format) {
+        'jpg' => imagejpeg($image, null, $quality),
+        'png' => imagepng($image),
+        'webp' => imagewebp($image, null, $quality),
+    };
+
+    return (string) ob_get_clean();
+}
+
+/**
  * Assert that a mobile API JSON listing response paginates instead of
  * returning every row at once — `data` has exactly `$perPage` entries and
  * `meta.total` matches the full row count.

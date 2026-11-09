@@ -37,7 +37,24 @@ class ReceiptService
     /** The longest side a bill photo keeps when it is re-encoded: enough to read the bill. */
     private const int PHOTO_MAX_DIMENSION = 2400;
 
-    public function __construct(private readonly ImageOptimizer $images) {}
+    /** The longest side a re-encoded bill photo is never shrunk below, whatever its size. */
+    private const int PHOTO_MIN_DIMENSION = 1600;
+
+    /** The JPEG quality bill photos are re-encoded at. */
+    private const int PHOTO_QUALITY = 80;
+
+    /** The type each stored extension is recorded and served as. */
+    private const array STORED_MIME_TYPES = [
+        'jpg' => 'image/jpeg',
+        'png' => 'image/png',
+        'webp' => 'image/webp',
+        'pdf' => 'application/pdf',
+    ];
+
+    public function __construct(
+        private readonly ImageOptimizer $images,
+        private readonly PdfOptimizer $pdfs,
+    ) {}
 
     /**
      * Create a draft receipt for one warehouse with an optional note and the
@@ -88,11 +105,11 @@ class ReceiptService
     }
 
     /**
-     * Store a photo or PDF of the bill on the private disk and record it.
-     * Photos are re-encoded to JPEG (dropping metadata and anything appended
-     * to them), as product images are; a PDF is kept as sent. The file is
-     * written before the receipt is locked and removed again when the record
-     * cannot be created, so a refused upload leaves nothing behind.
+     * Store a photo or PDF of the bill on the private disk and record it,
+     * compressed (see photo() and PdfOptimizer); the record's type, size and
+     * download name describe the bytes actually stored. The file is written
+     * before the receipt is locked and removed again when the record cannot
+     * be created, so a refused upload leaves nothing behind.
      *
      * @throws ReceiptFinalizedException
      * @throws InvalidReceiptStateException `receipt_file_limit_reached` beyond ReceiptFile::MAX_PER_RECEIPT
@@ -104,18 +121,12 @@ class ReceiptService
             throw new ReceiptFinalizedException;
         }
 
-        $contents = (string) file_get_contents($upload->getRealPath());
-        $isPdf = $upload->getMimeType() === 'application/pdf';
+        $original = (string) file_get_contents($upload->getRealPath());
 
-        if (! $isPdf) {
-            try {
-                [$contents] = $this->images->optimise($contents, 'jpg', self::PHOTO_MAX_DIMENSION);
-            } catch (InvalidArgumentException $exception) {
-                throw ValidationException::withMessages(['file' => $exception->getMessage()]);
-            }
-        }
+        [$contents, $extension] = $upload->getMimeType() === 'application/pdf'
+            ? [$this->pdfs->optimise($original), 'pdf']
+            : $this->photo($original);
 
-        $extension = $isPdf ? 'pdf' : 'jpg';
         $path = ReceiptFile::DIRECTORY.'/'.Str::uuid().'.'.$extension;
 
         if (! Storage::disk(ReceiptFile::DISK)->put($path, $contents)) {
@@ -123,7 +134,7 @@ class ReceiptService
         }
 
         try {
-            return DB::transaction(function () use ($receipt, $upload, $path, $contents, $isPdf, $extension) {
+            return DB::transaction(function () use ($receipt, $upload, $path, $contents, $extension) {
                 $locked = $this->lockDraft($receipt->id);
 
                 if ($locked->files()->count() >= ReceiptFile::MAX_PER_RECEIPT) {
@@ -136,7 +147,7 @@ class ReceiptService
                 return $locked->files()->create([
                     'path' => $path,
                     'original_name' => $this->downloadName($upload->getClientOriginalName(), $extension),
-                    'mime_type' => $isPdf ? 'application/pdf' : 'image/jpeg',
+                    'mime_type' => self::STORED_MIME_TYPES[$extension],
                     'size' => strlen($contents),
                 ]);
             });
@@ -145,6 +156,32 @@ class ReceiptService
 
             throw $exception;
         }
+    }
+
+    /**
+     * A bill photo re-encoded to JPEG (quality 80, longest side at most 2400
+     * px and never shrunk below 1600, metadata and appended bytes dropped),
+     * unless the upload as sent is already smaller: then the upload is kept,
+     * under its own (sniffed) type.
+     *
+     * @return array{0: string, 1: string} the bytes to store and their extension
+     *
+     * @throws ValidationException when the photo cannot be decoded
+     */
+    private function photo(string $original): array
+    {
+        try {
+            [$encoded] = $this->images->optimise($original, 'jpg', self::PHOTO_MAX_DIMENSION, self::PHOTO_QUALITY, self::PHOTO_MIN_DIMENSION);
+        } catch (InvalidArgumentException $exception) {
+            throw ValidationException::withMessages(['file' => $exception->getMessage()]);
+        }
+
+        $info = @getimagesizefromstring($original);
+        $sentAs = is_array($info) ? array_search($info['mime'], self::STORED_MIME_TYPES, true) : false;
+
+        return is_string($sentAs) && $sentAs !== 'pdf' && strlen($original) < strlen($encoded)
+            ? [$original, $sentAs]
+            : [$encoded, 'jpg'];
     }
 
     /**

@@ -157,3 +157,24 @@ test('all base64 API image endpoints enforce dimensions on direct uploads', func
             ->and($upload->file_size)->toBeLessThanOrEqual(ImageOptimizer::MAX_OUTPUT_BYTES);
     });
 })->with(['file/image-upload', 'profile/update-image', 'profile/image-upload']);
+
+test('a minimum dimension stops the shrinking for the byte budget there, and returns that size even when larger', function () {
+    $photo = billPhoto(2000, 1500, noise: 255);
+
+    [$floored] = app(ImageOptimizer::class)->optimise($photo, 'jpg', 2400, 80, minDimension: 1600);
+    [$budgeted] = app(ImageOptimizer::class)->optimise($photo, 'jpg', 2400, 80);
+
+    expect(getimagesizefromstring($floored)[0])->toBe(1600)
+        ->and(strlen($floored))->toBeGreaterThan(ImageOptimizer::MAX_OUTPUT_BYTES)
+        ->and(getimagesizefromstring($budgeted)[0])->toBeLessThan(1600)
+        ->and(strlen($budgeted))->toBeLessThanOrEqual(ImageOptimizer::MAX_OUTPUT_BYTES);
+});
+
+test('a lower quality gives a smaller JPEG', function () {
+    $photo = billPhoto(800, 600);
+
+    [$high] = app(ImageOptimizer::class)->optimise($photo, 'jpg', 2400, 95);
+    [$low] = app(ImageOptimizer::class)->optimise($photo, 'jpg', 2400, 60);
+
+    expect(strlen($low))->toBeLessThan(strlen($high));
+});

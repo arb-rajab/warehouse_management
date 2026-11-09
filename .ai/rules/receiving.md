@@ -16,6 +16,7 @@ paths:
   - app/Http/Resources/PalletResource.php
   - app/Http/Resources/ProductPalletResource.php
   - app/Services/ReceiptService.php
+  - app/Services/PdfOptimizer.php
   - app/Exceptions/ReceiptFinalizedException.php
   - app/Exceptions/InvalidReceiptStateException.php
   - 'app/Http/Controllers/Api/V1/Receipt*Controller.php'
@@ -194,14 +195,46 @@ to be in the future (the receipt records what arrived). The note is
   `finalized_at`.
 - **Bill files are private.** Stored on `ReceiptFile::DISK` (`local`,
   `storage/app/private`, served by Laravel only with a valid signature), under
-  `receipt-bills/` with a random name; never on `public`. Photos are
-  re-encoded to JPEG through `ImageOptimizer` (longest side 2400 px), a PDF is
-  kept as sent; `original_name` is the client's base name with the stored
-  extension. `ReceiptFile::MAX_PER_RECEIPT` (10) is checked under the lock; the
+  `receipt-bills/` with a random name; never on `public`. `original_name` is
+  the client's base name with the stored extension, and `mime_type`/`size`
+  describe the bytes actually stored (`ReceiptService::STORED_MIME_TYPES`). `ReceiptFile::MAX_PER_RECEIPT` (10) is checked under the lock; the
   bytes are written before the lock and removed when the record is refused,
   and a deleted record's bytes are removed after its transaction commits.
   Payloads never carry `path`: `ReceiptFileResource.url` is the authenticated
   `files.show` route.
+- **Bill files are stored compressed** (`ReceiptService::addFile()`):
+  - *Photos* (JPEG, PNG, WebP) are re-encoded to JPEG by `ImageOptimizer` at
+    quality 80, longest side at most 2400 px, EXIF orientation applied and
+    metadata/appended bytes dropped. To meet `ImageOptimizer::MAX_OUTPUT_BYTES`
+    (1 MiB) it shrinks further, but `minDimension` stops it at 1600 px (legible
+    text wins over the budget). When the upload as sent is strictly smaller
+    than that JPEG, the upload is stored unchanged under its own sniffed type
+    (`.png` / `image/png`, ...), so its metadata stays in that case.
+  - *PDFs* go through `PdfOptimizer`: Ghostscript (`gs -dSAFER -dBATCH
+    -dNOPAUSE -dQUIET -sDEVICE=pdfwrite -dCompatibilityLevel=1.5
+    -dPDFSETTINGS=/ebook`) through the `Process` facade with an argument list
+    (no shell), on its own temp files in the system temp dir, removed in a
+    `finally`. Best effort: when it is turned off, the binary is missing,
+    exits non-zero, times out, throws, or writes something that is not a
+    smaller PDF (`%PDF-` header and `%%EOF`), the PDF is stored as sent and a
+    warning is logged; compression never fails an upload.
+  - Configured in `config/services.php` `ghostscript`: `binary`
+    (`GHOSTSCRIPT_BINARY`, default `gs`), `compress_pdfs`
+    (`GHOSTSCRIPT_COMPRESS_PDFS`, default true), `timeout` in seconds
+    (`GHOSTSCRIPT_TIMEOUT`, default 30).
+  - **Server requirement.** PDF compression needs the `ghostscript` system
+    package (binary `gs`, 9.50 or later so `-dSAFER` is the hardened default;
+    keep it patched, it parses untrusted PDFs) and `proc_open` enabled for PHP.
+    Neither the deploy workflow (`.github/workflows/deploy.yml`,
+    `.github/scripts/deploy-remote.sh`, which only installs Composer/npm
+    dependencies) nor the Sail image (`compose.yaml`) installs it: install it
+    on the host by hand or set `GHOSTSCRIPT_BINARY` to its path. Without it
+    PDFs are simply stored as sent, with a warning in the log per upload.
+  - Tests fake Ghostscript with `Process::fake()` (`PdfOptimizerTest`), and the
+    one real-binary test skips where `gs` is not installed. `billPhoto()` in
+    `tests/Pest.php` builds a photo that compresses like a real one; the solid
+    black `UploadedFile::fake()->image()` is often smaller as sent than as JPEG,
+    so it is now stored as sent.
 
 ## Admin web pages (read-only, `role:admin`)
 
