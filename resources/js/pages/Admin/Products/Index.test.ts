@@ -1,11 +1,7 @@
 import { Form, Head, Link } from '@inertiajs/vue3';
 import { Check, Filter, X } from '@lucide/vue';
-import {
-    enableAutoUnmount,
-    flushPromises,
-    mount,
-    type VueWrapper,
-} from '@vue/test-utils';
+import { enableAutoUnmount, flushPromises, mount } from '@vue/test-utils';
+import type { VueWrapper } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { show as helpShow } from '@/actions/App/Http/Controllers/Admin/HelpController';
 import { index as palletsIndex } from '@/actions/App/Http/Controllers/Admin/PalletController';
