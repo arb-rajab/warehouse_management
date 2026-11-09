@@ -9,6 +9,8 @@ use App\Http\Controllers\Admin\HelpController;
 use App\Http\Controllers\Admin\PalletController;
 use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\Admin\ProductImageReviewController;
+use App\Http\Controllers\Admin\ReceiptController;
+use App\Http\Controllers\Admin\ReceiptFileController;
 use App\Http\Controllers\Admin\RowController;
 use App\Http\Controllers\Admin\SettingController;
 use App\Http\Controllers\Admin\UserController;
@@ -79,6 +81,10 @@ Route::middleware('auth')->group(function () {
         Route::post('pallets/{pallet}/remove-boxes', [PalletController::class, 'removeBoxes'])->name('pallets.remove-boxes');
         Route::post('pallets/{pallet}/empty', [PalletController::class, 'empty'])->name('pallets.empty');
         Route::post('pallets/{pallet}/transfer', [PalletController::class, 'transfer'])->name('pallets.transfer');
+
+        Route::get('receipts', [ReceiptController::class, 'index'])->name('receipts.index');
+        Route::get('receipts/{receipt}', [ReceiptController::class, 'show'])->name('receipts.show');
+        Route::get('receipts/{receipt}/files/{file}', [ReceiptFileController::class, 'show'])->scopeBindings()->name('receipts.files.show');
 
         Route::get('cell-logs', [CellStatusLogController::class, 'index'])->name('cell-logs.index');
         Route::post('cell-logs/{cellStatusLog}/acknowledge-flags', [CellStatusLogController::class, 'acknowledgeFlags'])->name('cell-logs.acknowledge-flags');

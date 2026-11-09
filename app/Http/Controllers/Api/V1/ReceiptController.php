@@ -11,7 +11,6 @@ use App\Models\Receipt;
 use App\Models\User;
 use App\Services\ReceiptService;
 use Dedoc\Scramble\Attributes\Response as DocumentedResponse;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -37,7 +36,7 @@ class ReceiptController extends Controller
             ->select(Receipt::SELECT_COLUMNS)
             ->with(Receipt::WITH_SUMMARY)
             ->withCount(['pallets', 'files'])
-            ->when($request->validated('status'), fn (Builder $query, string $status) => $query->where('status', $status))
+            ->ofStatus($request->status())
             ->forWarehouses($request->warehouseIds())
             ->latest('created_at')
             ->latest('id')

@@ -10,6 +10,7 @@ import {
     Package,
     Rows3,
     Settings,
+    Truck,
     Users,
 } from '@lucide/vue';
 import type { Component } from 'vue';
@@ -23,6 +24,7 @@ const topics: { key: string; topic: string; icon: Component }[] = [
     { key: 'rows', topic: 'rows', icon: Rows3 },
     { key: 'warehouses', topic: 'warehouses', icon: Building2 },
     { key: 'cells', topic: 'cells', icon: LayoutGrid },
+    { key: 'receipts', topic: 'receipts', icon: Truck },
     { key: 'warehouseMap', topic: 'warehouse-map', icon: Boxes },
     { key: 'cellLogs', topic: 'cell-logs', icon: ArrowLeftRight },
     {

@@ -9,11 +9,9 @@ use App\Models\Receipt;
 use App\Models\ReceiptFile;
 use App\Services\ReceiptService;
 use Dedoc\Scramble\Attributes\Response as DocumentedResponse;
-use Illuminate\Filesystem\FilesystemAdapter;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Response;
 use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
@@ -45,16 +43,7 @@ class ReceiptFileController extends Controller
      */
     public function show(Receipt $receipt, ReceiptFile $file): StreamedResponse
     {
-        /** @var FilesystemAdapter $disk */
-        $disk = Storage::disk(ReceiptFile::DISK);
-
-        abort_unless($disk->exists($file->path), 404);
-
-        return $disk->response($file->path, $file->original_name, [
-            'Content-Type' => $file->mime_type,
-            'Cache-Control' => 'private, no-store',
-            'X-Content-Type-Options' => 'nosniff',
-        ]);
+        return $file->inlineResponse();
     }
 
     /**

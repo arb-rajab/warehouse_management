@@ -505,3 +505,59 @@ export interface CellVerificationReportFilters {
 
 export type CellVerificationReportFilterOptions = RowAndColumnFilterOptions &
     ProductFilterOptions;
+
+/** A truck receipt's state: a draft until it is finalized into pallets. */
+export type ReceiptStatus = 'draft' | 'finalized';
+
+/** One row of the receipts list (`ReceiptResource` without its files and pallets). */
+export interface ReceiptListItem {
+    id: number;
+    warehouse: WarehouseSummary;
+    note: string | null;
+    status: ReceiptStatus;
+    pallets_count: number;
+    files_count: number;
+    created_by: UserSummary;
+    finalized_by: UserSummary | null;
+    finalized_at: string | null;
+    created_at: string;
+}
+
+/**
+ * A bill photo or PDF. `url` is the session-authenticated admin download
+ * route; the storage path is never sent.
+ */
+export interface ReceiptFile {
+    id: number;
+    original_name: string;
+    mime_type: string;
+    /** Bytes stored. */
+    size: number;
+    url: string;
+    created_at: string | null;
+}
+
+/**
+ * One pallet exactly as the merchant wrote it on the bill, in the order it was
+ * typed. Carries no pallet id and no entry id.
+ */
+export interface ReceiptPalletEntry {
+    product_id: number;
+    product: ProductDetails;
+    boxes: number;
+    expiration_date: string | null;
+}
+
+export interface ReceiptDetail extends ReceiptListItem {
+    files: ReceiptFile[];
+    pallets: ReceiptPalletEntry[];
+}
+
+export interface ReceiptFilters {
+    warehouse_ids?: number[];
+    status?: ReceiptStatus;
+    sort_direction?: 'asc' | 'desc';
+    per_page?: number;
+}
+
+export type ReceiptFilterOptions = WarehouseFilterOptions;

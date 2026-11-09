@@ -23,6 +23,15 @@ paths:
   - app/Http/Requests/Concerns/ValidatesReceivedPallets.php
   - app/Http/Requests/Concerns/ResolvesSlotFromCoordinates.php
   - 'app/Http/Resources/Receipt*Resource.php'
+  - 'app/Http/Resources/AdminReceipt*Resource.php'
+  - app/Http/Controllers/Admin/ReceiptController.php
+  - app/Http/Controllers/Admin/ReceiptFileController.php
+  - app/Http/Requests/Admin/FilterReceiptsRequest.php
+  - app/Http/Requests/Concerns/FiltersByReceiptStatus.php
+  - resources/js/pages/Admin/Receipts/**
+  - resources/js/pages/Admin/Help/Receipts.vue
+  - resources/js/components/ReceiptStatusBadge.vue
+  - resources/js/components/ReceiptFileTile.vue
 ---
 
 # Truck receiving: receipts, unplaced pallets and their warehouse
@@ -191,3 +200,38 @@ to be in the future (the receipt records what arrived). The note is
   and a deleted record's bytes are removed after its transaction commits.
   Payloads never carry `path`: `ReceiptFileResource.url` is the authenticated
   `files.show` route.
+
+## Admin web pages (read-only, `role:admin`)
+
+`Admin\ReceiptController` (`admin.receipts.index`, `.show`) and
+`Admin\ReceiptFileController` (`admin.receipts.files.show`) in the admin group
+of `routes/web.php`; Vue pages `Admin/Receipts/{Index,Show}.vue`, Help topic
+`receipts`, menu item "Receipts" (Truck icon) after Pallets. There are no
+create, edit or delete screens: receipts are made and finalized from the mobile
+API only.
+
+- **List.** `Admin\FilterReceiptsRequest` (`warehouse_ids[]`, `status` through
+  `FiltersByReceiptStatus` shared with the API request, `sort_direction`,
+  `per_page`); `Receipt::ofStatus()` and `forWarehouses()` scopes (the API list
+  uses the same ones), explicit `SELECT_COLUMNS`, `WITH_SUMMARY` and
+  `withCount(pallets, files)`, newest first by default, sortable on creation
+  time only. Filters are a `FilterDialog` with `FilterWarehouseSelect` and a
+  status select. The table uses the shared column picker: `useTableColumns` with
+  `listId: 'admin.receipts'` (stored per admin user under
+  `store.tableColumns.{id}.admin.receipts`) and `StoreColumnPicker`, the one WMS
+  list that has one (the spec asks for it). Required: receipt number, warehouse,
+  status; hidden by default: created by, finalized at.
+- **Show.** `Receipt::withDetails()` through `AdminReceiptResource`, rendered as
+  a `DetailList` (empty values show "-"), the bill files (`ReceiptFileTile`:
+  thumbnail for a photo with an image-failed state, link for a PDF) and the
+  pallets as written in typed order: a "No." column (the position on the bill,
+  computed in the page), the product (`ProductOptionLabel` and its thumbnail),
+  boxes and expiry. **No pallet id, no entry id and no cell link anywhere**;
+  a draft shows a hint that the pallets are created when it is finalized.
+- **Bill download.** `ReceiptFile::inlineResponse()` is the one place a bill is
+  read (404 when the bytes are gone, `private, no-store`, `nosniff`); the API
+  and the admin controllers both return it. The admin route uses
+  `scopeBindings()` so a file of another receipt is a 404, and
+  `AdminReceiptResource` (its `files` presented by `AdminReceiptFileResource`,
+  which overrides `ReceiptFileResource::downloadUrl()`) makes the payload's
+  `url` this session-authenticated route instead of the bearer one. The storage path never leaves the model.

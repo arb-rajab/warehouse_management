@@ -8,6 +8,9 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Filesystem\FilesystemAdapter;
+use Illuminate\Support\Facades\Storage;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
  * A photo or PDF of a receipt's bill. `path` is relative to the filesystem
@@ -71,5 +74,25 @@ class ReceiptFile extends Model
     public function receipt(): BelongsTo
     {
         return $this->belongsTo(Receipt::class);
+    }
+
+    /**
+     * The file's bytes as an inline response (its type and original name),
+     * never cached and never sniffed. The one place a bill is read, shared by
+     * the mobile API and the admin web download; the storage path stays here.
+     * Aborts with 404 when the bytes are gone from the disk.
+     */
+    public function inlineResponse(): StreamedResponse
+    {
+        /** @var FilesystemAdapter $disk */
+        $disk = Storage::disk(self::DISK);
+
+        abort_unless($disk->exists($this->path), 404);
+
+        return $disk->response($this->path, $this->original_name, [
+            'Content-Type' => $this->mime_type,
+            'Cache-Control' => 'private, no-store',
+            'X-Content-Type-Options' => 'nosniff',
+        ]);
     }
 }

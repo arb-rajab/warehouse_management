@@ -34,8 +34,17 @@ class ReceiptFileResource extends JsonResource
             /** Bytes stored. */
             'size' => $this->size,
             /** `GET` with the bearer token to read the file. */
-            'url' => route('api.v1.receipts.files.show', ['receipt' => $this->receipt_id, 'file' => $this->id]),
+            'url' => $this->downloadUrl(),
             'created_at' => $this->created_at?->toIso8601String(),
         ];
+    }
+
+    /**
+     * The authenticated download route this payload points at; the admin web
+     * resource points at its own session-authenticated one.
+     */
+    protected function downloadUrl(): string
+    {
+        return route('api.v1.receipts.files.show', ['receipt' => $this->receipt_id, 'file' => $this->id]);
     }
 }

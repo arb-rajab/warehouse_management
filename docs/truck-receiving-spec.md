@@ -21,4 +21,8 @@ Agreed design for the draft PR. Work proceeds in prompts; this file is the share
 - Existing pallet/cell code (logs, ETag, actions, dashboard, product pallet lists) must be safe for unplaced pallets.
 
 ## Web
-Read-only admin pages: receipts list (column picker, filters) and show (bill files, note, pallets as written on the bill), following `.ai/rules`.
+Read-only admin pages (WMS `role:admin`, no create/edit/delete), following `.ai/rules`:
+- `GET admin/receipts`: the list (receipt number, warehouse, status, pallets and files counts, created by/at, finalized at), newest first, filters by warehouse and status, and the column picker.
+- `GET admin/receipts/{receipt}`: details (warehouse, status, note, created and finalized by/at), the bill files (thumbnails for photos, links for PDFs) and the pallets as written on the bill in typed order (number, product, boxes, expiry; no pallet id, no cell link). A draft says its pallets are created when it is finalized.
+- `GET admin/receipts/{receipt}/files/{file}`: the authenticated inline download behind those thumbnails (a file of another receipt or one whose bytes are gone is a 404; the storage path is never exposed).
+- A Help topic (`receipts`) and a "Receipts" menu item after Pallets.

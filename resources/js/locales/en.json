@@ -17,6 +17,7 @@
         "warehouses": "Warehouses",
         "breadcrumb": "Breadcrumb",
         "pallets": "Pallets",
+        "receipts": "Receipts",
         "help": "Help",
         "groupInventory": "Inventory",
         "groupActivity": "Activity",
@@ -779,6 +780,10 @@
                 "warehouses": {
                     "title": "Warehouses",
                     "description": "What a warehouse is, how rows belong to one, and how to add, rename or remove a warehouse."
+                },
+                "receipts": {
+                    "title": "Receipts",
+                    "description": "How to read a truck receipt: its bill photos and the pallets as written on the bill."
                 }
             }
         },
@@ -969,6 +974,33 @@
             "deleting": {
                 "heading": "Deleting a warehouse",
                 "body": "A warehouse can be deleted only while it has no rows. If it still has rows, move or delete them first — the delete option is hidden and a \"Has rows\" notice appears instead."
+            }
+        },
+        "receipts": {
+            "title": "Help: Receipts",
+            "what": {
+                "heading": "What is a receipt?",
+                "body": "A receipt records a truck of pallets received into one warehouse. It keeps the photos or PDFs of the bill and the pallets exactly as the merchant wrote them. Receipts are created and finalized in the mobile app; this page is read-only."
+            },
+            "list": {
+                "heading": "The receipts list",
+                "body": "Each row is one receipt, newest first. It shows the warehouse, whether the receipt is a draft or finalized, how many pallets and bill files it holds, who created it and when. Click the column header to reverse the order, and use Columns to show or hide the optional columns."
+            },
+            "status": {
+                "heading": "Draft and finalized",
+                "body": "A draft is still being filled in and can change. Finalizing it creates one unplaced pallet for every pallet written down, and the receipt can no longer change. The pallets then wait to be stored in a cell from the mobile app."
+            },
+            "filtering": {
+                "heading": "Finding a receipt",
+                "body": "Open Filters to see only the receipts of one or more warehouses, or only drafts or only finalized receipts. Leave a filter on All to see everything."
+            },
+            "files": {
+                "heading": "Bill photos and PDFs",
+                "body": "Open a receipt to see its bill files. Photos show as thumbnails and open full size in a new tab; PDFs open in a new tab. Compare the bill with the pallets listed below it. If a photo cannot be loaded, a message appears and you can still open it."
+            },
+            "pallets": {
+                "heading": "Pallets as written",
+                "body": "The table lists the pallets in the order they were typed, with the product, the number of boxes and the expiration date when one was written. Past dates are shown as they are: the receipt records what arrived."
             }
         }
     },
@@ -3460,5 +3492,58 @@
             "noWarehousesFound": "No warehouses found."
         },
         "rowOption": "{letter} - {warehouse}"
+    },
+    "receipts": {
+        "index": {
+            "title": "Receipts",
+            "empty": "No receipts yet.",
+            "emptyFiltered": "No receipts match the filters.",
+            "columns": {
+                "id": "Receipt",
+                "warehouse": "Warehouse",
+                "status": "Status",
+                "pallets": "Pallets",
+                "files": "Bill files",
+                "createdBy": "Created by",
+                "createdAt": "Created at",
+                "finalizedAt": "Finalized at"
+            }
+        },
+        "filters": {
+            "status": "Status",
+            "all": "All"
+        },
+        "status": {
+            "draft": "Draft",
+            "finalized": "Finalized"
+        },
+        "show": {
+            "title": "Receipt #{id}",
+            "backToList": "Back to receipts",
+            "details": "Details",
+            "warehouse": "Warehouse",
+            "status": "Status",
+            "note": "Note",
+            "createdBy": "Created by",
+            "createdAt": "Created at",
+            "finalizedBy": "Finalized by",
+            "finalizedAt": "Finalized at",
+            "files": "Bill files ({count})",
+            "noFiles": "No bill files were uploaded.",
+            "imageFailed": "The image could not be loaded.",
+            "open": "Open",
+            "openFile": "Open {name}",
+            "sizeKb": "{size} KB",
+            "sizeMb": "{size} MB",
+            "pallets": "Pallets as written on the bill ({count})",
+            "palletsEmpty": "No pallets have been written down yet.",
+            "draftHint": "This receipt is still a draft. The pallets are created when it is finalized.",
+            "columns": {
+                "number": "No.",
+                "product": "Product",
+                "boxes": "Boxes",
+                "expiration": "Expiration date"
+            }
+        }
     }
 }

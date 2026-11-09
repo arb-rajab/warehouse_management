@@ -174,4 +174,18 @@ class Receipt extends Model
             $query->whereIn($query->qualifyColumn('warehouse_id'), $warehouseIds);
         }
     }
+
+    /**
+     * Scope a query to the drafts or to the finalized receipts; null (no
+     * status filter) matches every receipt.
+     *
+     * @param  Builder<Receipt>  $query
+     */
+    #[Scope]
+    protected function ofStatus(Builder $query, ?ReceiptStatus $status): void
+    {
+        if ($status !== null) {
+            $query->where($query->qualifyColumn('status'), $status->value);
+        }
+    }
 }
