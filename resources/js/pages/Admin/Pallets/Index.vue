@@ -143,13 +143,13 @@ function onPerPageChange(perPage: number): void {
 
         <div
             v-if="filterChips.length > 0"
-            class="mb-4 flex flex-wrap items-center gap-2 text-sm text-gray-600 dark:text-neutral-400"
+            class="mb-4 flex flex-wrap items-center gap-2 text-sm text-muted"
         >
             <span>{{ t('pallets.filteredBy') }}</span>
             <span
                 v-for="chip in filterChips"
                 :key="chip"
-                class="rounded-full bg-gray-100 px-2 py-0.5 dark:bg-neutral-800"
+                class="rounded-full bg-subtle px-2 py-0.5"
             >
                 {{ chip }}
             </span>

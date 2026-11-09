@@ -69,12 +69,9 @@ function onPerPageChange(perPage: number): void {
         >
             <template #row="{ row }">
                 <td class="px-4 py-2">
-                    <span
-                        class="font-medium text-gray-900 dark:text-neutral-100"
-                        >{{ row.name }}</span
-                    >
+                    <span class="font-medium text-ink">{{ row.name }}</span>
                 </td>
-                <td class="px-4 py-2">{{ row.code ?? '—' }}</td>
+                <td class="px-4 py-2 font-mono">{{ row.code ?? '—' }}</td>
                 <td class="px-4 py-2">{{ row.address ?? '—' }}</td>
                 <td class="px-4 py-2">{{ row.rows_count }}</td>
                 <td class="px-4 py-2">
@@ -103,7 +100,7 @@ function onPerPageChange(perPage: number): void {
                         </TableActionLink>
                         <span
                             v-else
-                            class="inline-flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400"
+                            class="inline-flex items-center gap-1 text-xs text-warning"
                             :title="t('warehouses.index.hasRowsTitle')"
                         >
                             <TriangleAlert class="h-3.5 w-3.5 shrink-0" />

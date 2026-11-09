@@ -208,10 +208,10 @@ const actionError = usePageError('action');
         </TableLink>
 
         <div
-            class="mb-6 grid grid-cols-1 gap-4 rounded-lg border border-gray-200 p-4 text-sm sm:grid-cols-3 dark:border-neutral-800"
+            class="mb-6 grid grid-cols-1 gap-4 rounded-lg border border-line p-4 text-sm sm:grid-cols-3"
         >
             <div>
-                <div class="text-gray-500 dark:text-neutral-400">
+                <div class="text-muted">
                     {{ t('cellVerificationRound.columns.user') }}
                 </div>
                 <div class="font-medium">
@@ -222,7 +222,7 @@ const actionError = usePageError('action');
                 </div>
             </div>
             <div>
-                <div class="text-gray-500 dark:text-neutral-400">
+                <div class="text-muted">
                     {{ t('cellVerificationRound.show.startedAt') }}
                 </div>
                 <div class="font-medium">
@@ -230,7 +230,7 @@ const actionError = usePageError('action');
                 </div>
             </div>
             <div>
-                <div class="text-gray-500 dark:text-neutral-400">
+                <div class="text-muted">
                     {{ t('cellVerificationRound.show.completedAt') }}
                 </div>
                 <div class="font-medium">
@@ -242,7 +242,7 @@ const actionError = usePageError('action');
                 </div>
             </div>
             <div>
-                <div class="text-gray-500 dark:text-neutral-400">
+                <div class="text-muted">
                     {{ t('cellVerificationRound.show.rows') }}
                 </div>
                 <div class="font-medium">
@@ -387,6 +387,7 @@ const actionError = usePageError('action');
             <template #row="{ row }">
                 <td class="px-4 py-2">
                     <TableLink
+                        class="font-mono"
                         :href="
                             showRow(
                                 { letter: row.cell.row_letter },
@@ -430,7 +431,7 @@ const actionError = usePageError('action');
                     </div>
                     <div
                         v-if="snapshotProductLabel(row.expected)"
-                        class="text-xs text-gray-500 dark:text-neutral-400"
+                        class="text-xs text-muted"
                     >
                         {{ snapshotProductLabel(row.expected) }} ·
                         {{ row.expected.boxes_count }}
@@ -446,7 +447,7 @@ const actionError = usePageError('action');
                     </div>
                     <div
                         v-if="snapshotProductLabel(row.reported)"
-                        class="text-xs text-gray-500 dark:text-neutral-400"
+                        class="text-xs text-muted"
                     >
                         {{ snapshotProductLabel(row.reported) }} ·
                         {{ row.reported.boxes_count }}

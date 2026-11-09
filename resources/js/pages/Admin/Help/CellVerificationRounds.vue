@@ -51,7 +51,7 @@ const previewReports = [
             <h2 :class="sectionHeadingClass">
                 {{ t(`help.cellVerificationRounds.${section}.heading`) }}
             </h2>
-            <p class="text-sm text-gray-700 dark:text-neutral-300">
+            <p class="text-sm text-ink">
                 {{ t(`help.cellVerificationRounds.${section}.body`) }}
             </p>
             <HelpUiPreview v-if="section === 'reports'" class="mt-2">
@@ -87,9 +87,7 @@ const previewReports = [
                         </td>
                         <td class="px-4 py-2">{{ row.expected }}</td>
                         <td class="px-4 py-2">{{ row.reported }}</td>
-                        <td
-                            class="px-4 py-2 text-gray-500 dark:text-neutral-400"
-                        >
+                        <td class="px-4 py-2 text-muted">
                             {{ row.note }}
                         </td>
                         <td class="px-4 py-2">{{ row.when }}</td>

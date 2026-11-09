@@ -229,7 +229,7 @@ describe('CellStatusLogs Index', () => {
         return columnHeader(wrapper, label)
             .get('button[title]')
             .classes()
-            .includes('text-blue-600');
+            .includes('text-link');
     }
 
     it('shows a filter icon on every filterable column, none active, when no filters are active', () => {
@@ -1284,13 +1284,13 @@ describe('CellStatusLogs Index', () => {
     it('does not show the pallet-history banner when there is no pallet filter', () => {
         const wrapper = mountPage([], {});
 
-        expect(wrapper.find('.bg-blue-50').exists()).toBe(false);
+        expect(wrapper.find('.bg-info-soft').exists()).toBe(false);
     });
 
     it('clears the pallet filter when the banner Clear button is clicked', async () => {
         const wrapper = mountPage([], { pallet_id: 55 });
 
-        const banner = wrapper.get('.bg-blue-50');
+        const banner = wrapper.get('.bg-info-soft');
         const clearButton = banner.get('button');
         expect(clearButton.findComponent(X).exists()).toBe(true);
         await clearButton.trigger('click');

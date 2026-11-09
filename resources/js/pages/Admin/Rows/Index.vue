@@ -97,10 +97,7 @@ function onWarehouseIdsChange(ids: string[]): void {
         >
             <template #row="{ row }">
                 <td class="px-4 py-2">
-                    <span
-                        class="font-medium text-gray-900 dark:text-neutral-100"
-                        >{{ row.letter }}</span
-                    >
+                    <span class="font-medium text-ink">{{ row.letter }}</span>
                 </td>
                 <td class="px-4 py-2">{{ row.warehouse.name }}</td>
                 <td class="px-4 py-2">{{ row.cells_count }}</td>
@@ -151,7 +148,7 @@ function onWarehouseIdsChange(ids: string[]): void {
                         </TableActionLink>
                         <span
                             v-else
-                            class="inline-flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400"
+                            class="inline-flex items-center gap-1 text-xs text-warning"
                             :title="t('rows.index.hasPalletsTitle')"
                         >
                             <TriangleAlert class="h-3.5 w-3.5 shrink-0" />

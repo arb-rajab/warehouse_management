@@ -58,7 +58,7 @@ const previewProduct = ref<ProductFilterOption | null>(null);
             <h2 :class="sectionHeadingClass">
                 {{ t('help.cells.legend.heading') }}
             </h2>
-            <p class="mb-3 text-sm text-gray-700 dark:text-neutral-300">
+            <p class="mb-3 text-sm text-ink">
                 {{ t('help.cells.legend.body') }}
             </p>
             <CellStateLegend />
@@ -68,7 +68,7 @@ const previewProduct = ref<ProductFilterOption | null>(null);
             <h2 :class="sectionHeadingClass">
                 {{ t('help.cells.managingPallets.heading') }}
             </h2>
-            <p class="text-sm text-gray-700 dark:text-neutral-300">
+            <p class="text-sm text-ink">
                 {{ t('help.cells.managingPallets.body') }}
             </p>
             <HelpUiPreview inert class="mt-2 flex justify-center">
@@ -88,7 +88,7 @@ const previewProduct = ref<ProductFilterOption | null>(null);
                     :class="
                         index === 0
                             ? selectedToggleClass
-                            : 'border border-gray-300 text-gray-700 dark:border-neutral-700 dark:text-neutral-200'
+                            : 'border border-line-strong text-ink'
                     "
                 >
                     {{ t(`cells.palletActions.tabs.${action}`) }}
@@ -97,9 +97,7 @@ const previewProduct = ref<ProductFilterOption | null>(null);
 
             <div class="mt-4 space-y-4">
                 <div v-for="action in palletActionTabKeys" :key="action">
-                    <p
-                        class="mb-1 text-sm font-medium text-gray-700 dark:text-neutral-300"
-                    >
+                    <p class="mb-1 text-sm font-medium text-ink">
                         {{ t(`cells.palletActions.tabs.${action}`) }}
                     </p>
                     <HelpUiPreview inert class="block max-w-sm">
@@ -151,7 +149,7 @@ const previewProduct = ref<ProductFilterOption | null>(null);
                                     />
                                 </div>
                                 <label
-                                    class="flex items-start gap-2 text-sm text-gray-700 dark:text-neutral-300"
+                                    class="flex items-start gap-2 text-sm text-ink"
                                 >
                                     <input type="checkbox" class="mt-0.5" />
                                     {{
@@ -163,9 +161,7 @@ const previewProduct = ref<ProductFilterOption | null>(null);
                             </template>
 
                             <template v-else-if="action === 'empty'">
-                                <p
-                                    class="text-sm text-gray-600 dark:text-neutral-300"
-                                >
+                                <p class="text-sm text-muted">
                                     {{
                                         t(
                                             'cells.palletActions.empty.confirmText',
@@ -253,7 +249,7 @@ const previewProduct = ref<ProductFilterOption | null>(null);
                                     />
                                 </div>
                                 <label
-                                    class="flex items-start gap-2 text-sm text-gray-700 dark:text-neutral-300"
+                                    class="flex items-start gap-2 text-sm text-ink"
                                 >
                                     <input type="checkbox" class="mt-0.5" />
                                     {{
@@ -286,13 +282,13 @@ const previewProduct = ref<ProductFilterOption | null>(null);
             <h2 :class="sectionHeadingClass">
                 {{ t('help.cells.deactivating.heading') }}
             </h2>
-            <p class="text-sm text-gray-700 dark:text-neutral-300">
+            <p class="text-sm text-ink">
                 {{ t('help.cells.deactivating.body') }}
             </p>
             <HelpUiPreview class="mt-2">
                 <span
                     tabindex="-1"
-                    class="inline-flex items-center gap-1.5 text-sm text-gray-600 dark:text-neutral-400"
+                    class="inline-flex items-center gap-1.5 text-sm text-muted"
                 >
                     <Ban class="h-4 w-4" />
                     {{ t('cells.toggleActive.deactivateLabel') }}

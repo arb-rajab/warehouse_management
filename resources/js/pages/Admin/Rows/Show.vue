@@ -191,7 +191,7 @@ const palletActionError = usePageError('action');
                 />
                 <Link
                     :href="edit(row, rowLinkOptions(row.warehouse))"
-                    class="inline-flex items-center gap-1 text-sm text-gray-600 hover:underline dark:text-neutral-400"
+                    class="inline-flex items-center gap-1 text-sm text-muted hover:underline"
                 >
                     <Pencil class="h-3.5 w-3.5" />
                     {{ t('rows.show.editRow') }}
@@ -212,13 +212,13 @@ const palletActionError = usePageError('action');
             <div class="flex flex-col gap-2">
                 <div class="flex gap-2">
                     <div
-                        class="sticky start-0 z-10 h-6 w-12 shrink-0 bg-gray-50 dark:bg-neutral-950"
+                        class="sticky start-0 z-10 h-6 w-12 shrink-0 bg-subtle"
                     ></div>
                     <div
                         v-for="cellNumber in cellNumbers"
                         :key="cellNumber"
                         data-testid="cell-header"
-                        class="flex h-6 w-32 shrink-0 items-center justify-center text-xs font-medium text-gray-500 dark:text-neutral-400"
+                        class="flex h-6 w-32 shrink-0 items-center justify-center text-xs font-medium text-muted"
                     >
                         {{ t('rows.show.column', { n: cellNumber }) }}
                     </div>
@@ -226,13 +226,13 @@ const palletActionError = usePageError('action');
 
                 <div class="flex gap-2">
                     <div
-                        class="sticky start-0 z-10 flex flex-col gap-2 bg-gray-50 dark:bg-neutral-950"
+                        class="sticky start-0 z-10 flex flex-col gap-2 bg-subtle"
                     >
                         <div
                             v-for="flatNumber in flatNumbers"
                             :key="flatNumber"
                             data-testid="flat-header"
-                            class="flex h-28 w-12 shrink-0 items-center justify-center text-xs font-medium text-gray-500 dark:text-neutral-400"
+                            class="flex h-28 w-12 shrink-0 items-center justify-center text-xs font-medium text-muted"
                         >
                             {{ t('rows.show.flat', { n: flatNumber }) }}
                         </div>

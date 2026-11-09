@@ -334,7 +334,7 @@ const displayLogs = computed(() => mergeTransferPairs(props.logs.data));
 
         <div
             v-if="filters.pallet_id"
-            class="mb-4 flex items-center justify-between rounded-md bg-blue-50 px-4 py-2 text-sm text-blue-800 dark:bg-blue-950 dark:text-blue-200"
+            class="mb-4 flex items-center justify-between rounded-md bg-info-soft px-4 py-2 text-sm text-info-strong"
         >
             <span>{{
                 t('cellLog.filters.palletHistory', { id: filters.pallet_id })

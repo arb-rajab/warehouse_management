@@ -105,7 +105,7 @@ const previewLogs = [
             <h2 :class="sectionHeadingClass">
                 {{ t('help.cellLogs.filtering.heading') }}
             </h2>
-            <p class="text-sm text-gray-700 dark:text-neutral-300">
+            <p class="text-sm text-ink">
                 {{ t('help.cellLogs.filtering.body') }}
             </p>
             <HelpUiPreview inert class="mt-2 block">
@@ -130,16 +130,12 @@ const previewLogs = [
                 >
                     <template #row="{ row }">
                         <td class="px-4 py-2">{{ row.cell }}</td>
-                        <td
-                            class="px-4 py-2 font-medium text-gray-900 dark:text-neutral-100"
-                        >
+                        <td class="px-4 py-2 font-medium text-ink">
                             {{ row.action }}
                         </td>
                         <td class="px-4 py-2">{{ row.product }}</td>
                         <td class="px-4 py-2">{{ row.pallet }}</td>
-                        <td
-                            class="px-4 py-2 text-gray-500 dark:text-neutral-400"
-                        >
+                        <td class="px-4 py-2 text-muted">
                             {{ row.note }}
                         </td>
                         <td class="px-4 py-2">{{ row.doneBy }}</td>
@@ -243,12 +239,12 @@ const previewLogs = [
                 <li
                     v-for="action in actionKeys"
                     :key="action"
-                    class="flex items-center gap-1.5 text-sm text-gray-700 dark:text-neutral-300"
+                    class="flex items-center gap-1.5 text-sm text-ink"
                 >
                     <component
                         :is="actionIcons[action]"
                         v-if="actionIcons[action]"
-                        class="h-3.5 w-3.5 shrink-0 text-gray-400 dark:text-neutral-500"
+                        class="h-3.5 w-3.5 shrink-0 text-muted"
                     />
                     {{ t(`help.cellLogs.actions.${action}`) }}
                 </li>
@@ -259,7 +255,7 @@ const previewLogs = [
             <h2 :class="sectionHeadingClass">
                 {{ t('help.cellLogs.legend.heading') }}
             </h2>
-            <p class="mb-3 text-sm text-gray-700 dark:text-neutral-300">
+            <p class="mb-3 text-sm text-ink">
                 {{ t('help.cellLogs.legend.body') }}
             </p>
             <CellStateLegend />

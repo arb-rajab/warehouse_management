@@ -19,7 +19,7 @@ const sections = ['views', 'legend', 'search', 'walking', 'sharing'] as const;
             <h2 :class="sectionHeadingClass">
                 {{ t(`help.warehouseMap.${section}.heading`) }}
             </h2>
-            <p class="text-sm text-gray-700 dark:text-neutral-300">
+            <p class="text-sm text-ink">
                 {{ t(`help.warehouseMap.${section}.body`) }}
             </p>
             <HelpUiPreview v-if="section === 'legend'" inert class="mt-2 block">

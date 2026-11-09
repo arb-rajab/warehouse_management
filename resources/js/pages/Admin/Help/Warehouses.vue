@@ -30,7 +30,7 @@ const previewWarehouseIds = ref<string[]>([]);
             <h2 :class="sectionHeadingClass">
                 {{ t(`help.warehouses.${section}.heading`) }}
             </h2>
-            <p class="text-sm text-gray-700 dark:text-neutral-300">
+            <p class="text-sm text-ink">
                 {{ t(`help.warehouses.${section}.body`) }}
             </p>
         </section>
@@ -39,7 +39,7 @@ const previewWarehouseIds = ref<string[]>([]);
             <h2 :class="sectionHeadingClass">
                 {{ t('help.warehouses.creating.heading') }}
             </h2>
-            <p class="text-sm text-gray-700 dark:text-neutral-300">
+            <p class="text-sm text-ink">
                 {{ t('help.warehouses.creating.body') }}
             </p>
             <HelpUiPreview class="mt-2">
@@ -61,7 +61,7 @@ const previewWarehouseIds = ref<string[]>([]);
             <h2 :class="sectionHeadingClass">
                 {{ t('help.warehouses.filtering.heading') }}
             </h2>
-            <p class="text-sm text-gray-700 dark:text-neutral-300">
+            <p class="text-sm text-ink">
                 {{ t('help.warehouses.filtering.body') }}
             </p>
             <HelpUiPreview inert class="mt-2 block max-w-xs">
@@ -80,7 +80,7 @@ const previewWarehouseIds = ref<string[]>([]);
             <h2 :class="sectionHeadingClass">
                 {{ t('help.warehouses.deleting.heading') }}
             </h2>
-            <p class="text-sm text-gray-700 dark:text-neutral-300">
+            <p class="text-sm text-ink">
                 {{ t('help.warehouses.deleting.body') }}
             </p>
             <div class="mt-2 flex flex-wrap items-center gap-2">
@@ -94,7 +94,7 @@ const previewWarehouseIds = ref<string[]>([]);
                     <span
                         tabindex="-1"
                         :title="t('warehouses.index.hasRowsTitle')"
-                        class="inline-flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400"
+                        class="inline-flex items-center gap-1 text-xs text-warning"
                     >
                         <TriangleAlert class="h-3.5 w-3.5 shrink-0" />
                         {{ t('warehouses.index.hasRows') }}

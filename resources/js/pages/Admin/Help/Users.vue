@@ -21,7 +21,7 @@ import { t } from '@/lib/i18n';
             <h2 :class="sectionHeadingClass">
                 {{ t('help.users.accounts.heading') }}
             </h2>
-            <p class="text-sm text-gray-700 dark:text-neutral-300">
+            <p class="text-sm text-ink">
                 {{ t('help.users.accounts.body') }}
             </p>
             <div class="mt-2 flex flex-wrap items-center gap-3">
@@ -46,7 +46,7 @@ import { t } from '@/lib/i18n';
             <h2 :class="sectionHeadingClass">
                 {{ t('help.users.roles.heading') }}
             </h2>
-            <p class="text-sm text-gray-700 dark:text-neutral-300">
+            <p class="text-sm text-ink">
                 {{ t('help.users.roles.body') }}
             </p>
             <div class="mt-2 flex flex-wrap items-center gap-3">
@@ -63,7 +63,7 @@ import { t } from '@/lib/i18n';
             <h2 :class="sectionHeadingClass">
                 {{ t('help.users.removing.heading') }}
             </h2>
-            <p class="text-sm text-gray-700 dark:text-neutral-300">
+            <p class="text-sm text-ink">
                 {{ t('help.users.removing.body') }}
             </p>
             <div class="mt-2 flex flex-wrap items-center gap-3">

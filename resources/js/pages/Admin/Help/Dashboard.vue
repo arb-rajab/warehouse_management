@@ -49,7 +49,7 @@ const activityActions: {
             <h2 :class="sectionHeadingClass">
                 {{ t(`help.dashboard.${section}.heading`) }}
             </h2>
-            <p class="text-sm text-gray-700 dark:text-neutral-300">
+            <p class="text-sm text-ink">
                 {{ t(`help.dashboard.${section}.body`) }}
             </p>
 
@@ -90,12 +90,12 @@ const activityActions: {
                     }}</span>
                     <span
                         tabindex="-1"
-                        class="flex w-48 items-center justify-between gap-2 rounded-md border border-gray-300 px-3 py-2 text-start text-sm dark:border-neutral-700 dark:bg-neutral-800"
+                        class="flex w-48 items-center justify-between gap-2 rounded-md border border-line-strong bg-surface px-3 py-2 text-start text-sm"
                     >
                         <span class="truncate">{{
                             t('cellLog.filters.all')
                         }}</span>
-                        <ChevronDown class="h-4 w-4 shrink-0 text-gray-400" />
+                        <ChevronDown class="h-4 w-4 shrink-0 text-muted" />
                     </span>
                 </div>
             </HelpUiPreview>

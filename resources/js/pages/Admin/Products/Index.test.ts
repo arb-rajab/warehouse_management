@@ -695,10 +695,10 @@ describe('Products Index', () => {
         ]);
 
         expect(rowCells(wrapper, 0)[3].get('button').classes()).toContain(
-            'text-red-600',
+            'text-danger',
         );
         expect(rowCells(wrapper, 1)[3].get('button').classes()).not.toContain(
-            'text-red-600',
+            'text-danger',
         );
     });
 
@@ -943,12 +943,7 @@ describe('Products Index', () => {
         // The other row says why, under its value, in the Store form's muted style.
         const note = rows[2].get('#barcode-note-8');
         expect(note.text()).toBe(t('products.barcodeNotPrintable'));
-        expect(note.classes()).toEqual([
-            'mt-1',
-            'text-xs',
-            'text-gray-600',
-            'dark:text-neutral-400',
-        ]);
+        expect(note.classes()).toEqual(['mt-1', 'text-xs', 'text-muted']);
 
         for (const key of ['viewBarcode', 'downloadBarcode']) {
             const off = buttonFor(2, key, 'متجر-٢٠٢٦');
@@ -1555,7 +1550,7 @@ describe('Products Index', () => {
         return columnHeader(wrapper, label)
             .get('button[title]')
             .classes()
-            .includes('text-blue-600');
+            .includes('text-link');
     }
 
     it("shows the primary column's filter icon in each shared group, none active, when no filters are set", () => {
