@@ -1,12 +1,22 @@
 <script setup lang="ts">
-import { LoaderCircle } from '@lucide/vue';
+import { LoaderCircle, Trash2 } from '@lucide/vue';
+import { dangerButtonClass } from '@/lib/filters';
 
-defineProps<{
-    label: string;
-    processingLabel: string;
-    processing: boolean;
-    form?: string;
-}>();
+/**
+ * The form submit button. `variant="danger"` is the soft danger style with
+ * the Trash2 icon for a destructive submit (Delete selection), so it never
+ * reads as the brand-red primary button.
+ */
+withDefaults(
+    defineProps<{
+        label: string;
+        processingLabel: string;
+        processing: boolean;
+        form?: string;
+        variant?: 'primary' | 'danger';
+    }>(),
+    { variant: 'primary' },
+);
 </script>
 
 <template>
@@ -14,9 +24,18 @@ defineProps<{
         type="submit"
         :form="form"
         :disabled="processing"
-        class="flex w-full cursor-pointer items-center justify-center gap-2 rounded-md bg-gray-900 px-3 py-2 text-sm font-medium text-white hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white dark:text-gray-900 dark:hover:bg-neutral-200"
+        :class="
+            variant === 'danger'
+                ? [dangerButtonClass, 'w-full']
+                : 'flex w-full cursor-pointer items-center justify-center gap-2 rounded-md bg-brand px-3.5 py-2 text-sm font-semibold text-on-brand shadow-btn hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-50'
+        "
     >
         <LoaderCircle v-if="processing" class="h-4 w-4 shrink-0 animate-spin" />
+        <Trash2
+            v-else-if="variant === 'danger'"
+            class="h-4 w-4 shrink-0"
+            aria-hidden="true"
+        />
         {{ processing ? processingLabel : label }}
     </button>
 </template>

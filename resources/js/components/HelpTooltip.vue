@@ -81,7 +81,7 @@ onBeforeUnmount(() => {
             type="button"
             :aria-label="label"
             :aria-describedby="id"
-            class="inline-flex h-5 w-5 cursor-pointer items-center justify-center rounded-full text-gray-500 hover:text-gray-900 dark:text-neutral-400 dark:hover:text-white"
+            class="inline-flex h-5 w-5 cursor-pointer items-center justify-center rounded-full text-muted hover:text-ink"
             @focus="onFocus"
             @blur="focused = false"
             @click="onClick"
@@ -92,7 +92,7 @@ onBeforeUnmount(() => {
             v-show="visible()"
             :id="id"
             role="tooltip"
-            class="absolute start-0 bottom-full z-30 mb-2 w-60 rounded-md bg-gray-900 p-3 text-xs font-normal text-white shadow-lg dark:bg-neutral-100 dark:text-neutral-900"
+            class="absolute start-0 bottom-full z-30 mb-2 w-60 rounded-md bg-ink p-3 text-xs font-normal text-page shadow-pop"
             >{{ text }}</span
         >
     </span>

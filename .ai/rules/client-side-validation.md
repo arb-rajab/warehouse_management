@@ -25,6 +25,10 @@ paths:
   - 'lang/en/validation.php'
   - 'lang/ar/validation.php'
   - 'tests/Feature/Store/Admin/ProductClientValidationParityTest.php'
+  - 'resources/js/lib/warehouseForm.ts'
+  - 'resources/js/lib/warehouseRules.json'
+  - 'resources/js/pages/Admin/Warehouses/{Create,Edit}.vue'
+  - 'tests/Feature/Admin/WarehouseClientValidationParityTest.php'
 ---
 
 # Forms validate in the browser first
@@ -33,8 +37,10 @@ Added 2026-11-05. Every mistake the browser can see is reported before a
 request is sent, from a copy of the server's rules; **the backend remains the
 authority** and is never removed or weakened for it. New or changed server
 rules update the client copy in the same change, and every new form should
-adopt the layer. The physical and digital product create/edit forms use it
-today; other forms adopt it one at a time.
+adopt the layer. The physical and digital product create/edit forms and the WMS
+warehouse create/edit forms use it today; other forms adopt it one at a time
+(the warehouse copy is `lib/warehouseRules.json`, checked by
+`WarehouseClientValidationParityTest`).
 
 ## The layer
 

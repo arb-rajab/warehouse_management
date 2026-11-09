@@ -142,6 +142,7 @@ const tableColumns = computed(() => [
                     :value="id"
                 />
                 <SubmitButton
+                    variant="danger"
                     :label="t('store.dynamicPopups.index.deleteSelection')"
                     :processing-label="t('store.dynamicPopups.index.deleting')"
                     :processing="processing"

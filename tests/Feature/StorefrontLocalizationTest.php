@@ -181,7 +181,8 @@ test('scoped templates resolve every literal storefront key in both catalogs', f
                 continue;
             }
             $source = file_get_contents($file->getPathname());
-            preg_match_all("/storefront\.([a-z0-9_.]+)'/", $source, $matches);
+            // A translation key, not the `resources/css/storefront.css` asset path that shares its prefix.
+            preg_match_all("#(?<![\w/.-])storefront\.([a-z0-9_.]+)'#", $source, $matches);
             foreach ($matches[1] as $key) {
                 expect(array_key_exists($key, $catalog))->toBeTrue($file->getPathname().': '.$key);
             }

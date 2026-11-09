@@ -9,6 +9,7 @@ use App\Models\Pallet;
 use App\Models\Product;
 use App\Models\Row;
 use App\Models\Setting;
+use App\Models\Warehouse;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
@@ -58,6 +59,7 @@ test('an authenticated worker can add a pallet to an empty slot', function () {
             'cell_number' => 1,
             'flat_number' => 2,
         ],
+        'warehouse' => ['id' => Warehouse::firstOrCreateDefault()->id, 'name' => Warehouse::DEFAULT_NAME],
     ]);
 
     $this->assertDatabaseCount('pallets', 1);
@@ -110,6 +112,7 @@ test('an authenticated worker can add a pallet to an empty slot with no expirati
             'cell_number' => 1,
             'flat_number' => 2,
         ],
+        'warehouse' => ['id' => Warehouse::firstOrCreateDefault()->id, 'name' => Warehouse::DEFAULT_NAME],
     ]);
 
     expect($pallet->expiration_date)->toBeNull();
@@ -396,6 +399,7 @@ test('an authenticated worker can view a pallet with every property the app read
             'cell_number' => 2,
             'flat_number' => 1,
         ],
+        'warehouse' => ['id' => Warehouse::firstOrCreateDefault()->id, 'name' => Warehouse::DEFAULT_NAME],
     ]);
 });
 
@@ -1676,4 +1680,71 @@ test('transferring and opening a pallet with a stale If-Match is refused with 41
 
     expect($pallet->refresh()->cell_id)->toBe($sourceCell->id);
     $this->assertDatabaseCount('cell_status_logs', 0);
+});
+
+test('storing a pallet at a row letter two warehouses use needs warehouse_id, and the pallet names its warehouse', function () {
+    actingAsMobileUser();
+    $north = Warehouse::factory()->create(['name' => 'North']);
+    $northRow = Row::factory()->for($north)->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 1]);
+    $defaultRow = Row::factory()->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 1]);
+    $product = Product::factory()->create();
+    $payload = [
+        'image_review_status' => $product->image_url ? 'matches' : 'image_missing',
+        'image_source' => $product->image_url,
+        'row_letter' => 'A',
+        'cell_number' => 1,
+        'flat_number' => 1,
+        'product_id' => $product->id,
+        'expiration_date' => now()->addMonth()->toDateString(),
+    ];
+
+    $this->postJson('/api/v1/pallets', $payload)
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['warehouse_id' => 'This row letter is used in more than one warehouse. Choose the warehouse.']);
+    expect(Pallet::count())->toBe(0);
+
+    $response = $this->postJson('/api/v1/pallets', [...$payload, 'warehouse_id' => $north->id]);
+
+    $response->assertCreated();
+    expect(Pallet::query()->sole()->cell_id)->toBe($northRow->cells()->value('id'))
+        ->and($response->json('warehouse'))->toEqual(['id' => $north->id, 'name' => 'North'])
+        ->and($defaultRow->cells()->whereHas('pallet')->exists())->toBeFalse();
+});
+
+test('storing a pallet in a warehouse that has no row with that letter is rejected', function () {
+    actingAsMobileUser();
+    $north = Warehouse::factory()->create();
+    Row::factory()->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 1]);
+    $product = Product::factory()->create();
+
+    $this->postJson('/api/v1/pallets', [
+        'image_review_status' => $product->image_url ? 'matches' : 'image_missing',
+        'image_source' => $product->image_url,
+        'warehouse_id' => $north->id,
+        'row_letter' => 'A',
+        'cell_number' => 1,
+        'flat_number' => 1,
+        'product_id' => $product->id,
+        'expiration_date' => now()->addMonth()->toDateString(),
+    ])->assertUnprocessable()->assertJsonValidationErrors('cell_number');
+
+    expect(Pallet::count())->toBe(0);
+});
+
+test('transferring a pallet to a row letter two warehouses use needs to_warehouse_id', function () {
+    actingAsMobileUser();
+    $north = Warehouse::factory()->create();
+    $sourceRow = Row::factory()->create(['letter' => 'S', 'cells_count' => 1, 'flats_count' => 1]);
+    $pallet = Pallet::factory()->create(['cell_id' => $sourceRow->cells()->value('id')]);
+    $northRow = Row::factory()->for($north)->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 1]);
+    Row::factory()->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 1]);
+    $payload = ['to_row_letter' => 'A', 'to_cell_number' => 1, 'to_flat_number' => 1];
+
+    $this->postJson("/api/v1/pallets/{$pallet->id}/transfer", $payload)
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('to_warehouse_id');
+    expect($pallet->fresh()->cell_id)->toBe($sourceRow->cells()->value('id'));
+
+    $this->postJson("/api/v1/pallets/{$pallet->id}/transfer", [...$payload, 'to_warehouse_id' => $north->id])->assertOk();
+    expect($pallet->fresh()->cell_id)->toBe($northRow->cells()->value('id'));
 });

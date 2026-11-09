@@ -59,9 +59,7 @@ function onPerPageChange(perPage: number): void {
             :empty-message="t('store.roles.index.empty')"
         >
             <template #row="{ row: role }">
-                <td
-                    class="px-4 py-2 font-medium text-gray-900 dark:text-neutral-100"
-                >
+                <td class="px-4 py-2 font-medium text-ink">
                     {{ role.name }}
                 </td>
                 <td class="px-4 py-2">

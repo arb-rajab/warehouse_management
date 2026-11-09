@@ -14,7 +14,24 @@ import {
     storeRole,
     storeSharedProps,
     user,
+    warehouse,
 } from './factories';
+
+describe('warehouse', () => {
+    it('applies default fields and merges overrides on top', () => {
+        expect(warehouse()).toMatchObject({
+            id: 1,
+            name: 'Main',
+            rows_count: 2,
+        });
+        expect(warehouse({ name: 'Annex', rows_count: 0 })).toMatchObject({
+            id: 1,
+            name: 'Annex',
+            code: 'MAIN',
+            rows_count: 0,
+        });
+    });
+});
 
 describe('row', () => {
     it('applies default fields', () => {
@@ -24,6 +41,7 @@ describe('row', () => {
             cells_count: 5,
             flats_count: 7,
             has_pallets: false,
+            warehouse: { id: 1, name: 'Main' },
         });
     });
 

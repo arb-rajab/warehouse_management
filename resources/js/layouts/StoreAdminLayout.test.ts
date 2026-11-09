@@ -1,5 +1,5 @@
 import { Link } from '@inertiajs/vue3';
-import { CircleUser, Globe, Store } from '@lucide/vue';
+import { CircleUser, Globe } from '@lucide/vue';
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { logout } from '@/actions/App/Http/Controllers/Auth/LoginController';
@@ -12,6 +12,7 @@ import {
     index as staffIndex,
 } from '@/actions/App/Http/Controllers/Store/Admin/StaffController';
 import { edit as tripEdit } from '@/actions/App/Http/Controllers/Store/Admin/TripController';
+import BackofficeShell from '@/components/BackofficeShell.vue';
 import FilterDialog from '@/components/FilterDialog.vue';
 import HelpTooltip from '@/components/HelpTooltip.vue';
 import LanguageSwitcher from '@/components/LanguageSwitcher.vue';
@@ -54,7 +55,7 @@ function mountLayout(
 ) {
     usePageMock.mockReturnValue({
         url,
-        props: defaultAuthProps({ store }),
+        props: defaultAuthProps({ store, brandName: 'Store name' }),
         flash,
     });
 
@@ -78,14 +79,30 @@ function groupButton(wrapper: ReturnType<typeof mountLayout>, label: string) {
 describe('StoreAdminLayout', () => {
     beforeEach(() => {
         resetMocks({ usePageMock, routerPostMock });
+        window.localStorage.clear();
     });
 
-    it('renders the brand with its icon, in the bar and the sidebar', () => {
+    it('draws the shared back-office shell with the brand name over the Store Admin title', () => {
         const wrapper = mountLayout(staffIndex.url());
+        const shell = wrapper.getComponent(BackofficeShell);
 
-        expect(wrapper.findAllComponents(Store)).toHaveLength(2);
-        expect(wrapper.text()).toContain(t('store.nav.brand'));
+        expect(shell.props('sidebarId')).toBe('store-admin-sidebar');
+        expect(shell.props('area')).toBe(t('store.nav.brand'));
         expect(t('store.nav.brand')).toBe('Store Admin');
+        expect(wrapper.get('[data-testid="sidebar-brand"]').text()).toBe(
+            'Store name',
+        );
+        expect(wrapper.get('[data-testid="sidebar-area"]').text()).toBe(
+            'Store Admin',
+        );
+    });
+
+    it('names the active menu link in the header crumb', () => {
+        const wrapper = mountLayout(staffEdit.url({ staff: 4 }));
+        const crumb = wrapper.get(`nav[aria-label="${t('nav.breadcrumb')}"]`);
+
+        expect(crumb.text()).toContain(t('store.nav.brand'));
+        expect(crumb.text()).toContain(t('store.nav.allStaff'));
     });
 
     it('labels the sidebar navigation', () => {
@@ -184,7 +201,7 @@ describe('StoreAdminLayout', () => {
         expect(wrapper.text()).not.toContain(t('store.nav.drivers'));
     });
 
-    it('links to the storefront in a new tab', () => {
+    it('links to the storefront in a new tab from the header', () => {
         const wrapper = mountLayout(staffIndex.url());
 
         const link = (wrapper.findComponent(Globe).element as Element).closest(
@@ -192,10 +209,15 @@ describe('StoreAdminLayout', () => {
         );
         expect(link?.getAttribute('href')).toBe(storefrontHome.url());
         expect(link?.getAttribute('target')).toBe('_blank');
-        expect(wrapper.text()).toContain(t('store.nav.browseWebsite'));
+        expect(link?.getAttribute('aria-label')).toBe(
+            t('store.nav.browseWebsite'),
+        );
+        expect(wrapper.get('header').element.contains(link as Element)).toBe(
+            true,
+        );
     });
 
-    it("links the signed-in user's name to their profile", () => {
+    it('links to the profile from the user block in the sidebar footer', () => {
         const wrapper = mountLayout(staffIndex.url());
 
         const link = (
@@ -203,16 +225,23 @@ describe('StoreAdminLayout', () => {
         ).closest('a');
         expect(link?.getAttribute('href')).toBe(profileIndex.url());
         expect(link?.getAttribute('aria-label')).toBe(t('store.nav.profile'));
-        expect(link?.textContent).toContain('Jane Doe');
+        expect(wrapper.get('aside').element.contains(link as Element)).toBe(
+            true,
+        );
+        expect(wrapper.get('aside').text()).toContain('Jane Doe');
     });
 
-    it("signs out of the store's own guard, and offers the language switcher", () => {
+    it("signs out of the store's own guard from the sidebar, with the language switcher in the header", () => {
         const wrapper = mountLayout(staffIndex.url());
+        const logoutLink = wrapper.getComponent(LogoutLink);
 
-        expect(wrapper.getComponent(LogoutLink).props('href')).toEqual(
-            logout.post(),
+        expect(logoutLink.props('href')).toEqual(logout.post());
+        expect(wrapper.get('aside').element.contains(logoutLink.element)).toBe(
+            true,
         );
-        expect(wrapper.findComponent(LanguageSwitcher).exists()).toBe(true);
+        expect(
+            wrapper.get('header').findComponent(LanguageSwitcher).exists(),
+        ).toBe(true);
     });
 
     it('folds the sidebar behind the menu button on small screens', async () => {
@@ -227,13 +256,22 @@ describe('StoreAdminLayout', () => {
         expect(toggle.attributes('aria-expanded')).toBe('false');
         expect(toggle.attributes('aria-label')).toBe(t('nav.openMenu'));
 
+        expect(wrapper.get('header').element.contains(toggle.element)).toBe(
+            true,
+        );
+
         await toggle.trigger('click');
 
         expect(wrapper.get('#store-admin-sidebar').classes()).not.toContain(
             'hidden',
         );
         expect(toggle.attributes('aria-expanded')).toBe('true');
-        expect(toggle.attributes('aria-label')).toBe(t('nav.closeMenu'));
+        expect(
+            wrapper
+                .get('#store-admin-sidebar')
+                .find(`button[aria-label="${t('nav.closeMenu')}"]`)
+                .exists(),
+        ).toBe(true);
     });
 
     it('closes the small-screen sidebar when a link is followed', async () => {
@@ -330,6 +368,9 @@ describe('StoreAdminLayout', () => {
             true,
         );
         expect(wrapper.get('main').find('button').exists()).toBe(false);
+        expect(wrapper.get('header').element.contains(trigger.element)).toBe(
+            false,
+        );
         expect(trigger.text()).toContain(t('store.nav.notifications'));
         expect(trigger.text()).toContain('3');
         expect(trigger.text()).toContain(
@@ -497,6 +538,30 @@ describe('StoreAdminLayout', () => {
         expect(wrapper.findAll('nav button[data-active="true"]')).toHaveLength(
             1,
         );
+    });
+
+    it('folds to an icon rail: group icons unfold the sidebar with the group open', async () => {
+        const wrapper = mountLayout(admin_dashboard.url());
+        await wrapper.get('[data-testid="sidebar-collapse"]').trigger('click');
+
+        expect(
+            wrapper.get('#store-admin-sidebar').attributes('data-collapsed'),
+        ).toBe('true');
+        expect(
+            wrapper.get('#store-menu-search').element.closest('.lg\\:hidden'),
+        ).not.toBeNull();
+        expect(
+            navLink(wrapper, 'store.nav.dashboard')?.props('collapsed'),
+        ).toBe(true);
+
+        const staff = groupButton(wrapper, t('store.nav.staff'));
+        expect(staff?.attributes('title')).toBe(t('store.nav.staff'));
+        await staff?.trigger('click');
+
+        expect(
+            wrapper.get('#store-admin-sidebar').attributes('data-collapsed'),
+        ).toBe('false');
+        expect(navLink(wrapper, 'store.nav.allStaff')).toBeDefined();
     });
 
     it('lets the content grow to 2xl so wide lists scroll sideways less', () => {

@@ -63,16 +63,17 @@
 </section>
 
 <!-- footer subscription & icons -->
-<section class="py-3 text-light footer-widget border-bottom" style="border-color: #3d3d46 !important; background-color: #212129 !important;">
+<section class="sf-footer py-3 text-light footer-widget border-bottom">
     <div class="container">
-        <!-- footer logo -->
-        <div class="mt-3 mb-4">
-            <a href="{{ route('home') }}" class="d-block">
+        <!-- footer logo and the placeholder brand name (messages.brand_name) -->
+        <div class="mt-4 mb-4">
+            <a href="{{ route('home') }}" class="sf-brand d-inline-flex">
                 @if(get_setting('footer_logo') != null)
-                    <img class="lazyload" src="{{ static_asset('assets/img/placeholder-rect.jpg') }}" data-src="{{ uploaded_asset(get_setting('footer_logo')) }}" alt="{{ config('app.name') }}" height="44">
+                    <img class="lazyload" src="{{ static_asset('assets/img/placeholder-rect.jpg') }}" data-src="{{ uploaded_asset(get_setting('footer_logo')) }}" alt="" height="44">
                 @else
-                    <img class="lazyload" src="{{ static_asset('assets/img/placeholder-rect.jpg') }}" data-src="{{ static_asset('assets/img/logo.png') }}" alt="{{ config('app.name') }}" height="44">
+                    <img class="sf-brand-mark" src="{{ static_asset('assets/img/33logoqr.png') }}" alt="" height="44" loading="lazy">
                 @endif
+                <span class="sf-brand-name">{{ __('messages.brand_name') }}</span>
             </a>
         </div>
 
@@ -89,10 +90,10 @@
                         @csrf
                         <div class="row gutters-10">
                             <div class="col-8">
-                                <input type="email" class="form-control border-secondary rounded-0 text-white w-100 bg-transparent" placeholder="{{ __('storefront.auth.your_email_address') }}" name="email" required>
+                                <input type="email" class="form-control border-secondary text-white w-100 bg-transparent" placeholder="{{ __('storefront.auth.your_email_address') }}" name="email" required>
                             </div>
                             <div class="col-4">
-                                <button type="submit" class="btn btn-primary rounded-0 w-100">{{ __('storefront.navigation.subscribe') }}</button>
+                                <button type="submit" class="btn btn-primary w-100">{{ __('storefront.navigation.subscribe') }}</button>
                             </div>
                         </div>
                     </form>
@@ -170,7 +171,7 @@
 @php
     $col_values = ((get_setting('vendor_system_activation') == 1) || addon_is_activated('delivery_boy')) ? "col-lg-3 col-md-6 col-sm-6" : "col-md-4 col-sm-6";
 @endphp
-<section class="py-lg-3 text-light footer-widget" style="background-color: #212129 !important;">
+<section class="sf-footer py-lg-3 text-light footer-widget">
     <!-- footer widgets ========== [Accordion Fotter widgets are bellow from this]-->
     <div class="container d-none d-lg-block">
         <div class="row">
@@ -199,9 +200,11 @@
             </div> --}}
 
 
+            @if (get_setting('google_maps_link'))
             <div class="{{ $col_values }}">
                 <iframe src="{{ get_setting('google_maps_link') }}" width="350" height="350" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
             </div>
+            @endif
 
 
 
@@ -350,7 +353,7 @@
             <div class="aiz-accordion-heading container bg-black">
                 <button class="aiz-accordion fs-14 text-white bg-transparent">{{ get_setting('widget_one',null,App::getLocale()) }}</button>
             </div>
-            <div class="aiz-accordion-panel bg-transparent" style="background-color: #212129 !important;">
+            <div class="aiz-accordion-panel bg-transparent">
                 <div class="container">
                     <ul class="list-unstyled mt-3">
                         @if ( get_setting('widget_one_labels',null,App::getLocale()) !=  null )
@@ -372,7 +375,7 @@
             <div class="aiz-accordion-heading container bg-black">
                 <button class="aiz-accordion fs-14 text-white bg-transparent">{{ __('storefront.navigation.contacts') }}</button>
             </div>
-            <div class="aiz-accordion-panel bg-transparent" style="background-color: #212129 !important;">
+            <div class="aiz-accordion-panel bg-transparent">
                 <div class="container">
                     <ul class="list-unstyled mt-3">
                         <li class="mb-2">
@@ -399,7 +402,7 @@
             <div class="aiz-accordion-heading container bg-black">
                 <button class="aiz-accordion fs-14 text-white bg-transparent">{{ __('storefront.auth.my_account') }}</button>
             </div>
-            <div class="aiz-accordion-panel bg-transparent" style="background-color: #212129 !important;">
+            <div class="aiz-accordion-panel bg-transparent">
                 <div class="container">
                     <ul class="list-unstyled mt-3">
                         @auth
@@ -448,7 +451,7 @@
             <div class="aiz-accordion-heading container bg-black">
                 <button class="aiz-accordion fs-14 text-white bg-transparent">{{ __('storefront.product.seller_zone') }}</button>
             </div>
-            <div class="aiz-accordion-panel bg-transparent" style="background-color: #212129 !important;">
+            <div class="aiz-accordion-panel bg-transparent">
                 <div class="container">
                     <ul class="list-unstyled mt-3">
                         <li class="mb-2 pb-2 {{ areActiveRoutes(['shops.create'],' active')}}">
@@ -483,7 +486,7 @@
             <div class="aiz-accordion-heading container bg-black">
                 <button class="aiz-accordion fs-14 text-white bg-transparent">{{ __('storefront.checkout.delivery_boy') }}</button>
             </div>
-            <div class="aiz-accordion-panel bg-transparent" style="background-color: #212129 !important;">
+            <div class="aiz-accordion-panel bg-transparent">
                 <div class="container">
                     <ul class="list-unstyled mt-3">
                         @guest
@@ -509,7 +512,7 @@
 </section>
 
 <!-- FOOTER -->
-<footer class="pt-3 pb-7 pb-xl-3 bg-black text-soft-light">
+<footer class="sf-footer sf-footer-bottom pt-3 pb-7 pb-xl-3 bg-black text-soft-light">
     <div class="container">
         <div class="row align-items-center py-3">
             <!-- Copyright -->
@@ -538,7 +541,7 @@
 </footer>
 
 <!-- Mobile bottom nav -->
-<div class="aiz-mobile-bottom-nav d-xl-none fixed-bottom border-top border-sm-bottom border-sm-left border-sm-right mx-auto mb-sm-2" style="background-color: rgb(255 255 255 / 90%)!important;">
+<div class="aiz-mobile-bottom-nav d-xl-none fixed-bottom border-top border-sm-bottom border-sm-left border-sm-right mx-auto mb-sm-2">
     <div class="row align-items-center gutters-5">
         <!-- Home -->
         <div class="col">

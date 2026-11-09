@@ -15,7 +15,7 @@
             font-family: dejavusans, sans-serif;
             direction: {{ $documentLocale === 'ar' ? 'rtl' : 'ltr' }};
 
-            color: #000;
+            color: #1f1a17;
         }
 
         .container {
@@ -32,7 +32,7 @@
         th,
         td {
             padding: 0.5rem;
-            border: 1px solid #eceff4;
+            border: 1px solid #ece5df;
             text-align: center;
             font-weight: normal;
         }
@@ -46,7 +46,15 @@
         } */
 
         .gry-color {
-            color: #666;
+            color: #6b625c;
+        }
+
+        .brand-head {
+            border-top: 4px solid #c4170c;
+            background-color: #faf7f4;
+            padding: 0.75rem 1rem;
+            margin-bottom: 1rem;
+            text-align: center;
         }
 
         .key {
@@ -61,6 +69,10 @@
 </head>
 <body>
     <div class="container">
+        <div class="brand-head">
+            <img src="{{ static_asset('assets/img/33logoqr.png') }}" height="40" alt="">
+            <span class="strong" style="font-size: 1.5rem;">&nbsp;{{ __('messages.brand_name', [], $documentLocale) }}</span>
+        </div>
         <table>
             <tr>
                 <td class="key strong small gry-color">{{ __('storefront.checkout.receipt_code', [], $documentLocale) }}</td>

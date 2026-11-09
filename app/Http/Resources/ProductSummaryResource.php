@@ -33,8 +33,6 @@ class ProductSummaryResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
-        $labels = app(ProductBarcodeLabels::class);
-
         return [
             'image_verification' => $this->image_verification,
             'id' => $this->id,
@@ -52,11 +50,24 @@ class ProductSummaryResource extends JsonResource
             // The shared table's rows bar the own-id row (the id is already
             // the default barcode) and blanks; `printable` says whether the
             // value, Arabic digits converted, can be drawn as a label.
-            'barcodes' => ProductBarcode::listedInWms($this->barcodes)->map(fn (ProductBarcode $barcode): array => [
-                'id' => $barcode->id,
-                'barcode' => $barcode->barcode,
-                'printable' => $labels->isPrintable($labels->normalize($barcode->barcode)),
-            ])->all(),
+            'barcodes' => ProductBarcode::listedInWms($this->barcodes)->map(fn (ProductBarcode $barcode): array => self::barcodeShape($barcode))->all(),
+        ];
+    }
+
+    /**
+     * One listed barcode row. Also the shape the mobile add-barcode endpoint
+     * answers with, so both lists read the same.
+     *
+     * @return array{id: int, barcode: string, printable: bool}
+     */
+    public static function barcodeShape(ProductBarcode $barcode): array
+    {
+        $labels = app(ProductBarcodeLabels::class);
+
+        return [
+            'id' => $barcode->id,
+            'barcode' => $barcode->barcode,
+            'printable' => $labels->isPrintable($labels->normalize($barcode->barcode)),
         ];
     }
 }

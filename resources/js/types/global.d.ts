@@ -24,6 +24,12 @@ declare module '@inertiajs/core' {
         };
         sharedPageProps: {
             name: string;
+            /**
+             * The owner-editable placeholder brand name (`messages.brand_name`,
+             * the storefront header's source) in the current language; the
+             * back-office sidebar shows it next to the logo.
+             */
+            brandName: string;
             locale: string;
             auth: Auth;
             /** Present on the store back office's pages only. */

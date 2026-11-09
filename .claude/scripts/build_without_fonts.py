@@ -11,7 +11,7 @@ this script when the normal build fails:
 It writes a temporary copy of vite.config.ts without the `bunny` import and the
 `fonts: [...]` option, builds with `vite build --config <copy>`, and always
 deletes the copy. `vite.config.ts` itself is never modified, so real builds keep
-the font. Configurations using only bundled local fonts are built unchanged.
+the font. Configurations without a remote font are built unchanged.
 Exits with the build's exit code, or 1 for an unrecognized configuration.
 """
 
@@ -26,12 +26,16 @@ TEMP_CONFIG = ROOT / 'vite.nofonts.config.ts'
 
 BUNNY_IMPORT = re.compile(r"^import \{[^}]*\bbunny\b[^}]*\} from 'laravel-vite-plugin/fonts';\n", re.M)
 FONTS_OPTION = re.compile(r'^[ \t]*fonts: \[.*?^[ \t]*\],\n', re.M | re.S)
-LOCAL_IMPORT = re.compile(r"^import \{ local \} from 'laravel-vite-plugin/fonts';\n", re.M)
 
 
 def fontless_config(source: str) -> str:
-    """Remove the legacy Bunny provider, preserving bundled local fonts."""
-    if LOCAL_IMPORT.search(source) and not BUNNY_IMPORT.search(source):
+    """Remove the legacy Bunny provider, preserving bundled local fonts.
+
+    A configuration that fetches no remote font (bundled local fonts, or no
+    font plugin at all: the back office self-hosts IBM Plex through
+    @fontsource in app.css) is returned unchanged.
+    """
+    if not BUNNY_IMPORT.search(source) and 'bunny' not in source:
         return source
 
     without_import, imports = BUNNY_IMPORT.subn('', source)

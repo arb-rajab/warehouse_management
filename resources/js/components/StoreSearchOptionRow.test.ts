@@ -31,15 +31,15 @@ describe('StoreSearchOptionRow', () => {
         ).toBe('SKU RC-5000 · #512 · 24.00');
         const badge = wrapper.get('[data-testid="search-option-badge"]');
         expect(badge.text()).toBe('In stock 120');
-        expect(badge.classes()).toContain('bg-green-100');
+        expect(badge.classes()).toContain('bg-success-soft');
     });
 
     it.each([
-        ['neutral', 'bg-gray-100'],
-        ['success', 'bg-green-100'],
-        ['warning', 'bg-amber-100'],
-        ['danger', 'bg-red-100'],
-        ['info', 'bg-blue-100'],
+        ['neutral', 'bg-subtle'],
+        ['success', 'bg-success-soft'],
+        ['warning', 'bg-warning-soft'],
+        ['danger', 'bg-danger-soft'],
+        ['info', 'bg-info-soft'],
     ] as const)('tints a %s badge', (tone, expected) => {
         const wrapper = mount(StoreSearchOptionRow, {
             props: { option: { ...product, badge: { text: 'x', tone } } },

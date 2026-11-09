@@ -443,15 +443,15 @@ const statusText = computed(() => {
 });
 
 const boxClass = computed(() => [
-    'min-h-10 w-full rounded-md border bg-white px-3 py-1.5 pe-16 text-start text-sm dark:bg-neutral-800',
+    'min-h-10 w-full rounded-md border bg-surface px-3 py-1.5 pe-16 text-start text-sm',
     props.error
-        ? 'border-red-500 dark:border-red-400'
+        ? 'border-danger'
         : open.value
-          ? 'border-blue-500 ring-2 ring-blue-500/30'
-          : 'border-gray-300 dark:border-neutral-700',
+          ? 'border-focus ring-2 ring-focus-ring'
+          : 'border-line-strong',
     props.disabled
         ? 'cursor-not-allowed opacity-60'
-        : 'cursor-pointer focus-visible:border-blue-500 focus-visible:ring-2 focus-visible:ring-blue-500/30 focus-visible:outline-none',
+        : 'cursor-pointer focus-visible:border-focus focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:outline-none',
 ]);
 
 defineExpose({
@@ -502,7 +502,7 @@ defineExpose({
                 <span
                     v-for="picked in items"
                     :key="String(picked.id)"
-                    class="inline-flex max-w-full items-center gap-1.5 rounded-full border border-gray-300 bg-gray-50 py-0.5 ps-1 pe-1 dark:border-neutral-600 dark:bg-neutral-700"
+                    class="inline-flex max-w-full items-center gap-1.5 rounded-full border border-line-strong bg-subtle py-0.5 ps-1 pe-1"
                     data-testid="search-select-chip"
                 >
                     <StoreSearchOptionRow
@@ -512,7 +512,7 @@ defineExpose({
                     />
                     <button
                         type="button"
-                        class="grid size-5 shrink-0 cursor-pointer place-items-center rounded-full text-gray-500 hover:bg-gray-200 disabled:cursor-not-allowed dark:text-neutral-300 dark:hover:bg-neutral-600"
+                        class="grid size-5 shrink-0 cursor-pointer place-items-center rounded-full text-muted hover:bg-line disabled:cursor-not-allowed"
                         :aria-label="
                             t('common.searchSelect.remove', {
                                 label: picked.label,
@@ -528,7 +528,7 @@ defineExpose({
                     :id="id"
                     ref="triggerRef"
                     type="button"
-                    class="min-w-24 flex-1 cursor-pointer py-0.5 text-start text-gray-500 focus-visible:outline-none disabled:cursor-not-allowed dark:text-neutral-400"
+                    class="min-w-24 flex-1 cursor-pointer py-0.5 text-start text-muted focus-visible:outline-none disabled:cursor-not-allowed"
                     aria-haspopup="listbox"
                     :aria-expanded="open"
                     :aria-controls="open ? panelId : undefined"
@@ -574,21 +574,17 @@ defineExpose({
                 >
                     <StoreSearchOptionRow :option="single" variant="selected" />
                 </slot>
-                <span
-                    v-else
-                    class="min-w-0 flex-1 truncate text-gray-500 dark:text-neutral-400"
-                    >{{
-                        placeholder ?? t('common.searchSelect.placeholder')
-                    }}</span
-                >
+                <span v-else class="min-w-0 flex-1 truncate text-muted">{{
+                    placeholder ?? t('common.searchSelect.placeholder')
+                }}</span>
             </button>
             <span
-                class="pointer-events-none absolute inset-y-0 end-2 flex items-center gap-1 text-gray-400"
+                class="pointer-events-none absolute inset-y-0 end-2 flex items-center gap-1 text-muted"
             >
                 <button
                     v-if="clearable && hasValue && !disabled"
                     type="button"
-                    class="pointer-events-auto grid size-6 cursor-pointer place-items-center rounded hover:bg-gray-100 dark:hover:bg-neutral-700"
+                    class="pointer-events-auto grid size-6 cursor-pointer place-items-center rounded hover:bg-subtle"
                     :aria-label="
                         t(
                             multiple
@@ -604,11 +600,7 @@ defineExpose({
                 <ChevronDown class="size-4" aria-hidden="true" />
             </span>
         </div>
-        <p
-            v-if="helper"
-            :id="helperId"
-            class="mt-1 text-xs text-gray-500 dark:text-neutral-400"
-        >
+        <p v-if="helper" :id="helperId" class="mt-1 text-xs text-muted">
             {{ helper }}
         </p>
         <div :id="errorId"><FieldError :message="error" /></div>
@@ -616,7 +608,7 @@ defineExpose({
             <div v-if="open" data-search-select-layer>
                 <div
                     v-if="phone"
-                    class="fixed inset-0 z-[69] bg-black/40"
+                    class="fixed inset-0 z-[69] bg-scrim"
                     aria-hidden="true"
                     data-testid="search-select-backdrop"
                     @click="closePanel()"
@@ -624,15 +616,13 @@ defineExpose({
                 <div
                     :id="panelId"
                     ref="panelRef"
-                    class="fixed z-[70] overflow-hidden rounded-lg border border-gray-300 bg-white text-gray-900 shadow-xl ring-1 ring-black/5 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100"
+                    class="fixed z-[70] overflow-hidden rounded-lg border border-line-strong bg-surface text-ink shadow-pop ring-1 ring-line"
                     :class="phone ? 'inset-x-2 top-2' : ''"
                     :style="panelStyle"
                 >
-                    <div
-                        class="relative border-b border-gray-200 p-2 dark:border-neutral-700"
-                    >
+                    <div class="relative border-b border-line p-2">
                         <Search
-                            class="pointer-events-none absolute start-4 top-1/2 size-4 -translate-y-1/2 text-gray-400"
+                            class="pointer-events-none absolute start-4 top-1/2 size-4 -translate-y-1/2 text-muted"
                             aria-hidden="true"
                         />
                         <input
@@ -644,7 +634,7 @@ defineExpose({
                             aria-expanded="true"
                             autocomplete="off"
                             maxlength="100"
-                            class="w-full rounded-md border border-gray-300 py-2 ps-8 pe-14 text-base sm:text-sm dark:border-neutral-600 dark:bg-neutral-900"
+                            class="w-full rounded-md border border-line-strong bg-surface py-2 ps-8 pe-14 text-base sm:text-sm"
                             :aria-controls="listboxId"
                             :aria-activedescendant="
                                 activeIndex >= 0
@@ -659,7 +649,7 @@ defineExpose({
                             @keydown="onInputKeydown"
                         />
                         <span
-                            class="absolute end-4 top-1/2 flex -translate-y-1/2 items-center gap-1 text-gray-400"
+                            class="absolute end-4 top-1/2 flex -translate-y-1/2 items-center gap-1 text-muted"
                         >
                             <LoaderCircle
                                 v-if="loading"
@@ -671,7 +661,7 @@ defineExpose({
                                 v-if="query !== ''"
                                 type="button"
                                 tabindex="-1"
-                                class="grid size-5 cursor-pointer place-items-center rounded hover:bg-gray-100 dark:hover:bg-neutral-700"
+                                class="grid size-5 cursor-pointer place-items-center rounded hover:bg-subtle"
                                 :aria-label="
                                     t('common.searchSelect.clearSearch')
                                 "
@@ -693,7 +683,7 @@ defineExpose({
                         <div
                             v-if="failed"
                             role="alert"
-                            class="m-2 flex items-start gap-2 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300"
+                            class="m-2 flex items-start gap-2 rounded-md border border-danger/30 bg-danger-soft p-3 text-sm text-danger-strong"
                             data-testid="search-select-error"
                         >
                             <CircleAlert
@@ -705,7 +695,7 @@ defineExpose({
                             }}</span>
                             <button
                                 type="button"
-                                class="inline-flex cursor-pointer items-center gap-1 rounded-md border border-red-300 px-2 py-1 text-xs font-medium dark:border-red-800"
+                                class="inline-flex cursor-pointer items-center gap-1 rounded-md border border-danger/30 px-2 py-1 text-xs font-medium"
                                 data-testid="search-select-retry"
                                 @click="refresh()"
                             >
@@ -715,7 +705,7 @@ defineExpose({
                         </div>
                         <p
                             v-if="belowMinimum"
-                            class="flex items-center gap-2 px-4 py-6 text-sm text-gray-500 dark:text-neutral-400"
+                            class="flex items-center gap-2 px-4 py-6 text-sm text-muted"
                             data-testid="search-select-min-chars"
                         >
                             <Keyboard class="size-4" aria-hidden="true" />
@@ -736,14 +726,14 @@ defineExpose({
                                 class="flex min-h-14 items-center gap-3 px-3 py-2"
                             >
                                 <span
-                                    class="size-10 shrink-0 animate-pulse rounded-full bg-gray-200 dark:bg-neutral-700"
+                                    class="size-10 shrink-0 animate-pulse rounded-full bg-line"
                                 ></span>
                                 <span class="flex-1 space-y-2">
                                     <span
-                                        class="block h-3 w-2/3 animate-pulse rounded bg-gray-200 dark:bg-neutral-700"
+                                        class="block h-3 w-2/3 animate-pulse rounded bg-line"
                                     ></span>
                                     <span
-                                        class="block h-2.5 w-1/2 animate-pulse rounded bg-gray-100 dark:bg-neutral-700/70"
+                                        class="block h-2.5 w-1/2 animate-pulse rounded bg-subtle"
                                     ></span>
                                 </span>
                             </div>
@@ -756,16 +746,14 @@ defineExpose({
                             :query="query"
                         >
                             <div
-                                class="flex flex-col items-center gap-2 px-4 py-8 text-center text-sm text-gray-500 dark:text-neutral-400"
+                                class="flex flex-col items-center gap-2 px-4 py-8 text-center text-sm text-muted"
                                 data-testid="search-select-empty"
                             >
                                 <PackageSearch
-                                    class="size-8 text-gray-400"
+                                    class="size-8 text-muted"
                                     aria-hidden="true"
                                 />
-                                <p
-                                    class="font-medium text-gray-700 dark:text-neutral-200"
-                                >
+                                <p class="font-medium text-ink">
                                     {{ t('common.searchSelect.noResults') }}
                                 </p>
                                 <p v-if="query !== ''" class="text-xs">
@@ -795,11 +783,9 @@ defineExpose({
                                 :aria-selected="isSelected(option)"
                                 class="flex min-h-14 cursor-pointer items-center gap-3 border-s-2 px-3 py-2 text-start"
                                 :class="[
-                                    index === activeIndex
-                                        ? 'bg-gray-100 dark:bg-neutral-700'
-                                        : '',
+                                    index === activeIndex ? 'bg-subtle' : '',
                                     isSelected(option)
-                                        ? 'border-blue-600 dark:border-blue-400'
+                                        ? 'border-focus'
                                         : 'border-transparent',
                                 ]"
                                 @click="choose(option)"
@@ -833,7 +819,7 @@ defineExpose({
                                     </StoreSearchOptionRow>
                                     <Check
                                         v-if="isSelected(option)"
-                                        class="size-4 shrink-0 text-blue-600 dark:text-blue-400"
+                                        class="size-4 shrink-0 text-link"
                                         aria-hidden="true"
                                     />
                                 </slot>
@@ -841,7 +827,7 @@ defineExpose({
                         </div>
                     </div>
                     <div
-                        class="flex items-center justify-between gap-2 border-t border-gray-200 px-3 py-1.5 text-xs text-gray-500 dark:border-neutral-700 dark:text-neutral-400"
+                        class="flex items-center justify-between gap-2 border-t border-line px-3 py-1.5 text-xs text-muted"
                     >
                         <span
                             role="status"
@@ -852,7 +838,7 @@ defineExpose({
                         <button
                             v-if="phone"
                             type="button"
-                            class="cursor-pointer rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 dark:border-neutral-600 dark:text-neutral-200"
+                            class="cursor-pointer rounded-md border border-line-strong px-3 py-1.5 text-sm font-medium text-ink"
                             @click="closePanel()"
                         >
                             {{ t('common.searchSelect.close') }}
@@ -864,20 +850,16 @@ defineExpose({
                             :title="t('common.searchSelect.keyboardHint')"
                         >
                             <Keyboard class="size-3.5" aria-hidden="true" />
-                            <kbd
-                                class="rounded border border-gray-300 px-1 dark:border-neutral-600"
+                            <kbd class="rounded border border-line-strong px-1"
                                 >↑</kbd
                             >
-                            <kbd
-                                class="rounded border border-gray-300 px-1 dark:border-neutral-600"
+                            <kbd class="rounded border border-line-strong px-1"
                                 >↓</kbd
                             >
-                            <kbd
-                                class="rounded border border-gray-300 px-1 dark:border-neutral-600"
+                            <kbd class="rounded border border-line-strong px-1"
                                 >Enter</kbd
                             >
-                            <kbd
-                                class="rounded border border-gray-300 px-1 dark:border-neutral-600"
+                            <kbd class="rounded border border-line-strong px-1"
                                 >Esc</kbd
                             >
                         </span>

@@ -297,10 +297,8 @@ function isLowStock(product: ProductSummary): boolean {
 }
 
 /** The Barcodes dialog's preview and download buttons, and the same while disabled. */
-const barcodeActionClass =
-    'cursor-pointer text-gray-400 hover:text-blue-600 dark:text-neutral-500 dark:hover:text-blue-400';
-const barcodeActionDisabledClass =
-    'cursor-not-allowed text-gray-400 opacity-50 dark:text-neutral-500';
+const barcodeActionClass = 'cursor-pointer text-muted hover:text-link';
+const barcodeActionDisabledClass = 'cursor-not-allowed text-muted opacity-50';
 const barcodesDialogProduct = ref<ProductSummary | null>(null);
 /** The barcode whose printable label is shown inline in the dialog, if any. */
 const previewedBarcodeId = ref<number | 'default' | null>(null);
@@ -677,16 +675,14 @@ function refreshBarcodesDialogProduct(): void {
                     <Download class="h-4 w-4 shrink-0" />
                     {{ t('products.downloadAllBarcodes') }}
                 </button>
-                <ul
-                    class="mt-4 divide-y divide-gray-100 dark:divide-neutral-700"
-                >
+                <ul class="mt-4 divide-y divide-line">
                     <li data-testid="default-barcode" class="py-2 text-sm">
                         <div class="flex items-center justify-between gap-2">
-                            <span class="flex items-center gap-2">
+                            <span class="flex items-center gap-2 font-mono">
                                 {{ barcodesDialogProduct.id }}
                                 <span
                                     :title="t('products.defaultBarcodeHint')"
-                                    class="rounded bg-gray-100 px-1.5 py-0.5 text-xs text-gray-600 dark:bg-neutral-700 dark:text-neutral-300"
+                                    class="rounded bg-subtle px-1.5 py-0.5 text-xs text-muted"
                                 >
                                     {{ t('products.defaultBarcode') }}
                                 </span>
@@ -731,7 +727,7 @@ function refreshBarcodesDialogProduct(): void {
                                 previewDefaultBarcode.url(barcodesDialogProduct)
                             "
                             :alt="String(barcodesDialogProduct.id)"
-                            class="mt-2 max-w-full rounded border border-gray-200 bg-white dark:border-neutral-700"
+                            class="mt-2 max-w-full rounded border border-line bg-surface"
                         />
                     </li>
                     <li
@@ -740,7 +736,7 @@ function refreshBarcodesDialogProduct(): void {
                         class="py-2 text-sm"
                     >
                         <div class="flex items-center justify-between gap-2">
-                            {{ barcode.barcode }}
+                            <span class="font-mono">{{ barcode.barcode }}</span>
                             <span class="flex items-center gap-3">
                                 <button
                                     type="button"
@@ -818,7 +814,7 @@ function refreshBarcodesDialogProduct(): void {
                                         () => confirmDelete(barcode.barcode)
                                     "
                                     :on-success="refreshBarcodesDialogProduct"
-                                    class="cursor-pointer text-gray-400 hover:text-red-600 dark:text-neutral-500 dark:hover:text-red-400"
+                                    class="cursor-pointer text-muted hover:text-danger"
                                 >
                                     <X class="h-4 w-4" />
                                 </Link>
@@ -827,7 +823,7 @@ function refreshBarcodesDialogProduct(): void {
                         <p
                             v-if="!barcode.printable"
                             :id="`barcode-note-${barcode.id}`"
-                            class="mt-1 text-xs text-gray-600 dark:text-neutral-400"
+                            class="mt-1 text-xs text-muted"
                         >
                             {{ t('products.barcodeNotPrintable') }}
                         </p>
@@ -840,13 +836,13 @@ function refreshBarcodesDialogProduct(): void {
                                 })
                             "
                             :alt="barcode.barcode"
-                            class="mt-2 max-w-full rounded border border-gray-200 bg-white dark:border-neutral-700"
+                            class="mt-2 max-w-full rounded border border-line bg-surface"
                         />
                     </li>
                 </ul>
                 <p
                     v-if="barcodesDialogProduct.barcodes.length === 0"
-                    class="mt-4 text-sm text-gray-500 dark:text-neutral-400"
+                    class="mt-4 text-sm text-muted"
                 >
                     {{ t('products.noBarcodes') }}
                 </p>
@@ -946,13 +942,11 @@ function refreshBarcodesDialogProduct(): void {
             </template>
 
             <template #row="{ row: product }">
-                <td class="px-4 py-2 text-gray-500 dark:text-neutral-400">
+                <td class="px-4 py-2 text-muted">
                     {{ product.id }}
                 </td>
                 <td class="px-4 py-2">
-                    <div
-                        class="flex items-center gap-2 font-medium text-gray-900 dark:text-neutral-100"
-                    >
+                    <div class="flex items-center gap-2 font-medium text-ink">
                         <img
                             v-if="product.image_url"
                             :src="product.image_url"
@@ -1018,9 +1012,7 @@ function refreshBarcodesDialogProduct(): void {
                         "
                         :class="[
                             filterTriggerButtonClass,
-                            isLowStock(product)
-                                ? 'text-red-600 dark:text-red-400'
-                                : '',
+                            isLowStock(product) ? 'text-danger' : '',
                         ]"
                         @click="openMinimumPalletsDialog(product)"
                     >

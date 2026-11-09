@@ -16,6 +16,7 @@ import FilterDialog from '@/components/FilterDialog.vue';
 import FilterDialogFooter from '@/components/FilterDialogFooter.vue';
 import FilterMultiSelect from '@/components/FilterMultiSelect.vue';
 import FilterSelect from '@/components/FilterSelect.vue';
+import FilterWarehouseSelect from '@/components/FilterWarehouseSelect.vue';
 import HelpLink from '@/components/HelpLink.vue';
 import PageHeader from '@/components/PageHeader.vue';
 import Pagination from '@/components/Pagination.vue';
@@ -49,6 +50,7 @@ const props = defineProps<{
 }>();
 
 const filters = reactive({
+    warehouse_ids: (props.filters.warehouse_ids ?? []).map(String),
     user_id: (props.filters.user_id ?? []).map(String),
     completed:
         props.filters.completed === undefined
@@ -70,6 +72,7 @@ const filtersOpen = ref(false);
 
 const activeFilterCount = computed(() =>
     countActive([
+        filters.warehouse_ids.length > 0,
         filters.user_id.length > 0,
         filters.completed !== '',
         dateRangeActive(filters),
@@ -93,6 +96,7 @@ function applyFilters(): void {
 }
 
 function clearFilters(): void {
+    filters.warehouse_ids = [];
     filters.user_id = [];
     filters.completed = '';
     filters.date_from = '';
@@ -158,6 +162,15 @@ function onPerPageChange(perPage: number): void {
                         {{ t('common.filters.title') }}
                     </h3>
                     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                        <FilterWarehouseSelect
+                            id="filter-warehouse"
+                            v-model="filters.warehouse_ids"
+                            :label="t('warehouses.filters.label')"
+                            :all-label="t('cellVerificationRound.filters.all')"
+                            :selected-count-label="selectedCountLabel"
+                            :selected="filterOptions.warehouses"
+                        />
+
                         <FilterMultiSelect
                             id="filter-user"
                             v-model="filters.user_id"

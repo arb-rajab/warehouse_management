@@ -12,7 +12,7 @@ describe('DetailItem', () => {
         expect(wrapper.element.tagName).toBe('DIV');
         expect(wrapper.get('dt').text()).toBe('Tracking code');
         expect(wrapper.get('dt').classes()).toContain('text-xs');
-        expect(wrapper.get('dt').classes()).toContain('text-gray-500');
+        expect(wrapper.get('dt').classes()).toContain('text-muted');
         expect(wrapper.get('dd').text()).toBe('TRK-1');
         expect(wrapper.get('dd').classes()).toContain('break-words');
         expect(wrapper.find('[data-detail-empty]').exists()).toBe(false);

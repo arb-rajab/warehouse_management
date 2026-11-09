@@ -77,7 +77,9 @@ class HandleInertiaRequests extends Middleware
     protected $rootView = 'app';
 
     /**
-     * Define the props that are shared by default.
+     * Define the props that are shared by default. `brandName` is the
+     * storefront's placeholder `messages.brand_name`, so the back-office
+     * sidebar and the storefront header read one owner-editable source.
      *
      * @see https://inertiajs.com/shared-data
      *
@@ -92,6 +94,7 @@ class HandleInertiaRequests extends Middleware
         return [
             ...parent::share($request),
             'name' => config('app.name'),
+            'brandName' => fn () => __('messages.brand_name'),
             'locale' => app()->getLocale(),
             'fallbackLocale' => config('app.fallback_locale'),
             'auth' => [
@@ -129,6 +132,7 @@ class HandleInertiaRequests extends Middleware
     {
         return [
             'name' => config('app.name'),
+            'brandName' => fn () => __('messages.brand_name'),
             'locale' => fn () => StoreLocale::uiLocale(),
             'fallbackLocale' => StoreLocale::uiLocale(config('app.fallback_locale')),
             'auth' => [

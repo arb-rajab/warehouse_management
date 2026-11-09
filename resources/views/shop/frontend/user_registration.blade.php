@@ -203,8 +203,8 @@
                                                             <div class="modal-header d-block py-4">
                                                                 <div class="d-flex justify-content-center">
                                                                 </div>
-                                                                <h4 class="modal-title text-center fw-700" id="personalInfo_enterPassword_modalModalLabel" style="color: #ff0000;">{{ __('storefront.common.terms_conditions')}}</h4>
-                                                                <p class="fs-16 fw-600 text-center" style="color: #8d8d8d;">{{ __('storefront.auth.please_read_and_agree_to_terms_and_conditions_to_create_an_account')}}</p>
+                                                                <h4 class="modal-title text-center fw-700 text-danger" id="personalInfo_enterPassword_modalModalLabel">{{ __('storefront.common.terms_conditions')}}</h4>
+                                                                <p class="fs-16 fw-600 text-center text-secondary">{{ __('storefront.auth.please_read_and_agree_to_terms_and_conditions_to_create_an_account')}}</p>
                                                             </div>
 
                                                             <div class="modal-body">

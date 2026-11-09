@@ -53,18 +53,18 @@ function buttonLabel(): string {
         <button
             :id="id"
             type="button"
-            class="flex w-full min-w-48 cursor-pointer items-center justify-between gap-2 rounded-md border border-gray-300 px-3 py-2 text-start text-sm dark:border-neutral-700 dark:bg-neutral-800"
+            class="flex w-full min-w-48 cursor-pointer items-center justify-between gap-2 rounded-md border border-line-strong bg-surface px-3 py-2 text-start text-sm"
             aria-haspopup="listbox"
             :aria-expanded="open"
             @click="toggleOpen"
         >
             <span class="truncate">{{ buttonLabel() }}</span>
-            <ChevronDown class="h-4 w-4 shrink-0 text-gray-400" />
+            <ChevronDown class="h-4 w-4 shrink-0 text-muted" />
         </button>
         <div
             v-if="open"
             role="listbox"
-            class="absolute z-10 mt-1 w-max min-w-full rounded-md border border-gray-300 bg-white p-2 shadow-lg dark:border-neutral-700 dark:bg-neutral-800"
+            class="absolute z-10 mt-1 w-max min-w-full rounded-lg border border-line-strong bg-surface p-2 shadow-pop"
             :style="{ maxWidth: `${panelMaxWidthPx}px` }"
         >
             <label
@@ -72,7 +72,7 @@ function buttonLabel(): string {
                 :key="option.value"
                 role="option"
                 :aria-selected="isChecked(option.value)"
-                class="flex cursor-pointer items-start gap-2 rounded px-2 py-1 text-sm hover:bg-gray-100 dark:hover:bg-neutral-700"
+                class="flex cursor-pointer items-start gap-2 rounded px-2 py-1 text-sm hover:bg-subtle"
             >
                 <input
                     :ref="(el) => setOptionRef(el, index)"

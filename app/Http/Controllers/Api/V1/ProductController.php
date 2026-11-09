@@ -4,19 +4,25 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\FilterProductsRequest;
+use App\Http\Requests\Api\V1\StoreProductBarcodeRequest;
 use App\Http\Resources\ProductPalletResource;
 use App\Http\Resources\ProductResource;
+use App\Http\Resources\ProductSummaryResource;
 use App\Models\Pallet;
 use App\Models\Product;
 use App\Models\ProductBarcode;
+use App\Services\ProductBarcodeAttacher;
 use Dedoc\Scramble\Attributes\Response as DocumentedResponse;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response as HttpResponse;
+use Illuminate\Validation\ValidationException;
 
 class ProductController extends Controller
 {
+    public function __construct(private readonly ProductBarcodeAttacher $barcodeAttacher) {}
+
     /**
      * An inactive product is only ever listed while the warehouse still holds
      * it (see Product::activeOrInWarehouse()): with no `product_status` that
@@ -118,5 +124,46 @@ class ProductController extends Controller
             ->each(fn (Pallet $pallet) => $pallet->setAttribute('product_boxes_count', $productBoxesCount));
 
         return ProductPalletResource::collection($pallets);
+    }
+
+    /**
+     * Adds a barcode to the product, in `product_barcodes`, exactly as the WMS
+     * products page does (`ProductBarcodeAttacher`: the value is trimmed,
+     * printable ASCII up to 64 characters, checked by `NewProductBarcode` and
+     * inserted under its lock). Answers 201 with the product's listed barcodes,
+     * the new one included and flagged in `barcode`; the own-id row the import
+     * stores is never touched and never listed. A value this product already
+     * holds, or the id of a product, is 422 like the WMS form; a value another
+     * product holds is 409 `barcode_taken` with those product ids (ascending).
+     * An unknown product is 404.
+     */
+    #[DocumentedResponse(201, description: 'The barcode was added; `barcode` is the new row and `barcodes` every barcode the product lists, oldest first.', type: 'array{data: array{product_id: int, barcode: array{id: int, barcode: string, printable: bool}, barcodes: list<array{id: int, barcode: string, printable: bool}>}}')]
+    #[DocumentedResponse(409, description: 'Another product already holds the code (`error_code`: `barcode_taken`; `product_ids` lists those products, ascending).', type: 'array{message: string, error_code: string, product_ids: list<int>}')]
+    public function storeBarcode(StoreProductBarcodeRequest $request, Product $product): JsonResponse
+    {
+        $value = $request->validated('barcode');
+
+        try {
+            $created = $this->barcodeAttacher->attach($product, $value);
+        } catch (ValidationException $exception) {
+            // Lost a race: the value was taken between the request's check and the lock.
+            $holders = $this->barcodeAttacher->otherHolders($product, $value);
+
+            if ($holders === []) {
+                throw $exception;
+            }
+
+            return StoreProductBarcodeRequest::takenResponse($holders);
+        }
+
+        $barcodes = ProductBarcode::listedInWms(
+            $product->barcodes()->select(['id', 'product_id', 'barcode'])->orderBy('id')->get()
+        );
+
+        return response()->json(['data' => [
+            'product_id' => $product->id,
+            'barcode' => ProductSummaryResource::barcodeShape($created),
+            'barcodes' => $barcodes->map(fn (ProductBarcode $barcode): array => ProductSummaryResource::barcodeShape($barcode))->all(),
+        ]], HttpResponse::HTTP_CREATED);
     }
 }

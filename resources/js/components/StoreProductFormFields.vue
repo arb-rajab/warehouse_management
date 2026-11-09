@@ -121,12 +121,11 @@ const flashDiscountType = ref(
     stored?.flash_deal_id == null ? '' : (stored.discount_type ?? ''),
 );
 const sectionClass =
-    'grid gap-4 rounded-lg border border-gray-200 p-4 lg:grid-cols-2 dark:border-neutral-800';
+    'grid gap-4 rounded-lg border border-line p-4 lg:grid-cols-2';
 const legendClass = 'px-1 text-sm font-semibold';
 const checkboxClass = 'h-4 w-4 cursor-pointer';
-const helpClass = 'mt-1 text-xs text-gray-600 dark:text-neutral-400';
-const linkClass =
-    'text-blue-700 underline hover:no-underline dark:text-blue-300';
+const helpClass = 'mt-1 text-xs text-muted';
+const linkClass = 'text-link underline hover:no-underline';
 </script>
 
 <template>
@@ -138,7 +137,7 @@ const linkClass =
             <p
                 v-if="readOnlyFields?.length"
                 id="otajer-synced-fields"
-                class="flex items-start gap-2 rounded-md bg-blue-50 p-3 text-sm text-blue-900 lg:col-span-2 dark:bg-blue-950 dark:text-blue-100"
+                class="flex items-start gap-2 rounded-md bg-info-soft p-3 text-sm text-info-strong lg:col-span-2"
             >
                 <Info class="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
                 {{
@@ -424,7 +423,7 @@ const linkClass =
                         v-if="barcodeImageSrc(value)"
                         :src="barcodeImageSrc(value)"
                         :alt="value.trim()"
-                        class="mt-2 w-full max-w-xs rounded border border-gray-200 bg-white dark:border-neutral-700"
+                        class="mt-2 w-full max-w-xs rounded border border-line bg-surface"
                     />
                     <p v-else-if="barcodeNote(value)" :class="helpClass">
                         {{ barcodeNote(value) }}
@@ -560,7 +559,7 @@ const linkClass =
                     :html="description ?? ''"
                     aria-labelledby="description-label"
                     aria-describedby="description-otajer-synced"
-                    class="rounded-md border border-gray-300 bg-gray-100 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-neutral-900"
+                    class="rounded-md border border-line-strong bg-subtle px-3 py-2 text-sm"
                 />
                 <input
                     type="hidden"
@@ -696,7 +695,7 @@ const linkClass =
                     <p
                         v-if="shippingType === 'flat_rate'"
                         id="flat_shipping_cost_help"
-                        class="text-xs text-gray-600 dark:text-neutral-400"
+                        class="text-xs text-muted"
                     >
                         {{ t('store.products.form.shippingCostHelp') }}
                     </p>
@@ -895,10 +894,7 @@ const linkClass =
                     </option>
                 </select>
                 <FieldError :message="errors.flash_discount_type" />
-                <p
-                    id="flash_discount_help"
-                    class="text-xs text-gray-600 dark:text-neutral-400"
-                >
+                <p id="flash_discount_help" class="text-xs text-muted">
                     {{ t('store.products.form.flashDiscountHelp') }}
                 </p>
             </div>

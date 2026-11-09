@@ -457,6 +457,10 @@
     color: var(--wms-muted);
 }
 
+.wms[data-theme='dark'] .wms-link {
+    color: var(--wms-primary-link);
+}
+
 .wms-link {
     color: var(--wms-primary);
     font-weight: 800;

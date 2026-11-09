@@ -30,6 +30,6 @@ onBeforeUnmount(() => {
         dir="ltr"
         role="region"
         :aria-label="label"
-        class="isolate h-120 w-full rounded-md border border-gray-200 dark:border-neutral-700"
+        class="isolate h-120 w-full rounded-md border border-line"
     />
 </template>

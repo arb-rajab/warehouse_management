@@ -55,7 +55,7 @@ const permissionsError = computed(
             <fieldset
                 v-for="group in permissionGroups"
                 :key="group.section"
-                class="rounded-md border border-gray-200 p-3 dark:border-neutral-800"
+                class="rounded-md border border-line p-3"
             >
                 <legend class="px-1 text-sm font-medium">
                     {{ group.label }}
@@ -64,7 +64,7 @@ const permissionsError = computed(
                     <label
                         v-for="permission in group.permissions"
                         :key="permission.id"
-                        class="flex cursor-pointer items-center gap-2 text-sm text-gray-700 dark:text-neutral-300"
+                        class="flex cursor-pointer items-center gap-2 text-sm text-ink"
                     >
                         <input
                             type="checkbox"
@@ -73,7 +73,7 @@ const permissionsError = computed(
                             :checked="
                                 checkedPermissionIds.includes(permission.id)
                             "
-                            class="h-4 w-4 cursor-pointer rounded border-gray-300 dark:border-neutral-700"
+                            class="h-4 w-4 cursor-pointer rounded border-line-strong"
                         />
                         {{ permission.label }}
                     </label>

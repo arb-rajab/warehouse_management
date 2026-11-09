@@ -12,6 +12,8 @@ return [
     'row_cannot_reduce_columns_has_history' => 'لا يمكن تقليل عدد الأعمدة: تم تسجيل نشاط على خلايا بعض الأعمدة المراد حذفها.',
     'row_cannot_reduce_levels_has_history' => 'لا يمكن تقليل عدد المستويات: تم تسجيل نشاط على خلايا بعض المستويات المراد حذفها.',
     'row_cannot_delete_has_history' => 'لا يمكن حذف ممر تم تسجيل نشاط على خلاياه.',
+    'row_letter_in_several_warehouses' => 'حرف هذا الممر مستخدم في أكثر من مستودع. اختر المستودع.',
+    'warehouse_cannot_delete_has_rows' => 'لا يمكن حذف مستودع لا يزال يحتوي على ممرات.',
     'slot_does_not_exist' => 'هذا الموقع غير موجود في هذا الممر.',
     'cannot_delete_own_account' => 'لا يمكنك حذف حسابك الخاص.',
     'pallet_already_at_location' => 'المنصات النقالة موجودة بالفعل في هذا الموقع.',
@@ -36,6 +38,7 @@ return [
     'barcode_is_product_id' => 'هذا الباركود هو رقم تعريف منتج. لكل منتج رقم تعريفه كباركود افتراضي.',
     'barcodes_not_printable_in_zip' => 'لا يمكن رسم هذه الباركودات كملصق Code 128، لذلك لم تُضمَّن في هذا الملف المضغوط:',
     'barcode_ambiguous' => 'هذا الباركود يخص أكثر من منتج.',
+    'barcode_taken' => 'هذا الباركود يخص منتجًا آخر بالفعل.',
     'password_same_as_current' => 'يجب أن تختلف كلمة المرور الجديدة عن كلمة المرور الحالية.',
     'pallet_moved' => 'تم نقل هذه المنصة النقالة منذ تحميلها. يرجى التحديث والمحاولة مرة أخرى.',
     'precondition_failed' => 'تغيّر هذا العنصر منذ تحميله. يرجى التحديث والمحاولة مرة أخرى.',
@@ -76,4 +79,6 @@ return [
     'staff_role_not_assignable' => 'يمكنك فقط منح دور لا يتجاوز صلاحياتك، ولا يمكنك تغيير دورك الخاص.',
     'seller_payout_full_request' => 'ادفع كامل المبلغ المطلوب (:amount)، أو اطلب من البائع تقديم طلب جديد. الدفعات الجزئية غير مدعومة.',
     'seller_payout_balance_limit' => 'لا يمكن أن يتجاوز المبلغ الرصيد المتاح لطريقة الدفع هذه (:amount).',
+    // Storefront header brand name: a placeholder until the owner chooses the store's name.
+    'brand_name' => 'اسم المتجر',
 ];

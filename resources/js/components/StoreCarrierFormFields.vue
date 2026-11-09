@@ -206,7 +206,7 @@ onMounted(validateRanges);
             <fieldset
                 v-for="(range, index) in ranges"
                 :key="range.key"
-                class="space-y-3 rounded-md border border-gray-300 p-4 dark:border-neutral-700"
+                class="space-y-3 rounded-md border border-line-strong p-4"
             >
                 <legend class="px-2 font-medium">
                     {{ t('store.carriers.range') }} {{ index + 1 }}

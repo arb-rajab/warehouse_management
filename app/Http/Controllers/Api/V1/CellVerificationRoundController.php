@@ -35,6 +35,7 @@ class CellVerificationRoundController extends Controller
             ->ownedBy($user->id)
             ->withCount('reports')
             ->when($request->boolean('only_unfinished'), fn (Builder $query) => $query->unfinished())
+            ->forWarehouses($request->warehouseIds())
             ->latest('created_at')
             ->latest('id')
             ->paginate(20)

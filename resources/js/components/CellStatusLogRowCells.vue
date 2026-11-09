@@ -16,7 +16,7 @@ import {
 import type { DisplayCellStatusLog } from '@/lib/cellStatusLogDisplay';
 import { formatDate, formatDateTime, formatDuration } from '@/lib/date';
 import { t } from '@/lib/i18n';
-import { formatSlot } from '@/lib/location';
+import { formatSlot, rowLinkOptions } from '@/lib/location';
 import { productName } from '@/lib/productName';
 
 /**
@@ -51,15 +51,14 @@ const pair = computed(() => transferPair(props.log));
     <td class="px-4 py-2">
         <div class="flex items-center gap-1">
             <TableLink
+                class="font-mono"
                 :href="
                     showRow(
                         { letter: pair.from.row_letter },
-                        {
-                            query: {
-                                cell_number: pair.from.cell_number,
-                                flat_number: pair.from.flat_number,
-                            },
-                        },
+                        rowLinkOptions(pair.from.warehouse, {
+                            cell_number: pair.from.cell_number,
+                            flat_number: pair.from.flat_number,
+                        }),
                     )
                 "
             >
@@ -73,18 +72,17 @@ const pair = computed(() => transferPair(props.log));
             </TableLink>
             <template v-if="pair.to">
                 <ArrowRight
-                    class="h-3 w-3 shrink-0 text-gray-400 rtl:rotate-180 dark:text-neutral-500"
+                    class="h-3 w-3 shrink-0 text-muted rtl:rotate-180"
                 />
                 <TableLink
+                    class="font-mono"
                     :href="
                         showRow(
                             { letter: pair.to.row_letter },
-                            {
-                                query: {
-                                    cell_number: pair.to.cell_number,
-                                    flat_number: pair.to.flat_number,
-                                },
-                            },
+                            rowLinkOptions(pair.to.warehouse, {
+                                cell_number: pair.to.cell_number,
+                                flat_number: pair.to.flat_number,
+                            }),
                         )
                     "
                 >
@@ -100,9 +98,7 @@ const pair = computed(() => transferPair(props.log));
         </div>
     </td>
     <td class="px-4 py-2">
-        <div
-            class="flex items-center gap-1 font-medium text-gray-900 dark:text-neutral-100"
-        >
+        <div class="flex items-center gap-1 font-medium text-ink">
             {{
                 log.pairedIn
                     ? t('cellLog.actions.transferred')
@@ -110,10 +106,10 @@ const pair = computed(() => transferPair(props.log));
             }}
             <TriangleAlert
                 v-if="log.flagged"
-                class="h-3.5 w-3.5 shrink-0 text-amber-500"
+                class="h-3.5 w-3.5 shrink-0 text-warning"
             />
         </div>
-        <div class="text-xs text-gray-500 dark:text-neutral-400">
+        <div class="text-xs text-muted">
             {{ cellStateLabel(log.from_state) }}
             <template v-if="!log.pairedIn">
                 <span class="inline-block rtl:rotate-180">→</span>
@@ -124,7 +120,7 @@ const pair = computed(() => transferPair(props.log));
         <button
             v-if="hasUnacknowledgedFlags(log)"
             type="button"
-            class="mt-1 inline-flex cursor-pointer items-center gap-1 text-xs text-blue-600 hover:underline dark:text-blue-400"
+            class="mt-1 inline-flex cursor-pointer items-center gap-1 text-xs text-link hover:underline"
             @click="acknowledgeFlags(log, returnTo)"
         >
             <Check class="h-3 w-3 shrink-0" />
@@ -134,7 +130,7 @@ const pair = computed(() => transferPair(props.log));
     <td class="px-4 py-2">
         <div
             v-if="log.product"
-            class="flex items-center gap-2 font-medium text-gray-900 dark:text-neutral-100"
+            class="flex items-center gap-2 font-medium text-ink"
         >
             <img
                 v-if="log.product.image_url"
@@ -145,37 +141,31 @@ const pair = computed(() => transferPair(props.log));
             {{ productName(log.product.name, log.product.ar_name) }}
             <ProductActiveBadge :active="log.product.active" />
         </div>
-        <span v-else class="text-gray-400 dark:text-neutral-600">—</span>
+        <span v-else class="text-muted">—</span>
     </td>
     <td class="px-4 py-2">
         <template v-if="log.pallet">
             <button
                 type="button"
-                class="inline-flex cursor-pointer items-center gap-1 font-medium text-blue-600 hover:underline dark:text-blue-400"
+                class="inline-flex cursor-pointer items-center gap-1 font-medium text-link hover:underline"
                 :title="t('cellLog.columns.viewPalletHistory')"
                 @click="emit('view-pallet-history', log.pallet.id)"
             >
                 #{{ log.pallet.id }}
                 <History class="h-3 w-3 shrink-0" />
             </button>
-            <div
-                v-if="log.boxes_count !== null"
-                class="text-xs text-gray-500 dark:text-neutral-400"
-            >
+            <div v-if="log.boxes_count !== null" class="text-xs text-muted">
                 {{ t('cellLog.columns.boxes') }}: {{ log.boxes_count }}
             </div>
-            <div
-                v-if="log.pallet.expiration_date"
-                class="text-xs text-gray-500 dark:text-neutral-400"
-            >
+            <div v-if="log.pallet.expiration_date" class="text-xs text-muted">
                 {{ t('cellLog.columns.expires') }}
                 {{ formatDate(log.pallet.expiration_date) }}
             </div>
         </template>
-        <span v-else class="text-gray-400 dark:text-neutral-600">—</span>
+        <span v-else class="text-muted">—</span>
     </td>
     <td
-        class="max-w-xs truncate px-4 py-2 text-gray-500 dark:text-neutral-400"
+        class="max-w-xs truncate px-4 py-2 text-muted"
         :title="log.note ?? undefined"
     >
         {{ log.note ?? '—' }}
@@ -186,15 +176,15 @@ const pair = computed(() => transferPair(props.log));
         </TableLink>
     </td>
     <td class="px-4 py-2">
-        <div class="font-medium text-gray-900 dark:text-neutral-100">
+        <div class="font-medium text-ink">
             {{ formatDateTime(log.created_at) }}
         </div>
-        <div class="text-xs text-gray-500 dark:text-neutral-400">
+        <div class="text-xs text-muted">
             {{ formatDuration(log.duration_seconds) }}
         </div>
         <div
             v-if="!log.next_log_at"
-            class="flex items-center gap-1 text-xs text-gray-400 dark:text-neutral-600"
+            class="flex items-center gap-1 text-xs text-muted"
         >
             <Clock class="h-3 w-3 shrink-0" />
             {{ t('cellLog.columns.ongoing') }}

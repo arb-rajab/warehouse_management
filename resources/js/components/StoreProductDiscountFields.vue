@@ -34,10 +34,7 @@ const type = ref(props.discountType === 'percent' ? 'percent' : 'amount');
                 dir="ltr"
                 aria-describedby="date_range_help"
             />
-            <p
-                id="date_range_help"
-                class="mt-1 text-xs text-gray-600 dark:text-neutral-400"
-            >
+            <p id="date_range_help" class="mt-1 text-xs text-muted">
                 {{ t('store.productForm.dateHelp') }}
             </p>
         </div>

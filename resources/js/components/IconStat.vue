@@ -138,7 +138,7 @@ onBeforeUnmount(() => {
     <button
         ref="trigger"
         type="button"
-        class="inline-flex cursor-help items-center gap-1.5 rounded text-inherit tabular-nums focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
+        class="inline-flex cursor-help items-center gap-1.5 rounded text-inherit tabular-nums focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
         :class="tone"
         @mouseenter="onEnter"
         @mouseleave="hovered = false"
@@ -160,7 +160,7 @@ onBeforeUnmount(() => {
             ref="bubble"
             data-icon-stat-tooltip
             aria-hidden="true"
-            class="pointer-events-none fixed z-50 w-max max-w-60 -translate-x-1/2 rounded-md bg-gray-900 px-2.5 py-1.5 text-xs font-normal whitespace-normal text-white shadow-lg dark:bg-neutral-100 dark:text-neutral-900"
+            class="pointer-events-none fixed z-50 w-max max-w-60 -translate-x-1/2 rounded-md bg-ink px-2.5 py-1.5 text-xs font-normal whitespace-normal text-page shadow-pop"
             :class="position.below ? '' : '-translate-y-full'"
             :style="{ top: position.top, left: position.left }"
             >{{ label }}</span

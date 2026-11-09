@@ -29,7 +29,7 @@ import {
 import { formatDateTime } from '@/lib/date';
 import { filterSectionHeadingClass as sectionHeadingClass } from '@/lib/filters';
 import { t } from '@/lib/i18n';
-import { formatSlot } from '@/lib/location';
+import { formatSlot, rowLinkOptions } from '@/lib/location';
 import { usePageError } from '@/lib/pageErrors';
 import type {
     CellStatusLog,
@@ -83,7 +83,7 @@ function onReportsPerPageChange(perPage: number): void {
         <PageHeader :title="t('users.show.title', { name: user.name })">
             <Link
                 :href="editUser(user)"
-                class="inline-flex items-center gap-1 text-sm text-gray-600 hover:underline dark:text-neutral-400"
+                class="inline-flex items-center gap-1 text-sm text-muted hover:underline"
             >
                 <Pencil class="h-3.5 w-3.5" />
                 {{ t('users.show.editUser') }}
@@ -157,17 +157,14 @@ function onReportsPerPageChange(perPage: number): void {
                     </td>
                     <td class="px-4 py-2">
                         <TableLink
+                            class="font-mono"
                             :href="
                                 showRow(
                                     { letter: report.cell.row_letter },
-                                    {
-                                        query: {
-                                            cell_number:
-                                                report.cell.cell_number,
-                                            flat_number:
-                                                report.cell.flat_number,
-                                        },
-                                    },
+                                    rowLinkOptions(report.cell.warehouse, {
+                                        cell_number: report.cell.cell_number,
+                                        flat_number: report.cell.flat_number,
+                                    }),
                                 )
                             "
                         >
@@ -204,7 +201,7 @@ function onReportsPerPageChange(perPage: number): void {
                         </div>
                         <div
                             v-if="snapshotProductLabel(report.expected)"
-                            class="text-xs text-gray-500 dark:text-neutral-400"
+                            class="text-xs text-muted"
                         >
                             {{ snapshotProductLabel(report.expected) }} ·
                             {{ report.expected.boxes_count }}
@@ -220,7 +217,7 @@ function onReportsPerPageChange(perPage: number): void {
                         </div>
                         <div
                             v-if="snapshotProductLabel(report.reported)"
-                            class="text-xs text-gray-500 dark:text-neutral-400"
+                            class="text-xs text-muted"
                         >
                             {{ snapshotProductLabel(report.reported) }} ·
                             {{ report.reported.boxes_count }}

@@ -78,7 +78,7 @@ const initialFiles = computed<StoreUpload[]>(() =>
                 )?.[1]
             "
         />
-        <p class="text-sm text-gray-600 dark:text-neutral-300">
+        <p class="text-sm text-muted">
             {{ t('store.trucks.fields.photosHint') }}
         </p>
     </div>

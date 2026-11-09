@@ -55,7 +55,7 @@ function updateText(
         <div
             v-for="(_, index) in settings.home_slider_images"
             :key="slideKeys[index]"
-            class="space-y-3 rounded-md border border-gray-200 p-3 dark:border-neutral-700"
+            class="space-y-3 rounded-md border border-line p-3"
         >
             <StoreUploadField
                 :id="`slider-image-${index}`"

@@ -199,10 +199,7 @@ const tableColumns = computed(() => [
             />
         </PageHeader>
         <ActionErrorBanner :message="tripError || deliveryError" />
-        <p
-            v-if="access.can('edit_trip')"
-            class="mb-4 text-sm text-gray-600 dark:text-neutral-400"
-        >
+        <p v-if="access.can('edit_trip')" class="mb-4 text-sm text-muted">
             {{ t('store.trips.orders.invoiceHelp') }}
         </p>
         <StoreListFilters :action="tripOrders()" :chips="appliedFilters">
@@ -334,6 +331,7 @@ const tableColumns = computed(() => [
                         :value="id"
                     />
                     <SubmitButton
+                        variant="danger"
                         :label="t('store.trips.orders.deleteSelection')"
                         :processing-label="t('store.trips.orders.deleting')"
                         :processing="processing"
@@ -362,11 +360,11 @@ const tableColumns = computed(() => [
                         class="cursor-pointer"
                     />
                 </td>
-                <td class="px-4 py-2 whitespace-nowrap">
+                <td class="px-4 py-2 font-mono whitespace-nowrap">
                     {{ order.code }}
                     <span
                         v-if="order.is_new"
-                        class="ms-1 rounded bg-sky-100 px-1.5 py-0.5 text-xs text-sky-800 dark:bg-sky-900 dark:text-sky-100"
+                        class="ms-1 rounded bg-info-soft px-1.5 py-0.5 text-xs text-info-strong"
                         >{{ t('store.trips.orders.new') }}</span
                     >
                 </td>
@@ -405,7 +403,7 @@ const tableColumns = computed(() => [
                     <Link
                         v-if="order.trip"
                         :href="tripsShow(order.trip)"
-                        class="font-medium text-gray-900 underline dark:text-neutral-100"
+                        class="font-mono font-medium text-ink underline"
                         >{{ order.trip.code }}</Link
                     >
                     <template v-else>-</template>
@@ -479,7 +477,7 @@ const tableColumns = computed(() => [
                             <p
                                 v-if="savedInvoiceOrderId === order.id"
                                 role="status"
-                                class="mt-1 text-xs text-green-700 dark:text-green-400"
+                                class="mt-1 text-xs text-success-strong"
                             >
                                 {{ t('store.trips.orders.invoiceSaved') }}
                             </p>

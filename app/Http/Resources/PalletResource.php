@@ -19,6 +19,9 @@ use Illuminate\Support\Carbon;
  * @property-read int $remaining_boxes
  * @property-read Product $product
  * @property-read Cell $cell
+ *
+ * `warehouse` is present when the caller loaded `cell.row.warehouse`, as
+ * Api\V1\PalletController does.
  */
 class PalletResource extends JsonResource
 {
@@ -38,6 +41,10 @@ class PalletResource extends JsonResource
             'boxes_depleted_message' => $this->remaining_boxes === 0 ? __('messages.pallet_boxes_depleted') : null,
             'product' => $this->whenLoaded('product', fn () => new ProductResource($this->product)),
             'location' => $this->whenLoaded('cell', fn () => $this->cell->toLocationArray()),
+            'warehouse' => $this->when(
+                $this->resource->relationLoaded('cell') && $this->cell->relationLoaded('row') && $this->cell->row->relationLoaded('warehouse'),
+                fn () => new WarehouseSummaryResource($this->cell->row->warehouse),
+            ),
         ];
     }
 

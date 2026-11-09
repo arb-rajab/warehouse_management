@@ -26,10 +26,9 @@ const content = ref(props.content ?? '');
 const metaDescription = ref(props.page?.meta_description ?? '');
 const keywords = ref(props.page?.keywords ?? '');
 const metaImage = ref(props.page?.meta_image ?? '');
-const sectionClass =
-    'space-y-4 rounded-md border border-gray-200 p-4 dark:border-neutral-700';
+const sectionClass = 'space-y-4 rounded-md border border-line p-4';
 const legendClass = 'px-1 font-medium';
-const hintClass = 'text-sm text-gray-600 dark:text-neutral-300';
+const hintClass = 'text-sm text-muted';
 
 /** The Blade writer's slug rule, applied as it is typed: spaces become hyphens, anything but letters, digits and hyphens is dropped. */
 function slugChanged(event: Event): void {
@@ -59,7 +58,7 @@ function slugChanged(event: Event): void {
             /></label>
             <div v-if="editableSlug" class="flex items-stretch" dir="ltr">
                 <span
-                    class="flex items-center rounded-s-md border border-e-0 border-gray-300 bg-gray-100 px-3 text-sm text-gray-700 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-300"
+                    class="flex items-center rounded-s-md border border-e-0 border-line-strong bg-subtle px-3 text-sm text-ink"
                     >{{ homeUrl }}/</span
                 >
                 <input

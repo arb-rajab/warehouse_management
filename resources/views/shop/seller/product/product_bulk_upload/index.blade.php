@@ -12,7 +12,7 @@
 
     <div class="card">
         <div class="card-body">
-            <table class="table aiz-table mb-0" style="font-size:14px; background-color: #cce5ff; border-color: #b8daff">
+            <table class="table aiz-table seller-note-table mb-0">
                 <tr>
                     <td>{{ __('seller.products.bulk_download_template')}}:</td>
                 </tr>
@@ -32,7 +32,7 @@
 
     <div class="card">
         <div class="card-body">
-            <table class="table aiz-table mb-0" style="font-size:14px;background-color: #cce5ff;border-color: #b8daff">
+            <table class="table aiz-table seller-note-table mb-0">
                 <tr>
                     <td>{{ __('seller.products.bulk_identifiers_help')}}:</td>
                 </tr>

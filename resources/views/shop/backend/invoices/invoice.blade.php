@@ -22,6 +22,7 @@
             text-align: {{ $documentLocale === 'ar' ? 'right' : 'left' }};
             padding: 0;
             margin: 0;
+            color: #1f1a17;
         }
 
         .currency {
@@ -31,7 +32,12 @@
 
         .gry-color *,
         .gry-color {
-            color: #000;
+            color: #6b625c;
+        }
+
+        .brand-color,
+        .brand-color * {
+            color: #a11208;
         }
 
         table {
@@ -56,7 +62,7 @@
 
         .border-bottom td,
         .border-bottom th {
-            border-bottom: 1px solid #eceff4;
+            border-bottom: 1px solid #ece5df;
         }
 
         .text-left {
@@ -76,19 +82,20 @@
             $logo = get_setting('header_logo');
         @endphp
 
-        <div style="background: #eceff4;padding: 1rem;">
+        <div style="background: #faf7f4;padding: 1rem;border-top: 4px solid #c4170c;border-bottom: 1px solid #ece5df;">
             <table>
                 <tr>
                     <td>
                         @if ($logo != null)
                             <img src="{{ uploaded_asset($logo) }}" height="30" style="display:inline-block;">
                         @else
-                            <img src="{{ static_asset('assets/img/logo.png') }}" height="30"
+                            <img src="{{ static_asset('assets/img/33logoqr.png') }}" height="30"
                                 style="display:inline-block;">
                         @endif
+                        <span style="font-size: 1.1rem;font-weight: bold;">&nbsp;{{ __('messages.brand_name', [], $documentLocale) }}</span>
                     </td>
                     <td style="font-size: 1.5rem;" class="text-right strong">{{ __('delivery.documents.order', [], $documentLocale) }}:
-                        <span dir="ltr" style="direction:ltr;unicode-bidi:embed;">{{ $order->code }}</span></td>
+                        <span class="brand-color" dir="ltr" style="direction:ltr;unicode-bidi:embed;">{{ $order->code }}</span></td>
                 </tr>
             </table>
             <table>
@@ -192,7 +199,7 @@
         <div style="padding: 1rem;">
             <table class="padding text-left small border-bottom">
                 <thead>
-                    <tr class="gry-color" style="background: #eceff4;">
+                    <tr class="gry-color" style="background: #f3eee9;">
                         <th width="7%" class="text-left">#</th>
                         <th width="35%" class="text-left">{{ __('storefront.product.product_name', [], $documentLocale) }}</th>
                         <th width="10%" class="text-left">{{ __('storefront.common.variation', [], $documentLocale) }}</th>
@@ -332,8 +339,8 @@
 							            <td class="currency">{{ single_price($order->coupon_discount) }}</td>
 							        </tr> --}}
                                     <tr>
-                                        <th class="text-left strong">{{ __('delivery.documents.grand_total', [], $documentLocale) }}</th>
-                                        <td class="currency">{{ single_price($order->grand_total) }}</td>
+                                        <th class="text-left strong brand-color" style="border-top: 2px solid #c4170c;font-weight: bold;">{{ __('delivery.documents.grand_total', [], $documentLocale) }}</th>
+                                        <td class="currency brand-color" style="border-top: 2px solid #c4170c;font-weight: bold;">{{ single_price($order->grand_total) }}</td>
                                     </tr>
                                 </tbody>
                             </table>

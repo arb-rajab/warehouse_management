@@ -9,6 +9,7 @@ use App\Models\CellVerificationRound;
 use App\Models\Pallet;
 use App\Models\Product;
 use App\Models\Row;
+use App\Models\Warehouse;
 
 test('a row has many cells, generated on creation for exactly its own dimensions', function () {
     $row = Row::factory()->create(['cells_count' => 3, 'flats_count' => 2]);
@@ -99,6 +100,26 @@ test('filterOptions returns rows ordered by letter and the highest cells_count a
     expect($options['maxColumnNumber'])->toBe(5);
 });
 
+test('filterOptions leaves a letter only one warehouse uses as a plain id and letter', function () {
+    $row = Row::factory()->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 1]);
+
+    expect(Row::filterOptions()['rows']->all())->toBe([['id' => $row->id, 'letter' => 'A']]);
+});
+
+test('filterOptions names the warehouse of a letter that two warehouses share, and only of those', function () {
+    $main = Warehouse::firstOrCreateDefault();
+    $annex = Warehouse::factory()->create(['name' => 'Annex']);
+    $mainA = Row::factory()->for($main)->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 1]);
+    $annexA = Row::factory()->for($annex)->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 1]);
+    $annexB = Row::factory()->for($annex)->create(['letter' => 'B', 'cells_count' => 1, 'flats_count' => 1]);
+
+    expect(Row::filterOptions()['rows']->all())->toBe([
+        ['id' => $mainA->id, 'letter' => 'A', 'warehouse' => ['id' => $main->id, 'name' => Warehouse::DEFAULT_NAME]],
+        ['id' => $annexA->id, 'letter' => 'A', 'warehouse' => ['id' => $annex->id, 'name' => 'Annex']],
+        ['id' => $annexB->id, 'letter' => 'B'],
+    ]);
+});
+
 test('filterOptions maxColumnNumber is 0 when there are no rows', function () {
     $options = Row::filterOptions();
 
@@ -172,4 +193,42 @@ test('the withFullGrid scope can keep only cells holding a pallet of a published
     expect(Row::query()->withFullGrid(true)->first()->cells->pluck('id')->all())->toBe([$first->id]);
     expect(Row::query()->withFullGrid(false)->first()->cells->pluck('id')->all())->toBe([$second->id]);
     expect(Row::query()->withFullGrid()->first()->cells)->toHaveCount(3);
+});
+
+test('a row belongs to its warehouse', function () {
+    $warehouse = Warehouse::factory()->create();
+    $row = Row::factory()->for($warehouse)->create(['cells_count' => 1, 'flats_count' => 1]);
+    Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
+
+    expect($row->warehouse->is($warehouse))->toBeTrue();
+});
+
+test('a factory row goes into the Default warehouse unless the caller picks one', function () {
+    $row = Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
+
+    expect($row->warehouse->name)->toBe(Warehouse::DEFAULT_NAME);
+});
+
+test('forWarehouses narrows rows to the given warehouses and is a no-op for null', function () {
+    $north = Warehouse::factory()->create();
+    $south = Warehouse::factory()->create();
+    $inNorth = Row::factory()->for($north)->create(['cells_count' => 1, 'flats_count' => 1]);
+    $inSouth = Row::factory()->for($south)->create(['cells_count' => 1, 'flats_count' => 1]);
+    $noise = Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
+
+    expect(Row::query()->forWarehouses([$north->id])->pluck('id')->all())->toBe([$inNorth->id])
+        ->and(Row::query()->forWarehouses([$north->id, $south->id])->pluck('id')->sort()->values()->all())->toBe([$inNorth->id, $inSouth->id])
+        ->and(Row::query()->forWarehouses(null)->pluck('id'))->toContain($noise->id);
+});
+
+test('routeParameters adds warehouse_id only while another warehouse uses the same letter', function () {
+    $north = Warehouse::factory()->create();
+    $south = Warehouse::factory()->create();
+    $rowA = Row::factory()->for($north)->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 1]);
+    $rowB = Row::factory()->for($north)->create(['letter' => 'B', 'cells_count' => 1, 'flats_count' => 1]);
+    $southA = Row::factory()->for($south)->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 1]);
+
+    expect($rowB->routeParameters())->toBe(['row' => 'B'])
+        ->and($rowA->routeParameters())->toBe(['row' => 'A', 'warehouse_id' => $north->id])
+        ->and($southA->routeParameters())->toBe(['row' => 'A', 'warehouse_id' => $south->id]);
 });

@@ -17,7 +17,7 @@ import { t } from '@/lib/i18n';
             <h2 :class="sectionHeadingClass">
                 {{ t('help.settings.qrSize.heading') }}
             </h2>
-            <p class="text-sm text-gray-700 dark:text-neutral-300">
+            <p class="text-sm text-ink">
                 {{ t('help.settings.qrSize.body') }}
             </p>
             <HelpUiPreview inert class="mt-2 block max-w-xs">
@@ -34,7 +34,7 @@ import { t } from '@/lib/i18n';
             <h2 :class="sectionHeadingClass">
                 {{ t('help.settings.openLevels.heading') }}
             </h2>
-            <p class="text-sm text-gray-700 dark:text-neutral-300">
+            <p class="text-sm text-ink">
                 {{ t('help.settings.openLevels.body') }}
             </p>
         </section>

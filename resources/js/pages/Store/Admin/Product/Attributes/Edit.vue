@@ -37,7 +37,7 @@ defineProps<{
             :aria-label="t('store.attributes.edit.languages')"
             class="flex flex-wrap items-center gap-1 text-sm"
         >
-            <Languages class="h-4 w-4 text-gray-400 dark:text-neutral-500" />
+            <Languages class="h-4 w-4 text-muted" />
             <Link
                 v-for="language in languages"
                 :key="language.code"
@@ -47,15 +47,12 @@ defineProps<{
                 :class="
                     language.code === lang
                         ? selectedToggleClass
-                        : 'text-gray-600 hover:bg-gray-100 dark:text-neutral-400 dark:hover:bg-neutral-800'
+                        : 'text-muted hover:bg-subtle'
                 "
                 >{{ language.name }}</Link
             >
         </nav>
-        <p
-            v-if="languages.length > 1"
-            class="text-sm text-gray-500 dark:text-neutral-400"
-        >
+        <p v-if="languages.length > 1" class="text-sm text-muted">
             {{ t('store.attributes.edit.translationHint') }}
         </p>
         <input type="hidden" name="lang" :value="lang" />

@@ -14,7 +14,7 @@ useRequiredField(() => true);
 </script>
 
 <template>
-    <span data-required-mark class="ms-0.5 text-red-700 dark:text-red-400"
+    <span data-required-mark class="ms-0.5 text-danger-strong"
         ><span aria-hidden="true">*</span
         ><span class="sr-only">{{ t('common.required') }}</span></span
     >

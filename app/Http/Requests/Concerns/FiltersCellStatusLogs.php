@@ -16,6 +16,7 @@ trait FiltersCellStatusLogs
     use FiltersByProductIds;
     use FiltersByRowAndColumn;
     use FiltersByUserIds;
+    use FiltersByWarehouseIds;
     use NormalizesBooleanFilters;
     use SortsByDirection;
 
@@ -56,6 +57,7 @@ trait FiltersCellStatusLogs
             // logs (and this filter) must keep working against its old id.
             'pallet_id' => ['nullable', 'integer'],
             ...$this->rowAndColumnFilterRules(),
+            ...$this->warehouseIdsFilterRules(),
             'expiration_date_from' => ['nullable', 'date'],
             'expiration_date_to' => ['nullable', 'date', 'after_or_equal:expiration_date_from'],
             ...$this->userIdsFilterRules(),

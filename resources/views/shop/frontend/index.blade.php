@@ -5,6 +5,14 @@
 @endsection
 
 @section('content')
+    {{-- Direction A hero: only when the admin has not configured a home slider (it would clash with it). --}}
+    @php
+        $has_home_slider = count(array_filter((array) json_decode((string) get_setting('home_slider_images'), true))) > 0;
+    @endphp
+    @unless ($has_home_slider)
+        @include('shop.frontend.partials.home.hero')
+    @endunless
+
     <!-- Sliders & Today's deal -->
     <div class="home-banner-area mb-3" style="">
         <div class="container">
@@ -39,6 +47,8 @@
             </div>
         </div>
     </div>
+
+    @include('shop.frontend.partials.home.trust')
 
     <!-- Flash Deal -->
     @php
@@ -161,7 +171,7 @@
                 </div>
             @endif
             <!-- Products -->
-            <div class="" style="background-color: {{ get_setting('todays_deal_bg_color', '#3d4666') }}">
+            <div class="sf-deal-panel" style="background-color: {{ get_setting('todays_deal_bg_color', '#1f1a17') }}">
                 <div class="text-right px-4 px-xl-5 pt-4 pt-md-3">
                     <a href="{{ route('todays-deal') }}" class="fs-12 fw-700 text-white has-transition hov-text-warning">{{ __('storefront.common.view_all') }}</a>
                 </div>
@@ -624,6 +634,11 @@
             @endforeach
         @endif
     @endauth
+
+    {{-- "Run a shop?" banner: not for a signed-in seller, who already has a shop. --}}
+    @unless (auth()->check() && auth()->user()->user_type === 'seller')
+        @include('shop.frontend.partials.home.shop_banner')
+    @endunless
 
     <!-- Top Brands -->
     {{--

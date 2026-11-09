@@ -34,11 +34,18 @@ vi.mock('@inertiajs/vue3', async () => {
         Link: createLinkStub(),
         usePage: usePageMock,
         router: { get: routerGetMock },
+        useHttp: () => ({
+            get: (
+                _url: string,
+                options?: { onSuccess?: (response: unknown) => void },
+            ) => options?.onSuccess?.(paginated(filterOptions.warehouses, 20)),
+        }),
     };
 });
 
 const filterOptions: CellVerificationRoundFilterOptions = {
     users: [{ id: 7, name: 'Jane Doe' }],
+    warehouses: [{ id: 5, name: 'Annex' }],
 };
 
 function mountPage(
@@ -95,7 +102,10 @@ describe('CellVerificationRounds Index', () => {
     it('links the help icon to the verification rounds help page', () => {
         const wrapper = mountPage([]);
 
+        // The shell's own header carries a "Help" link with the same name, so
+        // look inside the page content.
         const helpLink = wrapper
+            .get('main')
             .findAll('a')
             .find((a) => a.attributes('aria-label') === t('help.viewHelp'));
         expect(helpLink?.attributes('href')).toBe(
@@ -124,6 +134,7 @@ describe('CellVerificationRounds Index', () => {
         expect(wrapper.get('[role="dialog"]').text()).toContain(
             t('common.filters.title'),
         );
+        expect(wrapper.find('#filter-warehouse').exists()).toBe(true);
         expect(wrapper.find('#filter-user').exists()).toBe(true);
         expect(wrapper.find('#filter-completed').exists()).toBe(true);
         expect(wrapper.find('#filter-date-from').exists()).toBe(true);
@@ -443,5 +454,66 @@ describe('CellVerificationRounds Index', () => {
             expect.objectContaining({ per_page: 50 }),
             { preserveState: true, replace: true },
         );
+    });
+    it('labels the warehouse filter from the selected warehouses and counts it in the badge', async () => {
+        const wrapper = mountPage([], { warehouse_ids: [5] });
+
+        const trigger = wrapper
+            .findAll('button')
+            .find((button) =>
+                button.text().includes(t('common.filters.title')),
+            );
+        expect(trigger?.get('span').text()).toBe('1');
+
+        await openFilters(wrapper);
+
+        expect(wrapper.get('#filter-warehouse').text()).toBe('Annex');
+    });
+
+    it('requests the selected warehouses when the warehouse filter is submitted', async () => {
+        const wrapper = mountPage([]);
+        await openFilters(wrapper);
+
+        await wrapper.get('#filter-warehouse').trigger('click');
+        await wrapper.findAll('input[type="checkbox"]')[0].setValue(true);
+        await wrapper.get('form').trigger('submit');
+
+        expect(routerGetMock).toHaveBeenCalledWith(
+            cellVerificationRoundsIndex.url(),
+            expect.objectContaining({ warehouse_ids: ['5'] }),
+            { preserveState: true, replace: true },
+        );
+    });
+
+    it('clears the warehouse filter with the other filters', async () => {
+        const wrapper = mountPage([], { warehouse_ids: [5] });
+        await openFilters(wrapper);
+
+        await wrapper
+            .findAll('button')
+            .find((button) => button.text() === t('common.filters.clear'))
+            ?.trigger('click');
+
+        expect(routerGetMock).toHaveBeenCalledWith(
+            cellVerificationRoundsIndex.url(),
+            { per_page: 20 },
+            { preserveState: true, replace: true },
+        );
+        expect(wrapper.get('#filter-warehouse').text()).toBe(
+            t('cellVerificationRound.filters.all'),
+        );
+    });
+
+    it('names the warehouse of each covered row', () => {
+        const wrapper = mountPage([
+            cellVerificationRound({
+                rows: [
+                    { id: 1, letter: 'A', warehouse: { id: 1, name: 'Main' } },
+                    { id: 2, letter: 'A', warehouse: { id: 5, name: 'Annex' } },
+                ],
+            }),
+        ]);
+
+        expect(rowCells(wrapper)[4].text()).toBe('A - Main, A - Annex');
     });
 });

@@ -6,6 +6,8 @@ use App\Models\Cell;
 use App\Models\CellStatusLog;
 use App\Models\Pallet;
 use App\Models\Product;
+use App\Models\Row;
+use App\Models\Warehouse;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -310,4 +312,15 @@ test('matchingOccupancyFilters pins the given cell state on top of the request f
 
     expect(Pallet::query()->matchingOccupancyFilters($request, CellState::Opened)->pluck('id')->all())->toBe([$opened->id])
         ->and(Pallet::query()->matchingOccupancyFilters($request)->count())->toBe(2);
+});
+
+test('forWarehouses narrows pallets to the cells of the given warehouses and is a no-op for null', function () {
+    $north = Warehouse::factory()->create();
+    $northRow = Row::factory()->for($north)->create(['cells_count' => 1, 'flats_count' => 1]);
+    $otherRow = Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
+    $inNorth = Pallet::factory()->create(['cell_id' => $northRow->cells()->value('id')]);
+    $noise = Pallet::factory()->create(['cell_id' => $otherRow->cells()->value('id')]);
+
+    expect(Pallet::query()->forWarehouses([$north->id])->pluck('id')->all())->toBe([$inNorth->id])
+        ->and(Pallet::query()->forWarehouses(null)->pluck('id'))->toContain($noise->id);
 });

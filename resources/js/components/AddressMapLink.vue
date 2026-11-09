@@ -18,7 +18,7 @@ const trimmed = computed(() => props.address?.trim() ?? '');
         target="_blank"
         rel="noopener noreferrer"
         :aria-label="t('common.openInMaps', { address: trimmed })"
-        class="rounded-sm hover:underline focus-visible:ring-2 focus-visible:ring-gray-900 focus-visible:outline-none dark:focus-visible:ring-white"
+        class="rounded-sm hover:underline focus-visible:ring-2 focus-visible:ring-focus focus-visible:outline-none"
         >{{ address }}</a
     >
     <span v-else-if="placeholder">{{ placeholder }}</span>

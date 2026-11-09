@@ -12,6 +12,8 @@ return [
     'row_cannot_reduce_columns_has_history' => 'Cannot reduce the columns: some of the columns being removed have history logged against their cells.',
     'row_cannot_reduce_levels_has_history' => 'Cannot reduce the levels: some of the levels being removed have history logged against their cells.',
     'row_cannot_delete_has_history' => 'Cannot delete a row that has history logged against its cells.',
+    'row_letter_in_several_warehouses' => 'This row letter is used in more than one warehouse. Choose the warehouse.',
+    'warehouse_cannot_delete_has_rows' => 'Cannot delete a warehouse that still has rows.',
     'slot_does_not_exist' => 'This slot does not exist for this row.',
     'cannot_delete_own_account' => 'You cannot delete your own account.',
     'pallet_already_at_location' => 'Pallet is already at that location.',
@@ -36,6 +38,7 @@ return [
     'barcode_is_product_id' => 'This barcode is the ID of a product. Every product already has its ID as a default barcode.',
     'barcodes_not_printable_in_zip' => 'These barcodes cannot be drawn as a Code 128 label, so they are not in this ZIP:',
     'barcode_ambiguous' => 'This barcode belongs to more than one product.',
+    'barcode_taken' => 'This barcode already belongs to another product.',
     'password_same_as_current' => 'The new password must be different from your current password.',
     'pallet_moved' => 'This pallet has been moved since it was loaded. Refresh and try again.',
     'precondition_failed' => 'The resource has changed since it was loaded. Refresh and try again.',
@@ -76,4 +79,6 @@ return [
     'staff_role_not_assignable' => 'You can only give a role that grants nothing beyond your own permissions, and you cannot change your own role.',
     'seller_payout_full_request' => 'Pay the full requested amount (:amount), or ask the seller to submit a new request. Partial payments are not supported.',
     'seller_payout_balance_limit' => 'The amount cannot exceed the available balance for this payment method (:amount).',
+    // Storefront header brand name: a placeholder until the owner chooses the store's name.
+    'brand_name' => 'Store name',
 ];

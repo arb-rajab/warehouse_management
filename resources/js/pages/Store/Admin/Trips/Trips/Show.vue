@@ -394,7 +394,7 @@ const tableColumns = computed(() => [
                             <p
                                 v-if="savedNotesCheckpointId === checkpoint.id"
                                 role="status"
-                                class="mt-1 text-xs text-green-700 dark:text-green-400"
+                                class="mt-1 text-xs text-success-strong"
                             >
                                 {{ t('store.trips.show.notesSaved') }}
                             </p>

@@ -7,7 +7,7 @@ import TableLink from '@/components/TableLink.vue';
 import { cellStateLabel } from '@/lib/cellStateColor';
 import { formatDate } from '@/lib/date';
 import { t } from '@/lib/i18n';
-import { formatSlot } from '@/lib/location';
+import { formatSlot, rowLinkOptions } from '@/lib/location';
 import { productName } from '@/lib/productName';
 import type { MatchingPallet } from '@/types/admin';
 
@@ -32,9 +32,7 @@ defineProps<{
     >
         <template #row="{ row: pallet }">
             <td class="px-4 py-2">
-                <div
-                    class="flex items-center gap-2 font-medium text-gray-900 dark:text-neutral-100"
-                >
+                <div class="flex items-center gap-2 font-medium text-ink">
                     <img
                         v-if="pallet.product.image_url"
                         :src="pallet.product.image_url"
@@ -57,15 +55,14 @@ defineProps<{
             </td>
             <td class="px-4 py-2">
                 <TableLink
+                    class="font-mono"
                     :href="
                         showRow(
                             { letter: pallet.location.row_letter },
-                            {
-                                query: {
-                                    cell_number: pallet.location.cell_number,
-                                    flat_number: pallet.location.flat_number,
-                                },
-                            },
+                            rowLinkOptions(pallet.location.warehouse, {
+                                cell_number: pallet.location.cell_number,
+                                flat_number: pallet.location.flat_number,
+                            }),
                         )
                     "
                 >
@@ -79,7 +76,7 @@ defineProps<{
                 </TableLink>
                 <span
                     v-if="!pallet.cell_active"
-                    class="ms-2 inline-flex items-center gap-0.5 rounded bg-red-600 px-1 py-0.5 align-middle text-[10px] font-semibold text-white"
+                    class="ms-2 inline-flex items-center gap-0.5 rounded border border-danger/30 bg-danger-soft px-1 py-0.5 align-middle text-[10px] font-semibold text-danger-strong"
                     data-testid="cell-inactive-badge"
                 >
                     <Ban class="h-3 w-3 shrink-0" stroke-width="2.5" />
@@ -90,17 +87,13 @@ defineProps<{
                 <span v-if="pallet.expiration_date">
                     {{ formatDate(pallet.expiration_date) }}
                 </span>
-                <span v-else class="text-gray-400 dark:text-neutral-600"
-                    >—</span
-                >
+                <span v-else class="text-muted">—</span>
             </td>
             <td class="px-4 py-2">
                 <span v-if="pallet.added_at">
                     {{ formatDate(pallet.added_at) }}
                 </span>
-                <span v-else class="text-gray-400 dark:text-neutral-600"
-                    >—</span
-                >
+                <span v-else class="text-muted">—</span>
             </td>
             <td class="px-4 py-2">{{ pallet.remaining_boxes }}</td>
         </template>

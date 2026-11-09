@@ -81,9 +81,7 @@ function onPerPageChange(perPage: number): void {
             :empty-message="t('store.blogCategories.index.empty')"
         >
             <template #row="{ row: category }">
-                <td
-                    class="px-4 py-2 font-medium text-gray-900 dark:text-neutral-100"
-                >
+                <td class="px-4 py-2 font-medium text-ink">
                     {{ category.category_name }}
                 </td>
                 <td class="px-4 py-2">

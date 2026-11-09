@@ -73,13 +73,13 @@ watch(() => props.markers, draw);
     border-radius: 50%;
     text-align: center;
     line-height: 30px;
-    color: #fff;
+    color: var(--page);
     font-weight: bold;
 }
 :deep(.store-visit-marker.red) {
-    background-color: #dc2626;
+    background-color: var(--danger-color);
 }
 :deep(.store-visit-marker.blue) {
-    background-color: #1d4ed8;
+    background-color: var(--info-color);
 }
 </style>

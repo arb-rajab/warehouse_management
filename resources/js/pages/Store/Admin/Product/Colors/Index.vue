@@ -82,14 +82,12 @@ const tableColumns = computed(() => [
                 :empty-message="t('store.colors.index.empty')"
             >
                 <template #row="{ row }">
-                    <td
-                        class="px-4 py-2 font-medium text-gray-900 dark:text-neutral-100"
-                    >
+                    <td class="px-4 py-2 font-medium text-ink">
                         {{ row.name }}
                     </td>
                     <td v-if="shown.code" class="px-4 py-2">
                         <span
-                            class="me-2 inline-block h-4 w-4 rounded border border-gray-300"
+                            class="me-2 inline-block h-4 w-4 rounded border border-line-strong"
                             :style="{ backgroundColor: row.code }"
                             aria-hidden="true"
                         />{{ row.code }}

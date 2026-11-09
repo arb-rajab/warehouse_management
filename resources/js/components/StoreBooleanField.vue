@@ -40,7 +40,7 @@ onMounted(async () => {
         :data-highlighted="highlighted ? '' : undefined"
         :class="
             highlighted
-                ? 'rounded-lg p-3 ring-2 ring-amber-500 ring-offset-2 dark:ring-offset-neutral-900'
+                ? 'rounded-lg p-3 ring-2 ring-warning ring-offset-2 ring-offset-surface'
                 : ''
         "
     >

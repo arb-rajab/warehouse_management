@@ -201,7 +201,7 @@ function requireOneRow(event: Event): void {
                         (vehiclesFailed || !drivers.length || !trucks.length)
                     "
                     role="status"
-                    class="mt-1 text-sm text-amber-700 dark:text-amber-400"
+                    class="mt-1 text-sm text-warning-strong"
                 >
                     {{ t('store.trips.form.noVehicles') }}
                 </p>
@@ -229,7 +229,7 @@ function requireOneRow(event: Event): void {
                 </select>
                 <p
                     v-if="vehiclesLoaded && !vehiclesFailed && !drivers.length"
-                    class="mt-1 text-sm text-gray-600 dark:text-neutral-400"
+                    class="mt-1 text-sm text-muted"
                 >
                     {{ t('store.trips.form.noDrivers') }}
                 </p>
@@ -259,7 +259,7 @@ function requireOneRow(event: Event): void {
                 </select>
                 <p
                     v-if="vehiclesLoaded && !vehiclesFailed && !trucks.length"
-                    class="mt-1 text-sm text-gray-600 dark:text-neutral-400"
+                    class="mt-1 text-sm text-muted"
                 >
                     {{ t('store.trips.form.noTrucks') }}
                 </p>
@@ -284,7 +284,7 @@ function requireOneRow(event: Event): void {
             <legend class="text-base font-semibold">
                 {{ t('store.trips.form.checkpoints') }}<RequiredMark />
             </legend>
-            <p class="text-sm text-gray-600 dark:text-neutral-400">
+            <p class="text-sm text-muted">
                 {{ t('store.trips.form.checkpointsHelp') }}
             </p>
             <input
@@ -297,10 +297,7 @@ function requireOneRow(event: Event): void {
                 :aria-label="t('store.trips.form.checkpointsRequired')"
                 @invalid="requireOneRow"
             />
-            <p
-                v-if="!rows.length"
-                class="text-sm text-gray-600 dark:text-neutral-400"
-            >
+            <p v-if="!rows.length" class="text-sm text-muted">
                 {{ t('store.trips.form.empty') }}
             </p>
             <FieldError :message="checkpointsError()" />
@@ -309,7 +306,7 @@ function requireOneRow(event: Event): void {
                     v-for="(row, index) in rows"
                     :key="row.key"
                     data-testid="trip-checkpoint"
-                    class="rounded-md border border-gray-200 p-3 dark:border-neutral-700"
+                    class="rounded-md border border-line p-3"
                 >
                     <input
                         type="hidden"
@@ -328,7 +325,7 @@ function requireOneRow(event: Event): void {
                                     position: index + 1,
                                 })
                             }}</span>
-                            <span class="text-gray-600 dark:text-neutral-400">{{
+                            <span class="text-muted">{{
                                 t(`store.trips.form.types.${row.type}`)
                             }}</span>
                         </div>
@@ -409,7 +406,7 @@ function requireOneRow(event: Event): void {
                         <div class="flex items-start gap-1">
                             <button
                                 type="button"
-                                class="cursor-pointer rounded p-1.5 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40 dark:hover:bg-neutral-800"
+                                class="cursor-pointer rounded p-1.5 hover:bg-subtle disabled:cursor-not-allowed disabled:opacity-40"
                                 :disabled="index === 0"
                                 :aria-label="
                                     t('store.trips.form.moveUp', {
@@ -427,7 +424,7 @@ function requireOneRow(event: Event): void {
                             </button>
                             <button
                                 type="button"
-                                class="cursor-pointer rounded p-1.5 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40 dark:hover:bg-neutral-800"
+                                class="cursor-pointer rounded p-1.5 hover:bg-subtle disabled:cursor-not-allowed disabled:opacity-40"
                                 :disabled="index === rows.length - 1"
                                 :aria-label="
                                     t('store.trips.form.moveDown', {
@@ -445,7 +442,7 @@ function requireOneRow(event: Event): void {
                             </button>
                             <button
                                 type="button"
-                                class="cursor-pointer rounded p-1.5 text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:bg-neutral-800"
+                                class="cursor-pointer rounded p-1.5 text-danger-strong hover:bg-danger-soft"
                                 :aria-label="
                                     t('store.trips.form.remove', {
                                         position: index + 1,
@@ -468,14 +465,14 @@ function requireOneRow(event: Event): void {
             <div class="flex flex-wrap gap-2">
                 <button
                     type="button"
-                    class="inline-flex cursor-pointer items-center gap-1 rounded-md border border-gray-300 px-3 py-2 text-sm hover:bg-gray-50 dark:border-neutral-700 dark:hover:bg-neutral-800"
+                    class="inline-flex cursor-pointer items-center gap-1 rounded-md border border-line-strong px-3 py-2 text-sm hover:bg-subtle"
                     @click="addRow('delivery')"
                 >
                     <Plus class="h-4 w-4" />{{ t('store.trips.form.addOrder') }}
                 </button>
                 <button
                     type="button"
-                    class="inline-flex cursor-pointer items-center gap-1 rounded-md border border-gray-300 px-3 py-2 text-sm hover:bg-gray-50 dark:border-neutral-700 dark:hover:bg-neutral-800"
+                    class="inline-flex cursor-pointer items-center gap-1 rounded-md border border-line-strong px-3 py-2 text-sm hover:bg-subtle"
                     @click="addRow('other')"
                 >
                     <Plus class="h-4 w-4" />{{

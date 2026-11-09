@@ -152,7 +152,34 @@ describe('Rows Show', () => {
         const editLink = wrapper
             .findAll('a')
             .find((a) => a.text().includes(t('rows.show.editRow')));
-        expect(editLink?.attributes('href')).toBe(rowEdit.url({ row: 'B' }));
+        expect(editLink?.attributes('href')).toBe(
+            rowEdit.url({ row: 'B' }, { query: { warehouse_id: 1 } }),
+        );
+    });
+
+    it("shows the row's warehouse in a details list", () => {
+        const wrapper = mountPage(
+            { letter: 'B', warehouse: { id: 5, name: 'Annex' } },
+            [],
+        );
+
+        const item = wrapper.get('dl > div');
+        expect(item.get('dt').text()).toBe(t('rows.show.warehouse'));
+        expect(item.get('dd').text()).toBe('Annex');
+    });
+
+    it('links to the edit page of the row in its own warehouse, so a shared letter opens the right row', () => {
+        const wrapper = mountPage(
+            { letter: 'B', warehouse: { id: 5, name: 'Annex' } },
+            [],
+        );
+
+        const editLink = wrapper
+            .findAll('a')
+            .find((a) => a.text().includes(t('rows.show.editRow')));
+        expect(editLink?.attributes('href')).toBe(
+            rowEdit.url({ row: 'B' }, { query: { warehouse_id: 5 } }),
+        );
     });
 
     it('renders a column header for every cell number, ascending', () => {
@@ -210,7 +237,7 @@ describe('Rows Show', () => {
         expect(wrapper.text()).toContain(
             formatDateTime('2026-08-01T10:00:00Z'),
         );
-        const img = wrapper.get('img');
+        const img = wrapper.get('main').get('img');
         expect(img.attributes('src')).toBe('/img/widgets.png');
         expect(img.attributes('alt')).toBe('Widgets');
     });
@@ -252,7 +279,7 @@ describe('Rows Show', () => {
             'bg-orange-50',
         );
         expect(slot(wrapper, formatSlot('A', 3, 1))?.classes()).toContain(
-            'bg-gray-100',
+            'bg-cell-empty',
         );
     });
 
@@ -270,7 +297,7 @@ describe('Rows Show', () => {
         expect(slotEl?.find('[data-testid="expiry-badge"]').exists()).toBe(
             false,
         );
-        expect(slotEl?.classes()).not.toContain('border-red-500');
+        expect(slotEl?.classes()).not.toContain('border-danger');
     });
 
     it('opens the highlight filter dialog when the highlight button is clicked', async () => {
@@ -302,10 +329,10 @@ describe('Rows Show', () => {
         await wrapper.findAll('input[type="checkbox"]')[2].setValue(true);
 
         expect(slot(wrapper, formatSlot('A', 1, 1))?.classes()).not.toContain(
-            'ring-blue-500',
+            'ring-info',
         );
         expect(slot(wrapper, formatSlot('A', 2, 1))?.classes()).toContain(
-            'ring-blue-500',
+            'ring-info',
         );
     });
 
@@ -355,7 +382,7 @@ describe('Rows Show', () => {
             await wrapper.findAll('input[type="checkbox"]')[2].setValue(true);
 
             expect(slot(wrapper, formatSlot('A', 2, 1))?.classes()).toContain(
-                'ring-emerald-500',
+                'ring-success',
             );
             expect(Element.prototype.scrollIntoView).toHaveBeenCalled();
         } finally {
@@ -384,11 +411,11 @@ describe('Rows Show', () => {
             await flushPromises();
 
             expect(slot(wrapper, formatSlot('A', 2, 1))?.classes()).toContain(
-                'ring-emerald-500',
+                'ring-success',
             );
             expect(
                 slot(wrapper, formatSlot('A', 1, 1))?.classes(),
-            ).not.toContain('ring-emerald-500');
+            ).not.toContain('ring-success');
             expect(Element.prototype.scrollIntoView).toHaveBeenCalled();
         } finally {
             wrapper.unmount();
@@ -401,7 +428,7 @@ describe('Rows Show', () => {
         ]);
 
         expect(slot(wrapper, formatSlot('A', 1, 1))?.classes()).not.toContain(
-            'ring-emerald-500',
+            'ring-success',
         );
     });
 
@@ -430,10 +457,10 @@ describe('Rows Show', () => {
         await wrapper.get('#highlight-expires-within-days').setValue(5);
 
         expect(slot(wrapper, formatSlot('A', 1, 1))?.classes()).toContain(
-            'ring-blue-500',
+            'ring-info',
         );
         expect(slot(wrapper, formatSlot('A', 2, 1))?.classes()).not.toContain(
-            'ring-blue-500',
+            'ring-info',
         );
     });
 
@@ -470,10 +497,10 @@ describe('Rows Show', () => {
             .setValue(true);
 
         expect(slot(wrapper, formatSlot('A', 1, 1))?.classes()).toContain(
-            'ring-blue-500',
+            'ring-info',
         );
         expect(slot(wrapper, formatSlot('A', 2, 1))?.classes()).not.toContain(
-            'ring-blue-500',
+            'ring-info',
         );
     });
 
@@ -497,10 +524,10 @@ describe('Rows Show', () => {
         await wrapper.get('#highlight-stale-after-days').setValue(5);
 
         expect(slot(wrapper, formatSlot('A', 1, 1))?.classes()).toContain(
-            'ring-blue-500',
+            'ring-info',
         );
         expect(slot(wrapper, formatSlot('A', 2, 1))?.classes()).not.toContain(
-            'ring-blue-500',
+            'ring-info',
         );
     });
 
@@ -510,7 +537,7 @@ describe('Rows Show', () => {
         ]);
 
         expect(slot(wrapper, formatSlot('A', 1, 1))?.classes()).not.toContain(
-            'ring-blue-500',
+            'ring-info',
         );
     });
 
@@ -523,7 +550,7 @@ describe('Rows Show', () => {
         await wrapper.get('#highlight-state').trigger('click');
         await wrapper.findAll('input[type="checkbox"]')[2].setValue(true);
         expect(slot(wrapper, formatSlot('A', 1, 1))?.classes()).toContain(
-            'ring-blue-500',
+            'ring-info',
         );
 
         const clearButton = wrapper
@@ -532,7 +559,7 @@ describe('Rows Show', () => {
         await clearButton?.trigger('click');
 
         expect(slot(wrapper, formatSlot('A', 1, 1))?.classes()).not.toContain(
-            'ring-blue-500',
+            'ring-info',
         );
         expect(wrapper.get('#highlight-state').text()).toBe(
             t('cellLog.filters.all'),

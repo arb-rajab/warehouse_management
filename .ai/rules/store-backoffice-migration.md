@@ -116,14 +116,14 @@ methods and the cache button through the page permissions, and "the shop's own
 admin" is the lowest-id `user_type = 'admin'` row. Empty groups disappear.
 Button gates use the same permission names as their action middleware. The
 account block uses the store logout route and the current actor's profile and
-notifications; cache clearing stays narrowly scoped. Notifications is a sidebar item above the footer and Clear dashboard cache (dashboard graph keys only) sits in the footer with a tooltip and confirm dialog; there is no top strip.
+notifications; cache clearing stays narrowly scoped. Notifications is a sidebar item above the footer and Clear dashboard cache (dashboard graph keys only) sits in the footer with a tooltip and confirm dialog. Both layouts render through the shared `BackofficeShell` (layouts.md), whose header carries only the crumb, the language switcher and "Browse website"; the profile link and logout are in the sidebar's user block.
 
 Use Inertia links only for Inertia destinations. `StoreAdminNavLink` uses a
 plain anchor for Blade destinations; build URLs through Wayfinder. The shared
 layout helpers are `SkipToContentLink`, `LogoutLink.href` and
 `ResourceFormPage`'s layout/width support. The store sidebar's active state
 comes only from `findActiveStoreMenuLink` (`store-admin-menu-highlighting.md`). Avoid merging the otherwise distinct
-WMS and store layouts.
+WMS and store layouts: they share only the `BackofficeShell` chrome, never a menu.
 
 ### 2.3 Translations
 
@@ -323,6 +323,12 @@ Seven protected files remain under `resources/views/shop/backend/`:
 
 The old backend app shell and its two navigation includes are retired. Keep
 storefront/seller/auth layouts and assets, the Inertia root and Blade CSP.
+
+The two retained customer-facing files carry the Direction A identity:
+`layouts/layout.blade.php` loads `storefront.css`, and `invoices/invoice.blade.php`
+takes the brand colours, logo and `messages.brand_name` (mPDF keeps DejaVu Sans
+for Arabic). The seller panel layout loads `resources/css/seller.css`. The
+`downloads/*` exports are back-office tools and keep their own styling (views.md).
 
 ## 6. Registered migrated controllers and consumers
 

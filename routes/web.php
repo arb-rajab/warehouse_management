@@ -12,6 +12,7 @@ use App\Http\Controllers\Admin\ProductImageReviewController;
 use App\Http\Controllers\Admin\RowController;
 use App\Http\Controllers\Admin\SettingController;
 use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\Admin\WarehouseController;
 use App\Http\Controllers\Admin\WarehouseMapController;
 use App\Http\Controllers\LocaleController;
 use App\Http\Controllers\LoginController;
@@ -45,6 +46,14 @@ Route::middleware('auth')->group(function () {
 
     Route::middleware('role:admin')->prefix('admin')->name('admin.')->group(function () {
         Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
+
+        Route::get('warehouses', [WarehouseController::class, 'index'])->name('warehouses.index');
+        Route::get('warehouses/create', [WarehouseController::class, 'create'])->name('warehouses.create');
+        Route::get('warehouses/search', [WarehouseController::class, 'search'])->middleware('cache.headers:private;etag')->name('warehouses.search');
+        Route::post('warehouses', [WarehouseController::class, 'store'])->name('warehouses.store');
+        Route::get('warehouses/{warehouse}/edit', [WarehouseController::class, 'edit'])->name('warehouses.edit');
+        Route::put('warehouses/{warehouse}', [WarehouseController::class, 'update'])->name('warehouses.update');
+        Route::delete('warehouses/{warehouse}', [WarehouseController::class, 'destroy'])->name('warehouses.destroy');
 
         Route::get('rows', [RowController::class, 'index'])->name('rows.index');
         Route::get('rows/create', [RowController::class, 'create'])->name('rows.create');

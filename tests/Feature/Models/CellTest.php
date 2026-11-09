@@ -4,6 +4,7 @@ use App\Enums\CellState;
 use App\Models\Cell;
 use App\Models\Pallet;
 use App\Models\Row;
+use App\Models\Warehouse;
 
 test('a cell belongs to its row', function () {
     $row = Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
@@ -141,3 +142,13 @@ test('the cell factory creates a row of its own only when the caller supplies no
     expect($withOwnRow->row_id)->not->toBe($row->id)
         ->and(Row::query()->count())->toBe(2);
 })->with([27, 40, 45, 69]);
+
+test('forWarehouses narrows cells to the rows of the given warehouses and is a no-op for null', function () {
+    $north = Warehouse::factory()->create();
+    $northRow = Row::factory()->for($north)->create(['cells_count' => 2, 'flats_count' => 1]);
+    $otherRow = Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
+
+    expect(Cell::query()->forWarehouses([$north->id])->pluck('id')->sort()->values()->all())
+        ->toBe($northRow->cells()->orderBy('id')->pluck('id')->all())
+        ->and(Cell::query()->forWarehouses(null)->pluck('id'))->toContain($otherRow->cells()->value('id'));
+});

@@ -44,7 +44,7 @@ class CellVerificationReportResource extends JsonResource
             'id' => $this->id,
             'cell_verification_round_id' => $this->cell_verification_round_id,
             'is_correct' => (bool) $this->is_correct,
-            'cell' => $this->whenLoaded('cell', fn () => $this->cell->toLocationArray()),
+            'cell' => $this->whenLoaded('cell', fn () => $this->cell->toLocationWithWarehouseArray()),
             'expected' => [
                 'cell_state' => $this->expected_cell_state->value,
                 'product' => $this->whenLoaded('expectedProduct', fn () => $this->expectedProduct === null ? null : new ProductResource($this->expectedProduct)),

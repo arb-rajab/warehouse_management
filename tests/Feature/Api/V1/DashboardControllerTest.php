@@ -4,6 +4,7 @@ use App\Enums\CellLogAction;
 use App\Models\CellStatusLog;
 use App\Models\Pallet;
 use App\Models\Product;
+use App\Models\Warehouse;
 use Illuminate\Support\Carbon;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\Feature\Concerns\SeedsCellStatusLogFixtures;
@@ -283,4 +284,66 @@ test('an unauthenticated caller cannot view the mobile dashboard', function () {
     $response = $this->getJson('/api/v1/dashboard');
 
     $response->assertUnauthorized();
+});
+
+test('every mobile dashboard stat respects the warehouse filter', function () {
+    Carbon::setTestNow('2026-08-13 10:00:00');
+    actingAsMobileUser();
+    ['north' => $north] = $this->seedDashboardWarehouseFilterFixture();
+
+    $response = $this->getJson("/api/v1/dashboard?warehouse_ids[]={$north->id}");
+
+    $response->assertOk();
+    expect($response->json('stats.occupancy'))->toEqual(['empty' => 1, 'full' => 1, 'opened' => 1])
+        ->and($response->json('stats.expiring.expired'))->toBe(0)
+        ->and($response->json('stats.expiring.custom.count'))->toBe(1)
+        ->and($response->json('stats.stale.count'))->toBe(0)
+        ->and($response->json('stats.low_stock.count'))->toBe(1)
+        ->and($response->json('stats.inactive_in_warehouse.count'))->toBe(1)
+        ->and($response->json('stats.activity_today.stored'))->toBe(1);
+});
+
+test('without a warehouse filter the mobile dashboard counts every warehouse', function () {
+    Carbon::setTestNow('2026-08-13 10:00:00');
+    actingAsMobileUser();
+    $this->seedDashboardWarehouseFilterFixture();
+
+    $response = $this->getJson('/api/v1/dashboard');
+
+    $response->assertOk();
+    expect($response->json('stats.occupancy'))->toEqual(['empty' => 2, 'full' => 3, 'opened' => 1])
+        ->and($response->json('stats.expiring.expired'))->toBe(1)
+        ->and($response->json('stats.stale.count'))->toBe(1)
+        ->and($response->json('stats.low_stock.count'))->toBe(0)
+        ->and($response->json('stats.inactive_in_warehouse.count'))->toBe(2)
+        ->and($response->json('stats.activity_today.stored'))->toBe(2)
+        ->and($response->json('filters.warehouse_ids'))->toBeNull();
+});
+
+test('the mobile dashboard echoes the warehouse filter beside the product filters, with no options list', function () {
+    actingAsMobileUser();
+    $north = Warehouse::factory()->create(['name' => 'North']);
+    $product = Product::factory()->create();
+
+    // product_status and product_id exclude each other, so each is echoed in its own request.
+    $byProduct = $this->getJson("/api/v1/dashboard?warehouse_ids[]={$north->id}&product_id[]={$product->id}");
+    $byStatus = $this->getJson("/api/v1/dashboard?warehouse_ids[]={$north->id}&product_status=active");
+
+    $byProduct->assertOk();
+    $byStatus->assertOk();
+    expect($byProduct->json('filters'))->toEqual([
+        'product_id' => [$product->id],
+        'product_status' => null,
+        'warehouse_ids' => [$north->id],
+    ])->and($byStatus->json('filters'))->toEqual([
+        'product_id' => null,
+        'product_status' => 'active',
+        'warehouse_ids' => [$north->id],
+    ])->and($byProduct->json('filterOptions'))->toBeNull();
+});
+
+test('the mobile dashboard rejects a warehouse id that does not exist', function () {
+    actingAsMobileUser();
+
+    $this->getJson('/api/v1/dashboard?warehouse_ids[]=999999')->assertUnprocessable()->assertJsonValidationErrors('warehouse_ids.0');
 });

@@ -51,7 +51,7 @@ const valueFilled = (value: string | number | null | undefined) =>
 
 <template>
     <div class="min-w-0" :class="{ 'col-span-full': full }">
-        <dt class="text-xs text-gray-500 dark:text-neutral-400">
+        <dt class="text-xs text-muted">
             {{ label }}
         </dt>
         <dd
@@ -65,12 +65,7 @@ const valueFilled = (value: string | number | null | undefined) =>
         >
             <slot v-if="slotFilled()" />
             <template v-else-if="valueFilled(value)">{{ value }}</template>
-            <span
-                v-else
-                data-detail-empty
-                class="text-gray-500 dark:text-neutral-400"
-                >-</span
-            >
+            <span v-else data-detail-empty class="text-muted">-</span>
         </dd>
     </div>
 </template>

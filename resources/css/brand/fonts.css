@@ -1,0 +1,11 @@
+/*
+ * Direction A fonts, self-hosted through @fontsource (no CDN, no CSP change).
+ * Shared by the storefront and the seller panel entries.
+ */
+
+@import '@fontsource/ibm-plex-sans-arabic/400.css';
+@import '@fontsource/ibm-plex-sans-arabic/500.css';
+@import '@fontsource/ibm-plex-sans-arabic/600.css';
+@import '@fontsource/ibm-plex-sans-arabic/700.css';
+@import '@fontsource/ibm-plex-mono/latin-500.css';
+@import '@fontsource/ibm-plex-mono/latin-600.css';

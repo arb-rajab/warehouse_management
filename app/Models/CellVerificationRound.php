@@ -121,6 +121,23 @@ class CellVerificationRound extends Model
     }
 
     /**
+     * Scope a query to the rounds claiming at least one row of the given
+     * warehouses; null matches every round. `rows.warehouse_id` is compared
+     * inline rather than through `Row::forWarehouses()`: a model scope called
+     * inside `whereHas()` loses Larastan's generic type (.ai/rules/models.md).
+     *
+     * @param  Builder<CellVerificationRound>  $query
+     * @param  list<int>|null  $warehouseIds
+     */
+    #[Scope]
+    protected function forWarehouses(Builder $query, ?array $warehouseIds): void
+    {
+        if ($warehouseIds !== null) {
+            $query->whereHas('rows', fn (Builder $rows) => $rows->whereIn('rows.warehouse_id', $warehouseIds));
+        }
+    }
+
+    /**
      * Scope a query by the user/completion/date-range filters used by the
      * admin rounds listing. Reads straight off the request (not
      * `$request->validated()`) so an absent filter is skipped rather than

@@ -23,8 +23,20 @@ const media = {
     }),
     removeEventListener: vi.fn(),
 };
+function setTokens(tokens: Record<string, string>): void {
+    for (const [name, value] of Object.entries(tokens)) {
+        document.documentElement.style.setProperty(name, value);
+    }
+}
 beforeEach(() => {
     vi.clearAllMocks();
+    setTokens({
+        '--brand': '#c4170c',
+        '--info-color': '#1d5fa8',
+        '--ink': '#1f1a17',
+        '--line': '#ece5df',
+        '--surface': '#ffffff',
+    });
     canMock.mockReturnValue(true);
     media.matches = false;
     vi.stubGlobal(
@@ -33,6 +45,7 @@ beforeEach(() => {
     );
 });
 afterEach(() => {
+    document.documentElement.removeAttribute('style');
     vi.unstubAllGlobals();
     i18n.global.locale.value = 'en';
 });
@@ -92,6 +105,12 @@ it('rebuilds for new series, Arabic labels and dark mode and retains an LTR canv
     });
     await wrapper.setProps({ labels: ['زيت'], values: [12] });
     i18n.global.locale.value = 'ar';
+    // brand/backoffice.css switches the tokens under prefers-color-scheme.
+    setTokens({
+        '--brand': '#d42a1e',
+        '--ink': '#f5f0eb',
+        '--line': '#3a332e',
+    });
     media.matches = true;
     themeListener();
     await nextTick();
@@ -103,7 +122,7 @@ it('rebuilds for new series, Arabic labels and dark mode and retains an LTR canv
                 datasets: [
                     expect.objectContaining({
                         data: [12],
-                        backgroundColor: ['#60a5fa', '#fbbf24'],
+                        backgroundColor: ['#d42a1e', '#1d5fa8'],
                     }),
                 ],
             }),
@@ -114,13 +133,42 @@ it('rebuilds for new series, Arabic labels and dark mode and retains an LTR canv
                     legend: expect.objectContaining({
                         rtl: true,
                         textDirection: 'rtl',
-                        labels: { color: '#e5e7eb', boxWidth: 12 },
+                        labels: { color: '#f5f0eb', boxWidth: 12 },
                     }),
                 }),
             }),
         }),
     );
     expect(chartDestroy).toHaveBeenCalled();
+    wrapper.unmount();
+});
+it('reads its colours from the Direction A tokens, not fixed hex values', () => {
+    const wrapper = mount(StoreDashboardChart, { props });
+    expect(ChartMock).toHaveBeenLastCalledWith(
+        wrapper.get('canvas').element,
+        expect.objectContaining({
+            data: expect.objectContaining({
+                datasets: [
+                    expect.objectContaining({
+                        backgroundColor: '#c4170c',
+                        borderColor: '#ffffff',
+                    }),
+                ],
+            }),
+            options: expect.objectContaining({
+                scales: {
+                    x: {
+                        ticks: { color: '#1f1a17' },
+                        grid: { color: '#ece5df' },
+                    },
+                    y: expect.objectContaining({
+                        ticks: { color: '#1f1a17', precision: 0 },
+                        grid: { color: '#ece5df' },
+                    }),
+                },
+            }),
+        }),
+    );
     wrapper.unmount();
 });
 it('does not instantiate a chart without dashboard permission', () => {

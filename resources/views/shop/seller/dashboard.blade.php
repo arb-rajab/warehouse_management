@@ -249,7 +249,7 @@
                                 <span class="fe fe-arrow-down fe-12"></span>
                                 <span class="fs-13 text-primary fw-600">{{ __('seller.dashboard.new_order') }}</span>
                             </p>
-                            <h3 class="mb-0" style="color: #A9A3CC">
+                            <h3 class="mb-0 text-secondary">
                                 {{ \App\Models\OrderDetail::where('seller_id', Auth::user()->id)->where('delivery_status', 'pending')->count() }}
                             </h3>
                         </div>
@@ -288,7 +288,7 @@
                                 <span class="fe fe-arrow-down fe-12"></span>
                                 <span class="fs-13 text-primary fw-600">{{ __('storefront.status.cancelled') }}</span>
                             </p>
-                            <h3 class="mb-0" style="color: #A9A3CC">
+                            <h3 class="mb-0 text-secondary">
                                 {{ \App\Models\OrderDetail::where('seller_id', Auth::user()->id)->where('delivery_status', 'cancelled')->count() }}
                             </h3>
                         </div>
@@ -330,7 +330,7 @@
                                 <span class="fe fe-arrow-down fe-12"></span>
                                 <span class="fs-13 text-primary fw-600">{{ __('storefront.status.on_delivery') }}</span>
                             </p>
-                            <h3 class="mb-0" style="color: #A9A3CC">
+                            <h3 class="mb-0 text-secondary">
                                 {{ \App\Models\OrderDetail::where('seller_id', Auth::user()->id)->where('delivery_status', 'on_the_way')->count() }}
                             </h3>
                         </div>
@@ -360,7 +360,7 @@
                                 <span class="fe fe-arrow-down fe-12"></span>
                                 <span class="fs-13 text-primary fw-600">{{ __('storefront.status.delivered') }}</span>
                             </p>
-                            <h3 class="mb-0" style="color: #A9A3CC">
+                            <h3 class="mb-0 text-secondary">
                                 {{ \App\Models\OrderDetail::where('seller_id', Auth::user()->id)->where('delivery_status', 'delivered')->count() }}
                             </h3>
                         </div>
@@ -573,6 +573,9 @@
 
 @section('script')
     <script type="text/javascript">
+        // Chart.js cannot read a CSS variable, so take the brand colour from the seller stylesheet.
+        var brandColor = getComputedStyle(document.documentElement).getPropertyValue('--brand').trim() || 'currentColor';
+        var chartFont = getComputedStyle(document.body).fontFamily;
         AIZ.plugins.chart('#graph-1', {
             type: 'bar',
             data: {
@@ -589,12 +592,8 @@
                         @endforeach
                     ],
 
-                    backgroundColor: ['#2E294E', '#2E294E', '#2E294E', '#2E294E', '#2E294E', '#2E294E',
-                        '#2E294E'
-                    ],
-                    borderColor: ['#2E294E', '#2E294E', '#2E294E', '#2E294E', '#2E294E', '#2E294E',
-                        '#2E294E'
-                    ],
+                    backgroundColor: brandColor,
+                    borderColor: brandColor,
                     borderWidth: 1
                 }]
             },
@@ -607,7 +606,7 @@
                         },
                         ticks: {
                             fontColor: "#AFAFAF",
-                            fontFamily: 'Roboto',
+                            fontFamily: chartFont,
                             fontSize: 10,
                             beginAtZero: true
                         },
@@ -618,7 +617,7 @@
                         },
                         ticks: {
                             fontColor: "#AFAFAF",
-                            fontFamily: 'Roboto',
+                            fontFamily: chartFont,
                             fontSize: 10
                         },
                         barThickness: 7,

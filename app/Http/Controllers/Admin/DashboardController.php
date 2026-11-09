@@ -8,6 +8,7 @@ use App\Http\Requests\Admin\ShowDashboardRequest;
 use App\Http\Resources\MatchingPalletResource;
 use App\Models\Pallet;
 use App\Models\Product;
+use App\Models\Warehouse;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -27,23 +28,27 @@ class DashboardController extends Controller
         $customExpiringDays = $request->integer('expiring_days') ?: self::DEFAULT_CUSTOM_EXPIRING_DAYS;
         $staleDays = $request->integer('stale_days') ?: self::DEFAULT_CUSTOM_STALE_DAYS;
         $productIds = $request->productIds();
+        $warehouseIds = $request->warehouseIds();
 
         return Inertia::render('Admin/Dashboard/Index', [
-            'stats' => $this->buildDashboardStats($today, $customExpiringDays, $staleDays, $productIds),
+            'stats' => $this->buildDashboardStats($today, $customExpiringDays, $staleDays, $productIds, $warehouseIds),
             'today' => $today->toDateString(),
             'weekStart' => $this->dashboardWeekStart($today)->toDateString(),
             'productPallets' => $productIds === null ? [] : MatchingPalletResource::collection(
                 Pallet::query()
                     ->listedForAdmin()
                     ->whereIn('product_id', $productIds)
+                    ->forWarehouses($warehouseIds)
                     ->limit(self::SELECTED_PRODUCT_PALLETS_LIMIT)
                     ->get(),
             ),
             'filters' => [
                 'product_id' => $productIds,
+                'warehouse_ids' => $warehouseIds,
             ],
             'filterOptions' => [
                 'products' => Product::selectedOptions($productIds ?? []),
+                'warehouses' => Warehouse::selectedOptions($warehouseIds ?? []),
             ],
         ]);
     }

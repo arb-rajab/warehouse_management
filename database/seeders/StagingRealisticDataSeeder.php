@@ -13,6 +13,7 @@ use App\Models\Product;
 use App\Models\ProductSetting;
 use App\Models\Row;
 use App\Models\User;
+use App\Models\Warehouse;
 use App\Services\DashboardStatsCache;
 use Carbon\CarbonInterface;
 use Database\Seeders\Concerns\RefusesProduction;
@@ -110,9 +111,11 @@ class StagingRealisticDataSeeder extends Seeder
 
     private function normalizeRows(): void
     {
+        $warehouseId = Warehouse::firstOrCreateDefault()->id;
+
         foreach (range(self::FIRST_ROW_LETTER, self::LAST_ROW_LETTER) as $letter) {
             Row::query()->firstOrCreate(
-                ['letter' => $letter],
+                ['warehouse_id' => $warehouseId, 'letter' => $letter],
                 ['cells_count' => self::COLUMNS, 'flats_count' => self::LEVELS],
             );
         }

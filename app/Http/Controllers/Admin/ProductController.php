@@ -19,13 +19,12 @@ use App\Models\ProductBarcode;
 use App\Models\ProductImageReview;
 use App\Models\ProductSetting;
 use App\Models\Setting;
-use App\Rules\NewProductBarcode;
+use App\Services\ProductBarcodeAttacher;
 use App\Services\ProductBarcodeLabels;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
-use Illuminate\Support\Facades\Validator;
 use Inertia\Inertia;
 use Inertia\Response;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
@@ -167,13 +166,10 @@ class ProductController extends Controller
      * Redirects to `admin.products.index` rather than `back()` — see
      * `updateBoxCount()`'s docblock.
      */
-    public function storeBarcode(StoreProductBarcodeRequest $request, Product $product): RedirectResponse
+    public function storeBarcode(StoreProductBarcodeRequest $request, Product $product, ProductBarcodeAttacher $attacher): RedirectResponse
     {
         $barcode = $request->validated('barcode');
-        NewProductBarcode::locked(function () use ($product, $barcode): void {
-            Validator::make(['barcode' => $barcode], StoreProductBarcodeRequest::barcodeRules())->validate();
-            $product->barcodes()->create(['barcode' => $barcode]);
-        });
+        $attacher->attach($product, $barcode);
         $this->flashAdminSuccess('barcode_has_been_added_successfully');
 
         return $this->redirectPreservingQuery('admin.products.index', $request);

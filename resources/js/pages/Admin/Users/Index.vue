@@ -71,9 +71,7 @@ function onPerPageChange(perPage: number): void {
             :empty-message="t('users.index.empty')"
         >
             <template #row="{ row: user }">
-                <td
-                    class="px-4 py-2 font-medium text-gray-900 dark:text-neutral-100"
-                >
+                <td class="px-4 py-2 font-medium text-ink">
                     {{ user.name }}
                 </td>
                 <td class="px-4 py-2">{{ user.email }}</td>

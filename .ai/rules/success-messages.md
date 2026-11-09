@@ -60,8 +60,9 @@ layout shows it in the green `SuccessBanner` above the page content.
 
 ## Where it shows
 
-`SuccessBanner.vue` is mounted once in `StoreAdminLayout` and in `AdminLayout`, not
-on the full-bleed warehouse map. It reads `usePage().flash.success`, hides with its
+`SuccessBanner.vue` is mounted once, by the shared `BackofficeShell` that both
+`StoreAdminLayout` and `AdminLayout` render through (layouts.md), not on the
+full-bleed warehouse map. It reads `usePage().flash.success`, hides with its
 X button, and shows again for the next flash even with the same wording. Do not add
 a second banner, toast or alert to a page for the same message.
 

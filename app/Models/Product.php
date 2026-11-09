@@ -429,14 +429,17 @@ class Product extends Model
      * (`Admin\ProductController::index()`), the dashboard's
      * inactive-in-warehouse count (`BuildsDashboardStats`) and
      * {@see self::activeOrInWarehouse()}, so the "in the warehouse"
-     * definitions can never drift apart.
+     * definitions can never drift apart. `$warehouseIds` narrows it to a
+     * pallet stored in one of those warehouses (the dashboard's warehouse
+     * filter); null means any warehouse.
      *
      * @param  EloquentBuilder<Product>  $query
+     * @param  list<int>|null  $warehouseIds
      */
     #[Scope]
-    protected function inWarehouse(EloquentBuilder $query): void
+    protected function inWarehouse(EloquentBuilder $query, ?array $warehouseIds = null): void
     {
-        $query->whereExists(self::palletOfProductSubquery());
+        $query->whereExists(self::palletOfProductSubquery()->forWarehouses($warehouseIds));
     }
 
     /**

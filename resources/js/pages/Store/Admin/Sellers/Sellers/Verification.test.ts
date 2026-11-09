@@ -121,7 +121,7 @@ describe('seller verification', () => {
             }),
         );
         expect(wrapper.find('script').exists()).toBe(false);
-        expect(wrapper.find('img').exists()).toBe(false);
+        expect(wrapper.get('main').find('img').exists()).toBe(false);
         expect(wrapper.text()).toContain('<script>value</script>');
         expect(wrapper.text()).toContain('<img onerror=bad>');
     });

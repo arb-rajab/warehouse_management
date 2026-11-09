@@ -17,8 +17,8 @@ defineProps<{
                 class="inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium"
                 :class="
                     flag.acknowledged
-                        ? 'bg-gray-100 text-gray-500 dark:bg-neutral-800 dark:text-neutral-400'
-                        : 'bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300'
+                        ? 'bg-subtle text-muted'
+                        : 'bg-warning-soft text-warning-strong'
                 "
             >
                 {{ flagReasonLabel(flag.reason) }}
@@ -27,7 +27,7 @@ defineProps<{
         <span
             v-for="flag in flags.filter((flag) => flag.acknowledged_by)"
             :key="`acknowledged-by-${flag.id}`"
-            class="text-[10px] text-gray-400 dark:text-neutral-500"
+            class="text-[10px] text-muted"
         >
             {{
                 t('cellLog.flags.acknowledgedBy', {

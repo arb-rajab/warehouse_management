@@ -37,10 +37,9 @@ const generalImages = computed(() =>
     ).filter((key) => settings.value[key] !== undefined),
 );
 const colors: ColorKey[] = ['base_color', 'base_hov_color'];
-const sectionClass =
-    'space-y-4 rounded-md border border-gray-200 p-4 dark:border-neutral-700';
+const sectionClass = 'space-y-4 rounded-md border border-line p-4';
 const legendClass = 'px-1 font-medium';
-const hintClass = 'text-sm text-gray-600 dark:text-neutral-300';
+const hintClass = 'text-sm text-muted';
 
 function updateText(key: TextKey | ColorKey, event: Event): void {
     settings.value[key] = (event.target as HTMLInputElement).value;

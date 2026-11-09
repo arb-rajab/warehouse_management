@@ -1,4 +1,21 @@
-@media (max-width: 860px) {
+/*
+ * Width breakpoints are container queries on `.wms` (base.css): the map sits
+ * beside the back-office sidebar, so its own width, not the viewport's,
+ * decides how much of the HUD fits. Height breakpoints stay media queries.
+ */
+@container wms (max-width: 1240px) {
+    /* beside an open sidebar on a laptop: the brand keeps only its logo */
+    .wms-brand__sub,
+    .wms-brand__title {
+        display: none;
+    }
+
+    .wms-brand {
+        padding-inline: 12px;
+    }
+}
+
+@container wms (max-width: 860px) {
     .wms-brand__sub {
         display: none;
     }
@@ -13,7 +30,7 @@
     }
 }
 
-@media (max-width: 720px) {
+@container wms (max-width: 720px) {
     /* on a phone the top bar never wraps over the content: the search folds behind a button */
     .wms-topbar {
         inset-inline: 8px;
@@ -204,13 +221,13 @@
     }
 }
 
-@media (min-width: 721px) {
+@container wms (min-width: 721px) {
     .wms-camera-bar {
         max-width: calc(100% - 270px);
     }
 }
 
-@media (max-width: 1250px) {
+@container wms (max-width: 1250px) {
     .wms-welcome__grid {
         grid-template-columns: auto auto;
     }
@@ -220,7 +237,7 @@
     }
 }
 
-@media (max-width: 1100px) {
+@container wms (max-width: 1100px) {
     .wms-stack {
         max-width: calc(100% - 32px);
     }

@@ -62,13 +62,13 @@ watch(
         v-if="message && !dismissed"
         ref="banner"
         role="status"
-        class="mb-4 flex items-center gap-1.5 rounded-md border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-700 dark:border-green-900 dark:bg-green-950 dark:text-green-400"
+        class="mb-4 flex items-center gap-1.5 rounded-md border border-success/25 bg-success-soft px-3 py-2 text-sm font-medium text-success-strong"
     >
         <CircleCheck class="h-4 w-4 shrink-0" aria-hidden="true" />
         <span class="min-w-0 flex-1">{{ message }}</span>
         <button
             type="button"
-            class="-me-1 shrink-0 cursor-pointer rounded p-0.5 hover:bg-green-100 dark:hover:bg-green-900"
+            class="-me-1 shrink-0 cursor-pointer rounded p-0.5 hover:bg-success/10"
             :aria-label="t('common.close')"
             @click="dismissed = true"
         >

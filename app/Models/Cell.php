@@ -52,11 +52,12 @@ class Cell extends Model
     ];
 
     /**
-     * As WITH_CONTENTS, plus the parent row for cells not already queried through one.
+     * As WITH_CONTENTS, plus the parent row and its warehouse for cells not
+     * already queried through one.
      *
      * @var list<string>
      */
-    public const array WITH_ROW_AND_CONTENTS = ['row:id,letter', ...self::WITH_CONTENTS];
+    public const array WITH_ROW_AND_CONTENTS = ['row:id,warehouse_id,letter', 'row.warehouse:id,name', ...self::WITH_CONTENTS];
 
     /**
      * @return array<string, string>
@@ -101,6 +102,27 @@ class Cell extends Model
     }
 
     /**
+     * {@see toLocationArray()} plus the cell's `warehouse` (`{id, name}`) when
+     * its row's warehouse is loaded (`row.warehouse`), for the admin listings
+     * whose links to a row must name its warehouse: a row letter is unique per
+     * warehouse only. The mobile API loads no warehouse for its locations, so
+     * its payloads keep the plain shape.
+     *
+     * @return array{row_letter: string, cell_number: int, flat_number: int, warehouse?: array{id: int, name: string}}
+     */
+    public function toLocationWithWarehouseArray(): array
+    {
+        $row = $this->row;
+        $location = $this->toLocationArray();
+
+        if ($row->relationLoaded('warehouse')) {
+            $location['warehouse'] = ['id' => $row->warehouse->id, 'name' => $row->warehouse->name];
+        }
+
+        return $location;
+    }
+
+    /**
      * The human-readable "A1·2" label printed on QR-export PDFs and shown on
      * the page a scanned QR code redirects to — both must stay in lockstep.
      */
@@ -120,6 +142,21 @@ class Cell extends Model
         $query->where('row_id', $row->id)
             ->where('cell_number', $cellNumber)
             ->where('flat_number', $flatNumber);
+    }
+
+    /**
+     * Scope a query to the cells of the given warehouses (through their row);
+     * null matches every cell. See {@see Row::forWarehouses()}.
+     *
+     * @param  Builder<Cell>  $query
+     * @param  list<int>|null  $warehouseIds
+     */
+    #[Scope]
+    protected function forWarehouses(Builder $query, ?array $warehouseIds): void
+    {
+        if ($warehouseIds !== null) {
+            $query->whereIn($query->qualifyColumn('row_id'), Row::query()->select('id')->forWarehouses($warehouseIds));
+        }
     }
 
     /**

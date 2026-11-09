@@ -158,6 +158,21 @@ class Pallet extends Model
     }
 
     /**
+     * Scope a query to the pallets stored in the given warehouses (through
+     * their cell's row); null matches every pallet. See {@see Row::forWarehouses()}.
+     *
+     * @param  Builder<Pallet>  $query
+     * @param  list<int>|null  $warehouseIds
+     */
+    #[Scope]
+    protected function forWarehouses(Builder $query, ?array $warehouseIds): void
+    {
+        if ($warehouseIds !== null) {
+            $query->whereIn($query->qualifyColumn('cell_id'), Cell::query()->select('id')->forWarehouses($warehouseIds));
+        }
+    }
+
+    /**
      * Scope a query by the admin products index's occupancy filters
      * (state/expired/expires_within_days), optionally pinned to one cell
      * state. Shared by `Product::matchingOccupancyFilters()` (which products
@@ -205,7 +220,8 @@ class Pallet extends Model
                 'product.thumbnailUpload:id,file_name,external_link',
                 'product.setting:product_id,boxes_count',
                 'cell:id,row_id,cell_number,flat_number,state,is_active',
-                'cell.row:id,letter',
+                'cell.row:id,warehouse_id,letter',
+                'cell.row.warehouse:id,name',
             ])
             ->orderedByExpirationThenAdded();
     }

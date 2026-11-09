@@ -16,6 +16,7 @@ describe('RowFormFields', () => {
         expect(t('rows.fields.letter')).toBe('Letter');
         expect(t('rows.fields.cellsPerFlat')).toBe('Cells per level');
         expect(t('rows.fields.flats')).toBe('Levels');
+        expect(t('rows.fields.warehouse')).toBe('Warehouse');
     });
 
     it('shows validation error messages', () => {
@@ -104,5 +105,50 @@ describe('RowFormFields', () => {
         expect(
             (wrapper.find('#flats_count').element as HTMLInputElement).readOnly,
         ).toBe(false);
+    });
+    it('shows the required warehouse select only when given the warehouses to offer', () => {
+        const without = mount(RowFormFields, { props: { errors: {} } });
+        expect(without.find('#warehouse_id').exists()).toBe(false);
+
+        const wrapper = mount(RowFormFields, {
+            props: {
+                errors: {},
+                warehouses: [
+                    { id: 1, name: 'Main' },
+                    { id: 5, name: 'Annex' },
+                ],
+                warehouseId: 5,
+            },
+        });
+        const select = wrapper.get<HTMLSelectElement>('#warehouse_id');
+
+        expect(select.element.required).toBe(true);
+        expect(select.element.value).toBe('5');
+        expect(wrapper.get('label[for="warehouse_id"]').text()).toContain(
+            t('rows.fields.warehouse'),
+        );
+    });
+
+    it('shows the warehouse of an existing row read-only, outside the posted fields', () => {
+        const wrapper = mount(RowFormFields, {
+            props: { errors: {}, warehouseName: 'Annex' },
+        });
+        const input = wrapper.get<HTMLInputElement>('#warehouse_name');
+
+        expect(input.element.value).toBe('Annex');
+        expect(input.element.readOnly).toBe(true);
+        expect(input.element.required).toBe(false);
+        expect(wrapper.find('#warehouse_id').exists()).toBe(false);
+    });
+
+    it('shows a warehouse validation error', () => {
+        const wrapper = mount(RowFormFields, {
+            props: {
+                errors: { warehouse_id: 'The selected warehouse is invalid.' },
+                warehouses: [{ id: 1, name: 'Main' }],
+            },
+        });
+
+        expect(wrapper.text()).toContain('The selected warehouse is invalid.');
     });
 });

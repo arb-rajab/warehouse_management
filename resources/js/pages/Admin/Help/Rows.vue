@@ -12,6 +12,9 @@ import { t } from '@/lib/i18n';
 
 const plainSections = ['grid', 'dimensions'];
 
+/** The warehouse the creation form's preview offers — plain fixture data, never fetched. */
+const previewWarehouses = [{ id: 1, name: 'Main' }];
+
 /** Representative rows for the Rows-list table preview below — plain fixture data, never fetched. */
 const previewRows = [
     { id: 1, letter: 'A', cells_count: 10, flats_count: 3 },
@@ -29,7 +32,7 @@ const previewRows = [
             <h2 :class="sectionHeadingClass">
                 {{ t(`help.rows.${section}.heading`) }}
             </h2>
-            <p class="text-sm text-gray-700 dark:text-neutral-300">
+            <p class="text-sm text-ink">
                 {{ t(`help.rows.${section}.body`) }}
             </p>
         </section>
@@ -38,7 +41,7 @@ const previewRows = [
             <h2 :class="sectionHeadingClass">
                 {{ t('help.rows.creating.heading') }}
             </h2>
-            <p class="text-sm text-gray-700 dark:text-neutral-300">
+            <p class="text-sm text-ink">
                 {{ t('help.rows.creating.body') }}
             </p>
             <HelpUiPreview class="mt-2">
@@ -49,7 +52,11 @@ const previewRows = [
                 />
             </HelpUiPreview>
             <HelpUiPreview inert class="mt-2 block max-w-xs">
-                <RowFormFields id-prefix="help-row-create-" :errors="{}" />
+                <RowFormFields
+                    id-prefix="help-row-create-"
+                    :warehouses="previewWarehouses"
+                    :errors="{}"
+                />
             </HelpUiPreview>
         </section>
 
@@ -57,13 +64,13 @@ const previewRows = [
             <h2 :class="sectionHeadingClass">
                 {{ t('help.rows.editing.heading') }}
             </h2>
-            <p class="text-sm text-gray-700 dark:text-neutral-300">
+            <p class="text-sm text-ink">
                 {{ t('help.rows.editing.body') }}
             </p>
             <HelpUiPreview class="mt-2">
                 <span
                     tabindex="-1"
-                    class="inline-flex items-center gap-1 text-sm text-gray-600 dark:text-neutral-400"
+                    class="inline-flex items-center gap-1 text-sm text-muted"
                 >
                     <Pencil class="h-3.5 w-3.5" />
                     {{ t('rows.show.editRow') }}
@@ -84,7 +91,7 @@ const previewRows = [
             <h2 :class="sectionHeadingClass">
                 {{ t('help.rows.deleting.heading') }}
             </h2>
-            <p class="text-sm text-gray-700 dark:text-neutral-300">
+            <p class="text-sm text-ink">
                 {{ t('help.rows.deleting.body') }}
             </p>
             <HelpUiPreview inert class="mt-2 block">
@@ -100,10 +107,9 @@ const previewRows = [
                 >
                     <template #row="{ row }">
                         <td class="px-4 py-2">
-                            <span
-                                class="font-medium text-gray-900 dark:text-neutral-100"
-                                >{{ row.letter }}</span
-                            >
+                            <span class="font-medium text-ink">{{
+                                row.letter
+                            }}</span>
                         </td>
                         <td class="px-4 py-2">{{ row.cells_count }}</td>
                         <td class="px-4 py-2">{{ row.flats_count }}</td>
@@ -122,7 +128,7 @@ const previewRows = [
                     <span
                         tabindex="-1"
                         :title="t('rows.index.hasPalletsTitle')"
-                        class="inline-flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400"
+                        class="inline-flex items-center gap-1 text-xs text-warning"
                     >
                         <TriangleAlert class="h-3.5 w-3.5 shrink-0" />
                         {{ t('rows.index.hasPallets') }}

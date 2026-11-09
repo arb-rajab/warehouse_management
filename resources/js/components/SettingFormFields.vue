@@ -97,7 +97,7 @@ const heightCm = computed(() =>
             <legend :class="fieldLabelClass">
                 {{ t('settings.fields.allowedOpenLevels') }}<RequiredMark />
             </legend>
-            <p class="mb-2 text-xs text-gray-500 dark:text-neutral-400">
+            <p class="mb-2 text-xs text-muted">
                 {{ t('settings.fields.allowedOpenLevelsHint') }}
             </p>
             <div class="space-y-1">
@@ -114,7 +114,7 @@ const heightCm = computed(() =>
                         :value="level"
                         :checked="checkedLevels.includes(level)"
                         :required="checkedLevels.length === 0"
-                        class="h-4 w-4 rounded border-gray-300 dark:border-neutral-700"
+                        class="h-4 w-4 rounded border-line-strong"
                         @change="
                             toggleLevel(
                                 level,
@@ -124,7 +124,7 @@ const heightCm = computed(() =>
                     />
                     <label
                         :for="`${idPrefix}allowed_open_levels_${level}`"
-                        class="text-sm text-gray-700 dark:text-neutral-300"
+                        class="text-sm text-ink"
                     >
                         {{ t('settings.fields.level', { level }) }}
                     </label>

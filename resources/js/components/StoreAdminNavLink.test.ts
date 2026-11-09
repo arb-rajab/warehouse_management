@@ -59,8 +59,28 @@ describe('StoreAdminNavLink', () => {
         });
 
         expect(active.get('a').attributes('aria-current')).toBe('page');
-        expect(active.get('a').classes()).toContain('font-medium');
+        expect(active.get('a').classes()).toContain('bg-sidebar-active');
+        expect(active.get('a').classes()).toContain('font-semibold');
         expect(inactive.get('a').attributes('aria-current')).toBeUndefined();
-        expect(inactive.get('a').classes()).not.toContain('font-medium');
+        expect(inactive.get('a').classes()).not.toContain('bg-sidebar-active');
+        expect(inactive.get('a').classes()).not.toContain('font-semibold');
+    });
+
+    it('passes the folded rail on to the shared sidebar link', () => {
+        const wrapper = mount(StoreAdminNavLink, {
+            props: {
+                item: {
+                    labelKey: 'store.nav.dashboard',
+                    href: admin_dashboard(),
+                },
+                active: false,
+                collapsed: true,
+            },
+        });
+
+        expect(wrapper.get('a').attributes('title')).toBe(
+            t('store.nav.dashboard'),
+        );
+        expect(wrapper.get('span').classes()).toContain('lg:sr-only');
     });
 });

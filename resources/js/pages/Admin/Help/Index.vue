@@ -5,6 +5,7 @@ import {
     ClipboardCheck,
     LayoutDashboard,
     Boxes,
+    Building2,
     LayoutGrid,
     Package,
     Rows3,
@@ -20,6 +21,7 @@ import { t } from '@/lib/i18n';
 const topics: { key: string; topic: string; icon: Component }[] = [
     { key: 'dashboard', topic: 'dashboard', icon: LayoutDashboard },
     { key: 'rows', topic: 'rows', icon: Rows3 },
+    { key: 'warehouses', topic: 'warehouses', icon: Building2 },
     { key: 'cells', topic: 'cells', icon: LayoutGrid },
     { key: 'warehouseMap', topic: 'warehouse-map', icon: Boxes },
     { key: 'cellLogs', topic: 'cell-logs', icon: ArrowLeftRight },
@@ -40,7 +42,7 @@ const topics: { key: string; topic: string; icon: Component }[] = [
     <AdminLayout>
         <PageHeader :title="t('help.index.title')" />
 
-        <p class="mb-6 text-sm text-gray-600 dark:text-neutral-400">
+        <p class="mb-6 text-sm text-muted">
             {{ t('help.index.intro') }}
         </p>
 
@@ -48,15 +50,15 @@ const topics: { key: string; topic: string; icon: Component }[] = [
             <li v-for="topic in topics" :key="topic.key">
                 <Link
                     :href="showHelp(topic.topic)"
-                    class="flex h-full flex-col gap-2 rounded-lg border border-gray-200 bg-white p-4 hover:border-gray-300 dark:border-neutral-800 dark:bg-neutral-900 dark:hover:border-neutral-700"
+                    class="flex h-full flex-col gap-2 rounded-lg border border-line bg-surface p-4 hover:border-line-strong"
                 >
                     <span
-                        class="inline-flex items-center gap-2 font-medium text-gray-900 dark:text-neutral-100"
+                        class="inline-flex items-center gap-2 font-medium text-ink"
                     >
                         <component :is="topic.icon" class="h-4 w-4 shrink-0" />
                         {{ t(`help.index.topics.${topic.key}.title`) }}
                     </span>
-                    <span class="text-sm text-gray-600 dark:text-neutral-400">
+                    <span class="text-sm text-muted">
                         {{ t(`help.index.topics.${topic.key}.description`) }}
                     </span>
                 </Link>

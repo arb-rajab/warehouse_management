@@ -56,9 +56,9 @@ class CellStatusLog extends Model
      */
     public const array WITH_DETAILS = [
         'cell:id,row_id,cell_number,flat_number',
-        'cell.row:id,letter',
+        'cell.row:id,warehouse_id,letter',
         'relatedCell:id,row_id,cell_number,flat_number',
-        'relatedCell.row:id,letter',
+        'relatedCell.row:id,warehouse_id,letter',
         'product:id,name,ar_name,thumbnail_img,warehouse_image_path,published',
         'product.thumbnailUpload:id,file_name,external_link',
         'product.setting:product_id,boxes_count',
@@ -81,6 +81,20 @@ class CellStatusLog extends Model
     public const array WITH_FLAG_DETAILS = [
         'flags:id,cell_status_log_id,reason,acknowledged_at,acknowledged_by',
         'flags.acknowledgedBy:id,name',
+    ];
+
+    /**
+     * The warehouses of the cells a log names, loaded only by the admin
+     * listings: their links to a cell's row carry the warehouse, because a row
+     * letter is unique per warehouse only. Left out of WITH_DETAILS so the
+     * mobile API's payloads keep their shape (`CellStatusLogResource` adds the
+     * `warehouse` key to a location only when it is loaded).
+     *
+     * @var list<string>
+     */
+    public const array WITH_WAREHOUSES = [
+        'cell.row.warehouse:id,name',
+        'relatedCell.row.warehouse:id,name',
     ];
 
     /**
@@ -224,6 +238,23 @@ class CellStatusLog extends Model
 
             $log->setAttribute('next_log_at', $nextLog?->created_at);
             $log->setAttribute('duration_seconds', (int) $log->created_at->diffInSeconds($nextLog->created_at ?? $now));
+        }
+    }
+
+    /**
+     * Scope a query to the logs written against cells of the given
+     * warehouses; null matches every log. A transfer between two warehouses
+     * writes one log per cell, so each side counts in its own warehouse.
+     * See {@see Row::forWarehouses()}.
+     *
+     * @param  Builder<CellStatusLog>  $query
+     * @param  list<int>|null  $warehouseIds
+     */
+    #[Scope]
+    protected function forWarehouses(Builder $query, ?array $warehouseIds): void
+    {
+        if ($warehouseIds !== null) {
+            $query->whereIn($query->qualifyColumn('cell_id'), Cell::query()->select('id')->forWarehouses($warehouseIds));
         }
     }
 

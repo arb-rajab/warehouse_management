@@ -13,8 +13,17 @@
         "confirmLogout": "Log out of your account?",
         "openMenu": "Open menu",
         "closeMenu": "Close menu",
-        "account": "Account",
-        "skipToContent": "Skip to main content"
+        "skipToContent": "Skip to main content",
+        "warehouses": "Warehouses",
+        "breadcrumb": "Breadcrumb",
+        "pallets": "Pallets",
+        "help": "Help",
+        "groupInventory": "Inventory",
+        "groupActivity": "Activity",
+        "groupAdmin": "Administration",
+        "menuLabel": "Warehouse menu",
+        "collapseSidebar": "Collapse sidebar",
+        "expandSidebar": "Expand sidebar"
     },
     "language": {
         "label": "Language",
@@ -112,7 +121,8 @@
             "delete": "Delete",
             "rowLabel": "row {letter}",
             "hasPallets": "Has pallets",
-            "hasPalletsTitle": "This row has pallets stored in it, so it can't be deleted."
+            "hasPalletsTitle": "This row has pallets stored in it, so it can't be deleted.",
+            "columnWarehouse": "Warehouse"
         },
         "create": {
             "title": "Add row",
@@ -133,12 +143,15 @@
             "empty": "Empty",
             "highlight": {
                 "button": "Highlight cells"
-            }
+            },
+            "details": "Details",
+            "warehouse": "Warehouse"
         },
         "fields": {
             "letter": "Letter",
             "cellsPerFlat": "Cells per level",
-            "flats": "Levels"
+            "flats": "Levels",
+            "warehouse": "Warehouse"
         }
     },
     "users": {
@@ -762,6 +775,10 @@
                 "settings": {
                     "title": "Settings",
                     "description": "How to change the size of every QR code label this app generates and which levels pallets may be opened on."
+                },
+                "warehouses": {
+                    "title": "Warehouses",
+                    "description": "What a warehouse is, how rows belong to one, and how to add, rename or remove a warehouse."
                 }
             }
         },
@@ -774,6 +791,10 @@
             "productFilter": {
                 "heading": "Filtering by product",
                 "body": "Use the product selector at the top to narrow every tile on the dashboard down to one or more specific products — useful for checking how much stock of a particular item is on hand or about to expire."
+            },
+            "warehouseFilter": {
+                "heading": "Filtering by warehouse",
+                "body": "Use the warehouse selector beside the product selector to count only the cells, pallets and activity of one or more warehouses. Leave it on All to see every warehouse together."
             }
         },
         "rows": {
@@ -788,7 +809,7 @@
             },
             "creating": {
                 "heading": "Adding a new row",
-                "body": "From the Rows page, click \"Add row\" and enter a letter plus the number of cells and levels. The system creates every empty slot in the grid automatically — there's nothing else to set up before pallets can be stored in it."
+                "body": "From the Rows page, click \"Add row\", choose the warehouse the row belongs to and enter a letter plus the number of cells and levels. The system creates every empty slot in the grid automatically — there's nothing else to set up before pallets can be stored in it."
             },
             "editing": {
                 "heading": "Changing a row's size",
@@ -925,6 +946,29 @@
             "sharing": {
                 "heading": "Sharing a location",
                 "body": "Open a rack and press “Copy link”: the link ends in #slot=B5-2 and opens the 3D view in front of that slot. The T key (or the small tab at the top edge) hides the toolbars."
+            }
+        },
+        "warehouses": {
+            "title": "Help: Warehouses",
+            "grid": {
+                "heading": "What is a warehouse?",
+                "body": "A warehouse is a physical site that holds rows. Every row belongs to exactly one warehouse, and its cells and pallets belong to that warehouse through the row. Everyone who uses the panel sees every warehouse."
+            },
+            "letters": {
+                "heading": "Row letters",
+                "body": "A row letter only has to be unique inside its warehouse, so two warehouses can each have a row A. Where a letter is shared, the row lists show the warehouse next to it (\"A - Main\")."
+            },
+            "creating": {
+                "heading": "Adding or changing a warehouse",
+                "body": "From the Warehouses page, click \"Add warehouse\" and enter a name; the code and address are optional. Open Edit on a warehouse to change them. Names and codes must be unique."
+            },
+            "filtering": {
+                "heading": "Showing one warehouse",
+                "body": "The dashboard, the warehouse map and the lists of rows, pallets, the activity log and verification rounds have a Warehouse filter. Pick one or more warehouses to see only their rows, cells and pallets; leave it on All to see everything."
+            },
+            "deleting": {
+                "heading": "Deleting a warehouse",
+                "body": "A warehouse can be deleted only while it has no rows. If it still has rows, move or delete them first — the delete option is hidden and a \"Has rows\" notice appears instead."
             }
         }
     },
@@ -3374,7 +3418,47 @@
             "slug": "slug",
             "old_photo": "Otajer images",
             "purchase_price": "purchase price",
-            "file": "product file"
+            "file": "product file",
+            "code": "code",
+            "address": "address"
         }
+    },
+    "warehouses": {
+        "index": {
+            "title": "Warehouses",
+            "addWarehouse": "Add warehouse",
+            "columnName": "Name",
+            "columnCode": "Code",
+            "columnAddress": "Address",
+            "columnRows": "Rows",
+            "columnAction": "Action",
+            "empty": "No warehouses yet.",
+            "edit": "Edit",
+            "delete": "Delete",
+            "warehouseLabel": "warehouse {name}",
+            "hasRows": "Has rows",
+            "hasRowsTitle": "This warehouse still has rows, so it can't be deleted. Move or delete its rows first."
+        },
+        "create": {
+            "title": "Add warehouse",
+            "submit": "Create warehouse",
+            "submitting": "Creating..."
+        },
+        "edit": {
+            "title": "Edit warehouse {name}",
+            "submit": "Save changes",
+            "submitting": "Saving..."
+        },
+        "fields": {
+            "name": "Name",
+            "code": "Code",
+            "address": "Address"
+        },
+        "filters": {
+            "label": "Warehouse",
+            "searchPlaceholder": "Search warehouses…",
+            "noWarehousesFound": "No warehouses found."
+        },
+        "rowOption": "{letter} - {warehouse}"
     }
 }

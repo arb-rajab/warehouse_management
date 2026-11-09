@@ -5,6 +5,7 @@ namespace App\Http\Requests\Admin;
 use App\Enums\CellState;
 use App\Http\Requests\Concerns\FiltersByProductIds;
 use App\Http\Requests\Concerns\FiltersByStaleAfterDays;
+use App\Http\Requests\Concerns\FiltersByWarehouseIds;
 use App\Http\Requests\Concerns\FiltersPerPage;
 use App\Http\Requests\Concerns\NormalizesBooleanFilters;
 use App\Http\Requests\Concerns\NormalizesExpiredFilter;
@@ -20,6 +21,7 @@ class FilterMatchingPalletsRequest extends FormRequest
 {
     use FiltersByProductIds;
     use FiltersByStaleAfterDays;
+    use FiltersByWarehouseIds;
     use FiltersPerPage;
     use NormalizesBooleanFilters;
     use NormalizesExpiredFilter;
@@ -44,6 +46,7 @@ class FilterMatchingPalletsRequest extends FormRequest
             'expired' => ['nullable', 'boolean'],
             ...$this->staleAfterDaysFilterRules(),
             ...$this->productIdsFilterRules(),
+            ...$this->warehouseIdsFilterRules(),
             ...$this->perPageRules(),
         ];
     }

@@ -9,6 +9,7 @@ use App\Models\Pallet;
 use App\Models\Product;
 use App\Models\Row;
 use App\Models\User;
+use App\Models\Warehouse;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -576,4 +577,17 @@ test('the cell log listing can be sorted by pallet expiration date', function ()
 
     $response->assertOk();
     expect(collect($response->json('data'))->pluck('id')->all())->toEqual([$soon->id, $late->id]);
+});
+
+test('the mobile cell logs can be filtered by warehouse', function () {
+    actingAsMobileUser();
+    $north = Warehouse::factory()->create();
+    $northRow = Row::factory()->for($north)->create(['cells_count' => 1, 'flats_count' => 1]);
+    $otherRow = Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
+    $inNorth = CellStatusLog::factory()->create(['cell_id' => $northRow->cells()->value('id')]);
+    $noise = CellStatusLog::factory()->create(['cell_id' => $otherRow->cells()->value('id')]);
+
+    expect(collect($this->getJson("/api/v1/cell-logs?warehouse_ids[]={$north->id}")->assertOk()->json('data'))->pluck('id')->all())
+        ->toBe([$inNorth->id])
+        ->and(collect($this->getJson('/api/v1/cell-logs')->json('data'))->pluck('id'))->toContain($noise->id);
 });

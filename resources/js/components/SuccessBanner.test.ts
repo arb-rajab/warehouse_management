@@ -31,12 +31,9 @@ describe('SuccessBanner', () => {
         expect(status.text()).toBe('Product has been updated successfully');
         expect(status.classes()).toEqual(
             expect.arrayContaining([
-                'border-green-200',
-                'bg-green-50',
-                'text-green-700',
-                'dark:border-green-900',
-                'dark:bg-green-950',
-                'dark:text-green-400',
+                'border-success/25',
+                'bg-success-soft',
+                'text-success-strong',
             ]),
         );
         expect(wrapper.findComponent(CircleCheck).exists()).toBe(true);

@@ -62,7 +62,7 @@ const access = useStoreAccess();
                             :href="field.file_url"
                             target="_blank"
                             rel="noopener"
-                            class="text-blue-700 underline dark:text-blue-400"
+                            class="text-link underline"
                             >{{ t('store.sellers.download') }}</a
                         ></DetailItem
                     >

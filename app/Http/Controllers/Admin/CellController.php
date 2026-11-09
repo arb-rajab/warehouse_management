@@ -21,10 +21,10 @@ class CellController extends Controller
 
     public function exportQrCode(Cell $cell): HttpResponse
     {
-        $cell->loadMissing('row:id,letter,flats_count');
+        $cell->loadMissing('row:id,warehouse_id,letter,flats_count');
         $setting = Setting::current();
 
-        return response($this->cellQrLabelImage($cell->row->letter, $cell, $setting->qr_code_width, $setting->qr_code_height, $cell->row->flats_count))
+        return response($this->cellQrLabelImage($cell->row, $cell, $setting->qr_code_width, $setting->qr_code_height))
             ->header('Content-Type', 'image/svg+xml')
             ->header('Content-Disposition', "attachment; filename=\"cell-{$cell->row->letter}{$cell->cell_number}-{$cell->flat_number}-qr.svg\"");
     }

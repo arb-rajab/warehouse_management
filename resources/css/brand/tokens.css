@@ -1,0 +1,81 @@
+/*
+ * Direction A ("Souq") tokens: brand red #C4170C (hover and strong #A11208),
+ * saffron accent #F2A900, ink #1F1A17, paper #FAF7F4, danger #B42318, IBM Plex
+ * Sans Arabic for both scripts, IBM Plex Mono for codes (.ai/rules/views.md).
+ * One source for the public storefront (storefront.css), the seller panel
+ * (seller.css) and the back office (app.css, which adds its sidebar and dark
+ * values in backoffice.css). The block also maps the legacy theme's own
+ * variables (--primary, --dark, ...) onto them.
+ */
+
+:root {
+    --font-sans:
+        'IBM Plex Sans Arabic', ui-sans-serif, system-ui, 'Segoe UI', sans-serif;
+    --font-mono:
+        'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+    --brand: #c4170c;
+    --brand-hover: #a11208;
+    --brand-strong: #a11208;
+    --brand-soft: #fdecea;
+    --on-brand: #ffffff;
+    --accent: #f2a900;
+    --accent-strong: #8a5a00;
+    --accent-soft: #fef3d7;
+    --on-accent: #1f1a17;
+    --ink: #1f1a17;
+    --muted: #6b625c;
+    --line: #ece5df;
+    --line-strong: #d9d0c8;
+    --page: #faf7f4;
+    --surface: #ffffff;
+    --subtle: #f3eee9;
+    --link: #a11208;
+    --focus-ring: rgb(196 23 12 / 0.18);
+    --success-color: #1e7f4f;
+    --success-strong: #17683f;
+    --success-soft: #e9f6ef;
+    --warning-color: #b25e00;
+    --warning-strong: #7a4a00;
+    --warning-soft: #fef3d7;
+    --danger-color: #b42318;
+    --danger-strong: #912018;
+    --danger-soft: #fee4e2;
+    --info-color: #1d5fa8;
+    --info-strong: #174c86;
+    --info-soft: #e6effa;
+
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 14px;
+    --radius-xl: 22px;
+    --radius-pill: 999px;
+    --shadow-card:
+        0 1px 2px rgb(31 26 23 / 0.05), 0 1px 1px rgb(31 26 23 / 0.03);
+    --shadow-pop: 0 16px 40px -12px rgb(31 26 23 / 0.28);
+    --shadow-btn: 0 1px 2px rgb(161 18 8 / 0.3);
+
+    /* The legacy theme's variables (aiz-core.css reads these). */
+    --primary: var(--brand);
+    --hov-primary: var(--brand-hover);
+    --soft-primary: var(--brand-soft);
+    --secondary: var(--muted);
+    --soft-secondary: rgb(107 98 92 / 0.12);
+    --success: var(--success-color);
+    --soft-success: var(--success-soft);
+    --warning: var(--accent);
+    --soft-warning: var(--accent-soft);
+    --danger: var(--danger-color);
+    --soft-danger: var(--danger-soft);
+    --info: var(--info-color);
+    --soft-info: var(--info-soft);
+    --blue: var(--info-color);
+    --light: var(--subtle);
+    --soft-light: var(--line);
+    --soft-white: var(--line-strong);
+    --dark: var(--ink);
+    --soft-dark: #2a2522;
+    --gray: #8a817a;
+    --gray-dark: var(--muted);
+    --white: #ffffff;
+}

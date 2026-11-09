@@ -77,6 +77,8 @@ Use the `actingAsAdmin()` helper in `tests/Pest.php` instead of writing `$this->
 
 The factories that quietly create a row: `Pallet::factory()` and `CellVerificationReport::factory()` when given no `cell_id`, and `Cell::factory()` with no `row_id` (see `CellFactory`'s `Row::withoutEvents(...)`).
 
+Since warehouses, `rows.letter` is unique per warehouse; every factory row still lands in the one Default warehouse unless the test passes `->for($warehouse)`, so the collision risk is the same. A test that needs one letter in two warehouses creates both rows with explicit warehouses.
+
 Pick one convention per test: either hardcode the letters *and* give every factory an explicit `cell_id`/`row_id` so none of them creates a row, or let the factories draw every letter. Only hardcode a letter when an assertion actually reads it — `expect($response->json('rows'))` needs 'A', a row that exists purely as noise does not.
 
 ## When changing a shared threshold constant, grep for the literal values it produces — not just its symbol name

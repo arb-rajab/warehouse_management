@@ -11,7 +11,7 @@ defineProps<{
 <template>
     <Link
         :href="href"
-        class="inline-flex items-center gap-1 text-blue-600 hover:underline dark:text-blue-400"
+        class="inline-flex items-center gap-1 text-link hover:underline"
     >
         <slot />
         <ArrowUpRight class="h-3 w-3 shrink-0" />

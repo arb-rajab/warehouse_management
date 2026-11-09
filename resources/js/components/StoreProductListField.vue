@@ -84,7 +84,7 @@ function remove(key: number): void {
                 </div>
                 <button
                     type="button"
-                    class="inline-flex cursor-pointer items-center gap-1 rounded-md border border-red-300 px-2 py-2 text-sm text-red-700 hover:bg-red-50 dark:border-red-800 dark:text-red-300 dark:hover:bg-red-950"
+                    class="inline-flex cursor-pointer items-center gap-1 rounded-md border border-danger/30 px-2 py-2 text-sm text-danger-strong hover:bg-danger-soft"
                     :aria-label="`${removeLabel} ${index + 1}`"
                     @click="remove(row.key)"
                 >
@@ -94,7 +94,7 @@ function remove(key: number): void {
         </ul>
         <button
             type="button"
-            class="mt-2 inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-50 dark:border-neutral-700 dark:hover:bg-neutral-800"
+            class="mt-2 inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-line-strong px-3 py-1.5 text-sm hover:bg-subtle"
             @click="add"
         >
             <Plus class="h-4 w-4" />{{ addLabel }}

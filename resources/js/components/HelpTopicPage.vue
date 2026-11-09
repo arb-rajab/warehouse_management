@@ -23,8 +23,7 @@ defineProps<{
 }>();
 
 /** Shared by both links; only the top one needs the trailing margin. */
-const topicLinkClass =
-    'inline-block text-sm text-blue-600 hover:underline dark:text-blue-400';
+const topicLinkClass = 'inline-block text-sm text-link hover:underline';
 </script>
 
 <template>

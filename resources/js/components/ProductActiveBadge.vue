@@ -12,8 +12,8 @@ defineProps<{
         class="inline-flex shrink-0 items-center gap-1 self-start rounded-full px-1.5 py-0.5 text-xs font-semibold whitespace-nowrap"
         :class="
             active
-                ? 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300'
-                : 'bg-amber-100 text-amber-900 dark:bg-amber-900/40 dark:text-amber-200'
+                ? 'bg-success-soft text-success-strong'
+                : 'bg-warning-soft text-warning-strong'
         "
         data-testid="product-active-badge"
     >

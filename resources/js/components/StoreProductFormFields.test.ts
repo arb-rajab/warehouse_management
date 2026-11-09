@@ -277,7 +277,7 @@ describe('StoreProductFormFields', () => {
             t('store.products.form.barcodeNotPrintable'),
         );
         expect(rows()[0].find('img').classes()).toEqual(
-            expect.arrayContaining(['bg-white', 'max-w-xs']),
+            expect.arrayContaining(['bg-surface', 'max-w-xs']),
         );
 
         // A changed value keeps its input editable and loses the image until saved.

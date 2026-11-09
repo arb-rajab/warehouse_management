@@ -11,6 +11,7 @@ import {
     Tooltip,
 } from 'chart.js';
 import { onBeforeUnmount, onMounted, ref, useId, watch } from 'vue';
+import { readCssToken } from '@/lib/cssToken';
 import { i18n } from '@/lib/i18n';
 import { useStoreAccess } from '@/lib/storeAccess';
 
@@ -47,9 +48,13 @@ function renderChart() {
         return;
     }
 
-    const text = dark.value ? '#e5e7eb' : '#1f2937';
-    const grid = dark.value ? '#525252' : '#d1d5db';
-    const colors = dark.value ? ['#60a5fa', '#fbbf24'] : ['#1d4ed8', '#92400e'];
+    // Chart.js draws on a canvas and cannot read a CSS variable, so the
+    // colours come from the Direction A tokens' computed values; dark mode
+    // switches them (brand/backoffice.css) and re-renders through `dark`.
+    const text = readCssToken('--ink');
+    const grid = readCssToken('--line');
+    // Saffron stays reserved for the user avatar, so the second series is info blue.
+    const colors = [readCssToken('--brand'), readCssToken('--info-color')];
     chart = new Chart(canvas.value, {
         type: props.type,
         data: {
@@ -59,7 +64,7 @@ function renderChart() {
                     label: props.valueLabel,
                     data: [...props.values],
                     backgroundColor: props.type === 'bar' ? colors[0] : colors,
-                    borderColor: dark.value ? '#171717' : '#ffffff',
+                    borderColor: readCssToken('--surface'),
                     borderWidth: 2,
                 },
             ],
@@ -70,7 +75,7 @@ function renderChart() {
             animation: false,
             locale: locale.value,
             ...(props.type === 'doughnut' ? { cutout: '70%' } : {}),
-            font: { family: 'Tajawal, Inter, sans-serif' },
+            font: { family: readCssToken('--font-sans') },
             plugins: {
                 legend: {
                     display: props.type === 'doughnut',
@@ -127,9 +132,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-    <section
-        class="rounded-lg border border-gray-200 bg-white p-4 dark:border-neutral-700 dark:bg-neutral-900"
-    >
+    <section class="rounded-lg border border-line bg-surface p-4 shadow-card">
         <h2 class="mb-4 font-semibold">{{ title }}</h2>
         <div dir="ltr" class="relative h-72">
             <canvas

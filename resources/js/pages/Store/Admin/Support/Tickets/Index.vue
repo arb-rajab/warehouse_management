@@ -89,7 +89,7 @@ const tableColumns = computed(() => [
             :empty-message="t('store.support.emptyTickets')"
         >
             <template #row="{ row }">
-                <td class="px-4 py-2">#{{ row.code }}</td>
+                <td class="px-4 py-2 font-mono">#{{ row.code }}</td>
                 <td v-if="shown.date" class="px-4 py-2">
                     {{ row.created_at ? formatDateTime(row.created_at) : '' }}
                     <span v-if="!row.viewed"

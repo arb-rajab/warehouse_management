@@ -34,8 +34,8 @@ describe('CellLogFlagBadges', () => {
         ]);
 
         const badges = wrapper.findAll('span');
-        expect(badges[0].classes()).toContain('bg-amber-100');
-        expect(badges[1].classes()).toContain('bg-gray-100');
+        expect(badges[0].classes()).toContain('bg-warning-soft');
+        expect(badges[1].classes()).toContain('bg-subtle');
         expect(badges[0].classes()).not.toEqual(badges[1].classes());
     });
 

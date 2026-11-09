@@ -95,9 +95,7 @@ const tableColumns = computed(() => [
             :empty-message="t('store.blogPosts.index.empty')"
         >
             <template #row="{ row: blog }">
-                <td
-                    class="px-4 py-2 font-medium text-gray-900 dark:text-neutral-100"
-                >
+                <td class="px-4 py-2 font-medium text-ink">
                     {{ blog.title }}
                 </td>
                 <td v-if="shown.category" class="px-4 py-2">

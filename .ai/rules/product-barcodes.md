@@ -6,6 +6,9 @@ paths:
   - 'app/Services/Store/InHouseProductWriter.php'
   - 'app/Console/Commands/ProductBarcodeConflictsCommand.php'
   - 'app/Http/Requests/Admin/StoreProductBarcodeRequest.php'
+  - 'app/Http/Requests/Api/V1/StoreProductBarcodeRequest.php'
+  - 'app/Services/ProductBarcodeAttacher.php'
+  - 'routes/api.php'
   - 'app/Http/Requests/Concerns/ValidatesStoreProduct.php'
   - 'app/Http/Resources/ProductSummaryResource.php'
   - 'app/Http/Resources/Store/ProductFormResource.php'
@@ -66,6 +69,21 @@ adding the same value at once cannot both pass. A new writer of
 `product_barcodes` does the same; the importer is the one that deliberately
 skips the product-id rule. Do not add a second uniqueness implementation or
 rely on a database error.
+
+## Mobile: `POST /api/v1/products/{product}/barcodes`
+
+`Api\V1\ProductController::storeBarcode` (route `api.v1.product-barcodes.store`,
+`auth:sanctum`, no role gate like the other v1 routes, no cache headers) mirrors
+the WMS add-barcode flow through `ProductBarcodeAttacher` and the Api/V1
+`StoreProductBarcodeRequest` (same trim and rules as the Admin one, via
+`barcodeRules()`/`barcodeFormatRules()`). 201 returns `data.product_id`,
+`data.barcode` (the new row) and `data.barcodes` (listed rows, oldest first,
+own-id row never listed or touched; the row shape is
+`ProductSummaryResource::barcodeShape()`). A code this product already holds,
+or a product's id, is 422 exactly like the WMS form. A code another product
+holds is 409 `error_code: barcode_taken` with ascending `product_ids`, the
+`ambiguous_barcode` envelope style; the same mapping applies if the check under
+the lock loses a race. An unknown product is 404.
 
 ## Every product delete path deletes its barcodes explicitly
 

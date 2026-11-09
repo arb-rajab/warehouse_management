@@ -32,12 +32,12 @@ const stateIcon = computed(() =>
 
 const borderClass = computed(() => {
     if (!props.cell) {
-        return 'border border-dashed border-gray-200 dark:border-neutral-800';
+        return 'border border-dashed border-line';
     }
 
     return props.cell.is_active
         ? `border ${CELL_STATE_COLOR[props.cell.state].borderClass}`
-        : 'border-2 border-red-500 dark:border-red-600';
+        : 'border-2 border-danger';
 });
 
 /**
@@ -91,10 +91,10 @@ function onManagePallet(): void {
             borderClass,
             fadeClass,
             highlighted
-                ? 'ring-2 ring-blue-500 ring-offset-1 dark:ring-offset-neutral-950'
+                ? 'ring-2 ring-info ring-offset-1 ring-offset-surface'
                 : '',
             pulsing
-                ? 'animate-pulse ring-2 ring-emerald-500 ring-offset-1 dark:ring-offset-neutral-950'
+                ? 'animate-pulse ring-2 ring-success ring-offset-1 ring-offset-surface'
                 : '',
             isManageable ? 'cursor-pointer' : '',
         ]"
@@ -105,9 +105,7 @@ function onManagePallet(): void {
         @click="onManagePallet"
         @keydown.enter.space.self.prevent="onManagePallet"
     >
-        <span
-            class="flex items-center gap-1 font-medium text-gray-500 dark:text-neutral-400"
-        >
+        <span class="flex items-center gap-1 font-mono font-medium text-muted">
             <component
                 :is="stateIcon"
                 v-if="stateIcon"
@@ -120,7 +118,7 @@ function onManagePallet(): void {
         <span
             v-if="cell && !cell.is_active"
             :title="t('cells.inactiveBadge')"
-            class="absolute start-1 top-1 flex items-center gap-0.5 rounded bg-red-600 px-1 py-0.5 text-[10px] font-semibold text-white"
+            class="absolute start-1 top-1 flex items-center gap-0.5 rounded border border-danger/30 bg-danger-soft px-1 py-0.5 text-[10px] font-semibold text-danger-strong"
         >
             <Ban class="h-3 w-3 shrink-0" stroke-width="2.5" />
         </span>
@@ -130,7 +128,7 @@ function onManagePallet(): void {
             type="button"
             :title="toggleActiveLabel"
             :aria-label="toggleActiveLabel"
-            class="absolute end-7 top-1 cursor-pointer text-gray-400 hover:text-red-600 dark:text-neutral-500 dark:hover:text-red-500"
+            class="absolute end-7 top-1 cursor-pointer text-muted hover:text-danger"
             @click.stop="onToggleActive"
         >
             <Ban class="h-5 w-5" stroke-width="2.5" />
@@ -143,10 +141,7 @@ function onManagePallet(): void {
             class="absolute end-1 top-1"
             @click.stop
         >
-            <QrCode
-                class="h-5 w-5 text-gray-400 dark:text-neutral-500"
-                stroke-width="2.5"
-            />
+            <QrCode class="h-5 w-5 text-muted" stroke-width="2.5" />
         </a>
 
         <template v-if="cell?.pallet">
@@ -161,9 +156,7 @@ function onManagePallet(): void {
                 "
                 class="mb-1 h-8 w-8 rounded object-cover"
             />
-            <div
-                class="truncate font-medium text-gray-900 dark:text-neutral-100"
-            >
+            <div class="truncate font-medium text-ink">
                 {{
                     productName(
                         cell.pallet.product_name,
@@ -174,22 +167,20 @@ function onManagePallet(): void {
             <div class="space-y-0.5">
                 <div
                     v-if="cell.pallet.expiration_date"
-                    class="flex items-center gap-1 text-xs text-gray-500 dark:text-neutral-400"
+                    class="flex items-center gap-1 text-xs text-muted"
                 >
                     <CalendarX class="h-3 w-3 shrink-0" />
                     {{ formatDate(cell.pallet.expiration_date) }}
                 </div>
                 <div
                     v-if="cell.pallet.added_at"
-                    class="flex items-center gap-1 text-xs text-gray-400 dark:text-neutral-500"
+                    class="flex items-center gap-1 text-xs text-muted"
                 >
                     <CalendarPlus class="h-3 w-3 shrink-0" />
                     {{ formatDateTime(cell.pallet.added_at) }}
                 </div>
             </div>
         </template>
-        <span v-else class="text-gray-400 dark:text-neutral-600">{{
-            t('rows.show.empty')
-        }}</span>
+        <span v-else class="text-muted">{{ t('rows.show.empty') }}</span>
     </div>
 </template>

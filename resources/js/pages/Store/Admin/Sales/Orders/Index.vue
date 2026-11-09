@@ -269,7 +269,7 @@ const hasRequiredFields = provideRequiredFields();
                                 "
                             />
                         </td>
-                        <td class="px-3 py-3">{{ row.code }}</td>
+                        <td class="px-3 py-3 font-mono">{{ row.code }}</td>
                         <td v-if="shown.customer" class="px-3 py-3">
                             <TableObjectLink
                                 v-if="row.customer"
@@ -323,6 +323,7 @@ const hasRequiredFields = provideRequiredFields();
                     "
                 >
                     <SubmitButton
+                        variant="danger"
                         :label="t('store.orders.deleteSelected')"
                         :processing-label="t('store.orders.saving')"
                         :processing="processing"

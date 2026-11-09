@@ -168,6 +168,7 @@ test('the only bare-named tables are this app\'s own domain tables plus the shar
         'users',
         'visits',
         'wallets',
+        'warehouses',
         'wishlists',
         'zones',
     ]);

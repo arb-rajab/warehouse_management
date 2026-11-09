@@ -6,6 +6,7 @@ use App\Models\CellVerificationRound;
 use App\Models\Product;
 use App\Models\Row;
 use App\Models\User;
+use App\Models\Warehouse;
 use Illuminate\Support\Carbon;
 
 test('an authenticated worker can start a verification round over the rows they name', function () {
@@ -425,4 +426,17 @@ test('completing a non-existent round returns a 404', function () {
     $response = $this->postJson('/api/v1/cell-verification-rounds/999999/complete');
 
     $response->assertNotFound();
+});
+
+test('the worker\'s own rounds can be filtered by warehouse', function () {
+    $user = actingAsMobileUser();
+    $north = Warehouse::factory()->create();
+    $northRow = Row::factory()->for($north)->create(['cells_count' => 1, 'flats_count' => 1]);
+    $otherRow = Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
+    $inNorth = CellVerificationRound::factory()->for($user)->covering($northRow)->create();
+    $noise = CellVerificationRound::factory()->for($user)->covering($otherRow)->completed()->create();
+
+    expect(collect($this->getJson("/api/v1/cell-verification-rounds?warehouse_ids[]={$north->id}")->assertOk()->json('data'))->pluck('id')->all())
+        ->toBe([$inNorth->id])
+        ->and(collect($this->getJson('/api/v1/cell-verification-rounds')->json('data'))->pluck('id'))->toContain($noise->id);
 });

@@ -10,7 +10,7 @@ defineProps<{
     <p
         v-if="message"
         role="alert"
-        class="mb-4 flex items-center gap-1.5 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600 dark:border-red-900 dark:bg-red-950 dark:text-red-400"
+        class="mb-4 flex items-center gap-1.5 rounded-md border border-danger/30 bg-danger-soft px-3 py-2 text-sm text-danger-strong"
     >
         <CircleAlert class="h-4 w-4 shrink-0" />
         {{ message }}

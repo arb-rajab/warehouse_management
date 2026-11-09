@@ -8,16 +8,17 @@ import { t } from '@/lib/i18n';
 
 /**
  * `href` defaults to this app's own logout; StoreAdminLayout passes the
- * store's, which signs out of the `store` guard instead.
+ * store's, which signs out of the `store` guard instead. `labelClass` lets
+ * the folded sidebar rail keep the label for screen readers only.
  */
-withDefaults(defineProps<{ href?: UrlMethodPair }>(), {
+withDefaults(defineProps<{ href?: UrlMethodPair; labelClass?: string }>(), {
     href: () => destroy(),
 });
 </script>
 
 <template>
     <Link :href="href" as="button" :on-before="confirmLogout">
-        <LogOut class="h-4 w-4" />
-        {{ t('nav.logout') }}
+        <LogOut class="h-4 w-4 shrink-0" aria-hidden="true" />
+        <span :class="labelClass">{{ t('nav.logout') }}</span>
     </Link>
 </template>
