@@ -558,3 +558,35 @@ test('an unplaced pallet shown on its own carries placed false, a null state and
         ->and($response->json('warehouse'))->toEqual(['id' => $warehouse->id, 'name' => 'Annex'])
         ->and($response->headers->get('ETag'))->not->toBeNull();
 });
+
+// --- The other pallet actions refuse an unplaced pallet ---------------------------------
+
+test('open, remove-boxes, empty and transfer refuse an unplaced pallet with 409 pallet_not_placed and change nothing', function (string $action, array $payload) {
+    actingAsMobileUser();
+    $destination = Row::factory()->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 1]);
+    $pallet = unplacedPalletIn(Warehouse::firstOrCreateDefault(), ['remaining_boxes' => 6]);
+
+    $this->postJson("/api/v1/pallets/{$pallet->id}/{$action}", $payload)
+        ->assertConflict()
+        ->assertExactJson(['message' => __('messages.pallet_not_placed'), 'error_code' => 'pallet_not_placed']);
+
+    expect(Pallet::query()->count())->toBe(1)
+        ->and($pallet->fresh()->cell_id)->toBeNull()
+        ->and($pallet->fresh()->remaining_boxes)->toBe(6)
+        ->and($destination->cells()->first()->state)->toBe(CellState::Empty)
+        ->and(CellStatusLog::query()->count())->toBe(0);
+})->with([
+    'open' => ['open', []],
+    'open with boxes' => ['open', ['boxes_count' => 2]],
+    'remove-boxes' => ['remove-boxes', ['boxes_count' => 1]],
+    'empty' => ['empty', []],
+    'transfer' => ['transfer', ['to_row_letter' => 'A', 'to_cell_number' => 1, 'to_flat_number' => 1]],
+]);
+
+test('an unplaced pallet is refused before the If-Match precondition is looked at', function () {
+    actingAsMobileUser();
+    $pallet = unplacedPalletIn(Warehouse::firstOrCreateDefault());
+
+    $this->postJson("/api/v1/pallets/{$pallet->id}/empty", [], ['If-Match' => '"not-the-etag"'])
+        ->assertConflict()->assertJsonPath('error_code', 'pallet_not_placed');
+});

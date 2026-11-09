@@ -593,3 +593,43 @@ test('the mobile cell logs can be filtered by warehouse', function () {
         ->toBe([$inNorth->id])
         ->and(collect($this->getJson('/api/v1/cell-logs')->json('data'))->pluck('id'))->toContain($noise->id);
 });
+
+test('a cell log names the warehouse of its cell and of its related cell, even when a transfer crosses warehouses', function () {
+    actingAsMobileUser();
+    $north = Warehouse::factory()->create(['name' => 'North']);
+    $south = Warehouse::factory()->create(['name' => 'South']);
+    $northRow = Row::factory()->for($north)->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 1]);
+    $southRow = Row::factory()->for($south)->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 1]);
+    $log = CellStatusLog::factory()->create([
+        'cell_id' => $northRow->cells()->value('id'),
+        'related_cell_id' => $southRow->cells()->value('id'),
+        'action' => CellLogAction::TransferredOut,
+    ]);
+
+    $payload = $this->getJson('/api/v1/cell-logs')->assertOk()->json('data.0');
+
+    expect($payload['id'])->toBe($log->id)
+        ->and($payload['cell'])->toBe(['row_letter' => 'A', 'cell_number' => 1, 'flat_number' => 1, 'warehouse' => ['id' => $north->id, 'name' => 'North']])
+        ->and($payload['related_cell'])->toBe(['row_letter' => 'A', 'cell_number' => 1, 'flat_number' => 1, 'warehouse' => ['id' => $south->id, 'name' => 'South']]);
+});
+
+test('a cell log without a related cell has a null related_cell, and several logs name their own warehouses without lazy loading', function () {
+    actingAsMobileUser();
+    $north = Warehouse::factory()->create(['name' => 'North']);
+    $south = Warehouse::factory()->create(['name' => 'South']);
+    $inNorth = CellStatusLog::factory()->create(['cell_id' => Row::factory()->for($north)->create(['cells_count' => 1, 'flats_count' => 1])->cells()->value('id'), 'related_cell_id' => null]);
+    $inSouth = CellStatusLog::factory()->create(['cell_id' => Row::factory()->for($south)->create(['cells_count' => 1, 'flats_count' => 1])->cells()->value('id'), 'related_cell_id' => null]);
+
+    $rows = collect($this->getJson('/api/v1/cell-logs')->assertOk()->json('data'))->keyBy('id');
+
+    expect($rows[$inNorth->id]['cell']['warehouse']['name'])->toBe('North')
+        ->and($rows[$inSouth->id]['cell']['warehouse']['name'])->toBe('South')
+        ->and($rows[$inNorth->id]['related_cell'])->toBeNull();
+});
+
+test('the cell log listing never contains an entry for an unplaced pallet, which has no cell to log against', function () {
+    actingAsMobileUser();
+    unplacedPalletIn(Warehouse::firstOrCreateDefault());
+
+    $this->getJson('/api/v1/cell-logs')->assertOk()->assertJsonCount(0, 'data');
+});

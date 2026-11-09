@@ -9,6 +9,7 @@ use App\Models\ProductBarcode;
 use App\Models\ProductCollection;
 use App\Models\Upload;
 use App\Models\User;
+use App\Models\Warehouse;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -799,4 +800,38 @@ test('atLeastStars keeps the products graded at least that high, and everything 
         ->and(Product::query()->atLeastStars(5.5)->count())->toBe(0)
         ->and(Product::query()->atLeastStars(0)->count())->toBe(3)
         ->and(Product::query()->atLeastStars(-1)->count())->toBe(3);
+});
+
+test('inWarehouse counts a pallet that was received but has no cell yet', function () {
+    $held = Product::factory()->create();
+    unplacedPalletIn(Warehouse::firstOrCreateDefault(), ['product_id' => $held->id]);
+    Product::factory()->create(); // noise: no pallet at all
+
+    expect(Product::query()->inWarehouse()->pluck('id')->all())->toBe([$held->id]);
+});
+
+test('inWarehouse narrowed to warehouses matches an unplaced pallet through its receipt and a placed one through its row', function () {
+    $north = Warehouse::factory()->create();
+    $south = Warehouse::factory()->create();
+    $unplacedNorth = Product::factory()->create();
+    $placedNorth = Product::factory()->create();
+    $southOnly = Product::factory()->create(); // noise
+    unplacedPalletIn($north, ['product_id' => $unplacedNorth->id]);
+    placedPalletIn($north, ['product_id' => $placedNorth->id]);
+    unplacedPalletIn($south, ['product_id' => $southOnly->id]);
+    placedPalletIn($south, ['product_id' => $southOnly->id]);
+
+    expect(Product::query()->inWarehouse([$north->id])->orderBy('id')->pluck('id')->all())->toBe([$unplacedNorth->id, $placedNorth->id])
+        ->and(Product::query()->inWarehouse([$south->id])->pluck('id')->all())->toBe([$southOnly->id])
+        ->and(Product::query()->inWarehouse()->count())->toBe(3);
+});
+
+test('activeOrInWarehouse keeps an inactive product that is held only as an unplaced pallet', function () {
+    $inactiveHeld = Product::factory()->inactive()->create();
+    $inactiveNone = Product::factory()->inactive()->create(); // noise
+    $active = Product::factory()->create();
+    unplacedPalletIn(Warehouse::firstOrCreateDefault(), ['product_id' => $inactiveHeld->id]);
+
+    expect(Product::query()->activeOrInWarehouse()->orderBy('id')->pluck('id')->all())->toBe([$inactiveHeld->id, $active->id])
+        ->and(Product::query()->activeOrInWarehouse()->pluck('id'))->not->toContain($inactiveNone->id);
 });

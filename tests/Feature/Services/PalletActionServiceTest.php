@@ -235,3 +235,62 @@ test('open skips the allowed-levels rule only when told to, as a verification re
 
     expect($cell->refresh()->state)->toBe(CellState::Opened);
 });
+
+test('every action that works on a cell refuses an unplaced pallet before locking anything, naming pallet_not_placed', function (Closure $action) {
+    $pallet = Pallet::factory()->unplaced()->create();
+    $user = User::factory()->mobileUser()->create();
+    [$destination] = secondLevelCells(1);
+
+    try {
+        $action(palletActionsUnderTest(), $pallet, $user, $destination);
+        $this->fail('Expected the unplaced pallet to be refused.');
+    } catch (InvalidSlotStateException $exception) {
+        expect($exception->errorCode)->toBe('pallet_not_placed')
+            ->and($exception->getMessage())->toBe(__('messages.pallet_not_placed'));
+    }
+
+    expect($pallet->fresh()->cell_id)->toBeNull()
+        ->and(Pallet::query()->count())->toBe(1)
+        ->and($destination->fresh()->state)->toBe(CellState::Empty)
+        ->and(CellStatusLog::query()->count())->toBe(0);
+})->with([
+    'open' => [fn ($service, $pallet, $user) => $service->open($pallet, null, false, $user->id, null)],
+    'removeBoxes' => [fn ($service, $pallet, $user) => $service->removeBoxes($pallet, 1, false, $user->id, null)],
+    'emptyPallet' => [fn ($service, $pallet, $user) => $service->emptyPallet($pallet, $user->id, null)],
+    'transfer' => [fn ($service, $pallet, $user, $destination) => $service->transfer($pallet, $destination->id, $user->id, null)],
+    'update' => [fn ($service, $pallet, $user) => $service->update($pallet, $pallet->product_id, null, 3, $user->id, false)],
+]);
+
+test('placing a pallet that another request placed after it was read is refused as already placed, leaving the target cell empty', function () {
+    [$first, $second] = secondLevelCells(2);
+    $pallet = Pallet::factory()->unplaced()->create();
+    $user = User::factory()->mobileUser()->create();
+
+    $staleCopy = Pallet::query()->findOrFail($pallet->id);
+    palletActionsUnderTest()->place(Pallet::query()->findOrFail($pallet->id), $first->id, $user->id, null);
+
+    expect(fn () => palletActionsUnderTest()->place($staleCopy, $second->id, $user->id, null))
+        ->toThrow(InvalidSlotStateException::class, __('messages.pallet_already_placed'));
+
+    expect($pallet->fresh()->cell_id)->toBe($first->id)
+        ->and($second->fresh()->state)->toBe(CellState::Empty)
+        ->and(CellStatusLog::query()->count())->toBe(1);
+});
+
+test('place writes one stored log with the pallets remaining boxes and returns the placed pallet', function () {
+    [$cell] = secondLevelCells(1);
+    $pallet = Pallet::factory()->unplaced()->create(['remaining_boxes' => 4]);
+    $user = User::factory()->mobileUser()->create();
+
+    $placed = palletActionsUnderTest()->place($pallet, $cell->id, $user->id, 'Aisle 1');
+
+    expect($placed->cell_id)->toBe($cell->id)
+        ->and($cell->fresh()->state)->toBe(CellState::Full)
+        ->and(CellStatusLog::query()->sole()->only(['action', 'boxes_count', 'note', 'pallet_id', 'user_id']))->toEqual([
+            'action' => CellLogAction::Stored,
+            'boxes_count' => 4,
+            'note' => 'Aisle 1',
+            'pallet_id' => $pallet->id,
+            'user_id' => $user->id,
+        ]);
+});
