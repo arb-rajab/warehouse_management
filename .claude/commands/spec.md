@@ -33,6 +33,7 @@ The user intervenes only to answer questions or approve things. Sub-agents canno
 
 Each prompt must be self-contained for a session with no memory of this conversation: what to build/fix and why, relevant paths, applicable constraints and conventions, the branch/draft PR to commit and push to, and what "done" looks like. Do not include triple-backtick fences inside the prompt text. In addition each prompt must say:
 - Which files to read first: name the specific `.ai/rules/*.md` files and code paths that apply to this prompt (found in the interview research), and tell the sub-agent to read only those plus `AGENTS.md`, not the whole `.ai/` tree, to keep its cold start cheap. Pick the lowest Model/Effort that fits the scope.
+- Cost rules: write large output (logs, listings, route lists) to the scratchpad and search it with `rg` instead of printing it; never print whole listings; push after each commit; do not poll background jobs, start one watcher and end the turn.
 - Do NOT run tests, type checks, or the pre-push script; they run once at the end. Commit and push the changes to the draft PR branch.
 - End the response with a concise report: what changed, files touched, commit(s) pushed, open questions, and anything not done.
 - If the work involves UI changes, examples, or samples: before applying anything, show screenshots, a snapshot, or a concrete example of the proposed solution, then STOP, end the response with that proposal and an explicit request for confirmation, and apply nothing until the coordinator sends back the user's confirmation.
