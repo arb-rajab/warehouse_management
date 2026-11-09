@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Ban } from '@lucide/vue';
+import { show as showReceipt } from '@/actions/App/Http/Controllers/Admin/ReceiptController';
 import { show as showRow } from '@/actions/App/Http/Controllers/Admin/RowController';
 import DataTable from '@/components/DataTable.vue';
 import ProductActiveBadge from '@/components/ProductActiveBadge.vue';
@@ -51,9 +52,37 @@ defineProps<{
                 </div>
             </td>
             <td class="px-4 py-2">
-                {{ cellStateLabel(pallet.state) }}
+                <span
+                    v-if="pallet.state === null"
+                    class="inline-flex items-center rounded border border-line bg-subtle px-1.5 py-0.5 text-xs font-semibold text-muted"
+                    data-testid="unplaced-badge"
+                >
+                    {{ t('pallets.unplacedBadge') }}
+                </span>
+                <template v-else>{{ cellStateLabel(pallet.state) }}</template>
             </td>
-            <td class="px-4 py-2">
+            <td v-if="pallet.location === null" class="px-4 py-2">
+                <div
+                    v-if="pallet.warehouse"
+                    class="text-ink"
+                    data-testid="unplaced-warehouse"
+                >
+                    {{ pallet.warehouse.name }}
+                </div>
+                <TableLink
+                    v-if="pallet.receipt_id !== null"
+                    :href="showReceipt(pallet.receipt_id)"
+                    data-testid="unplaced-receipt-link"
+                >
+                    {{ t('pallets.receiptLink', { id: pallet.receipt_id }) }}
+                </TableLink>
+                <span
+                    v-if="!pallet.warehouse && pallet.receipt_id === null"
+                    class="text-muted"
+                    >—</span
+                >
+            </td>
+            <td v-else class="px-4 py-2">
                 <TableLink
                     class="font-mono"
                     :href="

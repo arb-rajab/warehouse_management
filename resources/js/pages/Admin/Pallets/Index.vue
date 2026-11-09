@@ -65,6 +65,10 @@ const filterChips = computed<string[]>(() => {
         chips.push(cellStateLabel(props.filters.state));
     }
 
+    if (props.filters.unplaced) {
+        chips.push(t('dashboard.unplaced.title'));
+    }
+
     if (props.filters.expired) {
         chips.push(t('dashboard.expiring.expired'));
     }
@@ -134,7 +138,11 @@ function onPerPageChange(perPage: number): void {
                     :selected="filterOptions.warehouses"
                     @update:model-value="onWarehouseIdsChange"
                 />
-                <Link :href="mapHref" :class="filterTriggerButtonClass">
+                <Link
+                    v-if="!filters.unplaced"
+                    :href="mapHref"
+                    :class="filterTriggerButtonClass"
+                >
                     <Map class="h-4 w-4" />
                     {{ t('pallets.viewOnMap') }}
                 </Link>

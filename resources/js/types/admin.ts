@@ -406,14 +406,22 @@ export type ProductIndexFilterOptions = CellStatusLogFilterOptions;
  */
 export interface MatchingPallet {
     id: number;
-    state: Cell['state'];
+    /** False for a received pallet that has no cell yet. */
+    placed: boolean;
+    /** Null for an unplaced pallet. */
+    state: Cell['state'] | null;
     expiration_date: string | null;
     added_at: string | null;
     remaining_boxes: number;
     product: ProductDetails;
-    location: CellSlotLocation;
-    /** False when the pallet's cell is out of service. */
-    cell_active: boolean;
+    /** Null for an unplaced pallet: it has no map location. */
+    location: CellSlotLocation | null;
+    /** False when the pallet's cell is out of service; null when unplaced. */
+    cell_active: boolean | null;
+    /** The receipt the pallet arrived on (kept after it is placed). */
+    receipt_id: number | null;
+    /** The warehouse of the receipt, for an unplaced pallet only. */
+    warehouse: WarehouseSummary | null;
 }
 
 /**
@@ -424,6 +432,7 @@ export interface MatchingPalletFilters {
     state?: Cell['state'];
     is_active?: boolean;
     expired?: boolean;
+    unplaced?: boolean;
     expires_within_days?: number;
     stale_after_days?: number;
     product_id?: number[];

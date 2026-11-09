@@ -648,6 +648,10 @@
             "full": "Full",
             "opened": "Opened"
         },
+        "unplaced": {
+            "title": "Unplaced pallets",
+            "count": "Received, not yet placed in a cell"
+        },
         "expiring": {
             "title": "Expiring pallets",
             "expired": "Expired",
@@ -723,6 +727,8 @@
     "pallets": {
         "title": "Matching pallets",
         "viewOnMap": "View on map",
+        "unplacedBadge": "Unplaced",
+        "receiptLink": "Receipt #{id}",
         "filteredBy": "Filtered by:",
         "columns": {
             "product": "Product",
@@ -791,7 +797,11 @@
             "title": "Help: Dashboard",
             "overview": {
                 "heading": "What the dashboard shows",
-                "body": "The dashboard is the first page you see after signing in. It gives a quick snapshot of the whole warehouse: how many cells are empty, full, or opened; how many pallets are expired or expiring soon; and how much activity (pallets stored, opened, emptied, or transferred) happened today and this week."
+                "body": "The dashboard is the first page you see after signing in. It gives a quick snapshot of the whole warehouse: how many cells are empty, full, or opened; how many pallets have been received but not yet placed in a cell; how many pallets are expired or expiring soon; and how much activity (pallets stored, opened, emptied, or transferred) happened today and this week."
+            },
+            "unplaced": {
+                "heading": "Unplaced pallets",
+                "body": "The Unplaced pallets tile counts pallets that arrived on a truck and have not been stored in a cell yet. They are still stock: they also count in the expired, expiring and stale tiles. Click the tile to see them. An unplaced pallet has no place on the map, so the list shows its warehouse and a link to the receipt it arrived on instead."
             },
             "productFilter": {
                 "heading": "Filtering by product",
