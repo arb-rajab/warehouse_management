@@ -25,6 +25,9 @@ Use `switchLocale(page, label)` from that helper for locale buttons. It waits
 for LanguageSwitcher's full-page reload before another navigation starts;
 checking `dir` alone can race the reload and cancel the next visit.
 
+## Select by role, name or test id, not by a palette class
+The back office has no raw palette classes any more (js.md "Back-office colours"), so a spec must not locate an element by one: `admin-pagination-dark-mode.spec.ts` finds the active page link by `nav .bg-brand` (the shared `selectedToggleClass`), the sign-in frame by `data-testid` `auth-logo`/`auth-brand`/`auth-area`. Computed colours (contrast, `toHaveCSS`) are fine and are how dark mode is asserted; a colour a spec compares to a literal RGB is a token value (`--surface` in dark is `rgb(30, 26, 23)`, see `store-search-select.spec.ts`), so update it with the token, not the other way round. Native controls follow dark mode (`html` `color-scheme: dark`, asserted in `backoffice-shell.spec.ts`).
+
 ## Shared editor and CSP helpers live in tests/e2e/support/editor.ts
 Specs that drive the shared Tiptap editor (`StoreRichTextField`) import `watchCsp`/`documentViolations`/`expectStrictPolicy` (enforced strict policy, no violations), `uploadPhoto`, `press(page, key, editorSelector)` (waits for the editor to take in the selection), `focusedToolbarItem`/`arrowTo` and `colorsOf` from there: `store-blog-editor.spec.ts`, `store-newsletter-ticket.spec.ts` and `store-website-settings.spec.ts`. Don't re-inline them in a new spec. `pickUploads(page, id, files)` (editor.ts) picks library files for a canonical `StoreUploadField`, and `storedProduct(name, expression)` (storeFixtures.ts) reads a product back from the browser database; the digital and physical product form specs share both. The webServer env pins `MAIL_MAILER=array` (no spec can deliver mail) and a placeholder `MAIL_USERNAME` that only satisfies the newsletter's SMTP guard.
 

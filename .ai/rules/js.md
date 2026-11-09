@@ -150,4 +150,25 @@ Declare optional props `foo?: T` and leave them out of `withDefaults` — a `foo
 
 ## Back-office colours come from the Direction A tokens
 
-Write new back-office markup with the semantic utilities from `resources/css/app.css` (`bg-brand`/`text-on-brand` for the primary action, `text-muted`, `border-line`, `bg-surface`, `bg-subtle`, `text-link`, `bg-danger-soft`/`text-danger-strong`, `bg-success-soft`, `shadow-card`, `shadow-pop`, `ring-focus-ring`), which switch for dark mode by themselves, rather than a `gray-*`/`dark:neutral-*` pair. The remapped `gray`/`neutral`/`blue`/`red` scales keep existing pages on-brand; `blue-*` now renders brand red, so a colour that means "info" uses the `info` tokens. Never write a hex colour in a class (`shadow-[inset_0_-1px_0_var(--line)]`, not `#e5e7eb`). Code that cannot read a CSS variable (Chart.js on a canvas) reads the token with `readCssToken('--brand')` from `lib/cssToken.ts` and re-renders on a `prefers-color-scheme` change. The saffron accent is reserved for the sidebar user avatar. Cell-state colours are pinned (cell-state-visuals.md). Codes (cell slots, barcodes) use `font-mono` (IBM Plex Mono).
+Write back-office markup with the semantic utilities from `resources/css/app.css`, which switch for dark mode by themselves, never a `gray-*`/`dark:neutral-*` pair. Every file under `components/`, `layouts/`, `lib/` and `pages/` is swept; `components/semanticColorsGuard.test.ts` fails on a raw palette class (`gray|neutral|slate|zinc|stone|blue|red|green|amber|orange|yellow|emerald|sky|...-NNN`, any variant prefix), a `bg|text|border|ring-white|black` utility, a stock `shadow-sm|md|lg|xl`, or a hex colour. Its allow-list is explicit and short: `lib/cellStateColor.ts` (the pinned cell-state legend, cell-state-visuals.md), `pages/Admin/Help/CellLogs.vue` (`'#123'` is a sample id) and the three components holding a native colour input's `#rrggbb` value/placeholder. Do not widen it; add a token instead.
+
+| Meaning | Use |
+| --- | --- |
+| page, card, input, popover surface | `bg-page`, `bg-surface`; hover/quiet fill `bg-subtle`; strong fill `bg-line` |
+| text | `text-ink` (body, labels, values), `text-muted` (hints, captions, icons, placeholders), `text-on-brand` on a brand fill |
+| borders, dividers | `border-line` (cards, rows, `divide-line`), `border-line-strong` (inputs, buttons) |
+| primary action, selected pill | `bg-brand text-on-brand shadow-btn hover:bg-brand-hover` (`selectedToggleClass`) |
+| focus | `ring-focus-ring` / `border-focus` / `outline-focus`, `ring-offset-surface` |
+| link in content | `text-link` (same as `TableLink`) |
+| error, destructive | `text-danger` (message), `bg-danger-soft text-danger-strong` (badge, alert, button: `dangerButtonClass`), `border-danger/30` |
+| success, warning | `bg-success-soft text-success-strong`, `bg-warning-soft text-warning-strong` (+ `border-success/30`, `border-warning/30`); solid `bg-success`/`bg-muted` only for a switch track |
+| information | `bg-info-soft text-info-strong`, `text-info`, `border-info/30`, `ring-info` (a selected cell): badges, info alerts, selected-row tints, informational icons. Never `blue-*`, which renders brand red |
+| tooltip | `bg-ink text-page shadow-pop` |
+| modal backdrop | `bg-scrim` (`--scrim`, backoffice.css; darker in dark mode) |
+| shadows, radius | `shadow-card` (cards, knobs), `shadow-pop` (dialogs, dropdowns, tooltips), `shadow-btn`; `rounded-md` controls, `rounded-lg` cards, dialogs and popovers (10/14 px tokens) |
+
+Contrast: every text/background pair above is at least 4.5:1 in light and dark (ink/muted/link/danger on surface and page, each `*-strong` on its `*-soft`, `text-on-brand` on `bg-brand`; checked against the token values). A new token value must keep that. The info tokens are `--info-color/-strong/-soft` (tokens.css light; dark in backoffice.css).
+
+Never write a hex colour in a class or style (`shadow-[inset_0_-1px_0_var(--line)]`, `var(--info-color)` in scoped CSS such as the map markers). Code that cannot read a CSS variable (Chart.js on a canvas, the Inertia progress bar) reads the token with `readCssToken('--brand')` from `lib/cssToken.ts` and re-renders on a `prefers-color-scheme` change. Native controls follow dark mode (`color-scheme: dark` in backoffice.css) and take `accent-color: var(--brand)`; leave both global. The saffron accent is reserved for the sidebar user avatar.
+
+Codes (product barcodes and ids, cell slots, warehouse/order/trip/ticket/coupon/currency/country/language codes, SKUs) use `font-mono` (IBM Plex Mono) in tables, detail lists and dialogs. Destructive "Delete selection/selected" buttons are `dangerButtonClass` (or `SubmitButton variant="danger"`), never a red text link; inactive-cell and other status badges are soft danger, never a solid red. Page-level empty states, banners (`SuccessBanner`, `ActionErrorBanner`), pagination (bordered pills, the active one `selectedToggleClass`), tabs (`StoreLanguageTabs`), tooltips, popovers and dialogs share these tokens, so a WMS list and a control-panel list render the same.

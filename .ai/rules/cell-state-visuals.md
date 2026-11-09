@@ -38,6 +38,8 @@ repository mirrors them in `_getBgColor`, `_getBorderColor`, `_getStateIcon`;
 update those literals by hand when these values change. There is no shared
 cross-repository implementation.
 
+The state colours are the only palette classes left in `lib/cellStateColor.ts`, which is why `components/semanticColorsGuard.test.ts` exempts that one file. Everything else around a cell is tokens: `CellSlot`'s label is `font-mono text-muted`, its highlight rings are `ring-info` (a matched/selected cell) and `ring-success` (a found cell) with `ring-offset-surface`, an expired cell's border is `border-danger`, and the inactive-cell marker (here and in `MatchingPalletsTable`) is the soft danger badge `border-danger/30 bg-danger-soft text-danger-strong`, never a solid red. On the warehouse map the cell-state tokens stay as they are while the HUD accent became the brand token (warehouse-map.md).
+
 The retired three.js cell map's old `hex` fields were removed. The current
 warehouse map gets 3D colors from CSS tokens via `Palette`; do not restore the
 unused fields here.
