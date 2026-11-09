@@ -23,6 +23,11 @@ use Illuminate\Support\Collection;
  * their row, pallets through their cell, logs through the cell they were
  * written against, and the product counts (low stock, inactive in the
  * warehouse) through the pallets those warehouses hold.
+ *
+ * Received but unplaced pallets (no cell) count as stock in the product
+ * counts, but not in the expired/expiring/stale cards: those link to the
+ * matching pallets list, which shows placed pallets only, and a card must
+ * agree with the list it opens.
  */
 trait BuildsDashboardStats
 {
@@ -136,7 +141,7 @@ trait BuildsDashboardStats
      */
     private function expiring(CarbonImmutable $today, int $customDays, ?array $productIds, ?array $warehouseIds, ?bool $productPublished = null): array
     {
-        $expired = Pallet::query()->where('expiration_date', '<', $today)->forWarehouses($warehouseIds);
+        $expired = Pallet::query()->placed()->where('expiration_date', '<', $today)->forWarehouses($warehouseIds);
         $this->applyProductFilters($expired, $productIds, $productPublished);
 
         return [
@@ -192,7 +197,7 @@ trait BuildsDashboardStats
      */
     private function expiringWindowCounts(CarbonImmutable $today, CarbonImmutable $until, ?array $productIds, ?array $warehouseIds, ?bool $productPublished): array
     {
-        $query = Pallet::query()->whereBetween('expiration_date', [$today, $until])->forWarehouses($warehouseIds);
+        $query = Pallet::query()->placed()->whereBetween('expiration_date', [$today, $until])->forWarehouses($warehouseIds);
         $this->applyProductFilters($query, $productIds, $productPublished);
 
         return [
@@ -213,7 +218,7 @@ trait BuildsDashboardStats
      */
     private function stale(CarbonImmutable $today, int $days, ?array $productIds, ?array $warehouseIds, ?bool $productPublished = null): array
     {
-        $query = Pallet::query()->where('created_at', '<=', $today->copy()->subDays($days))->forWarehouses($warehouseIds);
+        $query = Pallet::query()->placed()->where('created_at', '<=', $today->copy()->subDays($days))->forWarehouses($warehouseIds);
         $this->applyProductFilters($query, $productIds, $productPublished);
 
         return [

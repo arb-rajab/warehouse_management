@@ -186,6 +186,7 @@ class CellVerificationService
                 throw new CellOutsideRoundRowsException;
             }
 
+            // Rounds count cells, so an unplaced pallet (no cell) is out of their scope.
             $pallet = Pallet::query()->where('cell_id', $cell->id)->lockForUpdate()->first();
 
             return CellVerificationReport::create([

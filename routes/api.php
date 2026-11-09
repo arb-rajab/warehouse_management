@@ -37,7 +37,10 @@ Route::prefix('v1')->group(function () {
         Route::post('products/{product}/barcodes', [ProductController::class, 'storeBarcode'])->whereNumber('product')->name('api.v1.product-barcodes.store');
 
         Route::post('pallets', [PalletController::class, 'store'])->name('api.v1.pallets.store');
+        // Before pallets/{pallet}, so "unplaced" is not bound as a pallet id.
+        Route::get('pallets/unplaced', [PalletController::class, 'unplaced'])->middleware('cache.headers:private;etag')->name('api.v1.pallets.unplaced');
         Route::get('pallets/{pallet}', [PalletController::class, 'show'])->name('api.v1.pallets.show');
+        Route::post('pallets/{pallet}/place', [PalletController::class, 'place'])->name('api.v1.pallets.place');
         Route::post('pallets/{pallet}/open', [PalletController::class, 'open'])->name('api.v1.pallets.open');
         Route::post('pallets/{pallet}/remove-boxes', [PalletController::class, 'removeBoxes'])->name('api.v1.pallets.remove-boxes');
         Route::post('pallets/{pallet}/empty', [PalletController::class, 'empty'])->name('api.v1.pallets.empty');

@@ -85,8 +85,8 @@ that only knows the letter:
   warehouse map page and rows payload, pallets, cell logs and rounds; mobile
   rows, rows/full, rows/frozen, cell logs, rounds (list, and `POST` creation,
   where it narrows the rows an omitted `row_ids` would claim and refuses a
-  named row outside it as `verification_round_rows_not_found`) and
-  `products/{product}/pallets`. The mobile ETags are content hashes, so the
+  named row outside it as `verification_round_rows_not_found`), `products/{product}/pallets`
+  and `pallets/unplaced`. The mobile ETags are content hashes, so the
   filter and the `warehouse` keys need no cache-key work.
 - Admin pages echo the ids in `filters.warehouse_ids` (the dashboard and map
   always send the key, `null` when unfiltered; listings send it only when
@@ -102,7 +102,9 @@ that only knows the letter:
 
 Cells through their row, pallets through their cell, logs through the cell
 they were written against (a transfer between warehouses counts once on each
-side). With a product filter `occupancy.empty` is 0; the warehouse filter alone
+side). An unplaced pallet counts through its receipt's warehouse in the product
+counts and is left out of the expired/expiring/stale cards (see
+[receiving](receiving.md)). With a product filter `occupancy.empty` is 0; the warehouse filter alone
 keeps those warehouses' empty cells. `low_stock` compares a product's minimum
 with the pallets the selected warehouses hold, so a product short in the
 selected warehouse counts even when another holds enough; the products page it
@@ -113,7 +115,7 @@ links to has no warehouse filter yet. The cache key includes the warehouse ids.
 `RowResource`, `RowSummaryResource` (when `warehouse` is loaded: the rows of a
 mobile round and `rows/frozen`), `CellResource` (when `row.warehouse` is loaded, as
 `Cell::WITH_ROW_AND_CONTENTS` does) and `PalletResource` (when
-`cell.row.warehouse` is loaded) carry `warehouse: {id, name}`
+`cell.row.warehouse` is loaded, or the receipt's for an unplaced pallet) carry `warehouse: {id, name}`
 (`WarehouseSummaryResource`); cells nested in a row payload leave it to the
 row. Row listings load `Row::WITH_WAREHOUSE`; `rows/frozen` loads it for its
 `RowSummaryResource`. `ProductPalletResource` carries the same top-level

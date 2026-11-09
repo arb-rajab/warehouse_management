@@ -172,6 +172,11 @@ class PalletController extends Controller
         return $this->redirectAfterCellAction($cell);
     }
 
+    /**
+     * The cell whose row page the action returns to. An unplaced pallet has
+     * none and 404s here: the admin actions are offered from a cell's row page
+     * only, and a received pallet is placed through the mobile API first.
+     */
     private function cellFor(Pallet $pallet): Cell
     {
         return $pallet->cell()->select(['id', 'row_id'])->firstOrFail();

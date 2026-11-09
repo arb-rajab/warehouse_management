@@ -29,7 +29,7 @@ use Illuminate\Support\Carbon;
  * @property-read Cell|null $cell
  * @property-read ReceiptLine|null $receiptLine
  * @property-read Warehouse|null $warehouse
- * @property-read CellState $state
+ * @property-read CellState|null $state null while the pallet is unplaced
  * @property-read CellStatusLog|null $cellEnteredLog
  * @property-read CarbonImmutable|null $cell_entered_at
  */
@@ -39,6 +39,18 @@ class Pallet extends Model
 {
     /** @use HasFactory<PalletFactory> */
     use HasFactory;
+
+    /**
+     * The eager loads `warehouse` reads for an unplaced pallet (its receipt's
+     * warehouse); a placed one reads `cell.row.warehouse`.
+     *
+     * @var list<string>
+     */
+    public const array WITH_RECEIPT_WAREHOUSE = [
+        'receiptLine:id,receipt_id',
+        'receiptLine.receipt:id,warehouse_id',
+        'receiptLine.receipt.warehouse:id,name',
+    ];
 
     /**
      * @return array<string, string>
@@ -53,7 +65,9 @@ class Pallet extends Model
     /**
      * Identifies the pallet's current stock state for `If-Match` / `ETag`: what
      * a worker acts on (product, location, level, expiry, boxes left). The
-     * cell's state is included because opening a pallet changes only that.
+     * cell's state is included because opening a pallet changes only that; an
+     * unplaced pallet has no cell, so its ETag reads no relation, and placing
+     * it changes `cell_id` and therefore the ETag.
      */
     public function etag(): string
     {
@@ -63,7 +77,7 @@ class Pallet extends Model
             $this->cell_id,
             $this->expiration_date?->toDateString(),
             $this->remaining_boxes,
-            $this->cell->state->value,
+            $this->state?->value,
             $this->updated_at?->getTimestamp(),
         ]));
     }
@@ -115,24 +129,44 @@ class Pallet extends Model
     }
 
     /**
-     * The pallet's state is read through its current cell — there is no stored column here.
+     * The pallet's state is read through its current cell — there is no stored
+     * column here. Null for an unplaced pallet, without touching the relation.
      *
-     * @return Attribute<CellState, never>
+     * @return Attribute<CellState|null, never>
      */
     protected function state(): Attribute
     {
         return Attribute::make(
-            get: fn (): CellState => $this->cell->state,
+            get: fn (): ?CellState => $this->cell_id === null ? null : $this->cell->state,
         );
+    }
+
+    /**
+     * Whether the relations `warehouse` reads for this pallet are loaded:
+     * `cell.row.warehouse` for a placed pallet, `receiptLine.receipt.warehouse`
+     * (see WITH_RECEIPT_WAREHOUSE) for an unplaced one. Resources show
+     * `warehouse` only then, so they never lazy load it.
+     */
+    public function warehouseLoaded(): bool
+    {
+        if ($this->cell_id !== null) {
+            return $this->relationLoaded('cell') && $this->cell !== null
+                && $this->cell->relationLoaded('row') && $this->cell->row->relationLoaded('warehouse');
+        }
+
+        return $this->relationLoaded('receiptLine')
+            && ($this->receiptLine === null
+                || ($this->receiptLine->relationLoaded('receipt') && $this->receiptLine->receipt->relationLoaded('warehouse')));
     }
 
     /**
      * The `stored`/`transferred_in` log written when this pallet last arrived in
      * whichever cell it currently occupies. A pallet's `cell_id` only ever changes
      * via `PalletActionService::transfer()`, which always writes a fresh
-     * `TransferredIn` log at the same moment — and `store()` always writes a
-     * `Stored` log — so the newest log of either action for this pallet is always
-     * the arrival into its *current* cell, with no need to also match on `cell_id`.
+     * `TransferredIn` log at the same moment — and `store()` and `place()` (an
+     * unplaced pallet's first cell) always write a `Stored` log — so the newest
+     * log of either action for this pallet is always the arrival into its
+     * *current* cell, with no need to also match on `cell_id`. Null while unplaced.
      *
      * @return HasOne<CellStatusLog, $this>
      */
@@ -217,6 +251,29 @@ class Pallet extends Model
     }
 
     /**
+     * Scope a query to the pallets that sit in a cell, leaving out the
+     * received but unplaced ones (`cell_id` null).
+     *
+     * @param  Builder<Pallet>  $query
+     */
+    #[Scope]
+    protected function placed(Builder $query): void
+    {
+        $query->whereNotNull($query->qualifyColumn('cell_id'));
+    }
+
+    /**
+     * Scope a query to the received pallets that have no cell yet.
+     *
+     * @param  Builder<Pallet>  $query
+     */
+    #[Scope]
+    protected function unplaced(Builder $query): void
+    {
+        $query->whereNull($query->qualifyColumn('cell_id'));
+    }
+
+    /**
      * Scope a query by the admin products index's occupancy filters
      * (state/expired/expires_within_days), optionally pinned to one cell
      * state. Shared by `Product::matchingOccupancyFilters()` (which products
@@ -252,12 +309,17 @@ class Pallet extends Model
      * the dashboard's selected-product pallet list so both always show the
      * same rows in the same order.
      *
+     * Unplaced pallets are left out: every row links to its place on the
+     * warehouse map, and the cell-based filters (state, inactive) cannot
+     * apply to them. The mobile `GET pallets/unplaced` lists them.
+     *
      * @param  Builder<Pallet>  $query
      */
     #[Scope]
     protected function listedForAdmin(Builder $query): void
     {
         $query
+            ->placed()
             ->select(['id', 'product_id', 'cell_id', 'expiration_date', 'remaining_boxes', 'created_at'])
             ->with([
                 'product:id,name,ar_name,thumbnail_img,warehouse_image_path,published',
@@ -296,13 +358,15 @@ class Pallet extends Model
      * links to) both build on this, so `state`/`expiration_date`/`added_at`
      * can't be derived one way in one listing and another way in the other.
      *
-     * @return array{id: int, state: string, expiration_date: string|null, added_at: string|null, remaining_boxes: int}
+     * `state` is null for an unplaced pallet (no cell).
+     *
+     * @return array{id: int, state: string|null, expiration_date: string|null, added_at: string|null, remaining_boxes: int}
      */
     public function toListingSummaryArray(): array
     {
         return [
             'id' => $this->id,
-            'state' => $this->state->value,
+            'state' => $this->state?->value,
             'expiration_date' => $this->expiration_date?->toDateString(),
             'added_at' => $this->created_at?->toIso8601String(),
             'remaining_boxes' => $this->remaining_boxes,
