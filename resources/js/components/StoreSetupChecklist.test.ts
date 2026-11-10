@@ -219,18 +219,18 @@ describe('StoreSetupChecklist', () => {
         expect(button.attributes('aria-label')).toBe(
             t('store.dashboard.checklist.collapse'),
         );
-        expect(list.isVisible()).toBe(true);
+        expect(list.element.style.display).not.toBe('none');
 
         await button.trigger('click');
         expect(button.attributes('aria-expanded')).toBe('false');
         expect(button.attributes('aria-label')).toBe(
             t('store.dashboard.checklist.expand'),
         );
-        expect(list.isVisible()).toBe(false);
+        expect(list.element.style.display).toBe('none');
         expect(wrapper.find('[role="progressbar"]').exists()).toBe(true);
 
         await button.trigger('click');
         expect(button.attributes('aria-expanded')).toBe('true');
-        expect(list.isVisible()).toBe(true);
+        expect(list.element.style.display).not.toBe('none');
     });
 });
