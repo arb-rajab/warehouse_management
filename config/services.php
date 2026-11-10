@@ -150,6 +150,13 @@ return [
         'currency' => env('IYZICO_CURRENCY_CODE', 'TRY'),
     ],
 
+    // The currency SSLCommerz is charged in. Amounts are converted to it from the
+    // store's default currency (App\Services\GatewayCurrency), so the store needs
+    // an active `currencies` row with this code and a rate.
+    'sslcommerz' => [
+        'currency' => env('SSLCZ_CURRENCY', 'BDT'),
+    ],
+
     'otajer' => [
         'url' => env('OTAJER_URL') ?: 'https://stores.otajer.com',
         'token' => env('OTAJER_TOKEN') ?: null,

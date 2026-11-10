@@ -6,10 +6,12 @@ use App\Http\Controllers\SSLCommerz;
 use App\Models\CombinedOrder;
 use App\Models\CustomerPackage;
 use App\Models\SellerPackage;
+use App\Services\GatewayCurrency;
 use App\Services\SessionGatewayPayment;
 use App\Services\VerifiedPayment;
 use Auth;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Session;
 
@@ -33,7 +35,6 @@ class SslcommerzController extends Controller
                 $combined_order = CombinedOrder::findOrFail($request->session()->get('combined_order_id'));
                 $post_data = [];
                 $post_data['total_amount'] = $combined_order->grand_total; # You cant not pay less than 10
-                $post_data['currency'] = "BDT";
                 $post_data['tran_id'] = $tran_id;
 
                 $post_data['value_a'] = $post_data['tran_id'];
@@ -59,7 +60,6 @@ class SslcommerzController extends Controller
             elseif (Session::get('payment_type') == 'wallet_payment') {
                 $post_data = [];
                 $post_data['total_amount'] = $request->session()->get('payment_data')['amount']; # You cant not pay less than 10
-                $post_data['currency'] = "BDT";
                 $post_data['tran_id'] = $tran_id;
 
                 $post_data['value_a'] = $post_data['tran_id'];
@@ -78,7 +78,6 @@ class SslcommerzController extends Controller
                 $customer_package = CustomerPackage::findOrFail(Session::get('payment_data')['customer_package_id']);
                 $post_data = [];
                 $post_data['total_amount'] = $customer_package->amount; # You cant not pay less than 10
-                $post_data['currency'] = "BDT";
                 $post_data['tran_id'] = $tran_id;
 
                 $post_data['value_a'] = $post_data['tran_id'];
@@ -96,7 +95,6 @@ class SslcommerzController extends Controller
                 $seller_package = SellerPackage::findOrFail(Session::get('payment_data')['seller_package_id']);
                 $post_data = [];
                 $post_data['total_amount'] = $seller_package->amount; # You cant not pay less than 10
-                $post_data['currency'] = "BDT";
                 $post_data['tran_id'] = $tran_id;
 
                 $post_data['value_a'] = $post_data['tran_id'];
@@ -121,12 +119,26 @@ class SslcommerzController extends Controller
             $post_data['cus_country'] = $user->country;
             $post_data['cus_phone'] = $user->phone;
             $post_data['cus_email'] = $user->email;
+
+            // The amounts above are in the store's currency; SSLCommerz is charged in its own.
+            $currency = GatewayCurrency::sslcommerz();
+            $amount = $currency->fromStore((float) $post_data['total_amount']);
+
+            if ($amount === null) {
+                Log::error('SSLCommerz refused: the store has no active rate for the gateway currency.', ['currency' => $currency->code]);
+                flash(__('storefront.checkout.payment_failed'))->error();
+
+                return redirect()->route('cart');
+            }
+
+            $post_data['total_amount'] = $amount;
+            $post_data['currency'] = $currency->code;
         }
 
-        $server_name=$request->root()."/";
-        $post_data['success_url'] = $server_name . "sslcommerz/success";
-        $post_data['fail_url'] = $server_name . "sslcommerz/fail";
-        $post_data['cancel_url'] = $server_name . "sslcommerz/cancel";
+        // route(), not the request root: the store lives under /temp, which the root does not carry.
+        $post_data['success_url'] = route('sslcommerz.success');
+        $post_data['fail_url'] = route('sslcommerz.fail');
+        $post_data['cancel_url'] = route('sslcommerz.cancel');
         // dd($post_data);
         # SHIPMENT INFORMATION
         // $post_data['ship_name'] = 'ship_name';
@@ -143,7 +155,7 @@ class SslcommerzController extends Controller
         // $post_data['value_c'] = "ref003";
         // $post_data['value_d'] = "ref004";
 
-        $sslc = new SSLCommerz();
+        $sslc = app(SSLCommerz::class);
 
         # initiate(Transaction Data , false: Redirect to SSLCOMMERZ gateway/ true: Show all the Payement gateway here )
         $payment_options = $sslc->initiate($post_data, false);
@@ -171,15 +183,23 @@ class SslcommerzController extends Controller
             return app(SessionGatewayPayment::class)->notVerified();
         }
 
-        $sslc = new SSLCommerz();
-        if ($sslc->orderValidate($tran_id, $amountDue, 'BDT', $request->all()) !== true) {
+        $currency = GatewayCurrency::sslcommerz();
+        $amountDueAtGateway = $currency->fromStore($amountDue);
+
+        if ($amountDueAtGateway === null) {
+            return app(SessionGatewayPayment::class)->notVerified();
+        }
+
+        $sslc = app(SSLCommerz::class);
+        if ($sslc->orderValidate($tran_id, $amountDueAtGateway, $currency->code, $request->all()) !== true) {
             return app(SessionGatewayPayment::class)->notVerified();
         }
 
         Session::forget('sslcommerz_tran_id');
         $result = $sslc->getResultData();
+        $paid = $currency->paidInStoreCurrency((float) ($result->amount ?? 0), $amountDue);
 
-        return app(SessionGatewayPayment::class)->complete(new VerifiedPayment('sslcommerz', $tran_id, (float) ($result->amount ?? 0), json_encode($result)));
+        return app(SessionGatewayPayment::class)->complete(new VerifiedPayment('sslcommerz', $tran_id, $paid, json_encode($result)));
     }
 
     public function fail(Request $request)

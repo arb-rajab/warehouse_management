@@ -230,9 +230,9 @@ Route::controller(CartController::class)->group(function () {
 
 // SSLCOMMERZ Start
 Route::controller(SslcommerzController::class)->group(function () {
-    Route::POST('/sslcommerz/success', 'success');
-    Route::POST('/sslcommerz/fail', 'fail');
-    Route::POST('/sslcommerz/cancel', 'cancel');
+    Route::POST('/sslcommerz/success', 'success')->name('sslcommerz.success');
+    Route::POST('/sslcommerz/fail', 'fail')->name('sslcommerz.fail');
+    Route::POST('/sslcommerz/cancel', 'cancel')->name('sslcommerz.cancel');
 });
 //SSLCOMMERZ END
 
