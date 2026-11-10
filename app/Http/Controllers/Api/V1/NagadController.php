@@ -4,11 +4,14 @@
 namespace App\Http\Controllers\Api\V1;
 
 
+use App\Models\GatewayPayment;
 use App\Services\ApiGatewayPayment;
+use App\Services\GatewayCurrency;
 use App\Services\GatewayPaymentService;
 use App\Services\VerifiedPayment;
 use App\Utility\NagadUtility;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class NagadController
 {
@@ -25,7 +28,6 @@ class NagadController
 
     public function __construct()
     {
-        date_default_timezone_set('Asia/Dhaka');
         if (config('nagad.sandbox_mode') === 'sandbox') {
             $this->nagadHost = "http://sandbox.mynagad.com:10080/";
         } else {
@@ -47,7 +49,17 @@ class NagadController
             return response()->json(['data' => null, 'result' => false, 'url' => '', 'message' => __('api.payment.nothing_due')]);
         }
 
-        $this->amount = $this->payment['amount'];
+        // The amount is in the store's currency; Nagad charges in BDT only, to the cent.
+        $currency = GatewayCurrency::forGateway('nagad');
+        $converted = $currency->fromStore((float) $this->payment['amount']);
+
+        if ($converted === null || $currency->chargeCode() !== 'BDT') {
+            Log::error('Nagad refused: no active BDT rate (Nagad charges in BDT only).', ['currency' => $currency->chargeCode()]);
+
+            return response()->json(['data' => null, 'result' => false, 'url' => '', 'message' => __('storefront.checkout.payment_failed')]);
+        }
+
+        $this->amount = GatewayCurrency::format($converted);
         $this->tnx_status = false;
         $this->tnx = $this->payment['combined_order_id'] ?? rand(10000, 99999);
 
@@ -58,10 +70,10 @@ class NagadController
     public function getSession($payment_type)
     {
 
-        $DateTime = Date('YmdHis');
+        $DateTime = now('Asia/Dhaka')->format('YmdHis'); // Nagad's protocol timestamps are Dhaka time
         $MerchantID = config('nagad.merchant_id');
         //$invoice_no = 'Inv'.Date('YmdH').rand(1000, 10000);
-        $invoice_no = $this->tnx_status ? $this->tnx : 'Inv' . Date('ymdHis') . random_int(1000, 9999);
+        $invoice_no = $this->tnx_status ? $this->tnx : 'Inv' . now('Asia/Dhaka')->format('ymdHis') . random_int(1000, 9999);
         $merchantCallbackURL = route('app.nagad.callback_url', ['payment_type' => $payment_type]);
 
         $SensitiveData = [
@@ -178,10 +190,21 @@ class NagadController
         $json = $payment_ref_id === '' ? '' : NagadUtility::HttpGet($this->nagadHost . "api/dfs/verify/payment/" . rawurlencode($payment_ref_id));
         $result = json_decode((string) $json, true);
 
+        // The payment begin() recorded for this Nagad order is in the store's currency; Nagad reports
+        // BDT. Paid in the store's own currency compares as it came, else the reported amount must be
+        // the converted amount due to the cent, and the amount due is what is credited.
+        $currency = GatewayCurrency::forGateway('nagad');
+        $reported = is_array($result) ? (float) ($result['amount'] ?? 0) : 0.0;
+        $pending = is_array($result)
+            ? GatewayPayment::query()->where('gateway', 'nagad')->where('reference', (string) ($result['orderId'] ?? ''))->whereNull('completed_at')->first()
+            : null;
+        $paid = $pending === null ? null : ($currency->isStoreCurrency() ? $reported : ($currency->matchesDue($reported, (float) $pending->amount) ? (float) $pending->amount : null));
+
         $isPaid = is_array($result)
+            && $paid !== null
             && ($result['status'] ?? null) === 'Success'
             && hash_equals($payment_ref_id, (string) ($result['paymentRefId'] ?? ''))
-            && app(GatewayPaymentService::class)->completePending(new VerifiedPayment('nagad', (string) ($result['orderId'] ?? ''), (float) ($result['amount'] ?? 0), $json));
+            && app(GatewayPaymentService::class)->completePending(new VerifiedPayment('nagad', (string) ($result['orderId'] ?? ''), $paid, $json));
 
         if ($isPaid) {
             return response()->json([

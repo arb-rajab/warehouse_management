@@ -172,6 +172,11 @@ return [
         'password' => env('BKASH_CHECKOUT_PASSWORD'),
     ],
 
+    // Nagad charges in BDT only; the amount is converted to it from the store's currency.
+    'nagad' => [
+        'currency' => env('NAGAD_CURRENCY', 'BDT'),
+    ],
+
     'aamarpay' => [
         'currency' => env('AAMARPAY_CURRENCY', 'BDT'),
         'store_id' => env('AAMARPAY_STORE_ID'),

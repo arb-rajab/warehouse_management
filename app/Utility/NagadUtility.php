@@ -1,6 +1,7 @@
 <?php
 
 namespace App\Utility;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
 use Cache;
 
@@ -77,30 +78,28 @@ class NagadUtility {
         return $plain_text;
     }
 
+    /**
+     * POST `$PostData` as JSON and return Nagad's decoded answer, or null when it did not answer
+     * with JSON. A timeout keeps a slow Nagad from holding the customer's request.
+     */
     public static function HttpPostMethod($PostURL, $PostData)
     {
-        $url = curl_init($PostURL);
-        $posttoken = json_encode($PostData);
-        $header = [
-            'Content-Type:application/json',
-            'X-KM-Api-Version:v-0.2.0',
-            'X-KM-IP-V4:' . self::get_client_ip(),
-            'X-KM-Client-Type:PC_WEB',
-        ];
+        try {
+            $response = Http::timeout(30)
+                ->withHeaders([
+                    'X-KM-Api-Version' => 'v-0.2.0',
+                    'X-KM-IP-V4' => self::get_client_ip(),
+                    'X-KM-Client-Type' => 'PC_WEB',
+                ])
+                ->withBody(json_encode($PostData), 'application/json')
+                ->post($PostURL);
+        } catch (ConnectionException) {
+            return null;
+        }
 
-        curl_setopt($url, CURLOPT_HTTPHEADER, $header);
-        curl_setopt($url, CURLOPT_CUSTOMREQUEST, "POST");
-        curl_setopt($url, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($url, CURLOPT_POSTFIELDS, $posttoken);
-        curl_setopt($url, CURLOPT_FOLLOWLOCATION, 1);
-        curl_setopt($url, CURLOPT_SSL_VERIFYHOST, 2);
-        curl_setopt($url, CURLOPT_SSL_VERIFYPEER, true);
+        $ResultArray = $response->json();
 
-        $resultdata = curl_exec($url);
-
-        $ResultArray = json_decode($resultdata, true);
-        return $ResultArray;
-
+        return is_array($ResultArray) ? $ResultArray : null;
     }
 
     public static function HttpGet($url)
