@@ -54,12 +54,12 @@ Read before choosing. The store prices in **euros** and serves customers in the 
 | PayHere | Sri Lanka (LKR) | Converted to `PAYHERE_CURRENCY` and signed with it; notifications must name that currency. Needs an active row for it |
 | VoguePay | Nigeria | Charges in `VOGUE_CURRENCY` (empty = the store currency); the total is converted and checked on return. The merchant id is `VOGUE_MERCHANT_ID`; the old hard-coded `developer_code` was removed, so confirm VoguePay accepts the form without it |
 | Iyzico | Turkey (TRY) | Exact converted amount; the buyer is the signed-in customer. `IYZICO_IDENTITY_NUMBER` is a placeholder (Iyzico requires a national id) |
-| N-Genius | UAE and the Middle East (AED default) | Amounts are right and the currency is configurable, but it is wired to the UAT test environment with no production URL (section 1) |
+| N-Genius | UAE and the Middle East (AED default) | Amounts and currency are right and `NGENIUS_MODE` switches UAT/live; check the live URLs (written from memory) before using `live` |
 
-- **Recommended now: enable none of them.** Cash on delivery works end to end (order, stock, cancel and restock were checked), and the gateway code paths were exercised only with simulated callbacks.
+- **Recommended: enable only a gateway you have a merchant account for.** Every gateway is processable and the checkout offers it once enabled, but the code was exercised only with simulated callbacks. Run its sandbox checks first. Cash on delivery works end to end.
 - **If online payment is needed for Dutch customers, integrate a euro-native provider as a new gateway** rather than reviving these. That needs a provider decision, a contract and keys first, so it is a business choice, not a code task.
-- **If one of the existing gateways must be used, N-Genius is the closest:** its amounts are correct, its currency is configurable, and it can be tested safely against UAT. It still needs a production/UAT switch before it can be live.
-- **Iyzico is the furthest:** it needs real buyer data and decimal amounts first.
+- **Closest fit for a first test: N-Genius** (configurable currency, safe to test against UAT).
+- **Iyzico** needs a real `IYZICO_IDENTITY_NUMBER` before live use.
 - Until a gateway is chosen, do not restore the checkout markup, add an outage message, or add a sandbox switch for the others: each of those is wasted work on a gateway that will not be used.
 
 ## 2. Enabling one gateway on staging
