@@ -32,6 +32,7 @@ use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets;
 use Illuminate\Http\Request;
 use Illuminate\Support\Env;
@@ -159,4 +160,21 @@ return Application::configure(basePath: dirname(__DIR__))
             $request,
             new NotFoundHttpException(previous: $exception),
         ));
+
+        // A payment provider that does not answer (timeout, DNS, refused) must not
+        // become a 500 mid-checkout: nothing was charged or marked paid, so send the
+        // customer back to the cart (or answer an API client 503). Still reported.
+        $exceptions->render(function (ConnectionException $exception, Request $request) {
+            if ($request->expectsJson() || $request->is('api/*', '*/api/*')) {
+                return response()->json(['result' => false, 'message' => __('storefront.checkout.payment_failed')], 503);
+            }
+
+            if ($request->is('temp', 'temp/*')) {
+                flash(__('storefront.checkout.payment_failed'))->error();
+
+                return redirect()->route('cart');
+            }
+
+            return null;
+        });
     })->create();

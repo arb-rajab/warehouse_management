@@ -39,8 +39,8 @@ These are defects in the current code. Testing the gateway before they are fixed
 
 **Still open:**
 - [ ] **Checkout does not offer gateways.** The payment-option card in `resources/views/shop/frontend/payment_select.blade.php` is `d-none` and every gateway radio is inside a `{{-- --}}` comment; only cash on delivery is live. To test through the UI, restore the markup for that gateway. Without it, you can only submit `payment_option=<gateway>` by hand (section 3, "No UI" note).
-- [ ] **A gateway outage is a 500.** `bkash/create-payment` (and other gateways' first call) does not catch a failed request to the provider. Decide the customer-facing message before go-live.
-- [ ] **Currencies and rounding per gateway.** Confirm the store currency against what each gateway charges (section 4). SSLCommerz now converts; no other gateway does. Iyzico, bKash, AamarPay and Nagad also round the charge to a whole unit (24.60 becomes 25), so check each one: unless its charge currency matches the store's, and whole-unit rounding is acceptable, it will charge the wrong sum.
+- [x] **A gateway outage was a 500.** A provider call that times out or cannot connect (`ConnectionException`) is now handled globally in `bootstrap/app.php`: the store returns the customer to the cart with "Payment failed", the API answers 503. The exception is still reported. Nothing is charged or marked paid on that path. A provider that answers with an error is handled per gateway.
+- [x] **Currencies and rounding per gateway.** Every gateway now sends the exact amount converted from the store currency to its own charge currency (`<GATEWAY>_CURRENCY`), signs/verifies it in that currency, and refuses a currency with no active, non-zero row in `currencies`. A payment must cover the amount due to the cent (`GatewayPaymentService::covers`). **Each BDT, LKR, TRY, AED, NGN gateway needs an active `currencies` row with a rate before it is enabled.**
 
 PayHere (callbacks), Iyzico, AamarPay, bKash, VoguePay and now SSLCommerz and Nagad build their return URLs with `route()`, which carries `/temp`.
 
@@ -50,10 +50,10 @@ Read before choosing. The store prices in **euros** and serves customers in the 
 
 | Gateway | Built for | Blocker for a euro store |
 | --- | --- | --- |
-| bKash, Nagad, SSLCommerz, AamarPay | Bangladesh (BDT mobile money and cards) | Charge in BDT. SSLCommerz now converts from the store currency. bKash, Nagad and AamarPay send the store's own figure **rounded to a whole unit** with no conversion, and Nagad hard-codes the BDT currency code (`050`) |
-| PayHere | Sri Lanka (LKR) | Sends the store's figure unconverted under the currency in `PAYHERE_CURRENCY`: correct only if that equals the store's currency |
+| bKash, Nagad, SSLCommerz, AamarPay | Bangladesh (BDT mobile money and cards) | Charge in BDT; the store figure is converted from the store currency and checked on return. Needs an active BDT row in `currencies` |
+| PayHere | Sri Lanka (LKR) | Converted to `PAYHERE_CURRENCY` and signed with it; notifications must name that currency. Needs an active row for it |
 | VoguePay | Nigeria | Charges in `VOGUE_CURRENCY` (empty = the store currency); the total is converted and checked on return. The merchant id is `VOGUE_MERCHANT_ID`; the old hard-coded `developer_code` was removed, so confirm VoguePay accepts the form without it |
-| Iyzico | Turkey (TRY) | Whole-unit rounding and a fake Turkish buyer on every payment (section 1) |
+| Iyzico | Turkey (TRY) | Exact converted amount; the buyer is the signed-in customer. `IYZICO_IDENTITY_NUMBER` is a placeholder (Iyzico requires a national id) |
 | N-Genius | UAE and the Middle East (AED default) | Amounts are right and the currency is configurable, but it is wired to the UAT test environment with no production URL (section 1) |
 
 - **Recommended now: enable none of them.** Cash on delivery works end to end (order, stock, cancel and restock were checked), and the gateway code paths were exercised only with simulated callbacks.
