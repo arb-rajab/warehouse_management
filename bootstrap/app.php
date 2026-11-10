@@ -27,6 +27,8 @@ use App\Http\Middleware\StrictResultStatus;
 use App\Http\Middleware\UseStoreAuthGuard;
 use App\Http\Middleware\WmsAuthMiddleware;
 use Illuminate\Contracts\Auth\Middleware\AuthenticatesRequests;
+use Illuminate\Contracts\Debug\ExceptionHandler;
+use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -37,6 +39,7 @@ use Spatie\Honeypot\ProtectAgainstSpam;
 use Spatie\Permission\Middleware\PermissionMiddleware;
 use Spatie\Permission\Middleware\RoleMiddleware;
 use Spatie\Permission\Middleware\RoleOrPermissionMiddleware;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -134,4 +137,12 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*', '*/api/*') || $request->expectsJson(),
         );
+
+        // The store puts encrypted ids in its URLs and decrypt()s them in many controllers, so a
+        // mistyped or tampered id is a missing record, not a server error. Rendered here and not
+        // mapped, so the exception is still reported: a rotated key must stay visible in the logs.
+        $exceptions->render(fn (DecryptException $exception, Request $request) => app(ExceptionHandler::class)->render(
+            $request,
+            new NotFoundHttpException(previous: $exception),
+        ));
     })->create();
