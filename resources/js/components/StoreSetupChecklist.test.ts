@@ -1,11 +1,11 @@
 import { Link } from '@inertiajs/vue3';
 import { mount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { all as allProducts } from '@/actions/App/Http/Controllers/Store/Admin/ProductController';
-import { edit as generalSettings } from '@/actions/App/Http/Controllers/Store/Admin/GeneralSettingsController';
 import { index as currencies } from '@/actions/App/Http/Controllers/Store/Admin/CurrencyController';
+import { edit as generalSettings } from '@/actions/App/Http/Controllers/Store/Admin/GeneralSettingsController';
 import { index as googleMap } from '@/actions/App/Http/Controllers/Store/Admin/GoogleMapController';
 import { index as languages } from '@/actions/App/Http/Controllers/Store/Admin/LanguageController';
+import { all as allProducts } from '@/actions/App/Http/Controllers/Store/Admin/ProductController';
 import {
     activation,
     firebase,

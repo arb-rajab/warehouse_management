@@ -2,11 +2,11 @@
 import { Link } from '@inertiajs/vue3';
 import { ChevronDown, ChevronUp, Circle, CircleCheck } from '@lucide/vue';
 import { computed, ref, useId } from 'vue';
-import { all as allProducts } from '@/actions/App/Http/Controllers/Store/Admin/ProductController';
-import { edit as generalSettings } from '@/actions/App/Http/Controllers/Store/Admin/GeneralSettingsController';
 import { index as currencies } from '@/actions/App/Http/Controllers/Store/Admin/CurrencyController';
+import { edit as generalSettings } from '@/actions/App/Http/Controllers/Store/Admin/GeneralSettingsController';
 import { index as googleMap } from '@/actions/App/Http/Controllers/Store/Admin/GoogleMapController';
 import { index as languages } from '@/actions/App/Http/Controllers/Store/Admin/LanguageController';
+import { all as allProducts } from '@/actions/App/Http/Controllers/Store/Admin/ProductController';
 import {
     activation,
     firebase,
@@ -17,11 +17,11 @@ import { index as shipping } from '@/actions/App/Http/Controllers/Store/Admin/Sh
 import { index as taxes } from '@/actions/App/Http/Controllers/Store/Admin/TaxController';
 import { t } from '@/lib/i18n';
 import { useStoreAccess } from '@/lib/storeAccess';
-import type { RouteDefinition } from '@/wayfinder';
 import type {
     StoreSetupChecklist,
     StoreSetupChecklistKey,
 } from '@/types/store';
+import type { RouteDefinition } from '@/wayfinder';
 
 /**
  * The dashboard's setup checklist: every setting the shop needs, each done or
