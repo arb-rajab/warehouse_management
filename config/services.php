@@ -148,6 +148,9 @@ return [
         'api_key' => env('IYZICO_API_KEY'),
         'secret_key' => env('IYZICO_SECRET_KEY'),
         'currency' => env('IYZICO_CURRENCY_CODE', 'TRY'),
+        // iyzico requires an identity number for every buyer. The store has none for its customers, so
+        // this placeholder (iyzico's documented value for buyers with no Turkish identity number) is sent.
+        'identity_number' => env('IYZICO_IDENTITY_NUMBER', '11111111111'),
     ],
 
     // The currency SSLCommerz is charged in. Amounts are converted to it from the
@@ -155,6 +158,55 @@ return [
     // an active `currencies` row with this code and a rate.
     'sslcommerz' => [
         'currency' => env('SSLCZ_CURRENCY', 'BDT'),
+        'store_id' => env('SSLCZ_STORE_ID'),
+        'store_password' => env('SSLCZ_STORE_PASSWD'),
+    ],
+
+    // Every gateway credential is read from here with config(), never with env(): production runs
+    // `artisan config:cache`, after which env() outside config/ returns null and the gateway has no keys.
+    'bkash' => [
+        'currency' => env('BKASH_CURRENCY', 'BDT'),
+        'app_key' => env('BKASH_CHECKOUT_APP_KEY'),
+        'app_secret' => env('BKASH_CHECKOUT_APP_SECRET'),
+        'username' => env('BKASH_CHECKOUT_USER_NAME'),
+        'password' => env('BKASH_CHECKOUT_PASSWORD'),
+    ],
+
+    // Nagad charges in BDT only; the amount is converted to it from the store's currency.
+    'nagad' => [
+        'currency' => env('NAGAD_CURRENCY', 'BDT'),
+    ],
+
+    'aamarpay' => [
+        'currency' => env('AAMARPAY_CURRENCY', 'BDT'),
+        'store_id' => env('AAMARPAY_STORE_ID'),
+        'signature_key' => env('AAMARPAY_SIGNATURE_KEY'),
+    ],
+
+    // N-Genius runs against its UAT test environment unless NGENIUS_MODE=live. The live URLs below are
+    // N-Genius's documented production endpoints; check them against the provider's documentation, or
+    // override them with the NGENIUS_*_URL variables, before going live.
+    'ngenius' => [
+        'mode' => env('NGENIUS_MODE', 'uat'),
+        'currency' => env('NGENIUS_CURRENCY', 'AED'),
+        'api_key' => env('NGENIUS_API_KEY'),
+        'outlet_id' => env('NGENIUS_OUTLET_ID'),
+        'urls' => [
+            'uat' => [
+                'identity' => env('NGENIUS_UAT_IDENTITY_URL', 'https://identity-uat.ngenius-payments.com/auth/realms/ni/protocol/openid-connect/token'),
+                'gateway' => env('NGENIUS_UAT_GATEWAY_URL', 'https://api-gateway-uat.ngenius-payments.com'),
+            ],
+            'live' => [
+                'identity' => env('NGENIUS_LIVE_IDENTITY_URL', 'https://identity.ngenius-payments.com/auth/realms/ni/protocol/openid-connect/token'),
+                'gateway' => env('NGENIUS_LIVE_GATEWAY_URL', 'https://api-gateway.ngenius-payments.com'),
+            ],
+        ],
+    ],
+
+    // Empty currency: VoguePay is charged in the store's own currency.
+    'voguepay' => [
+        'currency' => env('VOGUE_CURRENCY'),
+        'merchant_id' => env('VOGUE_MERCHANT_ID'),
     ],
 
     'otajer' => [

@@ -29,8 +29,8 @@ class SslCommerzController extends Controller
 
     public function __construct()
     {
-        $this->store_id = env('SSLCZ_STORE_ID');
-        $this->store_pass = env('SSLCZ_STORE_PASSWD');
+        $this->store_id = config('services.sslcommerz.store_id');
+        $this->store_pass = config('services.sslcommerz.store_password');
     }
 
     /**

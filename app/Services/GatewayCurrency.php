@@ -21,12 +21,34 @@ use App\Models\Currency;
  */
 final class GatewayCurrency
 {
+    /** `$code` is empty when the gateway charges in whatever currency the store prices in. */
     public function __construct(public readonly string $code) {}
+
+    /**
+     * The currency `$gateway` is configured to charge in (`config('services.<gateway>.currency')`).
+     * Empty means the store's own currency, so no conversion applies.
+     */
+    public static function forGateway(string $gateway): self
+    {
+        return new self(strtoupper(trim((string) config("services.$gateway.currency"))));
+    }
 
     /** SSLCommerz charges in BDT unless `SSLCZ_CURRENCY` says otherwise. */
     public static function sslcommerz(): self
     {
-        return new self(strtoupper((string) config('services.sslcommerz.currency', 'BDT')));
+        return self::forGateway('sslcommerz');
+    }
+
+    /** The currency code to send the gateway: its own, else the store's. Empty only when neither is configured. */
+    public function chargeCode(): string
+    {
+        return $this->code !== '' ? $this->code : strtoupper((string) $this->defaultCurrency()?->code);
+    }
+
+    /** An amount as gateways expect it: two decimals, a point, no thousands separator. */
+    public static function format(float $amount): string
+    {
+        return number_format($amount, 2, '.', '');
     }
 
     /** Whether the store already prices in this currency, so no conversion applies. */
@@ -34,7 +56,7 @@ final class GatewayCurrency
     {
         $default = $this->defaultCurrency();
 
-        return $default === null || strtoupper((string) $default->code) === $this->code;
+        return $default === null || $this->code === '' || strtoupper((string) $default->code) === $this->code;
     }
 
     /** `$amount` in the gateway's currency, or null when the store has no rate for it. */
@@ -45,7 +67,7 @@ final class GatewayCurrency
         }
 
         $default = $this->defaultCurrency();
-        $gateway = Currency::query()->where('code', $this->code)->where('status', 1)->orderByDesc('id')->first();
+        $gateway = $this->gatewayRow();
 
         if ($default === null || $gateway === null) {
             return null;
@@ -62,6 +84,37 @@ final class GatewayCurrency
     }
 
     /**
+     * `$amount`, reported by the gateway in its currency, in the store's currency; null when the
+     * store has no rate for it. For a payment with no stored amount due (a wallet top-up).
+     */
+    public function toStore(float $amount): ?float
+    {
+        if ($this->isStoreCurrency()) {
+            return round($amount, 2);
+        }
+
+        $default = $this->defaultCurrency();
+        $gateway = $this->gatewayRow();
+
+        if ($default === null || $gateway === null || (float) $default->exchange_rate <= 0 || (float) $gateway->exchange_rate <= 0) {
+            return null;
+        }
+
+        return round($amount / (float) $gateway->exchange_rate * (float) $default->exchange_rate, 2);
+    }
+
+    /**
+     * Whether the gateway's `$reported` amount is the converted amount due, to the cent: for a
+     * payment whose amount due is stored in the store's currency (an order, a package).
+     */
+    public function matchesDue(float $reported, float $dueInStoreCurrency, float $tolerance = 0.01): bool
+    {
+        $due = $this->fromStore($dueInStoreCurrency);
+
+        return $due !== null && abs($reported - $due) <= $tolerance + 1e-9;
+    }
+
+    /**
      * The amount to credit, in the store's currency, once the gateway's own
      * validation has confirmed the payment.
      *
@@ -73,6 +126,11 @@ final class GatewayCurrency
     public function paidInStoreCurrency(float $reported, float $due): float
     {
         return $this->isStoreCurrency() ? $reported : $due;
+    }
+
+    private function gatewayRow(): ?Currency
+    {
+        return Currency::query()->where('code', $this->code)->where('status', 1)->orderByDesc('id')->first();
     }
 
     private function defaultCurrency(): ?Currency

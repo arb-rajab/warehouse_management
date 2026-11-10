@@ -40,12 +40,12 @@ class GatewayPaymentService
     public const string SELLER_PACKAGE = 'seller_package_payment';
 
     /**
-     * Whether `$paid` pays `$due`. The gateways that charge whole units send
-     * `round($due)`, which can be up to half a unit less than the total.
+     * Whether `$paid` pays `$due`, to the cent. Every gateway now sends the exact
+     * amount (converted to its currency where needed), so no shortfall is allowed.
      */
     public static function covers(float $paid, float $due): bool
     {
-        return $due > 0 && $paid + 0.005 >= min($due, round($due));
+        return $due > 0 && $paid + 0.005 >= $due;
     }
 
     /**

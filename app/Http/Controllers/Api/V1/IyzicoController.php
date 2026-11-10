@@ -4,21 +4,15 @@
 namespace App\Http\Controllers\Api\V1;
 
 
+use App\Models\StoreUser;
 use App\Services\ApiGatewayPayment;
+use App\Services\GatewayCurrency;
 use App\Services\GatewayPaymentService;
 use App\Services\IyzicoPayments;
 use App\Services\VerifiedPayment;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
-use Iyzipay\Model\Address;
-use Iyzipay\Model\BasketItem;
-use Iyzipay\Model\BasketItemType;
-use Iyzipay\Model\Buyer;
-use Iyzipay\Model\Currency;
-use Iyzipay\Model\Locale;
-use Iyzipay\Model\PaymentGroup;
-use Iyzipay\Model\PayWithIyzicoInitialize;
-use Iyzipay\Request\CreatePayWithIyzicoInitializeRequest;
 use Redirect;
 
 class IyzicoController extends Controller
@@ -36,60 +30,27 @@ class IyzicoController extends Controller
             return response()->json(['result' => false, 'message' => __('api.payment.nothing_due')]);
         }
 
-        $iyzicoRequest = new CreatePayWithIyzicoInitializeRequest();
-        $iyzicoRequest->setLocale(Locale::TR);
-        $iyzicoRequest->setConversationId('123456789');
+        $iyzico = app(IyzicoPayments::class);
+        $currency = GatewayCurrency::forGateway('iyzico');
+        $converted = $currency->fromStore((float) $payment['amount']);
+        $payer = StoreUser::query()->find($payment['user_id']);
 
-        $buyer = new Buyer();
-        $buyer->setId("BY789");
-        $buyer->setName("John");
-        $buyer->setSurname("Doe");
-        $buyer->setEmail("email@email.com");
-        $buyer->setIdentityNumber("74300864791");
-        $buyer->setRegistrationAddress("Nidakule Göztepe, Merdivenköy Mah. Bora Sok. No:1");
-        $buyer->setCity("Istanbul");
-        $buyer->setCountry("Turkey");
-        $iyzicoRequest->setBuyer($buyer);
-        $shippingAddress = new Address();
-        $shippingAddress->setContactName("Jane Doe");
-        $shippingAddress->setCity("Istanbul");
-        $shippingAddress->setCountry("Turkey");
-        $shippingAddress->setAddress("Nidakule Göztepe, Merdivenköy Mah. Bora Sok. No:1");
-        $iyzicoRequest->setShippingAddress($shippingAddress);
+        if (! $iyzico->supports($payment['payment_type']) || $converted === null || $payer === null) {
+            Log::error('iyzico refused: the store has no active rate for the gateway currency.', ['type' => $payment['payment_type'], 'currency' => $currency->chargeCode()]);
 
-        $billingAddress = new Address();
-        $billingAddress->setContactName("Jane Doe");
-        $billingAddress->setCity("Istanbul");
-        $billingAddress->setCountry("Turkey");
-        $billingAddress->setAddress("Nidakule Göztepe, Merdivenköy Mah. Bora Sok. No:1");
-        $iyzicoRequest->setBillingAddress($billingAddress);
+            return response()->json(['result' => false, 'message' => __('storefront.checkout.payment_failed')]);
+        }
 
-        [$itemName, $itemCategory] = match ($payment['payment_type']) {
-            GatewayPaymentService::CART => ['Cart Payment', 'Accessories'],
-            GatewayPaymentService::WALLET => ['Wallet Payment', 'Wallet'],
-            GatewayPaymentService::SELLER_PACKAGE => ['Seller Package Payment', 'SellerPackage'],
-            default => ['Customer Package Payment', 'CustomerPackage'],
-        };
+        $url = $iyzico->initialize($iyzico->buildInitializeRequest(
+            $payer, $payment['payment_type'], $converted, $currency->chargeCode(),
+            route('api.iyzico.callback'), Str::random(20), (string) $request->ip(),
+        ));
 
-        $iyzicoRequest->setPrice(round($payment['amount']));
-        $iyzicoRequest->setPaidPrice(round($payment['amount']));
-        $iyzicoRequest->setCurrency(Currency::TL);
-        $iyzicoRequest->setBasketId(Str::random(20));
-        $iyzicoRequest->setPaymentGroup(PaymentGroup::SUBSCRIPTION);
-        $iyzicoRequest->setCallbackUrl(route('api.iyzico.callback'));
+        if ($url === null) {
+            return response()->json(['result' => false, 'message' => __('storefront.checkout.payment_failed')]);
+        }
 
-        $firstBasketItem = new BasketItem();
-        $firstBasketItem->setId(rand(1000, 9999));
-        $firstBasketItem->setName($itemName);
-        $firstBasketItem->setCategory1($itemCategory);
-        $firstBasketItem->setItemType(BasketItemType::VIRTUAL);
-        $firstBasketItem->setPrice(round($payment['amount']));
-        $iyzicoRequest->setBasketItems([$firstBasketItem]);
-
-        $payWithIyzicoInitialize = PayWithIyzicoInitialize::create($iyzicoRequest, app(IyzicoPayments::class)->options());
-
-        # print result
-        return Redirect::to($payWithIyzicoInitialize->getPayWithIyzicoPageUrl());
+        return Redirect::to($url);
     }
 
     /**
@@ -126,9 +87,13 @@ class IyzicoController extends Controller
         }
 
         $retrieved = app(IyzicoPayments::class)->retrieve($token);
-        $verified = new VerifiedPayment('iyzico', $token, $retrieved['paid_price'], $retrieved['raw']);
+        $currency = GatewayCurrency::forGateway('iyzico');
+        $verified = new VerifiedPayment('iyzico', $token, $currency->paidInStoreCurrency($retrieved['paid_price'], (float) $payment['amount']), $retrieved['raw']);
 
-        if (! $retrieved['paid'] || ! GatewayPaymentService::covers($retrieved['paid_price'], $payment['amount'])
+        // Paid, in the currency this store charges, for the amount due: exactly in the store's own
+        // currency, else the converted amount to the cent.
+        if (! $retrieved['paid'] || strtoupper((string) ($retrieved['currency'] ?? '')) !== $currency->chargeCode()
+            || ! ($currency->isStoreCurrency() ? GatewayPaymentService::covers($retrieved['paid_price'], $payment['amount']) : $currency->matchesDue($retrieved['paid_price'], (float) $payment['amount']))
             || ! app(GatewayPaymentService::class)->complete($verified, $payment['user_id'], $payment['payment_type'], $payment['combined_order_id'], $payment['package_id'])) {
             return response()->json(['result' => false, 'message' => __('storefront.checkout.payment_could_not_be_verified')]);
         }

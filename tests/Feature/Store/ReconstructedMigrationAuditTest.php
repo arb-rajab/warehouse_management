@@ -1,8 +1,6 @@
 <?php
 
 use App\Models\Brand;
-use App\Models\Currency;
-use App\Models\CustomerPackage;
 use App\Models\Page;
 use App\Models\ProductQuery;
 use App\Models\Upload;
@@ -42,16 +40,6 @@ test('retained uploader layouts preserve the request scheme port and temp prefix
     createShopFor($seller, 0);
     $this->get('https://store.example.test:8443/temp/seller/product/create')->assertOk()->assertSee('name="app-url" content="https://store.example.test:8443/temp"', false)
         ->assertSee('name="file-base-url" content="https://store.example.test:8443/"', false);
-});
-
-test('VoguePay package template compiles and renders the configured currency without a payment call', function () {
-    actingAsStoreUser(createStoreUser('customer'));
-    app('auth')->shouldUse('store');
-    seedStoreCurrency();
-    $package = CustomerPackage::forceCreate(['name' => 'Audit package', 'amount' => 12, 'product_upload' => 1]);
-    session(['payment_data' => ['customer_package_id' => $package->id]]);
-    $html = view('shop.frontend.voguepay.customer_package_payment_vogue')->render();
-    expect($html)->toContain("total: '12'", "cur: '".Currency::findOrFail(get_setting('system_default_currency'))->code."'");
 });
 
 test('retained seller shell reference PDF and email templates render without delivery', function () {

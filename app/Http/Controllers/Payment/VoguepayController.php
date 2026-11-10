@@ -4,29 +4,53 @@ namespace App\Http\Controllers\Payment;
 
 use App\Http\Controllers\Controller;
 use App\Models\BusinessSetting;
+use App\Services\GatewayCurrency;
 use App\Services\GatewayPaymentService;
 use App\Services\SessionGatewayPayment;
 use App\Services\VerifiedPayment;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Session;
 
 class VoguepayController extends Controller
 {
+    /**
+     * Show VoguePay's payment form for what this session is paying: cart, wallet top-up or
+     * customer package. The total is the amount due from the database (with the payer's
+     * ownership check), converted to VoguePay's currency and kept to the cent, and the customer
+     * is the signed-in customer. A currency the store has no active rate for is refused.
+     */
     public function pay()
     {
-        // The reference the payment form sends and paymentSuccess() checks.
-        Session::put('voguepay_merchant_ref', Str::random(20));
+        $paymentType = (string) Session::get('payment_type');
+        $due = app(SessionGatewayPayment::class)->amountDue();
+        $currency = GatewayCurrency::forGateway('voguepay');
+        $converted = $due === null ? null : $currency->fromStore($due);
+        $payer = Auth::user();
 
-        if (Session::get('payment_type') == 'cart_payment') {
-            return view('shop.frontend.voguepay.cart_payment_vogue');
+        if (! in_array($paymentType, [GatewayPaymentService::CART, GatewayPaymentService::WALLET, GatewayPaymentService::CUSTOMER_PACKAGE], true) || $converted === null || $payer === null) {
+            Log::error('VoguePay refused: nothing due, or the store has no active rate for the gateway currency.', ['type' => $paymentType, 'currency' => $currency->chargeCode()]);
+            flash(__('storefront.checkout.payment_failed'))->error();
+
+            return redirect()->route('cart');
         }
-        elseif (Session::get('payment_type') == 'wallet_payment') {
-            return view('shop.frontend.voguepay.wallet_payment_vogue');
-        }
-        elseif (Session::get('payment_type') == 'customer_package_payment') {
-            return view('shop.frontend.voguepay.customer_package_payment_vogue');
-        }
+
+        // The reference the payment form sends and paymentSuccess() checks.
+        $merchantRef = Str::random(20);
+        Session::put('voguepay_merchant_ref', $merchantRef);
+
+        return view('shop.frontend.voguepay.pay', [
+            'merchantId' => get_setting('voguepay_sandbox') == 1 ? 'demo' : config('services.voguepay.merchant_id'),
+            'total' => GatewayCurrency::format($converted),
+            'currency' => $currency->chargeCode(),
+            'merchantRef' => $merchantRef,
+            'payer' => $payer,
+            'successUrl' => route('voguepay.success', ['id' => '__id__']),
+            'failureUrl' => route('voguepay.failure', ['id' => '__id__']),
+            'homeUrl' => route('home'),
+        ]);
     }
 
     /**
@@ -51,11 +75,13 @@ class VoguepayController extends Controller
         }
 
         $transaction = Http::timeout(30)->get('https://voguepay.com/', $query)->json();
+        $currency = GatewayCurrency::forGateway('voguepay');
+        $reported = is_array($transaction) ? (float) ($transaction['total'] ?? 0) : 0.0;
         $isApproved = is_array($transaction)
             && ($transaction['response_message'] ?? null) === 'Approved'
             && hash_equals((string) $id, (string) ($transaction['transaction_id'] ?? ''))
             && hash_equals($merchantRef, (string) ($transaction['merchant_ref'] ?? ''))
-            && GatewayPaymentService::covers((float) ($transaction['total'] ?? 0), $amountDue);
+            && ($currency->isStoreCurrency() ? GatewayPaymentService::covers($reported, $amountDue) : $currency->matchesDue($reported, $amountDue));
 
         if (! $isApproved) {
             flash(__('storefront.checkout.payment_failed'))->error();
@@ -64,7 +90,7 @@ class VoguepayController extends Controller
 
         Session::forget('voguepay_merchant_ref');
 
-        return app(SessionGatewayPayment::class)->complete(new VerifiedPayment('voguepay', (string) $id, (float) $transaction['total'], json_encode($transaction)));
+        return app(SessionGatewayPayment::class)->complete(new VerifiedPayment('voguepay', (string) $id, $currency->paidInStoreCurrency($reported, $amountDue), json_encode($transaction)));
     }
 
     public function paymentFailure($id)

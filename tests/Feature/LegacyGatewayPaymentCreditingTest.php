@@ -28,12 +28,7 @@ beforeEach(function () {
     config(['store.enabled_payment_gateways' => ['aamarpay', 'bkash', 'iyzico', 'nagad', 'ngenius', 'payhere', 'sslcommerz', 'voguepay']]);
     Http::preventStrayRequests();
     Sleep::fake();
-    $_SERVER['SSLCZ_STORE_ID'] = 'store-1';
-    $_SERVER['SSLCZ_STORE_PASSWD'] = 'store-pass';
-});
-
-afterEach(function () {
-    unset($_SERVER['SSLCZ_STORE_ID'], $_SERVER['SSLCZ_STORE_PASSWD']);
+    config(['services.sslcommerz.store_id' => 'store-1', 'services.sslcommerz.store_password' => 'store-pass']);
 });
 
 function gatewayCustomer(float $balance = 0): StoreUser
@@ -145,9 +140,10 @@ test('the sink refuses another account\'s order, a short amount and an order alr
     expectOrderUnpaid($combined);
 });
 
-test('a whole-unit charge for a fractional total pays it, and nothing less does', function () {
-    expect(GatewayPaymentService::covers(30, 30.4))->toBeTrue()
+test('a payment covers the amount due to the cent, and nothing less does', function () {
+    expect(GatewayPaymentService::covers(30.4, 30.4))->toBeTrue()
         ->and(GatewayPaymentService::covers(30.6, 30.6))->toBeTrue()
+        ->and(GatewayPaymentService::covers(30, 30.4))->toBeFalse()
         ->and(GatewayPaymentService::covers(30, 30.6))->toBeFalse()
         ->and(GatewayPaymentService::covers(0, 0))->toBeFalse();
 });
@@ -286,8 +282,8 @@ function fakeBkash(array $result): void
 {
     Http::fake([
         '*bka.sh/*checkout/token/grant' => Http::response(['id_token' => 'grant-token']),
-        '*bka.sh/*checkout/execute' => Http::response($result),
-        '*bka.sh/*checkout/payment/status' => Http::response($result),
+        '*bka.sh/*checkout/execute' => Http::response($result + ['currency' => 'BDT']),
+        '*bka.sh/*checkout/payment/status' => Http::response($result + ['currency' => 'BDT']),
     ]);
 }
 
@@ -349,7 +345,7 @@ function fakeIyzico(array $payment): void
 {
     test()->mock(IyzicoPayments::class)
         ->shouldReceive('retrieve')
-        ->andReturn($payment + ['paid' => true, 'paid_price' => 0.0, 'basket_id' => 'BASKET-1', 'raw' => '{}']);
+        ->andReturn($payment + ['paid' => true, 'paid_price' => 0.0, 'currency' => 'TRY', 'basket_id' => 'BASKET-1', 'raw' => '{}']);
 }
 
 test('iyzico: a token for another basket pays nothing', function () {
@@ -468,7 +464,7 @@ function fakeNgenius(string $reference, int $minorAmount, string $state = 'CAPTU
     Http::fake([
         'identity-uat.ngenius-payments.com/*' => Http::response(['access_token' => 'token']),
         'api-gateway-uat.ngenius-payments.com/*' => Http::response([
-            'reference' => $reference, 'amount' => ['value' => $minorAmount], '_embedded' => ['payment' => [['state' => $state]]],
+            'reference' => $reference, 'amount' => ['value' => $minorAmount, 'currencyCode' => 'AED'], '_embedded' => ['payment' => [['state' => $state]]],
         ]),
     ]);
 }

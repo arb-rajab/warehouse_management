@@ -385,8 +385,8 @@ Route::group(['middleware' => ['auth']], function() {
 Route::resource('shops', ShopController::class)->except('update');
 
 Route::controller(VoguepayController::class)->group(function () {
-    Route::get('/vogue-pay/success/{id}', 'paymentSuccess');
-    Route::get('/vogue-pay/failure/{id}', 'paymentFailure');
+    Route::get('/vogue-pay/success/{id}', 'paymentSuccess')->name('voguepay.success');
+    Route::get('/vogue-pay/failure/{id}', 'paymentFailure')->name('voguepay.failure');
 });
 
 
