@@ -2760,7 +2760,7 @@
                     },
                     "googleMaps": {
                         "label": "Google Maps",
-                        "hint": "The Google Maps key is not set. It is set in the server environment (MAP_API_KEY), not on the settings page."
+                        "hint": "The Google Maps key is not set. Add it on the Google map settings page (it can also be supplied by MAP_API_KEY in the server environment)."
                     },
                     "currency": {
                         "label": "Currency",
@@ -3134,6 +3134,13 @@
             }
         },
         "googleMap": {
+            "apiKey": "Google Maps API key",
+            "apiKeyPlaceholder": "AIza…",
+            "apiKeyHelp": "The browser key from the Google Cloud console (Maps JavaScript API and Places API). If no key is saved here, MAP_API_KEY from the server environment is used.",
+            "apiKeyStatusSaved": "A key is saved. Leave blank to keep it, or enter a new key to replace it.",
+            "apiKeyStatusEnv": "No key is saved here. The key from the server environment (MAP_API_KEY) is in use. Enter a key to override it.",
+            "apiKeyStatusNone": "No key is set. Maps will not load on the storefront until you add one.",
+            "apiKeyRequiredHint": "Required while the map is enabled and no key is set.",
             "title": "Google map settings",
             "requirementsHint": "Choose whether to enable the map when no coordinates are sent. Enter both coordinates together, or leave both empty.",
             "enabled": "Enable the storefront’s Google map",

@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { all as allProducts } from '@/actions/App/Http/Controllers/Store/Admin/ProductController';
 import { edit as generalSettings } from '@/actions/App/Http/Controllers/Store/Admin/GeneralSettingsController';
 import { index as currencies } from '@/actions/App/Http/Controllers/Store/Admin/CurrencyController';
+import { index as googleMap } from '@/actions/App/Http/Controllers/Store/Admin/GoogleMapController';
 import { index as languages } from '@/actions/App/Http/Controllers/Store/Admin/LanguageController';
 import {
     activation,
@@ -158,7 +159,7 @@ describe('StoreSetupChecklist', () => {
         const wrapper = mount(StoreSetupChecklistCard, {
             props: { checklist: checklist([]) },
         });
-        expect(wrapper.findAllComponents(Link)).toHaveLength(10);
+        expect(wrapper.findAllComponents(Link)).toHaveLength(11);
         expect(hrefOf(wrapper, 'smtp')).toBe(smtp().url);
         expect(hrefOf(wrapper, 'paymentMethod')).toBe(payments().url);
         expect(hrefOf(wrapper, 'cashOnDeliveryProducts')).toBe(
@@ -166,6 +167,7 @@ describe('StoreSetupChecklist', () => {
         );
         expect(hrefOf(wrapper, 'shipping')).toBe(shipping().url);
         expect(hrefOf(wrapper, 'firebasePush')).toBe(firebase().url);
+        expect(hrefOf(wrapper, 'googleMaps')).toBe(googleMap().url);
         expect(hrefOf(wrapper, 'currency')).toBe(currencies().url);
         expect(hrefOf(wrapper, 'vatTax')).toBe(taxes().url);
         expect(hrefOf(wrapper, 'catalog')).toBe(allProducts().url);
@@ -173,13 +175,26 @@ describe('StoreSetupChecklist', () => {
         expect(hrefOf(wrapper, 'language')).toBe(languages().url);
     });
 
-    it('gives Google Maps a hint about the server environment and no link', () => {
-        const wrapper = mount(StoreSetupChecklistCard, {
-            props: { checklist: checklist([]) },
-        });
-        const row = wrapper.get('li[data-key="googleMaps"]');
-        expect(row.text()).toContain('MAP_API_KEY');
-        expect(row.find('a').exists()).toBe(false);
+    it.each(['en', 'ar'] as const)(
+        'tells staff in %s the Google Maps key is missing, that it is set on the Google map settings page, and links there',
+        (locale) => {
+            i18n.global.locale.value = locale;
+            const wrapper = mount(StoreSetupChecklistCard, {
+                props: { checklist: checklist([]) },
+            });
+            const row = wrapper.get('li[data-key="googleMaps"]');
+            expect(row.text()).toContain(
+                t('store.dashboard.checklist.items.googleMaps.hint'),
+            );
+            expect(row.text()).toContain('MAP_API_KEY');
+            expect(row.get('a').attributes('href')).toBe(googleMap().url);
+        },
+    );
+
+    it('words the English Google Maps hint around the settings page', () => {
+        expect(t('store.dashboard.checklist.items.googleMaps.hint')).toContain(
+            'Google map settings page',
+        );
     });
 
     it('sends the payment row to the cash payment option when Features activation is allowed', () => {

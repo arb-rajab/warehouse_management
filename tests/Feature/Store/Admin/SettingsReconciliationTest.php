@@ -35,7 +35,7 @@ test('no settings writer reachable by the website permissions writes another pag
     }
     $this->assertDatabaseHas('business_settings', ['type' => 'website_name', 'value' => 'Original']);
     expect(DB::table('business_settings')->count())->toBe(1);
-})->with(array_values(array_unique(array_merge(array_merge(...array_column(SettingsController::PAGES, 'keys')), UpdateWebsiteHeaderRequest::KEYS, UpdateWebsiteHomeRequest::KEYS, UpdateGeneralSettingsRequest::KEYS, UpdateWebsiteFooterRequest::KEYS, UpdateWebsiteAppearanceRequest::KEYS, ['header_script', 'footer_script', 'google_map', 'google_map_latitude', 'google_map_longtitude', 'MAP_API_KEY']))))->with([false, true]);
+})->with(array_values(array_unique(array_merge(array_merge(...array_column(SettingsController::PAGES, 'keys')), UpdateWebsiteHeaderRequest::KEYS, UpdateWebsiteHomeRequest::KEYS, UpdateGeneralSettingsRequest::KEYS, UpdateWebsiteFooterRequest::KEYS, UpdateWebsiteAppearanceRequest::KEYS, ['header_script', 'footer_script', 'google_map', 'google_map_latitude', 'google_map_longtitude', 'google_map_api_key', 'MAP_API_KEY']))))->with([false, true]);
 
 // The four permissions that gated the generic writer (#391's gap: any one of
 // them wrote footer and appearance keys) now reach only their own page.

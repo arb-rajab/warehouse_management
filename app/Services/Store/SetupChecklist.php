@@ -13,6 +13,7 @@ use App\Models\Product;
 use App\Models\StoreUser;
 use App\Models\Tax;
 use App\Services\FcmPushService;
+use App\Support\GoogleMapsKey;
 
 /**
  * The setup checklist of the store back office dashboard: every setting the
@@ -58,6 +59,7 @@ class SetupChecklist
         'cash_payment', 'wallet_system', 'iyzico', 'bkash', 'nagad', 'sslcommerz_payment',
         'shipping_type', 'flat_rate_shipping_cost', 'shipping_cost_admin',
         'system_default_currency', 'site_name', 'contact_email', 'contact_phone', 'header_logo',
+        'google_map_api_key',
     ];
 
     /** @var array<string, string|null>|null */
@@ -217,13 +219,13 @@ class SetupChecklist
     }
 
     /**
-     * The key the storefront and seller pages load Google Maps with
-     * (`services.google_maps.key`, from MAP_API_KEY). The Google map settings
-     * page saves only the switch and the default location, never a key.
+     * The key the storefront and seller pages load Google Maps with: the one
+     * saved on the Google map settings page, else MAP_API_KEY
+     * (see GoogleMapsKey).
      */
     private function googleMaps(): bool
     {
-        return filled(config('services.google_maps.key'));
+        return GoogleMapsKey::resolve($this->setting('google_map_api_key')) !== null;
     }
 
     /**

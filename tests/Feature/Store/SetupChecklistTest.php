@@ -220,6 +220,22 @@ test('google maps is done when the maps key is set', function (?string $key, boo
     expect(setupChecklistDone('googleMaps'))->toBe($done);
 })->with([[null, false], ['', false], ['AIza-test-key', true]]);
 
+test('google maps is done by a key saved on the Google map settings page, with no MAP_API_KEY', function () {
+    storeSetting('google_map_api_key', 'AIza-saved-key');
+
+    expect(setupChecklistDone('googleMaps'))->toBeTrue();
+});
+
+test('google maps is not done by a blank saved key without MAP_API_KEY, and falls back to MAP_API_KEY with one', function () {
+    storeSetting('google_map_api_key', '   ');
+
+    expect(setupChecklistDone('googleMaps'))->toBeFalse();
+
+    config(['services.google_maps.key' => 'AIza-env-key']);
+
+    expect(setupChecklistDone('googleMaps'))->toBeTrue();
+});
+
 // currency
 
 test('currency is done when the default currency is set and its row exists', function (array $settings, string $seed, bool $done) {

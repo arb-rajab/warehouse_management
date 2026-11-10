@@ -5,6 +5,7 @@ import { computed, ref, useId } from 'vue';
 import { all as allProducts } from '@/actions/App/Http/Controllers/Store/Admin/ProductController';
 import { edit as generalSettings } from '@/actions/App/Http/Controllers/Store/Admin/GeneralSettingsController';
 import { index as currencies } from '@/actions/App/Http/Controllers/Store/Admin/CurrencyController';
+import { index as googleMap } from '@/actions/App/Http/Controllers/Store/Admin/GoogleMapController';
 import { index as languages } from '@/actions/App/Http/Controllers/Store/Admin/LanguageController';
 import {
     activation,
@@ -37,8 +38,8 @@ const access = useStoreAccess();
 const expanded = ref(true);
 const listId = useId();
 
-// The page that fixes each item. Google Maps has none: its key is set in the
-// server environment (MAP_API_KEY), so the row carries only its hint.
+// The page that fixes each item. Every item has one: the Google Maps key is
+// set on the Google map settings page (MAP_API_KEY is only a fallback).
 const links: Record<
     StoreSetupChecklistKey,
     () => RouteDefinition<'get'> | null
@@ -51,7 +52,7 @@ const links: Record<
     cashOnDeliveryProducts: () => allProducts(),
     shipping: () => shipping(),
     firebasePush: () => firebase(),
-    googleMaps: () => null,
+    googleMaps: () => googleMap(),
     currency: () => currencies(),
     vatTax: () => taxes(),
     catalog: () => allProducts(),
