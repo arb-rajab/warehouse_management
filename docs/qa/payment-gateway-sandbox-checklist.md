@@ -52,7 +52,7 @@ Read before choosing. The store prices in **euros** and serves customers in the 
 | --- | --- | --- |
 | bKash, Nagad, SSLCommerz, AamarPay | Bangladesh (BDT mobile money and cards) | Charge in BDT. SSLCommerz now converts from the store currency. bKash, Nagad and AamarPay send the store's own figure **rounded to a whole unit** with no conversion, and Nagad hard-codes the BDT currency code (`050`) |
 | PayHere | Sri Lanka (LKR) | Sends the store's figure unconverted under the currency in `PAYHERE_CURRENCY`: correct only if that equals the store's currency |
-| VoguePay | Nigeria | Sends the store's own currency code, so there is no mismatch, but VoguePay must accept it. The merchant id is `VOGUE_MERCHANT_ID`, set in the environment |
+| VoguePay | Nigeria | Charges in `VOGUE_CURRENCY` (empty = the store currency); the total is converted and checked on return. The merchant id is `VOGUE_MERCHANT_ID`; the old hard-coded `developer_code` was removed, so confirm VoguePay accepts the form without it |
 | Iyzico | Turkey (TRY) | Whole-unit rounding and a fake Turkish buyer on every payment (section 1) |
 | N-Genius | UAE and the Middle East (AED default) | Amounts are right and the currency is configurable, but it is wired to the UAT test environment with no production URL (section 1) |
 
