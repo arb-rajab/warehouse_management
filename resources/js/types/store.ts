@@ -1062,9 +1062,36 @@ export interface StoreDashboardProps {
     topProducts: StoreDashboardProduct[];
     showSmtpAlert: boolean;
     setupAlerts: StoreSetupAlert[];
+    setupChecklist: StoreSetupChecklist;
 }
 
 export type StoreSetupAlert = 'noPaymentMethod' | 'cashOnDeliveryProducts';
+
+/** The setup checklist items, in display order. */
+export type StoreSetupChecklistKey =
+    | 'smtp'
+    | 'paymentMethod'
+    | 'cashOnDeliveryProducts'
+    | 'shipping'
+    | 'firebasePush'
+    | 'googleMaps'
+    | 'currency'
+    | 'vatTax'
+    | 'catalog'
+    | 'siteBasics'
+    | 'language';
+
+export interface StoreSetupChecklistItem {
+    key: StoreSetupChecklistKey;
+    done: boolean;
+}
+
+/** Only the items the signed-in staff member may fix; done/total count those. */
+export interface StoreSetupChecklist {
+    items: StoreSetupChecklistItem[];
+    done: number;
+    total: number;
+}
 
 export interface StoreSeller {
     id: number;

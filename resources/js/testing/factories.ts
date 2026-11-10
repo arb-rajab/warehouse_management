@@ -1614,6 +1614,7 @@ export function storeDashboardProps(): StoreDashboardProps {
         },
         showSmtpAlert: true,
         setupAlerts: [],
+        setupChecklist: { items: [], done: 0, total: 0 },
         topProducts: [
             {
                 id: 1,

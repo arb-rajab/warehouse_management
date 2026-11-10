@@ -2728,6 +2728,62 @@
                 "noPaymentMethod": "Payments are not set up: no payment method is switched on, so customers cannot place an order in the app.",
                 "cashOnDeliveryProducts": "Cash payment is on, but no product allows cash on delivery, so the app does not offer it. Tick \"Cash on delivery\" on the products that take cash."
             },
+            "checklist": {
+                "title": "Setup checklist",
+                "progress": "{done} of {total} done",
+                "collapse": "Hide checklist",
+                "expand": "Show checklist",
+                "configure": "Configure",
+                "configureItem": "Configure {item}",
+                "statusDone": "Done",
+                "statusTodo": "To do",
+                "items": {
+                    "smtp": {
+                        "label": "Email (SMTP)",
+                        "hint": "No SMTP username or password is set, so the store cannot send emails."
+                    },
+                    "paymentMethod": {
+                        "label": "Payment methods",
+                        "hint": "No payment method is switched on, so customers cannot place an order in the app."
+                    },
+                    "cashOnDeliveryProducts": {
+                        "label": "Cash on delivery products",
+                        "hint": "Cash payment is on, but no product allows cash on delivery, so the app does not offer it."
+                    },
+                    "shipping": {
+                        "label": "Shipping",
+                        "hint": "The shipping type is not set up, or the cost or area data it needs is missing."
+                    },
+                    "firebasePush": {
+                        "label": "Push notifications (Firebase)",
+                        "hint": "Firebase is not configured, so the app cannot send push notifications."
+                    },
+                    "googleMaps": {
+                        "label": "Google Maps",
+                        "hint": "The Google Maps key is not set. It is set in the server environment (MAP_API_KEY), not on the settings page."
+                    },
+                    "currency": {
+                        "label": "Currency",
+                        "hint": "No default currency is set, or the chosen one no longer exists."
+                    },
+                    "vatTax": {
+                        "label": "VAT and tax",
+                        "hint": "No active VAT or tax rate is set up."
+                    },
+                    "catalog": {
+                        "label": "Products and categories",
+                        "hint": "The shop needs at least one published product and one category."
+                    },
+                    "siteBasics": {
+                        "label": "Site basics",
+                        "hint": "The site name, contact email, contact phone or logo is missing."
+                    },
+                    "language": {
+                        "label": "Default language",
+                        "hint": "The default language does not exist or is not active."
+                    }
+                }
+            },
             "configureNow": "Configure now",
             "charts": {
                 "products": "Products",
