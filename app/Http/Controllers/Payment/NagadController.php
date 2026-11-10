@@ -73,7 +73,7 @@ class NagadController{
         $MerchantID = config('nagad.merchant_id');
         //$invoice_no = 'Inv'.Date('YmdH').rand(1000, 10000);
         $invoice_no = $this->tnx_status ? $this->tnx :'Inv'.Date('YmdH').rand(1000, 10000);
-        $merchantCallbackURL = config('nagad.callback_url');
+        $merchantCallbackURL = self::merchantCallbackUrl();
 
         $SensitiveData = [
             'merchantId' => $MerchantID,
@@ -187,5 +187,15 @@ class NagadController{
         Session::forget('nagad_order_id');
 
         return app(SessionGatewayPayment::class)->complete(new VerifiedPayment('nagad', $payment_ref_id, (float) $result['amount'], $json));
+    }
+
+    /**
+     * Where Nagad sends the customer back: `NAGAD_CALLBACK_URL` when set, else the
+     * storefront's own callback route, which carries the /temp prefix a hand-built
+     * `APP_URL/nagad/callback` did not.
+     */
+    public static function merchantCallbackUrl(): string
+    {
+        return config('nagad.callback_url') ?: route('nagad.callback');
     }
 }

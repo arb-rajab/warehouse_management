@@ -320,9 +320,9 @@ Route::group(['prefix' => 'v1/store', 'middleware' => ['app_language', 'strict.s
     Route::any('nagad/verify/{payment_type}', 'App\Http\Controllers\Api\V1\NagadController@verify')->name('app.nagad.callback_url');
 
     Route::get('sslcommerz/begin', 'App\Http\Controllers\Api\V1\SslCommerzController@begin')->middleware('auth:store_api');
-    Route::any('sslcommerz/success', 'App\Http\Controllers\Api\V1\SslCommerzController@payment_success');
-    Route::any('sslcommerz/fail', 'App\Http\Controllers\Api\V1\SslCommerzController@payment_fail');
-    Route::any('sslcommerz/cancel', 'App\Http\Controllers\Api\V1\SslCommerzController@payment_cancel');
+    Route::any('sslcommerz/success', 'App\Http\Controllers\Api\V1\SslCommerzController@payment_success')->name('api.sslcommerz.success');
+    Route::any('sslcommerz/fail', 'App\Http\Controllers\Api\V1\SslCommerzController@payment_fail')->name('api.sslcommerz.fail');
+    Route::any('sslcommerz/cancel', 'App\Http\Controllers\Api\V1\SslCommerzController@payment_cancel')->name('api.sslcommerz.cancel');
 
 
 

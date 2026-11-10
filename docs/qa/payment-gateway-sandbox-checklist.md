@@ -20,15 +20,18 @@ Mark each check `[x]` pass, `[!]` fail (write what you saw), `[-]` not applicabl
 
 These are defects in the current code. Testing the gateway before they are fixed will fail for reasons that are not the gateway's.
 
-- [ ] **SSLCommerz return URLs have no `/temp`.** `SslcommerzController` builds `$request->root()."/sslcommerz/success"` (also `fail`, `cancel`), i.e. `https://host/sslcommerz/success`. The store's routes are `temp/sslcommerz/*`, so a customer returning from SSLCommerz lands on a 404 and the order is never completed. Use the `route()` helper, as the other gateways do.
-- [ ] **SSLCommerz currency is hard-coded `BDT` with the raw order total.** The store prices in the default currency (EUR in the seed data). A 25.00 EUR order would be sent as 25.00 BDT. Decide the real currency and convert the amount, or the gateway is charging the wrong sum.
-- [ ] **Nagad's default callback URL has no `/temp`.** `config/nagad.php` defaults to `APP_URL . '/nagad/callback'`. Either set `NAGAD_CALLBACK_URL=https://<host>/temp/nagad/callback` explicitly, or fix the default.
+**Fixed (verify them on staging, do not assume):**
+- [x] **SSLCommerz return URLs had no `/temp`.** They are now `route('sslcommerz.success|fail|cancel')`, i.e. `https://<host>/temp/sslcommerz/...`. The mobile API's URLs were also wrong (`/api/v1/sslcommerz/...`, missing `/store`) and are now `route('api.sslcommerz.*')`. On staging: after paying, the customer must land on a store page, never a 404.
+- [x] **SSLCommerz charged the store's figure in `BDT`.** The amount is now converted from the store's default currency to the gateway's (`SSLCZ_CURRENCY`, default `BDT`) using the `currencies` table (`amount / default rate * gateway rate`), and the validation and the credit use the matching units. A gateway currency the store has no **active** rate for is refused with a message, never charged. **The store therefore needs an active `currencies` row with that code and its exchange rate before this gateway can take a payment.** On staging: the amount shown at SSLCommerz must equal the order total times that rate.
+- [x] **Nagad's default callback URL had no `/temp`.** `NAGAD_CALLBACK_URL` is now unset by default and the callback is the storefront's `route('nagad.callback')`. Set it only to send Nagad somewhere else.
+
+**Still open:**
 - [ ] **N-Genius cannot use its sandbox.** `NgeniusUtility` has `$sandbox = false` hard-coded ("check from db or env"), so it always talks to the real N-Genius. It needs a real switch before it can be tested safely.
 - [ ] **Checkout does not offer gateways.** The payment-option card in `resources/views/shop/frontend/payment_select.blade.php` is `d-none` and every gateway radio is inside a `{{-- --}}` comment; only cash on delivery is live. To test through the UI, restore the markup for that gateway. Without it, you can only submit `payment_option=<gateway>` by hand (section 3, "No UI" note).
 - [ ] **A gateway outage is a 500.** `bkash/create-payment` (and other gateways' first call) does not catch a failed request to the provider. Decide the customer-facing message before go-live.
-- [ ] **Currencies per gateway.** Confirm the store currency against what each gateway charges (section 4). The code does not convert for most of them.
+- [ ] **Currencies per gateway.** Confirm the store currency against what each gateway charges (section 4). SSLCommerz now converts. No conversion was found in the other gateways' code, so check each one: unless its charge currency matches the store's, it will charge the wrong sum.
 
-PayHere (callbacks), Iyzico, AamarPay, bKash, VoguePay and Nagad build their return URLs with `route()`, which carries `/temp`.
+PayHere (callbacks), Iyzico, AamarPay, bKash, VoguePay and now SSLCommerz and Nagad build their return URLs with `route()`, which carries `/temp`.
 
 ## 2. Enabling one gateway on staging
 
@@ -77,19 +80,19 @@ Replace `<host>` with the staging host. All callback paths sit under `/temp`.
 | Gateway | Env keys | Store settings | Currency in code | Callback URLs to register | How the store verifies |
 | --- | --- | --- | --- | --- | --- |
 | **PayHere** | `PAYHERE_MERCHANT_ID`, `PAYHERE_SECRET`, `PAYHERE_CURRENCY` | `payhere`, `payhere_sandbox` | `PAYHERE_CURRENCY` | `https://<host>/temp/payhere/checkout/{notify,return,cancel}`, `.../wallet/{notify,return,cancel}`, `.../customer_package_payment/{notify,return,cancel}` | MD5 signature (`md5sig`) rebuilt from the merchant secret; order id carries the account (`W<user>-…`, `P<user>-<package>-…`) |
-| **SSLCommerz** | `SSLCZ_STORE_ID`, `SSLCZ_STORE_PASSWD` | `sslcommerz_payment`, `sslcommerz_sandbox` | hard-coded `BDT` | `https://<host>/temp/sslcommerz/{success,fail,cancel}` (**POST**, see section 1) | server-side `orderValidate()` of `val_id` for the amount due, in `BDT` |
+| **SSLCommerz** | `SSLCZ_STORE_ID`, `SSLCZ_STORE_PASSWD`, `SSLCZ_CURRENCY` (default `BDT`) | `sslcommerz_payment`, `sslcommerz_sandbox` | `SSLCZ_CURRENCY`, converted from the store currency (needs an active `currencies` row) | `https://<host>/temp/sslcommerz/{success,fail,cancel}` (**POST**; built by the store with `route()`) | server-side `orderValidate()` of `val_id` for the converted amount due, in the gateway currency |
 | **VoguePay** | `VOGUE_MERCHANT_ID` (the form sends `demo` instead when sandbox mode is on) | `voguepay`, `voguepay_sandbox` | from the form | `https://<host>/temp/vogue-pay/success/{id}`, `.../failure/{id}` (GET) | asks VoguePay's server for the transaction: approved, same id, same `merchant_ref` as this session, covers the amount due |
 | **AamarPay** | `AAMARPAY_STORE_ID`, `AAMARPAY_SIGNATURE_KEY` | `aamarpay`, `aamarpay_sandbox` | store default | success `https://<host>/temp/aamarpay/success`, fail `.../fail` (**POST**); cancel returns to the cart | signature key check on the verification call |
 | **Iyzico** | `IYZICO_API_KEY`, `IYZICO_SECRET_KEY`, `IYZICO_CURRENCY_CODE` (default `TRY`) | `iyzico`, `iyzico_sandbox` | `TRY` by default | `https://<host>/temp/iyzico/payment/callback/{payment_type}/{amount?}/{payment_method?}/{combined_order_id?}/{customer_package_id?}/{seller_package_id?}` (any method; built by the store, not registered by hand) | retrieves the payment by `token` from iyzico and accepts only the one reported for this basket |
 | **bKash** | `BKASH_CHECKOUT_APP_KEY`, `BKASH_CHECKOUT_APP_SECRET`, `BKASH_CHECKOUT_USER_NAME`, `BKASH_CHECKOUT_PASSWORD` | `bkash`, `bkash_sandbox` | BDT | `https://<host>/temp/bkash/callback` (GET) then `/temp/bkash/success` | bKash's own execute call, or its status query if execute does not answer; one payment per session |
-| **Nagad** | `NAGAD_MODE` (`sandbox`), `NAGAD_MERCHANT_ID`, `NAGAD_MERCHANT_NUMBER`, `NAGAD_MERCHANT_PRIVATE_KEY`, `NAGAD_PG_PUBLIC_KEY`, `NAGAD_CALLBACK_URL` | `nagad` | BDT | `https://<host>/temp/nagad/callback` (GET). **Set `NAGAD_CALLBACK_URL` explicitly** (section 1) | signed request and response (`sensitiveData` + `signature`); one Nagad order per session |
+| **Nagad** | `NAGAD_MODE` (`sandbox`), `NAGAD_MERCHANT_ID`, `NAGAD_MERCHANT_NUMBER`, `NAGAD_MERCHANT_PRIVATE_KEY`, `NAGAD_PG_PUBLIC_KEY`, `NAGAD_CALLBACK_URL` (optional) | `nagad` | BDT | `https://<host>/temp/nagad/callback` (GET); the store sends it by default, nothing to register by hand | signed request and response (`sensitiveData` + `signature`); one Nagad order per session |
 | **N-Genius** | `NGENIUS_API_KEY`, `NGENIUS_OUTLET_ID`, `NGENIUS_CURRENCY` (default `AED`) | `ngenius` | `AED` by default | `https://<host>/temp/ngenius/{cart,wallet,customer_package,seller_package}_payment_callback` | retrieves the order by `ref` from N-Genius. **Sandbox is hard-coded off** (section 1) |
 
 Gateway-specific checks:
 - [ ] **PayHere:** the notify URL is called server to server by PayHere. Confirm it arrives (PayHere dashboard or staging access log), answers 200, and that the signature check rejects a forged `md5sig`.
 - [ ] **PayHere:** the `/temp/payhere/*/testing` routes exist while the gateway is enabled. Do not leave PayHere enabled on a public site while they are present.
 - [ ] **SSLCommerz / AamarPay:** the success and fail URLs receive a **POST from the customer's browser**. Confirm it is not 419 (section 2, PR #555) and that you land on a store page afterwards.
-- [ ] **SSLCommerz:** the amount at the gateway is in the right currency (section 1).
+- [ ] **SSLCommerz:** the amount at the gateway is the order total converted at the store's rate for `SSLCZ_CURRENCY`, and the credited wallet or order amount is in the store currency. Also refuse-test it: with no active rate for the currency, paying must stop with a message and send nothing to the gateway.
 - [ ] **Iyzico:** the token in the callback is for this basket; a token from another basket is refused.
 - [ ] **bKash:** a sandbox "success", "failure" and "cancelled" each end in the right state; a bKash outage shows a message, not a 500.
 - [ ] **Nagad:** both success and failure of the signed response leave the order in the right state.
