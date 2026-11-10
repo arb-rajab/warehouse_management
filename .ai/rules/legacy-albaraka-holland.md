@@ -1269,6 +1269,12 @@ These are uninstalled-addon dead code, so delete them with their controllers.
   Each site needs its guard checked, and the phase 0b schema dump must
   confirm the table is really absent in production, before these go.
 
+  `manual_payment_methods` is the exception: migration
+  `2026_11_10_100000_create_manual_payment_methods_table` creates it where it is
+  missing (guarded by `Schema::hasTable`, a no-op on the shared database), so
+  `GET /payment-types` and the dashboard setup checklist never hit a missing
+  table. Its columns were derived from the code, not from a production dump.
+
 Original list:
 
 - `Affiliate*` ×7
