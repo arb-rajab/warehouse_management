@@ -463,7 +463,7 @@ function fakeNgenius(string $reference, int $minorAmount, string $state = 'CAPTU
     Http::fake([
         'identity-uat.ngenius-payments.com/*' => Http::response(['access_token' => 'token']),
         'api-gateway-uat.ngenius-payments.com/*' => Http::response([
-            'reference' => $reference, 'amount' => ['value' => $minorAmount], '_embedded' => ['payment' => [['state' => $state]]],
+            'reference' => $reference, 'amount' => ['value' => $minorAmount, 'currencyCode' => 'AED'], '_embedded' => ['payment' => [['state' => $state]]],
         ]),
     ]);
 }

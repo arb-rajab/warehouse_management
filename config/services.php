@@ -175,10 +175,24 @@ return [
         'signature_key' => env('AAMARPAY_SIGNATURE_KEY'),
     ],
 
+    // N-Genius runs against its UAT test environment unless NGENIUS_MODE=live. The live URLs below are
+    // N-Genius's documented production endpoints; check them against the provider's documentation, or
+    // override them with the NGENIUS_*_URL variables, before going live.
     'ngenius' => [
+        'mode' => env('NGENIUS_MODE', 'uat'),
         'currency' => env('NGENIUS_CURRENCY', 'AED'),
         'api_key' => env('NGENIUS_API_KEY'),
         'outlet_id' => env('NGENIUS_OUTLET_ID'),
+        'urls' => [
+            'uat' => [
+                'identity' => env('NGENIUS_UAT_IDENTITY_URL', 'https://identity-uat.ngenius-payments.com/auth/realms/ni/protocol/openid-connect/token'),
+                'gateway' => env('NGENIUS_UAT_GATEWAY_URL', 'https://api-gateway-uat.ngenius-payments.com'),
+            ],
+            'live' => [
+                'identity' => env('NGENIUS_LIVE_IDENTITY_URL', 'https://identity.ngenius-payments.com/auth/realms/ni/protocol/openid-connect/token'),
+                'gateway' => env('NGENIUS_LIVE_GATEWAY_URL', 'https://api-gateway.ngenius-payments.com'),
+            ],
+        ],
     ],
 
     // Empty currency: VoguePay is charged in the store's own currency.
