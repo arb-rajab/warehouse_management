@@ -55,6 +55,20 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->append(SendSecureHeaders::class);
         $middleware->append(BlockMaliciousRequests::class);
 
+        // Payment gateways and Sign in with Apple POST to the store from outside, with no CSRF
+        // token: each callback is verified with the provider instead (GatewayPaymentService, the
+        // gateway's signature or its API). The store lives under /temp, so the paths carry it. The
+        // list used to sit in a VerifyCsrfToken class that nothing registered, so every such POST
+        // answered 419 and a customer who had paid at the gateway never had the order completed.
+        $middleware->preventRequestForgery(except: [
+            'temp/sslcommerz*',
+            'temp/payhere*',
+            'temp/iyzico*',
+            'temp/aamarpay*',
+            'temp/bkash*',
+            'temp/apple-callback',
+        ]);
+
         $trustedProxies = array_filter(explode(',', (string) Env::get('TRUSTED_PROXIES', '')));
 
         if ($trustedProxies !== []) {
