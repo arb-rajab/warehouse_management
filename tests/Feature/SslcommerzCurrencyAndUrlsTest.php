@@ -315,3 +315,34 @@ test('GatewayCurrency treats a store with no default currency as already in the 
     expect((new GatewayCurrency('BDT'))->isStoreCurrency())->toBeTrue()
         ->and((new GatewayCurrency('BDT'))->fromStore(25.0))->toBe(25.0);
 });
+
+test('GatewayCurrency reads each gateway\'s currency from its own config, and empty means the store currency', function () {
+    sslcCurrencies('EUR', ['LKR' => [320, 1]]);
+    config(['services.payhere.currency' => 'lkr', 'services.voguepay.currency' => null]);
+
+    expect(GatewayCurrency::forGateway('payhere')->code)->toBe('LKR')
+        ->and(GatewayCurrency::forGateway('payhere')->chargeCode())->toBe('LKR')
+        ->and(GatewayCurrency::forGateway('voguepay')->code)->toBe('')
+        ->and(GatewayCurrency::forGateway('voguepay')->chargeCode())->toBe('EUR')
+        ->and(GatewayCurrency::forGateway('voguepay')->isStoreCurrency())->toBeTrue();
+});
+
+test('GatewayCurrency converts back to the store currency and matches an amount due to the cent', function () {
+    sslcCurrencies('EUR', ['BDT' => [130.5, 1]]);
+    $bdt = new GatewayCurrency('BDT');
+
+    expect($bdt->toStore(3262.5))->toBe(25.0)
+        ->and($bdt->matchesDue(3262.5, 25.0))->toBeTrue()
+        ->and($bdt->matchesDue(3262.51, 25.0))->toBeTrue()
+        ->and($bdt->matchesDue(3262.49, 25.0))->toBeTrue()
+        ->and($bdt->matchesDue(3262.0, 25.0))->toBeFalse()
+        ->and($bdt->matchesDue(25.0, 25.0))->toBeFalse()
+        ->and((new GatewayCurrency('USD'))->toStore(10.0))->toBeNull()
+        ->and((new GatewayCurrency('USD'))->matchesDue(10.0, 10.0))->toBeFalse();
+});
+
+test('GatewayCurrency formats amounts the way gateways expect them', function () {
+    expect(GatewayCurrency::format(24.6))->toBe('24.60')
+        ->and(GatewayCurrency::format(1234567.891))->toBe('1234567.89')
+        ->and(GatewayCurrency::format(25))->toBe('25.00');
+});

@@ -1,6 +1,8 @@
 <?php
 
 namespace App\Utility;
+
+use App\Services\GatewayCurrency;
 use Cache;
 
 class PayhereUtility
@@ -23,33 +25,38 @@ class PayhereUtility
         return $sandbox ? PayhereUtility::action_url('sandbox') : PayhereUtility::action_url('live');
     }
 
-    public static  function create_checkout_form($combined_order_id, $amount, $first_name, $last_name, $phone, $email,$address,$city)
+    public static  function create_checkout_form($combined_order_id, $amount, $first_name, $last_name, $phone, $email,$address,$city, ?string $currency = null)
     {
-        $hash_value = static::getHash($combined_order_id , $amount);
-        return view('shop.frontend.payhere.checkout_form', compact('combined_order_id', 'amount', 'first_name', 'last_name', 'phone', 'email','address','city','hash_value'));
+        $currency ??= GatewayCurrency::forGateway('payhere')->chargeCode();
+        $hash_value = static::getHash($combined_order_id , $amount, $currency);
+        return view('shop.frontend.payhere.checkout_form', compact('combined_order_id', 'amount', 'currency', 'first_name', 'last_name', 'phone', 'email','address','city','hash_value'));
     }
 
-    public static  function create_wallet_form($user_id,$order_id, $amount, $first_name, $last_name, $phone, $email,$address,$city)
+    public static  function create_wallet_form($user_id,$order_id, $amount, $first_name, $last_name, $phone, $email,$address,$city, ?string $currency = null)
     {
-        $hash_value = static::getHash($order_id , $amount);
-        return view('shop.frontend.payhere.wallet_form', compact('user_id','order_id', 'amount', 'first_name', 'last_name', 'phone', 'email','address','city','hash_value'));
+        $currency ??= GatewayCurrency::forGateway('payhere')->chargeCode();
+        $hash_value = static::getHash($order_id , $amount, $currency);
+        return view('shop.frontend.payhere.wallet_form', compact('user_id','order_id', 'amount', 'currency', 'first_name', 'last_name', 'phone', 'email','address','city','hash_value'));
     }
 
-    public static  function create_customer_package_form($user_id,$package_id,$order_id, $amount, $first_name, $last_name, $phone, $email,$address,$city)
+    public static  function create_customer_package_form($user_id,$package_id,$order_id, $amount, $first_name, $last_name, $phone, $email,$address,$city, ?string $currency = null)
     {
-        $hash_value = static::getHash($order_id , $amount);
-        return view('shop.frontend.payhere.customer_package_form', compact('user_id','package_id','order_id', 'amount', 'first_name', 'last_name', 'phone', 'email','address','city','hash_value'));
+        $currency ??= GatewayCurrency::forGateway('payhere')->chargeCode();
+        $hash_value = static::getHash($order_id , $amount, $currency);
+        return view('shop.frontend.payhere.customer_package_form', compact('user_id','package_id','order_id', 'amount', 'currency', 'first_name', 'last_name', 'phone', 'email','address','city','hash_value'));
     }
 
 
-    public static function getHash($order_id, $payhere_amount)
+    public static function getHash($order_id, $payhere_amount, ?string $currency = null)
     {
+        $currency ??= GatewayCurrency::forGateway('payhere')->chargeCode();
+
         $hash = strtoupper(
             md5(
                 config('services.payhere.merchant_id').
                 $order_id.
                 number_format($payhere_amount, 2, '.', '').
-                config('services.payhere.currency').
+                $currency.
                 strtoupper(md5(config('services.payhere.secret')))
             )
         );
