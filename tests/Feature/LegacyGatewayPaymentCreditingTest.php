@@ -344,7 +344,7 @@ function fakeIyzico(array $payment): void
 {
     test()->mock(IyzicoPayments::class)
         ->shouldReceive('retrieve')
-        ->andReturn($payment + ['paid' => true, 'paid_price' => 0.0, 'basket_id' => 'BASKET-1', 'raw' => '{}']);
+        ->andReturn($payment + ['paid' => true, 'paid_price' => 0.0, 'currency' => 'TRY', 'basket_id' => 'BASKET-1', 'raw' => '{}']);
 }
 
 test('iyzico: a token for another basket pays nothing', function () {

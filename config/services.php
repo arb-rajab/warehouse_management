@@ -148,6 +148,9 @@ return [
         'api_key' => env('IYZICO_API_KEY'),
         'secret_key' => env('IYZICO_SECRET_KEY'),
         'currency' => env('IYZICO_CURRENCY_CODE', 'TRY'),
+        // iyzico requires an identity number for every buyer. The store has none for its customers, so
+        // this placeholder (iyzico's documented value for buyers with no Turkish identity number) is sent.
+        'identity_number' => env('IYZICO_IDENTITY_NUMBER', '11111111111'),
     ],
 
     // The currency SSLCommerz is charged in. Amounts are converted to it from the
