@@ -140,9 +140,10 @@ test('the sink refuses another account\'s order, a short amount and an order alr
     expectOrderUnpaid($combined);
 });
 
-test('a whole-unit charge for a fractional total pays it, and nothing less does', function () {
-    expect(GatewayPaymentService::covers(30, 30.4))->toBeTrue()
+test('a payment covers the amount due to the cent, and nothing less does', function () {
+    expect(GatewayPaymentService::covers(30.4, 30.4))->toBeTrue()
         ->and(GatewayPaymentService::covers(30.6, 30.6))->toBeTrue()
+        ->and(GatewayPaymentService::covers(30, 30.4))->toBeFalse()
         ->and(GatewayPaymentService::covers(30, 30.6))->toBeFalse()
         ->and(GatewayPaymentService::covers(0, 0))->toBeFalse();
 });
