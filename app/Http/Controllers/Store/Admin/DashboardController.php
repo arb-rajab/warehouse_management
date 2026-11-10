@@ -7,10 +7,10 @@ use App\Http\Controllers\Store\Admin\Concerns\FlashesSuccess;
 use App\Http\Resources\Store\DashboardProductResource;
 use App\Models\Brand;
 use App\Models\Category;
-use App\Models\ManualPaymentMethod;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\StoreUser;
+use App\Services\Store\SetupChecklist;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -32,8 +32,12 @@ class DashboardController extends Controller implements HasMiddleware
         return [new Middleware('permission:admin_dashboard', only: ['index'])];
     }
 
-    public function index(Request $request): Response
+    public function index(Request $request, SetupChecklist $checklist): Response
     {
+        /** @var StoreUser $user */
+        $user = $request->user();
+        $items = $checklist->items($user);
+        $pending = $checklist->pending($items);
         $graphs = Cache::remember(self::GRAPH_CACHE_KEY, 86400, fn (): array => $this->graphTotals());
         $categories = Category::query()->select(['id', 'name'])->where('level', 0)
             ->with('category_translations:id,category_id,lang,name')->orderBy('id')->get();
@@ -62,48 +66,33 @@ class DashboardController extends Controller implements HasMiddleware
                 'visits' => $graphs['visits'],
             ],
             'topProducts' => DashboardProductResource::collection($products),
-            'showSmtpAlert' => $request->user()->can('smtp_settings')
-                && config('mail.mailers.smtp.username') == null
-                && config('mail.mailers.smtp.password') == null,
-            'setupAlerts' => $this->setupAlerts($request),
+            'showSmtpAlert' => in_array('smtp', $pending, true),
+            'setupAlerts' => $this->setupAlerts($pending),
+            'setupChecklist' => $checklist->payload($items),
         ]);
     }
 
     /**
-     * The settings the mobile app's checkout cannot work without, for the staff
-     * who can change them, in the way the SMTP warning is shown: no payment
-     * method switched on, or cash payment on while no product allows it (the
-     * app lists cash on delivery only when both are set).
+     * The banners the checkout-critical checks raise: no payment method
+     * switched on, or cash payment on while no product allows it. Each is
+     * pending only for staff whose permission can fix it (see SetupChecklist).
      *
+     * @param  list<string>  $pending  keys of the checklist items still to do
      * @return list<string>
      */
-    private function setupAlerts(Request $request): array
+    private function setupAlerts(array $pending): array
     {
         $alerts = [];
 
-        if ($request->user()->can('payment_methods_configurations') && ! $this->takesPayments()) {
+        if (in_array('paymentMethod', $pending, true)) {
             $alerts[] = 'noPaymentMethod';
         }
 
-        if ($request->user()->can('show_all_products') && get_setting('cash_payment') == 1 && ! Product::query()->where('cash_on_delivery', 1)->exists()) {
+        if (in_array('cashOnDeliveryProducts', $pending, true)) {
             $alerts[] = 'cashOnDeliveryProducts';
         }
 
         return $alerts;
-    }
-
-    /**
-     * Whether GET /payment-types can list anything: the same settings it reads.
-     */
-    private function takesPayments(): bool
-    {
-        foreach (['cash_payment', 'wallet_system', 'iyzico', 'bkash', 'nagad', 'sslcommerz_payment'] as $setting) {
-            if (get_setting($setting) == 1) {
-                return true;
-            }
-        }
-
-        return addon_is_activated('offline_payment') && ManualPaymentMethod::query()->exists();
     }
 
     /** @return array{categories: array<int, array{sales: int, stock: int}>, visits: array{labels: list<string>, values: list<int>}} */
