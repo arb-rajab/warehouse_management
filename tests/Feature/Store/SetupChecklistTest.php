@@ -1,12 +1,12 @@
 <?php
 
 use App\Models\Category;
+use App\Models\ManualPaymentMethod;
 use App\Models\StoreUser;
 use App\Services\Store\SetupChecklist;
 use App\Support\StorePermissions;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 
 /** A staff account holding every permission a check is gated by. */
 function setupChecklistStaff(): StoreUser
@@ -98,16 +98,11 @@ test('a payment method is done when the app can list one', function (string $set
 ]);
 
 test('offline payment counts only when its addon is on and a manual method exists', function (bool $addon, bool $method, bool $done) {
-    // The legacy table has no migration in this repository: give the query one.
-    Schema::create('manual_payment_methods', function ($table) {
-        $table->id();
-        $table->timestamps();
-    });
     if ($addon) {
         DB::table('addons')->insert(['name' => 'Offline payment', 'unique_identifier' => 'offline_payment', 'activated' => 1]);
     }
     if ($method) {
-        DB::table('manual_payment_methods')->insert(['created_at' => now(), 'updated_at' => now()]);
+        ManualPaymentMethod::factory()->create();
     }
     Cache::forget('addons');
 
