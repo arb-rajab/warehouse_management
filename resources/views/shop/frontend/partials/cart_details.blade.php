@@ -369,11 +369,20 @@
 </div><!-- /.modal -->
 
 <script type="text/javascript">
-    AIZ.extra.plusMinus();
+    // On the first page render this partial sits before vendors.js/aiz-core.js
+    // (loaded at the end of the layout); aiz-core runs plusMinus itself on DOM
+    // ready. When the cart is re-rendered over AJAX the libraries already exist.
+    if (window.AIZ && AIZ.extra) {
+        AIZ.extra.plusMinus();
+    }
 </script>
 
 <script>
-      recalculateTotal();
+    if (window.jQuery) {
+        recalculateTotal();
+    } else {
+        window.addEventListener('load', function () { recalculateTotal(); });
+    }
     function postponed(){
         $.post('{{ route('cart-offered.postpone') }}', {_token:'{{ csrf_token() }}'}, function(data){
             if(data == 1){

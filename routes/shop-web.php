@@ -230,7 +230,6 @@ Route::controller(CartController::class)->group(function () {
 
 // SSLCOMMERZ Start
 Route::controller(SslcommerzController::class)->group(function () {
-    Route::get('/sslcommerz/pay', 'index');
     Route::POST('/sslcommerz/success', 'success');
     Route::POST('/sslcommerz/fail', 'fail');
     Route::POST('/sslcommerz/cancel', 'cancel');
@@ -274,8 +273,7 @@ Route::group(['middleware' => ['customer', 'verified', 'unbanned']], function() 
             Route::post('/payment_select', 'store_delivery_info')->name('checkout.store_delivery_info');
             Route::get('/order-confirmed', 'order_confirmed')->name('order_confirmed');
             Route::post('/payment', 'checkout')->name('payment.checkout');
-            Route::post('/get_pick_up_points', 'get_pick_up_points')->name('shipping_info.get_pick_up_points');
-            Route::get('/payment-select', 'get_payment_info')->name('checkout.payment_info');
+            Route::get('/payment-select', 'store_delivery_info')->name('checkout.payment_info');
             Route::post('/apply_coupon_code', 'apply_coupon_code')->name('checkout.apply_coupon_code');
             Route::post('/remove_coupon_code', 'remove_coupon_code')->name('checkout.remove_coupon_code');
             //Club point
@@ -285,7 +283,7 @@ Route::group(['middleware' => ['customer', 'verified', 'unbanned']], function() 
     });
 
     // Purchase History
-    Route::resource('purchase_history', PurchaseHistoryController::class);
+    Route::resource('purchase_history', PurchaseHistoryController::class)->only('index');
     Route::controller(PurchaseHistoryController::class)->group(function () {
         Route::get('/purchase_history/details/{id}', 'purchase_history_details')->name('purchase_history.details');
         Route::post('/purchase_history/destroy/{id}', 'order_cancel')->name('purchase_history.destroy');
@@ -369,7 +367,7 @@ Route::group(['middleware' => ['auth']], function() {
     });
 
     // Product Query
-    Route::resource('product-queries', ProductQueryController::class);
+    Route::resource('product-queries', ProductQueryController::class)->only(['index', 'show', 'store']);
 
     Route::resource('messages', MessageController::class);
 
@@ -384,10 +382,9 @@ Route::group(['middleware' => ['auth']], function() {
     });
 });
 
-Route::resource('shops', ShopController::class);
+Route::resource('shops', ShopController::class)->except('update');
 
 Route::controller(VoguepayController::class)->group(function () {
-    Route::get('/vogue-pay', 'showForm');
     Route::get('/vogue-pay/success/{id}', 'paymentSuccess');
     Route::get('/vogue-pay/failure/{id}', 'paymentFailure');
 });
@@ -402,19 +399,16 @@ Route::get('/customer-products/admin', [IyzicoController::class, 'initPayment'])
 Route::controller(PayhereController::class)->group(function () {
     Route::get('/payhere/checkout/testing', 'checkout_testing')->name('payhere.checkout.testing');
     Route::get('/payhere/wallet/testing', 'wallet_testing')->name('payhere.checkout.testing');
-    Route::get('/payhere/customer_package/testing', 'customer_package_testing')->name('payhere.customer_package.testing');
+    Route::get('/payhere/customer_package/testing', 'customer_package_payment_testing')->name('payhere.customer_package.testing');
 
     Route::any('/payhere/checkout/notify', 'checkout_notify')->name('payhere.checkout.notify');
     Route::any('/payhere/checkout/return', 'checkout_return')->name('payhere.checkout.return');
-    Route::any('/payhere/checkout/cancel', 'chekout_cancel')->name('payhere.checkout.cancel');
+    Route::any('/payhere/checkout/cancel', 'checkout_cancel')->name('payhere.checkout.cancel');
 
     Route::any('/payhere/wallet/notify', 'wallet_notify')->name('payhere.wallet.notify');
     Route::any('/payhere/wallet/return', 'wallet_return')->name('payhere.wallet.return');
     Route::any('/payhere/wallet/cancel', 'wallet_cancel')->name('payhere.wallet.cancel');
 
-    Route::any('/payhere/seller_package_payment/notify', 'seller_package_notify')->name('payhere.seller_package_payment.notify');
-    Route::any('/payhere/seller_package_payment/return', 'seller_package_payment_return')->name('payhere.seller_package_payment.return');
-    Route::any('/payhere/seller_package_payment/cancel', 'seller_package_payment_cancel')->name('payhere.seller_package_payment.cancel');
 
     Route::any('/payhere/customer_package_payment/notify', 'customer_package_notify')->name('payhere.customer_package_payment.notify');
     Route::any('/payhere/customer_package_payment/return', 'customer_package_return')->name('payhere.customer_package_payment.return');

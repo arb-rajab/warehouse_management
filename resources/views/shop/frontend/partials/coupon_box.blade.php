@@ -1,10 +1,12 @@
-@if ($key == 0 || ($key+1 > 3 && ($key+1 -(floor(($key+1)%3)*3)) == 1))
-    @php $bg = "linear-gradient(to right, #e2583e 0%, #bf1931 100%);"; @endphp
-@elseif ($key == 1 || ($key+1 > 3 && ($key+1 -(floor(($key+1)%3)*3)) == 2))
-    @php $bg = "linear-gradient(to right, #7cc4c3 0%, #479493 100%);"; @endphp
-@elseif ($key == 2 || ($key+1 > 3 && ($key+1 -(floor(($key+1)%3)*3)) == 3))
-    @php $bg = "linear-gradient(to right, #98b3d1 0%, #5f4a8b 100%);"; @endphp
-@endif
+@php
+    // Three gradients repeating by position; every loop key gets one.
+    $couponGradients = [
+        'linear-gradient(to right, #e2583e 0%, #bf1931 100%)',
+        'linear-gradient(to right, #7cc4c3 0%, #479493 100%)',
+        'linear-gradient(to right, #98b3d1 0%, #5f4a8b 100%)',
+    ];
+    $bg = $couponGradients[((int) ($key ?? 0)) % 3];
+@endphp
 
 @if($coupon->type == 'product_base')
     @php

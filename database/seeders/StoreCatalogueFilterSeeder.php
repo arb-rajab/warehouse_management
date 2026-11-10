@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Services\Store\ProductVariantCombinations;
 use Database\Seeders\Concerns\RefusesProduction;
 use Database\Seeders\Support\StoreFilterSeedData;
 use Database\Seeders\Support\StoreSeedExamples;
@@ -15,6 +16,9 @@ use RuntimeException;
 class StoreCatalogueFilterSeeder extends Seeder
 {
     use RefusesProduction;
+
+    /** More combinations than this would make a seeded product's stock table unwieldy. */
+    private const MAX_VARIANTS_PER_PRODUCT = 24;
 
     public function run(): void
     {
@@ -244,10 +248,40 @@ class StoreCatalogueFilterSeeder extends Seeder
                 'attributes' => json_encode(array_column($choices, 'attribute_id'), JSON_THROW_ON_ERROR),
                 ...$conditions,
             ]);
-            $data->row('product_stocks', 'catalogue-stock-'.$token, ['product_id' => $id, 'variant' => '', 'sku' => StoreSeedExamples::code('SKU', $ownedKey), 'qty' => 20, 'price' => StoreSeedExamples::price($ownedKey)]);
+            // One stock row per variant the product's own colours and choices generate, as the
+            // storefront names them when a buyer picks them; a single '' row would match none.
+            foreach ($this->variantNames($id) as $position => $variant) {
+                $data->row('product_stocks', 'catalogue-stock-'.$token.($position === 0 ? '' : '-'.$position), ['product_id' => $id, 'variant' => $variant, 'sku' => StoreSeedExamples::code('SKU', $ownedKey).($position === 0 ? '' : '-'.$position), 'qty' => 20, 'price' => StoreSeedExamples::price($ownedKey)]);
+            }
             $first ??= $id;
         }
 
         return (int) $first;
+    }
+
+    /**
+     * The variant names a seeded product's stored colours and attribute values
+     * generate (ProductVariantCombinations), at most MAX_VARIANTS_PER_PRODUCT,
+     * or the single unnamed variant when it has none.
+     *
+     * @return list<string>
+     */
+    private function variantNames(int $productId): array
+    {
+        $product = DB::table('products')->where('id', $productId)->first(['colors', 'choice_options']);
+        $colors = json_decode((string) $product?->colors, true);
+        $choices = json_decode((string) $product?->choice_options, true);
+        $colors = is_array($colors) ? array_values(array_filter($colors, 'is_string')) : [];
+        $values = array_map(
+            fn ($choice): array => is_array($choice) && is_array($choice['values'] ?? null) ? array_values(array_filter($choice['values'], 'is_string')) : [],
+            is_array($choices) ? array_values($choices) : [],
+        );
+        $values = array_values(array_filter($values));
+
+        $names = array_product(array_map('count', [$colors ?: [null], ...$values])) <= self::MAX_VARIANTS_PER_PRODUCT
+            ? (new ProductVariantCombinations)->names($colors, $values)
+            : [];
+
+        return $names === [] ? [''] : $names;
     }
 }

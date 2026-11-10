@@ -1,6 +1,8 @@
 @php
     $offer = $active_offers->first();
-    $offer_products = $offer->offer_products->load(['product:id,slug,name,ar_name,thumbnail_img,unit_price', 'product.product_translations:id,product_id,lang,name', 'product.taxes:id,product_id,tax,tax_type']);
+    // Load the relations together: reading ->offer_products or ->base_product first would lazy load them.
+    $offer->loadMissing(\App\Models\Offer::WITH_OFFERED_PRODUCTS);
+    $offer_products = $offer->offer_products;
 @endphp
 <div class="bg-white border">
     <div class="p-3 p-sm-4">
