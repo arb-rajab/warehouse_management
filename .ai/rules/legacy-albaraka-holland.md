@@ -257,8 +257,8 @@ prefix. That is the single point every storefront asset URL goes through.
   anything. **Fixed 2026-10-03:** `App\Services\GatewayPaymentService` is the
   one sink: one transaction under row locks, the order must be the payer's
   (`combined_orders.user_id`), not paid, without commission, and the amount due
-  is read from the database (`covers()` accepts the whole-unit charge the
-  gateways send); the gateway's reference goes into `wms_gateway_payments`
+  is read from the database (`covers()` requires it to the cent: every gateway
+  sends the exact amount, converted to its own currency); the gateway's reference goes into `wms_gateway_payments`
   (unique per gateway), so a repeated callback credits nothing. A callback hands
   it a `VerifiedPayment` built only from the gateway's own server: SSLCommerz
   `orderValidate`/`sslcommerz_validate`, aamarpay's search API, bKash
@@ -671,10 +671,9 @@ Checked statically, with nothing installed:
   after compiling them with this app's L13 Blade compiler. No implicitly
   nullable parameters. No `${var}` interpolation either: the 48 "`${var}`
   sites" in §7 phase 2 are JavaScript template literals inside `<script>`
-  blocks, not PHP. The only failure is a pre-existing parse error in
-  `frontend/voguepay/customer_package_payment_vogue.blade.php` (an unmatched
-  `)` in the currency lookup). That view 500s whenever it renders; phase 1
-  deletes VoguePay or fixes it.
+  blocks, not PHP. The only failure was a parse error in
+  `frontend/voguepay/customer_package_payment_vogue.blade.php` (since removed:
+  VoguePay now has the one `frontend/voguepay/pay.blade.php`).
 - **Dynamic properties.** A nikic/php-parser scan of legacy `app/` for
   `$this->x =` on undeclared properties (resolving parents through this app's
   L13 vendor) and for `$request->x =`. The only hits were 7 order-status paths
