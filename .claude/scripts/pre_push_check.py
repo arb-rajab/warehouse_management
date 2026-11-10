@@ -75,6 +75,7 @@ Exits non-zero, and stops at the first failing step, if any check fails.
 import argparse
 import concurrent.futures
 import importlib.util
+import json
 import os
 import shutil
 import signal
@@ -164,6 +165,21 @@ def php_tools_installed() -> bool:
     return (ROOT / 'vendor' / 'bin' / 'pint').exists()
 
 
+def pint_checkable(paths: list[str]) -> list[str]:
+    """Drop the files pint.json excludes (`notPath`) from the ones handed to Pint.
+
+    Pint checks every file it is given by name, exclusions or not, so only a run
+    over the whole tree (CI's `composer lint:check`) honours `notPath`. Without
+    this a change touching one excluded legacy file always failed here.
+    """
+    try:
+        excluded = set(json.loads((ROOT / 'pint.json').read_text()).get('notPath', []))
+    except (OSError, ValueError):
+        return paths
+
+    return [path for path in paths if path not in excluded]
+
+
 def git_lines(*args: str) -> list[str] | None:
     """Return a git command's output lines, or None when it fails."""
     result = subprocess.run(['git', *args], cwd=ROOT, capture_output=True, text=True)
@@ -243,9 +259,10 @@ def scoped_steps(files: list[str]) -> list[Step]:
 
     if needed['php'] and php_tools_installed():
         php_files = [path for path in existing if path.endswith('.php')]
+        pint_files = pint_checkable(php_files)
 
-        if php_files:
-            steps.append(('Pint', ['vendor/bin/pint', '--test', *php_files], PHP_ENV))
+        if pint_files:
+            steps.append(('Pint', ['vendor/bin/pint', '--test', *pint_files], PHP_ENV))
 
         steps += php_suite_steps()
 

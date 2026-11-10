@@ -209,6 +209,17 @@ export default laravel({
             return {label: command for label, command, _ in pre_push_check.scoped_steps(list(files))}
 
         check(
+            'Pint is not handed a file pint.json excludes',
+            scoped('routes/shop-web.php', 'app/Models/Pallet.php').get('Pint') == ['vendor/bin/pint', '--test', 'app/Models/Pallet.php'],
+            str(scoped('routes/shop-web.php', 'app/Models/Pallet.php').get('Pint')),
+        )
+        check(
+            'a change touching only excluded files skips Pint but still runs the PHP suite',
+            'Pint' not in scoped('routes/shop-web.php') and 'Pest' in scoped('routes/shop-web.php'),
+            str(list(scoped('routes/shop-web.php'))),
+        )
+
+        check(
             'a docs-only change runs nothing',
             scoped('.ai/rules/index.md', 'AGENTS.md', '.claude/scripts/selftest.py') == {},
         )
