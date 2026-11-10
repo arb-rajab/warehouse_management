@@ -51,16 +51,11 @@ beforeEach(function () {
     config(['store.enabled_payment_gateways' => ['sslcommerz']]);
     Http::preventStrayRequests();
     Sleep::fake();
-    $_SERVER['SSLCZ_STORE_ID'] = 'store-1';
-    $_SERVER['SSLCZ_STORE_PASSWD'] = 'store-pass';
+    config(['services.sslcommerz.store_id' => 'store-1', 'services.sslcommerz.store_password' => 'store-pass']);
     FakeSslcommerzGateway::$sent = null;
     FakeApiSslCommerzGateway::$sent = null;
     $this->app->bind(SSLCommerz::class, FakeSslcommerzGateway::class);
     $this->app->bind(ApiSslCommerzController::class, FakeApiSslCommerzGateway::class);
-});
-
-afterEach(function () {
-    unset($_SERVER['SSLCZ_STORE_ID'], $_SERVER['SSLCZ_STORE_PASSWD']);
 });
 
 /** The store prices in `$default`; `$rates` adds a row per other currency (code => rate, status). */

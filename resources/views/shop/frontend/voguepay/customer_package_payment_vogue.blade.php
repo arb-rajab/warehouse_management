@@ -16,7 +16,7 @@
 @if (get_setting('voguepay_sandbox') == 1)
     <input type="hidden" id="merchant_id" name="v_merchant_id" value="demo">
 @else
-    <input type="hidden" id="merchant_id" name="v_merchant_id" value="{{ env('VOGUE_MERCHANT_ID') }}">
+    <input type="hidden" id="merchant_id" name="v_merchant_id" value="{{ config('services.voguepay.merchant_id') }}">
 @endif
 @php
     $customer_package = \App\Models\CustomerPackage::findOrFail(Session::get('payment_data')['customer_package_id']);

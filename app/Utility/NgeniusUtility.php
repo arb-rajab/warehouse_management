@@ -30,7 +30,7 @@ class NgeniusUtility
 
     public static function getAccessToken()
     {
-        $apikey = env("NGENIUS_API_KEY"); // set your service account API key (example only)
+        $apikey = config('services.ngenius.api_key'); // set your service account API key (example only)
         $idServiceURL = self::getUrl('identity');                   // set the identity service URL (example only)
 
         $tokenHeaders = ["Authorization: Basic $apikey", "Content-Type: application/x-www-form-urlencoded"];
@@ -55,7 +55,7 @@ class NgeniusUtility
 
         $order->action = "SALE";                                        // Transaction mode ("AUTH" = authorize only, no automatic settle/capture, "SALE" = authorize + automatic settle/capture)
         $order->amount = new \stdClass();
-        $order->amount->currencyCode = env('NGENIUS_CURRENCY', "AED");                           // Payment currency ('AED' only for now)
+        $order->amount->currencyCode = config('services.ngenius.currency');                           // Payment currency ('AED' only for now)
         $order->amount->value = $amount;                                   // Minor units (1000 = 10.00 AED)
         $order->language = "en";                                        // Payment page language ('en' or 'ar' only)
         $order->merchantOrderReference = time();                                        // Payment page language ('en' or 'ar' only)
@@ -68,7 +68,7 @@ class NgeniusUtility
         $order = json_encode($order);
 
 
-        $outletRef = env("NGENIUS_OUTLET_ID"); // set your outlet reference/ID value here (example only)
+        $outletRef = config('services.ngenius.outlet_id'); // set your outlet reference/ID value here (example only)
         $txnServiceURL = self::getUrl('gateway') . "/transactions/outlets/$outletRef/orders";             // set the transaction service URL (example only)
         $access_token = self::getAccessToken();
 
@@ -108,7 +108,7 @@ class NgeniusUtility
      */
     public static function retrieve_order($orderRef)
     {
-        $outletRef = env("NGENIUS_OUTLET_ID"); // set your outlet reference/ID value here (example only)
+        $outletRef = config('services.ngenius.outlet_id'); // set your outlet reference/ID value here (example only)
         $orderCheckURL = self::getUrl('gateway') . "/transactions/outlets/$outletRef/orders/" . rawurlencode($orderRef);
         $access_token = self::getAccessToken();
 

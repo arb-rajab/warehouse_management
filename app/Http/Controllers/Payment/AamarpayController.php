@@ -61,7 +61,7 @@ class AamarpayController extends Controller
         Session::put('aamarpay_tran_id', $tran_id);
 
         $fields = [
-            'store_id' => env('AAMARPAY_STORE_ID'), //store id will be aamarpay,  contact integration@aamarpay.com for test/live id
+            'store_id' => config('services.aamarpay.store_id'), //store id will be aamarpay,  contact integration@aamarpay.com for test/live id
             'amount' => $amount, //transaction amount
             'payment_type' => 'VISA', //no need to change
             'currency' => 'BDT',  //currenct will be USD/BDT
@@ -91,7 +91,7 @@ class AamarpayController extends Controller
             'opt_b' => Session::get('combined_order_id'),
             'opt_c' => json_encode(Session::get('payment_data')),
             'opt_d' => '',
-            'signature_key' => env('AAMARPAY_SIGNATURE_KEY'), //signature key will provided aamarpay, contact integration@aamarpay.com for test/live signature key
+            'signature_key' => config('services.aamarpay.signature_key'), //signature key will provided aamarpay, contact integration@aamarpay.com for test/live signature key
         ];
 
         $fields_string = http_build_query($fields);
@@ -173,8 +173,8 @@ class AamarpayController extends Controller
 
         $response = Http::timeout(30)->get($base_url.'api/v1/trxcheck/request.php', [
             'request_id' => $tran_id,
-            'store_id' => env('AAMARPAY_STORE_ID'),
-            'signature_key' => env('AAMARPAY_SIGNATURE_KEY'),
+            'store_id' => config('services.aamarpay.store_id'),
+            'signature_key' => config('services.aamarpay.signature_key'),
             'type' => 'json',
         ]);
 

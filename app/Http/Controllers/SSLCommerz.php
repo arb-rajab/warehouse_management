@@ -27,8 +27,8 @@ class SSLCommerz
             # (a property, not a define(): a constant cannot be defined twice, so a
             # second instance in one process threw)
             $this->setSSLCommerzMode(BusinessSetting::where('type', 'sslcommerz_sandbox')->first()?->value == 1 ? 1 : 0);
-            $this->store_id = env('SSLCZ_STORE_ID');
-            $this->store_pass = env('SSLCZ_STORE_PASSWD');
+            $this->store_id = config('services.sslcommerz.store_id');
+            $this->store_pass = config('services.sslcommerz.store_password');
         }
         $this->sslc_submit_url = "https://" . $this->sslc_mode . ".sslcommerz.com/gwprocess/v3/api.php";
         $this->sslc_validation_url = "https://" . $this->sslc_mode . ".sslcommerz.com/validator/api/validationserverAPI.php";

@@ -27,6 +27,8 @@ These are defects in the current code. Testing the gateway before they are fixed
 
 - [x] **PayHere charged the store's figure under `PAYHERE_CURRENCY` and never checked the notification's currency.** The signed form now carries the converted amount to two decimals and the currency, a currency with no active rate is refused, and a notification must be in the charge currency and match the converted amount due. On staging: the amount and currency at PayHere must equal the order total at the store's rate, and a wallet top-up must credit exactly the converted-back amount.
 
+- [x] **Gateway credentials were read with `env()`, which is `null` under `config:cache`.** Production runs `artisan config:cache`, so SSLCommerz, bKash, Nagad, AamarPay and N-Genius would have sent empty keys on the live site (PayHere and Iyzico already used config). Every credential is now read from `config/services.php` / `config/nagad.php`, and a test fails if `env()` returns to gateway code. On staging: set the keys in `.env`, then run `php artisan config:cache` (the deploy does), and check a request really carries them.
+
 **Still open:**
 - [ ] **N-Genius is wired to N-Genius's UAT test environment only, and has no production URL.** `NgeniusUtility::getMode()` has `$sandbox = false` hard-coded, but its "real" URLs are `identity-uat.ngenius-payments.com` and `api-gateway-uat.ngenius-payments.com`, and a comment says the sandbox URLs do not work. So it is safe to test with UAT credentials, and it can never take a real payment: going live needs a production switch and URLs. (An earlier version of this checklist said it always talks to the real N-Genius. That was wrong.) Its amounts are right: they are sent in minor units, rounded to the cent. Set `NGENIUS_CURRENCY` (default `AED`) to the store's currency.
 - [ ] **Iyzico rounds every charge to a whole unit.** `IyzicoController` sends `round($grand_total)` for the price, so 24.60 is charged as 25. The credit check allows the same rounding, so nothing flags it. Sending the real amount to two decimals needs a code change.
@@ -58,7 +60,7 @@ Read before choosing. The store prices in **euros** and serves customers in the 
 ## 2. Enabling one gateway on staging
 
 - [ ] Deploy a build that contains PR #555 (CSRF exemptions for the callbacks under `/temp`). Without it, every POST callback answers 419.
-- [ ] Set the gateway's env keys (section 4) in staging's `.env`, then `php artisan config:clear`.
+- [ ] Set the gateway's env keys (section 4) in staging's `.env`, then `php artisan config:cache` (the deploy runs it, and the keys are only read from the cached config).
 - [ ] Add the gateway name to `STORE_PAYMENT_GATEWAYS` (comma separated: `payhere`, `sslcommerz`, `voguepay`, `bkash`, `nagad`, `iyzico`, `ngenius`, `aamarpay`).
 - [ ] In the back office set the matching setting to `1` (`payhere`, `sslcommerz_payment`, `voguepay`, `bkash`, `nagad`, `iyzico`, `ngenius`, `aamarpay`) and the `<gateway>_sandbox` setting where it exists.
 - [ ] Register the gateway's callback URLs in its merchant dashboard (section 4). They must be `https://<staging-host>/temp/...`.

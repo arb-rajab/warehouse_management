@@ -28,12 +28,7 @@ beforeEach(function () {
     config(['store.enabled_payment_gateways' => ['aamarpay', 'bkash', 'iyzico', 'nagad', 'ngenius', 'payhere', 'sslcommerz', 'voguepay']]);
     Http::preventStrayRequests();
     Sleep::fake();
-    $_SERVER['SSLCZ_STORE_ID'] = 'store-1';
-    $_SERVER['SSLCZ_STORE_PASSWD'] = 'store-pass';
-});
-
-afterEach(function () {
-    unset($_SERVER['SSLCZ_STORE_ID'], $_SERVER['SSLCZ_STORE_PASSWD']);
+    config(['services.sslcommerz.store_id' => 'store-1', 'services.sslcommerz.store_password' => 'store-pass']);
 });
 
 function gatewayCustomer(float $balance = 0): StoreUser

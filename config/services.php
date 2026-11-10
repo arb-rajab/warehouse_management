@@ -155,6 +155,36 @@ return [
     // an active `currencies` row with this code and a rate.
     'sslcommerz' => [
         'currency' => env('SSLCZ_CURRENCY', 'BDT'),
+        'store_id' => env('SSLCZ_STORE_ID'),
+        'store_password' => env('SSLCZ_STORE_PASSWD'),
+    ],
+
+    // Every gateway credential is read from here with config(), never with env(): production runs
+    // `artisan config:cache`, after which env() outside config/ returns null and the gateway has no keys.
+    'bkash' => [
+        'currency' => env('BKASH_CURRENCY', 'BDT'),
+        'app_key' => env('BKASH_CHECKOUT_APP_KEY'),
+        'app_secret' => env('BKASH_CHECKOUT_APP_SECRET'),
+        'username' => env('BKASH_CHECKOUT_USER_NAME'),
+        'password' => env('BKASH_CHECKOUT_PASSWORD'),
+    ],
+
+    'aamarpay' => [
+        'currency' => env('AAMARPAY_CURRENCY', 'BDT'),
+        'store_id' => env('AAMARPAY_STORE_ID'),
+        'signature_key' => env('AAMARPAY_SIGNATURE_KEY'),
+    ],
+
+    'ngenius' => [
+        'currency' => env('NGENIUS_CURRENCY', 'AED'),
+        'api_key' => env('NGENIUS_API_KEY'),
+        'outlet_id' => env('NGENIUS_OUTLET_ID'),
+    ],
+
+    // Empty currency: VoguePay is charged in the store's own currency.
+    'voguepay' => [
+        'currency' => env('VOGUE_CURRENCY'),
+        'merchant_id' => env('VOGUE_MERCHANT_ID'),
     ],
 
     'otajer' => [

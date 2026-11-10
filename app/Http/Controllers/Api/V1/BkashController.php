@@ -80,7 +80,7 @@ class BkashController extends Controller
         $header = [
             'Content-Type:application/json',
             'Authorization:' . $auth,
-            'X-APP-Key:' . env('BKASH_CHECKOUT_APP_KEY'),
+            'X-APP-Key:' . config('services.bkash.app_key'),
         ];
 
         $url = curl_init($this->baseUrl() . 'checkout/create');
@@ -161,8 +161,8 @@ class BkashController extends Controller
     public function getToken()
     {
         $response = Http::timeout(30)
-            ->withHeaders(['username' => env('BKASH_CHECKOUT_USER_NAME'), 'password' => env('BKASH_CHECKOUT_PASSWORD')])
-            ->post($this->baseUrl() . 'checkout/token/grant', ['app_key' => env('BKASH_CHECKOUT_APP_KEY'), 'app_secret' => env('BKASH_CHECKOUT_APP_SECRET')]);
+            ->withHeaders(['username' => config('services.bkash.username'), 'password' => config('services.bkash.password')])
+            ->post($this->baseUrl() . 'checkout/token/grant', ['app_key' => config('services.bkash.app_key'), 'app_secret' => config('services.bkash.app_secret')]);
 
         return $response->json('id_token');
     }
@@ -190,7 +190,7 @@ class BkashController extends Controller
     private function api(string $path, array $body, $token): array
     {
         $response = Http::timeout(30)
-            ->withHeaders(['Authorization' => (string) $token, 'X-APP-Key' => (string) env('BKASH_CHECKOUT_APP_KEY')])
+            ->withHeaders(['Authorization' => (string) $token, 'X-APP-Key' => (string) config('services.bkash.app_key')])
             ->post($this->baseUrl() . $path, $body);
 
         return is_array($response->json()) ? $response->json() : [];
