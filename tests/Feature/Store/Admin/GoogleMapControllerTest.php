@@ -80,7 +80,7 @@ test('the Google Maps configuration refuses unauthorized callers', function (str
 
 test('the Google Maps endpoint changes only allowlisted settings and invalidates their cache', function () {
     actingAsStoreUser(createStoreStaff('google_map_setting'));
-    Cache::put('business_settings', 'old cache', 60);
+    Cache::put('business_settings', collect(), 60);
     Cache::put('unrelated cache', 'preserved', 60);
 
     $this->post('/temp/admin/google-map', [
@@ -118,6 +118,7 @@ test('saving the toggle preserves coordinates and saving coordinates preserves t
 
 test('missing settings can be created without a prior business settings row', function () {
     actingAsStoreUser(createStoreStaff('google_map_setting'));
+    config(['services.google_maps.key' => 'ENVKEY-from-environment']);
     DB::table('business_settings')->where('type', 'google_map')->delete();
 
     $this->post('/temp/admin/google-map', ['google_map' => true])
@@ -226,7 +227,7 @@ beforeEach(function () {
 
 test('staff save the API key as a business setting, with the success flash', function () {
     actingAsStoreUser(createStoreStaff('google_map_setting'));
-    Cache::put('business_settings', 'old cache', 60);
+    Cache::put('business_settings', collect(), 60);
 
     $this->post(route('google-map.update'), ['google_map' => true, 'google_map_api_key' => '  AIzaSyTestKey_123-abc  '])
         ->assertRedirect(route('google-map.index'))
@@ -313,7 +314,7 @@ test('an invalid key is refused and nothing is written', function (string $key) 
     expect(DB::table('business_settings')->orderBy('id')->get()->toArray())->toEqual($before);
 })->with([
     'spaces inside' => ['AIza bad key'],
-    'markup' => ['"><script>alert(1)</script>'],
+    'slash' => ['AIza/bad/key'],
     'too long' => [str_repeat('a', 256)],
 ]);
 
