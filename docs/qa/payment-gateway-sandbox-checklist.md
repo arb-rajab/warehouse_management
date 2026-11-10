@@ -26,12 +26,32 @@ These are defects in the current code. Testing the gateway before they are fixed
 - [x] **Nagad's default callback URL had no `/temp`.** `NAGAD_CALLBACK_URL` is now unset by default and the callback is the storefront's `route('nagad.callback')`. Set it only to send Nagad somewhere else.
 
 **Still open:**
-- [ ] **N-Genius cannot use its sandbox.** `NgeniusUtility` has `$sandbox = false` hard-coded ("check from db or env"), so it always talks to the real N-Genius. It needs a real switch before it can be tested safely.
+- [ ] **N-Genius is wired to N-Genius's UAT test environment only, and has no production URL.** `NgeniusUtility::getMode()` has `$sandbox = false` hard-coded, but its "real" URLs are `identity-uat.ngenius-payments.com` and `api-gateway-uat.ngenius-payments.com`, and a comment says the sandbox URLs do not work. So it is safe to test with UAT credentials, and it can never take a real payment: going live needs a production switch and URLs. (An earlier version of this checklist said it always talks to the real N-Genius. That was wrong.) Its amounts are right: they are sent in minor units, rounded to the cent. Set `NGENIUS_CURRENCY` (default `AED`) to the store's currency.
+- [ ] **Iyzico rounds every charge to a whole unit.** `IyzicoController` sends `round($grand_total)` for the price, so 24.60 is charged as 25. The credit check allows the same rounding, so nothing flags it. Sending the real amount to two decimals needs a code change.
+- [ ] **Iyzico sends a made-up buyer to the provider on every payment.** The buyer name ("John Doe"), identity number, and the buyer, shipping and billing address (a street in Istanbul, Turkey) are hard-coded, and the locale is Turkish. Real customers' details are never sent, which matters for the provider's fraud checks and its terms.
 - [ ] **Checkout does not offer gateways.** The payment-option card in `resources/views/shop/frontend/payment_select.blade.php` is `d-none` and every gateway radio is inside a `{{-- --}}` comment; only cash on delivery is live. To test through the UI, restore the markup for that gateway. Without it, you can only submit `payment_option=<gateway>` by hand (section 3, "No UI" note).
 - [ ] **A gateway outage is a 500.** `bkash/create-payment` (and other gateways' first call) does not catch a failed request to the provider. Decide the customer-facing message before go-live.
-- [ ] **Currencies per gateway.** Confirm the store currency against what each gateway charges (section 4). SSLCommerz now converts. No conversion was found in the other gateways' code, so check each one: unless its charge currency matches the store's, it will charge the wrong sum.
+- [ ] **Currencies and rounding per gateway.** Confirm the store currency against what each gateway charges (section 4). SSLCommerz now converts; no other gateway does. Iyzico, bKash, AamarPay and Nagad also round the charge to a whole unit (24.60 becomes 25), so check each one: unless its charge currency matches the store's, and whole-unit rounding is acceptable, it will charge the wrong sum.
 
 PayHere (callbacks), Iyzico, AamarPay, bKash, VoguePay and now SSLCommerz and Nagad build their return URLs with `route()`, which carries `/temp`.
+
+## 1b. Which gateway first? (a recommendation, from reading the code)
+
+Read before choosing. The store prices in **euros** and serves customers in the Netherlands; most of these gateways were built for other markets and currencies.
+
+| Gateway | Built for | Blocker for a euro store |
+| --- | --- | --- |
+| bKash, Nagad, SSLCommerz, AamarPay | Bangladesh (BDT mobile money and cards) | Charge in BDT. SSLCommerz now converts from the store currency. bKash, Nagad and AamarPay send the store's own figure **rounded to a whole unit** with no conversion, and Nagad hard-codes the BDT currency code (`050`) |
+| PayHere | Sri Lanka (LKR) | Sends the store's figure unconverted under the currency in `PAYHERE_CURRENCY`: correct only if that equals the store's currency |
+| VoguePay | Nigeria | Sends the store's own currency code, so there is no mismatch, but VoguePay must accept it. The merchant id is `VOGUE_MERCHANT_ID`, set in the environment |
+| Iyzico | Turkey (TRY) | Whole-unit rounding and a fake Turkish buyer on every payment (section 1) |
+| N-Genius | UAE and the Middle East (AED default) | Amounts are right and the currency is configurable, but it is wired to the UAT test environment with no production URL (section 1) |
+
+- **Recommended now: enable none of them.** Cash on delivery works end to end (order, stock, cancel and restock were checked), and the gateway code paths were exercised only with simulated callbacks.
+- **If online payment is needed for Dutch customers, integrate a euro-native provider as a new gateway** rather than reviving these. That needs a provider decision, a contract and keys first, so it is a business choice, not a code task.
+- **If one of the existing gateways must be used, N-Genius is the closest:** its amounts are correct, its currency is configurable, and it can be tested safely against UAT. It still needs a production/UAT switch before it can be live.
+- **Iyzico is the furthest:** it needs real buyer data and decimal amounts first.
+- Until a gateway is chosen, do not restore the checkout markup, add an outage message, or add a sandbox switch for the others: each of those is wasted work on a gateway that will not be used.
 
 ## 2. Enabling one gateway on staging
 
@@ -86,7 +106,7 @@ Replace `<host>` with the staging host. All callback paths sit under `/temp`.
 | **Iyzico** | `IYZICO_API_KEY`, `IYZICO_SECRET_KEY`, `IYZICO_CURRENCY_CODE` (default `TRY`) | `iyzico`, `iyzico_sandbox` | `TRY` by default | `https://<host>/temp/iyzico/payment/callback/{payment_type}/{amount?}/{payment_method?}/{combined_order_id?}/{customer_package_id?}/{seller_package_id?}` (any method; built by the store, not registered by hand) | retrieves the payment by `token` from iyzico and accepts only the one reported for this basket |
 | **bKash** | `BKASH_CHECKOUT_APP_KEY`, `BKASH_CHECKOUT_APP_SECRET`, `BKASH_CHECKOUT_USER_NAME`, `BKASH_CHECKOUT_PASSWORD` | `bkash`, `bkash_sandbox` | BDT | `https://<host>/temp/bkash/callback` (GET) then `/temp/bkash/success` | bKash's own execute call, or its status query if execute does not answer; one payment per session |
 | **Nagad** | `NAGAD_MODE` (`sandbox`), `NAGAD_MERCHANT_ID`, `NAGAD_MERCHANT_NUMBER`, `NAGAD_MERCHANT_PRIVATE_KEY`, `NAGAD_PG_PUBLIC_KEY`, `NAGAD_CALLBACK_URL` (optional) | `nagad` | BDT | `https://<host>/temp/nagad/callback` (GET); the store sends it by default, nothing to register by hand | signed request and response (`sensitiveData` + `signature`); one Nagad order per session |
-| **N-Genius** | `NGENIUS_API_KEY`, `NGENIUS_OUTLET_ID`, `NGENIUS_CURRENCY` (default `AED`) | `ngenius` | `AED` by default | `https://<host>/temp/ngenius/{cart,wallet,customer_package,seller_package}_payment_callback` | retrieves the order by `ref` from N-Genius. **Sandbox is hard-coded off** (section 1) |
+| **N-Genius** | `NGENIUS_API_KEY`, `NGENIUS_OUTLET_ID`, `NGENIUS_CURRENCY` (default `AED`) | `ngenius` | `AED` by default | `https://<host>/temp/ngenius/{cart,wallet,customer_package,seller_package}_payment_callback` | retrieves the order by `ref` from N-Genius. **UAT only, no production URL** (section 1) |
 
 Gateway-specific checks:
 - [ ] **PayHere:** the notify URL is called server to server by PayHere. Confirm it arrives (PayHere dashboard or staging access log), answers 200, and that the signature check rejects a forged `md5sig`.
