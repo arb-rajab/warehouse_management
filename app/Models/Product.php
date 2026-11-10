@@ -147,6 +147,16 @@ class Product extends Model
     public const array WITH_STORE_LIST = ['stocks', 'taxes', 'offers', 'collection', 'product_translations'];
 
     /**
+     * Eager loads for the storefront's product card (partials/product_box_1):
+     * it prints the translated name and the offer badge of every card, so a
+     * list of cards built without them trips the lazy-loading guard in
+     * local/testing and costs production two extra queries per card.
+     *
+     * @var list<string>
+     */
+    public const array WITH_STORE_CARD = ['offers', 'product_translations:id,product_id,lang,name'];
+
+    /**
      * The columns a product search matches, in the order the FULLTEXT index
      * declares them — `MATCH` only resolves against an index covering exactly
      * this column list, so the two must stay in step with

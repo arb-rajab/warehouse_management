@@ -310,17 +310,20 @@
             }
         }
 
-        intlTelInput(input, {
-            separateDialCode: true,
-            utilsScript: "{{ static_asset('assets/js/intlTelutils.js') }}?1590403638580",
-            onlyCountries: @php echo json_encode(\App\Models\Country::where('status', 1)->pluck('code')->toArray()) @endphp,
-            customPlaceholder: function(selectedCountryPlaceholder, selectedCountryData) {
-                if(selectedCountryData.iso2 == 'bd'){
-                    return "01xxxxxxxxx";
+        // #phone-code only exists when the otp_system addon renders it.
+        if (input) {
+            intlTelInput(input, {
+                separateDialCode: true,
+                utilsScript: "{{ static_asset('assets/js/intlTelutils.js') }}?1590403638580",
+                onlyCountries: @php echo json_encode(\App\Models\Country::where('status', 1)->pluck('code')->toArray()) @endphp,
+                customPlaceholder: function(selectedCountryPlaceholder, selectedCountryData) {
+                    if(selectedCountryData.iso2 == 'bd'){
+                        return "01xxxxxxxxx";
+                    }
+                    return selectedCountryPlaceholder;
                 }
-                return selectedCountryPlaceholder;
-            }
-        });
+            });
+        }
 
         function toggleEmailPhone(el){
             if(isPhoneShown){

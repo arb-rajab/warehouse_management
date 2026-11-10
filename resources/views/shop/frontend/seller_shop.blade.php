@@ -314,10 +314,10 @@
 
             @php
                 if (!isset($type)){
-                    $products = \App\Models\Product::where('user_id', $shop->user->id)->where('published', 1)->where('approved', 1)->orderBy('created_at', 'desc')->get();
+                    $products = \App\Models\Product::where('user_id', $shop->user->id)->where('published', 1)->where('approved', 1)->with(\App\Models\Product::WITH_STORE_CARD)->orderBy('created_at', 'desc')->get();
                 }
                 elseif ($type == 'top-selling'){
-                    $products = \App\Models\Product::where('user_id', $shop->user->id)->where('published', 1)->where('approved', 1)->orderBy('num_of_sale', 'desc')->paginate(24);
+                    $products = \App\Models\Product::where('user_id', $shop->user->id)->where('published', 1)->where('approved', 1)->with(\App\Models\Product::WITH_STORE_CARD)->orderBy('num_of_sale', 'desc')->paginate(24);
                 }
                 elseif ($type == 'cupons'){
                     $coupons = \App\Models\Coupon::where('user_id', $shop->user->id)->where('start_date', '<=', strtotime(date('d-m-Y')))->where('end_date', '>=', strtotime(date('d-m-Y')))->paginate(24);

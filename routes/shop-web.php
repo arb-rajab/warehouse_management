@@ -275,7 +275,7 @@ Route::group(['middleware' => ['customer', 'verified', 'unbanned']], function() 
             Route::get('/order-confirmed', 'order_confirmed')->name('order_confirmed');
             Route::post('/payment', 'checkout')->name('payment.checkout');
             Route::post('/get_pick_up_points', 'get_pick_up_points')->name('shipping_info.get_pick_up_points');
-            Route::get('/payment-select', 'get_payment_info')->name('checkout.payment_info');
+            Route::get('/payment-select', 'store_delivery_info')->name('checkout.payment_info');
             Route::post('/apply_coupon_code', 'apply_coupon_code')->name('checkout.apply_coupon_code');
             Route::post('/remove_coupon_code', 'remove_coupon_code')->name('checkout.remove_coupon_code');
             //Club point
@@ -285,7 +285,7 @@ Route::group(['middleware' => ['customer', 'verified', 'unbanned']], function() 
     });
 
     // Purchase History
-    Route::resource('purchase_history', PurchaseHistoryController::class);
+    Route::resource('purchase_history', PurchaseHistoryController::class)->only('index');
     Route::controller(PurchaseHistoryController::class)->group(function () {
         Route::get('/purchase_history/details/{id}', 'purchase_history_details')->name('purchase_history.details');
         Route::post('/purchase_history/destroy/{id}', 'order_cancel')->name('purchase_history.destroy');
@@ -369,7 +369,7 @@ Route::group(['middleware' => ['auth']], function() {
     });
 
     // Product Query
-    Route::resource('product-queries', ProductQueryController::class);
+    Route::resource('product-queries', ProductQueryController::class)->only(['index', 'show', 'store']);
 
     Route::resource('messages', MessageController::class);
 
@@ -384,7 +384,7 @@ Route::group(['middleware' => ['auth']], function() {
     });
 });
 
-Route::resource('shops', ShopController::class);
+Route::resource('shops', ShopController::class)->except('update');
 
 Route::controller(VoguepayController::class)->group(function () {
     Route::get('/vogue-pay', 'showForm');

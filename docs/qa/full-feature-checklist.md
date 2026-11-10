@@ -22,6 +22,17 @@ Seeded accounts (`DatabaseSeeder`, refuses production):
 | Store back office | `/temp/login` then `/temp/admin` | `store-admin@example.com` / `password` |
 | Storefront customer | `/temp/login`, `/temp/register` | register a new one (section C) |
 
+**Prerequisites learned from running this checklist** (a fresh `migrate:fresh --seed` is not enough):
+
+- The default seed has warehouse data only. Add store data with
+  `APP_ENV=local php artisan db:seed --class=StoreFilterCoverageSeeder --force`
+  (accounts such as `store-filter-customer@example.invalid`, `store-filter-seller@example.invalid`, all `password`).
+- Every storefront price needs a default currency: set the `system_default_currency` business setting to a currency id, or product pages return 404.
+- Browsers must use HTTPS: the CSP upgrades asset requests, so `php artisan serve` over plain HTTP loads no assets.
+  Use `node tests/e2e/support/serve-https.mjs` with `APP_URL=https://127.0.0.1:8010` and `TRUSTED_PROXIES=127.0.0.1`
+  (see `playwright.config.ts` for the full environment, including a dedicated sqlite file per connection).
+- Local and CI run Eloquent strict mode (`local`/`testing`): a lazy load of a relation on a list of two or more models throws there, though production does not.
+
 Notes:
 
 - The storefront, seller area and store back office all live under the `/temp` prefix.
@@ -132,9 +143,10 @@ Mark a check `[x]` pass, `[!]` fail (add a note), `[-]` not applicable/skipped (
 
 ### A14. Mobile/warehouse API (`/api/v1`)
 - [ ] `POST login` returns a token; bad credentials rejected; throttled when abused. `POST logout` revokes it; `GET user`.
-- [ ] `GET dashboard`, `warehouses`, `rows`, `rows/full`, `rows/frozen` (ETag support), `rows/{row}/cells`, `rows/{row}/cells/{cell}/flats/{flat}`.
+- [ ] `GET dashboard`, `warehouses`, `rows`, `rows/full`, `rows/frozen` (ETag support: a repeat with `If-None-Match` is 304), `rows/{letter}/cells`, `rows/{letter}/cells/{cell}/flats/{flat}` (rows bind by **letter**, not id).
 - [ ] `GET products`, `products/{id}`, `products/{id}/pallets`; `POST products/{id}/barcodes` (201 / 409 `barcode_taken` / 422).
-- [ ] Pallets: `POST pallets`, `GET pallets/unplaced`, `GET pallets/{id}`, `place`, `open`, `remove-boxes`, `empty`, `transfer`.
+- [ ] Pallets: `POST pallets` (needs `product_id`, `warehouse_id`, `row_letter`, `cell_number`, `flat_number`, `image_review_status`, and `image_source` equal to the product's current `image_url`), `GET pallets/unplaced`, `GET pallets/{id}`, `place`, `open` (only on levels where opening is allowed), `remove-boxes` (`boxes_count`), `empty`, `transfer` (`to_*` coordinates).
+- [ ] A slot in a row that is in an active verification round answers 409 `rows_already_in_active_round`; storing on an occupied slot answers 409 `slot_not_empty`.
 - [ ] `GET cell-logs`; verification rounds index/store/show/complete; `POST cell-verification-reports`.
 - [ ] Receipts (admin role only): index, store, show, update pallets, finalize, file upload/show/delete.
 - [ ] Unauthenticated calls return 401; minimum-app-version middleware rejects too-old clients.
