@@ -79,6 +79,11 @@ test('default location uses real Leaflet with editable coordinates under enforce
         ),
     ).toBe(true);
     await lat.fill('40');
+    // With the map on and no key anywhere, the key is required to save.
+    await expect(page.locator('#google_map_api_key')).toHaveAttribute(
+        'required',
+    );
+    await page.locator('#google_map_api_key').fill('AIzaSyE2eKey_123-abc');
     await page.getByRole('button', { name: 'Save', exact: true }).click();
     await expect(
         page.getByRole('button', { name: 'Save', exact: true }),

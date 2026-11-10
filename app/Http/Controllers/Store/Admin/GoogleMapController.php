@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Controllers\Store\Admin\Concerns\FlashesSuccess;
 use App\Http\Requests\Store\Admin\UpdateGoogleMapRequest;
 use App\Models\BusinessSetting;
+use App\Support\GoogleMapsKey;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
@@ -24,13 +25,22 @@ class GoogleMapController extends Controller implements HasMiddleware
         return [new Middleware('permission:google_map_setting')];
     }
 
+    /**
+     * The saved key is never sent to the page: only whether one is saved, its
+     * masked tail, and whether MAP_API_KEY supplies one.
+     */
     public function index(): Response
     {
+        $stored = GoogleMapsKey::stored();
+
         return Inertia::render('Store/Admin/Setup/GoogleMap/Index', [
             'settings' => [
                 'google_map' => (bool) get_setting('google_map', false),
                 'google_map_latitude' => (string) get_setting('google_map_latitude', ''),
                 'google_map_longtitude' => (string) get_setting('google_map_longtitude', ''),
+                'google_map_api_key_set' => $stored !== null,
+                'google_map_api_key_mask' => GoogleMapsKey::mask($stored),
+                'google_map_api_key_from_env' => GoogleMapsKey::fromEnvironment() !== null,
             ],
         ]);
     }
@@ -39,9 +49,14 @@ class GoogleMapController extends Controller implements HasMiddleware
     {
         DB::transaction(function () use ($request): void {
             foreach ($request->validated() as $type => $value) {
+                // A blank key keeps the saved one; a new one replaces it.
+                if ($type === GoogleMapsKey::SETTING && blank($value)) {
+                    continue;
+                }
+
                 $setting = BusinessSetting::query()->where('type', $type)->whereNull('lang')->first(['id', 'type', 'value']) ?? new BusinessSetting;
                 $setting->type = $type;
-                $setting->value = $type === 'google_map' ? ($value ? '1' : '0') : $value;
+                $setting->value = $type === 'google_map' ? ($value ? '1' : '0') : ($type === GoogleMapsKey::SETTING ? trim($value) : $value);
                 $setting->save();
             }
         });

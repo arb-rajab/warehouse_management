@@ -113,6 +113,7 @@ test('the only bare-named tables are this app\'s own domain tables plus the shar
         'follow_sellers',
         'home_categories',
         'languages',
+        'manual_payment_methods',
         'messages',
         'mobile_app_version_requirements',
         'notifications',

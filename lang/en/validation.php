@@ -207,6 +207,7 @@ return [
     */
 
     'attributes' => [
+        'google_map_api_key' => 'Google Maps API key',
         'profit_from' => 'profits from',
         'profit_to' => 'profits to',
         'category_id' => 'category',

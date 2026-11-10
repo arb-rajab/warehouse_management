@@ -45,6 +45,9 @@ it.each(['en', 'ar'] as const)(
             google_map: false,
             google_map_latitude: '33.513',
             google_map_longtitude: '36.291',
+            google_map_api_key_set: true,
+            google_map_api_key_mask: '••••••••wXyZ',
+            google_map_api_key_from_env: false,
         };
         const wrapper = mount(Index, { props: { settings } });
         expect(wrapper.getComponent(ResourceFormPage).props()).toMatchObject({

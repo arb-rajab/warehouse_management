@@ -10,6 +10,7 @@ import {
 } from '@/actions/App/Http/Controllers/Store/Admin/SettingsController';
 import PageHeader from '@/components/PageHeader.vue';
 import StoreDashboardChart from '@/components/StoreDashboardChart.vue';
+import StoreSetupChecklist from '@/components/StoreSetupChecklist.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
 import { t } from '@/lib/i18n';
 import { useStoreAccess } from '@/lib/storeAccess';
@@ -89,6 +90,7 @@ const charts = computed(() => [
     <StoreAdminLayout>
         <PageHeader :title="t('store.dashboard.title')" />
         <div v-if="access.can('admin_dashboard')" class="space-y-6">
+            <StoreSetupChecklist :checklist="setupChecklist" />
             <div
                 v-for="alert in alerts"
                 :key="alert.key"

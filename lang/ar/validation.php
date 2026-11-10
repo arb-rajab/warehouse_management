@@ -174,6 +174,7 @@ return [
     ],
 
     'attributes' => [
+        'google_map_api_key' => 'مفتاح Google Maps',
         'profit_from' => 'الأرباح من',
         'profit_to' => 'الأرباح حتى',
         'category_id' => 'الفئة',

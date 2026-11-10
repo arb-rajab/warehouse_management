@@ -143,3 +143,47 @@ describe('the seller panel', function () {
             ->and($page)->not->toContain('default_longtitude');
     });
 });
+
+/** The `key` the page's Google Maps script is loaded with. */
+function mapsScriptKey(string $html): ?string
+{
+    return preg_match('#maps\.googleapis\.com/maps/api/js\?key=([^&"]*)&#', $html, $match) === 1 ? urldecode($match[1]) : null;
+}
+
+describe('the Google Maps key the pages load the map with', function () {
+    beforeEach(fn () => config(['services.google_maps.key' => null]));
+
+    test('is the key saved on the settings page, which wins over MAP_API_KEY', function () {
+        storeSetting('google_map_api_key', 'AIza-saved-key');
+        config(['services.google_maps.key' => 'AIza-env-key']);
+        actingAsStoreUser(createStoreUser());
+
+        expect(mapsScriptKey($this->get('/temp/profile')->assertOk()->getContent()))->toBe('AIza-saved-key');
+    });
+
+    test('falls back to MAP_API_KEY while no key is saved', function () {
+        config(['services.google_maps.key' => 'AIza-env-key']);
+        actingAsStoreUser(createStoreUser());
+
+        expect(mapsScriptKey($this->get('/temp/profile')->assertOk()->getContent()))->toBe('AIza-env-key');
+    });
+
+    test('is also the one the seller shop settings load', function () {
+        DB::table('addons')->insert(['name' => 'Delivery boy', 'unique_identifier' => 'delivery_boy', 'activated' => 1]);
+        Cache::forget('addons');
+        storeSetting('google_map_api_key', 'AIza-saved-key');
+        config(['services.google_maps.key' => 'AIza-env-key']);
+        actingAsMapSeller();
+
+        expect(mapsScriptKey($this->get('/temp/seller/shop')->assertOk()->getContent()))->toBe('AIza-saved-key');
+    });
+
+    test('is printed URL-encoded so a stored value cannot break out of the script address', function () {
+        storeSetting('google_map_api_key', 'a&b"c');
+        actingAsStoreUser(createStoreUser());
+
+        $page = $this->get('/temp/profile')->assertOk()->getContent();
+
+        expect($page)->toContain('key=a%26b%22c&')->and(mapsScriptKey($page))->toBe('a&b"c');
+    });
+});
