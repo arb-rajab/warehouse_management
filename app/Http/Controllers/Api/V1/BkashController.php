@@ -4,10 +4,12 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Services\ApiGatewayPayment;
+use App\Services\GatewayCurrency;
 use App\Services\GatewayPaymentService;
 use App\Services\VerifiedPayment;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Sleep;
 
 class BkashController extends Controller
@@ -37,13 +39,23 @@ class BkashController extends Controller
             return response()->json(['token' => '', 'result' => false, 'url' => '', 'message' => __('api.payment.nothing_due')]);
         }
 
+        // The amount is in the store's currency; bKash is charged in its own, to the cent.
+        $currency = GatewayCurrency::forGateway('bkash');
+        $converted = $currency->fromStore((float) $payment['amount']);
+
+        if ($converted === null) {
+            Log::error('bKash refused: the store has no active rate for the gateway currency.', ['currency' => $currency->chargeCode()]);
+
+            return response()->json(['token' => '', 'result' => false, 'url' => '', 'message' => __('storefront.checkout.payment_failed')]);
+        }
+
         try {
             $token = $this->getToken();
 
             return response()->json([
                 'token' => $token,
                 'result' => true,
-                'url' => route('api.bkash.webpage', ["token" => $token, "amount" => $payment['amount']]),
+                'url' => route('api.bkash.webpage', ["token" => $token, "amount" => GatewayCurrency::format($converted)]),
                 'message' => __('api.payment.page_found')
             ]);
         } catch (\Exception $exception) {
@@ -71,7 +83,7 @@ class BkashController extends Controller
             'payerReference' => ' ',
             'callbackURL' => route('api.bkash.callback'),
             'amount' => $amount,
-            'currency' => 'BDT',
+            'currency' => GatewayCurrency::forGateway('bkash')->chargeCode(),
             'intent' => 'sale',
             'merchantInvoiceNumber' => "Inv" . Date('YmdH') . rand(1000, 10000),
         ];
@@ -92,7 +104,15 @@ class BkashController extends Controller
         curl_setopt($url, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
         $resultdata = curl_exec($url);
 
-        return redirect(json_decode($resultdata)->bkashURL);
+        $bkashUrl = json_decode((string) $resultdata)->bkashURL ?? null;
+
+        if (! is_string($bkashUrl) || $bkashUrl === '') {
+            Log::error('bKash gave no payment page.');
+
+            return $this->failed(__('storefront.checkout.payment_failed'));
+        }
+
+        return redirect($bkashUrl);
     }
 
     public function callback(Request $request)
@@ -138,11 +158,18 @@ class BkashController extends Controller
             $result = $this->query($token, $paymentID);
         }
 
-        if (! self::isCompleted($result) || ! GatewayPaymentService::covers((float) ($result['amount'] ?? 0), $payment['amount'])) {
+        $currency = GatewayCurrency::forGateway('bkash');
+        $reported = (float) ($result['amount'] ?? 0);
+
+        // Completed, in the currency this store charges, for the amount due: exactly in the store's
+        // own currency, else the converted amount to the cent.
+        if (! self::isCompleted($result)
+            || strtoupper((string) ($result['currency'] ?? '')) !== $currency->chargeCode()
+            || ! ($currency->isStoreCurrency() ? GatewayPaymentService::covers($reported, $payment['amount']) : $currency->matchesDue($reported, (float) $payment['amount']))) {
             return $this->failed($result['statusMessage'] ?? __('storefront.checkout.payment_could_not_be_verified'));
         }
 
-        $verified = new VerifiedPayment('bkash', $paymentID, (float) $result['amount'], json_encode($result));
+        $verified = new VerifiedPayment('bkash', $paymentID, $currency->paidInStoreCurrency($reported, (float) $payment['amount']), json_encode($result));
         if (! app(GatewayPaymentService::class)->complete($verified, $payment['user_id'], $payment['payment_type'], $payment['combined_order_id'], $payment['package_id'])) {
             return $this->failed(__('storefront.checkout.payment_could_not_be_verified'));
         }

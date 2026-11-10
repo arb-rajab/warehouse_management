@@ -281,8 +281,8 @@ function fakeBkash(array $result): void
 {
     Http::fake([
         '*bka.sh/*checkout/token/grant' => Http::response(['id_token' => 'grant-token']),
-        '*bka.sh/*checkout/execute' => Http::response($result),
-        '*bka.sh/*checkout/payment/status' => Http::response($result),
+        '*bka.sh/*checkout/execute' => Http::response($result + ['currency' => 'BDT']),
+        '*bka.sh/*checkout/payment/status' => Http::response($result + ['currency' => 'BDT']),
     ]);
 }
 

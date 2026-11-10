@@ -3,14 +3,13 @@
 namespace App\Http\Controllers\Payment;
 
 use App\Http\Controllers\Controller;
-use App\Models\CombinedOrder;
-use App\Models\CustomerPackage;
-use App\Models\SellerPackage;
+use App\Services\GatewayCurrency;
 use App\Services\GatewayPaymentService;
 use App\Services\SessionGatewayPayment;
 use App\Services\VerifiedPayment;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Sleep;
 use Session;
 
@@ -28,53 +27,73 @@ class BkashController extends Controller
             : 'https://tokenized.pay.bka.sh/v1.2.0-beta/tokenized/';
     }
 
-    public function pay(){
-        $amount = 0;
-        if(Session::has('payment_type')){
-            if(Session::get('payment_type') == 'cart_payment'){
-                $combined_order = CombinedOrder::findOrFail(Session::get('combined_order_id'));
-                $amount = round($combined_order->grand_total);
-            }
-            elseif (Session::get('payment_type') == 'wallet_payment') {
-                $amount = round(Session::get('payment_data')['amount']);
-            }
-            elseif (Session::get('payment_type') == 'customer_package_payment') {
-                $customer_package = CustomerPackage::findOrFail(Session::get('payment_data')['customer_package_id']);
-                $amount = round($customer_package->amount);
-            }
-            elseif (Session::get('payment_type') == 'seller_package_payment') {
-                $seller_package = SellerPackage::findOrFail(Session::get('payment_data')['seller_package_id']);
-                $amount = round($seller_package->amount);
-            }
+    /**
+     * Start the payment this session is making. The amount due comes from the database (an
+     * order of the signed-in customer, a package's price, the top-up asked for), is converted
+     * to bKash's currency and kept to the cent. A currency the store has no active rate for is
+     * refused with a message and nothing is recorded.
+     */
+    public function pay()
+    {
+        $due = app(SessionGatewayPayment::class)->amountDue();
+        $currency = GatewayCurrency::forGateway('bkash');
+        $converted = $due === null ? null : $currency->fromStore($due);
+
+        if ($converted === null) {
+            Log::error('bKash refused: nothing due, or the store has no active rate for the gateway currency.', ['currency' => $currency->chargeCode()]);
+
+            return $this->failed();
         }
 
         Session::forget('bkash_token');
         Session::put('bkash_token', $this->getToken());
-        Session::put('amount', $amount);
+        Session::put('amount', GatewayCurrency::format($converted));
+
         return redirect()->route('bkash.create_payment');
     }
 
-    public function create_payment(){
+    private function failed()
+    {
+        flash(__('storefront.checkout.payment_failed'))->error();
+
+        return redirect()->route('cart');
+    }
+
+    public function create_payment()
+    {
+        $amount = (string) Session::get('amount');
+
+        if ($amount === '') {
+            return $this->failed();
+        }
 
         $requestbody = [
             'mode' => '0011',
             'payerReference' => ' ',
             'callbackURL' => route('bkash.callback'),
-            'amount' => Session::get('amount'),
-            'currency' => 'BDT',
+            'amount' => $amount,
+            'currency' => GatewayCurrency::forGateway('bkash')->chargeCode(),
             'intent' => 'sale',
-            'merchantInvoiceNumber' => "Inv".Date('YmdH').rand(1000, 10000),
+            'merchantInvoiceNumber' => 'Inv'.Date('YmdH').rand(1000, 10000),
         ];
 
         $result = $this->api('checkout/create', $requestbody, Session::get('bkash_token'));
 
+        if (! is_string($result['bkashURL'] ?? null) || $result['bkashURL'] === '') {
+            Log::error('bKash gave no payment page.', ['status' => $result['statusCode'] ?? null, 'message' => $result['statusMessage'] ?? null]);
+            Session::forget('bkash_payment_id');
+
+            return $this->failed();
+        }
+
         // The payment callback() may verify: only this one, for this session.
         Session::put('bkash_payment_id', $result['paymentID'] ?? null);
 
-        return redirect($result['bkashURL'] ?? route('cart'));
+        return redirect($result['bkashURL']);
     }
 
-    public function getToken(){
+    public function getToken()
+    {
         $response = Http::timeout(30)
             ->withHeaders(['username' => config('services.bkash.username'), 'password' => config('services.bkash.password')])
             ->post($this->baseUrl().'checkout/token/grant', ['app_key' => config('services.bkash.app_key'), 'app_secret' => config('services.bkash.app_secret')]);
@@ -120,14 +139,21 @@ class BkashController extends Controller
             $result = $this->query($paymentID);
         }
 
-        if (! self::isCompleted($result) || ! GatewayPaymentService::covers((float) ($result['amount'] ?? 0), $amountDue)) {
+        $currency = GatewayCurrency::forGateway('bkash');
+        $reported = (float) ($result['amount'] ?? 0);
+
+        // Completed, in the currency this store charges, for the amount due: exactly in the store's
+        // own currency, else the converted amount to the cent.
+        if (! self::isCompleted($result)
+            || strtoupper((string) ($result['currency'] ?? '')) !== $currency->chargeCode()
+            || ! ($currency->isStoreCurrency() ? GatewayPaymentService::covers($reported, $amountDue) : $currency->matchesDue($reported, $amountDue))) {
             return view('shop.frontend.bkash.fail')->with([
                 'errorMessage' => $result['statusMessage'] ?? 'Payment could not be verified',
             ]);
         }
 
         Session::forget('bkash_payment_id');
-        Session::put('bkash_verified_payment', ['payment_id' => $paymentID, 'amount' => (float) $result['amount'], 'details' => json_encode($result)]);
+        Session::put('bkash_verified_payment', ['payment_id' => $paymentID, 'amount' => $currency->paidInStoreCurrency($reported, $amountDue), 'details' => json_encode($result)]);
 
         return redirect()->route('bkash.success');
     }
