@@ -18,6 +18,41 @@ class PaymentOptions
     private const CONTROLLER_NAMESPACE = 'App\\Http\\Controllers\\Payment\\';
 
     /**
+     * The online gateways a customer can be offered: the back office setting that
+     * switches each on, its logo under `assets/img/cards`, and its brand name.
+     *
+     * @var array<string, array{setting: string, image: string, name: string}>
+     */
+    public const GATEWAYS = [
+        'sslcommerz' => ['setting' => 'sslcommerz_payment', 'image' => 'sslcommerz.png', 'name' => 'SSLCommerz'],
+        'voguepay' => ['setting' => 'voguepay', 'image' => 'vogue.png', 'name' => 'VoguePay'],
+        'payhere' => ['setting' => 'payhere', 'image' => 'payhere.png', 'name' => 'PayHere'],
+        'ngenius' => ['setting' => 'ngenius', 'image' => 'ngenius.png', 'name' => 'N-Genius'],
+        'iyzico' => ['setting' => 'iyzico', 'image' => 'iyzico.png', 'name' => 'Iyzico'],
+        'nagad' => ['setting' => 'nagad', 'image' => 'nagad.png', 'name' => 'Nagad'],
+        'bkash' => ['setting' => 'bkash', 'image' => 'bkash.png', 'name' => 'bKash'],
+        'aamarpay' => ['setting' => 'aamarpay', 'image' => 'aamarpay.png', 'name' => 'AamarPay'],
+    ];
+
+    /**
+     * The gateways to show: enabled in `STORE_PAYMENT_GATEWAYS` (the deploy-level
+     * switch the routes and `isAllowed()` enforce) and switched on in the back
+     * office. Empty while no gateway is enabled, so the pages show nothing extra.
+     *
+     * @return array<string, array{setting: string, image: string, name: string}>
+     */
+    public function available(): array
+    {
+        $enabled = config('store.enabled_payment_gateways', []);
+
+        return array_filter(
+            self::GATEWAYS,
+            fn (array $gateway, string $key): bool => in_array($key, $enabled, true) && get_setting($gateway['setting']) == 1,
+            ARRAY_FILTER_USE_BOTH,
+        );
+    }
+
+    /**
      * The proof a customer attaches to a manual payment: the transaction id
      * and the uploaded receipt. Receipts are stored upload ids or file names,
      * never markup.
