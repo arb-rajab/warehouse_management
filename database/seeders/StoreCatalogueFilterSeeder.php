@@ -282,6 +282,6 @@ class StoreCatalogueFilterSeeder extends Seeder
             ? (new ProductVariantCombinations)->names($colors, $values)
             : [];
 
-        return $names === [] ? [''] : array_values($names);
+        return $names === [] ? [''] : $names;
     }
 }
