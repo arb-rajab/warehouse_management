@@ -140,6 +140,7 @@ class SetupChecklist
             'catalog' => $this->catalog(),
             'siteBasics' => $this->siteBasics(),
             'language' => $this->language(),
+            default => throw new \LogicException("Unknown setup checklist key [{$key}]."),
         };
     }
 
