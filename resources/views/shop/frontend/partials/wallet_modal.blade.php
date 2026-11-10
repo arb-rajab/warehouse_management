@@ -16,30 +16,9 @@
                             <div class="mb-3">
                                 <select class="form-control selectpicker rounded-0" data-minimum-results-for-search="Infinity"
                                     name="payment_option" data-live-search="true">
-                                    @if (get_setting('toyyibpay_payment') == 1)
-                                        <option value="toyyibpay">{{ __('storefront.common.toyyibpay') }}</option>
-                                    @endif
-                                    @if (get_setting('sslcommerz_payment') == 1)
-                                        <option value="sslcommerz">{{ __('storefront.common.sslcommerz_label') }}</option>
-                                    @endif
-                                    @if (get_setting('voguepay') == 1)
-                                        <option value="voguepay">{{ __('storefront.common.voguepay') }}</option>
-                                    @endif
-                                    @if (get_setting('payhere') == 1)
-                                        <option value="payhere">{{ __('storefront.common.payhere_label') }}</option>
-                                    @endif
-                                    @if (get_setting('ngenius') == 1)
-                                        <option value="ngenius">{{ __('storefront.common.ngenius_label') }}</option>
-                                    @endif
-                                    @if (get_setting('iyzico') == 1)
-                                        <option value="iyzico">{{ __('storefront.common.iyzico') }}</option>
-                                    @endif
-                                    @if (get_setting('bkash') == 1)
-                                        <option value="bkash">{{ __('storefront.common.bkash') }}</option>
-                                    @endif
-                                    @if (get_setting('nagad') == 1)
-                                        <option value="nagad">{{ __('storefront.common.nagad') }}</option>
-                                    @endif
+                                    @foreach (app(\App\Services\PaymentOptions::class)->available() as $gatewayKey => $gateway)
+                                        <option value="{{ $gatewayKey }}">{{ $gateway['name'] }}</option>
+                                    @endforeach
                                 </select>
                             </div>
                         </div>

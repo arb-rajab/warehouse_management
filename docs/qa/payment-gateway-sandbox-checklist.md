@@ -37,8 +37,8 @@ These are defects in the current code. Testing the gateway before they are fixed
 - [x] **Nagad changed PHP's timezone for the rest of the request.** Its constructor set the default timezone to Asia/Dhaka, skewing every timestamp the app wrote after it. Nagad's protocol timestamps are now made in Dhaka time without touching the default. Nagad's POST helper also had no timeout and now has one.
 - [x] **AamarPay used raw curl and ended the request with `exit`.** It now uses the HTTP client with a timeout and returns a redirect to aamarpay's payment page instead of an auto-submitting form (a GET redirect to `paynow.php?track=...`). **Confirm in aamarpay's sandbox that the payment page accepts a GET redirect; the old code POSTed an empty form to it.** A response that is not a plain path to a payment page is refused.
 
-**Still open:**
-- [ ] **Checkout does not offer gateways.** The payment-option card in `resources/views/shop/frontend/payment_select.blade.php` is `d-none` and every gateway radio is inside a `{{-- --}}` comment; only cash on delivery is live. To test through the UI, restore the markup for that gateway. Without it, you can only submit `payment_option=<gateway>` by hand (section 3, "No UI" note).
+**Open items (all done):**
+- [x] **Checkout did not offer gateways.** The payment step, the wallet top-up and the customer packages page now list every gateway that is in `STORE_PAYMENT_GATEWAYS` **and** switched on in the back office (`PaymentOptions::available()`). With none enabled the pages are as before: cash on delivery only, and the gateway card stays hidden. The first gateway is preselected when any is offered.
 - [x] **A gateway outage was a 500.** A provider call that times out or cannot connect (`ConnectionException`) is now handled globally in `bootstrap/app.php`: the store returns the customer to the cart with "Payment failed", the API answers 503. The exception is still reported. Nothing is charged or marked paid on that path. A provider that answers with an error is handled per gateway.
 - [x] **Currencies and rounding per gateway.** Every gateway now sends the exact amount converted from the store currency to its own charge currency (`<GATEWAY>_CURRENCY`), signs/verifies it in that currency, and refuses a currency with no active, non-zero row in `currencies`. A payment must cover the amount due to the cent (`GatewayPaymentService::covers`). **Each BDT, LKR, TRY, AED, NGN gateway needs an active `currencies` row with a rate before it is enabled.**
 
@@ -100,7 +100,7 @@ Read before choosing. The store prices in **euros** and serves customers in the 
 - [ ] Customer package purchase: the package is granted once.
 - [ ] Seller package purchase (seller account): the package is granted once.
 
-**No UI?** If you have not restored the gateway radios, sign in, build the cart, reach the payment step in the browser, then submit the final form with `payment_option=<gateway name>` set by hand (browser dev tools). The gateway name is the controller's prefix, lower case: `payhere`, `sslcommerz`, `voguepay`, `bkash`, `nagad`, `iyzico`, `ngenius`, `aamarpay`. The store refuses a gateway that is not in `STORE_PAYMENT_GATEWAYS` (it flashes "select a payment option").
+**No UI?** The payment step, wallet top-up and customer packages pages show a gateway once it is in `STORE_PAYMENT_GATEWAYS` and its back office setting is `1` (section 3). If it does not appear, one of those two is missing. You can still submit `payment_option=<gateway name>` by hand: the gateway name is the controller's prefix, lower case: `payhere`, `sslcommerz`, `voguepay`, `bkash`, `nagad`, `iyzico`, `ngenius`, `aamarpay`. The store refuses a gateway that is not in `STORE_PAYMENT_GATEWAYS` (it flashes "select a payment option").
 
 ## 4. Per gateway
 
