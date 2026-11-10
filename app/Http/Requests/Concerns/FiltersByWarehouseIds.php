@@ -17,6 +17,7 @@ trait FiltersByWarehouseIds
     protected function warehouseIdsFilterRules(): array
     {
         return [
+            /** Only these warehouses (ids from `GET /api/v1/warehouses`); omit for every warehouse. */
             'warehouse_ids' => ['nullable', 'array'],
             'warehouse_ids.*' => ['integer', 'exists:warehouses,id'],
         ];

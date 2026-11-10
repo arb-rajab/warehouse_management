@@ -72,6 +72,7 @@ test.describe('desktop', () => {
             'Warehouses',
             'Rows',
             'Pallets',
+            'Receipts',
             'Warehouse map',
             'Products',
             'Cell Log',

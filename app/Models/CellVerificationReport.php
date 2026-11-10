@@ -63,8 +63,8 @@ class CellVerificationReport extends Model
     use HasFactory;
 
     /**
-     * The warehouse of the cell a report names, loaded only by the admin
-     * listings (see CellStatusLog::WITH_WAREHOUSES).
+     * The warehouse of the cell a report names, loaded by the admin listings
+     * and the mobile API (see CellStatusLog::WITH_WAREHOUSES).
      *
      * @var list<string>
      */

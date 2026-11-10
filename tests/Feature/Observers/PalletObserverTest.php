@@ -2,6 +2,11 @@
 
 use App\Models\Pallet;
 use App\Models\Product;
+use App\Models\Receipt;
+use App\Models\ReceiptFile;
+use App\Models\ReceiptPallet;
+use App\Models\Row;
+use App\Models\Warehouse;
 use Illuminate\Support\Carbon;
 use Inertia\Testing\AssertableInertia as Assert;
 
@@ -109,4 +114,38 @@ test('updating a pallet via the real admin edit endpoint invalidates the dashboa
     $after->assertOk()->assertInertia(
         fn (Assert $page) => $page->where('stats.expiring.windows.0.count', 1)
     );
+});
+
+test('finalizing a receipt creates unplaced pallets, which flush the cache so the low-stock card sees the new stock', function () {
+    actingAsAdminMobileUser();
+    $product = Product::factory()->minimumPallets(1)->create();
+
+    $before = $this->getJson('/api/v1/dashboard');
+    expect($before->json('stats.low_stock.count'))->toBe(1);
+
+    $receipt = Receipt::factory()->create();
+    ReceiptFile::factory()->for($receipt)->create();
+    ReceiptPallet::factory()->for($receipt)->create(['product_id' => $product->id]);
+    $this->postJson("/api/v1/receipts/{$receipt->id}/finalize")->assertOk();
+
+    expect($this->getJson('/api/v1/dashboard')->json('stats.low_stock.count'))->toBe(0);
+});
+
+test('placing an unplaced pallet flushes the cache: the expiry card already counts it, the occupancy card sees the cell taken', function () {
+    actingAsMobileUser();
+    $pallet = unplacedPalletIn(Warehouse::firstOrCreateDefault(), ['expiration_date' => '2026-08-20']);
+    $row = Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
+
+    // Primed while unplaced: the expiry card already counts it, no cell is full.
+    $before = $this->getJson('/api/v1/dashboard');
+    expect($before->json('stats.expiring.windows.0.count'))->toBe(1)
+        ->and($before->json('stats.occupancy.empty'))->toBe(1)
+        ->and($before->json('stats.unplaced_pallets.count'))->toBe(1);
+
+    $this->postJson("/api/v1/pallets/{$pallet->id}/place", ['row_letter' => $row->letter, 'cell_number' => 1, 'flat_number' => 1])->assertOk();
+
+    $after = $this->getJson('/api/v1/dashboard');
+    expect($after->json('stats.expiring.windows.0.count'))->toBe(1)
+        ->and($after->json('stats.occupancy.empty'))->toBe(0)
+        ->and($after->json('stats.unplaced_pallets.count'))->toBe(0);
 });

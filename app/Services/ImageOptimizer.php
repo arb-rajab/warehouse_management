@@ -22,9 +22,13 @@ class ImageOptimizer
      * Always re-encode untrusted images to strip metadata and appended content.
      * Legacy clients retain their format; admin uploads may request WebP.
      *
+     * The result is shrunk until it fits MAX_OUTPUT_BYTES. With `$minDimension`
+     * it never shrinks the longest side below that (a bill photo must stay
+     * legible) and is returned at that size even when it is larger.
+     *
      * @return array{0: string, 1: string}
      */
-    public function optimise(string $contents, ?string $format = null, int $maxDimension = 1500): array
+    public function optimise(string $contents, ?string $format = null, int $maxDimension = 1500, int $quality = 82, ?int $minDimension = null): array
     {
         if (strlen($contents) > self::MAX_INPUT_BYTES) {
             throw new InvalidArgumentException('The image is too large.');
@@ -64,11 +68,16 @@ class ImageOptimizer
 
             for ($attempt = 0; $attempt < 10; $attempt++) {
                 // Quality is ignored by the PNG and GIF encoders, as it was in v2.
-                $encoded = $image->encodeUsingFileExtension($format, quality: 82)->toString();
-                if ($encoded !== '' && strlen($encoded) <= self::MAX_OUTPUT_BYTES) {
+                $encoded = $image->encodeUsingFileExtension($format, quality: $quality)->toString();
+                $longest = max($image->width(), $image->height());
+                if ($encoded !== '' && (strlen($encoded) <= self::MAX_OUTPUT_BYTES || ($minDimension !== null && $longest <= $minDimension))) {
                     return [$encoded, $format];
                 }
-                $image->resize(max(1, (int) ($image->width() * 0.8)), max(1, (int) ($image->height() * 0.8)));
+                if ($minDimension !== null && $longest * 0.8 < $minDimension) {
+                    $image->scaleDown($minDimension, $minDimension);
+                } else {
+                    $image->resize(max(1, (int) ($image->width() * 0.8)), max(1, (int) ($image->height() * 0.8)));
+                }
             }
         } catch (Throwable $exception) {
             throw new InvalidArgumentException('The image could not be compressed.', previous: $exception);

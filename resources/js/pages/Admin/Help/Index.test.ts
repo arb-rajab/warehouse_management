@@ -62,6 +62,7 @@ describe('Help Index', () => {
             topic: 'cell-verification-rounds',
         }),
         warehouses: helpShow.url({ topic: 'warehouses' }),
+        receipts: helpShow.url({ topic: 'receipts' }),
         products: helpShow.url({ topic: 'products' }),
         users: helpShow.url({ topic: 'users' }),
         settings: helpShow.url({ topic: 'settings' }),

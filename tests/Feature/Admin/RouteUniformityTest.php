@@ -5,6 +5,8 @@ use App\Http\Controllers\Admin\CellVerificationReportController;
 use App\Http\Controllers\Admin\CellVerificationRoundController;
 use App\Http\Controllers\Admin\PalletController;
 use App\Http\Controllers\Admin\ProductController;
+use App\Http\Controllers\Admin\ReceiptController;
+use App\Http\Controllers\Admin\ReceiptFileController;
 use App\Models\Pallet;
 use App\Models\Product;
 use Illuminate\Routing\Route as RoutingRoute;
@@ -36,6 +38,9 @@ test('admin routes resolve to the URI, verb and controller method their name pro
     'default barcode preview' => ['admin.products.export-qr.preview', 'GET', 'admin/products/{product}/export-qr/preview', ProductController::class, 'previewDefaultBarcode'],
     'cell qr code' => ['admin.cells.export-qr-code', 'GET', 'admin/cells/{cell}/export-qr-code', CellController::class, 'exportQrCode'],
     'round export' => ['admin.cell-verification-rounds.export-reports', 'GET', 'admin/cell-verification-rounds/{cellVerificationRound}/export', CellVerificationRoundController::class, 'exportReports'],
+    'receipt list' => ['admin.receipts.index', 'GET', 'admin/receipts', ReceiptController::class, 'index'],
+    'receipt show' => ['admin.receipts.show', 'GET', 'admin/receipts/{receipt}', ReceiptController::class, 'show'],
+    'receipt file' => ['admin.receipts.files.show', 'GET', 'admin/receipts/{receipt}/files/{file}', ReceiptFileController::class, 'show'],
     'report accept' => ['admin.cell-verification-reports.accept', 'POST', 'admin/cell-verification-reports/{cellVerificationReport}/accept', CellVerificationReportController::class, 'accept'],
 ]);
 

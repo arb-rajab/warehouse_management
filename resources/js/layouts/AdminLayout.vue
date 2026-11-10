@@ -12,6 +12,7 @@ import {
     Package,
     Rows3,
     Settings,
+    Truck,
     Users,
 } from '@lucide/vue';
 import type { Component } from 'vue';
@@ -22,6 +23,7 @@ import { index as dashboardIndex } from '@/actions/App/Http/Controllers/Admin/Da
 import { index as helpIndex } from '@/actions/App/Http/Controllers/Admin/HelpController';
 import { index as palletsIndex } from '@/actions/App/Http/Controllers/Admin/PalletController';
 import { index as productsIndex } from '@/actions/App/Http/Controllers/Admin/ProductController';
+import { index as receiptsIndex } from '@/actions/App/Http/Controllers/Admin/ReceiptController';
 import { index as rowsIndex } from '@/actions/App/Http/Controllers/Admin/RowController';
 import { edit as settingsEdit } from '@/actions/App/Http/Controllers/Admin/SettingController';
 import { index as usersIndex } from '@/actions/App/Http/Controllers/Admin/UserController';
@@ -80,6 +82,7 @@ const navGroups = computed<NavGroup[]>(() => [
             },
             { labelKey: 'nav.rows', href: rowsIndex(), icon: Rows3 },
             { labelKey: 'nav.pallets', href: palletsIndex(), icon: Layers },
+            { labelKey: 'nav.receipts', href: receiptsIndex(), icon: Truck },
             {
                 labelKey: 'nav.warehouseMap',
                 href: warehouseMapIndex(),

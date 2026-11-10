@@ -155,4 +155,12 @@ return [
         'token' => env('OTAJER_TOKEN') ?: null,
     ],
 
+    // Ghostscript compresses the receipt bill PDFs (App\Services\PdfOptimizer).
+    // Best effort: without the binary a PDF is stored as sent.
+    'ghostscript' => [
+        'compress_pdfs' => (bool) env('GHOSTSCRIPT_COMPRESS_PDFS', true),
+        'binary' => env('GHOSTSCRIPT_BINARY') ?: 'gs',
+        'timeout' => (int) env('GHOSTSCRIPT_TIMEOUT', 30),
+    ],
+
 ];

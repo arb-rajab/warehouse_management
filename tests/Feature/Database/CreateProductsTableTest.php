@@ -101,6 +101,7 @@ test('products.id and every product_id FK are declared as signed integers, not b
             "\$table->integer('expected_product_id')->nullable();",
             "\$table->integer('reported_product_id')->nullable();",
         ],
+        '2026_11_09_100002_create_receipt_pallets_table.php' => ["\$table->integer('product_id');"],
         '2026_09_08_000001_create_uploads_table.php' => ["\$table->integer('id')->autoIncrement();"],
         '2026_09_08_000002_create_wms_product_settings_table.php' => ["\$table->integer('product_id')->primary();"],
         '2026_10_24_094759_create_wms_product_image_reviews_table.php' => ["\$table->integer('product_id');"],

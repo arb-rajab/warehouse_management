@@ -10,6 +10,7 @@ import {
     PackageOpen,
     PackageX,
     SlidersHorizontal,
+    Truck,
     TriangleAlert,
 } from '@lucide/vue';
 import { computed, ref } from 'vue';
@@ -68,6 +69,10 @@ interface InactiveInWarehouseStats {
     count: number;
 }
 
+interface UnplacedPalletsStats {
+    count: number;
+}
+
 const props = defineProps<{
     stats: {
         occupancy: { empty: number; full: number; opened: number };
@@ -77,6 +82,7 @@ const props = defineProps<{
             custom: ExpiringDayWindow;
         };
         stale: StaleDayWindow;
+        unplaced_pallets: UnplacedPalletsStats;
         low_stock: LowStockStats;
         inactive_in_warehouse: InactiveInWarehouseStats;
         activity_today: {
@@ -318,6 +324,29 @@ function onWarehouseIdsChange(ids: string[]): void {
                         })
                     "
                     :icon="CELL_STATE_COLOR.opened.icon"
+                />
+            </div>
+        </section>
+
+        <section class="mb-8">
+            <h2 :class="sectionHeadingClass">
+                {{ t('dashboard.unplaced.title') }}
+            </h2>
+            <div :class="tileGridClass">
+                <DashboardStatTile
+                    :label="t('dashboard.unplaced.count')"
+                    :value="stats.unplaced_pallets.count"
+                    :href="
+                        palletsIndex({
+                            query: {
+                                unplaced: true,
+                                ...productQuery,
+                                ...warehouseQuery,
+                            },
+                        })
+                    "
+                    tone="warning"
+                    :icon="Truck"
                 />
             </div>
         </section>

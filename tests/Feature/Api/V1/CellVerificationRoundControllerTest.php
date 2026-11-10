@@ -35,8 +35,8 @@ test('an authenticated worker can start a verification round over the rows they 
         'started_at' => $round->created_at->toIso8601String(),
         'completed_at' => null,
         'rows' => [
-            ['id' => $rowA->id, 'letter' => 'A'],
-            ['id' => $rowB->id, 'letter' => 'B'],
+            ['id' => $rowA->id, 'letter' => 'A', 'warehouse' => ['id' => Warehouse::firstOrCreateDefault()->id, 'name' => Warehouse::DEFAULT_NAME]],
+            ['id' => $rowB->id, 'letter' => 'B', 'warehouse' => ['id' => Warehouse::firstOrCreateDefault()->id, 'name' => Warehouse::DEFAULT_NAME]],
         ],
     ]);
 });
@@ -52,9 +52,9 @@ test('a round started without row_ids covers every row in the warehouse', functi
 
     $response->assertCreated();
     expect($response->json('rows'))->toEqual([
-        ['id' => $rowA->id, 'letter' => 'A'],
-        ['id' => $rowB->id, 'letter' => 'B'],
-        ['id' => $rowC->id, 'letter' => 'C'],
+        ['id' => $rowA->id, 'letter' => 'A', 'warehouse' => ['id' => Warehouse::firstOrCreateDefault()->id, 'name' => Warehouse::DEFAULT_NAME]],
+        ['id' => $rowB->id, 'letter' => 'B', 'warehouse' => ['id' => Warehouse::firstOrCreateDefault()->id, 'name' => Warehouse::DEFAULT_NAME]],
+        ['id' => $rowC->id, 'letter' => 'C', 'warehouse' => ['id' => Warehouse::firstOrCreateDefault()->id, 'name' => Warehouse::DEFAULT_NAME]],
     ]);
 });
 
@@ -277,7 +277,7 @@ test('a worker can view one of their own rounds, including its reports in report
         'completed_at' => $round->completed_at->toIso8601String(),
         'reports_count' => 2,
         'rows' => [
-            ['id' => $row->id, 'letter' => 'D'],
+            ['id' => $row->id, 'letter' => 'D', 'warehouse' => ['id' => Warehouse::firstOrCreateDefault()->id, 'name' => Warehouse::DEFAULT_NAME]],
         ],
         'reports' => [
             [
@@ -288,6 +288,7 @@ test('a worker can view one of their own rounds, including its reports in report
                     'row_letter' => 'D',
                     'cell_number' => 1,
                     'flat_number' => 1,
+                    'warehouse' => ['id' => Warehouse::firstOrCreateDefault()->id, 'name' => Warehouse::DEFAULT_NAME],
                 ],
                 'expected' => [
                     'cell_state' => 'empty',
@@ -319,6 +320,7 @@ test('a worker can view one of their own rounds, including its reports in report
                     'row_letter' => 'D',
                     'cell_number' => 1,
                     'flat_number' => 1,
+                    'warehouse' => ['id' => Warehouse::firstOrCreateDefault()->id, 'name' => Warehouse::DEFAULT_NAME],
                 ],
                 'expected' => [
                     'cell_state' => 'full',
@@ -439,4 +441,171 @@ test('the worker\'s own rounds can be filtered by warehouse', function () {
     expect(collect($this->getJson("/api/v1/cell-verification-rounds?warehouse_ids[]={$north->id}")->assertOk()->json('data'))->pluck('id')->all())
         ->toBe([$inNorth->id])
         ->and(collect($this->getJson('/api/v1/cell-verification-rounds')->json('data'))->pluck('id'))->toContain($noise->id);
+});
+
+test('every round payload names the warehouse of each row it covers, also for a letter two warehouses share', function () {
+    $user = actingAsMobileUser();
+    $north = Warehouse::factory()->create(['name' => 'North']);
+    $south = Warehouse::factory()->create(['name' => 'South']);
+    $northRow = Row::factory()->for($north)->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 1]);
+    $southRow = Row::factory()->for($south)->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 1]);
+    $expectedRows = [
+        ['id' => $northRow->id, 'letter' => 'A', 'warehouse' => ['id' => $north->id, 'name' => 'North']],
+        ['id' => $southRow->id, 'letter' => 'A', 'warehouse' => ['id' => $south->id, 'name' => 'South']],
+    ];
+
+    $started = $this->postJson('/api/v1/cell-verification-rounds', ['row_ids' => [$northRow->id, $southRow->id]])->assertCreated();
+    $roundId = $started->json('id');
+
+    expect($started->json('rows'))->toEqual($expectedRows)
+        ->and($this->getJson("/api/v1/cell-verification-rounds/{$roundId}")->assertOk()->json('rows'))->toEqual($expectedRows)
+        ->and($this->getJson('/api/v1/cell-verification-rounds')->assertOk()->json('data.0.rows'))->toEqual($expectedRows)
+        ->and($this->postJson("/api/v1/cell-verification-rounds/{$roundId}/complete")->assertOk()->json('rows'))->toEqual($expectedRows)
+        ->and(CellVerificationRound::query()->sole()->user_id)->toBe($user->id);
+});
+
+test('a round shown with its reports names the warehouse of every reported cell', function () {
+    $user = actingAsMobileUser();
+    $north = Warehouse::factory()->create(['name' => 'North']);
+    $row = Row::factory()->for($north)->create(['letter' => 'N', 'cells_count' => 2, 'flats_count' => 1]);
+    $round = CellVerificationRound::factory()->for($user)->covering($row)->create();
+    foreach ($row->cells()->orderBy('cell_number')->get() as $cell) {
+        CellVerificationReport::factory()->create(['cell_verification_round_id' => $round->id, 'cell_id' => $cell->id, 'user_id' => $user->id]);
+    }
+
+    $reports = $this->getJson("/api/v1/cell-verification-rounds/{$round->id}")->assertOk()->json('reports');
+
+    expect($reports)->toHaveCount(2)
+        ->and(array_column(array_column($reports, 'cell'), 'warehouse'))->toBe([
+            ['id' => $north->id, 'name' => 'North'],
+            ['id' => $north->id, 'name' => 'North'],
+        ]);
+});
+
+test('a round started with warehouse_ids[] alone covers every row of those warehouses and no other', function () {
+    actingAsMobileUser();
+    $north = Warehouse::factory()->create(['name' => 'North']);
+    $northA = Row::factory()->for($north)->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 1]);
+    $northB = Row::factory()->for($north)->create(['letter' => 'B', 'cells_count' => 1, 'flats_count' => 1]);
+    $elsewhere = Row::factory()->create(['letter' => 'C', 'cells_count' => 1, 'flats_count' => 1]); // noise: Default warehouse
+
+    $response = $this->postJson('/api/v1/cell-verification-rounds', ['warehouse_ids' => [$north->id]]);
+
+    $response->assertCreated();
+    expect(array_column($response->json('rows'), 'id'))->toBe([$northA->id, $northB->id])
+        ->and(Row::query()->whereKey($elsewhere->id)->underActiveVerification()->exists())->toBeFalse()
+        ->and(Row::query()->whereKey($northA->id)->underActiveVerification()->exists())->toBeTrue();
+
+    // The other warehouse is still free for a round of its own.
+    $this->postJson('/api/v1/cell-verification-rounds', ['warehouse_ids' => [Warehouse::firstOrCreateDefault()->id]])->assertCreated();
+});
+
+test('warehouse_ids[] with several warehouses covers the rows of each', function () {
+    actingAsMobileUser();
+    $north = Warehouse::factory()->create();
+    $south = Warehouse::factory()->create();
+    $northRow = Row::factory()->for($north)->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 1]);
+    $southRow = Row::factory()->for($south)->create(['letter' => 'B', 'cells_count' => 1, 'flats_count' => 1]);
+    Row::factory()->create(['letter' => 'C', 'cells_count' => 1, 'flats_count' => 1]); // noise
+
+    $response = $this->postJson('/api/v1/cell-verification-rounds', ['warehouse_ids' => [$north->id, $south->id]])->assertCreated();
+
+    expect(array_column($response->json('rows'), 'id'))->toBe([$northRow->id, $southRow->id]);
+});
+
+test('row_ids with warehouse_ids covers the named rows that lie in those warehouses', function () {
+    actingAsMobileUser();
+    $north = Warehouse::factory()->create();
+    $named = Row::factory()->for($north)->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 1]);
+    Row::factory()->for($north)->create(['letter' => 'B', 'cells_count' => 1, 'flats_count' => 1]); // noise: in the warehouse, not named
+
+    $response = $this->postJson('/api/v1/cell-verification-rounds', ['row_ids' => [$named->id], 'warehouse_ids' => [$north->id]])->assertCreated();
+
+    expect(array_column($response->json('rows'), 'id'))->toBe([$named->id]);
+});
+
+test('a named row outside the given warehouses is refused as verification_round_rows_not_found and no row is claimed', function () {
+    actingAsMobileUser();
+    $north = Warehouse::factory()->create();
+    $inside = Row::factory()->for($north)->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 1]);
+    $outside = Row::factory()->create(['letter' => 'B', 'cells_count' => 1, 'flats_count' => 1]);
+
+    $this->postJson('/api/v1/cell-verification-rounds', ['row_ids' => [$inside->id, $outside->id], 'warehouse_ids' => [$north->id]])
+        ->assertUnprocessable()
+        ->assertExactJson(['message' => __('messages.verification_round_rows_not_found'), 'error_code' => 'verification_round_rows_not_found']);
+
+    expect(CellVerificationRound::query()->count())->toBe(0)
+        ->and(Row::query()->whereKey($inside->id)->underActiveVerification()->exists())->toBeFalse();
+});
+
+test('omitting both row_ids and warehouse_ids still claims every row of every warehouse', function () {
+    actingAsMobileUser();
+    $north = Warehouse::factory()->create();
+    $northRow = Row::factory()->for($north)->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 1]);
+    $defaultRow = Row::factory()->create(['letter' => 'B', 'cells_count' => 1, 'flats_count' => 1]);
+
+    $response = $this->postJson('/api/v1/cell-verification-rounds')->assertCreated();
+
+    expect(array_column($response->json('rows'), 'id'))->toBe([$northRow->id, $defaultRow->id]);
+});
+
+test('a warehouse without rows makes an empty round, which is refused with verification_round_scope_empty', function () {
+    actingAsMobileUser();
+    $empty = Warehouse::factory()->create();
+    Row::factory()->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 1]);
+
+    $this->postJson('/api/v1/cell-verification-rounds', ['warehouse_ids' => [$empty->id]])
+        ->assertUnprocessable()->assertJsonPath('error_code', 'verification_round_scope_empty');
+
+    expect(CellVerificationRound::query()->count())->toBe(0);
+});
+
+test('starting a round rejects an unknown or malformed warehouse filter', function (array $payload, string $field) {
+    actingAsMobileUser();
+    Row::factory()->create(['cells_count' => 1, 'flats_count' => 1]);
+
+    $this->postJson('/api/v1/cell-verification-rounds', $payload)->assertUnprocessable()->assertJsonValidationErrors([$field]);
+
+    expect(CellVerificationRound::query()->count())->toBe(0);
+})->with([
+    'unknown warehouse' => [['warehouse_ids' => [999999]], 'warehouse_ids.0'],
+    'not an array' => [['warehouse_ids' => 1], 'warehouse_ids'],
+]);
+
+test('the overlap message labels a letter several warehouses use with its warehouse, and leaves an unshared letter bare', function () {
+    actingAsMobileUser();
+    $annex = Warehouse::factory()->create(['name' => 'Annex']);
+    $annexA = Row::factory()->for($annex)->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 1]);
+    $annexB = Row::factory()->for($annex)->create(['letter' => 'B', 'cells_count' => 1, 'flats_count' => 1]);
+    $defaultA = Row::factory()->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 1]);
+    CellVerificationRound::factory()->for(User::factory()->mobileUser()->create())->covering($annexA, $annexB)->create();
+
+    $response = $this->postJson('/api/v1/cell-verification-rounds', ['row_ids' => [$annexA->id, $annexB->id, $defaultA->id]]);
+
+    $response->assertConflict()->assertJsonPath('error_code', 'rows_already_in_active_round');
+    expect($response->json('message'))->toBe(__('messages.rows_already_in_active_round', ['rows' => 'A (Annex), B']))
+        ->and(CellVerificationRound::query()->count())->toBe(1);
+});
+
+test('the overlap message names each warehouse when both rows of a shared letter are taken', function () {
+    actingAsMobileUser();
+    $annex = Warehouse::factory()->create(['name' => 'Annex']);
+    $annexA = Row::factory()->for($annex)->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 1]);
+    $defaultA = Row::factory()->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 1]);
+    CellVerificationRound::factory()->for(User::factory()->mobileUser()->create())->covering($annexA, $defaultA)->create();
+
+    $response = $this->postJson('/api/v1/cell-verification-rounds');
+
+    $response->assertConflict();
+    expect($response->json('message'))->toContain('A (Annex)')->toContain('A ('.Warehouse::DEFAULT_NAME.')');
+});
+
+test('the overlap message of a letter only one warehouse uses stays a bare letter', function () {
+    actingAsMobileUser();
+    $row = Row::factory()->create(['letter' => 'K', 'cells_count' => 1, 'flats_count' => 1]);
+    CellVerificationRound::factory()->for(User::factory()->mobileUser()->create())->covering($row)->create();
+
+    $this->postJson('/api/v1/cell-verification-rounds', ['row_ids' => [$row->id]])
+        ->assertConflict()
+        ->assertJsonPath('message', __('messages.rows_already_in_active_round', ['rows' => 'K']));
 });

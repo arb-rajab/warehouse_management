@@ -105,8 +105,7 @@ class Cell extends Model
      * {@see toLocationArray()} plus the cell's `warehouse` (`{id, name}`) when
      * its row's warehouse is loaded (`row.warehouse`), for the admin listings
      * whose links to a row must name its warehouse: a row letter is unique per
-     * warehouse only. The mobile API loads no warehouse for its locations, so
-     * its payloads keep the plain shape.
+     * warehouse only. A caller that does not load it gets the plain shape.
      *
      * @return array{row_letter: string, cell_number: int, flat_number: int, warehouse?: array{id: int, name: string}}
      */

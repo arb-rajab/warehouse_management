@@ -406,14 +406,22 @@ export type ProductIndexFilterOptions = CellStatusLogFilterOptions;
  */
 export interface MatchingPallet {
     id: number;
-    state: Cell['state'];
+    /** False for a received pallet that has no cell yet. */
+    placed: boolean;
+    /** Null for an unplaced pallet. */
+    state: Cell['state'] | null;
     expiration_date: string | null;
     added_at: string | null;
     remaining_boxes: number;
     product: ProductDetails;
-    location: CellSlotLocation;
-    /** False when the pallet's cell is out of service. */
-    cell_active: boolean;
+    /** Null for an unplaced pallet: it has no map location. */
+    location: CellSlotLocation | null;
+    /** False when the pallet's cell is out of service; null when unplaced. */
+    cell_active: boolean | null;
+    /** The receipt the pallet arrived on (kept after it is placed). */
+    receipt_id: number | null;
+    /** The warehouse of the receipt, for an unplaced pallet only. */
+    warehouse: WarehouseSummary | null;
 }
 
 /**
@@ -424,6 +432,7 @@ export interface MatchingPalletFilters {
     state?: Cell['state'];
     is_active?: boolean;
     expired?: boolean;
+    unplaced?: boolean;
     expires_within_days?: number;
     stale_after_days?: number;
     product_id?: number[];
@@ -505,3 +514,59 @@ export interface CellVerificationReportFilters {
 
 export type CellVerificationReportFilterOptions = RowAndColumnFilterOptions &
     ProductFilterOptions;
+
+/** A truck receipt's state: a draft until it is finalized into pallets. */
+export type ReceiptStatus = 'draft' | 'finalized';
+
+/** One row of the receipts list (`ReceiptResource` without its files and pallets). */
+export interface ReceiptListItem {
+    id: number;
+    warehouse: WarehouseSummary;
+    note: string | null;
+    status: ReceiptStatus;
+    pallets_count: number;
+    files_count: number;
+    created_by: UserSummary;
+    finalized_by: UserSummary | null;
+    finalized_at: string | null;
+    created_at: string;
+}
+
+/**
+ * A bill photo or PDF. `url` is the session-authenticated admin download
+ * route; the storage path is never sent.
+ */
+export interface ReceiptFile {
+    id: number;
+    original_name: string;
+    mime_type: string;
+    /** Bytes stored. */
+    size: number;
+    url: string;
+    created_at: string | null;
+}
+
+/**
+ * One pallet exactly as the merchant wrote it on the bill, in the order it was
+ * typed. Carries no pallet id and no entry id.
+ */
+export interface ReceiptPalletEntry {
+    product_id: number;
+    product: ProductDetails;
+    boxes: number;
+    expiration_date: string | null;
+}
+
+export interface ReceiptDetail extends ReceiptListItem {
+    files: ReceiptFile[];
+    pallets: ReceiptPalletEntry[];
+}
+
+export interface ReceiptFilters {
+    warehouse_ids?: number[];
+    status?: ReceiptStatus;
+    sort_direction?: 'asc' | 'desc';
+    per_page?: number;
+}
+
+export type ReceiptFilterOptions = WarehouseFilterOptions;

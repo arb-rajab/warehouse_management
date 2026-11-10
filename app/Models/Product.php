@@ -420,10 +420,9 @@ class Product extends Model
 
     /**
      * Scope a query to products that currently have at least one pallet
-     * somewhere in the warehouse. `pallets.cell_id` is non-nullable and
-     * unique (see Pallet's docblock), so every pallet row is inherently "in
-     * a cell" — this reduces to "has at least one pallet row", with no
-     * cell-state check needed.
+     * somewhere in the warehouse — this reduces to "has at least one pallet
+     * row", with no cell-state check needed. A received but unplaced pallet
+     * (no cell yet) counts: it is stock the warehouse holds.
      *
      * Shared by the admin products index's `inactive` filter
      * (`Admin\ProductController::index()`), the dashboard's

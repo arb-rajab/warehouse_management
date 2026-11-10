@@ -4,6 +4,7 @@ use App\Models\Pallet;
 use App\Models\Product;
 use App\Models\ProductBarcode;
 use App\Models\Row;
+use App\Models\Warehouse;
 use Illuminate\Support\Facades\DB;
 
 test('an authenticated worker can list products with every property the app reads', function () {
@@ -519,6 +520,8 @@ test('an authenticated worker can list every current pallet of a product, ordere
             'flat_number' => 1,
         ],
         'is_active' => true,
+        'placed' => true,
+        'warehouse' => ['id' => Warehouse::firstOrCreateDefault()->id, 'name' => Warehouse::DEFAULT_NAME],
     ]);
 });
 
@@ -592,3 +595,89 @@ test('the product listings answer a repeat request that already holds the curren
     'show' => '/api/v1/products/{id}',
     'pallets' => '/api/v1/products/{id}/pallets',
 ]);
+
+test('every pallet of a product names the warehouse it is stored in', function () {
+    actingAsMobileUser();
+    $product = Product::factory()->create();
+    $north = Warehouse::factory()->create(['name' => 'North']);
+    $south = Warehouse::factory()->create(['name' => 'South']);
+    $inNorth = placedPalletIn($north, ['product_id' => $product->id, 'expiration_date' => '2026-09-01']);
+    $inSouth = placedPalletIn($south, ['product_id' => $product->id, 'expiration_date' => '2026-09-02']);
+
+    $response = $this->getJson("/api/v1/products/{$product->id}/pallets");
+
+    $response->assertOk();
+    $byId = collect($response->json())->keyBy('id');
+    expect($byId[$inNorth->id]['warehouse'])->toBe(['id' => $north->id, 'name' => 'North'])
+        ->and($byId[$inSouth->id]['warehouse'])->toBe(['id' => $south->id, 'name' => 'South']);
+});
+
+test('the pallet listing of a product keeps only the pallets of the warehouse_ids[] given, placed or unplaced', function () {
+    actingAsMobileUser();
+    $product = Product::factory()->create();
+    $north = Warehouse::factory()->create();
+    $south = Warehouse::factory()->create();
+    $placedNorth = placedPalletIn($north, ['product_id' => $product->id, 'expiration_date' => '2026-09-01']);
+    $unplacedNorth = unplacedPalletIn($north, ['product_id' => $product->id, 'expiration_date' => '2026-09-02']);
+    placedPalletIn($south, ['product_id' => $product->id, 'expiration_date' => '2026-09-03']); // noise
+    unplacedPalletIn($south, ['product_id' => $product->id, 'expiration_date' => '2026-09-04']); // noise
+    placedPalletIn($north, ['expiration_date' => '2026-09-05']); // noise: another product
+
+    $filtered = collect($this->getJson("/api/v1/products/{$product->id}/pallets?warehouse_ids[]={$north->id}")->assertOk()->json())->pluck('id')->all();
+    $unfiltered = $this->getJson("/api/v1/products/{$product->id}/pallets")->assertOk()->json();
+
+    expect($filtered)->toBe([$placedNorth->id, $unplacedNorth->id])
+        ->and($unfiltered)->toHaveCount(4);
+});
+
+test('the pallet listing of a product rejects an unknown or malformed warehouse filter', function (string $query, string $field) {
+    actingAsMobileUser();
+    $product = Product::factory()->create();
+
+    $this->getJson("/api/v1/products/{$product->id}/pallets?{$query}")->assertUnprocessable()->assertJsonValidationErrors([$field]);
+})->with([
+    'unknown warehouse' => ['warehouse_ids[]=999999', 'warehouse_ids.0'],
+    'not an array' => ['warehouse_ids=1', 'warehouse_ids'],
+    'not a number' => ['warehouse_ids[]=north', 'warehouse_ids.0'],
+]);
+
+test('unplaced pallets are listed as stock with placed false and no location, after the placed ones on an expiry and arrival tie', function () {
+    actingAsMobileUser();
+    $product = Product::factory()->boxesCount(20)->create();
+    $warehouse = Warehouse::factory()->create(['name' => 'Annex']);
+    $placed = placedPalletIn($warehouse, ['product_id' => $product->id, 'expiration_date' => '2026-09-05', 'remaining_boxes' => 9]);
+    $unplaced = unplacedPalletIn($warehouse, ['product_id' => $product->id, 'expiration_date' => '2026-09-05', 'remaining_boxes' => 8]);
+    $earlierUnplaced = unplacedPalletIn($warehouse, ['product_id' => $product->id, 'expiration_date' => '2026-09-01']);
+    $undated = unplacedPalletIn($warehouse, ['product_id' => $product->id, 'expiration_date' => null]);
+    // The placed and the unplaced pallet arrived at the same moment.
+    backdate($placed, '2026-08-01 10:00:00');
+    backdate($unplaced, '2026-08-01 10:00:00');
+    backdate($earlierUnplaced, '2026-08-02 10:00:00');
+    backdate($undated, '2026-08-03 10:00:00');
+
+    $response = $this->getJson("/api/v1/products/{$product->id}/pallets");
+
+    $response->assertOk();
+    expect(collect($response->json())->pluck('id')->all())->toBe([$earlierUnplaced->id, $placed->id, $unplaced->id, $undated->id])
+        ->and(collect($response->json())->firstWhere('id', $unplaced->id))->toEqual([
+            'id' => $unplaced->id,
+            'state' => null,
+            'expiration_date' => '2026-09-05',
+            'added_at' => '2026-08-01T10:00:00+00:00',
+            'cell_entered_at' => null,
+            'remaining_boxes' => 8,
+            'product_boxes_count' => 20,
+            'placed' => false,
+            'location' => null,
+            'is_active' => null,
+            'warehouse' => ['id' => $warehouse->id, 'name' => 'Annex'],
+        ]);
+});
+
+test('a product that is held only as unplaced pallets still lists them', function () {
+    actingAsMobileUser();
+    $product = Product::factory()->create();
+    $pallet = unplacedPalletIn(Warehouse::firstOrCreateDefault(), ['product_id' => $product->id]);
+
+    expect(collect($this->getJson("/api/v1/products/{$product->id}/pallets")->assertOk()->json())->pluck('id')->all())->toBe([$pallet->id]);
+});

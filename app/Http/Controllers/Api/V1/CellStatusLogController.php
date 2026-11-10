@@ -17,6 +17,7 @@ class CellStatusLogController extends Controller
 
         $query = CellStatusLog::query()
             ->forListing()
+            ->with(CellStatusLog::WITH_WAREHOUSES)
             ->filtered($request)
             ->forWarehouses($request->warehouseIds())
             ->sorted($request);

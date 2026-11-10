@@ -51,7 +51,7 @@ class PalletController extends Controller
         return Inertia::render('Admin/Pallets/Index', [
             'pallets' => $this->paginated(MatchingPalletResource::collection($pallets)),
             'filters' => [
-                ...$request->only(['state', 'is_active', 'expired', 'expires_within_days', 'stale_after_days', 'product_id', 'warehouse_ids']),
+                ...$request->only(['state', 'is_active', 'expired', 'unplaced', 'expires_within_days', 'stale_after_days', 'product_id', 'warehouse_ids']),
                 'per_page' => $perPage,
             ],
             'filterOptions' => [
@@ -172,6 +172,11 @@ class PalletController extends Controller
         return $this->redirectAfterCellAction($cell);
     }
 
+    /**
+     * The cell whose row page the action returns to. An unplaced pallet has
+     * none and 404s here: the admin actions are offered from a cell's row page
+     * only, and a received pallet is placed through the mobile API first.
+     */
     private function cellFor(Pallet $pallet): Cell
     {
         return $pallet->cell()->select(['id', 'row_id'])->firstOrFail();

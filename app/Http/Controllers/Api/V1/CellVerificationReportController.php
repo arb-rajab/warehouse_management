@@ -18,8 +18,8 @@ class CellVerificationReportController extends Controller
     public function __construct(private readonly CellVerificationService $cellVerifications) {}
 
     #[DocumentedResponse(403, description: 'The verification round belongs to another user.', type: 'array{message: string}')]
-    #[DocumentedResponse(409, description: 'The verification round has already been completed (`error_code`: `verification_round_completed`).', type: 'array{message: string, error_code: string}')]
-    #[DocumentedResponse(409, description: 'The cell is not in one of the rows this round covers (`error_code`: `cell_outside_round_rows`).', type: 'array{message: string, error_code: string}')]
+    #[DocumentedResponse(409, description: 'The verification round has already been completed (`error_code`: `verification_round_completed`).', type: "array{message: string, error_code: 'verification_round_completed'}")]
+    #[DocumentedResponse(409, description: 'The cell is not in one of the rows this round covers (`error_code`: `cell_outside_round_rows`).', type: "array{message: string, error_code: 'cell_outside_round_rows'}")]
     public function store(StoreCellVerificationReportRequest $request): JsonResponse
     {
         /** @var User $user */
@@ -38,7 +38,7 @@ class CellVerificationReportController extends Controller
             'note' => $request->input('note'),
         ]);
 
-        return (new CellVerificationReportResource($report->load(CellVerificationReport::WITH_DETAILS)))
+        return (new CellVerificationReportResource($report->load([...CellVerificationReport::WITH_DETAILS, ...CellVerificationReport::WITH_WAREHOUSE])))
             ->response()
             ->setStatusCode(201);
     }

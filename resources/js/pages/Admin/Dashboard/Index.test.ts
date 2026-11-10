@@ -8,6 +8,7 @@ import {
     Clock,
     Inbox,
     PackageOpen,
+    Truck,
 } from '@lucide/vue';
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -58,6 +59,7 @@ const stats = {
         custom: { days: 45, until: '2026-09-27', count: 8 },
     },
     stale: { days: 30, count: 5 },
+    unplaced_pallets: { count: 7 },
     low_stock: { count: 4 },
     inactive_in_warehouse: { count: 2 },
     activity_today: { stored: 6, opened: 2, emptied: 1, transferred: 3 },
@@ -519,16 +521,60 @@ describe('Dashboard Index', () => {
         expect(wrapper.text()).toContain(t('dashboard.productPallets.empty'));
     });
 
-    it('renders exactly seven sections, including the stale, low-stock and inactive-in-warehouse sections', () => {
+    it('renders exactly eight sections, including the unplaced, stale, low-stock and inactive-in-warehouse sections', () => {
         const wrapper = mountPage();
 
-        expect(wrapper.findAll('section')).toHaveLength(7);
+        expect(wrapper.findAll('section')).toHaveLength(8);
+    });
+
+    it('renders the unplaced pallets tile with its count, linking to the matching list with unplaced=true', () => {
+        const wrapper = mountPage();
+
+        const tile = tileByLabelAndHref(
+            wrapper,
+            t('dashboard.unplaced.count'),
+            palletsIndex({ query: { unplaced: true } }),
+        );
+
+        expect(tile?.props('value')).toBe(7);
+        expect(tile?.props('tone')).toBe('warning');
+        expect(tile?.findComponent(Truck).exists()).toBe(true);
+    });
+
+    it('carries the product and warehouse filters on the unplaced pallets tile link', () => {
+        const wrapper = mountPage({
+            filters: { product_id: [1], warehouse_ids: [2] },
+            warehouses: [{ id: 2, name: 'Annex' }],
+        });
+
+        const tile = tileByLabelAndHref(
+            wrapper,
+            t('dashboard.unplaced.count'),
+            palletsIndex({
+                query: { unplaced: true, product_id: [1], warehouse_ids: [2] },
+            }),
+        );
+
+        expect(tile).toBeDefined();
+    });
+
+    it('places the unplaced section right after the occupancy section', () => {
+        const wrapper = mountPage();
+
+        const headings = wrapper.findAll('section h2').map((h2) => h2.text());
+
+        expect(headings.slice(0, 3)).toEqual([
+            t('dashboard.occupancy.title'),
+            t('dashboard.unplaced.title'),
+            t('dashboard.expiring.title'),
+        ]);
     });
 
     it('renders every section heading', () => {
         const wrapper = mountPage();
 
         expect(wrapper.text()).toContain(t('dashboard.occupancy.title'));
+        expect(wrapper.text()).toContain(t('dashboard.unplaced.title'));
         expect(wrapper.text()).toContain(t('dashboard.expiring.title'));
         expect(wrapper.text()).toContain(t('dashboard.stale.title'));
         expect(wrapper.text()).toContain(t('dashboard.lowStock.title'));
@@ -693,6 +739,9 @@ describe('Dashboard Index', () => {
                     warehouse_ids: [2],
                 },
             }),
+        );
+        expect(hrefOf(t('dashboard.unplaced.count'))).toEqual(
+            palletsIndex({ query: { unplaced: true, warehouse_ids: [2] } }),
         );
         expect(hrefOf(t('dashboard.lowStock.count'))).toEqual(
             productsIndex({ query: { low_stock: true } }),

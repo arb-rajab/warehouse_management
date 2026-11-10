@@ -6,6 +6,7 @@ import {
     ChevronDown,
     CircleDashed,
     PackageOpen,
+    Truck,
 } from '@lucide/vue';
 import type { Component } from 'vue';
 import { index as dashboardIndex } from '@/actions/App/Http/Controllers/Admin/DashboardController';
@@ -19,7 +20,7 @@ import {
 } from '@/lib/filters';
 import { t } from '@/lib/i18n';
 
-const sections = ['overview', 'productFilter', 'warehouseFilter'];
+const sections = ['overview', 'unplaced', 'productFilter', 'warehouseFilter'];
 
 /**
  * Same action/icon pairing as Dashboard/Index.vue's ACTIVITY_ACTIONS
@@ -82,6 +83,17 @@ const activityActions: {
                     </HelpUiPreview>
                 </div>
             </template>
+
+            <HelpUiPreview v-if="section === 'unplaced'" class="mt-2">
+                <DashboardStatTile
+                    tabindex="-1"
+                    href="#"
+                    :value="0"
+                    tone="warning"
+                    :icon="Truck"
+                    :label="t('dashboard.unplaced.count')"
+                />
+            </HelpUiPreview>
 
             <HelpUiPreview v-if="section === 'productFilter'" class="mt-2">
                 <div>

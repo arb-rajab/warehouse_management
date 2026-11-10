@@ -8,6 +8,7 @@ use App\Models\ProductBarcode;
 use App\Models\Row;
 use App\Models\Setting;
 use App\Models\User;
+use App\Models\Warehouse;
 use App\Services\ProductBarcodeLabels;
 use Illuminate\Contracts\Cache\Lock;
 use Illuminate\Support\Carbon;
@@ -2085,4 +2086,52 @@ test('the product search answers a repeat request that already holds the current
     expect($etag)->not->toBeNull();
 
     $this->getJson('/admin/products/search?q=Widget', ['If-None-Match' => $etag])->assertNotModified();
+});
+
+test('pallets_count counts an unplaced pallet while the occupancy columns leave it out', function () {
+    actingAsAdmin();
+    $product = Product::factory()->create(['name' => 'Alpha Widgets']);
+    Pallet::factory()->create(['product_id' => $product->id, 'expiration_date' => '2020-01-01']);
+    unplacedPalletIn(Warehouse::firstOrCreateDefault(), ['product_id' => $product->id, 'expiration_date' => '2020-01-01']);
+
+    $this->get('/admin/products')->assertOk()->assertInertia(
+        fn (Assert $page) => $page->where('products.data.0.pallets_count', 2)
+            ->where('products.data.0.full_cells_count', 1)
+            ->where('products.data.0.opened_cells_count', 0)
+            ->where('products.data.0.expired_cells_count', 1)
+    );
+});
+
+test('the low_stock filter counts an unplaced pallet as stock', function () {
+    actingAsAdmin();
+    $held = Product::factory()->minimumPallets(1)->create();
+    unplacedPalletIn(Warehouse::firstOrCreateDefault(), ['product_id' => $held->id]);
+    $short = Product::factory()->minimumPallets(1)->create();
+
+    $this->get('/admin/products?low_stock=true')->assertOk()->assertInertia(
+        fn (Assert $page) => $page->has('products.data', 1)->where('products.data.0.id', $short->id)
+    );
+});
+
+test('the inactive filter keeps an inactive product held only as an unplaced pallet', function () {
+    actingAsAdmin();
+    $held = Product::factory()->create(['published' => false]);
+    unplacedPalletIn(Warehouse::firstOrCreateDefault(), ['product_id' => $held->id]);
+    Product::factory()->create(['published' => false]); // noise: nothing received
+
+    $this->get('/admin/products?inactive=true')->assertOk()->assertInertia(
+        fn (Assert $page) => $page->has('products.data', 1)->where('products.data.0.id', $held->id)
+    );
+});
+
+test('an occupancy filter on the products page does not match a product through an unplaced pallet', function () {
+    actingAsAdmin();
+    $onlyUnplaced = Product::factory()->create();
+    unplacedPalletIn(Warehouse::firstOrCreateDefault(), ['product_id' => $onlyUnplaced->id, 'expiration_date' => '2020-01-01']);
+    $placed = Product::factory()->create();
+    Pallet::factory()->create(['product_id' => $placed->id, 'expiration_date' => '2020-01-01']);
+
+    $this->get('/admin/products?expired=true')->assertOk()->assertInertia(
+        fn (Assert $page) => $page->has('products.data', 1)->where('products.data.0.id', $placed->id)
+    );
 });

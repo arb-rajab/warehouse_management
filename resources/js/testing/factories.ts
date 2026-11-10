@@ -274,6 +274,7 @@ export function matchingPallet(
 ): MatchingPallet {
     return {
         id: 1,
+        placed: true,
         state: 'full',
         expiration_date: '2026-09-01',
         added_at: '2026-08-01T10:00:00Z',
@@ -288,8 +289,25 @@ export function matchingPallet(
         },
         location: { row_letter: 'A', cell_number: 3, flat_number: 2 },
         cell_active: true,
+        receipt_id: null,
+        warehouse: null,
         ...overrides,
     };
+}
+
+/** A received pallet with no cell yet, waiting on its receipt's warehouse. */
+export function unplacedMatchingPallet(
+    overrides: Partial<MatchingPallet> = {},
+): MatchingPallet {
+    return matchingPallet({
+        placed: false,
+        state: null,
+        location: null,
+        cell_active: null,
+        receipt_id: 12,
+        warehouse: { id: 3, name: 'North' },
+        ...overrides,
+    });
 }
 
 export function cellLog(overrides: Partial<CellStatusLog> = {}): CellStatusLog {

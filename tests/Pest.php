@@ -15,10 +15,13 @@ use App\Models\OrderDetail;
 use App\Models\Pallet;
 use App\Models\Permission as StorePermission;
 use App\Models\Product;
+use App\Models\Receipt;
 use App\Models\Role as StoreRole;
+use App\Models\Row;
 use App\Models\Staff;
 use App\Models\StoreUser;
 use App\Models\User;
+use App\Models\Warehouse;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Schema\Blueprint;
@@ -790,6 +793,74 @@ function createTransferPair(Pallet $pallet, Cell $source, Cell $destination, str
     ]), $inAt);
 
     return [$transferredOut, $transferredIn];
+}
+
+/**
+ * A pallet placed in a fresh cell of a new row in the given warehouse (the row
+ * letter is drawn by the factory, so it cannot collide with another row).
+ *
+ * @param  array<string, mixed>  $attributes
+ */
+function placedPalletIn(Warehouse $warehouse, array $attributes = []): Pallet
+{
+    $row = Row::factory()->for($warehouse)->create(['cells_count' => 1, 'flats_count' => 1]);
+
+    return Pallet::factory()->create(['cell_id' => $row->cells()->value('id'), ...$attributes]);
+}
+
+/**
+ * A received pallet with no cell yet, on a finalized receipt of the given
+ * warehouse (`->for()` cannot pick it: see PalletFactory::unplaced()).
+ *
+ * @param  array<string, mixed>  $attributes
+ */
+function unplacedPalletIn(Warehouse $warehouse, array $attributes = []): Pallet
+{
+    $receipt = Receipt::factory()->finalized()->for($warehouse)->create();
+
+    return Pallet::factory()->unplaced()->create(['receipt_id' => $receipt->id, ...$attributes]);
+}
+
+/**
+ * The bytes of a photographed bill as a phone would send it: lines of text
+ * on paper with sensor noise (`$noise` around the paper's grey level, 255
+ * for random pixels), encoded at a phone's high quality. Unlike the solid
+ * black UploadedFile::fake()->image(), it compresses like a real photo. The
+ * noise is seeded, so the same call always gives the same bytes.
+ *
+ * @param  'jpg'|'png'|'webp'  $format
+ */
+function billPhoto(int $width, int $height, string $format = 'jpg', int $noise = 6, int $quality = 95): string
+{
+    mt_srand(7);
+    $tile = imagecreatetruecolor(97, 89);
+    $level = fn (): int => mt_rand(max(0, 220 - $noise), min(255, 220 + $noise));
+    for ($x = 0; $x < 97; $x++) {
+        for ($y = 0; $y < 89; $y++) {
+            imagesetpixel($tile, $x, $y, imagecolorallocate($tile, $level(), $level(), $level()));
+        }
+    }
+    mt_srand();
+
+    $image = imagecreatetruecolor($width, $height);
+    for ($x = 0; $x < $width; $x += 97) {
+        for ($y = 0; $y < $height; $y += 89) {
+            imagecopy($image, $tile, $x, $y, 0, 0, 97, 89);
+        }
+    }
+    $ink = imagecolorallocate($image, 30, 30, 40);
+    for ($y = 10; $y < $height - 10; $y += 36) {
+        imagestring($image, 5, 10, $y, str_repeat('PALLET 12  BOXES 48  EXP 2027-03-01  ', max(1, intdiv($width, 330))), $ink);
+    }
+
+    ob_start();
+    match ($format) {
+        'jpg' => imagejpeg($image, null, $quality),
+        'png' => imagepng($image),
+        'webp' => imagewebp($image, null, $quality),
+    };
+
+    return (string) ob_get_clean();
 }
 
 /**

@@ -8,6 +8,8 @@ use App\Http\Controllers\Api\V1\CellVerificationRoundController;
 use App\Http\Controllers\Api\V1\DashboardController;
 use App\Http\Controllers\Api\V1\PalletController;
 use App\Http\Controllers\Api\V1\ProductController;
+use App\Http\Controllers\Api\V1\ReceiptController;
+use App\Http\Controllers\Api\V1\ReceiptFileController;
 use App\Http\Controllers\Api\V1\RowController;
 use App\Http\Controllers\Api\V1\WarehouseController;
 use Illuminate\Support\Facades\Route;
@@ -37,7 +39,10 @@ Route::prefix('v1')->group(function () {
         Route::post('products/{product}/barcodes', [ProductController::class, 'storeBarcode'])->whereNumber('product')->name('api.v1.product-barcodes.store');
 
         Route::post('pallets', [PalletController::class, 'store'])->name('api.v1.pallets.store');
+        // Before pallets/{pallet}, so "unplaced" is not bound as a pallet id.
+        Route::get('pallets/unplaced', [PalletController::class, 'unplaced'])->middleware('cache.headers:private;etag')->name('api.v1.pallets.unplaced');
         Route::get('pallets/{pallet}', [PalletController::class, 'show'])->name('api.v1.pallets.show');
+        Route::post('pallets/{pallet}/place', [PalletController::class, 'place'])->name('api.v1.pallets.place');
         Route::post('pallets/{pallet}/open', [PalletController::class, 'open'])->name('api.v1.pallets.open');
         Route::post('pallets/{pallet}/remove-boxes', [PalletController::class, 'removeBoxes'])->name('api.v1.pallets.remove-boxes');
         Route::post('pallets/{pallet}/empty', [PalletController::class, 'empty'])->name('api.v1.pallets.empty');
@@ -51,5 +56,20 @@ Route::prefix('v1')->group(function () {
         Route::post('cell-verification-rounds/{cellVerificationRound}/complete', [CellVerificationRoundController::class, 'complete'])->name('api.v1.cell-verification-rounds.complete');
 
         Route::post('cell-verification-reports', [CellVerificationReportController::class, 'store'])->name('api.v1.cell-verification-reports.store');
+
+        // Truck receiving: WMS admins only (the same role gate as the admin
+        // web routes). Scoped bindings make a file of another receipt a
+        // 404. See .ai/rules/receiving.md.
+        Route::middleware('role:admin')->prefix('receipts')->name('api.v1.receipts.')->scopeBindings()->group(function () {
+            Route::get('/', [ReceiptController::class, 'index'])->name('index');
+            Route::post('/', [ReceiptController::class, 'store'])->name('store');
+            Route::get('{receipt}', [ReceiptController::class, 'show'])->name('show');
+            Route::put('{receipt}/pallets', [ReceiptController::class, 'updatePallets'])->name('pallets.update');
+            Route::post('{receipt}/finalize', [ReceiptController::class, 'finalize'])->name('finalize');
+
+            Route::post('{receipt}/files', [ReceiptFileController::class, 'store'])->name('files.store');
+            Route::get('{receipt}/files/{file}', [ReceiptFileController::class, 'show'])->name('files.show');
+            Route::delete('{receipt}/files/{file}', [ReceiptFileController::class, 'destroy'])->name('files.destroy');
+        });
     });
 });

@@ -20,9 +20,15 @@ use Illuminate\Support\Collection;
  *
  * Every stat honours the optional warehouse filter (`$warehouseIds`, null for
  * every warehouse) the same way it honours the product filter: cells through
- * their row, pallets through their cell, logs through the cell they were
+ * their row, pallets through their cell (an unplaced one through its receipt's warehouse), logs through the cell they were
  * written against, and the product counts (low stock, inactive in the
  * warehouse) through the pallets those warehouses hold.
+ *
+ * Received but unplaced pallets (no cell) count everywhere a pallet does: the
+ * product counts, the expired/expiring/stale cards (the matching pallets list
+ * those open lists them too, so a card agrees with its list) and their own
+ * `unplaced_pallets` card. Occupancy and activity are about cells and logs,
+ * which an unplaced pallet has none of.
  */
 trait BuildsDashboardStats
 {
@@ -54,6 +60,7 @@ trait BuildsDashboardStats
      *     occupancy: array{empty: int, full: int, opened: int},
      *     expiring: array{expired: int, windows: list<array{months: int, days: int, until: string, count: int}>, custom: array{days: int, until: string, count: int}},
      *     stale: array{days: int, count: int},
+     *     unplaced_pallets: array{count: int},
      *     low_stock: array{count: int},
      *     inactive_in_warehouse: array{count: int},
      *     activity_today: array{stored: int, opened: int, emptied: int, transferred: int},
@@ -64,6 +71,7 @@ trait BuildsDashboardStats
      *     occupancy: array{empty: int, full: int, opened: int},
      *     expiring: array{expired: int, windows: list<array{months: int, days: int, until: string, count: int}>, custom: array{days: int, until: string, count: int}},
      *     stale: array{days: int, count: int},
+     *     unplaced_pallets: array{count: int},
      *     low_stock: array{count: int},
      *     inactive_in_warehouse: array{count: int},
      *     activity_today: array{stored: int, opened: int, emptied: int, transferred: int},
@@ -81,6 +89,7 @@ trait BuildsDashboardStats
                     'occupancy' => $this->occupancy($productIds, $warehouseIds, $productPublished),
                     'expiring' => $this->expiring($today, $customExpiringDays, $productIds, $warehouseIds, $productPublished),
                     'stale' => $this->stale($today, $staleDays, $productIds, $warehouseIds, $productPublished),
+                    'unplaced_pallets' => $this->unplacedPallets($productIds, $warehouseIds, $productPublished),
                     'low_stock' => $this->lowStock($productIds, $warehouseIds, $productPublished),
                     'inactive_in_warehouse' => $this->inactiveInWarehouse($productIds, $warehouseIds, $productPublished),
                     'activity_today' => $this->activityCounts(CellStatusLog::query()->whereDate('created_at', $today)->forWarehouses($warehouseIds), $productIds, $productPublished),
@@ -220,6 +229,23 @@ trait BuildsDashboardStats
             'days' => $days,
             'count' => $query->count(),
         ];
+    }
+
+    /**
+     * Received pallets with no cell yet, in the selected warehouses (through
+     * their receipt's) — the list the card opens is the matching pallets page
+     * with `unplaced=true`, built from the same scopes.
+     *
+     * @param  list<int>|null  $productIds
+     * @param  list<int>|null  $warehouseIds
+     * @return array{count: int}
+     */
+    private function unplacedPallets(?array $productIds, ?array $warehouseIds, ?bool $productPublished = null): array
+    {
+        $query = Pallet::query()->unplaced()->forWarehouses($warehouseIds);
+        $this->applyProductFilters($query, $productIds, $productPublished);
+
+        return ['count' => $query->count()];
     }
 
     /**
