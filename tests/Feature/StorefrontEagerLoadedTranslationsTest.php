@@ -75,6 +75,22 @@ test('adding to the cart shows the added product and several frequently bought t
         ->and($response->json('modal_view'))->not->toContain('Other category');
 });
 
+test('adding to the cart as a signed-in customer shows the frequently bought together products with their prices', function () {
+    $category = 7;
+    [$product] = translatedProducts(1, ['category_id' => $category, 'name' => 'Added product']);
+    translatedProducts(2, ['category_id' => $category, 'featured' => 1, 'name' => 'Sibling', 'unit_price' => 4]);
+    $customer = createStoreUser('customer');
+    $customer->forceFill(['admin_verified' => 1])->save();
+    actingAsStoreUser($customer->fresh());
+
+    $response = $this->post(route('cart.addToCart'), ['id' => $product->id, 'quantity' => 1])->assertOk();
+
+    // A guest never reaches the price line, so the verified customer's view is what pins the attribute it reads.
+    expect($response->json('status'))->toBe(1)
+        ->and($response->json('modal_view'))->toContain('Sibling 1')
+        ->and($response->json('modal_view'))->toContain('Sibling 2');
+});
+
 test('a verified seller shop lists several of its products and none of another shop', function () {
     $seller = sellerAccount();
     $shopId = createShopFor($seller, 0);

@@ -65,7 +65,7 @@
                                 <h3 class="fw-400 fs-14 text-dark text-truncate-2 lh-1-4 mb-0 h-35px">
                                     <a href="{{ \App\Support\StorefrontUrl::to($related_product) }}" class="d-block text-reset hov-text-primary">{{ $related_product->getTranslation('name') }}</a>
                                 </h3>
-                                @if(Auth::check() && Auth::user()->admin_verifed)
+                                @if(Auth::check() && Auth::user()->admin_verified)
                                 <div class="fs-14 mt-3">
                                     <span class="fw-700 text-primary">{{ home_discounted_base_price($related_product) }}</span>
                                     @if(home_base_price($related_product) != home_discounted_base_price($related_product))
