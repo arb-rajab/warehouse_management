@@ -1,38 +1,54 @@
 import { Head, router } from '@inertiajs/vue3';
-import { mount } from '@vue/test-utils';
+import { flushPromises, mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { index as helpIndex } from '@/actions/App/Http/Controllers/Admin/HelpController';
 import {
     index as warehouseMapIndex,
     rows as warehouseMapRows,
 } from '@/actions/App/Http/Controllers/Admin/WarehouseMapController';
+import PalletTransferDialog from '@/components/PalletTransferDialog.vue';
+import SuccessBanner from '@/components/SuccessBanner.vue';
 import { t } from '@/lib/i18n';
+import { formatSlot } from '@/lib/location';
 import { defaultAuthProps, resetMocks } from '@/testing/inertiaPageMocks';
-import type { WarehouseSummary } from '@/types/admin';
+import type { PalletTransferTargets, WarehouseSummary } from '@/types/admin';
+import type { PalletTransferRequest } from '@/warehouse-map/main';
 import Index from './Index.vue';
 
 const {
     usePageMock,
     routerPostMock,
     routerGetMock,
+    routerReloadMock,
+    formSubmitMock,
     mountMapMock,
     disposeMock,
+    refreshMock,
 } = vi.hoisted(() => ({
     usePageMock: vi.fn(),
     routerPostMock: vi.fn(),
     routerGetMock: vi.fn(),
+    routerReloadMock: vi.fn(),
+    formSubmitMock: vi.fn(),
     mountMapMock: vi.fn(),
     disposeMock: vi.fn(),
+    refreshMock: vi.fn(),
 }));
 
 vi.mock('@inertiajs/vue3', async () => {
-    const { createLinkStub, headStub } = await import('@/testing/inertiaStubs');
+    const { createLinkStub, createUseFormStub, headStub } =
+        await import('@/testing/inertiaStubs');
 
     return {
         Head: headStub,
         Link: createLinkStub(),
         usePage: usePageMock,
-        router: { post: routerPostMock, get: routerGetMock },
+        useForm: createUseFormStub(formSubmitMock),
+        router: {
+            post: routerPostMock,
+            get: routerGetMock,
+            reload: routerReloadMock,
+        },
         useHttp: () => ({
             get: (
                 _url: string,
@@ -58,13 +74,36 @@ vi.mock('@/warehouse-map/main', () => ({
     mountWarehouseMap: mountMapMock,
 }));
 
+const transferTargets: PalletTransferTargets = {
+    warehouses: [
+        { id: 1, name: 'Main' },
+        { id: 5, name: 'Annex' },
+    ],
+    rows: [
+        { id: 1, letter: 'A', cells_count: 4, flats_count: 2, warehouse_id: 1 },
+        { id: 2, letter: 'B', cells_count: 4, flats_count: 2, warehouse_id: 5 },
+    ],
+};
+
+const transferRequest: PalletTransferRequest = {
+    palletId: 43,
+    rowLetter: 'A',
+    cellNumber: 3,
+    flatNumber: 2,
+    warehouseId: 1,
+    productName: 'Olive oil',
+    productArName: 'زيت زيتون',
+};
+
 function mountPage(
     warehouseIds: number[] | null = null,
     warehouses: WarehouseSummary[] = [],
+    flash: Record<string, string> | undefined = undefined,
 ) {
     usePageMock.mockReturnValue({
         url: '/admin/warehouse-map',
         props: defaultAuthProps(),
+        flash,
     });
 
     return mount(Index, {
@@ -78,13 +117,20 @@ function mountPage(
 
 describe('WarehouseMap Index', () => {
     beforeEach(() => {
-        resetMocks({ usePageMock, routerPostMock, routerGetMock });
+        resetMocks({
+            usePageMock,
+            routerPostMock,
+            routerGetMock,
+            routerReloadMock,
+            formSubmitMock,
+            refreshMock,
+        });
         window.localStorage.clear();
         mountMapMock.mockReset();
         disposeMock.mockReset();
         mountMapMock.mockReturnValue({
             dispose: disposeMock,
-            refresh: vi.fn(),
+            refresh: refreshMock,
         });
     });
 
@@ -212,6 +258,63 @@ describe('WarehouseMap Index', () => {
             warehouseMapIndex.url(),
             { warehouse_ids: ['5'] },
             { preserveState: false },
+        );
+        wrapper.unmount();
+    });
+
+    it("opens the transfer dialog on the map's request and loads the destinations once", async () => {
+        routerReloadMock.mockImplementation(
+            (options: {
+                onSuccess: (page: { props: Record<string, unknown> }) => void;
+            }) => options.onSuccess({ props: { transferTargets } }),
+        );
+        const wrapper = mountPage([1], [{ id: 1, name: 'Main' }]);
+        const { transferPallet } = mountMapMock.mock.calls[0][1];
+
+        transferPallet(transferRequest);
+        await flushPromises();
+
+        expect(routerReloadMock).toHaveBeenCalledTimes(1);
+        expect(routerReloadMock.mock.calls[0][0]).toMatchObject({
+            only: ['transferTargets'],
+        });
+
+        const dialog = wrapper.getComponent(PalletTransferDialog);
+
+        expect(dialog.props('open')).toBe(true);
+        expect(dialog.props('target')).toEqual({
+            palletId: 43,
+            location: formatSlot('A', 3, 2),
+            productName: 'Olive oil',
+            warehouseId: 1,
+        });
+        expect(dialog.props('targets')).toEqual(transferTargets);
+        expect(dialog.props('returnWarehouseIds')).toEqual([1]);
+
+        transferPallet({ ...transferRequest, palletId: 44 });
+        await flushPromises();
+
+        expect(routerReloadMock).toHaveBeenCalledTimes(1);
+        wrapper.unmount();
+    });
+
+    it('refreshes the map once a transfer succeeded', async () => {
+        const wrapper = mountPage();
+
+        wrapper.getComponent(PalletTransferDialog).vm.$emit('transferred');
+
+        expect(refreshMock).toHaveBeenCalledTimes(1);
+        wrapper.unmount();
+    });
+
+    it("shows a transfer's success message in the bar above the map", () => {
+        const wrapper = mountPage(null, [], {
+            success: 'Pallet has been transferred successfully',
+        });
+
+        expect(wrapper.findComponent(SuccessBanner).exists()).toBe(true);
+        expect(wrapper.get('[role="status"]').text()).toContain(
+            'Pallet has been transferred successfully',
         );
         wrapper.unmount();
     });

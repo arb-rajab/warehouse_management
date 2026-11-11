@@ -1,0 +1,9 @@
+{
+    "rules": {
+        "warehouse_id": ["nullable", "integer"],
+        "row_letter": ["required", "string", "max:2"],
+        "cell_number": ["required", "integer", "min:1"],
+        "flat_number": ["required", "integer", "min:1"],
+        "note": ["nullable", "string", "max:1000"]
+    }
+}

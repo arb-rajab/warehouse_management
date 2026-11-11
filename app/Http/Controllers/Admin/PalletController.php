@@ -20,6 +20,7 @@ use App\Models\Product;
 use App\Models\User;
 use App\Models\Warehouse;
 use App\Services\PalletActionService;
+use Closure;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -125,6 +126,13 @@ class PalletController extends Controller
         /** @var User $user */
         $user = $request->user();
 
+        // From the warehouse map, both outcomes land back on the map with its
+        // warehouse filter (its own banner shows the flash); otherwise on the
+        // source row page, as every other pallet action.
+        $redirect = $request->returnsToMap()
+            ? fn (): RedirectResponse => redirect()->route('admin.warehouse-map.index', array_filter(['warehouse_ids' => $request->warehouseIds()]))
+            : null;
+
         return $this->handle($this->cellFor($pallet), 'pallet_has_been_transferred_successfully', function () use ($request, $pallet, $user) {
             $this->palletActions->transfer(
                 $pallet,
@@ -132,7 +140,7 @@ class PalletController extends Controller
                 $user->id,
                 $request->input('note'),
             );
-        });
+        }, $redirect);
     }
 
     public function update(UpdatePalletRequest $request, Pallet $pallet): RedirectResponse
@@ -158,18 +166,23 @@ class PalletController extends Controller
      * surfacing an InvalidSlotStateException as a non-field `action` error for
      * ActionErrorBanner to render — the target state can legitimately have changed
      * since the page was rendered (another admin, or the mobile app).
+     * `$redirect` replaces the row page as the target of both outcomes.
+     *
+     * @param  (Closure(): RedirectResponse)|null  $redirect
      */
-    private function handle(Cell $cell, string $successKey, callable $action): RedirectResponse
+    private function handle(Cell $cell, string $successKey, callable $action, ?Closure $redirect = null): RedirectResponse
     {
+        $redirect ??= fn (): RedirectResponse => $this->redirectAfterCellAction($cell);
+
         try {
             $action();
         } catch (InvalidSlotStateException $e) {
-            return $this->redirectAfterCellAction($cell)->withErrors(['action' => $e->getMessage()]);
+            return $redirect()->withErrors(['action' => $e->getMessage()]);
         }
 
         $this->flashAdminSuccess($successKey);
 
-        return $this->redirectAfterCellAction($cell);
+        return $redirect();
     }
 
     /**

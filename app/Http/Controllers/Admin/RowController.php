@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Concerns\BuildsCellQrLabels;
+use App\Http\Controllers\Concerns\BuildsPalletTransferTargets;
 use App\Http\Controllers\Concerns\FlashesAdminSuccess;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\FilterRowsRequest;
@@ -27,7 +28,7 @@ use SimpleXMLElement;
 
 class RowController extends Controller
 {
-    use BuildsCellQrLabels, FlashesAdminSuccess;
+    use BuildsCellQrLabels, BuildsPalletTransferTargets, FlashesAdminSuccess;
 
     public function index(FilterRowsRequest $request): Response
     {
@@ -80,8 +81,8 @@ class RowController extends Controller
 
         return Inertia::render('Admin/Rows/Show', [
             'row' => new RowResource($row->loadHasPallets()->load(Row::WITH_WAREHOUSE)),
-            // The row switcher offers the rows of this row's own warehouse.
-            'rows' => Row::query()->select(Row::SELECT_COLUMNS)->where('warehouse_id', $row->warehouse_id)->orderBy('letter')->get(),
+            // The pallet transfer dialog's destinations, in every warehouse.
+            'transferTargets' => $this->palletTransferTargets(),
             'cells' => CellResource::collection(
                 $row->cells()
                     ->select(Cell::SELECT_COLUMNS)

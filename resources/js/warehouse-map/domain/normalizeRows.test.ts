@@ -92,6 +92,15 @@ describe('normalizeRows', () => {
         expect(warehouse.byId.get(21)?.row).toBe('B');
     });
 
+    it('keeps the row warehouse id on each slot, for a pallet transfer', () => {
+        const rows = apiRows();
+        rows[0].warehouse = { id: 7, name: 'Annex' };
+        const warehouse = normalizeRows(rows, NOW);
+
+        expect(warehouse.byId.get(12)?.warehouseId).toBe(7);
+        expect(warehouse.byId.get(21)?.warehouseId).toBeUndefined();
+    });
+
     it('builds the slot with its code, search text and expiry', () => {
         const slot = normalizeRows(apiRows(), NOW).byId.get(12)!;
 

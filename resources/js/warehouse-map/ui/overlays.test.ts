@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_SETTINGS } from '../config';
 import { buildMatchIndex } from '../domain/MatchIndex';
+import { columnKey, columnSlots } from '../domain/normalizeRows';
 import type { Slot } from '../domain/types';
 import { makeWarehouse } from '../testing/fixtures';
 import { click, fakeSlice, host, keyI18n } from '../testing/ui';
@@ -181,7 +182,7 @@ describe('SelectionPill', () => {
 });
 
 describe('RackDialog', () => {
-    function rack(partial = {}) {
+    function rack(partial = {}, transferPallet?: (slot: Slot) => void) {
         const root = host();
         const slice = fakeSlice({
             rack: { row: 'A', col: 2, level: null } as {
@@ -200,6 +201,7 @@ describe('RackDialog', () => {
             copyLink: vi.fn(),
             showIn3d: vi.fn(),
             showInPlan: vi.fn(),
+            ...(transferPallet ? { transferPallet } : {}),
         };
         const view = new RackDialog(root, slice, keyI18n(), intents);
 
@@ -263,6 +265,73 @@ describe('RackDialog', () => {
             new MouseEvent('pointerdown', { bubbles: true }),
         );
         expect(intents.close).toHaveBeenCalledTimes(2);
+        view.dispose();
+    });
+
+    it('offers no transfer while the host does not take one', () => {
+        const { view, root } = rack();
+
+        expect(root.querySelector('[data-action="transfer"]')).toBeNull();
+        view.dispose();
+    });
+
+    it('offers a transfer under each occupied in-service shelf and hands that slot to the host', () => {
+        const transferPallet = vi.fn();
+        const target = warehouse.slots.find(
+            (slot) => slot.pallet !== null && slot.active,
+        )!;
+        const { view, root } = rack(
+            { rack: { row: target.row, col: target.col, level: null } },
+            transferPallet,
+        );
+        const movable = columnSlots(warehouse, target.row, target.col).filter(
+            (slot) => slot.pallet !== null && slot.active,
+        );
+
+        expect(movable.length).toBeGreaterThan(0);
+        const buttons = [
+            ...root.querySelectorAll('[data-action="transfer"]'),
+        ] as HTMLElement[];
+
+        expect(buttons).toHaveLength(movable.length);
+
+        for (const button of buttons) {
+            const level = Number(
+                (button.closest('.wms-shelf') as HTMLElement).dataset.level,
+            );
+
+            expect(button.textContent).toContain('transferPallet');
+            click(button);
+            expect(transferPallet).toHaveBeenLastCalledWith(
+                movable.find((slot) => slot.level === level),
+            );
+        }
+
+        view.dispose();
+    });
+
+    it('offers no transfer from an empty or out-of-service shelf', () => {
+        const transferPallet = vi.fn();
+        const target = warehouse.slots.find((slot) => slot.pallet !== null)!;
+        const column = columnSlots(warehouse, target.row, target.col).map(
+            (slot) => ({ ...slot, active: false }),
+        );
+        const offline = {
+            ...warehouse,
+            byColumn: new Map(warehouse.byColumn).set(
+                columnKey(target.row, target.col),
+                column,
+            ),
+        };
+        const { view, root } = rack(
+            {
+                warehouse: offline,
+                rack: { row: target.row, col: target.col, level: null },
+            },
+            transferPallet,
+        );
+
+        expect(root.querySelector('[data-action="transfer"]')).toBeNull();
         view.dispose();
     });
 

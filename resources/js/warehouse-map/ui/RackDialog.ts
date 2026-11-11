@@ -22,6 +22,8 @@ export interface RackDialogIntents {
     copyLink(slot: Slot): void;
     showIn3d(slot: Slot): void;
     showInPlan(slot: Slot): void;
+    /** Opens the host's pallet transfer dialog for an occupied, in-service shelf; absent, no button shows. */
+    transferPallet?(slot: Slot): void;
 }
 
 /** One rack column: its shelves stacked, top level first, never rearranged. */
@@ -178,8 +180,33 @@ export class RackDialog extends SliceView<RackDialogState> {
                           el('span', { text: boxes }),
                       )
                     : null,
+                this.transferButton(slot),
             ),
         );
+    }
+
+    /** "Transfer…" under an occupied shelf; the host's dialog does the rest. */
+    private transferButton(slot: Slot): HTMLElement | null {
+        const transferPallet = this.intents.transferPallet;
+
+        if (!transferPallet || !slot.pallet || !slot.active) {
+            return null;
+        }
+
+        const button = el(
+            'button',
+            {
+                class: 'wms-btn wms-btn--soft wms-btn--sm',
+                attrs: { type: 'button' },
+                data: { action: 'transfer' },
+            },
+            icon('transfer'),
+            this.t('transferPallet'),
+        );
+
+        this.on(button, 'click', () => transferPallet(slot));
+
+        return el('div', { class: 'wms-shelf__actions' }, button);
     }
 
     private footer(slots: Slot[], rack: RackRef): HTMLElement {

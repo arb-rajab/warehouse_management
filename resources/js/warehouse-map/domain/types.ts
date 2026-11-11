@@ -32,6 +32,8 @@ export interface ApiRow {
     id: number;
     letter?: string;
     row_letter?: string;
+    /** The row's warehouse (`RowResource.warehouse`). */
+    warehouse?: { id: number; name: string } | null;
     cells?: ApiCell[] | null;
 }
 
@@ -65,6 +67,12 @@ export interface Slot {
     haystack: string;
     /** Whole days until the pallet expires (negative once expired), null without an expiry. */
     expiresInDays: number | null;
+    /**
+     * The id of the slot's row's warehouse, when the payload names it. The map
+     * does not tell warehouses apart (a filter on one does); it only hands this
+     * to the host with a pallet transfer, as the destination's default.
+     */
+    warehouseId?: number;
 }
 
 export interface WarehouseRow {

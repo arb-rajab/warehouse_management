@@ -171,6 +171,12 @@
     border: 1px solid var(--wms-border-light);
 }
 
+.wms-btn--sm {
+    height: 30px;
+    padding: 0 12px;
+    font-size: 12px;
+}
+
 .wms-btn--grow {
     flex: 1;
     justify-content: center;

@@ -79,8 +79,43 @@ export interface WarehouseMapOptions {
     fallbackMessages?: Messages;
     /** Changes the panel's language (it reloads the page). */
     switchLocale(locale: Locale): void;
+    /**
+     * Asks the host to transfer the pallet on an occupied shelf (the rack
+     * dialog's "Transfer…" button, shown only when this is given). The host
+     * owns the destination picker and the request; the map stays read-only.
+     */
+    transferPallet?(request: PalletTransferRequest): void;
     repository?: WarehouseRepository;
     storage?: StorageLike;
+}
+
+/** The pallet a rack dialog's "Transfer…" button hands to the host. */
+export interface PalletTransferRequest {
+    palletId: number;
+    rowLetter: string;
+    cellNumber: number;
+    flatNumber: number;
+    /** The pallet's current warehouse, when the rows payload names it. */
+    warehouseId: number | null;
+    productName: string;
+    productArName: string;
+}
+
+/** The transfer request for an occupied slot. */
+export function transferRequestOf(slot: Slot): PalletTransferRequest | null {
+    if (!slot.pallet) {
+        return null;
+    }
+
+    return {
+        palletId: slot.pallet.id,
+        rowLetter: slot.row,
+        cellNumber: slot.col,
+        flatNumber: slot.level,
+        warehouseId: slot.warehouseId ?? null,
+        productName: slot.pallet.productName,
+        productArName: slot.pallet.productArName,
+    };
 }
 
 export interface WarehouseMapHandle {
@@ -649,6 +684,15 @@ export function mountWarehouseMap(
                 copyLink: (slot) => void copyLink(slot),
                 showIn3d: (slot) => navigator_.showIn3d(slot),
                 showInPlan: (slot) => navigator_.showInPlan(slot),
+                transferPallet: options.transferPallet
+                    ? (slot) => {
+                          const request = transferRequestOf(slot);
+
+                          if (request) {
+                              options.transferPallet?.(request);
+                          }
+                      }
+                    : undefined,
             },
         ),
     );

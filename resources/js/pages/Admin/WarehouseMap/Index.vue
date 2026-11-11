@@ -8,17 +8,31 @@ import {
 } from '@/actions/App/Http/Controllers/Admin/WarehouseMapController';
 import { update as updateLocale } from '@/actions/App/Http/Controllers/LocaleController';
 import FilterWarehouseSelect from '@/components/FilterWarehouseSelect.vue';
+import PalletTransferDialog from '@/components/PalletTransferDialog.vue';
+import type { PalletTransferDialogTarget } from '@/components/PalletTransferDialog.vue';
+import SuccessBanner from '@/components/SuccessBanner.vue';
 import AdminLayout from '@/layouts/AdminLayout.vue';
 import { selectedCountLabel } from '@/lib/filters';
 import { i18n, isSupportedLocale, t } from '@/lib/i18n';
-import type { WarehouseFilterOptions, WarehouseFilters } from '@/types/admin';
+import { formatSlot } from '@/lib/location';
+import { productName } from '@/lib/productName';
+import type {
+    PalletTransferTargets,
+    WarehouseFilterOptions,
+    WarehouseFilters,
+} from '@/types/admin';
 import { mountWarehouseMap } from '@/warehouse-map/main';
-import type { WarehouseMapHandle } from '@/warehouse-map/main';
+import type {
+    PalletTransferRequest,
+    WarehouseMapHandle,
+} from '@/warehouse-map/main';
 import '../../../../css/warehouse-map/index.css';
 
 const props = defineProps<{
     filters: WarehouseFilters;
     filterOptions: WarehouseFilterOptions;
+    /** Sent only on the partial reload the transfer dialog asks for. */
+    transferTargets?: PalletTransferTargets;
 }>();
 
 const container = ref<HTMLElement | null>(null);
@@ -47,6 +61,51 @@ function onWarehouseIdsChange(ids: string[]): void {
         { warehouse_ids: ids },
         { preserveState: false },
     );
+}
+
+const transferOpen = ref(false);
+const transferTarget = ref<PalletTransferDialogTarget | null>(null);
+// Kept here, not read off the prop: a later visit of this page (the
+// transfer's own redirect) does not send the optional prop again.
+const transferTargets = ref<PalletTransferTargets | null>(
+    props.transferTargets ?? null,
+);
+
+/** Loads every warehouse's rows for the transfer dialog, once. */
+function loadTransferTargets(): void {
+    if (transferTargets.value) {
+        return;
+    }
+
+    router.reload({
+        only: ['transferTargets'],
+        onSuccess: (page) => {
+            transferTargets.value =
+                (page.props.transferTargets as
+                    PalletTransferTargets | undefined) ?? null;
+        },
+    });
+}
+
+/** The map's "Transfer…" on an occupied shelf. */
+function openTransfer(request: PalletTransferRequest): void {
+    transferTarget.value = {
+        palletId: request.palletId,
+        location: formatSlot(
+            request.rowLetter,
+            request.cellNumber,
+            request.flatNumber,
+        ),
+        productName: productName(request.productName, request.productArName),
+        warehouseId: request.warehouseId,
+    };
+    transferOpen.value = true;
+    loadTransferTargets();
+}
+
+/** The pallet moved: show it on the map without waiting for a focus. */
+function onTransferred(): void {
+    void map?.refresh();
 }
 
 /** The `warehouseMap` messages of a language (the map module takes plain dictionaries). */
@@ -78,6 +137,7 @@ onMounted(() => {
         messages: messagesOf(locale),
         fallbackMessages: messagesOf('en'),
         switchLocale,
+        transferPallet: openTransfer,
     });
 });
 
@@ -93,8 +153,13 @@ onBeforeUnmount(() => {
     <AdminLayout full-bleed>
         <div class="absolute inset-0 flex flex-col">
             <div
-                class="flex shrink-0 items-end justify-end border-b border-line bg-surface px-4 py-2"
+                class="flex shrink-0 flex-wrap items-end justify-end gap-x-4 gap-y-2 border-b border-line bg-surface px-4 py-2"
             >
+                <!-- The shell shows no banner on a full-bleed page; a
+                     transfer's success message shows here. -->
+                <div class="min-w-0 flex-1 [&>p]:mb-0">
+                    <SuccessBanner />
+                </div>
                 <FilterWarehouseSelect
                     id="warehouse-map-warehouse"
                     :model-value="(filters.warehouse_ids ?? []).map(String)"
@@ -111,5 +176,13 @@ onBeforeUnmount(() => {
                 data-testid="warehouse-map"
             ></div>
         </div>
+
+        <PalletTransferDialog
+            v-model:open="transferOpen"
+            :target="transferTarget"
+            :targets="transferTargets"
+            :return-warehouse-ids="filters.warehouse_ids"
+            @transferred="onTransferred"
+        />
     </AdminLayout>
 </template>

@@ -10,6 +10,7 @@ use App\Models\Row;
 use App\Models\Setting;
 use App\Models\Warehouse;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Inertia\Testing\AssertableInertia as Assert;
 
 test('the matching pallets list orders by expiration date ascending, then add date ascending, with a null expiration sorting last', function () {
@@ -1312,3 +1313,280 @@ test('an unplaced pallet is a 404 on every admin pallet action, which are offere
     'empty' => ['POST', '/empty', []],
     'transfer' => ['POST', '/transfer', ['row_letter' => 'A', 'cell_number' => 1, 'flat_number' => 1]],
 ]);
+
+test('an admin can transfer a pallet to a cell in another warehouse, logging both cells', function () {
+    $admin = actingAsAdmin();
+    $annex = Warehouse::factory()->create(['name' => 'Annex']);
+    $sourceRow = Row::factory()->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 1]);
+    $sourceCell = $sourceRow->cells()->first();
+    $pallet = Pallet::factory()->create(['cell_id' => $sourceCell->id, 'remaining_boxes' => 9]);
+    $destinationRow = Row::factory()->for($annex)->create(['letter' => 'C', 'cells_count' => 2, 'flats_count' => 2]);
+    $destinationCell = $destinationRow->cells()->where('cell_number', 2)->where('flat_number', 2)->first();
+
+    $this->post("/admin/pallets/{$pallet->id}/transfer", [
+        'warehouse_id' => $annex->id,
+        'row_letter' => 'C',
+        'cell_number' => 2,
+        'flat_number' => 2,
+        'note' => 'To the annex.',
+    ])
+        ->assertRedirect(route('admin.rows.show', $sourceRow->routeParameters()))
+        ->assertInertiaFlash('success', 'Pallet has been transferred successfully');
+
+    expect($pallet->refresh()->cell_id)->toBe($destinationCell->id)
+        ->and($pallet->cell->row->warehouse_id)->toBe($annex->id)
+        ->and($sourceCell->refresh()->state)->toBe(CellState::Empty)
+        ->and($destinationCell->refresh()->state)->toBe(CellState::Full);
+
+    $this->assertDatabaseHas('cell_status_logs', [
+        'cell_id' => $sourceCell->id,
+        'related_cell_id' => $destinationCell->id,
+        'action' => CellLogAction::TransferredOut->value,
+        'pallet_id' => $pallet->id,
+        'user_id' => $admin->id,
+        'boxes_count' => 9,
+        'note' => 'To the annex.',
+    ]);
+    $this->assertDatabaseHas('cell_status_logs', [
+        'cell_id' => $destinationCell->id,
+        'related_cell_id' => $sourceCell->id,
+        'action' => CellLogAction::TransferredIn->value,
+        'pallet_id' => $pallet->id,
+        'user_id' => $admin->id,
+        'boxes_count' => 9,
+        'note' => 'To the annex.',
+    ]);
+    $this->assertDatabaseCount('cell_status_logs', 2);
+});
+
+test('a transfer to a row letter two warehouses use goes to the row of the named warehouse', function () {
+    actingAsAdmin();
+    $annex = Warehouse::factory()->create(['name' => 'Annex']);
+    $sourceRow = Row::factory()->create(['letter' => 'A', 'cells_count' => 2, 'flats_count' => 1]);
+    $sourceCell = $sourceRow->cells()->where('cell_number', 1)->first();
+    $pallet = Pallet::factory()->create(['cell_id' => $sourceCell->id]);
+    $annexRow = Row::factory()->for($annex)->create(['letter' => 'A', 'cells_count' => 2, 'flats_count' => 1]);
+    $annexCell = $annexRow->cells()->where('cell_number', 1)->first();
+
+    $this->post("/admin/pallets/{$pallet->id}/transfer", [
+        'warehouse_id' => $annex->id,
+        'row_letter' => 'A',
+        'cell_number' => 1,
+        'flat_number' => 1,
+    ])
+        // The source letter is shared, so the row page link names its warehouse.
+        ->assertRedirect(route('admin.rows.show', ['row' => 'A', 'warehouse_id' => $sourceRow->warehouse_id]))
+        ->assertInertiaFlash('success', 'Pallet has been transferred successfully');
+
+    expect($pallet->refresh()->cell_id)->toBe($annexCell->id);
+    $this->assertDatabaseHas('cell_status_logs', [
+        'cell_id' => $annexCell->id,
+        'related_cell_id' => $sourceCell->id,
+        'action' => CellLogAction::TransferredIn->value,
+    ]);
+});
+
+test('a transfer to a row letter two warehouses use, naming no warehouse, is refused on warehouse_id', function () {
+    actingAsAdmin();
+    $annex = Warehouse::factory()->create(['name' => 'Annex']);
+    $sourceRow = Row::factory()->create(['letter' => 'A', 'cells_count' => 2, 'flats_count' => 1]);
+    $pallet = Pallet::factory()->create(['cell_id' => $sourceRow->cells()->where('cell_number', 1)->first()->id]);
+    Row::factory()->for($annex)->create(['letter' => 'A', 'cells_count' => 2, 'flats_count' => 1]);
+
+    $this->post("/admin/pallets/{$pallet->id}/transfer", [
+        'row_letter' => 'A',
+        'cell_number' => 2,
+        'flat_number' => 1,
+    ])
+        ->assertSessionHasErrors(['warehouse_id' => __('messages.row_letter_in_several_warehouses')])
+        ->assertInertiaFlashMissing('success');
+
+    expect($pallet->refresh()->cell_id)->toBe($sourceRow->cells()->where('cell_number', 1)->first()->id);
+    $this->assertDatabaseCount('cell_status_logs', 0);
+});
+
+test('a transfer naming a warehouse without that row letter is refused and nothing moves', function () {
+    actingAsAdmin();
+    $annex = Warehouse::factory()->create(['name' => 'Annex']);
+    $sourceRow = Row::factory()->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 1]);
+    $pallet = Pallet::factory()->create(['cell_id' => $sourceRow->cells()->first()->id]);
+    Row::factory()->create(['letter' => 'B', 'cells_count' => 1, 'flats_count' => 1]);
+
+    $this->post("/admin/pallets/{$pallet->id}/transfer", [
+        'warehouse_id' => $annex->id,
+        'row_letter' => 'B',
+        'cell_number' => 1,
+        'flat_number' => 1,
+    ])
+        ->assertSessionHasErrors(['cell_number' => __('messages.slot_does_not_exist')])
+        ->assertInertiaFlashMissing('success');
+
+    expect($pallet->refresh()->cell_id)->toBe($sourceRow->cells()->first()->id);
+    $this->assertDatabaseCount('cell_status_logs', 0);
+});
+
+test('a transfer naming a warehouse that does not exist is refused on warehouse_id', function () {
+    actingAsAdmin();
+    $sourceRow = Row::factory()->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 1]);
+    $pallet = Pallet::factory()->create(['cell_id' => $sourceRow->cells()->first()->id]);
+    Row::factory()->create(['letter' => 'B', 'cells_count' => 1, 'flats_count' => 1]);
+
+    $this->post("/admin/pallets/{$pallet->id}/transfer", [
+        'warehouse_id' => 999999,
+        'row_letter' => 'B',
+        'cell_number' => 1,
+        'flat_number' => 1,
+    ])->assertSessionHasErrors(['warehouse_id']);
+
+    expect($pallet->refresh()->cell_id)->toBe($sourceRow->cells()->first()->id);
+});
+
+test('a transfer to a full cell in another warehouse is refused with an action error, no flash and no log', function () {
+    actingAsAdmin();
+    $annex = Warehouse::factory()->create(['name' => 'Annex']);
+    $sourceRow = Row::factory()->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 1]);
+    $sourceCell = $sourceRow->cells()->first();
+    $pallet = Pallet::factory()->create(['cell_id' => $sourceCell->id]);
+    $annexRow = Row::factory()->for($annex)->create(['letter' => 'C', 'cells_count' => 1, 'flats_count' => 1]);
+    $occupied = Pallet::factory()->create(['cell_id' => $annexRow->cells()->first()->id]);
+    $logsBefore = DB::table('cell_status_logs')->count();
+
+    $this->post("/admin/pallets/{$pallet->id}/transfer", [
+        'warehouse_id' => $annex->id,
+        'row_letter' => 'C',
+        'cell_number' => 1,
+        'flat_number' => 1,
+    ])
+        ->assertRedirect(route('admin.rows.show', $sourceRow->routeParameters()))
+        ->assertSessionHasErrors(['action' => __('messages.destination_not_empty')])
+        ->assertInertiaFlashMissing('success');
+
+    expect($pallet->refresh()->cell_id)->toBe($sourceCell->id)
+        ->and($occupied->refresh()->cell_id)->toBe($annexRow->cells()->first()->id);
+    expect(DB::table('cell_status_logs')->count())->toBe($logsBefore);
+});
+
+test('a transfer to an inactive cell in another warehouse is refused with an action error', function () {
+    actingAsAdmin();
+    $annex = Warehouse::factory()->create(['name' => 'Annex']);
+    $sourceRow = Row::factory()->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 1]);
+    $sourceCell = $sourceRow->cells()->first();
+    $pallet = Pallet::factory()->create(['cell_id' => $sourceCell->id]);
+    $annexRow = Row::factory()->for($annex)->create(['letter' => 'C', 'cells_count' => 1, 'flats_count' => 1]);
+    $annexRow->cells()->first()->update(['is_active' => false]);
+
+    $this->post("/admin/pallets/{$pallet->id}/transfer", [
+        'warehouse_id' => $annex->id,
+        'row_letter' => 'C',
+        'cell_number' => 1,
+        'flat_number' => 1,
+    ])
+        ->assertSessionHasErrors(['action' => __('messages.slot_inactive')])
+        ->assertInertiaFlashMissing('success');
+
+    expect($pallet->refresh()->cell_id)->toBe($sourceCell->id);
+});
+
+test('a transfer from the warehouse map returns to the map with its warehouse filter and flashes there', function () {
+    actingAsAdmin();
+    $annex = Warehouse::factory()->create(['name' => 'Annex']);
+    $sourceRow = Row::factory()->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 1]);
+    $pallet = Pallet::factory()->create(['cell_id' => $sourceRow->cells()->first()->id]);
+    $annexRow = Row::factory()->for($annex)->create(['letter' => 'C', 'cells_count' => 1, 'flats_count' => 1]);
+
+    $this->post("/admin/pallets/{$pallet->id}/transfer", [
+        'warehouse_id' => $annex->id,
+        'row_letter' => 'C',
+        'cell_number' => 1,
+        'flat_number' => 1,
+        'return_to' => 'map',
+        'warehouse_ids' => [$sourceRow->warehouse_id, $annex->id],
+    ])
+        ->assertRedirect(route('admin.warehouse-map.index', ['warehouse_ids' => [$sourceRow->warehouse_id, $annex->id]]))
+        ->assertInertiaFlash('success', 'Pallet has been transferred successfully');
+
+    expect($pallet->refresh()->cell_id)->toBe($annexRow->cells()->first()->id);
+});
+
+test('a transfer from the unfiltered warehouse map returns to the unfiltered map', function () {
+    actingAsAdmin();
+    $sourceRow = Row::factory()->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 1]);
+    $pallet = Pallet::factory()->create(['cell_id' => $sourceRow->cells()->first()->id]);
+    Row::factory()->create(['letter' => 'B', 'cells_count' => 1, 'flats_count' => 1]);
+
+    $this->post("/admin/pallets/{$pallet->id}/transfer", [
+        'row_letter' => 'B',
+        'cell_number' => 1,
+        'flat_number' => 1,
+        'return_to' => 'map',
+    ])
+        ->assertRedirect(route('admin.warehouse-map.index'))
+        ->assertInertiaFlash('success', 'Pallet has been transferred successfully');
+});
+
+test('a refused transfer from the warehouse map returns to the map with the action error and no flash', function () {
+    actingAsAdmin();
+    $sourceRow = Row::factory()->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 1]);
+    $sourceCell = $sourceRow->cells()->first();
+    $pallet = Pallet::factory()->create(['cell_id' => $sourceCell->id]);
+    $destinationRow = Row::factory()->create(['letter' => 'B', 'cells_count' => 1, 'flats_count' => 1]);
+    Pallet::factory()->create(['cell_id' => $destinationRow->cells()->first()->id]);
+
+    $this->post("/admin/pallets/{$pallet->id}/transfer", [
+        'row_letter' => 'B',
+        'cell_number' => 1,
+        'flat_number' => 1,
+        'return_to' => 'map',
+    ])
+        ->assertRedirect(route('admin.warehouse-map.index'))
+        ->assertSessionHasErrors(['action' => __('messages.destination_not_empty')])
+        ->assertInertiaFlashMissing('success');
+
+    expect($pallet->refresh()->cell_id)->toBe($sourceCell->id);
+});
+
+test('a transfer refuses an unknown return target and an unknown warehouse filter', function () {
+    actingAsAdmin();
+    $sourceRow = Row::factory()->create(['letter' => 'A', 'cells_count' => 1, 'flats_count' => 1]);
+    $pallet = Pallet::factory()->create(['cell_id' => $sourceRow->cells()->first()->id]);
+    Row::factory()->create(['letter' => 'B', 'cells_count' => 1, 'flats_count' => 1]);
+    $payload = ['row_letter' => 'B', 'cell_number' => 1, 'flat_number' => 1];
+
+    $this->post("/admin/pallets/{$pallet->id}/transfer", [...$payload, 'return_to' => 'dashboard'])
+        ->assertSessionHasErrors('return_to');
+    $this->post("/admin/pallets/{$pallet->id}/transfer", [...$payload, 'return_to' => 'map', 'warehouse_ids' => [999999]])
+        ->assertSessionHasErrors('warehouse_ids.0');
+
+    expect($pallet->refresh()->cell_id)->toBe($sourceRow->cells()->first()->id);
+});
+
+test('the row page offers transfer destinations in every warehouse', function () {
+    actingAsAdmin();
+    $annex = Warehouse::factory()->create(['name' => 'Annex']);
+    $row = Row::factory()->create(['letter' => 'A', 'cells_count' => 2, 'flats_count' => 1]);
+    $annexRow = Row::factory()->for($annex)->create(['letter' => 'C', 'cells_count' => 3, 'flats_count' => 2]);
+
+    $this->get("/admin/rows/{$row->letter}")->assertOk()->assertInertia(
+        fn (Assert $page) => $page->component('Admin/Rows/Show')
+            ->where('transferTargets.warehouses', [
+                ['id' => $annex->id, 'name' => 'Annex'],
+                ['id' => $row->warehouse_id, 'name' => Warehouse::DEFAULT_NAME],
+            ])
+            ->has('transferTargets.rows', 2)
+            ->where('transferTargets.rows.0', [
+                'id' => $row->id,
+                'warehouse_id' => $row->warehouse_id,
+                'letter' => 'A',
+                'cells_count' => 2,
+                'flats_count' => 1,
+            ])
+            ->where('transferTargets.rows.1', [
+                'id' => $annexRow->id,
+                'warehouse_id' => $annex->id,
+                'letter' => 'C',
+                'cells_count' => 3,
+                'flats_count' => 2,
+            ])
+            ->missing('rows')
+    );
+});

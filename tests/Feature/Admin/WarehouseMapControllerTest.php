@@ -191,3 +191,28 @@ test('the warehouse map rows can be narrowed to the selected warehouses, each ro
         ->and($filtered->json('0.warehouse'))->toEqual(['id' => $north->id, 'name' => 'North'])
         ->and(collect($all->json())->pluck('id')->sort()->values()->all())->toBe([$northRow->id, $defaultRow->id]);
 });
+
+test('the warehouse map screen sends the pallet transfer destinations only when the transfer dialog asks for them', function () {
+    actingAsAdmin();
+    $annex = Warehouse::factory()->create(['name' => 'Annex']);
+    $defaultRow = Row::factory()->create(['letter' => 'A', 'cells_count' => 2, 'flats_count' => 1]);
+    $annexRow = Row::factory()->for($annex)->create(['letter' => 'A', 'cells_count' => 3, 'flats_count' => 2]);
+
+    $this->get('/admin/warehouse-map')->assertOk()->assertInertia(
+        fn (Assert $page) => $page->component('Admin/WarehouseMap/Index')
+            ->missing('transferTargets')
+            ->reloadOnly('transferTargets', fn (Assert $reload) => $reload
+                ->where('transferTargets.warehouses', [
+                    ['id' => $annex->id, 'name' => 'Annex'],
+                    ['id' => $defaultRow->warehouse_id, 'name' => Warehouse::DEFAULT_NAME],
+                ])
+                ->has('transferTargets.rows', 2)
+                ->where('transferTargets.rows.0.id', $defaultRow->id)
+                ->where('transferTargets.rows.0.warehouse_id', $defaultRow->warehouse_id)
+                ->where('transferTargets.rows.1.id', $annexRow->id)
+                ->where('transferTargets.rows.1.warehouse_id', $annex->id)
+                ->where('transferTargets.rows.1.cells_count', 3)
+                ->where('transferTargets.rows.1.flats_count', 2)
+            )
+    );
+});

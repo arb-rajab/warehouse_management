@@ -446,10 +446,13 @@
                 "submit": "Empty pallet"
             },
             "transfer": {
+                "warehouseLabel": "Destination warehouse",
                 "rowLabel": "Destination row",
                 "cellNumberLabel": "Destination cell number",
                 "flatNumberLabel": "Destination level",
-                "submit": "Transfer pallet"
+                "submit": "Transfer pallet",
+                "title": "Transfer pallet — {location}",
+                "loading": "Loading destinations…"
             },
             "noteLabel": "Note (optional)",
             "notePlaceholder": "Reason for this change…",
@@ -617,6 +620,7 @@
         "sBob": "Camera bob while walking",
         "sMagnet": "Snap back after peeking (guided)",
         "copyLink": "Copy link",
+        "transferPallet": "Transfer…",
         "copied": "Link copied",
         "toolbar": "Warehouse map toolbar",
         "viewToggle": "Map view",
@@ -843,11 +847,16 @@
             },
             "managingPallets": {
                 "heading": "Storing, opening, and moving pallets",
-                "body": "Click a cell to manage what's in it: store a new pallet in an empty cell, open a full pallet to start taking boxes out, remove more boxes from an already-open pallet, empty a pallet completely, transfer it to a different cell, or edit its details. Use Edit to correct a mistyped product, expiration date, or box count — that keeps the cell's history, unlike emptying and storing again. Every change is recorded in the activity log automatically."
+                "body": "Click a cell to manage what's in it: store a new pallet in an empty cell, open a full pallet to start taking boxes out, remove more boxes from an already-open pallet, empty a pallet completely, transfer it to a different cell, or edit its details. Use Edit to correct a mistyped product, expiration date, or box count — that keeps the cell's history, unlike emptying and storing again. Every change is recorded in the activity log automatically.",
+                "transferBody": "To move a pallet to another warehouse, choose the destination warehouse first: the row list then shows that warehouse's rows. The warehouse map offers the same transfer: open a rack, then press Transfer… under an occupied shelf."
             },
             "deactivating": {
                 "heading": "Deactivating a cell",
                 "body": "If a cell becomes unusable — damaged shelving, for example — deactivate it so it can no longer be used to store, open, or move pallets, until you reactivate it again."
+            },
+            "preview": {
+                "mainWarehouse": "Main warehouse",
+                "otherWarehouse": "Annex"
             }
         },
         "users": {

@@ -178,7 +178,17 @@ export interface CellMapRow {
     cells_count: number;
     flats_count: number;
     /** The row's warehouse, which a transfer to this row names (a letter alone is unique per warehouse only). */
-    warehouse_id?: number;
+    warehouse_id: number;
+}
+
+/**
+ * Where an admin pallet transfer can go (`BuildsPalletTransferTargets`): every
+ * warehouse, and every row of every warehouse. The transfer fields list the
+ * rows of the chosen warehouse.
+ */
+export interface PalletTransferTargets {
+    warehouses: WarehouseSummary[];
+    rows: CellMapRow[];
 }
 
 /**

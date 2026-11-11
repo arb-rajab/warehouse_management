@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemoryStorage } from './data/Storage';
 import type { WarehouseRepository } from './data/WarehouseRepository';
-import { mountWarehouseMap } from './main';
+import { mountWarehouseMap, transferRequestOf } from './main';
 import type { WarehouseMapHandle } from './main';
 import { installFakeCanvas } from './testing/canvas';
 import { makeWarehouse } from './testing/fixtures';
@@ -245,6 +245,71 @@ describe('mountWarehouseMap', () => {
         expect(root.dataset.modal).toBe('false');
     });
 
+    it("hands an occupied shelf's pallet to the host for a transfer", async () => {
+        const transferPallet = vi.fn();
+        const { container } = await mount({ transferPallet });
+        const slot = warehouse.slots.find(
+            (candidate) => candidate.pallet !== null && candidate.active,
+        )!;
+        const tile = container.querySelector<HTMLElement>(
+            `.wms-tile[data-row="${slot.row}"][data-col="${slot.col}"]`,
+        )!;
+
+        document.elementFromPoint = () => tile;
+        const plan = container.querySelector('.wms-plan')!;
+
+        for (const type of ['pointerdown', 'pointerup']) {
+            plan.dispatchEvent(
+                Object.assign(
+                    new MouseEvent(type, {
+                        clientX: 3,
+                        clientY: 3,
+                        bubbles: true,
+                    }),
+                    { pointerId: 1 },
+                ),
+            );
+        }
+
+        Reflect.deleteProperty(document, 'elementFromPoint');
+
+        const button = container.querySelector<HTMLElement>(
+            `.wms-shelf[data-level="${slot.level}"] [data-action="transfer"]`,
+        )!;
+
+        button.click();
+        expect(transferPallet).toHaveBeenCalledWith(transferRequestOf(slot));
+    });
+
+    it('offers no transfer button without a host to take it', async () => {
+        const { container } = await mount();
+        const slot = warehouse.slots.find((candidate) => candidate.pallet)!;
+        const tile = container.querySelector<HTMLElement>(
+            `.wms-tile[data-row="${slot.row}"][data-col="${slot.col}"]`,
+        )!;
+
+        document.elementFromPoint = () => tile;
+        const plan = container.querySelector('.wms-plan')!;
+
+        for (const type of ['pointerdown', 'pointerup']) {
+            plan.dispatchEvent(
+                Object.assign(
+                    new MouseEvent(type, {
+                        clientX: 3,
+                        clientY: 3,
+                        bubbles: true,
+                    }),
+                    { pointerId: 1 },
+                ),
+            );
+        }
+
+        Reflect.deleteProperty(document, 'elementFromPoint');
+
+        expect(container.querySelector('.wms-backdrop.is-open')).not.toBeNull();
+        expect(container.querySelector('[data-action="transfer"]')).toBeNull();
+    });
+
     it('chooses a floor', async () => {
         const { container } = await mount();
         const floor2 =
@@ -386,5 +451,28 @@ describe('mountWarehouseMap', () => {
         handle = null;
 
         expect(container.querySelector('.wms')).toBeNull();
+    });
+});
+
+describe('transferRequestOf', () => {
+    it("describes an occupied slot's pallet, its place and its warehouse", () => {
+        const slot = warehouse.slots.find((candidate) => candidate.pallet)!;
+
+        expect(transferRequestOf({ ...slot, warehouseId: 4 })).toEqual({
+            palletId: slot.pallet!.id,
+            rowLetter: slot.row,
+            cellNumber: slot.col,
+            flatNumber: slot.level,
+            warehouseId: 4,
+            productName: slot.pallet!.productName,
+            productArName: slot.pallet!.productArName,
+        });
+        expect(transferRequestOf(slot)?.warehouseId).toBeNull();
+    });
+
+    it('is null for an empty slot', () => {
+        const slot = warehouse.slots.find((candidate) => !candidate.pallet)!;
+
+        expect(transferRequestOf(slot)).toBeNull();
     });
 });

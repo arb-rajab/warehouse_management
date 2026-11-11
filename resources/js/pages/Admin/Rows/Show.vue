@@ -23,15 +23,15 @@ import { usePageError } from '@/lib/pageErrors';
 import { usePulse } from '@/lib/usePulse';
 import type {
     Cell,
-    CellMapRow,
     CellSlotLocation,
+    PalletTransferTargets,
     ProductFilterOptions,
     Row,
 } from '@/types/admin';
 
 const props = defineProps<{
     row: Row;
-    rows: CellMapRow[];
+    transferTargets: PalletTransferTargets;
     cells: Cell[];
     today: string;
     filterOptions: ProductFilterOptions;
@@ -283,7 +283,8 @@ const palletActionError = usePageError('action');
             v-model:open="palletActionsDialogOpen"
             :cell="palletActionsCell"
             :label="palletActionsLabel"
-            :rows="rows"
+            :transfer-targets="transferTargets"
+            :warehouse-id="row.warehouse.id"
         />
     </AdminLayout>
 </template>

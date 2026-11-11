@@ -29,6 +29,12 @@ paths:
   - 'resources/js/lib/warehouseRules.json'
   - 'resources/js/pages/Admin/Warehouses/{Create,Edit}.vue'
   - 'tests/Feature/Admin/WarehouseClientValidationParityTest.php'
+  - 'resources/js/lib/palletTransferForm.ts'
+  - 'resources/js/lib/palletTransferRules.json'
+  - 'resources/js/components/PalletTransferFields.vue'
+  - 'resources/js/components/PalletTransferDialog.vue'
+  - 'resources/js/components/PalletActionsDialog.vue'
+  - 'tests/Feature/Admin/TransferPalletClientValidationParityTest.php'
 ---
 
 # Forms validate in the browser first
@@ -40,7 +46,15 @@ rules update the client copy in the same change, and every new form should
 adopt the layer. The physical and digital product create/edit forms and the WMS
 warehouse create/edit forms use it today; other forms adopt it one at a time
 (the warehouse copy is `lib/warehouseRules.json`, checked by
-`WarehouseClientValidationParityTest`).
+`WarehouseClientValidationParityTest`). The admin pallet transfer (the row
+page's pallet dialog, transfer tab, and the warehouse map's transfer dialog)
+uses `lib/palletTransferRules.json`, checked by
+`TransferPalletClientValidationParityTest`: the `exists` rules stay on the
+server, and `return_to`/`warehouse_ids` have no control. Those dialogs are not
+`ResourceFormPage`s: they call `useFormValidation` themselves (its handlers on
+the `<form>`, `onBefore()` before `form.submit`, `onStart` on the visit) and
+read inline errors through `errorsFor(form.errors)`; the banner shows only the
+errors no field shows (`nonFieldErrors`).
 
 ## The layer
 

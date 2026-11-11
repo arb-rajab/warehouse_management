@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Concerns\BuildsPalletTransferTargets;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\FilterWarehouseMapRequest;
 use App\Http\Resources\RowResource;
@@ -13,12 +14,16 @@ use Inertia\Response;
 
 class WarehouseMapController extends Controller
 {
+    use BuildsPalletTransferTargets;
+
     /**
      * The 2D / 3D warehouse map page. It carries no row data of its own: the
      * page fetches {@see self::rows()} so that it can revalidate it (ETag)
      * whenever the tab regains focus, without reloading the Inertia page. It
      * does carry the warehouse filter (`warehouse_ids[]`) and the selected
-     * warehouses' labels, the same shape as the dashboard's.
+     * warehouses' labels, the same shape as the dashboard's. The pallet
+     * transfer dialog's destinations (`transferTargets`) are sent only when
+     * the page asks for them (a partial reload when the dialog first opens).
      */
     public function index(FilterWarehouseMapRequest $request): Response
     {
@@ -31,6 +36,7 @@ class WarehouseMapController extends Controller
             'filterOptions' => [
                 'warehouses' => Warehouse::selectedOptions($warehouseIds ?? []),
             ],
+            'transferTargets' => Inertia::optional(fn (): array => $this->palletTransferTargets()),
         ]);
     }
 
