@@ -34,7 +34,7 @@ class UpdateIntegrationIdsRequest extends FormRequest
             'settings.*' => ['required', 'boolean'],
         ];
 
-        foreach (array_values($config['ids']) as $field) {
+        foreach (array_values($config['ids'] ?? []) as $field) {
             $rules[$field] = ['nullable', 'string', 'max:40', 'regex:'.StoreIntegrationIds::PATTERNS[$field]];
         }
 
@@ -56,7 +56,7 @@ class UpdateIntegrationIdsRequest extends FormRequest
     {
         return [function (Validator $validator): void {
             $page = lcfirst(substr($this->route()->getActionMethod(), strlen('update')));
-            $allowed = ['settings', '_token', '_method', ...array_values(SettingsController::PAGES[$page]['ids'])];
+            $allowed = ['settings', '_token', '_method', ...array_values(SettingsController::PAGES[$page]['ids'] ?? [])];
 
             if (array_diff(array_keys($this->all()), $allowed) !== []) {
                 $validator->errors()->add('settings', __('validation.prohibited', ['attribute' => 'settings']));

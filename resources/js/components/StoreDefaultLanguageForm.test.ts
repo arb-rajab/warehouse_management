@@ -209,6 +209,7 @@ describe('StoreDefaultLanguageForm', () => {
         expect(Object.keys(ar.store.languages).sort()).toEqual(
             Object.keys(en.store.languages).sort(),
         );
+
         for (const key of ['default_missing', 'default_inactive'] as const) {
             expect(
                 ar.store.dashboard.checklist.reasons.language[key],

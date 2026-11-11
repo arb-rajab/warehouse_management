@@ -77,7 +77,10 @@ const pair = computed(() => transferPair(props.log));
                 <div
                     v-if="cellWarehouseName(pair.from, multipleWarehouses)"
                     class="truncate text-xs text-muted"
-                    :title="cellWarehouseName(pair.from, multipleWarehouses) ?? undefined"
+                    :title="
+                        cellWarehouseName(pair.from, multipleWarehouses) ??
+                        undefined
+                    "
                     data-testid="cell-warehouse"
                 >
                     {{ cellWarehouseName(pair.from, multipleWarehouses) }}
@@ -111,7 +114,10 @@ const pair = computed(() => transferPair(props.log));
                     <div
                         v-if="cellWarehouseName(pair.to, multipleWarehouses)"
                         class="truncate text-xs text-muted"
-                        :title="cellWarehouseName(pair.to, multipleWarehouses) ?? undefined"
+                        :title="
+                            cellWarehouseName(pair.to, multipleWarehouses) ??
+                            undefined
+                        "
                         data-testid="cell-warehouse"
                     >
                         {{ cellWarehouseName(pair.to, multipleWarehouses) }}

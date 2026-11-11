@@ -53,12 +53,12 @@ class Warehouse extends Model
 
     /**
      * Whether the system has more than one warehouse: the cell-log listings
-     * name a cell's warehouse only then. One cheap query (two ids at most),
+     * name a cell's warehouse only then. One cheap count query (a handful of rows at most),
      * run once per page, never per row.
      */
     public static function hasMultiple(): bool
     {
-        return self::query()->limit(2)->pluck('id')->count() > 1;
+        return self::query()->count() > 1;
     }
 
     /**

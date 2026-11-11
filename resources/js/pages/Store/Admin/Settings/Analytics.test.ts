@@ -191,7 +191,7 @@ describe('Analytics settings page', () => {
     });
 
     it.each([
-        ['google_analytics', '#google_analytics'],
+        ['google_analytics', '[id="settings[google_analytics]"]'],
         ['google_analytics_tracking_id', '#google_analytics_tracking_id'],
         ['facebook_pixel_id', '#facebook_pixel_id'],
     ])(

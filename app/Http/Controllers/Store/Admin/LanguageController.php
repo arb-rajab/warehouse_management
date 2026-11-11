@@ -197,7 +197,7 @@ class LanguageController extends Controller implements HasMiddleware
 
         if ($saved !== null && ! in_array($saved, array_column($options, 'code'), true)) {
             $other = Language::query()->where('code', $saved)->first(['code', 'name']);
-            $options[] = ['code' => $saved, 'name' => $other?->name ?? $saved, 'active' => false];
+            $options[] = ['code' => $saved, 'name' => $other->name ?? $saved, 'active' => false];
         }
 
         $current = filled($effective['value']) ? Language::query()->where('code', $effective['value'])->first(['id', 'status']) : null;

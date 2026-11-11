@@ -292,6 +292,7 @@ describe('Store settings', () => {
             expect(block.text()).toContain(
                 t(`store.settings.server.${section}.title`),
             );
+
             for (const [label, value] of rows) {
                 expect(block.text()).toContain(
                     t(`store.settings.server.${section}.${label}`),
@@ -300,6 +301,7 @@ describe('Store settings', () => {
                     value.startsWith('store.') ? t(value) : value,
                 );
             }
+
             expect(document.activeElement).toBe(block.element);
             wrapper.unmount();
 

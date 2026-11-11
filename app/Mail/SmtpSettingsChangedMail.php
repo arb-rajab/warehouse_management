@@ -20,13 +20,15 @@ class SmtpSettingsChangedMail extends LocalizedMail
     {
         $this->locale(StoreLocale::deliveryLocale(locale: $this->locale));
         $locale = $this->locale;
-        $fields = collect($this->array['changes'])
-            ->map(fn (string $kind, string $field): string => __('delivery.mail.smtp_changed.field_change', [
+        $fields = [];
+
+        foreach ($this->array['changes'] as $field => $kind) {
+            $fields[] = __('delivery.mail.smtp_changed.field_change', [
                 'field' => __('delivery.mail.smtp_changed.fields.'.$field, [], $locale),
                 'change' => __('delivery.mail.smtp_changed.kinds.'.$kind, [], $locale),
-            ], $locale))
-            ->values()
-            ->all();
+            ], $locale);
+        }
+
         $subject = __('delivery.mail.smtp_changed.subject', ['shop' => __('messages.brand_name', [], $locale)], $locale);
 
         if (filled($this->array['from_address'] ?? null)) {

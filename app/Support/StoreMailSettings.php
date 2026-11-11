@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Throwable;
 
 /**
@@ -160,8 +161,8 @@ final class StoreMailSettings
         config($values);
         $this->applied = $fingerprint;
 
-        if (app()->resolved('mail.manager') && method_exists($manager = app('mail.manager'), 'forgetMailers')) {
-            $manager->forgetMailers();
+        if (app()->resolved('mail.manager')) {
+            Mail::forgetMailers();
         }
     }
 

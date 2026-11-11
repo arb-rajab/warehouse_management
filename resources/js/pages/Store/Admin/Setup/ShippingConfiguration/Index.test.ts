@@ -222,11 +222,13 @@ describe('Shipping configuration', () => {
         expect(select.selectedOptions[0]?.textContent?.trim()).toBe(
             t('store.shippingConfiguration.chooseMethod'),
         );
+
         for (const id of ['flat_rate_shipping_cost', 'shipping_cost_admin']) {
             expect(
                 (wrapper.get(`#${id}`).element as HTMLInputElement).value,
             ).toBe('');
         }
+
         wrapper.unmount();
     });
 

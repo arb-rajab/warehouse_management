@@ -1,6 +1,8 @@
+import type { UrlMethodPair } from '@inertiajs/core';
 import { Form } from '@inertiajs/vue3';
 import { mount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { nextTick } from 'vue';
 import {
     testSmtp,
     updateSmtp,
@@ -124,7 +126,11 @@ function mountPage(
 function settingsForm(wrapper: ReturnType<typeof mountPage>) {
     return wrapper
         .findAllComponents(Form)
-        .find((form) => form.props('action')?.url === updateSmtp.url())!;
+        .find(
+            (form) =>
+                (form.props('action') as UrlMethodPair).url ===
+                updateSmtp.url(),
+        )!;
 }
 
 beforeEach(() => {
@@ -340,8 +346,9 @@ describe('SMTP settings page', () => {
         ).toContain('The password is incorrect.');
     });
 
-    it('asks for the current password, required, never filled in, and empties it and the SMTP password after every submit', () => {
+    it('asks for the current password, required, never filled in, and empties it and the SMTP password after every submit', async () => {
         const wrapper = mountPage();
+        await nextTick();
         const field = wrapper.get('#current_password');
 
         expect(field.attributes()).toMatchObject({
@@ -427,12 +434,16 @@ describe('SMTP settings page', () => {
         );
     });
 
-    it('offers the test email only to staff who may also send newsletters', () => {
+    it('offers the test email only to staff who may also send newsletters', async () => {
         const without = mountPage();
         expect(
             without
                 .findAllComponents(Form)
-                .some((form) => form.props('action')?.url === testSmtp.url()),
+                .some(
+                    (form) =>
+                        (form.props('action') as UrlMethodPair).url ===
+                        testSmtp.url(),
+                ),
         ).toBe(false);
 
         const withTest = mountPage(saved(), {
@@ -440,13 +451,18 @@ describe('SMTP settings page', () => {
         });
         const test = withTest
             .findAllComponents(Form)
-            .find((form) => form.props('action')?.url === testSmtp.url())!;
+            .find(
+                (form) =>
+                    (form.props('action') as UrlMethodPair).url ===
+                    testSmtp.url(),
+            )!;
         expect(test.props('action')).toEqual(testSmtp());
         expect(test.get('#email').attributes()).toMatchObject({
             type: 'email',
             maxlength: '255',
             required: '',
         });
+        await nextTick();
         expect(test.text()).toContain(t('common.requiredLegend'));
     });
 

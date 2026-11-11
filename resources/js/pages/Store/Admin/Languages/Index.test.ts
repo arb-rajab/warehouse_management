@@ -16,6 +16,7 @@ import {
 import AddResourceLink from '@/components/AddResourceLink.vue';
 import DataTable from '@/components/DataTable.vue';
 import Pagination from '@/components/Pagination.vue';
+import StoreDefaultLanguageForm from '@/components/StoreDefaultLanguageForm.vue';
 import StoreStatusSwitch from '@/components/StoreStatusSwitch.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
 import { confirmDelete } from '@/lib/confirm';
@@ -107,8 +108,8 @@ describe('Language Index', () => {
             expect(wrapper.text()).toContain(t(`store.languages.${key}`));
         }
 
-        expect(wrapper.text()).toContain(
-            t('store.languages.defaultReadOnly', { code: 'en' }),
+        expect(wrapper.findComponent(StoreDefaultLanguageForm).exists()).toBe(
+            true,
         );
         expect(
             wrapper

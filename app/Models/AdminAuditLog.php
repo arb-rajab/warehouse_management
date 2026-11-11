@@ -65,7 +65,7 @@ class AdminAuditLog extends Model
 
         return self::query()->create([
             'user_id' => $actor->getKey(),
-            'user_name' => $actor->name === null ? null : Str::limit((string) $actor->name, 255, ''),
+            'user_name' => Str::limit($actor->name, 255, ''),
             'user_email' => $actor->email === null ? null : Str::limit((string) $actor->email, 255, ''),
             'action' => $action,
             'changed_fields' => $changedFields,

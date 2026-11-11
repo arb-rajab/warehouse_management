@@ -351,6 +351,7 @@ describe('StoreSetupChecklist', () => {
             props: { checklist: checklist([]) },
         });
         expect(wrapper.findAllComponents(Link)).toHaveLength(REASONS.length);
+
         for (const [reason, target] of REASONS) {
             expect(
                 wrapper
@@ -399,6 +400,7 @@ describe('StoreSetupChecklist', () => {
         'words every reason in %s, never falling back to its key',
         (locale) => {
             i18n.global.locale.value = locale;
+
             for (const [reason] of REASONS) {
                 const path = `store.dashboard.checklist.reasons.${reason.key}`;
                 expect(i18n.global.te(path, locale)).toBe(true);

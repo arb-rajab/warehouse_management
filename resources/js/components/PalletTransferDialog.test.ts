@@ -106,7 +106,9 @@ describe('PalletTransferDialog', () => {
         expect(wrapper.findComponent(PalletTransferFields).exists()).toBe(
             false,
         );
-        expect(wrapper.getComponent(SubmitButton).props('disabled')).toBe(true);
+        expect(
+            wrapper.getComponent(SubmitButton).attributes('disabled'),
+        ).toBeDefined();
 
         await wrapper.setProps({ targets });
 
