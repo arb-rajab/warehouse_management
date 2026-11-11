@@ -161,6 +161,31 @@ Box counts are set per product from the products screen at `/admin/products` —
 
 A freshly deployed catalog therefore needs someone to walk the list and set the real counts; there is nothing to import them from.
 
+### Settings managed in the admin (they supersede `.env`)
+
+Some settings that used to live only in the server's `.env` can be saved in the store admin. A value saved there **wins**; with nothing saved, the `.env` value is used, so a fresh deploy behaves exactly as its `.env` says. Nothing in the admin ever writes `.env`. Each page shows every effective value with "saved in admin" or "from .env" (secrets only as set / not set). Details: [.ai/rules/admin-env-overrides.md](.ai/rules/admin-env-overrides.md).
+
+| Admin page | Superseded `.env` keys | Notes |
+| --- | --- | --- |
+| SMTP settings (`/temp/admin/smtp-settings`, permission `smtp_settings`) | `MAIL_MAILER` | The admin offers `smtp`, `log` or "use the server setting". |
+| | `MAIL_HOST`, `MAIL_PORT`, `MAIL_SCHEME`, `MAIL_USERNAME`, `MAIL_PASSWORD` | One group: with a host saved in the admin, all five come from the admin (the `.env` username and password are not used, and `MAIL_URL` is ignored); without one, all five come from `.env`. The password is stored encrypted with `APP_KEY`; after changing `APP_KEY` without `APP_PREVIOUS_KEYS`, enter it again. |
+| | `MAIL_FROM_ADDRESS`, `MAIL_FROM_NAME` | Each on its own. The health and backup notifications still read these from `.env`. |
+| Google map (`/temp/admin/google-map`) | `MAP_API_KEY` | |
+| Analytics (`/temp/admin/google-analytics`, permission `analytics_tools_configuration`) | `TRACKING_ID` | Google Analytics tracking ID (for example `G-XXXXXXXXXX`). Public, shown back in full; letters, digits and hyphens only. Empty uses `.env`. |
+| | `FACEBOOK_PIXEL_ID` | Facebook pixel ID (digits only). Empty uses `.env`. |
+| Facebook chat (`/temp/admin/facebook-chat`, permission `facebook_chat`) | `FACEBOOK_PAGE_ID` | Facebook page ID (digits only). Empty uses `.env`. |
+| Facebook comments (`/temp/admin/facebook-comment`, permission `facebook_comment`) | `FACEBOOK_APP_ID` | Facebook app ID (digits only). Empty uses `.env`. |
+| Order configuration (`/temp/admin/order-configuration`, permission `order_configuration`) | `STORE_DELIVERY_LEAD_DAYS` | Delivery lead days for orders placed through the app: whole days, 0 to 30. Empty uses `.env`. |
+| | `STORE_DELIVERY_TIMEZONE` | The timezone "today" is read in for the delivery date check: one of PHP's timezone identifiers (for example `Europe/Amsterdam`), chosen from a list. Empty uses `.env`. The delivery weekdays stay in `config/store.php`. |
+| Languages (`/temp/admin/languages`, permission `language_setup`) | `DEFAULT_LANGUAGE` | The default content language: choose an existing, active language. "Use the server setting" uses `.env`. Applied to web requests and queued jobs, not to other console commands. Changing it re-labels text already saved under the old default (product, category and brand text), so the page asks to confirm. |
+| reCAPTCHA (`/temp/admin/google-recaptcha`, permission `google_recaptcha_configuration`) | `CAPTCHA_KEY`, `CAPTCHA_SECRET` | One pair: with a site key saved in the admin, the site key and the secret both come from the admin (`CAPTCHA_SECRET` is not used with it); without one, both come from `.env`. The secret is stored encrypted with `APP_KEY`, never shown or returned, and changing the site key asks for the secret again. |
+
+Each page warns, naming the field, when its switch is on but no ID or key is in effect; the storefront prints nothing for such a switch. The analytics, pixel, chat and comments IDs and the reCAPTCHA site key are public (every visitor's browser receives them), so the admin shows them in full; only the encrypted reCAPTCHA secret row is hidden from the public business-settings API. Social login keys (`FACEBOOK_CLIENT_ID` and the others) stay `.env` only.
+
+Still `.env` only: `MAIL_EHLO_DOMAIN`, `MAIL_LOG_CHANNEL`, `MAIL_SENDMAIL_PATH` and the other mailers' keys. Saved SMTP settings apply to web requests and queued jobs (a running worker picks up a save before its next job); they are never applied to other console commands, so `config:cache` never writes them into the cached config. The "Send test email" button sends at once and shows the mail server's refusal as an error.
+
+**Who can change SMTP.** Whoever controls the SMTP settings can read every email the shop sends, password-reset emails included, so `smtp_settings` is a sensitive permission: only a Super Admin can give it to a role (or take it off one), or give a role that carries it; the role form warns on it and the Roles list badges such roles. Existing grants are not revoked; to see who holds it, run the query in [.ai/rules/admin-env-overrides.md](.ai/rules/admin-env-overrides.md#security-the-smtp-settings-are-a-way-to-read-all-mail). Saving the SMTP page asks for the staff member's own current password (5 wrong ones per 15 minutes lock the field). Every change is written to `admin_audit_logs` (who, when, IP, field names only, never values) and listed on the page, and every active Super Admin, plus the previous from-address when the from address changed, is mailed at once through the settings as they were before the change.
+
 ## Contributing / conventions
 
 See the [documentation map](.ai/README.md) for warehouse and integrated-store

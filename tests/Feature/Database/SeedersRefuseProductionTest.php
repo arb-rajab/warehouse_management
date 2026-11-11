@@ -3,12 +3,14 @@
 use App\Models\CellStatusLog;
 use App\Models\CellVerificationRound;
 use App\Models\Permission;
+use App\Models\Receipt;
 use App\Models\Role;
 use App\Models\StoreUser;
 use App\Models\User;
 use Database\Seeders\CellStatusLogSeeder;
 use Database\Seeders\CellVerificationRoundSeeder;
 use Database\Seeders\DatabaseSeeder;
+use Database\Seeders\ReceiptSeeder;
 use Database\Seeders\StagingRealisticDataSeeder;
 use Database\Seeders\StoreAccountFilterSeeder;
 use Database\Seeders\StoreActivityFilterSeeder;
@@ -47,6 +49,7 @@ function accountAndRoleCounts(): array
         'role grants' => DB::table('wms_role_has_permissions')->count(),
         'model roles' => DB::table('wms_model_has_roles')->count(),
         'cell status logs' => CellStatusLog::query()->count(),
+        'receipts' => Receipt::query()->count(),
         'verification rounds' => CellVerificationRound::query()->count(),
     ];
 }
@@ -61,6 +64,7 @@ dataset('account-writing seeders', [
     'StoreReferenceFilterSeeder' => StoreReferenceFilterSeeder::class,
     'CellStatusLogSeeder' => CellStatusLogSeeder::class,
     'CellVerificationRoundSeeder' => CellVerificationRoundSeeder::class,
+    'ReceiptSeeder' => ReceiptSeeder::class,
     'StagingRealisticDataSeeder' => StagingRealisticDataSeeder::class,
     'DatabaseSeeder' => DatabaseSeeder::class,
 ]);

@@ -10,7 +10,8 @@ import type { StoreRole } from '@/types/store';
 /**
  * The store staff form's fields (Store\Admin\StoreStaffRequest and
  * UpdateStaffRequest): the account's contact details, its store role and a
- * password, required on create and optional on edit.
+ * password, required on create and optional on edit. A role carrying a
+ * sensitive permission (only a Super Admin may grant it) is labelled so.
  */
 withDefaults(
     defineProps<{
@@ -87,7 +88,13 @@ const { confirmationMismatchError, syncConfirmationValidity } =
                     :value="role.id"
                     :selected="role.id === roleId"
                 >
-                    {{ role.name }}
+                    {{
+                        role.sensitive
+                            ? t('store.staff.fields.roleSensitive', {
+                                  name: role.name,
+                              })
+                            : role.name
+                    }}
                 </option>
             </select>
             <FieldError :message="errors.role_id" />

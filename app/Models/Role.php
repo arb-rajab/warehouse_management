@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App;
+use App\Support\StorePermissions;
 use Illuminate\Database\Eloquent\Builder;
 use Spatie\Permission\Models\Role as SpatieRole;
 
@@ -40,6 +41,19 @@ class Role extends SpatieRole
     public function scopeExcludingSuperAdmin(Builder $query): Builder
     {
         return $query->where($query->qualifyColumn('name'), '!=', self::SUPER_ADMIN);
+    }
+
+    /**
+     * Adds `grants_sensitive`: whether the role carries a permission only a
+     * Super Admin may grant (StorePermissions::SENSITIVE). RoleResource sends
+     * it as `sensitive` for the Roles list badge and the staff form's role list.
+     *
+     * @param  Builder<Role>  $query
+     * @return Builder<Role>
+     */
+    public function scopeWithSensitiveFlag(Builder $query): Builder
+    {
+        return $query->withExists(['permissions as grants_sensitive' => fn (Builder $permissions) => $permissions->whereIn($permissions->qualifyColumn('name'), StorePermissions::SENSITIVE)]);
     }
 
     public function getTranslation($field = '', $lang = false){

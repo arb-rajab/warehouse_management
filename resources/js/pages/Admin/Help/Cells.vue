@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { Ban } from '@lucide/vue';
+import { ArrowLeftRight, Ban } from '@lucide/vue';
 import { ref } from 'vue';
 import { index as rowsIndex } from '@/actions/App/Http/Controllers/Admin/RowController';
 import CellSlot from '@/components/CellSlot.vue';
 import CellStateLegend from '@/components/CellStateLegend.vue';
 import HelpTopicPage from '@/components/HelpTopicPage.vue';
 import HelpUiPreview from '@/components/HelpUiPreview.vue';
+import PalletTransferFields from '@/components/PalletTransferFields.vue';
 import ProductSelect from '@/components/ProductSelect.vue';
 import {
     fieldLabelClass,
@@ -15,7 +16,11 @@ import {
 } from '@/lib/filters';
 import { t } from '@/lib/i18n';
 import { formatSlot } from '@/lib/location';
-import type { Cell, ProductFilterOption } from '@/types/admin';
+import type {
+    Cell,
+    PalletTransferTargets,
+    ProductFilterOption,
+} from '@/types/admin';
 
 const previewManageableCell: Cell = {
     id: 0,
@@ -46,6 +51,22 @@ const palletActionTabKeys = [
 ] as const;
 
 const previewProduct = ref<ProductFilterOption | null>(null);
+
+// Two sample warehouses, so the preview shows the destination warehouse select.
+const previewTransferTargets: PalletTransferTargets = {
+    warehouses: [
+        { id: 1, name: t('help.cells.preview.mainWarehouse') },
+        { id: 2, name: t('help.cells.preview.otherWarehouse') },
+    ],
+    rows: [
+        { id: 1, letter: 'A', cells_count: 1, flats_count: 1, warehouse_id: 1 },
+        { id: 2, letter: 'A', cells_count: 1, flats_count: 1, warehouse_id: 2 },
+    ],
+};
+const previewTransferWarehouseId = ref<number | null>(1);
+const previewTransferRow = ref('');
+const previewTransferCell = ref('');
+const previewTransferFlat = ref('');
 </script>
 
 <template>
@@ -174,40 +195,19 @@ const previewProduct = ref<ProductFilterOption | null>(null);
                             </template>
 
                             <template v-else-if="action === 'transfer'">
-                                <div>
-                                    <label :class="fieldLabelClass">{{
-                                        t(
-                                            'cells.palletActions.transfer.rowLabel',
-                                        )
-                                    }}</label>
-                                    <select :class="plainFieldInputClass">
-                                        <option value="" disabled>—</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label :class="fieldLabelClass">{{
-                                        t(
-                                            'cells.palletActions.transfer.cellNumberLabel',
-                                        )
-                                    }}</label>
-                                    <input
-                                        type="number"
-                                        min="1"
-                                        :class="plainFieldInputClass"
-                                    />
-                                </div>
-                                <div>
-                                    <label :class="fieldLabelClass">{{
-                                        t(
-                                            'cells.palletActions.transfer.flatNumberLabel',
-                                        )
-                                    }}</label>
-                                    <input
-                                        type="number"
-                                        min="1"
-                                        :class="plainFieldInputClass"
-                                    />
-                                </div>
+                                <PalletTransferFields
+                                    v-model:warehouse-id="
+                                        previewTransferWarehouseId
+                                    "
+                                    v-model:row-letter="previewTransferRow"
+                                    v-model:cell-number="previewTransferCell"
+                                    v-model:flat-number="previewTransferFlat"
+                                    id-prefix="help-pallet-transfer-"
+                                    :warehouses="
+                                        previewTransferTargets.warehouses
+                                    "
+                                    :rows="previewTransferTargets.rows"
+                                />
                             </template>
 
                             <template v-else-if="action === 'edit'">
@@ -276,6 +276,20 @@ const previewProduct = ref<ProductFilterOption | null>(null);
                     </HelpUiPreview>
                 </div>
             </div>
+
+            <p class="mt-4 text-sm text-ink">
+                {{ t('help.cells.managingPallets.transferBody') }}
+            </p>
+            <HelpUiPreview class="mt-2">
+                <span
+                    tabindex="-1"
+                    data-testid="help-map-transfer-button"
+                    class="inline-flex items-center gap-1.5 rounded-full border border-line-strong bg-subtle px-3 py-1.5 text-xs font-bold text-ink"
+                >
+                    <ArrowLeftRight class="h-3.5 w-3.5 shrink-0" />
+                    {{ t('warehouseMap.transferPallet') }}
+                </span>
+            </HelpUiPreview>
         </section>
 
         <section>

@@ -116,6 +116,26 @@ describe('StoreStaffFormFields', () => {
         ).toBe('');
     });
 
+    it('labels a role carrying a sensitive permission', () => {
+        const wrapper = mountFields({
+            roles: [
+                storeRole({ id: 3, name: 'Clerk', sensitive: false }),
+                storeRole({ id: 4, name: 'Mail admin', sensitive: true }),
+            ],
+        });
+
+        expect(
+            wrapper.findAll('#role_id option').map((option) => option.text()),
+        ).toEqual([
+            t('store.staff.fields.rolePlaceholder'),
+            'Clerk',
+            t('store.staff.fields.roleSensitive', { name: 'Mail admin' }),
+        ]);
+        expect(
+            t('store.staff.fields.roleSensitive', { name: 'Mail admin' }),
+        ).toBe('Mail admin (sensitive: can read all outgoing email)');
+    });
+
     it('shows each field error, the role one included', () => {
         const wrapper = mountFields({
             errors: {

@@ -4,13 +4,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { clearCache } from '@/actions/App/Http/Controllers/Store/Admin/DashboardController';
 import {
     updateActivation,
-    updateFacebookChat,
-    updateFacebookComments,
-    updateAnalytics,
-    updateRecaptcha,
     updateFirebase,
     updatePayments,
-    testSmtp,
 } from '@/actions/App/Http/Controllers/Store/Admin/SettingsController';
 import ResourceFormPage from '@/components/ResourceFormPage.vue';
 import StoreBooleanField from '@/components/StoreBooleanField.vue';
@@ -115,21 +110,7 @@ const pages = {
             'apple_login',
         ],
     },
-    smtp: { permission: 'smtp_settings', keys: [] },
     socialLogin: { permission: 'social_media_logins', keys: [] },
-    facebookChat: { permission: 'facebook_chat', keys: ['facebook_chat'] },
-    facebookComments: {
-        permission: 'facebook_comment',
-        keys: ['facebook_comment'],
-    },
-    analytics: {
-        permission: 'analytics_tools_configuration',
-        keys: ['google_analytics', 'facebook_pixel'],
-    },
-    recaptcha: {
-        permission: 'google_recaptcha_configuration',
-        keys: ['google_recaptcha'],
-    },
     firebase: {
         permission: 'google_firebase_setting',
         keys: ['google_firebase'],
@@ -150,10 +131,6 @@ const pages = {
 type Section = keyof typeof pages;
 const actions = {
     activation: updateActivation,
-    facebookChat: updateFacebookChat,
-    facebookComments: updateFacebookComments,
-    analytics: updateAnalytics['/temp/admin/google-analytics'],
-    recaptcha: updateRecaptcha,
     firebase: updateFirebase,
     payments: updatePayments,
 };
@@ -274,38 +251,81 @@ describe('Store settings', () => {
         );
         highlighted.unmount();
     });
+    it.each([
+        [
+            'firebase',
+            { project_set: true, credentials_found: false },
+            'firebase_server',
+            [
+                ['project', 'store.settings.server.set'],
+                ['credentials', 'store.settings.server.notFound'],
+            ],
+        ],
+    ] as const)(
+        'shows whether each %s server value is set, never the value, and highlights it for a setup checklist link',
+        async (section, server, anchor, rows) => {
+            Element.prototype.scrollIntoView = vi.fn();
+            usePageMock.mockReturnValue({
+                url: `/temp/admin/settings?highlight=${anchor}`,
+                props: defaultAuthProps({
+                    store: storeSharedProps({
+                        permissions: [pages[section].permission],
+                    }),
+                }),
+            });
+            const wrapper = mount(Index, {
+                props: {
+                    section,
+                    server,
+                    highlight: anchor,
+                    settings: Object.fromEntries(
+                        pages[section].keys.map((key) => [key, true]),
+                    ),
+                },
+                attachTo: document.body,
+            });
+            await wrapper.vm.$nextTick();
+            await wrapper.vm.$nextTick();
+            const block = wrapper.get(`[data-section="${anchor}"]`);
+            expect(block.attributes('data-highlighted')).toBeDefined();
+            expect(wrapper.findAll('[data-highlighted]')).toHaveLength(1);
+            expect(block.text()).toContain(
+                t(`store.settings.server.${section}.title`),
+            );
+
+            for (const [label, value] of rows) {
+                expect(block.text()).toContain(
+                    t(`store.settings.server.${section}.${label}`),
+                );
+                expect(block.text()).toContain(
+                    value.startsWith('store.') ? t(value) : value,
+                );
+            }
+
+            expect(document.activeElement).toBe(block.element);
+            wrapper.unmount();
+
+            const plain = mountPage(section);
+            expect(plain.find(`[data-section="${anchor}"]`).exists()).toBe(
+                false,
+            );
+            plain.unmount();
+        },
+    );
     it('lets an admin holding the permission write activation', () => {
         expect(
             pageForms(mountPage('activation', ['features_activation'])),
         ).toHaveLength(1);
     });
-    it('renders SMTP testing only with both permissions and mirrors recipient validation', () => {
-        const wrapper = mountPage('smtp', ['smtp_settings', 'send_newsletter']);
-        expect(pageForms(wrapper)[0].props('action')).toEqual(testSmtp());
-        expect(wrapper.get('#email').attributes()).toMatchObject({
-            type: 'email',
-            maxlength: '255',
-            required: '',
-        });
-        expect(wrapper.text()).toContain(t('store.settings.testEmail'));
-        expect(wrapper.text()).toContain(t('store.settings.sendTest'));
-        expect(pageForms(mountPage('smtp', ['send_newsletter']))).toHaveLength(
-            0,
-        );
-    });
-    it('displays server validation errors for settings and SMTP', () => {
+    it('displays server validation errors for settings', () => {
         formSlotPropsMock.mockReturnValue({
             errors: {
                 settings: 'Unknown keys',
-                'settings.google_recaptcha': 'Bad boolean',
-                email: 'Invalid email',
+                'settings.google_firebase': 'Bad boolean',
             },
             processing: false,
         });
-        expect(mountPage('recaptcha').text()).toContain('Unknown keys');
-        expect(mountPage('recaptcha').text()).toContain('Bad boolean');
-        expect(
-            mountPage('smtp', ['smtp_settings', 'send_newsletter']).text(),
-        ).toContain('Invalid email');
+        expect(mountPage('firebase').text()).toContain('Unknown keys');
+        expect(mountPage('firebase').text()).toContain('Bad boolean');
     });
 });

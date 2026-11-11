@@ -1,8 +1,11 @@
 <?php
 
+use App\Models\Permission;
 use App\Models\Product;
+use App\Models\Role;
 use App\Models\StoreUser;
 use App\Services\Store\ProductVariantCombinations;
+use App\Support\StorePermissions;
 use Database\Seeders\StoreAccountFilterSeeder;
 use Database\Seeders\StoreFilterCoverageSeeder;
 use Database\Seeders\Support\StoreFilterSeedData;
@@ -221,4 +224,16 @@ test('re-seeding keeps one stock row per variant rather than adding a second set
     (new StoreFilterCoverageSeeder)->run();
 
     expect(DB::table('product_stocks')->count())->toBe($stocks);
+});
+
+test('the demonstration administrator role gets every store permission but the sensitive ones', function () {
+    (new StoreAccountFilterSeeder)->run();
+
+    $role = Role::findByName('Demonstration Store Administrator', 'store');
+    $granted = $role->permissions->pluck('name');
+
+    expect($granted)->not->toContain('smtp_settings')
+        ->and($granted->sort()->values()->all())->toBe(
+            Permission::query()->whereNotIn('name', StorePermissions::SENSITIVE)->pluck('name')->sort()->values()->all()
+        );
 });

@@ -43,6 +43,7 @@ const props = defineProps<{
     user: User;
     logs: Paginated<CellStatusLog>;
     reports: Paginated<CellVerificationReport>;
+    multipleWarehouses: boolean;
     filters: UserShowFilters;
 }>();
 
@@ -113,6 +114,7 @@ function onReportsPerPageChange(perPage: number): void {
                     <CellStatusLogRowCells
                         :log="log"
                         return-to="user"
+                        :multiple-warehouses="multipleWarehouses"
                         @view-pallet-history="viewPalletHistory"
                     />
                 </template>

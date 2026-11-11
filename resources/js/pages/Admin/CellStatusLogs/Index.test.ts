@@ -75,7 +75,12 @@ function mountPage(
     });
 
     return mount(Index, {
-        props: { logs: paginated(logs), filters, filterOptions: options },
+        props: {
+            logs: paginated(logs),
+            filters,
+            filterOptions: options,
+            multipleWarehouses: false,
+        },
     });
 }
 

@@ -328,6 +328,7 @@ return [
         'phone' => 'phone',
         'password' => 'password',
         'password_confirmation' => 'password confirmation',
+        'current_password' => 'current password',
         'code' => 'code',
         'company_name' => 'company name',
         'company_address' => 'company address',
@@ -352,6 +353,15 @@ return [
         'payment_option' => 'payment option',
         'delivery_date' => 'delivery date',
         'trade_license' => 'trade license',
+        'google_analytics_tracking_id' => 'Google Analytics tracking ID',
+        'facebook_pixel_id' => 'Facebook pixel ID',
+        'facebook_page_id' => 'Facebook page ID',
+        'facebook_app_id' => 'Facebook app ID',
+        'recaptcha_site_key' => 'reCAPTCHA site key',
+        'recaptcha_secret_key' => 'reCAPTCHA secret key',
+        'delivery_lead_days' => 'delivery lead days',
+        'delivery_timezone' => 'delivery timezone',
+        'default_language' => 'default language',
     ],
 
 ];

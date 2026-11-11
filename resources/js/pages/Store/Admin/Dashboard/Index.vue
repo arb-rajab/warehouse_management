@@ -1,13 +1,7 @@
 <script setup lang="ts">
-import { Head, Link } from '@inertiajs/vue3';
-import { PackageSearch, TriangleAlert } from '@lucide/vue';
+import { Head } from '@inertiajs/vue3';
+import { PackageSearch } from '@lucide/vue';
 import { computed } from 'vue';
-import { all as allProducts } from '@/actions/App/Http/Controllers/Store/Admin/ProductController';
-import {
-    activation,
-    payments,
-    smtp,
-} from '@/actions/App/Http/Controllers/Store/Admin/SettingsController';
 import PageHeader from '@/components/PageHeader.vue';
 import StoreDashboardChart from '@/components/StoreDashboardChart.vue';
 import StoreSetupChecklist from '@/components/StoreSetupChecklist.vue';
@@ -18,31 +12,6 @@ import type { StoreDashboardProps } from '@/types/store';
 
 const props = defineProps<StoreDashboardProps>();
 const access = useStoreAccess();
-// Settings the store cannot take orders without, each with the page that sets it.
-// Cash payment is switched on in Features activation, and the link lands on that option.
-const setupLinks = {
-    noPaymentMethod: () =>
-        access.value.can('features_activation')
-            ? activation({ query: { highlight: 'cash_payment' } })
-            : payments(),
-    cashOnDeliveryProducts: allProducts,
-};
-const alerts = computed(() => [
-    ...(props.showSmtpAlert && access.value.can('smtp_settings')
-        ? [
-              {
-                  key: 'smtp',
-                  message: t('store.dashboard.smtpWarning'),
-                  href: smtp(),
-              },
-          ]
-        : []),
-    ...props.setupAlerts.map((key) => ({
-        key,
-        message: t(`store.dashboard.setup.${key}`),
-        href: setupLinks[key](),
-    })),
-]);
 const charts = computed(() => [
     {
         key: 'products',
@@ -91,20 +60,6 @@ const charts = computed(() => [
         <PageHeader :title="t('store.dashboard.title')" />
         <div v-if="access.can('admin_dashboard')" class="space-y-6">
             <StoreSetupChecklist :checklist="setupChecklist" />
-            <div
-                v-for="alert in alerts"
-                :key="alert.key"
-                role="alert"
-                class="flex items-center gap-3 rounded-lg border border-danger/30 bg-danger-soft p-4 text-danger-strong"
-            >
-                <TriangleAlert class="size-5 shrink-0" />
-                <span
-                    >{{ alert.message }}
-                    <Link :href="alert.href" class="font-semibold underline">{{
-                        t('store.dashboard.configureNow')
-                    }}</Link></span
-                >
-            </div>
             <dl class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
                 <div
                     v-for="(value, key) in stats"

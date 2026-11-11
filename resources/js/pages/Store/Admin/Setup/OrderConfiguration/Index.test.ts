@@ -5,6 +5,7 @@ import {
     index,
     representatives,
     update,
+    updateDelivery,
     updateRepresentative,
 } from '@/actions/App/Http/Controllers/Store/Admin/OrderConfigurationController';
 import { search } from '@/actions/App/Http/Controllers/Store/Admin/ProductSearchController';
@@ -12,9 +13,11 @@ import StoreSearchSelect from '@/components/StoreSearchSelect.vue';
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
 import { t } from '@/lib/i18n';
 import ar from '@/locales/ar.json';
-import { storeSharedProps } from '@/testing/factories';
+import en from '@/locales/en.json';
+import { deliverySettings, storeSharedProps } from '@/testing/factories';
 import { defaultAuthProps } from '@/testing/inertiaPageMocks';
 import type { SearchOption } from '@/types/searchSelect';
+import type { StoreDeliverySettings } from '@/types/store';
 import Index from './Index.vue';
 const { usePageMock, routerPostMock, slotMock, getMock } = vi.hoisted(() => ({
     usePageMock: vi.fn(),
@@ -56,7 +59,10 @@ const selectedRepresentative: SearchOption = {
     icon: 'user',
     badge: { text: '10% discount', tone: 'info' },
 };
-function mountPage(permissions = ['order_configuration']) {
+function mountPage(
+    permissions = ['order_configuration'],
+    delivery: StoreDeliverySettings = deliverySettings(),
+) {
     usePageMock.mockReturnValue({
         url: index.url(),
         props: defaultAuthProps({ store: storeSharedProps({ permissions }) }),
@@ -67,6 +73,7 @@ function mountPage(permissions = ['order_configuration']) {
             settings,
             selectedProduct,
             selectedRepresentative,
+            delivery,
         },
     });
 }
@@ -120,7 +127,7 @@ describe('Order configuration', () => {
         const wrapper = mountPage();
         expect(
             wrapper.findAllComponents(Form).map((form) => form.props('action')),
-        ).toEqual([update(), updateRepresentative()]);
+        ).toEqual([update(), updateRepresentative(), updateDelivery()]);
         expect(wrapper.get('#minimum_order_amount').attributes()).toMatchObject(
             { type: 'number', required: '', min: '0', step: 'any' },
         );
@@ -207,5 +214,145 @@ describe('Order configuration', () => {
                 .every((button) => button.attributes('disabled') !== undefined),
         ).toBe(true);
         wrapper.unmount();
+    });
+    describe('delivery dates', () => {
+        const saved = deliverySettings({
+            saved: {
+                delivery_lead_days: 3,
+                delivery_timezone: 'Europe/London',
+            },
+            effective: {
+                delivery_lead_days: { value: 3, source: 'admin' },
+                delivery_timezone: { value: 'Europe/London', source: 'admin' },
+            },
+        });
+
+        function deliveryForm(wrapper: ReturnType<typeof mountPage>) {
+            return wrapper.get('[data-section="delivery_settings"] form');
+        }
+
+        it('shows what is in use with its source, and both fields empty when nothing is saved', () => {
+            const wrapper = mountPage();
+            const section = wrapper.get('[data-section="delivery_settings"]');
+
+            expect(section.text()).toContain(
+                t('store.orderConfiguration.delivery.inUse.leadDays', {
+                    value: 2,
+                    source: t('store.orderConfiguration.delivery.sources.env'),
+                }),
+            );
+            expect(section.text()).toContain(
+                t('store.orderConfiguration.delivery.inUse.timezone', {
+                    value: 'Europe/Amsterdam',
+                    source: t('store.orderConfiguration.delivery.sources.env'),
+                }),
+            );
+            const days = wrapper.get('#delivery_lead_days');
+            expect(days.attributes()).toMatchObject({
+                type: 'number',
+                min: '0',
+                max: '30',
+                step: '1',
+                placeholder: '2',
+            });
+            expect((days.element as HTMLInputElement).value).toBe('');
+            expect(
+                (wrapper.get('#delivery_timezone').element as HTMLSelectElement)
+                    .value,
+            ).toBe('');
+            expect(wrapper.get('#delivery_timezone').text()).toContain(
+                t('store.orderConfiguration.delivery.timezoneServer', {
+                    timezone: 'Europe/Amsterdam',
+                }),
+            );
+            wrapper.unmount();
+        });
+
+        it('shows the saved values selected and "saved in admin"', () => {
+            const wrapper = mountPage(['order_configuration'], saved);
+
+            expect(
+                (wrapper.get('#delivery_lead_days').element as HTMLInputElement)
+                    .value,
+            ).toBe('3');
+            expect(
+                (wrapper.get('#delivery_timezone').element as HTMLSelectElement)
+                    .value,
+            ).toBe('Europe/London');
+            expect(
+                wrapper.get('[data-section="delivery_settings"]').text(),
+            ).toContain(t('store.orderConfiguration.delivery.sources.admin'));
+            wrapper.unmount();
+        });
+
+        it('has no required field, mark or legend: an empty field uses .env', () => {
+            const wrapper = mountPage();
+            const form = deliveryForm(wrapper);
+
+            expect(form.find('[required]').exists()).toBe(false);
+            expect(form.find('[data-required-mark]').exists()).toBe(false);
+            expect(form.find('[data-required-legend]').exists()).toBe(false);
+            expect(form.attributes('novalidate')).toBeDefined();
+            wrapper.unmount();
+        });
+
+        it('offers every timezone it was given, and the .env choice first', () => {
+            const wrapper = mountPage();
+            const options = wrapper
+                .get('#delivery_timezone')
+                .findAll('option')
+                .map((option) => option.attributes('value'));
+
+            expect(options).toEqual([
+                '',
+                'Europe/Amsterdam',
+                'Europe/London',
+                'UTC',
+            ]);
+            wrapper.unmount();
+        });
+
+        it('blocks the submit and shows the message for lead days above the maximum', async () => {
+            const wrapper = mountPage();
+            const form = deliveryForm(wrapper);
+            const input = wrapper.get('#delivery_lead_days');
+
+            await input.setValue('31');
+            await form.trigger('submit');
+            await wrapper.vm.$nextTick();
+
+            expect(
+                wrapper.get('[data-section="delivery_settings"]').text(),
+            ).toContain(
+                'The delivery lead days field must not be greater than 30.',
+            );
+            expect(input.attributes('aria-invalid')).toBe('true');
+            wrapper.unmount();
+        });
+
+        it('shows the server errors of both fields', () => {
+            slotMock.mockReturnValue({
+                errors: {
+                    delivery_lead_days: 'Lead days is invalid',
+                    delivery_timezone: 'Timezone is invalid',
+                },
+                processing: false,
+            });
+            const wrapper = mountPage();
+            const section = wrapper.get('[data-section="delivery_settings"]');
+
+            expect(section.text()).toContain('Lead days is invalid');
+            expect(section.text()).toContain('Timezone is invalid');
+            wrapper.unmount();
+        });
+
+        it('has the same delivery strings in English and Arabic', () => {
+            expect(Object.keys(ar.store.orderConfiguration.delivery)).toEqual(
+                Object.keys(en.store.orderConfiguration.delivery),
+            );
+            expect(
+                Object.keys(ar.store.orderConfiguration.delivery.inUse),
+            ).toEqual(Object.keys(en.store.orderConfiguration.delivery.inUse));
+        });
     });
 });

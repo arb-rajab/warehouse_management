@@ -67,6 +67,7 @@ function mountPage(
             user: user(userOverrides),
             logs: paginated(logs, perPage),
             reports: paginated(reports, reportsPerPage),
+            multipleWarehouses: false,
             filters: { per_page: perPage, reports_per_page: reportsPerPage },
         },
     });
@@ -491,6 +492,7 @@ describe('Users Show', () => {
                 user: user(),
                 logs: paginated([]),
                 reports: paginated([]),
+                multipleWarehouses: false,
                 filters: { per_page: 20, reports_per_page: 20 },
             },
         });

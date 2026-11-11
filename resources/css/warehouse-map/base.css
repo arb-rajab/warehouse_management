@@ -19,6 +19,25 @@
     line-height: 1.25;
 }
 
+/*
+ * A control of the map shown on its own (the help page's preview of the
+ * warehouse switcher): in the page's flow, no map behind it, and not a
+ * `wms` container, so it shows its desktop layout whatever its width.
+ */
+.wms.wms--preview {
+    position: relative;
+    inset: auto;
+    container-type: normal;
+    overflow: visible;
+    background: transparent;
+    /* room for the open menu under the chip */
+    min-height: 360px;
+}
+
+.wms--preview .wms-brand {
+    display: inline-flex;
+}
+
 .wms *,
 .wms *::before,
 .wms *::after {
@@ -169,6 +188,12 @@
     background: var(--wms-subtle);
     color: var(--wms-text);
     border: 1px solid var(--wms-border-light);
+}
+
+.wms-btn--sm {
+    height: 30px;
+    padding: 0 12px;
+    font-size: 12px;
 }
 
 .wms-btn--grow {

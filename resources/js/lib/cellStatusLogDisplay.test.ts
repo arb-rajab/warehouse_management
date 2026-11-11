@@ -5,6 +5,7 @@ import type { CellStatusLog, CellStatusLogFlag } from '@/types/admin';
 import {
     acknowledgeFlags,
     cellLogActionLabel,
+    cellWarehouseName,
     flagReasonLabel,
     hasUnacknowledgedFlags,
     mergeTransferPairs,
@@ -208,5 +209,46 @@ describe('mergeTransferPairs', () => {
         const opened = cellLog({ id: 2, action: 'opened' });
 
         expect(mergeTransferPairs([stored, opened])).toHaveLength(2);
+    });
+});
+
+describe('cellWarehouseName', () => {
+    const cell = {
+        row_letter: 'A',
+        cell_number: 1,
+        flat_number: 1,
+        warehouse: { id: 2, name: 'Cold store' },
+    };
+
+    it('names the warehouse only when the system has several', () => {
+        expect(cellWarehouseName(cell, true)).toBe('Cold store');
+        expect(cellWarehouseName(cell, false)).toBeNull();
+        expect(cellWarehouseName(cell, undefined)).toBeNull();
+    });
+
+    it('has no name when the payload carries no warehouse', () => {
+        expect(
+            cellWarehouseName({ ...cell, warehouse: undefined }, true),
+        ).toBeNull();
+    });
+});
+
+describe('mergeTransferPairs across warehouses', () => {
+    it('does not merge rows whose mirrored sides name different warehouses', () => {
+        const slot = { row_letter: 'A', cell_number: 1, flat_number: 1 };
+        const out = cellLog({
+            id: 1,
+            action: 'transferred_out',
+            cell: { ...slot, warehouse: { id: 1, name: 'Main' } },
+            related_cell: { ...slot, warehouse: { id: 2, name: 'Cold' } },
+        });
+        const incoming = cellLog({
+            id: 2,
+            action: 'transferred_in',
+            cell: { ...slot, warehouse: { id: 1, name: 'Main' } },
+            related_cell: { ...slot, warehouse: { id: 2, name: 'Cold' } },
+        });
+
+        expect(mergeTransferPairs([out, incoming])).toHaveLength(2);
     });
 });

@@ -1,6 +1,7 @@
 import { Link } from '@inertiajs/vue3';
 import { mount } from '@vue/test-utils';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { index as categories } from '@/actions/App/Http/Controllers/Store/Admin/CategoryController';
 import { index as currencies } from '@/actions/App/Http/Controllers/Store/Admin/CurrencyController';
 import { edit as generalSettings } from '@/actions/App/Http/Controllers/Store/Admin/GeneralSettingsController';
 import { index as googleMap } from '@/actions/App/Http/Controllers/Store/Admin/GoogleMapController';
@@ -9,35 +10,25 @@ import { all as allProducts } from '@/actions/App/Http/Controllers/Store/Admin/P
 import {
     activation,
     firebase,
-    payments,
     smtp,
 } from '@/actions/App/Http/Controllers/Store/Admin/SettingsController';
 import { index as shipping } from '@/actions/App/Http/Controllers/Store/Admin/ShippingConfigurationController';
 import { index as taxes } from '@/actions/App/Http/Controllers/Store/Admin/TaxController';
+import { edit as websiteFooter } from '@/actions/App/Http/Controllers/Store/Admin/WebsiteFooterController';
+import { edit as websiteHeader } from '@/actions/App/Http/Controllers/Store/Admin/WebsiteHeaderController';
 import { i18n, t } from '@/lib/i18n';
-import { storeSharedProps } from '@/testing/factories';
-import { defaultAuthProps } from '@/testing/inertiaPageMocks';
 import type {
     StoreSetupChecklist,
     StoreSetupChecklistKey,
+    StoreSetupChecklistReason,
 } from '@/types/store';
+import type { RouteDefinition } from '@/wayfinder';
 import StoreSetupChecklistCard from './StoreSetupChecklist.vue';
 
-const { permissions } = vi.hoisted(() => ({
-    permissions: { value: [] as string[] },
-}));
 vi.mock('@inertiajs/vue3', async () => {
     const { createLinkStub } = await import('@/testing/inertiaStubs');
 
-    return {
-        Link: createLinkStub(),
-        usePage: () => ({
-            url: '/temp/admin',
-            props: defaultAuthProps({
-                store: storeSharedProps({ permissions: permissions.value }),
-            }),
-        }),
-    };
+    return { Link: createLinkStub() };
 });
 
 const KEYS: StoreSetupChecklistKey[] = [
@@ -54,24 +45,228 @@ const KEYS: StoreSetupChecklistKey[] = [
     'language',
 ];
 
+/**
+ * Every reason SetupChecklist::TARGETS can give, with the page and highlight
+ * it links to and the href the card must build for it.
+ */
+const REASONS: [StoreSetupChecklistReason, RouteDefinition<'get'>][] = [
+    [
+        {
+            key: 'smtp.mailer_log',
+            route: 'smtp_settings.index',
+            highlight: 'mail_mailer',
+        },
+        smtp({ query: { highlight: 'mail_mailer' } }),
+    ],
+    [
+        {
+            key: 'smtp.host',
+            route: 'smtp_settings.index',
+            highlight: 'mail_host',
+        },
+        smtp({ query: { highlight: 'mail_host' } }),
+    ],
+    [
+        {
+            key: 'smtp.username_and_password',
+            route: 'smtp_settings.index',
+            highlight: 'mail_credentials',
+        },
+        smtp({ query: { highlight: 'mail_credentials' } }),
+    ],
+    [
+        {
+            key: 'paymentMethod.none_enabled',
+            route: 'activation.index',
+            highlight: 'cash_payment',
+        },
+        activation({ query: { highlight: 'cash_payment' } }),
+    ],
+    [
+        {
+            key: 'cashOnDeliveryProducts.no_product_allows_cod',
+            route: 'products.all',
+            highlight: null,
+        },
+        allProducts(),
+    ],
+    [
+        {
+            key: 'shipping.type_unset',
+            route: 'shipping_configuration.index',
+            highlight: 'shipping_type',
+        },
+        shipping({ query: { highlight: 'shipping_type' } }),
+    ],
+    [
+        {
+            key: 'shipping.flat_rate_cost',
+            route: 'shipping_configuration.index',
+            highlight: 'flat_rate_shipping_cost',
+        },
+        shipping({ query: { highlight: 'flat_rate_shipping_cost' } }),
+    ],
+    [
+        {
+            key: 'shipping.seller_admin_cost',
+            route: 'shipping_configuration.index',
+            highlight: 'shipping_cost_admin',
+        },
+        shipping({ query: { highlight: 'shipping_cost_admin' } }),
+    ],
+    [
+        {
+            key: 'shipping.area_no_active_city_with_cost',
+            route: 'shipping_configuration.index',
+            highlight: 'cities',
+        },
+        shipping({ query: { highlight: 'cities' } }),
+    ],
+    [
+        {
+            key: 'shipping.carrier_none_usable',
+            route: 'shipping_configuration.index',
+            highlight: 'carriers',
+        },
+        shipping({ query: { highlight: 'carriers' } }),
+    ],
+    [
+        {
+            key: 'firebasePush.project_unset',
+            route: 'google-firebase.index',
+            highlight: 'firebase_server',
+        },
+        firebase({ query: { highlight: 'firebase_server' } }),
+    ],
+    [
+        {
+            key: 'firebasePush.credentials_missing',
+            route: 'google-firebase.index',
+            highlight: 'firebase_server',
+        },
+        firebase({ query: { highlight: 'firebase_server' } }),
+    ],
+    [
+        {
+            key: 'googleMaps.api_key_unset',
+            route: 'google-map.index',
+            highlight: 'google_map_api_key',
+        },
+        googleMap({ query: { highlight: 'google_map_api_key' } }),
+    ],
+    [
+        {
+            key: 'currency.default_unset',
+            route: 'currency.index',
+            highlight: 'system_default_currency',
+        },
+        currencies({ query: { highlight: 'system_default_currency' } }),
+    ],
+    [
+        {
+            key: 'currency.default_missing',
+            route: 'currency.index',
+            highlight: 'system_default_currency',
+        },
+        currencies({ query: { highlight: 'system_default_currency' } }),
+    ],
+    [
+        { key: 'vatTax.no_active_tax', route: 'tax.index', highlight: null },
+        taxes(),
+    ],
+    [
+        {
+            key: 'catalog.no_published_product',
+            route: 'products.all',
+            highlight: null,
+        },
+        allProducts(),
+    ],
+    [
+        {
+            key: 'catalog.no_category',
+            route: 'categories.index',
+            highlight: null,
+        },
+        categories(),
+    ],
+    [
+        {
+            key: 'siteBasics.site_name',
+            route: 'general_setting.index',
+            highlight: 'site_name',
+        },
+        generalSettings({ query: { highlight: 'site_name' } }),
+    ],
+    [
+        {
+            key: 'siteBasics.contact_email',
+            route: 'website.footer',
+            highlight: 'contact_email',
+        },
+        websiteFooter({ query: { highlight: 'contact_email' } }),
+    ],
+    [
+        {
+            key: 'siteBasics.contact_phone',
+            route: 'website.footer',
+            highlight: 'contact_phone',
+        },
+        websiteFooter({ query: { highlight: 'contact_phone' } }),
+    ],
+    [
+        {
+            key: 'siteBasics.header_logo',
+            route: 'website.header',
+            highlight: 'header_logo',
+        },
+        websiteHeader({ query: { highlight: 'header_logo' } }),
+    ],
+    [
+        {
+            key: 'language.default_missing',
+            route: 'languages.index',
+            highlight: 'default_language',
+            params: { code: 'nl' },
+        },
+        languages({ query: { highlight: 'default_language' } }),
+    ],
+    [
+        {
+            key: 'language.default_inactive',
+            route: 'languages.index',
+            highlight: 'default_language',
+            params: { code: 'nl' },
+        },
+        languages({ query: { highlight: 'default_language' } }),
+    ],
+];
+
+/** Each to-do item carries every reason of its check (two for site basics and firebase, say). */
 function checklist(doneKeys: StoreSetupChecklistKey[]): StoreSetupChecklist {
     return {
-        items: KEYS.map((key) => ({ key, done: doneKeys.includes(key) })),
+        items: KEYS.map((key) => {
+            const done = doneKeys.includes(key);
+
+            return {
+                key,
+                done,
+                reasons: done
+                    ? []
+                    : REASONS.map(([reason]) => reason).filter((reason) =>
+                          reason.key.startsWith(`${key}.`),
+                      ),
+            };
+        }),
         done: doneKeys.length,
         total: KEYS.length,
     };
 }
 
-function hrefOf(
-    wrapper: ReturnType<typeof mount>,
-    key: StoreSetupChecklistKey,
-): string | undefined {
-    return wrapper.find(`li[data-key="${key}"] a`).attributes('href');
+function row(wrapper: ReturnType<typeof mount>, key: StoreSetupChecklistKey) {
+    return wrapper.get(`[data-key="${key}"]`);
 }
 
-beforeEach(() => {
-    permissions.value = [];
-});
 afterEach(() => {
     i18n.global.locale.value = 'en';
 });
@@ -116,37 +311,33 @@ describe('StoreSetupChecklist', () => {
         },
     );
 
-    it('renders done rows without hint or link and to-do rows with both', () => {
+    it('renders done rows without a reason or link and to-do rows with the exact missing setting and a fix link', () => {
         const wrapper = mount(StoreSetupChecklistCard, {
             props: { checklist: checklist(['smtp', 'paymentMethod']) },
         });
-        expect(wrapper.findAll('li')).toHaveLength(11);
-        const done = wrapper.get('li[data-key="smtp"]');
+        expect(wrapper.findAll('[data-key]')).toHaveLength(11);
+        const done = row(wrapper, 'smtp');
         expect(done.attributes('data-done')).toBe('true');
         expect(done.classes()).toContain('text-muted');
         expect(done.text()).toContain(
             t('store.dashboard.checklist.items.smtp.label'),
         );
-        expect(done.text()).not.toContain(
-            t('store.dashboard.checklist.items.smtp.hint'),
-        );
+        expect(done.find('[data-reason]').exists()).toBe(false);
         expect(done.find('a').exists()).toBe(false);
 
-        const todo = wrapper.get('li[data-key="shipping"]');
+        const todo = row(wrapper, 'shipping');
         expect(todo.attributes('data-done')).toBe('false');
         expect(todo.text()).toContain(
             t('store.dashboard.checklist.items.shipping.label'),
         );
-        expect(todo.text()).toContain(
-            t('store.dashboard.checklist.items.shipping.hint'),
+        const reason = todo.get('[data-reason="shipping.flat_rate_cost"]');
+        const text = t(
+            'store.dashboard.checklist.reasons.shipping.flat_rate_cost',
         );
-        expect(todo.get('a').text()).toBe(
-            t('store.dashboard.checklist.configure'),
-        );
-        expect(todo.get('a').attributes('aria-label')).toBe(
-            t('store.dashboard.checklist.configureItem', {
-                item: t('store.dashboard.checklist.items.shipping.label'),
-            }),
+        expect(reason.text()).toContain(text);
+        expect(reason.get('a').text()).toBe(t('store.dashboard.checklist.fix'));
+        expect(reason.get('a').attributes('aria-label')).toBe(
+            t('store.dashboard.checklist.fixReason', { reason: text }),
         );
         expect(
             wrapper
@@ -155,57 +346,68 @@ describe('StoreSetupChecklist', () => {
         ).toBe(true);
     });
 
-    it('links each to-do row to the page that fixes it', () => {
+    it('links every reason to the page that sets it, highlighting the exact setting', () => {
         const wrapper = mount(StoreSetupChecklistCard, {
             props: { checklist: checklist([]) },
         });
-        expect(wrapper.findAllComponents(Link)).toHaveLength(11);
-        expect(hrefOf(wrapper, 'smtp')).toBe(smtp().url);
-        expect(hrefOf(wrapper, 'paymentMethod')).toBe(payments().url);
-        expect(hrefOf(wrapper, 'cashOnDeliveryProducts')).toBe(
-            allProducts().url,
-        );
-        expect(hrefOf(wrapper, 'shipping')).toBe(shipping().url);
-        expect(hrefOf(wrapper, 'firebasePush')).toBe(firebase().url);
-        expect(hrefOf(wrapper, 'googleMaps')).toBe(googleMap().url);
-        expect(hrefOf(wrapper, 'currency')).toBe(currencies().url);
-        expect(hrefOf(wrapper, 'vatTax')).toBe(taxes().url);
-        expect(hrefOf(wrapper, 'catalog')).toBe(allProducts().url);
-        expect(hrefOf(wrapper, 'siteBasics')).toBe(generalSettings().url);
-        expect(hrefOf(wrapper, 'language')).toBe(languages().url);
+        expect(wrapper.findAllComponents(Link)).toHaveLength(REASONS.length);
+
+        for (const [reason, target] of REASONS) {
+            expect(
+                wrapper
+                    .get(`[data-reason="${reason.key}"] a`)
+                    .attributes('href'),
+            ).toBe(target.url);
+        }
+    });
+
+    it('lists one line and link per missing part when a check has several', () => {
+        const wrapper = mount(StoreSetupChecklistCard, {
+            props: { checklist: checklist([]) },
+        });
+        const reasons = row(wrapper, 'siteBasics').findAll('[data-reason]');
+        expect(
+            reasons.map((reason) => reason.attributes('data-reason')),
+        ).toEqual([
+            'siteBasics.site_name',
+            'siteBasics.contact_email',
+            'siteBasics.contact_phone',
+            'siteBasics.header_logo',
+        ]);
+        expect(reasons.every((reason) => reason.find('a').exists())).toBe(true);
     });
 
     it.each(['en', 'ar'] as const)(
-        'tells staff in %s the Google Maps key is missing, that it is set on the Google map settings page, and links there',
+        'names the language in both language reasons in %s',
         (locale) => {
             i18n.global.locale.value = locale;
             const wrapper = mount(StoreSetupChecklistCard, {
                 props: { checklist: checklist([]) },
             });
-            const row = wrapper.get('li[data-key="googleMaps"]');
-            expect(row.text()).toContain(
-                t('store.dashboard.checklist.items.googleMaps.hint'),
-            );
-            expect(row.text()).toContain('MAP_API_KEY');
-            expect(row.get('a').attributes('href')).toBe(googleMap().url);
+
+            for (const key of ['default_missing', 'default_inactive']) {
+                expect(
+                    wrapper.get(`[data-reason="language.${key}"]`).text(),
+                ).toContain('nl');
+                expect(
+                    wrapper.get(`[data-reason="language.${key}"]`).text(),
+                ).not.toContain('{code}');
+            }
         },
     );
 
-    it('words the English Google Maps hint around the settings page', () => {
-        expect(t('store.dashboard.checklist.items.googleMaps.hint')).toContain(
-            'Google map settings page',
-        );
-    });
+    it.each(['en', 'ar'] as const)(
+        'words every reason in %s, never falling back to its key',
+        (locale) => {
+            i18n.global.locale.value = locale;
 
-    it('sends the payment row to the cash payment option when Features activation is allowed', () => {
-        permissions.value = ['features_activation'];
-        const wrapper = mount(StoreSetupChecklistCard, {
-            props: { checklist: checklist([]) },
-        });
-        expect(hrefOf(wrapper, 'paymentMethod')).toBe(
-            activation({ query: { highlight: 'cash_payment' } }).url,
-        );
-    });
+            for (const [reason] of REASONS) {
+                const path = `store.dashboard.checklist.reasons.${reason.key}`;
+                expect(i18n.global.te(path, locale)).toBe(true);
+                expect(t(path)).not.toBe(path);
+            }
+        },
+    );
 
     it('collapses and expands the list with an accessible toggle button', async () => {
         const wrapper = mount(StoreSetupChecklistCard, {

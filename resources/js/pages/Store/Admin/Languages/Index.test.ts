@@ -8,6 +8,7 @@ import {
     edit,
     show,
     showAppTranslations,
+    updateDefault,
     updateStatus,
     updateRtlStatus,
     importAppTranslations,
@@ -15,12 +16,14 @@ import {
 import AddResourceLink from '@/components/AddResourceLink.vue';
 import DataTable from '@/components/DataTable.vue';
 import Pagination from '@/components/Pagination.vue';
+import StoreDefaultLanguageForm from '@/components/StoreDefaultLanguageForm.vue';
 import StoreStatusSwitch from '@/components/StoreStatusSwitch.vue';
 import TableActionLink from '@/components/TableActionLink.vue';
 import { confirmDelete } from '@/lib/confirm';
 import { i18n, syncPageLocale, t } from '@/lib/i18n';
 import {
     adminLanguage,
+    defaultLanguageSetting,
     paginated,
     storeSharedProps,
 } from '@/testing/factories';
@@ -77,6 +80,7 @@ function mountPage(permissions = ['language_setup']) {
             languages: paginated([language]),
             filters: { per_page: 20 },
             defaultLanguage: 'en',
+            defaultLanguageSetting: defaultLanguageSetting(),
         },
     });
 }
@@ -104,8 +108,8 @@ describe('Language Index', () => {
             expect(wrapper.text()).toContain(t(`store.languages.${key}`));
         }
 
-        expect(wrapper.text()).toContain(
-            t('store.languages.defaultReadOnly', { code: 'en' }),
+        expect(wrapper.findComponent(StoreDefaultLanguageForm).exists()).toBe(
+            true,
         );
         expect(
             wrapper
@@ -152,7 +156,10 @@ describe('Language Index', () => {
             }
 
             expect(wrapper.text()).toContain(
-                t('store.languages.defaultReadOnly', { code: 'en' }),
+                t('store.languages.defaultInUse', {
+                    code: 'en',
+                    source: t('store.languages.defaultSources.env'),
+                }),
             );
         },
     );
@@ -177,6 +184,7 @@ describe('Language Index', () => {
         const wrapper = mountPage();
         const forms = wrapper.findAllComponents(Form);
         expect(forms.map((form) => form.props('action'))).toEqual([
+            updateDefault(),
             updateRtlStatus({ mergeQuery: {} }),
             updateStatus({ mergeQuery: {} }),
             importAppTranslations(),
@@ -197,7 +205,7 @@ describe('Language Index', () => {
             },
         ]);
 
-        for (const form of forms.slice(0, 2)) {
+        for (const form of forms.slice(1, 3)) {
             expect(form.get('input[name=id]').attributes('value')).toBe('3');
             expect(form.get('input[name=status]').attributes('value')).toBe(
                 '0',
@@ -214,6 +222,7 @@ describe('Language Index', () => {
                 ]),
                 filters: {},
                 defaultLanguage: 'en',
+                defaultLanguageSetting: defaultLanguageSetting(),
             },
         });
         expect(
@@ -236,6 +245,7 @@ describe('Language Index', () => {
                 ]),
                 filters: {},
                 defaultLanguage: 'en',
+                defaultLanguageSetting: defaultLanguageSetting(),
             },
         });
         expect(wrapper.findAllComponents(TableActionLink)).toHaveLength(3);
@@ -251,7 +261,58 @@ describe('Language Index', () => {
             'aria-disabled': 'true',
         });
         expect(status.text()).toContain(t('store.languages.defaultLocked'));
-        expect(wrapper.findAllComponents(Form)).toHaveLength(2);
+        expect(wrapper.findAllComponents(Form)).toHaveLength(3);
+    });
+    it('lets an inactive default language be switched back on', () => {
+        const wrapper = mount(Index, {
+            props: {
+                languages: paginated([
+                    adminLanguage({
+                        is_default: true,
+                        is_english: true,
+                        status: false,
+                    }),
+                ]),
+                filters: {},
+                defaultLanguage: 'en',
+                defaultLanguageSetting: defaultLanguageSetting(),
+            },
+        });
+        const [, status] = wrapper.findAllComponents(StoreStatusSwitch);
+        expect(status.props('locked')).toBeUndefined();
+        expect(status.findComponent(Form).exists()).toBe(true);
+    });
+    it('marks the default language notice for a setup checklist deep link, and nothing without one', async () => {
+        const scrollIntoView = vi.fn();
+        Element.prototype.scrollIntoView = scrollIntoView;
+        const props = {
+            languages: paginated([adminLanguage()]),
+            filters: {},
+            defaultLanguage: 'nl',
+            defaultLanguageSetting: defaultLanguageSetting({
+                effective: { value: 'nl', source: 'env' },
+                environment: 'nl',
+                state: 'missing',
+            }),
+        };
+        const wrapper = mount(Index, {
+            props: { ...props, highlight: 'default_language' },
+            attachTo: document.body,
+        });
+        await wrapper.vm.$nextTick();
+        await wrapper.vm.$nextTick();
+        const marked = wrapper.findAll('[data-highlighted]');
+        expect(marked).toHaveLength(1);
+        expect(marked[0].attributes('data-section')).toBe('default_language');
+        expect(marked[0].text()).toContain(
+            t('store.languages.default_missing', { code: 'nl' }),
+        );
+        expect(scrollIntoView).toHaveBeenCalledWith({ block: 'center' });
+        expect(document.activeElement).toBe(marked[0].get('select').element);
+        wrapper.unmount();
+
+        const plain = mount(Index, { props });
+        expect(plain.findAll('[data-highlighted]')).toHaveLength(0);
     });
     it('changes page size through the languages route', () => {
         mountPage().getComponent(Pagination).vm.$emit('update:per-page', 10);
@@ -261,22 +322,27 @@ describe('Language Index', () => {
             { preserveState: true, replace: true },
         );
     });
-    it('keeps the required legend on the import form only; the switches post fixed values', async () => {
+    it('keeps the required legend on the import form only; the default language and the switches carry no required field', async () => {
         const wrapper = mountPage();
         await wrapper.vm.$nextTick();
         const forms = wrapper.findAll('form');
-        expect(forms).toHaveLength(3);
+        expect(forms).toHaveLength(4);
 
-        for (const form of forms.slice(0, 2)) {
+        for (const form of forms.slice(0, 3)) {
             expect(form.find('[data-required-legend]').exists()).toBe(false);
             expect(form.find('[data-required-mark]').exists()).toBe(false);
             expect(form.find('[required]').exists()).toBe(false);
+        }
+
+        expect(forms[0].find('select#default_language').exists()).toBe(true);
+
+        for (const form of forms.slice(1, 3)) {
             expect(form.find('select').exists()).toBe(false);
         }
 
-        expect(forms[2].findAll('[data-required-legend]')).toHaveLength(1);
-        expect(forms[2].findAll('[data-required-mark]')).toHaveLength(1);
-        expect(forms[2].findAll('[required]')).toHaveLength(1);
+        expect(forms[3].findAll('[data-required-legend]')).toHaveLength(1);
+        expect(forms[3].findAll('[data-required-mark]')).toHaveLength(1);
+        expect(forms[3].findAll('[required]')).toHaveLength(1);
         expect(i18n.global.te('store.languages.rtlFor', 'ar')).toBe(true);
         expect(i18n.global.te('store.languages.statusFor', 'ar')).toBe(true);
         expect(i18n.global.te('store.languages.defaultLocked', 'ar')).toBe(

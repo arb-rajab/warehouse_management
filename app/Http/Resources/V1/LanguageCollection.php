@@ -17,7 +17,7 @@ class LanguageCollection extends ResourceCollection
                     'code' => $data->code,
                     'mobile_app_code' => $data->app_lang_code,
                     'rtl' => $data->rtl == 1,
-                    'is_default' => config("app.default_language") == $data->code,
+                    'is_default' => default_language() == $data->code,
                     'image' => static_asset('assets/img/flags/'.$data->code.'.png') ,
 
                 ];

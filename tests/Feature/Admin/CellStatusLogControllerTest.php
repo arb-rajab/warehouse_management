@@ -753,3 +753,66 @@ test('the cell logs can be filtered by warehouse, hydrating the selected warehou
             ->where('filterOptions.warehouses', [['id' => $north->id, 'name' => 'North']])
     );
 });
+
+test('the cell log flags a single-warehouse system so no warehouse name is shown', function () {
+    actingAsAdmin();
+    CellStatusLog::factory()->create();
+
+    $this->get('/admin/cell-logs')->assertOk()->assertInertia(
+        fn (Assert $page) => $page->where('multipleWarehouses', false)
+    );
+});
+
+test('the cell log flags a system with several warehouses and ships the warehouse of both transfer sides', function () {
+    actingAsAdmin();
+    $main = Warehouse::factory()->create(['name' => 'Main']);
+    $cold = Warehouse::factory()->create(['name' => 'Cold store']);
+    $fromCell = Row::factory()->create(['warehouse_id' => $main->id, 'letter' => 'A', 'cells_count' => 1, 'flats_count' => 1])->cells()->first();
+    $toCell = Row::factory()->create(['warehouse_id' => $cold->id, 'letter' => 'A', 'cells_count' => 1, 'flats_count' => 1])->cells()->first();
+    CellStatusLog::factory()->create([
+        'cell_id' => $fromCell->id,
+        'related_cell_id' => $toCell->id,
+        'action' => CellLogAction::TransferredOut,
+    ]);
+
+    $this->get('/admin/cell-logs')->assertOk()->assertInertia(
+        fn (Assert $page) => $page->where('multipleWarehouses', true)
+            ->where('logs.data.0.cell.warehouse', ['id' => $main->id, 'name' => 'Main'])
+            ->where('logs.data.0.related_cell.warehouse', ['id' => $cold->id, 'name' => 'Cold store'])
+    );
+});
+
+test('the cell log loads the warehouses of its cells without a query per row', function () {
+    actingAsAdmin();
+    Warehouse::factory()->count(2)->create();
+    $countQueries = function (): int {
+        DB::flushQueryLog();
+        DB::enableQueryLog();
+        test()->get('/admin/cell-logs')->assertOk();
+        $count = count(DB::getQueryLog());
+        DB::disableQueryLog();
+
+        return $count;
+    };
+
+    $makeLog = function (): void {
+        $warehouse = Warehouse::factory()->create();
+        $from = Row::factory()->create(['warehouse_id' => $warehouse->id, 'cells_count' => 1, 'flats_count' => 1])->cells()->first();
+        $to = Row::factory()->create(['warehouse_id' => Warehouse::factory()->create()->id, 'cells_count' => 1, 'flats_count' => 1])->cells()->first();
+        CellStatusLog::factory()->create([
+            'cell_id' => $from->id,
+            'related_cell_id' => $to->id,
+            'action' => CellLogAction::TransferredOut,
+        ]);
+    };
+
+    $makeLog();
+    // The first request also loads the signed-in user's roles; count from the second.
+    $countQueries();
+    $few = $countQueries();
+    foreach (range(1, 4) as $_) {
+        $makeLog();
+    }
+
+    expect($countQueries())->toBe($few);
+});

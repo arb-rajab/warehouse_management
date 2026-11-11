@@ -11,7 +11,7 @@ trait ValidatesStoreLanguageDefinition
     protected function languageDefinitionRules(?Language $language = null): array
     {
         $codeRules = ['required', 'string', 'max:10', 'regex:/^[a-zA-Z]{2,3}(?:[-_][a-zA-Z0-9]{2,4})?$/', Rule::unique('languages', 'code')->ignore($language?->id)];
-        if ($language !== null && in_array($language->code, ['en', config('app.default_language')], true)) {
+        if ($language !== null && in_array($language->code, ['en', default_language()], true)) {
             $codeRules[] = Rule::in([$language->code]);
         }
 

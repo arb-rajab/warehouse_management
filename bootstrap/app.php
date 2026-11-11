@@ -147,7 +147,7 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        $exceptions->dontFlash(['current_password', 'password', 'password_confirmation', 'new_password', 'confirm_password']);
+        $exceptions->dontFlash(['current_password', 'password', 'password_confirmation', 'new_password', 'confirm_password', 'recaptcha_secret_key']);
 
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*', '*/api/*') || $request->expectsJson(),

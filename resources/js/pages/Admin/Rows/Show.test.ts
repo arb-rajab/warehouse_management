@@ -7,12 +7,18 @@ import {
     show as rowShow,
     edit as rowEdit,
 } from '@/actions/App/Http/Controllers/Admin/RowController';
+import PalletActionsDialog from '@/components/PalletActionsDialog.vue';
 import { formatDate, formatDateTime } from '@/lib/date';
 import { t } from '@/lib/i18n';
 import { formatSlot } from '@/lib/location';
 import { cell, paginated, row } from '@/testing/factories';
 import { defaultAuthProps, resetMocks } from '@/testing/inertiaPageMocks';
-import type { Cell, CellMapRow, CellSlotLocation, Row } from '@/types/admin';
+import type {
+    Cell,
+    CellSlotLocation,
+    PalletTransferTargets,
+    Row,
+} from '@/types/admin';
 import Show from './Show.vue';
 
 const { usePageMock, routerGetMock, formSubmitMock } = vi.hoisted(() => ({
@@ -68,7 +74,7 @@ function mountPage(
     cells: Cell[],
     overrides: {
         today?: string;
-        rows?: CellMapRow[];
+        transferTargets?: PalletTransferTargets;
         errors?: Record<string, string>;
         linkedCell?: CellSlotLocation | null;
         attachTo?: Element;
@@ -85,14 +91,18 @@ function mountPage(
         attachTo: overrides.attachTo,
         props: {
             row: shownRow,
-            rows: overrides.rows ?? [
-                {
-                    id: shownRow.id,
-                    letter: shownRow.letter,
-                    cells_count: shownRow.cells_count,
-                    flats_count: shownRow.flats_count,
-                },
-            ],
+            transferTargets: overrides.transferTargets ?? {
+                warehouses: [shownRow.warehouse],
+                rows: [
+                    {
+                        id: shownRow.id,
+                        letter: shownRow.letter,
+                        cells_count: shownRow.cells_count,
+                        flats_count: shownRow.flats_count,
+                        warehouse_id: shownRow.warehouse.id,
+                    },
+                ],
+            },
             cells,
             today: overrides.today ?? '2026-08-13',
             filterOptions: { products },
@@ -635,6 +645,44 @@ describe('Rows Show', () => {
             expect.objectContaining({ boxes_count: 3 }),
             expect.objectContaining({ preserveScroll: true }),
         );
+    });
+
+    it("hands the pallet dialog every warehouse's transfer destinations and the row's own warehouse", () => {
+        const transferTargets: PalletTransferTargets = {
+            warehouses: [
+                { id: 1, name: 'Main' },
+                { id: 4, name: 'Annex' },
+            ],
+            rows: [
+                {
+                    id: 1,
+                    letter: 'A',
+                    cells_count: 1,
+                    flats_count: 1,
+                    warehouse_id: 1,
+                },
+                {
+                    id: 2,
+                    letter: 'A',
+                    cells_count: 2,
+                    flats_count: 1,
+                    warehouse_id: 4,
+                },
+            ],
+        };
+        const wrapper = mountPage(
+            {
+                cells_count: 1,
+                flats_count: 1,
+                warehouse: { id: 1, name: 'Main' },
+            },
+            [],
+            { transferTargets },
+        );
+        const dialog = wrapper.getComponent(PalletActionsDialog);
+
+        expect(dialog.props('transferTargets')).toEqual(transferTargets);
+        expect(dialog.props('warehouseId')).toBe(1);
     });
 
     it('does not show a manage-pallet button for a coordinate with no cell record', () => {

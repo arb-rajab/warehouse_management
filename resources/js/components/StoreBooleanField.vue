@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { nextTick, onMounted, useTemplateRef } from 'vue';
 import FieldError from '@/components/FieldError.vue';
 import RequiredMark from '@/components/RequiredMark.vue';
+import StoreHighlight from '@/components/StoreHighlight.vue';
 import { fieldLabelClass, plainFieldInputClass } from '@/lib/filters';
 import { t } from '@/lib/i18n';
 /**
@@ -9,10 +9,10 @@ import { t } from '@/lib/i18n';
  * `:required="false"` where the server rule is not `required`.
  *
  * `highlighted` marks the option a button sent the admin here to change: it is
- * ringed, scrolled into view and focused when the page renders
- * (.ai/rules/deep-link-highlight.md).
+ * ringed, scrolled into view and focused when the page renders, through the
+ * shared StoreHighlight (.ai/rules/deep-link-highlight.md).
  */
-const props = withDefaults(
+withDefaults(
     defineProps<{
         name: string;
         label: string;
@@ -24,32 +24,14 @@ const props = withDefaults(
     }>(),
     { required: true, highlighted: false },
 );
-const select = useTemplateRef<HTMLSelectElement>('select');
-onMounted(async () => {
-    if (!props.highlighted) {
-        return;
-    }
-
-    await nextTick();
-    select.value?.scrollIntoView?.({ block: 'center' });
-    select.value?.focus({ preventScroll: true });
-});
 </script>
 <template>
-    <div
-        :data-highlighted="highlighted ? '' : undefined"
-        :class="
-            highlighted
-                ? 'rounded-lg p-3 ring-2 ring-warning ring-offset-2 ring-offset-surface'
-                : ''
-        "
-    >
+    <StoreHighlight :active="highlighted">
         <label :for="name" :class="fieldLabelClass"
             >{{ label }}<RequiredMark v-if="required"
         /></label>
         <select
             :id="name"
-            ref="select"
             :name="name"
             :required="required"
             :disabled="disabled"
@@ -66,5 +48,5 @@ onMounted(async () => {
             </option>
         </select>
         <FieldError :message="error" />
-    </div>
+    </StoreHighlight>
 </template>

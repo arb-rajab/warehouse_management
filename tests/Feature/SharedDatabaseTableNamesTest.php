@@ -58,6 +58,7 @@ test('the only bare-named tables are this app\'s own domain tables plus the shar
     expect($bareNamed)->toBe([
         'addons',
         'addresses',
+        'admin_audit_logs',
         'app_translations',
         'attribute_category',
         'attribute_translations',

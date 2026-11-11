@@ -6,6 +6,7 @@ use App\Http\Controllers\Concerns\ProvidesStoreReferenceOptions;
 use App\Http\Controllers\Concerns\ProvidesStoreUploadPreviews;
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\Store\Admin\Concerns\FlashesSuccess;
+use App\Http\Controllers\Store\Admin\Concerns\ReadsHighlight;
 use App\Http\Requests\Store\Admin\EditReferenceTranslationRequest;
 use App\Http\Requests\Store\Admin\UpdateWebsiteFooterRequest;
 use App\Services\Store\WebsiteSettings;
@@ -24,6 +25,7 @@ class WebsiteFooterController extends Controller implements HasMiddleware
     use FlashesSuccess;
     use ProvidesStoreReferenceOptions;
     use ProvidesStoreUploadPreviews;
+    use ReadsHighlight;
 
     /** @return array<int, Middleware> */
     public static function middleware(): array
@@ -56,6 +58,7 @@ class WebsiteFooterController extends Controller implements HasMiddleware
             'lang' => $lang,
             'languages' => $languages,
             'initialFiles' => $this->settingsImagePreviews($request, ['footer_logo', 'payment_method_images']),
+            'highlight' => $this->highlight($request, ['contact_email', 'contact_phone']),
         ]);
     }
 

@@ -299,9 +299,9 @@ test('an authenticated user can view a rows cell grid, including pallet and adde
                 ->where('flats_count', 1)
                 ->where('has_pallets', true)
             )
-            ->has('rows', 2)
-            ->where('rows.0.letter', 'B')
-            ->where('rows.1.letter', 'C')
+            ->has('transferTargets.rows', 2)
+            ->where('transferTargets.rows.0.letter', 'B')
+            ->where('transferTargets.rows.1.letter', 'C')
             ->has('cells', 2)
             ->has('cells.0', fn (Assert $cell) => $cell
                 ->where('id', $occupiedCell->id)
@@ -1114,9 +1114,12 @@ test('a row letter two warehouses use is refused without ?warehouse_id= and reso
     $this->get("/admin/rows/A?warehouse_id={$annex->id}")->assertOk()->assertInertia(
         fn (Assert $page) => $page->where('row.id', $annexRow->id)
             ->where('row.warehouse', ['id' => $annex->id, 'name' => 'Annex'])
-            // The row switcher lists the annex's rows only.
-            ->has('rows', 1)
-            ->where('rows.0.id', $annexRow->id)
+            // A pallet can be transferred to a row of any warehouse.
+            ->has('transferTargets.rows', 2)
+            ->where('transferTargets.warehouses', [
+                ['id' => $annex->id, 'name' => 'Annex'],
+                ['id' => $defaultRow->warehouse_id, 'name' => Warehouse::DEFAULT_NAME],
+            ])
     );
     $this->get("/admin/rows/A?warehouse_id={$defaultRow->warehouse_id}")->assertOk()->assertInertia(
         fn (Assert $page) => $page->where('row.id', $defaultRow->id)

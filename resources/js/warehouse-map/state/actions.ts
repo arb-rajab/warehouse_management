@@ -1,6 +1,9 @@
 import type { FilterRef } from '../domain/SlotCode';
 import { parseTerms } from '../domain/SlotFilter';
-import type { Slot, StateFilter } from '../domain/types';
+import type { Slot, StateFilter, Warehouse } from '../domain/types';
+import type { WarehouseSelection } from '../domain/warehouseSelection';
+import { carryOf, restoreCarry } from './carry';
+import type { MapCarry } from './carry';
 import type {
     MapState,
     PlanOrientation,
@@ -29,6 +32,40 @@ export function createActions(store: Store<MapState>) {
     const actions = {
         setWarehouse(warehouse: MapState['warehouse']): void {
             store.update({ warehouse, loadFailed: false });
+        },
+
+        setWarehouseIds(warehouseIds: WarehouseSelection): void {
+            store.update({ warehouseIds });
+        },
+
+        /**
+         * Rows of another set of warehouses: the search, the chips, the
+         * floor, the target, the selection, the open rack and the drawer
+         * carry over (from `carry`, else from the current state), minus
+         * whatever the new rows no longer hold.
+         */
+        showRows(warehouse: Warehouse, carry?: MapCarry): void {
+            store.update((s) => {
+                const { selectedId, ...kept } = restoreCarry(
+                    carry ?? carryOf(s),
+                    warehouse,
+                );
+                const hoverKept =
+                    s.scene.hoverId !== null &&
+                    warehouse.byId.has(s.scene.hoverId);
+
+                return {
+                    ...kept,
+                    warehouse,
+                    loadFailed: false,
+                    scene: {
+                        ...s.scene,
+                        selectedId,
+                        hoverId: hoverKept ? s.scene.hoverId : null,
+                        cardVisible: hoverKept && s.scene.cardVisible,
+                    },
+                };
+            });
         },
 
         setLoadFailed(failed: boolean): void {

@@ -11,8 +11,8 @@ When a button, banner link or alert exists to get an admin to change a specific 
 
 ## How
 - **Link to the page that holds the option**, passing the option's key as `?highlight=<key>`. Use Wayfinder: `activation({ query: { highlight: 'cash_payment' } })`. If the admin may not open that page, fall back to the nearest page they may open, as `Dashboard/Index.vue` does.
-- **Validate the key on the server.** The controller passes `highlight` to the page only when it is one of that page's own keys (`SettingsController::page()` checks `PAGES[$page]['keys']`). An unknown or non-string value becomes `null`. Never echo the raw query value.
-- **Mark it in the page.** `StoreBooleanField` takes `highlighted`: it adds `data-highlighted`, an amber ring, scrolls the option into view (centred) and focuses its control on mount. Pass `:highlighted="key === highlight"`. For a new kind of field, give it the same prop and behaviour rather than inventing another one.
+- **Validate the key on the server.** The controller passes `highlight` to the page only when it is one of that page's own keys, through the `ReadsHighlight` concern (`SettingsController::page()` checks `PAGES[$page]['keys']` and `sections`). An unknown or non-string value becomes `null`. Never echo the raw query value.
+- **Mark it in the page.** Wrap the field or section in `StoreHighlight` with `:active="highlight === '<key>'"`: it adds `data-highlighted`, an amber ring, scrolls the first control into view (centred) and focuses it on mount, or the block itself when it holds no control. `StoreBooleanField`'s `highlighted` prop uses it. Never invent another highlight mechanism.
 - **Keep it working without script.** The option stays an ordinary, reachable form control; the highlight is added on top.
 
 ## Tests
@@ -22,4 +22,17 @@ When a button, banner link or alert exists to get an admin to change a specific 
 - A test on the button's page that the link carries the `highlight` query.
 
 ## Where it applies today
-`Dashboard/Index.vue` → Features activation (`cash_payment`). The SMTP alert opens a read-only page with no option to change, and "no product allows cash on delivery" opens the product list, where there is no single option to mark; add the highlight when such a target exists.
+The dashboard setup checklist (`StoreSetupChecklist.vue`) links every reason in `SetupChecklist::TARGETS` (.ai/rules/setup-checklist-reasons.md). The targets are:
+- Features activation (`cash_payment`)
+- Shipping configuration (`shipping_type`, `flat_rate_shipping_cost`, `shipping_cost_admin`, `cities`, `carriers`)
+- the SMTP settings form's fields (`mail_mailer`, `mail_host`, and `mail_credentials`, the username and password pair) and the Firebase server status section (`firebase_server`)
+- The Analytics (`google_analytics`, `facebook_pixel`, `google_analytics_tracking_id`,
+  `facebook_pixel_id`), Facebook chat (`facebook_chat`, `facebook_page_id`), Facebook
+  comments (`facebook_comment`, `facebook_app_id`) and reCAPTCHA (`google_recaptcha`,
+  `recaptcha_site_key`, `recaptcha_secret_key`) pages mark their switch or field;
+  no checklist item links to them yet (`SettingsController::PAGES[...]['sections']`)
+- Google map (`google_map_api_key`), Currencies (`system_default_currency`) and General settings (`site_name`)
+- Website header (`header_logo`) and footer (`contact_email`, `contact_phone`)
+- Languages (`default_language`, the default-language control: a select of active languages and a save button)
+
+The product, category and tax lists hold no single option to mark, so their links carry no highlight.

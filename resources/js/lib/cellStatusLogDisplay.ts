@@ -44,6 +44,20 @@ export function transferPair(log: CellStatusLog): {
     return { from: log.cell, to: log.related_cell };
 }
 
+/**
+ * The warehouse name shown under a cell's slot in the log listings: only in a
+ * system with several warehouses (`multipleWarehouses`), and only when the
+ * payload names it. Both sides of a transfer ask separately, so a
+ * same-warehouse transfer names it on both sides and a cross-warehouse one
+ * shows the two differing names.
+ */
+export function cellWarehouseName(
+    cell: CellSlotLocation,
+    multipleWarehouses: boolean | undefined,
+): string | null {
+    return multipleWarehouses ? (cell.warehouse?.name ?? null) : null;
+}
+
 function sameCellLocation(
     a: CellSlotLocation | null,
     b: CellSlotLocation | null,
@@ -51,6 +65,7 @@ function sameCellLocation(
     return (
         a !== null &&
         b !== null &&
+        a.warehouse?.id === b.warehouse?.id &&
         a.row_letter === b.row_letter &&
         a.cell_number === b.cell_number &&
         a.flat_number === b.flat_number

@@ -22,6 +22,11 @@ export interface StoreSharedProps {
 export interface StoreRole {
     id: number;
     name: string;
+    /**
+     * Whether the role carries a permission only a Super Admin may grant
+     * (StorePermissions::SENSITIVE); sent by the Roles list and the staff forms.
+     */
+    sensitive?: boolean;
 }
 
 /** StaffResource: a store back-office account. */
@@ -39,7 +44,8 @@ export interface StaffMember {
 export interface PermissionGroup {
     section: string;
     label: string;
-    permissions: { id: number; label: string }[];
+    /** `sensitive`: only a Super Admin may grant it; the form warns. */
+    permissions: { id: number; label: string; sensitive?: boolean }[];
 }
 
 /** A store language a role name can be translated into. */
@@ -1060,12 +1066,8 @@ export interface StoreDashboardProps {
         visits: StoreDashboardSeries;
     };
     topProducts: StoreDashboardProduct[];
-    showSmtpAlert: boolean;
-    setupAlerts: StoreSetupAlert[];
     setupChecklist: StoreSetupChecklist;
 }
-
-export type StoreSetupAlert = 'noPaymentMethod' | 'cashOnDeliveryProducts';
 
 /** The setup checklist items, in display order. */
 export type StoreSetupChecklistKey =
@@ -1081,9 +1083,140 @@ export type StoreSetupChecklistKey =
     | 'siteBasics'
     | 'language';
 
+/** The pages a setup checklist reason links to (Laravel route names). */
+export type StoreSetupChecklistRoute =
+    | 'smtp_settings.index'
+    | 'activation.index'
+    | 'products.all'
+    | 'shipping_configuration.index'
+    | 'google-firebase.index'
+    | 'google-map.index'
+    | 'currency.index'
+    | 'tax.index'
+    | 'categories.index'
+    | 'general_setting.index'
+    | 'website.header'
+    | 'website.footer'
+    | 'languages.index';
+
+/**
+ * Why a check is not done: the exact missing setting (`shipping.flat_rate_cost`),
+ * the page that sets it and the key that page highlights (null on a list page).
+ */
+export interface StoreSetupChecklistReason {
+    key: string;
+    route: StoreSetupChecklistRoute;
+    highlight: string | null;
+    /** Words the reason's text fills in (the language reasons: `code`). */
+    params?: Record<string, string>;
+}
+
 export interface StoreSetupChecklistItem {
     key: StoreSetupChecklistKey;
     done: boolean;
+    /** Empty when done; at least one while to do. */
+    reasons: StoreSetupChecklistReason[];
+}
+
+/** Whether each server value a setup check reads is set (never the value). */
+export type StoreServerSettings = {
+    project_set: boolean;
+    credentials_found: boolean;
+};
+
+/**
+ * The SMTP settings saved on the SMTP page (StoreMailSettings); null where
+ * nothing is saved and the server's `.env` value applies. The saved password
+ * is never sent: only whether one is saved and whether it can be read.
+ */
+export interface StoreSmtpSettings {
+    mailer: 'smtp' | 'log' | null;
+    host: string | null;
+    port: number | null;
+    scheme: 'smtp' | 'smtps' | null;
+    username: string | null;
+    from_address: string | null;
+    from_name: string | null;
+    password_set: boolean;
+    password_unreadable: boolean;
+    /** MAIL_MAILER, offered as "use the server setting". */
+    environment_mailer: string;
+}
+
+/** Where an effective mail value comes from: saved in the admin, or `.env`. */
+export type StoreSmtpSource = 'admin' | 'env';
+
+export interface StoreSmtpEffectiveValue {
+    value: string | null;
+    source: StoreSmtpSource;
+}
+
+/** A secret: only whether it is set. */
+export interface StoreSmtpEffectivePresence {
+    set: boolean;
+    source: StoreSmtpSource;
+}
+
+/** How an audited field changed (AdminAuditLog::CHANGE_KINDS). */
+export type StoreAuditChangeKind = 'set' | 'changed' | 'removed';
+
+/**
+ * One row of the SMTP page's recent changes (AdminAuditLog): who, when, from
+ * which IP and which fields; never a value or the user agent.
+ */
+export interface StoreSmtpAuditEntry {
+    id: number;
+    action: 'smtp_settings.updated' | 'smtp_settings.password_failed';
+    changed_fields: Record<string, StoreAuditChangeKind>;
+    user_name: string | null;
+    user_email: string | null;
+    /** The account no longer exists: the name and email are the snapshot. */
+    user_deleted: boolean;
+    user_id: number;
+    ip_address: string | null;
+    created_at: string | null;
+}
+
+/** The values mail is sent with, each with its source. */
+export interface StoreSmtpEffectiveSettings {
+    mailer: StoreSmtpEffectiveValue;
+    host: StoreSmtpEffectiveValue;
+    port: StoreSmtpEffectiveValue;
+    scheme: StoreSmtpEffectiveValue;
+    username: StoreSmtpEffectivePresence;
+    password: StoreSmtpEffectivePresence;
+    from_address: StoreSmtpEffectiveValue;
+    from_name: StoreSmtpEffectiveValue;
+}
+
+/** Where an effective integration value comes from: saved in the admin, or `.env`. */
+export type StoreIntegrationSource = 'admin' | 'env';
+
+/**
+ * A public ID a settings page edits (StoreIntegrationIds): what is saved in the
+ * admin (null when nothing is, so `.env` applies) and the effective value with
+ * its source. Public IDs are shown in full.
+ */
+export interface StoreIntegrationId {
+    name:
+        | 'google_analytics_tracking_id'
+        | 'facebook_pixel_id'
+        | 'facebook_page_id'
+        | 'facebook_app_id';
+    value: string | null;
+    effective: { value: string | null; source: StoreIntegrationSource };
+}
+
+/** The reCAPTCHA pair (StoreRecaptchaSettings). The secret is never sent. */
+export interface StoreRecaptchaSettings {
+    site_key: string | null;
+    secret_set: boolean;
+    secret_unreadable: boolean;
+}
+
+export interface StoreRecaptchaEffective {
+    site_key: { value: string | null; source: StoreIntegrationSource };
+    secret: { set: boolean; source: StoreIntegrationSource };
 }
 
 /** Only the items the signed-in staff member may fix; done/total count those. */
@@ -1187,4 +1320,56 @@ export interface StoreSellerVerificationField {
     type: 'text' | 'file' | 'select' | 'multi_select' | 'radio';
     label: string;
     options?: string[];
+}
+
+/** Where a setting's value in use comes from: saved in the admin, or `.env`. */
+export type StoreSettingSource = 'admin' | 'env';
+
+/**
+ * The delivery date settings on the Order configuration page
+ * (StoreDeliverySettings): what is saved (null when nothing is), what is in
+ * use and its source, and the `.env` values the empty fields fall back to.
+ */
+export interface StoreDeliverySettings {
+    saved: {
+        delivery_lead_days: number | null;
+        delivery_timezone: string | null;
+    };
+    effective: {
+        delivery_lead_days: {
+            value: number | string | null;
+            source: StoreSettingSource;
+        };
+        delivery_timezone: {
+            value: number | string | null;
+            source: StoreSettingSource;
+        };
+    };
+    environment: {
+        delivery_lead_days: number | string | null;
+        delivery_timezone: number | string | null;
+    };
+    timezones: string[];
+    bounds: { min: number; max: number };
+}
+
+/** One choice of the default-language select. */
+export interface StoreDefaultLanguageOption {
+    code: string;
+    name: string;
+    /** False for the saved language when it is switched off or gone. */
+    active: boolean;
+}
+
+/**
+ * The default-language control on the Languages page (StoreDefaultLanguage).
+ * `state` is about the language in use: it is missing from the list, switched
+ * off, or fine.
+ */
+export interface StoreDefaultLanguageSetting {
+    saved: string | null;
+    effective: { value: string | null; source: StoreSettingSource };
+    environment: string | null;
+    state: 'ok' | 'missing' | 'inactive';
+    options: StoreDefaultLanguageOption[];
 }

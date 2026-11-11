@@ -279,7 +279,7 @@ defineExpose({ closeDrawer, expand, collapsed, drawerOpen });
                     <SuccessBanner />
                     <slot />
                 </div>
-                <!-- The full-bleed map has no room above it for a banner. -->
+                <!-- The full-bleed map shows its own banner in its top bar. -->
                 <slot v-else />
             </main>
         </div>

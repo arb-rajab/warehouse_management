@@ -16,6 +16,8 @@ const withoutPicker: Record<string, string> = {
         'only a value and the actions: no optional column to choose',
     'Sales/Orders/Show.vue':
         "one order's product lines: a document, not a list of records",
+    'Settings/Smtp.vue':
+        'the last 10 SMTP changes on a settings page: a short history with four fixed columns, not a list of records',
 };
 
 /** Components that render a DataTable inside a form, not as a list. */

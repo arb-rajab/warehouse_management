@@ -295,6 +295,7 @@ return [
         'phone' => 'رقم الهاتف',
         'password' => 'كلمة المرور',
         'password_confirmation' => 'تأكيد كلمة المرور',
+        'current_password' => 'كلمة المرور الحالية',
         'code' => 'الرمز',
         'company_name' => 'اسم الشركة',
         'company_address' => 'عنوان الشركة',
@@ -319,6 +320,15 @@ return [
         'payment_option' => 'وسيلة الدفع',
         'delivery_date' => 'تاريخ التوصيل',
         'trade_license' => 'الرخصة التجارية',
+        'google_analytics_tracking_id' => 'معرّف تتبع تحليلات جوجل',
+        'facebook_pixel_id' => 'معرّف بكسل فيسبوك',
+        'facebook_page_id' => 'معرّف صفحة فيسبوك',
+        'facebook_app_id' => 'معرّف تطبيق فيسبوك',
+        'recaptcha_site_key' => 'مفتاح موقع reCAPTCHA',
+        'recaptcha_secret_key' => 'المفتاح السري لـ reCAPTCHA',
+        'delivery_lead_days' => 'أيام مهلة التوصيل',
+        'delivery_timezone' => 'المنطقة الزمنية للتوصيل',
+        'default_language' => 'اللغة الافتراضية',
     ],
 
 ];

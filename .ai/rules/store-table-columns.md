@@ -29,7 +29,8 @@ remembered in the browser. The guard is `pages/Store/Admin/tableColumns.test.ts`
   AI agents must follow this when they add or change a list.
 - **The only lists without it** are those with nothing optional to choose (an
   identifier and the actions only: blog categories, roles, attribute values) and
-  tables that are not lists (the lines of one order, rows inside a form editor).
+  tables that are not lists (the lines of one order, rows inside a form editor,
+  the SMTP page's last 10 changes).
   They are named, with the reason, in `tableColumns.test.ts`. A table that gains
   an optional column leaves that list and gets the picker.
 

@@ -283,12 +283,38 @@ preserves permissions the editor does not hold. Super Admin remains unrestricted
 Super Admin role/account invariants still apply. Who receives staff-edit powers
 is an owner decision; removing one's own held permissions can still lock one out.
 
+Sensitive permissions (`StorePermissions::SENSITIVE`, today `smtp_settings`, which
+can read all outgoing mail) only a Super Admin grants: anyone else neither adds
+nor removes them on a role nor gives a role carrying one, even when holding it
+(2026-11-11, [admin-env-overrides.md](admin-env-overrides.md#security-the-smtp-settings-are-a-way-to-read-all-mail)).
+Existing grants are never revoked by a migration; the owner reviews the holders.
+
 ## 5. Conflict decisions and retained work
 
 - Typed settings writers reject unknown/foreign/reserved keys, including localized
   keys, **before any write**. `business_settings.update` is retired. Timezone is
   config-managed (`app.timezone`, UTC); a settings form accepts only the configured
-  value and never writes `.env`. Settings writers forget only `business_settings`.
+  value and never writes `.env`. Settings writers forget only `business_settings`
+  (the SMTP writer also its own `business_settings:mail` entry, the reCAPTCHA writer its own `business_settings:recaptcha`).
+- A setting only `.env` held may become editable in the admin: it is stored in
+  `business_settings`, the saved value wins and `.env` stays the fallback, secrets
+  are encrypted and never sent back, and it is applied at runtime, never in the
+  console ([admin-env-overrides.md](admin-env-overrides.md)). SMTP is managed on the
+  SMTP settings page this way (2026-11-11, `StoreMailSettings`): a save needs the
+  staff member's current password, is written to `admin_audit_logs` (field names
+  only) and mailed to the Super Admins through the previous settings; the Google Maps key
+  already was (`GoogleMapsKey`). So are the Analytics, Facebook chat and Facebook
+  comments IDs (`StoreIntegrationIds`) and the reCAPTCHA site key and secret
+  (`StoreRecaptchaSettings`, the secret encrypted and read through the class, never
+  laid over config). Those four pages are dedicated Inertia pages
+  (`Settings/{Analytics,FacebookChat,FacebookComments,Recaptcha}.vue`), not the
+  plain switch list. The delivery lead days and timezone are saved on the Order
+  configuration page (`StoreDeliverySettings`, read by the order API) and the default
+  content language on the Languages page (`StoreDefaultLanguage`, laid over
+  `config('app.default_language')` on web requests and queued jobs only, never at
+  console boot; the Languages page, its guards and the setup checklist read the
+  class). The README's Deployment section lists the
+  superseded `.env` keys.
 - Website script fields remain plain code on the restricted compatibility endpoint
   with existing rendering, appearance gate and WAF behavior. New script policy,
   `manage_website_scripts` activation and broad rich-text WAF exceptions stay held.

@@ -6,6 +6,7 @@ use App\Http\Controllers\Concerns\ProvidesStoreUploadPreviews;
 use App\Http\Controllers\Concerns\UpdatesStoreSettings;
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\Store\Admin\Concerns\FlashesSuccess;
+use App\Http\Controllers\Store\Admin\Concerns\ReadsHighlight;
 use App\Http\Requests\Store\Admin\UpdateGeneralSettingsRequest;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -19,6 +20,7 @@ class GeneralSettingsController extends Controller implements HasMiddleware
 {
     use FlashesSuccess;
     use ProvidesStoreUploadPreviews;
+    use ReadsHighlight;
     use UpdatesStoreSettings;
 
     /** @return array<int, Middleware> */
@@ -38,6 +40,7 @@ class GeneralSettingsController extends Controller implements HasMiddleware
             'settings' => [...$settings, 'timezone' => app_timezone()],
             'timezones' => array_values(timezones()),
             'initialFiles' => $this->settingsImagePreviews($request, UpdateGeneralSettingsRequest::IMAGES),
+            'highlight' => $this->highlight($request, ['site_name']),
         ]);
     }
 

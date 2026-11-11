@@ -124,8 +124,8 @@ describe('create', function () {
         $this->get('/temp/admin/staffs/create')->assertOk()->assertInertia(
             fn (Assert $page) => $page->component('Store/Admin/Staff/Staffs/Create')
                 ->where('roles', [
-                    ['id' => $manager->id, 'name' => 'Manager'],
-                    ['id' => $clerk->id, 'name' => 'Clerk'],
+                    ['id' => $manager->id, 'name' => 'Manager', 'sensitive' => false],
+                    ['id' => $clerk->id, 'name' => 'Clerk', 'sensitive' => false],
                 ])
         );
     });
@@ -220,7 +220,7 @@ describe('edit', function () {
                     ->where('phone', $member->phone)
                     ->where('is_super_admin', false)
                     ->where('role', ['id' => $clerk->id, 'name' => 'Clerk']))
-                ->where('roles', [['id' => $clerk->id, 'name' => 'Clerk']])
+                ->where('roles', [['id' => $clerk->id, 'name' => 'Clerk', 'sensitive' => false]])
         );
     });
 

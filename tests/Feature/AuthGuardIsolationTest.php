@@ -207,7 +207,7 @@ test('the store staff screens offer only store roles', function () {
 
     $this->get('/temp/admin/staffs/create')
         ->assertOk()
-        ->assertInertia(fn (Assert $page) => $page->where('roles', [['id' => $storeClerk->id, 'name' => 'Store Clerk']]));
+        ->assertInertia(fn (Assert $page) => $page->where('roles', [['id' => $storeClerk->id, 'name' => 'Store Clerk', 'sensitive' => false]]));
 
     $this->post('/temp/admin/staffs', [
         'name' => 'New Staff',

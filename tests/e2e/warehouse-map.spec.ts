@@ -1,6 +1,12 @@
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 import { loginAsAdmin } from './support/auth';
+import {
+    createRow,
+    createWarehouse,
+    deleteRow,
+    warehouseId,
+} from './support/warehouses';
 
 /**
  * The warehouse map's browser-only behaviour: the Three.js scene, pointer and
@@ -165,6 +171,95 @@ test.describe('desktop', () => {
         await expect(trigger).toHaveClass(/is-on/);
     });
 
+    test('switches warehouses from the toolbar, keeps the search and the choice in the URL, and Back returns', async ({
+        page,
+    }) => {
+        test.slow();
+        await loginAsAdmin(page);
+        await createWarehouse(page, 'E2E Map Depot');
+        await createRow(page, 'E2E Map Depot', 'ZM');
+        const depotId = await warehouseId(page, 'E2E Map Depot');
+
+        try {
+            await page.goto('/admin/warehouse-map');
+            await expect(page.locator('.wms-tile').first()).toBeVisible();
+
+            const trigger = page.locator('.wms-warehouses__trigger');
+            const search = page.locator('.wms-search__input');
+            const depot = page.getByRole('menuitemcheckbox', {
+                name: 'E2E Map Depot',
+            });
+
+            // the switcher in the map is the only warehouse control
+            await expect(trigger).toHaveText('All warehouses');
+            await expect(
+                page.locator('[data-testid="warehouse-map-bar"]'),
+            ).toBeHidden();
+
+            await search.fill('zz');
+            await trigger.click();
+            await expect(page.locator('.wms-warehouses__panel')).toBeVisible();
+            await expect(
+                page.getByRole('menuitemcheckbox', { name: 'All warehouses' }),
+            ).toHaveAttribute('aria-checked', 'true');
+            await depot.click();
+            await expect(depot).toHaveAttribute('aria-checked', 'true');
+            await page.locator('.wms-warehouses__apply').click();
+
+            await expect(page).toHaveURL(
+                // Inertia serializes the array with an index (warehouse_ids[0]=6);
+                // the server accepts that and the empty-bracket form alike
+                new RegExp(`warehouse_ids(%5B\\d*%5D|\\[\\d*\\])=${depotId}`),
+            );
+            await expect(trigger).toHaveText('E2E Map Depot');
+            await expect(page.locator('.wms-tile')).toHaveCount(1);
+            await expect(
+                page.locator('.wms-tile[data-row="ZM"]'),
+            ).toBeVisible();
+            // loaded in place: the search is still there
+            await expect(search).toHaveValue('zz');
+            // the touch hint shares the class, so pick the status line
+            await expect(
+                page.locator('.wms-hint:not(.wms-hint--touch)'),
+            ).toContainText('E2E Map Depot');
+
+            await page.reload();
+            await expect(trigger).toHaveText('E2E Map Depot');
+            await expect(page.locator('.wms-tile')).toHaveCount(1);
+
+            await page.goBack();
+            await expect(page).not.toHaveURL(/warehouse_ids/);
+            await expect(trigger).toHaveText('All warehouses');
+            await expect
+                .poll(() => page.locator('.wms-tile').count())
+                .toBeGreaterThan(1);
+
+            // the keyboard: the down arrow opens, Escape leaves the choice as it was
+            await trigger.focus();
+            await page.keyboard.press('ArrowDown');
+            await expect(
+                page.getByRole('menuitemcheckbox', { name: 'All warehouses' }),
+            ).toBeFocused();
+            await page.keyboard.press('End');
+            await page.keyboard.press('Space');
+            await page.keyboard.press('Escape');
+            await expect(page.locator('.wms-warehouses__panel')).toBeHidden();
+            await expect(trigger).toBeFocused();
+            await expect(page).not.toHaveURL(/warehouse_ids/);
+        } finally {
+            await deleteRow(page, depotId, 'ZM');
+            await page.goto('/admin/warehouses');
+            page.once('dialog', (dialog) => dialog.accept());
+            await page
+                .getByRole('row', { name: /E2E Map Depot/ })
+                .getByRole('button', { name: 'Delete' })
+                .click();
+            await expect(
+                page.getByRole('row', { name: /E2E Map Depot/ }),
+            ).toHaveCount(0);
+        }
+    });
+
     test('opens a rack from the plan, copies a deep link and follows it into 3D', async ({
         page,
         context,
@@ -323,6 +418,55 @@ test.describe('phone', () => {
             /is-on/,
         );
         await expect(page.locator('.wms-tile.is-dim').first()).toBeAttached();
+    });
+
+    test('switches warehouses from the icon on a phone, the menu across the bar', async ({
+        page,
+    }) => {
+        await loginAsAdmin(page);
+        await page.goto('/admin/warehouse-map');
+        await expect(page.locator('.wms-tile').first()).toBeVisible();
+
+        const trigger = page.locator('.wms-warehouses__trigger');
+
+        // no room for the name: the icon opens the menu, the name is in its label
+        await expect(trigger).toBeVisible();
+        await expect(page.locator('.wms-warehouses__label')).toBeHidden();
+        await expect(trigger).toHaveAttribute(
+            'aria-label',
+            'Warehouse: All warehouses',
+        );
+
+        const bar = await page.locator('.wms-topbar').boundingBox();
+
+        expect(bar?.height ?? 999).toBeLessThan(70);
+
+        await trigger.tap();
+
+        const panel = page.locator('.wms-warehouses__panel');
+
+        await expect(panel).toBeVisible();
+        await expect(page.locator('.wms-warehouses__head')).toContainText(
+            'All warehouses',
+        );
+
+        const box = await panel.boundingBox();
+
+        expect(box!.x).toBeGreaterThanOrEqual(0);
+        expect(box!.x + box!.width).toBeLessThanOrEqual(390);
+
+        // a tap outside the menu applies the ticks
+        await page.getByRole('menuitemcheckbox', { name: 'Default' }).tap();
+        await page.locator('.wms-stage--plan').tap({
+            position: { x: 30, y: 500 },
+        });
+
+        await expect(panel).toBeHidden();
+        await expect(page).toHaveURL(/warehouse_ids/);
+        await expect(trigger).toHaveAttribute(
+            'aria-label',
+            'Warehouse: Default',
+        );
     });
 
     test('walks with touch controls: joystick area, lift buttons and the guided pad', async ({

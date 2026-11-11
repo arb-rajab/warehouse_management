@@ -446,10 +446,13 @@
                 "submit": "Empty pallet"
             },
             "transfer": {
+                "warehouseLabel": "Destination warehouse",
                 "rowLabel": "Destination row",
                 "cellNumberLabel": "Destination cell number",
                 "flatNumberLabel": "Destination level",
-                "submit": "Transfer pallet"
+                "submit": "Transfer pallet",
+                "title": "Transfer pallet — {location}",
+                "loading": "Loading destinations…"
             },
             "noteLabel": "Note (optional)",
             "notePlaceholder": "Reason for this change…",
@@ -462,6 +465,12 @@
         "searchPh": "Search products…",
         "productsLabel": "Filter by product",
         "productsAll": "All products",
+        "warehouseLabel": "Warehouse",
+        "warehousesAll": "All warehouses",
+        "warehousesCount": "{count} warehouse | {count} warehouses",
+        "warehouseSwitch": "Choose warehouses",
+        "warehouseApply": "Apply",
+        "warehouseShowing": "Showing {name}",
         "productsSearchPh": "Find a product…",
         "productsSelected": "Selected",
         "productsDeselectAll": "Deselect all",
@@ -617,6 +626,7 @@
         "sBob": "Camera bob while walking",
         "sMagnet": "Snap back after peeking (guided)",
         "copyLink": "Copy link",
+        "transferPallet": "Transfer…",
         "copied": "Link copied",
         "toolbar": "Warehouse map toolbar",
         "viewToggle": "Map view",
@@ -843,11 +853,16 @@
             },
             "managingPallets": {
                 "heading": "Storing, opening, and moving pallets",
-                "body": "Click a cell to manage what's in it: store a new pallet in an empty cell, open a full pallet to start taking boxes out, remove more boxes from an already-open pallet, empty a pallet completely, transfer it to a different cell, or edit its details. Use Edit to correct a mistyped product, expiration date, or box count — that keeps the cell's history, unlike emptying and storing again. Every change is recorded in the activity log automatically."
+                "body": "Click a cell to manage what's in it: store a new pallet in an empty cell, open a full pallet to start taking boxes out, remove more boxes from an already-open pallet, empty a pallet completely, transfer it to a different cell, or edit its details. Use Edit to correct a mistyped product, expiration date, or box count — that keeps the cell's history, unlike emptying and storing again. Every change is recorded in the activity log automatically.",
+                "transferBody": "To move a pallet to another warehouse, choose the destination warehouse first: the row list then shows that warehouse's rows. The warehouse map offers the same transfer: open a rack, then press Transfer… under an occupied shelf."
             },
             "deactivating": {
                 "heading": "Deactivating a cell",
                 "body": "If a cell becomes unusable — damaged shelving, for example — deactivate it so it can no longer be used to store, open, or move pallets, until you reactivate it again."
+            },
+            "preview": {
+                "mainWarehouse": "Main warehouse",
+                "otherWarehouse": "Annex"
             }
         },
         "users": {
@@ -961,6 +976,13 @@
             "sharing": {
                 "heading": "Sharing a location",
                 "body": "Open a rack and press “Copy link”: the link ends in #slot=B5-2 and opens the 3D view in front of that slot. The T key (or the small tab at the top edge) hides the toolbars."
+            },
+            "warehouses": {
+                "heading": "Switching warehouse",
+                "body": "When there is more than one warehouse, the map's top bar shows which warehouses are on the map next to its title (on a phone, the warehouse icon). Open it, tick \"All warehouses\" or one or more warehouses, then press Apply or simply close the menu. The map reloads only those rows and keeps your view, search, filters, floor and open rack where they still exist. The choice is part of the page address, so reloading, Back and a shared link keep it.",
+                "exampleMain": "Main warehouse",
+                "exampleAnnex": "Annex",
+                "exampleCold": "Cold store"
             }
         },
         "warehouses": {
@@ -1178,7 +1200,8 @@
                 "password": "Password",
                 "newPassword": "New password",
                 "confirmPassword": "Confirm password",
-                "passwordPlaceholder": "Leave blank to keep current password"
+                "passwordPlaceholder": "Leave blank to keep current password",
+                "roleSensitive": "{name} (sensitive: can read all outgoing email)"
             }
         },
         "roles": {
@@ -1189,7 +1212,9 @@
                 "columnActions": "Actions",
                 "empty": "No roles yet.",
                 "edit": "Edit",
-                "delete": "Delete"
+                "delete": "Delete",
+                "sensitiveBadge": "Sensitive",
+                "sensitiveBadgeHint": "Includes a permission only a Super Admin can grant: it can read all outgoing email."
             },
             "create": {
                 "title": "Add role",
@@ -1205,7 +1230,9 @@
             "fields": {
                 "name": "Name",
                 "nameTranslationHint": "The default language's name is the role's own; any other language only translates it.",
-                "permissions": "Permissions"
+                "permissions": "Permissions",
+                "sensitive": "Sensitive",
+                "sensitiveWarning": "Can read all outgoing email, password-reset emails included. Only a Super Admin can grant it."
             }
         },
         "reference": {
@@ -1294,7 +1321,8 @@
             "areaNote": "Uses the customer’s shipping area. Configure shipping cities to set area costs.",
             "carrierNote": "Uses the carrier’s free shipping, weight range, or price range. Configure shipping carriers to set these costs.",
             "cities": "Configure shipping cities",
-            "carriers": "Configure shipping carriers"
+            "carriers": "Configure shipping carriers",
+            "chooseMethod": "Choose a shipping type"
         },
         "orderConfiguration": {
             "title": "Order configuration",
@@ -1308,7 +1336,25 @@
             "chooseProduct": "Select the default product",
             "searchProducts": "Search by product ID…",
             "chooseRepresentative": "Select the default representative",
-            "searchRepresentatives": "Search representatives by name, phone or email…"
+            "searchRepresentatives": "Search representatives by name, phone or email…",
+            "delivery": {
+                "title": "Delivery dates",
+                "intro": "Orders placed in the app are refused when the delivery date is earlier than today plus the lead days. \"Today\" is read in the timezone below. A field left empty uses the server's setting (.env).",
+                "leadDays": "Lead days",
+                "leadDaysHelp": "Whole days to skip after today, from {min} to {max}. With 2, today and tomorrow cannot be picked.",
+                "timezone": "Timezone",
+                "timezoneServer": "Use the server setting ({timezone})",
+                "timezoneHelp": "The warehouse's timezone, used to decide what \"today\" is.",
+                "sources": {
+                    "admin": "saved in admin",
+                    "env": "from .env"
+                },
+                "inUse": {
+                    "title": "In use",
+                    "leadDays": "{value} days ({source})",
+                    "timezone": "{value} ({source})"
+                }
+            }
         },
         "generalSettings": {
             "title": "General settings",
@@ -1442,6 +1488,148 @@
                 "iyzico_sandbox": "Iyzico sandbox",
                 "payhere_sandbox": "Payhere sandbox",
                 "voguepay_sandbox": "Voguepay sandbox"
+            },
+            "server": {
+                "set": "Set",
+                "notSet": "Not set",
+                "found": "Found",
+                "notFound": "Not found",
+                "firebase": {
+                    "title": "Push notifications (set on the server)",
+                    "project": "Firebase project (FIREBASE_PROJECT)",
+                    "credentials": "Credentials file (FIREBASE_CREDENTIALS)"
+                }
+            },
+            "integrations": {
+                "intro": {
+                    "analytics": "Values saved here replace the server's .env values (TRACKING_ID, FACEBOOK_PIXEL_ID). Leave a field empty to use the server value.",
+                    "facebookChat": "A value saved here replaces the server's .env value (FACEBOOK_PAGE_ID). Leave the field empty to use the server value.",
+                    "facebookComments": "A value saved here replaces the server's .env value (FACEBOOK_APP_ID). Leave the field empty to use the server value."
+                },
+                "fields": {
+                    "google_analytics_tracking_id": {
+                        "label": "Google Analytics tracking ID",
+                        "help": "For example G-XXXXXXXXXX. Letters, digits and hyphens only. Empty uses the server value."
+                    },
+                    "facebook_pixel_id": {
+                        "label": "Facebook pixel ID",
+                        "help": "Digits only, 5 to 20. Empty uses the server value."
+                    },
+                    "facebook_page_id": {
+                        "label": "Facebook page ID",
+                        "help": "The page the chat widget opens, digits only, 5 to 20. Empty uses the server value."
+                    },
+                    "facebook_app_id": {
+                        "label": "Facebook app ID",
+                        "help": "Digits only, 5 to 20. Empty uses the server value."
+                    }
+                },
+                "missing": "{switch} is on but no {field} is set, so nothing is added to the storefront. Enter it below.",
+                "effective": {
+                    "title": "In use",
+                    "withSource": "{value} ({source})",
+                    "notSet": "Not set",
+                    "sources": {
+                        "admin": "saved in admin",
+                        "env": "from .env"
+                    }
+                }
+            },
+            "recaptcha": {
+                "intro": "Values saved here replace the server's .env reCAPTCHA keys (CAPTCHA_KEY, CAPTCHA_SECRET). The site key and the secret are a pair: with a site key saved here, the secret also comes from here. Leave both empty to use the server pair.",
+                "siteKey": "Site key",
+                "siteKeyHelp": "The public key the forms show the widget with. Letters, digits, hyphens and underscores only.",
+                "secretKey": "Secret key",
+                "secretKeep": "Leave empty to keep the saved secret",
+                "secretSaved": "A secret is saved. It is never shown.",
+                "secretNotSaved": "No secret is saved here.",
+                "secretUnreadable": "The saved secret can no longer be read (the application key changed). Enter it again.",
+                "secretHelp": "Enter the secret again when you add or change the site key.",
+                "removeSecret": "Remove the saved secret",
+                "missingSiteKey": "reCAPTCHA is on but no site key is set: the forms cannot show the widget. Enter the site key below.",
+                "missingSecret": "reCAPTCHA is on but no secret key is set: every form that shows it is refused. Enter the secret key below.",
+                "effective": {
+                    "title": "In use",
+                    "withSource": "{value} ({source})",
+                    "siteKey": "Site key",
+                    "secretKey": "Secret key",
+                    "notSet": "Not set",
+                    "set": "Set",
+                    "sources": {
+                        "admin": "saved in admin",
+                        "env": "from .env"
+                    }
+                }
+            },
+            "smtp": {
+                "intro": "Values saved here replace the server's .env mail settings (MAIL_*). Leave a field empty to use the server value.",
+                "passwordUnreadable": "The saved password can no longer be read (the application key changed). Enter it again.",
+                "mailer": "Mailer",
+                "mailerServer": "Use the server setting (.env: {mailer})",
+                "mailerHelp": "Log only writes emails to the server log: customers receive nothing.",
+                "mailers": {
+                    "smtp": "SMTP: send through the mail server below",
+                    "log": "Log only: emails are not sent"
+                },
+                "host": "SMTP host",
+                "hostHelp": "The host, port, encryption, username and password belong together: with no host here, all five come from the server's .env. A port, username or password needs a host.",
+                "port": "Port",
+                "portHelp": "Usually 587 (STARTTLS) or 465 (SSL/TLS). Required with a host.",
+                "scheme": "Encryption",
+                "schemeAutomatic": "Automatic (SSL/TLS on port 465, otherwise STARTTLS when offered)",
+                "schemes": {
+                    "smtps": "SSL/TLS (smtps)",
+                    "smtp": "STARTTLS when offered (smtp)"
+                },
+                "username": "Username",
+                "password": "Password",
+                "passwordKeep": "Leave empty to keep the saved password",
+                "passwordSaved": "A password is saved. It is never shown.",
+                "passwordNotSaved": "No password is saved here.",
+                "passwordHelp": "Enter the password again when you change the host or username.",
+                "removePassword": "Remove the saved password",
+                "fromAddress": "From address",
+                "fromName": "From name",
+                "fromHelp": "An empty from address or name uses the server's MAIL_FROM_ADDRESS or MAIL_FROM_NAME.",
+                "currentPassword": "Your current password",
+                "currentPasswordHelp": "Enter the password you sign in with to save. Whoever controls these settings can read every email the shop sends, password-reset emails included.",
+                "testTitle": "Send a test email",
+                "testHelp": "Sent at once with the saved settings; if the mail server refuses it, the error shows here.",
+                "effective": {
+                    "title": "Mail is sent with",
+                    "withSource": "{value} ({source})",
+                    "sources": {
+                        "admin": "saved in admin",
+                        "env": "from .env"
+                    },
+                    "automatic": "Automatic",
+                    "mailer": "Mailer",
+                    "host": "SMTP host",
+                    "port": "Port",
+                    "scheme": "Encryption",
+                    "username": "Username",
+                    "password": "Password",
+                    "from_address": "From address",
+                    "from_name": "From name"
+                },
+                "audit": {
+                    "title": "Recent changes",
+                    "help": "The last 10 saves and refused passwords on this page. Values are never recorded.",
+                    "when": "When",
+                    "who": "Staff member",
+                    "ip": "IP address",
+                    "what": "What changed",
+                    "empty": "No SMTP changes have been recorded yet.",
+                    "passwordFailed": "Wrong current password, nothing saved",
+                    "deletedUser": "Account #{id} no longer exists",
+                    "fieldChange": "{field} ({change})",
+                    "separator": ", ",
+                    "kinds": {
+                        "set": "set",
+                        "changed": "changed",
+                        "removed": "removed"
+                    }
+                }
             }
         },
         "languages": {
@@ -1458,7 +1646,7 @@
             "defaultLocked": "Default language",
             "actions": "Actions",
             "empty": "No languages found.",
-            "defaultReadOnly": "Default content language ({code}) is managed on the server. The interface language is selected separately.",
+            "defaultReadOnly": "Default content language ({code}) is chosen in the default language section above. The interface language is selected separately.",
             "translations": "Content and custom labels",
             "appTranslations": "Mobile compatibility translations",
             "delete": "Delete",
@@ -1474,7 +1662,21 @@
             "key": "Key",
             "source": "English",
             "value": "Translation",
-            "noTranslations": "No translation keys found."
+            "noTranslations": "No translation keys found.",
+            "defaultTitle": "Default content language",
+            "defaultLabel": "Default language",
+            "defaultServer": "Use the server setting ({code})",
+            "defaultHelp": "Only active languages can be chosen. Existing product, category and brand text is not translated when you change the default: text saved under the old default is read as the new default's until you translate it.",
+            "defaultInUse": "In use: {code} ({source})",
+            "defaultSources": {
+                "admin": "saved in admin",
+                "env": "from .env"
+            },
+            "defaultSwitchedOff": "switched off",
+            "defaultNone": "No default language is set. Choose one.",
+            "default_missing": "The default language ({code}) is not in the language list. Choose another language or add it.",
+            "default_inactive": "The default language ({code}) is switched off. Switch it on in the list below or choose another language.",
+            "defaultConfirm": "Change the default content language to {name}? Existing text saved under the old default will be read as {name} until it is translated."
         },
         "reports": {
             "number": "#",
@@ -2696,8 +2898,6 @@
             "searchProducts": "Search products by name, SKU or id…"
         },
         "dashboard": {
-            "smtpMissing": "SMTP is not configured.",
-            "configure": "Configure SMTP",
             "customers": "Verified customers",
             "orders": "Total orders",
             "categories": "Product categories",
@@ -2723,68 +2923,99 @@
             "numberOfVisits": "Number of visits",
             "category": "Category / country",
             "emptyProducts": "No products yet.",
-            "smtpWarning": "Please configure SMTP settings for email sending to work.",
-            "setup": {
-                "noPaymentMethod": "Payments are not set up: no payment method is switched on, so customers cannot place an order in the app.",
-                "cashOnDeliveryProducts": "Cash payment is on, but no product allows cash on delivery, so the app does not offer it. Tick \"Cash on delivery\" on the products that take cash."
-            },
             "checklist": {
                 "title": "Setup checklist",
                 "progress": "{done} of {total} done",
                 "collapse": "Hide checklist",
                 "expand": "Show checklist",
-                "configure": "Configure",
-                "configureItem": "Configure {item}",
                 "statusDone": "Done",
                 "statusTodo": "To do",
                 "items": {
                     "smtp": {
-                        "label": "Email (SMTP)",
-                        "hint": "No SMTP username or password is set, so the store cannot send emails."
+                        "label": "Email (SMTP)"
                     },
                     "paymentMethod": {
-                        "label": "Payment methods",
-                        "hint": "No payment method is switched on, so customers cannot place an order in the app."
+                        "label": "Payment methods"
                     },
                     "cashOnDeliveryProducts": {
-                        "label": "Cash on delivery products",
-                        "hint": "Cash payment is on, but no product allows cash on delivery, so the app does not offer it."
+                        "label": "Cash on delivery products"
                     },
                     "shipping": {
-                        "label": "Shipping",
-                        "hint": "The shipping type is not set up, or the cost or area data it needs is missing."
+                        "label": "Shipping"
                     },
                     "firebasePush": {
-                        "label": "Push notifications (Firebase)",
-                        "hint": "Firebase is not configured, so the app cannot send push notifications."
+                        "label": "Push notifications (Firebase)"
                     },
                     "googleMaps": {
-                        "label": "Google Maps",
-                        "hint": "The Google Maps key is not set. Add it on the Google map settings page (it can also be supplied by MAP_API_KEY in the server environment)."
+                        "label": "Google Maps"
                     },
                     "currency": {
-                        "label": "Currency",
-                        "hint": "No default currency is set, or the chosen one no longer exists."
+                        "label": "Currency"
                     },
                     "vatTax": {
-                        "label": "VAT and tax",
-                        "hint": "No active VAT or tax rate is set up."
+                        "label": "VAT and tax"
                     },
                     "catalog": {
-                        "label": "Products and categories",
-                        "hint": "The shop needs at least one published product and one category."
+                        "label": "Products and categories"
                     },
                     "siteBasics": {
-                        "label": "Site basics",
-                        "hint": "The site name, contact email, contact phone or logo is missing."
+                        "label": "Site basics"
                     },
                     "language": {
-                        "label": "Default language",
-                        "hint": "The default language does not exist or is not active."
+                        "label": "Default language"
+                    }
+                },
+                "fix": "Fix this setting",
+                "fixReason": "Fix: {reason}",
+                "reasons": {
+                    "smtp": {
+                        "mailer_log": "The mailer is \"Log only\", so emails are only written to the server log and never reach anyone.",
+                        "host": "No SMTP host is saved in the admin or set on the server (MAIL_HOST), so the store cannot send emails.",
+                        "username_and_password": "No SMTP username or password is saved in the admin or set on the server (MAIL_USERNAME, MAIL_PASSWORD), so the store cannot send emails."
+                    },
+                    "paymentMethod": {
+                        "none_enabled": "No payment method is switched on in Features activation, so customers cannot place an order in the app."
+                    },
+                    "cashOnDeliveryProducts": {
+                        "no_product_allows_cod": "Cash payment is on, but no product allows cash on delivery. Tick \"Cash on delivery\" on the products that take cash."
+                    },
+                    "shipping": {
+                        "type_unset": "No shipping type is chosen yet.",
+                        "flat_rate_cost": "The shipping type is \"Flat rate\", but the flat rate cost was never saved.",
+                        "seller_admin_cost": "The shipping type is \"Seller wise\", but the in-house seller shipping cost was never saved.",
+                        "area_no_active_city_with_cost": "The shipping type is \"Area wise\", but no active shipping city has a cost above zero.",
+                        "carrier_none_usable": "The shipping type is \"Carrier wise\", but no active carrier ships free or has a price for a weight or price range."
+                    },
+                    "firebasePush": {
+                        "project_unset": "FIREBASE_PROJECT is not set on the server.",
+                        "credentials_missing": "The FIREBASE_CREDENTIALS file is not found on the server."
+                    },
+                    "googleMaps": {
+                        "api_key_unset": "No Google Maps key is saved on the Google map settings page, and MAP_API_KEY is not set on the server."
+                    },
+                    "currency": {
+                        "default_unset": "No default currency is chosen.",
+                        "default_missing": "The default currency no longer exists. Choose another one."
+                    },
+                    "vatTax": {
+                        "no_active_tax": "No VAT or tax rate is active. Switch one on or add one."
+                    },
+                    "catalog": {
+                        "no_published_product": "No product is published.",
+                        "no_category": "No product category exists."
+                    },
+                    "siteBasics": {
+                        "site_name": "The site name is missing (General settings).",
+                        "contact_email": "The contact email is missing (Website footer).",
+                        "contact_phone": "The contact phone is missing (Website footer).",
+                        "header_logo": "The header logo is missing (Website header)."
+                    },
+                    "language": {
+                        "default_missing": "The default language ({code}) is not in the language list.",
+                        "default_inactive": "The default language ({code}) is switched off."
                     }
                 }
             },
-            "configureNow": "Configure now",
             "charts": {
                 "products": "Products",
                 "sources": "Products Source",
@@ -3520,12 +3751,23 @@
             "tax_type.*": "tax type",
             "button": "publishing choice",
             "lang": "content language",
+            "google_analytics_tracking_id": "Google Analytics tracking ID",
+            "facebook_pixel_id": "Facebook pixel ID",
+            "facebook_page_id": "Facebook page ID",
+            "facebook_app_id": "Facebook app ID",
+            "recaptcha_site_key": "reCAPTCHA site key",
+            "recaptcha_secret_key": "reCAPTCHA secret key",
+            "delivery_lead_days": "delivery lead days",
+            "delivery_timezone": "delivery timezone",
+            "default_language": "default language",
             "slug": "slug",
             "old_photo": "Otajer images",
             "purchase_price": "purchase price",
             "file": "product file",
             "code": "code",
-            "address": "address"
+            "address": "address",
+            "password": "password",
+            "current_password": "current password"
         }
     },
     "warehouses": {

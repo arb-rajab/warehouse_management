@@ -42,13 +42,24 @@ function mountPage(
         'manage_shipping_cities',
         'manage_carriers',
     ],
+    extra: {
+        settings?: Partial<Record<keyof typeof settings, string | null>>;
+        highlight?: string | null;
+    } = {},
 ) {
     usePageMock.mockReturnValue({
         url: index.url(),
         props: defaultAuthProps({ store: storeSharedProps({ permissions }) }),
     });
 
-    return mount(Index, { props: { settings } });
+    return mount(Index, {
+        props: {
+            settings: { ...settings, ...extra.settings },
+            highlight: extra.highlight ?? null,
+        },
+        // Focus is only observable on an attached document.
+        ...(extra.highlight ? { attachTo: document.body } : {}),
+    });
 }
 describe('Shipping configuration', () => {
     beforeEach(() => {
@@ -106,9 +117,12 @@ describe('Shipping configuration', () => {
             wrapper
                 .findAll('#shipping_type option')
                 .map((option) => option.text()),
-        ).toEqual(
-            methods.map((method) => t(`store.shippingConfiguration.${method}`)),
-        );
+        ).toEqual([
+            t('store.shippingConfiguration.chooseMethod'),
+            ...methods.map((method) =>
+                t(`store.shippingConfiguration.${method}`),
+            ),
+        ]);
         expect(wrapper.get('#shipping_type').element).toHaveProperty(
             'value',
             'area_wise_shipping',
@@ -192,5 +206,93 @@ describe('Shipping configuration', () => {
                 .findAll('button[type=submit]')
                 .every((button) => button.attributes('disabled') !== undefined),
         ).toBe(true);
+    });
+
+    it('shows a never saved type as not chosen and never saved costs as empty, not 0', () => {
+        const wrapper = mountPage(undefined, {
+            settings: {
+                shipping_type: null,
+                flat_rate_shipping_cost: null,
+                shipping_cost_admin: null,
+            },
+        });
+        const select = wrapper.get('#shipping_type')
+            .element as HTMLSelectElement;
+        expect(select.value).toBe('');
+        expect(select.selectedOptions[0]?.textContent?.trim()).toBe(
+            t('store.shippingConfiguration.chooseMethod'),
+        );
+
+        for (const id of ['flat_rate_shipping_cost', 'shipping_cost_admin']) {
+            expect(
+                (wrapper.get(`#${id}`).element as HTMLInputElement).value,
+            ).toBe('');
+        }
+
+        wrapper.unmount();
+    });
+
+    it('shows an unknown saved type as not chosen', () => {
+        const wrapper = mountPage(undefined, {
+            settings: { shipping_type: 'teleport' },
+        });
+        expect(
+            (wrapper.get('#shipping_type').element as HTMLSelectElement).value,
+        ).toBe('');
+        wrapper.unmount();
+    });
+
+    it.each([
+        ['shipping_type', '#shipping_type'],
+        ['flat_rate_shipping_cost', '#flat_rate_shipping_cost'],
+        ['shipping_cost_admin', '#shipping_cost_admin'],
+    ])(
+        'marks, scrolls to and focuses exactly the %s setting it is asked to highlight',
+        async (highlight, control) => {
+            const scrollIntoView = vi.fn();
+            Element.prototype.scrollIntoView = scrollIntoView;
+            const wrapper = mountPage(undefined, {
+                settings: { shipping_type: 'flat_rate' },
+                highlight,
+            });
+            await wrapper.vm.$nextTick();
+            await wrapper.vm.$nextTick();
+            const marked = wrapper.findAll('[data-highlighted]');
+            expect(marked).toHaveLength(1);
+            expect(marked[0].find(control).exists()).toBe(true);
+            expect(marked[0].classes()).toContain('ring-warning');
+            expect(scrollIntoView).toHaveBeenCalledWith({ block: 'center' });
+            expect(document.activeElement).toBe(wrapper.get(control).element);
+            wrapper.unmount();
+        },
+    );
+
+    it.each([
+        ['cities', 'areaNote', citiesIndex()],
+        ['carriers', 'carrierNote', carriersIndex()],
+    ])(
+        'marks the %s note and focuses its link for a %s deep link',
+        async (highlight, note, href) => {
+            Element.prototype.scrollIntoView = vi.fn();
+            const wrapper = mountPage(undefined, { highlight });
+            await wrapper.vm.$nextTick();
+            await wrapper.vm.$nextTick();
+            const marked = wrapper.findAll('[data-highlighted]');
+            expect(marked).toHaveLength(1);
+            expect(marked[0].attributes('data-note')).toBe(note);
+            expect(marked[0].text()).toContain(
+                t(`store.shippingConfiguration.${note}`),
+            );
+            expect(
+                JSON.stringify(marked[0].getComponent(Link).props('href')),
+            ).toBe(JSON.stringify(href));
+            wrapper.unmount();
+        },
+    );
+
+    it('marks nothing without a highlight', () => {
+        const wrapper = mountPage();
+        expect(wrapper.findAll('[data-highlighted]')).toHaveLength(0);
+        wrapper.unmount();
     });
 });

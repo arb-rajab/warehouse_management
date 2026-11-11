@@ -6,7 +6,11 @@ import type { StoreGoogleMapSettings } from '@/components/StoreGoogleMapFormFiel
 import StoreAdminLayout from '@/layouts/StoreAdminLayout.vue';
 import { t } from '@/lib/i18n';
 
-defineProps<{ settings: StoreGoogleMapSettings }>();
+defineProps<{
+    settings: StoreGoogleMapSettings;
+    /** The setting a setup checklist link sent the admin here to fix. */
+    highlight?: string | null;
+}>();
 </script>
 <template>
     <ResourceFormPage
@@ -18,6 +22,10 @@ defineProps<{ settings: StoreGoogleMapSettings }>();
         wide
         #default="{ errors }"
     >
-        <StoreGoogleMapFormFields :settings="settings" :errors="errors" />
+        <StoreGoogleMapFormFields
+            :settings="settings"
+            :errors="errors"
+            :highlight="highlight"
+        />
     </ResourceFormPage>
 </template>

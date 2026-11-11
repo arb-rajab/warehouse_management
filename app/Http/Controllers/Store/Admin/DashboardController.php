@@ -37,7 +37,6 @@ class DashboardController extends Controller implements HasMiddleware
         /** @var StoreUser $user */
         $user = $request->user();
         $items = $checklist->items($user);
-        $pending = $checklist->pending($items);
         $graphs = Cache::remember(self::GRAPH_CACHE_KEY, 86400, fn (): array => $this->graphTotals());
         $categories = Category::query()->select(['id', 'name'])->where('level', 0)
             ->with('category_translations:id,category_id,lang,name')->orderBy('id')->get();
@@ -66,33 +65,8 @@ class DashboardController extends Controller implements HasMiddleware
                 'visits' => $graphs['visits'],
             ],
             'topProducts' => DashboardProductResource::collection($products),
-            'showSmtpAlert' => in_array('smtp', $pending, true),
-            'setupAlerts' => $this->setupAlerts($pending),
             'setupChecklist' => $checklist->payload($items),
         ]);
-    }
-
-    /**
-     * The banners the checkout-critical checks raise: no payment method
-     * switched on, or cash payment on while no product allows it. Each is
-     * pending only for staff whose permission can fix it (see SetupChecklist).
-     *
-     * @param  list<string>  $pending  keys of the checklist items still to do
-     * @return list<string>
-     */
-    private function setupAlerts(array $pending): array
-    {
-        $alerts = [];
-
-        if (in_array('paymentMethod', $pending, true)) {
-            $alerts[] = 'noPaymentMethod';
-        }
-
-        if (in_array('cashOnDeliveryProducts', $pending, true)) {
-            $alerts[] = 'cashOnDeliveryProducts';
-        }
-
-        return $alerts;
     }
 
     /** @return array{categories: array<int, array{sales: int, stock: int}>, visits: array{labels: list<string>, values: list<int>}} */

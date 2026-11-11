@@ -106,6 +106,42 @@ describe('StoreRoleFormFields', () => {
     });
 });
 
+describe('StoreRoleFormFields sensitive permissions', () => {
+    it('warns on a sensitive permission, tied to its checkbox, and on no other', () => {
+        const wrapper = mountFields({
+            permissionGroups: [
+                permissionGroup({
+                    section: 'dashboard',
+                    label: 'Dashboard',
+                    permissions: [
+                        { id: 9, label: 'Smtp Settings', sensitive: true },
+                        { id: 10, label: 'Language Setup', sensitive: false },
+                    ],
+                }),
+            ],
+        });
+        const sensitive = wrapper.findAll('[data-sensitive]');
+
+        expect(sensitive).toHaveLength(1);
+        expect(sensitive[0].text()).toContain('Smtp Settings');
+        expect(sensitive[0].text()).toContain(
+            t('store.roles.fields.sensitive'),
+        );
+        expect(sensitive[0].get('#permission-9-warning').text()).toBe(
+            t('store.roles.fields.sensitiveWarning'),
+        );
+        expect(
+            sensitive[0].get('input[value="9"]').attributes('aria-describedby'),
+        ).toBe('permission-9-warning');
+        expect(
+            wrapper.get('input[value="10"]').attributes('aria-describedby'),
+        ).toBeUndefined();
+        expect(t('store.roles.fields.sensitiveWarning')).toBe(
+            'Can read all outgoing email, password-reset emails included. Only a Super Admin can grant it.',
+        );
+    });
+});
+
 describe('StoreRoleFormFields required marks', () => {
     it('marks the required name and none of the optional permissions', () => {
         const wrapper = mount(StoreRoleFormFields, {

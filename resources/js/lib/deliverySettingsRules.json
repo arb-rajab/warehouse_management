@@ -1,0 +1,9 @@
+{
+    "rules": {
+        "delivery_lead_days": ["nullable", "integer", "min:0", "max:30"],
+        "delivery_timezone": ["nullable", "string"]
+    },
+    "serverOnly": {
+        "delivery_timezone": ["in:timezone-identifiers"]
+    }
+}

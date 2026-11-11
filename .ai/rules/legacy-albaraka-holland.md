@@ -152,7 +152,10 @@ prefix. That is the single point every storefront asset URL goes through.
   settings writer, .ai/archive/store-backoffice/changes-20261013.md §20), `env_key_update` refuses, and the two activation toggles
   that lived in `.env` (`FORCE_HTTPS`, `FILESYSTEM_DRIVER`) report failure.
   Credentials the screens used to save (SMTP, social login, analytics, gateway
-  keys) are now set in the server `.env` by whoever deploys.
+  keys) are now set in the server `.env` by whoever deploys. **Since 2026-11-11
+  SMTP is managed again in the store admin** (SMTP settings page), stored in
+  `business_settings` with the password encrypted and `.env` as the fallback,
+  never by writing `.env` (.ai/rules/admin-env-overrides.md).
   `LegacyEnvFileProtectionTest` covers staff, customer and vendor-admin
   callers against a scratch `.env`. **Permission gap, fixed 2026-10-01 for writes:** the same
   `permission:`-list gap left 173 of the store admin's write routes (store,
@@ -1809,8 +1812,9 @@ and [docs/backend-replies-20261104.md](../../docs/backend-replies-20261104.md);
 the tests are `tests/Feature/StoreApiBackendRequestsTest.php`. Constraints that follow from them:
 
 - `POST order/store` and `payments/pay/*` (all through `Api\V1\OrderController::store`) require a `delivery_date`:
-  `YYYY-MM-DD` (or `DD-MM-YYYY`, stored as `YYYY-MM-DD`), at least `store.delivery.lead_days` after today in
-  `store.delivery.timezone`, on a `store.delivery.weekdays` day. A refusal is 422 with `errors.delivery_date`.
+  `YYYY-MM-DD` (or `DD-MM-YYYY`, stored as `YYYY-MM-DD`), at least the lead days after today in the delivery
+  timezone (`StoreDeliverySettings`: saved on the Order configuration page, else `store.delivery.lead_days` /
+  `store.delivery.timezone`), on a `store.delivery.weekdays` day. A refusal is 422 with `errors.delivery_date`.
   Tests that place an order send `validDeliveryDate()` (tests/Pest.php).
 - An `Idempotency-Key` header (at most 128 characters) makes a placed order replay its answer for 24 hours per
   account; only a successful placement is remembered.

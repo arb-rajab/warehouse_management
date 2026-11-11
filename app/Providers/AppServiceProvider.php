@@ -6,6 +6,8 @@ use App\Models\PersonalAccessToken;
 use App\Models\User;
 use App\Support\ApiResourceResponse;
 use App\Support\MergeRepeatedResponseAttributes;
+use App\Support\StoreDefaultLanguage;
+use App\Support\StoreMailSettings;
 use Carbon\CarbonImmutable;
 use Dedoc\Scramble\Scramble;
 use Dedoc\Scramble\Support\Generator\OpenApi;
@@ -20,6 +22,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Pagination\Paginator;
+use Illuminate\Queue\Events\JobProcessing;
 use Illuminate\Routing\Route;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
@@ -65,6 +68,12 @@ class AppServiceProvider extends ServiceProvider
             autoOrientation: false,
             decodeAnimation: false,
         ));
+
+        // One per process: it remembers the `.env` mail values it overrides.
+        $this->app->singleton(StoreMailSettings::class);
+
+        // One per process: it remembers the `.env` default language it overrides.
+        $this->app->singleton(StoreDefaultLanguage::class);
     }
 
     /**
@@ -74,6 +83,8 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->configureDefaults();
         $this->configureApiDocumentation();
+        $this->applyStoreMailSettings();
+        $this->applyStoreDefaultLanguage();
 
         // Merged from the legacy store's AppServiceProvider (see
         // .ai/rules/legacy-albaraka-holland.md section 2). Its migrations
@@ -166,6 +177,42 @@ class AppServiceProvider extends ServiceProvider
         // The warehouse client is one server calling in with a static token, so the
         // bucket is per IP and sized for a sync that pages through every list.
         RateLimiter::for('wms', fn (Request $request): Limit => Limit::perMinute(120)->by('wms|'.$request->ip()));
+    }
+
+    /**
+     * The SMTP settings saved in the store admin win over MAIL_* (StoreMailSettings,
+     * .ai/rules/admin-env-overrides.md). Applied on web requests and before each
+     * queued job, so a running worker picks up a save; never for other console
+     * commands, since `config:cache` and `optimize` boot this provider and would
+     * write the decrypted SMTP password into bootstrap/cache/config.php.
+     */
+    private function applyStoreMailSettings(): void
+    {
+        if (! $this->app->runningInConsole()) {
+            $this->app->make(StoreMailSettings::class)->apply();
+        }
+
+        Event::listen(JobProcessing::class, function (): void {
+            $this->app->make(StoreMailSettings::class)->apply();
+        });
+    }
+
+    /**
+     * The default content language saved on the Languages page wins over
+     * DEFAULT_LANGUAGE (StoreDefaultLanguage, .ai/rules/admin-env-overrides.md).
+     * Applied on web requests and before each queued job; never for other
+     * console commands, so `config:cache` and `optimize` cannot write it into
+     * bootstrap/cache/config.php.
+     */
+    private function applyStoreDefaultLanguage(): void
+    {
+        if (! $this->app->runningInConsole()) {
+            $this->app->make(StoreDefaultLanguage::class)->apply();
+        }
+
+        Event::listen(JobProcessing::class, function (): void {
+            $this->app->make(StoreDefaultLanguage::class)->apply();
+        });
     }
 
     private function configureApiDocumentation(): void

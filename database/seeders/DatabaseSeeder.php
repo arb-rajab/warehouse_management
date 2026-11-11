@@ -34,6 +34,7 @@ class DatabaseSeeder extends Seeder
             WarehouseSeeder::class,
             RowSeeder::class,
             PalletSeeder::class,
+            ReceiptSeeder::class,
             CellStatusLogSeeder::class,
             CellVerificationRoundSeeder::class,
             CellVerificationReportSeeder::class,

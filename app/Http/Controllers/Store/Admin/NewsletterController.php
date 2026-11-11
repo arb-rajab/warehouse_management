@@ -11,6 +11,7 @@ use App\Mail\EmailManager;
 use App\Models\StoreUser;
 use App\Models\Subscriber;
 use App\Support\SearchOption;
+use App\Support\StoreMailSettings;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -39,7 +40,7 @@ class NewsletterController extends Controller implements HasMiddleware
     public function index(): Response
     {
         return Inertia::render('Store/Admin/Marketing/Newsletters/Index', [
-            'smtpConfigured' => filled(config('mail.mailers.smtp.username')),
+            'smtpConfigured' => filled(app(StoreMailSettings::class)->effective()['username']['value']),
         ]);
     }
 
@@ -69,7 +70,7 @@ class NewsletterController extends Controller implements HasMiddleware
 
     public function send(SendNewsletterRequest $request): RedirectResponse
     {
-        if (blank(config('mail.mailers.smtp.username'))) {
+        if (blank(app(StoreMailSettings::class)->effective()['username']['value'])) {
             throw ValidationException::withMessages(['smtp' => __('store_admin.please_configure_smtp_first')]);
         }
 

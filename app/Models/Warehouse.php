@@ -52,6 +52,16 @@ class Warehouse extends Model
     }
 
     /**
+     * Whether the system has more than one warehouse: the cell-log listings
+     * name a cell's warehouse only then. One cheap count query (a handful of rows at most),
+     * run once per page, never per row.
+     */
+    public static function hasMultiple(): bool
+    {
+        return self::query()->count() > 1;
+    }
+
+    /**
      * The "Default" warehouse, created when missing. For seeders and the
      * row factory, which need a warehouse for rows created without one.
      */

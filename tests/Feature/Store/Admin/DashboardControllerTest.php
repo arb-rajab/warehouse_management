@@ -28,7 +28,7 @@ test('the dashboard renders an empty shop with typed empty series under strict C
             'products' => [0, 0], 'sources' => [0, 0],
             'sales' => ['labels' => [], 'values' => []], 'stock' => ['labels' => [], 'values' => []],
             'visits' => ['labels' => [], 'values' => []],
-        ])->where('topProducts', [])->where('showSmtpAlert', false));
+        ])->where('topProducts', [])->missing('showSmtpAlert'));
     expect($response->headers->get('Content-Security-Policy-Report-Only') ?? $response->headers->get('Content-Security-Policy'))->toContain("script-src 'self';");
     $this->get(route('shop.admin.dashboard'), inertiaHeaders())->assertOk()->assertHeader('X-Inertia', 'true');
 });
@@ -68,7 +68,7 @@ test('the dashboard payload preserves totals prices translations and product fil
         ->where('id', $product->id)->where('name', 'Translated oil')->where('public_url', route('product', 'oil'))
         ->where('thumbnail_url', static_asset('assets/img/placeholder.jpg'))
         ->where('base_price', single_price(22))->where('discounted_price', single_price(19.8))->where('rating', 4.5))
-        ->where('showSmtpAlert', false));
+        ->missing('showSmtpAlert')->missing('setupAlerts'));
     expect($queries->filter(fn ($q) => str_contains($q['query'], 'from "product_translations"')))->toHaveCount(1)
         ->and($queries->filter(fn ($q) => str_contains($q['query'], 'from "product_taxes"')))->toHaveCount(1);
 });
@@ -122,82 +122,60 @@ test('top products are limited to twelve ranked published products and translati
     expect($queries->filter(fn ($q) => str_contains($q['query'], 'from "product_translations"')))->toHaveCount(1);
 });
 
-test('SMTP warning keeps its exact permission and both empty credentials condition', function (?string $username, ?string $password, bool $permission, bool $expected) {
-    actingAsStoreUser(createStoreStaff(...($permission ? ['admin_dashboard', 'smtp_settings'] : ['admin_dashboard'])));
-    config(['mail.mailers.smtp.username' => $username, 'mail.mailers.smtp.password' => $password]);
-    $this->get(route('shop.admin.dashboard'))->assertOk()->assertInertia(fn (Assert $p) => $p->where('showSmtpAlert', $expected));
-})->with([
-    [null, null, true, true], ['', '', true, true], [null, null, false, false],
-    ['user', null, true, false], [null, 'pass', true, false], ['user', 'pass', true, false],
-]);
+test('the dashboard sends no SMTP or checkout banner props: the setup checklist is their single place', function () {
+    config(['mail.mailers.smtp.username' => null, 'mail.mailers.smtp.password' => null]);
+    storeSetting('cash_payment', 1);
+    createStoreProduct(['cash_on_delivery' => 0]);
+    actingAsStoreUser(createStoreStaff('admin_dashboard', 'smtp_settings', 'features_activation', 'show_all_products'));
 
-test('the dashboard warns staff who can fix them about the settings orders need', function (array $settings, array $products, array $permissions, array $expected) {
-    foreach ($settings as $type => $value) {
-        storeSetting($type, $value);
-    }
-    foreach ($products as $cashOnDelivery) {
-        createStoreProduct(['cash_on_delivery' => $cashOnDelivery]);
-    }
-    actingAsStoreUser(createStoreStaff('admin_dashboard', ...$permissions));
-
-    $this->get(route('shop.admin.dashboard'))->assertOk()->assertInertia(fn (Assert $p) => $p->where('setupAlerts', $expected));
-})->with([
-    'nothing switched on' => [[], [], ['payment_methods_configurations', 'show_all_products'], ['noPaymentMethod']],
-    'nothing switched on, no permission' => [[], [], ['show_all_products'], []],
-    'a gateway is on' => [['bkash' => 1], [], ['payment_methods_configurations', 'show_all_products'], []],
-    'wallet is on' => [['wallet_system' => 1], [], ['payment_methods_configurations'], []],
-    'cash is on, no product allows it' => [['cash_payment' => 1], [0, 0], ['payment_methods_configurations', 'show_all_products'], ['cashOnDeliveryProducts']],
-    'cash is on, no product allows it, no permission' => [['cash_payment' => 1], [0], ['payment_methods_configurations'], []],
-    'cash is on and a product allows it' => [['cash_payment' => 1], [0, 1], ['payment_methods_configurations', 'show_all_products'], []],
-    'cash is off, products allow it' => [['cash_payment' => 0], [1], ['payment_methods_configurations', 'show_all_products'], ['noPaymentMethod']],
-]);
+    $this->get(route('shop.admin.dashboard'))->assertOk()->assertInertia(fn (Assert $p) => $p
+        ->missing('showSmtpAlert')->missing('setupAlerts')
+        ->where('setupChecklist.items.0.key', 'smtp')->where('setupChecklist.items.0.done', false)
+        ->where('setupChecklist.items.2.key', 'cashOnDeliveryProducts')->where('setupChecklist.items.2.done', false));
+});
 
 test('the dashboard passes the setup checklist for the checks the staff member can fix', function () {
     config(['mail.mailers.smtp.username' => null, 'mail.mailers.smtp.password' => null]);
     storeSetting('bkash', 1);
-    actingAsStoreUser(createStoreStaff('admin_dashboard', 'smtp_settings', 'payment_methods_configurations', 'currency_setup'));
+    actingAsStoreUser(createStoreStaff('admin_dashboard', 'smtp_settings', 'features_activation', 'currency_setup'));
 
     $this->get(route('shop.admin.dashboard'))->assertOk()->assertInertia(fn (Assert $p) => $p
         ->where('setupChecklist', [
             'items' => [
-                ['key' => 'smtp', 'done' => false],
-                ['key' => 'paymentMethod', 'done' => true],
-                ['key' => 'currency', 'done' => true],
+                ['key' => 'smtp', 'done' => false, 'reasons' => [
+                    ['key' => 'smtp.username_and_password', 'route' => 'smtp_settings.index', 'highlight' => 'mail_credentials'],
+                ]],
+                ['key' => 'paymentMethod', 'done' => true, 'reasons' => []],
+                ['key' => 'currency', 'done' => true, 'reasons' => []],
             ],
             'done' => 2,
             'total' => 3,
-        ])
-        ->where('showSmtpAlert', true)->where('setupAlerts', []));
+        ]));
 });
 
 test('the setup checklist is empty without a setup permission and lists every check with all of them', function () {
     actingAsStoreUser(createStoreStaff('admin_dashboard'));
     $this->get(route('shop.admin.dashboard'))->assertOk()->assertInertia(fn (Assert $p) => $p
-        ->where('setupChecklist', ['items' => [], 'done' => 0, 'total' => 0])
-        ->where('showSmtpAlert', false)->where('setupAlerts', []));
+        ->where('setupChecklist', ['items' => [], 'done' => 0, 'total' => 0]));
 
     actingAsStoreUser(createStoreAdmin());
     $this->get(route('shop.admin.dashboard'))->assertOk()->assertInertia(fn (Assert $p) => $p
         ->has('setupChecklist.items', 11)->where('setupChecklist.total', 11)
-        ->has('setupChecklist.items.0', fn (Assert $item) => $item->where('key', 'smtp')->where('done', false))
+        ->has('setupChecklist.items.0', fn (Assert $item) => $item->where('key', 'smtp')->where('done', false)
+            ->where('reasons', [['key' => 'smtp.username_and_password', 'route' => 'smtp_settings.index', 'highlight' => 'mail_credentials']]))
         ->whereType('setupChecklist.done', 'integer'));
 });
 
-test('the old banners and the checklist agree because both come from the same checks', function () {
-    storeSetting('cash_payment', 1);
-    createStoreProduct(['cash_on_delivery' => 0]);
-    config(['mail.mailers.smtp.username' => null, 'mail.mailers.smtp.password' => null]);
-    actingAsStoreUser(createStoreStaff('admin_dashboard', 'smtp_settings', 'payment_methods_configurations', 'show_all_products'));
+test('the dashboard explains a not done shipping check with the exact setting and its deep link', function () {
+    storeSetting('shipping_type', 'seller_wise_shipping');
+    actingAsStoreUser(createStoreStaff('admin_dashboard', 'shipping_configuration'));
 
     $this->get(route('shop.admin.dashboard'))->assertOk()->assertInertia(fn (Assert $p) => $p
-        ->where('showSmtpAlert', true)
-        ->where('setupAlerts', ['cashOnDeliveryProducts'])
         ->where('setupChecklist.items', [
-            ['key' => 'smtp', 'done' => false],
-            ['key' => 'paymentMethod', 'done' => true],
-            ['key' => 'cashOnDeliveryProducts', 'done' => false],
-            ['key' => 'catalog', 'done' => false],
-        ])->where('setupChecklist.done', 1)->where('setupChecklist.total', 4));
+            ['key' => 'shipping', 'done' => false, 'reasons' => [
+                ['key' => 'shipping.seller_admin_cost', 'route' => 'shipping_configuration.index', 'highlight' => 'shipping_cost_admin'],
+            ]],
+        ]));
 });
 
 test('dashboard refuses unauthorized callers without changing database rows', function (string $caller) {

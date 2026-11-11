@@ -142,6 +142,28 @@ describe('Store roles Index', () => {
         expect(wrapper.findAllComponents(TableActionLink)).toHaveLength(0);
     });
 
+    it('badges a role carrying a sensitive permission, and no other', () => {
+        const wrapper = mountPage([
+            storeRole({ id: 3, name: 'Clerk', sensitive: false }),
+            storeRole({ id: 4, name: 'Mail admin', sensitive: true }),
+        ]);
+        const badges = wrapper.findAll('[data-badge="sensitive"]');
+
+        expect(badges).toHaveLength(1);
+        expect(badges[0].element.closest('tr')?.textContent).toContain(
+            'Mail admin',
+        );
+        expect(badges[0].text()).toContain(
+            t('store.roles.index.sensitiveBadge'),
+        );
+        expect(badges[0].text()).toContain(
+            t('store.roles.index.sensitiveBadgeHint'),
+        );
+        expect(badges[0].attributes('title')).toBe(
+            t('store.roles.index.sensitiveBadgeHint'),
+        );
+    });
+
     it('pages the list, and reloads it at a new page size', () => {
         const wrapper = mountPage([storeRole()], { perPage: 25 });
         const pagination = wrapper.getComponent(Pagination);
